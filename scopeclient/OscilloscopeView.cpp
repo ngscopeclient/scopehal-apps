@@ -107,191 +107,181 @@ void OscilloscopeView::SetSizeDirty()
 
 bool OscilloscopeView::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 {
-	try
+	Glib::RefPtr<Gdk::Window> window = get_bin_window();
+	if(window)
 	{
-		Glib::RefPtr<Gdk::Window> window = get_bin_window();
-		if(window)
+		//printf("========== NEW FRAME ==========\n");
+
+		//Get dimensions of the virtual canvas (max of requested size and window size)
+		Gtk::Allocation allocation = get_allocation();
+		int width = allocation.get_width();
+		int height = allocation.get_height();
+		if(m_width > width)
+			width = m_width;
+		if(m_height > height)
+			m_height = height;
+
+		//Get the visible area of the window
+		int pwidth = get_width();
+		//int pheight = get_height();
+		int xoff = get_hadjustment()->get_value();
+		int yoff = get_vadjustment()->get_value();
+
+		//Set up drawing context
+		cr->save();
+		cr->translate(-xoff, -yoff);
+
+		//Fill background
+		cr->set_source_rgb(0, 0, 0);
+		cr->rectangle(0, 0, width, height);
+		cr->fill();
+
+		//We do crazy stuff in which stuff moves around every time we render. As a result, partial redraws will fail
+		//horribly. If the clip region isn't the full window, redraw with the full region selected.
+		double clip_x1, clip_y1, clip_x2, clip_y2;
+		cr->get_clip_extents(clip_x1, clip_y1, clip_x2, clip_y2);
+		int clipwidth = clip_x2 - clip_x1;
+		if(clipwidth != pwidth)
+			queue_draw();
+
+		//Re-calculate mappings
+		vector<time_range> ranges;
+		MakeTimeRanges(ranges);
+
+		//All good, draw individual channels
+		//Draw channels in numerical order.
+		//This allows painters-algorithm handling of protocol decoders that wish to be drawn
+		//on top of the original channel.
+		m_timescaleRender->Render(cr, width, 0+xoff, pwidth+xoff, ranges);
+		for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 		{
-			//printf("========== NEW FRAME ==========\n");
+			auto chan = m_scope->GetChannel(i);
+			auto it = m_renderers.find(chan);
+			if( (it == m_renderers.end()) || (it->second == NULL) )
+			{
+				//LogWarning("Channel \"%s\" has no renderer\n", chan->m_displayname.c_str());
+				continue;
+			}
+			it->second->Render(cr, width, 0 + xoff, pwidth + xoff, ranges);
+		}
 
-			//Get dimensions of the virtual canvas (max of requested size and window size)
-			Gtk::Allocation allocation = get_allocation();
-			int width = allocation.get_width();
-			int height = allocation.get_height();
-			if(m_width > width)
-				width = m_width;
-			if(m_height > height)
-				m_height = height;
+		//Draw zigzag lines over the channel backgrounds
+		//Don't draw break at end of last range, though
+		for(size_t i=0; i<ranges.size(); i++)
+		{
+			if((i+1) == ranges.size())
+				break;
 
-			//Get the visible area of the window
-			int pwidth = get_width();
-			//int pheight = get_height();
-			int xoff = get_hadjustment()->get_value();
-			int yoff = get_vadjustment()->get_value();
+			time_range& range = ranges[i];
+			float xshift = 5;
+			float yshift = 5;
+			float ymid = height/2;
 
-			//Set up drawing context
 			cr->save();
-			cr->translate(-xoff, -yoff);
 
-			//Fill background
-			cr->set_source_rgb(0, 0, 0);
-			cr->rectangle(0, 0, width, height);
-			cr->fill();
+				//Set up path
+				cr->move_to(range.xend,        0);
+				cr->line_to(range.xend,        ymid - 2*yshift);
+				cr->line_to(range.xend+xshift, ymid -   yshift);
+				cr->line_to(range.xend-xshift, ymid +   yshift);
+				cr->line_to(range.xend,        ymid + 2*yshift);
+				cr->line_to(range.xend,        height);
 
-			//We do crazy stuff in which stuff moves around every time we render. As a result, partial redraws will fail
-			//horribly. If the clip region isn't the full window, redraw with the full region selected.
-			double clip_x1, clip_y1, clip_x2, clip_y2;
-			cr->get_clip_extents(clip_x1, clip_y1, clip_x2, clip_y2);
-			int clipwidth = clip_x2 - clip_x1;
-			if(clipwidth != pwidth)
-				queue_draw();
+				//Fill background
+				cr->set_source_rgb(1,1,1);
+				cr->set_line_width(10);
+				cr->stroke_preserve();
 
-			//Re-calculate mappings
-			vector<time_range> ranges;
-			MakeTimeRanges(ranges);
+				//Fill foreground
+				cr->set_source_rgb(0,0,0);
+				cr->set_line_width(6);
+				cr->stroke();
 
-			//All good, draw individual channels
-			//Draw channels in numerical order.
-			//This allows painters-algorithm handling of protocol decoders that wish to be drawn
-			//on top of the original channel.
-			m_timescaleRender->Render(cr, width, 0+xoff, pwidth+xoff, ranges);
+			cr->restore();
+		}
+
+		//Figure out time scale for cursor
+		float tscale = 0;
+		if(m_scope->GetChannelCount() != 0)
+		{
+			OscilloscopeChannel* chan = m_scope->GetChannel(0);
+			CaptureChannelBase* capture = chan->GetData();
+			if(capture != NULL)
+				 tscale = chan->m_timescale * capture->m_timescale;
+		}
+
+		//Draw cursor
+		for(size_t i=0; i<ranges.size(); i++)
+		{
+			time_range& range = ranges[i];
+
+			//Draw cursor (if it's in this range)
+			if( (m_cursorpos >= range.tstart) && (m_cursorpos <= range.tend) )
+			{
+				float dt = m_cursorpos - range.tstart;
+				float dx = dt * tscale;
+				float xpos = range.xstart + dx;
+
+				cr->set_source_rgb(1,1,0);
+				cr->move_to(xpos, 0);
+				cr->line_to(xpos, height);
+				cr->stroke();
+			}
+		}
+
+		//Done
+		cr->restore();
+
+		//Draw channel name overlays (constant position regardles of X scrolling, but still scroll Y if needed)
+		cr->save();
+			cr->translate(1, -yoff);
+
+			int labelmargin = 2;
 			for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 			{
 				auto chan = m_scope->GetChannel(i);
 				auto it = m_renderers.find(chan);
-				if( (it == m_renderers.end()) || (it->second == NULL) )
-				{
-					//LogWarning("Channel \"%s\" has no renderer\n", chan->m_displayname.c_str());
+				if(it == m_renderers.end())
 					continue;
-				}
-				it->second->Render(cr, width, 0 + xoff, pwidth + xoff, ranges);
-			}
+				auto r = it->second;
 
-			//Draw zigzag lines over the channel backgrounds
-			//Don't draw break at end of last range, though
-			for(size_t i=0; i<ranges.size(); i++)
-			{
-				if((i+1) == ranges.size())
-					break;
+				auto ybot = r->m_ypos + r->m_height;
 
-				time_range& range = ranges[i];
-				float xshift = 5;
-				float yshift = 5;
-				float ymid = height/2;
+				int twidth, theight;
+				GetStringWidth(cr, chan->GetHwname(), true, twidth, theight);
+
+				cr->set_source_rgba(0, 0, 0, 0.75);
+				cr->rectangle(0, ybot - theight - labelmargin*2, twidth + labelmargin*2, theight + labelmargin*2);
+				cr->fill();
+
+				cr->set_source_rgba(1, 1, 1, 1);
 
 				cr->save();
-
-					//Set up path
-					cr->move_to(range.xend,        0);
-					cr->line_to(range.xend,        ymid - 2*yshift);
-					cr->line_to(range.xend+xshift, ymid -   yshift);
-					cr->line_to(range.xend-xshift, ymid +   yshift);
-					cr->line_to(range.xend,        ymid + 2*yshift);
-					cr->line_to(range.xend,        height);
-
-					//Fill background
-					cr->set_source_rgb(1,1,1);
-					cr->set_line_width(10);
-					cr->stroke_preserve();
-
-					//Fill foreground
-					cr->set_source_rgb(0,0,0);
-					cr->set_line_width(6);
-					cr->stroke();
-
+					Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+					cr->move_to(labelmargin, ybot - theight - labelmargin);
+					Pango::FontDescription font("sans normal 10");
+					font.set_weight(Pango::WEIGHT_NORMAL);
+					tlayout->set_font_description(font);
+					tlayout->set_text(chan->GetHwname());
+					tlayout->update_from_cairo_context(cr);
+					tlayout->show_in_cairo_context(cr);
 				cr->restore();
+
 			}
 
-			//Figure out time scale for cursor
-			float tscale = 0;
-			if(m_scope->GetChannelCount() != 0)
-			{
-				OscilloscopeChannel* chan = m_scope->GetChannel(0);
-				CaptureChannelBase* capture = chan->GetData();
-				if(capture != NULL)
-					 tscale = chan->m_timescale * capture->m_timescale;
-			}
-
-			//Draw cursor
-			for(size_t i=0; i<ranges.size(); i++)
-			{
-				time_range& range = ranges[i];
-
-				//Draw cursor (if it's in this range)
-				if( (m_cursorpos >= range.tstart) && (m_cursorpos <= range.tend) )
-				{
-					float dt = m_cursorpos - range.tstart;
-					float dx = dt * tscale;
-					float xpos = range.xstart + dx;
-
-					cr->set_source_rgb(1,1,0);
-					cr->move_to(xpos, 0);
-					cr->line_to(xpos, height);
-					cr->stroke();
-				}
-			}
-
-			//Done
-			cr->restore();
-
-			//Draw channel name overlays (constant position regardles of X scrolling, but still scroll Y if needed)
-			cr->save();
-				cr->translate(1, -yoff);
-
-				int labelmargin = 2;
-				for(size_t i=0; i<m_scope->GetChannelCount(); i++)
-				{
-					auto chan = m_scope->GetChannel(i);
-					auto it = m_renderers.find(chan);
-					if(it == m_renderers.end())
-						continue;
-					auto r = it->second;
-
-					auto ybot = r->m_ypos + r->m_height;
-
-					int twidth, theight;
-					GetStringWidth(cr, chan->GetHwname(), true, twidth, theight);
-
-					cr->set_source_rgba(0, 0, 0, 0.75);
-					cr->rectangle(0, ybot - theight - labelmargin*2, twidth + labelmargin*2, theight + labelmargin*2);
-					cr->fill();
-
-					cr->set_source_rgba(1, 1, 1, 1);
-
-					cr->save();
-						Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-						cr->move_to(labelmargin, ybot - theight - labelmargin);
-						Pango::FontDescription font("sans normal 10");
-						font.set_weight(Pango::WEIGHT_NORMAL);
-						tlayout->set_font_description(font);
-						tlayout->set_text(chan->GetHwname());
-						tlayout->update_from_cairo_context(cr);
-						tlayout->show_in_cairo_context(cr);
-					cr->restore();
-
-				}
-
-				/*cr->set_source_rgb(1, 0, 0);
-				cr->move_to(0, 50);
-				cr->line_to(50, 50);
-				cr->stroke();
-				*/
-			cr->restore();
-		}
-
-		if(m_sizeDirty)
-		{
-			m_sizeDirty = false;
-			Resize();
-			queue_draw();
-		}
+			/*cr->set_source_rgb(1, 0, 0);
+			cr->move_to(0, 50);
+			cr->line_to(50, 50);
+			cr->stroke();
+			*/
+		cr->restore();
 	}
 
-
-	catch(const JtagException& ex)
+	if(m_sizeDirty)
 	{
-		printf("%s\n", ex.GetDescription().c_str());
-		exit(1);
+		m_sizeDirty = false;
+		Resize();
+		queue_draw();
 	}
 
 	return true;
@@ -736,129 +726,122 @@ void OscilloscopeView::OnAutoFitVertical()
 
 void OscilloscopeView::OnProtocolDecode(string protocol)
 {
-	try
+	//Decoding w/o a channel selected (and full of data) is nonsensical
+	if(m_selectedChannel == NULL)
+		return;
+	auto data = m_selectedChannel->GetData();
+	if(data == NULL)
+		return;
+
+	//Create the decoder
+	LogDebug("Decoding current channel as %s\n", protocol.c_str());
+	auto decoder = ProtocolDecoder::CreateDecoder(
+		protocol,
+		m_selectedChannel->GetHwname() + "/" + protocol,
+		GetDefaultChannelColor(m_scope->GetChannelCount() + 1)
+		);
+
+	//Single input? Hook it up
+	if(decoder->GetInputCount() == 1)
 	{
-		//Decoding w/o a channel selected (and full of data) is nonsensical
-		if(m_selectedChannel == NULL)
-			return;
-		auto data = m_selectedChannel->GetData();
-		if(data == NULL)
-			return;
-
-		//Create the decoder
-		LogDebug("Decoding current channel as %s\n", protocol.c_str());
-		auto decoder = ProtocolDecoder::CreateDecoder(
-			protocol,
-			m_selectedChannel->GetHwname() + "/" + protocol,
-			GetDefaultChannelColor(m_scope->GetChannelCount() + 1)
-			);
-
-		//Single input? Hook it up
-		if(decoder->GetInputCount() == 1)
-		{
-			if(decoder->ValidateChannel(0, m_selectedChannel))
-				decoder->SetInput(0, m_selectedChannel);
-			else
-			{
-				LogError("Input is not valid for this decoder\n");
-				delete decoder;
-				return;
-			}
-		}
-
-		//FIXME: If we have two inputs, use the current and next channel
-		//This is temporary until we get a UI for this!
-		if(decoder->GetInputCount() == 2)
-		{
-			if(decoder->ValidateChannel(0, m_selectedChannel))
-				decoder->SetInput(0, m_selectedChannel);
-			else
-			{
-				LogError("Input 0 is not valid for this decoder\n");
-				delete decoder;
-				return;
-			}
-
-			//Find the adjacent channel
-			int ichan = -1;
-			for(int i=0; i<(int)m_scope->GetChannelCount() - 2; i++)
-			{
-				if(m_selectedChannel == m_scope->GetChannel(i))
-				{
-					ichan = i;
-					break;
-				}
-			}
-			if(ichan < 0)
-			{
-				LogError("Couldn't find adjacent channel\n");
-				delete decoder;
-				return;
-			}
-			OscilloscopeChannel* next = m_scope->GetChannel(ichan + 2);
-			if(decoder->ValidateChannel(1, next))
-				decoder->SetInput(1, next);
-			else
-			{
-				LogError("Input 1 is not valid for this decoder\n");
-				delete decoder;
-				return;
-			}
-		}
-
-		//TODO: dialog for configuring stuff
-		if(decoder->NeedsConfig())
-		{
-		}
-
-		//Add the channel only after we've configured it successfully
-		m_scope->AddChannel(decoder);
-
-		//Create a renderer for it
-		auto render = decoder->CreateRenderer();
-		m_renderers[decoder] = render;
-
-		//Configure the renderer
-		//If we're an overlay, draw us on top of the original channel.
-		auto original_render = m_renderers[m_selectedChannel];
-		if(decoder->IsOverlay())
-		{
-			render->m_ypos = original_render->m_ypos;
-			render->m_overlay = true;
-
-			//If the original renderer is also an overlay, we're doing a second-level decode!
-			//Move us down below them.
-			//TODO: push other decoders as needed?
-			if(original_render->m_overlay)
-				render->m_ypos += original_render->m_height;
-		}
-
-		//NOT an overlay.
-		//Insert us right after the original channel.
+		if(decoder->ValidateChannel(0, m_selectedChannel))
+			decoder->SetInput(0, m_selectedChannel);
 		else
 		{
-			int spacing = 5;			//TODO: this should be a member variable and not redeclared everywhere
-			render->m_overlay = false;
-			render->m_ypos = original_render->m_ypos + original_render->m_height + spacing;
+			LogError("Input is not valid for this decoder\n");
+			delete decoder;
+			return;
+		}
+	}
 
-			//Loop over all renderers and push the ones below us as needed
-			for(auto it : m_renderers)
-			{
-				auto r = it.second;
-				if(r == render)
-					continue;
-
-				if(r->m_ypos >= (render->m_ypos - 10) )	//allow for padding
-					r->m_ypos += render->m_height;
-			}
+	//FIXME: If we have two inputs, use the current and next channel
+	//This is temporary until we get a UI for this!
+	if(decoder->GetInputCount() == 2)
+	{
+		if(decoder->ValidateChannel(0, m_selectedChannel))
+			decoder->SetInput(0, m_selectedChannel);
+		else
+		{
+			LogError("Input 0 is not valid for this decoder\n");
+			delete decoder;
+			return;
 		}
 
-		//Done, update things
-		decoder->Refresh();
-		queue_draw();
+		//Find the adjacent channel
+		int ichan = -1;
+		for(int i=0; i<(int)m_scope->GetChannelCount() - 2; i++)
+		{
+			if(m_selectedChannel == m_scope->GetChannel(i))
+			{
+				ichan = i;
+				break;
+			}
+		}
+		if(ichan < 0)
+		{
+			LogError("Couldn't find adjacent channel\n");
+			delete decoder;
+			return;
+		}
+		OscilloscopeChannel* next = m_scope->GetChannel(ichan + 2);
+		if(decoder->ValidateChannel(1, next))
+			decoder->SetInput(1, next);
+		else
+		{
+			LogError("Input 1 is not valid for this decoder\n");
+			delete decoder;
+			return;
+		}
 	}
-	catch(const JtagException& e)
+
+	//TODO: dialog for configuring stuff
+	if(decoder->NeedsConfig())
 	{
-		LogError(e.GetDescription().c_str());
 	}
+
+	//Add the channel only after we've configured it successfully
+	m_scope->AddChannel(decoder);
+
+	//Create a renderer for it
+	auto render = decoder->CreateRenderer();
+	m_renderers[decoder] = render;
+
+	//Configure the renderer
+	//If we're an overlay, draw us on top of the original channel.
+	auto original_render = m_renderers[m_selectedChannel];
+	if(decoder->IsOverlay())
+	{
+		render->m_ypos = original_render->m_ypos;
+		render->m_overlay = true;
+
+		//If the original renderer is also an overlay, we're doing a second-level decode!
+		//Move us down below them.
+		//TODO: push other decoders as needed?
+		if(original_render->m_overlay)
+			render->m_ypos += original_render->m_height;
+	}
+
+	//NOT an overlay.
+	//Insert us right after the original channel.
+	else
+	{
+		int spacing = 5;			//TODO: this should be a member variable and not redeclared everywhere
+		render->m_overlay = false;
+		render->m_ypos = original_render->m_ypos + original_render->m_height + spacing;
+
+		//Loop over all renderers and push the ones below us as needed
+		for(auto it : m_renderers)
+		{
+			auto r = it.second;
+			if(r == render)
+				continue;
+
+			if(r->m_ypos >= (render->m_ypos - 10) )	//allow for padding
+				r->m_ypos += render->m_height;
+		}
+	}
+
+	//Done, update things
+	decoder->Refresh();
+	queue_draw();
 }

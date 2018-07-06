@@ -133,122 +133,113 @@ void ScopeApp::on_activate()
 
 int main(int argc, char* argv[])
 {
-	int exit_code = 0;
-	try
+	auto app = ScopeApp::create();
+
+	//Global settings
+	unsigned short port = 0;
+	string server = "";
+	string api = "redtin_uart";
+	//bool scripted = false;
+	string scopename = "";
+	string tty = "/dev/ttyUSB0";
+
+	Severity console_verbosity = Severity::NOTICE;
+
+	//Parse command-line arguments
+	for(int i=1; i<argc; i++)
 	{
-		auto app = ScopeApp::create();
+		string s(argv[i]);
 
-		//Global settings
-		unsigned short port = 0;
-		string server = "";
-		string api = "redtin_uart";
-		//bool scripted = false;
-		string scopename = "";
-		string tty = "/dev/ttyUSB0";
+		//Let the logger eat its args first
+		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
+			continue;
 
-		Severity console_verbosity = Severity::NOTICE;
-
-		//Parse command-line arguments
-		for(int i=1; i<argc; i++)
+		if(s == "--help")
 		{
-			string s(argv[i]);
-
-			//Let the logger eat its args first
-			if(ParseLoggerArguments(i, argc, argv, console_verbosity))
-				continue;
-
-			if(s == "--help")
-			{
-				//not implemented
-				return 0;
-			}
-			else if(s == "--port")
-				port = atoi(argv[++i]);
-			else if(s == "--server")
-				server = argv[++i];
-			else if(s == "--api")
-				api = argv[++i];
-			//else if(s == "--scripted")
-			//	scripted = true;
-			else if(s == "--scopename")
-				scopename = argv[++i];
-			else if(s == "--tty")
-				tty = argv[++i];
-			else if(s == "--version")
-			{
-				//not implemented
-				//ShowVersion();
-				return 0;
-			}
-			else
-			{
-				fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
-				return 1;
-			}
+			//not implemented
+			return 0;
 		}
-
-		//Set up logging
-		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-
-		//Initialize the protocol decoder library
-		ScopeProtocolStaticInit();
-
-		//Connect to the server
-		/*if(api == "scoped")
-			scope = new NetworkedOscilloscope(server, port);
-		else if(api == "redtin")
+		else if(s == "--port")
+			port = atoi(argv[++i]);
+		else if(s == "--server")
+			server = argv[++i];
+		else if(s == "--api")
+			api = argv[++i];
+		//else if(s == "--scripted")
+		//	scripted = true;
+		else if(s == "--scopename")
+			scopename = argv[++i];
+		else if(s == "--tty")
+			tty = argv[++i];
+		else if(s == "--version")
 		{
-			//Not scripting? Normal dialog process
-			if(!scripted)
-			{
-				ScopeConnectionDialog dlg(server, port);
-				if(Gtk::RESPONSE_OK != dlg.run())
-					return 0;
-
-				namesrvr = dlg.DetachNameServer();
-				scope = dlg.DetachScope();
-			}
-			else
-			{
-				RedTinLogicAnalyzer* la = new RedTinLogicAnalyzer(server, port);
-				namesrvr = new NameServer(&la->m_iface);
-				la->Connect(scopename);
-				scope = la;
-			}
-		}*/
-		if(api == "redtin_uart")
-			app->m_instruments.push_back(InstrumentInfo(new RedTinLogicAnalyzer(tty, 115200), server, port));
-		else if(api == "lecroy_vicp")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 1861;
-
-			app->m_instruments.push_back(InstrumentInfo(new LeCroyVICPOscilloscope(server, port), server, port));
-		}
-		else if(api == "rohdeschwarz_psu")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 5025;
-
-			app->m_instruments.push_back(
-				InstrumentInfo(new RohdeSchwarzHMC804xPowerSupply(server, port), server, port));
+			//not implemented
+			//ShowVersion();
+			return 0;
 		}
 		else
 		{
-			LogError("Unrecognized API \"%s\", use --help\n", api.c_str());
+			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
 			return 1;
 		}
-
-		//and run the app
-		app->run();
 	}
-	catch(const JtagException& ex)
+
+	//Set up logging
+	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
+
+	//Initialize the protocol decoder library
+	ScopeProtocolStaticInit();
+
+	//Connect to the server
+	/*if(api == "scoped")
+		scope = new NetworkedOscilloscope(server, port);
+	else if(api == "redtin")
 	{
-		LogError("%s\n", ex.GetDescription().c_str());
-		exit_code = 1;
+		//Not scripting? Normal dialog process
+		if(!scripted)
+		{
+			ScopeConnectionDialog dlg(server, port);
+			if(Gtk::RESPONSE_OK != dlg.run())
+				return 0;
+
+			namesrvr = dlg.DetachNameServer();
+			scope = dlg.DetachScope();
+		}
+		else
+		{
+			RedTinLogicAnalyzer* la = new RedTinLogicAnalyzer(server, port);
+			namesrvr = new NameServer(&la->m_iface);
+			la->Connect(scopename);
+			scope = la;
+		}
+	}*/
+	if(api == "redtin_uart")
+		app->m_instruments.push_back(InstrumentInfo(new RedTinLogicAnalyzer(tty, 115200), server, port));
+	else if(api == "lecroy_vicp")
+	{
+		//default port if not specified
+		if(port == 0)
+			port = 1861;
+
+		app->m_instruments.push_back(InstrumentInfo(new LeCroyVICPOscilloscope(server, port), server, port));
+	}
+	else if(api == "rohdeschwarz_psu")
+	{
+		//default port if not specified
+		if(port == 0)
+			port = 5025;
+
+		app->m_instruments.push_back(
+			InstrumentInfo(new RohdeSchwarzHMC804xPowerSupply(server, port), server, port));
+	}
+	else
+	{
+		LogError("Unrecognized API \"%s\", use --help\n", api.c_str());
+		return 1;
 	}
 
-	return exit_code;
+	//and run the app
+	app->run();
+
+	return 0;
 }

@@ -130,71 +130,63 @@ void OscilloscopeWindow::CreateWidgets()
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
-	try
+	m_statprogress.set_fraction(0);
+
+	static int i = 0;
+	i ++;
+	i %= 10;
+
+	if(m_waiting)
 	{
-		m_statprogress.set_fraction(0);
+		//m_statprogress.set_text("Ready");
+		string str = "Ready";
+		for(int j=0; j<i; j++)
+			str += ".";
+		m_statprogress.set_text(str);
 
-		static int i = 0;
-		i ++;
-		i %= 10;
+		//TODO: poll channel status and time/div etc and update our in-memory representation
+		//(in case the user enabled a channel etc with hardware buttons)
 
-		if(m_waiting)
+		//Poll the trigger status of the scope
+		Oscilloscope::TriggerMode status = m_scope->PollTrigger();
+		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 		{
-			//m_statprogress.set_text("Ready");
-			string str = "Ready";
-			for(int j=0; j<i; j++)
-				str += ".";
-			m_statprogress.set_text(str);
-
-			//TODO: poll channel status and time/div etc and update our in-memory representation
-			//(in case the user enabled a channel etc with hardware buttons)
-
-			//Poll the trigger status of the scope
-			Oscilloscope::TriggerMode status = m_scope->PollTrigger();
-			if(status > Oscilloscope::TRIGGER_MODE_COUNT)
-			{
-				//Invalid value, skip it
-				return true;
-			}
-
-			//If not TRIGGERED, do nothing
-			if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-				return true;
-
-			double dt = GetTime() - m_tArm;
-			LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
-
-			m_statprogress.set_text("Triggered");
-
-			//Triggered - get the data from each channel
-			double start = GetTime();
-			m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
-			dt = GetTime() - start;
-			LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
-
-			//Set to a sane zoom if this is our first capture
-			//otherwise keep time scale unchanged
-			if(m_timescale == 0)
-				OnZoomFit();
-
-			//Refresh display
-			m_view.SetSizeDirty();
-			m_view.queue_draw();
-
-			m_waiting = false;
-
-			//TODO: if in continuous mode, trigger again
-			//TODO: have settings for this
-			//OnStart();
+			//Invalid value, skip it
+			return true;
 		}
-		else
-			m_statprogress.set_text("Stopped");
-	}
 
-	catch(const JtagException& ex)
-	{
-		printf("%s\n", ex.GetDescription().c_str());
+		//If not TRIGGERED, do nothing
+		if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			return true;
+
+		double dt = GetTime() - m_tArm;
+		LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
+
+		m_statprogress.set_text("Triggered");
+
+		//Triggered - get the data from each channel
+		double start = GetTime();
+		m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+		dt = GetTime() - start;
+		LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+
+		//Set to a sane zoom if this is our first capture
+		//otherwise keep time scale unchanged
+		if(m_timescale == 0)
+			OnZoomFit();
+
+		//Refresh display
+		m_view.SetSizeDirty();
+		m_view.queue_draw();
+
+		m_waiting = false;
+
+		//TODO: if in continuous mode, trigger again
+		//TODO: have settings for this
+		//OnStart();
 	}
+	else
+		m_statprogress.set_text("Stopped");
 
 	//false to stop timer
 	return true;
@@ -268,25 +260,18 @@ int OscilloscopeWindow::OnCaptureProgressUpdate(float progress)
 
 void OscilloscopeWindow::OnStart()
 {
-	try
-	{
-		//TODO: get triggers
-		//Load trigger conditions from sidebar
-		//m_channelview.UpdateTriggers();
+	//TODO: get triggers
+	//Load trigger conditions from sidebar
+	//m_channelview.UpdateTriggers();
 
-		//Start the capture
-		m_tArm = GetTime();
-		m_scope->StartSingleTrigger();
-		m_waiting = true;
+	//Start the capture
+	m_tArm = GetTime();
+	m_scope->StartSingleTrigger();
+	m_waiting = true;
 
-		//Print to stdout so scripts know we're ready
-		//LogDebug("Ready\n");
-		//fflush(stdout);
-	}
-	catch(const JtagException& ex)
-	{
-		LogError("%s\n", ex.GetDescription().c_str());
-	}
+	//Print to stdout so scripts know we're ready
+	//LogDebug("Ready\n");
+	//fflush(stdout);
 }
 
 /*

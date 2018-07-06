@@ -213,40 +213,32 @@ void DMMWindow::OnMeasurementTypeChanged()
 
 bool DMMWindow::OnTimer(int /*timer*/)
 {
-	try
-	{
-		//Voltage
-		double v = m_meter->GetVoltage();
-		char tmp[128];
-		if(fabs(v) < 1)
-			snprintf(tmp, sizeof(tmp), "%7.2f     mV", v * 1000);
-		else
-			snprintf(tmp, sizeof(tmp), "%10.5f  V", v);
-		m_voltageLabel.set_text(tmp);
+	//Voltage
+	double v = m_meter->GetVoltage();
+	char tmp[128];
+	if(fabs(v) < 1)
+		snprintf(tmp, sizeof(tmp), "%7.2f     mV", v * 1000);
+	else
+		snprintf(tmp, sizeof(tmp), "%10.5f  V", v);
+	m_voltageLabel.set_text(tmp);
 
-		//Peak-to-peak voltage
-		double vpp = m_meter->GetPeakToPeak();
-		if(fabs(vpp) < 1)
-			snprintf(tmp, sizeof(tmp), "%7.2f     mVpp", vpp * 1000);
-		else
-			snprintf(tmp, sizeof(tmp), "%8.3f  Vpp", vpp);
-		m_vppLabel.set_text(tmp);
+	//Peak-to-peak voltage
+	double vpp = m_meter->GetPeakToPeak();
+	if(fabs(vpp) < 1)
+		snprintf(tmp, sizeof(tmp), "%7.2f     mVpp", vpp * 1000);
+	else
+		snprintf(tmp, sizeof(tmp), "%8.3f  Vpp", vpp);
+	m_vppLabel.set_text(tmp);
 
-		//Frequency
-		double f = m_meter->GetFrequency();
-		if(f > 1000000)
-			snprintf(tmp, sizeof(tmp), "%8.3f   MHz", f / 1000000);
-		else if(f > 1000)
-			snprintf(tmp, sizeof(tmp), "%8.3f   kHz", f / 1000);
-		else
-			snprintf(tmp, sizeof(tmp), "%8.3f    Hz", f);
-		m_frequencyLabel.set_text(tmp);
-	}
-
-	catch(const JtagException& ex)
-	{
-		printf("%s\n", ex.GetDescription().c_str());
-	}
+	//Frequency
+	double f = m_meter->GetFrequency();
+	if(f > 1000000)
+		snprintf(tmp, sizeof(tmp), "%8.3f   MHz", f / 1000000);
+	else if(f > 1000)
+		snprintf(tmp, sizeof(tmp), "%8.3f   kHz", f / 1000);
+	else
+		snprintf(tmp, sizeof(tmp), "%8.3f    Hz", f);
+	m_frequencyLabel.set_text(tmp);
 
 	//false to stop timer
 	return true;

@@ -409,70 +409,62 @@ void PSUWindow::on_hide()
 
 bool PSUWindow::OnTimer(int /*timer*/)
 {
-	try
-	{
-		//Master enable
-		m_masterEnableButton.set_active(m_psu->GetMasterPowerEnable());
+	//Master enable
+	m_masterEnableButton.set_active(m_psu->GetMasterPowerEnable());
 
-		char tmp[128];
-		for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+	char tmp[128];
+	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+	{
+		//Channel voltage
+		double v = m_psu->GetPowerVoltageActual(i);
+		if(fabs(v) < 1)
+			snprintf(tmp, sizeof(tmp), "%5.1f   mV", v * 1000);
+		else
+			snprintf(tmp, sizeof(tmp), "%7.3f  V", v);
+		m_voltageValueLabels[i].set_text(tmp);
+
+		//Update voltage graph with the new data
+		auto vseries = m_voltageData[i]->GetSeries("voltage");
+		vseries->push_back(GraphPoint(GetTime(), v));
+		while(vseries->size() > 500)
+			vseries->pop_front();
+
+		//Channel current
+		double c = m_psu->GetPowerCurrentActual(i);
+		if(fabs(c) < 1)
+			snprintf(tmp, sizeof(tmp), "%4.1f  mA", c * 1000);
+		else
+			snprintf(tmp, sizeof(tmp), "%6.3f A", c);
+		m_currentValueLabels[i].set_text(tmp);
+
+		//Update current graph with the new data
+		auto iseries = m_currentData[i]->GetSeries("current");
+		iseries->push_back(GraphPoint(GetTime(), c));
+		while(iseries->size() > 500)
+			iseries->pop_front();
+
+		//Channel enable
+		bool enabled = m_psu->GetPowerChannelActive(i);
+		m_channelEnableButtons[i].set_active(enabled);
+
+		//Channel status
+		if(!enabled)
 		{
-			//Channel voltage
-			double v = m_psu->GetPowerVoltageActual(i);
-			if(fabs(v) < 1)
-				snprintf(tmp, sizeof(tmp), "%5.1f   mV", v * 1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%7.3f  V", v);
-			m_voltageValueLabels[i].set_text(tmp);
-
-			//Update voltage graph with the new data
-			auto vseries = m_voltageData[i]->GetSeries("voltage");
-			vseries->push_back(GraphPoint(GetTime(), v));
-			while(vseries->size() > 500)
-				vseries->pop_front();
-
-			//Channel current
-			double c = m_psu->GetPowerCurrentActual(i);
-			if(fabs(c) < 1)
-				snprintf(tmp, sizeof(tmp), "%4.1f  mA", c * 1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%6.3f A", c);
-			m_currentValueLabels[i].set_text(tmp);
-
-			//Update current graph with the new data
-			auto iseries = m_currentData[i]->GetSeries("current");
-			iseries->push_back(GraphPoint(GetTime(), c));
-			while(iseries->size() > 500)
-				iseries->pop_front();
-
-			//Channel enable
-			bool enabled = m_psu->GetPowerChannelActive(i);
-			m_channelEnableButtons[i].set_active(enabled);
-
-			//Channel status
-			if(!enabled)
-			{
-				m_channelStatusLabels[i].set_label("--");
-				m_channelStatusLabels[i].override_color(Gdk::RGBA("#000000"));
-			}
-
-			else if(m_psu->IsPowerConstantCurrent(i))
-			{
-				m_channelStatusLabels[i].set_label("CC");
-				m_channelStatusLabels[i].override_color(Gdk::RGBA("#ff0000"));
-			}
-
-			else
-			{
-				m_channelStatusLabels[i].set_label("CV");
-				m_channelStatusLabels[i].override_color(Gdk::RGBA("#00a000"));
-			}
+			m_channelStatusLabels[i].set_label("--");
+			m_channelStatusLabels[i].override_color(Gdk::RGBA("#000000"));
 		}
-	}
 
-	catch(const JtagException& ex)
-	{
-		printf("%s\n", ex.GetDescription().c_str());
+		else if(m_psu->IsPowerConstantCurrent(i))
+		{
+			m_channelStatusLabels[i].set_label("CC");
+			m_channelStatusLabels[i].override_color(Gdk::RGBA("#ff0000"));
+		}
+
+		else
+		{
+			m_channelStatusLabels[i].set_label("CV");
+			m_channelStatusLabels[i].override_color(Gdk::RGBA("#00a000"));
+		}
 	}
 
 	//false to stop timer
