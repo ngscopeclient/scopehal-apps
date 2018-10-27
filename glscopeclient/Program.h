@@ -30,27 +30,15 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief  Declaration of Program
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#ifndef Program_h
+#define Program_h
 
-#define GL_GLEXT_PROTOTYPES
+class Program
+{
+public:
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
-
-#include <giomm.h>
-#include <gtkmm.h>
-
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "Shader.h"
+};
 
 #endif

@@ -30,27 +30,44 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief  Declaration of Shader
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#ifndef Shader_h
+#define Shader_h
 
-#define GL_GLEXT_PROTOTYPES
+/**
+	@brief A shader object
+ */
+class Shader
+{
+public:
+	Shader(GLenum type);
+	virtual ~Shader();
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
+	bool Load(std::string path);
 
-#include <giomm.h>
-#include <gtkmm.h>
+	operator GLuint()
+	{ return m_handle; }
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+protected:
+	GLuint	m_handle;
+};
 
-#include "Shader.h"
+class FragmentShader : public Shader
+{
+public:
+	FragmentShader()
+	: Shader(GL_FRAGMENT_SHADER)
+	{}
+};
+
+class VertexShader : public Shader
+{
+public:
+	VertexShader()
+	: Shader(GL_VERTEX_SHADER)
+	{}
+};
 
 #endif
+
