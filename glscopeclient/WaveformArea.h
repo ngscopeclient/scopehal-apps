@@ -47,12 +47,15 @@ protected:
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 
 	//DEBUG: waveform data
-	std::vector<float> m_waveformData;
+	//std::vector<float> m_waveformData;
 
 	Program m_defaultProgram;
 
-	VertexArray m_defaultArray;
-	VertexBuffer m_defaultBuffer;
+	//VertexArray m_defaultArray;
+	//VertexBuffer m_defaultBuffer;
+
+	std::vector<VertexArray*> m_traceVAOs;
+	std::vector<VertexBuffer*> m_traceVBOs;
 
 	glm::mat4 m_projection;
 

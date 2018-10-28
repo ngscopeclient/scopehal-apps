@@ -90,6 +90,9 @@ public:
 	void SetUniform(glm::mat4 mat, const char* name)
 	{ glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 
+	void SetUniform(float f, const char* name)
+	{ glUniform1f(GetUniformLocation(name), f); }
+
 protected:
 	GLuint m_handle;
 
