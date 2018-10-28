@@ -30,125 +30,48 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of WaveformArea
+	@brief  Implementation of Program
  */
 #include "glscopeclient.h"
-#include "WaveformArea.h"
+#include "Program.h"
 
 using namespace std;
 
-WaveformArea::WaveformArea()
+Program::Program()
 {
-	FILE* fp = fopen("/tmp/adc-dump.bin", "rb");
-	int n = 0;
-	while(!feof(fp))
-	{
-		int c1 = fgetc(fp);
-		int c2 = fgetc(fp);
-
-		m_waveformData.push_back(((c1 << 8) | c2) / 65535.0f);
-	}
+	m_handle = 0;	//invalid program by default
 }
 
-WaveformArea::~WaveformArea()
+Program::~Program()
 {
-
+	glDeleteProgram(m_handle);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Initialization
-
-void WaveformArea::on_realize()
+void Program::Add(Shader& shader)
 {
-	//Call base class to create the GL context, then select it
-	Gtk::GLArea::on_realize();
-	make_current();
+	//Lazily create the program object if needed.
+	//(This allows Program objects to be created before GL is initialized)
+	if(m_handle == 0)
+		m_handle = glCreateProgram();
 
-	//Do global initialization (independent of camera settings etc)
-	glClearColor(0, 0, 0, 1.0);
-
-	//Create shader objects
-	VertexShader vs;
-	FragmentShader fs;
-	if(!vs.Load("default-vertex.glsl") || !fs.Load("default-fragment.glsl"))
-	{
-		LogError("failed to load default shaders, aborting");
-		exit(1);
-	}
-
-	//Create the program
-	m_defaultProgram.Add(vs);
-	m_defaultProgram.Add(fs);
-	if(!m_defaultProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
-
-	//Create vertex array object and vertex buffer object
-	m_defaultArray.Bind();
-	m_defaultBuffer.Bind();
-
-	//Create a buffer with a bunch of waveform data in it
-	const int NUM_VERTS = 4096;
-	float* verts = new float[NUM_VERTS * 3];
-	for(int i=0; i<NUM_VERTS; i++)
-	{
-		verts[i*3] 		= 50 + i * 0.25f;
-		verts[i*3 + 1]	= 50 + m_waveformData[i] * 800.0f;
-		verts[i*3 + 2]	= 0;
-	}
-
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*NUM_VERTS*3, verts, GL_STATIC_DRAW);
-
-	delete[] verts;
-
-	m_defaultProgram.EnableVertexArray("vert");
-	m_defaultProgram.SetVertexAttribPointer("vert");
+	//Attach it
+	glAttachShader(m_handle, shader);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
-
-void WaveformArea::on_resize(int width, int height)
+bool Program::Link()
 {
-	//Reset camera configuration
-	glViewport(0, 0, width, height);
-	LogDebug("window is %d x %d\n", width, height);
-}
+	glLinkProgram(m_handle);
 
-bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
-{
-	int width = get_allocated_width();
-	int height = get_allocated_height();
+	int status;
+	glGetProgramiv(m_handle, GL_LINK_STATUS, &status);
+	if(status == GL_TRUE)
+		return true;
 
-	glClear(GL_COLOR_BUFFER_BIT);
+	//Compile failed, return error
+	char log[4096];
+	int len;
+	glGetProgramInfoLog(m_handle, sizeof(log), &len, log);
+	LogError("Link of shader progam failed:\n%s\n", log);
 
-	//Configure our shader and array
-	m_defaultProgram.Bind();
-	m_defaultArray.Bind();
-
-	//use pixel coordinates
-	glm::mat4 projection =
-		glm::translate(
-			glm::scale(glm::mat4(1.0f), glm::vec3(2.0f / width, 2.0f / height, 1)),	//scale to window size
-			glm::vec3(-width/2, -height/2, 0)											//put origin at bottom left
-		);
-
-	int projIndex = glGetUniformLocation(m_defaultProgram, "projection");
-	LogDebug("projection is at index %d\n", projIndex);
-	glUniformMatrix4fv(projIndex, 1, GL_FALSE, glm::value_ptr(projection));
-
-	glDrawArrays(GL_LINE_STRIP, 0, 4096);
-
-	//Initialize projection
-	/*glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, width, 0, height);*/
-
-	int err = glGetError();
-	if(err != 0)
-		LogNotice("err = %x\n", err);
-
-	return true;
+	return false;
 }

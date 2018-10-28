@@ -46,15 +46,13 @@ protected:
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 
-	bool LinkProgram(unsigned int program, unsigned int fragment, unsigned int vertex);
-
 	//DEBUG: waveform data
 	std::vector<float> m_waveformData;
 
-	unsigned int m_defaultProgram;
+	Program m_defaultProgram;
 
-	unsigned int m_defaultArray;
-	unsigned int m_defaultBuffer;
+	VertexArray m_defaultArray;
+	VertexBuffer m_defaultBuffer;
 };
 
 #endif

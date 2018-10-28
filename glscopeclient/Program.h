@@ -35,10 +35,50 @@
 #ifndef Program_h
 #define Program_h
 
+#include "Shader.h"
+
 class Program
 {
 public:
+	Program();
+	virtual ~Program();
 
+	bool Link();
+
+	void Add(Shader& shader);
+
+	operator GLuint()
+	{ return m_handle; }
+
+	GLint GetAttributeLocation(const char* name)
+	{
+		//Check the cache rather than going to the GL driver if we can avoid it
+		auto pos = m_attribMap.find(name);
+		if(pos != m_attribMap.end())
+			return pos->second;
+
+		//Nope, ask and add to cache
+		GLint index = glGetAttribLocation(m_handle, name);
+		m_attribMap[name] = index;
+		return index;
+	}
+
+	void Bind()
+	{ glUseProgram(m_handle); }
+
+	//these functions work on the current VAO
+	void EnableVertexArray(const char* name)
+	{ glEnableVertexAttribArray(GetAttributeLocation(name)); }
+
+	void SetVertexAttribPointer(const char* name, int size = 3, size_t stride = 0, size_t offset = 0)
+	{ glVertexAttribPointer(GetAttributeLocation(name), size, GL_FLOAT, GL_FALSE, stride, (void*)offset); }
+
+
+protected:
+	GLuint m_handle;
+
+	//Map of attribute names to locations
+	std::map<std::string, GLint> m_attribMap;
 };
 
 #endif

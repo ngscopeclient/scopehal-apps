@@ -52,5 +52,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Shader.h"
+#include "Program.h"
+#include "VertexArray.h"
+#include "VertexBuffer.h"
 
 #endif
