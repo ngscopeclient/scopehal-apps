@@ -112,40 +112,33 @@ void WaveformArea::on_realize()
 
 void WaveformArea::on_resize(int width, int height)
 {
+	m_width = width;
+	m_height = height;
+
 	//Reset camera configuration
 	glViewport(0, 0, width, height);
-	LogDebug("window is %d x %d\n", width, height);
+
+	//transformation matrix from screen to pixel coordinates
+	m_projection = glm::translate(
+		glm::scale(glm::mat4(1.0f), glm::vec3(2.0f / width, 2.0f / height, 1)),	//scale to window size
+		glm::vec3(-width/2, -height/2, 0)											//put origin at bottom left
+		);
 }
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 {
-	int width = get_allocated_width();
-	int height = get_allocated_height();
-
+	//Start with a blank window
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	//Configure our shader and array
+	//Configure our shader and projection matrix
 	m_defaultProgram.Bind();
+	m_defaultProgram.SetUniform(m_projection, "projection");
+
+	//Actually draw the waveform
 	m_defaultArray.Bind();
-
-	//use pixel coordinates
-	glm::mat4 projection =
-		glm::translate(
-			glm::scale(glm::mat4(1.0f), glm::vec3(2.0f / width, 2.0f / height, 1)),	//scale to window size
-			glm::vec3(-width/2, -height/2, 0)											//put origin at bottom left
-		);
-
-	int projIndex = glGetUniformLocation(m_defaultProgram, "projection");
-	LogDebug("projection is at index %d\n", projIndex);
-	glUniformMatrix4fv(projIndex, 1, GL_FALSE, glm::value_ptr(projection));
-
 	glDrawArrays(GL_LINE_STRIP, 0, 4096);
 
-	//Initialize projection
-	/*glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, width, 0, height);*/
-
+	//Sanity check
 	int err = glGetError();
 	if(err != 0)
 		LogNotice("err = %x\n", err);

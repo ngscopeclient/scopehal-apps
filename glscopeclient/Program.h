@@ -63,6 +63,20 @@ public:
 		return index;
 	}
 
+	GLint GetUniformLocation(const char* name)
+	{
+		//Check the cache rather than going to the GL driver if we can avoid it
+		auto pos = m_uniformMap.find(name);
+		if(pos != m_uniformMap.end())
+			return pos->second;
+
+		//Nope, ask and add to cache
+		GLint index = glGetUniformLocation(m_handle, name);
+		m_uniformMap[name] = index;
+		return index;
+	}
+
+
 	void Bind()
 	{ glUseProgram(m_handle); }
 
@@ -73,12 +87,15 @@ public:
 	void SetVertexAttribPointer(const char* name, int size = 3, size_t stride = 0, size_t offset = 0)
 	{ glVertexAttribPointer(GetAttributeLocation(name), size, GL_FLOAT, GL_FALSE, stride, (void*)offset); }
 
+	void SetUniform(glm::mat4 mat, const char* name)
+	{ glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 
 protected:
 	GLuint m_handle;
 
 	//Map of attribute names to locations
 	std::map<std::string, GLint> m_attribMap;
+	std::map<std::string, GLint> m_uniformMap;
 };
 
 #endif

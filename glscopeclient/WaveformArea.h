@@ -53,6 +53,11 @@ protected:
 
 	VertexArray m_defaultArray;
 	VertexBuffer m_defaultBuffer;
+
+	glm::mat4 m_projection;
+
+	int m_width;
+	int m_height;
 };
 
 #endif
