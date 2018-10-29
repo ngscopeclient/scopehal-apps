@@ -30,34 +30,17 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief  Implementation of Texture
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
-
-#define GL_GLEXT_PROTOTYPES
-
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
-
-#include <giomm.h>
-#include <gtkmm.h>
-
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
+#include "glscopeclient.h"
 #include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
 
-double GetTime();
+Texture::Texture()
+{
+	m_handle = 0;
+}
 
-#endif
+Texture::~Texture()
+{
+	glDeleteTextures(1, &m_handle);
+}

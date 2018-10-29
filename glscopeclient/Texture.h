@@ -30,34 +30,67 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief  Declaration of Texture
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#ifndef Texture_h
+#define Texture_h
 
-#define GL_GLEXT_PROTOTYPES
+/**
+	@brief A texture object
+ */
+class Texture
+{
+public:
+	Texture();
+	virtual ~Texture();
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
+	operator GLuint()
+	{ return m_handle; }
 
-#include <giomm.h>
-#include <gtkmm.h>
+	void Bind(GLenum target = GL_TEXTURE_2D)
+	{
+		LazyInit();
+		glBindTexture(target, m_handle);
+	}
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+	//we must be bound to use these functions
+	void SetData(
+		size_t width,
+		size_t height,
+		void* data = NULL,
+		GLenum format = GL_RGBA,
+		GLenum type = GL_UNSIGNED_BYTE,
+		GLint internalformat = GL_RGBA8,
+		GLenum target = GL_TEXTURE_2D,
+		int mipmap = 0
+		)
+	{
+		glTexImage2D(target, mipmap, internalformat, width, height, 0, format, type, data);
+	}
+	void AllocateMultisample(
+		size_t width,
+		size_t height,
+		int samples = 4,
+		GLint internalformat = GL_RGBA32F,
+		GLenum target = GL_TEXTURE_2D_MULTISAMPLE,
+		GLboolean fixed_sample = GL_FALSE
+		)
+	{
+		glTexImage2DMultisample(target, samples, internalformat, width, height, fixed_sample);
+	}
 
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
-#include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
+protected:
 
-double GetTime();
+	/**
+		@brief Lazily creates the FBO
+	 */
+	void LazyInit()
+	{
+		if(!m_handle)
+			glGenTextures(1, &m_handle);
+	}
+
+	GLuint	m_handle;
+};
 
 #endif

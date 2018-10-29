@@ -30,34 +30,45 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief  Declaration of Framebuffer
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#ifndef Framebuffer_h
+#define Framebuffer_h
 
-#define GL_GLEXT_PROTOTYPES
+/**
+	@brief A framebuffer object
+ */
+class Framebuffer
+{
+public:
+	Framebuffer();
+	virtual ~Framebuffer();
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
+	operator GLuint()
+	{ return m_handle; }
 
-#include <giomm.h>
-#include <gtkmm.h>
+	void Bind(GLenum target)
+	{
+		LazyInit();
+		glBindFramebuffer(target, m_handle);
+	}
 
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+	//we must be bound for this to work
+	bool IsComplete(GLenum target = GL_FRAMEBUFFER)
+	{ return glCheckFramebufferStatus(target) == GL_FRAMEBUFFER_COMPLETE; }
 
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
-#include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
+protected:
 
-double GetTime();
+	/**
+		@brief Lazily creates the FBO
+	 */
+	void LazyInit()
+	{
+		if(!m_handle)
+			glGenFramebuffers(1, &m_handle);
+	}
+
+	GLuint	m_handle;
+};
 
 #endif

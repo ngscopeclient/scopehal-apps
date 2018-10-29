@@ -5,9 +5,11 @@ link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 ###############################################################################
 #C++ compilation
 add_executable(glscopeclient
-	Shader.cpp
+	Framebuffer.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
+	Shader.cpp
+	Texture.cpp
 	VertexArray.cpp
 	VertexBuffer.cpp
 	WaveformArea.cpp

@@ -213,3 +213,22 @@ int main(int argc, char* argv[])
 	app->run();
 	return 0;
 }
+
+double GetTime()
+{
+#ifdef _WIN32
+	uint64_t tm;
+	static uint64_t freq = 0;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&tm));
+	double ret = tm;
+	if(freq == 0)
+		QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&freq));
+	return ret / freq;
+#else
+	timespec t;
+	clock_gettime(CLOCK_REALTIME,&t);
+	double d = static_cast<double>(t.tv_nsec) / 1E9f;
+	d += t.tv_sec;
+	return d;
+#endif
+}

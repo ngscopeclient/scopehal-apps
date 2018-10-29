@@ -46,13 +46,10 @@ protected:
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 
-	//DEBUG: waveform data
-	//std::vector<float> m_waveformData;
-
 	Program m_defaultProgram;
 
-	//VertexArray m_defaultArray;
-	//VertexBuffer m_defaultBuffer;
+	Framebuffer m_framebuffer;
+	Texture m_fboTexture;
 
 	std::vector<VertexArray*> m_traceVAOs;
 	std::vector<VertexBuffer*> m_traceVBOs;
