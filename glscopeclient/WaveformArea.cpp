@@ -177,28 +177,27 @@ void WaveformArea::on_realize()
 
 	dt = GetTime() - start;
 	start = GetTime();
-	LogDebug("Trigger: %.3f ms (%d trigger points found)\n", dt * 1000, trigger_positions.size());
+	size_t nwaves = trigger_positions.size();
+	LogDebug("Trigger: %.3f ms (%d trigger points found)\n", dt * 1000, nwaves);
 
-	float* verts = new float[BLOCK_SIZE*2*2];
-
-	//Create VAOs/VBOs
-	//TODO: this preprocessing should be optimized and/or moved to a shader
-	for(auto base : trigger_positions)
+	//Create the geometry
+	const int POINTS_PER_TRI = 2;
+	const int TRIS_PER_SAMPLE = 2;
+	const int waveform_size = BLOCK_SIZE * POINTS_PER_TRI * TRIS_PER_SAMPLE;
+	double lheight = 1.0f / (65535 * 2);	//one ADC code
+	float* verts = new float[nwaves * waveform_size];
+	#pragma omp parallel for
+	for(size_t i=0; i<nwaves; i++)
 	{
-		VertexArray* va = new VertexArray;
-		va->Bind();
-		VertexBuffer* vb = new VertexBuffer;
-		vb->Bind();
+		size_t base = trigger_positions[i];
+		size_t voff = i * waveform_size;
 
-		//Create geometry
-		double lheight = 1.0f / (65535 * 2);	//one ADC code
-		size_t voff = 0;
 		for(int j=0; j<BLOCK_SIZE; j++)
 		{
 			float y = waveform[base + j];
 
-			//Rather than using a generalized line drawing algorithm, we can cheat!
-			//Add some height to the samples
+			//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
+			//always left to right, sorted, and never vertical. Just add some height to the samples!
 			verts[voff + 0] = j;
 			verts[voff + 1] = y + lheight;
 
@@ -207,9 +206,23 @@ void WaveformArea::on_realize()
 
 			voff += 4;
 		}
+	}
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
+
+	//Create VAOs/VBOs
+	//TODO: this preprocessing should be optimized and/or moved to a shader
+	for(size_t i=0; i<nwaves; i++)
+	{
+		VertexArray* va = new VertexArray;
+		va->Bind();
+		VertexBuffer* vb = new VertexBuffer;
+		vb->Bind();
 
 		//Set the pointers
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts + i*waveform_size, GL_STATIC_DRAW);
 		m_defaultProgram.EnableVertexArray("vert");
 		m_defaultProgram.SetVertexAttribPointer("vert", 2);
 
@@ -217,15 +230,15 @@ void WaveformArea::on_realize()
 		m_traceVAOs.push_back(va);
 		m_traceVBOs.push_back(vb);
 	}
+
 	dt = GetTime() - start;
 	start = GetTime();
-	size_t nbufs = m_traceVAOs.size();
-	size_t nsamps = nbufs * BLOCK_SIZE;
-	LogDebug("Created %d buffers (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
-		nbufs,
+	size_t nsamps = nwaves * BLOCK_SIZE;
+	LogDebug("Created %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
+		nwaves,
 		nsamps,
 		dt * 1000,
-		nbufs / (1e3 * dt),
+		nwaves / (1e3 * dt),
 		nsamps / (1e6 * dt)
 		);
 
