@@ -137,7 +137,7 @@ void WaveformArea::on_realize()
 	start = GetTime();
 	LogDebug("File read: %.3f ms\n", dt * 1000);
 
-	//Crunch the ADC data
+	//Convert the ADC data to floating point samples
 	vector<float> waveform;
 	waveform.resize(len/2);
 	size_t nsamples = len/2;
@@ -153,18 +153,11 @@ void WaveformArea::on_realize()
 	start = GetTime();
 	LogDebug("Floating point conversion: %.3f ms\n", dt * 1000);
 
-	float* verts = new float[BLOCK_SIZE*2*2];
-
-	//Create VAOs/VBOs
-	//TODO: this preprocessing should be optimized and/or moved to a shader
+	//Find trigger positions (not needed with a real scope either)
+	vector<size_t> trigger_positions;
 	size_t ptr = 0;
-	for(int i=0; i<nblocks; i++)
+	while(ptr < nsamples)
 	{
-		VertexArray* va = new VertexArray;
-		va->Bind();
-		VertexBuffer* vb = new VertexBuffer;
-		vb->Bind();
-
 		//Skip samples until we hit a rising-edge trigger point
 		//Wait until we go below the trigger, then back up
 		float thresh = 0.0007;
@@ -175,9 +168,30 @@ void WaveformArea::on_realize()
 		if((ptr + BLOCK_SIZE) >= nsamples)
 			break;
 
+		//Add the start of this waveform to the trigger array
+		trigger_positions.push_back(ptr);
+
+		//Skip this waveform
+		ptr += BLOCK_SIZE;
+	}
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Trigger: %.3f ms (%d trigger points found)\n", dt * 1000, trigger_positions.size());
+
+	float* verts = new float[BLOCK_SIZE*2*2];
+
+	//Create VAOs/VBOs
+	//TODO: this preprocessing should be optimized and/or moved to a shader
+	for(auto base : trigger_positions)
+	{
+		VertexArray* va = new VertexArray;
+		va->Bind();
+		VertexBuffer* vb = new VertexBuffer;
+		vb->Bind();
+
 		//Create geometry
 		double lheight = 1.0f / (65535 * 2);	//one ADC code
-		size_t base = ptr;
 		size_t voff = 0;
 		for(int j=0; j<BLOCK_SIZE; j++)
 		{
@@ -193,7 +207,6 @@ void WaveformArea::on_realize()
 
 			voff += 4;
 		}
-		ptr += BLOCK_SIZE;
 
 		//Set the pointers
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts, GL_STATIC_DRAW);
