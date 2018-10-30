@@ -73,6 +73,8 @@ public:
 		//Nope, ask and add to cache
 		GLint index = glGetUniformLocation(m_handle, name);
 		m_uniformMap[name] = index;
+		if(index < 0)
+			LogError("Uniform %s couldn't be found\n", name);
 		return index;
 	}
 

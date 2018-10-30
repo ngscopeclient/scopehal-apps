@@ -36,6 +36,38 @@
 #include "WaveformArea.h"
 #include <random>
 
+/*
+dvec2 nvec;
+
+//First point in the line? Our normal is perpendicular to the vector from us to the next point
+if(j == 0)
+{
+	dvec2 delta = points[1] - points[0];
+	nvec = normalize(dvec2(delta.y, -delta.x));
+}
+
+//Last point? Same deal
+else if(j == (BLOCK_SIZE-1))
+{
+	dvec2 delta = points[j] - points[j-1];
+	nvec = normalize(dvec2(delta.y, -delta.x));
+}
+
+//Nope, we're a midpoint.
+//Use the midpoint of the two normals
+else
+{
+	dvec2 delta1 = normalize(points[j] - points[j-1]);
+	dvec2 delta2 = normalize(points[j+1] - points[j]);
+	dvec2 tangent = normalize(delta1 + delta2);			//tangent to the ideal lines
+	nvec = dvec2(-tangent.y, tangent.x);
+}
+
+//Offset start/end positions by the normal
+dvec2 p1 = points[j] + (nvec * hwidth);
+dvec2 p2 = points[j] - (nvec * hwidth);
+*/
+
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -68,6 +100,8 @@ void WaveformArea::on_realize()
 	//Do global initialization (independent of camera settings etc)
 	glClearColor(0, 0, 0, 1.0);
 
+	double start = GetTime();
+
 	//Create shader objects
 	VertexShader vs;
 	FragmentShader fs;
@@ -86,39 +120,44 @@ void WaveformArea::on_realize()
 		exit(1);
 	}
 
-	//Normal distribution
-	random_device rd{};
-    minstd_rand gen{rd()};
-    uniform_real_distribution<> dist{-0.75, 0.75};
+	double dt = GetTime() - start;
+	LogDebug("Shader load: %.3f ms\n", dt * 1000);
 
 	//Load the ADC data
-	vector<float> waveform;
+	start = GetTime();
 	FILE* fp = fopen("/tmp/adc-dump.bin", "rb");
+	fseek(fp, 0, SEEK_END);
+	long len = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	vector<uint8_t> rawdata;
+	rawdata.resize(len);
+	fread(&rawdata[0], 1, len, fp);
+	fclose(fp);
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("File read: %.3f ms\n", dt * 1000);
+
+	//Crunch the ADC data
+	vector<float> waveform;
+	waveform.resize(len/2);
+	size_t nsamples = len/2;
 	int n = 0;
-	while(!feof(fp))
+	#pragma omp parallel for
+	for(size_t i=0; i<rawdata.size(); i += 2)
 	{
-		int c1 = fgetc(fp);
-		int c2 = fgetc(fp);
-
-		float code_raw = ((c1 << 8) | c2);
-
-		//Add Gaussian noise with an RMS amplitude of one ADC code.
-		//This is an antialiasing trick we use to make low-precision samples not "stack up"
-		//and doesn't cause any significant loss of accuracy. We only do this to the display dataset,
-		//so measurements won't be impacted.
-		code_raw += dist(gen);
-
-		waveform.push_back(code_raw / 65535.0f);
+		float code_raw = ((rawdata[i] << 8) | rawdata[i+1]);
+		waveform[i/2] = code_raw / 65535.0f;
 	}
-	int nblocks = waveform.size() / BLOCK_SIZE;
+	int nblocks = nsamples / BLOCK_SIZE;
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Floating point conversion: %.3f ms\n", dt * 1000);
 
-	float* verts = new float[BLOCK_SIZE*3*2];
+	float* verts = new float[BLOCK_SIZE*2*2];
 
 	//Create VAOs/VBOs
 	//TODO: this preprocessing should be optimized and/or moved to a shader
 	size_t ptr = 0;
-	vector<dvec2> points;
-	points.resize(BLOCK_SIZE);
 	for(int i=0; i<nblocks; i++)
 	{
 		VertexArray* va = new VertexArray;
@@ -127,80 +166,55 @@ void WaveformArea::on_realize()
 		vb->Bind();
 
 		//Skip samples until we hit a rising-edge trigger point
-		//First, wait until we go below the trigger
+		//Wait until we go below the trigger, then back up
 		float thresh = 0.0007;
-		for(; ptr < waveform.size() && waveform[ptr] > thresh; ptr ++)
+		for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
 		{}
-
-		//Then wait until we hit it
-		for(; ptr < waveform.size() && waveform[ptr] < thresh; ptr ++)
+		for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
 		{}
-
-		//If at end of buffer, stop
-		if((ptr + BLOCK_SIZE) >= waveform.size())
+		if((ptr + BLOCK_SIZE) >= nsamples)
 			break;
 
-		//Create a vec2f for each of the points in the block
-		float xscale = 1.0f;
-		float yscale = 1000000.0f;
-		float yoff = -50;
-		for(int j=0; j<BLOCK_SIZE; j++)
-			points[j] = dvec2(50 + j * xscale, yoff + waveform[ptr++] * yscale);
-
 		//Create geometry
-		double hwidth = 1;
+		double lheight = 1.0f / (65535 * 2);	//one ADC code
+		size_t base = ptr;
+		size_t voff = 0;
 		for(int j=0; j<BLOCK_SIZE; j++)
 		{
-			dvec2 nvec;
+			float y = waveform[base + j];
 
-			//First point in the line? Our normal is perpendicular to the vector from us to the next point
-			if(j == 0)
-			{
-				dvec2 delta = points[1] - points[0];
-				nvec = normalize(dvec2(delta.y, -delta.x));
-			}
+			//Rather than using a generalized line drawing algorithm, we can cheat!
+			//Add some height to the samples
+			verts[voff + 0] = j;
+			verts[voff + 1] = y + lheight;
 
-			//Last point? Same deal
-			else if(j == (BLOCK_SIZE-1))
-			{
-				dvec2 delta = points[j] - points[j-1];
-				nvec = normalize(dvec2(delta.y, -delta.x));
-			}
+			verts[voff + 2] = j;
+			verts[voff + 3] = y - lheight;
 
-			//Nope, we're a midpoint.
-			//Use the midpoint of the two normals
-			else
-			{
-				dvec2 delta1 = normalize(points[j] - points[j-1]);
-				dvec2 delta2 = normalize(points[j+1] - points[j]);
-				dvec2 tangent = normalize(delta1 + delta2);			//tangent to the ideal lines
-				nvec = dvec2(-tangent.y, tangent.x);
-			}
-
-			//Offset start/end positions by the normal
-			dvec2 p1 = points[j] + (nvec * hwidth);
-			dvec2 p2 = points[j] - (nvec * hwidth);
-
-			//Add to the geometry array
-			verts[j*6 + 0] = p1.x;
-			verts[j*6 + 1] = p1.y;
-			verts[j*6 + 2] = 0;
-
-			verts[j*6 + 3] = p2.x;
-			verts[j*6 + 4] = p2.y;
-			verts[j*6 + 5] = 0;
+			voff += 4;
 		}
+		ptr += BLOCK_SIZE;
 
 		//Set the pointers
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3*2*BLOCK_SIZE, verts, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts, GL_STATIC_DRAW);
 		m_defaultProgram.EnableVertexArray("vert");
-		m_defaultProgram.SetVertexAttribPointer("vert");
+		m_defaultProgram.SetVertexAttribPointer("vert", 2);
 
 		//Save buffers
 		m_traceVAOs.push_back(va);
 		m_traceVBOs.push_back(vb);
 	}
-	LogDebug("%d total buffers created\n", (int)m_traceVAOs.size());
+	dt = GetTime() - start;
+	start = GetTime();
+	size_t nbufs = m_traceVAOs.size();
+	size_t nsamps = nbufs * BLOCK_SIZE;
+	LogDebug("Created %d buffers (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
+		nbufs,
+		nsamps,
+		dt * 1000,
+		nbufs / (1e3 * dt),
+		nsamps / (1e6 * dt)
+		);
 
 	delete[] verts;
 }
@@ -210,6 +224,8 @@ void WaveformArea::on_realize()
 
 void WaveformArea::on_resize(int width, int height)
 {
+	double start = GetTime();
+
 	m_width = width;
 	m_height = height;
 
@@ -224,7 +240,7 @@ void WaveformArea::on_resize(int width, int height)
 
 	//Initialize the color buffer
 	//TODO: make MSAA config not hard coded
-	const bool multisample = true;
+	const bool multisample = false;//true;
 	const int numSamples = 4;
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 	if(multisample)
@@ -246,11 +262,20 @@ void WaveformArea::on_resize(int width, int height)
 	int err = glGetError();
 	if(err != 0)
 		LogNotice("resize, err = %x\n", err);
+
+	double dt = GetTime() - start;
+	LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 {
+	static double last = -1;
+
 	double start = GetTime();
+	double dt = start - last;
+	if(last > 0)
+		LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+	last = start;
 
 	//Something funky is going on. Why do we get correct results blitting to framebuffer ONE,
 	//and nothing showing up when we blit to framebuffer ZERO?
@@ -265,7 +290,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 
 	//Set up blending
 	glEnable(GL_BLEND);
-	glEnable(GL_MULTISAMPLE);
+	//glEnable(GL_MULTISAMPLE);
+	glDisable(GL_MULTISAMPLE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
@@ -274,22 +300,19 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	//Configure our shader and projection matrix
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
+	m_defaultProgram.SetUniform(50.0f, "xoff");
+	m_defaultProgram.SetUniform(1.0f, "xscale");
+	m_defaultProgram.SetUniform(-50.0f, "yoff");
+	m_defaultProgram.SetUniform(1000000.0f, "yscale");
+
+	//Set the color decay value (constant for now)
+	m_defaultProgram.SetUniform(0.002f, "alpha");
 
 	//Actually draw the waveform
 	for(int i=0; i<m_traceVAOs.size(); i++)
 	{
 		m_traceVAOs[i]->Bind();
 		m_traceVBOs[i]->Bind();
-
-		float fage = 1.0f - (i * 1.0f / m_traceVAOs.size());
-
-		//Set the color decay value (quadratic decay with current trace extra bright)
-		float alpha = 1;
-		/*if(i > 0)
-			alpha = pow(fage, 2) * 0.01f;*/
-
-		alpha = 0.002f;
-		m_defaultProgram.SetUniform(alpha, "alpha");
 
 		//Draw it
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*BLOCK_SIZE);
@@ -309,8 +332,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	if(err != 0)
 		LogNotice("err = %x\n", err);
 
-	double dt = GetTime() - start;
-	LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
-
+	queue_draw();
 	return true;
 }
