@@ -37,12 +37,18 @@
 
 /**
 	@brief An OpenGL VAO
+
+	No virtual functions, must be a POD datatype
  */
 class VertexArray
 {
 public:
-	VertexArray();
-	virtual ~VertexArray();
+	VertexArray()
+	: m_handle(0)
+	{}
+
+	~VertexArray()
+	{ glDeleteVertexArrays(1, &m_handle); }
 
 	operator GLuint() const
 	{ return m_handle; }
@@ -52,6 +58,8 @@ public:
 		LazyInit();
 		glBindVertexArray(m_handle);
 	}
+
+	static void BulkInit(std::vector<VertexArray*>& arr);
 
 protected:
 

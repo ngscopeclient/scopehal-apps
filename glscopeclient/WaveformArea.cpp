@@ -212,35 +212,43 @@ void WaveformArea::on_realize()
 	start = GetTime();
 	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
 
-	//Create VAOs/VBOs
-	//TODO: this preprocessing should be optimized and/or moved to a shader
+	//Create the VAOs and VBOs
 	for(size_t i=0; i<nwaves; i++)
 	{
-		VertexArray* va = new VertexArray;
-		va->Bind();
-		VertexBuffer* vb = new VertexBuffer;
-		vb->Bind();
+		m_traceVAOs.push_back(new VertexArray);
+		m_traceVBOs.push_back(new VertexBuffer);
+	}
+	VertexArray::BulkInit(m_traceVAOs);
+	VertexBuffer::BulkInit(m_traceVBOs);
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("VAO/VBO creation: %.3f ms\n", dt * 1000);
+
+	//Download waveform data
+	for(size_t i=0; i<nwaves; i++)
+	{
+		m_traceVAOs[i]->Bind();
+		m_traceVBOs[i]->Bind();
 
 		//Set the pointers
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts + i*waveform_size, GL_STATIC_DRAW);
 		m_defaultProgram.EnableVertexArray("vert");
 		m_defaultProgram.SetVertexAttribPointer("vert", 2);
-
-		//Save buffers
-		m_traceVAOs.push_back(va);
-		m_traceVBOs.push_back(vb);
 	}
 
 	dt = GetTime() - start;
 	start = GetTime();
-	size_t nsamps = nwaves * BLOCK_SIZE;
-	LogDebug("Created %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
+	LogDebug("Waveform download: %.3f ms\n", dt * 1000);
+
+	/*size_t nsamps = nwaves * BLOCK_SIZE;
+	LogDebug("Downloaded %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
 		nwaves,
 		nsamps,
 		dt * 1000,
 		nwaves / (1e3 * dt),
 		nsamps / (1e6 * dt)
-		);
+		);*/
 
 	delete[] verts;
 }

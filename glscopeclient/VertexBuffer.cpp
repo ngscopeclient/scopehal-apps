@@ -35,12 +35,16 @@
 #include "glscopeclient.h"
 #include "VertexBuffer.h"
 
-VertexBuffer::VertexBuffer()
-{
-	m_handle = 0;
-}
+using namespace std;
 
-VertexBuffer::~VertexBuffer()
+void VertexBuffer::BulkInit(vector<VertexBuffer*>& arr)
 {
-	glDeleteBuffers(1, &m_handle);
+	size_t sz = arr.size();
+	GLuint* p = new GLuint[sz];
+
+	glGenBuffers(sz, p);
+	for(size_t i=0; i<sz; i++)
+		arr[i]->m_handle = p[i];
+
+	delete[] p;
 }

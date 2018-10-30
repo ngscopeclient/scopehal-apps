@@ -35,12 +35,17 @@
 #include "glscopeclient.h"
 #include "VertexArray.h"
 
-VertexArray::VertexArray()
+using namespace std;
+
+void VertexArray::BulkInit(vector<VertexArray*>& arr)
 {
-	m_handle = 0;
+	size_t sz = arr.size();
+	GLuint* p = new GLuint[sz];
+
+	glGenVertexArrays(sz, p);
+	for(size_t i=0; i<sz; i++)
+		arr[i]->m_handle = p[i];
+
+	delete[] p;
 }
 
-VertexArray::~VertexArray()
-{
-	glDeleteVertexArrays(1, &m_handle);
-}

@@ -36,13 +36,19 @@
 #define VertexBuffer_h
 
 /**
-	@brief An OpenGL VBO
+	@brief An OpenGL VBO.
+
+	No virtual functions allowed, must be a POD type.
  */
 class VertexBuffer
 {
 public:
-	VertexBuffer();
-	virtual ~VertexBuffer();
+	VertexBuffer()
+	: m_handle(0)
+	{}
+
+	~VertexBuffer()
+	{ glDeleteBuffers(1, &m_handle); }
 
 	operator GLuint() const
 	{ return m_handle; }
@@ -52,6 +58,8 @@ public:
 		LazyInit();
 		glBindBuffer(GL_ARRAY_BUFFER, m_handle);
 	}
+
+	static void BulkInit(std::vector<VertexBuffer*>& arr);
 
 protected:
 
