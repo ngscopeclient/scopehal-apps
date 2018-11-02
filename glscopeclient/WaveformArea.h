@@ -51,13 +51,24 @@ protected:
 	Framebuffer m_framebuffer;
 	Texture m_fboTexture;
 
-	std::vector<VertexArray*> m_traceVAOs;
 	std::vector<VertexBuffer*> m_traceVBOs;
+	std::vector<VertexArray*> m_traceVAOs;
 
 	glm::mat4 m_projection;
 
 	int m_width;
 	int m_height;
+	int m_numWaveforms;
+
+	double m_frameTime;
+	long m_frameCount;
+
+	//Final rendering pass:
+	void InitializeColormapPass();
+	VertexArray m_colormapVAO;
+	VertexBuffer m_colormapVBO;
+	Program m_colormapProgram;
+
 };
 
 #endif

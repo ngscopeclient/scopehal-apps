@@ -68,18 +68,94 @@ dvec2 p1 = points[j] + (nvec * hwidth);
 dvec2 p2 = points[j] - (nvec * hwidth);
 */
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 128
 
 using namespace std;
 using namespace glm;
 
+/*
+static const RGBQUAD g_eyeColorScale[256] =
+{
+	{   0,   0,   0, 0   },     {   4,   2,  20, 255 },     {   7,   4,  35, 255 },     {   9,   5,  45, 255 },
+    {  10,   6,  53, 255 },     {  11,   7,  60, 255 },     {  13,   7,  66, 255 },     {  14,   8,  71, 255 },
+    {  14,   8,  75, 255 },     {  16,  10,  80, 255 },     {  16,  10,  85, 255 },     {  17,  10,  88, 255 },
+    {  18,  11,  92, 255 },     {  19,  11,  95, 255 },     {  19,  12,  98, 255 },     {  20,  12, 102, 255 },
+    {  20,  13, 104, 255 },     {  20,  13, 107, 255 },     {  21,  13, 110, 255 },     {  21,  13, 112, 255 },
+    {  23,  14, 114, 255 },     {  23,  14, 117, 255 },     {  23,  14, 118, 255 },     {  23,  14, 121, 255 },
+    {  23,  15, 122, 255 },     {  24,  15, 124, 255 },     {  24,  15, 126, 255 },     {  24,  14, 127, 255 },
+    {  25,  15, 129, 255 },     {  25,  15, 130, 255 },     {  25,  16, 131, 255 },     {  26,  16, 132, 255 },
+    {  26,  15, 134, 255 },     {  27,  16, 136, 255 },     {  26,  16, 136, 255 },     {  26,  16, 137, 255 },
+    {  27,  16, 138, 255 },     {  26,  16, 138, 255 },     {  26,  16, 140, 255 },     {  27,  16, 141, 255 },
+    {  27,  16, 141, 255 },     {  28,  17, 142, 255 },     {  27,  17, 142, 255 },     {  27,  16, 143, 255 },
+    {  28,  17, 144, 255 },     {  28,  17, 144, 255 },     {  28,  17, 144, 255 },     {  28,  17, 144, 255 },
+    {  28,  17, 144, 255 },     {  28,  17, 145, 255 },     {  28,  17, 145, 255 },     {  28,  17, 145, 255 },
+    {  28,  17, 145, 255 },     {  30,  17, 144, 255 },     {  32,  17, 143, 255 },     {  34,  17, 142, 255 },
+    {  35,  16, 140, 255 },     {  37,  17, 139, 255 },     {  38,  16, 138, 255 },     {  40,  17, 136, 255 },
+    {  42,  16, 136, 255 },     {  44,  16, 134, 255 },     {  46,  17, 133, 255 },     {  47,  16, 133, 255 },
+    {  49,  16, 131, 255 },     {  51,  16, 130, 255 },     {  53,  17, 129, 255 },     {  54,  16, 128, 255 },
+    {  56,  16, 127, 255 },     {  58,  16, 126, 255 },     {  60,  16, 125, 255 },     {  62,  16, 123, 255 },
+    {  63,  16, 122, 255 },     {  65,  16, 121, 255 },     {  67,  16, 120, 255 },     {  69,  16, 119, 255 },
+    {  70,  16, 117, 255 },     {  72,  16, 116, 255 },     {  74,  16, 115, 255 },     {  75,  15, 114, 255 },
+    {  78,  16, 113, 255 },     {  79,  16, 112, 255 },     {  81,  16, 110, 255 },     {  83,  15, 110, 255 },
+    {  84,  15, 108, 255 },     {  86,  16, 108, 255 },     {  88,  15, 106, 255 },     {  90,  15, 105, 255 },
+    {  91,  16, 103, 255 },     {  93,  15, 103, 255 },     {  95,  15, 102, 255 },     {  96,  15, 100, 255 },
+    {  98,  15, 100, 255 },     { 100,  15,  98, 255 },     { 101,  15,  97, 255 },     { 104,  15,  96, 255 },
+    { 106,  15,  95, 255 },     { 107,  15,  94, 255 },     { 109,  14,  92, 255 },     { 111,  14,  92, 255 },
+    { 112,  15,  90, 255 },     { 114,  14,  89, 255 },     { 116,  15,  87, 255 },     { 118,  14,  87, 255 },
+    { 119,  14,  86, 255 },     { 121,  14,  85, 255 },     { 123,  14,  83, 255 },     { 124,  14,  83, 255 },
+    { 126,  15,  81, 255 },     { 128,  14,  80, 255 },     { 130,  14,  78, 255 },     { 132,  14,  77, 255 },
+    { 134,  14,  76, 255 },     { 137,  14,  74, 255 },     { 139,  14,  73, 255 },     { 141,  14,  71, 255 },
+    { 143,  13,  70, 255 },     { 146,  13,  68, 255 },     { 148,  14,  67, 255 },     { 150,  13,  65, 255 },
+    { 153,  14,  64, 255 },     { 155,  14,  62, 255 },     { 157,  13,  61, 255 },     { 159,  13,  60, 255 },
+    { 162,  13,  58, 255 },     { 165,  13,  56, 255 },     { 166,  13,  55, 255 },     { 169,  13,  54, 255 },
+    { 171,  13,  52, 255 },     { 173,  13,  50, 255 },     { 176,  13,  48, 255 },     { 179,  12,  47, 255 },
+    { 181,  12,  45, 255 },     { 183,  12,  45, 255 },     { 185,  12,  43, 255 },     { 188,  13,  41, 255 },
+    { 190,  12,  40, 255 },     { 192,  12,  38, 255 },     { 194,  13,  37, 255 },     { 197,  12,  35, 255 },
+    { 199,  12,  33, 255 },     { 201,  12,  32, 255 },     { 204,  12,  30, 255 },     { 206,  12,  29, 255 },
+    { 209,  12,  28, 255 },     { 211,  12,  26, 255 },     { 213,  12,  25, 255 },     { 216,  12,  23, 255 },
+    { 218,  11,  22, 255 },     { 221,  12,  20, 255 },     { 223,  11,  18, 255 },     { 224,  11,  17, 255 },
+    { 227,  11,  16, 255 },     { 230,  11,  14, 255 },     { 231,  11,  12, 255 },     { 234,  12,  11, 255 },
+    { 235,  13,  10, 255 },     { 235,  15,  11, 255 },     { 235,  17,  11, 255 },     { 235,  19,  11, 255 },
+    { 236,  21,  10, 255 },     { 236,  23,  10, 255 },     { 237,  24,  10, 255 },     { 237,  26,  10, 255 },
+    { 236,  28,   9, 255 },     { 237,  30,  10, 255 },     { 237,  32,   9, 255 },     { 238,  34,   9, 255 },
+    { 238,  35,   9, 255 },     { 238,  38,   8, 255 },     { 239,  39,   9, 255 },     { 239,  42,   8, 255 },
+    { 240,  44,   9, 255 },     { 240,  45,   8, 255 },     { 240,  47,   8, 255 },     { 240,  49,   8, 255 },
+    { 241,  51,   7, 255 },     { 241,  53,   8, 255 },     { 241,  55,   7, 255 },     { 241,  57,   7, 255 },
+    { 242,  58,   7, 255 },     { 242,  60,   7, 255 },     { 242,  62,   6, 255 },     { 243,  64,   6, 255 },
+    { 244,  66,   6, 255 },     { 243,  68,   5, 255 },     { 244,  69,   6, 255 },     { 244,  71,   6, 255 },
+    { 245,  74,   6, 255 },     { 245,  76,   5, 255 },     { 245,  79,   5, 255 },     { 246,  82,   5, 255 },
+    { 246,  85,   5, 255 },     { 247,  87,   4, 255 },     { 247,  90,   4, 255 },     { 248,  93,   3, 255 },
+    { 249,  96,   4, 255 },     { 248,  99,   3, 255 },     { 249, 102,   3, 255 },     { 250, 105,   3, 255 },
+    { 250, 107,   2, 255 },     { 250, 110,   2, 255 },     { 251, 113,   2, 255 },     { 252, 115,   1, 255 },
+    { 252, 118,   2, 255 },     { 253, 121,   1, 255 },     { 253, 124,   1, 255 },     { 253, 126,   1, 255 },
+    { 254, 129,   0, 255 },     { 255, 132,   0, 255 },     { 255, 135,   0, 255 },     { 255, 138,   1, 255 },
+    { 254, 142,   3, 255 },     { 253, 145,   4, 255 },     { 253, 148,   6, 255 },     { 252, 151,   9, 255 },
+    { 252, 155,  11, 255 },     { 251, 158,  12, 255 },     { 251, 161,  14, 255 },     { 250, 163,  15, 255 },
+    { 251, 165,  16, 255 },     { 250, 167,  17, 255 },     { 250, 169,  18, 255 },     { 250, 170,  19, 255 },
+    { 250, 172,  20, 255 },     { 249, 174,  21, 255 },     { 249, 177,  22, 255 },     { 248, 178,  23, 255 },
+    { 248, 180,  24, 255 },     { 247, 182,  25, 255 },     { 247, 184,  26, 255 },     { 247, 185,  27, 255 },
+    { 247, 188,  27, 255 },     { 247, 191,  26, 255 },     { 248, 194,  25, 255 },     { 249, 197,  24, 255 },
+    { 248, 200,  22, 255 },     { 249, 203,  21, 255 },     { 249, 205,  20, 255 },     { 250, 209,  18, 255 },
+    { 250, 212,  18, 255 },     { 250, 214,  16, 255 },     { 251, 217,  15, 255 },     { 251, 221,  14, 255 },
+    { 251, 223,  13, 255 },     { 251, 226,  12, 255 },     { 252, 229,  11, 255 },     { 253, 231,   9, 255 },
+    { 253, 234,   9, 255 },     { 253, 237,   7, 255 },     { 253, 240,   6, 255 },     { 253, 243,   5, 255 },
+    { 254, 246,   4, 255 },     { 254, 248,   3, 255 },     { 255, 251,   1, 255 },     { 255, 254,   1, 255 }
+};
+*/
+
 WaveformArea::WaveformArea()
 {
+	m_frameTime = 0;
+	m_frameCount = 0;
+
 	set_has_alpha();
 }
 
 WaveformArea::~WaveformArea()
 {
+	double tavg = m_frameTime / m_frameCount;
+	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
+
 	for(auto a : m_traceVAOs)
 		delete a;
 	for(auto b : m_traceVBOs)
@@ -103,17 +179,17 @@ void WaveformArea::on_realize()
 	double start = GetTime();
 
 	//Create shader objects
-	VertexShader vs;
-	FragmentShader fs;
-	if(!vs.Load("default-vertex.glsl") || !fs.Load("default-fragment.glsl"))
+	VertexShader dvs;
+	FragmentShader dfs;
+	if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
 	{
 		LogError("failed to load default shaders, aborting");
 		exit(1);
 	}
 
-	//Create the program
-	m_defaultProgram.Add(vs);
-	m_defaultProgram.Add(fs);
+	//Create the programs
+	m_defaultProgram.Add(dvs);
+	m_defaultProgram.Add(dfs);
 	if(!m_defaultProgram.Link())
 	{
 		LogError("failed to link shader program, aborting");
@@ -122,9 +198,16 @@ void WaveformArea::on_realize()
 
 	double dt = GetTime() - start;
 	LogDebug("Shader load: %.3f ms\n", dt * 1000);
-
-	//Load the ADC data
 	start = GetTime();
+
+	InitializeColormapPass();
+
+	dt = GetTime() - start;
+	LogDebug("Setup for colormap pass: %.3f ms\n", dt * 1000);
+	start = GetTime();
+
+	/*
+	//Load the ADC data
 	FILE* fp = fopen("/tmp/adc-dump.bin", "rb");
 	fseek(fp, 0, SEEK_END);
 	long len = ftell(fp);
@@ -152,19 +235,47 @@ void WaveformArea::on_realize()
 	dt = GetTime() - start;
 	start = GetTime();
 	LogDebug("Floating point conversion: %.3f ms\n", dt * 1000);
+	*/
+
+	FILE* fp = fopen("/home/azonenberg/Downloads/waveforms/312M500_prbs_12G5_10M.bin", "rb");
+	fseek(fp, 0, SEEK_END);
+	size_t len = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	size_t nsamples = len / sizeof(float);
+	vector<float> waveform;
+	waveform.resize(nsamples);
+	fread(&waveform[0], sizeof(float), nsamples, fp);
+	fclose(fp);
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("File read: %.3f ms\n", dt * 1000);
 
 	//Find trigger positions (not needed with a real scope either)
 	vector<size_t> trigger_positions;
-	size_t ptr = 0;
+	size_t ptr = 1;
 	while(ptr < nsamples)
 	{
+		float thresh = 0.0;
+
+		/*
 		//Skip samples until we hit a rising-edge trigger point
 		//Wait until we go below the trigger, then back up
-		float thresh = 0.0007;
 		for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
 		{}
 		for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
 		{}
+		*/
+
+		//Both edge thresholding
+		for(; ptr<nsamples; ptr++)
+		{
+			if(waveform[ptr-1] < thresh && waveform[ptr] > thresh)
+				break;
+			if(waveform[ptr-1] > thresh && waveform[ptr] < thresh)
+				break;
+		}
+
 		if((ptr + BLOCK_SIZE) >= nsamples)
 			break;
 
@@ -173,18 +284,36 @@ void WaveformArea::on_realize()
 
 		//Skip this waveform
 		ptr += BLOCK_SIZE;
+
+		//DEBUG: cap at 1K waveforms
+		if(trigger_positions.size() >= 5000)
+			break;
 	}
+	m_numWaveforms = trigger_positions.size();
 
 	dt = GetTime() - start;
 	start = GetTime();
 	size_t nwaves = trigger_positions.size();
 	LogDebug("Trigger: %.3f ms (%d trigger points found)\n", dt * 1000, nwaves);
 
+	//Create the VAOs and VBOs
+	m_traceVBOs.push_back(new VertexBuffer);
+	m_traceVBOs[0]->Bind();
+	m_traceVAOs.push_back(new VertexArray);
+	m_traceVAOs[0]->Bind();
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("VAO/VBO creation: %.3f ms\n", dt * 1000);
+
+	//Don't count buffer allocation time, in the real system we'll have a pool of pre-created VAOs/VBOs we can reuse
+	double tprocess = 0;
+
 	//Create the geometry
 	const int POINTS_PER_TRI = 2;
 	const int TRIS_PER_SAMPLE = 2;
 	const int waveform_size = BLOCK_SIZE * POINTS_PER_TRI * TRIS_PER_SAMPLE;
-	double lheight = 1.0f / (65535 * 2);	//one ADC code
+	double lheight = 0.002f;//1.0f / (65535 * 2);	//one ADC code
 	float* verts = new float[nwaves * waveform_size];
 	#pragma omp parallel for
 	for(size_t i=0; i<nwaves; i++)
@@ -211,46 +340,72 @@ void WaveformArea::on_realize()
 	dt = GetTime() - start;
 	start = GetTime();
 	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
-
-	//Create the VAOs and VBOs
-	for(size_t i=0; i<nwaves; i++)
-	{
-		m_traceVAOs.push_back(new VertexArray);
-		m_traceVBOs.push_back(new VertexBuffer);
-	}
-	VertexArray::BulkInit(m_traceVAOs);
-	VertexBuffer::BulkInit(m_traceVBOs);
-
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("VAO/VBO creation: %.3f ms\n", dt * 1000);
+	tprocess += dt;
 
 	//Download waveform data
-	for(size_t i=0; i<nwaves; i++)
-	{
-		m_traceVAOs[i]->Bind();
-		m_traceVBOs[i]->Bind();
-
-		//Set the pointers
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*2*BLOCK_SIZE, verts + i*waveform_size, GL_STATIC_DRAW);
-		m_defaultProgram.EnableVertexArray("vert");
-		m_defaultProgram.SetVertexAttribPointer("vert", 2);
-	}
+	m_traceVBOs[0]->Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*nwaves * waveform_size, verts, GL_DYNAMIC_DRAW);
 
 	dt = GetTime() - start;
 	start = GetTime();
 	LogDebug("Waveform download: %.3f ms\n", dt * 1000);
+	tprocess += dt;
 
-	/*size_t nsamps = nwaves * BLOCK_SIZE;
-	LogDebug("Downloaded %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
+	//Configure vertex array settings
+	m_traceVAOs[0]->Bind();
+	m_defaultProgram.EnableVertexArray("vert");
+	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
+	tprocess += dt;
+
+	size_t nsamps = nwaves * BLOCK_SIZE;
+	LogDebug("Processed %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
 		nwaves,
 		nsamps,
-		dt * 1000,
-		nwaves / (1e3 * dt),
-		nsamps / (1e6 * dt)
-		);*/
+		tprocess * 1000,
+		nwaves / (1e3 * tprocess),
+		nsamps / (1e6 * tprocess)
+		);
 
 	delete[] verts;
+}
+
+void WaveformArea::InitializeColormapPass()
+{
+	//Set up shaders
+	VertexShader cvs;
+	FragmentShader cfs;
+	if(!cvs.Load("colormap-vertex.glsl") || !cfs.Load("colormap-fragment.glsl"))
+	{
+		LogError("failed to load colormap shaders, aborting");
+		exit(1);
+	}
+
+	m_colormapProgram.Add(cvs);
+	m_colormapProgram.Add(cfs);
+	if(!m_colormapProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
+
+	//Create the VAO/VBO for a fullscreen polygon
+	float verts[8] =
+	{
+		-1, -1,
+		 1, -1,
+		 1,  1,
+		-1,  1
+	};
+	m_colormapVBO.Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	m_colormapVAO.Bind();
+	m_colormapProgram.EnableVertexArray("vert");
+	m_colormapProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -274,7 +429,7 @@ void WaveformArea::on_resize(int width, int height)
 
 	//Initialize the color buffer
 	//TODO: make MSAA config not hard coded
-	const bool multisample = false;//true;
+	const bool multisample = false;
 	const int numSamples = 4;
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 	if(multisample)
@@ -308,8 +463,15 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	double start = GetTime();
 	double dt = start - last;
 	if(last > 0)
-		LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+	{
+		//LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+		m_frameTime += dt;
+		m_frameCount ++;
+	}
 	last = start;
+
+	//Everything we draw is 2D painter's algorithm
+	glDisable(GL_DEPTH_TEST);
 
 	//Something funky is going on. Why do we get correct results blitting to framebuffer ONE,
 	//and nothing showing up when we blit to framebuffer ZERO?
@@ -324,9 +486,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 
 	//Set up blending
 	glEnable(GL_BLEND);
-	//glEnable(GL_MULTISAMPLE);
-	glDisable(GL_MULTISAMPLE);
-	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -335,37 +495,46 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
 	m_defaultProgram.SetUniform(50.0f, "xoff");
-	m_defaultProgram.SetUniform(1.0f, "xscale");
-	m_defaultProgram.SetUniform(-50.0f, "yoff");
-	m_defaultProgram.SetUniform(1000000.0f, "yscale");
+	m_defaultProgram.SetUniform(10.0f, "xscale");
+	m_defaultProgram.SetUniform(300.0f, "yoff");
+	m_defaultProgram.SetUniform(800.0f, "yscale");
 
 	//Set the color decay value (constant for now)
 	m_defaultProgram.SetUniform(0.002f, "alpha");
 
 	//Actually draw the waveform
-	for(int i=0; i<m_traceVAOs.size(); i++)
+	//m_traceVBOs[0]->Bind();
+	m_traceVAOs[0]->Bind();
+
+	vector<int> firsts;
+	vector<int> counts;
+	for(int i=0; i<m_numWaveforms; i++)
 	{
-		m_traceVAOs[i]->Bind();
-		m_traceVBOs[i]->Bind();
-
-		//Draw it
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*BLOCK_SIZE);
+		firsts.push_back(2*i*BLOCK_SIZE);
+		counts.push_back(2*BLOCK_SIZE);
 	}
+	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], m_numWaveforms);
 
-	//Once the rendering proper is complete, blit the floating-point buffer into our onscreen buffer
-	m_framebuffer.Bind(GL_READ_FRAMEBUFFER);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, windowFramebuffer);
-	glBlitFramebuffer(
-		0, 0, m_width, m_height,
-		0, 0, m_width, m_height,
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
+	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
+	//as a textured quad. Apply color correction as we do this.
+	glBindFramebuffer(GL_FRAMEBUFFER, windowFramebuffer);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	m_colormapProgram.Bind();
+	m_colormapVBO.Bind();
+	m_colormapVAO.Bind();
+	/*int loc = m_colormapProgram.GetUniformLocation("fbtex");
+	glActiveTexture(GL_TEXTURE0);
+	m_fboTexture.Bind();
+	glUniform1i(loc, 0);*/
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	//Sanity check
 	int err = glGetError();
 	if(err != 0)
 		LogNotice("err = %x\n", err);
 
+	//Get ready to immediately refresh
 	queue_draw();
 	return true;
 }

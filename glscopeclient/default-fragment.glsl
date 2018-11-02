@@ -6,5 +6,5 @@ uniform float alpha;
 
 void main()
 {
-	finalColor = vec4(1, 1, 0, alpha);
+	finalColor = vec4(1, 1, 1, alpha);
 }

@@ -86,7 +86,7 @@ public:
 	void EnableVertexArray(const char* name)
 	{ glEnableVertexAttribArray(GetAttributeLocation(name)); }
 
-	void SetVertexAttribPointer(const char* name, int size = 3, size_t stride = 0, size_t offset = 0)
+	void SetVertexAttribPointer(const char* name, int size = 3, size_t offset = 0, size_t stride = 0)
 	{ glVertexAttribPointer(GetAttributeLocation(name), size, GL_FLOAT, GL_FALSE, stride, (void*)offset); }
 
 	void SetUniform(glm::mat4 mat, const char* name)
