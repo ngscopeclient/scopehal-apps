@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "WaveformArea.h"
 #include <random>
+#include "ProfileBlock.h"
 
 /*
 dvec2 nvec;
@@ -68,7 +69,7 @@ dvec2 p1 = points[j] + (nvec * hwidth);
 dvec2 p2 = points[j] - (nvec * hwidth);
 */
 
-#define BLOCK_SIZE 128
+#define BLOCK_SIZE 64
 
 using namespace std;
 using namespace glm;
@@ -176,144 +177,112 @@ void WaveformArea::on_realize()
 	//Do global initialization (independent of camera settings etc)
 	glClearColor(0, 0, 0, 1.0);
 
-	double start = GetTime();
-
 	//Create shader objects
-	VertexShader dvs;
-	FragmentShader dfs;
-	if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
 	{
-		LogError("failed to load default shaders, aborting");
-		exit(1);
-	}
+		ProfileBlock pb("Load waveform shaders");
+		VertexShader dvs;
+		FragmentShader dfs;
+		if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
+		{
+			LogError("failed to load default shaders, aborting");
+			exit(1);
+		}
 
-	//Create the programs
-	m_defaultProgram.Add(dvs);
-	m_defaultProgram.Add(dfs);
-	if(!m_defaultProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
+		//Create the programs
+		m_defaultProgram.Add(dvs);
+		m_defaultProgram.Add(dfs);
+		if(!m_defaultProgram.Link())
+		{
+			LogError("failed to link shader program, aborting");
+			exit(1);
+		}
 	}
-
-	double dt = GetTime() - start;
-	LogDebug("Shader load: %.3f ms\n", dt * 1000);
-	start = GetTime();
 
 	InitializeColormapPass();
 
-	dt = GetTime() - start;
-	LogDebug("Setup for colormap pass: %.3f ms\n", dt * 1000);
-	start = GetTime();
-
-	/*
-	//Load the ADC data
-	FILE* fp = fopen("/tmp/adc-dump.bin", "rb");
-	fseek(fp, 0, SEEK_END);
-	long len = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	vector<uint8_t> rawdata;
-	rawdata.resize(len);
-	fread(&rawdata[0], 1, len, fp);
-	fclose(fp);
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("File read: %.3f ms\n", dt * 1000);
-
-	//Convert the ADC data to floating point samples
+	//Read the original file
 	vector<float> waveform;
-	waveform.resize(len/2);
-	size_t nsamples = len/2;
-	int n = 0;
-	#pragma omp parallel for
-	for(size_t i=0; i<rawdata.size(); i += 2)
+	size_t nsamples;
 	{
-		float code_raw = ((rawdata[i] << 8) | rawdata[i+1]);
-		waveform[i/2] = code_raw / 65535.0f;
+		ProfileBlock pb("File read");
+
+		FILE* fp = fopen("/home/azonenberg/Downloads/waveforms/USB3_12G5_50M.bin", "rb");
+		fseek(fp, 0, SEEK_END);
+		size_t len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		nsamples = len / sizeof(float);
+		vector<float> raw_waveform;
+		raw_waveform.resize(nsamples);
+		fread(&raw_waveform[0], sizeof(float), nsamples, fp);
+		fclose(fp);
+
+		waveform = raw_waveform;
 	}
-	int nblocks = nsamples / BLOCK_SIZE;
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("Floating point conversion: %.3f ms\n", dt * 1000);
-	*/
-
-	FILE* fp = fopen("/home/azonenberg/Downloads/waveforms/312M500_prbs_12G5_10M.bin", "rb");
-	fseek(fp, 0, SEEK_END);
-	size_t len = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	size_t nsamples = len / sizeof(float);
-	vector<float> waveform;
-	waveform.resize(nsamples);
-	fread(&waveform[0], sizeof(float), nsamples, fp);
-	fclose(fp);
-
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("File read: %.3f ms\n", dt * 1000);
 
 	//Find trigger positions (not needed with a real scope either)
 	vector<size_t> trigger_positions;
-	size_t ptr = 1;
-	while(ptr < nsamples)
 	{
-		float thresh = 0.0;
+		ProfileBlock pb("Trigger");
 
-		/*
-		//Skip samples until we hit a rising-edge trigger point
-		//Wait until we go below the trigger, then back up
-		for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
-		{}
-		for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
-		{}
-		*/
-
-		//Both edge thresholding
-		for(; ptr<nsamples; ptr++)
+		size_t ptr = 1;
+		while(ptr < nsamples)
 		{
-			if(waveform[ptr-1] < thresh && waveform[ptr] > thresh)
+			float thresh = 0.0;
+
+			/*
+			//Skip samples until we hit a rising-edge trigger point
+			//Wait until we go below the trigger, then back up
+			for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
+			{}
+			for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
+			{}
+			*/
+
+			//Both edge thresholding
+			for(; ptr<nsamples; ptr++)
+			{
+				if(waveform[ptr-1] < thresh && waveform[ptr] > thresh)
+					break;
+				if(waveform[ptr-1] > thresh && waveform[ptr] < thresh)
+					break;
+			}
+
+			if((ptr + BLOCK_SIZE) >= nsamples)
 				break;
-			if(waveform[ptr-1] > thresh && waveform[ptr] < thresh)
+
+			//Add the start of this waveform to the trigger array
+			trigger_positions.push_back(ptr);
+
+			//Skip this waveform
+			ptr += BLOCK_SIZE;
+
+			//DEBUG: cap at 1K waveforms
+			if(trigger_positions.size() >= 5)
 				break;
 		}
-
-		if((ptr + BLOCK_SIZE) >= nsamples)
-			break;
-
-		//Add the start of this waveform to the trigger array
-		trigger_positions.push_back(ptr);
-
-		//Skip this waveform
-		ptr += BLOCK_SIZE;
-
-		//DEBUG: cap at 1K waveforms
-		if(trigger_positions.size() >= 5000)
-			break;
+		m_numWaveforms = trigger_positions.size();
+		LogDebug("%d trigger points found\n", m_numWaveforms);
 	}
-	m_numWaveforms = trigger_positions.size();
-
-	dt = GetTime() - start;
-	start = GetTime();
 	size_t nwaves = trigger_positions.size();
-	LogDebug("Trigger: %.3f ms (%d trigger points found)\n", dt * 1000, nwaves);
 
 	//Create the VAOs and VBOs
-	m_traceVBOs.push_back(new VertexBuffer);
-	m_traceVBOs[0]->Bind();
-	m_traceVAOs.push_back(new VertexArray);
-	m_traceVAOs[0]->Bind();
+	{
+		ProfileBlock pb("VAO/VBO creation");
 
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("VAO/VBO creation: %.3f ms\n", dt * 1000);
+		m_traceVBOs.push_back(new VertexBuffer);
+		m_traceVBOs[0]->Bind();
+		m_traceVAOs.push_back(new VertexArray);
+		m_traceVAOs[0]->Bind();
+	}
 
-	//Don't count buffer allocation time, in the real system we'll have a pool of pre-created VAOs/VBOs we can reuse
 	double tprocess = 0;
+	double start = GetTime();
 
 	//Create the geometry
 	const int POINTS_PER_TRI = 2;
 	const int TRIS_PER_SAMPLE = 2;
 	const int waveform_size = BLOCK_SIZE * POINTS_PER_TRI * TRIS_PER_SAMPLE;
-	double lheight = 0.002f;//1.0f / (65535 * 2);	//one ADC code
+	double lheight = 0.004f;//1.0f / (65535 * 2);	//one ADC code
 	float* verts = new float[nwaves * waveform_size];
 	#pragma omp parallel for
 	for(size_t i=0; i<nwaves; i++)
@@ -337,7 +306,7 @@ void WaveformArea::on_realize()
 		}
 	}
 
-	dt = GetTime() - start;
+	double dt = GetTime() - start;
 	start = GetTime();
 	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
 	tprocess += dt;
@@ -375,6 +344,8 @@ void WaveformArea::on_realize()
 
 void WaveformArea::InitializeColormapPass()
 {
+	ProfileBlock pb("Load colormap shaders");
+
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
@@ -428,6 +399,7 @@ void WaveformArea::on_resize(int width, int height)
 		);
 
 	//Initialize the color buffer
+	//No antialiasing for now, we just alpha blend everything
 	//TODO: make MSAA config not hard coded
 	const bool multisample = false;
 	const int numSamples = 4;
@@ -495,12 +467,12 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
 	m_defaultProgram.SetUniform(50.0f, "xoff");
-	m_defaultProgram.SetUniform(10.0f, "xscale");
-	m_defaultProgram.SetUniform(300.0f, "yoff");
-	m_defaultProgram.SetUniform(800.0f, "yscale");
+	m_defaultProgram.SetUniform(50.0f, "xscale");
+	m_defaultProgram.SetUniform(400.0f, "yoff");
+	m_defaultProgram.SetUniform(600.0f, "yscale");
 
 	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(0.002f, "alpha");
+	m_defaultProgram.SetUniform(1.0f, "alpha");
 
 	//Actually draw the waveform
 	//m_traceVBOs[0]->Bind();
@@ -521,7 +493,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	m_colormapProgram.Bind();
-	m_colormapVBO.Bind();
+	//m_colormapVBO.Bind();
 	m_colormapVAO.Bind();
 	/*int loc = m_colormapProgram.GetUniformLocation("fbtex");
 	glActiveTexture(GL_TEXTURE0);

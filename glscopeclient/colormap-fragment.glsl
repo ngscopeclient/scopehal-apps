@@ -18,9 +18,9 @@ void main()
 	y = min(y, 1);
 	y = max(y, 0);
 
-	//convert to rgb
+	//convert to rgb grayscale
 	finalColor.r = y;
 	finalColor.g = y;
-	finalColor.b = 0;
+	finalColor.b = y;
 	finalColor.a = 1;
 }
