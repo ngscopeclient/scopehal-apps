@@ -46,7 +46,7 @@ public:
 	~ProfileBlock()
 	{
 		double dt = GetTime() - m_start;
-		LogDebug("%30s: %.3f ms\n", m_description.c_str(), dt * 1000);
+		LogDebug("%-20s: %.3f ms\n", m_description.c_str(), dt * 1000);
 	}
 
 	std::string m_description;

@@ -35,6 +35,9 @@
 #ifndef WaveformArea_h
 #define WaveformArea_h
 
+float sinc(float x, float width);
+float blackman(float x, float width);
+
 class WaveformArea : public Gtk::GLArea
 {
 public:

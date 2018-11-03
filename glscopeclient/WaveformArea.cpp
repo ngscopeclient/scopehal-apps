@@ -69,10 +69,30 @@ dvec2 p1 = points[j] + (nvec * hwidth);
 dvec2 p2 = points[j] - (nvec * hwidth);
 */
 
-#define BLOCK_SIZE 64
+#define BLOCK_SIZE 640
 
 using namespace std;
 using namespace glm;
+
+float sinc(float x, float width)
+{
+	float xi = x - width/2;
+
+	if(fabs(xi) < 1e-7)
+		return 1.0f;
+	else
+	{
+		float px = M_PI*xi;
+		return sin(px) / px;
+	}
+}
+
+float blackman(float x, float width)
+{
+	if(x > width)
+		return 0;
+	return 0.42 - 0.5*cos(2*M_PI * x / width) + 0.08 * cos(4*M_PI*x/width);
+}
 
 /*
 static const RGBQUAD g_eyeColorScale[256] =
@@ -202,21 +222,64 @@ void WaveformArea::on_realize()
 
 	//Read the original file
 	vector<float> waveform;
+	vector<float> raw_waveform;
 	size_t nsamples;
 	{
 		ProfileBlock pb("File read");
 
+		//USB3_12G5_50M
 		FILE* fp = fopen("/home/azonenberg/Downloads/waveforms/USB3_12G5_50M.bin", "rb");
 		fseek(fp, 0, SEEK_END);
 		size_t len = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 		nsamples = len / sizeof(float);
-		vector<float> raw_waveform;
 		raw_waveform.resize(nsamples);
 		fread(&raw_waveform[0], sizeof(float), nsamples, fp);
 		fclose(fp);
+	}
 
-		waveform = raw_waveform;
+	{
+		ProfileBlock pb("Sinc interpolation");
+
+		size_t upsample_factor = 10;
+
+		const size_t window = 5;
+		const size_t kernel = window*upsample_factor;
+
+		//Create the interpolation filter
+		float frac_kernel = kernel * 1.0f / upsample_factor;
+		float filter[kernel];
+		for(size_t i=0; i<kernel; i++)
+		{
+			float frac = i*1.0f / upsample_factor;
+			filter[i] = sinc(frac, frac_kernel) * blackman(frac, frac_kernel);
+		}
+
+		//Logically, we upsample by inserting zeroes, then convolve with the sinc filter.
+		//Optimization: don't actually waste time multiplying by zero
+		waveform.resize(nsamples * upsample_factor);
+		size_t offset = 0;
+		for(size_t i=0; i<raw_waveform.size(); i++)
+		{
+			for(size_t j=0; j<upsample_factor; j++)
+			{
+				size_t start = 0;
+				size_t sstart = 0;
+				if(j > 0)
+				{
+					sstart = 1;
+					start = upsample_factor - j;
+				}
+
+				float f = 0;
+				for(size_t k = start; k<kernel; k += upsample_factor, sstart ++)
+					f += filter[k] * raw_waveform[i + sstart];
+				waveform[offset ++] = f;
+			}
+		}
+
+		nsamples = waveform.size();
+		LogDebug("%zd samples\n", nsamples);
 	}
 
 	//Find trigger positions (not needed with a real scope either)
@@ -224,19 +287,18 @@ void WaveformArea::on_realize()
 	{
 		ProfileBlock pb("Trigger");
 
+		/*
 		size_t ptr = 1;
 		while(ptr < nsamples)
 		{
 			float thresh = 0.0;
 
-			/*
 			//Skip samples until we hit a rising-edge trigger point
 			//Wait until we go below the trigger, then back up
-			for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
+			//for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
 			{}
-			for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
+			//for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
 			{}
-			*/
 
 			//Both edge thresholding
 			for(; ptr<nsamples; ptr++)
@@ -257,9 +319,11 @@ void WaveformArea::on_realize()
 			ptr += BLOCK_SIZE;
 
 			//DEBUG: cap at 1K waveforms
-			if(trigger_positions.size() >= 5)
+			if(trigger_positions.size() >= 1)
 				break;
 		}
+		*/
+		trigger_positions.push_back(0);
 		m_numWaveforms = trigger_positions.size();
 		LogDebug("%d trigger points found\n", m_numWaveforms);
 	}
@@ -302,6 +366,12 @@ void WaveformArea::on_realize()
 			verts[voff + 2] = j;
 			verts[voff + 3] = y - lheight;
 
+			/*LogDebug("%.3f, %.3f\n%.3f,%.3f\n",
+				verts[voff+0],
+				verts[voff+1],
+				verts[voff+2],
+				verts[voff+3]);*/
+
 			voff += 4;
 		}
 	}
@@ -330,15 +400,15 @@ void WaveformArea::on_realize()
 	LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
 	tprocess += dt;
 
-	size_t nsamps = nwaves * BLOCK_SIZE;
-	LogDebug("Processed %d waveforms (%d samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
+	/*size_t nsamps = nwaves * BLOCK_SIZE;
+	LogDebug("Processed %zd waveforms (%zd samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
 		nwaves,
 		nsamps,
 		tprocess * 1000,
 		nwaves / (1e3 * tprocess),
 		nsamps / (1e6 * tprocess)
 		);
-
+	*/
 	delete[] verts;
 }
 
@@ -428,7 +498,7 @@ void WaveformArea::on_resize(int width, int height)
 	LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
-bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
+bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	static double last = -1;
 
@@ -460,6 +530,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	glEnable(GL_BLEND);
 	glEnable(GL_MULTISAMPLE);
 	glDisable(GL_FRAMEBUFFER_SRGB);
+	glDisable(GL_CULL_FACE);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -467,7 +538,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
 	m_defaultProgram.SetUniform(50.0f, "xoff");
-	m_defaultProgram.SetUniform(50.0f, "xscale");
+	m_defaultProgram.SetUniform(2.0f, "xscale");
 	m_defaultProgram.SetUniform(400.0f, "yoff");
 	m_defaultProgram.SetUniform(600.0f, "yscale");
 
@@ -485,7 +556,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& context)
 		firsts.push_back(2*i*BLOCK_SIZE);
 		counts.push_back(2*BLOCK_SIZE);
 	}
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], m_numWaveforms);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
