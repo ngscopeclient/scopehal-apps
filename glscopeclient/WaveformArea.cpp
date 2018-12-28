@@ -69,7 +69,7 @@ dvec2 p1 = points[j] + (nvec * hwidth);
 dvec2 p2 = points[j] - (nvec * hwidth);
 */
 
-#define BLOCK_SIZE 640
+#define BLOCK_SIZE 256
 
 using namespace std;
 using namespace glm;
@@ -258,9 +258,11 @@ void WaveformArea::on_realize()
 		//Logically, we upsample by inserting zeroes, then convolve with the sinc filter.
 		//Optimization: don't actually waste time multiplying by zero
 		waveform.resize(nsamples * upsample_factor);
-		size_t offset = 0;
-		for(size_t i=0; i<raw_waveform.size(); i++)
+		size_t imax = raw_waveform.size() - window;
+		#pragma omp parallel for
+		for(size_t i=0; i < imax; i++)
 		{
+			size_t offset = i * upsample_factor;
 			for(size_t j=0; j<upsample_factor; j++)
 			{
 				size_t start = 0;
@@ -274,12 +276,12 @@ void WaveformArea::on_realize()
 				float f = 0;
 				for(size_t k = start; k<kernel; k += upsample_factor, sstart ++)
 					f += filter[k] * raw_waveform[i + sstart];
-				waveform[offset ++] = f;
+
+				waveform[offset + j] = f;
 			}
 		}
 
 		nsamples = waveform.size();
-		LogDebug("%zd samples\n", nsamples);
 	}
 
 	//Find trigger positions (not needed with a real scope either)
@@ -287,7 +289,6 @@ void WaveformArea::on_realize()
 	{
 		ProfileBlock pb("Trigger");
 
-		/*
 		size_t ptr = 1;
 		while(ptr < nsamples)
 		{
@@ -319,10 +320,10 @@ void WaveformArea::on_realize()
 			ptr += BLOCK_SIZE;
 
 			//DEBUG: cap at 1K waveforms
-			if(trigger_positions.size() >= 1)
+			if(trigger_positions.size() >= 50000)
 				break;
 		}
-		*/
+
 		trigger_positions.push_back(0);
 		m_numWaveforms = trigger_positions.size();
 		LogDebug("%d trigger points found\n", m_numWaveforms);
@@ -537,13 +538,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Configure our shader and projection matrix
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
-	m_defaultProgram.SetUniform(50.0f, "xoff");
-	m_defaultProgram.SetUniform(2.0f, "xscale");
+	m_defaultProgram.SetUniform(-1700.0f, "xoff");
+	m_defaultProgram.SetUniform(13.0f, "xscale");
 	m_defaultProgram.SetUniform(400.0f, "yoff");
 	m_defaultProgram.SetUniform(600.0f, "yscale");
 
 	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(1.0f, "alpha");
+	m_defaultProgram.SetUniform(0.002f, "alpha");
 
 	//Actually draw the waveform
 	//m_traceVBOs[0]->Bind();
