@@ -228,11 +228,18 @@ void OscilloscopeWindow::OnZoomIn()
 
 void OscilloscopeWindow::OnZoomFit()
 {
-	if( (m_scope->GetChannelCount() != 0) && (m_scope->GetChannel(0) != NULL) && (m_scope->GetChannel(0)->GetData() != NULL))
+	if(m_scope->GetChannelCount() != 0)
 	{
-		CaptureChannelBase* capture = m_scope->GetChannel(0)->GetData();
-		int64_t capture_len = capture->m_timescale * capture->GetEndTime();
-		m_timescale = static_cast<float>(m_viewscroller.get_width()) / capture_len;
+		for(size_t i=0; i<m_scope->GetChannelCount(); i=i+1)
+		{
+			if( (m_scope->GetChannel(i) != NULL) && (m_scope->GetChannel(i)->GetData() != NULL))
+			{
+				CaptureChannelBase* capture = m_scope->GetChannel(i)->GetData();
+				int64_t capture_len = capture->m_timescale * capture->GetEndTime();
+				m_timescale = static_cast<float>(m_viewscroller.get_width()) / capture_len;
+				break;
+			}
+		}
 	}
 
 	OnZoomChanged();
@@ -240,8 +247,15 @@ void OscilloscopeWindow::OnZoomFit()
 
 void OscilloscopeWindow::OnZoomChanged()
 {
+	if(!m_scope->GetChannelCount())
+		return;
+
+	//need to preserve relationships between time scales
+	float oldscale = m_scope->GetChannel(0)->m_timescale;
+	float mscale = m_timescale / oldscale;
+
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
-		m_scope->GetChannel(i)->m_timescale = m_timescale;
+		m_scope->GetChannel(i)->m_timescale *= mscale;
 
 	m_view.SetSizeDirty();
 	m_view.queue_draw();
