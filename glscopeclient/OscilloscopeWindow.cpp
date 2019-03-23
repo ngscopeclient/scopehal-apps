@@ -73,9 +73,9 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	//Done adding widgets
 	show_all();
 
-	//Set the update timer (100 Hz
+	//Set the update timer (1 kHz)
 	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
-	sigc::connection conn = Glib::signal_timeout().connect(slot, 10);
+	sigc::connection conn = Glib::signal_timeout().connect(slot, 1);
 
 	m_tArm = GetTime();
 	m_scope->StartSingleTrigger();

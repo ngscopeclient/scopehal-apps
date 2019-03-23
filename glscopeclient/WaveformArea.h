@@ -51,6 +51,7 @@ public:
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
+	void PrepareGeometry();
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 
 	Program m_defaultProgram;
@@ -66,9 +67,6 @@ protected:
 	int m_width;
 	int m_height;
 	size_t m_waveformLength;
-
-	//temp
-	size_t m_numWaveforms;
 
 	double m_frameTime;
 	long m_frameCount;

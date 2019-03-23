@@ -222,116 +222,6 @@ void WaveformArea::on_realize()
 
 	InitializeColormapPass();
 
-	//Read the original file
-	vector<float> waveform;
-	vector<float> raw_waveform;
-	size_t nsamples;
-	{
-		ProfileBlock pb("File read");
-
-		//USB3_12G5_50M
-		FILE* fp = fopen("/nfs4/share/waveforms/USB3_12G5_50M.bin", "rb");
-		fseek(fp, 0, SEEK_END);
-		size_t len = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		nsamples = len / sizeof(float);
-		raw_waveform.resize(nsamples);
-		fread(&raw_waveform[0], sizeof(float), nsamples, fp);
-		fclose(fp);
-	}
-
-	{
-		ProfileBlock pb("Sinc interpolation");
-
-		size_t upsample_factor = 10;
-
-		const size_t window = 5;
-		const size_t kernel = window*upsample_factor;
-
-		//Create the interpolation filter
-		float frac_kernel = kernel * 1.0f / upsample_factor;
-		float filter[kernel];
-		for(size_t i=0; i<kernel; i++)
-		{
-			float frac = i*1.0f / upsample_factor;
-			filter[i] = sinc(frac, frac_kernel) * blackman(frac, frac_kernel);
-		}
-
-		//Logically, we upsample by inserting zeroes, then convolve with the sinc filter.
-		//Optimization: don't actually waste time multiplying by zero
-		waveform.resize(nsamples * upsample_factor);
-		size_t imax = raw_waveform.size() - window;
-		#pragma omp parallel for
-		for(size_t i=0; i < imax; i++)
-		{
-			size_t offset = i * upsample_factor;
-			for(size_t j=0; j<upsample_factor; j++)
-			{
-				size_t start = 0;
-				size_t sstart = 0;
-				if(j > 0)
-				{
-					sstart = 1;
-					start = upsample_factor - j;
-				}
-
-				float f = 0;
-				for(size_t k = start; k<kernel; k += upsample_factor, sstart ++)
-					f += filter[k] * raw_waveform[i + sstart];
-
-				waveform[offset + j] = f;
-			}
-		}
-
-		nsamples = waveform.size();
-	}
-
-	//Find trigger positions (not needed with a real scope either)
-	vector<size_t> trigger_positions;
-	{
-		ProfileBlock pb("Trigger");
-
-		size_t ptr = 1;
-		while(ptr < nsamples)
-		{
-			float thresh = 0.0;
-
-			//Skip samples until we hit a rising-edge trigger point
-			//Wait until we go below the trigger, then back up
-			//for(; ptr < nsamples && waveform[ptr] > thresh; ptr ++)
-			{}
-			//for(; ptr < nsamples && waveform[ptr] < thresh; ptr ++)
-			{}
-
-			//Both edge thresholding
-			for(; ptr<nsamples; ptr++)
-			{
-				if(waveform[ptr-1] < thresh && waveform[ptr] > thresh)
-					break;
-				if(waveform[ptr-1] > thresh && waveform[ptr] < thresh)
-					break;
-			}
-
-			if((ptr + BLOCK_SIZE) >= nsamples)
-				break;
-
-			//Add the start of this waveform to the trigger array
-			trigger_positions.push_back(ptr);
-
-			//Skip this waveform
-			ptr += BLOCK_SIZE;
-
-			//DEBUG: cap at 1K waveforms
-			if(trigger_positions.size() >= 50000)
-				break;
-		}
-
-		trigger_positions.push_back(0);
-		m_numWaveforms = trigger_positions.size();
-		LogDebug("%d trigger points found\n", m_numWaveforms);
-	}
-	size_t nwaves = trigger_positions.size();
-
 	//Create the VAOs and VBOs
 	{
 		ProfileBlock pb("VAO/VBO creation");
@@ -341,78 +231,6 @@ void WaveformArea::on_realize()
 		m_traceVAOs.push_back(new VertexArray);
 		m_traceVAOs[0]->Bind();
 	}
-
-	double tprocess = 0;
-	double start = GetTime();
-
-	//Create the geometry
-	const int POINTS_PER_TRI = 2;
-	const int TRIS_PER_SAMPLE = 2;
-	const int waveform_size = BLOCK_SIZE * POINTS_PER_TRI * TRIS_PER_SAMPLE;
-	double lheight = 0.004f;//1.0f / (65535 * 2);	//one ADC code
-	float* verts = new float[nwaves * waveform_size];
-	#pragma omp parallel for
-	for(size_t i=0; i<nwaves; i++)
-	{
-		size_t base = trigger_positions[i];
-		size_t voff = i * waveform_size;
-
-		for(int j=0; j<BLOCK_SIZE; j++)
-		{
-			float y = waveform[base + j];
-
-			//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
-			//always left to right, sorted, and never vertical. Just add some height to the samples!
-			verts[voff + 0] = j;
-			verts[voff + 1] = y + lheight;
-
-			verts[voff + 2] = j;
-			verts[voff + 3] = y - lheight;
-
-			/*LogDebug("%.3f, %.3f\n%.3f,%.3f\n",
-				verts[voff+0],
-				verts[voff+1],
-				verts[voff+2],
-				verts[voff+3]);*/
-
-			voff += 4;
-		}
-	}
-
-	double dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
-	tprocess += dt;
-
-	//Download waveform data
-	m_traceVBOs[0]->Bind();
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*nwaves * waveform_size, verts, GL_DYNAMIC_DRAW);
-
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("Waveform download: %.3f ms\n", dt * 1000);
-	tprocess += dt;
-
-	//Configure vertex array settings
-	m_traceVAOs[0]->Bind();
-	m_defaultProgram.EnableVertexArray("vert");
-	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
-
-	dt = GetTime() - start;
-	start = GetTime();
-	LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
-	tprocess += dt;
-
-	/*size_t nsamps = nwaves * BLOCK_SIZE;
-	LogDebug("Processed %zd waveforms (%zd samples) in %.3f ms (%.2f kWFM/s, %.2f MSps)\n",
-		nwaves,
-		nsamps,
-		tprocess * 1000,
-		nwaves / (1e3 * tprocess),
-		nsamps / (1e6 * tprocess)
-		);
-	*/
-	delete[] verts;
 }
 
 void WaveformArea::InitializeColormapPass()
@@ -501,9 +319,89 @@ void WaveformArea::on_resize(int width, int height)
 	LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
+void WaveformArea::PrepareGeometry()
+{
+	LogDebug("Processing capture\n");
+	LogIndenter li;
+
+	double start = GetTime();
+
+	//Fake differential probe
+	//For now, assume channels 2 and 3 are enabled
+	auto d2 = m_scope->GetChannel(1)->GetData();
+	auto d3 = m_scope->GetChannel(2)->GetData();
+	if(!d2 || !d3)
+	{
+		LogDebug("null data, nothing to do\n");
+		return;
+	}
+	AnalogCapture& data2 = *dynamic_cast<AnalogCapture*>(d2);
+	AnalogCapture& data3 = *dynamic_cast<AnalogCapture*>(d3);
+	size_t count = data2.size();
+	float* voltages = new float[count];
+	for(size_t i=0; i<count; i++)
+		voltages[i] = data2[i] - data3[i];
+
+	double dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Subtraction: %.3f ms\n", dt * 1000);
+
+	//Create the geometry
+	const int POINTS_PER_TRI = 2;
+	const int TRIS_PER_SAMPLE = 2;
+	size_t waveform_size = count * POINTS_PER_TRI * TRIS_PER_SAMPLE;
+	double lheight = 0.075f;
+	float* verts = new float[waveform_size];
+	LogDebug("waveform_size = %zu\n", waveform_size);
+	size_t voff = 0;
+	for(size_t j=0; j<count; j++)
+	{
+		float y = voltages[j];
+
+		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
+		//always left to right, sorted, and never vertical. Just add some height to the samples!
+		verts[voff + 0] = j;
+		verts[voff + 1] = y + lheight;
+
+		verts[voff + 2] = j;
+		verts[voff + 3] = y - lheight;
+
+		voff += 4;
+	}
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
+
+	//Download waveform data
+	m_traceVBOs[0]->Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * waveform_size, verts, GL_DYNAMIC_DRAW);
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Waveform download: %.3f ms\n", dt * 1000);
+
+	//Configure vertex array settings
+	m_traceVAOs[0]->Bind();
+	m_defaultProgram.EnableVertexArray("vert");
+	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
+
+	dt = GetTime() - start;
+	start = GetTime();
+	LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
+
+	m_waveformLength = count;
+
+	//Cleanup time
+	delete[] voltages;
+	delete[] verts;
+}
+
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	static double last = -1;
+
+	PrepareGeometry();
 
 	double start = GetTime();
 	double dt = start - last;
@@ -540,13 +438,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Configure our shader and projection matrix
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
-	m_defaultProgram.SetUniform(-1700.0f, "xoff");
-	m_defaultProgram.SetUniform(13.0f, "xscale");
+	m_defaultProgram.SetUniform(0.0f, "xoff");
+	m_defaultProgram.SetUniform(0.075f, "xscale");
 	m_defaultProgram.SetUniform(400.0f, "yoff");
-	m_defaultProgram.SetUniform(600.0f, "yscale");
+	m_defaultProgram.SetUniform(100.0f, "yscale");
 
 	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(0.002f, "alpha");
+	m_defaultProgram.SetUniform(0.5f, "alpha");
 
 	//Actually draw the waveform
 	//m_traceVBOs[0]->Bind();
@@ -554,13 +452,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	vector<int> firsts;
 	vector<int> counts;
-	for(int i=0; i<m_numWaveforms; i++)
-	{
-		firsts.push_back(2*i*BLOCK_SIZE);
-		counts.push_back(2*BLOCK_SIZE);
-	}
+	firsts.push_back(0);
+	counts.push_back(2*m_waveformLength);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], m_numWaveforms);
+	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
@@ -582,11 +477,11 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	if(err != 0)
 		LogNotice("err = %x\n", err);
 
-	//Get ready to immediately refresh
-	queue_draw();
 	return true;
 }
 
 void WaveformArea::OnWaveformDataReady()
 {
+	//Get ready to immediately refresh
+	queue_draw();
 }
