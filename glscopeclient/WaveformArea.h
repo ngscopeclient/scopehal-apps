@@ -52,7 +52,12 @@ protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
 	bool PrepareGeometry();
+
+	//Rendering
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
+	void RenderTrace();
+	void RenderTraceColorCorrection();
+	void RenderPersistence();
 
 	Program m_defaultProgram;
 

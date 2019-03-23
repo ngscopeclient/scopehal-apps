@@ -1,4 +1,4 @@
-#version 150
+#version 130
 
 in vec2 		vert;
 uniform float	xoff;

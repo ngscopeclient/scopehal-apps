@@ -310,8 +310,6 @@ bool WaveformArea::PrepareGeometry()
 	//LogDebug("Processing capture\n");
 	LogIndenter li;
 
-	double start = GetTime();
-
 	auto dat = m_channel->GetData();
 	if(!dat)
 	{
@@ -331,38 +329,27 @@ bool WaveformArea::PrepareGeometry()
 	for(size_t j=0; j<count; j++)
 	{
 		float y = data[j];
+		float x = data.GetSampleStart(j);
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
-		verts[voff + 0] = j;
+		verts[voff + 0] = x;
 		verts[voff + 1] = y + lheight;
 
-		verts[voff + 2] = j;
+		verts[voff + 2] = x;
 		verts[voff + 3] = y - lheight;
 
 		voff += 4;
 	}
 
-	//dt = GetTime() - start;
-	//start = GetTime();
-	//LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
-
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * waveform_size, verts, GL_DYNAMIC_DRAW);
-
-	//dt = GetTime() - start;
-	//start = GetTime();
-	//LogDebug("Waveform download: %.3f ms\n", dt * 1000);
 
 	//Configure vertex array settings
 	m_traceVAOs[0]->Bind();
 	m_defaultProgram.EnableVertexArray("vert");
 	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
-
-	//dt = GetTime() - start;
-	//start = GetTime();
-	//LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
 
 	m_waveformLength = count;
 
@@ -392,20 +379,36 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	}
 	last = start;
 
-	//Everything we draw is 2D painter's algorithm
+	//Everything we draw is 2D painter's algorithm.
+	//Turn off some stuff we don't need.
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_MULTISAMPLE);
+	glDisable(GL_FRAMEBUFFER_SRGB);
+	glDisable(GL_CULL_FACE);
 
 	//Start with a blank window
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	//Set up blending
 	glEnable(GL_BLEND);
-	glEnable(GL_MULTISAMPLE);
-	glDisable(GL_FRAMEBUFFER_SRGB);
-	glDisable(GL_CULL_FACE);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	//Actual rendering
+	RenderTrace();
+	RenderTraceColorCorrection();
+	RenderPersistence();
+
+	//Sanity check
+	int err = glGetError();
+	if(err != 0)
+		LogNotice("err = %x\n", err);
+
+	return true;
+}
+
+void WaveformArea::RenderTrace()
+{
 	//Configure our shader and projection matrix
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
@@ -425,7 +428,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	firsts.push_back(0);
 	counts.push_back(2*m_waveformLength);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
+}
 
+void WaveformArea::RenderTraceColorCorrection()
+{
 	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -438,14 +444,17 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_fboTexture.Bind();
 	glUniform1i(loc, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
 
+void WaveformArea::RenderPersistence()
+{
 	//Draw the persistence buffer
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	m_persistProgram.Bind();
 	m_persistVAO.Bind();
 	glActiveTexture(GL_TEXTURE0);
 	m_persistTexture.Bind();
-	loc = m_persistProgram.GetUniformLocation("fbtex");
+	int loc = m_persistProgram.GetUniformLocation("fbtex");
 	glUniform1i(loc, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
@@ -457,13 +466,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		0, 0, m_width, m_height,
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
-
-	//Sanity check
-	int err = glGetError();
-	if(err != 0)
-		LogNotice("err = %x\n", err);
-
-	return true;
 }
 
 void WaveformArea::OnWaveformDataReady()
