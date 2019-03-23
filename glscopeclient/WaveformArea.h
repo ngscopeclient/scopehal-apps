@@ -56,8 +56,11 @@ protected:
 
 	Program m_defaultProgram;
 
-	Framebuffer m_framebuffer[2];
-	Texture m_fboTexture[2];
+	Framebuffer m_framebuffer;
+	Texture m_fboTexture;
+
+	Framebuffer m_persistbuffer;
+	Texture m_persistTexture;
 
 	std::vector<VertexBuffer*> m_traceVBOs;
 	std::vector<VertexArray*> m_traceVAOs;

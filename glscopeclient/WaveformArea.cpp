@@ -237,16 +237,20 @@ void WaveformArea::on_resize(int width, int height)
 
 	//Initialize the color buffers
 	//No antialiasing for now, we just alpha blend everything
-	for(int i=0; i<2; i++)
-	{
-		m_framebuffer[i].Bind(GL_FRAMEBUFFER);
-		m_fboTexture[i].Bind();
-		m_fboTexture[i].SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer[i], 0);
-		if(!m_framebuffer[i].IsComplete())
-			LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
-		break;
-	}
+
+	m_persistbuffer.Bind(GL_FRAMEBUFFER);
+	m_persistTexture.Bind();
+	m_persistTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_persistbuffer, 0);
+	if(!m_persistbuffer.IsComplete())
+		LogError("Persist FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+
+	m_framebuffer.Bind(GL_FRAMEBUFFER);
+	m_fboTexture.Bind();
+	m_fboTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer, 0);
+	if(!m_framebuffer.IsComplete())
+		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
 	int err = glGetError();
 	if(err != 0)
@@ -337,6 +341,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	static double last = -1;
 
+	//Draw to the offscreen floating-point framebuffer.
+	m_framebuffer.Bind(GL_FRAMEBUFFER);
+
 	PrepareGeometry();
 
 	double start = GetTime();
@@ -351,14 +358,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	//Everything we draw is 2D painter's algorithm
 	glDisable(GL_DEPTH_TEST);
-
-	//Something funky is going on. Why do we get correct results blitting to framebuffer ONE,
-	//and nothing showing up when we blit to framebuffer ZERO?
-	//According to the GL spec, FBO 0 should be the default.
-	const int windowFramebuffer = 1;
-
-	//Draw to the offscreen floating-point framebuffer.
-	m_framebuffer[0].Bind(GL_FRAMEBUFFER);
 
 	//Start with a blank window
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -383,16 +382,18 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_defaultProgram.SetUniform(1.0f, "alpha");
 
 	//Actually draw the waveform
-	//m_traceVBOs[0]->Bind();
 	m_traceVAOs[0]->Bind();
 
 	vector<int> firsts;
 	vector<int> counts;
 	firsts.push_back(0);
 	counts.push_back(2*m_waveformLength);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	//Something funky is going on. Why do we get correct results blitting to framebuffer ONE,
+	//and nothing showing up when we blit to framebuffer ZERO?
+	//According to the GL spec, FBO 0 should be the default.
+	const int windowFramebuffer = 1;
 
 	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
