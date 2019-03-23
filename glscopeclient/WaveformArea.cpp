@@ -37,62 +37,8 @@
 #include <random>
 #include "ProfileBlock.h"
 
-/*
-dvec2 nvec;
-
-//First point in the line? Our normal is perpendicular to the vector from us to the next point
-if(j == 0)
-{
-	dvec2 delta = points[1] - points[0];
-	nvec = normalize(dvec2(delta.y, -delta.x));
-}
-
-//Last point? Same deal
-else if(j == (BLOCK_SIZE-1))
-{
-	dvec2 delta = points[j] - points[j-1];
-	nvec = normalize(dvec2(delta.y, -delta.x));
-}
-
-//Nope, we're a midpoint.
-//Use the midpoint of the two normals
-else
-{
-	dvec2 delta1 = normalize(points[j] - points[j-1]);
-	dvec2 delta2 = normalize(points[j+1] - points[j]);
-	dvec2 tangent = normalize(delta1 + delta2);			//tangent to the ideal lines
-	nvec = dvec2(-tangent.y, tangent.x);
-}
-
-//Offset start/end positions by the normal
-dvec2 p1 = points[j] + (nvec * hwidth);
-dvec2 p2 = points[j] - (nvec * hwidth);
-*/
-
-#define BLOCK_SIZE 256
-
 using namespace std;
 using namespace glm;
-
-float sinc(float x, float width)
-{
-	float xi = x - width/2;
-
-	if(fabs(xi) < 1e-7)
-		return 1.0f;
-	else
-	{
-		float px = M_PI*xi;
-		return sin(px) / px;
-	}
-}
-
-float blackman(float x, float width)
-{
-	if(x > width)
-		return 0;
-	return 0.42 - 0.5*cos(2*M_PI * x / width) + 0.08 * cos(4*M_PI*x/width);
-}
 
 /*
 static const RGBQUAD g_eyeColorScale[256] =
@@ -289,27 +235,18 @@ void WaveformArea::on_resize(int width, int height)
 		vec3(-width/2, -height/2, 0)											//put origin at bottom left
 		);
 
-	//Initialize the color buffer
+	//Initialize the color buffers
 	//No antialiasing for now, we just alpha blend everything
-	//TODO: make MSAA config not hard coded
-	const bool multisample = false;
-	const int numSamples = 4;
-	m_framebuffer.Bind(GL_FRAMEBUFFER);
-	if(multisample)
+	for(int i=0; i<2; i++)
 	{
-		m_fboTexture.Bind(GL_TEXTURE_2D_MULTISAMPLE);
-		m_fboTexture.AllocateMultisample(width, height, numSamples, GL_RGBA32F);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, m_framebuffer, 0);
+		m_framebuffer[i].Bind(GL_FRAMEBUFFER);
+		m_fboTexture[i].Bind();
+		m_fboTexture[i].SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer[i], 0);
+		if(!m_framebuffer[i].IsComplete())
+			LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+		break;
 	}
-	else
-	{
-		m_fboTexture.Bind();
-		m_fboTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer, 0);
-	}
-
-	if(!m_framebuffer.IsComplete())
-		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
 	int err = glGetError();
 	if(err != 0)
@@ -321,7 +258,7 @@ void WaveformArea::on_resize(int width, int height)
 
 void WaveformArea::PrepareGeometry()
 {
-	LogDebug("Processing capture\n");
+	//LogDebug("Processing capture\n");
 	LogIndenter li;
 
 	double start = GetTime();
@@ -344,7 +281,7 @@ void WaveformArea::PrepareGeometry()
 
 	double dt = GetTime() - start;
 	start = GetTime();
-	LogDebug("Subtraction: %.3f ms\n", dt * 1000);
+	//LogDebug("Subtraction: %.3f ms\n", dt * 1000);
 
 	//Create the geometry
 	const int POINTS_PER_TRI = 2;
@@ -352,7 +289,6 @@ void WaveformArea::PrepareGeometry()
 	size_t waveform_size = count * POINTS_PER_TRI * TRIS_PER_SAMPLE;
 	double lheight = 0.075f;
 	float* verts = new float[waveform_size];
-	LogDebug("waveform_size = %zu\n", waveform_size);
 	size_t voff = 0;
 	for(size_t j=0; j<count; j++)
 	{
@@ -371,7 +307,7 @@ void WaveformArea::PrepareGeometry()
 
 	dt = GetTime() - start;
 	start = GetTime();
-	LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
+	//LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
 
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
@@ -379,7 +315,7 @@ void WaveformArea::PrepareGeometry()
 
 	dt = GetTime() - start;
 	start = GetTime();
-	LogDebug("Waveform download: %.3f ms\n", dt * 1000);
+	//LogDebug("Waveform download: %.3f ms\n", dt * 1000);
 
 	//Configure vertex array settings
 	m_traceVAOs[0]->Bind();
@@ -388,7 +324,7 @@ void WaveformArea::PrepareGeometry()
 
 	dt = GetTime() - start;
 	start = GetTime();
-	LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
+	//LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
 
 	m_waveformLength = count;
 
@@ -407,7 +343,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	double dt = start - last;
 	if(last > 0)
 	{
-		//LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+		LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
 		m_frameTime += dt;
 		m_frameCount ++;
 	}
@@ -422,7 +358,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	const int windowFramebuffer = 1;
 
 	//Draw to the offscreen floating-point framebuffer.
-	m_framebuffer.Bind(GL_FRAMEBUFFER);
+	m_framebuffer[0].Bind(GL_FRAMEBUFFER);
 
 	//Start with a blank window
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -444,7 +380,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_defaultProgram.SetUniform(100.0f, "yscale");
 
 	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(0.5f, "alpha");
+	m_defaultProgram.SetUniform(1.0f, "alpha");
 
 	//Actually draw the waveform
 	//m_traceVBOs[0]->Bind();

@@ -130,13 +130,13 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		return true;
 
 	double dt = GetTime() - m_tArm;
-	LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
+	//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
 
 	//Triggered - get the data from each channel
 	double start = GetTime();
 	m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 	dt = GetTime() - start;
-	LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+	//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
 
 	//Update the view
 	m_waveformArea.OnWaveformDataReady();
