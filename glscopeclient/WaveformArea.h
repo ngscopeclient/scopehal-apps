@@ -43,7 +43,7 @@ class OscilloscopeWindow;
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea(Oscilloscope* scope, OscilloscopeWindow* parent);
+	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent);
 	virtual ~WaveformArea();
 
 	void OnWaveformDataReady();
@@ -51,10 +51,12 @@ public:
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
-	void PrepareGeometry();
+	bool PrepareGeometry();
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 
 	Program m_defaultProgram;
+
+	Framebuffer m_windowFramebuffer;
 
 	Framebuffer m_framebuffer;
 	Texture m_fboTexture;
@@ -86,6 +88,7 @@ protected:
 	VertexBuffer m_persistVBO;
 
 	Oscilloscope* m_scope;
+	OscilloscopeChannel* m_channel;
 	OscilloscopeWindow* m_parent;
 };
 

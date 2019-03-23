@@ -70,7 +70,7 @@ protected:
 	Gtk::VBox m_vbox;
 		Gtk::Toolbar m_toolbar;
 			//Gtk::ToolButton m_btnStart;
-		WaveformArea m_waveformArea;
+		std::set<WaveformArea*> m_waveformAreas;
 
 	//Our oscilloscope connection
 	Oscilloscope* m_scope;

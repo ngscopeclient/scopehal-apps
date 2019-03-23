@@ -110,8 +110,9 @@ static const RGBQUAD g_eyeColorScale[256] =
 };
 */
 
-WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeWindow* parent)
+WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent)
 	: m_scope(scope)
+	, m_channel(channel)
 	, m_parent(parent)
 {
 	m_frameTime = 0;
@@ -273,13 +274,17 @@ void WaveformArea::on_resize(int width, int height)
 		vec3(-width/2, -height/2, 0)											//put origin at bottom left
 		);
 
+	//GTK creates a FBO for us, but doesn't tell us what it is!
+	//We need to glGet the FBO ID the first time we're resized.
+	if(!m_windowFramebuffer.IsInitialized())
+		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
+
 	//Initialize the color buffers
 	//No antialiasing for now, we just alpha blend everything
-
 	m_persistbuffer.Bind(GL_FRAMEBUFFER);
 	m_persistTexture.Bind();
 	m_persistTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_persistbuffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_persistTexture, 0);
 	if(!m_persistbuffer.IsComplete())
 		LogError("Persist FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	glClearColor(0,0,0,0);
@@ -288,7 +293,7 @@ void WaveformArea::on_resize(int width, int height)
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 	m_fboTexture.Bind();
 	m_fboTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_fboTexture, 0);
 	if(!m_framebuffer.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
@@ -300,43 +305,32 @@ void WaveformArea::on_resize(int width, int height)
 	LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
-void WaveformArea::PrepareGeometry()
+bool WaveformArea::PrepareGeometry()
 {
 	//LogDebug("Processing capture\n");
 	LogIndenter li;
 
 	double start = GetTime();
 
-	//Fake differential probe
-	//For now, assume channels 2 and 3 are enabled
-	auto d2 = m_scope->GetChannel(1)->GetData();
-	auto d3 = m_scope->GetChannel(2)->GetData();
-	if(!d2 || !d3)
+	auto dat = m_channel->GetData();
+	if(!dat)
 	{
 		LogDebug("null data, nothing to do\n");
-		return;
+		return false;
 	}
-	AnalogCapture& data2 = *dynamic_cast<AnalogCapture*>(d2);
-	AnalogCapture& data3 = *dynamic_cast<AnalogCapture*>(d3);
-	size_t count = data2.size();
-	float* voltages = new float[count];
-	for(size_t i=0; i<count; i++)
-		voltages[i] = data2[i] - data3[i];
-
-	//double dt = GetTime() - start;
-	//start = GetTime();
-	//LogDebug("Subtraction: %.3f ms\n", dt * 1000);
+	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
+	size_t count = data.size();
 
 	//Create the geometry
 	const int POINTS_PER_TRI = 2;
 	const int TRIS_PER_SAMPLE = 2;
 	size_t waveform_size = count * POINTS_PER_TRI * TRIS_PER_SAMPLE;
-	double lheight = 0.075f;
+	double lheight = 0.025f;
 	float* verts = new float[waveform_size];
 	size_t voff = 0;
 	for(size_t j=0; j<count; j++)
 	{
-		float y = voltages[j];
+		float y = data[j];
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
@@ -373,8 +367,9 @@ void WaveformArea::PrepareGeometry()
 	m_waveformLength = count;
 
 	//Cleanup time
-	delete[] voltages;
 	delete[] verts;
+
+	return true;
 }
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
@@ -384,13 +379,14 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Draw to the offscreen floating-point framebuffer.
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 
-	PrepareGeometry();
+	if(!PrepareGeometry())
+		return true;
 
 	double start = GetTime();
 	double dt = start - last;
 	if(last > 0)
 	{
-		LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+		//LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
 		m_frameTime += dt;
 		m_frameCount ++;
 	}
@@ -414,8 +410,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
 	m_defaultProgram.SetUniform(0.0f, "xoff");
-	m_defaultProgram.SetUniform(0.25f, "xscale");
-	m_defaultProgram.SetUniform(400.0f, "yoff");
+	m_defaultProgram.SetUniform(0.5f, "xscale");
+	m_defaultProgram.SetUniform(100.0f, "yoff");
 	m_defaultProgram.SetUniform(100.0f, "yscale");
 
 	//Set the color decay value (constant for now)
@@ -430,14 +426,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	counts.push_back(2*m_waveformLength);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
 
-	//Something funky is going on. Why do we get correct results blitting to framebuffer ONE,
-	//and nothing showing up when we blit to framebuffer ZERO?
-	//According to the GL spec, FBO 0 should be the default.
-	const int windowFramebuffer = 1;
-
 	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
-	glBindFramebuffer(GL_FRAMEBUFFER, windowFramebuffer);
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	m_colormapProgram.Bind();
@@ -459,7 +450,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	//Copy the whole on-screen buffer to the persistence buffer so we can do decay
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, windowFramebuffer);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_windowFramebuffer);
 	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
 	glBlitFramebuffer(
 		0, 0, m_width, m_height,

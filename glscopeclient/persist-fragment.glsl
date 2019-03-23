@@ -14,5 +14,5 @@ void main()
 	finalColor.r = texcolor.r;
 	finalColor.g = texcolor.g;
 	finalColor.b = texcolor.b;
-	finalColor.a = 0.9;
+	finalColor.a = 0.95;
 }

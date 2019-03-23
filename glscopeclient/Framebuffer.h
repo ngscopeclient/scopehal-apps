@@ -47,11 +47,26 @@ public:
 	operator GLuint()
 	{ return m_handle; }
 
+	/**
+		@brief Initialize this FBO from the currently bound FBO.
+
+		This is important in GTK stuff since it creates FBOs for us,
+		and the window surface may not be framebuffer 0!
+	 */
+	void InitializeFromCurrentFramebuffer()
+	{
+		if(!m_handle)
+			glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&m_handle);
+	}
+
 	void Bind(GLenum target)
 	{
 		LazyInit();
 		glBindFramebuffer(target, m_handle);
 	}
+
+	bool IsInitialized()
+	{ return (m_handle != 0); }
 
 	//we must be bound for this to work
 	bool IsComplete(GLenum target = GL_FRAMEBUFFER)

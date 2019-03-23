@@ -48,8 +48,7 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, int port)
-	: m_waveformArea(scope, this)
-	, m_scope(scope)
+	: m_scope(scope)
 	//, m_btnStart(Gtk::Stock::YES)
 {
 	//Set title
@@ -86,6 +85,8 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	for(auto w : m_waveformAreas)
+		delete w;
 }
 
 /**
@@ -98,7 +99,12 @@ void OscilloscopeWindow::CreateWidgets()
 		m_vbox.pack_start(m_toolbar, Gtk::PACK_SHRINK);
 			//m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 			//	m_btnStart.set_tooltip_text("Start capture");
-		m_vbox.pack_start(m_waveformArea);
+		for(int i=0; i<3; i++)
+		{
+			auto w = new WaveformArea(m_scope, m_scope->GetChannel(i), this);
+			m_waveformAreas.emplace(w);
+			m_vbox.pack_start(*w);
+		}
 
 	//Set dimensions
 	//m_viewscroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
@@ -129,17 +135,18 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
 		return true;
 
-	double dt = GetTime() - m_tArm;
+	//double dt = GetTime() - m_tArm;
 	//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
 
 	//Triggered - get the data from each channel
-	double start = GetTime();
+	//double start = GetTime();
 	m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
-	dt = GetTime() - start;
+	//dt = GetTime() - start;
 	//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
 
 	//Update the view
-	m_waveformArea.OnWaveformDataReady();
+	for(auto w : m_waveformAreas)
+		w->OnWaveformDataReady();
 
 	//Re-arm trigger for another pass
 	m_scope->StartSingleTrigger();
