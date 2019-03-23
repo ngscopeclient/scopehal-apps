@@ -113,7 +113,8 @@ void OscilloscopeWindow::CreateWidgets()
 			m_statprogress.set_show_text();
 
 	//Set dimensions
-	m_viewscroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	//m_viewscroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	m_viewscroller.set_policy(Gtk::POLICY_ALWAYS, Gtk::POLICY_ALWAYS);
 
 	//Set up message handlers
 	//m_viewscroller.get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnScopeScroll));

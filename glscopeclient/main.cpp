@@ -36,22 +36,9 @@
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
+#include "../scopehal/LeCroyVICPOscilloscope.h"
 
 using namespace std;
-
-class InstrumentInfo
-{
-public:
-	Instrument* m_inst;
-	string m_server;
-	unsigned short m_port;
-
-	InstrumentInfo(Instrument* o, string s, unsigned short p)
-		: m_inst(o)
-		, m_server(s)
-		, m_port(p)
-	{}
-};
 
 /**
 	@brief The main application class
@@ -61,6 +48,8 @@ class ScopeApp : public Gtk::Application
 public:
 	ScopeApp()
 	 : Gtk::Application()
+	 , m_scope(NULL)
+	 , m_window(NULL)
 	{}
 
 	virtual ~ScopeApp();
@@ -70,20 +59,18 @@ public:
 		return Glib::RefPtr<ScopeApp>(new ScopeApp);
 	}
 
-	vector<InstrumentInfo> m_instruments;
+	Oscilloscope* m_scope;
+	std::string m_host;
 
 protected:
-	vector<Gtk::Window*> m_windows;
+	Gtk::Window* m_window;
 
 	virtual void on_activate();
 };
 
 ScopeApp::~ScopeApp()
 {
-	for(auto w : m_windows)
-		delete w;
-	for(auto i : m_instruments)
-		delete i.m_inst;
+	delete m_window;
 }
 
 /**
@@ -91,29 +78,10 @@ ScopeApp::~ScopeApp()
  */
 void ScopeApp::on_activate()
 {
-	/*
-	for(auto i : m_instruments)
-	{
-		auto features = i.m_inst->GetInstrumentTypes();
-
-		//Add UI for the oscilloscope
-		if(features & Instrument::INST_OSCILLOSCOPE)
-		{
-			auto w = new OscilloscopeWindow(dynamic_cast<Oscilloscope*>(i.m_inst), i.m_server, i.m_port);
-			m_windows.push_back(w);
-			add_window(*w);
-			w->present();
-		}
-
-		//TODO: other types of app
-	}
-	*/
-
 	//Test application
-	auto w = new OscilloscopeWindow(NULL, "", 0);
-	m_windows.push_back(w);
-	add_window(*w);
-	w->present();
+	m_window = new OscilloscopeWindow(m_scope, m_host, 0);
+	add_window(*m_window);
+	m_window->present();
 }
 
 int main(int argc, char* argv[])
@@ -121,17 +89,12 @@ int main(int argc, char* argv[])
 	auto app = ScopeApp::create();
 
 	//FIXME: proper way to locate shaders etc
-	chdir("/home/azonenberg/Documents/software/scopehal-cmake/src/glscopeclient/");
+	chdir("/nfs4/home/azonenberg/code/scopehal-cmake/src/glscopeclient/");
 
-	/*
 	//Global settings
 	unsigned short port = 0;
 	string server = "";
 	string api = "redtin_uart";
-	//bool scripted = false;
-	string scopename = "";
-	string tty = "/dev/ttyUSB0";
-	*/
 
 	Severity console_verbosity = Severity::NOTICE;
 
@@ -144,7 +107,6 @@ int main(int argc, char* argv[])
 		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
 			continue;
 
-		/*
 		if(s == "--help")
 		{
 			//not implemented
@@ -156,12 +118,6 @@ int main(int argc, char* argv[])
 			server = argv[++i];
 		else if(s == "--api")
 			api = argv[++i];
-		//else if(s == "--scripted")
-		//	scripted = true;
-		else if(s == "--scopename")
-			scopename = argv[++i];
-		else if(s == "--tty")
-			tty = argv[++i];
 		else if(s == "--version")
 		{
 			//not implemented
@@ -173,7 +129,6 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
 			return 1;
 		}
-		*/
 	}
 
 	//Set up logging
@@ -182,32 +137,21 @@ int main(int argc, char* argv[])
 	//Initialize the protocol decoder library
 	ScopeProtocolStaticInit();
 
-	/*
 	//Connect to the server
-	if(api == "redtin_uart")
-		app->m_instruments.push_back(InstrumentInfo(new RedTinLogicAnalyzer(tty, 115200), server, port));
-	else if(api == "lecroy_vicp")
+	if(api == "lecroy_vicp")
 	{
 		//default port if not specified
 		if(port == 0)
 			port = 1861;
 
-		app->m_instruments.push_back(InstrumentInfo(new LeCroyVICPOscilloscope(server, port), server, port));
-	}
-	else if(api == "rohdeschwarz_psu")
-	{
-		//default port if not specified
-		if(port == 0)
-			port = 5025;
-
-		app->m_instruments.push_back(
-			InstrumentInfo(new RohdeSchwarzHMC804xPowerSupply(server, port), server, port));
+		app->m_scope = new LeCroyVICPOscilloscope(server, port);
+		app->m_host = server;
 	}
 	else
 	{
 		LogError("Unrecognized API \"%s\", use --help\n", api.c_str());
 		return 1;
-	}*/
+	}
 
 	//and run the app
 	app->run();

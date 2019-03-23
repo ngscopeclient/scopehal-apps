@@ -769,6 +769,7 @@ void OscilloscopeView::OnProtocolDecode(string protocol)
 
 		//Find the adjacent channel
 		int ichan = -1;
+		LogDebug("Scope has %zu channels\n", m_scope->GetChannelCount());
 		for(int i=0; i<(int)m_scope->GetChannelCount() - 2; i++)
 		{
 			if(m_selectedChannel == m_scope->GetChannel(i))
@@ -783,7 +784,7 @@ void OscilloscopeView::OnProtocolDecode(string protocol)
 			delete decoder;
 			return;
 		}
-		OscilloscopeChannel* next = m_scope->GetChannel(ichan + 2);
+		OscilloscopeChannel* next = m_scope->GetChannel(ichan + 1);
 		if(decoder->ValidateChannel(1, next))
 			decoder->SetInput(1, next);
 		else

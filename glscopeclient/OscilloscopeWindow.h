@@ -48,10 +48,9 @@ public:
 	OscilloscopeWindow(Oscilloscope* scope, std::string host, int port);
 	~OscilloscopeWindow();
 
-	/*
 	Oscilloscope* GetScope()
 	{ return m_scope; }
-
+/*
 	OscilloscopeView& GetScopeView()
 	{ return m_view; }
 
@@ -74,21 +73,21 @@ protected:
 		WaveformArea m_waveformArea;
 
 	//Our oscilloscope connection
-	//Oscilloscope* m_scope;
+	Oscilloscope* m_scope;
 
 	//Status polling
 	bool OnTimer(int timer);
 
-	/*
 	int OnCaptureProgressUpdate(float progress);
 
+	/*
 	float m_timescale;
 
 	void OnZoomChanged();
 
-	bool m_waiting;
+	bool m_waiting;*/
 
-	double m_tArm;*/
+	double m_tArm;
 };
 
 #endif

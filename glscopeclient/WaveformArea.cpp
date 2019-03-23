@@ -164,7 +164,9 @@ static const RGBQUAD g_eyeColorScale[256] =
 };
 */
 
-WaveformArea::WaveformArea()
+WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeWindow* parent)
+	: m_scope(scope)
+	, m_parent(parent)
 {
 	m_frameTime = 0;
 	m_frameCount = 0;
@@ -228,7 +230,7 @@ void WaveformArea::on_realize()
 		ProfileBlock pb("File read");
 
 		//USB3_12G5_50M
-		FILE* fp = fopen("/home/azonenberg/Downloads/waveforms/USB3_12G5_50M.bin", "rb");
+		FILE* fp = fopen("/nfs4/share/waveforms/USB3_12G5_50M.bin", "rb");
 		fseek(fp, 0, SEEK_END);
 		size_t len = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
@@ -583,4 +585,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Get ready to immediately refresh
 	queue_draw();
 	return true;
+}
+
+void WaveformArea::OnWaveformDataReady()
+{
 }

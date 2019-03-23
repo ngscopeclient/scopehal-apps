@@ -48,20 +48,19 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, int port)
-	/*: m_btnStart(Gtk::Stock::YES)
-	, m_view(scope, this)
-	, m_scope(scope)*/
+	: m_waveformArea(scope, this)
+	, m_scope(scope)
+	//, m_btnStart(Gtk::Stock::YES)
 {
 	//Set title
 	char title[256];
-	/*snprintf(title, sizeof(title), "Oscilloscope: %s:%d (%s %s, serial %s)",
+	snprintf(title, sizeof(title), "Oscilloscope: %s:%d (%s %s, serial %s)",
 		host.c_str(),
 		port,
 		scope->GetVendor().c_str(),
 		scope->GetName().c_str(),
 		scope->GetSerial().c_str()
-		);*/
-	snprintf(title, sizeof(title), "FIXME");
+		);
 	set_title(title);
 
 	//Initial setup
@@ -78,15 +77,8 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
 	sigc::connection conn = Glib::signal_timeout().connect(slot, 10);
 
-	/*
-	//Set up display time scale
-	m_timescale = 0;
-	m_waiting = false;
-
-	//Try triggering immediately. This lets us download an initial waveform right away.
-	//It's also necessary to do this to initialize some other subsystems like the DMM.
-	OnStart();
-	*/
+	m_tArm = GetTime();
+	m_scope->StartSingleTrigger();
 }
 
 /**
@@ -126,65 +118,33 @@ void OscilloscopeWindow::CreateWidgets()
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
-	/*
-	m_statprogress.set_fraction(0);
-
-	static int i = 0;
-	i ++;
-	i %= 10;
-
-	if(m_waiting)
+	Oscilloscope::TriggerMode status = m_scope->PollTrigger();
+	if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 	{
-		//m_statprogress.set_text("Ready");
-		string str = "Ready";
-		for(int j=0; j<i; j++)
-			str += ".";
-		m_statprogress.set_text(str);
-
-		//TODO: poll channel status and time/div etc and update our in-memory representation
-		//(in case the user enabled a channel etc with hardware buttons)
-
-		//Poll the trigger status of the scope
-		Oscilloscope::TriggerMode status = m_scope->PollTrigger();
-		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
-		{
-			//Invalid value, skip it
-			return true;
-		}
-
-		//If not TRIGGERED, do nothing
-		if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			return true;
-
-		double dt = GetTime() - m_tArm;
-		LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
-
-		m_statprogress.set_text("Triggered");
-
-		//Triggered - get the data from each channel
-		double start = GetTime();
-		m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
-		dt = GetTime() - start;
-		LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
-
-		//Set to a sane zoom if this is our first capture
-		//otherwise keep time scale unchanged
-		if(m_timescale == 0)
-			OnZoomFit();
-
-		//Refresh display
-		m_view.SetSizeDirty();
-		m_view.queue_draw();
-
-		m_waiting = false;
-
-		//TODO: if in continuous mode, trigger again
-		//TODO: have settings for this
-		//OnStart();
+		//Invalid value, skip it
+		return true;
 	}
-	else
-		m_statprogress.set_text("Stopped");
-	*/
+
+	//If not TRIGGERED, do nothing
+	if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+		return true;
+
+	double dt = GetTime() - m_tArm;
+	LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
+
+	//Triggered - get the data from each channel
+	double start = GetTime();
+	m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+	dt = GetTime() - start;
+	LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+
+	//Update the view
+	m_waveformArea.OnWaveformDataReady();
+
+	//Re-arm trigger for another pass
+	m_scope->StartSingleTrigger();
+	m_tArm = GetTime();
+
 	//false to stop timer
 	return true;
 }
@@ -244,10 +204,10 @@ void OscilloscopeWindow::OnZoomChanged()
 	m_view.SetSizeDirty();
 	m_view.queue_draw();
 }
-
-int OscilloscopeWindow::OnCaptureProgressUpdate(float progress)
+*/
+int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
 {
-	m_statprogress.set_fraction(progress);
+	//m_statprogress.set_fraction(progress);
 
 	//Dispatch pending gtk events (such as draw calls)
 	while(Gtk::Main::events_pending())
@@ -256,6 +216,7 @@ int OscilloscopeWindow::OnCaptureProgressUpdate(float progress)
 	return 0;
 }
 
+/*
 void OscilloscopeWindow::OnStart()
 {
 	//TODO: get triggers

@@ -38,11 +38,15 @@
 float sinc(float x, float width);
 float blackman(float x, float width);
 
+class OscilloscopeWindow;
+
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea();
+	WaveformArea(Oscilloscope* scope, OscilloscopeWindow* parent);
 	virtual ~WaveformArea();
+
+	void OnWaveformDataReady();
 
 protected:
 	virtual void on_realize();
@@ -61,7 +65,10 @@ protected:
 
 	int m_width;
 	int m_height;
-	int m_numWaveforms;
+	size_t m_waveformLength;
+
+	//temp
+	size_t m_numWaveforms;
 
 	double m_frameTime;
 	long m_frameCount;
@@ -72,6 +79,8 @@ protected:
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
 
+	Oscilloscope* m_scope;
+	OscilloscopeWindow* m_parent;
 };
 
 #endif
