@@ -80,6 +80,11 @@ protected:
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
 
+	void InitializePersistencePass();
+	Program m_persistProgram;
+	VertexArray m_persistVAO;
+	VertexBuffer m_persistVBO;
+
 	Oscilloscope* m_scope;
 	OscilloscopeWindow* m_parent;
 };

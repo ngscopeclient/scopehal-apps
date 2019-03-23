@@ -167,6 +167,7 @@ void WaveformArea::on_realize()
 	}
 
 	InitializeColormapPass();
+	InitializePersistencePass();
 
 	//Create the VAOs and VBOs
 	{
@@ -216,6 +217,43 @@ void WaveformArea::InitializeColormapPass()
 	m_colormapProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
+void WaveformArea::InitializePersistencePass()
+{
+	ProfileBlock pb("Load persistence shaders");
+
+	//Set up shaders
+	VertexShader cvs;
+	FragmentShader cfs;
+	if(!cvs.Load("persist-vertex.glsl") || !cfs.Load("persist-fragment.glsl"))
+	{
+		LogError("failed to load persist shaders, aborting");
+		exit(1);
+	}
+
+	m_persistProgram.Add(cvs);
+	m_persistProgram.Add(cfs);
+	if(!m_persistProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
+
+	//Create the VAO/VBO for a fullscreen polygon
+	float verts[8] =
+	{
+		-1, -1,
+		 1, -1,
+		 1,  1,
+		-1,  1
+	};
+	m_persistVBO.Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	m_persistVAO.Bind();
+	m_persistProgram.EnableVertexArray("vert");
+	m_persistProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
@@ -244,6 +282,8 @@ void WaveformArea::on_resize(int width, int height)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_persistbuffer, 0);
 	if(!m_persistbuffer.IsComplete())
 		LogError("Persist FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	glClearColor(0,0,0,0);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 	m_fboTexture.Bind();
@@ -283,8 +323,8 @@ void WaveformArea::PrepareGeometry()
 	for(size_t i=0; i<count; i++)
 		voltages[i] = data2[i] - data3[i];
 
-	double dt = GetTime() - start;
-	start = GetTime();
+	//double dt = GetTime() - start;
+	//start = GetTime();
 	//LogDebug("Subtraction: %.3f ms\n", dt * 1000);
 
 	//Create the geometry
@@ -309,16 +349,16 @@ void WaveformArea::PrepareGeometry()
 		voff += 4;
 	}
 
-	dt = GetTime() - start;
-	start = GetTime();
+	//dt = GetTime() - start;
+	//start = GetTime();
 	//LogDebug("Geometry creation: %.3f ms\n", dt * 1000);
 
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * waveform_size, verts, GL_DYNAMIC_DRAW);
 
-	dt = GetTime() - start;
-	start = GetTime();
+	//dt = GetTime() - start;
+	//start = GetTime();
 	//LogDebug("Waveform download: %.3f ms\n", dt * 1000);
 
 	//Configure vertex array settings
@@ -326,8 +366,8 @@ void WaveformArea::PrepareGeometry()
 	m_defaultProgram.EnableVertexArray("vert");
 	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
 
-	dt = GetTime() - start;
-	start = GetTime();
+	//dt = GetTime() - start;
+	//start = GetTime();
 	//LogDebug("Vertex array config: %.3f ms\n", dt * 1000);
 
 	m_waveformLength = count;
@@ -374,7 +414,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_defaultProgram.Bind();
 	m_defaultProgram.SetUniform(m_projection, "projection");
 	m_defaultProgram.SetUniform(0.0f, "xoff");
-	m_defaultProgram.SetUniform(0.075f, "xscale");
+	m_defaultProgram.SetUniform(0.25f, "xscale");
 	m_defaultProgram.SetUniform(400.0f, "yoff");
 	m_defaultProgram.SetUniform(100.0f, "yscale");
 
@@ -401,13 +441,31 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	m_colormapProgram.Bind();
-	//m_colormapVBO.Bind();
 	m_colormapVAO.Bind();
-	/*int loc = m_colormapProgram.GetUniformLocation("fbtex");
+	int loc = m_colormapProgram.GetUniformLocation("fbtex");
 	glActiveTexture(GL_TEXTURE0);
 	m_fboTexture.Bind();
-	glUniform1i(loc, 0);*/
+	glUniform1i(loc, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	//Draw the persistence buffer
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	m_persistProgram.Bind();
+	m_persistVAO.Bind();
+	glActiveTexture(GL_TEXTURE0);
+	m_persistTexture.Bind();
+	loc = m_persistProgram.GetUniformLocation("fbtex");
+	glUniform1i(loc, 0);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	//Copy the whole on-screen buffer to the persistence buffer so we can do decay
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, windowFramebuffer);
+	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
+	glBlitFramebuffer(
+		0, 0, m_width, m_height,
+		0, 0, m_width, m_height,
+		GL_COLOR_BUFFER_BIT,
+		GL_NEAREST);
 
 	//Sanity check
 	int err = glGetError();
