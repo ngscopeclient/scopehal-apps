@@ -121,17 +121,17 @@ protected:
 	Texture m_waveformTexture;
 
 	//Persistence
-	void RenderPersistence();
+	void RenderPersistenceOverlay();
 	void InitializePersistencePass();
 	Program m_persistProgram;
 	VertexArray m_persistVAO;
 	VertexBuffer m_persistVBO;
-	Framebuffer m_persistbuffer;
-	Texture m_persistTexture;
 
 	//Cairo overlay rendering for text and protocol decode overlays
 	void RenderCairoUnderlays();
 	void RenderCairoOverlays();
+	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
+	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
 	VertexArray m_cairoVAO;

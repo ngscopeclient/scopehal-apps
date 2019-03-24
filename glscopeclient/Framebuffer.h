@@ -35,6 +35,8 @@
 #ifndef Framebuffer_h
 #define Framebuffer_h
 
+#include "Texture.h"
+
 /**
 	@brief A framebuffer object
  */
@@ -71,6 +73,11 @@ public:
 	//we must be bound for this to work
 	bool IsComplete(GLenum target = GL_FRAMEBUFFER)
 	{ return glCheckFramebufferStatus(target) == GL_FRAMEBUFFER_COMPLETE; }
+
+	void SetTexture(Texture& tex)
+	{
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+	}
 
 protected:
 

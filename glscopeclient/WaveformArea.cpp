@@ -599,19 +599,10 @@ void WaveformArea::on_resize(int width, int height)
 
 	//Initialize the color buffers
 	//No antialiasing for now, we just alpha blend everything
-	m_persistbuffer.Bind(GL_FRAMEBUFFER);
-	m_persistTexture.Bind();
-	m_persistTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_persistTexture, 0);
-	if(!m_persistbuffer.IsComplete())
-		LogError("Persist FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
-	glClearColor(0,0,0,0);
-	glClear(GL_COLOR_BUFFER_BIT);
-
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 	m_waveformTexture.Bind();
 	m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_waveformTexture, 0);
+	m_waveformFramebuffer.SetTexture(m_waveformTexture);
 	if(!m_waveformFramebuffer.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
@@ -701,9 +692,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	//Offscreen rendering and accumulation of the waveforms
+	RenderPersistenceOverlay();
 	if(PrepareGeometry())
 		RenderTrace();
-	RenderPersistence();
 
 	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderCairoUnderlays();
@@ -718,13 +709,33 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	return true;
 }
 
-void WaveformArea::RenderTrace()
+void WaveformArea::RenderPersistenceOverlay()
 {
 	//Draw to the offscreen floating-point framebuffer.
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
 
+	//If not persisting, just wipe out whatever was there before
+	if(!m_persistence)
+	{
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+		return;
+	}
+
+	//Configure blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+	glBlendColor(0, 0, 0, 0.1);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+	//Draw a black overlay with programmable alpha
+	m_persistProgram.Bind();
+	m_persistVAO.Bind();
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+void WaveformArea::RenderTrace()
+{
 	//Configure our shader and projection matrix
 	m_waveformProgram.Bind();
 	m_waveformProgram.SetUniform(m_projection, "projection");
@@ -733,8 +744,9 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(100.0f, "yoff");
 	m_waveformProgram.SetUniform(100.0f, "yscale");
 
-	//Set the color decay value (constant for now)
-	m_waveformProgram.SetUniform(1.0f, "alpha");
+	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+	glBlendColor(0, 0, 0, 1);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();
@@ -746,30 +758,6 @@ void WaveformArea::RenderTrace()
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
 	*/
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*m_waveformLength);
-}
-
-void WaveformArea::RenderPersistence()
-{
-	//Draw the persistence buffer over our waveforms
-	if(m_persistence)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		m_persistProgram.Bind();
-		m_persistVAO.Bind();
-		m_persistProgram.SetUniform(m_persistTexture, "fbtex");
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
-
-	//Copy the whole waveform buffer to the persistence buffer so we can do decay.
-	//Do this even if we're not actually drawing persistence (to clear out old state)
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_waveformFramebuffer);
-	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
-	glBlitFramebuffer(
-		0, 0, m_width, m_height,
-		0, 0, m_width, m_height,
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
 }
 
 void WaveformArea::RenderCairoUnderlays()
@@ -788,10 +776,7 @@ void WaveformArea::RenderCairoUnderlays()
 	cr->rectangle(0, 0, m_width, m_height);
 	cr->fill();
 
-	//simple test geometry
-	cr->set_source_rgba(0.25, 0.25, 0.25, 1);
-	cr->rectangle(50, 50, 200, 200);
-	cr->fill();
+	DoRenderCairoUnderlays(cr);
 
 	//Get the image data and make a texture from it
 	m_cairoTexture.Bind();
@@ -808,6 +793,10 @@ void WaveformArea::RenderCairoUnderlays()
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
+void WaveformArea::DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr)
+{
+}
+
 void WaveformArea::RenderTraceColorCorrection()
 {
 	//Drawing to the window
@@ -815,15 +804,10 @@ void WaveformArea::RenderTraceColorCorrection()
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
-	/*if(m_persistence)
-		m_persistTexture.Bind();
-	else
-		m_waveformTexture.Bind();
-		*/
-
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
 	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
@@ -846,10 +830,7 @@ void WaveformArea::RenderCairoOverlays()
 	cr->rectangle(0, 0, m_width, m_height);
 	cr->fill();
 
-	//simple test geometry
-	cr->set_source_rgba(0, 0, 1, 0.5);
-	cr->rectangle(550, 50, 200, 200);
-	cr->fill();
+	DoRenderCairoOverlays(cr);
 
 	//Get the image data and make a texture from it
 	m_cairoTexture.Bind();
@@ -869,6 +850,10 @@ void WaveformArea::RenderCairoOverlays()
 	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
+{
 }
 
 void WaveformArea::OnWaveformDataReady()

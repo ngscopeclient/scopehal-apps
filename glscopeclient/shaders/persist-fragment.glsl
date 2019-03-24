@@ -1,18 +1,12 @@
 #version 130
 
-in vec2 			texcoord;
-uniform sampler2D	fbtex;
-
 out vec4 			finalColor;
 
 void main()
 {
-	//Look up the original color
-	vec4 texcolor = texture(fbtex, vec2(texcoord));
-
-	//alpha blend
-	finalColor.r = texcolor.r;
+	//Output a black overlay with no color
+	finalColor.r = 0;
 	finalColor.g = 0;
 	finalColor.b = 0;
-	finalColor.a = 0.5;//texcolor.a * 0.8;
+	finalColor.a = 0;
 }
