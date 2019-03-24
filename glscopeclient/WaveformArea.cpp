@@ -119,6 +119,19 @@ WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, Os
 	m_frameCount = 0;
 
 	set_has_alpha();
+
+	add_events(
+		Gdk::EXPOSURE_MASK |
+		Gdk::SCROLL_MASK |
+		Gdk::BUTTON_PRESS_MASK |
+		Gdk::BUTTON_RELEASE_MASK);
+
+	//Create the menu
+	auto item = Gtk::manage(new Gtk::MenuItem("Hide channel", false));
+	item->signal_activate().connect(
+		sigc::mem_fun(*this, &WaveformArea::OnHide));
+	m_contextMenu.append(*item);
+	m_contextMenu.show_all();
 }
 
 WaveformArea::~WaveformArea()
@@ -256,6 +269,27 @@ void WaveformArea::InitializePersistencePass()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
+
+bool WaveformArea::on_button_press_event(GdkEventButton* event)
+{
+	switch(event->button)
+	{
+		//Right
+		case 3:
+			m_contextMenu.popup(event->button, event->time);
+			break;
+	}
+
+	return true;
+}
+
+void WaveformArea::OnHide()
+{
+	hide();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
 void WaveformArea::on_resize(int width, int height)
@@ -312,10 +346,8 @@ bool WaveformArea::PrepareGeometry()
 
 	auto dat = m_channel->GetData();
 	if(!dat)
-	{
-		LogDebug("null data, nothing to do\n");
 		return false;
-	}
+
 	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
 	size_t count = data.size();
 
@@ -366,9 +398,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Draw to the offscreen floating-point framebuffer.
 	m_framebuffer.Bind(GL_FRAMEBUFFER);
 
-	if(!PrepareGeometry())
-		return true;
-
 	double start = GetTime();
 	double dt = start - last;
 	if(last > 0)
@@ -394,10 +423,15 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//Actual rendering
-	RenderTrace();
+	//Create the actual waveform we're drawing, then render it.
+	if(PrepareGeometry())
+		RenderTrace();
+
+	//Do postprocessing even if we have no waveform data (so we get a blank background)
 	RenderTraceColorCorrection();
 	RenderPersistence();
+
+	//TODO: HUD overlays etc
 
 	//Sanity check
 	int err = glGetError();

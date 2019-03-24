@@ -50,18 +50,16 @@ public:
 
 	Oscilloscope* GetScope()
 	{ return m_scope; }
-/*
-	OscilloscopeView& GetScopeView()
-	{ return m_view; }
 
-	//Message handlers (also called by OscilloscopeView)
-	void OnZoomOut();
-	void OnZoomIn();
-	void OnZoomFit();
+	void OnStart();
+	void OnStartSingle();
+	void OnStop();
 
-	void OnStart();*/
+	//void RemoveWaveform(WaveformArea* view);
 
 protected:
+
+	//Gtk::IconTheme m_iconTheme;
 
 	//Initialization
 	void CreateWidgets();
@@ -69,7 +67,9 @@ protected:
 	//Widgets
 	Gtk::VBox m_vbox;
 		Gtk::Toolbar m_toolbar;
-			//Gtk::ToolButton m_btnStart;
+			Gtk::ToolButton m_btnStart;
+			Gtk::ToolButton m_btnStartSingle;
+			Gtk::ToolButton m_btnStop;
 		std::set<WaveformArea*> m_waveformAreas;
 
 	//Our oscilloscope connection
@@ -80,14 +80,8 @@ protected:
 
 	int OnCaptureProgressUpdate(float progress);
 
-	/*
-	float m_timescale;
-
-	void OnZoomChanged();
-
-	bool m_waiting;*/
-
 	double m_tArm;
+	bool m_triggerOneShot;
 };
 
 #endif

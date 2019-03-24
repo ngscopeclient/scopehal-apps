@@ -49,7 +49,7 @@ using namespace std;
  */
 OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, int port)
 	: m_scope(scope)
-	//, m_btnStart(Gtk::Stock::YES)
+	// m_iconTheme(Gtk::IconTheme::get_default())
 {
 	//Set title
 	char title[256];
@@ -78,6 +78,7 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 
 	m_tArm = GetTime();
 	m_scope->StartSingleTrigger();
+	m_triggerOneShot = false;
 }
 
 /**
@@ -97,9 +98,18 @@ void OscilloscopeWindow::CreateWidgets()
 	//Set up window hierarchy
 	add(m_vbox);
 		m_vbox.pack_start(m_toolbar, Gtk::PACK_SHRINK);
-			//m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
-			//	m_btnStart.set_tooltip_text("Start capture");
-		for(int i=0; i<3; i++)
+			m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
+				m_btnStart.set_tooltip_text("Start (normal trigger)");
+				m_btnStart.set_icon_name("media-playback-start");
+			m_toolbar.append(m_btnStartSingle, sigc::mem_fun(*this, &OscilloscopeWindow::OnStartSingle));
+				m_btnStartSingle.set_tooltip_text("Start (single trigger)");
+				m_btnStartSingle.set_icon_name("media-skip-forward");
+			m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
+				m_btnStop.set_tooltip_text("Stop trigger");
+				m_btnStop.set_icon_name("media-playback-stop");
+
+		//Create viewers for all the channels
+		for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 		{
 			auto w = new WaveformArea(m_scope, m_scope->GetChannel(i), this);
 			m_waveformAreas.emplace(w);
@@ -121,6 +131,11 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+/*void OscilloscopeWindow::RemoveWaveform(WaveformArea* view)
+{
+
+}*/
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
@@ -149,12 +164,34 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		w->OnWaveformDataReady();
 
 	//Re-arm trigger for another pass
-	m_scope->StartSingleTrigger();
-	m_tArm = GetTime();
+	if(!m_triggerOneShot)
+	{
+		m_scope->StartSingleTrigger();
+		m_tArm = GetTime();
+	}
 
 	//false to stop timer
 	return true;
 }
+
+void OscilloscopeWindow::OnStart()
+{
+	m_scope->StartSingleTrigger();
+	m_triggerOneShot = false;
+}
+
+void OscilloscopeWindow::OnStartSingle()
+{
+	m_scope->StartSingleTrigger();
+	m_triggerOneShot = true;
+}
+
+void OscilloscopeWindow::OnStop()
+{
+	m_scope->Stop();
+	m_triggerOneShot = true;
+}
+
 
 /*
 void OscilloscopeWindow::OnZoomOut()

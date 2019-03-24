@@ -51,7 +51,13 @@ public:
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
+	virtual bool on_button_press_event(GdkEventButton* event);
 	bool PrepareGeometry();
+
+	void OnHide();
+
+	//Context menu
+	Gtk::Menu m_contextMenu;
 
 	//Rendering
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
@@ -59,8 +65,8 @@ protected:
 	void RenderTraceColorCorrection();
 	void RenderPersistence();
 
+	//GL stuff (TODO organize)
 	Program m_defaultProgram;
-
 	Framebuffer m_windowFramebuffer;
 
 	Framebuffer m_framebuffer;
