@@ -771,6 +771,10 @@ void WaveformArea::RenderCairoUnderlays()
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
 	Cairo::RefPtr< Cairo::Context > cr = Cairo::Context::create(surface);
 
+	//Set up transformation to match GL's bottom-left origin
+	cr->translate(0, m_height);
+	cr->scale(1, -1);
+
 	//Clear to a blank background
 	cr->set_source_rgba(0, 0, 0, 1);
 	cr->rectangle(0, 0, m_width, m_height);
@@ -795,6 +799,33 @@ void WaveformArea::RenderCairoUnderlays()
 
 void WaveformArea::DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr)
 {
+	RenderBackgroundGradient(cr);
+}
+
+void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
+{
+	//Draw the background gradient
+	float padding = 2;
+	float ytop = padding;
+	float ybot = m_height - 2*padding;
+	float top_brightness = 0.3;
+	float bottom_brightness = 0.1;
+
+	Gdk::Color color(m_channel->m_displaycolor);
+	Cairo::RefPtr<Cairo::LinearGradient> background_gradient = Cairo::LinearGradient::create(0, ytop, 0, ybot);
+	background_gradient->add_color_stop_rgb(
+		0,
+		color.get_red_p() * top_brightness,
+		color.get_green_p() * top_brightness,
+		color.get_blue_p() * top_brightness);
+	background_gradient->add_color_stop_rgb(
+		1,
+		color.get_red_p() * bottom_brightness,
+		color.get_green_p() * bottom_brightness,
+		color.get_blue_p() * bottom_brightness);
+	cr->set_source(background_gradient);
+	cr->rectangle(0, 0, m_width, m_height);
+	cr->fill();
 }
 
 void WaveformArea::RenderTraceColorCorrection()
@@ -825,6 +856,10 @@ void WaveformArea::RenderCairoOverlays()
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
 	Cairo::RefPtr< Cairo::Context > cr = Cairo::Context::create(surface);
 
+	//Set up transformation to match GL's bottom-left origin
+	cr->translate(0, m_height);
+	cr->scale(1, -1);
+
 	//Clear to a blank background
 	cr->set_source_rgba(0, 0, 0, 0);
 	cr->rectangle(0, 0, m_width, m_height);
@@ -854,6 +889,35 @@ void WaveformArea::RenderCairoOverlays()
 
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
+	RenderChannelLabel(cr);
+}
+
+void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
+{
+	auto ybot = m_height;
+
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Pango::FontDescription font("sans normal 10");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	tlayout->set_text(m_channel->GetHwname());
+	tlayout->get_pixel_size(twidth, theight);
+
+	//Black background
+	int labelmargin = 2;
+	cr->set_source_rgba(0, 0, 0, 0.75);
+	cr->rectangle(0, ybot - theight - labelmargin*2, twidth + labelmargin*2, theight + labelmargin*2);
+	cr->fill();
+
+	//White text
+	cr->save();
+		cr->set_source_rgba(1, 1, 1, 1);
+		cr->move_to(labelmargin, ybot - theight - labelmargin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
 }
 
 void WaveformArea::OnWaveformDataReady()

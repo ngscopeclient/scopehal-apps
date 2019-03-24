@@ -129,9 +129,11 @@ protected:
 
 	//Cairo overlay rendering for text and protocol decode overlays
 	void RenderCairoUnderlays();
+	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
-	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
 	VertexArray m_cairoVAO;
