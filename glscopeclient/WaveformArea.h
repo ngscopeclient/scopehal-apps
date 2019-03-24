@@ -72,6 +72,12 @@ protected:
 				Gtk::RadioMenuItem m_dc1MCouplingItem;
 				Gtk::RadioMenuItem m_ac1MCouplingItem;
 				Gtk::RadioMenuItem m_gndCouplingItem;
+		Gtk::MenuItem m_attenItem;
+			Gtk::Menu m_attenMenu;
+				Gtk::RadioMenuItem::Group m_attenGroup;
+					Gtk::RadioMenuItem m_atten1xItem;
+					Gtk::RadioMenuItem m_atten10xItem;
+					Gtk::RadioMenuItem m_atten20xItem;
 	void UpdateContextMenu();
 	bool m_updatingContextMenu;
 	void OnHide();

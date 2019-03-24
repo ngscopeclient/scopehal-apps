@@ -147,6 +147,16 @@ WaveformArea::WaveformArea(
 		m_persistenceItem.signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnTogglePersistence));
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+	m_contextMenu.append(m_triggerItem);
+		m_triggerItem.set_label("Trigger");
+		m_triggerItem.set_submenu(m_triggerMenu);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Rising edge"));
+			m_triggerMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Falling edge"));
+			m_triggerMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Any edge"));
+			m_triggerMenu.append(*item);
+			//TODO: more trigger types
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
 		m_couplingItem.set_submenu(m_couplingMenu);
@@ -162,16 +172,18 @@ WaveformArea::WaveformArea(
 			m_gndCouplingItem.set_label("GND");
 				m_gndCouplingItem.set_group(m_couplingGroup);
 				m_couplingMenu.append(m_gndCouplingItem);
-	m_contextMenu.append(m_triggerItem);
-		m_triggerItem.set_label("Trigger");
-		m_triggerItem.set_submenu(m_triggerMenu);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Rising edge"));
-			m_triggerMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Falling edge"));
-			m_triggerMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Any edge"));
-			m_triggerMenu.append(*item);
-			//TODO: more trigger types
+	m_contextMenu.append(m_attenItem);
+		m_attenItem.set_label("Attenuation");
+		m_attenItem.set_submenu(m_attenMenu);
+			m_atten1xItem.set_label("1x");
+				m_atten1xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten1xItem);
+			m_atten10xItem.set_label("10x");
+				m_atten10xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten10xItem);
+			m_atten20xItem.set_label("20x");
+				m_atten20xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten20xItem);
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 	m_contextMenu.append(m_decodeItem);
 		m_decodeItem.set_label("Protocol decode");
@@ -397,6 +409,27 @@ void WaveformArea::UpdateContextMenu()
 
 		default:
 			m_couplingItem.set_sensitive(false);
+			break;
+	}
+
+	//Update the current attenuation
+	int atten = static_cast<int>(m_selectedChannel->GetAttenuation());
+	switch(atten)
+	{
+		case 1:
+			m_atten1xItem.set_active(true);
+			break;
+
+		case 10:
+			m_atten10xItem.set_active(true);
+			break;
+
+		case 20:
+			m_atten20xItem.set_active(true);
+			break;
+
+		default:
+			//TODO: how to handle this?
 			break;
 	}
 
