@@ -43,7 +43,7 @@ class OscilloscopeWindow;
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent);
+	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent, Gdk::Color color);
 	virtual ~WaveformArea();
 
 	void OnWaveformDataReady();
@@ -51,56 +51,58 @@ public:
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
+	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
 	bool PrepareGeometry();
 
-	void OnHide();
-
 	//Context menu
 	Gtk::Menu m_contextMenu;
+		Gtk::CheckMenuItem m_persistenceItem;
+	void OnHide();
+	void OnTogglePersistence();
 
-	//Rendering
-	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
-	void RenderTrace();
-	void RenderTraceColorCorrection();
-	void RenderPersistence();
+	int m_width;
+	int m_height;
+
+	//Display options
+	bool m_persistence;
 
 	//GL stuff (TODO organize)
 	Program m_defaultProgram;
 	Framebuffer m_windowFramebuffer;
 
-	Framebuffer m_framebuffer;
-	Texture m_fboTexture;
-
-	Framebuffer m_persistbuffer;
-	Texture m_persistTexture;
-
+	//Trace rendering
+	void RenderTrace();
 	std::vector<VertexBuffer*> m_traceVBOs;
 	std::vector<VertexArray*> m_traceVAOs;
-
 	glm::mat4 m_projection;
-
-	int m_width;
-	int m_height;
 	size_t m_waveformLength;
 
-	double m_frameTime;
-	long m_frameCount;
-
-	//Final rendering pass:
+	//Color correction
+	void RenderTraceColorCorrection();
 	void InitializeColormapPass();
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
+	Gdk::Color m_color;
+	Framebuffer m_framebuffer;
+	Texture m_fboTexture;
 
+	//Persistence
+	void RenderPersistence();
 	void InitializePersistencePass();
 	Program m_persistProgram;
 	VertexArray m_persistVAO;
 	VertexBuffer m_persistVBO;
+	Framebuffer m_persistbuffer;
+	Texture m_persistTexture;
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
 	OscilloscopeWindow* m_parent;
+
+	double m_frameTime;
+	long m_frameCount;
 };
 
 #endif

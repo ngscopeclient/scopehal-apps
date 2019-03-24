@@ -110,8 +110,14 @@ static const RGBQUAD g_eyeColorScale[256] =
 };
 */
 
-WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent)
-	: m_scope(scope)
+WaveformArea::WaveformArea(
+	Oscilloscope* scope,
+	OscilloscopeChannel* channel,
+	OscilloscopeWindow* parent,
+	Gdk::Color color
+	)
+	: m_color(color)
+	, m_scope(scope)
 	, m_channel(channel)
 	, m_parent(parent)
 {
@@ -128,10 +134,17 @@ WaveformArea::WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, Os
 
 	//Create the menu
 	auto item = Gtk::manage(new Gtk::MenuItem("Hide channel", false));
-	item->signal_activate().connect(
-		sigc::mem_fun(*this, &WaveformArea::OnHide));
-	m_contextMenu.append(*item);
+		item->signal_activate().connect(
+			sigc::mem_fun(*this, &WaveformArea::OnHide));
+		m_contextMenu.append(*item);
+	m_contextMenu.append(m_persistenceItem);
+		m_persistenceItem.set_label("Persistence");
+		m_persistenceItem.signal_activate().connect(
+			sigc::mem_fun(*this, &WaveformArea::OnTogglePersistence));
+
 	m_contextMenu.show_all();
+
+	m_persistence = false;
 }
 
 WaveformArea::~WaveformArea()
@@ -287,6 +300,13 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 void WaveformArea::OnHide()
 {
 	hide();
+}
+
+void WaveformArea::OnTogglePersistence()
+{
+	m_persistence = !m_persistence;
+
+	queue_draw();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -471,28 +491,39 @@ void WaveformArea::RenderTraceColorCorrection()
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
+
 	int loc = m_colormapProgram.GetUniformLocation("fbtex");
 	glActiveTexture(GL_TEXTURE0);
 	m_fboTexture.Bind();
+
+	m_colormapProgram.SetUniform(m_color.get_red_p(), "r");
+	m_colormapProgram.SetUniform(m_color.get_green_p(), "g");
+	m_colormapProgram.SetUniform(m_color.get_blue_p(), "b");
+
 	glUniform1i(loc, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void WaveformArea::RenderPersistence()
 {
-	//Draw the persistence buffer
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	m_persistProgram.Bind();
-	m_persistVAO.Bind();
-	glActiveTexture(GL_TEXTURE0);
-	m_persistTexture.Bind();
-	int loc = m_persistProgram.GetUniformLocation("fbtex");
-	glUniform1i(loc, 0);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	//Draw the persistence buffer over our waveforms
+	if(m_persistence)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		m_persistProgram.Bind();
+		m_persistVAO.Bind();
+		glActiveTexture(GL_TEXTURE0);
+		m_persistTexture.Bind();
+		int loc = m_persistProgram.GetUniformLocation("fbtex");
+		glUniform1i(loc, 0);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	}
 
-	//Copy the whole on-screen buffer to the persistence buffer so we can do decay
+	//Copy the whole on-screen buffer to the persistence buffer so we can do decay.
+	//Do this even if we're not actually drawing persistence (to clear out old state)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_windowFramebuffer);
 	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
 	glBlitFramebuffer(

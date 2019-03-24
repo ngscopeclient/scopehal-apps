@@ -111,7 +111,12 @@ void OscilloscopeWindow::CreateWidgets()
 		//Create viewers for all the channels
 		for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 		{
-			auto w = new WaveformArea(m_scope, m_scope->GetChannel(i), this);
+			auto w = new WaveformArea(
+				m_scope,
+				m_scope->GetChannel(i),
+				this,
+				Gdk::Color(GetDefaultChannelColor(i))
+				);
 			m_waveformAreas.emplace(w);
 			m_vbox.pack_start(*w);
 		}

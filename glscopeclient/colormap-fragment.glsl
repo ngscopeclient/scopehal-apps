@@ -2,6 +2,9 @@
 
 in vec2 			texcoord;
 uniform sampler2D	fbtex;
+uniform float		r;
+uniform float		g;
+uniform float		b;
 
 out vec4 			finalColor;
 
@@ -19,8 +22,8 @@ void main()
 	y = max(y, 0);
 
 	//convert to rgb grayscale
-	finalColor.r = y * 0.25;
-	finalColor.g = y;
-	finalColor.b = y;
+	finalColor.r = y * r;
+	finalColor.g = y * g;
+	finalColor.b = y * b;
 	finalColor.a = 1;
 }
