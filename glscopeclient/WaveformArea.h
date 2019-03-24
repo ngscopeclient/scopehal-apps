@@ -104,6 +104,7 @@ protected:
 	//Trace rendering
 	bool PrepareGeometry();
 	void RenderTrace();
+	void InitializeWaveformPass();
 	std::vector<VertexBuffer*> m_traceVBOs;
 	std::vector<VertexArray*> m_traceVAOs;
 	glm::mat4 m_projection;
@@ -127,6 +128,14 @@ protected:
 	VertexBuffer m_persistVBO;
 	Framebuffer m_persistbuffer;
 	Texture m_persistTexture;
+
+	//Cairo overlay rendering for text and protocol decode overlays
+	void RenderCairoOverlays();
+	void InitializeCairoPass();
+	Texture m_cairoTexture;
+	VertexArray m_cairoVAO;
+	VertexBuffer m_cairoVBO;
+	Program m_cairoProgram;
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;

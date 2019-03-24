@@ -36,6 +36,7 @@
 #define Program_h
 
 #include "Shader.h"
+#include "Texture.h"
 
 class Program
 {
@@ -94,6 +95,13 @@ public:
 
 	void SetUniform(float f, const char* name)
 	{ glUniform1f(GetUniformLocation(name), f); }
+
+	void SetUniform(Texture& tex, const char* name, int texid = 0)
+	{
+		glActiveTexture(GL_TEXTURE0 + texid);
+		tex.Bind();
+		glUniform1i(GetUniformLocation(name), texid);
+	}
 
 protected:
 	GLuint m_handle;

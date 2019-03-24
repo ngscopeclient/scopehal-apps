@@ -238,46 +238,46 @@ WaveformArea::~WaveformArea()
 
 void WaveformArea::on_realize()
 {
-	//Call base class to create the GL context, then select it
+	//Let the base class create the GL context, then select it
 	Gtk::GLArea::on_realize();
 	make_current();
 
 	//Do global initialization (independent of camera settings etc)
 	glClearColor(0, 0, 0, 1.0);
 
-	//Create shader objects
-	{
-		//ProfileBlock pb("Load waveform shaders");
-		VertexShader dvs;
-		FragmentShader dfs;
-		if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
-		{
-			LogError("failed to load default shaders, aborting");
-			exit(1);
-		}
-
-		//Create the programs
-		m_defaultProgram.Add(dvs);
-		m_defaultProgram.Add(dfs);
-		if(!m_defaultProgram.Link())
-		{
-			LogError("failed to link shader program, aborting");
-			exit(1);
-		}
-	}
-
+	//Set stuff up for each rendering pass
+	InitializeWaveformPass();
 	InitializeColormapPass();
 	InitializePersistencePass();
+	InitializeCairoPass();
+}
 
-	//Create the VAOs and VBOs
+void WaveformArea::InitializeWaveformPass()
+{
+	//ProfileBlock pb("Load waveform shaders");
+	VertexShader dvs;
+	FragmentShader dfs;
+	if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
 	{
-		//ProfileBlock pb("VAO/VBO creation");
-
-		m_traceVBOs.push_back(new VertexBuffer);
-		m_traceVBOs[0]->Bind();
-		m_traceVAOs.push_back(new VertexArray);
-		m_traceVAOs[0]->Bind();
+		LogError("failed to load default shaders, aborting");
+		exit(1);
 	}
+
+	//Create the programs
+	m_defaultProgram.Add(dvs);
+	m_defaultProgram.Add(dfs);
+	if(!m_defaultProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
+
+	//ProfileBlock pb("VAO/VBO creation");
+
+	m_traceVBOs.push_back(new VertexBuffer);
+	m_traceVBOs[0]->Bind();
+	m_traceVAOs.push_back(new VertexArray);
+	m_traceVAOs[0]->Bind();
 }
 
 void WaveformArea::InitializeColormapPass()
@@ -352,6 +352,41 @@ void WaveformArea::InitializePersistencePass()
 	m_persistVAO.Bind();
 	m_persistProgram.EnableVertexArray("vert");
 	m_persistProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
+void WaveformArea::InitializeCairoPass()
+{
+	//Set up shaders
+	VertexShader cvs;
+	FragmentShader cfs;
+	if(!cvs.Load("cairo-vertex.glsl") || !cfs.Load("cairo-fragment.glsl"))
+	{
+		LogError("failed to load cairo shaders, aborting");
+		exit(1);
+	}
+
+	m_cairoProgram.Add(cvs);
+	m_cairoProgram.Add(cfs);
+	if(!m_cairoProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
+
+	//Create the VAO/VBO for a fullscreen polygon
+	float verts[8] =
+	{
+		-1, -1,
+		 1, -1,
+		 1,  1,
+		-1,  1
+	};
+	m_cairoVBO.Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	m_cairoVAO.Bind();
+	m_cairoProgram.EnableVertexArray("vert");
+	m_cairoProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -683,7 +718,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	RenderTraceColorCorrection();
 	RenderPersistence();
 
-	//TODO: HUD overlays etc
+	//Render non-GL stuff (text rendering etc sucks in GL and doesn't have to be fast)
+	RenderCairoOverlays();
 
 	//Sanity check
 	int err = glGetError();
@@ -691,6 +727,36 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		LogNotice("err = %x\n", err);
 
 	return true;
+}
+
+void WaveformArea::RenderCairoOverlays()
+{
+	//Create the Cairo surface we're drawing on
+	Cairo::RefPtr< Cairo::ImageSurface > surface =
+		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
+	Cairo::RefPtr< Cairo::Context > cr = Cairo::Context::create(surface);
+
+	//Clear to a blank background
+	cr->set_source_rgba(0, 0, 0, 0);
+	cr->rectangle(0, 0, m_width, m_height);
+	cr->fill();
+
+	//Get the image data and make a texture from it
+	m_cairoTexture.Bind();
+	m_cairoTexture.SetData(
+		m_width,
+		m_height,
+		surface->get_data(),
+		GL_BGRA);
+
+	//Configure blending for Cairo's premultiplied alpha
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	//Draw the actual image
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+	m_cairoProgram.Bind();
+	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void WaveformArea::RenderTrace()
@@ -726,16 +792,11 @@ void WaveformArea::RenderTraceColorCorrection()
 
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
-
-	int loc = m_colormapProgram.GetUniformLocation("fbtex");
-	glActiveTexture(GL_TEXTURE0);
-	m_fboTexture.Bind();
-
+	m_colormapProgram.SetUniform(m_fboTexture, "fbtex");
 	m_colormapProgram.SetUniform(m_color.get_red_p(), "r");
 	m_colormapProgram.SetUniform(m_color.get_green_p(), "g");
 	m_colormapProgram.SetUniform(m_color.get_blue_p(), "b");
 
-	glUniform1i(loc, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
@@ -747,10 +808,9 @@ void WaveformArea::RenderPersistence()
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		m_persistProgram.Bind();
 		m_persistVAO.Bind();
+		m_persistProgram.SetUniform(m_persistTexture, "fbtex");
 		glActiveTexture(GL_TEXTURE0);
 		m_persistTexture.Bind();
-		int loc = m_persistProgram.GetUniformLocation("fbtex");
-		glUniform1i(loc, 0);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	}
 
