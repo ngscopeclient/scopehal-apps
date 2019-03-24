@@ -157,6 +157,37 @@ WaveformArea::WaveformArea(
 			item = Gtk::manage(new Gtk::RadioMenuItem("Any edge"));
 			m_triggerMenu.append(*item);
 			//TODO: more trigger types
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+	m_contextMenu.append(m_attenItem);
+		m_attenItem.set_label("Attenuation");
+		m_attenItem.set_submenu(m_attenMenu);
+			m_atten1xItem.set_label("1x");
+				m_atten1xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten1xItem);
+			m_atten10xItem.set_label("10x");
+				m_atten10xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten10xItem);
+			m_atten20xItem.set_label("20x");
+				m_atten20xItem.set_group(m_attenGroup);
+				m_attenMenu.append(m_atten20xItem);
+	m_contextMenu.append(m_bwItem);
+		m_bwItem.set_label("Bandwidth");
+		m_bwItem.set_submenu(m_bwMenu);
+			m_bwFullItem.set_label("Full");
+				m_bwFullItem.set_group(m_bwGroup);
+				m_bwFullItem.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 0, &m_bwFullItem));
+				m_bwMenu.append(m_bwFullItem);
+			m_bw200Item.set_label("200 MHz");
+				m_bw200Item.set_group(m_bwGroup);
+				m_bw200Item.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 200, &m_bw200Item));
+				m_bwMenu.append(m_bw200Item);
+			m_bw20Item.set_label("20 MHz");
+				m_bw20Item.set_group(m_bwGroup);
+				m_bw20Item.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 20, &m_bw20Item));
+				m_bwMenu.append(m_bw20Item);
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
 		m_couplingItem.set_submenu(m_couplingMenu);
@@ -172,18 +203,6 @@ WaveformArea::WaveformArea(
 			m_gndCouplingItem.set_label("GND");
 				m_gndCouplingItem.set_group(m_couplingGroup);
 				m_couplingMenu.append(m_gndCouplingItem);
-	m_contextMenu.append(m_attenItem);
-		m_attenItem.set_label("Attenuation");
-		m_attenItem.set_submenu(m_attenMenu);
-			m_atten1xItem.set_label("1x");
-				m_atten1xItem.set_group(m_attenGroup);
-				m_attenMenu.append(m_atten1xItem);
-			m_atten10xItem.set_label("10x");
-				m_atten10xItem.set_group(m_attenGroup);
-				m_attenMenu.append(m_atten10xItem);
-			m_atten20xItem.set_label("20x");
-				m_atten20xItem.set_group(m_attenGroup);
-				m_attenMenu.append(m_atten20xItem);
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 	m_contextMenu.append(m_decodeItem);
 		m_decodeItem.set_label("Protocol decode");
@@ -386,51 +405,86 @@ void WaveformArea::UpdateContextMenu()
 		delete decoder;
 	}
 
-	//Figure out the current trigger selection
-	auto coupling = m_selectedChannel->GetCoupling();
-	m_couplingItem.set_sensitive(true);
-	switch(coupling)
+	if(m_selectedChannel->IsPhysicalChannel())
 	{
-		case OscilloscopeChannel::COUPLE_DC_1M:
-			m_dc1MCouplingItem.set_active(true);
-			break;
+		m_bwMenu.set_sensitive(true);
+		m_attenMenu.set_sensitive(true);
+		m_couplingMenu.set_sensitive(true);
 
-		case OscilloscopeChannel::COUPLE_AC_1M:
-			m_ac1MCouplingItem.set_active(true);
-			break;
+		//Update the current coupling setting
+		auto coupling = m_selectedChannel->GetCoupling();
+		m_couplingItem.set_sensitive(true);
+		switch(coupling)
+		{
+			case OscilloscopeChannel::COUPLE_DC_1M:
+				m_dc1MCouplingItem.set_active(true);
+				break;
 
-		case OscilloscopeChannel::COUPLE_DC_50:
-			m_dc50CouplingItem.set_active(true);
-			break;
+			case OscilloscopeChannel::COUPLE_AC_1M:
+				m_ac1MCouplingItem.set_active(true);
+				break;
 
-		case OscilloscopeChannel::COUPLE_GND:
-			m_gndCouplingItem.set_active(true);
-			break;
+			case OscilloscopeChannel::COUPLE_DC_50:
+				m_dc50CouplingItem.set_active(true);
+				break;
 
-		default:
-			m_couplingItem.set_sensitive(false);
-			break;
+			case OscilloscopeChannel::COUPLE_GND:
+				m_gndCouplingItem.set_active(true);
+				break;
+
+			//coupling not possible, it's not an analog channel
+			default:
+				m_couplingItem.set_sensitive(false);
+				break;
+		}
+
+		//Update the current attenuation
+		int atten = static_cast<int>(m_selectedChannel->GetAttenuation());
+		switch(atten)
+		{
+			case 1:
+				m_atten1xItem.set_active(true);
+				break;
+
+			case 10:
+				m_atten10xItem.set_active(true);
+				break;
+
+			case 20:
+				m_atten20xItem.set_active(true);
+				break;
+
+			default:
+				//TODO: how to handle this?
+				break;
+		}
+
+		//Update the bandwidth limit
+		int bwl = m_selectedChannel->GetBandwidthLimit();
+		switch(bwl)
+		{
+			case 0:
+				m_bwFullItem.set_active(true);
+				break;
+
+			case 20:
+				m_bw20Item.set_active(true);
+				break;
+
+			case 200:
+				m_bw200Item.set_active(true);
+				break;
+
+			default:
+				//TODO: how to handle this?
+				break;
+		}
 	}
-
-	//Update the current attenuation
-	int atten = static_cast<int>(m_selectedChannel->GetAttenuation());
-	switch(atten)
+	else
 	{
-		case 1:
-			m_atten1xItem.set_active(true);
-			break;
-
-		case 10:
-			m_atten10xItem.set_active(true);
-			break;
-
-		case 20:
-			m_atten20xItem.set_active(true);
-			break;
-
-		default:
-			//TODO: how to handle this?
-			break;
+		m_bwMenu.set_sensitive(false);
+		m_attenMenu.set_sensitive(false);
+		m_couplingMenu.set_sensitive(false);
 	}
 
 	m_updatingContextMenu = false;
@@ -472,6 +526,19 @@ void WaveformArea::OnTogglePersistence()
 void WaveformArea::OnProtocolDecode(string name)
 {
 	LogDebug("Protocol decode: %s\n", name.c_str());
+}
+
+void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
+{
+	//ignore spurious events while loading menu config
+	if(m_updatingContextMenu)
+		return;
+
+	//ignore events from item being deselected
+	if(!item->get_active())
+		return;
+
+	m_selectedChannel->SetBandwidthLimit(mhz);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
