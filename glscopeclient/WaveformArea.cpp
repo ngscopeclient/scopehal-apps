@@ -254,16 +254,16 @@ void WaveformArea::InitializeWaveformPass()
 	//ProfileBlock pb("Load waveform shaders");
 	VertexShader dvs;
 	FragmentShader dfs;
-	if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
+	if(!dvs.Load("shaders/waveform-vertex.glsl") || !dfs.Load("shaders/waveform-fragment.glsl"))
 	{
 		LogError("failed to load default shaders, aborting");
 		exit(1);
 	}
 
 	//Create the programs
-	m_defaultProgram.Add(dvs);
-	m_defaultProgram.Add(dfs);
-	if(!m_defaultProgram.Link())
+	m_waveformProgram.Add(dvs);
+	m_waveformProgram.Add(dfs);
+	if(!m_waveformProgram.Link())
 	{
 		LogError("failed to link shader program, aborting");
 		exit(1);
@@ -284,7 +284,7 @@ void WaveformArea::InitializeColormapPass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("colormap-vertex.glsl") || !cfs.Load("colormap-fragment.glsl"))
+	if(!cvs.Load("shaders/colormap-vertex.glsl") || !cfs.Load("shaders/colormap-fragment.glsl"))
 	{
 		LogError("failed to load colormap shaders, aborting");
 		exit(1);
@@ -321,7 +321,7 @@ void WaveformArea::InitializePersistencePass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("persist-vertex.glsl") || !cfs.Load("persist-fragment.glsl"))
+	if(!cvs.Load("shaders/persist-vertex.glsl") || !cfs.Load("shaders/persist-fragment.glsl"))
 	{
 		LogError("failed to load persist shaders, aborting");
 		exit(1);
@@ -356,7 +356,7 @@ void WaveformArea::InitializeCairoPass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("cairo-vertex.glsl") || !cfs.Load("cairo-fragment.glsl"))
+	if(!cvs.Load("shaders/cairo-vertex.glsl") || !cfs.Load("shaders/cairo-fragment.glsl"))
 	{
 		LogError("failed to load cairo shaders, aborting");
 		exit(1);
@@ -664,8 +664,8 @@ bool WaveformArea::PrepareGeometry()
 
 	//Configure vertex array settings
 	m_traceVAOs[0]->Bind();
-	m_defaultProgram.EnableVertexArray("vert");
-	m_defaultProgram.SetVertexAttribPointer("vert", 2, 0);
+	m_waveformProgram.EnableVertexArray("vert");
+	m_waveformProgram.SetVertexAttribPointer("vert", 2, 0);
 
 	m_waveformLength = count;
 
@@ -730,15 +730,15 @@ void WaveformArea::RenderTrace()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	//Configure our shader and projection matrix
-	m_defaultProgram.Bind();
-	m_defaultProgram.SetUniform(m_projection, "projection");
-	m_defaultProgram.SetUniform(0.0f, "xoff");
-	m_defaultProgram.SetUniform(0.5f, "xscale");
-	m_defaultProgram.SetUniform(100.0f, "yoff");
-	m_defaultProgram.SetUniform(100.0f, "yscale");
+	m_waveformProgram.Bind();
+	m_waveformProgram.SetUniform(m_projection, "projection");
+	m_waveformProgram.SetUniform(0.0f, "xoff");
+	m_waveformProgram.SetUniform(0.5f, "xscale");
+	m_waveformProgram.SetUniform(100.0f, "yoff");
+	m_waveformProgram.SetUniform(100.0f, "yscale");
 
 	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(1.0f, "alpha");
+	m_waveformProgram.SetUniform(1.0f, "alpha");
 
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();

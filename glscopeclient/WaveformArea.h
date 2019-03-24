@@ -98,7 +98,7 @@ protected:
 	bool m_persistence;
 
 	//GL stuff (TODO organize)
-	Program m_defaultProgram;
+	Program m_waveformProgram;
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
