@@ -21,9 +21,9 @@ void main()
 	y = min(y, 1);
 	y = max(y, 0);
 
-	//convert to rgb grayscale
+	//convert to rgba grayscale
 	finalColor.r = y * r;
 	finalColor.g = y * g;
 	finalColor.b = y * b;
-	finalColor.a = 1;
+	finalColor.a = texcolor.a;
 }

@@ -117,8 +117,8 @@ protected:
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
 	Gdk::Color m_color;
-	Framebuffer m_framebuffer;
-	Texture m_fboTexture;
+	Framebuffer m_waveformFramebuffer;
+	Texture m_waveformTexture;
 
 	//Persistence
 	void RenderPersistence();

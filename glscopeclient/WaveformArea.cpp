@@ -242,9 +242,6 @@ void WaveformArea::on_realize()
 	Gtk::GLArea::on_realize();
 	make_current();
 
-	//Do global initialization (independent of camera settings etc)
-	glClearColor(0, 0, 0, 1.0);
-
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();
 	InitializeColormapPass();
@@ -611,11 +608,11 @@ void WaveformArea::on_resize(int width, int height)
 	glClearColor(0,0,0,0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	m_framebuffer.Bind(GL_FRAMEBUFFER);
-	m_fboTexture.Bind();
-	m_fboTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_fboTexture, 0);
-	if(!m_framebuffer.IsComplete())
+	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+	m_waveformTexture.Bind();
+	m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_waveformTexture, 0);
+	if(!m_waveformFramebuffer.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
 	int err = glGetError();
@@ -682,8 +679,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	static double last = -1;
 
-	//Draw to the offscreen floating-point framebuffer.
-	m_framebuffer.Bind(GL_FRAMEBUFFER);
+
 
 	double start = GetTime();
 	double dt = start - last;
@@ -702,9 +698,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glDisable(GL_CULL_FACE);
 
-	//Start with a blank window
-	glClear(GL_COLOR_BUFFER_BIT);
-
 	//Set up blending
 	glEnable(GL_BLEND);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
@@ -715,8 +708,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		RenderTrace();
 
 	//Do postprocessing even if we have no waveform data (so we get a blank background)
-	RenderTraceColorCorrection();
 	RenderPersistence();
+	RenderTraceColorCorrection();
 
 	//Render non-GL stuff (text rendering etc sucks in GL and doesn't have to be fast)
 	RenderCairoOverlays();
@@ -727,6 +720,81 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		LogNotice("err = %x\n", err);
 
 	return true;
+}
+
+void WaveformArea::RenderTrace()
+{
+	//Draw to the offscreen floating-point framebuffer.
+	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+	glClearColor(0, 0, 0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	//Configure our shader and projection matrix
+	m_defaultProgram.Bind();
+	m_defaultProgram.SetUniform(m_projection, "projection");
+	m_defaultProgram.SetUniform(0.0f, "xoff");
+	m_defaultProgram.SetUniform(0.5f, "xscale");
+	m_defaultProgram.SetUniform(100.0f, "yoff");
+	m_defaultProgram.SetUniform(100.0f, "yscale");
+
+	//Set the color decay value (constant for now)
+	m_defaultProgram.SetUniform(1.0f, "alpha");
+
+	//Actually draw the waveform
+	m_traceVAOs[0]->Bind();
+
+	vector<int> firsts;
+	vector<int> counts;
+	firsts.push_back(0);
+	counts.push_back(2*m_waveformLength);
+	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
+}
+
+void WaveformArea::RenderPersistence()
+{
+	//Draw the persistence buffer over our waveforms
+	if(m_persistence)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		m_persistProgram.Bind();
+		m_persistVAO.Bind();
+		m_persistProgram.SetUniform(m_persistTexture, "fbtex");
+		glActiveTexture(GL_TEXTURE0);
+		m_persistTexture.Bind();
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	}
+
+	//Copy the whole waveform buffer to the persistence buffer so we can do decay.
+	//Do this even if we're not actually drawing persistence (to clear out old state)
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_waveformFramebuffer);
+	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
+	glBlitFramebuffer(
+		0, 0, m_width, m_height,
+		0, 0, m_width, m_height,
+		GL_COLOR_BUFFER_BIT,
+		GL_NEAREST);
+}
+
+void WaveformArea::RenderTraceColorCorrection()
+{
+	//Drawing to the window
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+	glClearColor(0, 0, 0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
+	//as a textured quad. Apply color correction as we do this.);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	m_colormapProgram.Bind();
+	m_colormapVAO.Bind();
+	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
+	m_colormapProgram.SetUniform(m_color.get_red_p(), "r");
+	m_colormapProgram.SetUniform(m_color.get_green_p(), "g");
+	m_colormapProgram.SetUniform(m_color.get_blue_p(), "b");
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void WaveformArea::RenderCairoOverlays()
@@ -757,72 +825,6 @@ void WaveformArea::RenderCairoOverlays()
 	m_cairoProgram.Bind();
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-}
-
-void WaveformArea::RenderTrace()
-{
-	//Configure our shader and projection matrix
-	m_defaultProgram.Bind();
-	m_defaultProgram.SetUniform(m_projection, "projection");
-	m_defaultProgram.SetUniform(0.0f, "xoff");
-	m_defaultProgram.SetUniform(0.5f, "xscale");
-	m_defaultProgram.SetUniform(100.0f, "yoff");
-	m_defaultProgram.SetUniform(100.0f, "yscale");
-
-	//Set the color decay value (constant for now)
-	m_defaultProgram.SetUniform(1.0f, "alpha");
-
-	//Actually draw the waveform
-	m_traceVAOs[0]->Bind();
-
-	vector<int> firsts;
-	vector<int> counts;
-	firsts.push_back(0);
-	counts.push_back(2*m_waveformLength);
-	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
-}
-
-void WaveformArea::RenderTraceColorCorrection()
-{
-	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
-	//as a textured quad. Apply color correction as we do this.
-	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	m_colormapProgram.Bind();
-	m_colormapVAO.Bind();
-	m_colormapProgram.SetUniform(m_fboTexture, "fbtex");
-	m_colormapProgram.SetUniform(m_color.get_red_p(), "r");
-	m_colormapProgram.SetUniform(m_color.get_green_p(), "g");
-	m_colormapProgram.SetUniform(m_color.get_blue_p(), "b");
-
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-}
-
-void WaveformArea::RenderPersistence()
-{
-	//Draw the persistence buffer over our waveforms
-	if(m_persistence)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		m_persistProgram.Bind();
-		m_persistVAO.Bind();
-		m_persistProgram.SetUniform(m_persistTexture, "fbtex");
-		glActiveTexture(GL_TEXTURE0);
-		m_persistTexture.Bind();
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	}
-
-	//Copy the whole on-screen buffer to the persistence buffer so we can do decay.
-	//Do this even if we're not actually drawing persistence (to clear out old state)
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_windowFramebuffer);
-	m_persistbuffer.Bind(GL_DRAW_FRAMEBUFFER);
-	glBlitFramebuffer(
-		0, 0, m_width, m_height,
-		0, 0, m_width, m_height,
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
 }
 
 void WaveformArea::OnWaveformDataReady()
