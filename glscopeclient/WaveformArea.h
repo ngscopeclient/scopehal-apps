@@ -130,6 +130,7 @@ protected:
 	Texture m_persistTexture;
 
 	//Cairo overlay rendering for text and protocol decode overlays
+	void RenderCairoUnderlays();
 	void RenderCairoOverlays();
 	void InitializeCairoPass();
 	Texture m_cairoTexture;

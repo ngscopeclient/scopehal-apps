@@ -679,8 +679,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	static double last = -1;
 
-
-
 	double start = GetTime();
 	double dt = start - last;
 	if(last > 0)
@@ -692,27 +690,26 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	last = start;
 
 	//Everything we draw is 2D painter's algorithm.
-	//Turn off some stuff we don't need.
+	//Turn off some stuff we don't need, but leave blending on.
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_MULTISAMPLE);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glDisable(GL_CULL_FACE);
-
-	//Set up blending
 	glEnable(GL_BLEND);
-	glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_FUNC_ADD, GL_MAX);
 
-	//Create the actual waveform we're drawing, then render it.
+	//Clear out the window contents
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+	glClearColor(0, 0, 0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	//Call each of the render passes
 	if(PrepareGeometry())
 		RenderTrace();
-
-	//Do postprocessing even if we have no waveform data (so we get a blank background)
 	RenderPersistence();
+	RenderCairoUnderlays();
 	RenderTraceColorCorrection();
-
-	//Render non-GL stuff (text rendering etc sucks in GL and doesn't have to be fast)
-	RenderCairoOverlays();
+	//RenderCairoOverlays();
 
 	//Sanity check
 	int err = glGetError();
@@ -743,11 +740,13 @@ void WaveformArea::RenderTrace()
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();
 
-	vector<int> firsts;
+	/*vector<int> firsts;
 	vector<int> counts;
 	firsts.push_back(0);
 	counts.push_back(2*m_waveformLength);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
+	*/
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*m_waveformLength);
 }
 
 void WaveformArea::RenderPersistence()
@@ -775,15 +774,48 @@ void WaveformArea::RenderPersistence()
 		GL_NEAREST);
 }
 
+void WaveformArea::RenderCairoUnderlays()
+{
+	return;
+
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	//Create the Cairo surface we're drawing on
+	Cairo::RefPtr< Cairo::ImageSurface > surface =
+		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
+	Cairo::RefPtr< Cairo::Context > cr = Cairo::Context::create(surface);
+
+	//Clear to a blank background
+	cr->set_source_rgba(0, 1, 0, 1);
+	cr->rectangle(0, 0, m_width, m_height);
+	cr->fill();
+
+	//m_persistTexture.Bind();
+
+	//Get the image data and make a texture from it
+	//m_cairoTexture.Bind();
+	/*m_cairoTexture.SetData(
+		m_width,
+		m_height,
+		surface->get_data(),
+		GL_BGRA);*/
+
+	//Draw the actual image
+	//m_cairoProgram.Bind();
+	//m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
+	//glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
 void WaveformArea::RenderTraceColorCorrection()
 {
 	//Drawing to the window
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
-	glClearColor(0, 0, 0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//Once the rendering proper is complete, draw the offscreen buffer to the onscreen buffer
-	//as a textured quad. Apply color correction as we do this.);
+	//Draw the offscreen buffer to the onscreen buffer
+	//as a textured quad. Apply color correction as we do this.
+	//m_waveformTexture.Bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
