@@ -55,9 +55,10 @@ public:
 	void OnStartSingle();
 	void OnStop();
 
-	//void RemoveWaveform(WaveformArea* view);
+	void OnToggleChannel(WaveformArea* w);
 
 protected:
+	void ArmTrigger(bool oneshot);
 
 	//Gtk::IconTheme m_iconTheme;
 
@@ -66,6 +67,11 @@ protected:
 
 	//Widgets
 	Gtk::VBox m_vbox;
+		Gtk::MenuBar m_menu;
+			Gtk::MenuItem m_fileMenuItem;
+				Gtk::Menu m_fileMenu;
+			Gtk::MenuItem m_channelsMenuItem;
+				Gtk::Menu m_channelsMenu;
 		Gtk::Toolbar m_toolbar;
 			Gtk::ToolButton m_btnStart;
 			Gtk::ToolButton m_btnStartSingle;
@@ -82,6 +88,8 @@ protected:
 
 	double m_tArm;
 	bool m_triggerOneShot;
+
+	bool m_toggleInProgress;
 };
 
 #endif

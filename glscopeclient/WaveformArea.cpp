@@ -34,6 +34,7 @@
  */
 #include "glscopeclient.h"
 #include "WaveformArea.h"
+#include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
 
@@ -174,7 +175,7 @@ void WaveformArea::on_realize()
 
 	//Create shader objects
 	{
-		ProfileBlock pb("Load waveform shaders");
+		//ProfileBlock pb("Load waveform shaders");
 		VertexShader dvs;
 		FragmentShader dfs;
 		if(!dvs.Load("default-vertex.glsl") || !dfs.Load("default-fragment.glsl"))
@@ -198,7 +199,7 @@ void WaveformArea::on_realize()
 
 	//Create the VAOs and VBOs
 	{
-		ProfileBlock pb("VAO/VBO creation");
+		//ProfileBlock pb("VAO/VBO creation");
 
 		m_traceVBOs.push_back(new VertexBuffer);
 		m_traceVBOs[0]->Bind();
@@ -209,7 +210,7 @@ void WaveformArea::on_realize()
 
 void WaveformArea::InitializeColormapPass()
 {
-	ProfileBlock pb("Load colormap shaders");
+	//ProfileBlock pb("Load colormap shaders");
 
 	//Set up shaders
 	VertexShader cvs;
@@ -246,7 +247,7 @@ void WaveformArea::InitializeColormapPass()
 
 void WaveformArea::InitializePersistencePass()
 {
-	ProfileBlock pb("Load persistence shaders");
+	//ProfileBlock pb("Load persistence shaders");
 
 	//Set up shaders
 	VertexShader cvs;
@@ -299,7 +300,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 
 void WaveformArea::OnHide()
 {
-	hide();
+	m_parent->OnToggleChannel(this);
 }
 
 void WaveformArea::OnTogglePersistence()

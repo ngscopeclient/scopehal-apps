@@ -48,6 +48,9 @@ public:
 
 	void OnWaveformDataReady();
 
+	OscilloscopeChannel* GetChannel()
+	{ return m_channel; }
+
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);

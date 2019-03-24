@@ -69,16 +69,12 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	//Add widgets
 	CreateWidgets();
 
-	//Done adding widgets
-	show_all();
-
 	//Set the update timer (1 kHz)
 	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
 	sigc::connection conn = Glib::signal_timeout().connect(slot, 1);
 
-	m_tArm = GetTime();
-	m_scope->StartSingleTrigger();
-	m_triggerOneShot = false;
+	ArmTrigger(false);
+	m_toggleInProgress = false;
 }
 
 /**
@@ -97,50 +93,101 @@ void OscilloscopeWindow::CreateWidgets()
 {
 	//Set up window hierarchy
 	add(m_vbox);
+		m_vbox.pack_start(m_menu, Gtk::PACK_SHRINK);
+			m_menu.append(m_fileMenuItem);
+				m_fileMenuItem.set_label("File");
+				m_fileMenuItem.set_submenu(m_fileMenu);
+			m_menu.append(m_channelsMenuItem);
+				m_channelsMenuItem.set_label("Channels");
+				m_channelsMenuItem.set_submenu(m_channelsMenu);
 		m_vbox.pack_start(m_toolbar, Gtk::PACK_SHRINK);
 			m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 				m_btnStart.set_tooltip_text("Start (normal trigger)");
 				m_btnStart.set_icon_name("media-playback-start");
+				m_btnStart.set_sensitive(false);
 			m_toolbar.append(m_btnStartSingle, sigc::mem_fun(*this, &OscilloscopeWindow::OnStartSingle));
 				m_btnStartSingle.set_tooltip_text("Start (single trigger)");
 				m_btnStartSingle.set_icon_name("media-skip-forward");
+				m_btnStartSingle.set_sensitive(false);
 			m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 				m_btnStop.set_tooltip_text("Stop trigger");
 				m_btnStop.set_icon_name("media-playback-stop");
 
-		//Create viewers for all the channels
-		for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	//Done adding widgets
+	show_all();
+
+	//Create viewers and menu items for all the channels
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	{
+		auto chan = m_scope->GetChannel(i);
+		auto w = new WaveformArea(
+			m_scope,
+			chan,
+			this,
+			Gdk::Color(GetDefaultChannelColor(i))
+			);
+		m_waveformAreas.emplace(w);
+		m_vbox.pack_start(*w);
+
+		auto item = Gtk::manage(new Gtk::CheckMenuItem(chan->GetHwname(), false));
+		item->signal_activate().connect(
+			sigc::bind<WaveformArea*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnToggleChannel), w));
+		m_channelsMenu.append(*item);
+
+		//See which channels are currently on
+		if(chan->IsEnabled())
 		{
-			auto w = new WaveformArea(
-				m_scope,
-				m_scope->GetChannel(i),
-				this,
-				Gdk::Color(GetDefaultChannelColor(i))
-				);
-			m_waveformAreas.emplace(w);
-			m_vbox.pack_start(*w);
+			item->set_active();
+			w->show();
 		}
+		else
+			w->hide();
+	}
 
-	//Set dimensions
-	//m_viewscroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-
-	//Set up message handlers
-	//m_viewscroller.get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnScopeScroll));
-	//m_viewscroller.get_vadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnScopeScroll));
-	//m_viewscroller.get_hadjustment()->set_step_increment(50);
-
-	//Refresh the views
-	//Need to refresh main view first so we have renderers to reference in the channel list
-	//m_view.Refresh();
+	m_channelsMenu.show_all();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
 
-/*void OscilloscopeWindow::RemoveWaveform(WaveformArea* view)
+void OscilloscopeWindow::OnToggleChannel(WaveformArea* w)
 {
+	//We need this guard because set_active() will invoke this handler again!
+	if(m_toggleInProgress)
+		return;
+	m_toggleInProgress = true;
 
-}*/
+	auto chan = w->GetChannel();
+
+	//TODO: make this more efficient if we have lots of channels?
+	auto children = m_channelsMenu.get_children();
+	Gtk::CheckMenuItem* menu = NULL;
+	for(auto item : children)
+	{
+		menu = dynamic_cast<Gtk::CheckMenuItem*>(item);
+		if(menu == NULL)
+			continue;
+		if(menu->get_label() == chan->GetHwname())
+			break;
+	}
+
+	if(w->is_visible())
+	{
+		w->hide();
+		chan->Disable();
+		if(menu)
+			menu->set_active(false);
+	}
+	else
+	{
+		w->show();
+		w->GetChannel()->Enable();
+		if(menu)
+			menu->set_active(true);
+	}
+
+	m_toggleInProgress = false;
+}
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
@@ -170,9 +217,14 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 	//Re-arm trigger for another pass
 	if(!m_triggerOneShot)
+		ArmTrigger(false);
+
+	//We've stopped
+	else
 	{
-		m_scope->StartSingleTrigger();
-		m_tArm = GetTime();
+		m_btnStart.set_sensitive(true);
+		m_btnStartSingle.set_sensitive(true);
+		m_btnStop.set_sensitive(false);
 	}
 
 	//false to stop timer
@@ -181,20 +233,37 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 void OscilloscopeWindow::OnStart()
 {
-	m_scope->StartSingleTrigger();
-	m_triggerOneShot = false;
+	m_btnStart.set_sensitive(false);
+	m_btnStartSingle.set_sensitive(false);
+	m_btnStop.set_sensitive(true);
+
+	ArmTrigger(false);
 }
 
 void OscilloscopeWindow::OnStartSingle()
 {
-	m_scope->StartSingleTrigger();
-	m_triggerOneShot = true;
+	m_btnStart.set_sensitive(false);
+	m_btnStartSingle.set_sensitive(false);
+	m_btnStop.set_sensitive(true);
+
+	ArmTrigger(true);
 }
 
 void OscilloscopeWindow::OnStop()
 {
+	m_btnStart.set_sensitive(true);
+	m_btnStartSingle.set_sensitive(true);
+	m_btnStop.set_sensitive(false);
+
 	m_scope->Stop();
 	m_triggerOneShot = true;
+}
+
+void OscilloscopeWindow::ArmTrigger(bool oneshot)
+{
+	m_scope->StartSingleTrigger();
+	m_triggerOneShot = oneshot;
+	m_tArm = GetTime();
 }
 
 
