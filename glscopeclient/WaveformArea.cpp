@@ -124,6 +124,8 @@ WaveformArea::WaveformArea(
 {
 	m_frameTime = 0;
 	m_frameCount = 0;
+	m_persistence = false;
+	m_selectedChannel = m_channel;
 
 	set_has_alpha();
 
@@ -138,14 +140,48 @@ WaveformArea::WaveformArea(
 		item->signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnHide));
 		m_contextMenu.append(*item);
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 	m_contextMenu.append(m_persistenceItem);
 		m_persistenceItem.set_label("Persistence");
 		m_persistenceItem.signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnTogglePersistence));
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+	m_contextMenu.append(m_couplingItem);
+		m_couplingItem.set_label("Coupling");
+		m_couplingItem.set_submenu(m_couplingMenu);
+			item = Gtk::manage(new Gtk::RadioMenuItem("AC 1M"));
+			m_couplingMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("DC 1M"));
+			m_couplingMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("DC 50Ω"));
+			m_couplingMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("GND"));
+			m_couplingMenu.append(*item);
+	m_contextMenu.append(m_triggerItem);
+		m_triggerItem.set_label("Trigger");
+		m_triggerItem.set_submenu(m_triggerMenu);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Rising edge"));
+			m_triggerMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Falling edge"));
+			m_triggerMenu.append(*item);
+			item = Gtk::manage(new Gtk::RadioMenuItem("Any edge"));
+			m_triggerMenu.append(*item);
+			//TODO: more trigger types
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+	m_contextMenu.append(m_decodeItem);
+		m_decodeItem.set_label("Protocol decode");
+		m_decodeItem.set_submenu(m_decodeMenu);
+		vector<string> names;
+		ProtocolDecoder::EnumProtocols(names);
+		for(auto p : names)
+		{
+			item = Gtk::manage(new Gtk::MenuItem(p, false));
+			item->signal_activate().connect(
+				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+			m_decodeMenu.append(*item);
+		}
 
 	m_contextMenu.show_all();
-
-	m_persistence = false;
 }
 
 WaveformArea::~WaveformArea()
@@ -285,13 +321,64 @@ void WaveformArea::InitializePersistencePass()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
 
+bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
+{
+	switch(ev->direction)
+	{
+		case GDK_SCROLL_UP:
+			LogDebug("zoom in\n");
+			break;
+		case GDK_SCROLL_DOWN:
+			LogDebug("zoom out\n");
+			break;
+		case GDK_SCROLL_LEFT:
+			LogDebug("scroll left\n");
+			break;
+		case GDK_SCROLL_RIGHT:
+			LogDebug("scroll right\n");
+			break;
+
+		default:
+			break;
+	}
+
+	return true;
+}
+
 bool WaveformArea::on_button_press_event(GdkEventButton* event)
 {
+	//TODO: See if we right clicked on our main channel or a protocol decoder.
+	//If a decoder, filter for that instead
+	m_selectedChannel = m_channel;
+
 	switch(event->button)
 	{
 		//Right
 		case 3:
+
+			//Gray out decoders that don't make sense for the type of channel we've selected
+			{
+				auto children = m_decodeMenu.get_children();
+				for(auto item : children)
+				{
+					Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
+					if(menu == NULL)
+						continue;
+
+					auto decoder = ProtocolDecoder::CreateDecoder(
+						menu->get_label(),
+						"dummy",
+						"");
+					menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
+					delete decoder;
+				}
+			}
+
 			m_contextMenu.popup(event->button, event->time);
+			break;
+
+		default:
+			LogDebug("Button %d pressed\n", event->button);
 			break;
 	}
 
@@ -306,8 +393,12 @@ void WaveformArea::OnHide()
 void WaveformArea::OnTogglePersistence()
 {
 	m_persistence = !m_persistence;
-
 	queue_draw();
+}
+
+void WaveformArea::OnProtocolDecode(string name)
+{
+	LogDebug("Protocol decode: %s\n", name.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

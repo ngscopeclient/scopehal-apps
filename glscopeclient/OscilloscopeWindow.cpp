@@ -97,6 +97,10 @@ void OscilloscopeWindow::CreateWidgets()
 			m_menu.append(m_fileMenuItem);
 				m_fileMenuItem.set_label("File");
 				m_fileMenuItem.set_submenu(m_fileMenu);
+					auto item = Gtk::manage(new Gtk::MenuItem("Quit", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnQuit));
+					m_fileMenu.append(*item);
 			m_menu.append(m_channelsMenuItem);
 				m_channelsMenuItem.set_label("Channels");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);
@@ -149,6 +153,11 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnQuit()
+{
+	close();
+}
 
 void OscilloscopeWindow::OnToggleChannel(WaveformArea* w)
 {
@@ -325,30 +334,9 @@ void OscilloscopeWindow::OnZoomChanged()
 */
 int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
 {
-	//m_statprogress.set_fraction(progress);
-
 	//Dispatch pending gtk events (such as draw calls)
 	while(Gtk::Main::events_pending())
 		Gtk::Main::iteration();
 
 	return 0;
 }
-
-/*
-void OscilloscopeWindow::OnStart()
-{
-	//TODO: get triggers
-	//Load trigger conditions from sidebar
-	//m_channelview.UpdateTriggers();
-
-	//Start the capture
-	m_tArm = GetTime();
-	m_scope->StartSingleTrigger();
-	m_waiting = true;
-
-	//Print to stdout so scripts know we're ready
-	//LogDebug("Ready\n");
-	//fflush(stdout);
-}
-
-*/

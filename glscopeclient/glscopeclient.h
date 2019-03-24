@@ -41,6 +41,7 @@
 #include "../scopehal/Instrument.h"
 #include "../scopehal/Multimeter.h"
 #include "../scopehal/OscilloscopeChannel.h"
+#include "../scopehal/ProtocolDecoder.h"
 
 #include <giomm.h>
 #include <gtkmm.h>

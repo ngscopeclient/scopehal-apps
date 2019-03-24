@@ -51,16 +51,18 @@ public:
 	Oscilloscope* GetScope()
 	{ return m_scope; }
 
-	void OnStart();
-	void OnStartSingle();
-	void OnStop();
-
 	void OnToggleChannel(WaveformArea* w);
 
 protected:
 	void ArmTrigger(bool oneshot);
 
 	//Gtk::IconTheme m_iconTheme;
+
+	//Menu/toolbar message handlers
+	void OnStart();
+	void OnStartSingle();
+	void OnStop();
+	void OnQuit();
 
 	//Initialization
 	void CreateWidgets();

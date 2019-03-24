@@ -56,13 +56,21 @@ protected:
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
+	virtual bool on_scroll_event (GdkEventScroll* ev);
 	bool PrepareGeometry();
 
 	//Context menu
 	Gtk::Menu m_contextMenu;
 		Gtk::CheckMenuItem m_persistenceItem;
+		Gtk::MenuItem m_decodeItem;
+			Gtk::Menu m_decodeMenu;
+		Gtk::MenuItem m_triggerItem;
+			Gtk::Menu m_triggerMenu;
+		Gtk::MenuItem m_couplingItem;
+			Gtk::Menu m_couplingMenu;
 	void OnHide();
 	void OnTogglePersistence();
+	void OnProtocolDecode(std::string name);
 
 	int m_width;
 	int m_height;
@@ -102,6 +110,7 @@ protected:
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
+	OscilloscopeChannel* m_selectedChannel;
 	OscilloscopeWindow* m_parent;
 
 	double m_frameTime;
