@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -125,6 +125,7 @@ WaveformArea::WaveformArea(
 	m_frameTime = 0;
 	m_frameCount = 0;
 	m_persistence = false;
+	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
 
 	set_has_alpha();
@@ -149,14 +150,18 @@ WaveformArea::WaveformArea(
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
 		m_couplingItem.set_submenu(m_couplingMenu);
-			item = Gtk::manage(new Gtk::RadioMenuItem("AC 1M"));
-			m_couplingMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("DC 1M"));
-			m_couplingMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("DC 50Ω"));
-			m_couplingMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("GND"));
-			m_couplingMenu.append(*item);
+			m_ac1MCouplingItem.set_label("AC 1M");
+				m_ac1MCouplingItem.set_group(m_couplingGroup);
+				m_couplingMenu.append(m_ac1MCouplingItem);
+			m_dc1MCouplingItem.set_label("DC 1M");
+				m_dc1MCouplingItem.set_group(m_couplingGroup);
+				m_couplingMenu.append(m_dc1MCouplingItem);
+			m_dc50CouplingItem.set_label("DC 50Ω");
+				m_dc50CouplingItem.set_group(m_couplingGroup);
+				m_couplingMenu.append(m_dc50CouplingItem);
+			m_gndCouplingItem.set_label("GND");
+				m_gndCouplingItem.set_group(m_couplingGroup);
+				m_couplingMenu.append(m_gndCouplingItem);
 	m_contextMenu.append(m_triggerItem);
 		m_triggerItem.set_label("Trigger");
 		m_triggerItem.set_submenu(m_triggerMenu);
@@ -345,6 +350,59 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 	return true;
 }
 
+/**
+	@brief Enable/disable or show/hide context menu items for the current selection
+ */
+void WaveformArea::UpdateContextMenu()
+{
+	//Let signal handlers know to ignore any events that happen as we pull state from the scope
+	m_updatingContextMenu = true;
+
+	//Gray out decoders that don't make sense for the type of channel we've selected
+	auto children = m_decodeMenu.get_children();
+	for(auto item : children)
+	{
+		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
+		if(menu == NULL)
+			continue;
+
+		auto decoder = ProtocolDecoder::CreateDecoder(
+			menu->get_label(),
+			"dummy",
+			"");
+		menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
+		delete decoder;
+	}
+
+	//Figure out the current trigger selection
+	auto coupling = m_selectedChannel->GetCoupling();
+	m_couplingItem.set_sensitive(true);
+	switch(coupling)
+	{
+		case OscilloscopeChannel::COUPLE_DC_1M:
+			m_dc1MCouplingItem.set_active(true);
+			break;
+
+		case OscilloscopeChannel::COUPLE_AC_1M:
+			m_ac1MCouplingItem.set_active(true);
+			break;
+
+		case OscilloscopeChannel::COUPLE_DC_50:
+			m_dc50CouplingItem.set_active(true);
+			break;
+
+		case OscilloscopeChannel::COUPLE_GND:
+			m_gndCouplingItem.set_active(true);
+			break;
+
+		default:
+			m_couplingItem.set_sensitive(false);
+			break;
+	}
+
+	m_updatingContextMenu = false;
+}
+
 bool WaveformArea::on_button_press_event(GdkEventButton* event)
 {
 	//TODO: See if we right clicked on our main channel or a protocol decoder.
@@ -355,25 +413,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	{
 		//Right
 		case 3:
-
-			//Gray out decoders that don't make sense for the type of channel we've selected
-			{
-				auto children = m_decodeMenu.get_children();
-				for(auto item : children)
-				{
-					Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
-					if(menu == NULL)
-						continue;
-
-					auto decoder = ProtocolDecoder::CreateDecoder(
-						menu->get_label(),
-						"dummy",
-						"");
-					menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
-					delete decoder;
-				}
-			}
-
+			UpdateContextMenu();
 			m_contextMenu.popup(event->button, event->time);
 			break;
 

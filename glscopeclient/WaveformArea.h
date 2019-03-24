@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -57,7 +57,6 @@ protected:
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
-	bool PrepareGeometry();
 
 	//Context menu
 	Gtk::Menu m_contextMenu;
@@ -68,6 +67,13 @@ protected:
 			Gtk::Menu m_triggerMenu;
 		Gtk::MenuItem m_couplingItem;
 			Gtk::Menu m_couplingMenu;
+				Gtk::RadioMenuItem::Group m_couplingGroup;
+				Gtk::RadioMenuItem m_dc50CouplingItem;
+				Gtk::RadioMenuItem m_dc1MCouplingItem;
+				Gtk::RadioMenuItem m_ac1MCouplingItem;
+				Gtk::RadioMenuItem m_gndCouplingItem;
+	void UpdateContextMenu();
+	bool m_updatingContextMenu;
 	void OnHide();
 	void OnTogglePersistence();
 	void OnProtocolDecode(std::string name);
@@ -83,6 +89,7 @@ protected:
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
+	bool PrepareGeometry();
 	void RenderTrace();
 	std::vector<VertexBuffer*> m_traceVBOs;
 	std::vector<VertexArray*> m_traceVAOs;
