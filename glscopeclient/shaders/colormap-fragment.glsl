@@ -22,8 +22,8 @@ void main()
 	y = max(y, 0);
 
 	//convert to rgba grayscale
-	finalColor.r = y * r;
-	finalColor.g = y * g;
-	finalColor.b = y * b;
+	finalColor.r = r;
+	finalColor.g = g;
+	finalColor.b = b;
 	finalColor.a = texcolor.a;
 }

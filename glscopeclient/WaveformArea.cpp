@@ -695,21 +695,20 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glDisable(GL_MULTISAMPLE);
 	glDisable(GL_FRAMEBUFFER_SRGB);
 	glDisable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_FUNC_ADD, GL_MAX);
 
-	//Clear out the window contents
-	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
-	glClearColor(0, 0, 0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	//No texture filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	//Call each of the render passes
+	//Offscreen rendering and accumulation of the waveforms
 	if(PrepareGeometry())
 		RenderTrace();
 	RenderPersistence();
+
+	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderCairoUnderlays();
 	RenderTraceColorCorrection();
-	//RenderCairoOverlays();
+	RenderCairoOverlays();
 
 	//Sanity check
 	int err = glGetError();
@@ -723,7 +722,7 @@ void WaveformArea::RenderTrace()
 {
 	//Draw to the offscreen floating-point framebuffer.
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-	glClearColor(0, 0, 0, 1.0);
+	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	//Configure our shader and projection matrix
@@ -754,12 +753,11 @@ void WaveformArea::RenderPersistence()
 	//Draw the persistence buffer over our waveforms
 	if(m_persistence)
 	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		m_persistProgram.Bind();
 		m_persistVAO.Bind();
 		m_persistProgram.SetUniform(m_persistTexture, "fbtex");
-		glActiveTexture(GL_TEXTURE0);
-		m_persistTexture.Bind();
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	}
 
@@ -776,10 +774,9 @@ void WaveformArea::RenderPersistence()
 
 void WaveformArea::RenderCairoUnderlays()
 {
-	return;
-
+	//No blending since we're the first thing to hit the window framebuffer
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
 
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
@@ -787,37 +784,45 @@ void WaveformArea::RenderCairoUnderlays()
 	Cairo::RefPtr< Cairo::Context > cr = Cairo::Context::create(surface);
 
 	//Clear to a blank background
-	cr->set_source_rgba(0, 1, 0, 1);
+	cr->set_source_rgba(0, 0, 0, 1);
 	cr->rectangle(0, 0, m_width, m_height);
 	cr->fill();
 
-	//m_persistTexture.Bind();
+	//simple test geometry
+	cr->set_source_rgba(0.25, 0.25, 0.25, 1);
+	cr->rectangle(50, 50, 200, 200);
+	cr->fill();
 
 	//Get the image data and make a texture from it
-	//m_cairoTexture.Bind();
-	/*m_cairoTexture.SetData(
+	m_cairoTexture.Bind();
+	m_cairoTexture.SetData(
 		m_width,
 		m_height,
 		surface->get_data(),
-		GL_BGRA);*/
+		GL_BGRA);
 
 	//Draw the actual image
-	//m_cairoProgram.Bind();
-	//m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
-	//glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	m_cairoProgram.Bind();
+	m_cairoVAO.Bind();
+	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void WaveformArea::RenderTraceColorCorrection()
 {
 	//Drawing to the window
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	//Draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
-	//m_waveformTexture.Bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	/*if(m_persistence)
+		m_persistTexture.Bind();
+	else
+		m_waveformTexture.Bind();
+		*/
 
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
@@ -841,6 +846,11 @@ void WaveformArea::RenderCairoOverlays()
 	cr->rectangle(0, 0, m_width, m_height);
 	cr->fill();
 
+	//simple test geometry
+	cr->set_source_rgba(0, 0, 1, 0.5);
+	cr->rectangle(550, 50, 200, 200);
+	cr->fill();
+
 	//Get the image data and make a texture from it
 	m_cairoTexture.Bind();
 	m_cairoTexture.SetData(
@@ -850,11 +860,13 @@ void WaveformArea::RenderCairoOverlays()
 		GL_BGRA);
 
 	//Configure blending for Cairo's premultiplied alpha
+	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 	//Draw the actual image
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	m_cairoProgram.Bind();
+	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }

@@ -12,7 +12,7 @@ void main()
 
 	//alpha blend
 	finalColor.r = texcolor.r;
-	finalColor.g = texcolor.g;
-	finalColor.b = texcolor.b;
-	finalColor.a = 0.8;
+	finalColor.g = 0;
+	finalColor.b = 0;
+	finalColor.a = 0.5;//texcolor.a * 0.8;
 }
