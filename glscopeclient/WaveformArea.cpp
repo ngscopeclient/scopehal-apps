@@ -137,6 +137,7 @@ WaveformArea::WaveformArea(
 
 	add_events(
 		Gdk::EXPOSURE_MASK |
+		Gdk::POINTER_MOTION_MASK |
 		Gdk::SCROLL_MASK |
 		Gdk::BUTTON_PRESS_MASK |
 		Gdk::BUTTON_RELEASE_MASK);
@@ -393,6 +394,11 @@ void WaveformArea::InitializeCairoPass()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
+{
+	return true;
+}
 
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 {
@@ -847,8 +853,8 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	//Draw the background gradient
 	float ytop = m_padding;
 	float ybot = m_height - 2*m_padding;
-	float top_brightness = 0.3;
-	float bottom_brightness = 0.1;
+	float top_brightness = 0.2;
+	float bottom_brightness = 0.0;
 
 	Gdk::Color color(m_channel->m_displaycolor);
 	Cairo::RefPtr<Cairo::LinearGradient> background_gradient = Cairo::LinearGradient::create(0, ytop, 0, ybot);
@@ -875,6 +881,11 @@ float WaveformArea::PixelsToVolts(float pix)
 float WaveformArea::VoltsToPixels(float volt)
 {
 	return volt * m_pixelsPerVolt;
+}
+
+float WaveformArea::VoltsToYPosition(float volt)
+{
+	return m_height/2 - VoltsToPixels(volt);
 }
 
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
@@ -910,17 +921,17 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	gridmap[0] = 0;
 	for(float dv=0; ; dv += selected_step)
 	{
-		float yt = ymid + VoltsToPixels(dv);
-		float yb = ymid - VoltsToPixels(dv);
-
-		//Stop if we're off the edge
-		if( (yb < ybot) && (yt > ytop) )
-			break;
+		float yt = VoltsToYPosition(dv);
+		float yb = VoltsToYPosition(-dv);
 
 		if(yb >= ybot)
-			gridmap[-dv] = yt;
+			gridmap[-dv] = yb;
 		if(yt <= ytop)
-			gridmap[dv] = yb;
+			gridmap[dv] = yt;
+
+		//Stop if we're off the edge
+		if(VoltsToPixels(dv) > halfheight)
+			break;
 	}
 
 	//Center line is solid
@@ -929,14 +940,15 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->line_to(m_plotRight, ymid);
 	cr->stroke();
 
-	//Dotted lines above and below
-	vector<double> dashes;
-	dashes.push_back(2);
-	dashes.push_back(2);
-	cr->set_dash(dashes, 0);
+	//Dimmed lines above and below
+	/*vector<double> dashes;
+	dashes.push_back(4);
+	dashes.push_back(4);
+	cr->set_dash(dashes, 0);*/
+	cr->set_source_rgba(0.7, 0.7, 0.7, 0.25);
 	for(auto it : gridmap)
 	{
-		if(it.second == ymid)	//no dots on center line
+		if(it.first == 0)	//don't over-draw the center line
 			continue;
 		cr->move_to(0, it.second);
 		cr->line_to(m_plotRight, it.second);
@@ -951,7 +963,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Draw text for the Y axis labels
 	cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
-	float textleft = m_plotRight + 5;
+	float textleft = m_plotRight + 10;
 	for(auto it : gridmap)
 	{
 		float v = it.first;
@@ -974,6 +986,25 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		tlayout->show_in_cairo_context(cr);
 	}
 	cr->begin_new_path();
+
+	//See if we're the active trigger
+	if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
+	{
+		float v = m_scope->GetTriggerVoltage();
+		float y = VoltsToYPosition(v);
+
+		float trisize = 5;
+
+		cr->set_source_rgba(
+			m_color.get_red_p(),
+			m_color.get_green_p(),
+			m_color.get_blue_p(),
+			1);
+		cr->move_to(m_plotRight, y);
+		cr->line_to(m_plotRight + trisize, y + trisize);
+		cr->line_to(m_plotRight + trisize, y - trisize);
+		cr->fill();
+	}
 
 	cr->restore();
 }

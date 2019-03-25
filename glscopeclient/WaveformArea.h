@@ -57,6 +57,7 @@ protected:
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
+	virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 	//Context menu
 	Gtk::Menu m_contextMenu;
@@ -144,6 +145,7 @@ protected:
 	//Math helpers
 	float PixelsToVolts(float pix);
 	float VoltsToPixels(float volt);
+	float VoltsToYPosition(float volt);
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
