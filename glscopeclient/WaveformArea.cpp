@@ -128,6 +128,11 @@ WaveformArea::WaveformArea(
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
 
+	m_padding = 2;
+	m_pixelsPerVolt = 100;
+
+	m_lastFrameStart = -1;
+
 	set_has_alpha();
 
 	add_events(
@@ -582,6 +587,7 @@ void WaveformArea::on_resize(int width, int height)
 
 	m_width = width;
 	m_height = height;
+	m_plotRight = width;
 
 	//Reset camera configuration
 	glViewport(0, 0, width, height);
@@ -668,17 +674,15 @@ bool WaveformArea::PrepareGeometry()
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
-	static double last = -1;
-
 	double start = GetTime();
-	double dt = start - last;
-	if(last > 0)
+	double dt = start - m_lastFrameStart;
+	if(m_lastFrameStart > 0)
 	{
 		//LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
 		m_frameTime += dt;
 		m_frameCount ++;
 	}
-	last = start;
+	m_lastFrameStart = start;
 
 	//Everything we draw is 2D painter's algorithm.
 	//Turn off some stuff we don't need, but leave blending on.
@@ -691,12 +695,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	//Offscreen rendering and accumulation of the waveforms
+	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderPersistenceOverlay();
 	if(PrepareGeometry())
 		RenderTrace();
-
-	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderCairoUnderlays();
 	RenderTraceColorCorrection();
 	RenderCairoOverlays();
@@ -742,11 +744,15 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(0.0f, "xoff");
 	m_waveformProgram.SetUniform(0.5f, "xscale");
 	m_waveformProgram.SetUniform(100.0f, "yoff");
-	m_waveformProgram.SetUniform(100.0f, "yscale");
+	m_waveformProgram.SetUniform(m_pixelsPerVolt, "yscale");
 
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
 	glBlendColor(0, 0, 0, 1);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+	//Only look at stuff inside the plot area
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
 
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();
@@ -758,6 +764,8 @@ void WaveformArea::RenderTrace()
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
 	*/
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*m_waveformLength);
+
+	glDisable(GL_SCISSOR_TEST);
 }
 
 void WaveformArea::RenderCairoUnderlays()
@@ -800,14 +808,14 @@ void WaveformArea::RenderCairoUnderlays()
 void WaveformArea::DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr)
 {
 	RenderBackgroundGradient(cr);
+	RenderGrid(cr);
 }
 
 void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//Draw the background gradient
-	float padding = 2;
-	float ytop = padding;
-	float ybot = m_height - 2*padding;
+	float ytop = m_padding;
+	float ybot = m_height - 2*m_padding;
 	float top_brightness = 0.3;
 	float bottom_brightness = 0.1;
 
@@ -824,8 +832,119 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 		color.get_green_p() * bottom_brightness,
 		color.get_blue_p() * bottom_brightness);
 	cr->set_source(background_gradient);
-	cr->rectangle(0, 0, m_width, m_height);
+	cr->rectangle(0, 0, m_plotRight, m_height);
 	cr->fill();
+}
+
+float WaveformArea::PixelsToVolts(float pix)
+{
+	return pix / m_pixelsPerVolt;
+}
+
+float WaveformArea::VoltsToPixels(float volt)
+{
+	return volt * m_pixelsPerVolt;
+}
+
+void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
+{
+	cr->save();
+
+	//Calculate width of right side axis label
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Pango::FontDescription font("sans normal 10");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	tlayout->set_text("500 mV_xxx");
+	tlayout->get_pixel_size(twidth, theight);
+	m_plotRight = m_width - twidth;
+
+	float ytop = m_height - m_padding;
+	float ybot = m_padding;
+	float plotheight = m_height - 2*m_padding;
+	float halfheight = plotheight/2;
+	float ymid = halfheight + ybot;
+
+	//Volts from the center line of our graph to the top. May not be the max value in the signal.
+	float volts_per_half_span = PixelsToVolts(halfheight);
+
+	//Decide what voltage step to use. Pick from a list (in volts)
+	float selected_step = AnalogRenderer::PickStepSize(volts_per_half_span);
+
+	//Calculate grid positions
+	std::map<float, float> gridmap;
+	gridmap.clear();
+	gridmap[0] = 0;
+	for(float dv=0; ; dv += selected_step)
+	{
+		float yt = ymid + VoltsToPixels(dv);
+		float yb = ymid - VoltsToPixels(dv);
+
+		//Stop if we're off the edge
+		if( (yb < ybot) && (yt > ytop) )
+			break;
+
+		if(yb >= ybot)
+			gridmap[-dv] = yt;
+		if(yt <= ytop)
+			gridmap[dv] = yb;
+	}
+
+	//Center line is solid
+	cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
+	cr->move_to(0, ymid);
+	cr->line_to(m_plotRight, ymid);
+	cr->stroke();
+
+	//Dotted lines above and below
+	vector<double> dashes;
+	dashes.push_back(2);
+	dashes.push_back(2);
+	cr->set_dash(dashes, 0);
+	for(auto it : gridmap)
+	{
+		if(it.second == ymid)	//no dots on center line
+			continue;
+		cr->move_to(0, it.second);
+		cr->line_to(m_plotRight, it.second);
+	}
+	cr->stroke();
+	cr->unset_dash();
+
+	//Draw background for the Y axis labels
+	cr->set_source_rgba(0, 0, 0, 0.5);
+	cr->rectangle(m_plotRight, 0, twidth, plotheight);
+	cr->fill();
+
+	//Draw text for the Y axis labels
+	cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+	float textleft = m_plotRight + 5;
+	for(auto it : gridmap)
+	{
+		float v = it.first;
+		char tmp[32];
+
+		if(fabs(v) < 1)
+			snprintf(tmp, sizeof(tmp), "%.0f mV", v*1000);
+		else
+			snprintf(tmp, sizeof(tmp), "%.3f V", v);
+
+		float y = it.second - theight/2;
+		if(y < ybot)
+			continue;
+		if(y > ytop)
+			continue;
+
+		cr->move_to(textleft, y);
+		tlayout->set_text(tmp);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	}
+	cr->begin_new_path();
+
+	cr->restore();
 }
 
 void WaveformArea::RenderTraceColorCorrection()

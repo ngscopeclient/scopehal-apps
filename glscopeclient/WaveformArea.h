@@ -131,6 +131,7 @@ protected:
 	void RenderCairoUnderlays();
 	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderGrid(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
@@ -140,13 +141,22 @@ protected:
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
 
+	//Math helpers
+	float PixelsToVolts(float pix);
+	float VoltsToPixels(float volt);
+
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
 	OscilloscopeChannel* m_selectedChannel;
 	OscilloscopeWindow* m_parent;
 
+	double m_lastFrameStart;
 	double m_frameTime;
 	long m_frameCount;
+
+	float m_pixelsPerVolt;
+	float m_padding;
+	float m_plotRight;
 };
 
 #endif
