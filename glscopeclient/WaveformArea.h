@@ -56,8 +56,11 @@ protected:
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
+	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
+
+	void CreateWidgets();
 
 	//Context menu
 	Gtk::Menu m_contextMenu;
@@ -146,6 +149,7 @@ protected:
 	float PixelsToVolts(float pix);
 	float VoltsToPixels(float volt);
 	float VoltsToYPosition(float volt);
+	float YPositionToVolts(float y);
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
@@ -162,9 +166,16 @@ protected:
 
 	enum ClickLocations
 	{
+		LOC_PLOT,
 		LOC_VSCALE,
-		LOC_PLOT
+		LOC_TRIGGER
 	} m_clickLocation;
+
+	enum DragStates
+	{
+		DRAG_NONE,
+		DRAG_TRIGGER
+	} m_dragState;
 };
 
 #endif

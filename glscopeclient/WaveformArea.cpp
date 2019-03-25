@@ -127,6 +127,7 @@ WaveformArea::WaveformArea(
 	m_persistence = false;
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
+	m_dragState = DRAG_NONE;
 
 	m_padding = 2;
 	m_pixelsPerVolt = 100;
@@ -142,7 +143,28 @@ WaveformArea::WaveformArea(
 		Gdk::BUTTON_PRESS_MASK |
 		Gdk::BUTTON_RELEASE_MASK);
 
-	//Create the menu
+	CreateWidgets();
+}
+
+WaveformArea::~WaveformArea()
+{
+	double tavg = m_frameTime / m_frameCount;
+	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
+
+	for(auto a : m_traceVAOs)
+		delete a;
+	for(auto b : m_traceVBOs)
+		delete b;
+	m_traceVAOs.clear();
+	m_traceVBOs.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Initialization
+
+void WaveformArea::CreateWidgets()
+{
+		//Create the menu
 	auto item = Gtk::manage(new Gtk::MenuItem("Hide channel", false));
 		item->signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnHide));
@@ -225,22 +247,6 @@ WaveformArea::WaveformArea(
 
 	m_contextMenu.show_all();
 }
-
-WaveformArea::~WaveformArea()
-{
-	double tavg = m_frameTime / m_frameCount;
-	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
-
-	for(auto a : m_traceVAOs)
-		delete a;
-	for(auto b : m_traceVBOs)
-		delete b;
-	m_traceVAOs.clear();
-	m_traceVBOs.clear();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Initialization
 
 void WaveformArea::on_realize()
 {
@@ -395,11 +401,6 @@ void WaveformArea::InitializeCairoPass()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
 
-bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
-{
-	return true;
-}
-
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 {
 	switch(ev->direction)
@@ -542,7 +543,20 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	//See where we are left-right
 	m_clickLocation = LOC_PLOT;
 	if(event->x > m_plotRight)
+	{
 		m_clickLocation = LOC_VSCALE;
+
+		if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
+		{
+			float y = VoltsToYPosition(m_scope->GetTriggerVoltage());
+			float radius = 15;
+			if( (fabs(event->y - y) < radius) &&
+				(event->x < (m_plotRight + radius) ) )
+			{
+				m_clickLocation = LOC_TRIGGER;
+			}
+		}
+	}
 
 	switch(m_clickLocation)
 	{
@@ -581,10 +595,57 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 			}
 			break;
 
+		//Trigger indicator
+		case LOC_TRIGGER:
+			{
+				switch(event->button)
+				{
+					//Left
+					case 1:
+						m_dragState = DRAG_TRIGGER;
+						queue_draw();
+						break;
+
+					default:
+						LogDebug("Button %d pressed on trigger\n", event->button);
+						break;
+				}
+			}
+			break;
+
+
 	}
 
 	return true;
 }
+
+bool WaveformArea::on_button_release_event(GdkEventButton* event)
+{
+	//Stop dragging things
+	if(m_dragState != DRAG_NONE)
+	{
+		m_dragState = DRAG_NONE;
+		queue_draw();
+	}
+
+	return true;
+}
+
+bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
+{
+	switch(m_dragState)
+	{
+		case DRAG_TRIGGER:
+			{
+				float voltage = YPositionToVolts(event->y);
+				LogDebug("New trigger = %.3f\n", voltage);
+			}
+			break;
+	}
+
+	return true;
+}
+
 
 void WaveformArea::OnHide()
 {
@@ -888,6 +949,11 @@ float WaveformArea::VoltsToYPosition(float volt)
 	return m_height/2 - VoltsToPixels(volt);
 }
 
+float WaveformArea::YPositionToVolts(float y)
+{
+	return PixelsToVolts(-1 * (y - m_height/2) );
+}
+
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
 	cr->save();
@@ -995,11 +1061,16 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 		float trisize = 5;
 
-		cr->set_source_rgba(
-			m_color.get_red_p(),
-			m_color.get_green_p(),
-			m_color.get_blue_p(),
-			1);
+		if(m_dragState == DRAG_TRIGGER)
+			cr->set_source_rgba(1, 0, 0, 1);
+		else
+		{
+			cr->set_source_rgba(
+				m_color.get_red_p(),
+				m_color.get_green_p(),
+				m_color.get_blue_p(),
+				1);
+		}
 		cr->move_to(m_plotRight, y);
 		cr->line_to(m_plotRight + trisize, y + trisize);
 		cr->line_to(m_plotRight + trisize, y - trisize);
