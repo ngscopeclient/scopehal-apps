@@ -749,6 +749,7 @@ void WaveformArea::on_resize(int width, int height)
 }
 
 //TODO: only do this if the waveform is dirty!
+//TODO: Tesselate in a geometry shader, rather than on the CPU!
 bool WaveformArea::PrepareGeometry()
 {
 	//LogDebug("Processing capture\n");
@@ -761,22 +762,37 @@ bool WaveformArea::PrepareGeometry()
 	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
 	size_t count = data.size();
 
+	//Scaling factor from samples to pixels
+	float xscale = m_horizontalZoomFactor * m_parent->m_pixelsPerSample;
+
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
 	double lheight = 0.025f;
 	float* verts = new float[waveform_size];
-	size_t voff = 0;
+	#pragma omp parallel for
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X/Y start points of the data
-		float xleft = data.GetSampleStart(j);
-		float xright = data.GetSampleStart(j+1);
+		float xleft = data.GetSampleStart(j) * xscale;
+		float xright = data.GetSampleStart(j+1) * xscale;
+
+		//If the triangle would be degenerate (less than one pixel wide), stretch it
+		float width = xright-xleft;
+		float minwidth = 2;
+		if(width < minwidth)
+		{
+			float xmid = width/2 + xleft;
+
+			xleft = xmid - minwidth/2;
+			xright = xmid + minwidth/2;
+		}
 
 		float yleft = data[j];
 		float yright = data[j+1];
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
+		size_t voff = j*12;
 		verts[voff++] = xleft;
 		verts[voff++] = yleft + lheight;
 
@@ -883,12 +899,12 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.Bind();
 	m_waveformProgram.SetUniform(m_projection, "projection");
 	m_waveformProgram.SetUniform(0.0f, "xoff");
-	m_waveformProgram.SetUniform(m_horizontalZoomFactor * m_parent->m_pixelsPerSample, "xscale");
+	m_waveformProgram.SetUniform(1.0, "xscale");
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(m_pixelsPerVolt, "yscale");
 
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 1);
+	glBlendColor(0, 0, 0, 0.1);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Only look at stuff inside the plot area
