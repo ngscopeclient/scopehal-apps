@@ -762,26 +762,38 @@ bool WaveformArea::PrepareGeometry()
 	size_t count = data.size();
 
 	//Create the geometry
-	const int POINTS_PER_TRI = 2;
-	const int TRIS_PER_SAMPLE = 2;
-	size_t waveform_size = count * POINTS_PER_TRI * TRIS_PER_SAMPLE;
+	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
 	double lheight = 0.025f;
 	float* verts = new float[waveform_size];
 	size_t voff = 0;
-	for(size_t j=0; j<count; j++)
+	for(size_t j=0; j<(count-1); j++)
 	{
-		float y = data[j];
-		float x = data.GetSampleStart(j);
+		//Actual X/Y start points of the data
+		float xleft = data.GetSampleStart(j);
+		float xright = data.GetSampleStart(j+1);
+
+		float yleft = data[j];
+		float yright = data[j+1];
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
-		verts[voff + 0] = x;
-		verts[voff + 1] = y + lheight;
+		verts[voff++] = xleft;
+		verts[voff++] = yleft + lheight;
 
-		verts[voff + 2] = x;
-		verts[voff + 3] = y - lheight;
+		verts[voff++] = xleft;
+		verts[voff++] = yleft - lheight;
 
-		voff += 4;
+		verts[voff++] = xright;
+		verts[voff++] = yright - lheight;
+
+		verts[voff++] = xright;
+		verts[voff++] = yright - lheight;
+
+		verts[voff++] = xright;
+		verts[voff++] = yright + lheight;
+
+		verts[voff++] = xleft;
+		verts[voff++] = yleft + lheight;
 	}
 
 	//Download waveform data
@@ -892,7 +904,7 @@ void WaveformArea::RenderTrace()
 	counts.push_back(2*m_waveformLength);
 	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
 	*/
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 2*m_waveformLength);
+	glDrawArrays(GL_TRIANGLES, 0, 12*m_waveformLength);
 
 	glDisable(GL_SCISSOR_TEST);
 }
