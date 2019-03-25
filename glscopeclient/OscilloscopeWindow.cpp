@@ -150,7 +150,10 @@ void OscilloscopeWindow::CreateWidgets()
 
 	//Status bar has to come at the bottom
 	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-		m_statusbar.pack_end(m_sampleLabel, Gtk::PACK_SHRINK);
+		m_statusbar.pack_end(m_sampleRateLabel, Gtk::PACK_SHRINK);
+		m_sampleRateLabel.set_size_request(75, 1);
+		m_statusbar.pack_end(m_sampleCountLabel, Gtk::PACK_SHRINK);
+		m_sampleCountLabel.set_size_request(75, 1);
 	m_statusbar.show_all();
 
 	m_channelsMenu.show_all();
@@ -250,20 +253,28 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 void OscilloscopeWindow::UpdateStatusBar()
 {
-	double ps_per_sample = 0;
+	//Find the first enabled channel (assume same config as the rest for now)
+	OscilloscopeChannel* chan = NULL;
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		auto chan = m_scope->GetChannel(i);
-		if(!chan->IsEnabled())
-			continue;
-		ps_per_sample = chan->GetData()->m_timescale;
-		break;
+		chan = m_scope->GetChannel(i);
+		if(chan->IsEnabled())
+			break;
 	}
 
-	double gsps = 1000 / ps_per_sample;
+	double gsps = 1000 / chan->GetData()->m_timescale;
 	char tmp[128];
 	snprintf(tmp, sizeof(tmp), "%.1f GS/s", gsps);
-	m_sampleLabel.set_label(tmp);
+	m_sampleRateLabel.set_label(tmp);
+
+	size_t len = chan->GetData()->GetDepth();
+	if(len > 1e6)
+		snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
+	else if(len > 1e3)
+		snprintf(tmp, sizeof(tmp), "%.0f kS", len * 1e-3f);
+	else
+		snprintf(tmp, sizeof(tmp), "%zu S", len);
+	m_sampleCountLabel.set_label(tmp);
 }
 
 void OscilloscopeWindow::OnStart()
