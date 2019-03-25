@@ -533,17 +533,48 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	//If a decoder, filter for that instead
 	m_selectedChannel = m_channel;
 
-	switch(event->button)
+	//See where we are left-right
+	m_clickLocation = LOC_PLOT;
+	if(event->x > m_plotRight)
+		m_clickLocation = LOC_VSCALE;
+
+	switch(m_clickLocation)
 	{
-		//Right
-		case 3:
-			UpdateContextMenu();
-			m_contextMenu.popup(event->button, event->time);
+		//Waveform area
+		case LOC_PLOT:
+			{
+				switch(event->button)
+				{
+					//Right
+					case 3:
+						UpdateContextMenu();
+						m_contextMenu.popup(event->button, event->time);
+						break;
+
+					default:
+						LogDebug("Button %d pressed on waveform plot\n", event->button);
+						break;
+				}
+
+			};
 			break;
 
-		default:
-			LogDebug("Button %d pressed\n", event->button);
+		//Vertical axis
+		case LOC_VSCALE:
+			{
+				switch(event->button)
+				{
+					//Right
+					case 3:
+						break;
+
+					default:
+						LogDebug("Button %d pressed on vertical scale\n", event->button);
+						break;
+				}
+			}
 			break;
+
 	}
 
 	return true;

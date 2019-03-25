@@ -157,6 +157,12 @@ protected:
 	float m_pixelsPerVolt;
 	float m_padding;
 	float m_plotRight;
+
+	enum ClickLocations
+	{
+		LOC_VSCALE,
+		LOC_PLOT
+	} m_clickLocation;
 };
 
 #endif

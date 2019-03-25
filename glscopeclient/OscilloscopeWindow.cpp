@@ -148,6 +148,11 @@ void OscilloscopeWindow::CreateWidgets()
 			w->hide();
 	}
 
+	//Status bar has to come at the bottom
+	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+		m_statusbar.pack_end(m_sampleLabel, Gtk::PACK_SHRINK);
+	m_statusbar.show_all();
+
 	m_channelsMenu.show_all();
 }
 
@@ -220,6 +225,9 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	//dt = GetTime() - start;
 	//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
 
+	//Update the status
+	UpdateStatusBar();
+
 	//Update the view
 	for(auto w : m_waveformAreas)
 		w->OnWaveformDataReady();
@@ -238,6 +246,24 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 	//false to stop timer
 	return true;
+}
+
+void OscilloscopeWindow::UpdateStatusBar()
+{
+	double ps_per_sample = 0;
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	{
+		auto chan = m_scope->GetChannel(i);
+		if(!chan->IsEnabled())
+			continue;
+		ps_per_sample = chan->GetData()->m_timescale;
+		break;
+	}
+
+	double gsps = 1000 / ps_per_sample;
+	char tmp[128];
+	snprintf(tmp, sizeof(tmp), "%.1f GS/s", gsps);
+	m_sampleLabel.set_label(tmp);
 }
 
 void OscilloscopeWindow::OnStart()

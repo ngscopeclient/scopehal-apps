@@ -64,6 +64,8 @@ protected:
 	void OnStop();
 	void OnQuit();
 
+	void UpdateStatusBar();
+
 	//Initialization
 	void CreateWidgets();
 
@@ -79,6 +81,8 @@ protected:
 			Gtk::ToolButton m_btnStartSingle;
 			Gtk::ToolButton m_btnStop;
 		std::set<WaveformArea*> m_waveformAreas;
+		Gtk::HBox m_statusbar;
+			Gtk::Label m_sampleLabel;
 
 	//Our oscilloscope connection
 	Oscilloscope* m_scope;
