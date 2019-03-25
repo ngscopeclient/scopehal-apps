@@ -163,13 +163,16 @@ protected:
 	float m_pixelsPerVolt;
 	float m_padding;
 	float m_plotRight;
+	float m_horizontalZoomFactor;
 
-	enum ClickLocations
+	enum ClickLocation
 	{
 		LOC_PLOT,
 		LOC_VSCALE,
 		LOC_TRIGGER
 	} m_clickLocation;
+
+	ClickLocation HitTest(double x, double y);
 
 	enum DragStates
 	{

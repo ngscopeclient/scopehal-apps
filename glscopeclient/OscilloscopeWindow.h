@@ -53,6 +53,12 @@ public:
 
 	void OnToggleChannel(WaveformArea* w);
 
+	float m_pixelsPerSample;
+
+	void OnAutofitHorizontal();
+	void OnZoomInHorizontal();
+	void OnZoomOutHorizontal();
+
 protected:
 	void ArmTrigger(bool oneshot);
 

@@ -75,6 +75,7 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
+	m_pixelsPerSample = 1;
 }
 
 /**
@@ -161,6 +162,29 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnAutofitHorizontal()
+{
+	LogDebug("autofit horz\n");
+
+	//
+}
+
+void OscilloscopeWindow::OnZoomInHorizontal()
+{
+	m_pixelsPerSample *= 1.5;
+
+	for(auto w : m_waveformAreas)
+		w->queue_draw();
+}
+
+void OscilloscopeWindow::OnZoomOutHorizontal()
+{
+	m_pixelsPerSample /= 1.5;
+
+	for(auto w : m_waveformAreas)
+		w->queue_draw();
+}
 
 void OscilloscopeWindow::OnQuit()
 {

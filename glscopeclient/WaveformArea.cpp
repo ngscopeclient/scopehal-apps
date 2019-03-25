@@ -132,6 +132,8 @@ WaveformArea::WaveformArea(
 	m_padding = 2;
 	m_pixelsPerVolt = 100;
 
+	m_horizontalZoomFactor = 1;
+
 	m_lastFrameStart = -1;
 
 	set_has_alpha();
@@ -401,21 +403,58 @@ void WaveformArea::InitializeCairoPass()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
 
+/**
+	@brief Update the location of the mouse
+ */
+WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
+{
+	if(x > m_plotRight)
+	{
+		//On the trigger button?
+		if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
+		{
+			float vy = VoltsToYPosition(m_scope->GetTriggerVoltage());
+			float radius = 15;
+			if( (fabs(y - vy) < radius) &&
+				(x < (m_plotRight + radius) ) )
+			{
+				return LOC_TRIGGER;
+			}
+		}
+
+		//Nope, just the scale bar
+		return LOC_VSCALE;
+	}
+
+	return LOC_PLOT;
+}
+
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 {
-	switch(ev->direction)
+	m_clickLocation = HitTest(ev->x, ev->y);
+
+	switch(m_clickLocation)
 	{
-		case GDK_SCROLL_UP:
-			LogDebug("zoom in\n");
-			break;
-		case GDK_SCROLL_DOWN:
-			LogDebug("zoom out\n");
-			break;
-		case GDK_SCROLL_LEFT:
-			LogDebug("scroll left\n");
-			break;
-		case GDK_SCROLL_RIGHT:
-			LogDebug("scroll right\n");
+		case LOC_PLOT:
+
+			switch(ev->direction)
+			{
+				case GDK_SCROLL_UP:
+					m_parent->OnZoomInHorizontal();
+					break;
+				case GDK_SCROLL_DOWN:
+					m_parent->OnZoomOutHorizontal();
+					break;
+				case GDK_SCROLL_LEFT:
+					LogDebug("scroll left\n");
+					break;
+				case GDK_SCROLL_RIGHT:
+					LogDebug("scroll right\n");
+					break;
+
+				default:
+					break;
+			}
 			break;
 
 		default:
@@ -539,24 +578,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	//TODO: See if we right clicked on our main channel or a protocol decoder.
 	//If a decoder, filter for that instead
 	m_selectedChannel = m_channel;
-
-	//See where we are left-right
-	m_clickLocation = LOC_PLOT;
-	if(event->x > m_plotRight)
-	{
-		m_clickLocation = LOC_VSCALE;
-
-		if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
-		{
-			float y = VoltsToYPosition(m_scope->GetTriggerVoltage());
-			float radius = 15;
-			if( (fabs(event->y - y) < radius) &&
-				(event->x < (m_plotRight + radius) ) )
-			{
-				m_clickLocation = LOC_TRIGGER;
-			}
-		}
-	}
+	m_clickLocation = HitTest(event->x, event->y);
 
 	switch(m_clickLocation)
 	{
@@ -565,6 +587,11 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 			{
 				switch(event->button)
 				{
+					//Middle
+					case 2:
+						m_parent->OnAutofitHorizontal();
+						break;
+
 					//Right
 					case 3:
 						UpdateContextMenu();
@@ -619,7 +646,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	return true;
 }
 
-bool WaveformArea::on_button_release_event(GdkEventButton* event)
+bool WaveformArea::on_button_release_event(GdkEventButton* /*event*/)
 {
 	//Stop dragging things
 	if(m_dragState != DRAG_NONE)
@@ -639,6 +666,10 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_TRIGGER:
 			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
 			queue_draw();
+			break;
+
+		//Nothing to do
+		default:
 			break;
 	}
 
@@ -680,7 +711,7 @@ void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 
 void WaveformArea::on_resize(int width, int height)
 {
-	double start = GetTime();
+	//double start = GetTime();
 
 	m_width = width;
 	m_height = height;
@@ -713,10 +744,11 @@ void WaveformArea::on_resize(int width, int height)
 	if(err != 0)
 		LogNotice("resize, err = %x\n", err);
 
-	double dt = GetTime() - start;
+	//double dt = GetTime() - start;
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
+//TODO: only do this if the waveform is dirty!
 bool WaveformArea::PrepareGeometry()
 {
 	//LogDebug("Processing capture\n");
@@ -839,7 +871,7 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.Bind();
 	m_waveformProgram.SetUniform(m_projection, "projection");
 	m_waveformProgram.SetUniform(0.0f, "xoff");
-	m_waveformProgram.SetUniform(0.5f, "xscale");
+	m_waveformProgram.SetUniform(m_horizontalZoomFactor * m_parent->m_pixelsPerSample, "xscale");
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(m_pixelsPerVolt, "yscale");
 
