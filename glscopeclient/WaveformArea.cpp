@@ -635,11 +635,10 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 {
 	switch(m_dragState)
 	{
+		//Trigger drag - figure out the new trigger level and update the scope
 		case DRAG_TRIGGER:
-			{
-				float voltage = YPositionToVolts(event->y);
-				LogDebug("New trigger = %.3f\n", voltage);
-			}
+			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+			queue_draw();
 			break;
 	}
 
