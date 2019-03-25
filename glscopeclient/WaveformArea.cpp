@@ -654,7 +654,7 @@ void WaveformArea::on_resize(int width, int height)
 		LogNotice("resize, err = %x\n", err);
 
 	double dt = GetTime() - start;
-	LogDebug("Resize time: %.3f ms\n", dt*1000);
+	//LogDebug("Resize time: %.3f ms\n", dt*1000);
 }
 
 bool WaveformArea::PrepareGeometry()
@@ -780,7 +780,7 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(m_projection, "projection");
 	m_waveformProgram.SetUniform(0.0f, "xoff");
 	m_waveformProgram.SetUniform(0.5f, "xscale");
-	m_waveformProgram.SetUniform(100.0f, "yoff");
+	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(m_pixelsPerVolt, "yscale");
 
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
@@ -924,13 +924,13 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		float yt = VoltsToYPosition(dv);
 		float yb = VoltsToYPosition(-dv);
 
-		if(yb >= ybot)
+		if(yb <= (ytop - theight/2) )
 			gridmap[-dv] = yb;
-		if(yt <= ytop)
+		if(yt >= (ybot + theight/2) )
 			gridmap[dv] = yt;
 
 		//Stop if we're off the edge
-		if(VoltsToPixels(dv) > halfheight)
+		if( (yb > ytop) && (yt < ybot) )
 			break;
 	}
 
