@@ -456,6 +456,7 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 
 	switch(m_clickLocation)
 	{
+		//Adjust time/div
 		case LOC_PLOT:
 
 			switch(ev->direction)
@@ -475,6 +476,25 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 
 				default:
 					break;
+			}
+			break;
+
+		//Adjust volts/div
+		case LOC_VSCALE:
+			{
+				double vrange = m_channel->GetVoltageRange();
+				switch(ev->direction)
+				{
+					case GDK_SCROLL_UP:
+						m_channel->SetVoltageRange(vrange * 0.9);
+						break;
+					case GDK_SCROLL_DOWN:
+						m_channel->SetVoltageRange(vrange / 0.9);
+						break;
+
+					default:
+						break;
+				}
 			}
 			break;
 
@@ -859,7 +879,7 @@ bool WaveformArea::PrepareGeometry()
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
 	double lheight = 0.025f;
 	float* verts = new float[waveform_size];
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X/Y start points of the data
