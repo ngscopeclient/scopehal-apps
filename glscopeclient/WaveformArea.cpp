@@ -180,13 +180,33 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(m_triggerItem);
 		m_triggerItem.set_label("Trigger");
 		m_triggerItem.set_submenu(m_triggerMenu);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Rising edge"));
-			m_triggerMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Falling edge"));
-			m_triggerMenu.append(*item);
-			item = Gtk::manage(new Gtk::RadioMenuItem("Any edge"));
-			m_triggerMenu.append(*item);
-			//TODO: more trigger types
+			m_risingTriggerItem.set_label("Rising edge");
+			m_risingTriggerItem.signal_activate().connect(
+				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
+					Oscilloscope::TRIGGER_TYPE_RISING,
+					&m_risingTriggerItem));
+			m_risingTriggerItem.set_group(m_triggerGroup);
+			m_triggerMenu.append(m_risingTriggerItem);
+
+			m_fallingTriggerItem.set_label("Falling edge");
+			m_fallingTriggerItem.signal_activate().connect(
+				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
+					Oscilloscope::TRIGGER_TYPE_FALLING,
+					&m_fallingTriggerItem));
+			m_fallingTriggerItem.set_group(m_triggerGroup);
+			m_triggerMenu.append(m_fallingTriggerItem);
+
+			m_bothTriggerItem.set_label("Both edges");
+			m_bothTriggerItem.signal_activate().connect(
+				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
+					Oscilloscope::TRIGGER_TYPE_CHANGE,
+					&m_bothTriggerItem));
+			m_bothTriggerItem.set_group(m_triggerGroup);
+			m_triggerMenu.append(m_bothTriggerItem);
+
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 	m_contextMenu.append(m_attenItem);
 		m_attenItem.set_label("Attenuation");
@@ -562,6 +582,32 @@ void WaveformArea::UpdateContextMenu()
 				//TODO: how to handle this?
 				break;
 		}
+
+		if(m_scope->GetTriggerChannelIndex() != m_channel->GetIndex())
+		{
+			//don't change (TODO grayed out?)
+		}
+		else
+		{
+			switch(m_scope->GetTriggerType())
+			{
+				case Oscilloscope::TRIGGER_TYPE_RISING:
+					m_risingTriggerItem.set_active();
+					break;
+
+				case Oscilloscope::TRIGGER_TYPE_FALLING:
+					m_fallingTriggerItem.set_active();
+					break;
+
+				case Oscilloscope::TRIGGER_TYPE_CHANGE:
+					m_bothTriggerItem.set_active();
+					break;
+
+				//unsupported trigger
+				default:
+					break;
+			}
+		}
 	}
 	else
 	{
@@ -695,15 +741,20 @@ void WaveformArea::OnProtocolDecode(string name)
 
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 {
-	//ignore spurious events while loading menu config
-	if(m_updatingContextMenu)
-		return;
-
-	//ignore events from item being deselected
-	if(!item->get_active())
+	//ignore spurious events while loading menu config, or from item being deselected
+	if(m_updatingContextMenu || !item->get_active())
 		return;
 
 	m_selectedChannel->SetBandwidthLimit(mhz);
+}
+
+void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item)
+{
+	//ignore spurious events while loading menu config, or from item being deselected
+	if(m_updatingContextMenu || !item->get_active())
+		return;
+
+	m_scope->SetTriggerType(type);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -973,7 +1024,7 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	//Draw the background gradient
 	float ytop = m_padding;
 	float ybot = m_height - 2*m_padding;
-	float top_brightness = 0.2;
+	float top_brightness = 0.1;
 	float bottom_brightness = 0.0;
 
 	Gdk::Color color(m_channel->m_displaycolor);

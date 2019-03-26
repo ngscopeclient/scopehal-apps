@@ -69,6 +69,10 @@ protected:
 			Gtk::Menu m_decodeMenu;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
+			Gtk::RadioMenuItem::Group m_triggerGroup;
+			Gtk::RadioMenuItem m_risingTriggerItem;
+			Gtk::RadioMenuItem m_fallingTriggerItem;
+			Gtk::RadioMenuItem m_bothTriggerItem;
 		Gtk::MenuItem m_couplingItem;
 			Gtk::Menu m_couplingMenu;
 				Gtk::RadioMenuItem::Group m_couplingGroup;
@@ -93,6 +97,7 @@ protected:
 	void OnHide();
 	void OnTogglePersistence();
 	void OnProtocolDecode(std::string name);
+	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 
 	int m_width;

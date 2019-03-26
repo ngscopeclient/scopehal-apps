@@ -88,6 +88,7 @@ protected:
 			Gtk::ToolButton m_btnStop;
 		std::set<WaveformArea*> m_waveformAreas;
 		Gtk::HBox m_statusbar;
+			Gtk::Label m_triggerConfigLabel;
 			Gtk::Label m_sampleCountLabel;
 			Gtk::Label m_sampleRateLabel;
 

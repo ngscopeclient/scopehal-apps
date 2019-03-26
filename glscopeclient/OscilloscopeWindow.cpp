@@ -155,6 +155,8 @@ void OscilloscopeWindow::CreateWidgets()
 		m_sampleRateLabel.set_size_request(75, 1);
 		m_statusbar.pack_end(m_sampleCountLabel, Gtk::PACK_SHRINK);
 		m_sampleCountLabel.set_size_request(75, 1);
+		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
+		m_triggerConfigLabel.set_size_request(75, 1);
 	m_statusbar.show_all();
 
 	m_channelsMenu.show_all();
@@ -299,6 +301,14 @@ void OscilloscopeWindow::UpdateStatusBar()
 	else
 		snprintf(tmp, sizeof(tmp), "%zu S", len);
 	m_sampleCountLabel.set_label(tmp);
+
+	string name = m_scope->GetChannel(m_scope->GetTriggerChannelIndex())->GetHwname();
+	float voltage = m_scope->GetTriggerVoltage();
+	if(voltage < 1)
+		snprintf(tmp, sizeof(tmp), "%s %.0f mV", name.c_str(), voltage*1000);
+	else
+		snprintf(tmp, sizeof(tmp), "%s %.3f V", name.c_str(), voltage);
+	m_triggerConfigLabel.set_label(tmp);
 }
 
 void OscilloscopeWindow::OnStart()
