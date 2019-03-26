@@ -135,6 +135,7 @@ WaveformArea::WaveformArea(
 	m_horizontalZoomFactor = 1;
 
 	m_lastFrameStart = -1;
+	m_persistenceClear = true;
 
 	set_has_alpha();
 
@@ -585,10 +586,24 @@ void WaveformArea::UpdateContextMenu()
 
 		if(m_scope->GetTriggerChannelIndex() != m_channel->GetIndex())
 		{
-			//don't change (TODO grayed out?)
+			m_risingTriggerItem.set_inconsistent(true);
+			m_fallingTriggerItem.set_inconsistent(true);
+			m_bothTriggerItem.set_inconsistent(true);
+
+			m_risingTriggerItem.set_draw_as_radio(false);
+			m_fallingTriggerItem.set_draw_as_radio(false);
+			m_bothTriggerItem.set_draw_as_radio(false);
 		}
 		else
 		{
+			m_risingTriggerItem.set_inconsistent(false);
+			m_fallingTriggerItem.set_inconsistent(false);
+			m_bothTriggerItem.set_inconsistent(false);
+
+			m_risingTriggerItem.set_draw_as_radio(true);
+			m_fallingTriggerItem.set_draw_as_radio(true);
+			m_bothTriggerItem.set_draw_as_radio(true);
+
 			switch(m_scope->GetTriggerType())
 			{
 				case Oscilloscope::TRIGGER_TYPE_RISING:
@@ -711,6 +726,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		//Trigger drag - figure out the new trigger level and update the scope
 		case DRAG_TRIGGER:
 			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+			m_parent->ClearAllPersistence();
 			queue_draw();
 			break;
 
@@ -746,6 +762,7 @@ void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 		return;
 
 	m_selectedChannel->SetBandwidthLimit(mhz);
+	ClearPersistence();
 }
 
 void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item)
@@ -754,7 +771,9 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
+	m_scope->SetTriggerChannelIndex(m_channel->GetIndex());
 	m_scope->SetTriggerType(type);
+	m_parent->ClearAllPersistence();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -925,8 +944,9 @@ void WaveformArea::RenderPersistenceOverlay()
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 
 	//If not persisting, just wipe out whatever was there before
-	if(!m_persistence)
+	if(!m_persistence || m_persistenceClear)
 	{
+		m_persistenceClear = false;
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		return;

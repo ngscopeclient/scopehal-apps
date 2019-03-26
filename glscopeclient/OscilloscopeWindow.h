@@ -59,6 +59,8 @@ public:
 	void OnZoomInHorizontal();
 	void OnZoomOutHorizontal();
 
+	void ClearAllPersistence();
+
 protected:
 	void ArmTrigger(bool oneshot);
 

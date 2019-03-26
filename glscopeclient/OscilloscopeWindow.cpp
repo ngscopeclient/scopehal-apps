@@ -175,17 +175,22 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 void OscilloscopeWindow::OnZoomInHorizontal()
 {
 	m_pixelsPerSample *= 1.5;
+	ClearAllPersistence();
+}
 
+void OscilloscopeWindow::ClearAllPersistence()
+{
 	for(auto w : m_waveformAreas)
+	{
+		w->ClearPersistence();
 		w->queue_draw();
+	}
 }
 
 void OscilloscopeWindow::OnZoomOutHorizontal()
 {
 	m_pixelsPerSample /= 1.5;
-
-	for(auto w : m_waveformAreas)
-		w->queue_draw();
+	ClearAllPersistence();
 }
 
 void OscilloscopeWindow::OnQuit()
@@ -346,42 +351,7 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 	m_tArm = GetTime();
 }
 
-
 /*
-void OscilloscopeWindow::OnZoomOut()
-{
-	//Get center of current view
-	float fract = m_viewscroller.get_hadjustment()->get_value() / m_viewscroller.get_hadjustment()->get_upper();
-
-	//Change zoom
-	m_timescale /= 1.5;
-	OnZoomChanged();
-
-	//Dispatch the draw events
-	while(Gtk::Main::events_pending())
-		Gtk::Main::iteration();
-
-	//Re-scroll
-	m_viewscroller.get_hadjustment()->set_value(fract * m_viewscroller.get_hadjustment()->get_upper());
-}
-
-void OscilloscopeWindow::OnZoomIn()
-{
-	//Get center of current view
-	float fract = m_viewscroller.get_hadjustment()->get_value() / m_viewscroller.get_hadjustment()->get_upper();
-
-	//Change zoom
-	m_timescale *= 1.5;
-	OnZoomChanged();
-
-	//Dispatch the draw events
-	while(Gtk::Main::events_pending())
-		Gtk::Main::iteration();
-
-	//Re-scroll
-	m_viewscroller.get_hadjustment()->set_value(fract * m_viewscroller.get_hadjustment()->get_upper());
-}
-
 void OscilloscopeWindow::OnZoomFit()
 {
 	if( (m_scope->GetChannelCount() != 0) && (m_scope->GetChannel(0) != NULL) && (m_scope->GetChannel(0)->GetData() != NULL))
@@ -392,15 +362,6 @@ void OscilloscopeWindow::OnZoomFit()
 	}
 
 	OnZoomChanged();
-}
-
-void OscilloscopeWindow::OnZoomChanged()
-{
-	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
-		m_scope->GetChannel(i)->m_timescale = m_timescale;
-
-	m_view.SetSizeDirty();
-	m_view.queue_draw();
 }
 */
 int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)

@@ -51,6 +51,9 @@ public:
 	OscilloscopeChannel* GetChannel()
 	{ return m_channel; }
 
+	void ClearPersistence()
+	{ m_persistenceClear = true; }
+
 protected:
 	virtual void on_realize();
 	virtual void on_resize (int width, int height);
@@ -105,6 +108,7 @@ protected:
 
 	//Display options
 	bool m_persistence;
+	bool m_persistenceClear;
 
 	//GL stuff (TODO organize)
 	Program m_waveformProgram;
