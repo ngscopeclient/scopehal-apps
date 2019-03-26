@@ -130,7 +130,7 @@ WaveformArea::WaveformArea(
 	m_dragState = DRAG_NONE;
 
 	m_padding = 2;
-	m_pixelsPerVolt = 100;
+	m_pixelsPerVolt = 1;
 
 	m_horizontalZoomFactor = 1;
 
@@ -435,7 +435,7 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 		if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
 		{
 			float vy = VoltsToYPosition(m_scope->GetTriggerVoltage());
-			float radius = 15;
+			float radius = 20;
 			if( (fabs(y - vy) < radius) &&
 				(x < (m_plotRight + radius) ) )
 			{
@@ -660,7 +660,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 						break;
 
 					default:
-						LogDebug("Button %d pressed on waveform plot\n", event->button);
+						//LogDebug("Button %d pressed on waveform plot\n", event->button);
 						break;
 				}
 
@@ -677,7 +677,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 						break;
 
 					default:
-						LogDebug("Button %d pressed on vertical scale\n", event->button);
+						//LogDebug("Button %d pressed on vertical scale\n", event->button);
 						break;
 				}
 			}
@@ -695,7 +695,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 						break;
 
 					default:
-						LogDebug("Button %d pressed on trigger\n", event->button);
+						//LogDebug("Button %d pressed on trigger\n", event->button);
 						break;
 				}
 			}
@@ -707,8 +707,24 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	return true;
 }
 
-bool WaveformArea::on_button_release_event(GdkEventButton* /*event*/)
+bool WaveformArea::on_button_release_event(GdkEventButton* event)
 {
+	switch(m_dragState)
+	{
+		//Update scope trigger configuration if left mouse is released
+		case DRAG_TRIGGER:
+			if(event->button == 1)
+			{
+				m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+				m_parent->ClearAllPersistence();
+				queue_draw();
+			}
+			break;
+
+		default:
+			break;
+	}
+
 	//Stop dragging things
 	if(m_dragState != DRAG_NONE)
 	{
@@ -721,12 +737,13 @@ bool WaveformArea::on_button_release_event(GdkEventButton* /*event*/)
 
 bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 {
+	m_cursorX = event->x;
+	m_cursorY = event->y;
+
 	switch(m_dragState)
 	{
-		//Trigger drag - figure out the new trigger level and update the scope
+		//Trigger drag - refresh (don't reconfigure trigger until we release)
 		case DRAG_TRIGGER:
-			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
-			m_parent->ClearAllPersistence();
 			queue_draw();
 			break;
 
@@ -831,6 +848,9 @@ bool WaveformArea::PrepareGeometry()
 
 	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
 	size_t count = data.size();
+
+	//Pull vertical size from the scope
+	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
 
 	//Scaling factor from samples to pixels
 	float xscale = m_horizontalZoomFactor * m_parent->m_pixelsPerSample;
@@ -1192,7 +1212,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		float trisize = 5;
 
 		if(m_dragState == DRAG_TRIGGER)
+		{
 			cr->set_source_rgba(1, 0, 0, 1);
+			y = m_cursorY;
+		}
 		else
 		{
 			cr->set_source_rgba(

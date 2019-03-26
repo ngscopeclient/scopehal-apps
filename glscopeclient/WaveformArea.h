@@ -106,6 +106,9 @@ protected:
 	int m_width;
 	int m_height;
 
+	float m_cursorX;
+	float m_cursorY;
+
 	//Display options
 	bool m_persistence;
 	bool m_persistenceClear;

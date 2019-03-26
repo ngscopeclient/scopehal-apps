@@ -106,6 +106,8 @@ protected:
 	bool m_triggerOneShot;
 
 	bool m_toggleInProgress;
+
+	double m_tLastFlush;
 };
 
 #endif

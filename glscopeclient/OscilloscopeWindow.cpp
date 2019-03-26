@@ -76,6 +76,8 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	ArmTrigger(false);
 	m_toggleInProgress = false;
 	m_pixelsPerSample = 1;
+
+	m_tLastFlush = GetTime();
 }
 
 /**
@@ -239,6 +241,10 @@ void OscilloscopeWindow::OnToggleChannel(WaveformArea* w)
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
+	//Flush the config cache every 2 seconds
+	if( (GetTime() - m_tLastFlush) > 2)
+		m_scope->FlushConfigCache();
+
 	Oscilloscope::TriggerMode status = m_scope->PollTrigger();
 	if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 	{
