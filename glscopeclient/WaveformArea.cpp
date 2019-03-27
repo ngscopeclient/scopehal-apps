@@ -160,6 +160,10 @@ WaveformArea::~WaveformArea()
 		delete b;
 	m_traceVAOs.clear();
 	m_traceVBOs.clear();
+
+	for(auto d : m_decoders)
+		delete d;
+	m_decoders.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -167,12 +171,26 @@ WaveformArea::~WaveformArea()
 
 void WaveformArea::CreateWidgets()
 {
-		//Create the menu
-	auto item = Gtk::manage(new Gtk::MenuItem("Hide channel", false));
+	//Create the menu
+	auto item = Gtk::manage(new Gtk::MenuItem("Delete", false));
 		item->signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnHide));
 		m_contextMenu.append(*item);
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+	m_contextMenu.append(m_moveItem);
+		m_moveItem.set_label("Move waveform to");
+		m_moveItem.set_submenu(m_moveMenu);
+			m_moveMenu.append(m_moveNewGroupBelowItem);
+				m_moveNewGroupBelowItem.set_label("Insert new group at bottom");
+			m_moveMenu.append(m_moveNewGroupRightItem);
+				m_moveNewGroupRightItem.set_label("Insert new group at right");
+	m_contextMenu.append(m_copyItem);
+		m_copyItem.set_label("Copy waveform to");
+		m_copyItem.set_submenu(m_copyMenu);
+			m_copyMenu.append(m_copyNewGroupBelowItem);
+				m_copyNewGroupBelowItem.set_label("Insert new group at bottom");
+			m_copyMenu.append(m_copyNewGroupRightItem);
+				m_copyNewGroupRightItem.set_label("Insert new group at right");
 	m_contextMenu.append(m_persistenceItem);
 		m_persistenceItem.set_label("Persistence");
 		m_persistenceItem.signal_activate().connect(
@@ -487,9 +505,11 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 				{
 					case GDK_SCROLL_UP:
 						m_channel->SetVoltageRange(vrange * 0.9);
+						queue_draw();
 						break;
 					case GDK_SCROLL_DOWN:
 						m_channel->SetVoltageRange(vrange / 0.9);
+						queue_draw();
 						break;
 
 					default:

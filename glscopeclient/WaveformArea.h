@@ -68,6 +68,14 @@ protected:
 	//Context menu
 	Gtk::Menu m_contextMenu;
 		Gtk::CheckMenuItem m_persistenceItem;
+		Gtk::MenuItem m_moveItem;
+			Gtk::Menu m_moveMenu;
+				Gtk::MenuItem m_moveNewGroupBelowItem;
+				Gtk::MenuItem m_moveNewGroupRightItem;
+		Gtk::MenuItem m_copyItem;
+			Gtk::Menu m_copyMenu;
+				Gtk::MenuItem m_copyNewGroupBelowItem;
+				Gtk::MenuItem m_copyNewGroupRightItem;
 		Gtk::MenuItem m_decodeItem;
 			Gtk::Menu m_decodeMenu;
 		Gtk::MenuItem m_triggerItem;
@@ -167,6 +175,8 @@ protected:
 	OscilloscopeChannel* m_channel;
 	OscilloscopeChannel* m_selectedChannel;
 	OscilloscopeWindow* m_parent;
+
+	std::vector<ProtocolDecoder*> m_decoders;
 
 	double m_lastFrameStart;
 	double m_frameTime;
