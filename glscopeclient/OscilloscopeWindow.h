@@ -54,6 +54,7 @@ public:
 
 	void OnToggleChannel(WaveformArea* w);
 	void OnMoveNewRight(WaveformArea* w);
+	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
 
 	float m_pixelsPerSample;
 
@@ -65,6 +66,8 @@ public:
 
 protected:
 	void ArmTrigger(bool oneshot);
+
+	void GarbageCollectGroups();
 
 	//Gtk::IconTheme m_iconTheme;
 
@@ -94,10 +97,12 @@ protected:
 		//All of the splitters
 		std::set<Gtk::Paned*> m_splitters;
 
+public:
 		//All of the waveform groups and areas, regardless of where they live
 		std::set<WaveformGroup*> m_waveformGroups;
 		std::set<WaveformArea*> m_waveformAreas;
 
+protected:
 		Gtk::HBox m_statusbar;
 			Gtk::Label m_triggerConfigLabel;
 			Gtk::Label m_sampleCountLabel;

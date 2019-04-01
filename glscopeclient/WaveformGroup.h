@@ -44,7 +44,7 @@ public:
 		m_frame.add(m_vbox);
 
 		char tmp[64];
-		snprintf(tmp, sizeof(tmp), "Waveform Group %d\n", m_numGroups);
+		snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
 		m_numGroups ++;
 
 		m_frame.set_label(tmp);

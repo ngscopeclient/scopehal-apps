@@ -159,6 +159,13 @@ WaveformArea::~WaveformArea()
 	for(auto d : m_decoders)
 		delete d;
 	m_decoders.clear();
+
+	for(auto m : m_moveExistingGroupItems)
+	{
+		m_moveMenu.remove(*m);
+		delete m;
+	}
+	m_moveExistingGroupItems.clear();
 }
 
 void WaveformArea::CleanupBufferObjects()
@@ -192,6 +199,7 @@ void WaveformArea::CreateWidgets()
 				m_moveNewGroupRightItem.set_label("Insert new group at right");
 				m_moveNewGroupRightItem.signal_activate().connect(
 					sigc::mem_fun(*this, &WaveformArea::OnMoveNewRight));
+			m_moveMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 	m_contextMenu.append(m_copyItem);
 		m_copyItem.set_label("Copy waveform to");
 		m_copyItem.set_submenu(m_copyMenu);
@@ -312,8 +320,6 @@ void WaveformArea::on_realize()
 
 void WaveformArea::on_unrealize()
 {
-	LogDebug("unrealizing\n");
-
 	//TODO: this might leak resources, but not doing it this way seems to cause bugs??
 	m_traceVBOs.clear();
 	m_traceVAOs.clear();
@@ -481,6 +487,11 @@ void WaveformArea::OnMoveNewRight()
 	m_parent->OnMoveNewRight(this);
 }
 
+void WaveformArea::OnMoveToExistingGroup(WaveformGroup* group)
+{
+	m_parent->OnMoveToExistingGroup(this, group);
+}
+
 /**
 	@brief Update the location of the mouse
  */
@@ -571,6 +582,29 @@ void WaveformArea::UpdateContextMenu()
 {
 	//Let signal handlers know to ignore any events that happen as we pull state from the scope
 	m_updatingContextMenu = true;
+
+	//Update waveform views
+	for(auto m : m_moveExistingGroupItems)
+	{
+		m_moveMenu.remove(*m);
+		delete m;
+	}
+	m_moveExistingGroupItems.clear();
+	for(auto g : m_parent->m_waveformGroups)
+	{
+		auto item = new Gtk::MenuItem;
+		item->set_label(g->m_frame.get_label());
+		m_moveMenu.append(*item);
+		m_moveExistingGroupItems.emplace(item);
+
+		//Gray out the item if it's our current parent
+		if(get_parent() == &g->m_vbox)
+			item->set_sensitive(false);
+
+		item->signal_activate().connect(sigc::bind<WaveformGroup*>(
+			sigc::mem_fun(*this, &WaveformArea::OnMoveToExistingGroup), g));
+	}
+	m_moveMenu.show_all();
 
 	//Gray out decoders that don't make sense for the type of channel we've selected
 	auto children = m_decodeMenu.get_children();

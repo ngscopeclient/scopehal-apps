@@ -129,6 +129,7 @@ void OscilloscopeWindow::CreateWidgets()
 		m_vbox.pack_start(*split);
 		m_splitters.emplace(split);
 		auto group = new WaveformGroup;
+		m_waveformGroups.emplace(group);
 		split->pack1(group->m_frame);
 
 	//Done adding widgets
@@ -188,12 +189,9 @@ void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 		return;
 	}
 
-	//Remove the waveform view from the previous parent
-	w->get_parent()->remove(*w);
-
 	//Make a new group and move the waveform view to it
 	auto group = new WaveformGroup;
-	group->m_vbox.pack_start(*w);
+	m_waveformGroups.emplace(group);
 
 	//See what the widget's current parenting situation is.
 	//We might have a free splitter area to the right already!
@@ -205,6 +203,29 @@ void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 
 		split->set_position(split->get_width()/2);
 	}
+
+	//TODO: split the current parent
+	else
+	{
+		LogDebug("Need to make new splitter\n");
+	}
+
+	OnMoveToExistingGroup(w, group);
+}
+
+void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
+{
+	w->get_parent()->remove(*w);
+	ngroup->m_vbox.pack_start(*w);
+
+	//Remove any groups that no longer have any waveform views in them,'
+	//or splitters that only have one child
+	GarbageCollectGroups();
+}
+
+void OscilloscopeWindow::GarbageCollectGroups()
+{
+	LogDebug("TODO: gc groupd\n");
 }
 
 void OscilloscopeWindow::OnAutofitHorizontal()

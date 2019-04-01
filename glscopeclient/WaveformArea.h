@@ -35,6 +35,8 @@
 #ifndef WaveformArea_h
 #define WaveformArea_h
 
+#include "WaveformGroup.h"
+
 float sinc(float x, float width);
 float blackman(float x, float width);
 
@@ -73,6 +75,7 @@ protected:
 			Gtk::Menu m_moveMenu;
 				Gtk::MenuItem m_moveNewGroupBelowItem;
 				Gtk::MenuItem m_moveNewGroupRightItem;
+				std::set<Gtk::MenuItem*> m_moveExistingGroupItems;
 		Gtk::MenuItem m_copyItem;
 			Gtk::Menu m_copyMenu;
 				Gtk::MenuItem m_copyNewGroupBelowItem;
@@ -112,6 +115,7 @@ protected:
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();
+	void OnMoveToExistingGroup(WaveformGroup* group);
 
 	void CleanupBufferObjects();
 
