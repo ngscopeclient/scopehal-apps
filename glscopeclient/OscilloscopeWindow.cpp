@@ -181,6 +181,16 @@ void OscilloscopeWindow::CreateWidgets()
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 {
+	OnMoveNew(w, true);
+}
+
+void OscilloscopeWindow::OnMoveNewBelow(WaveformArea* w)
+{
+	OnMoveNew(w, false);
+}
+
+void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
+{
 	//Hierarchy is WaveformArea -> WaveformGroup box -> WaveformGroup frame -> splitter
 	auto frame = w->get_parent()->get_parent();
 	auto split = dynamic_cast<Gtk::Paned*>(frame->get_parent());
@@ -195,8 +205,13 @@ void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 	m_waveformGroups.emplace(group);
 
 	//See what the widget's current parenting situation is.
-	//We might have a free splitter area to the right already!
-	if( (dynamic_cast<Gtk::HPaned*>(split) != NULL) && (split->get_child2() == NULL) )
+	//We might have a free splitter area free already!
+	Gtk::Paned* csplit = NULL;
+	if(horizontal)
+		csplit = dynamic_cast<Gtk::HPaned*>(split);
+	else
+		csplit = dynamic_cast<Gtk::VPaned*>(split);
+	if( (csplit != NULL) && (split->get_child2() == NULL) )
 	{
 		split->pack2(group->m_frame);
 		split->show_all();
@@ -206,7 +221,11 @@ void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 	else
 	{
 		//Create a new splitter
-		auto nsplit = new Gtk::HPaned;
+		Gtk::Paned* nsplit;
+		if(horizontal)
+			nsplit = new Gtk::HPaned;
+		else
+			nsplit = new Gtk::VPaned;
 		m_splitters.emplace(nsplit);
 
 		//Take the current frame out of the parent group so we have room for the splitter
@@ -227,10 +246,6 @@ void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 	}
 
 	OnMoveToExistingGroup(w, group);
-}
-
-void OscilloscopeWindow::OnMoveNewBelow(WaveformArea* w)
-{
 }
 
 void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
@@ -254,7 +269,6 @@ void OscilloscopeWindow::GarbageCollectGroups()
 	}
 	for(auto g : groupsToRemove)
 	{
-		LogDebug("Group %s is empty, removing\n", g->m_frame.get_label().c_str());
 		auto parent = g->m_frame.get_parent();
 		parent->remove(g->m_frame);
 		delete g;
@@ -268,9 +282,6 @@ void OscilloscopeWindow::GarbageCollectGroups()
 		auto second = s->get_child2();
 		if( (first == NULL) && (second != NULL) )
 		{
-			LogDebug("Group %s is the only thing in the secondary half of a splitter, moving to primary\n",
-				dynamic_cast<Gtk::Frame*>(second)->get_label().c_str());
-
 			s->remove(*second);
 			s->pack1(*second);
 		}
@@ -287,15 +298,11 @@ void OscilloscopeWindow::GarbageCollectGroups()
 			//If this is the top level splitter, we have no higher level to move it to
 			if(s->get_parent() == &m_vbox)
 			{
-				LogDebug("Group %s is the only thing in the root splitter, no action needed\n",
-					dynamic_cast<Gtk::Frame*>(first)->get_label().c_str());
 			}
 
 			else
 			{
-				LogDebug("Group %s is the only thing in a child splitter, moving to parent\n",
-					dynamic_cast<Gtk::Frame*>(first)->get_label().c_str());
-				//TODO
+				//TODO: move single occupant of empty splitter to parent
 			}
 		}
 	}

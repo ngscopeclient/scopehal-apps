@@ -68,6 +68,7 @@ public:
 protected:
 	void ArmTrigger(bool oneshot);
 
+	void OnMoveNew(WaveformArea* w, bool horizontal);
 	void GarbageCollectGroups();
 
 	//Gtk::IconTheme m_iconTheme;
