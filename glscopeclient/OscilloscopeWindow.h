@@ -54,6 +54,7 @@ public:
 
 	void OnToggleChannel(WaveformArea* w);
 	void OnMoveNewRight(WaveformArea* w);
+	void OnMoveNewBelow(WaveformArea* w);
 	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
 
 	float m_pixelsPerSample;

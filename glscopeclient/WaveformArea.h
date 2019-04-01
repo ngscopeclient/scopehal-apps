@@ -115,6 +115,7 @@ protected:
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();
+	void OnMoveNewBelow();
 	void OnMoveToExistingGroup(WaveformGroup* group);
 
 	void CleanupBufferObjects();

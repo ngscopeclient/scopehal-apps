@@ -195,6 +195,8 @@ void WaveformArea::CreateWidgets()
 		m_moveItem.set_submenu(m_moveMenu);
 			m_moveMenu.append(m_moveNewGroupBelowItem);
 				m_moveNewGroupBelowItem.set_label("Insert new group at bottom");
+				m_moveNewGroupBelowItem.signal_activate().connect(
+					sigc::mem_fun(*this, &WaveformArea::OnMoveNewBelow));
 			m_moveMenu.append(m_moveNewGroupRightItem);
 				m_moveNewGroupRightItem.set_label("Insert new group at right");
 				m_moveNewGroupRightItem.signal_activate().connect(
@@ -485,6 +487,11 @@ void WaveformArea::InitializeCairoPass()
 void WaveformArea::OnMoveNewRight()
 {
 	m_parent->OnMoveNewRight(this);
+}
+
+void WaveformArea::OnMoveNewBelow()
+{
+	m_parent->OnMoveNewBelow(this);
 }
 
 void WaveformArea::OnMoveToExistingGroup(WaveformGroup* group)
