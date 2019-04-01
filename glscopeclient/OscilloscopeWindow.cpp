@@ -85,6 +85,10 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	for(auto s : m_splitters)
+		delete s;
+	for(auto g : m_waveformGroups)
+		delete g;
 	for(auto w : m_waveformAreas)
 		delete w;
 }
@@ -120,6 +124,13 @@ void OscilloscopeWindow::CreateWidgets()
 				m_btnStop.set_tooltip_text("Stop trigger");
 				m_btnStop.set_icon_name("media-playback-stop");
 
+		//Create the initial splitter and waveform group
+		auto split = new Gtk::HPaned;
+		m_vbox.pack_start(*split);
+		m_splitters.emplace(split);
+		auto group = new WaveformGroup;
+		split->pack1(group->m_frame);
+
 	//Done adding widgets
 	show_all();
 
@@ -134,7 +145,7 @@ void OscilloscopeWindow::CreateWidgets()
 			Gdk::Color(GetDefaultChannelColor(i))
 			);
 		m_waveformAreas.emplace(w);
-		m_vbox.pack_start(*w);
+		group->m_vbox.pack_start(*w);
 
 		auto item = Gtk::manage(new Gtk::CheckMenuItem(chan->GetHwname(), false));
 		item->signal_activate().connect(
@@ -166,6 +177,35 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
+{
+	//Hierarchy is WaveformArea -> WaveformGroup box -> WaveformGroup frame -> splitter
+	auto split = dynamic_cast<Gtk::Paned*>(w->get_parent()->get_parent()->get_parent());
+	if(split == NULL)
+	{
+		LogError("parent isn't a splitter\n");
+		return;
+	}
+
+	//Remove the waveform view from the previous parent
+	w->get_parent()->remove(*w);
+
+	//Make a new group and move the waveform view to it
+	auto group = new WaveformGroup;
+	group->m_vbox.pack_start(*w);
+
+	//See what the widget's current parenting situation is.
+	//We might have a free splitter area to the right already!
+	if( (dynamic_cast<Gtk::HPaned*>(split) != NULL) && (split->get_child2() == NULL) )
+	{
+		LogDebug("Used existing splitter pane\n");
+		split->pack2(group->m_frame);
+		split->show_all();
+
+		split->set_position(split->get_width()/2);
+	}
+}
 
 void OscilloscopeWindow::OnAutofitHorizontal()
 {

@@ -44,6 +44,8 @@ public:
 	Program();
 	virtual ~Program();
 
+	void Destroy();
+
 	bool Link();
 
 	void Add(Shader& shader);

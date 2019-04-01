@@ -47,6 +47,15 @@ public:
 	operator GLuint()
 	{ return m_handle; }
 
+	void Destroy()
+	{
+		if(m_handle != 0)
+		{
+			glDeleteTextures(1, &m_handle);
+			m_handle = 0;
+		}
+	}
+
 	void Bind(GLenum target = GL_TEXTURE_2D)
 	{
 		LazyInit();

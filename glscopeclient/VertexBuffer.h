@@ -48,7 +48,14 @@ public:
 	{}
 
 	~VertexBuffer()
-	{ glDeleteBuffers(1, &m_handle); }
+	{ Destroy(); }
+
+	void Destroy()
+	{
+		if(m_handle != 0)
+			glDeleteBuffers(1, &m_handle);
+		m_handle = 0;
+	}
 
 	operator GLuint() const
 	{ return m_handle; }

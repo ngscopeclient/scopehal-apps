@@ -48,7 +48,17 @@ public:
 	{}
 
 	~VertexArray()
-	{ glDeleteVertexArrays(1, &m_handle); }
+	{ Destroy(); }
+
+	void Destroy()
+	{
+		if(m_handle != 0)
+		{
+			LogDebug("Deleting VAO %u\n", m_handle);
+			glDeleteVertexArrays(1, &m_handle);
+		}
+		m_handle = 0;
+	}
 
 	operator GLuint() const
 	{ return m_handle; }
@@ -69,7 +79,10 @@ protected:
 	void LazyInit()
 	{
 		if(!m_handle)
+		{
 			glGenVertexArrays(1, &m_handle);
+			LogDebug("Allocated VAO %u\n", m_handle);
+		}
 	}
 
 	GLuint	m_handle;

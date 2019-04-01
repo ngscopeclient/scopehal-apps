@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,17 +30,33 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Framebuffer
+	@brief A group of one or more WaveformArea's
  */
-#include "glscopeclient.h"
-#include "Framebuffer.h"
 
-Framebuffer::Framebuffer()
-{
-	m_handle = 0;
-}
+#ifndef WaveformGroup_h
+#define WaveformGroup_h
 
-Framebuffer::~Framebuffer()
+class WaveformGroup
 {
-	Destroy();
-}
+public:
+	WaveformGroup()
+	{
+		m_frame.add(m_vbox);
+
+		char tmp[64];
+		snprintf(tmp, sizeof(tmp), "Waveform Group %d\n", m_numGroups);
+		m_numGroups ++;
+
+		m_frame.set_label(tmp);
+
+		m_frame.override_background_color(Gdk::RGBA("#000000"));
+		m_frame.override_color(Gdk::RGBA("#ffffff"));
+	}
+
+	Gtk::Frame m_frame;
+	Gtk::VBox m_vbox;
+
+	static int m_numGroups;
+};
+
+#endif

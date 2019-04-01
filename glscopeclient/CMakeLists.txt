@@ -13,6 +13,7 @@ add_executable(glscopeclient
 	VertexArray.cpp
 	VertexBuffer.cpp
 	WaveformArea.cpp
+	WaveformGroup.cpp
 
 	main.cpp
 )

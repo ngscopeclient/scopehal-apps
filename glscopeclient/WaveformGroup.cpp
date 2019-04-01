@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,17 +30,9 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Framebuffer
+	@brief Implementation of WaveformGroup
  */
 #include "glscopeclient.h"
-#include "Framebuffer.h"
+#include "WaveformGroup.h"
 
-Framebuffer::Framebuffer()
-{
-	m_handle = 0;
-}
-
-Framebuffer::~Framebuffer()
-{
-	Destroy();
-}
+int WaveformGroup::m_numGroups = 1;

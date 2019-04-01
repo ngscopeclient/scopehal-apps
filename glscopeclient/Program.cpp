@@ -44,7 +44,14 @@ Program::Program()
 
 Program::~Program()
 {
-	glDeleteProgram(m_handle);
+	Destroy();
+}
+
+void Program::Destroy()
+{
+	if(m_handle != 0)
+		glDeleteProgram(m_handle);
+	m_handle = 0;
 }
 
 void Program::Add(Shader& shader)

@@ -56,6 +56,7 @@ public:
 
 protected:
 	virtual void on_realize();
+	virtual void on_unrealize();
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
@@ -110,6 +111,9 @@ protected:
 	void OnProtocolDecode(std::string name);
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
+	void OnMoveNewRight();
+
+	void CleanupBufferObjects();
 
 	int m_width;
 	int m_height;

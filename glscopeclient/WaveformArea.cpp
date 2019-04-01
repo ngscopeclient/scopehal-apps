@@ -154,16 +154,22 @@ WaveformArea::~WaveformArea()
 	double tavg = m_frameTime / m_frameCount;
 	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
 
-	for(auto a : m_traceVAOs)
-		delete a;
-	for(auto b : m_traceVBOs)
-		delete b;
-	m_traceVAOs.clear();
-	m_traceVBOs.clear();
+	CleanupBufferObjects();
 
 	for(auto d : m_decoders)
 		delete d;
 	m_decoders.clear();
+}
+
+void WaveformArea::CleanupBufferObjects()
+{
+	for(auto a : m_traceVAOs)
+		delete a;
+	m_traceVAOs.clear();
+
+	for(auto b : m_traceVBOs)
+		delete b;
+	m_traceVBOs.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,6 +190,8 @@ void WaveformArea::CreateWidgets()
 				m_moveNewGroupBelowItem.set_label("Insert new group at bottom");
 			m_moveMenu.append(m_moveNewGroupRightItem);
 				m_moveNewGroupRightItem.set_label("Insert new group at right");
+				m_moveNewGroupRightItem.signal_activate().connect(
+					sigc::mem_fun(*this, &WaveformArea::OnMoveNewRight));
 	m_contextMenu.append(m_copyItem);
 		m_copyItem.set_label("Copy waveform to");
 		m_copyItem.set_submenu(m_copyMenu);
@@ -300,6 +308,32 @@ void WaveformArea::on_realize()
 	InitializeColormapPass();
 	InitializePersistencePass();
 	InitializeCairoPass();
+}
+
+void WaveformArea::on_unrealize()
+{
+	LogDebug("unrealizing\n");
+
+	//TODO: this might leak resources, but not doing it this way seems to cause bugs??
+	m_traceVBOs.clear();
+	m_traceVAOs.clear();
+
+	m_waveformProgram.Destroy();
+	m_colormapProgram.Destroy();
+	m_colormapVAO.Destroy();
+	m_colormapVBO.Destroy();
+	m_persistProgram.Destroy();
+	m_persistVAO.Destroy();
+	m_persistVBO.Destroy();
+	m_cairoProgram.Destroy();
+	m_cairoVAO.Destroy();
+	m_cairoVBO.Destroy();
+	m_waveformFramebuffer.Destroy();
+	m_windowFramebuffer.Detach();
+	m_waveformTexture.Destroy();
+	m_cairoTexture.Destroy();
+
+	Gtk::GLArea::on_unrealize();
 }
 
 void WaveformArea::InitializeWaveformPass()
@@ -441,6 +475,11 @@ void WaveformArea::InitializeCairoPass()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+void WaveformArea::OnMoveNewRight()
+{
+	m_parent->OnMoveNewRight(this);
+}
 
 /**
 	@brief Update the location of the mouse
@@ -844,6 +883,10 @@ void WaveformArea::on_resize(int width, int height)
 	m_height = height;
 	m_plotRight = width;
 
+	int err = glGetError();
+	if(err != 0)
+		LogNotice("resize 1, err = %x\n", err);
+
 	//Reset camera configuration
 	glViewport(0, 0, width, height);
 
@@ -852,11 +895,18 @@ void WaveformArea::on_resize(int width, int height)
 		scale(mat4(1.0f), vec3(2.0f / width, 2.0f / height, 1)),	//scale to window size
 		vec3(-width/2, -height/2, 0)											//put origin at bottom left
 		);
+	err = glGetError();
+	if(err != 0)
+		LogNotice("resize 2, err = %x\n", err);
 
 	//GTK creates a FBO for us, but doesn't tell us what it is!
 	//We need to glGet the FBO ID the first time we're resized.
 	if(!m_windowFramebuffer.IsInitialized())
 		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
+
+	err = glGetError();
+	if(err != 0)
+		LogNotice("resize 3, err = %x\n", err);
 
 	//Initialize the color buffers
 	//No antialiasing for now, we just alpha blend everything
@@ -867,7 +917,7 @@ void WaveformArea::on_resize(int width, int height)
 	if(!m_waveformFramebuffer.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
-	int err = glGetError();
+	err = glGetError();
 	if(err != 0)
 		LogNotice("resize, err = %x\n", err);
 

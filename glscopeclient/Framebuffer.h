@@ -67,6 +67,16 @@ public:
 		glBindFramebuffer(target, m_handle);
 	}
 
+	void Destroy()
+	{
+		if(m_handle != 0)
+			glDeleteFramebuffers(1, &m_handle);
+		m_handle = 0;
+	}
+
+	void Detach()
+	{ m_handle = 0; }
+
 	bool IsInitialized()
 	{ return (m_handle != 0); }
 
