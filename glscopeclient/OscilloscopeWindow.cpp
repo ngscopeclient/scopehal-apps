@@ -265,7 +265,7 @@ void OscilloscopeWindow::GarbageCollectGroups()
 	std::set<WaveformGroup*> groupsToRemove;
 	for(auto g : m_waveformGroups)
 	{
-		if(g->m_vbox.get_children().empty())
+		if(g->m_vbox.get_children().size() == 1)	//an empty group will still have a timeline in it
 			groupsToRemove.emplace(g);
 	}
 	for(auto g : groupsToRemove)
@@ -318,13 +318,13 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 
 void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
 {
-	group->m_pixelsPerSample *= 1.5;
+	group->m_pixelsPerPicosecond *= 1.5;
 	ClearPersistence(group);
 }
 
 void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
 {
-	group->m_pixelsPerSample /= 1.5;
+	group->m_pixelsPerPicosecond /= 1.5;
 	ClearPersistence(group);
 }
 
@@ -333,7 +333,12 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group)
 	auto children = group->m_vbox.get_children();
 	for(auto w : children)
 	{
-		dynamic_cast<WaveformArea*>(w)->ClearPersistence();
+		//Clear persistence on waveform areas
+		auto area = dynamic_cast<WaveformArea*>(w);
+		if(area != NULL)
+			area->ClearPersistence();
+
+		//Redraw everything (timeline included)
 		w->queue_draw();
 	}
 }

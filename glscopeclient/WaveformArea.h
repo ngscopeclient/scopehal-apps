@@ -196,7 +196,6 @@ protected:
 	float m_pixelsPerVolt;
 	float m_padding;
 	float m_plotRight;
-	float m_horizontalZoomFactor;
 
 	enum ClickLocation
 	{

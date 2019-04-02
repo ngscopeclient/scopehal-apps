@@ -132,8 +132,6 @@ WaveformArea::WaveformArea(
 	m_padding = 2;
 	m_pixelsPerVolt = 1;
 
-	m_horizontalZoomFactor = 1;
-
 	m_lastFrameStart = -1;
 	m_persistenceClear = true;
 
@@ -986,7 +984,7 @@ bool WaveformArea::PrepareGeometry()
 	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
 
 	//Scaling factor from samples to pixels
-	float xscale = m_horizontalZoomFactor * m_group->m_pixelsPerSample;
+	float xscale = m_group->m_pixelsPerPicosecond * dat->m_timescale;
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates

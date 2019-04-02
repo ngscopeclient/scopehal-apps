@@ -10,6 +10,7 @@ add_executable(glscopeclient
 	Program.cpp
 	Shader.cpp
 	Texture.cpp
+	Timeline.cpp
 	VertexArray.cpp
 	VertexBuffer.cpp
 	WaveformArea.cpp

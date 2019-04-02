@@ -27,45 +27,20 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief A group of one or more WaveformArea's
- */
+#ifndef Timeline_h
+#define Timeline_h
 
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
+class WaveformGroup;
 
-#include "Timeline.h"
-
-class WaveformGroup
+class Timeline : public Gtk::Layout
 {
 public:
-	WaveformGroup()
-	{
-		m_frame.add(m_vbox);
-		m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
+	Timeline();
+	virtual ~Timeline();
 
-		char tmp[64];
-		snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
-		m_numGroups ++;
+	WaveformGroup* m_group;
 
-		m_frame.set_label(tmp);
-
-		m_frame.override_background_color(Gdk::RGBA("#000000"));
-		m_frame.override_color(Gdk::RGBA("#ffffff"));
-
-		m_pixelsPerPicosecond = 0.05;
-		m_timeline.m_group = this;
-	}
-
-	Gtk::Frame m_frame;
-	Gtk::VBox m_vbox;
-	Timeline m_timeline;
-
-	float m_pixelsPerPicosecond;
-
-	static int m_numGroups;
+	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 };
 
 #endif
