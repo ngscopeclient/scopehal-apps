@@ -51,10 +51,14 @@ public:
 
 		m_frame.override_background_color(Gdk::RGBA("#000000"));
 		m_frame.override_color(Gdk::RGBA("#ffffff"));
+
+		m_pixelsPerSample = 1;
 	}
 
 	Gtk::Frame m_frame;
 	Gtk::VBox m_vbox;
+
+	float m_pixelsPerSample;
 
 	static int m_numGroups;
 };

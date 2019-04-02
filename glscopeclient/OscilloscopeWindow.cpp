@@ -75,7 +75,6 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
-	m_pixelsPerSample = 1;
 
 	m_tLastFlush = GetTime();
 }
@@ -145,6 +144,7 @@ void OscilloscopeWindow::CreateWidgets()
 			this,
 			Gdk::Color(GetDefaultChannelColor(i))
 			);
+		w->m_group = group;
 		m_waveformAreas.emplace(w);
 		group->m_vbox.pack_start(*w);
 
@@ -250,6 +250,7 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 
 void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
 {
+	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
 	ngroup->m_vbox.pack_start(*w);
 
@@ -315,10 +316,26 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 	//
 }
 
-void OscilloscopeWindow::OnZoomInHorizontal()
+void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
 {
-	m_pixelsPerSample *= 1.5;
-	ClearAllPersistence();
+	group->m_pixelsPerSample *= 1.5;
+	ClearPersistence(group);
+}
+
+void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
+{
+	group->m_pixelsPerSample /= 1.5;
+	ClearPersistence(group);
+}
+
+void OscilloscopeWindow::ClearPersistence(WaveformGroup* group)
+{
+	auto children = group->m_vbox.get_children();
+	for(auto w : children)
+	{
+		dynamic_cast<WaveformArea*>(w)->ClearPersistence();
+		w->queue_draw();
+	}
 }
 
 void OscilloscopeWindow::ClearAllPersistence()
@@ -328,12 +345,6 @@ void OscilloscopeWindow::ClearAllPersistence()
 		w->ClearPersistence();
 		w->queue_draw();
 	}
-}
-
-void OscilloscopeWindow::OnZoomOutHorizontal()
-{
-	m_pixelsPerSample /= 1.5;
-	ClearAllPersistence();
 }
 
 void OscilloscopeWindow::OnQuit()

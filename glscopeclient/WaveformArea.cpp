@@ -147,6 +147,8 @@ WaveformArea::WaveformArea(
 		Gdk::BUTTON_RELEASE_MASK);
 
 	CreateWidgets();
+
+	m_group = NULL;
 }
 
 WaveformArea::~WaveformArea()
@@ -537,10 +539,10 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			switch(ev->direction)
 			{
 				case GDK_SCROLL_UP:
-					m_parent->OnZoomInHorizontal();
+					m_parent->OnZoomInHorizontal(m_group);
 					break;
 				case GDK_SCROLL_DOWN:
-					m_parent->OnZoomOutHorizontal();
+					m_parent->OnZoomOutHorizontal(m_group);
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");
@@ -984,7 +986,7 @@ bool WaveformArea::PrepareGeometry()
 	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
 
 	//Scaling factor from samples to pixels
-	float xscale = m_horizontalZoomFactor * m_parent->m_pixelsPerSample;
+	float xscale = m_horizontalZoomFactor * m_group->m_pixelsPerSample;
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates

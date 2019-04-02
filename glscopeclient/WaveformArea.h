@@ -56,6 +56,8 @@ public:
 	void ClearPersistence()
 	{ m_persistenceClear = true; }
 
+	WaveformGroup* m_group;
+
 protected:
 	virtual void on_realize();
 	virtual void on_unrealize();

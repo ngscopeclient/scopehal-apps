@@ -57,12 +57,10 @@ public:
 	void OnMoveNewBelow(WaveformArea* w);
 	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
 
-	float m_pixelsPerSample;
-
 	void OnAutofitHorizontal();
-	void OnZoomInHorizontal();
-	void OnZoomOutHorizontal();
-
+	void OnZoomInHorizontal(WaveformGroup* group);
+	void OnZoomOutHorizontal(WaveformGroup* group);
+	void ClearPersistence(WaveformGroup* group);
 	void ClearAllPersistence();
 
 protected:
