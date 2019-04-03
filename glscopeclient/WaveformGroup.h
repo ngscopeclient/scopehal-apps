@@ -57,6 +57,8 @@ public:
 
 		m_pixelsPerPicosecond = 0.05;
 		m_timeline.m_group = this;
+
+		m_cursorConfig = CURSOR_NONE;
 	}
 
 	Gtk::Frame m_frame;
@@ -66,6 +68,15 @@ public:
 	float m_pixelsPerPicosecond;
 
 	static int m_numGroups;
+
+	enum CursorConfig
+	{
+		CURSOR_NONE,
+		CURSOR_HORZ_SINGLE,
+		CURSOR_HORZ_DUAL
+	} m_cursorConfig;
+
+	//int64_t m_
 };
 
 #endif

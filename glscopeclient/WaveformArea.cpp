@@ -184,12 +184,13 @@ void WaveformArea::CleanupBufferObjects()
 
 void WaveformArea::CreateWidgets()
 {
-	//Create the menu
+	//Delete
 	auto item = Gtk::manage(new Gtk::MenuItem("Delete", false));
 		item->signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnHide));
 		m_contextMenu.append(*item);
-	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
+	//Move/copy
 	m_contextMenu.append(m_moveItem);
 		m_moveItem.set_label("Move waveform to");
 		m_moveItem.set_submenu(m_moveMenu);
@@ -209,11 +210,47 @@ void WaveformArea::CreateWidgets()
 				m_copyNewGroupBelowItem.set_label("Insert new group at bottom");
 			m_copyMenu.append(m_copyNewGroupRightItem);
 				m_copyNewGroupRightItem.set_label("Insert new group at right");
+
+	//Persistence
 	m_contextMenu.append(m_persistenceItem);
 		m_persistenceItem.set_label("Persistence");
 		m_persistenceItem.signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformArea::OnTogglePersistence));
+
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
+	//Cursor
+	m_contextMenu.append(m_cursorItem);
+		m_cursorItem.set_label("Cursor");
+		m_cursorItem.set_submenu(m_cursorMenu);
+			m_cursorMenu.append(m_cursorNoneItem);
+				m_cursorNoneItem.set_label("None");
+				m_cursorNoneItem.set_group(m_cursorGroup);
+				m_cursorNoneItem.signal_activate().connect(
+					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
+						WaveformGroup::CURSOR_NONE,
+						&m_cursorNoneItem));
+			m_cursorMenu.append(m_cursorSingleHorizontalItem);
+				m_cursorSingleHorizontalItem.set_label("Horizontal (single)");
+				m_cursorSingleHorizontalItem.set_group(m_cursorGroup);
+				m_cursorSingleHorizontalItem.signal_activate().connect(
+					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
+						WaveformGroup::CURSOR_HORZ_SINGLE,
+						&m_cursorSingleHorizontalItem));
+			m_cursorMenu.append(m_cursorDualHorizontalItem);
+				m_cursorDualHorizontalItem.set_label("Horizontal (dual)");
+				m_cursorDualHorizontalItem.set_group(m_cursorGroup);
+				m_cursorDualHorizontalItem.signal_activate().connect(
+					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
+						WaveformGroup::CURSOR_HORZ_DUAL,
+						&m_cursorDualHorizontalItem));
+
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
+	//Trigger
 	m_contextMenu.append(m_triggerItem);
 		m_triggerItem.set_label("Trigger");
 		m_triggerItem.set_submenu(m_triggerMenu);
@@ -245,6 +282,8 @@ void WaveformArea::CreateWidgets()
 			m_triggerMenu.append(m_bothTriggerItem);
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
+	//Attenuation
 	m_contextMenu.append(m_attenItem);
 		m_attenItem.set_label("Attenuation");
 		m_attenItem.set_submenu(m_attenMenu);
@@ -257,6 +296,8 @@ void WaveformArea::CreateWidgets()
 			m_atten20xItem.set_label("20x");
 				m_atten20xItem.set_group(m_attenGroup);
 				m_attenMenu.append(m_atten20xItem);
+
+	//Bandwidth
 	m_contextMenu.append(m_bwItem);
 		m_bwItem.set_label("Bandwidth");
 		m_bwItem.set_submenu(m_bwMenu);
@@ -275,6 +316,8 @@ void WaveformArea::CreateWidgets()
 				m_bw20Item.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
 					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 20, &m_bw20Item));
 				m_bwMenu.append(m_bw20Item);
+
+	//Coupling
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
 		m_couplingItem.set_submenu(m_couplingMenu);
@@ -290,7 +333,10 @@ void WaveformArea::CreateWidgets()
 			m_gndCouplingItem.set_label("GND");
 				m_gndCouplingItem.set_group(m_couplingGroup);
 				m_couplingMenu.append(m_gndCouplingItem);
+
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
+	//Decode
 	m_contextMenu.append(m_decodeItem);
 		m_decodeItem.set_label("Protocol decode");
 		m_decodeItem.set_submenu(m_decodeMenu);
@@ -483,6 +529,10 @@ void WaveformArea::InitializeCairoPass()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+void WaveformArea::OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item)
+{
+}
 
 void WaveformArea::OnMoveNewRight()
 {

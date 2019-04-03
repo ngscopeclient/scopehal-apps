@@ -73,6 +73,12 @@ protected:
 	//Context menu
 	Gtk::Menu m_contextMenu;
 		Gtk::CheckMenuItem m_persistenceItem;
+		Gtk::MenuItem m_cursorItem;
+			Gtk::Menu m_cursorMenu;
+				Gtk::RadioMenuItem::Group m_cursorGroup;
+				Gtk::RadioMenuItem m_cursorNoneItem;
+				Gtk::RadioMenuItem m_cursorSingleHorizontalItem;
+				Gtk::RadioMenuItem m_cursorDualHorizontalItem;
 		Gtk::MenuItem m_moveItem;
 			Gtk::Menu m_moveMenu;
 				Gtk::MenuItem m_moveNewGroupBelowItem;
@@ -100,15 +106,15 @@ protected:
 		Gtk::MenuItem m_attenItem;
 			Gtk::Menu m_attenMenu;
 				Gtk::RadioMenuItem::Group m_attenGroup;
-					Gtk::RadioMenuItem m_atten1xItem;
-					Gtk::RadioMenuItem m_atten10xItem;
-					Gtk::RadioMenuItem m_atten20xItem;
+				Gtk::RadioMenuItem m_atten1xItem;
+				Gtk::RadioMenuItem m_atten10xItem;
+				Gtk::RadioMenuItem m_atten20xItem;
 		Gtk::MenuItem m_bwItem;
 			Gtk::Menu m_bwMenu;
 				Gtk::RadioMenuItem::Group m_bwGroup;
-					Gtk::RadioMenuItem m_bwFullItem;
-					Gtk::RadioMenuItem m_bw200Item;
-					Gtk::RadioMenuItem m_bw20Item;
+				Gtk::RadioMenuItem m_bwFullItem;
+				Gtk::RadioMenuItem m_bw200Item;
+				Gtk::RadioMenuItem m_bw20Item;
 	void UpdateContextMenu();
 	bool m_updatingContextMenu;
 	void OnHide();
@@ -119,6 +125,7 @@ protected:
 	void OnMoveNewRight();
 	void OnMoveNewBelow();
 	void OnMoveToExistingGroup(WaveformGroup* group);
+	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
 
 	void CleanupBufferObjects();
 
