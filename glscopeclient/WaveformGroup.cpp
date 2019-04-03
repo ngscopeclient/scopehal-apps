@@ -36,3 +36,27 @@
 #include "WaveformGroup.h"
 
 int WaveformGroup::m_numGroups = 1;
+
+WaveformGroup::WaveformGroup()
+	: m_pixelsPerPicosecond(0.05)
+	, m_cursorConfig(CURSOR_NONE)
+{
+	m_frame.add(m_vbox);
+	m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
+
+	char tmp[64];
+	snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
+	m_numGroups ++;
+	m_frame.set_label(tmp);
+
+	m_frame.override_background_color(Gdk::RGBA("#000000"));
+	m_frame.override_color(Gdk::RGBA("#ffffff"));
+
+	m_timeline.m_group = this;
+
+	m_xCursorPos[0] = 0;
+	m_xCursorPos[1] = 0;
+
+	m_yCursorPos[0] = 0;
+	m_yCursorPos[1] = 0;
+}

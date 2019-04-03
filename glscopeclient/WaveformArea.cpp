@@ -161,22 +161,22 @@ void WaveformArea::CreateWidgets()
 						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
 						WaveformGroup::CURSOR_NONE,
 						&m_cursorNoneItem));
-			m_cursorMenu.append(m_cursorSingleHorizontalItem);
-				m_cursorSingleHorizontalItem.set_label("Horizontal (single)");
-				m_cursorSingleHorizontalItem.set_group(m_cursorGroup);
-				m_cursorSingleHorizontalItem.signal_activate().connect(
+			m_cursorMenu.append(m_cursorSingleVerticalItem);
+				m_cursorSingleVerticalItem.set_label("Vertical (single)");
+				m_cursorSingleVerticalItem.set_group(m_cursorGroup);
+				m_cursorSingleVerticalItem.signal_activate().connect(
 					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
 						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
-						WaveformGroup::CURSOR_HORZ_SINGLE,
-						&m_cursorSingleHorizontalItem));
-			m_cursorMenu.append(m_cursorDualHorizontalItem);
-				m_cursorDualHorizontalItem.set_label("Horizontal (dual)");
-				m_cursorDualHorizontalItem.set_group(m_cursorGroup);
-				m_cursorDualHorizontalItem.signal_activate().connect(
+						WaveformGroup::CURSOR_X_SINGLE,
+						&m_cursorSingleVerticalItem));
+			m_cursorMenu.append(m_cursorDualVerticalItem);
+				m_cursorDualVerticalItem.set_label("Vertical (dual)");
+				m_cursorDualVerticalItem.set_group(m_cursorGroup);
+				m_cursorDualVerticalItem.signal_activate().connect(
 					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
 						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
-						WaveformGroup::CURSOR_HORZ_DUAL,
-						&m_cursorDualHorizontalItem));
+						WaveformGroup::CURSOR_X_DUAL,
+						&m_cursorDualVerticalItem));
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
@@ -457,3 +457,7 @@ void WaveformArea::InitializeCairoPass()
 	m_cairoProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
+int64_t WaveformArea::PixelsToPicoseconds(float pix)
+{
+	return pix / m_group->m_pixelsPerPicosecond;
+}

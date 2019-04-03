@@ -40,6 +40,7 @@
 #include "ProfileBlock.h"
 
 using namespace std;
+using namespace glm;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Window events
@@ -151,13 +152,15 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 	return true;
 }
 
-
 bool WaveformArea::on_button_press_event(GdkEventButton* event)
 {
 	//TODO: See if we right clicked on our main channel or a protocol decoder.
 	//If a decoder, filter for that instead
 	m_selectedChannel = m_channel;
 	m_clickLocation = HitTest(event->x, event->y);
+
+	//Look up the time of our click (if in the plot area)
+	int64_t timestamp = PixelsToPicoseconds(event->x);
 
 	switch(m_clickLocation)
 	{
@@ -166,6 +169,29 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 			{
 				switch(event->button)
 				{
+					//Left
+					case 1:
+
+						//Start dragging the second cursor
+						if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+						{
+							m_dragState = DRAG_CURSOR;
+							m_group->m_xCursorPos[1] = timestamp;
+						}
+
+						//Place the first cursor
+						if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
+							(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE))
+						{
+							m_group->m_xCursorPos[0] = timestamp;
+						}
+
+						//Redraw if we have any cursor
+						if(m_group->m_cursorConfig != WaveformGroup::CURSOR_NONE)
+							m_group->m_vbox.queue_draw();
+
+						break;
+
 					//Middle
 					case 2:
 						m_parent->OnAutofitHorizontal();
@@ -227,6 +253,8 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 
 bool WaveformArea::on_button_release_event(GdkEventButton* event)
 {
+	int64_t timestamp = PixelsToPicoseconds(event->x);
+
 	switch(m_dragState)
 	{
 		//Update scope trigger configuration if left mouse is released
@@ -237,6 +265,11 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				m_parent->ClearAllPersistence();
 				queue_draw();
 			}
+			break;
+
+		case DRAG_CURSOR:
+			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+				m_group->m_xCursorPos[1] = timestamp;
 			break;
 
 		default:
@@ -258,11 +291,21 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	m_cursorX = event->x;
 	m_cursorY = event->y;
 
+	int64_t timestamp = PixelsToPicoseconds(event->x);
+
 	switch(m_dragState)
 	{
 		//Trigger drag - refresh (don't reconfigure trigger until we release)
 		case DRAG_TRIGGER:
 			queue_draw();
+			break;
+
+		case DRAG_CURSOR:
+			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+			{
+				m_group->m_xCursorPos[1] = timestamp;
+				m_group->m_vbox.queue_draw();
+			}
 			break;
 
 		//Nothing to do
@@ -280,6 +323,9 @@ void WaveformArea::OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::Radio
 {
 	if(m_updatingContextMenu || !item->get_active())
 		return;
+
+	m_group->m_cursorConfig = config;
+	m_group->m_vbox.queue_draw();
 }
 
 void WaveformArea::OnMoveNewRight()

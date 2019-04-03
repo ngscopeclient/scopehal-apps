@@ -41,25 +41,7 @@
 class WaveformGroup
 {
 public:
-	WaveformGroup()
-	{
-		m_frame.add(m_vbox);
-		m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
-
-		char tmp[64];
-		snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
-		m_numGroups ++;
-
-		m_frame.set_label(tmp);
-
-		m_frame.override_background_color(Gdk::RGBA("#000000"));
-		m_frame.override_color(Gdk::RGBA("#ffffff"));
-
-		m_pixelsPerPicosecond = 0.05;
-		m_timeline.m_group = this;
-
-		m_cursorConfig = CURSOR_NONE;
-	}
+	WaveformGroup();
 
 	Gtk::Frame m_frame;
 	Gtk::VBox m_vbox;
@@ -72,11 +54,14 @@ public:
 	enum CursorConfig
 	{
 		CURSOR_NONE,
-		CURSOR_HORZ_SINGLE,
-		CURSOR_HORZ_DUAL
+		CURSOR_X_SINGLE,
+		CURSOR_X_DUAL,
+		CURSOR_Y_SINGLE,
+		CURSOR_Y_DUAL
 	} m_cursorConfig;
 
-	//int64_t m_
+	int64_t m_xCursorPos[2];
+	double m_yCursorPos[2];
 };
 
 #endif

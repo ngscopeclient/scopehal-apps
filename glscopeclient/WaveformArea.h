@@ -77,8 +77,8 @@ protected:
 			Gtk::Menu m_cursorMenu;
 				Gtk::RadioMenuItem::Group m_cursorGroup;
 				Gtk::RadioMenuItem m_cursorNoneItem;
-				Gtk::RadioMenuItem m_cursorSingleHorizontalItem;
-				Gtk::RadioMenuItem m_cursorDualHorizontalItem;
+				Gtk::RadioMenuItem m_cursorSingleVerticalItem;
+				Gtk::RadioMenuItem m_cursorDualVerticalItem;
 		Gtk::MenuItem m_moveItem;
 			Gtk::Menu m_moveMenu;
 				Gtk::MenuItem m_moveNewGroupBelowItem;
@@ -176,6 +176,7 @@ protected:
 	void RenderGrid(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
@@ -188,6 +189,7 @@ protected:
 	float VoltsToPixels(float volt);
 	float VoltsToYPosition(float volt);
 	float YPositionToVolts(float y);
+	int64_t PixelsToPicoseconds(float pix);
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;
@@ -216,7 +218,8 @@ protected:
 	enum DragStates
 	{
 		DRAG_NONE,
-		DRAG_TRIGGER
+		DRAG_TRIGGER,
+		DRAG_CURSOR
 	} m_dragState;
 };
 

@@ -514,19 +514,6 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 	m_tArm = GetTime();
 }
 
-/*
-void OscilloscopeWindow::OnZoomFit()
-{
-	if( (m_scope->GetChannelCount() != 0) && (m_scope->GetChannel(0) != NULL) && (m_scope->GetChannel(0)->GetData() != NULL))
-	{
-		CaptureChannelBase* capture = m_scope->GetChannel(0)->GetData();
-		int64_t capture_len = capture->m_timescale * capture->GetEndTime();
-		m_timescale = static_cast<float>(m_viewscroller.get_width()) / capture_len;
-	}
-
-	OnZoomChanged();
-}
-*/
 int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
 {
 	//Dispatch pending gtk events (such as draw calls)

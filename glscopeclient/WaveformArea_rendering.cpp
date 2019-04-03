@@ -575,6 +575,7 @@ void WaveformArea::RenderCairoOverlays()
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
 	RenderChannelLabel(cr);
+	RenderCursors(cr);
 }
 
 void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
@@ -603,4 +604,43 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	cr->restore();
+}
+
+void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
+{
+	int ytop = m_height;
+	int ybot = 0;
+
+	Gdk::Color yellow("yellow");
+	Gdk::Color orange("orange");
+
+	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
+		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
+	{
+		//Draw first vertical cursor
+		double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
+		cr->move_to(x, ytop);
+		cr->line_to(x, ybot);
+		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
+		cr->stroke();
+
+		//Dual cursors
+		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+		{
+			//Draw second vertical cursor
+			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
+			cr->move_to(x2, ytop);
+			cr->line_to(x2, ybot);
+			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());
+			cr->stroke();
+
+			//Draw filled area between them
+			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
+			cr->move_to(x, ytop);
+			cr->line_to(x2, ytop);
+			cr->line_to(x2, ybot);
+			cr->line_to(x, ybot);
+			cr->fill();
+		}
+	}
 }

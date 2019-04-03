@@ -184,6 +184,40 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		}
 	}
 
+	//Draw cursor positions if requested
+	Gdk::Color yellow("yellow");
+	Gdk::Color orange("orange");
+
+	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
+		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
+	{
+		//Draw first vertical cursor
+		double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
+		cr->move_to(x, 0);
+		cr->line_to(x, h);
+		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
+		cr->stroke();
+
+		//Dual cursors
+		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+		{
+			//Draw second vertical cursor
+			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
+			cr->move_to(x2, 0);
+			cr->line_to(x2, h);
+			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());
+			cr->stroke();
+
+			//Draw filled area between them
+			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
+			cr->move_to(x, 0);
+			cr->line_to(x2, 0);
+			cr->line_to(x2, h);
+			cr->line_to(x, h);
+			cr->fill();
+		}
+	}
+
 	cr->restore();
 	return true;
 }
