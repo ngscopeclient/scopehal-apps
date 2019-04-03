@@ -150,6 +150,8 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
+	int swidth;
+	int sheight;
 	for(double t = 0; t < width_ps; t += grad_ps_rounded)
 	{
 		double x = t * m_group->m_pixelsPerPicosecond;
@@ -165,8 +167,6 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		snprintf(namebuf, sizeof(namebuf), sformat.c_str(), scaled_time, units);
 
 		//Render it
-		int swidth;
-		int sheight;
 		tlayout->set_text(namebuf);
 		tlayout->get_pixel_size(swidth, sheight);
 		cr->move_to(x+2, ymid + sheight/2);
@@ -191,33 +191,138 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
 	{
-		//Draw first vertical cursor
-		double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
-		cr->move_to(x, 0);
-		cr->line_to(x, h);
-		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
-		cr->stroke();
-
 		//Dual cursors
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
-			//Draw second vertical cursor
-			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
-			cr->move_to(x2, 0);
-			cr->line_to(x2, h);
-			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());
-			cr->stroke();
-
 			//Draw filled area between them
+			double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
+			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
 			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
 			cr->move_to(x, 0);
 			cr->line_to(x2, 0);
 			cr->line_to(x2, h);
 			cr->line_to(x, h);
 			cr->fill();
+
+			//Second cursor
+			DrawCursor(
+				cr,
+				m_group->m_xCursorPos[1],
+				"X2",
+				orange,
+				unit_divisor,
+				sformat,
+				units,
+				false,
+				true);
 		}
+
+		//First cursor
+		DrawCursor(
+			cr,
+			m_group->m_xCursorPos[0],
+			"X1",
+			yellow,
+			unit_divisor,
+			sformat,
+			units,
+			true,
+			false);
 	}
 
 	cr->restore();
 	return true;
+}
+
+void Timeline::DrawCursor(
+	const Cairo::RefPtr<Cairo::Context>& cr,
+	int64_t ps,
+	const char* name,
+	Gdk::Color color,
+	double unit_divisor,
+	string sformat,
+	const char* units,
+	bool draw_left,
+	bool show_delta)
+{
+	int h = get_height();
+
+	Gdk::Color black("black");
+
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Pango::FontDescription font("sans normal 10");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	int swidth;
+	int sheight;
+
+	//Format label for cursor
+	char label[256];
+	if(!show_delta)
+	{
+		string format("%s: ");
+		format += sformat;
+		snprintf(
+			label,
+			sizeof(label),
+			format.c_str(),
+			name,
+			ps / unit_divisor,
+			units);
+	}
+	else
+	{
+		string format("%s: ");
+		format += sformat;
+		format += "\nΔX = ";
+		format += sformat;
+		format += " (%.3f MHz)\n";
+		int64_t dt = m_group->m_xCursorPos[1] - m_group->m_xCursorPos[0];
+		double delta = dt / unit_divisor;
+		double mhz = 1.0e6 / dt;
+		snprintf(
+			label,
+			sizeof(label),
+			format.c_str(),
+			name,
+			ps / unit_divisor,
+			units,
+			delta,
+			units,
+			mhz);
+	}
+	tlayout->set_text(label);
+	tlayout->get_pixel_size(swidth, sheight);
+
+	//Decide which side of the line to draw on
+	double x = ps * m_group->m_pixelsPerPicosecond;
+	double right = x-5;
+	double left = right - swidth - 5;
+	if(!draw_left)
+	{
+		left = x + 5;
+		right = left + swidth + 5;
+	}
+
+	//Draw filled background for label
+	cr->set_source_rgba(black.get_red_p(), black.get_green_p(), black.get_blue_p(), 0.75);
+	double bot = 10;
+	double top = bot + sheight;
+	cr->move_to(left, top);
+	cr->line_to(left, bot);
+	cr->line_to(right, bot);
+	cr->line_to(right, top);
+	cr->fill();
+
+	//Label text
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->move_to(left+5, bot);
+	tlayout->update_from_cairo_context(cr);
+	tlayout->show_in_cairo_context(cr);
+
+	//Cursor line
+	cr->move_to(x, 0);
+	cr->line_to(x, h);
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->stroke();
 }

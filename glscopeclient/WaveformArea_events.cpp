@@ -584,5 +584,24 @@ void WaveformArea::UpdateContextMenu()
 		m_couplingMenu.set_sensitive(false);
 	}
 
+	//Select cursor config
+	switch(m_group->m_cursorConfig)
+	{
+		case WaveformGroup::CURSOR_NONE:
+			m_cursorNoneItem.set_active(true);
+			break;
+
+		case WaveformGroup::CURSOR_X_SINGLE:
+			m_cursorSingleVerticalItem.set_active(true);
+			break;
+
+		case WaveformGroup::CURSOR_X_DUAL:
+			m_cursorDualVerticalItem.set_active(true);
+			break;
+
+		default:
+			break;
+	}
+
 	m_updatingContextMenu = false;
 }

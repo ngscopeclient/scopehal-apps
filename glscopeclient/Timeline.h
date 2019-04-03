@@ -41,6 +41,18 @@ public:
 	WaveformGroup* m_group;
 
 	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+
+protected:
+	virtual void DrawCursor(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		int64_t ps,
+		const char* name,
+		Gdk::Color color,
+		double unit_divisor,
+		std::string sformat,
+		const char* units,
+		bool draw_left,
+		bool show_delta);
 };
 
 #endif
