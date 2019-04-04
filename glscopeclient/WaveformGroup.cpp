@@ -87,7 +87,11 @@ void WaveformGroup::RefreshMeasurements()
 	{
 		//Run the measurement once, then update our text
 		m->m_measurement->Refresh();
-		snprintf(tmp, sizeof(tmp), "<span font-weight='bold' underline='single'>%s</span>\n<span rise='-5'>%s</span>",
+		snprintf(
+			tmp,
+			sizeof(tmp),
+			"<span font-weight='bold' underline='single'>%s</span>\n"
+			"<span rise='-5' font-family='monospace'>%s</span>",
 			m->m_title.c_str(), m->m_measurement->GetValueAsString().c_str());
 		m->m_label.set_markup(tmp);
 	}

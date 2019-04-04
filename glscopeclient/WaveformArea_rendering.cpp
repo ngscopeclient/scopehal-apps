@@ -347,18 +347,17 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	float top_brightness = 0.1;
 	float bottom_brightness = 0.0;
 
-	Gdk::Color color(m_channel->m_displaycolor);
 	Cairo::RefPtr<Cairo::LinearGradient> background_gradient = Cairo::LinearGradient::create(0, ytop, 0, ybot);
 	background_gradient->add_color_stop_rgb(
 		0,
-		color.get_red_p() * top_brightness,
-		color.get_green_p() * top_brightness,
-		color.get_blue_p() * top_brightness);
+		m_color.get_red_p() * top_brightness,
+		m_color.get_green_p() * top_brightness,
+		m_color.get_blue_p() * top_brightness);
 	background_gradient->add_color_stop_rgb(
 		1,
-		color.get_red_p() * bottom_brightness,
-		color.get_green_p() * bottom_brightness,
-		color.get_blue_p() * bottom_brightness);
+		m_color.get_red_p() * bottom_brightness,
+		m_color.get_green_p() * bottom_brightness,
+		m_color.get_blue_p() * bottom_brightness);
 	cr->set_source(background_gradient);
 	cr->rectangle(0, 0, m_plotRight, m_height);
 	cr->fill();
@@ -392,7 +391,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("sans normal 10");
+	Pango::FontDescription font("monospace normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
 	tlayout->set_text("500 mV_xxx");
@@ -476,8 +475,9 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		if(y > ytop)
 			continue;
 
-		cr->move_to(textleft, y);
 		tlayout->set_text(tmp);
+		tlayout->get_pixel_size(twidth, theight);
+		cr->move_to(m_width - twidth - 5, y);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	}

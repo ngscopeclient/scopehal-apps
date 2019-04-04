@@ -380,6 +380,8 @@ void WaveformArea::OnMeasure(string name)
 
 	//Add to the box and show it
 	m_group->m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
+	col->m_label.override_color(Gdk::RGBA(m_color.to_string()));
+	col->m_label.set_justify(Gtk::JUSTIFY_RIGHT);
 	col->m_label.show();
 
 	//Recalculate stuff now that we have more measurements to look at

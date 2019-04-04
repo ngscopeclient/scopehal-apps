@@ -266,6 +266,8 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 	w->get_parent()->remove(*w);
 	ngroup->m_waveformBox.pack_start(*w);
 
+	//TODO: move any measurements related to this trace to the new group?
+
 	//Remove any groups that no longer have any waveform views in them,'
 	//or splitters that only have one child
 	GarbageCollectGroups();
@@ -318,6 +320,15 @@ void OscilloscopeWindow::GarbageCollectGroups()
 				//TODO: move single occupant of empty splitter to parent
 			}
 		}
+	}
+
+	//Hide measurement display if there's no measurements in the group
+	for(auto g : m_waveformGroups)
+	{
+		if(g->m_measurementColumns.empty())
+			g->m_measurementFrame.hide();
+		else
+			g->m_measurementFrame.show_all();
 	}
 }
 
