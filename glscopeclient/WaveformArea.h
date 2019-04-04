@@ -90,6 +90,8 @@ protected:
 				Gtk::MenuItem m_copyNewGroupRightItem;
 		Gtk::MenuItem m_decodeItem;
 			Gtk::Menu m_decodeMenu;
+		Gtk::MenuItem m_measureItem;
+			Gtk::Menu m_measureMenu;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
 			Gtk::RadioMenuItem::Group m_triggerGroup;

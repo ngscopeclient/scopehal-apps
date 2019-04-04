@@ -280,6 +280,21 @@ void WaveformArea::CreateWidgets()
 			m_decodeMenu.append(*item);
 		}
 
+	//Measurements
+	m_contextMenu.append(m_measureItem);
+		m_measureItem.set_label("Measure");
+		m_measureItem.set_submenu(m_measureMenu);
+
+		names.clear();
+		Measurement::EnumMeasurements(names);
+		for(auto p : names)
+		{
+			item = Gtk::manage(new Gtk::MenuItem(p, false));
+			//item->signal_activate().connect(
+			//	sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+			m_measureMenu.append(*item);
+		}
+
 	m_contextMenu.show_all();
 }
 

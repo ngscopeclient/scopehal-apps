@@ -36,6 +36,7 @@
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
+#include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
 
 using namespace std;
@@ -134,8 +135,9 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-	//Initialize the protocol decoder library
+	//Initialize the protocol decoder and measurement libraries
 	ScopeProtocolStaticInit();
+	ScopeMeasurementStaticInit();
 
 	//Connect to the server
 	if(api == "lecroy_vicp")
