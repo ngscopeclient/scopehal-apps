@@ -38,18 +38,29 @@
 
 #include "Timeline.h"
 
+class MeasurementColumn
+{
+public:
+	Gtk::Label m_label;
+	std::string m_title;
+	Measurement* m_measurement;
+};
+
 class WaveformGroup
 {
 public:
 	WaveformGroup();
 	virtual ~WaveformGroup();
 
+	void RefreshMeasurements();
+
 	Gtk::Frame m_frame;
 		Gtk::VBox m_vbox;
 			Timeline m_timeline;
 			Gtk::VBox m_waveformBox;
 			Gtk::Frame m_measurementFrame;
-				Gtk::ListViewText m_measurementView;
+				Gtk::HBox m_measurementBox;
+					std::vector<MeasurementColumn*> m_measurementColumns;
 
 	float m_pixelsPerPicosecond;
 

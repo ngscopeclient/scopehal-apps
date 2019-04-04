@@ -359,6 +359,33 @@ void WaveformArea::OnProtocolDecode(string name)
 	LogDebug("Protocol decode: %s\n", name.c_str());
 }
 
+void WaveformArea::OnMeasure(string name)
+{
+	//Make sure the measurements can actually be seen
+	m_group->m_measurementFrame.show();
+
+	//TODO: Don't allow adding the same measurement twice
+
+	//Create the column and figure out the title
+	auto col = new MeasurementColumn;
+	char tmp[256];
+	snprintf(tmp, sizeof(tmp), "%s: %s", m_channel->GetHwname().c_str(), name.c_str());
+	col->m_title = tmp;
+	m_group->m_measurementColumns.push_back(col);
+
+	//Create the measurement itself
+	auto m = Measurement::CreateMeasurement(name);
+	col->m_measurement = m;
+	m->SetInput(0, m_channel);	//TODO: allow multiple inputs, pop up dialog or something
+
+	//Add to the box and show it
+	m_group->m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
+	col->m_label.show();
+
+	//Recalculate stuff now that we have more measurements to look at
+	m_group->RefreshMeasurements();
+}
+
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected
@@ -382,7 +409,7 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 
 void WaveformArea::OnWaveformDataReady()
 {
-	//Get ready to immediately refresh
+	//Update our measurements and redraw the waveform
 	queue_draw();
 }
 
@@ -460,6 +487,19 @@ void WaveformArea::UpdateContextMenu()
 			"");
 		menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
 		delete decoder;
+	}
+
+	//Gray out measurements that don't make sense for the type of channel we've selected
+	children = m_measureMenu.get_children();
+	for(auto item : children)
+	{
+		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
+		if(menu == NULL)
+			continue;
+
+		auto m = Measurement::CreateMeasurement(menu->get_label());
+		menu->set_sensitive(m->ValidateChannel(0, m_selectedChannel));
+		delete m;
 	}
 
 	if(m_selectedChannel->IsPhysicalChannel())

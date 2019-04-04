@@ -134,6 +134,9 @@ void OscilloscopeWindow::CreateWidgets()
 	//Done adding widgets
 	show_all();
 
+	//Don't show measurements by default
+	group->m_measurementFrame.hide();
+
 	//Create viewers and menu items for all the channels
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
@@ -434,9 +437,13 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	//Update the status
 	UpdateStatusBar();
 
-	//Update the view
+	//Update the views
 	for(auto w : m_waveformAreas)
 		w->OnWaveformDataReady();
+
+	//Update the measurements
+	for(auto g : m_waveformGroups)
+		g->RefreshMeasurements();
 
 	//Re-arm trigger for another pass
 	if(!m_triggerOneShot)

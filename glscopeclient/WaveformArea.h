@@ -122,6 +122,7 @@ protected:
 	void OnHide();
 	void OnTogglePersistence();
 	void OnProtocolDecode(std::string name);
+	void OnMeasure(std::string name);
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();
@@ -130,6 +131,8 @@ protected:
 	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
 
 	void CleanupBufferObjects();
+
+	void RefreshMeasurements();
 
 	int m_width;
 	int m_height;

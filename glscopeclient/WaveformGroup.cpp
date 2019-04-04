@@ -38,8 +38,7 @@
 int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup()
-	: m_measurementView(1, false, Gtk::SELECTION_NONE)
-	, m_pixelsPerPicosecond(0.05)
+	: m_pixelsPerPicosecond(0.05)
 	, m_cursorConfig(CURSOR_NONE)
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,13 +57,12 @@ WaveformGroup::WaveformGroup()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Measurements
 
-	m_vbox.pack_start(m_measurementFrame, Gtk::PACK_SHRINK);
-	m_measurementFrame.add(m_measurementView);
+	m_vbox.pack_start(m_measurementFrame, Gtk::PACK_SHRINK, 5);
 	m_measurementFrame.set_label("Measurements");
-	m_measurementFrame.show_all();
 
-	m_measurementView.set_column_title(0, "Measure");
-	m_measurementView.append("value");
+	m_measurementFrame.add(m_measurementBox);
+
+	m_measurementBox.set_spacing(30);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Cursors
@@ -78,4 +76,19 @@ WaveformGroup::WaveformGroup()
 
 WaveformGroup::~WaveformGroup()
 {
+	for(auto c : m_measurementColumns)
+		delete c;
+}
+
+void WaveformGroup::RefreshMeasurements()
+{
+	char tmp[256];
+	for(auto m : m_measurementColumns)
+	{
+		//Run the measurement once, then update our text
+		m->m_measurement->Refresh();
+		snprintf(tmp, sizeof(tmp), "<span font-weight='bold' underline='single'>%s</span>\n<span rise='-5'>%s</span>",
+			m->m_title.c_str(), m->m_measurement->GetValueAsString().c_str());
+		m->m_label.set_markup(tmp);
+	}
 }

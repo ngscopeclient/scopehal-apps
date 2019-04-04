@@ -290,8 +290,8 @@ void WaveformArea::CreateWidgets()
 		for(auto p : names)
 		{
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
-			//item->signal_activate().connect(
-			//	sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+			item->signal_activate().connect(
+				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnMeasure), p));
 			m_measureMenu.append(*item);
 		}
 
