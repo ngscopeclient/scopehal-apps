@@ -1,0 +1,22 @@
+frame
+{
+	color: white;
+	background-color: black;
+}
+
+treeview
+{
+	color: white;
+	background-color: black;
+	background-image: none;
+}
+
+treeview header button
+{
+	color: white;
+	background-color: black;
+	background-image: none;
+	border-top: none;
+	border-left: none;
+	border-right: none;
+}

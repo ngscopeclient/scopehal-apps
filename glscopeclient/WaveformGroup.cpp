@@ -38,25 +38,44 @@
 int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup()
-	: m_pixelsPerPicosecond(0.05)
+	: m_measurementView(1, false, Gtk::SELECTION_NONE)
+	, m_pixelsPerPicosecond(0.05)
 	, m_cursorConfig(CURSOR_NONE)
 {
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Initial GUI hierarchy, title, etc
+
 	m_frame.add(m_vbox);
-	m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
+		m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
+			m_timeline.m_group = this;
+		m_vbox.pack_start(m_waveformBox, Gtk::PACK_EXPAND_WIDGET);
 
 	char tmp[64];
 	snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
 	m_numGroups ++;
 	m_frame.set_label(tmp);
 
-	m_frame.override_background_color(Gdk::RGBA("#000000"));
-	m_frame.override_color(Gdk::RGBA("#ffffff"));
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Measurements
 
-	m_timeline.m_group = this;
+	m_vbox.pack_start(m_measurementFrame, Gtk::PACK_SHRINK);
+	m_measurementFrame.add(m_measurementView);
+	m_measurementFrame.set_label("Measurements");
+	m_measurementFrame.show_all();
+
+	m_measurementView.set_column_title(0, "Measure");
+	m_measurementView.append("value");
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Cursors
 
 	m_xCursorPos[0] = 0;
 	m_xCursorPos[1] = 0;
 
 	m_yCursorPos[0] = 0;
 	m_yCursorPos[1] = 0;
+}
+
+WaveformGroup::~WaveformGroup()
+{
 }

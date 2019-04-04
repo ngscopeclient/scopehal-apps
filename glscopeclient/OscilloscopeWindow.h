@@ -108,6 +108,8 @@ protected:
 			Gtk::Label m_sampleCountLabel;
 			Gtk::Label m_sampleRateLabel;
 
+		Glib::RefPtr<Gtk::CssProvider> m_css;
+
 	//Our oscilloscope connection
 	Oscilloscope* m_scope;
 

@@ -42,10 +42,14 @@ class WaveformGroup
 {
 public:
 	WaveformGroup();
+	virtual ~WaveformGroup();
 
 	Gtk::Frame m_frame;
-	Gtk::VBox m_vbox;
-	Timeline m_timeline;
+		Gtk::VBox m_vbox;
+			Timeline m_timeline;
+			Gtk::VBox m_waveformBox;
+			Gtk::Frame m_measurementFrame;
+				Gtk::ListViewText m_measurementView;
 
 	float m_pixelsPerPicosecond;
 

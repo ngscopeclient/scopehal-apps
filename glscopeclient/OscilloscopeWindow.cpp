@@ -146,7 +146,7 @@ void OscilloscopeWindow::CreateWidgets()
 			);
 		w->m_group = group;
 		m_waveformAreas.emplace(w);
-		group->m_vbox.pack_start(*w);
+		group->m_waveformBox.pack_start(*w);
 
 		auto item = Gtk::manage(new Gtk::CheckMenuItem(chan->GetHwname(), false));
 		item->signal_activate().connect(
@@ -174,6 +174,15 @@ void OscilloscopeWindow::CreateWidgets()
 	m_statusbar.show_all();
 
 	m_channelsMenu.show_all();
+
+	//Initialize the style sheets
+	m_css = Gtk::CssProvider::create();
+	m_css->load_from_path("styles/glscopeclient.css");
+
+	get_style_context()->add_provider_for_screen(
+		Gdk::Screen::get_default(),
+		m_css,
+		GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,8 +200,8 @@ void OscilloscopeWindow::OnMoveNewBelow(WaveformArea* w)
 
 void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 {
-	//Hierarchy is WaveformArea -> WaveformGroup box -> WaveformGroup frame -> splitter
-	auto frame = w->get_parent()->get_parent();
+	//Hierarchy is WaveformArea -> WaveformGroup waveform box -> WaveformGroup box -> WaveformGroup frame -> splitter
+	auto frame = w->get_parent()->get_parent()->get_parent();
 	auto split = dynamic_cast<Gtk::Paned*>(frame->get_parent());
 	if(split == NULL)
 	{
@@ -252,7 +261,7 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 {
 	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
-	ngroup->m_vbox.pack_start(*w);
+	ngroup->m_waveformBox.pack_start(*w);
 
 	//Remove any groups that no longer have any waveform views in them,'
 	//or splitters that only have one child
@@ -261,11 +270,11 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 
 void OscilloscopeWindow::GarbageCollectGroups()
 {
-	//Remove groups with no content
+	//Remove groups with no waveforms (any attached measurements will be deleted)
 	std::set<WaveformGroup*> groupsToRemove;
 	for(auto g : m_waveformGroups)
 	{
-		if(g->m_vbox.get_children().size() == 1)	//an empty group will still have a timeline in it
+		if(g->m_waveformBox.get_children().empty())
 			groupsToRemove.emplace(g);
 	}
 	for(auto g : groupsToRemove)
