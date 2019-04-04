@@ -134,6 +134,7 @@ bool WaveformArea::PrepareGeometry()
 
 	//Scaling factor from samples to pixels
 	float xscale = m_group->m_pixelsPerPicosecond * dat->m_timescale;
+	float xoff = m_group->m_pixelsPerPicosecond * dat->m_triggerPhase;
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
@@ -143,8 +144,8 @@ bool WaveformArea::PrepareGeometry()
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X/Y start points of the data
-		float xleft = data.GetSampleStart(j) * xscale;
-		float xright = data.GetSampleStart(j+1) * xscale;
+		float xleft = data.GetSampleStart(j) * xscale + xoff;
+		float xright = data.GetSampleStart(j+1) * xscale + xoff;
 
 		//If the triangle would be degenerate (less than one pixel wide), stretch it
 		float width = xright-xleft;
