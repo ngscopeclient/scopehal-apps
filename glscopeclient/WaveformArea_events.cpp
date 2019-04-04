@@ -361,31 +361,7 @@ void WaveformArea::OnProtocolDecode(string name)
 
 void WaveformArea::OnMeasure(string name)
 {
-	//Make sure the measurements can actually be seen
-	m_group->m_measurementFrame.show();
-
-	//TODO: Don't allow adding the same measurement twice
-
-	//Create the column and figure out the title
-	auto col = new MeasurementColumn;
-	char tmp[256];
-	snprintf(tmp, sizeof(tmp), "%s: %s", m_channel->GetHwname().c_str(), name.c_str());
-	col->m_title = tmp;
-	m_group->m_measurementColumns.push_back(col);
-
-	//Create the measurement itself
-	auto m = Measurement::CreateMeasurement(name);
-	col->m_measurement = m;
-	m->SetInput(0, m_channel);	//TODO: allow multiple inputs, pop up dialog or something
-
-	//Add to the box and show it
-	m_group->m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
-	col->m_label.override_color(Gdk::RGBA(m_color.to_string()));
-	col->m_label.set_justify(Gtk::JUSTIFY_RIGHT);
-	col->m_label.show();
-
-	//Recalculate stuff now that we have more measurements to look at
-	m_group->RefreshMeasurements();
+	m_group->AddColumn(name, m_selectedChannel, m_color.to_string());
 }
 
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)

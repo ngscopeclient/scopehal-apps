@@ -35,6 +35,8 @@
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
 
+using namespace std;
+
 int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup()
@@ -63,6 +65,17 @@ WaveformGroup::WaveformGroup()
 	m_measurementFrame.add(m_measurementBox);
 
 	m_measurementBox.set_spacing(30);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Context menu
+
+	m_contextMenu.append(m_removeMeasurementItem);
+		m_removeMeasurementItem.set_label("Delete");
+		m_removeMeasurementItem.signal_activate().connect(
+			sigc::mem_fun(*this, &WaveformGroup::OnRemoveMeasurementItem));
+	m_contextMenu.show_all();
+
+	m_selectedColumn = NULL;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Cursors
@@ -95,4 +108,61 @@ void WaveformGroup::RefreshMeasurements()
 			m->m_title.c_str(), m->m_measurement->GetValueAsString().c_str());
 		m->m_label.set_markup(tmp);
 	}
+}
+
+void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string color)
+{
+	//Make sure the measurements can actually be seen
+	m_measurementFrame.show();
+
+	//TODO: Don't allow adding the same measurement twice
+
+	//Create the column and figure out the title
+	auto col = new MeasurementColumn;
+	char tmp[256];
+	snprintf(tmp, sizeof(tmp), "%s: %s", chan->GetHwname().c_str(), name.c_str());
+	col->m_title = tmp;
+	m_measurementColumns.emplace(col);
+
+	//Create the measurement itself
+	auto m = Measurement::CreateMeasurement(name);
+	col->m_measurement = m;
+	m->SetInput(0, chan);	//TODO: allow multiple inputs, pop up dialog or something
+
+	//Add to the box and show it
+	m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
+	col->m_label.override_color(Gdk::RGBA(color));
+	col->m_label.set_justify(Gtk::JUSTIFY_RIGHT);
+	col->m_label.add_events(Gdk::BUTTON_PRESS_MASK);
+	col->m_label.show();
+	col->m_label.set_selectable();
+	col->m_label.signal_button_press_event().connect(
+		sigc::bind<MeasurementColumn*>(sigc::mem_fun(*this, &WaveformGroup::OnMeasurementContextMenu), col),
+		false);
+
+	//Recalculate stuff now that we have more measurements to look at
+	RefreshMeasurements();
+}
+
+bool WaveformGroup::OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col)
+{
+	//SKip anything not right click
+	if(event->button != 3)
+		return true;
+
+	m_selectedColumn = col;
+
+	m_contextMenu.popup(event->button, event->time);
+	return true;
+}
+
+void WaveformGroup::OnRemoveMeasurementItem()
+{
+	m_measurementBox.remove(m_selectedColumn->m_label);
+	m_measurementColumns.erase(m_selectedColumn);
+	delete m_selectedColumn;
+	m_selectedColumn = NULL;
+
+	if(m_measurementColumns.empty())
+		m_measurementFrame.hide();
 }

@@ -41,6 +41,12 @@
 class MeasurementColumn
 {
 public:
+	~MeasurementColumn()
+	{
+		delete m_measurement;
+		m_measurement = NULL;
+	}
+
 	Gtk::Label m_label;
 	std::string m_title;
 	Measurement* m_measurement;
@@ -54,13 +60,18 @@ public:
 
 	void RefreshMeasurements();
 
+	void AddColumn(std::string name, OscilloscopeChannel* chan, std::string color);
+
 	Gtk::Frame m_frame;
 		Gtk::VBox m_vbox;
 			Timeline m_timeline;
 			Gtk::VBox m_waveformBox;
 			Gtk::Frame m_measurementFrame;
 				Gtk::HBox m_measurementBox;
-					std::vector<MeasurementColumn*> m_measurementColumns;
+					std::set<MeasurementColumn*> m_measurementColumns;
+
+	Gtk::Menu m_contextMenu;
+		Gtk::MenuItem m_removeMeasurementItem;
 
 	float m_pixelsPerPicosecond;
 
@@ -77,6 +88,11 @@ public:
 
 	int64_t m_xCursorPos[2];
 	double m_yCursorPos[2];
+
+protected:
+	MeasurementColumn* m_selectedColumn;
+	bool OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col);
+	void OnRemoveMeasurementItem();
 };
 
 #endif
