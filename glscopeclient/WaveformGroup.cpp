@@ -70,7 +70,7 @@ WaveformGroup::WaveformGroup()
 	// Context menu
 
 	m_contextMenu.append(m_removeMeasurementItem);
-		m_removeMeasurementItem.set_label("Delete");
+		m_removeMeasurementItem.set_label("Remove measurement");
 		m_removeMeasurementItem.signal_activate().connect(
 			sigc::mem_fun(*this, &WaveformGroup::OnRemoveMeasurementItem));
 	m_contextMenu.show_all();

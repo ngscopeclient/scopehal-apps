@@ -138,7 +138,7 @@ bool WaveformArea::PrepareGeometry()
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
-	double lheight = 0.025f;
+	double lheight = 1.0;	//pixels
 	float* verts = new float[waveform_size];
 	//#pragma omp parallel for
 	for(size_t j=0; j<(count-1); j++)
@@ -158,8 +158,8 @@ bool WaveformArea::PrepareGeometry()
 			xright = xmid + minwidth/2;
 		}
 
-		float yleft = data[j];
-		float yright = data[j+1];
+		float yleft = data[j] * m_pixelsPerVolt;
+		float yright = data[j+1] * m_pixelsPerVolt;
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
@@ -259,7 +259,7 @@ void WaveformArea::RenderPersistenceOverlay()
 	glBlendColor(0, 0, 0, 0.1);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
-	//Draw a black overlay with programmable alpha
+	//Draw a black overlay with a little bit of alpha (to make old traces decay)
 	m_persistProgram.Bind();
 	m_persistVAO.Bind();
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -273,10 +273,10 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(0.0f, "xoff");
 	m_waveformProgram.SetUniform(1.0, "xscale");
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
-	m_waveformProgram.SetUniform(m_pixelsPerVolt, "yscale");
+	m_waveformProgram.SetUniform(1, "yscale");
 
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 0.1);
+	glBlendColor(0, 0, 0, 0.2);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Only look at stuff inside the plot area
@@ -459,7 +459,6 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Draw text for the Y axis labels
 	cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
-	float textleft = m_plotRight + 10;
 	for(auto it : gridmap)
 	{
 		float v = it.first;
@@ -520,7 +519,7 @@ void WaveformArea::RenderTraceColorCorrection()
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Draw the offscreen buffer to the onscreen buffer

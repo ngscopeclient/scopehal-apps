@@ -108,9 +108,11 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			{
 				case GDK_SCROLL_UP:
 					m_parent->OnZoomInHorizontal(m_group);
+					ClearPersistence();
 					break;
 				case GDK_SCROLL_DOWN:
 					m_parent->OnZoomOutHorizontal(m_group);
+					ClearPersistence();
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");
@@ -295,8 +297,10 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 
 	switch(m_dragState)
 	{
-		//Trigger drag - refresh (don't reconfigure trigger until we release)
+		//Trigger drag - update level and refresh
 		case DRAG_TRIGGER:
+			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+			m_parent->ClearAllPersistence();
 			queue_draw();
 			break;
 
