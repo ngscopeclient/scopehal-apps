@@ -285,6 +285,13 @@ void WaveformArea::CreateWidgets()
 		m_measureItem.set_label("Measure");
 		m_measureItem.set_submenu(m_measureMenu);
 
+		m_measureMenu.append(m_measureHorzItem);
+			m_measureHorzItem.set_label("Horizontal");
+			m_measureHorzItem.set_submenu(m_measureHorzMenu);
+		m_measureMenu.append(m_measureVertItem);
+			m_measureVertItem.set_label("Vertical");
+			m_measureVertItem.set_submenu(m_measureVertMenu);
+
 		names.clear();
 		Measurement::EnumMeasurements(names);
 		for(auto p : names)
@@ -292,7 +299,20 @@ void WaveformArea::CreateWidgets()
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
 			item->signal_activate().connect(
 				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnMeasure), p));
-			m_measureMenu.append(*item);
+
+			auto m = Measurement::CreateMeasurement(p);
+			switch(m->GetMeasurementType())
+			{
+				case Measurement::MEAS_HORZ:
+					m_measureHorzMenu.append(*item);
+					break;
+
+				case Measurement::MEAS_VERT:
+					m_measureVertMenu.append(*item);
+					break;
+			}
+
+			delete m;
 		}
 
 	m_contextMenu.show_all();

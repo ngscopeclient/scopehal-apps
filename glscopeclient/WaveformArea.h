@@ -92,6 +92,10 @@ protected:
 			Gtk::Menu m_decodeMenu;
 		Gtk::MenuItem m_measureItem;
 			Gtk::Menu m_measureMenu;
+				Gtk::MenuItem m_measureVertItem;
+					Gtk::Menu m_measureVertMenu;
+				Gtk::MenuItem m_measureHorzItem;
+					Gtk::Menu m_measureHorzMenu;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
 			Gtk::RadioMenuItem::Group m_triggerGroup;
@@ -118,6 +122,7 @@ protected:
 				Gtk::RadioMenuItem m_bw200Item;
 				Gtk::RadioMenuItem m_bw20Item;
 	void UpdateContextMenu();
+	void UpdateMeasureContextMenu(std::vector<Widget*> children);
 	bool m_updatingContextMenu;
 	void OnHide();
 	void OnTogglePersistence();

@@ -424,6 +424,20 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	return LOC_PLOT;
 }
 
+void WaveformArea::UpdateMeasureContextMenu(std::vector<Widget*> children)
+{
+	for(auto item : children)
+	{
+		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
+		if(menu == NULL)
+			continue;
+
+		auto m = Measurement::CreateMeasurement(menu->get_label());
+		menu->set_sensitive(m->ValidateChannel(0, m_selectedChannel));
+		delete m;
+	}
+}
+
 /**
 	@brief Enable/disable or show/hide context menu items for the current selection
  */
@@ -472,17 +486,10 @@ void WaveformArea::UpdateContextMenu()
 	}
 
 	//Gray out measurements that don't make sense for the type of channel we've selected
-	children = m_measureMenu.get_children();
-	for(auto item : children)
-	{
-		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
-		if(menu == NULL)
-			continue;
-
-		auto m = Measurement::CreateMeasurement(menu->get_label());
-		menu->set_sensitive(m->ValidateChannel(0, m_selectedChannel));
-		delete m;
-	}
+	children = m_measureHorzMenu.get_children();
+	UpdateMeasureContextMenu(children);
+	children = m_measureVertMenu.get_children();
+	UpdateMeasureContextMenu(children);
 
 	if(m_selectedChannel->IsPhysicalChannel())
 	{
