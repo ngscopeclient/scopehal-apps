@@ -46,7 +46,7 @@
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes, std::string host, int port);
+	OscilloscopeWindow(std::vector<Oscilloscope*> scopes);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();

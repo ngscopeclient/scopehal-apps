@@ -47,19 +47,28 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, std::string host, int port)
+OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	: m_scopes(scopes)
 	// m_iconTheme(Gtk::IconTheme::get_default())
 {
 	//Set title
-	char title[256];
-	snprintf(title, sizeof(title), "Oscilloscope: %s:%d (%s %s, serial %s)",
-		host.c_str(),
-		port,
-		scopes[0]->GetVendor().c_str(),
-		scopes[0]->GetName().c_str(),
-		scopes[0]->GetSerial().c_str()
-		);
+	string title = "Oscilloscope: ";
+	for(size_t i=0; i<scopes.size(); i++)
+	{
+		auto scope = scopes[i];
+
+		char tt[256];
+		snprintf(tt, sizeof(tt), "%s (%s %s, serial %s)",
+			scope->m_nickname.c_str(),
+			scope->GetVendor().c_str(),
+			scope->GetName().c_str(),
+			scope->GetSerial().c_str()
+			);
+
+		if(i > 0)
+			title += ", ";
+		title += tt;
+	}
 	set_title(title);
 
 	//Initial setup
@@ -138,28 +147,44 @@ void OscilloscopeWindow::CreateWidgets()
 		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
 		m_triggerConfigLabel.set_size_request(75, 1);
 
-	//Create menu items for all the channels
-	auto scope = m_scopes[0];
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	//Process all of the channels
+	for(auto scope : m_scopes)
 	{
-		auto chan = scope->GetChannel(i);
-		auto item = Gtk::manage(new Gtk::MenuItem(chan->GetHwname(), false));
-		item->signal_activate().connect(
-			sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
-		m_channelsMenu.append(*item);
-
-		//See which channels are currently on
-		//DEBUG: enable all analog channels to save time when setting up the client
-		//if(chan->IsEnabled())
-		if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto w = new WaveformArea(
-				scope,
-				chan,
-				this);
-			w->m_group = group;
-			m_waveformAreas.emplace(w);
-			group->m_waveformBox.pack_start(*w);
+			auto chan = scope->GetChannel(i);
+
+			//TODO: only if we have >1 scope
+			//Qualify the channel name by the scope name
+			if(true)
+			{
+				char tmp[128];
+				snprintf(tmp, sizeof(tmp), "%s:%s", scope->m_nickname.c_str(), chan->GetHwname().c_str());
+				chan->m_displayname = tmp;
+			}
+
+			//Add a menu item - but not for the external trigger(s)
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			{
+				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+				item->signal_activate().connect(
+					sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+				m_channelsMenu.append(*item);
+			}
+
+			//See which channels are currently on
+			//DEBUG: enable all analog channels to save time when setting up the client
+			//if(chan->IsEnabled())
+			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			{
+				auto w = new WaveformArea(
+					scope,
+					chan,
+					this);
+				w->m_group = group;
+				m_waveformAreas.emplace(w);
+				group->m_waveformBox.pack_start(*w);
+			}
 		}
 	}
 
@@ -461,12 +486,12 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 		{
 			//Invalid value, skip it
-			return true;
+			continue;
 		}
 
 		//If not TRIGGERED, do nothing
 		if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			return true;
+			continue;
 
 		//double dt = GetTime() - m_tArm;
 		//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
@@ -476,33 +501,36 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 		//dt = GetTime() - start;
 		//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+
+		//TODO: a lot of the stuff below has to be redone for multi-scope
+
+		//Update the status
+		UpdateStatusBar();
+
+		//Re-arm trigger for another pass.
+		//Do this before we re-run measurements etc, so triggering runs in parallel with the math
+		if(!m_triggerOneShot)
+			ArmTrigger(false);
+
+		//We've stopped
+		else
+		{
+			m_btnStart.set_sensitive(true);
+			m_btnStartSingle.set_sensitive(true);
+			m_btnStop.set_sensitive(false);
+		}
+
+		//Update the views
+		for(auto w : m_waveformAreas)
+		{
+			if(w->GetChannel()->GetScope() == scope)
+				w->OnWaveformDataReady();
+		}
+
+		//Update the measurements (TODO: only relevant ones)
+		for(auto g : m_waveformGroups)
+			g->RefreshMeasurements();
 	}
-
-	//TODO: a lot of the stuff below has to be redone for multi-scope
-
-	//Update the status
-	UpdateStatusBar();
-
-	//Re-arm trigger for another pass.
-	//Do this before we re-run measurements etc, so triggering runs in parallel with the math
-	if(!m_triggerOneShot)
-		ArmTrigger(false);
-
-	//We've stopped
-	else
-	{
-		m_btnStart.set_sensitive(true);
-		m_btnStartSingle.set_sensitive(true);
-		m_btnStop.set_sensitive(false);
-	}
-
-	//Update the views
-	for(auto w : m_waveformAreas)
-		w->OnWaveformDataReady();
-
-	//Update the measurements
-	for(auto g : m_waveformGroups)
-		g->RefreshMeasurements();
 
 	//false to stop timer
 	return true;

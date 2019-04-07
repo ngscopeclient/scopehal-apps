@@ -148,6 +148,8 @@ bool WaveformArea::PrepareGeometry()
 		float xleft = data.GetSampleStart(j) * xscale + xoff;
 		float xright = data.GetSampleStart(j+1) * xscale + xoff;
 
+		//TODO: if a triangle is <1 pixel wide, don't stretch. Merge it with the adjacent one(s)
+
 		//If the triangle would be degenerate horizontally (less than one pixel wide), stretch it
 		float width = xright-xleft;
 		float minwidth = 2;

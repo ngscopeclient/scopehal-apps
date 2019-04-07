@@ -60,7 +60,6 @@ public:
 	}
 
 	vector<Oscilloscope*> m_scopes;
-	string m_host;
 
 protected:
 	Gtk::Window* m_window;
@@ -79,7 +78,7 @@ ScopeApp::~ScopeApp()
 void ScopeApp::on_activate()
 {
 	//Test application
-	m_window = new OscilloscopeWindow(m_scopes, m_host, 0);
+	m_window = new OscilloscopeWindow(m_scopes);
 	add_window(*m_window);
 	m_window->present();
 }
@@ -92,13 +91,10 @@ int main(int argc, char* argv[])
 	chdir("/nfs4/home/azonenberg/code/scopehal-cmake/src/glscopeclient/");
 
 	//Global settings
-	unsigned short port = 0;
-	string server = "";
-	string api = "redtin_uart";
-
 	Severity console_verbosity = Severity::NOTICE;
 
 	//Parse command-line arguments
+	vector<string> scopes;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -112,23 +108,19 @@ int main(int argc, char* argv[])
 			//not implemented
 			return 0;
 		}
-		else if(s == "--port")
-			port = atoi(argv[++i]);
-		else if(s == "--server")
-			server = argv[++i];
-		else if(s == "--api")
-			api = argv[++i];
 		else if(s == "--version")
 		{
 			//not implemented
 			//ShowVersion();
 			return 0;
 		}
-		else
+		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
 			return 1;
 		}
+		else
+			scopes.push_back(s);
 	}
 
 	//Set up logging
@@ -138,20 +130,41 @@ int main(int argc, char* argv[])
 	ScopeProtocolStaticInit();
 	ScopeMeasurementStaticInit();
 
-	//Connect to the server
-	if(api == "lecroy_vicp")
+	//Connect to the scope(s)
+	for(auto s : scopes)
 	{
-		//default port if not specified
-		if(port == 0)
-			port = 1861;
+		//Scope format: name:api:host[:port]
+		char nick[128];
+		char api[128];
+		char host[128];
+		int port = 0;
+		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%d", nick, api, host, &port))
+		{
+			if(3 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]", nick, api, host))
+			{
+				LogError("Invalid scope string %s\n", s.c_str());
+				continue;
+			}
+		}
 
-		app->m_scopes.push_back(new LeCroyVICPOscilloscope(server, port));
-		app->m_host = server;
-	}
-	else
-	{
-		LogError("Unrecognized API \"%s\", use --help\n", api.c_str());
-		return 1;
+		string sapi(api);
+
+		//Connect to the scope
+		if(sapi == "lecroy_vicp")
+		{
+			//default port if not specified
+			if(port == 0)
+				port = 1861;
+
+			auto scope = new LeCroyVICPOscilloscope(host, port);
+			scope->m_nickname = nick;
+			app->m_scopes.push_back(scope);
+		}
+		else
+		{
+			LogError("Unrecognized API \"%s\", use --help\n", api);
+			return 1;
+		}
 	}
 
 	//and run the app

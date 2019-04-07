@@ -120,7 +120,7 @@ void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string col
 	//Create the column and figure out the title
 	auto col = new MeasurementColumn;
 	char tmp[256];
-	snprintf(tmp, sizeof(tmp), "%s: %s", chan->GetHwname().c_str(), name.c_str());
+	snprintf(tmp, sizeof(tmp), "%s: %s", chan->m_displayname.c_str(), name.c_str());
 	col->m_title = tmp;
 	m_measurementColumns.emplace(col);
 
