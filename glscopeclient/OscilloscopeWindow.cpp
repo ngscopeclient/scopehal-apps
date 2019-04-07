@@ -108,7 +108,7 @@ void OscilloscopeWindow::CreateWidgets()
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnQuit));
 					m_fileMenu.append(*item);
 			m_menu.append(m_channelsMenuItem);
-				m_channelsMenuItem.set_label("Channels");
+				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);
 		m_vbox.pack_start(m_toolbar, Gtk::PACK_SHRINK);
 			m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
@@ -123,13 +123,46 @@ void OscilloscopeWindow::CreateWidgets()
 				m_btnStop.set_tooltip_text("Stop trigger");
 				m_btnStop.set_icon_name("media-playback-stop");
 
-		//Create the initial splitter and waveform group
 		auto split = new Gtk::HPaned;
-		m_vbox.pack_start(*split);
-		m_splitters.emplace(split);
-		auto group = new WaveformGroup;
-		m_waveformGroups.emplace(group);
-		split->pack1(group->m_frame);
+			m_vbox.pack_start(*split);
+			m_splitters.emplace(split);
+			auto group = new WaveformGroup;
+			m_waveformGroups.emplace(group);
+			split->pack1(group->m_frame);
+
+		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+		m_statusbar.pack_end(m_sampleRateLabel, Gtk::PACK_SHRINK);
+		m_sampleRateLabel.set_size_request(75, 1);
+		m_statusbar.pack_end(m_sampleCountLabel, Gtk::PACK_SHRINK);
+		m_sampleCountLabel.set_size_request(75, 1);
+		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
+		m_triggerConfigLabel.set_size_request(75, 1);
+
+	//Create menu items for all the channels
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	{
+		auto chan = m_scope->GetChannel(i);
+		auto item = Gtk::manage(new Gtk::MenuItem(chan->GetHwname(), false));
+		item->signal_activate().connect(
+			sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+		m_channelsMenu.append(*item);
+
+		//See which channels are currently on
+		//DEBUG: enable all channels to save time when setting up the client
+		//if(chan->IsEnabled())
+		if(true)
+		{
+			auto w = new WaveformArea(
+				m_scope,
+				chan,
+				this);
+			w->m_group = group;
+			m_waveformAreas.emplace(w);
+			group->m_waveformBox.pack_start(*w);
+		}
+	}
+
+	m_channelsMenu.show_all();
 
 	//Done adding widgets
 	show_all();
@@ -137,49 +170,9 @@ void OscilloscopeWindow::CreateWidgets()
 	//Don't show measurements by default
 	group->m_measurementFrame.hide();
 
-	//Create viewers and menu items for all the channels
-	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
-	{
-		auto chan = m_scope->GetChannel(i);
-		auto w = new WaveformArea(
-			m_scope,
-			chan,
-			this);
-		w->m_group = group;
-		m_waveformAreas.emplace(w);
-		group->m_waveformBox.pack_start(*w);
-
-		auto item = Gtk::manage(new Gtk::CheckMenuItem(chan->GetHwname(), false));
-		item->signal_activate().connect(
-			sigc::bind<WaveformArea*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnToggleChannel), w));
-		m_channelsMenu.append(*item);
-
-		//See which channels are currently on
-		if(chan->IsEnabled())
-		{
-			item->set_active();
-			w->show();
-		}
-		else
-			w->hide();
-	}
-
-	//Status bar has to come at the bottom
-	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-		m_statusbar.pack_end(m_sampleRateLabel, Gtk::PACK_SHRINK);
-		m_sampleRateLabel.set_size_request(75, 1);
-		m_statusbar.pack_end(m_sampleCountLabel, Gtk::PACK_SHRINK);
-		m_sampleCountLabel.set_size_request(75, 1);
-		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
-		m_triggerConfigLabel.set_size_request(75, 1);
-	m_statusbar.show_all();
-
-	m_channelsMenu.show_all();
-
 	//Initialize the style sheets
 	m_css = Gtk::CssProvider::create();
 	m_css->load_from_path("styles/glscopeclient.css");
-
 	get_style_context()->add_provider_for_screen(
 		Gdk::Screen::get_default(),
 		m_css,
@@ -199,20 +192,15 @@ void OscilloscopeWindow::OnMoveNewBelow(WaveformArea* w)
 	OnMoveNew(w, false);
 }
 
-void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
+void OscilloscopeWindow::SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal)
 {
 	//Hierarchy is WaveformArea -> WaveformGroup waveform box -> WaveformGroup box -> WaveformGroup frame -> splitter
-	auto frame = w->get_parent()->get_parent()->get_parent();
 	auto split = dynamic_cast<Gtk::Paned*>(frame->get_parent());
 	if(split == NULL)
 	{
 		LogError("parent isn't a splitter\n");
 		return;
 	}
-
-	//Make a new group and move the waveform view to it
-	auto group = new WaveformGroup;
-	m_waveformGroups.emplace(group);
 
 	//See what the widget's current parenting situation is.
 	//We might have a free splitter area free already!
@@ -254,8 +242,32 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 		nsplit->pack2(group->m_frame);
 		split->show_all();
 	}
+}
 
+void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
+{
+	//Make a new group
+	auto group = new WaveformGroup;
+	m_waveformGroups.emplace(group);
+
+	//Split the existing group and add the new group to it
+	SplitGroup(w->get_parent()->get_parent()->get_parent(), group, horizontal);
+
+	//Move the waveform into the new group
 	OnMoveToExistingGroup(w, group);
+}
+
+void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
+{
+	//Make a new group
+	auto group = new WaveformGroup;
+	m_waveformGroups.emplace(group);
+
+	//Split the existing group and add the new group to it
+	SplitGroup(w->get_parent()->get_parent()->get_parent(), group, horizontal);
+
+	//Make a copy of the current waveform view and add to that group
+	OnCopyToExistingGroup(w, group);
 }
 
 void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
@@ -269,6 +281,28 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 	//Remove any groups that no longer have any waveform views in them,'
 	//or splitters that only have one child
 	GarbageCollectGroups();
+}
+
+void OscilloscopeWindow::OnCopyNewRight(WaveformArea* w)
+{
+	OnCopyNew(w, true);
+}
+
+void OscilloscopeWindow::OnCopyNewBelow(WaveformArea* w)
+{
+	OnCopyNew(w, false);
+}
+
+void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
+{
+	//Create a new waveform area that looks like the existing one (not an exact copy)
+	WaveformArea* nw = new WaveformArea(w);
+	m_waveformAreas.emplace(nw);
+
+	//Then add it like normal
+	nw->m_group = ngroup;
+	ngroup->m_waveformBox.pack_start(*nw);
+	nw->show();
 }
 
 void OscilloscopeWindow::GarbageCollectGroups()
@@ -378,43 +412,35 @@ void OscilloscopeWindow::OnQuit()
 	close();
 }
 
-void OscilloscopeWindow::OnToggleChannel(WaveformArea* w)
+void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 {
-	//We need this guard because set_active() will invoke this handler again!
-	if(m_toggleInProgress)
-		return;
-	m_toggleInProgress = true;
+	//Add to a random group for now
+	DoAddChannel(chan, *m_waveformGroups.begin());
+}
 
-	auto chan = w->GetChannel();
+WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup)
+{
+	//Create the viewer
+	auto w = new WaveformArea(
+		m_scope,
+		chan,
+		this);
+	w->m_group = ngroup;
+	m_waveformAreas.emplace(w);
+	ngroup->m_waveformBox.pack_start(*w);
+	w->show();
+	return w;
+}
 
-	//TODO: make this more efficient if we have lots of channels?
-	auto children = m_channelsMenu.get_children();
-	Gtk::CheckMenuItem* menu = NULL;
-	for(auto item : children)
-	{
-		menu = dynamic_cast<Gtk::CheckMenuItem*>(item);
-		if(menu == NULL)
-			continue;
-		if(menu->get_label() == chan->GetHwname())
-			break;
-	}
+void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
+{
+	//Get rid of the channel
+	w->get_parent()->remove(*w);
+	m_waveformAreas.erase(w);
+	delete w;
 
-	if(w->is_visible())
-	{
-		w->hide();
-		chan->Disable();
-		if(menu)
-			menu->set_active(false);
-	}
-	else
-	{
-		w->show();
-		w->GetChannel()->Enable();
-		if(menu)
-			menu->set_active(true);
-	}
-
-	m_toggleInProgress = false;
+	//Clean up in case it was the last channel in the group
+	GarbageCollectGroups();
 }
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
@@ -481,8 +507,11 @@ void OscilloscopeWindow::UpdateStatusBar()
 		if(chan->IsEnabled())
 			break;
 	}
+	auto data = chan->GetData();
+	if(data == NULL)
+		return;	//don't update
 
-	double gsps = 1000 / chan->GetData()->m_timescale;
+	double gsps = 1000 / data->m_timescale;
 	char tmp[128];
 	snprintf(tmp, sizeof(tmp), "%.1f GS/s", gsps);
 	m_sampleRateLabel.set_label(tmp);

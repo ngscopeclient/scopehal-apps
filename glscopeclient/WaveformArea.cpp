@@ -46,20 +46,38 @@ WaveformArea::WaveformArea(
 	OscilloscopeChannel* channel,
 	OscilloscopeWindow* parent
 	)
-	: m_scope(scope)
+	: m_persistence(false)
+	, m_scope(scope)
 	, m_channel(channel)
 	, m_parent(parent)
+	, m_pixelsPerVolt(1)
+{
+	SharedCtorInit();
+}
+
+/**
+	@brief Semi-copy constructor, used when copying a waveform to a new group
+
+	Note that we only clone UI settings, the GL context, GTK properties, etc are new!
+ */
+WaveformArea::WaveformArea(const WaveformArea* clone)
+	: m_persistence(clone->m_persistence)
+	, m_scope(clone->m_scope)
+	, m_channel(clone->m_channel)
+	, m_parent(clone->m_parent)
+	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
+{
+	SharedCtorInit();
+}
+
+void WaveformArea::SharedCtorInit()
 {
 	m_frameTime = 0;
 	m_frameCount = 0;
-	m_persistence = false;
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
 	m_dragState = DRAG_NONE;
-
 	m_padding = 2;
-	m_pixelsPerVolt = 1;
-
 	m_lastFrameStart = -1;
 	m_persistenceClear = true;
 
@@ -75,10 +93,14 @@ WaveformArea::WaveformArea(
 	CreateWidgets();
 
 	m_group = NULL;
+
+	m_channel->AddRef();
 }
 
 WaveformArea::~WaveformArea()
 {
+	m_channel->Release();
+
 	double tavg = m_frameTime / m_frameCount;
 	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
 
@@ -136,8 +158,12 @@ void WaveformArea::CreateWidgets()
 		m_copyItem.set_submenu(m_copyMenu);
 			m_copyMenu.append(m_copyNewGroupBelowItem);
 				m_copyNewGroupBelowItem.set_label("Insert new group at bottom");
+				m_copyNewGroupBelowItem.signal_activate().connect(
+					sigc::mem_fun(*this, &WaveformArea::OnCopyNewBelow));
 			m_copyMenu.append(m_copyNewGroupRightItem);
 				m_copyNewGroupRightItem.set_label("Insert new group at right");
+				m_copyNewGroupRightItem.signal_activate().connect(
+					sigc::mem_fun(*this, &WaveformArea::OnCopyNewRight));
 
 	//Persistence
 	m_contextMenu.append(m_persistenceItem);

@@ -347,9 +347,24 @@ void WaveformArea::OnMoveToExistingGroup(WaveformGroup* group)
 	m_parent->OnMoveToExistingGroup(this, group);
 }
 
+void WaveformArea::OnCopyNewRight()
+{
+	m_parent->OnCopyNewRight(this);
+}
+
+void WaveformArea::OnCopyNewBelow()
+{
+	m_parent->OnCopyNewBelow(this);
+}
+
+void WaveformArea::OnCopyToExistingGroup(WaveformGroup* group)
+{
+	m_parent->OnCopyToExistingGroup(this, group);
+}
+
 void WaveformArea::OnHide()
 {
-	m_parent->OnToggleChannel(this);
+	m_parent->OnRemoveChannel(this);
 }
 
 void WaveformArea::OnTogglePersistence()
@@ -446,28 +461,45 @@ void WaveformArea::UpdateContextMenu()
 	//Let signal handlers know to ignore any events that happen as we pull state from the scope
 	m_updatingContextMenu = true;
 
-	//Update waveform views
+	//Clean out old group stuff
 	for(auto m : m_moveExistingGroupItems)
 	{
 		m_moveMenu.remove(*m);
 		delete m;
 	}
 	m_moveExistingGroupItems.clear();
+	for(auto m : m_copyExistingGroupItems)
+	{
+		m_copyMenu.remove(*m);
+		delete m;
+	}
+	m_copyExistingGroupItems.clear();
+
+	//Add new entries
 	for(auto g : m_parent->m_waveformGroups)
 	{
+		//Move
 		auto item = new Gtk::MenuItem;
 		item->set_label(g->m_frame.get_label());
 		m_moveMenu.append(*item);
 		m_moveExistingGroupItems.emplace(item);
-
-		//Gray out the item if it's our current parent
 		if(get_parent() == &g->m_vbox)
 			item->set_sensitive(false);
-
 		item->signal_activate().connect(sigc::bind<WaveformGroup*>(
 			sigc::mem_fun(*this, &WaveformArea::OnMoveToExistingGroup), g));
+
+		//Copy
+		item = new Gtk::MenuItem;
+		item->set_label(g->m_frame.get_label());
+		m_copyMenu.append(*item);
+		m_copyExistingGroupItems.emplace(item);
+		if(get_parent() == &g->m_vbox)
+			item->set_sensitive(false);
+		item->signal_activate().connect(sigc::bind<WaveformGroup*>(
+			sigc::mem_fun(*this, &WaveformArea::OnCopyToExistingGroup), g));
 	}
 	m_moveMenu.show_all();
+	m_copyMenu.show_all();
 
 	//Gray out decoders that don't make sense for the type of channel we've selected
 	auto children = m_decodeMenu.get_children();

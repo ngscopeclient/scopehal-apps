@@ -46,6 +46,7 @@ class WaveformArea : public Gtk::GLArea
 {
 public:
 	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent);
+	WaveformArea(const WaveformArea* clone);
 	virtual ~WaveformArea();
 
 	void OnWaveformDataReady();
@@ -59,6 +60,8 @@ public:
 	WaveformGroup* m_group;
 
 protected:
+	void SharedCtorInit();
+
 	virtual void on_realize();
 	virtual void on_unrealize();
 	virtual void on_resize (int width, int height);
@@ -88,6 +91,7 @@ protected:
 			Gtk::Menu m_copyMenu;
 				Gtk::MenuItem m_copyNewGroupBelowItem;
 				Gtk::MenuItem m_copyNewGroupRightItem;
+				std::set<Gtk::MenuItem*> m_copyExistingGroupItems;
 		Gtk::MenuItem m_decodeItem;
 			Gtk::Menu m_decodeMenu;
 		Gtk::MenuItem m_measureItem;
@@ -133,6 +137,9 @@ protected:
 	void OnMoveNewRight();
 	void OnMoveNewBelow();
 	void OnMoveToExistingGroup(WaveformGroup* group);
+	void OnCopyNewRight();
+	void OnCopyNewBelow();
+	void OnCopyToExistingGroup(WaveformGroup* group);
 	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
 
 	void CleanupBufferObjects();

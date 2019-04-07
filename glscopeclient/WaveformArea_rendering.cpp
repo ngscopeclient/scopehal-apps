@@ -594,7 +594,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
-	tlayout->set_text(m_channel->GetHwname());
+	tlayout->set_text(m_channel->m_displayname);
 	tlayout->get_pixel_size(twidth, theight);
 
 	//Black background

@@ -52,24 +52,33 @@ public:
 	Oscilloscope* GetScope()
 	{ return m_scope; }
 
-	void OnToggleChannel(WaveformArea* w);
-	void OnMoveNewRight(WaveformArea* w);
-	void OnMoveNewBelow(WaveformArea* w);
-	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
-
 	void OnAutofitHorizontal();
 	void OnZoomInHorizontal(WaveformGroup* group);
 	void OnZoomOutHorizontal(WaveformGroup* group);
 	void ClearPersistence(WaveformGroup* group);
 	void ClearAllPersistence();
 
+	void OnRemoveChannel(WaveformArea* w);
+
+	//need to be public so it can be called by WaveformArea
+	void OnMoveNew(WaveformArea* w, bool horizontal);
+	void OnMoveNewRight(WaveformArea* w);
+	void OnMoveNewBelow(WaveformArea* w);
+	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+
+	void OnCopyNew(WaveformArea* w, bool horizontal);
+	void OnCopyNewRight(WaveformArea* w);
+	void OnCopyNewBelow(WaveformArea* w);
+	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+
+	void OnAddChannel(OscilloscopeChannel* w);
+	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup);
+
 protected:
 	void ArmTrigger(bool oneshot);
 
-	void OnMoveNew(WaveformArea* w, bool horizontal);
+	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
 	void GarbageCollectGroups();
-
-	//Gtk::IconTheme m_iconTheme;
 
 	//Menu/toolbar message handlers
 	void OnStart();
