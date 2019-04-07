@@ -483,7 +483,7 @@ void WaveformArea::UpdateContextMenu()
 		item->set_label(g->m_frame.get_label());
 		m_moveMenu.append(*item);
 		m_moveExistingGroupItems.emplace(item);
-		if(get_parent() == &g->m_vbox)
+		if(get_parent() == &g->m_waveformBox)
 			item->set_sensitive(false);
 		item->signal_activate().connect(sigc::bind<WaveformGroup*>(
 			sigc::mem_fun(*this, &WaveformArea::OnMoveToExistingGroup), g));
@@ -493,8 +493,7 @@ void WaveformArea::UpdateContextMenu()
 		item->set_label(g->m_frame.get_label());
 		m_copyMenu.append(*item);
 		m_copyExistingGroupItems.emplace(item);
-		if(get_parent() == &g->m_vbox)
-			item->set_sensitive(false);
+		//don't disable if in this group, it's OK to copy to ourself
 		item->signal_activate().connect(sigc::bind<WaveformGroup*>(
 			sigc::mem_fun(*this, &WaveformArea::OnCopyToExistingGroup), g));
 	}

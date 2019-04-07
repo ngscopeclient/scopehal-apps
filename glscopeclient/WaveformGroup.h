@@ -75,8 +75,6 @@ public:
 
 	float m_pixelsPerPicosecond;
 
-	static int m_numGroups;
-
 	enum CursorConfig
 	{
 		CURSOR_NONE,
@@ -93,6 +91,8 @@ protected:
 	MeasurementColumn* m_selectedColumn;
 	bool OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col);
 	void OnRemoveMeasurementItem();
+
+	static int m_numGroups;
 };
 
 #endif

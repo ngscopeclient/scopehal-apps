@@ -248,6 +248,7 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
 	auto group = new WaveformGroup;
+	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
@@ -261,6 +262,7 @@ void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
 	auto group = new WaveformGroup;
+	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
