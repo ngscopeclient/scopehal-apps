@@ -45,7 +45,7 @@ class OscilloscopeWindow;
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent, Gdk::Color color);
+	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent);
 	virtual ~WaveformArea();
 
 	void OnWaveformDataReady();
@@ -168,7 +168,6 @@ protected:
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
-	Gdk::Color m_color;
 	Framebuffer m_waveformFramebuffer;
 	Texture m_waveformTexture;
 

@@ -144,9 +144,7 @@ void OscilloscopeWindow::CreateWidgets()
 		auto w = new WaveformArea(
 			m_scope,
 			chan,
-			this,
-			Gdk::Color(GetDefaultChannelColor(i))
-			);
+			this);
 		w->m_group = group;
 		m_waveformAreas.emplace(w);
 		group->m_waveformBox.pack_start(*w);
@@ -448,15 +446,8 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	//Update the status
 	UpdateStatusBar();
 
-	//Update the views
-	for(auto w : m_waveformAreas)
-		w->OnWaveformDataReady();
-
-	//Update the measurements
-	for(auto g : m_waveformGroups)
-		g->RefreshMeasurements();
-
-	//Re-arm trigger for another pass
+	//Re-arm trigger for another pass.
+	//Do this before we re-run measurements etc, so triggering runs in parallel with the math
 	if(!m_triggerOneShot)
 		ArmTrigger(false);
 
@@ -467,6 +458,14 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		m_btnStartSingle.set_sensitive(true);
 		m_btnStop.set_sensitive(false);
 	}
+
+	//Update the views
+	for(auto w : m_waveformAreas)
+		w->OnWaveformDataReady();
+
+	//Update the measurements
+	for(auto g : m_waveformGroups)
+		g->RefreshMeasurements();
 
 	//false to stop timer
 	return true;

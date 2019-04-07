@@ -348,17 +348,19 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	float top_brightness = 0.1;
 	float bottom_brightness = 0.0;
 
+	Gdk::Color color(m_channel->m_displaycolor);
+
 	Cairo::RefPtr<Cairo::LinearGradient> background_gradient = Cairo::LinearGradient::create(0, ytop, 0, ybot);
 	background_gradient->add_color_stop_rgb(
 		0,
-		m_color.get_red_p() * top_brightness,
-		m_color.get_green_p() * top_brightness,
-		m_color.get_blue_p() * top_brightness);
+		color.get_red_p() * top_brightness,
+		color.get_green_p() * top_brightness,
+		color.get_blue_p() * top_brightness);
 	background_gradient->add_color_stop_rgb(
 		1,
-		m_color.get_red_p() * bottom_brightness,
-		m_color.get_green_p() * bottom_brightness,
-		m_color.get_blue_p() * bottom_brightness);
+		color.get_red_p() * bottom_brightness,
+		color.get_green_p() * bottom_brightness,
+		color.get_blue_p() * bottom_brightness);
 	cr->set_source(background_gradient);
 	cr->rectangle(0, 0, m_plotRight, m_height);
 	cr->fill();
@@ -387,6 +389,8 @@ float WaveformArea::YPositionToVolts(float y)
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
 	cr->save();
+
+	Gdk::Color color(m_channel->m_displaycolor);
 
 	//Calculate width of right side axis label
 	int twidth;
@@ -499,9 +503,9 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		else
 		{
 			cr->set_source_rgba(
-				m_color.get_red_p(),
-				m_color.get_green_p(),
-				m_color.get_blue_p(),
+				color.get_red_p(),
+				color.get_green_p(),
+				color.get_blue_p(),
 				1);
 		}
 		cr->move_to(m_plotRight, y);
@@ -522,14 +526,16 @@ void WaveformArea::RenderTraceColorCorrection()
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
+	Gdk::Color color(m_channel->m_displaycolor);
+
 	//Draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
 	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
-	m_colormapProgram.SetUniform(m_color.get_red_p(), "r");
-	m_colormapProgram.SetUniform(m_color.get_green_p(), "g");
-	m_colormapProgram.SetUniform(m_color.get_blue_p(), "b");
+	m_colormapProgram.SetUniform(color.get_red_p(), "r");
+	m_colormapProgram.SetUniform(color.get_green_p(), "g");
+	m_colormapProgram.SetUniform(color.get_blue_p(), "b");
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }

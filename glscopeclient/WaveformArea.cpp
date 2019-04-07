@@ -44,11 +44,9 @@ using namespace glm;
 WaveformArea::WaveformArea(
 	Oscilloscope* scope,
 	OscilloscopeChannel* channel,
-	OscilloscopeWindow* parent,
-	Gdk::Color color
+	OscilloscopeWindow* parent
 	)
-	: m_color(color)
-	, m_scope(scope)
+	: m_scope(scope)
 	, m_channel(channel)
 	, m_parent(parent)
 {

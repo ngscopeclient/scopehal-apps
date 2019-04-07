@@ -365,7 +365,7 @@ void WaveformArea::OnProtocolDecode(string name)
 
 void WaveformArea::OnMeasure(string name)
 {
-	m_group->AddColumn(name, m_selectedChannel, m_color.to_string());
+	m_group->AddColumn(name, m_selectedChannel, m_selectedChannel->m_displaycolor);
 }
 
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
