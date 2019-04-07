@@ -378,11 +378,8 @@ void WaveformArea::OnTogglePersistence()
 void WaveformArea::OnProtocolDecode(string name)
 {
 	//Create a new decoder for the incoming signal
-	char hwname[256];
-	snprintf(hwname, sizeof(hwname), "%s/%s", m_selectedChannel->m_displayname.c_str(), name.c_str());
 	string color = GetDefaultChannelColor(g_numDecodes ++);
-
-	auto decode = ProtocolDecoder::CreateDecoder(name, hwname, color);
+	auto decode = ProtocolDecoder::CreateDecoder(name, color);
 
 	//Check if we know how to use it
 	if(decode->IsOverlay() || decode->NeedsConfig() || (decode->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
@@ -395,6 +392,9 @@ void WaveformArea::OnProtocolDecode(string name)
 
 	//Set the single channel for now
 	decode->SetInput(0, m_selectedChannel);
+
+	//Set the name
+	decode->SetDefaultName();
 
 	//Create a new waveform view for the generated signal
 	m_parent->DoAddChannel(decode, m_group);
@@ -535,7 +535,6 @@ void WaveformArea::UpdateContextMenu()
 
 			auto decoder = ProtocolDecoder::CreateDecoder(
 				menu->get_label(),
-				"dummy",
 				"");
 			menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
 			delete decoder;

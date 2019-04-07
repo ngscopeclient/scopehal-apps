@@ -320,7 +320,7 @@ void WaveformArea::CreateWidgets()
 				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
 
 			//Create a test decode and see where it goes
-			auto d = ProtocolDecoder::CreateDecoder(p, "", "");
+			auto d = ProtocolDecoder::CreateDecoder(p, "");
 			switch(d->GetCategory())
 			{
 				case ProtocolDecoder::CAT_ANALYSIS:
