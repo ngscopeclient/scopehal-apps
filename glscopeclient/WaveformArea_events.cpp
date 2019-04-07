@@ -42,6 +42,8 @@
 using namespace std;
 using namespace glm;
 
+extern int g_numDecodes;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Window events
 
@@ -375,7 +377,27 @@ void WaveformArea::OnTogglePersistence()
 
 void WaveformArea::OnProtocolDecode(string name)
 {
-	LogDebug("Protocol decode: %s\n", name.c_str());
+	//Create a new decoder for the incoming signal
+	char hwname[256];
+	snprintf(hwname, sizeof(hwname), "%s/%s", m_selectedChannel->m_displayname.c_str(), name.c_str());
+	string color = GetDefaultChannelColor(g_numDecodes ++);
+
+	auto decode = ProtocolDecoder::CreateDecoder(name, hwname, color);
+
+	//Check if we know how to use it
+	if(decode->IsOverlay() || decode->NeedsConfig() || (decode->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	{
+		LogNotice("Protocol decodes involving overlays or configs not yet implemented\n");
+
+		delete decode;
+		return;
+	}
+
+	//Set the single channel for now
+	decode->SetInput(0, m_selectedChannel);
+
+	//Create a new waveform view for the generated signal
+	m_parent->DoAddChannel(decode, m_group);
 }
 
 void WaveformArea::OnMeasure(string name)
@@ -421,7 +443,7 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	if(x > m_plotRight)
 	{
 		//On the trigger button?
-		if(m_channel->GetIndex() == m_scope->GetTriggerChannelIndex())
+		if((m_scope != NULL) && (m_channel->GetIndex() == m_scope->GetTriggerChannelIndex()) )
 		{
 			float vy = VoltsToYPosition(m_scope->GetTriggerVoltage());
 			float radius = 20;

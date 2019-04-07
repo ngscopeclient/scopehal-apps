@@ -41,6 +41,9 @@
 
 using namespace std;
 
+//for color selection
+int g_numDecodes = 0;
+
 /**
 	@brief The main application class
  */

@@ -447,6 +447,10 @@ void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 
 WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup)
 {
+	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
+	if(decode)
+		m_decoders.emplace(decode);
+
 	//Create the viewer
 	auto w = new WaveformArea(
 		chan->GetScope(),
@@ -461,6 +465,12 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 
 void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 {
+	//If we're about to remove the last viewer for a protocol decoder, forget about it
+	auto chan = w->GetChannel();
+	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
+	if(decode && (chan->GetRefCount() == 1) )
+		m_decoders.erase(decode);
+
 	//Get rid of the channel
 	w->get_parent()->remove(*w);
 	m_waveformAreas.erase(w);
@@ -519,16 +529,22 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			m_btnStop.set_sensitive(false);
 		}
 
-		//Update the views
-		for(auto w : m_waveformAreas)
-		{
-			if(w->GetChannel()->GetScope() == scope)
-				w->OnWaveformDataReady();
-		}
+		//TODO: handle multiple scopes properly here (refresh after they're all in sync)
 
 		//Update the measurements (TODO: only relevant ones)
 		for(auto g : m_waveformGroups)
 			g->RefreshMeasurements();
+
+		//Update our protocol decoders (TODO: only relevant ones)
+		for(auto d : m_decoders)
+			d->Refresh();
+
+		//Update the views
+		for(auto w : m_waveformAreas)
+		{
+			if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
+				w->OnWaveformDataReady();
+		}
 	}
 
 	//false to stop timer
