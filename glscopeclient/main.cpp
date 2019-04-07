@@ -49,7 +49,6 @@ class ScopeApp : public Gtk::Application
 public:
 	ScopeApp()
 	 : Gtk::Application()
-	 , m_scope(NULL)
 	 , m_window(NULL)
 	{}
 
@@ -60,8 +59,8 @@ public:
 		return Glib::RefPtr<ScopeApp>(new ScopeApp);
 	}
 
-	Oscilloscope* m_scope;
-	std::string m_host;
+	vector<Oscilloscope*> m_scopes;
+	string m_host;
 
 protected:
 	Gtk::Window* m_window;
@@ -80,7 +79,7 @@ ScopeApp::~ScopeApp()
 void ScopeApp::on_activate()
 {
 	//Test application
-	m_window = new OscilloscopeWindow(m_scope, m_host, 0);
+	m_window = new OscilloscopeWindow(m_scopes, m_host, 0);
 	add_window(*m_window);
 	m_window->present();
 }
@@ -146,7 +145,7 @@ int main(int argc, char* argv[])
 		if(port == 0)
 			port = 1861;
 
-		app->m_scope = new LeCroyVICPOscilloscope(server, port);
+		app->m_scopes.push_back(new LeCroyVICPOscilloscope(server, port));
 		app->m_host = server;
 	}
 	else

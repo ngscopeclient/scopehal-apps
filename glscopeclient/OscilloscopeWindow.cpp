@@ -47,8 +47,8 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, int port)
-	: m_scope(scope)
+OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, std::string host, int port)
+	: m_scopes(scopes)
 	// m_iconTheme(Gtk::IconTheme::get_default())
 {
 	//Set title
@@ -56,9 +56,9 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	snprintf(title, sizeof(title), "Oscilloscope: %s:%d (%s %s, serial %s)",
 		host.c_str(),
 		port,
-		scope->GetVendor().c_str(),
-		scope->GetName().c_str(),
-		scope->GetSerial().c_str()
+		scopes[0]->GetVendor().c_str(),
+		scopes[0]->GetName().c_str(),
+		scopes[0]->GetSerial().c_str()
 		);
 	set_title(title);
 
@@ -69,9 +69,9 @@ OscilloscopeWindow::OscilloscopeWindow(Oscilloscope* scope, std::string host, in
 	//Add widgets
 	CreateWidgets();
 
-	//Set the update timer (1 kHz)
+	//Set the update timer (100 Hz)
 	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
-	sigc::connection conn = Glib::signal_timeout().connect(slot, 1);
+	sigc::connection conn = Glib::signal_timeout().connect(slot, 10);
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
@@ -139,9 +139,10 @@ void OscilloscopeWindow::CreateWidgets()
 		m_triggerConfigLabel.set_size_request(75, 1);
 
 	//Create menu items for all the channels
-	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	auto scope = m_scopes[0];
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
-		auto chan = m_scope->GetChannel(i);
+		auto chan = scope->GetChannel(i);
 		auto item = Gtk::manage(new Gtk::MenuItem(chan->GetHwname(), false));
 		item->signal_activate().connect(
 			sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
@@ -153,7 +154,7 @@ void OscilloscopeWindow::CreateWidgets()
 		if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 		{
 			auto w = new WaveformArea(
-				m_scope,
+				scope,
 				chan,
 				this);
 			w->m_group = group;
@@ -424,7 +425,7 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 {
 	//Create the viewer
 	auto w = new WaveformArea(
-		m_scope,
+		chan->GetScope(),
 		chan,
 		this);
 	w->m_group = ngroup;
@@ -449,27 +450,35 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
 	//Flush the config cache every 2 seconds
 	if( (GetTime() - m_tLastFlush) > 2)
-		m_scope->FlushConfigCache();
-
-	Oscilloscope::TriggerMode status = m_scope->PollTrigger();
-	if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 	{
-		//Invalid value, skip it
-		return true;
+		for(auto scope : m_scopes)
+			scope->FlushConfigCache();
 	}
 
-	//If not TRIGGERED, do nothing
-	if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-		return true;
+	for(auto scope : m_scopes)
+	{
+		Oscilloscope::TriggerMode status = scope->PollTrigger();
+		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
+		{
+			//Invalid value, skip it
+			return true;
+		}
 
-	//double dt = GetTime() - m_tArm;
-	//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
+		//If not TRIGGERED, do nothing
+		if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			return true;
 
-	//Triggered - get the data from each channel
-	//double start = GetTime();
-	m_scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
-	//dt = GetTime() - start;
-	//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+		//double dt = GetTime() - m_tArm;
+		//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
+
+		//Triggered - get the data from each channel
+		//double start = GetTime();
+		scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+		//dt = GetTime() - start;
+		//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
+	}
+
+	//TODO: a lot of the stuff below has to be redone for multi-scope
 
 	//Update the status
 	UpdateStatusBar();
@@ -501,11 +510,14 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 void OscilloscopeWindow::UpdateStatusBar()
 {
+	//TODO: redo this for multiple scopes
+
 	//Find the first enabled channel (assume same config as the rest for now)
 	OscilloscopeChannel* chan = NULL;
-	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
+	auto scope = m_scopes[0];
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
-		chan = m_scope->GetChannel(i);
+		chan = scope->GetChannel(i);
 		if(chan->IsEnabled())
 			break;
 	}
@@ -527,8 +539,8 @@ void OscilloscopeWindow::UpdateStatusBar()
 		snprintf(tmp, sizeof(tmp), "%zu S", len);
 	m_sampleCountLabel.set_label(tmp);
 
-	string name = m_scope->GetChannel(m_scope->GetTriggerChannelIndex())->GetHwname();
-	float voltage = m_scope->GetTriggerVoltage();
+	string name = scope->GetChannel(scope->GetTriggerChannelIndex())->GetHwname();
+	float voltage = scope->GetTriggerVoltage();
 	if(voltage < 1)
 		snprintf(tmp, sizeof(tmp), "%s %.0f mV", name.c_str(), voltage*1000);
 	else
@@ -560,13 +572,15 @@ void OscilloscopeWindow::OnStop()
 	m_btnStartSingle.set_sensitive(true);
 	m_btnStop.set_sensitive(false);
 
-	m_scope->Stop();
+	for(auto scope : m_scopes)
+		scope->Stop();
 	m_triggerOneShot = true;
 }
 
 void OscilloscopeWindow::ArmTrigger(bool oneshot)
 {
-	m_scope->StartSingleTrigger();
+	for(auto scope : m_scopes)
+		scope->StartSingleTrigger();
 	m_triggerOneShot = oneshot;
 	m_tArm = GetTime();
 }

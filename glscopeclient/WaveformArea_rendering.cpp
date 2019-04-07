@@ -163,7 +163,8 @@ bool WaveformArea::PrepareGeometry()
 		float yleft = (data[j] + offset) * m_pixelsPerVolt;
 		float yright = (data[j+1] + offset) * m_pixelsPerVolt;
 
-		//If the triangle doesn't touch the next one,
+		//If the triangle doesn't touch the next one, stretch vertically? this SHOULD not be possible,
+		//but rendering shows that something is causing stuff to not touch vertically
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!

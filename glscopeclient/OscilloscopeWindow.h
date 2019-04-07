@@ -46,11 +46,8 @@
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(Oscilloscope* scope, std::string host, int port);
+	OscilloscopeWindow(std::vector<Oscilloscope*> scopes, std::string host, int port);
 	~OscilloscopeWindow();
-
-	Oscilloscope* GetScope()
-	{ return m_scope; }
 
 	void OnAutofitHorizontal();
 	void OnZoomInHorizontal(WaveformGroup* group);
@@ -119,8 +116,8 @@ protected:
 
 		Glib::RefPtr<Gtk::CssProvider> m_css;
 
-	//Our oscilloscope connection
-	Oscilloscope* m_scope;
+	//Our scope connections
+	std::vector<Oscilloscope*> m_scopes;
 
 	//Status polling
 	bool OnTimer(int timer);
