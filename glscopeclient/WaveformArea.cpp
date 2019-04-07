@@ -294,6 +294,23 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(m_decodeItem);
 		m_decodeItem.set_label("Protocol decode");
 		m_decodeItem.set_submenu(m_decodeMenu);
+		m_decodeMenu.append(m_decodeAnalysisItem);
+			m_decodeAnalysisItem.set_label("Analysis");
+			m_decodeAnalysisItem.set_submenu(m_decodeAnalysisMenu);
+		m_decodeMenu.append(m_decodeConversionItem);
+			m_decodeConversionItem.set_label("Conversion");
+			m_decodeConversionItem.set_submenu(m_decodeConversionMenu);
+		m_decodeMenu.append(m_decodeMathItem);
+			m_decodeMathItem.set_label("Math");
+			m_decodeMathItem.set_submenu(m_decodeMathMenu);
+		m_decodeMenu.append(m_decodeMiscItem);
+			m_decodeMiscItem.set_label("Misc");
+			m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
+		m_decodeMenu.append(m_decodeSerialItem);
+			m_decodeSerialItem.set_label("Serial");
+			m_decodeSerialItem.set_submenu(m_decodeSerialMenu);
+
+
 		vector<string> names;
 		ProtocolDecoder::EnumProtocols(names);
 		for(auto p : names)
@@ -301,7 +318,32 @@ void WaveformArea::CreateWidgets()
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
 			item->signal_activate().connect(
 				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
-			m_decodeMenu.append(*item);
+
+			//Create a test decode and see where it goes
+			auto d = ProtocolDecoder::CreateDecoder(p, "", "");
+			switch(d->GetCategory())
+			{
+				case ProtocolDecoder::CAT_ANALYSIS:
+					m_decodeAnalysisMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_CONVERSION:
+					m_decodeConversionMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_MATH:
+					m_decodeMathMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_MISC:
+					m_decodeMiscMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_SERIAL:
+					m_decodeSerialMenu.append(*item);
+					break;
+			}
+			delete d;
 		}
 
 	//Measurements

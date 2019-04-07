@@ -94,6 +94,16 @@ protected:
 				std::set<Gtk::MenuItem*> m_copyExistingGroupItems;
 		Gtk::MenuItem m_decodeItem;
 			Gtk::Menu m_decodeMenu;
+				Gtk::MenuItem m_decodeAnalysisItem;
+					Gtk::Menu m_decodeAnalysisMenu;
+				Gtk::MenuItem m_decodeConversionItem;
+					Gtk::Menu m_decodeConversionMenu;
+				Gtk::MenuItem m_decodeMathItem;
+					Gtk::Menu m_decodeMathMenu;
+				Gtk::MenuItem m_decodeMiscItem;
+					Gtk::Menu m_decodeMiscMenu;
+				Gtk::MenuItem m_decodeSerialItem;
+					Gtk::Menu m_decodeSerialMenu;
 		Gtk::MenuItem m_measureItem;
 			Gtk::Menu m_measureMenu;
 				Gtk::MenuItem m_measureVertItem;

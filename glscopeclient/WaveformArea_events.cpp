@@ -502,18 +502,22 @@ void WaveformArea::UpdateContextMenu()
 
 	//Gray out decoders that don't make sense for the type of channel we've selected
 	auto children = m_decodeMenu.get_children();
-	for(auto item : children)
+	for(auto submenu : children)
 	{
-		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
-		if(menu == NULL)
-			continue;
+		auto subchildren = dynamic_cast<Gtk::MenuItem*>(submenu)->get_submenu()->get_children();
+		for(auto item : subchildren)
+		{
+			Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
+			if(menu == NULL)
+				continue;
 
-		auto decoder = ProtocolDecoder::CreateDecoder(
-			menu->get_label(),
-			"dummy",
-			"");
-		menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
-		delete decoder;
+			auto decoder = ProtocolDecoder::CreateDecoder(
+				menu->get_label(),
+				"dummy",
+				"");
+			menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
+			delete decoder;
+		}
 	}
 
 	//Gray out measurements that don't make sense for the type of channel we've selected
