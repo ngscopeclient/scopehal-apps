@@ -154,9 +154,8 @@ void OscilloscopeWindow::CreateWidgets()
 		{
 			auto chan = scope->GetChannel(i);
 
-			//TODO: only if we have >1 scope
-			//Qualify the channel name by the scope name
-			if(true)
+			//Qualify the channel name by the scope name if we have >1 scope enabled
+			if(m_scopes.size() > 1)
 			{
 				char tmp[128];
 				snprintf(tmp, sizeof(tmp), "%s:%s", scope->m_nickname.c_str(), chan->GetHwname().c_str());
