@@ -140,14 +140,15 @@ bool WaveformArea::PrepareGeometry()
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
 	double lheight = 1.0;	//pixels
 	float* verts = new float[waveform_size];
+	double offset = m_channel->GetOffset();
 	//#pragma omp parallel for
 	for(size_t j=0; j<(count-1); j++)
 	{
-		//Actual X/Y start points of the data
+		//Actual X start/end point of the data
 		float xleft = data.GetSampleStart(j) * xscale + xoff;
 		float xright = data.GetSampleStart(j+1) * xscale + xoff;
 
-		//If the triangle would be degenerate (less than one pixel wide), stretch it
+		//If the triangle would be degenerate horizontally (less than one pixel wide), stretch it
 		float width = xright-xleft;
 		float minwidth = 2;
 		if(width < minwidth)
@@ -158,8 +159,11 @@ bool WaveformArea::PrepareGeometry()
 			xright = xmid + minwidth/2;
 		}
 
-		float yleft = data[j] * m_pixelsPerVolt;
-		float yright = data[j+1] * m_pixelsPerVolt;
+		//Actual Y start point/end of the data
+		float yleft = (data[j] + offset) * m_pixelsPerVolt;
+		float yright = (data[j+1] + offset) * m_pixelsPerVolt;
+
+		//If the triangle doesn't touch the next one,
 
 		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
 		//always left to right, sorted, and never vertical. Just add some height to the samples!
@@ -378,12 +382,12 @@ float WaveformArea::VoltsToPixels(float volt)
 
 float WaveformArea::VoltsToYPosition(float volt)
 {
-	return m_height/2 - VoltsToPixels(volt);
+	return m_height/2 - VoltsToPixels(volt + m_channel->GetOffset());
 }
 
 float WaveformArea::YPositionToVolts(float y)
 {
-	return PixelsToVolts(-1 * (y - m_height/2) );
+	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel->GetOffset();
 }
 
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)

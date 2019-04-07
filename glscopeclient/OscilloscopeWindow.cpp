@@ -148,9 +148,9 @@ void OscilloscopeWindow::CreateWidgets()
 		m_channelsMenu.append(*item);
 
 		//See which channels are currently on
-		//DEBUG: enable all channels to save time when setting up the client
+		//DEBUG: enable all analog channels to save time when setting up the client
 		//if(chan->IsEnabled())
-		if(true)
+		if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 		{
 			auto w = new WaveformArea(
 				m_scope,
