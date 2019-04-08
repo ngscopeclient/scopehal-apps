@@ -40,9 +40,22 @@ public:
 
 	WaveformGroup* m_group;
 
-	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
-
 protected:
+
+	enum DragState
+	{
+		DRAG_NONE,
+		DRAG_TIMELINE
+	} m_dragState;
+
+	double m_dragStartX;
+	int64_t m_originalTimeOffset;
+
+	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+	virtual bool on_button_press_event(GdkEventButton* event);
+	virtual bool on_button_release_event(GdkEventButton* event);
+	virtual bool on_motion_notify_event(GdkEventMotion* event);
+
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,
 		int64_t ps,

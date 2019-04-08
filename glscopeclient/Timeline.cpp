@@ -32,14 +32,80 @@
 
 using namespace std;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
 Timeline::Timeline()
 {
+	m_dragState = DRAG_NONE;
+	m_dragStartX = 0;
+	m_originalTimeOffset = 0;
+
 	set_size_request(1, 40);
+
+	add_events(
+		Gdk::POINTER_MOTION_MASK |
+		Gdk::BUTTON_PRESS_MASK |
+		Gdk::BUTTON_RELEASE_MASK);
 }
 
 Timeline::~Timeline()
 {
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI events
+
+bool Timeline::on_button_press_event(GdkEventButton* event)
+{
+	//for now, only handle left click
+	if(event->button == 1)
+	{
+		m_dragState = DRAG_TIMELINE;
+		m_dragStartX = event->x;
+		m_originalTimeOffset = m_group->m_timeOffset;
+	}
+
+	return true;
+}
+
+bool Timeline::on_button_release_event(GdkEventButton* event)
+{
+	if(event->button == 1)
+	{
+		m_dragState = DRAG_NONE;
+	}
+	return true;
+}
+
+bool Timeline::on_motion_notify_event(GdkEventMotion* event)
+{
+	switch(m_dragState)
+	{
+		//Dragging the horizontal offset
+		case DRAG_TIMELINE:
+			{
+				double dx = event->x - m_dragStartX;
+				double ps = dx / m_group->m_pixelsPerPicosecond;
+
+				//Update offset, but don't allow scrolling before the start of the capture
+				m_group->m_timeOffset = m_originalTimeOffset - ps;
+				if(m_group->m_timeOffset < 0)
+					m_group->m_timeOffset = 0;
+
+				m_group->m_frame.queue_draw();
+			}
+			break;
+
+		default:
+			break;
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
 bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 {
