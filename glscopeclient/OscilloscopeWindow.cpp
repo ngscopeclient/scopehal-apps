@@ -93,12 +93,18 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	for(auto a : m_analyzers)
+		delete a;
 	for(auto s : m_splitters)
 		delete s;
 	for(auto g : m_waveformGroups)
 		delete g;
 	for(auto w : m_waveformAreas)
 		delete w;
+
+	//decoders should self-delete when the last reference to them is removed
+	//for(auto d : m_decoders)
+	//	delete d;
 }
 
 /**
@@ -558,6 +564,10 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
 				w->OnWaveformDataReady();
 		}
+
+		//Update protocol analyzers
+		for(auto a : m_analyzers)
+			a->OnWaveformDataReady();
 	}
 
 	//false to stop timer

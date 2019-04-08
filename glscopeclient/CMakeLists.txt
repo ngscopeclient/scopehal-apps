@@ -8,6 +8,7 @@ add_executable(glscopeclient
 	Framebuffer.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
+	ProtocolAnalyzerWindow.cpp
 	ProtocolDecoderDialog.cpp
 	Shader.cpp
 	Texture.cpp

@@ -30,120 +30,119 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Top-level window for the application
+	@brief  Implementation of ProtocolAnalyzerWindow
  */
-
-#ifndef OscilloscopeWindow_h
-#define OscilloscopeWindow_h
-
-#include "../scopehal/Oscilloscope.h"
-#include "WaveformArea.h"
-#include "WaveformGroup.h"
+#include "glscopeclient.h"
+#include "OscilloscopeWindow.h"
 #include "ProtocolAnalyzerWindow.h"
 
-/**
-	@brief Main application window class for an oscilloscope
- */
-class OscilloscopeWindow	: public Gtk::Window
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ProtocolAnalyzerColumns
+
+ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 {
-public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes);
-	~OscilloscopeWindow();
+	add(m_timestamp);
 
-	void OnAutofitHorizontal();
-	void OnZoomInHorizontal(WaveformGroup* group);
-	void OnZoomOutHorizontal(WaveformGroup* group);
-	void ClearPersistence(WaveformGroup* group);
-	void ClearAllPersistence();
+	auto headers = decoder->GetHeaders();
+	for(size_t i=0; i<headers.size(); i++)
+	{
+		m_headers.push_back(Gtk::TreeModelColumn<Glib::ustring>());
+		add(m_headers[m_headers.size()-1]);
+	}
 
-	void OnRemoveChannel(WaveformArea* w);
+	add(m_data);
+}
 
-	//need to be public so it can be called by WaveformArea
-	void OnMoveNew(WaveformArea* w, bool horizontal);
-	void OnMoveNewRight(WaveformArea* w);
-	void OnMoveNewBelow(WaveformArea* w);
-	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-	void OnCopyNew(WaveformArea* w, bool horizontal);
-	void OnCopyNewRight(WaveformArea* w);
-	void OnCopyNewBelow(WaveformArea* w);
-	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow* parent, PacketDecoder* decoder)
+	: Gtk::Dialog(title, *parent, false)
+	, m_decoder(decoder)
+	, m_columns(decoder)
+{
+	m_decoder->AddRef();
 
-	void OnAddChannel(OscilloscopeChannel* w);
-	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
+	m_startTime = 0;
 
-	void AddDecoder(ProtocolDecoder* decode)
-	{ m_decoders.emplace(decode); }
+	set_size_request(1024, 600);
 
-	size_t GetScopeCount()
-	{ return m_scopes.size(); }
+	//Set up the tree view
+	m_model = Gtk::TreeStore::create(m_columns);
+	m_tree.set_model(m_model);
 
-	Oscilloscope* GetScope(size_t i)
-	{ return m_scopes[i]; }
+	//Add the columns
+	m_tree.append_column("Time", m_columns.m_timestamp);
+	auto headers = decoder->GetHeaders();
+	for(size_t i=0; i<headers.size(); i++)
+		m_tree.append_column(headers[i], m_columns.m_headers[i]);
+	m_tree.append_column("Data", m_columns.m_data);
 
-protected:
-	void ArmTrigger(bool oneshot);
+	//Set up the widgets
+	get_vbox()->pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
+		m_scroller.add(m_tree);
+		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	show_all();
+}
 
-	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
-	void GarbageCollectGroups();
+ProtocolAnalyzerWindow::~ProtocolAnalyzerWindow()
+{
+	m_decoder->Release();
+}
 
-	//Menu/toolbar message handlers
-	void OnStart();
-	void OnStartSingle();
-	void OnStop();
-	void OnQuit();
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
 
-	void UpdateStatusBar();
+void ProtocolAnalyzerWindow::OnWaveformDataReady()
+{
+	auto packets = m_decoder->GetPackets();
+	if(packets.empty())
+		return;
 
-	//Initialization
-	void CreateWidgets();
+	auto headers = m_decoder->GetHeaders();
 
-	//Widgets
-	Gtk::VBox m_vbox;
-		Gtk::MenuBar m_menu;
-			Gtk::MenuItem m_fileMenuItem;
-				Gtk::Menu m_fileMenu;
-			Gtk::MenuItem m_channelsMenuItem;
-				Gtk::Menu m_channelsMenu;
-		Gtk::Toolbar m_toolbar;
-			Gtk::ToolButton m_btnStart;
-			Gtk::ToolButton m_btnStartSingle;
-			Gtk::ToolButton m_btnStop;
+	for(auto p : packets)
+	{
+		//If this is our first packet, use it as the zero reference for time later on
+		if(m_model->children().empty())
+			m_startTime = p->m_start;
 
-		//All of the splitters
-		std::set<Gtk::Paned*> m_splitters;
+		//Convert timestamp to relative.
+		//Note that LeCroy scopes seem to wrap the timestamp every minute.
+		//If we see a negative time, add a minute as a workaround. This will give incorrect results if
+		//more than a minute has passed since the last packet was seen.
+		//TODO: use PC clock to correct for that
+		double reltime = p->m_start - m_startTime;
+		if(reltime < 0)
+		{
+			reltime += 60;
+			m_startTime -= 60;
+		}
 
-public:
-		//All of the waveform groups and areas, regardless of where they live
-		std::set<WaveformGroup*> m_waveformGroups;
-		std::set<WaveformArea*> m_waveformAreas;
-		std::set<ProtocolDecoder*> m_decoders;
+		//Format timestamp
+		auto row = *m_model->append();
+		char tmp[128];
+		snprintf(tmp, sizeof(tmp), "%.10f", reltime);
+		row[m_columns.m_timestamp] = tmp;
 
-		//All of the protocol analyzers
-		std::set<ProtocolAnalyzerWindow*> m_analyzers;
+		//Just copy headers without any processing
+		for(size_t i=0; i<headers.size(); i++)
+			row[m_columns.m_headers[i]] = p->m_headers[headers[i]];
 
-protected:
-		Gtk::HBox m_statusbar;
-			Gtk::Label m_triggerConfigLabel;
-			Gtk::Label m_sampleCountLabel;
-			Gtk::Label m_sampleRateLabel;
+		//Convert data to hex
+		string sdata;
+		for(auto b : p->m_data)
+		{
+			char t[4];
+			snprintf(t, sizeof(t), "%02x ", b);
+			sdata += t;
+		}
+		row[m_columns.m_data] = sdata;
+	}
 
-		Glib::RefPtr<Gtk::CssProvider> m_css;
-
-	//Our scope connections
-	std::vector<Oscilloscope*> m_scopes;
-
-	//Status polling
-	bool OnTimer(int timer);
-
-	int OnCaptureProgressUpdate(float progress);
-
-	double m_tArm;
-	bool m_triggerOneShot;
-
-	bool m_toggleInProgress;
-
-	double m_tLastFlush;
-};
-
-#endif
+	//auto scroll to bottom
+	auto adj = m_scroller.get_vadjustment();
+	adj->set_value(adj->get_upper());
+}

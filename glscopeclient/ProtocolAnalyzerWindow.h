@@ -30,120 +30,42 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Top-level window for the application
+	@brief  Declaration of ProtocolAnalyzerWindow
  */
+#ifndef ProtocolAnalyzerWindow_h
+#define ProtocolAnalyzerWindow_h
 
-#ifndef OscilloscopeWindow_h
-#define OscilloscopeWindow_h
+class OscilloscopeWindow;
 
-#include "../scopehal/Oscilloscope.h"
-#include "WaveformArea.h"
-#include "WaveformGroup.h"
-#include "ProtocolAnalyzerWindow.h"
+#include "../../lib/scopehal/PacketDecoder.h"
 
-/**
-	@brief Main application window class for an oscilloscope
- */
-class OscilloscopeWindow	: public Gtk::Window
+class ProtocolAnalyzerColumns : public Gtk::TreeModel::ColumnRecord
 {
 public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes);
-	~OscilloscopeWindow();
+	ProtocolAnalyzerColumns(PacketDecoder* decoder);
 
-	void OnAutofitHorizontal();
-	void OnZoomInHorizontal(WaveformGroup* group);
-	void OnZoomOutHorizontal(WaveformGroup* group);
-	void ClearPersistence(WaveformGroup* group);
-	void ClearAllPersistence();
+	Gtk::TreeModelColumn<Glib::ustring>					m_timestamp;
+	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
+	Gtk::TreeModelColumn<Glib::ustring>					m_data;
+};
 
-	void OnRemoveChannel(WaveformArea* w);
-
-	//need to be public so it can be called by WaveformArea
-	void OnMoveNew(WaveformArea* w, bool horizontal);
-	void OnMoveNewRight(WaveformArea* w);
-	void OnMoveNewBelow(WaveformArea* w);
-	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
-
-	void OnCopyNew(WaveformArea* w, bool horizontal);
-	void OnCopyNewRight(WaveformArea* w);
-	void OnCopyNewBelow(WaveformArea* w);
-	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
-
-	void OnAddChannel(OscilloscopeChannel* w);
-	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
-
-	void AddDecoder(ProtocolDecoder* decode)
-	{ m_decoders.emplace(decode); }
-
-	size_t GetScopeCount()
-	{ return m_scopes.size(); }
-
-	Oscilloscope* GetScope(size_t i)
-	{ return m_scopes[i]; }
-
-protected:
-	void ArmTrigger(bool oneshot);
-
-	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
-	void GarbageCollectGroups();
-
-	//Menu/toolbar message handlers
-	void OnStart();
-	void OnStartSingle();
-	void OnStop();
-	void OnQuit();
-
-	void UpdateStatusBar();
-
-	//Initialization
-	void CreateWidgets();
-
-	//Widgets
-	Gtk::VBox m_vbox;
-		Gtk::MenuBar m_menu;
-			Gtk::MenuItem m_fileMenuItem;
-				Gtk::Menu m_fileMenu;
-			Gtk::MenuItem m_channelsMenuItem;
-				Gtk::Menu m_channelsMenu;
-		Gtk::Toolbar m_toolbar;
-			Gtk::ToolButton m_btnStart;
-			Gtk::ToolButton m_btnStartSingle;
-			Gtk::ToolButton m_btnStop;
-
-		//All of the splitters
-		std::set<Gtk::Paned*> m_splitters;
-
+class ProtocolAnalyzerWindow : public Gtk::Dialog
+{
 public:
-		//All of the waveform groups and areas, regardless of where they live
-		std::set<WaveformGroup*> m_waveformGroups;
-		std::set<WaveformArea*> m_waveformAreas;
-		std::set<ProtocolDecoder*> m_decoders;
+	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder);
+	~ProtocolAnalyzerWindow();
 
-		//All of the protocol analyzers
-		std::set<ProtocolAnalyzerWindow*> m_analyzers;
+	void OnWaveformDataReady();
 
 protected:
-		Gtk::HBox m_statusbar;
-			Gtk::Label m_triggerConfigLabel;
-			Gtk::Label m_sampleCountLabel;
-			Gtk::Label m_sampleRateLabel;
+	PacketDecoder* m_decoder;
 
-		Glib::RefPtr<Gtk::CssProvider> m_css;
+	double m_startTime;
 
-	//Our scope connections
-	std::vector<Oscilloscope*> m_scopes;
-
-	//Status polling
-	bool OnTimer(int timer);
-
-	int OnCaptureProgressUpdate(float progress);
-
-	double m_tArm;
-	bool m_triggerOneShot;
-
-	bool m_toggleInProgress;
-
-	double m_tLastFlush;
+	Gtk::ScrolledWindow m_scroller;
+		Gtk::TreeView m_tree;
+	Glib::RefPtr<Gtk::TreeStore> m_model;
+	ProtocolAnalyzerColumns m_columns;
 };
 
 #endif

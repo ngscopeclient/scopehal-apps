@@ -413,6 +413,20 @@ void WaveformArea::OnProtocolDecode(string name)
 		m_parent->AddDecoder(decode);
 		queue_draw();
 	}
+
+	//If the decoder is a packet-oriented protocol, pop up a protocol analyzer
+	//TODO: UI for re-opening the analyzer if we close it?
+	auto pdecode = dynamic_cast<PacketDecoder*>(decode);
+	if(pdecode != NULL)
+	{
+		char title[256];
+		snprintf(title, sizeof(title), "Protocol Analyzer: %s", decode->m_displayname.c_str());
+
+		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode);
+		m_parent->m_analyzers.emplace(analyzer);
+
+		analyzer->show();
+	}
 }
 
 void WaveformArea::OnMeasure(string name)
