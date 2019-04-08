@@ -217,6 +217,8 @@ protected:
 	float VoltsToYPosition(float volt);
 	float YPositionToVolts(float y);
 	int64_t PixelsToPicoseconds(float pix);
+	float PicosecondsToPixels(int64_t t);
+	float PicosecondsToXPosition(int64_t t);
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;

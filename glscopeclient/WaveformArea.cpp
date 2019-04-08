@@ -557,8 +557,3 @@ void WaveformArea::InitializeCairoPass()
 	m_cairoProgram.EnableVertexArray("vert");
 	m_cairoProgram.SetVertexAttribPointer("vert", 2, 0);
 }
-
-int64_t WaveformArea::PixelsToPicoseconds(float pix)
-{
-	return pix / m_group->m_pixelsPerPicosecond;
-}

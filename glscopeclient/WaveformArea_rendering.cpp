@@ -133,10 +133,6 @@ bool WaveformArea::PrepareGeometry()
 	//Pull vertical size from the scope
 	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
 
-	//Scaling factor from samples to pixels
-	float xscale = m_group->m_pixelsPerPicosecond * dat->m_timescale;
-	float xoff = m_group->m_pixelsPerPicosecond * dat->m_triggerPhase;
-
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
 	double lheight = 1.0;	//pixels
@@ -146,8 +142,10 @@ bool WaveformArea::PrepareGeometry()
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X start/end point of the data
-		float xleft = data.GetSampleStart(j) * xscale + xoff;
-		float xright = data.GetSampleStart(j+1) * xscale + xoff;
+		float xleft = PicosecondsToXPosition(
+			(data.GetSampleStart(j) * dat->m_timescale) + dat->m_triggerPhase);
+		float xright = PicosecondsToXPosition(
+			(data.GetSampleStart(j+1) * dat->m_timescale) + dat->m_triggerPhase);
 
 		//TODO: if a triangle is <1 pixel wide, don't stretch. Merge it with the adjacent one(s)
 
@@ -163,8 +161,8 @@ bool WaveformArea::PrepareGeometry()
 		}
 
 		//Actual Y start point/end of the data
-		float yleft = (data[j] + offset) * m_pixelsPerVolt;
-		float yright = (data[j+1] + offset) * m_pixelsPerVolt;
+		float yleft = VoltsToPixels(data[j] + offset);
+		float yright = VoltsToPixels(data[j+1] + offset);
 
 		//If the triangle doesn't touch the next one, stretch vertically? this SHOULD not be possible,
 		//but rendering shows that something is causing stuff to not touch vertically
@@ -372,6 +370,21 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	cr->set_source(background_gradient);
 	cr->rectangle(0, 0, m_plotRight, m_height);
 	cr->fill();
+}
+
+int64_t WaveformArea::PixelsToPicoseconds(float pix)
+{
+	return pix / m_group->m_pixelsPerPicosecond;
+}
+
+float WaveformArea::PicosecondsToPixels(int64_t t)
+{
+	return t * m_group->m_pixelsPerPicosecond;
+}
+
+float WaveformArea::PicosecondsToXPosition(int64_t t)
+{
+	return PicosecondsToPixels(t);
 }
 
 float WaveformArea::PixelsToVolts(float pix)
@@ -618,17 +631,13 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		auto tr = dynamic_cast<TextRenderer*>(render);
 		if( (tr != NULL) && (data != NULL) )
 		{
-			//Scaling factor from samples to pixels
-			float xscale = m_group->m_pixelsPerPicosecond * data->m_timescale;
-			float xoff = m_group->m_pixelsPerPicosecond * data->m_triggerPhase;
-
 			for(size_t i=0; i<data->GetDepth(); i++)
 			{
-				double start = data->GetSampleStart(i);
-				double end = start + data->GetSampleLen(i);
+				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
+				double end = start + (data->GetSampleLen(i) * data->m_timescale);
 
-				double xs = start*xscale + xoff;
-				double xe = end*xscale + xoff;
+				double xs = PicosecondsToXPosition(start);
+				double xe = PicosecondsToXPosition(end);
 
 				if( (xe < 0) || (xs > m_plotRight) )
 					continue;
