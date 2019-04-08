@@ -41,6 +41,7 @@ int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup()
 	: m_pixelsPerPicosecond(0.05)
+	, m_timeOffset(12000)	//12us time offset
 	, m_cursorConfig(CURSOR_NONE)
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

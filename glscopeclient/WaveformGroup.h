@@ -74,6 +74,7 @@ public:
 		Gtk::MenuItem m_removeMeasurementItem;
 
 	float m_pixelsPerPicosecond;
+	int64_t m_timeOffset;
 
 	enum CursorConfig
 	{

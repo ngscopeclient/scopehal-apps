@@ -372,6 +372,11 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	cr->fill();
 }
 
+int64_t WaveformArea::XPositionToPicoseconds(float pix)
+{
+	return m_group->m_timeOffset + PixelsToPicoseconds(pix);
+}
+
 int64_t WaveformArea::PixelsToPicoseconds(float pix)
 {
 	return pix / m_group->m_pixelsPerPicosecond;
@@ -384,7 +389,7 @@ float WaveformArea::PicosecondsToPixels(int64_t t)
 
 float WaveformArea::PicosecondsToXPosition(int64_t t)
 {
-	return PicosecondsToPixels(t);
+	return PicosecondsToPixels(t - m_group->m_timeOffset);
 }
 
 float WaveformArea::PixelsToVolts(float pix)
@@ -699,7 +704,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
 	{
 		//Draw first vertical cursor
-		double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
+		double x = PicosecondsToXPosition(m_group->m_xCursorPos[0]);
 		cr->move_to(x, ytop);
 		cr->line_to(x, ybot);
 		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
@@ -709,7 +714,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw second vertical cursor
-			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
+			double x2 = PicosecondsToXPosition(m_group->m_xCursorPos[1]);
 			cr->move_to(x2, ytop);
 			cr->line_to(x2, ybot);
 			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());

@@ -165,7 +165,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	m_clickLocation = HitTest(event->x, event->y);
 
 	//Look up the time of our click (if in the plot area)
-	int64_t timestamp = PixelsToPicoseconds(event->x);
+	int64_t timestamp = XPositionToPicoseconds(event->x);
 
 	switch(m_clickLocation)
 	{
@@ -258,7 +258,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 
 bool WaveformArea::on_button_release_event(GdkEventButton* event)
 {
-	int64_t timestamp = PixelsToPicoseconds(event->x);
+	int64_t timestamp = XPositionToPicoseconds(event->x);
 
 	switch(m_dragState)
 	{
@@ -296,7 +296,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	m_cursorX = event->x;
 	m_cursorY = event->y;
 
-	int64_t timestamp = PixelsToPicoseconds(event->x);
+	int64_t timestamp = XPositionToPicoseconds(event->x);
 
 	switch(m_dragState)
 	{

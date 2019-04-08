@@ -219,6 +219,7 @@ protected:
 	int64_t PixelsToPicoseconds(float pix);
 	float PicosecondsToPixels(int64_t t);
 	float PicosecondsToXPosition(int64_t t);
+	int64_t XPositionToPicoseconds(float pix);
 
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;

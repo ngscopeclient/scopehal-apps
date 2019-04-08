@@ -145,6 +145,9 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	double nsubticks = 5;
 	double subtick = grad_ps_rounded / nsubticks;
 
+	//Find the start time (rounded down as needed)
+	double tstart = floor(m_group->m_timeOffset / grad_ps_rounded) * grad_ps_rounded;
+
 	//Print tick marks and labels
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
 	Pango::FontDescription font("sans normal 10");
@@ -152,9 +155,29 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	tlayout->set_font_description(font);
 	int swidth;
 	int sheight;
-	for(double t = 0; t < width_ps; t += grad_ps_rounded)
+	for(double t = tstart; t < (tstart + width_ps + grad_ps_rounded); t += grad_ps_rounded)
 	{
-		double x = t * m_group->m_pixelsPerPicosecond;
+		double x = (t - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+
+		//Draw fine ticks first (even if the labeled graduation doesn't fit)
+		for(int tick=1; tick < nsubticks; tick++)
+		{
+			double subx = (t - m_group->m_timeOffset + tick*subtick) * m_group->m_pixelsPerPicosecond;
+
+			if(subx < 0)
+				continue;
+			if(subx > w)
+				break;
+
+			cr->move_to(subx, ytop);
+			cr->line_to(subx, ytop + 10);
+		}
+		cr->stroke();
+
+		if(x < 0)
+			continue;
+		if(x > w)
+			break;
 
 		//Tick mark
 		cr->move_to(x, ytop);
@@ -172,16 +195,6 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		cr->move_to(x+2, ymid + sheight/2);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
-
-		//Draw fine ticks
-		for(int tick=1; tick < nsubticks; tick++)
-		{
-			double subx = (t + tick*subtick) * m_group->m_pixelsPerPicosecond;
-
-			cr->move_to(subx, ytop);
-			cr->line_to(subx, ytop + 10);
-			cr->stroke();
-		}
 	}
 
 	//Draw cursor positions if requested
@@ -195,8 +208,8 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw filled area between them
-			double x = m_group->m_xCursorPos[0] * m_group->m_pixelsPerPicosecond;
-			double x2 = m_group->m_xCursorPos[1] * m_group->m_pixelsPerPicosecond;
+			double x = (m_group->m_xCursorPos[0] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+			double x2 = (m_group->m_xCursorPos[1] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
 			cr->move_to(x, 0);
 			cr->line_to(x2, 0);
@@ -295,7 +308,7 @@ void Timeline::DrawCursor(
 	tlayout->get_pixel_size(swidth, sheight);
 
 	//Decide which side of the line to draw on
-	double x = ps * m_group->m_pixelsPerPicosecond;
+	double x = (ps - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 	double right = x-5;
 	double left = right - swidth - 5;
 	if(!draw_left)
