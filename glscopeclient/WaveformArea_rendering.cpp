@@ -38,6 +38,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
+#include "../../lib/scopehal/TextRenderer.h"
 
 using namespace std;
 using namespace glm;
@@ -263,7 +264,7 @@ void WaveformArea::RenderPersistenceOverlay()
 	//Configure blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 0.1);
+	glBlendColor(0, 0, 0, 0.01);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Draw a black overlay with a little bit of alpha (to make old traces decay)
@@ -283,7 +284,7 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(1, "yscale");
 
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 0.2);
+	glBlendColor(0, 0, 0, 0.1);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Only look at stuff inside the plot area
@@ -588,7 +589,65 @@ void WaveformArea::RenderCairoOverlays()
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
 	RenderChannelLabel(cr);
+	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
+}
+
+void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
+{
+	for(auto o : m_overlays)
+	{
+		auto render = o->CreateRenderer();
+		auto data = o->GetData();
+
+		//TODO: this needs a lot of tweaking for multiple overlays
+		double ymid = 15;
+		double ytop = 5;
+		double ybot = 25;
+
+		//Render the grayed-out background
+		cr->set_source_rgba(0,0,0, 0.6);
+		cr->move_to(0, 			ytop);
+		cr->line_to(m_width, 	ytop);
+		cr->line_to(m_width,	ybot);
+		cr->line_to(0,			ybot);
+		cr->fill();
+
+		//TODO: Render the channel label
+
+		auto tr = dynamic_cast<TextRenderer*>(render);
+		if( (tr != NULL) && (data != NULL) )
+		{
+			//Scaling factor from samples to pixels
+			float xscale = m_group->m_pixelsPerPicosecond * data->m_timescale;
+			float xoff = m_group->m_pixelsPerPicosecond * data->m_triggerPhase;
+
+			for(size_t i=0; i<data->GetDepth(); i++)
+			{
+				double start = data->GetSampleStart(i);
+				double end = start + data->GetSampleLen(i);
+
+				double xs = start*xscale + xoff;
+				double xe = end*xscale + xoff;
+
+				if( (xe < 0) || (xs > m_plotRight) )
+					continue;
+
+				auto text = tr->GetText(i);
+				auto color = tr->GetColor(i);
+
+				render->RenderComplexSignal(
+					cr,
+					0, m_plotRight,
+					xs, xe, 5,
+					ybot, ymid, ytop,
+					text,
+					color);
+			}
+		}
+
+		delete render;
+	}
 }
 
 void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)

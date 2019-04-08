@@ -71,6 +71,9 @@ public:
 	void OnAddChannel(OscilloscopeChannel* w);
 	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
 
+	void AddDecoder(ProtocolDecoder* decode)
+	{ m_decoders.emplace(decode); }
+
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }
 

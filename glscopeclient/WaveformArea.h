@@ -204,6 +204,7 @@ protected:
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
 	VertexArray m_cairoVAO;
@@ -222,7 +223,7 @@ protected:
 	OscilloscopeChannel* m_selectedChannel;
 	OscilloscopeWindow* m_parent;
 
-	std::vector<ProtocolDecoder*> m_decoders;
+	std::vector<ProtocolDecoder*> m_overlays;
 
 	double m_lastFrameStart;
 	double m_frameTime;

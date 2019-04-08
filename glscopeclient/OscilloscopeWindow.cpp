@@ -449,7 +449,7 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 {
 	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
 	if(decode)
-		m_decoders.emplace(decode);
+		AddDecoder(decode);
 
 	//Create the viewer
 	auto w = new WaveformArea(

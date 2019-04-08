@@ -382,17 +382,8 @@ void WaveformArea::OnProtocolDecode(string name)
 	string color = GetDefaultChannelColor(g_numDecodes ++);
 	auto decode = ProtocolDecoder::CreateDecoder(name, color);
 
-	//Check if we know how to use it
-	if(decode->IsOverlay() || (decode->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
-	{
-		LogNotice("Protocol decodes involving overlays or non-analog outputs not yet implemented\n");
-
-		delete decode;
-		return;
-	}
-
 	//Only one input with no config required? Do automagic configuration
-	if( (decode->GetInputCount() == 0) && !decode->NeedsConfig())
+	if( (decode->GetInputCount() == 1) && !decode->NeedsConfig())
 		decode->SetInput(0, m_selectedChannel);
 
 	//Multiple inputs or config needed
@@ -411,7 +402,17 @@ void WaveformArea::OnProtocolDecode(string name)
 	decode->SetDefaultName();
 
 	//Create a new waveform view for the generated signal
-	m_parent->DoAddChannel(decode, m_group, this);
+	if(!decode->IsOverlay())
+		m_parent->DoAddChannel(decode, m_group, this);
+
+	//It's an overlay. Reference it and add to our overlay list
+	else
+	{
+		decode->AddRef();
+		m_overlays.push_back(decode);
+		m_parent->AddDecoder(decode);
+		queue_draw();
+	}
 }
 
 void WaveformArea::OnMeasure(string name)

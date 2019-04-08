@@ -106,9 +106,9 @@ WaveformArea::~WaveformArea()
 
 	CleanupBufferObjects();
 
-	for(auto d : m_decoders)
-		delete d;
-	m_decoders.clear();
+	for(auto d : m_overlays)
+		d->Release();
+	m_overlays.clear();
 
 	for(auto m : m_moveExistingGroupItems)
 	{
