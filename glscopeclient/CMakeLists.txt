@@ -8,6 +8,7 @@ add_executable(glscopeclient
 	Framebuffer.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
+	ProtocolDecoderDialog.cpp
 	Shader.cpp
 	Texture.cpp
 	Timeline.cpp
@@ -30,6 +31,5 @@ target_link_libraries(glscopeclient
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	GL
-	GLU
 	)
 

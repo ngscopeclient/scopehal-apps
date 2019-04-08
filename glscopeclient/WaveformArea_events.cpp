@@ -38,6 +38,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
+#include "ProtocolDecoderDialog.h"
 
 using namespace std;
 using namespace glm;
@@ -382,22 +383,35 @@ void WaveformArea::OnProtocolDecode(string name)
 	auto decode = ProtocolDecoder::CreateDecoder(name, color);
 
 	//Check if we know how to use it
-	if(decode->IsOverlay() || decode->NeedsConfig() || (decode->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	if(decode->IsOverlay() || (decode->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
 	{
-		LogNotice("Protocol decodes involving overlays or configs not yet implemented\n");
+		LogNotice("Protocol decodes involving overlays or non-analog outputs not yet implemented\n");
 
 		delete decode;
 		return;
 	}
 
-	//Set the single channel for now
-	decode->SetInput(0, m_selectedChannel);
+	//Only one input with no config required? Do automagic configuration
+	if( (decode->GetInputCount() == 0) && !decode->NeedsConfig())
+		decode->SetInput(0, m_selectedChannel);
+
+	//Multiple inputs or config needed
+	else
+	{
+		ProtocolDecoderDialog dialog(m_parent, decode, m_selectedChannel);
+		if(dialog.run() != Gtk::RESPONSE_OK)
+		{
+			delete decode;
+			return;
+		}
+		dialog.ConfigureDecoder();
+	}
 
 	//Set the name
 	decode->SetDefaultName();
 
 	//Create a new waveform view for the generated signal
-	m_parent->DoAddChannel(decode, m_group);
+	m_parent->DoAddChannel(decode, m_group, this);
 }
 
 void WaveformArea::OnMeasure(string name)

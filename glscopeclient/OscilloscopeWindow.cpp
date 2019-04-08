@@ -445,7 +445,7 @@ void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 	DoAddChannel(chan, *m_waveformGroups.begin());
 }
 
-WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup)
+WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup, WaveformArea* ref)
 {
 	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
 	if(decode)
@@ -458,7 +458,20 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 		this);
 	w->m_group = ngroup;
 	m_waveformAreas.emplace(w);
+
 	ngroup->m_waveformBox.pack_start(*w);
+
+	//Move the new trace after the reference trace, if one was provided
+	if(ref != NULL)
+	{
+		auto children = ngroup->m_waveformBox.get_children();
+		for(size_t i=0; i<children.size(); i++)
+		{
+			if(children[i] == ref)
+				ngroup->m_waveformBox.reorder_child(*w, i+1);
+		}
+	}
+
 	w->show();
 	return w;
 }

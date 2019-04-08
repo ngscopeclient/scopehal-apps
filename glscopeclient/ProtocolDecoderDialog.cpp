@@ -30,113 +30,73 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Top-level window for the application
+	@brief Implementation of ProtocolDecoderDialog
  */
+#include "glscopeclient.h"
+#include "OscilloscopeWindow.h"
+#include "ProtocolDecoderDialog.h"
 
-#ifndef OscilloscopeWindow_h
-#define OscilloscopeWindow_h
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-#include "../scopehal/Oscilloscope.h"
-#include "WaveformArea.h"
-#include "WaveformGroup.h"
-
-/**
-	@brief Main application window class for an oscilloscope
- */
-class OscilloscopeWindow	: public Gtk::Window
+ProtocolDecoderDialog::ProtocolDecoderDialog(
+	OscilloscopeWindow* parent,
+	ProtocolDecoder* decoder,
+	OscilloscopeChannel* chan)
+	: Gtk::Dialog("Protocol Decode", *parent, Gtk::DIALOG_MODAL)
+	, m_decoder(decoder)
 {
-public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes);
-	~OscilloscopeWindow();
+	add_button("OK", Gtk::RESPONSE_OK);
+	add_button("Cancel", Gtk::RESPONSE_CANCEL);
 
-	void OnAutofitHorizontal();
-	void OnZoomInHorizontal(WaveformGroup* group);
-	void OnZoomOutHorizontal(WaveformGroup* group);
-	void ClearPersistence(WaveformGroup* group);
-	void ClearAllPersistence();
+	for(size_t i=0; i<decoder->GetInputCount(); i++)
+	{
+		//Add the row
+		auto row = new ChannelSelectorRow;
+		get_vbox()->pack_start(row->m_box, Gtk::PACK_SHRINK);
+		m_rows.push_back(row);
 
-	void OnRemoveChannel(WaveformArea* w);
+		//Label is just the channel name
+		row->m_label.set_label(decoder->GetInputName(i));
 
-	//need to be public so it can be called by WaveformArea
-	void OnMoveNew(WaveformArea* w, bool horizontal);
-	void OnMoveNewRight(WaveformArea* w);
-	void OnMoveNewBelow(WaveformArea* w);
-	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+		//Fill the channel list with all channels that are legal to use here
+		for(size_t j=0; j<parent->GetScopeCount(); j++)
+		{
+			Oscilloscope* scope = parent->GetScope(j);
+			for(size_t k=0; k<scope->GetChannelCount(); k++)
+			{
+				auto c = scope->GetChannel(k);
+				if(decoder->ValidateChannel(i, c))
+				{
+					row->m_chans.append(c->m_displayname);
+					row->m_chanptrs[c->m_displayname] = c;
+					if(c == chan)
+						row->m_chans.set_active_text(c->m_displayname);
+				}
+			}
+		}
+	}
+	show_all();
+}
 
-	void OnCopyNew(WaveformArea* w, bool horizontal);
-	void OnCopyNewRight(WaveformArea* w);
-	void OnCopyNewBelow(WaveformArea* w);
-	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+ProtocolDecoderDialog::~ProtocolDecoderDialog()
+{
+	for(auto r : m_rows)
+		delete r;
+	m_rows.clear();
+}
 
-	void OnAddChannel(OscilloscopeChannel* w);
-	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Output
 
-	size_t GetScopeCount()
-	{ return m_scopes.size(); }
+void ProtocolDecoderDialog::ConfigureDecoder()
+{
+	for(size_t i=0; i<m_rows.size(); i++)
+	{
+		auto chname = m_rows[i]->m_chans.get_active_text();
+		m_decoder->SetInput(i, m_rows[i]->m_chanptrs[chname]);
+	}
+}
 
-	Oscilloscope* GetScope(size_t i)
-	{ return m_scopes[i]; }
-
-protected:
-	void ArmTrigger(bool oneshot);
-
-	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
-	void GarbageCollectGroups();
-
-	//Menu/toolbar message handlers
-	void OnStart();
-	void OnStartSingle();
-	void OnStop();
-	void OnQuit();
-
-	void UpdateStatusBar();
-
-	//Initialization
-	void CreateWidgets();
-
-	//Widgets
-	Gtk::VBox m_vbox;
-		Gtk::MenuBar m_menu;
-			Gtk::MenuItem m_fileMenuItem;
-				Gtk::Menu m_fileMenu;
-			Gtk::MenuItem m_channelsMenuItem;
-				Gtk::Menu m_channelsMenu;
-		Gtk::Toolbar m_toolbar;
-			Gtk::ToolButton m_btnStart;
-			Gtk::ToolButton m_btnStartSingle;
-			Gtk::ToolButton m_btnStop;
-
-		//All of the splitters
-		std::set<Gtk::Paned*> m_splitters;
-
-public:
-		//All of the waveform groups and areas, regardless of where they live
-		std::set<WaveformGroup*> m_waveformGroups;
-		std::set<WaveformArea*> m_waveformAreas;
-		std::set<ProtocolDecoder*> m_decoders;
-
-protected:
-		Gtk::HBox m_statusbar;
-			Gtk::Label m_triggerConfigLabel;
-			Gtk::Label m_sampleCountLabel;
-			Gtk::Label m_sampleRateLabel;
-
-		Glib::RefPtr<Gtk::CssProvider> m_css;
-
-	//Our scope connections
-	std::vector<Oscilloscope*> m_scopes;
-
-	//Status polling
-	bool OnTimer(int timer);
-
-	int OnCaptureProgressUpdate(float progress);
-
-	double m_tArm;
-	bool m_triggerOneShot;
-
-	bool m_toggleInProgress;
-
-	double m_tLastFlush;
-};
-
-#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
