@@ -11,6 +11,7 @@ pkg_check_modules(SIGCXX sigc++-2.0)
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopemeasurements")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/scopeclient")
