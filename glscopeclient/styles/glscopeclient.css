@@ -9,6 +9,12 @@ treeview
 	color: white;
 	background-color: black;
 	background-image: none;
+	font-family: monospace;
+}
+
+row
+{
+	font-family: monospace;
 }
 
 treeview header button

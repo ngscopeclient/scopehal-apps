@@ -60,8 +60,6 @@ public:
 protected:
 	PacketDecoder* m_decoder;
 
-	double m_startTime;
-
 	Gtk::ScrolledWindow m_scroller;
 		Gtk::TreeView m_tree;
 	Glib::RefPtr<Gtk::TreeStore> m_model;

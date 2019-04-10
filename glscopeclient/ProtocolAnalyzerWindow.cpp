@@ -65,8 +65,6 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow*
 {
 	m_decoder->AddRef();
 
-	m_startTime = 0;
-
 	set_size_request(1024, 600);
 
 	//Set up the tree view
@@ -97,6 +95,7 @@ ProtocolAnalyzerWindow::~ProtocolAnalyzerWindow()
 
 void ProtocolAnalyzerWindow::OnWaveformDataReady()
 {
+	auto data = m_decoder->GetData();
 	auto packets = m_decoder->GetPackets();
 	if(packets.empty())
 		return;
@@ -105,27 +104,26 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 
 	for(auto p : packets)
 	{
-		//If this is our first packet, use it as the zero reference for time later on
-		if(m_model->children().empty())
-			m_startTime = p->m_start;
-
-		//Convert timestamp to relative.
-		//Note that LeCroy scopes seem to wrap the timestamp every minute.
-		//If we see a negative time, add a minute as a workaround. This will give incorrect results if
-		//more than a minute has passed since the last packet was seen.
-		//TODO: use PC clock to correct for that
-		double reltime = p->m_start - m_startTime;
-		if(reltime < 0)
+		//Need a bit of math in case the capture is >1 second long
+		time_t capstart = data->m_startTimestamp;
+		int64_t ps = data->m_startPicoseconds + p->m_offset;
+		const int64_t seconds_per_ps = 1000ll * 1000ll * 1000ll * 1000ll;
+		if(ps > seconds_per_ps)
 		{
-			reltime += 60;
-			m_startTime -= 60;
+			capstart += (ps / seconds_per_ps);
+			ps %= seconds_per_ps;
 		}
 
 		//Format timestamp
-		auto row = *m_model->append();
 		char tmp[128];
-		snprintf(tmp, sizeof(tmp), "%.10f", reltime);
-		row[m_columns.m_timestamp] = tmp;
+		strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&capstart));
+		string stime = tmp;
+		snprintf(tmp, sizeof(tmp), "%010zu", ps / 100);	//round to nearest 100ps for display
+		stime += tmp;
+
+		//Create the row
+		auto row = *m_model->append();
+		row[m_columns.m_timestamp] = stime;
 
 		//Just copy headers without any processing
 		for(size_t i=0; i<headers.size(); i++)
