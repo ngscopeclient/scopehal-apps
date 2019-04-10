@@ -62,6 +62,7 @@ public:
 
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
+	virtual void OnSelectionChanged();
 
 	Gtk::VBox m_vbox;
 		Gtk::HBox m_hbox;

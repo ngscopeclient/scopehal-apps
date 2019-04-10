@@ -61,6 +61,8 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
 	//Set up the tree view
 	m_model = Gtk::TreeStore::create(m_columns);
 	m_tree.set_model(m_model);
+	m_tree.get_selection()->signal_changed().connect(
+		sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
 
 	//Add the columns
 	m_tree.append_column("Time", m_columns.m_timestamp);
@@ -172,4 +174,25 @@ bool HistoryWindow::on_delete_event(GdkEventAny* /*ignored*/)
 {
 	m_parent->HideHistory();
 	return true;
+}
+
+void HistoryWindow::OnSelectionChanged()
+{
+	//If we're updating with a new waveform we're already on the newest waveform.
+	//No need to refresh anything.
+	if(m_updating)
+		return;
+
+	auto row = *m_tree.get_selection()->get_selected();
+	WaveformHistory hist = row[m_columns.m_history];
+
+	//Reload the scope with the saved waveforms
+	for(auto it : hist)
+	{
+		it.first->Detach();
+		it.first->SetData(it.second);
+	}
+
+	//Tell the window to refresh everything
+	m_parent->OnHistoryUpdated();
 }

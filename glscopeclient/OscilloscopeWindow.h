@@ -85,6 +85,8 @@ public:
 	void HideHistory()
 	{ m_btnHistory.set_active(0); }
 
+	void OnHistoryUpdated();
+
 protected:
 	void ArmTrigger(bool oneshot);
 

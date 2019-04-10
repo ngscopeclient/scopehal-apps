@@ -675,3 +675,29 @@ int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
 
 	return 0;
 }
+
+/**
+	@brief Called when the history view selects an old waveform
+ */
+void OscilloscopeWindow::OnHistoryUpdated()
+{
+	//Stop triggering if we select a saved waveform
+	OnStop();
+
+	//Update the measurements
+	for(auto g : m_waveformGroups)
+		g->RefreshMeasurements();
+
+	//Update our protocol decoders
+	for(auto d : m_decoders)
+		d->Refresh();
+
+	//Update the views
+	for(auto w : m_waveformAreas)
+	{
+		w->ClearPersistence();
+		w->OnWaveformDataReady();
+	}
+
+	//Don't update the protocol analyzers, they should already have this waveform saved
+}
