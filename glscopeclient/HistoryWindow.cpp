@@ -30,43 +30,62 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Declaration of ProtocolAnalyzerWindow
+	@brief  Implementation of HistoryWindow
  */
-#ifndef ProtocolAnalyzerWindow_h
-#define ProtocolAnalyzerWindow_h
+#include "glscopeclient.h"
+#include "OscilloscopeWindow.h"
+#include "HistoryWindow.h"
 
-class OscilloscopeWindow;
+using namespace std;
 
-#include "../../lib/scopehal/PacketDecoder.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// HistoryColumns
 
-class ProtocolAnalyzerColumns : public Gtk::TreeModel::ColumnRecord
+HistoryColumns::HistoryColumns()
 {
-public:
-	ProtocolAnalyzerColumns(PacketDecoder* decoder);
+	add(m_timestamp);
+}
 
-	Gtk::TreeModelColumn<Glib::ustring>					m_timestamp;
-	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
-	Gtk::TreeModelColumn<Glib::ustring>					m_data;
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-/**
-	@brief Window containing a protocol analyzer
- */
-class ProtocolAnalyzerWindow : public Gtk::Window
+HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
+	: m_parent(parent)
 {
-public:
-	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder);
-	~ProtocolAnalyzerWindow();
+	set_title("History");
 
-	void OnWaveformDataReady();
+	set_default_size(320, 800);
 
-protected:
-	PacketDecoder* m_decoder;
+	//Set up the tree view
+	m_model = Gtk::TreeStore::create(m_columns);
+	m_tree.set_model(m_model);
 
-	Gtk::ScrolledWindow m_scroller;
-		Gtk::TreeView m_tree;
-	Glib::RefPtr<Gtk::TreeStore> m_model;
-	ProtocolAnalyzerColumns m_columns;
-};
+	//Add the columns
+	m_tree.append_column("Time", m_columns.m_timestamp);
 
-#endif
+	//Set up the widgets
+	add(m_vbox);
+		m_vbox.pack_start(m_hbox, Gtk::PACK_SHRINK);
+			m_hbox.pack_start(m_maxLabel, Gtk::PACK_SHRINK);
+				m_maxLabel.set_label("Max waveforms");
+			m_hbox.pack_start(m_maxBox, Gtk::PACK_EXPAND_WIDGET);
+				m_maxBox.set_text("1000");
+		m_vbox.pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
+			m_scroller.add(m_tree);
+			m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+	show_all();
+}
+
+HistoryWindow::~HistoryWindow()
+{
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
+
+bool HistoryWindow::on_delete_event(GdkEventAny* /*ignored*/)
+{
+	m_parent->HideHistory();
+	return true;
+}

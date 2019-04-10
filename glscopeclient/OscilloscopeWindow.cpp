@@ -48,7 +48,8 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
-	: m_scopes(scopes)
+	: m_historyWindow(this)
+	, m_scopes(scopes)
 	// m_iconTheme(Gtk::IconTheme::get_default())
 {
 	//Set title
@@ -199,6 +200,8 @@ void OscilloscopeWindow::CreateWidgets()
 
 	m_channelsMenu.show_all();
 
+	m_historyWindow.hide();
+
 	//Done adding widgets
 	show_all();
 
@@ -219,7 +222,10 @@ void OscilloscopeWindow::CreateWidgets()
 
 void OscilloscopeWindow::OnHistory()
 {
-
+	if(m_btnHistory.get_active())
+		m_historyWindow.show();
+	else
+		m_historyWindow.hide();
 }
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)

@@ -30,43 +30,44 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Declaration of ProtocolAnalyzerWindow
+	@brief  Declaration of HistoryWindow
  */
-#ifndef ProtocolAnalyzerWindow_h
-#define ProtocolAnalyzerWindow_h
+
+#ifndef HistoryWindow_h
+#define HistoryWindow_h
 
 class OscilloscopeWindow;
 
-#include "../../lib/scopehal/PacketDecoder.h"
-
-class ProtocolAnalyzerColumns : public Gtk::TreeModel::ColumnRecord
+class HistoryColumns : public Gtk::TreeModel::ColumnRecord
 {
 public:
-	ProtocolAnalyzerColumns(PacketDecoder* decoder);
+	HistoryColumns();
 
 	Gtk::TreeModelColumn<Glib::ustring>					m_timestamp;
-	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
-	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 };
 
 /**
 	@brief Window containing a protocol analyzer
  */
-class ProtocolAnalyzerWindow : public Gtk::Window
+class HistoryWindow : public Gtk::Window
 {
 public:
-	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder);
-	~ProtocolAnalyzerWindow();
-
-	void OnWaveformDataReady();
+	HistoryWindow(OscilloscopeWindow* parent);
+	~HistoryWindow();
 
 protected:
-	PacketDecoder* m_decoder;
+	virtual bool on_delete_event(GdkEventAny* ignored);
 
-	Gtk::ScrolledWindow m_scroller;
-		Gtk::TreeView m_tree;
-	Glib::RefPtr<Gtk::TreeStore> m_model;
-	ProtocolAnalyzerColumns m_columns;
+	Gtk::VBox m_vbox;
+		Gtk::HBox m_hbox;
+			Gtk::Label m_maxLabel;
+			Gtk::Entry m_maxBox;
+		Gtk::ScrolledWindow m_scroller;
+			Gtk::TreeView m_tree;
+		Glib::RefPtr<Gtk::TreeStore> m_model;
+	HistoryColumns m_columns;
+
+	OscilloscopeWindow* m_parent;
 };
 
 #endif

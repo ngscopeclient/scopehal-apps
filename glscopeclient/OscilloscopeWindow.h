@@ -40,6 +40,7 @@
 #include "WaveformArea.h"
 #include "WaveformGroup.h"
 #include "ProtocolAnalyzerWindow.h"
+#include "HistoryWindow.h"
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -81,6 +82,9 @@ public:
 	Oscilloscope* GetScope(size_t i)
 	{ return m_scopes[i]; }
 
+	void HideHistory()
+	{ m_btnHistory.set_active(0); }
+
 protected:
 	void ArmTrigger(bool oneshot);
 
@@ -114,6 +118,9 @@ protected:
 
 		//All of the splitters
 		std::set<Gtk::Paned*> m_splitters;
+
+	//shared by all scopes/channels
+	HistoryWindow m_historyWindow;
 
 public:
 		//All of the waveform groups and areas, regardless of where they live

@@ -6,6 +6,7 @@ link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 #C++ compilation
 add_executable(glscopeclient
 	Framebuffer.cpp
+	HistoryWindow.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
 	ProtocolAnalyzerWindow.cpp
