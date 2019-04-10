@@ -51,6 +51,7 @@ HistoryColumns::HistoryColumns()
 
 HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
 	: m_parent(parent)
+	, m_updating(false)
 {
 	set_title("History");
 
@@ -73,7 +74,11 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
 		m_vbox.pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
 			m_scroller.add(m_tree);
 			m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-	show_all();
+				m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
+	m_vbox.show_all();
+
+	//not shown by default
+	hide();
 }
 
 HistoryWindow::~HistoryWindow()
@@ -83,6 +88,60 @@ HistoryWindow::~HistoryWindow()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
+
+void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
+{
+	//Use the timestamp from the first enabled channel
+	OscilloscopeChannel* chan = NULL;
+	CaptureChannelBase* data = NULL;
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		chan = scope->GetChannel(i);
+		if(chan->IsEnabled())
+		{
+			data = chan->GetData();
+			break;
+		}
+	}
+
+	//No channels at all? Nothing to do
+	if(chan == NULL)
+		return;
+
+	m_updating = true;
+
+	//Format timestamp
+	char tmp[128];
+	strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&data->m_startTimestamp));
+	string stime = tmp;
+	snprintf(tmp, sizeof(tmp), "%010zu", data->m_startPicoseconds / 100);	//round to nearest 100ps for display
+	stime += tmp;
+
+	//Create the row
+	auto row = *m_model->append();
+	row[m_columns.m_timestamp] = stime;
+
+	//TODO: add actual info to the row
+
+	//auto scroll to bottom
+	auto adj = m_scroller.get_vadjustment();
+	adj->set_value(adj->get_upper());
+
+	//Select the newly added row
+	m_tree.get_selection()->select(row);
+
+	//Remove extra waveforms, if we have any
+	string smax = m_maxBox.get_text();
+	size_t nmax = atoi(smax.c_str());
+	auto children = m_model->children();
+	while(children.size() > nmax)
+	{
+		//TODO: delete any saved waveforms etc
+		m_model->erase(children.begin());
+	}
+
+	m_updating = false;
+}
 
 bool HistoryWindow::on_delete_event(GdkEventAny* /*ignored*/)
 {

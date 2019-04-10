@@ -55,6 +55,8 @@ public:
 	HistoryWindow(OscilloscopeWindow* parent);
 	~HistoryWindow();
 
+	void OnWaveformDataReady(Oscilloscope* scope);
+
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
 
@@ -68,6 +70,7 @@ protected:
 	HistoryColumns m_columns;
 
 	OscilloscopeWindow* m_parent;
+	bool m_updating;
 };
 
 #endif

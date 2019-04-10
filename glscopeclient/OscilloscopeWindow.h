@@ -144,6 +144,7 @@ protected:
 
 	//Status polling
 	bool OnTimer(int timer);
+	void OnWaveformDataReady(Oscilloscope* scope);
 
 	int OnCaptureProgressUpdate(float progress);
 

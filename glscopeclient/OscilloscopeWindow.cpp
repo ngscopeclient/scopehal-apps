@@ -523,6 +523,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			scope->FlushConfigCache();
 	}
 
+	//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
 	for(auto scope : m_scopes)
 	{
 		Oscilloscope::TriggerMode status = scope->PollTrigger();
@@ -532,61 +533,58 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			continue;
 		}
 
-		//If not TRIGGERED, do nothing
-		if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			continue;
-
-		//double dt = GetTime() - m_tArm;
-		//LogDebug("Triggered (trigger was armed for %.2f ms)\n", dt * 1000);
-
-		//Triggered - get the data from each channel
-		//double start = GetTime();
-		scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
-		//dt = GetTime() - start;
-		//LogDebug("    Capture downloaded in %.2f ms\n", dt * 1000);
-
-		//TODO: a lot of the stuff below has to be redone for multi-scope
-
-		//Update the status
-		UpdateStatusBar();
-
-		//Re-arm trigger for another pass.
-		//Do this before we re-run measurements etc, so triggering runs in parallel with the math
-		if(!m_triggerOneShot)
-			ArmTrigger(false);
-
-		//We've stopped
-		else
-		{
-			m_btnStart.set_sensitive(true);
-			m_btnStartSingle.set_sensitive(true);
-			m_btnStop.set_sensitive(false);
-		}
-
-		//TODO: handle multiple scopes properly here (refresh after they're all in sync)
-
-		//Update the measurements (TODO: only relevant ones)
-		for(auto g : m_waveformGroups)
-			g->RefreshMeasurements();
-
-		//Update our protocol decoders (TODO: only relevant ones)
-		for(auto d : m_decoders)
-			d->Refresh();
-
-		//Update the views
-		for(auto w : m_waveformAreas)
-		{
-			if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
-				w->OnWaveformDataReady();
-		}
-
-		//Update protocol analyzers
-		for(auto a : m_analyzers)
-			a->OnWaveformDataReady();
+		//If triggered, grab the data
+		if(status == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			OnWaveformDataReady(scope);
 	}
 
 	//false to stop timer
 	return true;
+}
+
+void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
+{
+	//Download the data
+	scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+
+	//Update the status
+	UpdateStatusBar();
+
+	//Re-arm trigger for another pass.
+	//Do this before we re-run measurements etc, so triggering runs in parallel with the math
+	if(!m_triggerOneShot)
+		ArmTrigger(false);
+
+	//We've stopped
+	else
+	{
+		m_btnStart.set_sensitive(true);
+		m_btnStartSingle.set_sensitive(true);
+		m_btnStop.set_sensitive(false);
+	}
+
+	//Update the measurements
+	for(auto g : m_waveformGroups)
+		g->RefreshMeasurements();
+
+	//Update our protocol decoders
+	for(auto d : m_decoders)
+		d->Refresh();
+
+	//Update the views
+	for(auto w : m_waveformAreas)
+	{
+		if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
+			w->OnWaveformDataReady();
+	}
+
+	//Update protocol analyzers
+	for(auto a : m_analyzers)
+		a->OnWaveformDataReady();
+
+	//Update the history window
+	if(m_historyWindow.is_visible())
+		m_historyWindow.OnWaveformDataReady(scope);
 }
 
 void OscilloscopeWindow::UpdateStatusBar()

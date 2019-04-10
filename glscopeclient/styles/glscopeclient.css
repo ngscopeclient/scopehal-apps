@@ -17,6 +17,23 @@ row
 	font-family: monospace;
 }
 
+row:selected,
+row:selected:focus,
+.cell:selected,
+row:selected:hover,
+row:selected:focus:hover,
+.cell:selected:hover
+{
+	background-color: #505050;
+}
+
+row:hover,
+row:hover:focus,
+.cell:hover
+{
+	background-color: #202020;
+}
+
 treeview header button
 {
 	color: white;
