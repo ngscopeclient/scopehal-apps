@@ -544,6 +544,10 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 {
+	//Make sure we don't free the old waveform data
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+		scope->GetChannel(i)->Detach();
+
 	//Download the data
 	scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 
@@ -583,8 +587,7 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 		a->OnWaveformDataReady();
 
 	//Update the history window
-	if(m_historyWindow.is_visible())
-		m_historyWindow.OnWaveformDataReady(scope);
+	m_historyWindow.OnWaveformDataReady(scope);
 }
 
 void OscilloscopeWindow::UpdateStatusBar()

@@ -126,7 +126,6 @@ bool WaveformArea::PrepareGeometry()
 	auto dat = m_channel->GetData();
 	if(!dat)
 		return false;
-
 	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
 	size_t count = data.size();
 

@@ -44,6 +44,7 @@ using namespace std;
 HistoryColumns::HistoryColumns()
 {
 	add(m_timestamp);
+	add(m_history);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +84,14 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
 
 HistoryWindow::~HistoryWindow()
 {
-
+	//Delete old waveform data
+	auto children = m_model->children();
+	for(auto it : children)
+	{
+		WaveformHistory hist = it[m_columns.m_history];
+		for(auto w : hist)
+			delete w.second;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,7 +129,17 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	auto row = *m_model->append();
 	row[m_columns.m_timestamp] = stime;
 
-	//TODO: add actual info to the row
+	//Add waveform data
+	WaveformHistory hist;
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto c = scope->GetChannel(i);
+		auto dat = c->GetData();
+		if(!dat)
+			continue;
+		hist[c] = dat;
+	}
+	row[m_columns.m_history] = hist;
 
 	//auto scroll to bottom
 	auto adj = m_scroller.get_vadjustment();
@@ -130,14 +148,21 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//Select the newly added row
 	m_tree.get_selection()->select(row);
 
-	//Remove extra waveforms, if we have any
+	//Remove extra waveforms, if we have any.
+	//If not visible, destroy all waveforms other than the most recent
 	string smax = m_maxBox.get_text();
 	size_t nmax = atoi(smax.c_str());
+	if(!is_visible())
+		nmax = 1;
 	auto children = m_model->children();
 	while(children.size() > nmax)
 	{
-		//TODO: delete any saved waveforms etc
-		m_model->erase(children.begin());
+		auto it = children.begin();
+		hist = (*it)[m_columns.m_history];
+		for(auto w : hist)
+			delete w.second;
+
+		m_model->erase(it);
 	}
 
 	m_updating = false;
