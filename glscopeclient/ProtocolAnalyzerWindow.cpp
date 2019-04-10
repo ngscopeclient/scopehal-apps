@@ -44,6 +44,8 @@ using namespace std;
 ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 {
 	add(m_timestamp);
+	add(m_capturekey);
+	add(m_offset);
 
 	auto headers = decoder->GetHeaders();
 	for(size_t i=0; i<headers.size(); i++)
@@ -58,9 +60,15 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow* /*parent*/, PacketDecoder* decoder)
+ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
+	string title,
+	OscilloscopeWindow* /*parent*/,
+	PacketDecoder* decoder,
+	WaveformArea* area)
 	: m_decoder(decoder)
+	, m_area(area)
 	, m_columns(decoder)
+	, m_updating(false)
 {
 	set_title(title);
 
@@ -79,9 +87,13 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow*
 		m_tree.append_column(headers[i], m_columns.m_headers[i]);
 	m_tree.append_column("Data", m_columns.m_data);
 
+	m_tree.get_selection()->signal_changed().connect(
+		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnSelectionChanged));
+
 	//Set up the widgets
 	add(m_scroller);
 		m_scroller.add(m_tree);
+			m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
 		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	show_all();
 }
@@ -102,6 +114,8 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		return;
 
 	auto headers = m_decoder->GetHeaders();
+
+	m_updating = true;
 
 	for(auto p : packets)
 	{
@@ -125,6 +139,8 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		//Create the row
 		auto row = *m_model->append();
 		row[m_columns.m_timestamp] = stime;
+		row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+		row[m_columns.m_offset] = p->m_offset;
 
 		//Just copy headers without any processing
 		for(size_t i=0; i<headers.size(); i++)
@@ -139,9 +155,28 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 			sdata += t;
 		}
 		row[m_columns.m_data] = sdata;
+
+		//Select the newly added row
+		m_tree.get_selection()->select(row);
 	}
 
 	//auto scroll to bottom
 	auto adj = m_scroller.get_vadjustment();
 	adj->set_value(adj->get_upper());
+
+	m_updating = false;
+}
+
+void ProtocolAnalyzerWindow::OnSelectionChanged()
+{
+	//If we're updating with a new waveform we're already on the newest waveform.
+	//No need to refresh anything.
+	if(m_updating)
+		return;
+
+	auto row = *m_tree.get_selection()->get_selected();
+
+	//Set the offset of the decoder's group
+	m_area->m_group->m_timeOffset = row[m_columns.m_offset];
+	m_area->m_group->m_frame.queue_draw();
 }

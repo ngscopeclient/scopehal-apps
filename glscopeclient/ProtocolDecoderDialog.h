@@ -74,7 +74,6 @@ protected:
 	ProtocolDecoder* m_decoder;
 
 	std::vector<ChannelSelectorRow*> m_rows;
-
 };
 
 #endif

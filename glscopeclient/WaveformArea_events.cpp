@@ -422,7 +422,7 @@ void WaveformArea::OnProtocolDecode(string name)
 		char title[256];
 		snprintf(title, sizeof(title), "Protocol Analyzer: %s", decode->m_displayname.c_str());
 
-		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode);
+		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode, this);
 		m_parent->m_analyzers.emplace(analyzer);
 
 		analyzer->show();

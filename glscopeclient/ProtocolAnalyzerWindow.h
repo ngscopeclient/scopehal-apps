@@ -39,12 +39,16 @@ class OscilloscopeWindow;
 
 #include "../../lib/scopehal/PacketDecoder.h"
 
+typedef std::pair<time_t, int64_t> TimePoint;
+
 class ProtocolAnalyzerColumns : public Gtk::TreeModel::ColumnRecord
 {
 public:
 	ProtocolAnalyzerColumns(PacketDecoder* decoder);
 
 	Gtk::TreeModelColumn<Glib::ustring>					m_timestamp;
+	Gtk::TreeModelColumn<TimePoint>						m_capturekey;
+	Gtk::TreeModelColumn<int64_t>						m_offset;
 	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 };
@@ -55,18 +59,23 @@ public:
 class ProtocolAnalyzerWindow : public Gtk::Window
 {
 public:
-	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder);
+	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder, WaveformArea* area);
 	~ProtocolAnalyzerWindow();
 
 	void OnWaveformDataReady();
 
 protected:
 	PacketDecoder* m_decoder;
+	WaveformArea* m_area;
 
 	Gtk::ScrolledWindow m_scroller;
 		Gtk::TreeView m_tree;
 	Glib::RefPtr<Gtk::TreeStore> m_model;
 	ProtocolAnalyzerColumns m_columns;
+
+	void OnSelectionChanged();
+
+	bool m_updating;
 };
 
 #endif
