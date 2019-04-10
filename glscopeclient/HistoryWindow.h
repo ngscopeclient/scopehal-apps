@@ -46,6 +46,7 @@ public:
 	HistoryColumns();
 
 	Gtk::TreeModelColumn<Glib::ustring>		m_timestamp;
+	Gtk::TreeModelColumn<TimePoint>			m_capturekey;
 	Gtk::TreeModelColumn<WaveformHistory>	m_history;
 };
 

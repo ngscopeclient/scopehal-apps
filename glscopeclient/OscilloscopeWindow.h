@@ -86,6 +86,7 @@ public:
 	{ m_btnHistory.set_active(0); }
 
 	void OnHistoryUpdated();
+	void RemoveHistory(TimePoint timestamp);
 
 protected:
 	void ArmTrigger(bool oneshot);

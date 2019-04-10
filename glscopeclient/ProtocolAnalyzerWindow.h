@@ -63,6 +63,7 @@ public:
 	~ProtocolAnalyzerWindow();
 
 	void OnWaveformDataReady();
+	void RemoveHistory(TimePoint timestamp);
 
 protected:
 	PacketDecoder* m_decoder;

@@ -180,3 +180,23 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 	m_area->m_group->m_timeOffset = row[m_columns.m_offset];
 	m_area->m_group->m_frame.queue_draw();
 }
+
+void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
+{
+	//This always happens from the start of time, so just remove from the beginning of our list
+	//until we have nothing that matches.
+	auto children = m_model->children();
+	while(!children.empty())
+	{
+		//Stop if the timestamp is before our first point
+		auto it = children.begin();
+		TimePoint reftime = (*it)[m_columns.m_capturekey];
+		if(timestamp.first < reftime.first)
+			break;
+		if( (timestamp.first == reftime.first) && (timestamp.second <= reftime.second) )
+			break;
+
+		//Remove it
+		m_model->erase(it);
+	}
+}

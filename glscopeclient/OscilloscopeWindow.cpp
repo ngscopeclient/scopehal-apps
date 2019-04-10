@@ -701,3 +701,9 @@ void OscilloscopeWindow::OnHistoryUpdated()
 
 	//Don't update the protocol analyzers, they should already have this waveform saved
 }
+
+void OscilloscopeWindow::RemoveHistory(TimePoint timestamp)
+{
+	for(auto a : m_analyzers)
+		a->RemoveHistory(timestamp);
+}

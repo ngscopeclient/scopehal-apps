@@ -44,6 +44,7 @@ using namespace std;
 HistoryColumns::HistoryColumns()
 {
 	add(m_timestamp);
+	add(m_capturekey);
 	add(m_history);
 }
 
@@ -130,6 +131,7 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//Create the row
 	auto row = *m_model->append();
 	row[m_columns.m_timestamp] = stime;
+	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
 
 	//Add waveform data
 	WaveformHistory hist;
@@ -159,7 +161,11 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	auto children = m_model->children();
 	while(children.size() > nmax)
 	{
+		//Delete any protocol decodes from this waveform
 		auto it = children.begin();
+		m_parent->RemoveHistory((*it)[m_columns.m_capturekey]);
+
+		//Delete the saved waveform data
 		hist = (*it)[m_columns.m_history];
 		for(auto w : hist)
 			delete w.second;
