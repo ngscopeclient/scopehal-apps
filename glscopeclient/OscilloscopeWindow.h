@@ -92,6 +92,7 @@ protected:
 	void OnStartSingle();
 	void OnStop();
 	void OnQuit();
+	void OnHistory();
 
 	void UpdateStatusBar();
 
@@ -109,6 +110,7 @@ protected:
 			Gtk::ToolButton m_btnStart;
 			Gtk::ToolButton m_btnStartSingle;
 			Gtk::ToolButton m_btnStop;
+			Gtk::ToggleToolButton m_btnHistory;
 
 		//All of the splitters
 		std::set<Gtk::Paned*> m_splitters;

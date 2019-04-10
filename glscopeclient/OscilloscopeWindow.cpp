@@ -137,6 +137,10 @@ void OscilloscopeWindow::CreateWidgets()
 			m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 				m_btnStop.set_tooltip_text("Stop trigger");
 				m_btnStop.set_icon_name("media-playback-stop");
+			m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
+			m_toolbar.append(m_btnHistory, sigc::mem_fun(*this, &OscilloscopeWindow::OnHistory));
+				m_btnHistory.set_tooltip_text("History");
+				m_btnHistory.set_icon_name("search");
 
 		auto split = new Gtk::HPaned;
 			m_vbox.pack_start(*split);
@@ -212,6 +216,11 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnHistory()
+{
+
+}
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
 {
