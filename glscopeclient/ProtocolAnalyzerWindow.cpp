@@ -58,14 +58,15 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow* parent, PacketDecoder* decoder)
-	: Gtk::Dialog(title, *parent, false)
-	, m_decoder(decoder)
+ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow* /*parent*/, PacketDecoder* decoder)
+	: m_decoder(decoder)
 	, m_columns(decoder)
 {
+	set_title(title);
+
 	m_decoder->AddRef();
 
-	set_size_request(1024, 600);
+	set_default_size(1024, 600);
 
 	//Set up the tree view
 	m_model = Gtk::TreeStore::create(m_columns);
@@ -79,7 +80,7 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(string title, OscilloscopeWindow*
 	m_tree.append_column("Data", m_columns.m_data);
 
 	//Set up the widgets
-	get_vbox()->pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
+	add(m_scroller);
 		m_scroller.add(m_tree);
 		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 	show_all();

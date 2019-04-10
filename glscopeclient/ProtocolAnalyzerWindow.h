@@ -49,7 +49,7 @@ public:
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 };
 
-class ProtocolAnalyzerWindow : public Gtk::Dialog
+class ProtocolAnalyzerWindow : public Gtk::Window
 {
 public:
 	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder);
