@@ -707,3 +707,8 @@ void OscilloscopeWindow::RemoveHistory(TimePoint timestamp)
 	for(auto a : m_analyzers)
 		a->RemoveHistory(timestamp);
 }
+
+void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)
+{
+	m_historyWindow.JumpToHistory(timestamp);
+}

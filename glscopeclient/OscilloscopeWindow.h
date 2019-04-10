@@ -88,6 +88,8 @@ public:
 	void OnHistoryUpdated();
 	void RemoveHistory(TimePoint timestamp);
 
+	void JumpToHistory(TimePoint timestamp);
+
 protected:
 	void ArmTrigger(bool oneshot);
 

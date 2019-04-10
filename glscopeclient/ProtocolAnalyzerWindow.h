@@ -66,6 +66,7 @@ public:
 	void RemoveHistory(TimePoint timestamp);
 
 protected:
+	OscilloscopeWindow* m_parent;
 	PacketDecoder* m_decoder;
 	WaveformArea* m_area;
 

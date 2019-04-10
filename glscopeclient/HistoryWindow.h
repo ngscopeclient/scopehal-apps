@@ -60,6 +60,7 @@ public:
 	~HistoryWindow();
 
 	void OnWaveformDataReady(Oscilloscope* scope);
+	void JumpToHistory(TimePoint timestamp);
 
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);

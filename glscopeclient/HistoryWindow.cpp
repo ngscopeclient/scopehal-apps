@@ -131,7 +131,8 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//Create the row
 	auto row = *m_model->append();
 	row[m_columns.m_timestamp] = stime;
-	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+	TimePoint key(data->m_startTimestamp, data->m_startPicoseconds);
+	row[m_columns.m_capturekey] = key;
 
 	//Add waveform data
 	WaveformHistory hist;
@@ -163,7 +164,8 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	{
 		//Delete any protocol decodes from this waveform
 		auto it = children.begin();
-		m_parent->RemoveHistory((*it)[m_columns.m_capturekey]);
+		key = (*it)[m_columns.m_capturekey];
+		m_parent->RemoveHistory(key);
 
 		//Delete the saved waveform data
 		hist = (*it)[m_columns.m_history];
@@ -201,4 +203,20 @@ void HistoryWindow::OnSelectionChanged()
 
 	//Tell the window to refresh everything
 	m_parent->OnHistoryUpdated();
+}
+
+void HistoryWindow::JumpToHistory(TimePoint timestamp)
+{
+	//TODO: is there a way to binary search a tree view?
+	//Or get *stable* iterators that aren't invalidated by adding/removing items?
+	auto children = m_model->children();
+	for(auto it : children)
+	{
+		TimePoint key = (*it)[m_columns.m_capturekey];
+		if(key == timestamp)
+		{
+			m_tree.get_selection()->select(it);
+			break;
+		}
+	}
 }

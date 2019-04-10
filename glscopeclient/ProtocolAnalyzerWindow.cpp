@@ -62,10 +62,11 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 
 ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	string title,
-	OscilloscopeWindow* /*parent*/,
+	OscilloscopeWindow* parent,
 	PacketDecoder* decoder,
 	WaveformArea* area)
-	: m_decoder(decoder)
+	: m_parent(parent)
+	, m_decoder(decoder)
 	, m_area(area)
 	, m_columns(decoder)
 	, m_updating(false)
@@ -175,6 +176,9 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 		return;
 
 	auto row = *m_tree.get_selection()->get_selected();
+
+	//Select the waveform
+	m_parent->JumpToHistory(row[m_columns.m_capturekey]);
 
 	//Set the offset of the decoder's group
 	m_area->m_group->m_timeOffset = row[m_columns.m_offset];
