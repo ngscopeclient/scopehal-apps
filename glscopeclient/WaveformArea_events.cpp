@@ -416,6 +416,7 @@ void WaveformArea::OnProtocolDecode(string name)
 
 	//If the decoder is a packet-oriented protocol, pop up a protocol analyzer
 	//TODO: UI for re-opening the analyzer if we close it?
+	//TODO: allow protocol decoder dialogs to reconfigure decoder in the future
 	auto pdecode = dynamic_cast<PacketDecoder*>(decode);
 	if(pdecode != NULL)
 	{

@@ -39,6 +39,7 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "../../lib/scopehal/TextRenderer.h"
+#include "../../lib/scopehal/DigitalRenderer.h"
 
 using namespace std;
 using namespace glm;
@@ -128,6 +129,8 @@ bool WaveformArea::PrepareGeometry()
 		return false;
 	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
 	size_t count = data.size();
+	if(count == 0)
+		return false;
 
 	//Pull vertical size from the scope
 	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
@@ -632,8 +635,12 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 		//TODO: Render the channel label
 
+		if(data == NULL)
+			continue;
+
+		//Handle text
 		auto tr = dynamic_cast<TextRenderer*>(render);
-		if( (tr != NULL) && (data != NULL) )
+		if(tr != NULL)
 		{
 			for(size_t i=0; i<data->GetDepth(); i++)
 			{
@@ -657,6 +664,40 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					text,
 					color);
 			}
+		}
+
+		//Handle digital
+		auto dr = dynamic_cast<DigitalRenderer*>(render);
+		Gdk::Color color(o->m_displaycolor);
+		cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+		bool first = true;
+		if(dr != NULL)
+		{
+			auto ddat = dynamic_cast<DigitalCapture*>(data);
+			for(size_t i=0; i<data->GetDepth(); i++)
+			{
+				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
+				double end = start + (data->GetSampleLen(i) * data->m_timescale);
+
+				double xs = PicosecondsToXPosition(start);
+				double xe = PicosecondsToXPosition(end);
+
+				if( (xe < 0) || (xs > m_plotRight) )
+					continue;
+
+				double y = ybot;
+				if((*ddat)[i])
+					y = ytop;
+
+				if(first)
+				{
+					cr->move_to(xs, y);
+					first = false;
+				}
+				else
+					cr->line_to(xs, y);
+			}
+			cr->stroke();
 		}
 
 		delete render;

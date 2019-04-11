@@ -75,13 +75,41 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				}
 			}
 		}
+
+		//Add protocol decoders
+		for(auto d : parent->m_decoders)
+		{
+			if(decoder->ValidateChannel(i, d))
+			{
+				row->m_chans.append(d->m_displayname);
+				row->m_chanptrs[d->m_displayname] = d;
+				if(d == chan)
+					row->m_chans.set_active_text(d->m_displayname);
+			}
+		}
 	}
+
+	//Add parameters
+	for(auto it = decoder->GetParamBegin(); it != decoder->GetParamEnd(); it ++)
+	{
+		auto row = new ParameterRow;
+		get_vbox()->pack_start(row->m_box, Gtk::PACK_SHRINK);
+		m_prows.push_back(row);
+
+		row->m_label.set_label(it->first);
+
+		//Set initial value
+		row->m_entry.set_text(it->second.ToString());
+	}
+
 	show_all();
 }
 
 ProtocolDecoderDialog::~ProtocolDecoderDialog()
 {
 	for(auto r : m_rows)
+		delete r;
+	for(auto r : m_prows)
 		delete r;
 	m_rows.clear();
 }
@@ -95,6 +123,12 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 	{
 		auto chname = m_rows[i]->m_chans.get_active_text();
 		m_decoder->SetInput(i, m_rows[i]->m_chanptrs[chname]);
+	}
+
+	for(size_t i=0; i<m_prows.size(); i++)
+	{
+		m_decoder->GetParameter(m_prows[i]->m_label.get_label()).ParseString(
+			m_prows[i]->m_entry.get_text());
 	}
 }
 

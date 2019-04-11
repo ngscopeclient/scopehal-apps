@@ -45,9 +45,9 @@ class ChannelSelectorRow
 public:
 	ChannelSelectorRow()
 	{
-		m_box.pack_start(m_label, Gtk::PACK_EXPAND_WIDGET);
+		m_box.pack_start(m_label, Gtk::PACK_SHRINK);
 		m_box.pack_start(m_chans, Gtk::PACK_EXPAND_WIDGET);
-		m_label.set_size_request(100, 1);
+		m_label.set_size_request(150, 1);
 		m_label.set_halign(Gtk::ALIGN_END);
 		m_chans.set_size_request(100, 1);
 	}
@@ -57,6 +57,23 @@ public:
 		Gtk::ComboBoxText	m_chans;
 
 	std::map<std::string, OscilloscopeChannel*> m_chanptrs;
+};
+
+class ParameterRow
+{
+public:
+	ParameterRow()
+	{
+		m_box.pack_start(m_label, Gtk::PACK_SHRINK);
+		m_box.pack_start(m_entry, Gtk::PACK_EXPAND_WIDGET);
+		m_label.set_size_request(150, 1);
+		m_label.set_halign(Gtk::ALIGN_END);
+		m_entry.set_size_request(100, 1);
+	}
+
+	Gtk::HBox m_box;
+		Gtk::Label		m_label;
+		Gtk::Entry		m_entry;
 };
 
 /**
@@ -74,6 +91,7 @@ protected:
 	ProtocolDecoder* m_decoder;
 
 	std::vector<ChannelSelectorRow*> m_rows;
+	std::vector<ParameterRow*> m_prows;
 };
 
 #endif
