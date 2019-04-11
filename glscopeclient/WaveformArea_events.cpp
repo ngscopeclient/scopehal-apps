@@ -382,11 +382,11 @@ void WaveformArea::OnProtocolDecode(string name)
 	string color = GetDefaultChannelColor(g_numDecodes ++);
 	auto decode = ProtocolDecoder::CreateDecoder(name, color);
 
-	//Only one input with no config required? Do automagic configuration
+	//Only one input with no config required? Do default configuration
 	if( (decode->GetInputCount() == 1) && !decode->NeedsConfig())
 		decode->SetInput(0, m_selectedChannel);
 
-	//Multiple inputs or config needed
+	//Multiple inputs or config needed? Show the dialog
 	else
 	{
 		ProtocolDecoderDialog dialog(m_parent, decode, m_selectedChannel);
@@ -398,8 +398,11 @@ void WaveformArea::OnProtocolDecode(string name)
 		dialog.ConfigureDecoder();
 	}
 
-	//Set the name
+	//Set the name of the decoder based on the input channels etc
 	decode->SetDefaultName();
+
+	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
+	decode->Refresh();
 
 	//Create a new waveform view for the generated signal
 	if(!decode->IsOverlay())

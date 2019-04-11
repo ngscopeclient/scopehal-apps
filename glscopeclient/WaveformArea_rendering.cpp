@@ -633,7 +633,21 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		cr->line_to(0,			ybot);
 		cr->fill();
 
-		//TODO: Render the channel label
+		//Render the channel label
+		cr->set_source_rgba(1,1,1,1);
+		int twidth;
+		int theight;
+		Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+		Pango::FontDescription font("monospace normal 10");
+		font.set_weight(Pango::WEIGHT_NORMAL);
+		tlayout->set_font_description(font);
+		tlayout->set_text(o->m_displayname);
+		tlayout->get_pixel_size(twidth, theight);
+		cr->move_to(5, ybot - theight);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+
+		float left = twidth + 5;
 
 		if(data == NULL)
 			continue;
@@ -658,7 +672,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 				render->RenderComplexSignal(
 					cr,
-					0, m_plotRight,
+					left, m_plotRight,
 					xs, xe, 5,
 					ybot, ymid, ytop,
 					text,
@@ -682,13 +696,14 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xe < 0) || (xs > m_plotRight) )
+				if( (xs < left) || (xe > m_plotRight) )
 					continue;
 
 				double y = ybot;
 				if((*ddat)[i])
 					y = ytop;
 
+				//start of sample
 				if(first)
 				{
 					cr->move_to(xs, y);
@@ -696,6 +711,9 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				}
 				else
 					cr->line_to(xs, y);
+
+				//end of sample
+				cr->line_to(xe, y);
 			}
 			cr->stroke();
 		}
