@@ -538,17 +538,30 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			OnWaveformDataReady(scope);
 	}
 
+	//Process pending draw calls before we do another polling cycle
+	while(Gtk::Main::events_pending())
+		Gtk::Main::iteration();
+
 	//false to stop timer
 	return true;
 }
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 {
+	//make sure we close fully
+	if(!is_visible())
+		m_historyWindow.close();
+
+	LogDebug("----Data ready----\n");
+	LogIndenter li;
+
 	//Make sure we don't free the old waveform data
+	LogDebug("Detaching\n");
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 		scope->GetChannel(i)->Detach();
 
 	//Download the data
+	LogDebug("Acquiring\n");
 	scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 
 	//Update the status
@@ -573,7 +586,9 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//Update our protocol decoders
 	for(auto d : m_decoders)
-		d->Refresh();
+		d->SetDirty();
+	for(auto d : m_decoders)
+		d->RefreshIfDirty();
 
 	//Update the views
 	for(auto w : m_waveformAreas)
@@ -669,9 +684,11 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 
 int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
 {
+	//Do nothing. We don't want to have draws occur while state is inconsistent.
+
 	//Dispatch pending gtk events (such as draw calls)
-	while(Gtk::Main::events_pending())
-		Gtk::Main::iteration();
+	//while(Gtk::Main::events_pending())
+	//	Gtk::Main::iteration();
 
 	return 0;
 }

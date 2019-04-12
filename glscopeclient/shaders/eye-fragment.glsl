@@ -23,5 +23,8 @@ void main()
 	finalColor.r = color.r;
 	finalColor.g = color.g;
 	finalColor.b = color.b;
-	finalColor.a = 1;
+	if(y > 0.001)
+		finalColor.a = 1;
+	else
+		finalColor.a = 0;
 }

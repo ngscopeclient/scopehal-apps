@@ -218,6 +218,7 @@ protected:
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
+	Texture m_cairoTextureOver;
 	VertexArray m_cairoVAO;
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;

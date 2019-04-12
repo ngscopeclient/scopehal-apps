@@ -410,7 +410,7 @@ void WaveformArea::OnProtocolDecode(string name)
 	//Set the name of the decoder based on the input channels etc
 	decode->SetDefaultName();
 
-	//If it's an eye pattern, resize it
+	//If it's an eye pattern, set the initial size
 	auto eye = dynamic_cast<EyeDecoder2*>(decode);
 	if(eye != NULL)
 	{

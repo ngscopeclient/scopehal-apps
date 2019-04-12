@@ -418,6 +418,7 @@ void WaveformArea::on_unrealize()
 	m_windowFramebuffer.Detach();
 	m_waveformTexture.Destroy();
 	m_cairoTexture.Destroy();
+	m_cairoTextureOver.Destroy();
 	m_eyeProgram.Destroy();
 	m_eyeVAO.Destroy();
 	m_eyeVBO.Destroy();
@@ -527,7 +528,10 @@ void WaveformArea::InitializeEyePass()
 
 	//Load the eye color ramp
 	char tmp[1024];
-	FILE* fp = fopen("eye-gradient.bin", "r");
+	//FILE* fp = fopen("gradients/eye-gradient-ks.bin", "r");
+	FILE* fp = fopen("gradients/eye-gradient-crt.bin", "r");
+	if(!fp)
+		LogFatal("fail to open eye gradient");
 	fread(tmp, 1, 1024, fp);
 	fclose(fp);
 
