@@ -39,6 +39,7 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "ProtocolDecoderDialog.h"
+#include "../../lib/scopeprotocols/EyeDecoder2.h"
 
 using namespace std;
 using namespace glm;
@@ -96,6 +97,14 @@ void WaveformArea::on_resize(int width, int height)
 
 	//double dt = GetTime() - start;
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);
+
+	//If it's an eye pattern, resize it
+	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+	if(eye != NULL)
+	{
+		eye->SetWidth(m_width);
+		eye->SetHeight(m_height);
+	}
 }
 
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
@@ -400,6 +409,14 @@ void WaveformArea::OnProtocolDecode(string name)
 
 	//Set the name of the decoder based on the input channels etc
 	decode->SetDefaultName();
+
+	//If it's an eye pattern, resize it
+	auto eye = dynamic_cast<EyeDecoder2*>(decode);
+	if(eye != NULL)
+	{
+		eye->SetWidth(m_width);
+		eye->SetHeight(m_height);
+	}
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	decode->Refresh();

@@ -40,6 +40,7 @@
 #include "ProfileBlock.h"
 #include "../../lib/scopehal/TextRenderer.h"
 #include "../../lib/scopehal/DigitalRenderer.h"
+#include "../../lib/scopeprotocols/EyeDecoder2.h"
 
 using namespace std;
 using namespace glm;
@@ -124,16 +125,16 @@ bool WaveformArea::PrepareGeometry()
 	//LogDebug("Processing capture\n");
 	LogIndenter li;
 
-	auto dat = m_channel->GetData();
-	if(!dat)
+	//Pull vertical size from the scope even if we have no data
+	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
+
+	auto pdat = dynamic_cast<AnalogCapture*>(m_channel->GetData());
+	if(!pdat)
 		return false;
-	AnalogCapture& data = *dynamic_cast<AnalogCapture*>(dat);
+	AnalogCapture& data = *pdat;
 	size_t count = data.size();
 	if(count == 0)
 		return false;
-
-	//Pull vertical size from the scope
-	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
@@ -145,9 +146,9 @@ bool WaveformArea::PrepareGeometry()
 	{
 		//Actual X start/end point of the data
 		float xleft = PicosecondsToXPosition(
-			(data.GetSampleStart(j) * dat->m_timescale) + dat->m_triggerPhase);
+			(data.GetSampleStart(j) * pdat->m_timescale) + pdat->m_triggerPhase);
 		float xright = PicosecondsToXPosition(
-			(data.GetSampleStart(j+1) * dat->m_timescale) + dat->m_triggerPhase);
+			(data.GetSampleStart(j+1) * pdat->m_timescale) + pdat->m_triggerPhase);
 
 		//TODO: if a triangle is <1 pixel wide, don't stretch. Merge it with the adjacent one(s)
 
@@ -231,13 +232,32 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+	//Do persistence proecssing
+	if(!m_persistence || m_persistenceClear)
+	{
+		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+		m_persistenceClear = false;
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	else
+		RenderPersistenceOverlay();
+
+	bool is_eye = dynamic_cast<EyeDecoder2*>(m_channel) != NULL;
+
 	//Render the Cairo layers with the GL waveform sandwiched in between
-	RenderPersistenceOverlay();
-	if(PrepareGeometry())
-		RenderTrace();
 	RenderCairoUnderlays();
-	RenderTraceColorCorrection();
-	RenderCairoOverlays();
+	if(is_eye)
+		RenderEye();
+	else if(PrepareGeometry())
+	{
+		RenderTrace();
+		RenderTraceColorCorrection();
+	}
+
+	//TODO: figure out why this breaks eye rendering
+	if(!is_eye)
+		RenderCairoOverlays();
 
 	//Sanity check
 	int err = glGetError();
@@ -247,19 +267,39 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	return true;
 }
 
+void WaveformArea::RenderEye()
+{
+	auto pdat = dynamic_cast<EyeCapture2*>(m_channel->GetData());
+	if(pdat == NULL)
+		return;
+
+	//It's an eye pattern! Just copy it directly into the waveform texture.
+	m_eyeTexture.Bind();
+	m_eyeTexture.SetData(m_width, m_height, pdat->GetData(), GL_RED, GL_FLOAT, GL_RGBA32F);
+
+	//Drawing to the window
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+	m_eyeProgram.Bind();
+	m_eyeVAO.Bind();
+	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex");
+
+	//Only look at stuff inside the plot area
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisable(GL_SCISSOR_TEST);
+}
+
 void WaveformArea::RenderPersistenceOverlay()
 {
-	//Draw to the offscreen floating-point framebuffer.
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-
-	//If not persisting, just wipe out whatever was there before
-	if(!m_persistence || m_persistenceClear)
-	{
-		m_persistenceClear = false;
-		glClearColor(0, 0, 0, 0);
-		glClear(GL_COLOR_BUFFER_BIT);
-		return;
-	}
 
 	//Configure blending
 	glEnable(GL_BLEND);
@@ -275,6 +315,8 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
+	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+
 	//Configure our shader and projection matrix
 	m_waveformProgram.Bind();
 	m_waveformProgram.SetUniform(m_projection, "projection");
@@ -283,8 +325,9 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(1, "yscale");
 
+	glEnable(GL_BLEND);
 	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 0.1);
+	glBlendColor(0, 0, 0, 0.2);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Only look at stuff inside the plot area
@@ -582,7 +625,9 @@ void WaveformArea::RenderCairoOverlays()
 	//Clear to a blank background
 	cr->set_source_rgba(0, 0, 0, 0);
 	cr->rectangle(0, 0, m_width, m_height);
+	cr->set_operator(Cairo::OPERATOR_SOURCE);
 	cr->fill();
+	cr->set_operator(Cairo::OPERATOR_OVER);
 
 	DoRenderCairoOverlays(cr);
 
@@ -624,6 +669,13 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		double ymid = 15;
 		double ytop = 5;
 		double ybot = 25;
+
+		/*
+		//TEMP:
+		ymid = m_height / 2;
+		ytop = ymid - 10;
+		ybot = ymid + 10;
+		*/
 
 		//Render the grayed-out background
 		cr->set_source_rgba(0,0,0, 0.6);

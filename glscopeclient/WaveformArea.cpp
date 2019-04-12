@@ -395,6 +395,7 @@ void WaveformArea::on_realize()
 	InitializeColormapPass();
 	InitializePersistencePass();
 	InitializeCairoPass();
+	InitializeEyePass();
 }
 
 void WaveformArea::on_unrealize()
@@ -417,6 +418,9 @@ void WaveformArea::on_unrealize()
 	m_windowFramebuffer.Detach();
 	m_waveformTexture.Destroy();
 	m_cairoTexture.Destroy();
+	m_eyeProgram.Destroy();
+	m_eyeVAO.Destroy();
+	m_eyeVBO.Destroy();
 
 	Gtk::GLArea::on_unrealize();
 }
@@ -484,6 +488,41 @@ void WaveformArea::InitializeColormapPass()
 	m_colormapVAO.Bind();
 	m_colormapProgram.EnableVertexArray("vert");
 	m_colormapProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
+void WaveformArea::InitializeEyePass()
+{
+	//Set up shaders
+	VertexShader cvs;
+	FragmentShader cfs;
+	if(!cvs.Load("shaders/eye-vertex.glsl") || !cfs.Load("shaders/eye-fragment.glsl"))
+	{
+		LogError("failed to load eye shaders, aborting");
+		exit(1);
+	}
+
+	m_eyeProgram.Add(cvs);
+	m_eyeProgram.Add(cfs);
+	if(!m_eyeProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
+
+	//Create the VAO/VBO for a fullscreen polygon
+	float verts[8] =
+	{
+		-1, -1,
+		 1, -1,
+		 1,  1,
+		-1,  1
+	};
+	m_eyeVBO.Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	m_eyeVAO.Bind();
+	m_eyeProgram.EnableVertexArray("vert");
+	m_eyeProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
 void WaveformArea::InitializePersistencePass()
