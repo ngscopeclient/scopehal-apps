@@ -536,6 +536,7 @@ void WaveformArea::InitializeEyePass()
 	fclose(fp);
 
 	m_eyeColorRamp.Bind();
+	ResetTextureFiltering();
 	m_eyeColorRamp.SetData(256, 1, tmp, GL_RGBA);
 }
 

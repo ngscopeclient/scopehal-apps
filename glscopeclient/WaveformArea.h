@@ -223,6 +223,8 @@ protected:
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
 
+	void ResetTextureFiltering();
+
 	//Math helpers
 	float PixelsToVolts(float pix);
 	float VoltsToPixels(float volt);

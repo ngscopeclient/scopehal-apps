@@ -144,6 +144,15 @@ bool WaveformArea::PrepareGeometry()
 	return true;
 }
 
+void WaveformArea::ResetTextureFiltering()
+{
+	//No texture filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	double start = GetTime();
@@ -165,16 +174,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Turn off some stuff we don't need, but leave blending on.
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
-
-	//No texture filtering
-	for(int i=1; i>=0; i--)
-	{
-		glActiveTexture(GL_TEXTURE0 + i);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
 	//Do persistence processing
 	if(!m_persistence || m_persistenceClear)
@@ -198,11 +197,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		RenderTrace();
 		RenderTraceColorCorrection();
 	}
-	//if(!is_eye)
-	//	RenderCairoOverlays();
-
-	//bind a random texture we dont care about
-	//m_cairoTexture.Bind();
+	RenderCairoOverlays();
 
 	//Sanity check
 	int err = glGetError();
@@ -225,6 +220,7 @@ void WaveformArea::RenderEye()
 
 	//It's an eye pattern! Just copy it directly into the waveform texture.
 	m_eyeTexture.Bind();
+	ResetTextureFiltering();
 	m_eyeTexture.SetData(
 		peye->GetWidth(),
 		peye->GetHeight(),
@@ -310,6 +306,7 @@ void WaveformArea::RenderTrace()
 void WaveformArea::RenderCairoUnderlays()
 {
 	LogDebug("Cairo underlays\n");
+	LogIndenter li;
 
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
@@ -335,6 +332,9 @@ void WaveformArea::RenderCairoUnderlays()
 	m_cairoProgram.Bind();
 	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
+	LogDebug("m_cairoTexture = %d\n", (int)m_cairoTexture);
+	m_cairoTexture.Bind();
+	ResetTextureFiltering();
 	m_cairoTexture.SetData(
 		m_width,
 		m_height,
@@ -562,6 +562,7 @@ void WaveformArea::RenderTraceColorCorrection()
 	//as a textured quad. Apply color correction as we do this.
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
+	LogDebug("m_waveformTexture = %d\n", (int)m_waveformTexture);
 	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
 	m_colormapProgram.SetUniform(color.get_red_p(), "r");
 	m_colormapProgram.SetUniform(color.get_green_p(), "g");
@@ -594,6 +595,7 @@ void WaveformArea::RenderCairoOverlays()
 
 	//Get the image data and make a texture from it
 	m_cairoTextureOver.Bind();
+	ResetTextureFiltering();
 	m_cairoTextureOver.SetData(
 		m_width,
 		m_height,
@@ -609,6 +611,7 @@ void WaveformArea::RenderCairoOverlays()
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	m_cairoProgram.Bind();
 	m_cairoVAO.Bind();
+	LogDebug("m_cairoTextureOver = %d\n", (int)m_cairoTextureOver);
 	m_cairoProgram.SetUniform(m_cairoTextureOver, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }

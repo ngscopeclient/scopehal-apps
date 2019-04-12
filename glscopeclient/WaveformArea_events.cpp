@@ -86,6 +86,7 @@ void WaveformArea::on_resize(int width, int height)
 	//No antialiasing for now, we just alpha blend everything
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 	m_waveformTexture.Bind();
+	ResetTextureFiltering();
 	m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 	m_waveformFramebuffer.SetTexture(m_waveformTexture);
 	if(!m_waveformFramebuffer.IsComplete())
