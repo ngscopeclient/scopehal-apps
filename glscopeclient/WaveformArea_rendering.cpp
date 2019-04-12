@@ -229,8 +229,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	glDisable(GL_CULL_FACE);
 
 	//No texture filtering
+	glActiveTexture(GL_TEXTURE0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glActiveTexture(GL_TEXTURE1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glActiveTexture(GL_TEXTURE0);
 
 	//Do persistence proecssing
 	if(!m_persistence || m_persistenceClear)
@@ -269,13 +274,20 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 void WaveformArea::RenderEye()
 {
-	auto pdat = dynamic_cast<EyeCapture2*>(m_channel->GetData());
-	if(pdat == NULL)
+	auto peye = dynamic_cast<EyeDecoder2*>(m_channel);
+	auto pcap = dynamic_cast<EyeCapture2*>(m_channel->GetData());
+	if(peye == NULL)
 		return;
 
 	//It's an eye pattern! Just copy it directly into the waveform texture.
 	m_eyeTexture.Bind();
-	m_eyeTexture.SetData(m_width, m_height, pdat->GetData(), GL_RED, GL_FLOAT, GL_RGBA32F);
+	m_eyeTexture.SetData(
+		peye->GetWidth(),
+		peye->GetHeight(),
+		pcap->GetData(),
+		GL_RED,
+		GL_FLOAT,
+		GL_RGBA32F);
 
 	//Drawing to the window
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -286,7 +298,8 @@ void WaveformArea::RenderEye()
 
 	m_eyeProgram.Bind();
 	m_eyeVAO.Bind();
-	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex");
+	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
+	m_eyeProgram.SetUniform(m_eyeColorRamp, "ramp", 1);
 
 	//Only look at stuff inside the plot area
 	glEnable(GL_SCISSOR_TEST);
@@ -295,6 +308,7 @@ void WaveformArea::RenderEye()
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	glDisable(GL_SCISSOR_TEST);
+	glActiveTexture(GL_TEXTURE0);
 }
 
 void WaveformArea::RenderPersistenceOverlay()

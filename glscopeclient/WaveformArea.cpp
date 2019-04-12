@@ -421,6 +421,7 @@ void WaveformArea::on_unrealize()
 	m_eyeProgram.Destroy();
 	m_eyeVAO.Destroy();
 	m_eyeVBO.Destroy();
+	m_eyeColorRamp.Destroy();
 
 	Gtk::GLArea::on_unrealize();
 }
@@ -523,6 +524,15 @@ void WaveformArea::InitializeEyePass()
 	m_eyeVAO.Bind();
 	m_eyeProgram.EnableVertexArray("vert");
 	m_eyeProgram.SetVertexAttribPointer("vert", 2, 0);
+
+	//Load the eye color ramp
+	char tmp[1024];
+	FILE* fp = fopen("eye-gradient.bin", "r");
+	fread(tmp, 1, 1024, fp);
+	fclose(fp);
+
+	m_eyeColorRamp.Bind();
+	m_eyeColorRamp.SetData(256, 1, tmp, GL_RGBA);
 }
 
 void WaveformArea::InitializePersistencePass()

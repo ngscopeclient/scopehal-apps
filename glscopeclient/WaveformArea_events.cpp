@@ -102,7 +102,7 @@ void WaveformArea::on_resize(int width, int height)
 	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 	if(eye != NULL)
 	{
-		eye->SetWidth(m_width);
+		eye->SetWidth(m_width/4);
 		eye->SetHeight(m_height);
 	}
 }
@@ -414,7 +414,7 @@ void WaveformArea::OnProtocolDecode(string name)
 	auto eye = dynamic_cast<EyeDecoder2*>(decode);
 	if(eye != NULL)
 	{
-		eye->SetWidth(m_width);
+		eye->SetWidth(m_width / 4);
 		eye->SetHeight(m_height);
 	}
 
