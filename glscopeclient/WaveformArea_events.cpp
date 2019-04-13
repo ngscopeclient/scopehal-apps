@@ -174,6 +174,14 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	m_selectedChannel = m_channel;
 	m_clickLocation = HitTest(event->x, event->y);
 
+	for(auto it : m_overlayPositions)
+	{
+		int top = it.second - 10;
+		int bot = it.second + 10;
+		if( (event->y >= top) && (event->y <= bot) )
+			m_selectedChannel = it.first;
+	}
+
 	//Look up the time of our click (if in the plot area)
 	int64_t timestamp = XPositionToPicoseconds(event->x);
 
