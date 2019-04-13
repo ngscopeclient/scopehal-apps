@@ -14,7 +14,6 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopemeasurements")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/scopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/curvetrace")
 
