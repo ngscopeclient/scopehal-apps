@@ -171,6 +171,14 @@ void OscilloscopeWindow::CreateWidgets()
 									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
 									OscilloscopeWindow::EYE_RAINBOW,
 									&m_eyeColorRainbowItem));
+						m_viewEyeColorMenu.append(m_eyeColorViridisItem);
+							m_eyeColorViridisItem.set_label("Viridis");
+							m_eyeColorViridisItem.set_group(m_eyeColorGroup);
+							m_eyeColorViridisItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_VIRIDIS,
+									&m_eyeColorViridisItem));
 			m_menu.append(m_channelsMenuItem);
 				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);

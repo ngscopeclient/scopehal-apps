@@ -97,6 +97,7 @@ public:
 		EYE_KRAIN,
 		EYE_RAINBOW,
 		EYE_GRAYSCALE,
+		EYE_VIRIDIS,
 
 		NUM_EYE_COLORS
 	};
@@ -138,6 +139,7 @@ protected:
 							Gtk::RadioMenuItem m_eyeColorIronbowItem;
 							Gtk::RadioMenuItem m_eyeColorKRainItem;
 							Gtk::RadioMenuItem m_eyeColorRainbowItem;
+							Gtk::RadioMenuItem m_eyeColorViridisItem;
 		Gtk::Toolbar m_toolbar;
 			Gtk::ToolButton m_btnStart;
 			Gtk::ToolButton m_btnStartSingle;
