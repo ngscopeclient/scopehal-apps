@@ -479,8 +479,19 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 
 void WaveformArea::OnWaveformDataReady()
 {
+	//If we're an eye, refresh the parent's time scale
+	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+	if(eye != NULL)
+	{
+		//eye is two UIs wide
+		int64_t eye_width_ps = 2 * eye->GetUIWidth();
+		m_group->m_pixelsPerPicosecond = m_width * 1.0f / eye_width_ps;
+		m_group->m_timeOffset = -eye->GetUIWidth();
+	}
+
 	//Update our measurements and redraw the waveform
 	queue_draw();
+	m_group->m_timeline.queue_draw();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
