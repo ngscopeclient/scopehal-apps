@@ -202,7 +202,7 @@ protected:
 	VertexArray m_eyeVAO;
 	VertexBuffer m_eyeVBO;
 	Texture m_eyeTexture;
-	Texture m_eyeColorRamp[3];
+	Texture m_eyeColorRamp[5];
 
 	//Cairo overlay rendering for text and protocol decode overlays
 	void RenderCairoUnderlays();

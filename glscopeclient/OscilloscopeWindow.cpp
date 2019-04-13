@@ -139,6 +139,14 @@ void OscilloscopeWindow::CreateWidgets()
 									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
 									OscilloscopeWindow::EYE_CRT,
 									&m_eyeColorCrtItem));
+						m_viewEyeColorMenu.append(m_eyeColorGrayscaleItem);
+							m_eyeColorGrayscaleItem.set_label("Grayscale");
+							m_eyeColorGrayscaleItem.set_group(m_eyeColorGroup);
+							m_eyeColorGrayscaleItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_GRAYSCALE,
+									&m_eyeColorGrayscaleItem));
 						m_viewEyeColorMenu.append(m_eyeColorIronbowItem);
 							m_eyeColorIronbowItem.set_label("Ironbow");
 							m_eyeColorIronbowItem.set_group(m_eyeColorGroup);
@@ -155,6 +163,14 @@ void OscilloscopeWindow::CreateWidgets()
 									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
 									OscilloscopeWindow::EYE_KRAIN,
 									&m_eyeColorKRainItem));
+						m_viewEyeColorMenu.append(m_eyeColorRainbowItem);
+							m_eyeColorRainbowItem.set_label("Rainbow");
+							m_eyeColorRainbowItem.set_group(m_eyeColorGroup);
+							m_eyeColorRainbowItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_RAINBOW,
+									&m_eyeColorRainbowItem));
 			m_menu.append(m_channelsMenuItem);
 				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);

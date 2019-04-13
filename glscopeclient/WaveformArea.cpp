@@ -533,6 +533,8 @@ void WaveformArea::InitializeEyePass()
 	fnames[OscilloscopeWindow::EYE_CRT] = "gradients/eye-gradient-crt.rgba";
 	fnames[OscilloscopeWindow::EYE_IRONBOW] = "gradients/eye-gradient-ironbow.rgba";
 	fnames[OscilloscopeWindow::EYE_KRAIN] = "gradients/eye-gradient-krain.rgba";
+	fnames[OscilloscopeWindow::EYE_RAINBOW] = "gradients/eye-gradient-rainbow.rgba";
+	fnames[OscilloscopeWindow::EYE_GRAYSCALE] = "gradients/eye-gradient-grayscale.rgba";
 	for(int i=0; i<OscilloscopeWindow::NUM_EYE_COLORS; i++)
 	{
 		FILE* fp = fopen(fnames[i], "r");
