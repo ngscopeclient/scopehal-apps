@@ -52,24 +52,16 @@ using namespace glm;
 //TODO: Tesselate in a geometry shader, rather than on the CPU!
 bool WaveformArea::PrepareGeometry()
 {
-	LogDebug("Preparing geometry\n");
-
 	//LogDebug("Processing capture\n");
 	LogIndenter li;
 
 	auto pdat = dynamic_cast<AnalogCapture*>(m_channel->GetData());
 	if(!pdat)
-	{
-		LogDebug("No data\n");
 		return false;
-	}
 	AnalogCapture& data = *pdat;
 	size_t count = data.size();
 	if(count == 0)
-	{
-		LogDebug("No data content\n");
 		return false;
-	}
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
@@ -156,7 +148,7 @@ void WaveformArea::ResetTextureFiltering()
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	double start = GetTime();
-	LogDebug("[%f] Rendering %s\n", start, m_channel->m_displayname.c_str());
+	//LogDebug("[%f] Rendering %s\n", start, m_channel->m_displayname.c_str());
 	LogIndenter li;
 	double dt = start - m_lastFrameStart;
 	if(m_lastFrameStart > 0)
@@ -216,8 +208,6 @@ void WaveformArea::RenderEye()
 	if(pcap == NULL)
 		return;
 
-	LogDebug("Eye\n");
-
 	//It's an eye pattern! Just copy it directly into the waveform texture.
 	m_eyeTexture.Bind();
 	ResetTextureFiltering();
@@ -239,7 +229,7 @@ void WaveformArea::RenderEye()
 	m_eyeProgram.Bind();
 	m_eyeVAO.Bind();
 	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
-	m_eyeProgram.SetUniform(m_eyeColorRamp, "ramp", 1);
+	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
 	//Only look at stuff inside the plot area
 	glEnable(GL_SCISSOR_TEST);
@@ -269,8 +259,6 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	LogDebug("Trace\n");
-
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 
 	//Configure our shader and projection matrix
@@ -305,9 +293,6 @@ void WaveformArea::RenderTrace()
 
 void WaveformArea::RenderCairoUnderlays()
 {
-	LogDebug("Cairo underlays\n");
-	LogIndenter li;
-
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -332,7 +317,6 @@ void WaveformArea::RenderCairoUnderlays()
 	m_cairoProgram.Bind();
 	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
-	LogDebug("m_cairoTexture = %d\n", (int)m_cairoTexture);
 	m_cairoTexture.Bind();
 	ResetTextureFiltering();
 	m_cairoTexture.SetData(
@@ -547,8 +531,6 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderTraceColorCorrection()
 {
-	LogDebug("Color correction\n");
-
 	//Drawing to the window
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 
@@ -562,7 +544,6 @@ void WaveformArea::RenderTraceColorCorrection()
 	//as a textured quad. Apply color correction as we do this.
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
-	LogDebug("m_waveformTexture = %d\n", (int)m_waveformTexture);
 	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
 	m_colormapProgram.SetUniform(color.get_red_p(), "r");
 	m_colormapProgram.SetUniform(color.get_green_p(), "g");
@@ -573,8 +554,6 @@ void WaveformArea::RenderTraceColorCorrection()
 
 void WaveformArea::RenderCairoOverlays()
 {
-	LogDebug("Cairo overlays\n");
-
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -611,7 +590,6 @@ void WaveformArea::RenderCairoOverlays()
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	m_cairoProgram.Bind();
 	m_cairoVAO.Bind();
-	LogDebug("m_cairoTextureOver = %d\n", (int)m_cairoTextureOver);
 	m_cairoProgram.SetUniform(m_cairoTextureOver, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }

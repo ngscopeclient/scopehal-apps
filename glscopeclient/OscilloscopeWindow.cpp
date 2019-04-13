@@ -87,6 +87,8 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	m_toggleInProgress = false;
 
 	m_tLastFlush = GetTime();
+
+	m_eyeColor = EYE_CRT;
 }
 
 /**
@@ -123,6 +125,36 @@ void OscilloscopeWindow::CreateWidgets()
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnQuit));
 					m_fileMenu.append(*item);
+			m_menu.append(m_viewMenuItem);
+				m_viewMenuItem.set_label("View");
+				m_viewMenuItem.set_submenu(m_viewMenu);
+					m_viewMenu.append(m_viewEyeColorMenuItem);
+					m_viewEyeColorMenuItem.set_label("Eye color");
+					m_viewEyeColorMenuItem.set_submenu(m_viewEyeColorMenu);
+						m_viewEyeColorMenu.append(m_eyeColorCrtItem);
+							m_eyeColorCrtItem.set_label("CRT");
+							m_eyeColorCrtItem.set_group(m_eyeColorGroup);
+							m_eyeColorCrtItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_CRT,
+									&m_eyeColorCrtItem));
+						m_viewEyeColorMenu.append(m_eyeColorIronbowItem);
+							m_eyeColorIronbowItem.set_label("Ironbow");
+							m_eyeColorIronbowItem.set_group(m_eyeColorGroup);
+							m_eyeColorIronbowItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_IRONBOW,
+									&m_eyeColorIronbowItem));
+						m_viewEyeColorMenu.append(m_eyeColorKRainItem);
+							m_eyeColorKRainItem.set_label("KRain");
+							m_eyeColorKRainItem.set_group(m_eyeColorGroup);
+							m_eyeColorKRainItem.signal_activate().connect(
+								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
+									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
+									OscilloscopeWindow::EYE_KRAIN,
+									&m_eyeColorKRainItem));
 			m_menu.append(m_channelsMenuItem);
 				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);
@@ -219,6 +251,21 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item)
+{
+	if(!item->get_active())
+		return;
+
+	m_eyeColor = color;
+	for(auto v : m_waveformAreas)
+		v->queue_draw();
+}
+
+OscilloscopeWindow::EyeColor OscilloscopeWindow::GetEyeColor()
+{
+	return m_eyeColor;
+}
 
 void OscilloscopeWindow::OnHistory()
 {
@@ -552,16 +599,16 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	if(!is_visible())
 		m_historyWindow.close();
 
-	LogDebug("----Data ready----\n");
+	LogTrace("----Data ready----\n");
 	LogIndenter li;
 
 	//Make sure we don't free the old waveform data
-	LogDebug("Detaching\n");
+	LogTrace("Detaching\n");
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 		scope->GetChannel(i)->Detach();
 
 	//Download the data
-	LogDebug("Acquiring\n");
+	LogTrace("Acquiring\n");
 	scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 
 	//Update the status

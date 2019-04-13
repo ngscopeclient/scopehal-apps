@@ -90,6 +90,17 @@ public:
 
 	void JumpToHistory(TimePoint timestamp);
 
+	enum EyeColor
+	{
+		EYE_CRT,
+		EYE_IRONBOW,
+		EYE_KRAIN,
+
+		NUM_EYE_COLORS
+	};
+
+	EyeColor GetEyeColor();
+
 protected:
 	void ArmTrigger(bool oneshot);
 
@@ -115,34 +126,44 @@ protected:
 				Gtk::Menu m_fileMenu;
 			Gtk::MenuItem m_channelsMenuItem;
 				Gtk::Menu m_channelsMenu;
+			Gtk::MenuItem m_viewMenuItem;
+				Gtk::Menu m_viewMenu;
+					Gtk::MenuItem m_viewEyeColorMenuItem;
+						Gtk::Menu m_viewEyeColorMenu;
+							Gtk::RadioMenuItem::Group m_eyeColorGroup;
+							Gtk::RadioMenuItem m_eyeColorCrtItem;
+							Gtk::RadioMenuItem m_eyeColorIronbowItem;
+							Gtk::RadioMenuItem m_eyeColorKRainItem;
 		Gtk::Toolbar m_toolbar;
 			Gtk::ToolButton m_btnStart;
 			Gtk::ToolButton m_btnStartSingle;
 			Gtk::ToolButton m_btnStop;
 			Gtk::ToggleToolButton m_btnHistory;
 
-		//All of the splitters
-		std::set<Gtk::Paned*> m_splitters;
+	//All of the splitters
+	std::set<Gtk::Paned*> m_splitters;
 
 	//shared by all scopes/channels
 	HistoryWindow m_historyWindow;
 
 public:
-		//All of the waveform groups and areas, regardless of where they live
-		std::set<WaveformGroup*> m_waveformGroups;
-		std::set<WaveformArea*> m_waveformAreas;
-		std::set<ProtocolDecoder*> m_decoders;
+	//All of the waveform groups and areas, regardless of where they live
+	std::set<WaveformGroup*> m_waveformGroups;
+	std::set<WaveformArea*> m_waveformAreas;
+	std::set<ProtocolDecoder*> m_decoders;
 
-		//All of the protocol analyzers
-		std::set<ProtocolAnalyzerWindow*> m_analyzers;
+	//All of the protocol analyzers
+	std::set<ProtocolAnalyzerWindow*> m_analyzers;
 
 protected:
-		Gtk::HBox m_statusbar;
-			Gtk::Label m_triggerConfigLabel;
-			Gtk::Label m_sampleCountLabel;
-			Gtk::Label m_sampleRateLabel;
+	Gtk::HBox m_statusbar;
+		Gtk::Label m_triggerConfigLabel;
+		Gtk::Label m_sampleCountLabel;
+		Gtk::Label m_sampleRateLabel;
 
-		Glib::RefPtr<Gtk::CssProvider> m_css;
+	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
+
+	Glib::RefPtr<Gtk::CssProvider> m_css;
 
 	//Our scope connections
 	std::vector<Oscilloscope*> m_scopes;
@@ -159,6 +180,8 @@ protected:
 	bool m_toggleInProgress;
 
 	double m_tLastFlush;
+
+	EyeColor m_eyeColor;
 };
 
 #endif

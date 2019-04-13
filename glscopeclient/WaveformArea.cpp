@@ -422,7 +422,8 @@ void WaveformArea::on_unrealize()
 	m_eyeProgram.Destroy();
 	m_eyeVAO.Destroy();
 	m_eyeVBO.Destroy();
-	m_eyeColorRamp.Destroy();
+	for(auto& e : m_eyeColorRamp)
+		e.Destroy();
 
 	Gtk::GLArea::on_unrealize();
 }
@@ -528,16 +529,22 @@ void WaveformArea::InitializeEyePass()
 
 	//Load the eye color ramp
 	char tmp[1024];
-	//FILE* fp = fopen("gradients/eye-gradient-ks.bin", "r");
-	FILE* fp = fopen("gradients/eye-gradient-crt.bin", "r");
-	if(!fp)
-		LogFatal("fail to open eye gradient");
-	fread(tmp, 1, 1024, fp);
-	fclose(fp);
+	const char* fnames[OscilloscopeWindow::NUM_EYE_COLORS];
+	fnames[OscilloscopeWindow::EYE_CRT] = "gradients/eye-gradient-crt.rgba";
+	fnames[OscilloscopeWindow::EYE_IRONBOW] = "gradients/eye-gradient-ironbow.rgba";
+	fnames[OscilloscopeWindow::EYE_KRAIN] = "gradients/eye-gradient-krain.rgba";
+	for(int i=0; i<OscilloscopeWindow::NUM_EYE_COLORS; i++)
+	{
+		FILE* fp = fopen(fnames[i], "r");
+		if(!fp)
+			LogFatal("fail to open eye gradient");
+		fread(tmp, 1, 1024, fp);
+		fclose(fp);
 
-	m_eyeColorRamp.Bind();
-	ResetTextureFiltering();
-	m_eyeColorRamp.SetData(256, 1, tmp, GL_RGBA);
+		m_eyeColorRamp[i].Bind();
+		ResetTextureFiltering();
+		m_eyeColorRamp[i].SetData(256, 1, tmp, GL_RGBA);
+	}
 }
 
 void WaveformArea::InitializePersistencePass()

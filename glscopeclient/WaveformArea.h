@@ -179,9 +179,6 @@ protected:
 	glm::mat4 m_projection;
 	size_t m_waveformLength;
 
-	//Eye patterns
-	Texture m_eyeTexture;
-
 	//Color correction
 	void RenderTraceColorCorrection();
 	void InitializeColormapPass();
@@ -204,7 +201,8 @@ protected:
 	Program m_eyeProgram;
 	VertexArray m_eyeVAO;
 	VertexBuffer m_eyeVBO;
-	Texture m_eyeColorRamp;
+	Texture m_eyeTexture;
+	Texture m_eyeColorRamp[3];
 
 	//Cairo overlay rendering for text and protocol decode overlays
 	void RenderCairoUnderlays();
