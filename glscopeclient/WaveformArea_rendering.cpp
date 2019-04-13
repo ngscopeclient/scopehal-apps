@@ -420,7 +420,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	float ybot = m_padding;
 	float plotheight = m_height - 2*m_padding;
 	float halfheight = plotheight/2;
-	float ymid = halfheight + ybot;
+	//float ymid = halfheight + ybot;
 
 	//Volts from the center line of our graph to the top. May not be the max value in the signal.
 	float volts_per_half_span = PixelsToVolts(halfheight);
@@ -603,29 +603,56 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
+	int midline = 15;
+	int height = 20;
+	int spacing = 30;
+
+	//Find which overlay slots are in use
+	int max_overlays = 10;
+	bool overlayPositionsUsed[max_overlays] = {0};
+	for(auto o : m_overlays)
+	{
+		if(m_overlayPositions.find(o) == m_overlayPositions.end())
+			continue;
+
+		int pos = m_overlayPositions[o];
+		int index = (pos - midline) / spacing;
+		if( (pos >= 0) && (index < max_overlays) )
+			overlayPositionsUsed[index] = true;
+	}
+
+	//Assign first unused position to all overlays
+	for(auto o : m_overlays)
+	{
+		if(m_overlayPositions.find(o) == m_overlayPositions.end())
+		{
+			for(int i=0; i<max_overlays; i++)
+			{
+				if(!overlayPositionsUsed[i])
+				{
+					overlayPositionsUsed[i] = true;
+					m_overlayPositions[o] = midline + spacing*i;
+					break;
+				}
+			}
+		}
+	}
+
 	for(auto o : m_overlays)
 	{
 		auto render = o->CreateRenderer();
 		auto data = o->GetData();
 
-		//TODO: this needs a lot of tweaking for multiple overlays
-		double ymid = 15;
-		double ytop = 5;
-		double ybot = 25;
-
-		/*
-		//TEMP:
-		ymid = m_height / 2;
-		ytop = ymid - 10;
-		ybot = ymid + 10;
-		*/
+		double ymid = m_overlayPositions[o];
+		double ytop = ymid - height/2;
+		double ybot = ymid + height/2;
 
 		//Render the grayed-out background
 		cr->set_source_rgba(0,0,0, 0.6);
-		cr->move_to(0, 			ytop);
-		cr->line_to(m_width, 	ytop);
-		cr->line_to(m_width,	ybot);
-		cr->line_to(0,			ybot);
+		cr->move_to(0, 				ytop);
+		cr->line_to(m_plotRight, 	ytop);
+		cr->line_to(m_plotRight,	ybot);
+		cr->line_to(0,				ybot);
 		cr->fill();
 
 		//Render the channel label

@@ -239,6 +239,7 @@ protected:
 	OscilloscopeWindow* m_parent;
 
 	std::vector<ProtocolDecoder*> m_overlays;
+	std::map<ProtocolDecoder*, int> m_overlayPositions;
 
 	double m_lastFrameStart;
 	double m_frameTime;
