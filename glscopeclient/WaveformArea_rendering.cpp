@@ -669,7 +669,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 
-		float left = twidth + 5;
+		int textright = twidth + 10;
 
 		if(data == NULL)
 			continue;
@@ -686,7 +686,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xe < 0) || (xs > m_plotRight) )
+				if( (xs < textright) || (xe > m_plotRight) )
 					continue;
 
 				auto text = tr->GetText(i);
@@ -694,7 +694,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 				render->RenderComplexSignal(
 					cr,
-					left, m_plotRight,
+					textright, m_plotRight,
 					xs, xe, 5,
 					ybot, ymid, ytop,
 					text,
@@ -718,7 +718,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xs < left) || (xe > m_plotRight) )
+				if( (xs < textright) || (xe > m_plotRight) )
 					continue;
 
 				double y = ybot;
