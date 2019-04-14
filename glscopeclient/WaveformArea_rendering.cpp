@@ -686,7 +686,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xs < textright) || (xe > m_plotRight) )
+				if( (xs < textright) || (xs > m_plotRight) )
 					continue;
 
 				auto text = tr->GetText(i);
