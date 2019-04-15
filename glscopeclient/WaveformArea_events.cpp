@@ -455,6 +455,7 @@ void WaveformArea::OnProtocolDecode(string name)
 		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode, this);
 		m_parent->m_analyzers.emplace(analyzer);
 
+		analyzer->OnWaveformDataReady();
 		analyzer->show();
 	}
 }
