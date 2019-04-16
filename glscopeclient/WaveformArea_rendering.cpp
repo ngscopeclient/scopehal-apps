@@ -105,11 +105,11 @@ bool WaveformArea::PrepareGeometry()
 
 		//and emit the vertexes
 		size_t base = j*12;
-		m_traceBuffer[base+0] = x1;
-		m_traceBuffer[base+1] = y1;
+		m_traceBuffer[base+0] = x2;
+		m_traceBuffer[base+1] = y2;
 
-		m_traceBuffer[base+2] = x2;
-		m_traceBuffer[base+3] = y2;
+		m_traceBuffer[base+2] = x1;
+		m_traceBuffer[base+3] = y1;
 
 		m_traceBuffer[base+4] = x3;
 		m_traceBuffer[base+5] = y3;
@@ -157,7 +157,7 @@ void WaveformArea::ResetTextureFiltering()
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	LogIndenter li;
-	LogTrace("Rendering %s\n", m_channel->m_displayname.c_str());
+	//LogTrace("Rendering %s\n", m_channel->m_displayname.c_str());
 
 	double start = GetTime();
 	double dt = start - m_lastFrameStart;
@@ -206,10 +206,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Sanity check
 	int err = glGetError();
 	if(err != 0)
-		LogNotice("err = %x\n", err);
+		LogNotice("Render: err = %x\n", err);
 
-	dt = GetTime() - start;
-	LogTrace("Render time: %.3f ms\n", dt * 1000);
+	//dt = GetTime() - start;
+	//LogTrace("Render time: %.3f ms\n", dt * 1000);
 
 	return true;
 }
@@ -274,7 +274,7 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	bool msaa = false;
+	bool msaa = true;
 
 	if(msaa)
 		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
