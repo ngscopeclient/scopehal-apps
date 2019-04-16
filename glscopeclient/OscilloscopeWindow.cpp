@@ -79,9 +79,9 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	//Add widgets
 	CreateWidgets();
 
-	//Set the update timer (100 Hz)
+	//Set the update timer (50 Hz)
 	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
-	sigc::connection conn = Glib::signal_timeout().connect(slot, 10);
+	sigc::connection conn = Glib::signal_timeout().connect(slot, 20);
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;

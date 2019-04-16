@@ -83,18 +83,29 @@ void WaveformArea::on_resize(int width, int height)
 		LogNotice("resize 3, err = %x\n", err);
 
 	//Initialize the color buffers
-	//No antialiasing for now, we just alpha blend everything
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-	m_waveformTexture.Bind();
+	m_waveformTexture.Bind(GL_TEXTURE_2D_MULTISAMPLE);
+	m_waveformTexture.AllocateMultisample(width, height, 4);
 	ResetTextureFiltering();
-	m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	m_waveformFramebuffer.SetTexture(m_waveformTexture);
+	m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D_MULTISAMPLE);
 	if(!m_waveformFramebuffer.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
 	err = glGetError();
 	if(err != 0)
-		LogNotice("resize, err = %x\n", err);
+		LogNotice("resize 4, err = %x\n", err);
+
+	m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
+	m_waveformTextureResolved.Bind();
+	m_waveformTextureResolved.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+	ResetTextureFiltering();
+	m_waveformFramebufferResolved.SetTexture(m_waveformTextureResolved);
+	if(!m_waveformFramebufferResolved.IsComplete())
+		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+
+	err = glGetError();
+	if(err != 0)
+		LogNotice("resize 4, err = %x\n", err);
 
 	//double dt = GetTime() - start;
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);

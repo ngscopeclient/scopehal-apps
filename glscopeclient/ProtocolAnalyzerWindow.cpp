@@ -187,6 +187,9 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 
 void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 {
+	//TODO: delete data from the PacketDecoder's.
+	//Right now they'll keep growing without bound!
+
 	//This always happens from the start of time, so just remove from the beginning of our list
 	//until we have nothing that matches.
 	auto children = m_model->children();

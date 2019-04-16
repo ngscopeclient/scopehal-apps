@@ -96,6 +96,8 @@ protected:
 			Gtk::Menu m_decodeMenu;
 				Gtk::MenuItem m_decodeAnalysisItem;
 					Gtk::Menu m_decodeAnalysisMenu;
+				Gtk::MenuItem m_decodeClockItem;
+					Gtk::Menu m_decodeClockMenu;
 				Gtk::MenuItem m_decodeConversionItem;
 					Gtk::Menu m_decodeConversionMenu;
 				Gtk::MenuItem m_decodeMathItem;
@@ -178,6 +180,8 @@ protected:
 	std::vector<VertexArray*> m_traceVAOs;
 	glm::mat4 m_projection;
 	size_t m_waveformLength;
+	std::vector<float> m_traceBuffer;
+	float m_xoff;
 
 	//Color correction
 	void RenderTraceColorCorrection();
@@ -185,8 +189,10 @@ protected:
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
-	Framebuffer m_waveformFramebuffer;
+	Framebuffer m_waveformFramebuffer;			//multisample
 	Texture m_waveformTexture;
+	Framebuffer m_waveformFramebufferResolved;	//single sample
+	Texture m_waveformTextureResolved;
 
 	//Persistence
 	void RenderPersistenceOverlay();

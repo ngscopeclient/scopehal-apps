@@ -14,19 +14,16 @@ void main()
 	vec4 texcolor = texture(fbtex, vec2(texcoord));
 
 	//Logarithmic shading?
-	float liny = texcolor.a * 2;
-	//float y = pow(liny, 0.75);
-	//y = min(y, 1);
-	//y = max(y, 0);
+	float y = pow(texcolor.a, 1.0 / 4);
+	y = min(y, 2);
+	y = max(y, 0);
 
 	//convert to rgba
-	finalColor.r = r * liny;
-	finalColor.g = g * liny;
-	finalColor.b = b * liny;
-	/*if(liny > 1)
+	finalColor.r = r * y;
+	finalColor.g = g * y;
+	finalColor.b = b * y;
+	if(y > 0)
 		finalColor.a = 1;
-	else*/ if(liny > 0)
-		finalColor.a = 1.0;
 	else
 		finalColor.a = 0;
 }

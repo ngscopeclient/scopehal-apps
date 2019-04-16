@@ -102,7 +102,7 @@ WaveformArea::~WaveformArea()
 	m_channel->Release();
 
 	double tavg = m_frameTime / m_frameCount;
-	LogDebug("Average frame time: %.3f ms (%.2f FPS)\n", tavg*1000, 1/tavg);
+	LogDebug("Average frame time: %.3f ms (%.2f FPS, %zu frames)\n", tavg*1000, 1/tavg, m_frameCount);
 
 	CleanupBufferObjects();
 
@@ -297,6 +297,9 @@ void WaveformArea::CreateWidgets()
 		m_decodeMenu.append(m_decodeAnalysisItem);
 			m_decodeAnalysisItem.set_label("Analysis");
 			m_decodeAnalysisItem.set_submenu(m_decodeAnalysisMenu);
+		m_decodeMenu.append(m_decodeClockItem);
+			m_decodeClockItem.set_label("Clocking");
+			m_decodeClockItem.set_submenu(m_decodeClockMenu);
 		m_decodeMenu.append(m_decodeConversionItem);
 			m_decodeConversionItem.set_label("Conversion");
 			m_decodeConversionItem.set_submenu(m_decodeConversionMenu);
@@ -327,6 +330,10 @@ void WaveformArea::CreateWidgets()
 					m_decodeAnalysisMenu.append(*item);
 					break;
 
+				case ProtocolDecoder::CAT_CLOCK:
+					m_decodeClockMenu.append(*item);
+					break;
+
 				case ProtocolDecoder::CAT_CONVERSION:
 					m_decodeConversionMenu.append(*item);
 					break;
@@ -335,12 +342,13 @@ void WaveformArea::CreateWidgets()
 					m_decodeMathMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_MISC:
-					m_decodeMiscMenu.append(*item);
-					break;
-
 				case ProtocolDecoder::CAT_SERIAL:
 					m_decodeSerialMenu.append(*item);
+					break;
+
+				default:
+				case ProtocolDecoder::CAT_MISC:
+					m_decodeMiscMenu.append(*item);
 					break;
 			}
 			delete d;

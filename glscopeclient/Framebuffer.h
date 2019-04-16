@@ -84,9 +84,9 @@ public:
 	bool IsComplete(GLenum target = GL_FRAMEBUFFER)
 	{ return glCheckFramebufferStatus(target) == GL_FRAMEBUFFER_COMPLETE; }
 
-	void SetTexture(Texture& tex)
+	void SetTexture(Texture& tex, GLenum target = GL_TEXTURE_2D)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, tex, 0);
 	}
 
 protected:

@@ -49,11 +49,13 @@ using namespace glm;
 // Rendering
 
 //TODO: only do this if the waveform is dirty!
-//TODO: Tesselate in a geometry shader, rather than on the CPU!
+//TODO: Tesselate in a shader, rather than on the CPU!
 bool WaveformArea::PrepareGeometry()
 {
+	double start = GetTime();
+
 	//LogDebug("Processing capture\n");
-	LogIndenter li;
+	//LogIndenter li;
 
 	auto pdat = dynamic_cast<AnalogCapture*>(m_channel->GetData());
 	if(!pdat)
@@ -65,63 +67,70 @@ bool WaveformArea::PrepareGeometry()
 
 	//Create the geometry
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
-	double lheight = 1.0;	//pixels
-	float* verts = new float[waveform_size];
+	m_traceBuffer.resize(waveform_size);
+	double radius = 1;
 	double offset = m_channel->GetOffset();
-	//#pragma omp parallel for
+	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
+	#pragma omp parallel for num_threads(4)
 	for(size_t j=0; j<(count-1); j++)
 	{
-		//Actual X start/end point of the data
-		float xleft = PicosecondsToXPosition(
-			(data.GetSampleStart(j) * pdat->m_timescale) + pdat->m_triggerPhase);
-		float xright = PicosecondsToXPosition(
-			(data.GetSampleStart(j+1) * pdat->m_timescale) + pdat->m_triggerPhase);
+		//Actual X/Y start/end point of the data
+		float xleft = data.GetSampleStart(j) * xscale;
+		float xright = data.GetSampleStart(j+1) * xscale;
+		float yleft = m_pixelsPerVolt * (data[j] + offset);
+		float yright = m_pixelsPerVolt * (data[j+1] + offset);
 
-		//TODO: if a triangle is <1 pixel wide, don't stretch. Merge it with the adjacent one(s)
+		//Find the normal vector (swap x and y components
+		float dy = xright - xleft;
+		float dx = yright - yleft;
 
-		//If the triangle would be degenerate horizontally (less than one pixel wide), stretch it
-		float width = xright-xleft;
-		float minwidth = 2;
-		if(width < minwidth)
-		{
-			float xmid = width/2 + xleft;
+		//Normalize
+		float scale = radius / sqrt(dy*dy + dx*dx);
+		dx = dx * scale;
+		dy = dy * scale;
 
-			xleft = xmid - minwidth/2;
-			xright = xmid + minwidth/2;
-		}
+		//Calculate final coordinates
+		float x1 = xleft - dx;
+		float y1 = yleft - dy;
 
-		//Actual Y start point/end of the data
-		float yleft = VoltsToPixels(data[j] + offset);
-		float yright = VoltsToPixels(data[j+1] + offset);
+		float x2 = xleft + dx;
+		float y2 = yleft + dy;
 
-		//If the triangle doesn't touch the next one, stretch vertically? this SHOULD not be possible,
-		//but rendering shows that something is causing stuff to not touch vertically
+		float x3 = xright + dx;
+		float y3 = yright + dy;
 
-		//Rather than using a generalized line drawing algorithm, we can cheat since we know the points are
-		//always left to right, sorted, and never vertical. Just add some height to the samples!
-		size_t voff = j*12;
-		verts[voff++] = xleft;
-		verts[voff++] = yleft + lheight;
+		float x4 = xright - dx;
+		float y4 = yright - dy;
 
-		verts[voff++] = xleft;
-		verts[voff++] = yleft - lheight;
+		//and emit the vertexes
+		size_t base = j*12;
+		m_traceBuffer[base+0] = x1;
+		m_traceBuffer[base+1] = y1;
 
-		verts[voff++] = xright;
-		verts[voff++] = yright - lheight;
+		m_traceBuffer[base+2] = x2;
+		m_traceBuffer[base+3] = y2;
 
-		verts[voff++] = xright;
-		verts[voff++] = yright - lheight;
+		m_traceBuffer[base+4] = x3;
+		m_traceBuffer[base+5] = y3;
 
-		verts[voff++] = xright;
-		verts[voff++] = yright + lheight;
+		m_traceBuffer[base+6] = x1;
+		m_traceBuffer[base+7] = y1;
 
-		verts[voff++] = xleft;
-		verts[voff++] = yleft + lheight;
+		m_traceBuffer[base+8] = x3;
+		m_traceBuffer[base+9] = y3;
+
+		m_traceBuffer[base+10] = x4;
+		m_traceBuffer[base+11] = y4;
 	}
+
+	double dt = GetTime() - start;
+	LogTrace("Prepare geometry: %.3f ms\n", dt * 1000);
+	start = GetTime();
 
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * waveform_size, verts, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_traceBuffer.size(), &m_traceBuffer[0], GL_DYNAMIC_DRAW);
 
 	//Configure vertex array settings
 	m_traceVAOs[0]->Bind();
@@ -130,8 +139,8 @@ bool WaveformArea::PrepareGeometry()
 
 	m_waveformLength = count;
 
-	//Cleanup time
-	delete[] verts;
+	dt = GetTime() - start;
+	LogTrace("Download: %.3f ms\n", dt * 1000);
 
 	return true;
 }
@@ -147,13 +156,14 @@ void WaveformArea::ResetTextureFiltering()
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
-	double start = GetTime();
-	//LogDebug("[%f] Rendering %s\n", start, m_channel->m_displayname.c_str());
 	LogIndenter li;
+	LogTrace("Rendering %s\n", m_channel->m_displayname.c_str());
+
+	double start = GetTime();
 	double dt = start - m_lastFrameStart;
 	if(m_lastFrameStart > 0)
 	{
-		//LogDebug("Frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
+		//LogDebug("Inter-frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
 		m_frameTime += dt;
 		m_frameCount ++;
 	}
@@ -170,9 +180,11 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Do persistence processing
 	if(!m_persistence || m_persistenceClear)
 	{
-		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 		m_persistenceClear = false;
 		glClearColor(0, 0, 0, 0);
+		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+		glClear(GL_COLOR_BUFFER_BIT);
+		m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 	else
@@ -195,6 +207,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	int err = glGetError();
 	if(err != 0)
 		LogNotice("err = %x\n", err);
+
+	dt = GetTime() - start;
+	LogTrace("Render time: %.3f ms\n", dt * 1000);
 
 	return true;
 }
@@ -259,27 +274,30 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+	bool msaa = false;
+
+	if(msaa)
+		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
+	else
+		m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
 
 	//Configure our shader and projection matrix
 	m_waveformProgram.Bind();
 	m_waveformProgram.SetUniform(m_projection, "projection");
-	m_waveformProgram.SetUniform(0.0f, "xoff");
+	m_waveformProgram.SetUniform(m_xoff, "xoff");
 	m_waveformProgram.SetUniform(1.0, "xscale");
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(1, "yscale");
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
-	//Only look at stuff inside the plot area
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(0, 0, m_plotRight, m_height);
 
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();
-
 	/*vector<int> firsts;
 	vector<int> counts;
 	firsts.push_back(0);
@@ -289,6 +307,18 @@ void WaveformArea::RenderTrace()
 	glDrawArrays(GL_TRIANGLES, 0, 12*m_waveformLength);
 
 	glDisable(GL_SCISSOR_TEST);
+
+	//Resolve the multisample framebuffer
+	if(msaa)
+	{
+		m_waveformFramebuffer.Bind(GL_READ_FRAMEBUFFER);
+		m_waveformFramebufferResolved.Bind(GL_DRAW_FRAMEBUFFER);
+		glBlitFramebuffer(
+			0, 0, m_plotRight, m_height,
+			0, 0, m_plotRight, m_height,
+			GL_COLOR_BUFFER_BIT,
+			GL_NEAREST);
+	}
 }
 
 void WaveformArea::RenderCairoUnderlays()
@@ -544,7 +574,7 @@ void WaveformArea::RenderTraceColorCorrection()
 	//as a textured quad. Apply color correction as we do this.
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
-	m_colormapProgram.SetUniform(m_waveformTexture, "fbtex");
+	m_colormapProgram.SetUniform(m_waveformTextureResolved, "fbtex");
 	m_colormapProgram.SetUniform(color.get_red_p(), "r");
 	m_colormapProgram.SetUniform(color.get_green_p(), "g");
 	m_colormapProgram.SetUniform(color.get_blue_p(), "b");
