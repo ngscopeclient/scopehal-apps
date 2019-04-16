@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.3)
 project(jtaghal)
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_C_FLAGS "-g -O2 -fopenmp -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "-g -O2 -fopenmp -Wall -Wextra --std=c++11")
+set(CMAKE_C_FLAGS "-g -O3 -fopenmp -Wall -Wextra -march=native -mtune=native")
+set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=native -mtune=native")
 
 find_package(PkgConfig)
 pkg_check_modules(GTKMM gtkmm-3.0)
