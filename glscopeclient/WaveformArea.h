@@ -158,6 +158,9 @@ protected:
 
 	void RefreshMeasurements();
 
+	//Helpers for figuring out what kind of signal our primary trace is
+	bool IsEye();
+
 	int m_width;
 	int m_height;
 

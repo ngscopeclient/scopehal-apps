@@ -111,9 +111,9 @@ void WaveformArea::on_resize(int width, int height)
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);
 
 	//If it's an eye pattern, resize it
-	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
-	if(eye != NULL)
+	if(IsEye())
 	{
+		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 		eye->SetWidth(m_width/4);
 		eye->SetHeight(m_height);
 	}
@@ -131,12 +131,18 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			switch(ev->direction)
 			{
 				case GDK_SCROLL_UP:
-					m_parent->OnZoomInHorizontal(m_group);
-					ClearPersistence();
+					if(!IsEye())
+					{
+						m_parent->OnZoomInHorizontal(m_group);
+						ClearPersistence();
+					}
 					break;
 				case GDK_SCROLL_DOWN:
-					m_parent->OnZoomOutHorizontal(m_group);
-					ClearPersistence();
+					if(!IsEye())
+					{
+						m_parent->OnZoomOutHorizontal(m_group);
+						ClearPersistence();
+					}
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");

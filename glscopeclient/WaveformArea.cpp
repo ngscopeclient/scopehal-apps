@@ -37,6 +37,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
+#include "../../lib/scopeprotocols/EyeDecoder2.h"
 
 using namespace std;
 using namespace glm;
@@ -630,4 +631,10 @@ void WaveformArea::InitializeCairoPass()
 	m_cairoVAO.Bind();
 	m_cairoProgram.EnableVertexArray("vert");
 	m_cairoProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
+bool WaveformArea::IsEye()
+{
+	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+	return (eye != NULL);
 }

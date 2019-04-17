@@ -190,11 +190,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	else
 		RenderPersistenceOverlay();
 
-	bool is_eye = dynamic_cast<EyeDecoder2*>(m_channel) != NULL;
-
 	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderCairoUnderlays();
-	if(is_eye)
+	if(IsEye())
 		RenderEye();
 	else if(PrepareGeometry())
 	{
