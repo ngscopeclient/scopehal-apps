@@ -274,7 +274,7 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	bool msaa = true;
+	bool msaa = false;
 
 	if(msaa)
 		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);

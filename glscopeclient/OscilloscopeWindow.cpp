@@ -597,7 +597,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
 	for(auto scope : m_scopes)
 	{
-		Oscilloscope::TriggerMode status = scope->PollTrigger();
+		Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
 		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
 		{
 			//Invalid value, skip it
@@ -633,7 +633,7 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//Download the data
 	LogTrace("Acquiring\n");
-	scope->AcquireData(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+	scope->AcquireDataFifo(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
 
 	//Update the status
 	UpdateStatusBar();

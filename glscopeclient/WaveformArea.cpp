@@ -423,8 +423,10 @@ void WaveformArea::on_unrealize()
 	m_cairoVAO.Destroy();
 	m_cairoVBO.Destroy();
 	m_waveformFramebuffer.Destroy();
+	m_waveformFramebufferResolved.Destroy();
 	m_windowFramebuffer.Detach();
 	m_waveformTexture.Destroy();
+	m_waveformTextureResolved.Destroy();
 	m_cairoTexture.Destroy();
 	m_cairoTextureOver.Destroy();
 	m_eyeProgram.Destroy();
