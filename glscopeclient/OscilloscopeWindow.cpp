@@ -207,10 +207,6 @@ void OscilloscopeWindow::CreateWidgets()
 			split->pack1(group->m_frame);
 
 		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-		m_statusbar.pack_end(m_sampleRateLabel, Gtk::PACK_SHRINK);
-		m_sampleRateLabel.set_size_request(75, 1);
-		m_statusbar.pack_end(m_sampleCountLabel, Gtk::PACK_SHRINK);
-		m_sampleCountLabel.set_size_request(75, 1);
 		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
 		m_triggerConfigLabel.set_size_request(75, 1);
 
@@ -679,34 +675,8 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 void OscilloscopeWindow::UpdateStatusBar()
 {
 	//TODO: redo this for multiple scopes
-
-	//Find the first enabled channel (assume same config as the rest for now)
-	OscilloscopeChannel* chan = NULL;
 	auto scope = m_scopes[0];
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
-	{
-		chan = scope->GetChannel(i);
-		if(chan->IsEnabled())
-			break;
-	}
-	auto data = chan->GetData();
-	if(data == NULL)
-		return;	//don't update
-
-	double gsps = 1000 / data->m_timescale;
-	char tmp[128];
-	snprintf(tmp, sizeof(tmp), "%.1f GS/s", gsps);
-	m_sampleRateLabel.set_label(tmp);
-
-	size_t len = chan->GetData()->GetDepth();
-	if(len > 1e6)
-		snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
-	else if(len > 1e3)
-		snprintf(tmp, sizeof(tmp), "%.0f kS", len * 1e-3f);
-	else
-		snprintf(tmp, sizeof(tmp), "%zu S", len);
-	m_sampleCountLabel.set_label(tmp);
-
+	char tmp[256];
 	string name = scope->GetChannel(scope->GetTriggerChannelIndex())->GetHwname();
 	float voltage = scope->GetTriggerVoltage();
 	if(voltage < 1)

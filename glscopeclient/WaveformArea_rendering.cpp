@@ -782,7 +782,39 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
-	tlayout->set_text(m_channel->m_displayname);
+
+	//Add sample rate info to physical channels
+	//TODO: do this to some decodes too?
+	string label = m_channel->m_displayname;
+	auto data = m_channel->GetData();
+	if(m_channel->IsPhysicalChannel() && (data != NULL) )
+	{
+		label += " : ";
+
+		//Format sample depth
+		char tmp[256];
+		size_t len = data->GetDepth();
+		if(len > 1e6)
+			snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
+		else if(len > 1e3)
+			snprintf(tmp, sizeof(tmp), "%.0f kS", len * 1e-3f);
+		else
+			snprintf(tmp, sizeof(tmp), "%zu S", len);
+		label += tmp;
+		label += "\n";
+
+		//Format timebase
+		double gsps = 1000 / data->m_timescale;
+		if(gsps > 1)
+			snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
+		else if(gsps > 0.001)
+			snprintf(tmp, sizeof(tmp), "%.0f MS/s", gsps * 1000);
+		else
+			snprintf(tmp, sizeof(tmp), "%.1f kS/s", gsps * 1000 * 1000);
+		label += tmp;
+	}
+
+	tlayout->set_text(label);
 	tlayout->get_pixel_size(twidth, theight);
 
 	//Black background

@@ -164,8 +164,6 @@ public:
 protected:
 	Gtk::HBox m_statusbar;
 		Gtk::Label m_triggerConfigLabel;
-		Gtk::Label m_sampleCountLabel;
-		Gtk::Label m_sampleRateLabel;
 
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 
