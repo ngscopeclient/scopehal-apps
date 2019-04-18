@@ -778,7 +778,9 @@ void OscilloscopeWindow::OnHistoryUpdated()
 
 	//Update our protocol decoders
 	for(auto d : m_decoders)
-		d->Refresh();
+		d->SetDirty();
+	for(auto d : m_decoders)
+		d->RefreshIfDirty();
 
 	//Update the views
 	for(auto w : m_waveformAreas)
