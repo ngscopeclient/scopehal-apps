@@ -104,6 +104,9 @@ public:
 
 	EyeColor GetEyeColor();
 
+	double GetTraceAlpha()
+	{ return m_alphaslider.get_value(); }
+
 protected:
 	void ArmTrigger(bool oneshot);
 
@@ -127,6 +130,8 @@ protected:
 		Gtk::MenuBar m_menu;
 			Gtk::MenuItem m_fileMenuItem;
 				Gtk::Menu m_fileMenu;
+			Gtk::MenuItem m_setupMenuItem;
+				Gtk::Menu m_setupMenu;
 			Gtk::MenuItem m_channelsMenuItem;
 				Gtk::Menu m_channelsMenu;
 			Gtk::MenuItem m_viewMenuItem;
@@ -140,11 +145,14 @@ protected:
 							Gtk::RadioMenuItem m_eyeColorKRainItem;
 							Gtk::RadioMenuItem m_eyeColorRainbowItem;
 							Gtk::RadioMenuItem m_eyeColorViridisItem;
-		Gtk::Toolbar m_toolbar;
-			Gtk::ToolButton m_btnStart;
-			Gtk::ToolButton m_btnStartSingle;
-			Gtk::ToolButton m_btnStop;
-			Gtk::ToggleToolButton m_btnHistory;
+		Gtk::HBox m_toolbox;
+			Gtk::Toolbar m_toolbar;
+				Gtk::ToolButton m_btnStart;
+				Gtk::ToolButton m_btnStartSingle;
+				Gtk::ToolButton m_btnStop;
+				Gtk::ToggleToolButton m_btnHistory;
+		Gtk::Label  m_alphalabel;
+		Gtk::HScale m_alphaslider;
 
 	//All of the splitters
 	std::set<Gtk::Paned*> m_splitters;

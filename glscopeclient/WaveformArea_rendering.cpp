@@ -286,6 +286,7 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(1.0, "xscale");
 	m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(1, "yscale");
+	m_waveformProgram.SetUniform(m_parent->GetTraceAlpha(), "alpha");
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);

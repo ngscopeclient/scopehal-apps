@@ -6,6 +6,7 @@ uniform float	xscale;
 uniform float	yoff;
 uniform float	yscale;
 uniform mat4	projection;
+uniform float	alpha;
 
 void main()
 {
