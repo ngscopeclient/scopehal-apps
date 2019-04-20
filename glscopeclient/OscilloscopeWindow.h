@@ -119,6 +119,7 @@ protected:
 	void OnStop();
 	void OnQuit();
 	void OnHistory();
+	void OnAlphaChanged();
 
 	void UpdateStatusBar();
 

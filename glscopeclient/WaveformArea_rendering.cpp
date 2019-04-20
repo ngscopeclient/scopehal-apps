@@ -37,6 +37,7 @@
 #include "WaveformArea.h"
 #include "OscilloscopeWindow.h"
 #include <random>
+#include <map>
 #include "ProfileBlock.h"
 #include "../../lib/scopehal/TextRenderer.h"
 #include "../../lib/scopehal/DigitalRenderer.h"
@@ -72,14 +73,36 @@ bool WaveformArea::PrepareGeometry()
 	double offset = m_channel->GetOffset();
 	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
+	bool dbscale = IsFFT();
 	#pragma omp parallel for num_threads(4)
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X/Y start/end point of the data
 		float xleft = data.GetSampleStart(j) * xscale;
 		float xright = data.GetSampleStart(j+1) * xscale;
-		float yleft = m_pixelsPerVolt * (data[j] + offset);
-		float yright = m_pixelsPerVolt * (data[j+1] + offset);
+
+		float yleft;
+		float yright;
+
+		//log scale
+		if(dbscale)
+		{
+			double db1 = 20 * log10(data[j]);
+			double db2 = 20 * log10(data[j+1]);
+
+			db1 = -70 - db1;	//todo: dont hard code plot limit
+			db2 = -70 - db2;
+
+			yleft = DbToYPosition(db1);
+			yright = DbToYPosition(db2);
+		}
+
+		//normal linear scale
+		else
+		{
+			yleft = m_pixelsPerVolt * (data[j] + offset);
+			yright = m_pixelsPerVolt * (data[j+1] + offset);
+		}
 
 		//Find the normal vector (swap x and y components
 		float dy = xright - xleft;
@@ -284,7 +307,10 @@ void WaveformArea::RenderTrace()
 	m_waveformProgram.SetUniform(m_projection, "projection");
 	m_waveformProgram.SetUniform(m_xoff, "xoff");
 	m_waveformProgram.SetUniform(1.0, "xscale");
-	m_waveformProgram.SetUniform(m_height / 2, "yoff");
+	if(IsFFT())
+		m_waveformProgram.SetUniform(0, "yoff");
+	else
+		m_waveformProgram.SetUniform(m_height / 2, "yoff");
 	m_waveformProgram.SetUniform(1, "yscale");
 	m_waveformProgram.SetUniform(m_parent->GetTraceAlpha(), "alpha");
 
@@ -423,6 +449,12 @@ float WaveformArea::VoltsToYPosition(float volt)
 	return m_height/2 - VoltsToPixels(volt + m_channel->GetOffset());
 }
 
+float WaveformArea::DbToYPosition(float db)
+{
+	float plotheight = m_height - 2*m_padding;
+	return m_padding - (db/70 * plotheight);
+}
+
 float WaveformArea::YPositionToVolts(float y)
 {
 	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel->GetOffset();
@@ -451,41 +483,48 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	float halfheight = plotheight/2;
 	//float ymid = halfheight + ybot;
 
-	//Volts from the center line of our graph to the top. May not be the max value in the signal.
-	float volts_per_half_span = PixelsToVolts(halfheight);
-
-	//Decide what voltage step to use. Pick from a list (in volts)
-	float selected_step = AnalogRenderer::PickStepSize(volts_per_half_span);
-
-	//Calculate grid positions
 	std::map<float, float> gridmap;
-	gridmap.clear();
-	for(float dv=0; ; dv += selected_step)
+
+	//Spectra are printed on a logarithmic scale
+	if(IsFFT())
 	{
-		float yt = VoltsToYPosition(dv);
-		float yb = VoltsToYPosition(-dv);
-
-		if(yb <= (ytop - theight/2) )
-			gridmap[-dv] = yb;
-		if(yt >= (ybot + theight/2) )
-			gridmap[dv] = yt;
-
-		//Stop if we're off the edge
-		if( (yb > ytop) && (yt < ybot) )
-			break;
+		for(float db=0; db >= -60; db -= 10)
+			gridmap[db] = DbToYPosition(db);
 	}
 
-	//Center line is solid
-	cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
-	cr->move_to(0, VoltsToYPosition(0));
-	cr->line_to(m_plotRight, VoltsToYPosition(0));
-	cr->stroke();
+	//Normal analog waveform
+	else
+	{
+		//Volts from the center line of our graph to the top. May not be the max value in the signal.
+		float volts_per_half_span = PixelsToVolts(halfheight);
+
+		//Decide what voltage step to use. Pick from a list (in volts)
+		float selected_step = AnalogRenderer::PickStepSize(volts_per_half_span);
+
+		//Calculate grid positions
+		for(float dv=0; ; dv += selected_step)
+		{
+			float yt = VoltsToYPosition(dv);
+			float yb = VoltsToYPosition(-dv);
+
+			if(yb <= (ytop - theight/2) )
+				gridmap[-dv] = yb;
+			if(yt >= (ybot + theight/2) )
+				gridmap[dv] = yt;
+
+			//Stop if we're off the edge
+			if( (yb > ytop) && (yt < ybot) )
+				break;
+		}
+
+		//Center line is solid
+		cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
+		cr->move_to(0, VoltsToYPosition(0));
+		cr->line_to(m_plotRight, VoltsToYPosition(0));
+		cr->stroke();
+	}
 
 	//Dimmed lines above and below
-	/*vector<double> dashes;
-	dashes.push_back(4);
-	dashes.push_back(4);
-	cr->set_dash(dashes, 0);*/
 	cr->set_source_rgba(0.7, 0.7, 0.7, 0.25);
 	for(auto it : gridmap)
 	{
@@ -509,12 +548,19 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		float v = it.first;
 		char tmp[32];
 
-		if(fabs(v) < 1)
-			snprintf(tmp, sizeof(tmp), "%.0f mV", v*1000);
+		if(IsFFT())
+			snprintf(tmp, sizeof(tmp), "%.0f dB", v);
 		else
-			snprintf(tmp, sizeof(tmp), "%.3f V", v);
+		{
+			if(fabs(v) < 1)
+				snprintf(tmp, sizeof(tmp), "%.0f mV", v*1000);
+			else
+				snprintf(tmp, sizeof(tmp), "%.3f V", v);
+		}
 
-		float y = it.second - theight/2;
+		float y = it.second;
+		if(!IsFFT())
+			y -= theight/2;
 		if(y < ybot)
 			continue;
 		if(y > ytop)

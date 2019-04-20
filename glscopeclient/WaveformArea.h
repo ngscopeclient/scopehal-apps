@@ -160,6 +160,7 @@ protected:
 
 	//Helpers for figuring out what kind of signal our primary trace is
 	bool IsEye();
+	bool IsFFT();
 
 	int m_width;
 	int m_height;
@@ -237,6 +238,7 @@ protected:
 	float VoltsToPixels(float volt);
 	float VoltsToYPosition(float volt);
 	float YPositionToVolts(float y);
+	float DbToYPosition(float db);
 	int64_t PixelsToPicoseconds(float pix);
 	float PicosecondsToPixels(int64_t t);
 	float PicosecondsToXPosition(int64_t t);

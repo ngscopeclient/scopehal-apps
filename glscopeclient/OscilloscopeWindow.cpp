@@ -213,7 +213,8 @@ void OscilloscopeWindow::CreateWidgets()
 				m_alphaslider.set_increments(0.01, 0.01);
 				m_alphaslider.set_margin_left(10);
 				m_alphaslider.set_value(0.5);
-				//TODO: change signal
+				m_alphaslider.signal_value_changed().connect(
+					sigc::mem_fun(*this, &OscilloscopeWindow::OnAlphaChanged));
 
 		auto split = new Gtk::HPaned;
 			m_vbox.pack_start(*split);
@@ -287,6 +288,11 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+void OscilloscopeWindow::OnAlphaChanged()
+{
+	ClearAllPersistence();
+}
 
 void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item)
 {

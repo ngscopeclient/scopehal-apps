@@ -38,6 +38,7 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
+#include "../../lib/scopeprotocols/FFTDecoder.h"
 
 using namespace std;
 using namespace glm;
@@ -637,4 +638,10 @@ bool WaveformArea::IsEye()
 {
 	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 	return (eye != NULL);
+}
+
+bool WaveformArea::IsFFT()
+{
+	auto fft = dynamic_cast<FFTDecoder*>(m_channel);
+	return (fft != NULL);
 }
