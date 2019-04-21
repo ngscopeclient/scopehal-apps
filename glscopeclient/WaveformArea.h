@@ -59,6 +59,10 @@ public:
 
 	WaveformGroup* m_group;
 
+	//Helpers for figuring out what kind of signal our primary trace is
+	bool IsEye();
+	bool IsFFT();
+
 protected:
 	void SharedCtorInit();
 
@@ -157,10 +161,6 @@ protected:
 	void CleanupBufferObjects();
 
 	void RefreshMeasurements();
-
-	//Helpers for figuring out what kind of signal our primary trace is
-	bool IsEye();
-	bool IsFFT();
 
 	int m_width;
 	int m_height;

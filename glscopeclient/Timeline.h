@@ -56,6 +56,9 @@ protected:
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 
+	void RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr);
+	void RenderAsFrequency(const Cairo::RefPtr<Cairo::Context>& cr);
+
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,
 		int64_t ps,
@@ -65,7 +68,8 @@ protected:
 		std::string sformat,
 		const char* units,
 		bool draw_left,
-		bool show_delta);
+		bool show_delta,
+		bool is_frequency = false);
 };
 
 #endif
