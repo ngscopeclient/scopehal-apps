@@ -291,6 +291,7 @@ void WaveformArea::RenderWaterfall()
 
 	//Make sure timebase is correct
 	pfall->SetTimeScale(m_group->m_pixelsPerPicosecond);
+	pfall->SetTimeOffset(m_group->m_timeOffset);
 
 	//Just copy it directly into the waveform texture.
 	m_eyeTexture.Bind();
