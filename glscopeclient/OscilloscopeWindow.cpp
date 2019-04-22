@@ -132,7 +132,7 @@ void OscilloscopeWindow::CreateWidgets()
 				m_viewMenuItem.set_label("View");
 				m_viewMenuItem.set_submenu(m_viewMenu);
 					m_viewMenu.append(m_viewEyeColorMenuItem);
-					m_viewEyeColorMenuItem.set_label("Eye color");
+					m_viewEyeColorMenuItem.set_label("Color ramp");
 					m_viewEyeColorMenuItem.set_submenu(m_viewEyeColorMenu);
 						m_viewEyeColorMenu.append(m_eyeColorCrtItem);
 							m_eyeColorCrtItem.set_label("CRT");

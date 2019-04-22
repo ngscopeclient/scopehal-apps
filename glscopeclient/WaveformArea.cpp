@@ -38,6 +38,7 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
+#include "../../lib/scopeprotocols/WaterfallDecoder.h"
 #include "../../lib/scopeprotocols/FFTDecoder.h"
 
 using namespace std;
@@ -294,7 +295,7 @@ void WaveformArea::CreateWidgets()
 
 	//Decode
 	m_contextMenu.append(m_decodeItem);
-		m_decodeItem.set_label("Protocol decode");
+		m_decodeItem.set_label("Filter");
 		m_decodeItem.set_submenu(m_decodeMenu);
 		m_decodeMenu.append(m_decodeAnalysisItem);
 			m_decodeAnalysisItem.set_label("Analysis");
@@ -632,6 +633,12 @@ void WaveformArea::InitializeCairoPass()
 	m_cairoVAO.Bind();
 	m_cairoProgram.EnableVertexArray("vert");
 	m_cairoProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
+bool WaveformArea::IsWaterfall()
+{
+	auto fall = dynamic_cast<WaterfallDecoder*>(m_channel);
+	return (fall != NULL);
 }
 
 bool WaveformArea::IsEye()

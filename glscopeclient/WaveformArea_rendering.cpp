@@ -42,6 +42,7 @@
 #include "../../lib/scopehal/TextRenderer.h"
 #include "../../lib/scopehal/DigitalRenderer.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
+#include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
 using namespace std;
 using namespace glm;
@@ -217,6 +218,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	RenderCairoUnderlays();
 	if(IsEye())
 		RenderEye();
+	else if(IsWaterfall())
+		RenderWaterfall();
 	else if(PrepareGeometry())
 	{
 		RenderTrace();
@@ -250,6 +253,51 @@ void WaveformArea::RenderEye()
 	m_eyeTexture.SetData(
 		peye->GetWidth(),
 		peye->GetHeight(),
+		pcap->GetData(),
+		GL_RED,
+		GL_FLOAT,
+		GL_RGBA32F);
+
+	//Drawing to the window
+	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+	m_eyeProgram.Bind();
+	m_eyeVAO.Bind();
+	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
+	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
+
+	//Only look at stuff inside the plot area
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisable(GL_SCISSOR_TEST);
+	glActiveTexture(GL_TEXTURE0);
+}
+
+void WaveformArea::RenderWaterfall()
+{
+	auto pfall = dynamic_cast<WaterfallDecoder*>(m_channel);
+	auto pcap = dynamic_cast<WaterfallCapture*>(m_channel->GetData());
+	if(pfall == NULL)
+		return;
+	if(pcap == NULL)
+		return;
+
+	//Make sure timebase is correct
+	pfall->SetTimeScale(m_group->m_pixelsPerPicosecond);
+
+	//Just copy it directly into the waveform texture.
+	m_eyeTexture.Bind();
+	ResetTextureFiltering();
+	m_eyeTexture.SetData(
+		pfall->GetWidth(),
+		pfall->GetHeight(),
 		pcap->GetData(),
 		GL_RED,
 		GL_FLOAT,
@@ -462,10 +510,6 @@ float WaveformArea::YPositionToVolts(float y)
 
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
-	cr->save();
-
-	Gdk::Color color(m_channel->m_displaycolor);
-
 	//Calculate width of right side axis label
 	int twidth;
 	int theight;
@@ -476,6 +520,13 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	tlayout->set_text("500 mV_xxx");
 	tlayout->get_pixel_size(twidth, theight);
 	m_plotRight = m_width - twidth;
+
+	if(IsWaterfall())
+		return;
+
+	cr->save();
+
+	Gdk::Color color(m_channel->m_displaycolor);
 
 	float ytop = m_height - m_padding;
 	float ybot = m_padding;

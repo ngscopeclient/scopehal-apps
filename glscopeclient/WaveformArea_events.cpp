@@ -40,6 +40,7 @@
 #include "ProfileBlock.h"
 #include "ProtocolDecoderDialog.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
+#include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
 using namespace std;
 using namespace glm;
@@ -110,12 +111,18 @@ void WaveformArea::on_resize(int width, int height)
 	//double dt = GetTime() - start;
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);
 
-	//If it's an eye pattern, resize it
+	//If it's an eye pattern or waterfall, resize it
 	if(IsEye())
 	{
 		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 		eye->SetWidth(m_width/4);
 		eye->SetHeight(m_height);
+	}
+	else if(IsWaterfall())
+	{
+		auto waterfall = dynamic_cast<WaterfallDecoder*>(m_channel);
+		waterfall->SetWidth(m_width);
+		waterfall->SetHeight(m_height);
 	}
 }
 
@@ -436,12 +443,19 @@ void WaveformArea::OnProtocolDecode(string name)
 	//Set the name of the decoder based on the input channels etc
 	decode->SetDefaultName();
 
-	//If it's an eye pattern, set the initial size
+	//If it's an eye pattern or waterfall, set the initial size
 	auto eye = dynamic_cast<EyeDecoder2*>(decode);
 	if(eye != NULL)
 	{
 		eye->SetWidth(m_width / 4);
 		eye->SetHeight(m_height);
+	}
+	auto fall = dynamic_cast<WaterfallDecoder*>(decode);
+	if(fall != NULL)
+	{
+		fall->SetWidth(m_width);
+		fall->SetHeight(m_height);
+		fall->SetTimeScale(m_group->m_pixelsPerPicosecond);
 	}
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.

@@ -61,6 +61,7 @@ public:
 
 	//Helpers for figuring out what kind of signal our primary trace is
 	bool IsEye();
+	bool IsWaterfall();
 	bool IsFFT();
 
 protected:
@@ -213,6 +214,9 @@ protected:
 	VertexBuffer m_eyeVBO;
 	Texture m_eyeTexture;
 	Texture m_eyeColorRamp[6];
+
+	//Waterfall rendering
+	void RenderWaterfall();
 
 	//Cairo overlay rendering for text and protocol decode overlays
 	void RenderCairoUnderlays();
