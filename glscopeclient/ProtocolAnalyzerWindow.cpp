@@ -86,7 +86,8 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	auto headers = decoder->GetHeaders();
 	for(size_t i=0; i<headers.size(); i++)
 		m_tree.append_column(headers[i], m_columns.m_headers[i]);
-	m_tree.append_column("Data", m_columns.m_data);
+	if(decoder->GetShowDataColumn())
+		m_tree.append_column("Data", m_columns.m_data);
 
 	m_tree.get_selection()->signal_changed().connect(
 		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnSelectionChanged));

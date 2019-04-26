@@ -813,7 +813,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xs < textright) || (xs > m_plotRight) )
+				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
 
 				auto text = tr->GetText(i);
@@ -845,7 +845,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xs < textright) || (xe > m_plotRight) )
+				if( (xe < textright) || (xe > m_plotRight) )
 					continue;
 
 				double y = ybot;
@@ -903,7 +903,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		label += "\n";
 
 		//Format timebase
-		double gsps = 1000 / data->m_timescale;
+		double gsps = 1000.0f / data->m_timescale;
 		if(gsps > 1)
 			snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
 		else if(gsps > 0.001)
