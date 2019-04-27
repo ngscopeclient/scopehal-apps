@@ -176,7 +176,10 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 	if(m_updating)
 		return;
 
-	auto row = *m_tree.get_selection()->get_selected();
+	auto sel = m_tree.get_selection();
+	if(sel->count_selected_rows() == 0)
+		return;
+	auto row = *sel->get_selected();
 
 	//Select the waveform
 	m_parent->JumpToHistory(row[m_columns.m_capturekey]);

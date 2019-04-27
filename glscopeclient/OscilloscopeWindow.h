@@ -170,6 +170,9 @@ public:
 	//All of the protocol analyzers
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
 
+	//Event handlers
+	void PollScopes();
+
 protected:
 	Gtk::HBox m_statusbar;
 		Gtk::Label m_triggerConfigLabel;
@@ -182,7 +185,6 @@ protected:
 	std::vector<Oscilloscope*> m_scopes;
 
 	//Status polling
-	bool OnTimer(int timer);
 	void OnWaveformDataReady(Oscilloscope* scope);
 
 	int OnCaptureProgressUpdate(float progress);
@@ -195,6 +197,14 @@ protected:
 	double m_tLastFlush;
 
 	EyeColor m_eyeColor;
+
+	//Performance counters
+	double m_tAcquire;
+	double m_tDecode;
+	double m_tView;
+	double m_tHistory;
+	double m_tPoll;
+	double m_tEvent;
 };
 
 #endif

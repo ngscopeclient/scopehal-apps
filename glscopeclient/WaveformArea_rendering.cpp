@@ -75,7 +75,7 @@ bool WaveformArea::PrepareGeometry()
 	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
 	bool dbscale = IsFFT();
-	#pragma omp parallel for num_threads(4)
+	#pragma omp parallel for num_threads(8)
 	for(size_t j=0; j<(count-1); j++)
 	{
 		//Actual X/Y start/end point of the data

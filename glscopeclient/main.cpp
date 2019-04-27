@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -64,15 +64,40 @@ public:
 
 	vector<Oscilloscope*> m_scopes;
 
+	virtual void run();
+
 protected:
-	Gtk::Window* m_window;
+	OscilloscopeWindow* m_window;
 
 	virtual void on_activate();
 };
 
 ScopeApp::~ScopeApp()
 {
+
+}
+
+void ScopeApp::run()
+{
+	register_application();
+	on_activate();
+
+	while(true)
+	{
+		//Poll the scope to see if we have any new data
+		m_window->PollScopes();
+
+		//Dispatch events if we have any
+		while(Gtk::Main::events_pending())
+			Gtk::Main::iteration();
+
+		//Stop if the main window got closed
+		if(!m_window->is_visible())
+			break;
+	}
+
 	delete m_window;
+	m_window = NULL;
 }
 
 /**
@@ -170,7 +195,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	//and run the app
 	app->run();
 	return 0;
 }

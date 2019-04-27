@@ -79,16 +79,19 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	//Add widgets
 	CreateWidgets();
 
-	//Set the update timer (50 Hz)
-	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
-	sigc::connection conn = Glib::signal_timeout().connect(slot, 20);
-
 	ArmTrigger(false);
 	m_toggleInProgress = false;
 
 	m_tLastFlush = GetTime();
 
 	m_eyeColor = EYE_CRT;
+
+	m_tAcquire = 0;
+	m_tDecode = 0;
+	m_tView = 0;
+	m_tHistory = 0;
+	m_tPoll = 0;
+	m_tEvent = 0;
 }
 
 /**
@@ -96,6 +99,14 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	//Print stats
+	LogDebug("ACQUIRE: %.3f ms\n", m_tAcquire * 1000);
+	LogDebug("DECODE:  %.3f ms\n", m_tDecode * 1000);
+	LogDebug("VIEW:    %.3f ms\n", m_tView * 1000);
+	LogDebug("HISTORY: %.3f ms\n", m_tHistory * 1000);
+	LogDebug("POLL:    %.3f ms\n", m_tPoll * 1000);
+	LogDebug("EVENT:   %.3f ms\n", m_tEvent * 1000);
+
 	for(auto a : m_analyzers)
 		delete a;
 	for(auto s : m_splitters)
@@ -603,7 +614,7 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 	GarbageCollectGroups();
 }
 
-bool OscilloscopeWindow::OnTimer(int /*timer*/)
+void OscilloscopeWindow::PollScopes()
 {
 	//Flush the config cache every 2 seconds
 	if( (GetTime() - m_tLastFlush) > 2)
@@ -612,27 +623,55 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			scope->FlushConfigCache();
 	}
 
-	//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
-	for(auto scope : m_scopes)
+	static double tstamp = 0;
+	static bool first = true;
+	if(first)
 	{
-		Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
-		if(status > Oscilloscope::TRIGGER_MODE_COUNT)
-		{
-			//Invalid value, skip it
-			continue;
-		}
-
-		//If triggered, grab the data
-		if(status == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			OnWaveformDataReady(scope);
+		tstamp = GetTime();
+		first = false;
 	}
 
-	//Process pending draw calls before we do another polling cycle
-	while(Gtk::Main::events_pending())
-		Gtk::Main::iteration();
+	bool pending = true;
+	while(pending)
+	{
+		pending = false;
 
-	//false to stop timer
-	return true;
+		//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
+		for(auto scope : m_scopes)
+		{
+			double start = GetTime();
+			Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
+			if(status > Oscilloscope::TRIGGER_MODE_COUNT)
+			{
+				//Invalid value, skip it
+				continue;
+			}
+			m_tPoll += GetTime() - start;
+
+			//If triggered, grab the data
+			if(status == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			{
+				if(!scope->HasPendingWaveforms())
+				{
+					double dt = GetTime()-tstamp;
+					LogDebug("Time since last download: %.3f ms\n", dt * 1000);
+					tstamp = GetTime();
+				}
+
+				OnWaveformDataReady(scope);
+			}
+
+			//If there's more waveforms pending, keep going
+			if(scope->HasPendingWaveforms())
+				pending = true;
+		}
+
+		//Process pending draw calls before we do another polling cycle
+		double start = GetTime();
+		while(Gtk::Main::events_pending())
+			Gtk::Main::iteration();
+		m_tEvent += GetTime() - start;
+	}
 }
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
@@ -641,24 +680,23 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	if(!is_visible())
 		m_historyWindow.close();
 
-	LogTrace("----Data ready----\n");
-	LogIndenter li;
-
 	//Make sure we don't free the old waveform data
-	LogTrace("Detaching\n");
+	//LogTrace("Detaching\n");
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 		scope->GetChannel(i)->Detach();
 
 	//Download the data
-	LogTrace("Acquiring\n");
+	//LogTrace("Acquiring\n");
+	double start = GetTime();
 	scope->AcquireDataFifo(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+	m_tAcquire += GetTime() - start;
 
 	//Update the status
 	UpdateStatusBar();
 
 	//Re-arm trigger for another pass.
-	//Do this before we re-run measurements etc, so triggering runs in parallel with the math
-	if(!m_triggerOneShot)
+	//Do this before we re-run measurements etc, so triggering runs in parallel with the math.
+	if(!m_triggerOneShot && !scope->IsTriggerArmed() && (scope->GetPendingWaveformCount() < 5000) )
 		ArmTrigger(false);
 
 	//We've stopped
@@ -674,17 +712,22 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 		g->RefreshMeasurements();
 
 	//Update our protocol decoders
+	start = GetTime();
 	for(auto d : m_decoders)
 		d->SetDirty();
 	for(auto d : m_decoders)
 		d->RefreshIfDirty();
+	m_tDecode += GetTime() - start;
 
 	//Update the views
+	start = GetTime();
 	for(auto w : m_waveformAreas)
 	{
 		if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
 			w->OnWaveformDataReady();
 	}
+	m_tView += GetTime() - start;
+	start = GetTime();
 
 	//Update protocol analyzers
 	for(auto a : m_analyzers)
@@ -692,6 +735,8 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//Update the history window
 	m_historyWindow.OnWaveformDataReady(scope);
+
+	m_tHistory += GetTime() - start;
 }
 
 void OscilloscopeWindow::UpdateStatusBar()
