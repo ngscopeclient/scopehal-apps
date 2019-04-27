@@ -640,10 +640,6 @@ void OscilloscopeWindow::PollScopes()
 		//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
 		for(auto scope : m_scopes)
 		{
-			//If the trigger isn't armed, don't waste time checking
-			if(!scope->IsTriggerArmed())
-				continue;
-
 			double start = GetTime();
 			Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
 			if(status > Oscilloscope::TRIGGER_MODE_COUNT)

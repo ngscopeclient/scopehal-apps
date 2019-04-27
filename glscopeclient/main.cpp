@@ -250,17 +250,7 @@ void ScopeThread(Oscilloscope* scope)
 			continue;
 		}
 
-		//If the scope isn't triggering, hold off for a bit
-		if(!scope->IsTriggerArmed())
-		{
-			usleep(50 * 1000);
-			continue;
-		}
-
 		if(scope->PollTrigger() == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-		{
 			scope->AcquireData(true);
-			LogDebug("Now have %zu pending waveforms\n", scope->GetPendingWaveformCount());
-		}
 	}
 }
