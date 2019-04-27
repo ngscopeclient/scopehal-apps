@@ -16,6 +16,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/curvetrace")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/fgtest")
 
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
