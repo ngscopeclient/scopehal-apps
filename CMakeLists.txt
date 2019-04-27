@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
-project(jtaghal)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+project(scopehal-cmake)
 set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_C_FLAGS "-g -O3 -fopenmp -Wall -Wextra -march=native -mtune=native")
@@ -8,6 +9,9 @@ set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=native -mt
 find_package(PkgConfig)
 pkg_check_modules(GTKMM gtkmm-3.0)
 pkg_check_modules(SIGCXX sigc++-2.0)
+pkg_check_modules(GLM glm>=0.9.8)
+pkg_search_module(GLM REQUIRED glm>=0.9.8)
+find_package(FFTS)
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
@@ -16,7 +20,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/curvetrace")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/fgtest")
+#add_subdirectory("${PROJECT_SOURCE_DIR}/src/fgtest")
 
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
