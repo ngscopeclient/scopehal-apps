@@ -616,11 +616,13 @@ void OscilloscopeWindow::PollScopes()
 {
 	//Flush the config cache every 10 seconds
 	//TODO: make a button to do this, don't do it automatically
+	/*
 	if( (GetTime() - m_tLastFlush) > 10)
 	{
 		for(auto scope : m_scopes)
 			scope->FlushConfigCache();
 	}
+	*/
 
 	static double tstamp = 0;
 	static bool first = true;
@@ -654,15 +656,26 @@ void OscilloscopeWindow::PollScopes()
 			//If triggered, grab the data
 			if(status == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 			{
-				if(!scope->HasPendingWaveforms())
+				//If we have a LOT of waveforms ready, don't waste time rendering all of them.
+				//Grab a big pile and only render the last.
+				//TODO: batch render with persistence?
+				if(scope->GetPendingWaveformCount() > 100)
 				{
-					double dt = GetTime()-tstamp;
-					LogDebug("Time since last download: %.3f ms\n", dt * 1000);
-					tstamp = GetTime();
+					for(size_t i=0; i<50; i++)
+						OnWaveformDataReady(scope);
 				}
-
-				OnWaveformDataReady(scope);
+				else
+					OnWaveformDataReady(scope);
 			}
+
+			//Update the views
+			start = GetTime();
+			for(auto w : m_waveformAreas)
+			{
+				if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
+					w->OnWaveformDataReady();
+			}
+			m_tView += GetTime() - start;
 
 			//If there's more waveforms pending, keep going
 			if(scope->HasPendingWaveforms())
@@ -708,16 +721,6 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	for(auto d : m_decoders)
 		d->RefreshIfDirty();
 	m_tDecode += GetTime() - start;
-
-	//Update the views
-	start = GetTime();
-	for(auto w : m_waveformAreas)
-	{
-		if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
-			w->OnWaveformDataReady();
-	}
-	m_tView += GetTime() - start;
-	start = GetTime();
 
 	//Update protocol analyzers
 	for(auto a : m_analyzers)
