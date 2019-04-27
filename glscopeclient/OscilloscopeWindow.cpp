@@ -659,9 +659,9 @@ void OscilloscopeWindow::PollScopes()
 				//If we have a LOT of waveforms ready, don't waste time rendering all of them.
 				//Grab a big pile and only render the last.
 				//TODO: batch render with persistence?
-				if(scope->GetPendingWaveformCount() > 100)
+				if(scope->GetPendingWaveformCount() > 30)
 				{
-					for(size_t i=0; i<50; i++)
+					for(size_t i=0; i<25; i++)
 						OnWaveformDataReady(scope);
 				}
 				else
