@@ -187,10 +187,7 @@ protected:
 	//Status polling
 	void OnWaveformDataReady(Oscilloscope* scope);
 
-	int OnCaptureProgressUpdate(float progress);
-
 	double m_tArm;
-	bool m_triggerOneShot;
 
 	bool m_toggleInProgress;
 

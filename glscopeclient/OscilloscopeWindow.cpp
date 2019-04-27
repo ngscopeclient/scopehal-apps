@@ -201,11 +201,9 @@ void OscilloscopeWindow::CreateWidgets()
 				m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 					m_btnStart.set_tooltip_text("Start (normal trigger)");
 					m_btnStart.set_icon_name("media-playback-start");
-					m_btnStart.set_sensitive(false);
 				m_toolbar.append(m_btnStartSingle, sigc::mem_fun(*this, &OscilloscopeWindow::OnStartSingle));
 					m_btnStartSingle.set_tooltip_text("Start (single trigger)");
 					m_btnStartSingle.set_icon_name("media-skip-forward");
-					m_btnStartSingle.set_sensitive(false);
 				m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 					m_btnStop.set_tooltip_text("Stop trigger");
 					m_btnStop.set_icon_name("media-playback-stop");
@@ -616,8 +614,9 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 
 void OscilloscopeWindow::PollScopes()
 {
-	//Flush the config cache every 2 seconds
-	if( (GetTime() - m_tLastFlush) > 2)
+	//Flush the config cache every 10 seconds
+	//TODO: make a button to do this, don't do it automatically
+	if( (GetTime() - m_tLastFlush) > 10)
 	{
 		for(auto scope : m_scopes)
 			scope->FlushConfigCache();
@@ -639,6 +638,10 @@ void OscilloscopeWindow::PollScopes()
 		//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
 		for(auto scope : m_scopes)
 		{
+			//If the trigger isn't armed, don't waste time checking
+			if(!scope->IsTriggerArmed())
+				continue;
+
 			double start = GetTime();
 			Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
 			if(status > Oscilloscope::TRIGGER_MODE_COUNT)
@@ -688,24 +691,11 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//Download the data
 	//LogTrace("Acquiring\n");
 	double start = GetTime();
-	scope->AcquireDataFifo(sigc::mem_fun(*this, &OscilloscopeWindow::OnCaptureProgressUpdate));
+	scope->AcquireDataFifo();
 	m_tAcquire += GetTime() - start;
 
 	//Update the status
 	UpdateStatusBar();
-
-	//Re-arm trigger for another pass.
-	//Do this before we re-run measurements etc, so triggering runs in parallel with the math.
-	if(!m_triggerOneShot && !scope->IsTriggerArmed() && (scope->GetPendingWaveformCount() < 5000) )
-		ArmTrigger(false);
-
-	//We've stopped
-	else
-	{
-		m_btnStart.set_sensitive(true);
-		m_btnStartSingle.set_sensitive(true);
-		m_btnStop.set_sensitive(false);
-	}
 
 	//Update the measurements
 	for(auto g : m_waveformGroups)
@@ -755,50 +745,30 @@ void OscilloscopeWindow::UpdateStatusBar()
 
 void OscilloscopeWindow::OnStart()
 {
-	m_btnStart.set_sensitive(false);
-	m_btnStartSingle.set_sensitive(false);
-	m_btnStop.set_sensitive(true);
-
 	ArmTrigger(false);
 }
 
 void OscilloscopeWindow::OnStartSingle()
 {
-	m_btnStart.set_sensitive(false);
-	m_btnStartSingle.set_sensitive(false);
-	m_btnStop.set_sensitive(true);
-
 	ArmTrigger(true);
 }
 
 void OscilloscopeWindow::OnStop()
 {
-	m_btnStart.set_sensitive(true);
-	m_btnStartSingle.set_sensitive(true);
-	m_btnStop.set_sensitive(false);
-
 	for(auto scope : m_scopes)
 		scope->Stop();
-	m_triggerOneShot = true;
 }
 
 void OscilloscopeWindow::ArmTrigger(bool oneshot)
 {
 	for(auto scope : m_scopes)
-		scope->StartSingleTrigger();
-	m_triggerOneShot = oneshot;
+	{
+		if(oneshot)
+			scope->StartSingleTrigger();
+		else
+			scope->Start();
+	}
 	m_tArm = GetTime();
-}
-
-int OscilloscopeWindow::OnCaptureProgressUpdate(float /*progress*/)
-{
-	//Do nothing. We don't want to have draws occur while state is inconsistent.
-
-	//Dispatch pending gtk events (such as draw calls)
-	//while(Gtk::Main::events_pending())
-	//	Gtk::Main::iteration();
-
-	return 0;
 }
 
 /**

@@ -38,11 +38,16 @@
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
+#include <thread>
 
 using namespace std;
 
 //for color selection
 int g_numDecodes = 0;
+
+bool g_terminating = false;
+
+void ScopeThread(Oscilloscope* scope);
 
 /**
 	@brief The main application class
@@ -70,11 +75,17 @@ protected:
 	OscilloscopeWindow* m_window;
 
 	virtual void on_activate();
+
+	vector<thread*> m_threads;
 };
 
 ScopeApp::~ScopeApp()
 {
-
+	for(auto t : m_threads)
+	{
+		t->join();
+		delete t;
+	}
 }
 
 void ScopeApp::run()
@@ -96,6 +107,8 @@ void ScopeApp::run()
 			break;
 	}
 
+	g_terminating = true;
+
 	delete m_window;
 	m_window = NULL;
 }
@@ -105,6 +118,10 @@ void ScopeApp::run()
  */
 void ScopeApp::on_activate()
 {
+	//Start the scope threads
+	for(auto scope : m_scopes)
+		m_threads.push_back(new thread(ScopeThread, scope));
+
 	//Test application
 	m_window = new OscilloscopeWindow(m_scopes);
 	add_window(*m_window);
@@ -216,4 +233,34 @@ double GetTime()
 	d += t.tv_sec;
 	return d;
 #endif
+}
+
+void ScopeThread(Oscilloscope* scope)
+{
+	#ifndef _WIN32
+	pthread_setname_np(pthread_self(), "ScopeThread");
+	#endif
+
+	while(!g_terminating)
+	{
+		//If the queue is too big, stop grabbing data
+		if(scope->GetPendingWaveformCount() > 5000)
+		{
+			usleep(50 * 1000);
+			continue;
+		}
+
+		//If the scope isn't triggering, hold off for a bit
+		if(!scope->IsTriggerArmed())
+		{
+			usleep(50 * 1000);
+			continue;
+		}
+
+		if(scope->PollTrigger() == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+		{
+			scope->AcquireData(true);
+			LogDebug("Now have %zu pending waveforms\n", scope->GetPendingWaveformCount());
+		}
+	}
 }
