@@ -649,6 +649,6 @@ bool WaveformArea::IsEye()
 
 bool WaveformArea::IsFFT()
 {
-	auto fft = dynamic_cast<FFTDecoder*>(m_channel);
+	auto fft = dynamic_cast<FFTCapture*>(m_channel->GetData());
 	return (fft != NULL);
 }
