@@ -40,6 +40,6 @@ CMake build wrapper for scopehal and scopehal-apps
 
 `cd ~/scopehal-cmake/src/glscopeclient/`
 
-Example with Lecroy Oscilloscope available on network waverunner.mynetwork.net:
+Example with Lecroy Oscilloscope nicknamed "myscope" available on network waverunner.example.com:
 
-`./glscopeclient --debug WR8:lecroy_vicp:waverunner.mynetwork.net`
+`./glscopeclient --debug myscope:lecroy_vicp:waverunner.example.com`
