@@ -38,6 +38,7 @@
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
+#include "../scopehal/RigolLANOscilloscope.h"
 #include <thread>
 
 using namespace std;
@@ -205,6 +206,16 @@ int main(int argc, char* argv[])
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
+		else if(sapi == "rigol_lan")
+		{
+			//default port if not specified
+			if(port == 0)
+				port = 5555;
+
+			auto scope = new RigolLANOscilloscope(host, port);
+			scope->m_nickname = nick;
+			app->m_scopes.push_back(scope);
+		}
 		else
 		{
 			LogError("Unrecognized API \"%s\", use --help\n", api);
@@ -250,7 +261,16 @@ void ScopeThread(Oscilloscope* scope)
 			continue;
 		}
 
-		if(scope->PollTrigger() == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+		auto stat = scope->PollTrigger();
+
+		//If there's nothing to do, sleep for a bit to avoid hammering the CPU
+		if(stat == Oscilloscope::TRIGGER_MODE_STOP)
+		{
+			usleep(1000);
+			continue;
+		}
+
+		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 			scope->AcquireData(true);
 	}
 }
