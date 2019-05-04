@@ -6,12 +6,14 @@ if(NOT LIBFFTS_FOUND)
 	${LIBFFTS_PKG_INCLUDE_DIRS}
 	/usr/include/ffts
 	/usr/local/include/ffts
+	$ENV{HOME}/.local/include/ffts
   )
   find_library(LIBFFTS_LIBRARIES NAMES ffts
 	PATHS
 	${LIBFFTS_PKG_LIBRARY_DIRS}
 	/usr/lib
 	/usr/local/lib
+	$ENV{HOME}/.local/lib
   )
 
 if(LIBFFTS_INCLUDE_DIR AND LIBFFTS_LIBRARIES)
