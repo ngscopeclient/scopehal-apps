@@ -3,7 +3,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_C_FLAGS "-g -O3 -fopenmp -Wall -Wextra -march=native -mtune=native")
 set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=native -mtune=native")
 
 find_package(PkgConfig)
