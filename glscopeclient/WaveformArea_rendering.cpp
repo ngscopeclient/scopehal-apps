@@ -834,6 +834,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		Gdk::Color color(o->m_displaycolor);
 		cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 		bool first = true;
+		double last_end = -100;
 		if(dr != NULL)
 		{
 			auto ddat = dynamic_cast<DigitalCapture*>(data);
@@ -845,12 +846,21 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xe < textright) || (xe > m_plotRight) )
+				if( (xe < 0) || (xs > m_plotRight) )
 					continue;
+
+				//Clamp
+				if(xe > m_plotRight)
+					xe = m_plotRight;
 
 				double y = ybot;
 				if((*ddat)[i])
 					y = ytop;
+
+				//Handle gaps between samples
+				if( (xs - last_end) > 2)
+					first = true;
+				last_end = xe;
 
 				//start of sample
 				if(first)
