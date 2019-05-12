@@ -212,6 +212,10 @@ void OscilloscopeWindow::CreateWidgets()
 					m_btnHistory.set_tooltip_text("History");
 					m_btnHistory.set_icon_name("search");
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
+				m_toolbar.append(m_btnRefresh, sigc::mem_fun(*this, &OscilloscopeWindow::OnRefreshConfig));
+					m_btnRefresh.set_tooltip_text("Reload configuration from scope");
+					m_btnRefresh.set_icon_name("reload");
+				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
 				m_alphalabel.set_label("Opacity ");
 			m_toolbox.pack_start(m_alphaslider, Gtk::PACK_SHRINK);
@@ -510,6 +514,12 @@ void OscilloscopeWindow::GarbageCollectGroups()
 	}
 }
 
+void OscilloscopeWindow::OnRefreshConfig()
+{
+	for(auto scope : m_scopes)
+		scope->FlushConfigCache();
+}
+
 void OscilloscopeWindow::OnAutofitHorizontal()
 {
 	LogDebug("autofit horz\n");
@@ -614,16 +624,6 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 
 void OscilloscopeWindow::PollScopes()
 {
-	//Flush the config cache every 10 seconds
-	//TODO: make a button to do this, don't do it automatically
-	/*
-	if( (GetTime() - m_tLastFlush) > 10)
-	{
-		for(auto scope : m_scopes)
-			scope->FlushConfigCache();
-	}
-	*/
-
 	static double tstamp = 0;
 	static bool first = true;
 	if(first)

@@ -236,8 +236,8 @@ void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
 	//	width_ps, unit_divisor, round_divisor);
 
 	//Figure out about how much time per graduation to use
-	const int min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
-	int64_t grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerPicosecond;
+	const double min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
+	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerPicosecond;
 
 	//Round so the division sizes are sane
 	double units_per_grad = grad_ps_nominal * 1.0 / round_divisor;

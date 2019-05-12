@@ -120,6 +120,7 @@ protected:
 	void OnQuit();
 	void OnHistory();
 	void OnAlphaChanged();
+	void OnRefreshConfig();
 
 	void UpdateStatusBar();
 
@@ -152,6 +153,7 @@ protected:
 				Gtk::ToolButton m_btnStartSingle;
 				Gtk::ToolButton m_btnStop;
 				Gtk::ToggleToolButton m_btnHistory;
+				Gtk::ToolButton m_btnRefresh;
 		Gtk::Label  m_alphalabel;
 		Gtk::HScale m_alphaslider;
 
