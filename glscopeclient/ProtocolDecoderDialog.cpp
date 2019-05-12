@@ -59,6 +59,10 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		//Label is just the channel name
 		row->m_label.set_label(decoder->GetInputName(i));
 
+		//always allow not connecting an input
+		row->m_chans.append("NULL");
+		row->m_chanptrs["NULL"] = NULL;
+
 		//Fill the channel list with all channels that are legal to use here
 		for(size_t j=0; j<parent->GetScopeCount(); j++)
 		{
