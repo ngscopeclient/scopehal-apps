@@ -252,6 +252,7 @@ void ScopeThread(Oscilloscope* scope)
 	pthread_setname_np(pthread_self(), "ScopeThread");
 	#endif
 
+	uint32_t delay_us = 1000;
 	while(!g_terminating)
 	{
 		//If the queue is too big, stop grabbing data
@@ -263,14 +264,20 @@ void ScopeThread(Oscilloscope* scope)
 
 		auto stat = scope->PollTrigger();
 
-		//If there's nothing to do, sleep for a bit to avoid hammering the CPU
-		if(stat == Oscilloscope::TRIGGER_MODE_STOP)
+		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 		{
-			usleep(1000);
-			continue;
+			//reset delay if it got too long
+			if(delay_us > 10000)
+				delay_us = 1000;
+			scope->AcquireData(true);
 		}
 
-		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			scope->AcquireData(true);
+		//Armed, or nothing to do.
+		//Use exponential back-off to avoid hammering slower hardware.
+		else
+		{
+			usleep(delay_us);
+			delay_us *= 2;
+		}
 	}
 }
