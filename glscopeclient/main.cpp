@@ -253,12 +253,28 @@ void ScopeThread(Oscilloscope* scope)
 	#endif
 
 	uint32_t delay_us = 1000;
+	double tlast = GetTime();
+	size_t npolls = 0;
+	uint32_t delay_max = 500 * 1000;
+	uint32_t delay_min = 250;
 	while(!g_terminating)
 	{
+		//LogDebug("delay = %.2f ms\n", delay_us * 0.001f);
+
 		//If the queue is too big, stop grabbing data
+		//TODO: make the cap be time-based and not waveform-based
 		if(scope->GetPendingWaveformCount() > 5000)
 		{
 			usleep(50 * 1000);
+			tlast = GetTime();
+			continue;
+		}
+
+		//If trigger isn't armed, don't even bother polling for a while.
+		if(!scope->IsTriggerArmed())
+		{
+			usleep(50 * 1000);
+			tlast = GetTime();
 			continue;
 		}
 
@@ -266,18 +282,46 @@ void ScopeThread(Oscilloscope* scope)
 
 		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 		{
-			//reset delay if it got too long
-			if(delay_us > 10000)
-				delay_us = 1000;
 			scope->AcquireData(true);
-		}
 
-		//Armed, or nothing to do.
-		//Use exponential back-off to avoid hammering slower hardware.
-		else
+			//Measure how long the acquisition took
+			double now = GetTime();
+			double dt = now - tlast;
+			tlast = now;
+			LogTrace("Triggered, dt = %.3f ms (npolls = %zu, delay_ms = %.2f)\n",
+				dt*1000, npolls, delay_us * 0.001f);
+
+			//Adjust polling interval so that we poll a handful of times between triggers
+			if(npolls > 5)
+			{
+				delay_us *= 1.5;
+
+				//Don't increase poll interval beyond 500ms. If we hit that point the scope is either insanely slow,
+				//or they're targeting some kind of intermittent signal. Don't add more lag on top of that!
+				if(delay_us > delay_max)
+					delay_us = delay_max;
+			}
+			if(npolls < 2)
+			{
+				delay_us /= 1.5;
+				if(delay_us < delay_min)
+					delay_us = delay_min;
+			}
+
+			npolls = 0;
+			continue;
+		}
+		npolls ++;
+
+		//We didn't trigger. Wait a while before the next time we poll to avoid hammering slower hardware.
+		usleep(delay_us);
+
+		//If we've polled a ton of times and the delay is tiny, do a big step increase
+		if(npolls > 50)
 		{
-			usleep(delay_us);
-			delay_us *= 2;
+			LogTrace("Super laggy scope, bumping polling interval\n");
+			delay_us *= 10;
+			npolls = 0;
 		}
 	}
 }
