@@ -38,7 +38,7 @@
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
-#include "../scopehal/RigolLANOscilloscope.h"
+#include "../scopehal/RigolOscilloscope.h"
 #include <thread>
 
 using namespace std;
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 			if(port == 0)
 				port = 5555;
 
-			auto scope = new RigolLANOscilloscope(host, port);
+			auto scope = new RigolOscilloscope(new SCPISocketTransport(host, port));
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
@@ -288,8 +288,8 @@ void ScopeThread(Oscilloscope* scope)
 			double now = GetTime();
 			double dt = now - tlast;
 			tlast = now;
-			LogTrace("Triggered, dt = %.3f ms (npolls = %zu, delay_ms = %.2f)\n",
-				dt*1000, npolls, delay_us * 0.001f);
+			//LogDebug("Triggered, dt = %.3f ms (npolls = %zu, delay_ms = %.2f)\n",
+			//	dt*1000, npolls, delay_us * 0.001f);
 
 			//Adjust polling interval so that we poll a handful of times between triggers
 			if(npolls > 5)
@@ -308,6 +308,14 @@ void ScopeThread(Oscilloscope* scope)
 					delay_us = delay_min;
 			}
 
+			//If we have a really high trigger latency (super low bandwidth link?)
+			//then force the delay to be a bit higher so we have time for other threads to get to the scope
+			if(dt > 2000)
+			{
+				if(delay_us < 5000)
+					delay_us = 5000;
+			}
+
 			npolls = 0;
 			continue;
 		}
@@ -319,7 +327,7 @@ void ScopeThread(Oscilloscope* scope)
 		//If we've polled a ton of times and the delay is tiny, do a big step increase
 		if(npolls > 50)
 		{
-			LogTrace("Super laggy scope, bumping polling interval\n");
+			//LogDebug("Super laggy scope, bumping polling interval\n");
 			delay_us *= 10;
 			npolls = 0;
 		}
