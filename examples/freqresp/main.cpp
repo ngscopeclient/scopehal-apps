@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 	scope.DisableChannel(0);
 	scope.DisableChannel(1);
 	scope.EnableChannel(2);	//reference signal
-	scope.EnableChannel(3);	//signal throguh probe
+	scope.EnableChannel(3);	//signal through probe
 
 	//Measure the input frequency
 	FrequencyMeasurement freq_meas;
@@ -105,49 +105,63 @@ int main(int argc, char* argv[])
 	pp_probe.SetInput(0, scope.GetChannel(3));
 
 	//Main loop
-	fgen.SetFunctionChannelActive(0, true);
+	//fgen.SetFunctionChannelActive(0, true);
 	LogNotice("freq_mhz,ref_mv,probe_mv,gain_db\n");
-	for(float mhz = 0.5; mhz <= 10; mhz += 0.01)
+	//for(float mhz = 0.5; mhz <= 10; mhz += 0.01)
+	while(true)
 	{
 		//Configure the function generator and wait a little while (there's some lag on the output)
-		fgen.SetFunctionChannelFrequency(0, mhz * 1.0e6f);
+		//fgen.SetFunctionChannelFrequency(0, mhz * 1.0e6f);
 		usleep(1000 * 50);
 
-		//Acquire a waveform (TODO average a few?)
-		scope.StartSingleTrigger();
-		bool triggered = false;
-		for(int i=0; i<50; i++)
+		float actual_mhz 	= 0;
+		float amp_ref 		= 0;
+		float amp_probe		= 0;
+		float gain_db		= 0;
+		float navg = 5;
+		for(int j=0; j<navg; j++)
 		{
-			if(scope.PollTrigger() == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			//Acquire a waveform (TODO average a few?)
+			scope.StartSingleTrigger();
+			bool triggered = false;
+			for(int i=0; i<50; i++)
 			{
-				triggered = true;
+				if(scope.PollTrigger() == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+				{
+					triggered = true;
+					break;
+				}
+				usleep(10 * 1000);
+			}
+			if(!triggered)
+			{
+				//LogError("Scope never triggered\n");
+				continue;
+			}
+			if(!scope.AcquireData())
+			{
+				LogError("Couldn't acquire data\n");
 				break;
 			}
-			usleep(10 * 1000);
-		}
-		if(!triggered)
-		{
-			LogError("Scope never triggered\n");
-			break;
-		}
-		if(!scope.AcquireData())
-		{
-			LogError("Couldn't acquire data\n");
-			break;
+
+			//Update the measurements
+			freq_meas.Refresh();
+			pp_ref.Refresh();
+			pp_probe.Refresh();
+
+			//Done
+			actual_mhz += freq_meas.GetValue() * 1e-6f;
+			amp_ref += pp_ref.GetValue();
+			amp_probe += pp_probe.GetValue();
+			gain_db += 20 * log10(amp_probe / amp_ref);
 		}
 
-		//Update the measurements
-		freq_meas.Refresh();
-		pp_ref.Refresh();
-		pp_probe.Refresh();
-
-		//Done
-		float actual_mhz = freq_meas.GetValue() * 1e-6f;
-		float amp_ref = pp_ref.GetValue();
-		float amp_probe = pp_probe.GetValue();
-		float gain_db = 10 * log10(amp_probe / amp_ref);
-
-		LogNotice("%f,%f,%f,%f\n", actual_mhz, amp_ref * 1000, amp_probe * 1000, gain_db);
+		LogNotice("%f,%f,%f,%f\n",
+			actual_mhz / navg,
+			amp_ref * 1000 / navg,
+			amp_probe * 1000 / navg,
+			gain_db / navg);
+		fflush(stdout);
 	}
 
 	return 0;
