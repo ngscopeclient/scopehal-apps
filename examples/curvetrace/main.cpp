@@ -43,16 +43,16 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 	Severity console_verbosity = Severity::NOTICE;
-	
+
 	string spsu = "";
 	string sdmm = "";
-	
+
 	//Test configuration
 	int channel = 0;
 	double voltageMax = 4.0;
 	double currentMax = 0.02;
 	double voltageStep = 0.001;
-	
+
 	//Parse command-line arguments
 	for(int i=1; i<argc; i++)
 	{
@@ -80,10 +80,10 @@ int main(int argc, char* argv[])
 
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-	
-	RohdeSchwarzHMC804xPowerSupply psu(spsu, 5025);
-	RohdeSchwarzHMC8012Multimeter dmm(sdmm, 5025);
-	
+
+	RohdeSchwarzHMC804xPowerSupply psu(new SCPISocketTransport(spsu, 5025));
+	RohdeSchwarzHMC8012Multimeter dmm(new SCPISocketTransport(sdmm, 5025));
+
 	//Initial configuration
 	LogDebug("Initial output configuration\n");
 	psu.SetPowerOvercurrentShutdownEnabled(channel, false);
@@ -91,10 +91,10 @@ int main(int argc, char* argv[])
 	psu.SetPowerCurrent(channel, currentMax);
 	psu.SetPowerChannelActive(channel, true);
 	psu.SetMasterPowerEnable(true);
-		
+
 	if(dmm.GetMeterMode() != Multimeter::DC_CURRENT)
 		dmm.SetMeterMode(Multimeter::DC_CURRENT);
-		
+
 	//The actual curve tracing
 	LogNotice("Step,V,I\n");
 	for(int i=0;i*voltageStep < voltageMax; i++)
@@ -102,23 +102,23 @@ int main(int argc, char* argv[])
 		double v = i*voltageStep;
 		psu.SetPowerVoltage(channel, v);
 		LogNotice("%5d,%5.3f,",i,v);
-		
+
 		//wait 25ms to stabilize
 		usleep(25 * 1000);
-		
+
 		LogNotice("%5.7f\n", dmm.GetCurrent());
-		
+
 		if(psu.IsPowerConstantCurrent(channel))
 			break;
 	}
-	
+
 	//Clean up
 	psu.SetPowerVoltage(channel, 0);
 	psu.SetPowerChannelActive(channel, false);
-	
+
 	//Make sure all writes have committed before we close the socket
 	psu.GetSerial();
 	usleep(50 * 1000);
-		
+
 	return 0;
 }

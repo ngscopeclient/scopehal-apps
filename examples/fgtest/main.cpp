@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-	LeCroyVICPOscilloscope scope(hostname, 1861);
+	LeCroyVICPOscilloscope scope(new SCPISocketTransport(hostname, 1861));
 	if(0 == (scope.GetInstrumentTypes() & Instrument::INST_FUNCTION))
 	{
 		LogError("not a function generator\n");
