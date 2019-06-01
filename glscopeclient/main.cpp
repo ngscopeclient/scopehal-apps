@@ -39,6 +39,7 @@
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
+#include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include <thread>
 
 using namespace std;
@@ -213,6 +214,16 @@ int main(int argc, char* argv[])
 				port = 5555;
 
 			auto scope = new RigolOscilloscope(new SCPISocketTransport(host, port));
+			scope->m_nickname = nick;
+			app->m_scopes.push_back(scope);
+		}
+		else if(sapi == "rs_lan")
+		{
+			//default port if not specified
+			if(port == 0)
+				port = 5025;
+
+			auto scope = new RohdeSchwarzOscilloscope(new SCPISocketTransport(host, port));
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
