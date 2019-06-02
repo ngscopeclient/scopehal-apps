@@ -268,14 +268,26 @@ void ScopeThread(Oscilloscope* scope)
 	size_t npolls = 0;
 	uint32_t delay_max = 500 * 1000;
 	uint32_t delay_min = 250;
+	double dt = 0;
 	while(!g_terminating)
 	{
-		//LogDebug("delay = %.2f ms\n", delay_us * 0.001f);
+		size_t npending = scope->GetPendingWaveformCount();
+
+		//LogDebug("delay = %.2f ms, pending=%zu\n", delay_us * 0.001f, npending );
 
 		//If the queue is too big, stop grabbing data
-		//TODO: make the cap be time-based and not waveform-based
-		if(scope->GetPendingWaveformCount() > 5000)
+		if(npending > 5000)
 		{
+			usleep(50 * 1000);
+			tlast = GetTime();
+			continue;
+		}
+
+		//If the queue is more than 5 sec long, wait for a while before polling any more.
+		//We've gotten ahead of the UI!
+		if(npending*dt > 5)
+		{
+			//LogDebug("Capture thread got 5 sec ahead of UI, pausing\n");
 			usleep(50 * 1000);
 			tlast = GetTime();
 			continue;
@@ -297,7 +309,7 @@ void ScopeThread(Oscilloscope* scope)
 
 			//Measure how long the acquisition took
 			double now = GetTime();
-			double dt = now - tlast;
+			dt = now - tlast;
 			tlast = now;
 			//LogDebug("Triggered, dt = %.3f ms (npolls = %zu, delay_ms = %.2f)\n",
 			//	dt*1000, npolls, delay_us * 0.001f);
@@ -328,6 +340,7 @@ void ScopeThread(Oscilloscope* scope)
 			}
 
 			npolls = 0;
+
 			continue;
 		}
 		npolls ++;
