@@ -733,7 +733,14 @@ void OscilloscopeWindow::UpdateStatusBar()
 	//TODO: redo this for multiple scopes
 	auto scope = m_scopes[0];
 	char tmp[256];
-	string name = scope->GetChannel(scope->GetTriggerChannelIndex())->GetHwname();
+	size_t trig_idx = scope->GetTriggerChannelIndex();
+	OscilloscopeChannel* chan = scope->GetChannel(trig_idx);
+	if(chan == NULL)
+	{
+		LogWarning("Trigger channel (index %zu) is NULL", trig_idx);
+		return;
+	}
+	string name = chan->GetHwname();
 	float voltage = scope->GetTriggerVoltage();
 	if(voltage < 1)
 		snprintf(tmp, sizeof(tmp), "%s %.0f mV", name.c_str(), voltage*1000);
