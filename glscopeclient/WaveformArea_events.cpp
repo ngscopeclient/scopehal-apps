@@ -92,6 +92,9 @@ void WaveformArea::on_resize(int width, int height)
 	m_msaaEnabled = true;
 	if(!m_waveformFramebuffer.IsComplete())
 	{
+		//if MSAA failed to initialize, ignore the error
+		glGetError();
+
 		//Failed to allocate the texture as multisample. Try doing non-multisample.
 		m_waveformTexture.Destroy();
 		m_waveformTexture.Bind();
