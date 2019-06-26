@@ -279,6 +279,8 @@ protected:
 		DRAG_TRIGGER,
 		DRAG_CURSOR
 	} m_dragState;
+
+	bool	m_msaaEnabled;
 };
 
 #endif

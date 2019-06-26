@@ -344,9 +344,7 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	bool msaa = false;
-
-	if(msaa)
+	if(m_msaaEnabled)
 		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 	else
 		m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
@@ -383,7 +381,7 @@ void WaveformArea::RenderTrace()
 	glDisable(GL_SCISSOR_TEST);
 
 	//Resolve the multisample framebuffer
-	if(msaa)
+	if(m_msaaEnabled)
 	{
 		m_waveformFramebuffer.Bind(GL_READ_FRAMEBUFFER);
 		m_waveformFramebufferResolved.Bind(GL_DRAW_FRAMEBUFFER);

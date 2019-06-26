@@ -89,6 +89,7 @@ void WaveformArea::on_resize(int width, int height)
 	m_waveformTexture.AllocateMultisample(width, height, 4);
 	ResetTextureFiltering();
 	m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D_MULTISAMPLE);
+	m_msaaEnabled = true;
 	if(!m_waveformFramebuffer.IsComplete())
 	{
 		//Failed to allocate the texture as multisample. Try doing non-multisample.
@@ -97,6 +98,7 @@ void WaveformArea::on_resize(int width, int height)
 		m_waveformTexture.SetData(width, height, NULL);
 		ResetTextureFiltering();
 		m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D);
+		m_msaaEnabled = false;
 		if(!m_waveformFramebuffer.IsComplete())
 		{
 			LogError("FBO is still incomplete (non-multisample fallback): %x\n",

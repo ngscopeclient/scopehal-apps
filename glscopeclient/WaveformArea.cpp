@@ -54,6 +54,7 @@ WaveformArea::WaveformArea(
 	, m_channel(channel)
 	, m_parent(parent)
 	, m_pixelsPerVolt(1)
+	, m_msaaEnabled(true)
 {
 	SharedCtorInit();
 }
