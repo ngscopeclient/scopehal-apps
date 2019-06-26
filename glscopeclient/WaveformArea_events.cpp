@@ -90,7 +90,19 @@ void WaveformArea::on_resize(int width, int height)
 	ResetTextureFiltering();
 	m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D_MULTISAMPLE);
 	if(!m_waveformFramebuffer.IsComplete())
-		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	{
+		//Failed to allocate the texture as multisample. Try doing non-multisample.
+		m_waveformTexture.Destroy();
+		m_waveformTexture.Bind();
+		m_waveformTexture.SetData(width, height, NULL);
+		ResetTextureFiltering();
+		m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D);
+		if(!m_waveformFramebuffer.IsComplete())
+		{
+			LogError("FBO is still incomplete (non-multisample fallback): %x\n",
+				glCheckFramebufferStatus(GL_FRAMEBUFFER));
+		}
+	}
 
 	err = glGetError();
 	if(err != 0)
