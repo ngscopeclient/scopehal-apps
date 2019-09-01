@@ -133,16 +133,86 @@ void MainWindow::CreateWidgets()
 			auto aframe = Gtk::manage(new Gtk::Frame);
 			aframe->set_label("Actual");
 			vbox->pack_start(*aframe, Gtk::PACK_SHRINK);
+			auto avbox = Gtk::manage(new Gtk::VBox);
+			aframe->add(*avbox);
+
+			auto avvbox = Gtk::manage(new Gtk::HBox);
+			avbox->pack_start(*avvbox, Gtk::PACK_SHRINK);
+			auto avlabel = Gtk::manage(new Gtk::Label);
+			avlabel->set_label("Voltage");
+			avlabel->set_size_request(75, 1);
+			avvbox->pack_start(*avlabel, Gtk::PACK_SHRINK);
+			auto aventry = Gtk::manage(new Gtk::Entry);
+			avvbox->pack_start(*aventry, Gtk::PACK_SHRINK);
+
+			auto avibox = Gtk::manage(new Gtk::HBox);
+			avbox->pack_start(*avibox, Gtk::PACK_SHRINK);
+			auto ailabel = Gtk::manage(new Gtk::Label);
+			ailabel->set_label("Current");
+			ailabel->set_size_request(75, 1);
+			avibox->pack_start(*ailabel, Gtk::PACK_SHRINK);
+			auto aientry = Gtk::manage(new Gtk::Entry);
+			avibox->pack_start(*aientry, Gtk::PACK_SHRINK);
 
 			//Voltage and current SET POINT box
 			auto tframe = Gtk::manage(new Gtk::Frame);
 			tframe->set_label("Target");
 			vbox->pack_start(*tframe, Gtk::PACK_SHRINK);
 
+			auto tvbox = Gtk::manage(new Gtk::VBox);
+			tframe->add(*tvbox);
+
+			auto tvvbox = Gtk::manage(new Gtk::HBox);
+			tvbox->pack_start(*tvvbox, Gtk::PACK_SHRINK);
+			auto tvlabel = Gtk::manage(new Gtk::Label);
+			tvlabel->set_label("Voltage");
+			tvlabel->set_size_request(75, 1);
+			tvvbox->pack_start(*tvlabel, Gtk::PACK_SHRINK);
+			auto tventry = Gtk::manage(new Gtk::Entry);
+			tvvbox->pack_start(*tventry, Gtk::PACK_SHRINK);
+
+			auto tvibox = Gtk::manage(new Gtk::HBox);
+			tvbox->pack_start(*tvibox, Gtk::PACK_SHRINK);
+			auto tilabel = Gtk::manage(new Gtk::Label);
+			tilabel->set_label("Current");
+			tilabel->set_size_request(75, 1);
+			tvibox->pack_start(*tilabel, Gtk::PACK_SHRINK);
+			auto tientry = Gtk::manage(new Gtk::Entry);
+			tvibox->pack_start(*tientry, Gtk::PACK_SHRINK);
+
 			//Miscellaneous settings box
 			auto sframe = Gtk::manage(new Gtk::Frame);
 			sframe->set_label("Settings");
-			vbox->pack_start(*sframe, Gtk::PACK_SHRINK);
+			hbox->pack_start(*sframe, Gtk::PACK_SHRINK);
+
+			auto sbox = Gtk::manage(new Gtk::VBox);
+			sframe->add(*sbox);
+
+			//Checkboxes for settings
+			auto sstart = Gtk::manage(new Gtk::CheckButton);
+			sstart->set_label("Soft start");
+			sbox->pack_start(*sstart, Gtk::PACK_SHRINK);
+
+			auto ocbox = Gtk::manage(new Gtk::HBox);
+			sbox->pack_start(*ocbox, Gtk::PACK_SHRINK);
+			auto oclabel = Gtk::manage(new Gtk::Label);
+			oclabel->set_text("Overcurrent mode");
+			ocbox->pack_start(*oclabel, Gtk::PACK_SHRINK);
+			auto occombo = Gtk::manage(new Gtk::ComboBoxText);
+			occombo->append("Current limit");
+			occombo->append("Shut down");
+			ocbox->pack_start(*occombo, Gtk::PACK_SHRINK);
+			oclabel->set_size_request(125, 1);
+
+			auto pebox = Gtk::manage(new Gtk::HBox);
+			sbox->pack_start(*pebox, Gtk::PACK_SHRINK);
+			auto pelabel = Gtk::manage(new Gtk::Label);
+			pelabel->set_text("Power");
+			pebox->pack_start(*pelabel, Gtk::PACK_SHRINK);
+
+			pelabel->set_size_request(125, 1);
+			auto pswitch = Gtk::manage(new Gtk::Switch);
+			pebox->pack_start(*pswitch, Gtk::PACK_SHRINK);
 
 			//Vertical box for graphs
 			auto gbox = Gtk::manage(new Gtk::VBox);
@@ -150,7 +220,7 @@ void MainWindow::CreateWidgets()
 
 			//Graphs for I/V
 			auto vgraph = Gtk::manage(new Graph);
-			vgraph->set_size_request(400, 100);
+			vgraph->set_size_request(600, 100);
 			vgraph->m_units = "V";
 			vgraph->m_minScale = 0;
 			vgraph->m_maxScale = 5;
@@ -158,7 +228,7 @@ void MainWindow::CreateWidgets()
 			gbox->pack_start(*vgraph, Gtk::PACK_SHRINK);
 
 			auto igraph = Gtk::manage(new Graph);
-			igraph->set_size_request(400, 100);
+			igraph->set_size_request(600, 100);
 			igraph->m_units = "A";
 			igraph->m_minScale = 0;
 			igraph->m_maxScale = 5;
