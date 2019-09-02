@@ -72,6 +72,8 @@ protected:
 	void FormatCurrent(char* str, size_t len, double i);
 
 	void SetGraphLimits();
+
+	void OnPowerSwitch();
 };
 
 /**

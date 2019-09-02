@@ -200,6 +200,9 @@ ChannelRow::ChannelRow(PowerSupply* psu, int chan)
 
 	m_softStartModeButton->set_active(m_psu->IsSoftStartEnabled(m_chan));
 
+	//Connect signal handlers after initial values are loaded
+	m_powerSwitch->property_active().signal_changed().connect(sigc::mem_fun(*this, &ChannelRow::OnPowerSwitch));
+
 	SetGraphLimits();
 }
 
@@ -286,6 +289,11 @@ void ChannelRow::FormatCurrent(char* str, size_t len, double i)
 		snprintf(str, len, "%.2f mA", i * 1000);
 	else
 		snprintf(str, len, "%.3f mA", i * 1000);
+}
+
+void ChannelRow::OnPowerSwitch()
+{
+	m_psu->SetPowerChannelActive(m_chan, m_powerSwitch->get_state());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
