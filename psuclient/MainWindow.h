@@ -38,6 +38,32 @@
 
 #include "../scopehal/PowerSupply.h"
 
+class ChannelRow
+{
+public:
+	ChannelRow(PowerSupply* psu, int chan);
+
+	Gtk::Frame* GetFrame()
+	{ return m_frame; }
+
+	void OnTimer();
+
+protected:
+	Gtk::Frame* m_frame;
+	Gtk::Label* m_actualVoltageLabel;
+	Gtk::Label* m_actualCurrentLabel;
+
+	Graph* m_currentGraph;
+	Graph* m_voltageGraph;
+	Graphable m_channelData;
+
+	PowerSupply* m_psu;
+	int m_chan;
+
+	void FormatVoltage(char* str, size_t len, double v);
+	void FormatCurrent(char* str, size_t len, double i);
+};
+
 /**
 	@brief Main application window class for a power supply
  */
@@ -69,10 +95,14 @@ protected:
 			Gtk::Toolbar m_toolbar;
 		*/
 
+	bool OnTimer(int timer);
+
 protected:
 
 	//Our PSU connections
 	std::vector<PowerSupply*> m_psus;
+
+	std::vector<ChannelRow*> m_rows;
 };
 
 #endif

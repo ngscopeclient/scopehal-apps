@@ -36,13 +36,8 @@
 #include "psuclient.h"
 #include "MainWindow.h"
 #include "../scopehal/RohdeSchwarzHMC804xPowerSupply.h"
-#include <thread>
 
 using namespace std;
-
-bool g_terminating = false;
-
-void PSUThread(PowerSupply* psu);
 
 /**
 	@brief The main application class
@@ -70,17 +65,11 @@ protected:
 	MainWindow* m_window;
 
 	virtual void on_activate();
-
-	vector<thread*> m_threads;
 };
 
 PSUApp::~PSUApp()
 {
-	for(auto t : m_threads)
-	{
-		t->join();
-		delete t;
-	}
+
 }
 
 void PSUApp::run()
@@ -101,9 +90,6 @@ void PSUApp::run()
 		if(!m_window->is_visible())
 			break;
 	}
-
-	g_terminating = true;
-
 	delete m_window;
 	m_window = NULL;
 }
@@ -113,10 +99,6 @@ void PSUApp::run()
  */
 void PSUApp::on_activate()
 {
-	//Start the scope threads
-	for(auto psu : m_psus)
-		m_threads.push_back(new thread(PSUThread, psu));
-
 	//Test application
 	m_window = new MainWindow(m_psus);
 	add_window(*m_window);
@@ -223,105 +205,3 @@ double GetTime()
 #endif
 }
 
-void PSUThread(PowerSupply* psu)
-{
-	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "PSUThread");
-	#endif
-
-	/*
-	uint32_t delay_us = 1000;
-	double tlast = GetTime();
-	size_t npolls = 0;
-	uint32_t delay_max = 500 * 1000;
-	uint32_t delay_min = 250;
-	double dt = 0;
-	while(!g_terminating)
-	{
-		size_t npending = scope->GetPendingWaveformCount();
-
-		//LogDebug("delay = %.2f ms, pending=%zu\n", delay_us * 0.001f, npending );
-
-		//If the queue is too big, stop grabbing data
-		if(npending > 5000)
-		{
-			usleep(50 * 1000);
-			tlast = GetTime();
-			continue;
-		}
-
-		//If the queue is more than 5 sec long, wait for a while before polling any more.
-		//We've gotten ahead of the UI!
-		if(npending*dt > 5)
-		{
-			//LogDebug("Capture thread got 5 sec ahead of UI, pausing\n");
-			usleep(50 * 1000);
-			tlast = GetTime();
-			continue;
-		}
-
-		//If trigger isn't armed, don't even bother polling for a while.
-		if(!scope->IsTriggerArmed())
-		{
-			usleep(50 * 1000);
-			tlast = GetTime();
-			continue;
-		}
-
-		auto stat = scope->PollTrigger();
-
-		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-		{
-			scope->AcquireData(true);
-
-			//Measure how long the acquisition took
-			double now = GetTime();
-			dt = now - tlast;
-			tlast = now;
-			//LogDebug("Triggered, dt = %.3f ms (npolls = %zu, delay_ms = %.2f)\n",
-			//	dt*1000, npolls, delay_us * 0.001f);
-
-			//Adjust polling interval so that we poll a handful of times between triggers
-			if(npolls > 5)
-			{
-				delay_us *= 1.5;
-
-				//Don't increase poll interval beyond 500ms. If we hit that point the scope is either insanely slow,
-				//or they're targeting some kind of intermittent signal. Don't add more lag on top of that!
-				if(delay_us > delay_max)
-					delay_us = delay_max;
-			}
-			if(npolls < 2)
-			{
-				delay_us /= 1.5;
-				if(delay_us < delay_min)
-					delay_us = delay_min;
-			}
-
-			//If we have a really high trigger latency (super low bandwidth link?)
-			//then force the delay to be a bit higher so we have time for other threads to get to the scope
-			if(dt > 2000)
-			{
-				if(delay_us < 5000)
-					delay_us = 5000;
-			}
-
-			npolls = 0;
-
-			continue;
-		}
-		npolls ++;
-
-		//We didn't trigger. Wait a while before the next time we poll to avoid hammering slower hardware.
-		usleep(delay_us);
-
-		//If we've polled a ton of times and the delay is tiny, do a big step increase
-		if(npolls > 50)
-		{
-			//LogDebug("Super laggy scope, bumping polling interval\n");
-			delay_us *= 10;
-			npolls = 0;
-		}
-	}
-	*/
-}
