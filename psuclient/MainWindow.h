@@ -53,6 +53,14 @@ protected:
 	Gtk::Label* m_actualVoltageLabel;
 	Gtk::Label* m_actualCurrentLabel;
 
+	Gtk::Entry* m_setVoltageEntry;
+	Gtk::Entry* m_setCurrentEntry;
+
+	Gtk::Switch* m_powerSwitch;
+
+	Gtk::ComboBoxText* m_overcurrentModeBox;
+	Gtk::CheckButton* m_softStartModeButton;
+
 	Graph* m_currentGraph;
 	Graph* m_voltageGraph;
 	Graphable m_channelData;
@@ -62,6 +70,8 @@ protected:
 
 	void FormatVoltage(char* str, size_t len, double v);
 	void FormatCurrent(char* str, size_t len, double i);
+
+	void SetGraphLimits();
 };
 
 /**

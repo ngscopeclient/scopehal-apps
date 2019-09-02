@@ -103,8 +103,9 @@ ChannelRow::ChannelRow(PowerSupply* psu, int chan)
 	tvlabel->set_label("Voltage");
 	tvlabel->set_size_request(75, 1);
 	tvvbox->pack_start(*tvlabel, Gtk::PACK_SHRINK);
-	auto tventry = Gtk::manage(new Gtk::Entry);
-	tvvbox->pack_start(*tventry, Gtk::PACK_SHRINK);
+	m_setVoltageEntry = Gtk::manage(new Gtk::Entry);
+	m_setVoltageEntry->override_font(Pango::FontDescription("monospace bold 20"));
+	tvvbox->pack_start(*m_setVoltageEntry, Gtk::PACK_SHRINK);
 
 	auto tvibox = Gtk::manage(new Gtk::HBox);
 	tvbox->pack_start(*tvibox, Gtk::PACK_SHRINK);
@@ -112,31 +113,34 @@ ChannelRow::ChannelRow(PowerSupply* psu, int chan)
 	tilabel->set_label("Current");
 	tilabel->set_size_request(75, 1);
 	tvibox->pack_start(*tilabel, Gtk::PACK_SHRINK);
-	auto tientry = Gtk::manage(new Gtk::Entry);
-	tvibox->pack_start(*tientry, Gtk::PACK_SHRINK);
+	m_setCurrentEntry = Gtk::manage(new Gtk::Entry);
+	m_setCurrentEntry->override_font(Pango::FontDescription("monospace bold 20"));
+	tvibox->pack_start(*m_setCurrentEntry, Gtk::PACK_SHRINK);
 
 	//Miscellaneous settings box
 	auto sframe = Gtk::manage(new Gtk::Frame);
 	sframe->set_label("Settings");
+	sframe->set_margin_left(5);
+	sframe->set_margin_right(5);
 	hbox->pack_start(*sframe, Gtk::PACK_SHRINK);
 
 	auto sbox = Gtk::manage(new Gtk::VBox);
 	sframe->add(*sbox);
 
 	//Checkboxes for settings
-	auto sstart = Gtk::manage(new Gtk::CheckButton);
-	sstart->set_label("Soft start");
-	sbox->pack_start(*sstart, Gtk::PACK_SHRINK);
+	m_softStartModeButton = Gtk::manage(new Gtk::CheckButton);
+	m_softStartModeButton->set_label("Soft start");
+	sbox->pack_start(*m_softStartModeButton, Gtk::PACK_SHRINK);
 
 	auto ocbox = Gtk::manage(new Gtk::HBox);
 	sbox->pack_start(*ocbox, Gtk::PACK_SHRINK);
 	auto oclabel = Gtk::manage(new Gtk::Label);
 	oclabel->set_text("Overcurrent mode");
 	ocbox->pack_start(*oclabel, Gtk::PACK_SHRINK);
-	auto occombo = Gtk::manage(new Gtk::ComboBoxText);
-	occombo->append("Current limit");
-	occombo->append("Shut down");
-	ocbox->pack_start(*occombo, Gtk::PACK_SHRINK);
+	m_overcurrentModeBox = Gtk::manage(new Gtk::ComboBoxText);
+	m_overcurrentModeBox->append("Current limit");
+	m_overcurrentModeBox->append("Shut down");
+	ocbox->pack_start(*m_overcurrentModeBox, Gtk::PACK_SHRINK);
 	oclabel->set_size_request(125, 1);
 
 	auto pebox = Gtk::manage(new Gtk::HBox);
@@ -146,8 +150,8 @@ ChannelRow::ChannelRow(PowerSupply* psu, int chan)
 	pebox->pack_start(*pelabel, Gtk::PACK_SHRINK);
 
 	pelabel->set_size_request(125, 1);
-	auto pswitch = Gtk::manage(new Gtk::Switch);
-	pebox->pack_start(*pswitch, Gtk::PACK_SHRINK);
+	m_powerSwitch = Gtk::manage(new Gtk::Switch);
+	pebox->pack_start(*m_powerSwitch, Gtk::PACK_SHRINK);
 
 	//Vertical box for graphs
 	auto gbox = Gtk::manage(new Gtk::VBox);
@@ -175,6 +179,65 @@ ChannelRow::ChannelRow(PowerSupply* psu, int chan)
 	gbox->pack_start(*m_currentGraph, Gtk::PACK_SHRINK);
 
 	m_channelData.m_color = Gdk::Color("#0000ff");
+
+	//Refresh status of controls from the hardware.
+	//For now we only do this once at startup and don't poll for changes later.
+	char tmp[128];
+	double v = m_psu->GetPowerVoltageNominal(m_chan);
+	FormatVoltage(tmp, sizeof(tmp), v);
+	m_setVoltageEntry->set_text(tmp);
+
+	double i = m_psu->GetPowerCurrentNominal(m_chan);
+	FormatCurrent(tmp, sizeof(tmp), i);
+	m_setCurrentEntry->set_text(tmp);
+
+	m_powerSwitch->set_state(m_psu->GetPowerChannelActive(m_chan));
+
+	if(m_psu->GetPowerOvercurrentShutdownEnabled(m_chan))
+		m_overcurrentModeBox->set_active_text("Shut down");
+	else
+		m_overcurrentModeBox->set_active_text("Current limit");
+
+	m_softStartModeButton->set_active(m_psu->IsSoftStartEnabled(m_chan));
+
+	SetGraphLimits();
+}
+
+void ChannelRow::SetGraphLimits()
+{
+	//Set max range for graphs to 10% beyond the nominal values
+	double v = m_psu->GetPowerVoltageNominal(m_chan);
+	double i = m_psu->GetPowerCurrentNominal(m_chan);
+	m_voltageGraph->m_maxScale = v * 1.1;
+	m_currentGraph->m_maxScale = i * 1.1;
+
+	//Set redline at the current limit
+	m_currentGraph->m_maxRedline = i;
+
+	//Set step sizes appropriately
+	if(v > 6)
+		m_voltageGraph->m_scaleBump = 2;
+	else
+		m_voltageGraph->m_scaleBump = 1;
+
+	if(i > 1)
+		m_currentGraph->m_scaleBump = 1;
+	else if(i > 0.1)
+		m_currentGraph->m_scaleBump = 0.1;
+	else
+		m_currentGraph->m_scaleBump = 0.025;
+
+	//Set units
+	if(i > 2)
+	{
+		m_currentGraph->m_units = "A";
+		m_currentGraph->m_unitScale = 1;
+	}
+	else
+	{
+		m_currentGraph->m_units = "mA";
+		m_currentGraph->m_unitScale = 1000;
+	}
 }
 
 void ChannelRow::OnTimer()
@@ -182,7 +245,7 @@ void ChannelRow::OnTimer()
 	//If channel is off, nothing to do
 	if(m_psu->GetPowerChannelActive(m_chan) )
 	{
-		//Refresh current status from the hardware
+		//Refresh status from the hardware
 		char tmp[128];
 		double v = m_psu->GetPowerVoltageActual(m_chan);
 		FormatVoltage(tmp, sizeof(tmp), v);
@@ -275,7 +338,6 @@ MainWindow::MainWindow(vector<PowerSupply*> psus)
 
 	//Initial setup
 	set_reallocate_redraws(true);
-	set_default_size(1280, 800);
 
 	//Add widgets
 	CreateWidgets();
@@ -302,6 +364,7 @@ void MainWindow::CreateWidgets()
 {
 	//Set up window hierarchy
 	add(m_vbox);
+		/*
 		m_vbox.pack_start(m_menu, Gtk::PACK_SHRINK);
 			m_menu.append(m_fileMenuItem);
 				m_fileMenuItem.set_label("File");
@@ -310,12 +373,7 @@ void MainWindow::CreateWidgets()
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &MainWindow::OnQuit));
 					m_fileMenu.append(*item);
-
-		/*
-		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
-		m_triggerConfigLabel.set_size_request(75, 1);
-		*/
+				*/
 
 	//Process all of the channels
 	for(auto psu : m_psus)
