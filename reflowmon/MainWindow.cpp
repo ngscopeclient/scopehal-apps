@@ -47,7 +47,8 @@ using namespace std;
 	@brief Initializes the main window
  */
 MainWindow::MainWindow(Multimeter* dmm)
-	: m_dmm(dmm)
+	: m_peak(0)
+	, m_dmm(dmm)
 {
 	//Set title
 	string title = "Reflow Monitor: ";
@@ -108,6 +109,9 @@ void MainWindow::CreateWidgets()
 					m_tempLabelBox.pack_start(m_talLabel, Gtk::PACK_EXPAND_WIDGET);
 						m_talLabel.override_font(Pango::FontDescription("monospace bold 20"));
 						m_talLabel.set_label("TAL: 0 s");
+					m_tempLabelBox.pack_start(m_peakLabel, Gtk::PACK_EXPAND_WIDGET);
+						m_peakLabel.override_font(Pango::FontDescription("monospace bold 20"));
+						m_peakLabel.set_label("Peak: 0 C");
 
 		m_rateFrame.set_label("Ramp Rate");
 		m_vbox.pack_start(m_rateFrame, Gtk::PACK_SHRINK);
@@ -143,7 +147,7 @@ bool MainWindow::OnTimer(int /*timer*/)
 	m_tempData.GetSeries("temp")->push_back(GraphPoint(t, temp));
 
 	char str[32];
-	snprintf(str, sizeof(str), "%.1f C ", temp);
+	snprintf(str, sizeof(str), "Temp: %.1f C ", temp);
 	m_tempLabel.set_label(str);
 
 	//TODO: make melting point configurable
@@ -151,6 +155,11 @@ bool MainWindow::OnTimer(int /*timer*/)
 		m_tal ++;
 	snprintf(str, sizeof(str), "TAL: %d s ", m_tal);
 	m_talLabel.set_label(str);
+
+	if(temp > m_peak)
+		m_peak = temp;
+	snprintf(str, sizeof(str), "Peak: %.1f  C ", m_peak);
+	m_peakLabel.set_label(str);
 
 	//Save historical temp data to calculate ramp rate
 	m_tempBuffer.push_back(temp);
@@ -161,7 +170,7 @@ bool MainWindow::OnTimer(int /*timer*/)
 
 	m_rateData.GetSeries("rate")->push_back(GraphPoint(t, rate));
 
-	snprintf(str, sizeof(str), "%.2f C/s ", rate);
+	snprintf(str, sizeof(str), "Rate: %.2f C/s ", rate);
 	m_rateLabel.set_label(str);
 
 	return true;

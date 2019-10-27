@@ -61,6 +61,7 @@ protected:
 				Gtk::VBox m_tempLabelBox;
 					Gtk::Label m_tempLabel;
 					Gtk::Label m_talLabel;
+					Gtk::Label m_peakLabel;
 
 		Gtk::Frame m_rateFrame;
 			Gtk::HBox m_rateBox;
@@ -74,6 +75,7 @@ protected:
 
 	std::vector<float> m_tempBuffer;
 	int m_tal;
+	float m_peak;
 
 	Multimeter* m_dmm;
 };
