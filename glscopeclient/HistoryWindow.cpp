@@ -143,9 +143,19 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	{
 		auto c = scope->GetChannel(i);
 		auto dat = c->GetData();
+		if(!c->IsEnabled())		//don't save historical waveforms from disabled channels
+		{
+			hist[c] = NULL;
+			continue;
+		}
 		if(!dat)
 			continue;
 		hist[c] = dat;
+
+		//Clear excess space out of the waveform buffer
+		auto adat = dynamic_cast<AnalogCapture*>(data);
+		if(adat)
+			adat->m_samples.shrink_to_fit();
 	}
 	row[m_columns.m_history] = hist;
 
@@ -194,7 +204,7 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 			bytes_used += sizeof(AnalogCapture);
 
 			//Add size of each sample
-			bytes_used += sizeof(AnalogSample) * acap->GetDepth();
+			bytes_used += sizeof(AnalogSample) * acap->m_samples.capacity();
 		}
 	}
 
@@ -202,9 +212,9 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	float mb = bytes_used / (1024.0f * 1024.0f);
 	float gb = mb / 1024;
 	if(gb > 1)
-		snprintf(tmp, sizeof(tmp), "Memory: %.2f GB", gb);
+		snprintf(tmp, sizeof(tmp), "%u WFM / %.2f GB", children.size(), gb);
 	else
-		snprintf(tmp, sizeof(tmp), "Memory: %.0f MB", mb);
+		snprintf(tmp, sizeof(tmp), "%u WFM / %.0f MB", children.size(), mb);
 	m_memoryLabel.set_label(tmp);
 
 	m_updating = false;
