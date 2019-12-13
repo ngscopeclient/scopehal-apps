@@ -3,7 +3,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=native -mtune=native")
+set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=sandybridge -mtune=native")
 
 find_package(PkgConfig)
 pkg_check_modules(GTKMM gtkmm-3.0)
