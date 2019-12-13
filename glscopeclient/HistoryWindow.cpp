@@ -74,11 +74,14 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
 			m_hbox.pack_start(m_maxLabel, Gtk::PACK_SHRINK);
 				m_maxLabel.set_label("Max waveforms");
 			m_hbox.pack_start(m_maxBox, Gtk::PACK_EXPAND_WIDGET);
-				m_maxBox.set_text("1000");
+				m_maxBox.set_text("100");
 		m_vbox.pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
 			m_scroller.add(m_tree);
 			m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 				m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
+		m_vbox.pack_start(m_status, Gtk::PACK_SHRINK);
+			m_status.pack_end(m_memoryLabel, Gtk::PACK_SHRINK);
+				m_memoryLabel.set_text("");
 	m_vbox.show_all();
 
 	//not shown by default
@@ -174,6 +177,35 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 		m_model->erase(it);
 	}
+
+	//Calculate our RAM usage (rough estimate)
+	size_t bytes_used = 0;
+	for(auto it : children)
+	{
+		WaveformHistory hist = (*it)[m_columns.m_history];
+		for(auto jt : hist)
+		{
+			//TODO: support digital etc captures
+			auto acap = dynamic_cast<AnalogCapture*>(jt.second);
+			if(acap == NULL)
+				continue;
+
+			//Add static size of the capture object
+			bytes_used += sizeof(AnalogCapture);
+
+			//Add size of each sample
+			bytes_used += sizeof(AnalogSample) * acap->GetDepth();
+		}
+	}
+
+	//Convert to MB/GB
+	float mb = bytes_used / (1024.0f * 1024.0f);
+	float gb = mb / 1024;
+	if(gb > 1)
+		snprintf(tmp, sizeof(tmp), "Memory: %.2f GB", gb);
+	else
+		snprintf(tmp, sizeof(tmp), "Memory: %.0f MB", mb);
+	m_memoryLabel.set_label(tmp);
 
 	m_updating = false;
 }

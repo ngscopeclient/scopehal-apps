@@ -73,6 +73,8 @@ protected:
 		Gtk::ScrolledWindow m_scroller;
 			Gtk::TreeView m_tree;
 		Glib::RefPtr<Gtk::TreeStore> m_model;
+		Gtk::HBox m_status;
+			Gtk::Label m_memoryLabel;
 	HistoryColumns m_columns;
 
 	OscilloscopeWindow* m_parent;
