@@ -30,74 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief A group of one or more WaveformArea's
+	@brief Dialog for configuring protocol decoders
  */
 
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
+#ifndef MeasurementDialog_h
+#define MeasurementDialog_h
 
-#include "Timeline.h"
+#include "ProtocolDecoderDialog.h"
 
-class OscilloscopeWindow;
-
-class MeasurementColumn
+/**
+	@brief Main application window class for an oscilloscope
+ */
+class MeasurementDialog	: public Gtk::Dialog
 {
 public:
-	~MeasurementColumn()
-	{
-		delete m_measurement;
-		m_measurement = NULL;
-	}
+	MeasurementDialog(OscilloscopeWindow* parent, Measurement* measurement, OscilloscopeChannel* chan);
+	virtual ~MeasurementDialog();
 
-	Gtk::Label m_label;
-	std::string m_title;
-	Measurement* m_measurement;
-};
-
-class WaveformGroup
-{
-public:
-	WaveformGroup(OscilloscopeWindow* parent);
-	virtual ~WaveformGroup();
-
-	void RefreshMeasurements();
-
-	void AddColumn(std::string name, OscilloscopeChannel* chan, std::string color);
-
-	Gtk::Frame m_frame;
-		Gtk::VBox m_vbox;
-			Timeline m_timeline;
-			Gtk::VBox m_waveformBox;
-			Gtk::Frame m_measurementFrame;
-				Gtk::HBox m_measurementBox;
-					std::set<MeasurementColumn*> m_measurementColumns;
-
-	Gtk::Menu m_contextMenu;
-		Gtk::MenuItem m_removeMeasurementItem;
-
-	float m_pixelsPerPicosecond;
-	int64_t m_timeOffset;
-
-	enum CursorConfig
-	{
-		CURSOR_NONE,
-		CURSOR_X_SINGLE,
-		CURSOR_X_DUAL,
-		CURSOR_Y_SINGLE,
-		CURSOR_Y_DUAL
-	} m_cursorConfig;
-
-	int64_t m_xCursorPos[2];
-	double m_yCursorPos[2];
+	void ConfigureMeasurement();
 
 protected:
-	MeasurementColumn* m_selectedColumn;
-	bool OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col);
-	void OnRemoveMeasurementItem();
+	Measurement* m_measurement;
 
-	static int m_numGroups;
-
-	OscilloscopeWindow* m_parent;
+	std::vector<ChannelSelectorRow*> m_rows;
+	//std::vector<ParameterRow*> m_prows;
 };
 
 #endif

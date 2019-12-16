@@ -36,8 +36,6 @@
 #include "glscopeclient.h"
 #include "../scopehal/Instrument.h"
 #include "OscilloscopeWindow.h"
-//#include "../scopehal/AnalogRenderer.h"
-//#include "ProtocolDecoderDialog.h"
 
 using namespace std;
 
@@ -232,7 +230,7 @@ void OscilloscopeWindow::CreateWidgets()
 		auto split = new Gtk::HPaned;
 			m_vbox.pack_start(*split);
 			m_splitters.emplace(split);
-			auto group = new WaveformGroup;
+			auto group = new WaveformGroup(this);
 			m_waveformGroups.emplace(group);
 			split->pack1(group->m_frame);
 
@@ -395,7 +393,7 @@ void OscilloscopeWindow::SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bo
 void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
-	auto group = new WaveformGroup;
+	auto group = new WaveformGroup(this);
 	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
 	m_waveformGroups.emplace(group);
 
@@ -409,7 +407,7 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
-	auto group = new WaveformGroup;
+	auto group = new WaveformGroup(this);
 	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
 	m_waveformGroups.emplace(group);
 

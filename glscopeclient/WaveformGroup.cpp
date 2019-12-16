@@ -34,15 +34,17 @@
  */
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
+#include "MeasurementDialog.h"
 
 using namespace std;
 
 int WaveformGroup::m_numGroups = 1;
 
-WaveformGroup::WaveformGroup()
+WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	: m_pixelsPerPicosecond(0.05)
 	, m_timeOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
+	, m_parent(parent)
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Initial GUI hierarchy, title, etc
@@ -113,6 +115,21 @@ void WaveformGroup::RefreshMeasurements()
 
 void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string color)
 {
+	//Create the measurement itself
+	auto m = Measurement::CreateMeasurement(name);
+	if(m->GetInputCount() > 1)
+	{
+		MeasurementDialog dialog(m_parent, m, chan);
+		if(dialog.run() != Gtk::RESPONSE_OK)
+		{
+			delete m;
+			return;
+		}
+		dialog.ConfigureMeasurement();
+	}
+	else
+		m->SetInput(0, chan);
+	
 	//Make sure the measurements can actually be seen
 	m_measurementFrame.show();
 
@@ -132,11 +149,7 @@ void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string col
 	snprintf(tmp, sizeof(tmp), "%s: %s", shortname.c_str(), name.c_str());
 	col->m_title = tmp;
 	m_measurementColumns.emplace(col);
-
-	//Create the measurement itself
-	auto m = Measurement::CreateMeasurement(name);
 	col->m_measurement = m;
-	m->SetInput(0, chan);	//TODO: allow multiple inputs, pop up dialog or something
 
 	//Add to the box and show it
 	m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
