@@ -12,6 +12,7 @@ pkg_check_modules(GLM glm>=0.9.8)
 pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopemeasurements")
