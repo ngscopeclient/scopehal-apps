@@ -35,7 +35,7 @@
 
 #include "reflowmon.h"
 #include "../scopehal/Instrument.h"
-#include "../scopehal/Graph.h"
+#include "../graphwidget/Graph.h"
 #include "MainWindow.h"
 
 using namespace std;
