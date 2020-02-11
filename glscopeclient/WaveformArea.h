@@ -108,6 +108,8 @@ protected:
 					Gtk::Menu m_decodeConversionMenu;
 				Gtk::MenuItem m_decodeMathItem;
 					Gtk::Menu m_decodeMathMenu;
+				Gtk::MenuItem m_decodeMeasurementItem;
+					Gtk::Menu m_decodeMeasurementMenu;
 				Gtk::MenuItem m_decodeMiscItem;
 					Gtk::Menu m_decodeMiscMenu;
 				Gtk::MenuItem m_decodeSerialItem;

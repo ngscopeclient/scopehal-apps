@@ -37,10 +37,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
-#include "../../lib/scopeprotocols/EyeDecoder2.h"
-#include "../../lib/scopeprotocols/WaterfallDecoder.h"
-#include "../../lib/scopeprotocols/FFTDecoder.h"
-#include "../../lib/scopeprotocols/ClockJitterDecoder.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
 using namespace glm;
@@ -311,6 +308,9 @@ void WaveformArea::CreateWidgets()
 		m_decodeMenu.append(m_decodeMathItem);
 			m_decodeMathItem.set_label("Math");
 			m_decodeMathItem.set_submenu(m_decodeMathMenu);
+		m_decodeMenu.append(m_decodeMeasurementItem);
+			m_decodeMeasurementItem.set_label("Measurement");
+			m_decodeMeasurementItem.set_submenu(m_decodeMeasurementMenu);
 		m_decodeMenu.append(m_decodeMiscItem);
 			m_decodeMiscItem.set_label("Misc");
 			m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
@@ -341,6 +341,10 @@ void WaveformArea::CreateWidgets()
 
 				case ProtocolDecoder::CAT_CONVERSION:
 					m_decodeConversionMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_MEASUREMENT:
+					m_decodeMeasurementMenu.append(*item);
 					break;
 
 				case ProtocolDecoder::CAT_MATH:

@@ -601,7 +601,12 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		if(IsFFT())
 			snprintf(tmp, sizeof(tmp), "%.0f dB", v);
 		else if(IsTime())
-			snprintf(tmp, sizeof(tmp), "%.0f ps", v);
+		{
+			if(v > 1000)
+				snprintf(tmp, sizeof(tmp), "%.2f ns", v / 1000);
+			else
+				snprintf(tmp, sizeof(tmp), "%.0f ps", v);
+		}
 		else
 		{
 			if(fabs(v) < 1)
