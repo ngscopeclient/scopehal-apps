@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -40,6 +40,7 @@
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
 #include "../../lib/scopeprotocols/FFTDecoder.h"
+#include "../../lib/scopeprotocols/ClockJitterDecoder.h"
 
 using namespace std;
 using namespace glm;
@@ -652,4 +653,10 @@ bool WaveformArea::IsFFT()
 {
 	auto fft = dynamic_cast<FFTCapture*>(m_channel->GetData());
 	return (fft != NULL);
+}
+
+bool WaveformArea::IsTime()
+{
+	auto time = dynamic_cast<TimeCapture*>(m_channel->GetData());
+	return (time != NULL);
 }
