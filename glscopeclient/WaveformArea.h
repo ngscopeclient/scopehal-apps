@@ -251,6 +251,8 @@ protected:
 	float PicosecondsToXPosition(int64_t t);
 	int64_t XPositionToPicoseconds(float pix);
 
+	void OnRemoveOverlay(ProtocolDecoder* decode);
+
 	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;							//The main waveform for this view
 	OscilloscopeChannel* m_selectedChannel;					//The selected channel (either m_channel or an overlay)

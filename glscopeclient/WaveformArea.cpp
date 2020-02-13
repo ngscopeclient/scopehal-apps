@@ -109,13 +109,7 @@ WaveformArea::~WaveformArea()
 	CleanupBufferObjects();
 
 	for(auto d : m_overlays)
-	{
-		//If we're about to remove the last reference to a decoder, make sure the parent knows
-		if(d->GetRefCount() == 1)
-			m_parent->RemoveDecoder(d);
-
-		d->Release();
-	}
+		OnRemoveOverlay(d);
 	m_overlays.clear();
 
 	for(auto m : m_moveExistingGroupItems)
@@ -124,6 +118,15 @@ WaveformArea::~WaveformArea()
 		delete m;
 	}
 	m_moveExistingGroupItems.clear();
+}
+
+void WaveformArea::OnRemoveOverlay(ProtocolDecoder* decode)
+{
+	//If we're about to remove the last reference to a decoder, make sure the parent knows
+	if(decode->GetRefCount() == 1)
+		m_parent->RemoveDecoder(decode);
+
+	decode->Release();
 }
 
 void WaveformArea::CleanupBufferObjects()

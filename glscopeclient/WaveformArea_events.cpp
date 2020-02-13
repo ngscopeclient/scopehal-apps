@@ -433,8 +433,18 @@ void WaveformArea::OnHide()
 	//Deleting an overlay
 	else
 	{
-		//See what's being removed
-		LogDebug("Deleting overlay %s\n", m_selectedChannel->m_displayname.c_str());
+		//LogDebug("Deleting overlay %s\n", m_selectedChannel->m_displayname.c_str());
+
+		//Remove the overlay from the list
+		for(size_t i=0; i<m_overlays.size(); i++)
+		{
+			if(m_overlays[i] == m_selectedChannel)
+			{
+				OnRemoveOverlay(m_overlays[i]);
+				m_overlays.erase(m_overlays.begin() + i);
+				break;
+			}
+		}
 	}
 }
 
