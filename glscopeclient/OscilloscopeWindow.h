@@ -76,6 +76,9 @@ public:
 	void AddDecoder(ProtocolDecoder* decode)
 	{ m_decoders.emplace(decode); }
 
+	void RemoveDecoder(ProtocolDecoder* decode)
+	{ m_decoders.erase(decode); }
+
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }
 
