@@ -252,11 +252,11 @@ protected:
 	int64_t XPositionToPicoseconds(float pix);
 
 	Oscilloscope* m_scope;
-	OscilloscopeChannel* m_channel;
-	OscilloscopeChannel* m_selectedChannel;
+	OscilloscopeChannel* m_channel;							//The main waveform for this view
+	OscilloscopeChannel* m_selectedChannel;					//The selected channel (either m_channel or an overlay)
 	OscilloscopeWindow* m_parent;
 
-	std::vector<ProtocolDecoder*> m_overlays;
+	std::vector<ProtocolDecoder*> m_overlays;				//List of protocol decoders drawn on top of the signal
 	std::map<ProtocolDecoder*, int> m_overlayPositions;
 
 	double m_lastFrameStart;

@@ -426,7 +426,16 @@ void WaveformArea::OnCopyToExistingGroup(WaveformGroup* group)
 
 void WaveformArea::OnHide()
 {
-	m_parent->OnRemoveChannel(this);
+	//Delete the entire waveform area
+	if(m_selectedChannel == m_channel)
+		m_parent->OnRemoveChannel(this);
+
+	//Deleting an overlay
+	else
+	{
+		//See what's being removed
+		LogDebug("Deleting overlay %s\n", m_selectedChannel->m_displayname.c_str());
+	}
 }
 
 void WaveformArea::OnTogglePersistence()
@@ -438,7 +447,7 @@ void WaveformArea::OnTogglePersistence()
 void WaveformArea::OnProtocolDecode(string name)
 {
 	//Create a new decoder for the incoming signal
-	string color = GetDefaultChannelColor(g_numDecodes ++);
+	string color = GetDefaultChannelColor(g_numDecodes);
 	auto decode = ProtocolDecoder::CreateDecoder(name, color);
 
 	//Only one input with no config required? Do default configuration
@@ -456,6 +465,10 @@ void WaveformArea::OnProtocolDecode(string name)
 		}
 		dialog.ConfigureDecoder();
 	}
+
+	//Increment the color chooser only after we've decided to add the decode.
+	//If the dialog is canceled, don't do anything.
+	g_numDecodes ++;
 
 	//Set the name of the decoder based on the input channels etc
 	decode->SetDefaultName();
