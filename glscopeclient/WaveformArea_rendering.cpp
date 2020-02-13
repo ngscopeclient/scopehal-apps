@@ -105,7 +105,7 @@ bool WaveformArea::PrepareGeometry()
 			yright = m_pixelsPerVolt * (data[j+1] + offset);
 		}
 
-		//Find the normal vector (swap x and y components
+		//Find the normal vector (swap x and y components)
 		float dy = xright - xleft;
 		float dx = yright - yleft;
 
@@ -154,8 +154,8 @@ bool WaveformArea::PrepareGeometry()
 
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
-	glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_traceBuffer.size(), &m_traceBuffer[0], GL_DYNAMIC_DRAW);
+	glInvalidateBufferData(GL_ARRAY_BUFFER);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_traceBuffer.size(), &m_traceBuffer[0], GL_STREAM_DRAW);
 
 	//Configure vertex array settings
 	m_traceVAOs[0]->Bind();
