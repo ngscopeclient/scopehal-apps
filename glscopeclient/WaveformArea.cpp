@@ -76,6 +76,11 @@ void WaveformArea::SharedCtorInit()
 {
 	m_frameTime = 0;
 	m_frameCount = 0;
+	m_renderTime = 0;
+	m_underlayTime = 0;
+	m_overlayTime = 0;
+	m_prepareTime = 0;
+	m_downloadTime = 0;
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
 	m_dragState = DRAG_NONE;
@@ -101,10 +106,26 @@ void WaveformArea::SharedCtorInit()
 
 WaveformArea::~WaveformArea()
 {
-	m_channel->Release();
+	LogDebug("Shutting down view for waveform %s\n", m_channel->m_displayname.c_str());
+	{
+		LogIndenter li;
 
-	double tavg = m_frameTime / m_frameCount;
-	LogDebug("Average frame time: %.3f ms (%.2f FPS, %zu frames)\n", tavg*1000, 1/tavg, m_frameCount);
+		double tavg = m_frameTime / m_frameCount;
+		LogDebug("Average frame interval: %.3f ms (%.2f FPS, %zu frames)\n",
+			tavg*1000, 1/tavg, m_frameCount);
+		LogDebug("Total render time: %.3f ms\n",
+			m_renderTime * 1000);
+		LogDebug("Cairo underlay  : %.3f ms (%.1f %%)\n",
+			m_underlayTime * 1000, m_underlayTime * 100 / m_renderTime);
+		LogDebug("Cairo overlay   : %.3f ms (%.1f %%)\n",
+			m_overlayTime * 1000, m_overlayTime * 100 / m_renderTime);
+		LogDebug("Prepare geometry: %.3f ms (%.1f %%)\n",
+			m_prepareTime * 1000, m_prepareTime * 100 / m_renderTime);
+		LogDebug("Download geometry: %.3f ms (%.1f %%)\n",
+			m_downloadTime * 1000, m_downloadTime * 100 / m_renderTime);
+	}
+
+	m_channel->Release();
 
 	CleanupBufferObjects();
 

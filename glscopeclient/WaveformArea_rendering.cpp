@@ -149,11 +149,12 @@ bool WaveformArea::PrepareGeometry()
 	}
 
 	double dt = GetTime() - start;
-	LogTrace("Prepare geometry: %.3f ms\n", dt * 1000);
+	m_prepareTime += dt;
 	start = GetTime();
 
 	//Download waveform data
 	m_traceVBOs[0]->Bind();
+	glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_traceBuffer.size(), &m_traceBuffer[0], GL_DYNAMIC_DRAW);
 
 	//Configure vertex array settings
@@ -164,7 +165,7 @@ bool WaveformArea::PrepareGeometry()
 	m_waveformLength = count;
 
 	dt = GetTime() - start;
-	LogTrace("Download: %.3f ms\n", dt * 1000);
+	m_downloadTime += dt;
 
 	return true;
 }
@@ -232,8 +233,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	if(err != 0)
 		LogNotice("Render: err = %x\n", err);
 
-	//dt = GetTime() - start;
-	//LogTrace("Render time: %.3f ms\n", dt * 1000);
+	dt = GetTime() - start;
+	m_renderTime += dt;
 
 	return true;
 }
@@ -395,6 +396,8 @@ void WaveformArea::RenderTrace()
 
 void WaveformArea::RenderCairoUnderlays()
 {
+	double tstart = GetTime();
+
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -427,6 +430,8 @@ void WaveformArea::RenderCairoUnderlays()
 		surface->get_data(),
 		GL_BGRA);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	m_underlayTime += (GetTime() - tstart);
 }
 
 void WaveformArea::DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr)
@@ -686,6 +691,8 @@ void WaveformArea::RenderTraceColorCorrection()
 
 void WaveformArea::RenderCairoOverlays()
 {
+	double tstart = GetTime();
+
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -724,6 +731,8 @@ void WaveformArea::RenderCairoOverlays()
 	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTextureOver, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	m_overlayTime += GetTime() - tstart;
 }
 
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)

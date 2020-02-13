@@ -264,6 +264,11 @@ protected:
 	double m_lastFrameStart;
 	double m_frameTime;
 	long m_frameCount;
+	double m_renderTime;
+	double m_underlayTime;
+	double m_overlayTime;
+	double m_prepareTime;
+	double m_downloadTime;
 
 	float m_pixelsPerVolt;
 	float m_padding;
