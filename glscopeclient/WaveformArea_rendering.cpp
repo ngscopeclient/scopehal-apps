@@ -752,8 +752,8 @@ void WaveformArea::RenderCairoOverlays()
 
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
-	RenderChannelLabel(cr);
 	RenderDecodeOverlays(cr);
+	RenderChannelLabel(cr);
 	RenderCursors(cr);
 }
 
@@ -875,7 +875,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = PicosecondsToXPosition(start);
 				double xe = PicosecondsToXPosition(end);
 
-				if( (xe < 0) || (xs > m_plotRight) )
+				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
 
 				//Clamp

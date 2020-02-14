@@ -528,14 +528,12 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
 {
 	group->m_pixelsPerPicosecond *= 1.5;
-	LogDebug("zoom in\n");
 	ClearPersistence(group);
 }
 
 void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
 {
 	group->m_pixelsPerPicosecond /= 1.5;
-	LogDebug("zoom out\n");
 	ClearPersistence(group);
 }
 
