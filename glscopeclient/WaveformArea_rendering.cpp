@@ -68,152 +68,95 @@ bool WaveformArea::PrepareGeometry()
 		return false;
 
 	//Create the geometry
-	double radius = 1;
 	double offset = m_channel->GetOffset();
 	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
+	bool fft = IsFFT();
 
-	//Use old code path for FFT traces, for now
-	if(IsFFT())
+	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
+	m_traceBuffer.resize(waveform_size);
+	m_waveformLength = count;
+
+	for(size_t j=0; j<(count-1); j++)
 	{
-		size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
-		m_traceBuffer.resize(waveform_size);
-		m_waveformLength = count;
-		#pragma omp parallel for num_threads(8)
-		for(size_t j=0; j<(count-1); j++)
-		{
-			//Actual X/Y start/end point of the data
-			float xleft = data.GetSampleStart(j) * xscale;
-			float xright = data.GetSampleStart(j+1) * xscale;
+		float xleft = data.GetSampleStart(j) * xscale;
+		float xright = xleft + 1;
+		if(xscale > 1)
+			xright = xleft + xscale;
 
+		float ymid = m_pixelsPerVolt * (data[j] + offset);
+		float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
+
+		if(fft)
+		{
 			double db1 = 20 * log10(data[j]);
 			double db2 = 20 * log10(data[j+1]);
 
 			db1 = -70 - db1;	//todo: dont hard code plot limit
 			db2 = -70 - db2;
 
-			float yleft = DbToYPosition(db1);
-			float yright = DbToYPosition(db2);
-
-			//Find the normal vector (swap x and y components)
-			float dy = xright - xleft;
-			float dx = yright - yleft;
-
-			//Normalize
-			float scale = radius / sqrt(dy*dy + dx*dx);
-			dx = dx * scale;
-			dy = dy * scale;
-
-			//Calculate final coordinates
-			float x1 = xleft - dx;
-			float y1 = yleft - dy;
-
-			float x2 = xleft + dx;
-			float y2 = yleft + dy;
-
-			float x3 = xright + dx;
-			float y3 = yright + dy;
-
-			float x4 = xright - dx;
-			float y4 = yright - dy;
-
-			//and emit the vertexes
-			size_t base = j*12;
-			m_traceBuffer[base+0] = x2;
-			m_traceBuffer[base+1] = y2;
-
-			m_traceBuffer[base+2] = x1;
-			m_traceBuffer[base+3] = y1;
-
-			m_traceBuffer[base+4] = x3;
-			m_traceBuffer[base+5] = y3;
-
-			m_traceBuffer[base+6] = x1;
-			m_traceBuffer[base+7] = y1;
-
-			m_traceBuffer[base+8] = x3;
-			m_traceBuffer[base+9] = y3;
-
-			m_traceBuffer[base+10] = x4;
-			m_traceBuffer[base+11] = y4;
+			ymid = DbToYPosition(db1);
+			nextymid = DbToYPosition(db2);
 		}
-	}
 
-	else
-	{
-		size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
-		m_traceBuffer.resize(waveform_size);
-		m_waveformLength = count;
+		float ybot = std::min(ymid, nextymid) - 1;
+		float ytop = std::max(ymid, nextymid) + 1;
 
-		for(size_t j=0; j<(count-1); j++)
+		float x1 = xleft;
+		float y1 = ybot;
+
+		float x2 = xright;
+		float y2 = ybot;
+
+		float x3 = xright;
+		float y3 = ytop;
+
+		float x4 = xleft;
+		float y4 = ytop;
+
+		/*
+			If we stop here, we just get ugly looking boxes when zoomed in.
+
+			At higher zooms, we need to move the corners a bit.
+			Find the average of our starting Y coordinates and the previous box's end,
+			then move both to that point.
+		 */
+		if( (xscale > 1) && (j > 0) )
 		{
-			float xleft = data.GetSampleStart(j) * xscale;
-			float xright = xleft + 1;
-			if(xscale > 1)
-				xright = xleft + xscale;
+			size_t oldbase = (j-1)*12;
 
-			float ymid = m_pixelsPerVolt * (data[j] + offset);
-			float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
+			float oldtop = m_traceBuffer[oldbase + 9];
+			float oldbot = m_traceBuffer[oldbase + 1];
 
-			float ybot = std::min(ymid, nextymid) - 1;
-			float ytop = std::max(ymid, nextymid) + 1;
+			y4 = (oldtop + ytop) / 2;
+			y1 = (oldbot + ybot) / 2;
 
-			float x1 = xleft;
-			float y1 = ybot;
+			//Patch up the old points
+			m_traceBuffer[oldbase + 5] = y4;
+			m_traceBuffer[oldbase + 9] = y4;
 
-			float x2 = xright;
-			float y2 = ybot;
-
-			float x3 = xright;
-			float y3 = ytop;
-
-			float x4 = xleft;
-			float y4 = ytop;
-
-			/*
-				If we stop here, we just get ugly looking boxes when zoomed in.
-
-				At higher zooms, we need to move the corners a bit.
-				Find the average of our starting Y coordinates and the previous box's end,
-				then move both to that point.
-			 */
-			if( (xscale > 1) && (j > 0) )
-			{
-				size_t oldbase = (j-1)*12;
-
-				float oldtop = m_traceBuffer[oldbase + 9];
-				float oldbot = m_traceBuffer[oldbase + 1];
-
-				y4 = (oldtop + ytop) / 2;
-				y1 = (oldbot + ybot) / 2;
-
-				//Patch up the old points
-				m_traceBuffer[oldbase + 5] = y4;
-				m_traceBuffer[oldbase + 9] = y4;
-
-				m_traceBuffer[oldbase + 1] = y1;
-			}
-
-			//and emit the vertexes
-			size_t base = j*12;
-			m_traceBuffer[base+0] = x2;
-			m_traceBuffer[base+1] = y2;
-
-			m_traceBuffer[base+2] = x1;
-			m_traceBuffer[base+3] = y1;
-
-			m_traceBuffer[base+4] = x3;
-			m_traceBuffer[base+5] = y3;
-
-			m_traceBuffer[base+6] = x1;
-			m_traceBuffer[base+7] = y1;
-
-			m_traceBuffer[base+8] = x3;
-			m_traceBuffer[base+9] = y3;
-
-			m_traceBuffer[base+10] = x4;
-			m_traceBuffer[base+11] = y4;
+			m_traceBuffer[oldbase + 1] = y1;
 		}
+
+		//and emit the vertexes
+		size_t base = j*12;
+		m_traceBuffer[base+0] = x2;
+		m_traceBuffer[base+1] = y2;
+
+		m_traceBuffer[base+2] = x1;
+		m_traceBuffer[base+3] = y1;
+
+		m_traceBuffer[base+4] = x3;
+		m_traceBuffer[base+5] = y3;
+
+		m_traceBuffer[base+6] = x1;
+		m_traceBuffer[base+7] = y1;
+
+		m_traceBuffer[base+8] = x3;
+		m_traceBuffer[base+9] = y3;
+
+		m_traceBuffer[base+10] = x4;
+		m_traceBuffer[base+11] = y4;
 	}
 
 	double dt = GetTime() - start;
