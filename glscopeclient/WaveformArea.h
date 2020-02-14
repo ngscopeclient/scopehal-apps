@@ -57,6 +57,9 @@ public:
 	void ClearPersistence()
 	{ m_persistenceClear = true; }
 
+	void SetGeometryDirty()
+	{ m_geometryDirty = true; }
+
 	WaveformGroup* m_group;
 
 	//Helpers for figuring out what kind of signal our primary trace is
@@ -291,6 +294,7 @@ protected:
 	} m_dragState;
 
 	bool	m_msaaEnabled;
+	bool	m_geometryDirty;
 };
 
 #endif

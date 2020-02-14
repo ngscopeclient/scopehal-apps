@@ -121,6 +121,8 @@ void WaveformArea::on_resize(int width, int height)
 	if(!m_waveformFramebufferResolved.IsComplete())
 		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
+	SetGeometryDirty();
+
 	err = glGetError();
 	if(err != 0)
 		LogNotice("resize 4, err = %x\n", err);
@@ -156,17 +158,11 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			{
 				case GDK_SCROLL_UP:
 					if(!IsEye())
-					{
 						m_parent->OnZoomInHorizontal(m_group);
-						ClearPersistence();
-					}
 					break;
 				case GDK_SCROLL_DOWN:
 					if(!IsEye())
-					{
 						m_parent->OnZoomOutHorizontal(m_group);
-						ClearPersistence();
-					}
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");
@@ -188,10 +184,12 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 				{
 					case GDK_SCROLL_UP:
 						m_channel->SetVoltageRange(vrange * 0.9);
+						SetGeometryDirty();
 						queue_draw();
 						break;
 					case GDK_SCROLL_DOWN:
 						m_channel->SetVoltageRange(vrange / 0.9);
+						SetGeometryDirty();
 						queue_draw();
 						break;
 
@@ -570,6 +568,7 @@ void WaveformArea::OnWaveformDataReady()
 	}
 
 	//Update our measurements and redraw the waveform
+	SetGeometryDirty();
 	queue_draw();
 	m_group->m_timeline.queue_draw();
 }

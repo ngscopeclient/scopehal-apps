@@ -68,6 +68,7 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 	, m_channel(clone->m_channel)
 	, m_parent(clone->m_parent)
 	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
+	, m_msaaEnabled(clone->m_msaaEnabled)
 {
 	SharedCtorInit();
 }
@@ -87,6 +88,7 @@ void WaveformArea::SharedCtorInit()
 	m_padding = 2;
 	m_lastFrameStart = -1;
 	m_persistenceClear = true;
+	m_geometryDirty	= true;
 
 	set_has_alpha();
 

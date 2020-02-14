@@ -54,7 +54,7 @@ public:
 	void OnAutofitHorizontal();
 	void OnZoomInHorizontal(WaveformGroup* group);
 	void OnZoomOutHorizontal(WaveformGroup* group);
-	void ClearPersistence(WaveformGroup* group);
+	void ClearPersistence(WaveformGroup* group, bool dirty = true);
 	void ClearAllPersistence();
 
 	void OnRemoveChannel(WaveformArea* w);

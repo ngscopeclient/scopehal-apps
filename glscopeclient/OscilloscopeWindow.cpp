@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -528,24 +528,39 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
 {
 	group->m_pixelsPerPicosecond *= 1.5;
+	LogDebug("zoom in\n");
 	ClearPersistence(group);
 }
 
 void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
 {
 	group->m_pixelsPerPicosecond /= 1.5;
+	LogDebug("zoom out\n");
 	ClearPersistence(group);
 }
 
-void OscilloscopeWindow::ClearPersistence(WaveformGroup* group)
+void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool dirty)
 {
 	auto children = group->m_vbox.get_children();
 	for(auto w : children)
 	{
-		//Clear persistence on waveform areas
-		auto area = dynamic_cast<WaveformArea*>(w);
-		if(area != NULL)
-			area->ClearPersistence();
+		//Redraw all views in the waveform box
+		auto box = dynamic_cast<Gtk::Box*>(w);
+		if(box)
+		{
+			auto bchildren = box->get_children();
+			for(auto a : bchildren)
+			{
+				//Clear persistence on waveform areas
+				auto area = dynamic_cast<WaveformArea*>(a);
+				if(area != NULL)
+				{
+					if(dirty)
+						area->SetGeometryDirty();
+					area->ClearPersistence();
+				}
+			}
+		}
 
 		//Redraw everything (timeline included)
 		w->queue_draw();
@@ -648,19 +663,19 @@ void OscilloscopeWindow::PollScopes()
 			m_tPoll += GetTime() - start;
 
 			//If triggered, grab the data
-			if(status == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+				continue;
+
+			//If we have a LOT of waveforms ready, don't waste time rendering all of them.
+			//Grab a big pile and only render the last.
+			//TODO: batch render with persistence?
+			if(scope->GetPendingWaveformCount() > 30)
 			{
-				//If we have a LOT of waveforms ready, don't waste time rendering all of them.
-				//Grab a big pile and only render the last.
-				//TODO: batch render with persistence?
-				if(scope->GetPendingWaveformCount() > 30)
-				{
-					for(size_t i=0; i<25; i++)
-						OnWaveformDataReady(scope);
-				}
-				else
+				for(size_t i=0; i<25; i++)
 					OnWaveformDataReady(scope);
 			}
+			else
+				OnWaveformDataReady(scope);
 
 			//Update the views
 			start = GetTime();

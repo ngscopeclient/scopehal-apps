@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -26,10 +26,12 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
+
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
 #include "Timeline.h"
 #include "WaveformArea.h"
+#include "OscilloscopeWindow.h"
 
 using namespace std;
 
@@ -94,7 +96,8 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				if(m_group->m_timeOffset < 0)
 					m_group->m_timeOffset = 0;
 
-				m_group->m_frame.queue_draw();
+				//Clear persistence and redraw the group (fixes #46)
+				m_group->GetParent()->ClearPersistence(m_group, false);
 			}
 			break;
 

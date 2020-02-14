@@ -50,26 +50,31 @@ using namespace glm;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-//TODO: only do this if the waveform is dirty!
 //TODO: Tesselate in a shader, rather than on the CPU!
 bool WaveformArea::PrepareGeometry()
 {
+	//Look up some configuration and update the X axis offset
+	auto pdat = dynamic_cast<AnalogCapture*>(m_channel->GetData());
+	if(!pdat)
+		return false;
+	AnalogCapture& data = *pdat;
+	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+	size_t count = data.size();
+	if(count == 0)
+		return false;
+
+	//Early out if nothing has changed.
+	//glBufferData() and tesselation are expensive, only do them if changing LOD or new waveform data
+	if(!m_geometryDirty)
+		return true;
+
 	double start = GetTime();
 
 	//LogDebug("Processing capture\n");
 	//LogIndenter li;
 
-	auto pdat = dynamic_cast<AnalogCapture*>(m_channel->GetData());
-	if(!pdat)
-		return false;
-	AnalogCapture& data = *pdat;
-	size_t count = data.size();
-	if(count == 0)
-		return false;
-
 	//Create the geometry
 	double offset = m_channel->GetOffset();
-	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
 	bool fft = IsFFT();
 
@@ -176,6 +181,7 @@ bool WaveformArea::PrepareGeometry()
 	dt = GetTime() - start;
 	m_downloadTime += dt;
 
+	m_geometryDirty = false;
 	return true;
 }
 
