@@ -443,6 +443,8 @@ void WaveformArea::OnHide()
 				break;
 			}
 		}
+
+		queue_draw();
 	}
 }
 

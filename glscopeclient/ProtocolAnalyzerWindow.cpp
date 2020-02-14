@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
 #include "ProtocolAnalyzerWindow.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
 
@@ -54,6 +55,7 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 		add(m_headers[m_headers.size()-1]);
 	}
 
+	add(m_image);
 	add(m_data);
 }
 
@@ -86,6 +88,10 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	auto headers = decoder->GetHeaders();
 	for(size_t i=0; i<headers.size(); i++)
 		m_tree.append_column(headers[i], m_columns.m_headers[i]);
+
+	if(decoder->GetShowImageColumn())
+		m_tree.append_column("Image", m_columns.m_image);
+
 	if(decoder->GetShowDataColumn())
 		m_tree.append_column("Data", m_columns.m_data);
 
@@ -157,6 +163,30 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 			sdata += t;
 		}
 		row[m_columns.m_data] = sdata;
+
+		//Add the image for video packets
+		auto vp = dynamic_cast<VideoScanlinePacket*>(p);
+		if(vp != NULL)
+		{
+			//Create the image data
+			vp->m_image = p->m_data;
+			size_t rowsize = vp->m_image.size();
+			size_t width = rowsize / 3;
+			size_t height = 24;
+			size_t bcount = rowsize * height;
+			vp->m_image.resize(bcount);
+			for(size_t y=1; y<height; y++)
+				memcpy(&vp->m_image[y*rowsize], &vp->m_image[0], rowsize);
+
+			row[m_columns.m_image] = Gdk::Pixbuf::create_from_data(
+				&vp->m_image[0],
+				Gdk::COLORSPACE_RGB,
+				false,
+				8,
+				width,
+				height,
+				rowsize);
+		}
 
 		//Select the newly added row
 		m_tree.get_selection()->select(row);
