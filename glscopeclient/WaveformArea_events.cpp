@@ -39,6 +39,7 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "ProtocolDecoderDialog.h"
+#include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
@@ -326,9 +327,16 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 {
 	switch(m_clickLocation)
 	{
+		//Double click on channel name to pop up the config dialog
 		case LOC_CHAN_NAME:
-			//Pop up channel configuration dialog
-			LogDebug("TODO: channel config dialog\n");
+			{
+				ChannelPropertiesDialog dialog(m_parent, m_selectedChannel);
+				if(dialog.run() == Gtk::RESPONSE_OK)
+				{
+					dialog.ConfigureChannel();
+					queue_draw();
+				}
+			}
 			break;
 
 		default:
