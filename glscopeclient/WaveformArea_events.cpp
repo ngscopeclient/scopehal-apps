@@ -224,6 +224,16 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	//Look up the time of our click (if in the plot area)
 	int64_t timestamp = XPositionToPicoseconds(event->x);
 
+	if(event->type == GDK_BUTTON_PRESS)
+		OnSingleClick(event, timestamp);
+	else if(event->type == GDK_2BUTTON_PRESS)
+		OnDoubleClick(event, timestamp);
+
+	return true;
+}
+
+void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
+{
 	switch(m_clickLocation)
 	{
 		//Waveform area
@@ -307,10 +317,23 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 			}
 			break;
 
-
+		default:
+			break;
 	}
+}
 
-	return true;
+void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*/)
+{
+	switch(m_clickLocation)
+	{
+		case LOC_CHAN_NAME:
+			//Pop up channel configuration dialog
+			LogDebug("TODO: channel config dialog\n");
+			break;
+
+		default:
+			break;
+	}
 }
 
 bool WaveformArea::on_button_release_event(GdkEventButton* event)
@@ -583,6 +606,10 @@ void WaveformArea::OnWaveformDataReady()
  */
 WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 {
+	//On the channel name button?
+	if(m_infoBoxRect.HitTest(x, y))
+		return LOC_CHAN_NAME;
+
 	if(x > m_plotRight)
 	{
 		//On the trigger button?

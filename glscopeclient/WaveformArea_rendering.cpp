@@ -85,9 +85,9 @@ bool WaveformArea::PrepareGeometry()
 	for(size_t j=0; j<(count-1); j++)
 	{
 		float xleft = data.GetSampleStart(j) * xscale;
-		float xright = xleft + 1;
-		if(xscale > 1)
-			xright = xleft + xscale;
+		float xright = data.GetSampleStart(j+1) * xscale;
+		if(xright < xleft + 1)
+			xright = xleft + 1;
 
 		float ymid = m_pixelsPerVolt * (data[j] + offset);
 		float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
@@ -955,11 +955,44 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	tlayout->set_text(label);
 	tlayout->get_pixel_size(twidth, theight);
 
-	//Black background
-	int labelmargin = 2;
-	cr->set_source_rgba(0, 0, 0, 0.75);
-	cr->rectangle(0, ybot - theight - labelmargin*2, twidth + labelmargin*2, theight + labelmargin*2);
-	cr->fill();
+	//Channel-colored rounded outline
+	cr->save();
+
+		int labelmargin = 6;
+		int labelheight = theight + labelmargin*2;
+
+		m_infoBoxRect.set_x(2);
+		m_infoBoxRect.set_y(ybot - labelheight - 1);
+		m_infoBoxRect.set_width(twidth + labelmargin*2);
+		m_infoBoxRect.set_height(labelheight);
+
+		Rect innerBox = m_infoBoxRect;
+		innerBox.shrink(labelmargin, labelmargin);
+
+		//Path for the outline
+		cr->begin_new_sub_path();
+		cr->arc(innerBox.get_left(), innerBox.get_bottom(), labelmargin, M_PI_2, M_PI);		//bottom left
+		cr->line_to(m_infoBoxRect.get_left(), innerBox.get_y());
+		cr->arc(innerBox.get_left(), innerBox.get_top(), labelmargin, M_PI, 1.5*M_PI);		//top left
+		cr->line_to(innerBox.get_right(), m_infoBoxRect.get_top());
+		cr->arc(innerBox.get_right(), innerBox.get_top(), labelmargin, 1.5*M_PI, 2*M_PI);	//top right
+		cr->line_to(m_infoBoxRect.get_right(), innerBox.get_bottom());
+		cr->arc(innerBox.get_right(), innerBox.get_bottom(), labelmargin, 2*M_PI, M_PI_2);	//bottom right
+		cr->line_to(innerBox.get_left(), m_infoBoxRect.get_bottom());
+
+		//Fill it
+		cr->set_source_rgba(0, 0, 0, 0.75);
+		cr->fill_preserve();
+
+		//Draw the outline
+		Gdk::Color color(m_channel->m_displaycolor);
+		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1);
+
+		cr->set_line_width(1);
+
+		cr->stroke();
+
+	cr->restore();
 
 	//White text
 	cr->save();

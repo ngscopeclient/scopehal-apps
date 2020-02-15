@@ -37,6 +37,46 @@
 
 #include "WaveformGroup.h"
 
+/**
+	@brief Slightly more capable rectangle class
+ */
+class Rect : public Gdk::Rectangle
+{
+public:
+	int get_left()
+	{ return get_x(); }
+
+	int get_top()
+	{ return get_y(); }
+
+	int get_right()
+	{ return get_x() + get_width(); }
+
+	int get_bottom()
+	{ return get_y() + get_height(); }
+
+	/**
+		@brief moves all corners in by (dx, dy)
+	 */
+	void shrink(int dx, int dy)
+	{
+		set_x(get_x() + dx);
+		set_y(get_y() + dy);
+		set_width(get_width() - 2*dx);
+		set_height(get_height() - 2*dy);
+	}
+
+	bool HitTest(int x, int y)
+	{
+		if( (x < get_left()) || (x > get_right()) )
+			return false;
+		if( (y < get_top()) || (y > get_bottom()) )
+			return false;
+
+		return true;
+	}
+};
+
 float sinc(float x, float width);
 float blackman(float x, float width);
 
@@ -79,6 +119,9 @@ protected:
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
+
+	void OnSingleClick(GdkEventButton* event, int64_t timestamp);
+	void OnDoubleClick(GdkEventButton* event, int64_t timestamp);
 
 	void CreateWidgets();
 
@@ -277,11 +320,15 @@ protected:
 	float m_padding;
 	float m_plotRight;
 
+	//Positions of various UI elements used by hit testing
+	Rect m_infoBoxRect;
+
 	enum ClickLocation
 	{
 		LOC_PLOT,
 		LOC_VSCALE,
-		LOC_TRIGGER
+		LOC_TRIGGER,
+		LOC_CHAN_NAME
 	} m_clickLocation;
 
 	ClickLocation HitTest(double x, double y);
