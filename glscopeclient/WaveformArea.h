@@ -284,6 +284,15 @@ protected:
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
 
+	//Helpers for rendering and such
+	void RenderChannelInfoBox(
+		OscilloscopeChannel* chan,
+		Cairo::RefPtr< Cairo::Context > cr,
+		int bottom,
+		std::string text,
+		Rect& box,
+		int labelmargin = 6);
+
 	void ResetTextureFiltering();
 
 	//Math helpers
@@ -322,6 +331,7 @@ protected:
 
 	//Positions of various UI elements used by hit testing
 	Rect m_infoBoxRect;
+	std::map<ProtocolDecoder*, Rect> m_overlayBoxRects;
 
 	enum ClickLocation
 	{

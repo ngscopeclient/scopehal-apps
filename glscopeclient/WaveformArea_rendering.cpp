@@ -759,9 +759,10 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
-	int midline = 15;
+	//TODO: adjust height/spacing depending on font sizes etc
 	int height = 20;
 	int spacing = 30;
+	int midline = spacing / 2;
 
 	//Find which overlay slots are in use
 	int max_overlays = 10;
@@ -811,21 +812,11 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		cr->line_to(0,				ybot);
 		cr->fill();
 
-		//Render the channel label
-		cr->set_source_rgba(1,1,1,1);
-		int twidth;
-		int theight;
-		Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-		Pango::FontDescription font("monospace normal 10");
-		font.set_weight(Pango::WEIGHT_NORMAL);
-		tlayout->set_font_description(font);
-		tlayout->set_text(o->m_displayname);
-		tlayout->get_pixel_size(twidth, theight);
-		cr->move_to(5, ybot - theight);
-		tlayout->update_from_cairo_context(cr);
-		tlayout->show_in_cairo_context(cr);
+		Rect chanbox;
+		RenderChannelInfoBox(o, cr, ybot, o->m_displayname, chanbox, 2);
+		m_overlayBoxRects[o] = chanbox;
 
-		int textright = twidth + 10;
+		int textright = chanbox.get_right() + 4;
 
 		if(data == NULL)
 			continue;
@@ -910,17 +901,71 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	}
 }
 
-void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
+void WaveformArea::RenderChannelInfoBox(
+		OscilloscopeChannel* chan,
+		Cairo::RefPtr< Cairo::Context > cr,
+		int bottom,
+		string text,
+		Rect& box,
+		int labelmargin)
 {
-	auto ybot = m_height;
-
+	//Figure out text size
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
+	tlayout->set_text(text);
+	tlayout->get_pixel_size(twidth, theight);
 
+	//Channel-colored rounded outline
+	cr->save();
+
+		int labelheight = theight + labelmargin*2;
+
+		box.set_x(2);
+		box.set_y(bottom - labelheight - 1);
+		box.set_width(twidth + labelmargin*2);
+		box.set_height(labelheight);
+
+		Rect innerBox = box;
+		innerBox.shrink(labelmargin, labelmargin);
+
+		//Path for the outline
+		cr->begin_new_sub_path();
+		cr->arc(innerBox.get_left(), innerBox.get_bottom(), labelmargin, M_PI_2, M_PI);		//bottom left
+		cr->line_to(box.get_left(), innerBox.get_y());
+		cr->arc(innerBox.get_left(), innerBox.get_top(), labelmargin, M_PI, 1.5*M_PI);		//top left
+		cr->line_to(innerBox.get_right(), box.get_top());
+		cr->arc(innerBox.get_right(), innerBox.get_top(), labelmargin, 1.5*M_PI, 2*M_PI);	//top right
+		cr->line_to(box.get_right(), innerBox.get_bottom());
+		cr->arc(innerBox.get_right(), innerBox.get_bottom(), labelmargin, 2*M_PI, M_PI_2);	//bottom right
+		cr->line_to(innerBox.get_left(), box.get_bottom());
+
+		//Fill it
+		cr->set_source_rgba(0, 0, 0, 0.75);
+		cr->fill_preserve();
+
+		//Draw the outline
+		Gdk::Color color(chan->m_displaycolor);
+		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1);
+		cr->set_line_width(1);
+		cr->stroke();
+
+	cr->restore();
+
+	//White text
+	cr->save();
+		cr->set_source_rgba(1, 1, 1, 1);
+		cr->move_to(labelmargin, bottom - theight - labelmargin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
+}
+
+void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
+{
 	//Add sample rate info to physical channels
 	//TODO: do this to some decodes too?
 	string label = m_channel->m_displayname;
@@ -952,55 +997,8 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		label += tmp;
 	}
 
-	tlayout->set_text(label);
-	tlayout->get_pixel_size(twidth, theight);
-
-	//Channel-colored rounded outline
-	cr->save();
-
-		int labelmargin = 6;
-		int labelheight = theight + labelmargin*2;
-
-		m_infoBoxRect.set_x(2);
-		m_infoBoxRect.set_y(ybot - labelheight - 1);
-		m_infoBoxRect.set_width(twidth + labelmargin*2);
-		m_infoBoxRect.set_height(labelheight);
-
-		Rect innerBox = m_infoBoxRect;
-		innerBox.shrink(labelmargin, labelmargin);
-
-		//Path for the outline
-		cr->begin_new_sub_path();
-		cr->arc(innerBox.get_left(), innerBox.get_bottom(), labelmargin, M_PI_2, M_PI);		//bottom left
-		cr->line_to(m_infoBoxRect.get_left(), innerBox.get_y());
-		cr->arc(innerBox.get_left(), innerBox.get_top(), labelmargin, M_PI, 1.5*M_PI);		//top left
-		cr->line_to(innerBox.get_right(), m_infoBoxRect.get_top());
-		cr->arc(innerBox.get_right(), innerBox.get_top(), labelmargin, 1.5*M_PI, 2*M_PI);	//top right
-		cr->line_to(m_infoBoxRect.get_right(), innerBox.get_bottom());
-		cr->arc(innerBox.get_right(), innerBox.get_bottom(), labelmargin, 2*M_PI, M_PI_2);	//bottom right
-		cr->line_to(innerBox.get_left(), m_infoBoxRect.get_bottom());
-
-		//Fill it
-		cr->set_source_rgba(0, 0, 0, 0.75);
-		cr->fill_preserve();
-
-		//Draw the outline
-		Gdk::Color color(m_channel->m_displaycolor);
-		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1);
-
-		cr->set_line_width(1);
-
-		cr->stroke();
-
-	cr->restore();
-
-	//White text
-	cr->save();
-		cr->set_source_rgba(1, 1, 1, 1);
-		cr->move_to(labelmargin, ybot - theight - labelmargin);
-		tlayout->update_from_cairo_context(cr);
-		tlayout->show_in_cairo_context(cr);
-	cr->restore();
+	//Do the actual drawing
+	RenderChannelInfoBox(m_channel, cr, m_height, label, m_infoBoxRect);
 }
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)

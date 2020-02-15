@@ -330,12 +330,28 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 		//Double click on channel name to pop up the config dialog
 		case LOC_CHAN_NAME:
 			{
-				ChannelPropertiesDialog dialog(m_parent, m_selectedChannel);
-				if(dialog.run() == Gtk::RESPONSE_OK)
+				//See if it's a physical channel
+				if(m_selectedChannel->IsPhysicalChannel())
 				{
-					dialog.ConfigureChannel();
-					queue_draw();
+					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel);
+					if(dialog.run() == Gtk::RESPONSE_OK)
+					{
+						dialog.ConfigureChannel();
+						queue_draw();
+					}
 				}
+
+				//No, it's a decode
+				else
+				{
+					ProtocolDecoderDialog dialog(m_parent, dynamic_cast<ProtocolDecoder*>(m_selectedChannel), NULL);
+					if(dialog.run() == Gtk::RESPONSE_OK)
+					{
+						dialog.ConfigureDecoder();
+						queue_draw();
+					}
+				}
+
 			}
 			break;
 
@@ -511,9 +527,6 @@ void WaveformArea::OnProtocolDecode(string name)
 	//If the dialog is canceled, don't do anything.
 	g_numDecodes ++;
 
-	//Set the name of the decoder based on the input channels etc
-	decode->SetDefaultName();
-
 	//If it's an eye pattern or waterfall, set the initial size
 	auto eye = dynamic_cast<EyeDecoder2*>(decode);
 	if(eye != NULL)
@@ -614,9 +627,22 @@ void WaveformArea::OnWaveformDataReady()
  */
 WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 {
-	//On the channel name button?
+	//On the main channel name button?
 	if(m_infoBoxRect.HitTest(x, y))
+	{
+		m_selectedChannel = m_channel;
 		return LOC_CHAN_NAME;
+	}
+
+	//On an overlay info box?
+	for(auto it : m_overlayBoxRects)
+	{
+		if(it.second.HitTest(x, y))
+		{
+			m_selectedChannel = it.first;
+			return LOC_CHAN_NAME;
+		}
+	}
 
 	if(x > m_plotRight)
 	{

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,6 +49,14 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
 
+	get_vbox()->pack_start(m_channelDisplayNameBox, Gtk::PACK_SHRINK);
+		m_channelDisplayNameBox.pack_start(m_channelDisplayNameLabel, Gtk::PACK_SHRINK);
+		m_channelDisplayNameLabel.set_text("Display name");
+		m_channelDisplayNameBox.pack_start(m_channelDisplayNameEntry, Gtk::PACK_EXPAND_WIDGET);
+		m_channelDisplayNameLabel.set_size_request(150, 1);
+		m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
+		m_channelDisplayNameEntry.set_text(decoder->m_displayname);
+
 	for(size_t i=0; i<decoder->GetInputCount(); i++)
 	{
 		//Add the row
@@ -74,7 +82,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				{
 					row->m_chans.append(c->m_displayname);
 					row->m_chanptrs[c->m_displayname] = c;
-					if(c == chan)
+					if( (c == chan) || (c == decoder->GetInput(i)) )
 						row->m_chans.set_active_text(c->m_displayname);
 				}
 			}
@@ -134,6 +142,13 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 		m_decoder->GetParameter(m_prows[i]->m_label.get_label()).ParseString(
 			m_prows[i]->m_entry.get_text());
 	}
+
+	//Set the name of the decoder based on the input channels etc
+	//TODO: do this any time we change an input or configure stuff
+	m_decoder->SetDefaultName();
+	auto dname = m_channelDisplayNameEntry.get_text();
+	if(dname != "")
+		m_decoder->m_displayname = dname;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

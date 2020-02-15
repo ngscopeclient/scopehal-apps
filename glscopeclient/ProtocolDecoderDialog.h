@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -89,6 +89,10 @@ public:
 
 protected:
 	ProtocolDecoder* m_decoder;
+
+	Gtk::HBox m_channelDisplayNameBox;
+		Gtk::Label m_channelDisplayNameLabel;
+		Gtk::Entry m_channelDisplayNameEntry;
 
 	std::vector<ChannelSelectorRow*> m_rows;
 	std::vector<ParameterRow*> m_prows;
