@@ -168,24 +168,24 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		auto vp = dynamic_cast<VideoScanlinePacket*>(p);
 		if(vp != NULL)
 		{
-			//Create the image data
-			vp->m_image = p->m_data;
-			size_t rowsize = vp->m_image.size();
+			size_t rowsize = p->m_data.size();
 			size_t width = rowsize / 3;
 			size_t height = 24;
-			size_t bcount = rowsize * height;
-			vp->m_image.resize(bcount);
-			for(size_t y=1; y<height; y++)
-				memcpy(&vp->m_image[y*rowsize], &vp->m_image[0], rowsize);
 
-			row[m_columns.m_image] = Gdk::Pixbuf::create_from_data(
-				&vp->m_image[0],
+			Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create(
 				Gdk::COLORSPACE_RGB,
 				false,
 				8,
 				width,
-				height,
-				rowsize);
+				height);
+
+			//Make a 2D image
+			uint8_t* pixels = image->get_pixels();
+			size_t bcount = rowsize * height;
+			for(size_t y=0; y<height; y++)
+				memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
+
+			row[m_columns.m_image] = image;
 		}
 
 		//Select the newly added row
