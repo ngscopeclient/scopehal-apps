@@ -41,7 +41,8 @@ using namespace std;
 int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
-	: m_pixelsPerPicosecond(0.05)
+	: m_timeline(parent, this)
+	, m_pixelsPerPicosecond(0.05)
 	, m_timeOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
 	, m_parent(parent)
@@ -51,7 +52,6 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 
 	m_frame.add(m_vbox);
 		m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
-			m_timeline.m_group = this;
 		m_vbox.pack_start(m_waveformBox, Gtk::PACK_EXPAND_WIDGET);
 
 	char tmp[64];
@@ -129,7 +129,7 @@ void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string col
 	}
 	else
 		m->SetInput(0, chan);
-	
+
 	//Make sure the measurements can actually be seen
 	m_measurementFrame.show();
 

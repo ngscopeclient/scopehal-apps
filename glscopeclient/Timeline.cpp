@@ -38,7 +38,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Timeline::Timeline()
+Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
+	: m_group(group)
+	, m_parent(parent)
 {
 	m_dragState = DRAG_NONE;
 	m_dragStartX = 0;
@@ -49,6 +51,7 @@ Timeline::Timeline()
 	add_events(
 		Gdk::POINTER_MOTION_MASK |
 		Gdk::BUTTON_PRESS_MASK |
+		Gdk::SCROLL_MASK |
 		Gdk::BUTTON_RELEASE_MASK);
 }
 
@@ -108,6 +111,31 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 	return true;
 }
 
+bool Timeline::on_scroll_event (GdkEventScroll* ev)
+{
+	switch(ev->direction)
+	{
+		case GDK_SCROLL_LEFT:
+			m_parent->OnZoomInHorizontal(m_group);
+			break;
+		case GDK_SCROLL_RIGHT:
+			m_parent->OnZoomOutHorizontal(m_group);
+			break;
+
+		case GDK_SCROLL_SMOOTH:
+			if(ev->delta_y < 0)
+				m_parent->OnZoomInHorizontal(m_group);
+			else
+				m_parent->OnZoomOutHorizontal(m_group);
+			break;
+
+		default:
+			break;
+	}
+
+	return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
@@ -119,8 +147,6 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	size_t w = get_width();
 	size_t h = get_height();
 	double ytop = 2;
-	double ybot = h - 10;
-	double ymid = (h-10) / 2;
 
 	//Draw the background
 	Gdk::Color black("black");

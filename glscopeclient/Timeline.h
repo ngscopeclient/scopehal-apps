@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -31,14 +31,13 @@
 #define Timeline_h
 
 class WaveformGroup;
+class OscilloscopeWindow;
 
 class Timeline : public Gtk::Layout
 {
 public:
-	Timeline();
+	Timeline(OscilloscopeWindow* parent, WaveformGroup* group);
 	virtual ~Timeline();
-
-	WaveformGroup* m_group;
 
 protected:
 
@@ -55,6 +54,7 @@ protected:
 	virtual bool on_button_press_event(GdkEventButton* event);
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
+	virtual bool on_scroll_event (GdkEventScroll* ev);
 
 	void RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr);
 	void RenderAsFrequency(const Cairo::RefPtr<Cairo::Context>& cr);
@@ -70,6 +70,9 @@ protected:
 		bool draw_left,
 		bool show_delta,
 		bool is_frequency = false);
+
+	WaveformGroup* m_group;
+	OscilloscopeWindow* m_parent;
 };
 
 #endif
