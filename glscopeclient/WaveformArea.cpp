@@ -687,12 +687,10 @@ bool WaveformArea::IsEye()
 
 bool WaveformArea::IsFFT()
 {
-	auto fft = dynamic_cast<FFTCapture*>(m_channel->GetData());
-	return (fft != NULL);
+	return (m_channel->GetYAxisUnits().GetType() == Unit::UNIT_DB);
 }
 
 bool WaveformArea::IsTime()
 {
-	auto time = dynamic_cast<TimeCapture*>(m_channel->GetData());
-	return (time != NULL);
+	return (m_channel->GetYAxisUnits().GetType() == Unit::UNIT_PS);
 }

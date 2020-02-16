@@ -92,6 +92,7 @@ bool WaveformArea::PrepareGeometry()
 		float ymid = m_pixelsPerVolt * (data[j] + offset);
 		float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
 
+		//Logarithmic scale for FFT displays
 		if(fft)
 		{
 			double db1 = 20 * log10(data[j]);
@@ -577,9 +578,14 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 			float yt = VoltsToYPosition(dv);
 			float yb = VoltsToYPosition(-dv);
 
-			if(yb <= (ytop - theight/2) )
-				gridmap[-dv] = yb;
-			if(yt >= (ybot + theight/2) )
+			if(dv != 0)
+			{
+				if(yb <= (ytop - theight/2) )
+					gridmap[-dv] = yb;
+				if(yt >= (ybot + theight/2) )
+					gridmap[dv] = yt;
+			}
+			else
 				gridmap[dv] = yt;
 
 			//Stop if we're off the edge
@@ -616,24 +622,15 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto it : gridmap)
 	{
 		float v = it.first;
-		char tmp[32];
 
 		if(IsFFT())
-			snprintf(tmp, sizeof(tmp), "%.0f dB", v);
-		else if(IsTime())
 		{
-			if(v > 1000)
-				snprintf(tmp, sizeof(tmp), "%.2f ns", v / 1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%.0f ps", v);
+			char tmp[32];
+			snprintf(tmp, sizeof(tmp), "%.0f dB", v);
+			tlayout->set_text(tmp);
 		}
 		else
-		{
-			if(fabs(v) < 1)
-				snprintf(tmp, sizeof(tmp), "%.0f mV", v*1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%.3f V", v);
-		}
+			tlayout->set_text(m_channel->GetYAxisUnits().PrettyPrint(v));
 
 		float y = it.second;
 		if(!IsFFT())
@@ -643,7 +640,6 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		if(y > ytop)
 			continue;
 
-		tlayout->set_text(tmp);
 		tlayout->get_pixel_size(twidth, theight);
 		cr->move_to(m_width - twidth - 5, y);
 		tlayout->update_from_cairo_context(cr);
