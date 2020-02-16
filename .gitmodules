@@ -4,3 +4,6 @@
 [submodule "src"]
 	path = src
 	url = git@github.com:azonenberg/scopehal-apps.git
+[submodule "doc"]
+	path = doc
+	url = git@github.com:azonenberg/scopehal-docs.git

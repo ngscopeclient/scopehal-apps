@@ -3,7 +3,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=sandybridge -mtune=native")
+set(CMAKE_CXX_FLAGS "-g -O0 -fopenmp -Wall -Wextra --std=c++11 -march=sandybridge -mtune=native -fsanitize=address")
 
 find_package(PkgConfig)
 pkg_check_modules(GTKMM gtkmm-3.0)
@@ -12,6 +12,7 @@ pkg_check_modules(GLM glm>=0.9.8)
 pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
