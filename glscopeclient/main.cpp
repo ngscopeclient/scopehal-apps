@@ -208,6 +208,7 @@ int main(int argc, char* argv[])
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
+		//TODO: lecroy non-VICP scopes (raw TCP on port 5025)
 		else if(sapi == "rigol_lan")
 		{
 			//default port if not specified
