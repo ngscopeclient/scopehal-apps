@@ -215,7 +215,7 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 	m_parent->JumpToHistory(row[m_columns.m_capturekey]);
 
 	//Set the offset of the decoder's group
-	m_area->m_group->m_timeOffset = row[m_columns.m_offset];
+	m_area->m_group->m_xAxisOffset = row[m_columns.m_offset];
 	m_area->m_group->m_frame.queue_draw();
 }
 

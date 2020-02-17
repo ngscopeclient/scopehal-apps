@@ -394,7 +394,7 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
 	auto group = new WaveformGroup(this);
-	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
+	group->m_pixelsPerXUnit = w->m_group->m_pixelsPerXUnit;
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
@@ -408,7 +408,7 @@ void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
 {
 	//Make a new group
 	auto group = new WaveformGroup(this);
-	group->m_pixelsPerPicosecond = w->m_group->m_pixelsPerPicosecond;
+	group->m_pixelsPerXUnit = w->m_group->m_pixelsPerXUnit;
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
@@ -527,13 +527,13 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 
 void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
 {
-	group->m_pixelsPerPicosecond *= 1.5;
+	group->m_pixelsPerXUnit *= 1.5;
 	ClearPersistence(group);
 }
 
 void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
 {
-	group->m_pixelsPerPicosecond /= 1.5;
+	group->m_pixelsPerXUnit /= 1.5;
 	ClearPersistence(group);
 }
 

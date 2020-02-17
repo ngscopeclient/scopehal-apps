@@ -223,7 +223,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	}
 
 	//Look up the time of our click (if in the plot area)
-	int64_t timestamp = XPositionToPicoseconds(event->x);
+	int64_t timestamp = XPositionToXAxisUnits(event->x);
 
 	if(event->type == GDK_BUTTON_PRESS)
 		OnSingleClick(event, timestamp);
@@ -362,7 +362,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 
 bool WaveformArea::on_button_release_event(GdkEventButton* event)
 {
-	int64_t timestamp = XPositionToPicoseconds(event->x);
+	int64_t timestamp = XPositionToXAxisUnits(event->x);
 
 	switch(m_dragState)
 	{
@@ -400,7 +400,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	m_cursorX = event->x;
 	m_cursorY = event->y;
 
-	int64_t timestamp = XPositionToPicoseconds(event->x);
+	int64_t timestamp = XPositionToXAxisUnits(event->x);
 
 	switch(m_dragState)
 	{
@@ -539,7 +539,7 @@ void WaveformArea::OnProtocolDecode(string name)
 	{
 		fall->SetWidth(m_width);
 		fall->SetHeight(m_height);
-		fall->SetTimeScale(m_group->m_pixelsPerPicosecond);
+		fall->SetTimeScale(m_group->m_pixelsPerXUnit);
 	}
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
@@ -609,8 +609,8 @@ void WaveformArea::OnWaveformDataReady()
 	{
 		//eye is two UIs wide
 		int64_t eye_width_ps = 2 * eye->GetUIWidth();
-		m_group->m_pixelsPerPicosecond = m_width * 1.0f / eye_width_ps;
-		m_group->m_timeOffset = -eye->GetUIWidth();
+		m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
+		m_group->m_xAxisOffset = -eye->GetUIWidth();
 	}
 
 	//Update our measurements and redraw the waveform

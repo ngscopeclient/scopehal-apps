@@ -42,8 +42,8 @@ int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	: m_timeline(parent, this)
-	, m_pixelsPerPicosecond(0.05)
-	, m_timeOffset(0)
+	, m_pixelsPerXUnit(0.05)
+	, m_xAxisOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
 	, m_parent(parent)
 {

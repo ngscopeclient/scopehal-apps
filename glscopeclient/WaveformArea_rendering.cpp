@@ -58,7 +58,7 @@ bool WaveformArea::PrepareGeometry()
 	if(!pdat)
 		return false;
 	AnalogCapture& data = *pdat;
-	m_xoff = (pdat->m_triggerPhase - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+	m_xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	size_t count = data.size();
 	if(count == 0)
 		return false;
@@ -75,7 +75,7 @@ bool WaveformArea::PrepareGeometry()
 
 	//Create the geometry
 	double offset = m_channel->GetOffset();
-	double xscale = pdat->m_timescale * m_group->m_pixelsPerPicosecond;
+	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 	bool fft = IsFFT();
 
 	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
@@ -307,8 +307,8 @@ void WaveformArea::RenderWaterfall()
 		return;
 
 	//Make sure timebase is correct
-	pfall->SetTimeScale(m_group->m_pixelsPerPicosecond);
-	pfall->SetTimeOffset(m_group->m_timeOffset);
+	pfall->SetTimeScale(m_group->m_pixelsPerXUnit);
+	pfall->SetTimeOffset(m_group->m_xAxisOffset);
 
 	//Just copy it directly into the waveform texture.
 	m_eyeTexture.Bind();
@@ -482,24 +482,24 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	cr->fill();
 }
 
-int64_t WaveformArea::XPositionToPicoseconds(float pix)
+int64_t WaveformArea::XPositionToXAxisUnits(float pix)
 {
-	return m_group->m_timeOffset + PixelsToPicoseconds(pix);
+	return m_group->m_xAxisOffset + PixelsToXAxisUnits(pix);
 }
 
-int64_t WaveformArea::PixelsToPicoseconds(float pix)
+int64_t WaveformArea::PixelsToXAxisUnits(float pix)
 {
-	return pix / m_group->m_pixelsPerPicosecond;
+	return pix / m_group->m_pixelsPerXUnit;
 }
 
-float WaveformArea::PicosecondsToPixels(int64_t t)
+float WaveformArea::XAxisUnitsToPixels(int64_t t)
 {
-	return t * m_group->m_pixelsPerPicosecond;
+	return t * m_group->m_pixelsPerXUnit;
 }
 
-float WaveformArea::PicosecondsToXPosition(int64_t t)
+float WaveformArea::XAxisUnitsToXPosition(int64_t t)
 {
-	return PicosecondsToPixels(t - m_group->m_timeOffset);
+	return XAxisUnitsToPixels(t - m_group->m_xAxisOffset);
 }
 
 float WaveformArea::PixelsToVolts(float pix)
@@ -826,8 +826,8 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
 				double end = start + (data->GetSampleLen(i) * data->m_timescale);
 
-				double xs = PicosecondsToXPosition(start);
-				double xe = PicosecondsToXPosition(end);
+				double xs = XAxisUnitsToXPosition(start);
+				double xe = XAxisUnitsToXPosition(end);
 
 				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
@@ -859,8 +859,8 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
 				double end = start + (data->GetSampleLen(i) * data->m_timescale);
 
-				double xs = PicosecondsToXPosition(start);
-				double xe = PicosecondsToXPosition(end);
+				double xs = XAxisUnitsToXPosition(start);
+				double xe = XAxisUnitsToXPosition(end);
 
 				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
@@ -1009,7 +1009,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
 	{
 		//Draw first vertical cursor
-		double x = PicosecondsToXPosition(m_group->m_xCursorPos[0]);
+		double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
 		cr->move_to(x, ytop);
 		cr->line_to(x, ybot);
 		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
@@ -1019,7 +1019,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw second vertical cursor
-			double x2 = PicosecondsToXPosition(m_group->m_xCursorPos[1]);
+			double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
 			cr->move_to(x2, ytop);
 			cr->line_to(x2, ybot);
 			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());

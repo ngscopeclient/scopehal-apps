@@ -301,10 +301,10 @@ protected:
 	float VoltsToYPosition(float volt);
 	float YPositionToVolts(float y);
 	float DbToYPosition(float db);
-	int64_t PixelsToPicoseconds(float pix);
-	float PicosecondsToPixels(int64_t t);
-	float PicosecondsToXPosition(int64_t t);
-	int64_t XPositionToPicoseconds(float pix);
+	int64_t XPositionToXAxisUnits(float pix);
+	int64_t PixelsToXAxisUnits(float pix);
+	float XAxisUnitsToPixels(int64_t t);
+	float XAxisUnitsToXPosition(int64_t t);
 
 	void OnRemoveOverlay(ProtocolDecoder* decode);
 

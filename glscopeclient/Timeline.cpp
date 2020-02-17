@@ -69,7 +69,7 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 	{
 		m_dragState = DRAG_TIMELINE;
 		m_dragStartX = event->x;
-		m_originalTimeOffset = m_group->m_timeOffset;
+		m_originalTimeOffset = m_group->m_xAxisOffset;
 	}
 
 	return true;
@@ -92,12 +92,12 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_TIMELINE:
 			{
 				double dx = event->x - m_dragStartX;
-				double ps = dx / m_group->m_pixelsPerPicosecond;
+				double ps = dx / m_group->m_pixelsPerXUnit;
 
 				//Update offset, but don't allow scrolling before the start of the capture
-				m_group->m_timeOffset = m_originalTimeOffset - ps;
-				if(m_group->m_timeOffset < 0)
-					m_group->m_timeOffset = 0;
+				m_group->m_xAxisOffset = m_originalTimeOffset - ps;
+				if(m_group->m_xAxisOffset < 0)
+					m_group->m_xAxisOffset = 0;
 
 				//Clear persistence and redraw the group (fixes #46)
 				m_group->GetParent()->ClearPersistence(m_group, false);
@@ -189,7 +189,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	double ymid = (h-10) / 2;
 
 	//Figure out rounding granularity, based on our time scales
-	int64_t width_ps = w / m_group->m_pixelsPerPicosecond;
+	int64_t width_ps = w / m_group->m_pixelsPerXUnit;
 	int64_t round_divisor = 1;
 	if(width_ps < 1E4)
 	{
@@ -223,7 +223,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 
 	//Figure out about how much time per graduation to use
 	const double min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
-	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerPicosecond;
+	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerXUnit;
 
 	//Round so the division sizes are sane
 	double units_per_grad = grad_ps_nominal * 1.0 / round_divisor;
@@ -238,7 +238,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	double subtick = grad_ps_rounded / nsubticks;
 
 	//Find the start time (rounded down as needed)
-	double tstart = floor(m_group->m_timeOffset / grad_ps_rounded) * grad_ps_rounded;
+	double tstart = floor(m_group->m_xAxisOffset / grad_ps_rounded) * grad_ps_rounded;
 
 	//Print tick marks and labels
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
@@ -249,12 +249,12 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	int sheight;
 	for(double t = tstart; t < (tstart + width_ps + grad_ps_rounded); t += grad_ps_rounded)
 	{
-		double x = (t - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+		double x = (t - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 
 		//Draw fine ticks first (even if the labeled graduation doesn't fit)
 		for(int tick=1; tick < nsubticks; tick++)
 		{
-			double subx = (t - m_group->m_timeOffset + tick*subtick) * m_group->m_pixelsPerPicosecond;
+			double subx = (t - m_group->m_xAxisOffset + tick*subtick) * m_group->m_pixelsPerXUnit;
 
 			if(subx < 0)
 				continue;
@@ -296,8 +296,8 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw filled area between them
-			double x = (m_group->m_xCursorPos[0] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
-			double x2 = (m_group->m_xCursorPos[1] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+			double x = (m_group->m_xCursorPos[0] - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+			double x2 = (m_group->m_xCursorPos[1] - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
 			cr->move_to(x, 0);
 			cr->line_to(x2, 0);
@@ -384,7 +384,7 @@ void Timeline::DrawCursor(
 	tlayout->get_pixel_size(swidth, sheight);
 
 	//Decide which side of the line to draw on
-	double x = (ps - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
+	double x = (ps - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	double right = x-5;
 	double left = right - swidth - 5;
 	if(!draw_left)
