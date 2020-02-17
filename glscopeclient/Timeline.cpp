@@ -163,39 +163,24 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	cr->line_to(w, ytop);
 	cr->stroke();
 
-	//See if we're using time or frequency units
+	//Figure out the units to use for the axis
 	auto children = m_group->m_waveformBox.get_children();
-	enum ScaleMode
-	{
-		SCALE_TIME,
-		SCALE_FREQ
-	} scale = SCALE_TIME;
+	Unit unit(Unit::UNIT_PS);
 	if(!children.empty())
 	{
 		auto view = dynamic_cast<WaveformArea*>(children[0]);
 		if(view != NULL)
-		{
-			if(view->IsFFT())
-				scale = SCALE_FREQ;
-		}
+			unit = view->GetChannel()->GetXAxisUnits();
 	}
 
-	switch(scale)
-	{
-		case SCALE_TIME:
-			RenderAsTime(cr);
-			break;
-
-		case SCALE_FREQ:
-			RenderAsFrequency(cr);
-			break;
-	}
+	//And actually draw the rest
+	Render(cr, unit);
 
 	cr->restore();
 	return true;
 }
 
-void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
+void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 {
 	size_t w = get_width();
 	size_t h = get_height();
@@ -203,12 +188,9 @@ void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
 	double ybot = h - 10;
 	double ymid = (h-10) / 2;
 
-	//Figure out what units to use, based on the width of our window
+	//Figure out rounding granularity, based on our time scales
 	int64_t width_ps = w / m_group->m_pixelsPerPicosecond;
-	const char* units = "ps";
-	int64_t unit_divisor = 1;
 	int64_t round_divisor = 1;
-	string sformat = "%.0lf %s";
 	if(width_ps < 1E4)
 	{
 		//ps, leave default
@@ -224,45 +206,20 @@ void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
 			round_divisor = 500;
 		else
 			round_divisor = 1000;
-
-		sformat = "%.0lf %s";
 	}
 	else if(width_ps < 1E6)
-	{
-		units = "ns";
-		unit_divisor = 1E3;
 		round_divisor = 1E3;
-
-		sformat = "%.2lf %s";
-	}
 	else if(width_ps < 1E9)
 	{
-		units = "μs";
-		unit_divisor = 1E6;
-
 		if(width_ps < 1e8)
 			round_divisor = 1e5;
 		else
 			round_divisor = 1E6;
-
-		sformat = "%.4lf %s";
 	}
 	else if(width_ps < 1E11)
-	{
-		units = "ms";
-		unit_divisor = 1E9;
 		round_divisor = 1E9;
-
-		sformat = "%.6lf %s";
-	}
 	else
-	{
-		units = "s";
-		unit_divisor = 1E12;
 		round_divisor = 1E12;
-	}
-	//LogDebug("width_ps = %zu, unit_divisor = %zu, round_divisor = %zu\n",
-	//	width_ps, unit_divisor, round_divisor);
 
 	//Figure out about how much time per graduation to use
 	const double min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
@@ -319,18 +276,14 @@ void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
 		cr->line_to(x, ybot);
 		cr->stroke();
 
-		//Format the string
-		double scaled_time = t / unit_divisor;
-		char namebuf[256];
-		snprintf(namebuf, sizeof(namebuf), sformat.c_str(), scaled_time, units);
-
 		//Render it
-		tlayout->set_text(namebuf);
+		tlayout->set_text(xAxisUnit.PrettyPrint(t));
 		tlayout->get_pixel_size(swidth, sheight);
 		cr->move_to(x+2, ymid + sheight/2);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	}
+
 
 	//Draw cursor positions if requested
 	Gdk::Color yellow("yellow");
@@ -358,161 +311,9 @@ void Timeline::RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr)
 				m_group->m_xCursorPos[1],
 				"X2",
 				orange,
-				unit_divisor,
-				sformat,
-				units,
-				false,
-				true);
-		}
-
-		//First cursor
-		DrawCursor(
-			cr,
-			m_group->m_xCursorPos[0],
-			"X1",
-			yellow,
-			unit_divisor,
-			sformat,
-			units,
-			true,
-			false);
-	}
-}
-
-void Timeline::RenderAsFrequency(const Cairo::RefPtr<Cairo::Context>& cr)
-{
-	size_t w = get_width();
-	size_t h = get_height();
-	double ytop = 2;
-	double ybot = h - 10;
-	double ymid = (h-10) / 2;
-
-	//Figure out what units to use, based on the width of our window
-	//Note that scale factor for frequency domain is pixels per Hz, not per ps
-	int64_t width_hz = w / m_group->m_pixelsPerPicosecond;
-	const char* units = "Hz";
-	int64_t unit_divisor = 1;
-	int64_t round_divisor = 1;
-	string sformat = "%.0lf %s";
-	if(width_hz > 1e6)
-	{
-		units = "MHz";
-		unit_divisor = 1E6;
-		round_divisor = 1E6;
-
-		sformat = "%.2lf %s";
-	}
-	else if(width_hz > 1E3)
-	{
-		units = "kHz";
-		unit_divisor = 1e3;
-		round_divisor = 10;
-
-		sformat = "%.0lf %s";
-	}
-	//LogDebug("width_hz = %zu, unit_divisor = %zu, round_divisor = %zu\n",
-	//	width_hz, unit_divisor, round_divisor);
-
-	//Figure out about how much time per graduation to use
-	const int min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
-	int64_t grad_hz_nominal = min_label_grad_width / m_group->m_pixelsPerPicosecond;
-
-	//Round so the division sizes are sane
-	double units_per_grad = grad_hz_nominal * 1.0 / round_divisor;
-	double base = 5;
-	double log_units = log(units_per_grad) / log(base);
-	double log_units_rounded = ceil(log_units);
-	double units_rounded = pow(base, log_units_rounded);
-	int64_t grad_hz_rounded = units_rounded * round_divisor;
-
-	//Calculate number of ticks within a division
-	double nsubticks = 5;
-	double subtick = grad_hz_rounded / nsubticks;
-
-	//Find the start time (rounded down as needed)
-	double tstart = floor(m_group->m_timeOffset / grad_hz_rounded) * grad_hz_rounded;
-
-	//Print tick marks and labels
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("sans normal 10");
-	font.set_weight(Pango::WEIGHT_NORMAL);
-	tlayout->set_font_description(font);
-	int swidth;
-	int sheight;
-	for(double t = tstart; t < (tstart + width_hz + grad_hz_rounded); t += grad_hz_rounded)
-	{
-		double x = (t - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
-
-		//Draw fine ticks first (even if the labeled graduation doesn't fit)
-		for(int tick=1; tick < nsubticks; tick++)
-		{
-			double subx = (t - m_group->m_timeOffset + tick*subtick) * m_group->m_pixelsPerPicosecond;
-
-			if(subx < 0)
-				continue;
-			if(subx > w)
-				break;
-
-			cr->move_to(subx, ytop);
-			cr->line_to(subx, ytop + 10);
-		}
-		cr->stroke();
-
-		if(x < 0)
-			continue;
-		if(x > w)
-			break;
-
-		//Tick mark
-		cr->move_to(x, ytop);
-		cr->line_to(x, ybot);
-		cr->stroke();
-
-		//Format the string
-		double scaled_time = t / unit_divisor;
-		char namebuf[256];
-		snprintf(namebuf, sizeof(namebuf), sformat.c_str(), scaled_time, units);
-
-		//Render it
-		tlayout->set_text(namebuf);
-		tlayout->get_pixel_size(swidth, sheight);
-		cr->move_to(x+2, ymid + sheight/2);
-		tlayout->update_from_cairo_context(cr);
-		tlayout->show_in_cairo_context(cr);
-	}
-
-	//Draw cursor positions if requested
-	Gdk::Color yellow("yellow");
-	Gdk::Color orange("orange");
-
-	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
-		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
-	{
-		//Dual cursors
-		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
-		{
-			//Draw filled area between them
-			double x = (m_group->m_xCursorPos[0] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
-			double x2 = (m_group->m_xCursorPos[1] - m_group->m_timeOffset) * m_group->m_pixelsPerPicosecond;
-			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
-			cr->move_to(x, 0);
-			cr->line_to(x2, 0);
-			cr->line_to(x2, h);
-			cr->line_to(x, h);
-			cr->fill();
-
-			//Second cursor
-			DrawCursor(
-				cr,
-				m_group->m_xCursorPos[1],
-				"X2",
-				orange,
-				unit_divisor,
-				sformat,
-				units,
 				false,
 				true,
-				true);
+				xAxisUnit);
 		}
 
 		//First cursor
@@ -521,12 +322,9 @@ void Timeline::RenderAsFrequency(const Cairo::RefPtr<Cairo::Context>& cr)
 			m_group->m_xCursorPos[0],
 			"X1",
 			yellow,
-			unit_divisor,
-			sformat,
-			units,
 			true,
 			false,
-			true);
+			xAxisUnit);
 	}
 }
 
@@ -535,12 +333,9 @@ void Timeline::DrawCursor(
 	int64_t ps,
 	const char* name,
 	Gdk::Color color,
-	double unit_divisor,
-	string sformat,
-	const char* units,
 	bool draw_left,
 	bool show_delta,
-	bool is_frequency)
+	Unit xAxisUnit)
 {
 	int h = get_height();
 
@@ -557,37 +352,33 @@ void Timeline::DrawCursor(
 	char label[256];
 	if(!show_delta)
 	{
-		string format("%s: ");
-		format += sformat;
 		snprintf(
 			label,
 			sizeof(label),
-			format.c_str(),
+			"%s: %s",
 			name,
-			ps / unit_divisor,
-			units);
+			xAxisUnit.PrettyPrint(ps).c_str()
+			);
 	}
 	else
 	{
-		string format("%s: ");
-		format += sformat;
-		format += "\nΔX = ";
-		format += sformat;
-		if(!is_frequency)
+		string format("%s: %s\nΔX = %s");
+
+		//Special case for time domain traces
+		//Also show the frequency dual
+		if(xAxisUnit.GetType() == Unit::UNIT_PS)
 			format += " (%.3f MHz)\n";
+
 		int64_t dt = m_group->m_xCursorPos[1] - m_group->m_xCursorPos[0];
-		double delta = dt / unit_divisor;
-		double mhz = 1.0e6 / dt;
+
 		snprintf(
 			label,
 			sizeof(label),
 			format.c_str(),
 			name,
-			ps / unit_divisor,
-			units,
-			delta,
-			units,
-			mhz);
+			xAxisUnit.PrettyPrint(ps).c_str(),
+			xAxisUnit.PrettyPrint(dt).c_str(),
+			1.0e6 / dt);
 	}
 	tlayout->set_text(label);
 	tlayout->get_pixel_size(swidth, sheight);

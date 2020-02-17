@@ -56,20 +56,16 @@ protected:
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 
-	void RenderAsTime(const Cairo::RefPtr<Cairo::Context>& cr);
-	void RenderAsFrequency(const Cairo::RefPtr<Cairo::Context>& cr);
+	void Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit);
 
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,
 		int64_t ps,
 		const char* name,
 		Gdk::Color color,
-		double unit_divisor,
-		std::string sformat,
-		const char* units,
 		bool draw_left,
 		bool show_delta,
-		bool is_frequency = false);
+		Unit xAxisUnit);
 
 	WaveformGroup* m_group;
 	OscilloscopeWindow* m_parent;
