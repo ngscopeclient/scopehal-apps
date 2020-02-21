@@ -98,6 +98,7 @@ void main()
 			g_workingBuffer[y] += alpha;
 
 		//TODO: antialiasing
+		//TODO: decimation at very wide zooms
 	}
 
 	//Copy working buffer to RGB output

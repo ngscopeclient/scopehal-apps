@@ -117,6 +117,9 @@ bool WaveformArea::PrepareGeometry()
 	size_t nsample = 0;
 	for(int j=0; j<m_width; j++)
 	{
+		//Default to drawing nothing
+		m_indexBuffer[j] = count;
+
 		//Move forward until we find a sample that starts in the current column
 		for(; nsample < count-1; nsample ++)
 		{
