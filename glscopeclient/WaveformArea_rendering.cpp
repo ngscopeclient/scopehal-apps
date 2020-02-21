@@ -348,52 +348,6 @@ void WaveformArea::RenderTrace()
 	m_waveformIndexBuffer.BindBase(3);
 	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 	m_waveformComputeProgram.MemoryBarrier();
-
-	//m_waveformTexture
-
-	/*
-	if(m_msaaEnabled)
-		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-	else
-		m_waveformFramebufferResolvedm_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
-
-	//Configure our shader and projection matrix
-	m_waveformProgram.Bind();
-	m_waveformProgram.SetUniform(m_projection, "projection");
-	m_waveformProgram.SetUniform(m_xoff, "xoff");
-	m_waveformProgram.SetUniform(1.0, "xscale");
-	if(IsFFT())
-		m_waveformProgram.SetUniform(0, "yoff");
-	else
-		m_waveformProgram.SetUniform(m_height / 2, "yoff");
-	m_waveformProgram.SetUniform(1, "yscale");
-	m_waveformProgram.SetUniform(m_parent->GetTraceAlpha(), "alpha");
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(0, 0, m_plotRight, m_height);
-
-	//Actually draw the waveform
-	m_traceVAOs[0]->Bind();
-	glDrawArrays(GL_TRIANGLES, 0, 12*m_waveformLength);
-
-	glDisable(GL_SCISSOR_TEST);
-
-	//Resolve the multisample framebuffer
-	if(m_msaaEnabled)
-	{
-		m_waveformFramebuffer.Bind(GL_READ_FRAMEBUFFER);
-		m_waveformFramebufferResolved.Bind(GL_DRAW_FRAMEBUFFER);
-		glBlitFramebuffer(
-			0, 0, m_plotRight, m_height,
-			0, 0, m_plotRight, m_height,
-			GL_COLOR_BUFFER_BIT,
-			GL_NEAREST);
-	}
-	*/
 }
 
 void WaveformArea::RenderCairoUnderlays()

@@ -230,8 +230,6 @@ protected:
 	bool PrepareGeometry();
 	void RenderTrace();
 	void InitializeWaveformPass();
-	std::vector<VertexBuffer*> m_traceVBOs;
-	std::vector<VertexArray*> m_traceVAOs;
 	glm::mat4 m_projection;
 	size_t m_waveformLength;
 	std::vector<float> m_traceBuffer;

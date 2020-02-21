@@ -154,13 +154,6 @@ void WaveformArea::OnRemoveOverlay(ProtocolDecoder* decode)
 
 void WaveformArea::CleanupBufferObjects()
 {
-	for(auto a : m_traceVAOs)
-		delete a;
-	m_traceVAOs.clear();
-
-	for(auto b : m_traceVBOs)
-		delete b;
-	m_traceVBOs.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -449,10 +442,6 @@ void WaveformArea::on_realize()
 
 void WaveformArea::on_unrealize()
 {
-	//TODO: this might leak resources, but not doing it this way seems to cause bugs??
-	m_traceVBOs.clear();
-	m_traceVAOs.clear();
-
 	m_waveformProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_colormapVAO.Destroy();
@@ -495,13 +484,6 @@ void WaveformArea::InitializeWaveformPass()
 		LogError("failed to link shader program, aborting");
 		exit(1);
 	}
-
-	//ProfileBlock pb("VAO/VBO creation");
-
-	m_traceVBOs.push_back(new VertexBuffer);
-	m_traceVBOs[0]->Bind();
-	m_traceVAOs.push_back(new VertexArray);
-	m_traceVAOs[0]->Bind();
 
 	//Create the shader stuff
 	ComputeShader wc;
