@@ -14,6 +14,7 @@ add_executable(glscopeclient
 	ProtocolAnalyzerWindow.cpp
 	ProtocolDecoderDialog.cpp
 	Shader.cpp
+	ShaderStorageBuffer.cpp
 	Texture.cpp
 	Timeline.cpp
 	VertexArray.cpp

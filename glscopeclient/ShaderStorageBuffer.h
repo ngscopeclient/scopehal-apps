@@ -30,69 +30,59 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Shader
+	@brief  Declaration of ShaderStorageBuffer
  */
-#include "glscopeclient.h"
-#include "Shader.h"
+#ifndef ShaderStorageBuffer_h
+#define ShaderStorageBuffer_h
 
-using namespace std;
+/**
+	@brief An OpenGL SSBO.
 
-Shader::Shader(GLenum type)
+	No virtual functions allowed, must be a POD type.
+ */
+class ShaderStorageBuffer
 {
-	m_handle = glCreateShader(type);
+public:
+	ShaderStorageBuffer()
+	: m_handle(0)
+	{}
 
-	if(m_handle == 0)
-		LogError("Failed to create shader (of type %d)\n", type);
-}
+	~ShaderStorageBuffer()
+	{ Destroy(); }
 
-Shader::~Shader()
-{
-	glDeleteShader(m_handle);
-}
-
-bool Shader::Load(string path)
-{
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
+	void Destroy()
 	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
-
-	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
-	glCompileShader(m_handle);
-
-	//Check status
-	int status;
-	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
-	if(status == GL_TRUE)
-	{
-		delete[] buf;
-		return true;
+		if(m_handle != 0)
+			glDeleteBuffers(1, &m_handle);
+		m_handle = 0;
 	}
 
-	//Compile failed, return error
-	char log[4096];
-	int len;
-	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
+	operator GLuint() const
+	{ return m_handle; }
 
-	delete[] buf;
-	return false;
-}
+	void Bind()
+	{
+		LazyInit();
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_handle);
+	}
+
+	void BindBase(GLuint i)
+	{ glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, m_handle); }
+
+	static void BulkInit(std::vector<ShaderStorageBuffer*>& arr);
+
+protected:
+
+	/**
+		@brief Lazily creates the VAO
+	 */
+	void LazyInit()
+	{
+		if(!m_handle)
+			glGenBuffers(1, &m_handle);
+	}
+
+	GLuint	m_handle;
+};
+
+#endif

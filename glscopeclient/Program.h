@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -95,8 +95,14 @@ public:
 	void SetUniform(glm::mat4 mat, const char* name)
 	{ glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
 
+	void SetUniform(double f, const char* name)
+	{ glUniform1f(GetUniformLocation(name), f); }
+
 	void SetUniform(float f, const char* name)
 	{ glUniform1f(GetUniformLocation(name), f); }
+
+	void SetUniform(int i, const char* name)
+	{ glUniform1i(GetUniformLocation(name), i); }
 
 	void SetUniform(Texture& tex, const char* name, int texid = 0)
 	{
@@ -104,6 +110,20 @@ public:
 		tex.Bind();
 		glUniform1i(GetUniformLocation(name), texid);
 	}
+
+	void SetImageUniform(Texture& tex, const char* name, int texid = 0)
+	{
+		glActiveTexture(GL_TEXTURE0 + texid);
+		tex.Bind();
+		glUniform1i(GetUniformLocation(name), texid);
+		glBindImageTexture(texid, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	}
+
+	void DispatchCompute(GLuint x, GLuint y, GLuint z)
+	{ glDispatchCompute(x,y,z); }
+
+	void MemoryBarrier()
+	{ glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); }
 
 protected:
 	GLuint m_handle;
