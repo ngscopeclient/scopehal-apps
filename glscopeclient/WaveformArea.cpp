@@ -52,7 +52,6 @@ WaveformArea::WaveformArea(
 	, m_channel(channel)
 	, m_parent(parent)
 	, m_pixelsPerVolt(1)
-	, m_msaaEnabled(true)
 {
 	SharedCtorInit();
 }
@@ -68,7 +67,6 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 	, m_channel(clone->m_channel)
 	, m_parent(clone->m_parent)
 	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
-	, m_msaaEnabled(clone->m_msaaEnabled)
 {
 	SharedCtorInit();
 }
@@ -463,10 +461,7 @@ void WaveformArea::on_unrealize()
 	m_cairoProgram.Destroy();
 	m_cairoVAO.Destroy();
 	m_cairoVBO.Destroy();
-	m_waveformFramebuffer.Destroy();
-	m_waveformFramebufferResolved.Destroy();
 	m_windowFramebuffer.Detach();
-	m_waveformTexture.Destroy();
 	m_waveformTextureResolved.Destroy();
 	m_cairoTexture.Destroy();
 	m_cairoTextureOver.Destroy();
@@ -505,6 +500,20 @@ void WaveformArea::InitializeWaveformPass()
 	m_traceVBOs[0]->Bind();
 	m_traceVAOs.push_back(new VertexArray);
 	m_traceVAOs[0]->Bind();
+
+	//Create the shader stuff
+	ComputeShader wc;
+	if(!wc.Load("shaders/waveform-compute.glsl"))
+	{
+		LogError("failed to load waveform compute shader, aborting");
+		exit(1);
+	}
+	m_waveformComputeProgram.Add(wc);
+	if(!m_waveformComputeProgram.Link())
+	{
+		LogError("failed to link shader program, aborting");
+		exit(1);
+	}
 }
 
 void WaveformArea::InitializeColormapPass()

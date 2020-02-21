@@ -50,7 +50,6 @@ using namespace glm;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-//TODO: Tesselate in a shader, rather than on the CPU!
 bool WaveformArea::PrepareGeometry()
 {
 	//Look up some configuration and update the X axis offset
@@ -65,119 +64,90 @@ bool WaveformArea::PrepareGeometry()
 
 	//Early out if nothing has changed.
 	//glBufferData() and tesselation are expensive, only do them if changing LOD or new waveform data
-	if(!m_geometryDirty)
-		return true;
+	//if(!m_geometryDirty)
+	//	return true;
 
 	double start = GetTime();
 
-	//LogDebug("Processing capture\n");
-	//LogIndenter li;
-
-	//Create the geometry
-	double offset = m_channel->GetOffset();
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
-	bool fft = IsFFT();
 
-	size_t waveform_size = count * 12;	//3 points * 2 triangles * 2 coordinates
-	m_traceBuffer.resize(waveform_size);
-	m_waveformLength = count;
+	/*
+	float xleft = data.GetSampleStart(j) * xscale;
+	float xright = data.GetSampleStart(j+1) * xscale;
+	if(xright < xleft + 1)
+		xright = xleft + 1;
 
-	for(size_t j=0; j<(count-1); j++)
+	float ymid = m_pixelsPerVolt * (data[j] + offset);
+	float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
+
+	//Logarithmic scale for FFT displays
+	if(fft)
 	{
-		float xleft = data.GetSampleStart(j) * xscale;
-		float xright = data.GetSampleStart(j+1) * xscale;
-		if(xright < xleft + 1)
-			xright = xleft + 1;
+		double db1 = 20 * log10(data[j]);
+		double db2 = 20 * log10(data[j+1]);
 
-		float ymid = m_pixelsPerVolt * (data[j] + offset);
-		float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
+		db1 = -70 - db1;	//todo: dont hard code plot limit
+		db2 = -70 - db2;
 
-		//Logarithmic scale for FFT displays
-		if(fft)
+		ymid = DbToYPosition(db1);
+		nextymid = DbToYPosition(db2);
+	}
+	*/
+
+	//Calculate X/Y coordinate of each sample point
+	//TODO: some of this can probably move to GPU too?
+	m_traceBuffer.resize(count*2);
+	m_indexBuffer.resize(m_width);
+	m_waveformLength = count;
+	double offset = m_channel->GetOffset();
+	#pragma omp parallel for
+	for(size_t j=0; j<count; j++)
+	{
+		m_traceBuffer[j*2] 		= data.GetSampleStart(j) * xscale + m_xoff;
+		m_traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (data[j] + offset)) + m_height/2;
+	}
+
+	//Calculate indexes for rendering.
+	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
+	//trivially map sample indexes to X pixel coordinates.
+	//TODO: can we parallelize this? move to a compute shader?
+	size_t nsample = 0;
+	for(int j=0; j<m_width; j++)
+	{
+		//Move forward until we find a sample that starts in the current column
+		for(; nsample < count-1; nsample ++)
 		{
-			double db1 = 20 * log10(data[j]);
-			double db2 = 20 * log10(data[j+1]);
-
-			db1 = -70 - db1;	//todo: dont hard code plot limit
-			db2 = -70 - db2;
-
-			ymid = DbToYPosition(db1);
-			nextymid = DbToYPosition(db2);
+			//If the next sample ends after the start of the current pixel. stop
+			float end = m_traceBuffer[(nsample+1)*2];
+			if(end >= j)
+			{
+				//Start the current column at this sample
+				m_indexBuffer[j] = nsample;
+				break;
+			}
 		}
-
-		float ybot = std::min(ymid, nextymid) - 1;
-		float ytop = std::max(ymid, nextymid) + 1;
-
-		float x1 = xleft;
-		float y1 = ybot;
-
-		float x2 = xright;
-		float y2 = ybot;
-
-		float x3 = xright;
-		float y3 = ytop;
-
-		float x4 = xleft;
-		float y4 = ytop;
-
-		/*
-			If we stop here, we just get ugly looking boxes when zoomed in.
-
-			At higher zooms, we need to move the corners a bit.
-			Find the average of our starting Y coordinates and the previous box's end,
-			then move both to that point.
-		 */
-		if( (xscale > 1) && (j > 0) )
-		{
-			size_t oldbase = (j-1)*12;
-
-			float oldtop = m_traceBuffer[oldbase + 9];
-			float oldbot = m_traceBuffer[oldbase + 1];
-
-			y4 = (oldtop + ytop) / 2;
-			y1 = (oldbot + ybot) / 2;
-
-			//Patch up the old points
-			m_traceBuffer[oldbase + 5] = y4;
-			m_traceBuffer[oldbase + 9] = y4;
-
-			m_traceBuffer[oldbase + 1] = y1;
-		}
-
-		//and emit the vertexes
-		size_t base = j*12;
-		m_traceBuffer[base+0] = x2;
-		m_traceBuffer[base+1] = y2;
-
-		m_traceBuffer[base+2] = x1;
-		m_traceBuffer[base+3] = y1;
-
-		m_traceBuffer[base+4] = x3;
-		m_traceBuffer[base+5] = y3;
-
-		m_traceBuffer[base+6] = x1;
-		m_traceBuffer[base+7] = y1;
-
-		m_traceBuffer[base+8] = x3;
-		m_traceBuffer[base+9] = y3;
-
-		m_traceBuffer[base+10] = x4;
-		m_traceBuffer[base+11] = y4;
 	}
 
 	double dt = GetTime() - start;
 	m_prepareTime += dt;
 	start = GetTime();
 
-	//Download waveform data
-	m_traceVBOs[0]->Bind();
-	glInvalidateBufferData(GL_ARRAY_BUFFER);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_traceBuffer.size(), &m_traceBuffer[0], GL_STREAM_DRAW);
+	//Download it
+	m_waveformStorageBuffer.Bind();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, m_traceBuffer.size()*sizeof(float), &m_traceBuffer[0], GL_STREAM_DRAW);
 
-	//Configure vertex array settings
-	m_traceVAOs[0]->Bind();
-	m_waveformProgram.EnableVertexArray("vert");
-	m_waveformProgram.SetVertexAttribPointer("vert", 2, 0);
+	//Config stuff
+	uint32_t config[4];
+	config[0] = m_height;							//windowHeight
+	config[1] = m_plotRight;						//windowWidth
+	config[2] = count;								//depth
+	config[3] = m_parent->GetTraceAlpha() * 256;	//alpha
+	m_waveformConfigBuffer.Bind();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
+
+	//Indexing
+	m_waveformIndexBuffer.Bind();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, m_indexBuffer.size()*sizeof(uint32_t), &m_indexBuffer[0], GL_STREAM_DRAW);
 
 	dt = GetTime() - start;
 	m_downloadTime += dt;
@@ -222,11 +192,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	if(!m_persistence || m_persistenceClear)
 	{
 		m_persistenceClear = false;
-		glClearColor(0, 0, 0, 0);
-		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-		glClear(GL_COLOR_BUFFER_BIT);
-		m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
-		glClear(GL_COLOR_BUFFER_BIT);
 	}
 	else
 		RenderPersistenceOverlay();
@@ -345,6 +310,7 @@ void WaveformArea::RenderWaterfall()
 
 void WaveformArea::RenderPersistenceOverlay()
 {
+	/*
 	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 
 	//Configure blending
@@ -357,14 +323,26 @@ void WaveformArea::RenderPersistenceOverlay()
 	m_persistProgram.Bind();
 	m_persistVAO.Bind();
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	*/
 }
 
 void WaveformArea::RenderTrace()
 {
+	m_waveformComputeProgram.Bind();
+	m_waveformComputeProgram.SetImageUniform(m_waveformTextureResolved, "outputTex");
+	m_waveformStorageBuffer.BindBase(1);
+	m_waveformConfigBuffer.BindBase(2);
+	m_waveformIndexBuffer.BindBase(3);
+	m_waveformComputeProgram.DispatchCompute(m_plotRight, 1, 1);
+	m_waveformComputeProgram.MemoryBarrier();
+
+	//m_waveformTexture
+
+	/*
 	if(m_msaaEnabled)
 		m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
 	else
-		m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
+		m_waveformFramebufferResolvedm_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
 
 	//Configure our shader and projection matrix
 	m_waveformProgram.Bind();
@@ -387,12 +365,6 @@ void WaveformArea::RenderTrace()
 
 	//Actually draw the waveform
 	m_traceVAOs[0]->Bind();
-	/*vector<int> firsts;
-	vector<int> counts;
-	firsts.push_back(0);
-	counts.push_back(2*m_waveformLength);
-	glMultiDrawArrays(GL_TRIANGLE_STRIP, &firsts[0], &counts[0], 1);
-	*/
 	glDrawArrays(GL_TRIANGLES, 0, 12*m_waveformLength);
 
 	glDisable(GL_SCISSOR_TEST);
@@ -408,6 +380,7 @@ void WaveformArea::RenderTrace()
 			GL_COLOR_BUFFER_BIT,
 			GL_NEAREST);
 	}
+	*/
 }
 
 void WaveformArea::RenderCairoUnderlays()

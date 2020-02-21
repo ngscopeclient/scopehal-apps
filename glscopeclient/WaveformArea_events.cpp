@@ -84,43 +84,10 @@ void WaveformArea::on_resize(int width, int height)
 	if(err != 0)
 		LogNotice("resize 3, err = %x\n", err);
 
-	//Initialize the color buffers
-	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-	m_waveformTexture.Bind(GL_TEXTURE_2D_MULTISAMPLE);
-	m_waveformTexture.AllocateMultisample(width, height, 4);
-	ResetTextureFiltering();
-	m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D_MULTISAMPLE);
-	m_msaaEnabled = true;
-	if(!m_waveformFramebuffer.IsComplete())
-	{
-		//if MSAA failed to initialize, ignore the error
-		glGetError();
-
-		//Failed to allocate the texture as multisample. Try doing non-multisample.
-		m_waveformTexture.Destroy();
-		m_waveformTexture.Bind();
-		m_waveformTexture.SetData(width, height, NULL);
-		ResetTextureFiltering();
-		m_waveformFramebuffer.SetTexture(m_waveformTexture, GL_TEXTURE_2D);
-		m_msaaEnabled = false;
-		if(!m_waveformFramebuffer.IsComplete())
-		{
-			LogError("FBO is still incomplete (non-multisample fallback): %x\n",
-				glCheckFramebufferStatus(GL_FRAMEBUFFER));
-		}
-	}
-
-	err = glGetError();
-	if(err != 0)
-		LogNotice("resize 4, err = %x\n", err);
-
-	m_waveformFramebufferResolved.Bind(GL_FRAMEBUFFER);
+	//Allocate waveform texture
 	m_waveformTextureResolved.Bind();
 	m_waveformTextureResolved.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 	ResetTextureFiltering();
-	m_waveformFramebufferResolved.SetTexture(m_waveformTextureResolved);
-	if(!m_waveformFramebufferResolved.IsComplete())
-		LogError("FBO is incomplete: %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 
 	SetGeometryDirty();
 

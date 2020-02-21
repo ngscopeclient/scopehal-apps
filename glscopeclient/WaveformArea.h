@@ -237,15 +237,19 @@ protected:
 	std::vector<float> m_traceBuffer;
 	float m_xoff;
 
+	//New trace rendering path
+	Program m_waveformComputeProgram;
+	std::vector<uint32_t> m_indexBuffer;
+	ShaderStorageBuffer m_waveformStorageBuffer;
+	ShaderStorageBuffer m_waveformConfigBuffer;
+	ShaderStorageBuffer m_waveformIndexBuffer;
+
 	//Color correction
 	void RenderTraceColorCorrection();
 	void InitializeColormapPass();
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
-	Framebuffer m_waveformFramebuffer;			//multisample
-	Texture m_waveformTexture;
-	Framebuffer m_waveformFramebufferResolved;	//single sample
 	Texture m_waveformTextureResolved;
 
 	//Persistence
@@ -350,7 +354,6 @@ protected:
 		DRAG_CURSOR
 	} m_dragState;
 
-	bool	m_msaaEnabled;
 	bool	m_geometryDirty;
 };
 

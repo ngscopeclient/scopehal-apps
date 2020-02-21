@@ -13,7 +13,7 @@ void main()
 	//Look up the original color
 	vec4 texcolor = texture(fbtex, vec2(texcoord));
 
-	//Logarithmic shading?
+	//Logarithmic shading
 	float y = pow(texcolor.a, 1.0 / 4);
 	y = min(y, 2);
 	y = max(y, 0);
