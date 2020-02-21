@@ -58,13 +58,14 @@ void main()
 	for(uint y=0; y<windowHeight; y++)
 		g_workingBuffer[y] = 0;
 
-	//Loop over pixels of interest
+	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
+	vec2 left = vec2(data[istart].x, data[istart].voltage);
+	vec2 right;
 	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
-		vec2 left = vec2(data[i].x, data[i].voltage);
-		vec2 right = vec2(data[i+1].x, data[i+1].voltage);
+		right = vec2(data[i+1].x, data[i+1].voltage);
 		float dx_inverse = 1.0 / (right.x - left.x);
 
 		//To start, assume we're drawing the entire segment
@@ -81,13 +82,16 @@ void main()
 		int ymin = int(min(starty, endy));
 		int ymax = int(max(starty, endy));
 
+		//If the current point is right of us, stop
+		if(left.x > x+1)
+			break;
+
 		//If the upcoming point is still left of us, we're not there yet
 		if(right.x < x)
 			continue;
 
-		//If the current point is right of us, stop
-		if(left.x > x+1)
-			break;
+		//Push current point down the pipeline
+		left = right;
 
 		//Fill in the space between min and max for this segment
 		for(int y=ymin; y <= ymax; y++)
