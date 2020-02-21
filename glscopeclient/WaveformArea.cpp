@@ -115,12 +115,14 @@ WaveformArea::~WaveformArea()
 			tavg*1000, 1/tavg, m_frameCount);
 		LogDebug("Total render time: %.3f ms\n",
 			m_renderTime * 1000);
-		LogDebug("Cairo underlay  : %.3f ms (%.1f %%)\n",
+		LogDebug("Cairo underlay   : %.3f ms (%.1f %%)\n",
 			m_underlayTime * 1000, m_underlayTime * 100 / m_renderTime);
-		LogDebug("Cairo overlay   : %.3f ms (%.1f %%)\n",
+		LogDebug("Cairo overlay    : %.3f ms (%.1f %%)\n",
 			m_overlayTime * 1000, m_overlayTime * 100 / m_renderTime);
-		LogDebug("Prepare geometry: %.3f ms (%.1f %%)\n",
+		LogDebug("Prepare geometry : %.3f ms (%.1f %%)\n",
 			m_prepareTime * 1000, m_prepareTime * 100 / m_renderTime);
+		LogDebug("Build index      : %.3f ms (%.1f %%)\n",
+			m_indexTime * 1000, m_indexTime * 100 / m_renderTime);
 		LogDebug("Download geometry: %.3f ms (%.1f %%)\n",
 			m_downloadTime * 1000, m_downloadTime * 100 / m_renderTime);
 	}

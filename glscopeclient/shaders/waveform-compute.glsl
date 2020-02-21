@@ -28,13 +28,12 @@ layout(std430, binding=3) buffer index
 	uint xind[];
 };
 
-layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
+layout(local_size_x=128, local_size_y=1, local_size_z=1) in;
 
 //Interpolate a Y coordinate
-float InterpolateY(vec2 left, vec2 right, float x)
+float InterpolateY(vec2 left, vec2 right, float dx_inverse, float x)
 {
-	return left.y +
-		( (x - left.x) / (right.x - left.x) ) * (right.y - left.y);
+	return left.y + ( (x - left.x) * dx_inverse ) * (right.y - left.y);
 }
 
 //Maximum height of a single waveform, in pixels.
@@ -49,20 +48,24 @@ void main()
 	if(windowHeight > MAX_HEIGHT)
 		return;
 
+	//Save some constants
+	float x = gl_GlobalInvocationID.x;
+	if(x > windowWidth)
+		return;
+	float alpha = float(alpha_scaled) / 256;
+
 	//Clear column to blank
 	for(uint y=0; y<windowHeight; y++)
 		g_workingBuffer[y] = 0;
 
-	//Save some constants
-	float x = gl_GlobalInvocationID.x;
-	float alpha = float(alpha_scaled) / 256;
-
 	//Loop over pixels of interest
-	for(uint i=xind[gl_GlobalInvocationID.x]; i<(memDepth-1); i++)
+	uint istart = xind[gl_GlobalInvocationID.x];
+	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
 		vec2 left = vec2(data[i].x, data[i].voltage);
 		vec2 right = vec2(data[i+1].x, data[i+1].voltage);
+		float dx_inverse = 1.0 / (right.x - left.x);
 
 		//To start, assume we're drawing the entire segment
 		float starty = left.y;
@@ -70,9 +73,9 @@ void main()
 
 		//Interpolate if either end is outside our column
 		if(left.x < x)
-			starty = InterpolateY(left, right, x);
+			starty = InterpolateY(left, right, dx_inverse, x);
 		if(right.x > x+1)
-			endy = InterpolateY(left, right, x+1);
+			endy = InterpolateY(left, right, dx_inverse, x+1);
 
 		//Sort Y coordinates from min to max
 		int ymin = int(min(starty, endy));
@@ -95,8 +98,5 @@ void main()
 
 	//Copy working buffer to RGB output
 	for(uint y=0; y<windowHeight; y++)
-	{
-		ivec2 pos = ivec2(gl_GlobalInvocationID.x, y);
-		imageStore(outputTex, pos, vec4(0, 0, 0, g_workingBuffer[y]));
-	}
+		imageStore(outputTex, ivec2(gl_GlobalInvocationID.x, y), vec4(0, 0, 0, g_workingBuffer[y]));
 }

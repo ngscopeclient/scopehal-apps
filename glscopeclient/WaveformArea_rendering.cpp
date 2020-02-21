@@ -68,7 +68,6 @@ bool WaveformArea::PrepareGeometry()
 	//	return true;
 
 	double start = GetTime();
-
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 
 	/*
@@ -100,12 +99,16 @@ bool WaveformArea::PrepareGeometry()
 	m_indexBuffer.resize(m_width);
 	m_waveformLength = count;
 	double offset = m_channel->GetOffset();
-	#pragma omp parallel for
+	#pragma omp parallel for num_threads(8)
 	for(size_t j=0; j<count; j++)
 	{
 		m_traceBuffer[j*2] 		= data.GetSampleStart(j) * xscale + m_xoff;
 		m_traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (data[j] + offset)) + m_height/2;
 	}
+
+	double dt = GetTime() - start;
+	m_prepareTime += dt;
+	start = GetTime();
 
 	//Calculate indexes for rendering.
 	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
@@ -128,8 +131,8 @@ bool WaveformArea::PrepareGeometry()
 		}
 	}
 
-	double dt = GetTime() - start;
-	m_prepareTime += dt;
+	dt = GetTime() - start;
+	m_indexTime += dt;
 	start = GetTime();
 
 	//Download it
@@ -328,12 +331,22 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
+	//Round thread count up to next multiple of the local size (must be power of two)
+	int localSize = 128;
+	int numThreads = m_plotRight;
+	if(0 != (numThreads % localSize) )
+	{
+		numThreads |= (localSize-1);
+		numThreads ++;
+	}
+	int numGroups = numThreads / localSize;
+
 	m_waveformComputeProgram.Bind();
 	m_waveformComputeProgram.SetImageUniform(m_waveformTextureResolved, "outputTex");
 	m_waveformStorageBuffer.BindBase(1);
 	m_waveformConfigBuffer.BindBase(2);
 	m_waveformIndexBuffer.BindBase(3);
-	m_waveformComputeProgram.DispatchCompute(m_plotRight, 1, 1);
+	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 	m_waveformComputeProgram.MemoryBarrier();
 
 	//m_waveformTexture

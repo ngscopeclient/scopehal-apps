@@ -327,6 +327,7 @@ protected:
 	double m_underlayTime;
 	double m_overlayTime;
 	double m_prepareTime;
+	double m_indexTime;
 	double m_downloadTime;
 
 	float m_pixelsPerVolt;
