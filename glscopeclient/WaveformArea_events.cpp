@@ -566,6 +566,15 @@ void WaveformArea::OnWaveformDataReady()
 		m_group->m_xAxisOffset = -eye->GetUIWidth();
 	}
 
+	//Download the waveform to the GPU and kick off the compute shader for rendering it
+	if(!IsEye() && !IsWaterfall())
+	{
+		make_current();
+		m_geometryOK = PrepareGeometry();
+		if(m_geometryOK)
+			RenderTrace();
+	}
+
 	//Update our measurements and redraw the waveform
 	SetGeometryDirty();
 	queue_draw();

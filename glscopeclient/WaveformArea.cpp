@@ -89,6 +89,7 @@ void WaveformArea::SharedCtorInit()
 	m_persistenceClear = true;
 	m_geometryDirty	= true;
 	m_firstFrame = false;
+	m_geometryOK = false;
 
 	set_has_alpha();
 

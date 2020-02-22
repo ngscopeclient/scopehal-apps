@@ -226,12 +226,12 @@ protected:
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
-	bool PrepareGeometry();
 	void RenderTrace();
 	void InitializeWaveformPass();
 	size_t m_waveformLength;
 	std::vector<float> m_traceBuffer;
 	float m_xoff;
+	bool PrepareGeometry();
 
 	//New trace rendering path
 	Program m_waveformComputeProgram;
@@ -268,6 +268,8 @@ protected:
 	void RenderWaterfall();
 
 	//Cairo overlay rendering for text and protocol decode overlays
+	void ComputeAndDownloadCairoUnderlays();
+	void ComputeAndDownloadCairoOverlays();
 	void RenderCairoUnderlays();
 	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr);
@@ -353,6 +355,7 @@ protected:
 
 	bool	m_geometryDirty;
 	bool	m_firstFrame;
+	bool	m_geometryOK;
 };
 
 #endif
