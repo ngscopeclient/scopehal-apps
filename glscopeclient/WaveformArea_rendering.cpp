@@ -176,6 +176,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	LogIndenter li;
 	//LogTrace("Rendering %s\n", m_channel->m_displayname.c_str());
 
+	//On the first frame, figure out what the actual screen surface FBO is.
+	if(m_firstFrame)
+	{
+		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
+		m_firstFrame = false;
+	}
+
 	double start = GetTime();
 	double dt = start - m_lastFrameStart;
 	if(m_lastFrameStart > 0)
@@ -204,6 +211,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	//Render the Cairo layers with the GL waveform sandwiched in between
 	RenderCairoUnderlays();
+
 	if(IsEye())
 		RenderEye();
 	else if(IsWaterfall())
@@ -216,7 +224,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	RenderCairoOverlays();
 
 	//Sanity check
-	int err = glGetError();
+	GLint err = glGetError();
 	if(err != 0)
 		LogNotice("Render: err = %x\n", err);
 

@@ -66,23 +66,9 @@ void WaveformArea::on_resize(int width, int height)
 	//Reset camera configuration
 	glViewport(0, 0, width, height);
 
-	//transformation matrix from screen to pixel coordinates
-	m_projection = translate(
-		scale(mat4(1.0f), vec3(2.0f / width, 2.0f / height, 1)),	//scale to window size
-		vec3(-width/2, -height/2, 0)											//put origin at bottom left
-		);
 	err = glGetError();
 	if(err != 0)
 		LogNotice("resize 2, err = %x\n", err);
-
-	//GTK creates a FBO for us, but doesn't tell us what it is!
-	//We need to glGet the FBO ID the first time we're resized.
-	if(!m_windowFramebuffer.IsInitialized())
-		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
-
-	err = glGetError();
-	if(err != 0)
-		LogNotice("resize 3, err = %x\n", err);
 
 	//Allocate waveform texture
 	m_waveformTextureResolved.Bind();
@@ -93,7 +79,7 @@ void WaveformArea::on_resize(int width, int height)
 
 	err = glGetError();
 	if(err != 0)
-		LogNotice("resize 4, err = %x\n", err);
+		LogNotice("resize 3, err = %x\n", err);
 
 	//double dt = GetTime() - start;
 	//LogDebug("Resize time: %.3f ms\n", dt*1000);

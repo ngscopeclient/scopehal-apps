@@ -80,6 +80,7 @@ void WaveformArea::SharedCtorInit()
 	m_overlayTime = 0;
 	m_prepareTime = 0;
 	m_downloadTime = 0;
+	m_indexTime = 0;
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
 	m_dragState = DRAG_NONE;
@@ -87,6 +88,7 @@ void WaveformArea::SharedCtorInit()
 	m_lastFrameStart = -1;
 	m_persistenceClear = true;
 	m_geometryDirty	= true;
+	m_firstFrame = false;
 
 	set_has_alpha();
 
@@ -432,6 +434,10 @@ void WaveformArea::on_realize()
 	Gtk::GLArea::on_realize();
 	make_current();
 
+	//We're about to draw the first frame after realization.
+	//This means we need to save some configuration (like the current FBO) that GTK doesn't tell us directly
+	m_firstFrame = true;
+
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();
 	InitializeColormapPass();
@@ -442,50 +448,54 @@ void WaveformArea::on_realize()
 
 void WaveformArea::on_unrealize()
 {
-	m_waveformProgram.Destroy();
+	make_current();
+
+	CleanupGLHandles();
+
+	Gtk::GLArea::on_unrealize();
+}
+
+void WaveformArea::CleanupGLHandles()
+{
+	//Clean up old shaders
+	m_waveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
-	m_colormapVAO.Destroy();
-	m_colormapVBO.Destroy();
 	m_persistProgram.Destroy();
-	m_persistVAO.Destroy();
-	m_persistVBO.Destroy();
+	m_eyeProgram.Destroy();
 	m_cairoProgram.Destroy();
+
+	//Clean up old VAOs
+	m_colormapVAO.Destroy();
+	m_persistVAO.Destroy();
 	m_cairoVAO.Destroy();
+	m_eyeVAO.Destroy();
+
+	//Clean up old VBOs
+	m_colormapVBO.Destroy();
+	m_persistVBO.Destroy();
 	m_cairoVBO.Destroy();
-	m_windowFramebuffer.Detach();
+	m_eyeVBO.Destroy();
+
+	//Clean up old textures
 	m_waveformTextureResolved.Destroy();
 	m_cairoTexture.Destroy();
 	m_cairoTextureOver.Destroy();
-	m_eyeProgram.Destroy();
-	m_eyeVAO.Destroy();
-	m_eyeVBO.Destroy();
 	for(auto& e : m_eyeColorRamp)
 		e.Destroy();
 
-	Gtk::GLArea::on_unrealize();
+	//Clean up old SSBOs
+	m_waveformStorageBuffer.Destroy();
+	m_waveformConfigBuffer.Destroy();
+	m_waveformIndexBuffer.Destroy();
+
+	//Detach the FBO so we don't destroy it!!
+	//GTK manages this, and it might be used by more than one waveform area within the application.
+	m_windowFramebuffer.Detach();
 }
 
 void WaveformArea::InitializeWaveformPass()
 {
 	//ProfileBlock pb("Load waveform shaders");
-	VertexShader dvs;
-	FragmentShader dfs;
-	if(!dvs.Load("shaders/waveform-vertex.glsl") || !dfs.Load("shaders/waveform-fragment.glsl"))
-	{
-		LogError("failed to load default shaders, aborting");
-		exit(1);
-	}
-
-	//Create the programs
-	m_waveformProgram.Add(dvs);
-	m_waveformProgram.Add(dfs);
-	if(!m_waveformProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
-
-	//Create the shader stuff
 	ComputeShader wc;
 	if(!wc.Load("shaders/waveform-compute.glsl"))
 	{

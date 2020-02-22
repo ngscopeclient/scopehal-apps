@@ -98,7 +98,9 @@ void main()
 
 		//Fill in the space between min and max for this segment
 		for(int y=ymin; y <= ymax; y++)
+		{
 			g_workingBuffer[y] += alpha;
+		}
 
 		//TODO: antialiasing
 		//TODO: decimation at very wide zooms

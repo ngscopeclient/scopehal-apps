@@ -113,6 +113,7 @@ protected:
 
 	virtual void on_realize();
 	virtual void on_unrealize();
+	void CleanupGLHandles();
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
 	virtual bool on_button_press_event(GdkEventButton* event);
@@ -222,15 +223,12 @@ protected:
 	bool m_persistence;
 	bool m_persistenceClear;
 
-	//GL stuff (TODO organize)
-	Program m_waveformProgram;
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
 	bool PrepareGeometry();
 	void RenderTrace();
 	void InitializeWaveformPass();
-	glm::mat4 m_projection;
 	size_t m_waveformLength;
 	std::vector<float> m_traceBuffer;
 	float m_xoff;
@@ -354,6 +352,7 @@ protected:
 	} m_dragState;
 
 	bool	m_geometryDirty;
+	bool	m_firstFrame;
 };
 
 #endif
