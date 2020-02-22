@@ -113,8 +113,8 @@ WaveformArea::~WaveformArea()
 		double tavg = m_frameTime / m_frameCount;
 		LogDebug("Average frame interval: %.3f ms (%.2f FPS, %zu frames)\n",
 			tavg*1000, 1/tavg, m_frameCount);
-		LogDebug("Total render time: %.3f ms\n",
-			m_renderTime * 1000);
+		LogDebug("Total render time: %.3f ms (average %.3f)\n",
+			m_renderTime * 1000, m_renderTime * 1000 / m_frameCount);
 		LogDebug("Cairo underlay   : %.3f ms (%.1f %%)\n",
 			m_underlayTime * 1000, m_underlayTime * 100 / m_renderTime);
 		LogDebug("Cairo overlay    : %.3f ms (%.1f %%)\n",

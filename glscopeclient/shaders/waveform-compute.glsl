@@ -31,9 +31,9 @@ layout(std430, binding=3) buffer index
 layout(local_size_x=128, local_size_y=1, local_size_z=1) in;
 
 //Interpolate a Y coordinate
-float InterpolateY(vec2 left, vec2 right, float dx_inverse, float x)
+float InterpolateY(vec2 left, vec2 right, float slope, float x)
 {
-	return left.y + ( (x - left.x) * dx_inverse ) * (right.y - left.y);
+	return left.y + ( (x - left.x) * slope );
 }
 
 //Maximum height of a single waveform, in pixels.
@@ -66,21 +66,6 @@ void main()
 	{
 		//Fetch coordinates of the current and upcoming sample
 		right = vec2(data[i+1].x, data[i+1].voltage);
-		float dx_inverse = 1.0 / (right.x - left.x);
-
-		//To start, assume we're drawing the entire segment
-		float starty = left.y;
-		float endy = right.y;
-
-		//Interpolate if either end is outside our column
-		if(left.x < x)
-			starty = InterpolateY(left, right, dx_inverse, x);
-		if(right.x > x+1)
-			endy = InterpolateY(left, right, dx_inverse, x+1);
-
-		//Sort Y coordinates from min to max
-		int ymin = int(min(starty, endy));
-		int ymax = int(max(starty, endy));
 
 		//If the current point is right of us, stop
 		if(left.x > x+1)
@@ -88,7 +73,25 @@ void main()
 
 		//If the upcoming point is still left of us, we're not there yet
 		if(right.x < x)
+		{
+			left = right;
 			continue;
+		}
+
+		//To start, assume we're drawing the entire segment
+		float starty = left.y;
+		float endy = right.y;
+
+		//Interpolate if either end is outside our column
+		float slope = (right.y - left.y) / (right.x - left.x);
+		if(left.x < x)
+			starty = InterpolateY(left, right, slope, x);
+		if(right.x > x+1)
+			endy = InterpolateY(left, right, slope, x+1);
+
+		//Sort Y coordinates from min to max
+		int ymin = int(min(starty, endy));
+		int ymax = int(max(starty, endy));
 
 		//Push current point down the pipeline
 		left = right;
