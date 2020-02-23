@@ -70,29 +70,6 @@ bool WaveformArea::PrepareGeometry()
 	double start = GetTime();
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 
-	/*
-	float xleft = data.GetSampleStart(j) * xscale;
-	float xright = data.GetSampleStart(j+1) * xscale;
-	if(xright < xleft + 1)
-		xright = xleft + 1;
-
-	float ymid = m_pixelsPerVolt * (data[j] + offset);
-	float nextymid = m_pixelsPerVolt * (data[j+1] + offset);
-
-	//Logarithmic scale for FFT displays
-	if(fft)
-	{
-		double db1 = 20 * log10(data[j]);
-		double db2 = 20 * log10(data[j+1]);
-
-		db1 = -70 - db1;	//todo: dont hard code plot limit
-		db2 = -70 - db2;
-
-		ymid = DbToYPosition(db1);
-		nextymid = DbToYPosition(db2);
-	}
-	*/
-
 	bool fft = IsFFT();
 
 	//Calculate X/Y coordinate of each sample point
@@ -108,9 +85,7 @@ bool WaveformArea::PrepareGeometry()
 
 		float y;
 		if(fft)
-		{
-
-		}
+			y = DbToYPosition(-70 - (20 * log10(data[j])));		//TODO: don't hard code plot limits
 		else
 			y = (m_pixelsPerVolt * (data[j] + offset)) + m_height/2;
 
