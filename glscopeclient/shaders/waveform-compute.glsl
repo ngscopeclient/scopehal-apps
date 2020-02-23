@@ -28,7 +28,14 @@ layout(std430, binding=3) buffer index
 	uint xind[];
 };
 
-layout(local_size_x=128, local_size_y=1, local_size_z=1) in;
+//Maximum height of a single waveform, in pixels.
+//This is enough for a nearly fullscreen 4K window so should be plenty.
+#define MAX_HEIGHT		2048
+
+//Number of columns of pixels per thread block
+#define COLS_PER_BLOCK	2
+
+layout(local_size_x=COLS_PER_BLOCK, local_size_y=1, local_size_z=1) in;
 
 //Interpolate a Y coordinate
 float InterpolateY(vec2 left, vec2 right, float slope, float x)
@@ -36,27 +43,38 @@ float InterpolateY(vec2 left, vec2 right, float slope, float x)
 	return left.y + ( (x - left.x) * slope );
 }
 
-//Maximum height of a single waveform, in pixels.
-//This is enough for a nearly fullscreen 4K window so should be plenty.
-#define MAX_HEIGHT 2048
+/*
+NEW IDEA
+Multiple threads per X coordinate (say, 32 - 1 warp)
+Parallel fetch base[i+z] and atomically increment local memory
+
+Each local has a 2D shared array
+Assuming 96 KB shared memory, we can fit a total of 24K float32 temp pixels
+Assuming 2K max line height, that's up to 12 pixels of width per local
+*/
+
+//Shared buffer for the local working buffer
+shared float g_workingBuffer[COLS_PER_BLOCK][MAX_HEIGHT];
 
 void main()
 {
-	//Make sure image isn't too big for our hard coded max
-	//TODO: truncate in this case??
-	float g_workingBuffer[MAX_HEIGHT];
+	//Abort if window height is too big, or if we're off the end of the window
 	if(windowHeight > MAX_HEIGHT)
+		return;
+	if(gl_GlobalInvocationID.x > windowWidth)
 		return;
 
 	//Save some constants
-	float x = gl_GlobalInvocationID.x;
-	if(x > windowWidth)
-		return;
 	float alpha = float(alpha_scaled) / 256;
 
-	//Clear column to blank
-	for(uint y=0; y<windowHeight; y++)
-		g_workingBuffer[y] = 0;
+	//Clear column to blank in the first thread of the block
+	if(gl_LocalInvocationID.y == 0)
+	{
+		for(uint y=0; y<windowHeight; y++)
+			g_workingBuffer[gl_LocalInvocationID.x][y] = 0;
+	}
+	barrier();
+	memoryBarrierShared();
 
 	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
@@ -68,11 +86,11 @@ void main()
 		right = vec2(data[i+1].x, data[i+1].voltage);
 
 		//If the current point is right of us, stop
-		if(left.x > x+1)
+		if(left.x > gl_GlobalInvocationID.x + 1)
 			break;
 
 		//If the upcoming point is still left of us, we're not there yet
-		if(right.x < x)
+		if(right.x < gl_GlobalInvocationID.x)
 		{
 			left = right;
 			continue;
@@ -84,10 +102,10 @@ void main()
 
 		//Interpolate if either end is outside our column
 		float slope = (right.y - left.y) / (right.x - left.x);
-		if(left.x < x)
-			starty = InterpolateY(left, right, slope, x);
-		if(right.x > x+1)
-			endy = InterpolateY(left, right, slope, x+1);
+		if(left.x < gl_GlobalInvocationID.x)
+			starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
+		if(right.x > gl_GlobalInvocationID.x + 1)
+			endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
 
 		//Sort Y coordinates from min to max
 		int ymin = int(min(starty, endy));
@@ -99,7 +117,7 @@ void main()
 		//Fill in the space between min and max for this segment
 		for(int y=ymin; y <= ymax; y++)
 		{
-			g_workingBuffer[y] += alpha;
+			g_workingBuffer[gl_LocalInvocationID.x][y] += alpha;
 		}
 
 		//TODO: antialiasing
@@ -108,5 +126,5 @@ void main()
 
 	//Copy working buffer to RGB output
 	for(uint y=0; y<windowHeight; y++)
-		imageStore(outputTex, ivec2(gl_GlobalInvocationID.x, y), vec4(0, 0, 0, g_workingBuffer[y]));
+		imageStore(outputTex, ivec2(gl_GlobalInvocationID.x, y), vec4(0, 0, 0, g_workingBuffer[gl_LocalInvocationID.x][y]));
 }

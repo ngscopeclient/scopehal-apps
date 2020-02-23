@@ -211,7 +211,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		RenderPersistenceOverlay();
 	*/
 
-	//PrepareGeometry() / RenderTrace() are now launched early on, by OnWaveformDataReady()
+	//Download the waveform to the GPU and kick off the compute shader for rendering it
+	if(!IsEye() && !IsWaterfall())
+	{
+		m_geometryOK = PrepareGeometry();
+		if(m_geometryOK)
+			RenderTrace();
+	}
 
 	//Launch software rendering passes and push these to the GPU
 	ComputeAndDownloadCairoUnderlays();
@@ -350,15 +356,15 @@ void WaveformArea::RenderPersistenceOverlay()
 
 void WaveformArea::RenderTrace()
 {
-	//Round thread count up to next multiple of the local size (must be power of two)
-	int localSize = 128;
-	int numThreads = m_plotRight;
-	if(0 != (numThreads % localSize) )
+	//Round thread block size up to next multiple of the local size (must be power of two)
+	int localSize = 2;
+	int numCols = m_plotRight;
+	if(0 != (numCols % localSize) )
 	{
-		numThreads |= (localSize-1);
-		numThreads ++;
+		numCols |= (localSize-1);
+		numCols ++;
 	}
-	int numGroups = numThreads / localSize;
+	int numGroups = numCols / localSize;
 
 	m_waveformComputeProgram.Bind();
 	m_waveformComputeProgram.SetImageUniform(m_waveformTextureResolved, "outputTex");
