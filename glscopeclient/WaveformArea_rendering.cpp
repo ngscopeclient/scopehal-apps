@@ -93,6 +93,8 @@ bool WaveformArea::PrepareGeometry()
 	}
 	*/
 
+	bool fft = IsFFT();
+
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
 	m_traceBuffer.resize(count*2);
@@ -102,8 +104,17 @@ bool WaveformArea::PrepareGeometry()
 	#pragma omp parallel for num_threads(8)
 	for(size_t j=0; j<count; j++)
 	{
-		m_traceBuffer[j*2] 		= data.GetSampleStart(j) * xscale + m_xoff;
-		m_traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (data[j] + offset)) + m_height/2;
+		m_traceBuffer[j*2] = data.GetSampleStart(j) * xscale + m_xoff;
+
+		float y;
+		if(fft)
+		{
+
+		}
+		else
+			y = (m_pixelsPerVolt * (data[j] + offset)) + m_height/2;
+
+		m_traceBuffer[j*2 + 1]	= y;
 	}
 
 	double dt = GetTime() - start;
@@ -226,12 +237,15 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	RenderCairoUnderlays();
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
 	if(IsEye())
 		RenderEye();
 	else if(IsWaterfall())
 		RenderWaterfall();
 	else if(m_geometryOK)
 		RenderTraceColorCorrection();
+	glDisable(GL_SCISSOR_TEST);
 	RenderCairoOverlays();
 
 	//Sanity check
@@ -274,14 +288,7 @@ void WaveformArea::RenderEye()
 	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
 	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
-	//Only look at stuff inside the plot area
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(0, 0, m_plotRight, m_height);
-
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-	glDisable(GL_SCISSOR_TEST);
-	glActiveTexture(GL_TEXTURE0);
 }
 
 void WaveformArea::RenderWaterfall()
@@ -317,14 +324,7 @@ void WaveformArea::RenderWaterfall()
 	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
 	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
-	//Only look at stuff inside the plot area
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(0, 0, m_plotRight, m_height);
-
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-	glDisable(GL_SCISSOR_TEST);
-	glActiveTexture(GL_TEXTURE0);
 }
 
 void WaveformArea::RenderPersistenceOverlay()
