@@ -103,6 +103,7 @@ public:
 	WaveformGroup* m_group;
 
 	//Helpers for figuring out what kind of signal our primary trace is
+	bool IsAnalog();
 	bool IsEye();
 	bool IsWaterfall();
 	bool IsFFT();
@@ -322,8 +323,10 @@ protected:
 	double m_frameTime;
 	long m_frameCount;
 	double m_renderTime;
-	double m_underlayTime;
-	double m_overlayTime;
+	double m_cairoTime;
+	double m_texDownloadTime;
+	double m_compositeTime;
+
 	double m_prepareTime;
 	double m_indexTime;
 	double m_downloadTime;

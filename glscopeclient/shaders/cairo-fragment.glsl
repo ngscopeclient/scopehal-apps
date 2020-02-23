@@ -10,5 +10,5 @@ void main()
 	vec4 texcolor = texture(fbtex, vec2(texcoord));
 
 	//Copy it
-	finalColor = texcolor;
+	finalColor = vec4(texcolor.b, texcolor.g, texcolor.r, texcolor.a);
 }

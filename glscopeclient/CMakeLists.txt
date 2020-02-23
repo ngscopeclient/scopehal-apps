@@ -22,6 +22,7 @@ add_executable(glscopeclient
 	WaveformArea.cpp
 	WaveformArea_events.cpp
 	WaveformArea_rendering.cpp
+	WaveformArea_cairo.cpp
 	WaveformGroup.cpp
 
 	main.cpp

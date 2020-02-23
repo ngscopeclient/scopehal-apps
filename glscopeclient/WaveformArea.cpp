@@ -76,10 +76,11 @@ void WaveformArea::SharedCtorInit()
 	m_frameTime = 0;
 	m_frameCount = 0;
 	m_renderTime = 0;
-	m_underlayTime = 0;
-	m_overlayTime = 0;
 	m_prepareTime = 0;
 	m_downloadTime = 0;
+	m_cairoTime = 0;
+	m_texDownloadTime = 0;
+	m_compositeTime = 0;
 	m_indexTime = 0;
 	m_updatingContextMenu = false;
 	m_selectedChannel = m_channel;
@@ -116,18 +117,24 @@ WaveformArea::~WaveformArea()
 		double tavg = m_frameTime / m_frameCount;
 		LogDebug("Average frame interval: %.3f ms (%.2f FPS, %zu frames)\n",
 			tavg*1000, 1/tavg, m_frameCount);
-		LogDebug("Total render time: %.3f ms (average %.3f)\n",
-			m_renderTime * 1000, m_renderTime * 1000 / m_frameCount);
-		LogDebug("Cairo underlay   : %.3f ms (%.1f %%)\n",
-			m_underlayTime * 1000, m_underlayTime * 100 / m_renderTime);
-		LogDebug("Cairo overlay    : %.3f ms (%.1f %%)\n",
-			m_overlayTime * 1000, m_overlayTime * 100 / m_renderTime);
-		LogDebug("Prepare geometry : %.3f ms (%.1f %%)\n",
-			m_prepareTime * 1000, m_prepareTime * 100 / m_renderTime);
-		LogDebug("Build index      : %.3f ms (%.1f %%)\n",
-			m_indexTime * 1000, m_indexTime * 100 / m_renderTime);
-		LogDebug("Download geometry: %.3f ms (%.1f %%)\n",
-			m_downloadTime * 1000, m_downloadTime * 100 / m_renderTime);
+
+		LogDebug("----------------------------------------------------------\n");
+		LogDebug("Task              | Total (ms) | Average (ms) | Percentage\n");
+		LogDebug("----------------------------------------------------------\n");
+		LogDebug("Render            | %10.1f |   %10.3f | %.1f %%\n",
+			m_renderTime * 1000, m_renderTime * 1000 / m_frameCount, 100.0f);
+		LogDebug("Cairo             | %10.1f |   %10.3f | %.1f %%\n",
+			m_cairoTime * 1000, m_cairoTime * 1000 / m_frameCount, m_cairoTime * 100 / m_renderTime);
+		LogDebug("Texture download  | %10.1f |   %10.3f | %.1f %%\n",
+			m_texDownloadTime * 1000, m_texDownloadTime * 1000 / m_frameCount, m_texDownloadTime * 100 / m_renderTime);
+		LogDebug("Prepare           | %10.1f |   %10.3f | %.1f %%\n",
+			m_prepareTime * 1000, m_prepareTime * 1000 / m_frameCount, m_prepareTime * 100 / m_renderTime);
+		LogDebug("Build index       | %10.1f |   %10.3f | %.1f %%\n",
+			m_indexTime * 1000, m_indexTime * 1000 / m_frameCount, m_indexTime * 100 / m_renderTime);
+		LogDebug("Geometry download | %10.1f |   %10.3f | %.1f %%\n",
+			m_downloadTime * 1000, m_downloadTime * 1000 / m_frameCount, m_downloadTime * 100 / m_renderTime);
+		LogDebug("Composite         | %10.1f |   %10.3f | %.1f %%\n",
+			m_compositeTime * 1000, m_compositeTime * 1000 / m_frameCount, m_compositeTime * 100 / m_renderTime);
 	}
 
 	m_channel->Release();
@@ -681,6 +688,12 @@ bool WaveformArea::IsWaterfall()
 {
 	auto fall = dynamic_cast<WaterfallDecoder*>(m_channel);
 	return (fall != NULL);
+}
+
+bool WaveformArea::IsAnalog()
+{
+	auto pdat = m_channel->GetData();
+	return (dynamic_cast<AnalogCapture*>(pdat) != NULL);
 }
 
 bool WaveformArea::IsEye()

@@ -76,17 +76,6 @@ public:
 	{
 		glTexImage2D(target, mipmap, internalformat, width, height, 0, format, type, data);
 	}
-	void AllocateMultisample(
-		size_t width,
-		size_t height,
-		int samples = 4,
-		GLint internalformat = GL_RGBA32F,
-		GLenum target = GL_TEXTURE_2D_MULTISAMPLE,
-		GLboolean fixed_sample = GL_FALSE
-		)
-	{
-		glTexImage2DMultisample(target, samples, internalformat, width, height, fixed_sample);
-	}
 
 protected:
 
