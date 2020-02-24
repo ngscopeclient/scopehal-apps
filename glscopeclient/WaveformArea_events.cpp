@@ -71,8 +71,8 @@ void WaveformArea::on_resize(int width, int height)
 		LogNotice("resize 2, err = %x\n", err);
 
 	//Allocate waveform texture
-	m_waveformTextureResolved.Bind();
-	m_waveformTextureResolved.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+	m_waveformRenderData->m_waveformTexture.Bind();
+	m_waveformRenderData->m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 	ResetTextureFiltering();
 
 	SetGeometryDirty();

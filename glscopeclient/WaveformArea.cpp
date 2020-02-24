@@ -73,24 +73,25 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 
 void WaveformArea::SharedCtorInit()
 {
-	m_frameTime = 0;
-	m_frameCount = 0;
-	m_renderTime = 0;
-	m_prepareTime = 0;
-	m_downloadTime = 0;
-	m_cairoTime = 0;
-	m_texDownloadTime = 0;
-	m_compositeTime = 0;
-	m_indexTime = 0;
-	m_updatingContextMenu = false;
-	m_selectedChannel = m_channel;
-	m_dragState = DRAG_NONE;
-	m_padding = 2;
-	m_lastFrameStart = -1;
-	m_persistenceClear = true;
-	m_geometryDirty	= true;
-	m_firstFrame = false;
-	m_geometryOK = false;
+	//performance counters
+	m_frameTime 			= 0;
+	m_frameCount 			= 0;
+	m_renderTime 			= 0;
+	m_prepareTime 			= 0;
+	m_downloadTime 			= 0;
+	m_cairoTime				= 0;
+	m_texDownloadTime		= 0;
+	m_compositeTime			= 0;
+	m_indexTime 			= 0;
+	m_lastFrameStart 		= -1;
+
+	m_updatingContextMenu 	= false;
+	m_selectedChannel		= m_channel;
+	m_dragState 			= DRAG_NONE;
+	m_padding 				= 2;
+	m_persistenceClear 		= true;
+	m_firstFrame 			= false;
+	m_waveformRenderData	= NULL;
 
 	set_has_alpha();
 
@@ -446,6 +447,8 @@ void WaveformArea::on_realize()
 	//This means we need to save some configuration (like the current FBO) that GTK doesn't tell us directly
 	m_firstFrame = true;
 
+	m_waveformRenderData = new WaveformRenderData(m_channel);
+
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();
 	InitializeColormapPass();
@@ -485,16 +488,13 @@ void WaveformArea::CleanupGLHandles()
 	m_eyeVBO.Destroy();
 
 	//Clean up old textures
-	m_waveformTextureResolved.Destroy();
 	m_cairoTexture.Destroy();
 	m_cairoTextureOver.Destroy();
 	for(auto& e : m_eyeColorRamp)
 		e.Destroy();
 
-	//Clean up old SSBOs
-	m_waveformStorageBuffer.Destroy();
-	m_waveformConfigBuffer.Destroy();
-	m_waveformIndexBuffer.Destroy();
+	delete m_waveformRenderData;
+	m_waveformRenderData = NULL;
 
 	//Detach the FBO so we don't destroy it!!
 	//GTK manages this, and it might be used by more than one waveform area within the application.

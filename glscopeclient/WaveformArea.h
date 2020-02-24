@@ -77,6 +77,32 @@ public:
 	}
 };
 
+/**
+	@rbief GL buffers etc needed to render a single waveform
+ */
+class WaveformRenderData
+{
+public:
+	WaveformRenderData(OscilloscopeChannel* channel)
+	: m_channel(channel)
+	, m_geometryOK(false)
+	{}
+
+	//The channel of interest
+	OscilloscopeChannel*	m_channel;
+
+	//True if everything is good to render
+	bool					m_geometryOK;
+
+	//SSBOs with waveform data
+	ShaderStorageBuffer		m_waveformStorageBuffer;
+	ShaderStorageBuffer		m_waveformConfigBuffer;
+	ShaderStorageBuffer		m_waveformIndexBuffer;
+
+	//RGBA32 but only alpha actually used
+	Texture					m_waveformTexture;
+};
+
 float sinc(float x, float width);
 float blackman(float x, float width);
 
@@ -97,8 +123,9 @@ public:
 	void ClearPersistence()
 	{ m_persistenceClear = true; }
 
+	//TODO: dirtiness needs complete revamp
 	void SetGeometryDirty()
-	{ m_geometryDirty = true; }
+	{  }
 
 	WaveformGroup* m_group;
 
@@ -229,17 +256,9 @@ protected:
 	//Trace rendering
 	void RenderTrace();
 	void InitializeWaveformPass();
-	size_t m_waveformLength;
-	std::vector<float> m_traceBuffer;
-	float m_xoff;
-	bool PrepareGeometry();
-
-	//New trace rendering path
+	void PrepareGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
-	std::vector<uint32_t> m_indexBuffer;
-	ShaderStorageBuffer m_waveformStorageBuffer;
-	ShaderStorageBuffer m_waveformConfigBuffer;
-	ShaderStorageBuffer m_waveformIndexBuffer;
+	WaveformRenderData*	m_waveformRenderData;
 
 	//Color correction
 	void RenderTraceColorCorrection();
@@ -247,7 +266,6 @@ protected:
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
-	Texture m_waveformTextureResolved;
 
 	//Persistence
 	void RenderPersistenceOverlay();
@@ -356,9 +374,7 @@ protected:
 		DRAG_CURSOR
 	} m_dragState;
 
-	bool	m_geometryDirty;
 	bool	m_firstFrame;
-	bool	m_geometryOK;
 };
 
 #endif
