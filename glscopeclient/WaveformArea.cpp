@@ -509,16 +509,10 @@ void WaveformArea::InitializeWaveformPass()
 	//ProfileBlock pb("Load waveform shaders");
 	ComputeShader wc;
 	if(!wc.Load("shaders/waveform-compute.glsl"))
-	{
-		LogError("failed to load waveform compute shader, aborting");
-		exit(1);
-	}
+		LogFatal("failed to load waveform compute shader, aborting\n");
 	m_waveformComputeProgram.Add(wc);
 	if(!m_waveformComputeProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
+		LogFatal("failed to link shader program, aborting\n");
 }
 
 void WaveformArea::InitializeColormapPass()
@@ -529,18 +523,12 @@ void WaveformArea::InitializeColormapPass()
 	VertexShader cvs;
 	FragmentShader cfs;
 	if(!cvs.Load("shaders/colormap-vertex.glsl") || !cfs.Load("shaders/colormap-fragment.glsl"))
-	{
-		LogError("failed to load colormap shaders, aborting");
-		exit(1);
-	}
+		LogFatal("failed to load colormap shaders, aborting\n");
 
 	m_colormapProgram.Add(cvs);
 	m_colormapProgram.Add(cfs);
 	if(!m_colormapProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
+		LogFatal("failed to link shader program, aborting\n");
 
 	//Create the VAO/VBO for a fullscreen polygon
 	float verts[8] =
@@ -564,18 +552,12 @@ void WaveformArea::InitializeEyePass()
 	VertexShader cvs;
 	FragmentShader cfs;
 	if(!cvs.Load("shaders/eye-vertex.glsl") || !cfs.Load("shaders/eye-fragment.glsl"))
-	{
-		LogError("failed to load eye shaders, aborting");
-		exit(1);
-	}
+		LogFatal("failed to load eye shaders, aborting\n");
 
 	m_eyeProgram.Add(cvs);
 	m_eyeProgram.Add(cfs);
 	if(!m_eyeProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
+		LogFatal("failed to link shader program, aborting\n");
 
 	//Create the VAO/VBO for a fullscreen polygon
 	float verts[8] =
@@ -623,18 +605,12 @@ void WaveformArea::InitializePersistencePass()
 	VertexShader cvs;
 	FragmentShader cfs;
 	if(!cvs.Load("shaders/persist-vertex.glsl") || !cfs.Load("shaders/persist-fragment.glsl"))
-	{
-		LogError("failed to load persist shaders, aborting");
-		exit(1);
-	}
+		LogFatal("failed to load persist shaders, aborting\n");
 
 	m_persistProgram.Add(cvs);
 	m_persistProgram.Add(cfs);
 	if(!m_persistProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
+		LogFatal("failed to link shader program, aborting\n");
 
 	//Create the VAO/VBO for a fullscreen polygon
 	float verts[8] =
@@ -658,18 +634,12 @@ void WaveformArea::InitializeCairoPass()
 	VertexShader cvs;
 	FragmentShader cfs;
 	if(!cvs.Load("shaders/cairo-vertex.glsl") || !cfs.Load("shaders/cairo-fragment.glsl"))
-	{
-		LogError("failed to load cairo shaders, aborting");
-		exit(1);
-	}
+		LogFatal("failed to load cairo shaders, aborting\n");
 
 	m_cairoProgram.Add(cvs);
 	m_cairoProgram.Add(cfs);
 	if(!m_cairoProgram.Link())
-	{
-		LogError("failed to link shader program, aborting");
-		exit(1);
-	}
+		LogFatal("failed to link shader program, aborting\n");
 
 	//Create the VAO/VBO for a fullscreen polygon
 	float verts[8] =
