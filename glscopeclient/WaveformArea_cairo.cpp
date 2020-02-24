@@ -281,17 +281,22 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		auto render = o->CreateRenderer();
 		auto data = o->GetData();
 
+		bool digital = dynamic_cast<DigitalRenderer*>(render) != NULL;
+
 		double ymid = m_overlayPositions[o];
 		double ytop = ymid - height/2;
 		double ybot = ymid + height/2;
 
-		//Render the grayed-out background
-		cr->set_source_rgba(0,0,0, 0.6);
-		cr->move_to(0, 				ytop);
-		cr->line_to(m_plotRight, 	ytop);
-		cr->line_to(m_plotRight,	ybot);
-		cr->line_to(0,				ybot);
-		cr->fill();
+		if(!digital)
+		{
+			//Render the grayed-out background
+			cr->set_source_rgba(0,0,0, 0.6);
+			cr->move_to(0, 				ytop);
+			cr->line_to(m_plotRight, 	ytop);
+			cr->line_to(m_plotRight,	ybot);
+			cr->line_to(0,				ybot);
+			cr->fill();
+		}
 
 		Rect chanbox;
 		RenderChannelInfoBox(o, cr, ybot, o->m_displayname, chanbox, 2);
@@ -328,54 +333,6 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					text,
 					color);
 			}
-		}
-
-		//Handle digital
-		auto dr = dynamic_cast<DigitalRenderer*>(render);
-		Gdk::Color color(o->m_displaycolor);
-		cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
-		bool first = true;
-		double last_end = -100;
-		if(dr != NULL)
-		{
-			auto ddat = dynamic_cast<DigitalCapture*>(data);
-			for(size_t i=0; i<data->GetDepth(); i++)
-			{
-				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
-				double end = start + (data->GetSampleLen(i) * data->m_timescale);
-
-				double xs = XAxisUnitsToXPosition(start);
-				double xe = XAxisUnitsToXPosition(end);
-
-				if( (xe < textright) || (xs > m_plotRight) )
-					continue;
-
-				//Clamp
-				if(xe > m_plotRight)
-					xe = m_plotRight;
-
-				double y = ybot;
-				if((*ddat)[i])
-					y = ytop;
-
-				//Handle gaps between samples
-				if( (xs - last_end) > 2)
-					first = true;
-				last_end = xe;
-
-				//start of sample
-				if(first)
-				{
-					cr->move_to(xs, y);
-					first = false;
-				}
-				else
-					cr->line_to(xs, y);
-
-				//end of sample
-				cr->line_to(xe, y);
-			}
-			cr->stroke();
 		}
 
 		delete render;

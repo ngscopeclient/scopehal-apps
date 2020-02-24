@@ -70,10 +70,18 @@ void WaveformArea::on_resize(int width, int height)
 	if(err != 0)
 		LogNotice("resize 2, err = %x\n", err);
 
-	//Allocate waveform texture
+	//Reallocate waveform texture
 	m_waveformRenderData->m_waveformTexture.Bind();
 	m_waveformRenderData->m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 	ResetTextureFiltering();
+
+	//Reallocate textures for overlays
+	for(auto it : m_overlayRenderData)
+	{
+		it.second->m_waveformTexture.Bind();
+		it.second->m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+		ResetTextureFiltering();
+	}
 
 	SetGeometryDirty();
 

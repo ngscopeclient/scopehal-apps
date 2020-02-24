@@ -254,17 +254,17 @@ protected:
 	//Trace rendering
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
-	void PrepareAnalogGeometry(WaveformRenderData* wdata);
-	void PrepareDigitalGeometry(WaveformRenderData* wdata);
+	void PrepareGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
 	WaveformRenderData*								m_waveformRenderData;
 	std::map<ProtocolDecoder*, WaveformRenderData*>	m_overlayRenderData;
 
 	//Final compositing
 	void RenderMainTrace();
+	void RenderOverlayTraces();
 
 	//Color correction
-	void RenderTraceColorCorrection();
+	void RenderTraceColorCorrection(WaveformRenderData* wdata);
 	void InitializeColormapPass();
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;

@@ -50,24 +50,36 @@ using namespace glm;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::PrepareAnalogGeometry(WaveformRenderData* wdata)
+void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 {
 	double start = GetTime();
 
-	//TODO: support digital channels
 	auto channel = wdata->m_channel;
-	auto pdat = dynamic_cast<AnalogCapture*>(channel->GetData());
-	if(!pdat || (pdat->size() == 0))
+	auto pdat = channel->GetData();
+	auto andat = dynamic_cast<AnalogCapture*>(pdat);
+	auto digdat = dynamic_cast<DigitalCapture*>(pdat);
+	if( !(andat && andat->GetDepth()) && !(digdat && digdat->GetDepth()))
 	{
 		wdata->m_geometryOK = false;
 		return;
 	}
 
-	size_t count = pdat->size();
+	size_t count;
+	if(andat)
+		count = andat->size();
+	else
+		count = digdat->size();
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 
 	bool fft = IsFFT();
+
+	//Zero voltage level
+	//TODO: don't assume all digital data is a protocol decode, logic analyzers are a thing!
+	//TODO: properly calculate decoder positions once RenderDecodeOverlays() isn't doing that anymore
+	float ybase = m_height/2;
+	if(digdat)
+		ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 15);
 
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
@@ -82,10 +94,15 @@ void WaveformArea::PrepareAnalogGeometry(WaveformRenderData* wdata)
 		traceBuffer[j*2] = pdat->GetSampleStart(j) * xscale + xoff;
 
 		float y;
-		if(fft)
-			y = DbToYPosition(-70 - (20 * log10((*pdat)[j])));		//TODO: don't hard code plot limits
+		if(digdat)
+		{
+			//TODO: digital overlay stuff
+			y = ybase + 5 + ( (*digdat)[j] ? 20: 0 );
+		}
+		else if(fft)
+			y = DbToYPosition(-70 - (20 * log10((*andat)[j])));		//TODO: don't hard code plot limits
 		else
-			y = (m_pixelsPerVolt * ((*pdat)[j] + offset)) + m_height/2;
+			y = (m_pixelsPerVolt * ((*andat)[j] + offset)) + ybase;
 
 		traceBuffer[j*2 + 1]	= y;
 	}
@@ -145,11 +162,6 @@ void WaveformArea::PrepareAnalogGeometry(WaveformRenderData* wdata)
 	wdata->m_geometryOK = true;
 }
 
-void WaveformArea::PrepareDigitalGeometry(WaveformRenderData* wdata)
-{
-	//TODO
-}
-
 void WaveformArea::ResetTextureFiltering()
 {
 	//No texture filtering
@@ -199,35 +211,46 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		RenderPersistenceOverlay();
 	*/
 
-	//Download the waveform to the GPU and kick off the compute shader for rendering it
+	//Download the main waveform to the GPU and kick off the compute shader for rendering it
 	if(IsAnalog())
 	{
-		PrepareAnalogGeometry(m_waveformRenderData);
+		PrepareGeometry(m_waveformRenderData);
 		RenderTrace(m_waveformRenderData);
-	}
-
-	//Do compute shader rendering for digital waveforms
-	for(auto overlay : m_overlays)
-	{
-		//Create render data if needed
-		//(can't do this when m_waveformRenderData is created because decoders are added later on)
-		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
-			m_overlayRenderData[overlay] = new WaveformRenderData(overlay);
-
-		//PrepareDigitalGeometry(m_overlayRenderData[overlay]);
-		//RenderTrace(m_overlayRenderData[overlay]);
 	}
 
 	//Launch software rendering passes and push the resulting data to the GPU
 	ComputeAndDownloadCairoUnderlays();
 	ComputeAndDownloadCairoOverlays();
 
-	//
+	//Do compute shader rendering for digital waveforms
+	for(auto overlay : m_overlays)
+	{
+		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			continue;
+
+		//Create render data if needed
+		//(can't do this when m_waveformRenderData is created because decoders are added later on)
+		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
+			m_overlayRenderData[overlay] = new WaveformRenderData(overlay);
+
+		//Create the texture
+		auto wdat = m_overlayRenderData[overlay];
+		wdat->m_waveformTexture.Bind();
+		wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+		ResetTextureFiltering();
+
+		PrepareGeometry(wdat);
+		RenderTrace(wdat);
+	}
+
+	//Make sure all compute shaders are done before we composite
+	m_waveformComputeProgram.MemoryBarrier();
 
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	RenderCairoUnderlays();
 	RenderMainTrace();
+	RenderOverlayTraces();
 	RenderCairoOverlays();
 
 	//Sanity check
@@ -243,17 +266,25 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 void WaveformArea::RenderMainTrace()
 {
-	//Make sure all compute shaders are done
-	m_waveformComputeProgram.MemoryBarrier();
-
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(0, 0, m_plotRight, m_height);
 	if(IsEye())
 		RenderEye();
 	else if(IsWaterfall())
 		RenderWaterfall();
-	else if(m_waveformRenderData->m_geometryOK)
-		RenderTraceColorCorrection();
+	else
+		RenderTraceColorCorrection(m_waveformRenderData);
+	glDisable(GL_SCISSOR_TEST);
+}
+
+void WaveformArea::RenderOverlayTraces()
+{
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
+
+	for(auto it : m_overlayRenderData)
+		RenderTraceColorCorrection(it.second);
+
 	glDisable(GL_SCISSOR_TEST);
 }
 
@@ -366,6 +397,29 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 }
 
+void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)
+{
+	if(!data->m_geometryOK)
+		return;
+
+	//Prepare to render
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+	m_colormapProgram.Bind();
+	m_colormapVAO.Bind();
+
+	//Draw the offscreen buffer to the onscreen buffer
+	//as a textured quad. Apply color correction as we do this.
+	Gdk::Color color(data->m_channel->m_displaycolor);
+	m_colormapProgram.SetUniform(data->m_waveformTexture, "fbtex");
+	m_colormapProgram.SetUniform(color.get_red_p(), "r");
+	m_colormapProgram.SetUniform(color.get_green_p(), "g");
+	m_colormapProgram.SetUniform(color.get_blue_p(), "b");
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
 void WaveformArea::ComputeAndDownloadCairoUnderlays()
 {
 	double tstart = GetTime();
@@ -416,26 +470,6 @@ void WaveformArea::RenderCairoUnderlays()
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 	m_compositeTime += (GetTime() - tstart);
-}
-
-void WaveformArea::RenderTraceColorCorrection()
-{
-	//Prepare to render
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-	m_colormapProgram.Bind();
-	m_colormapVAO.Bind();
-
-	//Draw the offscreen buffer to the onscreen buffer
-	//as a textured quad. Apply color correction as we do this.
-	Gdk::Color color(m_channel->m_displaycolor);
-	m_colormapProgram.SetUniform(m_waveformRenderData->m_waveformTexture, "fbtex");
-	m_colormapProgram.SetUniform(color.get_red_p(), "r");
-	m_colormapProgram.SetUniform(color.get_green_p(), "g");
-	m_colormapProgram.SetUniform(color.get_blue_p(), "b");
-
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 void WaveformArea::ComputeAndDownloadCairoOverlays()
