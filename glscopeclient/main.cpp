@@ -42,6 +42,7 @@
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
 #include <thread>
+#include <libgen.h>
 
 using namespace std;
 
@@ -135,8 +136,6 @@ int main(int argc, char* argv[])
 {
 	auto app = ScopeApp::create();
 
-	//FIXME: proper way to locate shaders etc
-	chdir("/nfs4/home/azonenberg/code/scopehal-cmake/src/glscopeclient/");
 
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
@@ -173,6 +172,46 @@ int main(int argc, char* argv[])
 
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
+
+
+	//Change to the binary's directory so we can use relative paths for external resources
+	//FIXME: portability warning: this only works on Linux
+
+	char binDir[1024];
+
+	//Get our binary's full path
+	ssize_t readlinkReturn = readlink("/proc/self/exe", binDir, (sizeof(binDir) - 1) );
+
+	if ( readlinkReturn < 0 )
+	{
+		//FIXME: add errno output
+		LogError("Error: readlink() failed.\n");
+		return 1;
+	}
+	else if ( readlinkReturn == 0 )
+	{
+		LogError("Error: readlink() returned 0.\n");
+		return 1;
+	}
+	else if ( (unsigned) readlinkReturn > (sizeof(binDir) - 1) )
+	{
+		LogError("Error: readlink() returned a path larger than our buffer.\n");
+		return 1;
+	}
+	else
+	{
+		//Null terminate result
+		binDir[readlinkReturn - 1] = 0;
+
+		//Change to our binary's directory
+		if ( chdir(dirname(binDir)) != 0 )
+		{
+			//FIXME: add errno output
+			LogError("Error: chdir() failed.\n");
+			return 1;
+		}
+	}
+
 
 	//Initialize the protocol decoder and measurement libraries
 	ScopeProtocolStaticInit();
