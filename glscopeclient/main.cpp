@@ -37,6 +37,7 @@
 #include "OscilloscopeWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
+#include "../scopehal/AgilentOscilloscope.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
@@ -275,6 +276,16 @@ int main(int argc, char* argv[])
 				port = 5555;
 
 			auto scope = new AntikernelLogicAnalyzer(new SCPISocketTransport(host, port));
+			scope->m_nickname = nick;
+			app->m_scopes.push_back(scope);
+		}
+		else if(sapi == "agilent_lan")
+		{
+			//default port if not specified
+			if(port == 0)
+				port = 5025;
+
+			auto scope = new AgilentOscilloscope(new SCPISocketTransport(host, port));
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
