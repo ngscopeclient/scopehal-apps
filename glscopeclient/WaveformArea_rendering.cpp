@@ -85,26 +85,46 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//TODO: some of this can probably move to GPU too?
 	vector<float> traceBuffer;
 	vector<uint32_t> indexBuffer;
-	traceBuffer.resize(count*2);
-	indexBuffer.resize(m_width);
 	double offset = channel->GetOffset();
-	#pragma omp parallel for num_threads(8)
-	for(size_t j=0; j<count; j++)
+
+	if(digdat)
 	{
-		traceBuffer[j*2] = pdat->GetSampleStart(j) * xscale + xoff;
+		//We need to stretch every sample to two samples, one at the very left and one at the very right,
+		//so interpolation works right.
+		//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
+		size_t realcount = count;
+		count *= 2;
 
-		float y;
-		if(digdat)
+		traceBuffer.resize(count*2);
+		indexBuffer.resize(m_width);
+		#pragma omp parallel for num_threads(8)
+		for(size_t j=0; j<realcount; j++)
 		{
-			//TODO: digital overlay stuff
-			y = ybase + 5 + ( (*digdat)[j] ? 20: 0 );
-		}
-		else if(fft)
-			y = DbToYPosition(-70 - (20 * log10((*andat)[j])));		//TODO: don't hard code plot limits
-		else
-			y = (m_pixelsPerVolt * ((*andat)[j] + offset)) + ybase;
+			traceBuffer[j*4] = pdat->GetSampleStart(j) * xscale + xoff;
+			traceBuffer[j*4 + 2] = pdat->GetSampleEnd(j) * xscale + xoff - 1;
 
-		traceBuffer[j*2 + 1]	= y;
+			float y = ybase + 5 + ( (*digdat)[j] ? 20: 0 );
+			traceBuffer[j*4 + 1] = y;
+			traceBuffer[j*4 + 3] = y;
+		}
+	}
+	else
+	{
+		traceBuffer.resize(count*2);
+		indexBuffer.resize(m_width);
+		#pragma omp parallel for num_threads(8)
+		for(size_t j=0; j<count; j++)
+		{
+			traceBuffer[j*2] = pdat->GetSampleStart(j) * xscale + xoff;
+
+			float y;
+			if(fft)
+				y = DbToYPosition(-70 - (20 * log10((*andat)[j])));		//TODO: don't hard code plot limits
+			else
+				y = (m_pixelsPerVolt * ((*andat)[j] + offset)) + ybase;
+
+			traceBuffer[j*2 + 1]	= y;
+		}
 	}
 
 	double dt = GetTime() - start;
