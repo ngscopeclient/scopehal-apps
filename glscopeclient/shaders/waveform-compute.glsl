@@ -4,13 +4,15 @@
 layout(binding=0, rgba32f) uniform image2D outputTex;
 
 //Voltage data
+struct data_point
+{
+	float x;		//x pixel position (fractional)
+	float voltage;	//y value of this sample, in pixels
+};
+
 layout(std430, binding=1) buffer waveform
 {
-	struct
-	{
-		float x;		//x pixel position (fractional)
-		float voltage;	//y value of this sample, in pixels
-	} data[];
+	data_point data[];
 };
 
 //Global configuration for the run
