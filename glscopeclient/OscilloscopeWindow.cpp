@@ -131,12 +131,28 @@ void OscilloscopeWindow::CreateWidgets()
 				m_fileMenuItem.set_label("File");
 				m_fileMenuItem.set_submenu(m_fileMenu);
 					Gtk::MenuItem* item = Gtk::manage(new Gtk::MenuItem("Save Layout Only", false));
+					item->signal_activate().connect(
+						sigc::bind<bool, bool, bool>(
+							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
+							true, true, false));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::MenuItem("Save Layout Only As...", false));
+					item->signal_activate().connect(
+						sigc::bind<bool, bool, bool>(
+							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
+							false, true, false));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms", false));
+					item->signal_activate().connect(
+						sigc::bind<bool, bool, bool>(
+							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
+							true, true, true));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms As...", false));
+					item->signal_activate().connect(
+						sigc::bind<bool, bool, bool>(
+							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
+							false, true, true));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
@@ -310,13 +326,52 @@ void OscilloscopeWindow::CreateWidgets()
 	m_css = Gtk::CssProvider::create();
 	m_css->load_from_path("styles/glscopeclient.css");
 	get_style_context()->add_provider_for_screen(
-		Gdk::Screen::get_default(),
-		m_css,
-		GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+/**
+	@brief Common handler for save/save as commands
+ */
+void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms)
+{
+	//Pop up the dialog if we asked for a new file.
+	//But if we don't have a current file, we need to prompt regardless
+	if(m_currentFileName.empty() || !saveToCurrentFile)
+	{
+		string title = "Save ";
+		if(saveLayout)
+		{
+			title += "Layout";
+			if(saveWaveforms)
+				title += " and ";
+		}
+		if(saveWaveforms)
+			title += "Waveforms";
+
+		//Remove the CSS provider so the dialog isn't themed
+		//TODO: how can we un-theme just this one dialog?
+		get_style_context()->remove_provider_for_screen(
+			Gdk::Screen::get_default(), m_css);
+
+		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER);
+		dlg.add_button("Save", Gtk::RESPONSE_OK);
+		dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+		dlg.set_uri(m_currentFileName);
+		auto response = dlg.run();
+
+		//Re-add the CSS provider
+		get_style_context()->add_provider_for_screen(
+			Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+		if(response != Gtk::RESPONSE_OK)
+			return;
+
+		m_currentFileName = dlg.get_uri();
+	}
+}
 
 void OscilloscopeWindow::OnAlphaChanged()
 {

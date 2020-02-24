@@ -182,6 +182,8 @@ protected:
 	Gtk::HBox m_statusbar;
 		Gtk::Label m_triggerConfigLabel;
 
+	//Menu event handlers
+	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 
 	Glib::RefPtr<Gtk::CssProvider> m_css;
@@ -192,13 +194,17 @@ protected:
 	//Status polling
 	void OnWaveformDataReady(Oscilloscope* scope);
 
+	//Performance profiling
 	double m_tArm;
+	double m_tLastFlush;
 
 	bool m_toggleInProgress;
 
-	double m_tLastFlush;
-
+	//Color ramp selected for eye patterns etc
 	EyeColor m_eyeColor;
+
+	//Path of the file we are currently working on (if any)
+	std::string m_currentFileName;
 
 	//Performance counters
 	double m_tAcquire;
