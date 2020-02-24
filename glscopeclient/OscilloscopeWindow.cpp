@@ -130,7 +130,25 @@ void OscilloscopeWindow::CreateWidgets()
 			m_menu.append(m_fileMenuItem);
 				m_fileMenuItem.set_label("File");
 				m_fileMenuItem.set_submenu(m_fileMenu);
-					auto item = Gtk::manage(new Gtk::MenuItem("Quit", false));
+					Gtk::MenuItem* item = Gtk::manage(new Gtk::MenuItem("Save Layout Only", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Save Layout Only As...", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms As...", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Load Layout Only...", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Load Waveforms Only...", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Load Layout and Waveforms...", false));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Quit", false));
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnQuit));
 					m_fileMenu.append(*item);
@@ -635,14 +653,6 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 
 void OscilloscopeWindow::PollScopes()
 {
-	static double tstamp = 0;
-	static bool first = true;
-	if(first)
-	{
-		tstamp = GetTime();
-		first = false;
-	}
-
 	bool pending = true;
 	while(pending)
 	{
