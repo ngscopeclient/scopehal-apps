@@ -140,8 +140,6 @@ WaveformArea::~WaveformArea()
 
 	m_channel->Release();
 
-	CleanupBufferObjects();
-
 	for(auto d : m_overlays)
 		OnRemoveOverlay(d);
 	m_overlays.clear();
@@ -160,11 +158,12 @@ void WaveformArea::OnRemoveOverlay(ProtocolDecoder* decode)
 	if(decode->GetRefCount() == 1)
 		m_parent->RemoveDecoder(decode);
 
-	decode->Release();
-}
+	//Remove the render data for it
+	auto it = m_overlayRenderData.find(decode);
+	if(it != m_overlayRenderData.end())
+		m_overlayRenderData.erase(it);
 
-void WaveformArea::CleanupBufferObjects()
-{
+	decode->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -447,6 +446,7 @@ void WaveformArea::on_realize()
 	//This means we need to save some configuration (like the current FBO) that GTK doesn't tell us directly
 	m_firstFrame = true;
 
+	//Create waveform render data for our main trace
 	m_waveformRenderData = new WaveformRenderData(m_channel);
 
 	//Set stuff up for each rendering pass
@@ -495,6 +495,9 @@ void WaveformArea::CleanupGLHandles()
 
 	delete m_waveformRenderData;
 	m_waveformRenderData = NULL;
+	for(auto it : m_overlayRenderData)
+		delete it.second;
+	m_overlayRenderData.clear();
 
 	//Detach the FBO so we don't destroy it!!
 	//GTK manages this, and it might be used by more than one waveform area within the application.

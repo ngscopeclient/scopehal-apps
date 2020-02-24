@@ -50,7 +50,7 @@ using namespace glm;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
+void WaveformArea::PrepareAnalogGeometry(WaveformRenderData* wdata)
 {
 	double start = GetTime();
 
@@ -145,6 +145,11 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	wdata->m_geometryOK = true;
 }
 
+void WaveformArea::PrepareDigitalGeometry(WaveformRenderData* wdata)
+{
+	//TODO
+}
+
 void WaveformArea::ResetTextureFiltering()
 {
 	//No texture filtering
@@ -197,27 +202,32 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Download the waveform to the GPU and kick off the compute shader for rendering it
 	if(IsAnalog())
 	{
-		PrepareGeometry(m_waveformRenderData);
-		if(m_waveformRenderData->m_geometryOK)
-			RenderTrace();
+		PrepareAnalogGeometry(m_waveformRenderData);
+		RenderTrace(m_waveformRenderData);
+	}
+
+	//Do compute shader rendering for digital waveforms
+	for(auto overlay : m_overlays)
+	{
+		//Create render data if needed
+		//(can't do this when m_waveformRenderData is created because decoders are added later on)
+		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
+			m_overlayRenderData[overlay] = new WaveformRenderData(overlay);
+
+		//PrepareDigitalGeometry(m_overlayRenderData[overlay]);
+		//RenderTrace(m_overlayRenderData[overlay]);
 	}
 
 	//Launch software rendering passes and push the resulting data to the GPU
 	ComputeAndDownloadCairoUnderlays();
 	ComputeAndDownloadCairoOverlays();
 
+	//
+
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
 	RenderCairoUnderlays();
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(0, 0, m_plotRight, m_height);
-	if(IsEye())
-		RenderEye();
-	else if(IsWaterfall())
-		RenderWaterfall();
-	else if(m_waveformRenderData->m_geometryOK)
-		RenderTraceColorCorrection();
-	glDisable(GL_SCISSOR_TEST);
+	RenderMainTrace();
 	RenderCairoOverlays();
 
 	//Sanity check
@@ -229,6 +239,22 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_renderTime += dt;
 
 	return true;
+}
+
+void WaveformArea::RenderMainTrace()
+{
+	//Make sure all compute shaders are done
+	m_waveformComputeProgram.MemoryBarrier();
+
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(0, 0, m_plotRight, m_height);
+	if(IsEye())
+		RenderEye();
+	else if(IsWaterfall())
+		RenderWaterfall();
+	else if(m_waveformRenderData->m_geometryOK)
+		RenderTraceColorCorrection();
+	glDisable(GL_SCISSOR_TEST);
 }
 
 void WaveformArea::RenderEye()
@@ -317,8 +343,11 @@ void WaveformArea::RenderPersistenceOverlay()
 	*/
 }
 
-void WaveformArea::RenderTrace()
+void WaveformArea::RenderTrace(WaveformRenderData* data)
 {
+	if(!data->m_geometryOK)
+		return;
+
 	//Round thread block size up to next multiple of the local size (must be power of two)
 	int localSize = 2;
 	int numCols = m_plotRight;
@@ -330,10 +359,10 @@ void WaveformArea::RenderTrace()
 	int numGroups = numCols / localSize;
 
 	m_waveformComputeProgram.Bind();
-	m_waveformComputeProgram.SetImageUniform(m_waveformRenderData->m_waveformTexture, "outputTex");
-	m_waveformRenderData->m_waveformStorageBuffer.BindBase(1);
-	m_waveformRenderData->m_waveformConfigBuffer.BindBase(2);
-	m_waveformRenderData->m_waveformIndexBuffer.BindBase(3);
+	m_waveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+	data->m_waveformStorageBuffer.BindBase(1);
+	data->m_waveformConfigBuffer.BindBase(2);
+	data->m_waveformIndexBuffer.BindBase(3);
 	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 }
 
@@ -397,9 +426,6 @@ void WaveformArea::RenderTraceColorCorrection()
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 	m_colormapProgram.Bind();
 	m_colormapVAO.Bind();
-
-	//Make sure all compute shaders are done
-	m_waveformComputeProgram.MemoryBarrier();
 
 	//Draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.

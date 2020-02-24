@@ -237,8 +237,6 @@ protected:
 	void OnCopyToExistingGroup(WaveformGroup* group);
 	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
 
-	void CleanupBufferObjects();
-
 	void RefreshMeasurements();
 
 	int m_width;
@@ -254,11 +252,16 @@ protected:
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
-	void RenderTrace();
+	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
-	void PrepareGeometry(WaveformRenderData* wdata);
+	void PrepareAnalogGeometry(WaveformRenderData* wdata);
+	void PrepareDigitalGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
-	WaveformRenderData*	m_waveformRenderData;
+	WaveformRenderData*								m_waveformRenderData;
+	std::map<ProtocolDecoder*, WaveformRenderData*>	m_overlayRenderData;
+
+	//Final compositing
+	void RenderMainTrace();
 
 	//Color correction
 	void RenderTraceColorCorrection();
