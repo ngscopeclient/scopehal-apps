@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.3)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
-set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_CXX_FLAGS "-g -O3 -fopenmp -Wall -Wextra --std=c++11 -march=sandybridge -mtune=native")
-#-fsanitize=address
-#-O0
+set(WARNINGS "-Wall -Wextra -Wuninitialized ")
+set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
+set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
+set(CMAKE_CXX_FLAGS "-g -fopenmp ${WARNINGS} --std=c++11 -mtune=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
 
 find_package(PkgConfig)
 pkg_check_modules(GTKMM gtkmm-3.0)
