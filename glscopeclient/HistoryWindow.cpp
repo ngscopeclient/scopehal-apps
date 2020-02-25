@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -121,12 +121,16 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//No channels at all? Nothing to do
 	if(chan == NULL)
 		return;
+	if(data == NULL)
+		return;
 
 	m_updating = true;
 
 	//Format timestamp
 	char tmp[128];
-	strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&data->m_startTimestamp));
+	struct tm ltime;
+	localtime_r(&data->m_startTimestamp, &ltime);
+	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
 	snprintf(tmp, sizeof(tmp), "%010zu", data->m_startPicoseconds / 100);	//round to nearest 100ps for display
 	stime += tmp;
@@ -192,7 +196,7 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 	size_t bytes_used = 0;
 	for(auto it : children)
 	{
-		WaveformHistory hist = (*it)[m_columns.m_history];
+		hist = (*it)[m_columns.m_history];
 		for(auto jt : hist)
 		{
 			//TODO: support digital etc captures
