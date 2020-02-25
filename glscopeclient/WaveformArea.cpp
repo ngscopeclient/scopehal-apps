@@ -93,7 +93,14 @@ void WaveformArea::SharedCtorInit()
 	m_firstFrame 			= false;
 	m_waveformRenderData	= NULL;
 
+	//Configure the OpenGL context we want
+	//TODO: it looks like OpenGL ES 3.1 can do everything we need
+	//Do we want to support this for running on embedded ARM GPUs etc eventually?
 	set_has_alpha();
+	set_has_depth_buffer(false);
+	set_has_stencil_buffer(false);
+	set_required_version(4, 3);
+	set_use_es(false);
 
 	add_events(
 		Gdk::EXPOSURE_MASK |
