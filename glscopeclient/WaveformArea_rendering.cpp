@@ -92,6 +92,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		//We need to stretch every sample to two samples, one at the very left and one at the very right,
 		//so interpolation works right.
 		//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
+		//TODO: only add extra samples if the left and right values are not the same
 		size_t realcount = count;
 		count *= 2;
 

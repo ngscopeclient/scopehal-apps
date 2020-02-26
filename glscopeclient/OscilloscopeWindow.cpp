@@ -36,6 +36,9 @@
 #include "glscopeclient.h"
 #include "../scopehal/Instrument.h"
 #include "OscilloscopeWindow.h"
+#include <unistd.h>
+#include <fcntl.h>
+#include <map>
 
 using namespace std;
 
@@ -290,7 +293,7 @@ void OscilloscopeWindow::CreateWidgets()
 			//Add a menu item - but not for the external trigger(s)
 			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 			{
-				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+				item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
 				item->signal_activate().connect(
 					sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
 				m_channelsMenu.append(*item);
@@ -337,10 +340,16 @@ void OscilloscopeWindow::CreateWidgets()
  */
 void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms)
 {
+	bool creatingNew = false;
+
+	static const char* extension = ".scopesession";
+
 	//Pop up the dialog if we asked for a new file.
 	//But if we don't have a current file, we need to prompt regardless
 	if(m_currentFileName.empty() || !saveToCurrentFile)
 	{
+		creatingNew = true;
+
 		string title = "Save ";
 		if(saveLayout)
 		{
@@ -356,10 +365,15 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		get_style_context()->remove_provider_for_screen(
 			Gdk::Screen::get_default(), m_css);
 
-		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_CREATE_FOLDER);
+		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_SAVE);
+		auto filter = Gtk::FileFilter::create();
+		filter->add_pattern("*.scopesession");
+		filter->set_name("glscopeclient sessions (*.scopesession)");
+		dlg.add_filter(filter);
 		dlg.add_button("Save", Gtk::RESPONSE_OK);
 		dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 		dlg.set_uri(m_currentFileName);
+		dlg.set_do_overwrite_confirmation();
 		auto response = dlg.run();
 
 		//Re-add the CSS provider
@@ -369,8 +383,210 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		if(response != Gtk::RESPONSE_OK)
 			return;
 
-		m_currentFileName = dlg.get_uri();
+		m_currentFileName = dlg.get_filename();
 	}
+
+	//Add the extension if not present
+	if(m_currentFileName.find(extension) == string::npos)
+		m_currentFileName += extension;
+
+	//Format the directory name
+	m_currentDataDirName = m_currentFileName.substr(0, m_currentFileName.length() - strlen(extension)) + "_data";
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// FIXME: a fair bit of the code below is POSIX specific and will need to be fixed for portability eventually
+
+	//See if the directory exists
+	bool dir_exists = false;
+	int hfile = open(m_currentDataDirName.c_str(), O_RDONLY);
+	if(hfile >= 0)
+	{
+		//It exists as a file. Reopen and check if it's a directory
+		::close(hfile);
+		hfile = open(m_currentDataDirName.c_str(), O_RDONLY | O_DIRECTORY);
+
+		//If this open works, it's a directory.
+		if(hfile >= 0)
+		{
+			::close(hfile);
+			dir_exists = true;
+		}
+
+		//Data dir exists, but it's something else! Error out
+		else
+		{
+			string msg = string("The data directory ") + m_currentDataDirName + " already exists, but is not a directory!";
+			Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+			errdlg.set_title("Cannot save session\n");
+			errdlg.run();
+			return;
+		}
+	}
+
+	//See if the file exists
+	bool file_exists = false;
+	hfile = open(m_currentFileName.c_str(), O_RDONLY);
+	if(hfile >= 0)
+	{
+		file_exists = true;
+		::close(hfile);
+	}
+
+	//If we are trying to create a new file, warn if the directory exists but the file does not
+	//If the file exists GTK will warn, and we don't want to prompt the user twice if both exist!
+	if(creatingNew && (dir_exists && !file_exists))
+	{
+		string msg = string("The data directory ") + m_currentDataDirName +
+			" already exists. Overwrite existing contents?";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_YES_NO, true);
+		errdlg.set_title("Save session\n");
+		if(errdlg.run() != Gtk::RESPONSE_YES)
+			return;
+	}
+
+	//Create the directory we're saving to (if needed)
+	if(!dir_exists)
+	{
+		if(0 != mkdir(m_currentDataDirName.c_str(), 0755))
+		{
+			string msg = string("The data directory ") + m_currentDataDirName + " could not be created!";
+			Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+			errdlg.set_title("Cannot save session\n");
+			errdlg.run();
+			return;
+		}
+	}
+
+	//Serialize our configuration and save to the file
+	string config = SerializeConfiguration(saveLayout);
+	FILE* fp = fopen(m_currentFileName.c_str(), "w");
+	if(!fp)
+	{
+		string msg = string("The session file ") + m_currentFileName + " could not be created!";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot save session\n");
+		errdlg.run();
+		return;
+	}
+	if(config.length() != fwrite(config.c_str(), 1, config.length(), fp))
+	{
+		string msg = string("Error writing to session file ") + m_currentFileName + "!";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot save session\n");
+		errdlg.run();
+	}
+	fclose(fp);
+}
+
+string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
+{
+	string config = "";
+
+	//Assign integer IDs to everything instead of pointers
+	int nextID = 1;
+	std::map<void*, int> idmap;
+
+	//UI config
+	char tmp[1024];
+	if(saveLayout)
+	{
+		config += "ui_config:\n";
+
+		config += "    window:\n";
+		snprintf(tmp, sizeof(tmp), "        width: %d\n", get_width());
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "        height: %d\n", get_height());
+		config += tmp;
+
+		//Waveform areas
+		config += "    areas:\n";
+		for(auto area : m_waveformAreas)
+			idmap[area] = nextID++;
+		for(auto area : m_waveformAreas)
+		{
+			int id = idmap[area];
+			snprintf(tmp, sizeof(tmp), "        - id:             %d\n", id);
+			config += tmp;
+		}
+
+		//Waveform groups
+		config += "    groups:\n";
+		for(auto group : m_waveformGroups)
+			idmap[group] = nextID++;
+		for(auto group : m_waveformGroups)
+		{
+			int id = idmap[group];
+			snprintf(tmp, sizeof(tmp), "        - id:             %d\n", id);
+			config += tmp;
+
+			config += "          name:           " + group->m_frame.get_label() + "\n";
+
+			snprintf(tmp, sizeof(tmp), "          pixelsPerXUnit: %f\n", group->m_pixelsPerXUnit);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "          xAxisOffset:    %ld\n", group->m_xAxisOffset);
+			config += tmp;
+
+			switch(group->m_cursorConfig)
+			{
+				case WaveformGroup::CURSOR_NONE:
+					config += "          cursorConfig:   none\n";
+					break;
+
+				case WaveformGroup::CURSOR_X_SINGLE:
+					config += "          cursorConfig:   x_single\n";
+					break;
+
+				case WaveformGroup::CURSOR_Y_SINGLE:
+					config += "          cursorConfig:   y_single\n";
+					break;
+
+				case WaveformGroup::CURSOR_X_DUAL:
+					config += "          cursorConfig:   x_dual\n";
+					break;
+
+				case WaveformGroup::CURSOR_Y_DUAL:
+					config += "          cursorConfig:   y_dual\n";
+					break;
+			}
+
+			snprintf(tmp, sizeof(tmp), "          xcursor0:       %ld\n", group->m_xCursorPos[0]);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "          xcursor1:       %ld\n", group->m_xCursorPos[1]);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "          ycursor0:       %f\n", group->m_yCursorPos[0]);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "          ycursor1:       %f\n", group->m_yCursorPos[1]);
+			config += tmp;
+		}
+
+		//Splitters
+		config += "    splitters:\n";
+		for(auto split : m_splitters)
+			idmap[split] = nextID++;
+		for(auto split : m_splitters)
+		{
+			//Splitter config
+			int id = idmap[split];
+			snprintf(tmp, sizeof(tmp), "        - id:     %d\n", id);
+			config += tmp;
+			if(dynamic_cast<Gtk::HPaned*>(split) != NULL)
+				config +=  "          dir:    h\n";
+			else
+				config +=  "          dir:    v\n";
+
+			//Splitter position
+			snprintf(tmp, sizeof(tmp), "          split:  %d\n", split->get_position());
+			config += tmp;
+
+			//Children
+			snprintf(tmp, sizeof(tmp), "          child0: %d\n", idmap[split->get_child1()]);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "          child1: %d\n", idmap[split->get_child2()]);
+			config += tmp;
+		}
+	}
+
+	return config;
 }
 
 void OscilloscopeWindow::OnAlphaChanged()

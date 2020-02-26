@@ -205,6 +205,9 @@ protected:
 
 	//Path of the file we are currently working on (if any)
 	std::string m_currentFileName;
+	std::string m_currentDataDirName;
+
+	std::string SerializeConfiguration(bool saveLayout);
 
 	//Performance counters
 	double m_tAcquire;
