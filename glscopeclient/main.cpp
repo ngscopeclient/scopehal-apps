@@ -37,6 +37,7 @@
 #include "OscilloscopeWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
+#include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/AgilentOscilloscope.h"
 #include "../scopehal/LeCroyVICPOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
@@ -286,6 +287,17 @@ int main(int argc, char* argv[])
 				port = 5025;
 
 			auto scope = new AgilentOscilloscope(new SCPISocketTransport(host, port));
+			scope->m_nickname = nick;
+			app->m_scopes.push_back(scope);
+		}
+		else if(sapi == "siglent_lan" || sapi == "lecroy_lan")
+		{
+			//default port if not specified
+			if(port == 0)
+				port = 5025;
+
+			// TODO: update to proper transport convention
+			auto scope = new SiglentSCPIOscilloscope(host, port);
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
