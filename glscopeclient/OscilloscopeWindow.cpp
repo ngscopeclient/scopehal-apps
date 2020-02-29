@@ -501,7 +501,7 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
 string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
 	char tmp[1024];
-	string config = "instruments:\n";
+	string config = "instruments: @\n";
 
 	for(auto scope : m_scopes)
 	{
@@ -510,21 +510,23 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 		idmap[scope] = id;
 
 		//Save basic scope info
-		snprintf(tmp, sizeof(tmp), "    - id:             %d\n", id);
+		snprintf(tmp, sizeof(tmp), "    : %%\n");
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "      nick:           \"%s\"\n", scope->m_nickname.c_str());
+		snprintf(tmp, sizeof(tmp), "        id:             %d\n", id);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "      name:           \"%s\"\n", scope->GetName().c_str());
+		snprintf(tmp, sizeof(tmp), "        nick:           \"%s\"\n", scope->m_nickname.c_str());
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "      vendor:         \"%s\"\n", scope->GetVendor().c_str());
+		snprintf(tmp, sizeof(tmp), "        name:           \"%s\"\n", scope->GetName().c_str());
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "      serial:         \"%s\"\n", scope->GetSerial().c_str());
+		snprintf(tmp, sizeof(tmp), "        vendor:         \"%s\"\n", scope->GetVendor().c_str());
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "      path:           \"%s\"\n", "connection_string_not_yet_implemented");
+		snprintf(tmp, sizeof(tmp), "        serial:         \"%s\"\n", scope->GetSerial().c_str());
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "        path:           \"%s\"\n", "connection_string_not_yet_implemented");
 		config += tmp;
 
 		//Save channels
-		config += "    channels:\n";
+		config += "        channels: @\n";
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
@@ -535,26 +537,28 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 			idmap[chan] = id;
 
 			//Basic channel info
-			snprintf(tmp, sizeof(tmp), "        - id:          %d\n", id);
+			snprintf(tmp, sizeof(tmp), "            : %%\n");
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "          index:       %zu\n", i);
+			snprintf(tmp, sizeof(tmp), "                id:          %d\n", id);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "          color:       \"%s\"\n", chan->m_displaycolor.c_str());
+			snprintf(tmp, sizeof(tmp), "                index:       %zu\n", i);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "          nick:        \"%s\"\n", chan->m_displayname.c_str());
+			snprintf(tmp, sizeof(tmp), "                color:       \"%s\"\n", chan->m_displaycolor.c_str());
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "          name:        \"%s\"\n", chan->GetHwname().c_str());
+			snprintf(tmp, sizeof(tmp), "                nick:        \"%s\"\n", chan->m_displayname.c_str());
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                name:        \"%s\"\n", chan->GetHwname().c_str());
 			config += tmp;
 			switch(chan->GetType())
 			{
 				case OscilloscopeChannel::CHANNEL_TYPE_ANALOG:
-					config += "          type:        analog\n";
+					config += "                type:        analog\n";
 					break;
 				case OscilloscopeChannel::CHANNEL_TYPE_DIGITAL:
-					config += "          type:        digital\n";
+					config += "                type:        digital\n";
 					break;
 				case OscilloscopeChannel::CHANNEL_TYPE_TRIGGER:
-					config += "          type:        trigger\n";
+					config += "                type:        trigger\n";
 					break;
 
 				//should never get complex channels on a scope
@@ -564,22 +568,22 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 
 			//Current channel configuration
 			if(chan->IsEnabled())
-				config += "          enabled:     1\n";
+				config += "                enabled:     1\n";
 			else
-				config += "          enabled:     0\n";
+				config += "                enabled:     0\n";
 			switch(chan->GetCoupling())
 			{
 				case OscilloscopeChannel::COUPLE_DC_1M:
-					config += "          coupling:    dc_1M\n";
+					config += "                coupling:    dc_1M\n";
 					break;
 				case OscilloscopeChannel::COUPLE_AC_1M:
-					config += "          coupling:    ac_1M\n";
+					config += "                coupling:    ac_1M\n";
 					break;
 				case OscilloscopeChannel::COUPLE_DC_50:
-					config += "          coupling:    dc_50\n";
+					config += "                coupling:    dc_50\n";
 					break;
 				case OscilloscopeChannel::COUPLE_GND:
-					config += "          coupling:    gnd\n";
+					config += "                coupling:    gnd\n";
 					break;
 
 				//should never get synthetic coupling on a scope channel
@@ -589,13 +593,13 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 
 			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 			{
-				snprintf(tmp, sizeof(tmp), "          attenuation: %f\n", chan->GetAttenuation());
+				snprintf(tmp, sizeof(tmp), "                attenuation: %f\n", chan->GetAttenuation());
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "          bwlimit:     %d\n", chan->GetBandwidthLimit());
+				snprintf(tmp, sizeof(tmp), "                bwlimit:     %d\n", chan->GetBandwidthLimit());
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "          vrange:      %f\n", chan->GetVoltageRange());
+				snprintf(tmp, sizeof(tmp), "                vrange:      %f\n", chan->GetVoltageRange());
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "          offset:      %f\n", chan->GetOffset());
+				snprintf(tmp, sizeof(tmp), "                offset:      %f\n", chan->GetOffset());
 				config += tmp;
 			}
 		}
@@ -607,98 +611,105 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
 	char tmp[1024];
-	string config = "ui_config:\n";
+	string config = "ui_config: %\n";
 
-	config += "    window:\n";
+	config += "    window: %\n";
 	snprintf(tmp, sizeof(tmp), "        width: %d\n", get_width());
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "        height: %d\n", get_height());
 	config += tmp;
 
 	//Waveform areas
-	config += "    areas:\n";
+	config += "    areas: %\n";
 	for(auto area : m_waveformAreas)
 		idmap[area] = nextID++;
 	for(auto area : m_waveformAreas)
 	{
 		int id = idmap[area];
-		snprintf(tmp, sizeof(tmp), "        - id:             %d\n", id);
+		snprintf(tmp, sizeof(tmp), "        : %%\n");
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
 		config += tmp;
 	}
 
 	//Waveform groups
-	config += "    groups:\n";
+	config += "    groups: @\n";
 	for(auto group : m_waveformGroups)
 		idmap[group] = nextID++;
 	for(auto group : m_waveformGroups)
 	{
 		int id = idmap[group];
-		snprintf(tmp, sizeof(tmp), "        - id:             %d\n", id);
+		snprintf(tmp, sizeof(tmp), "        : %%\n");
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
 		config += tmp;
 
-		config += "          name:           \"" + group->m_frame.get_label() + "\"\n";
+		config += "            name:           \"" + group->m_frame.get_label() + "\"\n";
 
-		snprintf(tmp, sizeof(tmp), "          pixelsPerXUnit: %f\n", group->m_pixelsPerXUnit);
+		snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %f\n", group->m_pixelsPerXUnit);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "          xAxisOffset:    %ld\n", group->m_xAxisOffset);
+		snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", group->m_xAxisOffset);
 		config += tmp;
 
 		switch(group->m_cursorConfig)
 		{
 			case WaveformGroup::CURSOR_NONE:
-				config += "          cursorConfig:   none\n";
+				config += "            cursorConfig:   none\n";
 				break;
 
 			case WaveformGroup::CURSOR_X_SINGLE:
-				config += "          cursorConfig:   x_single\n";
+				config += "            cursorConfig:   x_single\n";
 				break;
 
 			case WaveformGroup::CURSOR_Y_SINGLE:
-				config += "          cursorConfig:   y_single\n";
+				config += "            cursorConfig:   y_single\n";
 				break;
 
 			case WaveformGroup::CURSOR_X_DUAL:
-				config += "          cursorConfig:   x_dual\n";
+				config += "            cursorConfig:   x_dual\n";
 				break;
 
 			case WaveformGroup::CURSOR_Y_DUAL:
-				config += "          cursorConfig:   y_dual\n";
+				config += "            cursorConfig:   y_dual\n";
 				break;
 		}
 
-		snprintf(tmp, sizeof(tmp), "          xcursor0:       %ld\n", group->m_xCursorPos[0]);
+		snprintf(tmp, sizeof(tmp), "            xcursor0:       %ld\n", group->m_xCursorPos[0]);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "          xcursor1:       %ld\n", group->m_xCursorPos[1]);
+		snprintf(tmp, sizeof(tmp), "            xcursor1:       %ld\n", group->m_xCursorPos[1]);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "          ycursor0:       %f\n", group->m_yCursorPos[0]);
+		snprintf(tmp, sizeof(tmp), "            ycursor0:       %f\n", group->m_yCursorPos[0]);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "          ycursor1:       %f\n", group->m_yCursorPos[1]);
+		snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", group->m_yCursorPos[1]);
 		config += tmp;
 	}
 
 	//Splitters
-	config += "    splitters:\n";
+	config += "    splitters: @\n";
 	for(auto split : m_splitters)
 		idmap[split] = nextID++;
 	for(auto split : m_splitters)
 	{
 		//Splitter config
 		int id = idmap[split];
-		snprintf(tmp, sizeof(tmp), "        - id:     %d\n", id);
+		snprintf(tmp, sizeof(tmp), "        : %%\n");
 		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            id:     %d\n", id);
+		config += tmp;
+
 		if(dynamic_cast<Gtk::HPaned*>(split) != NULL)
-			config +=  "          dir:    h\n";
+			config +=  "            dir:    h\n";
 		else
-			config +=  "          dir:    v\n";
+			config +=  "            dir:    v\n";
 
 		//Splitter position
-		snprintf(tmp, sizeof(tmp), "          split:  %d\n", split->get_position());
+		snprintf(tmp, sizeof(tmp), "            split:  %d\n", split->get_position());
 		config += tmp;
 
 		//Children
-		snprintf(tmp, sizeof(tmp), "          child0: %d\n", idmap[split->get_child1()]);
+		snprintf(tmp, sizeof(tmp), "            child0: %d\n", idmap[split->get_child1()]);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "          child1: %d\n", idmap[split->get_child2()]);
+		snprintf(tmp, sizeof(tmp), "            child1: %d\n", idmap[split->get_child2()]);
 		config += tmp;
 	}
 
