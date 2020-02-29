@@ -208,6 +208,8 @@ protected:
 	std::string m_currentDataDirName;
 
 	std::string SerializeConfiguration(bool saveLayout);
+	std::string SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID);
+	std::string SerializeUIConfiguration(std::map<void*, int>& idmap, int& nextID);
 
 	//Performance counters
 	double m_tAcquire;
