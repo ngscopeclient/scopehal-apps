@@ -75,11 +75,18 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	bool fft = IsFFT();
 
 	//Zero voltage level
-	//TODO: don't assume all digital data is a protocol decode, logic analyzers are a thing!
 	//TODO: properly calculate decoder positions once RenderDecodeOverlays() isn't doing that anymore
 	float ybase = m_height/2;
 	if(digdat)
-		ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 15);
+	{
+		//Main channel
+		if(channel == m_channel)
+			ybase = 15;
+
+		//Overlay
+		else
+			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 15);
+	}
 
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
@@ -233,7 +240,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	*/
 
 	//Download the main waveform to the GPU and kick off the compute shader for rendering it
-	if(IsAnalog())
+	if(IsAnalog() || IsDigital())
 	{
 		PrepareGeometry(m_waveformRenderData);
 		RenderTrace(m_waveformRenderData);

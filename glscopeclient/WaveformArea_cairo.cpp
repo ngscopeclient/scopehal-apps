@@ -84,6 +84,10 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
+	//If we're a digital channel, no grid or anything else makes sense
+	if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		return;
+
 	//Calculate width of right side axis label
 	int twidth;
 	int theight;
@@ -245,8 +249,68 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	int spacing = 30;
 	int midline = spacing / 2;
 
+	//Render digital bus waveforms here (TODO: GL stuff)
+	auto bus = dynamic_cast<DigitalBusCapture*>(m_channel->GetData());
+	if(bus != NULL)
+	{
+		int ymid = m_height - 15;
+		int ytop = ymid - 8;
+		int ybot = ymid + 8;
+
+		Gdk::Color color(m_channel->m_displaycolor);
+
+		for(size_t i=0; i<bus->GetDepth(); i++)
+		{
+			double start = (bus->GetSampleStart(i) * bus->m_timescale) + bus->m_triggerPhase;
+			double end = start + (bus->GetSampleLen(i) * bus->m_timescale);
+
+			double xs = XAxisUnitsToXPosition(start);
+			double xe = XAxisUnitsToXPosition(end);
+
+			if( (xe < m_infoBoxRect.get_right()) || (xs > m_plotRight) )
+				continue;
+
+			auto sample = bus->m_samples[i].m_sample;
+
+			uint64_t value = 0;
+			for(size_t j=0; j<sample.size(); j++)
+			{
+				if(sample[j])
+					value |= (1 << j);
+			}
+
+			char tmp[128];
+			if(sample.size() <= 4)
+				snprintf(tmp, sizeof(tmp), "%01lx", value);
+			else if(sample.size() <= 8)
+				snprintf(tmp, sizeof(tmp), "%02lx", value);
+			else if(sample.size() <= 12)
+				snprintf(tmp, sizeof(tmp), "%03lx", value);
+			else if(sample.size() <= 16)
+				snprintf(tmp, sizeof(tmp), "%04lx", value);
+			else if(sample.size() <= 20)
+				snprintf(tmp, sizeof(tmp), "%05lx", value);
+			else if(sample.size() <= 24)
+				snprintf(tmp, sizeof(tmp), "%06lx", value);
+			else if(sample.size() <= 28)
+				snprintf(tmp, sizeof(tmp), "%07lx", value);
+			else if(sample.size() <= 32)
+				snprintf(tmp, sizeof(tmp), "%08lx", value);
+			else
+				snprintf(tmp, sizeof(tmp), "%lx", value);
+
+			ChannelRenderer::RenderComplexSignal(
+				cr,
+				m_infoBoxRect.get_right(), m_plotRight,
+				xs, xe, 5,
+				ybot, ymid, ytop,
+				tmp,
+				color);
+		}
+	}
+
 	//Find which overlay slots are in use
-	int max_overlays = 10;
+	const int max_overlays = 10;
 	bool overlayPositionsUsed[max_overlays] = {0};
 	for(auto o : m_overlays)
 	{

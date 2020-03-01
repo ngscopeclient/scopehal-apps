@@ -131,6 +131,7 @@ public:
 
 	//Helpers for figuring out what kind of signal our primary trace is
 	bool IsAnalog();
+	bool IsDigital();
 	bool IsEye();
 	bool IsWaterfall();
 	bool IsFFT();

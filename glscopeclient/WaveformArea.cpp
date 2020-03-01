@@ -670,6 +670,12 @@ bool WaveformArea::IsWaterfall()
 	return (fall != NULL);
 }
 
+bool WaveformArea::IsDigital()
+{
+	auto pdat = m_channel->GetData();
+	return (dynamic_cast<DigitalCapture*>(pdat) != NULL);
+}
+
 bool WaveformArea::IsAnalog()
 {
 	auto pdat = m_channel->GetData();

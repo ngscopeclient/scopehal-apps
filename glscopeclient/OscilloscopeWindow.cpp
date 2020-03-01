@@ -292,8 +292,10 @@ void OscilloscopeWindow::CreateWidgets()
 				chan->m_displayname = tmp;
 			}
 
+			auto type = chan->GetType();
+
 			//Add a menu item - but not for the external trigger(s)
-			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			if(type != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 			{
 				item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
 				item->signal_activate().connect(
@@ -304,7 +306,8 @@ void OscilloscopeWindow::CreateWidgets()
 			//See which channels are currently on
 			//DEBUG: enable all analog channels to save time when setting up the client
 			//if(chan->IsEnabled())
-			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
+				(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
 			{
 				auto w = new WaveformArea(
 					scope,
