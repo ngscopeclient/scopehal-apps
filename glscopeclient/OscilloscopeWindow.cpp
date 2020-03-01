@@ -272,8 +272,10 @@ void OscilloscopeWindow::CreateWidgets()
 			split->pack1(group->m_frame);
 
 		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-		m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
-		m_triggerConfigLabel.set_size_request(75, 1);
+			m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
+			m_triggerConfigLabel.set_size_request(75, 1);
+			m_statusbar.pack_end(m_waveformRateLabel, Gtk::PACK_SHRINK);
+			m_waveformRateLabel.set_size_request(125, 1);
 
 	//Process all of the channels
 	for(auto scope : m_scopes)
@@ -1107,6 +1109,11 @@ void OscilloscopeWindow::PollScopes()
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 {
+	//TODO: handle multiple scopes better
+	m_lastWaveformTimes.push_back(GetTime());
+	while(m_lastWaveformTimes.size() > 10)
+		m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
+
 	//make sure we close fully
 	if(!is_visible())
 		m_historyWindow.close();
@@ -1166,6 +1173,17 @@ void OscilloscopeWindow::UpdateStatusBar()
 	else
 		snprintf(tmp, sizeof(tmp), "%s %.3f V", name.c_str(), voltage);
 	m_triggerConfigLabel.set_label(tmp);
+
+	//Update WFM/s counter
+	if(m_lastWaveformTimes.size() >= 2)
+	{
+		double first = m_lastWaveformTimes[0];
+		double last = m_lastWaveformTimes[m_lastWaveformTimes.size() - 1];
+		double dt = last - first;
+		double wps = m_lastWaveformTimes.size() / dt;
+		snprintf(tmp, sizeof(tmp), "%.1f WFM/s", wps);
+		m_waveformRateLabel.set_label(tmp);
+	}
 }
 
 void OscilloscopeWindow::OnStart()

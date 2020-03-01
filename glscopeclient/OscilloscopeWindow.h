@@ -157,8 +157,12 @@ protected:
 				Gtk::ToolButton m_btnStop;
 				Gtk::ToggleToolButton m_btnHistory;
 				Gtk::ToolButton m_btnRefresh;
-		Gtk::Label  m_alphalabel;
-		Gtk::HScale m_alphaslider;
+			Gtk::Label  m_alphalabel;
+			Gtk::HScale m_alphaslider;
+		//main app windows go here
+		Gtk::HBox m_statusbar;
+			Gtk::Label m_waveformRateLabel;
+			Gtk::Label m_triggerConfigLabel;
 
 	//All of the splitters
 	std::set<Gtk::Paned*> m_splitters;
@@ -177,10 +181,6 @@ public:
 
 	//Event handlers
 	void PollScopes();
-
-protected:
-	Gtk::HBox m_statusbar;
-		Gtk::Label m_triggerConfigLabel;
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
@@ -218,6 +218,9 @@ protected:
 	double m_tHistory;
 	double m_tPoll;
 	double m_tEvent;
+
+	//WFM/s performance info
+	std::vector<double> m_lastWaveformTimes;
 };
 
 #endif
