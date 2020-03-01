@@ -199,16 +199,35 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 		hist = (*it)[m_columns.m_history];
 		for(auto jt : hist)
 		{
-			//TODO: support digital etc captures
 			auto acap = dynamic_cast<AnalogCapture*>(jt.second);
-			if(acap == NULL)
-				continue;
+			if(acap != NULL)
+			{
+				//Add static size of the capture object
+				bytes_used += sizeof(AnalogCapture);
 
-			//Add static size of the capture object
-			bytes_used += sizeof(AnalogCapture);
+				//Add size of each sample
+				bytes_used += sizeof(AnalogSample) * acap->m_samples.capacity();
+			}
 
-			//Add size of each sample
-			bytes_used += sizeof(AnalogSample) * acap->m_samples.capacity();
+			auto dcap = dynamic_cast<DigitalCapture*>(jt.second);
+			if(dcap != NULL)
+			{
+				//Add static size of the capture object
+				bytes_used += sizeof(DigitalCapture);
+
+				//Add size of each sample
+				bytes_used += sizeof(DigitalSample) * dcap->m_samples.capacity();
+			}
+
+			auto bcap = dynamic_cast<DigitalBusCapture*>(jt.second);
+			if(bcap != NULL)
+			{
+				//Add static size of the capture object
+				bytes_used += sizeof(DigitalBusCapture);
+
+				//Add size of each sample
+				bytes_used += (sizeof(DigitalBusSample) + bcap->m_samples[0].m_sample.size()) * bcap->m_samples.capacity();
+			}
 		}
 	}
 
