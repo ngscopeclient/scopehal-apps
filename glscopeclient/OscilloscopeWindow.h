@@ -137,6 +137,8 @@ protected:
 				Gtk::Menu m_fileMenu;
 			Gtk::MenuItem m_setupMenuItem;
 				Gtk::Menu m_setupMenu;
+					Gtk::MenuItem m_setupTriggerMenuItem;
+						Gtk::Menu m_setupTriggerMenu;
 			Gtk::MenuItem m_channelsMenuItem;
 				Gtk::Menu m_channelsMenu;
 			Gtk::MenuItem m_viewMenuItem;
@@ -185,6 +187,7 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
+	void OnTriggerProperties(Oscilloscope* scope);
 
 	Glib::RefPtr<Gtk::CssProvider> m_css;
 

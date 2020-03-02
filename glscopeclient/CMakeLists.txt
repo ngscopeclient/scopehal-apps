@@ -17,6 +17,7 @@ add_executable(glscopeclient
 	ShaderStorageBuffer.cpp
 	Texture.cpp
 	Timeline.cpp
+	TriggerPropertiesDialog.cpp
 	VertexArray.cpp
 	VertexBuffer.cpp
 	WaveformArea.cpp

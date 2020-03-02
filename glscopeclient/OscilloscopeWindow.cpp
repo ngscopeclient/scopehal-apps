@@ -36,6 +36,7 @@
 #include "glscopeclient.h"
 #include "../scopehal/Instrument.h"
 #include "OscilloscopeWindow.h"
+#include "TriggerPropertiesDialog.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <map>
@@ -174,6 +175,9 @@ void OscilloscopeWindow::CreateWidgets()
 			m_menu.append(m_setupMenuItem);
 				m_setupMenuItem.set_label("Setup");
 				m_setupMenuItem.set_submenu(m_setupMenu);
+				m_setupMenu.append(m_setupTriggerMenuItem);
+					m_setupTriggerMenuItem.set_label("Trigger");
+					m_setupTriggerMenuItem.set_submenu(m_setupTriggerMenu);
 			m_menu.append(m_viewMenuItem);
 				m_viewMenuItem.set_label("View");
 				m_viewMenuItem.set_submenu(m_viewMenu);
@@ -318,6 +322,15 @@ void OscilloscopeWindow::CreateWidgets()
 				group->m_waveformBox.pack_start(*w);
 			}
 		}
+	}
+
+	//Add trigger config menu items for each scope
+	for(auto scope : m_scopes)
+	{
+		item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnTriggerProperties), scope));
+		m_setupTriggerMenu.append(*item);
 	}
 
 	m_channelsMenu.show_all();
@@ -724,6 +737,14 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 void OscilloscopeWindow::OnAlphaChanged()
 {
 	ClearAllPersistence();
+}
+
+void OscilloscopeWindow::OnTriggerProperties(Oscilloscope* scope)
+{
+	TriggerPropertiesDialog dlg(this, scope);
+	if(Gtk::RESPONSE_OK != dlg.run())
+		return;
+	dlg.ConfigureTrigger();
 }
 
 void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item)
