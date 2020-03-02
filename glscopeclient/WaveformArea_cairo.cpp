@@ -276,7 +276,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			for(size_t j=0; j<sample.size(); j++)
 			{
 				if(sample[j])
-					value |= (1 << j);
+					value |= (1LU << j);
 			}
 
 			char tmp[128];
