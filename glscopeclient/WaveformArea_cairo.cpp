@@ -264,6 +264,17 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			double start = (bus->GetSampleStart(i) * bus->m_timescale) + bus->m_triggerPhase;
 			double end = start + (bus->GetSampleLen(i) * bus->m_timescale);
 
+			//Merge with subsequent samples if they have the same value
+			for(size_t j=i+1; j<bus->GetDepth(); j++)
+			{
+				if(bus->m_samples[i].m_sample != bus->m_samples[j].m_sample)
+					break;
+
+				//Merge this sample with the next one
+				i++;
+				end = (bus->GetSampleStart(i) + bus->GetSampleLen(i)) * bus->m_timescale + bus->m_triggerPhase;
+			}
+
 			double xs = XAxisUnitsToXPosition(start);
 			double xe = XAxisUnitsToXPosition(end);
 
