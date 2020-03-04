@@ -91,7 +91,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	{
 		//Main channel
 		if(channel == m_channel)
-			ybase = 5;
+			ybase = 2;
 
 		//Overlay
 		else
@@ -113,6 +113,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		size_t realcount = count;
 		count *= 2;
 
+		float digheight = m_height - 5;
+
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
 		#pragma omp parallel for num_threads(8)
@@ -121,7 +123,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			traceBuffer[j*4] = pdat->GetSampleStart(j) * xscale + xoff;
 			traceBuffer[j*4 + 2] = pdat->GetSampleEnd(j) * xscale + xoff - 1;
 
-			float y = ybase + 5 + ( (*digdat)[j] ? 20: 0 );
+			float y = ybase + ( (*digdat)[j] ? digheight: 0 );
 			traceBuffer[j*4 + 1] = y;
 			traceBuffer[j*4 + 3] = y;
 		}
@@ -298,6 +300,21 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	dt = GetTime() - start;
 	m_renderTime += dt;
+
+	//If our channel is digital, set us to minimal size
+	if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	{
+		//Base height
+		int height = m_infoBoxRect.get_bottom() - m_infoBoxRect.get_top() + 5;
+
+		//Add in overlays (TODO: don't hard code overlay pitch)
+		height += 30*m_overlays.size();
+
+		int rw, rh;
+		get_size_request(rw, rh);
+		if(height != rh)
+			set_size_request(30, height);
+	}
 
 	return true;
 }

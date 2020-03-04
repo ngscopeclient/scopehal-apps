@@ -316,7 +316,7 @@ protected:
 		int bottom,
 		std::string text,
 		Rect& box,
-		int labelmargin = 6);
+		int labelmargin = 3);
 
 	void ResetTextureFiltering();
 

@@ -323,7 +323,10 @@ void OscilloscopeWindow::CreateWidgets()
 					this);
 				w->m_group = group;
 				m_waveformAreas.emplace(w);
-				group->m_waveformBox.pack_start(*w);
+				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+					group->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+				else
+					group->m_waveformBox.pack_start(*w);
 			}
 		}
 	}
@@ -875,7 +878,11 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 {
 	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
-	ngroup->m_waveformBox.pack_start(*w);
+
+	if(w->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+	else
+		ngroup->m_waveformBox.pack_start(*w);
 
 	//TODO: move any measurements related to this trace to the new group?
 
@@ -902,7 +909,10 @@ void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* n
 
 	//Then add it like normal
 	nw->m_group = ngroup;
-	ngroup->m_waveformBox.pack_start(*nw);
+	if(nw->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		ngroup->m_waveformBox.pack_start(*nw, Gtk::PACK_SHRINK);
+	else
+		ngroup->m_waveformBox.pack_start(*nw);
 	nw->show();
 }
 
