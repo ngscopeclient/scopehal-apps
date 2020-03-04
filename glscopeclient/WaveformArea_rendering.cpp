@@ -91,7 +91,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	{
 		//Main channel
 		if(channel == m_channel)
-			ybase = 15;
+			ybase = 5;
 
 		//Overlay
 		else
