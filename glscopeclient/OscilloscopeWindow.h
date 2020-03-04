@@ -170,7 +170,7 @@ protected:
 	std::set<Gtk::Paned*> m_splitters;
 
 	//shared by all scopes/channels
-	HistoryWindow m_historyWindow;
+	std::map<Oscilloscope*, HistoryWindow*> m_historyWindows;
 
 public:
 	//All of the waveform groups and areas, regardless of where they live

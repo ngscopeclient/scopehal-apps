@@ -672,18 +672,17 @@ bool WaveformArea::IsWaterfall()
 
 bool WaveformArea::IsDigital()
 {
-	auto pdat = m_channel->GetData();
-	return (dynamic_cast<DigitalCapture*>(pdat) != NULL);
+	return (m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL);
 }
 
 bool WaveformArea::IsAnalog()
 {
-	auto pdat = m_channel->GetData();
-	return (dynamic_cast<AnalogCapture*>(pdat) != NULL);
+	return (m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG);
 }
 
 bool WaveformArea::IsEye()
 {
+	//TODO: there are other possible sources for eyes, e.g. FREESAMPLE. Maybe define a CHANNEL_TYPE for it?
 	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 	return (eye != NULL);
 }

@@ -50,8 +50,7 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
-	: m_historyWindow(this)
-	, m_scopes(scopes)
+	: m_scopes(scopes)
 	// m_iconTheme(Gtk::IconTheme::get_default())
 {
 	//Set title
@@ -109,6 +108,9 @@ OscilloscopeWindow::~OscilloscopeWindow()
 	LogDebug("POLL:    %.3f ms\n", m_tPoll * 1000);
 	LogDebug("EVENT:   %.3f ms\n", m_tEvent * 1000);
 
+	for(auto it : m_historyWindows)
+		delete it.second;
+
 	for(auto a : m_analyzers)
 		delete a;
 	for(auto s : m_splitters)
@@ -119,8 +121,6 @@ OscilloscopeWindow::~OscilloscopeWindow()
 		delete w;
 
 	//decoders should self-delete when the last reference to them is removed
-	//for(auto d : m_decoders)
-	//	delete d;
 }
 
 /**
@@ -281,6 +281,10 @@ void OscilloscopeWindow::CreateWidgets()
 			m_statusbar.pack_end(m_waveformRateLabel, Gtk::PACK_SHRINK);
 			m_waveformRateLabel.set_size_request(125, 1);
 
+	//Create history windows
+	for(auto scope : m_scopes)
+		m_historyWindows[scope] = new HistoryWindow(this, scope);
+
 	//Process all of the channels
 	for(auto scope : m_scopes)
 	{
@@ -335,7 +339,8 @@ void OscilloscopeWindow::CreateWidgets()
 
 	m_channelsMenu.show_all();
 
-	m_historyWindow.hide();
+	for(auto it : m_historyWindows)
+		it.second->hide();
 
 	//Done adding widgets
 	show_all();
@@ -765,9 +770,15 @@ OscilloscopeWindow::EyeColor OscilloscopeWindow::GetEyeColor()
 void OscilloscopeWindow::OnHistory()
 {
 	if(m_btnHistory.get_active())
-		m_historyWindow.show();
+	{
+		for(auto it : m_historyWindows)
+			it.second->show();
+	}
 	else
-		m_historyWindow.hide();
+	{
+		for(auto it : m_historyWindows)
+			it.second->hide();
+	}
 }
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)
@@ -1140,7 +1151,10 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//make sure we close fully
 	if(!is_visible())
-		m_historyWindow.close();
+	{
+		for(auto it : m_historyWindows)
+			it.second->close();
+	}
 
 	//Make sure we don't free the old waveform data
 	//LogTrace("Detaching\n");
@@ -1173,7 +1187,7 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 		a->OnWaveformDataReady();
 
 	//Update the history window
-	m_historyWindow.OnWaveformDataReady(scope);
+	m_historyWindows[scope]->OnWaveformDataReady();
 
 	m_tHistory += GetTime() - start;
 }
@@ -1274,5 +1288,7 @@ void OscilloscopeWindow::RemoveHistory(TimePoint timestamp)
 
 void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)
 {
-	m_historyWindow.JumpToHistory(timestamp);
+	//TODO:  this might not work too well if triggers aren't perfectly synced!
+	for(auto it : m_historyWindows)
+		it.second->JumpToHistory(timestamp);
 }

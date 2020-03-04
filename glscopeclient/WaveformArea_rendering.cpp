@@ -54,21 +54,31 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 {
 	double start = GetTime();
 
+	//We need analog or digital data to render
 	auto channel = wdata->m_channel;
+	if( (channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
+		(channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	{
+		wdata->m_geometryOK = false;
+		return;
+	}
 	auto pdat = channel->GetData();
-	auto andat = dynamic_cast<AnalogCapture*>(pdat);
-	auto digdat = dynamic_cast<DigitalCapture*>(pdat);
-	if( !(andat && andat->GetDepth()) && !(digdat && digdat->GetDepth()))
+	if( (pdat == NULL) || (pdat->GetDepth() == 0) )
 	{
 		wdata->m_geometryOK = false;
 		return;
 	}
 
-	size_t count;
-	if(andat)
-		count = andat->size();
-	else
-		count = digdat->size();
+	//Make sure capture is the right type
+	auto andat = dynamic_cast<AnalogCapture*>(pdat);
+	auto digdat = dynamic_cast<DigitalCapture*>(pdat);
+	if(!andat && !digdat)
+	{
+		wdata->m_geometryOK = false;
+		return;
+	}
+
+	size_t count = pdat->GetDepth();
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 

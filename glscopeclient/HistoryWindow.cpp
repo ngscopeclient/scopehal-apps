@@ -51,11 +51,12 @@ HistoryColumns::HistoryColumns()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-HistoryWindow::HistoryWindow(OscilloscopeWindow* parent)
+HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	: m_parent(parent)
+	, m_scope(scope)
 	, m_updating(false)
 {
-	set_title("History");
+	set_title(string("History: ") + m_scope->m_nickname);
 
 	set_default_size(320, 800);
 
@@ -103,14 +104,14 @@ HistoryWindow::~HistoryWindow()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 
-void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
+void HistoryWindow::OnWaveformDataReady()
 {
 	//Use the timestamp from the first enabled channel
 	OscilloscopeChannel* chan = NULL;
 	CaptureChannelBase* data = NULL;
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		chan = scope->GetChannel(i);
+		chan = m_scope->GetChannel(i);
 		if(chan->IsEnabled())
 		{
 			data = chan->GetData();
@@ -143,9 +144,9 @@ void HistoryWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//Add waveform data
 	WaveformHistory hist;
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		auto c = scope->GetChannel(i);
+		auto c = m_scope->GetChannel(i);
 		auto dat = c->GetData();
 		if(!c->IsEnabled())		//don't save historical waveforms from disabled channels
 		{
