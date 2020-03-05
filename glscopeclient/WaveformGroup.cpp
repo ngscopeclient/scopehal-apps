@@ -243,12 +243,10 @@ string WaveformGroup::SerializeConfiguration(std::map<void*, int>& idmap, int& n
 	//Measurements
 	if(!m_measurementColumns.empty())
 	{
-		config += "            measurements: %%\n";
+		config += "            measurements: @\n";
 
 		for(auto col : m_measurementColumns)
-		{
-
-		}
+			config += col->m_measurement->SerializeConfiguration(idmap, nextID, col->m_title);
 	}
 
 	return config;
