@@ -95,7 +95,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 		//Overlay
 		else
-			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 15);
+			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 10);
 	}
 
 	//Calculate X/Y coordinate of each sample point
@@ -113,7 +113,11 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		size_t realcount = count;
 		count *= 2;
 
-		float digheight = m_height - 5;
+		float digheight;
+		if(channel == m_channel)
+			digheight = m_height - 5;
+		else
+			digheight = 20;
 
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
