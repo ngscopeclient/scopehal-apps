@@ -606,52 +606,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 	for(auto group : m_waveformGroups)
 		idmap[group] = nextID++;
 	for(auto group : m_waveformGroups)
-	{
-		int id = idmap[group];
-		snprintf(tmp, sizeof(tmp), "        : %%\n");
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
-		config += tmp;
-
-		config += "            name:           \"" + group->m_frame.get_label() + "\"\n";
-
-		snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %f\n", group->m_pixelsPerXUnit);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", group->m_xAxisOffset);
-		config += tmp;
-
-		switch(group->m_cursorConfig)
-		{
-			case WaveformGroup::CURSOR_NONE:
-				config += "            cursorConfig:   none\n";
-				break;
-
-			case WaveformGroup::CURSOR_X_SINGLE:
-				config += "            cursorConfig:   x_single\n";
-				break;
-
-			case WaveformGroup::CURSOR_Y_SINGLE:
-				config += "            cursorConfig:   y_single\n";
-				break;
-
-			case WaveformGroup::CURSOR_X_DUAL:
-				config += "            cursorConfig:   x_dual\n";
-				break;
-
-			case WaveformGroup::CURSOR_Y_DUAL:
-				config += "            cursorConfig:   y_dual\n";
-				break;
-		}
-
-		snprintf(tmp, sizeof(tmp), "            xcursor0:       %ld\n", group->m_xCursorPos[0]);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            xcursor1:       %ld\n", group->m_xCursorPos[1]);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            ycursor0:       %f\n", group->m_yCursorPos[0]);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", group->m_yCursorPos[1]);
-		config += tmp;
-	}
+		config += group->SerializeConfiguration(idmap, nextID);
 
 	//Splitters
 	config += "    splitters: @\n";

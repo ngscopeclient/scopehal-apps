@@ -188,3 +188,68 @@ void WaveformGroup::OnRemoveMeasurementItem()
 	if(m_measurementColumns.empty())
 		m_measurementFrame.hide();
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+string WaveformGroup::SerializeConfiguration(std::map<void*, int>& idmap, int& nextID)
+{
+	char tmp[1024];
+
+	int id = idmap[this];
+	snprintf(tmp, sizeof(tmp), "        : %%\n");
+	string config = tmp;
+	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
+	config += tmp;
+
+	config += "            name:           \"" + m_frame.get_label() + "\"\n";
+
+	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %f\n", m_pixelsPerXUnit);
+	config += tmp;
+	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", m_xAxisOffset);
+	config += tmp;
+
+	switch(m_cursorConfig)
+	{
+		case WaveformGroup::CURSOR_NONE:
+			config += "            cursorConfig:   none\n";
+			break;
+
+		case WaveformGroup::CURSOR_X_SINGLE:
+			config += "            cursorConfig:   x_single\n";
+			break;
+
+		case WaveformGroup::CURSOR_Y_SINGLE:
+			config += "            cursorConfig:   y_single\n";
+			break;
+
+		case WaveformGroup::CURSOR_X_DUAL:
+			config += "            cursorConfig:   x_dual\n";
+			break;
+
+		case WaveformGroup::CURSOR_Y_DUAL:
+			config += "            cursorConfig:   y_dual\n";
+			break;
+	}
+
+	snprintf(tmp, sizeof(tmp), "            xcursor0:       %ld\n", m_xCursorPos[0]);
+	config += tmp;
+	snprintf(tmp, sizeof(tmp), "            xcursor1:       %ld\n", m_xCursorPos[1]);
+	config += tmp;
+	snprintf(tmp, sizeof(tmp), "            ycursor0:       %f\n", m_yCursorPos[0]);
+	config += tmp;
+	snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", m_yCursorPos[1]);
+	config += tmp;
+
+	//Measurements
+	if(!m_measurementColumns.empty())
+	{
+		config += "            measurements: %%\n";
+
+		for(auto col : m_measurementColumns)
+		{
+
+		}
+	}
+
+	return config;
+}
