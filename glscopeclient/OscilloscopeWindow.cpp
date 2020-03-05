@@ -566,7 +566,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 	config += tmp;
 
 	//Waveform areas
-	config += "    areas: %\n";
+	config += "    areas: @\n";
 	for(auto area : m_waveformAreas)
 		idmap[area] = nextID++;
 	for(auto area : m_waveformAreas)
@@ -576,8 +576,29 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
 		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            persistence: %d\n", area->GetPersistenceEnabled());
+		config += tmp;
 
 		//Channels
+		//By the time we get here, all channels should be accounted for.
+		//So there should be no reason to assign names to channels at this point - just use what's already there
+		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", idmap[area->GetChannel()]);
+		config += tmp;
+
+		//Overlays
+		if(area->GetOverlayCount() != 0)
+		{
+			snprintf(tmp, sizeof(tmp), "            overlays: @\n");
+			config += tmp;
+
+			for(size_t i=0; i<area->GetOverlayCount(); i++)
+			{
+				snprintf(tmp, sizeof(tmp), "                : %%\n");
+				config += tmp;
+				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", idmap[area->GetOverlay(i)]);
+				config += tmp;
+			}
+		}
 	}
 
 	//Waveform groups

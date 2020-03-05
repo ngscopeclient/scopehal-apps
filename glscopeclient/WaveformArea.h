@@ -137,6 +137,15 @@ public:
 	bool IsFFT();
 	bool IsTime();
 
+	size_t GetOverlayCount()
+	{ return m_overlays.size(); }
+
+	ProtocolDecoder* GetOverlay(size_t i)
+	{ return m_overlays[i]; }
+
+	bool GetPersistenceEnabled()
+	{ return m_persistence; }
+
 protected:
 	void SharedCtorInit();
 
