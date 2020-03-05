@@ -517,6 +517,10 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
 	//Save instrument config regardless, since data etc needs it
 	config += SerializeInstrumentConfiguration(idmap, nextID);
 
+	//Decodes depend on scope channels, but need to happen before UI elements that use them
+	if(!m_decoders.empty())
+		config += SerializeDecodeConfiguration(idmap, nextID);
+
 	//UI config
 	if(saveLayout)
 		config += SerializeUIConfiguration(idmap, nextID);
@@ -524,112 +528,28 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
 	return config;
 }
 
+/**
+	@brief Serialize the configuration for all oscilloscopes
+ */
 string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
-	char tmp[1024];
 	string config = "instruments: @\n";
 
 	for(auto scope : m_scopes)
-	{
-		//Name it
-		int id = nextID ++;
-		idmap[scope] = id;
+		config += scope->SerializeConfiguration(idmap, nextID);
 
-		//Save basic scope info
-		snprintf(tmp, sizeof(tmp), "    : %%\n");
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        id:             %d\n", id);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        nick:           \"%s\"\n", scope->m_nickname.c_str());
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        name:           \"%s\"\n", scope->GetName().c_str());
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        vendor:         \"%s\"\n", scope->GetVendor().c_str());
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        serial:         \"%s\"\n", scope->GetSerial().c_str());
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "        path:           \"%s\"\n", "connection_string_not_yet_implemented");
-		config += tmp;
+	return config;
+}
 
-		//Save channels
-		config += "        channels: @\n";
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
-		{
-			auto chan = scope->GetChannel(i);
-			if(!chan->IsPhysicalChannel())
-				continue;	//skip any kind of math functions etc
+/**
+	@brief Serialize the configuration for all protocol decoders
+ */
+string OscilloscopeWindow::SerializeDecodeConfiguration(std::map<void*, int>& idmap, int& nextID)
+{
+	string config = "decodes: %\n";
 
-			id = nextID ++;
-			idmap[chan] = id;
-
-			//Basic channel info
-			snprintf(tmp, sizeof(tmp), "            : %%\n");
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                id:          %d\n", id);
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                index:       %zu\n", i);
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                color:       \"%s\"\n", chan->m_displaycolor.c_str());
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                nick:        \"%s\"\n", chan->m_displayname.c_str());
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                name:        \"%s\"\n", chan->GetHwname().c_str());
-			config += tmp;
-			switch(chan->GetType())
-			{
-				case OscilloscopeChannel::CHANNEL_TYPE_ANALOG:
-					config += "                type:        analog\n";
-					break;
-				case OscilloscopeChannel::CHANNEL_TYPE_DIGITAL:
-					config += "                type:        digital\n";
-					break;
-				case OscilloscopeChannel::CHANNEL_TYPE_TRIGGER:
-					config += "                type:        trigger\n";
-					break;
-
-				//should never get complex channels on a scope
-				default:
-					break;
-			}
-
-			//Current channel configuration
-			if(chan->IsEnabled())
-				config += "                enabled:     1\n";
-			else
-				config += "                enabled:     0\n";
-			switch(chan->GetCoupling())
-			{
-				case OscilloscopeChannel::COUPLE_DC_1M:
-					config += "                coupling:    dc_1M\n";
-					break;
-				case OscilloscopeChannel::COUPLE_AC_1M:
-					config += "                coupling:    ac_1M\n";
-					break;
-				case OscilloscopeChannel::COUPLE_DC_50:
-					config += "                coupling:    dc_50\n";
-					break;
-				case OscilloscopeChannel::COUPLE_GND:
-					config += "                coupling:    gnd\n";
-					break;
-
-				//should never get synthetic coupling on a scope channel
-				default:
-					break;
-			}
-
-			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
-			{
-				snprintf(tmp, sizeof(tmp), "                attenuation: %f\n", chan->GetAttenuation());
-				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                bwlimit:     %d\n", chan->GetBandwidthLimit());
-				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                vrange:      %f\n", chan->GetVoltageRange());
-				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                offset:      %f\n", chan->GetOffset());
-				config += tmp;
-			}
-		}
-	}
+	for(auto d : m_decoders)
+		config += d->SerializeConfiguration(idmap, nextID);
 
 	return config;
 }
@@ -656,6 +576,8 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
 		config += tmp;
+
+		//Channels
 	}
 
 	//Waveform groups
