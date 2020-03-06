@@ -1109,7 +1109,7 @@ void OscilloscopeWindow::UpdateStatusBar()
 	OscilloscopeChannel* chan = scope->GetChannel(trig_idx);
 	if(chan == NULL)
 	{
-		LogWarning("Trigger channel (index %zu) is NULL", trig_idx);
+		LogWarning("Trigger channel (index %zu) is NULL\n", trig_idx);
 		return;
 	}
 	string name = chan->GetHwname();
