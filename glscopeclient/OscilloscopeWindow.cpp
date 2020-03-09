@@ -392,6 +392,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 			Gdk::Screen::get_default(), m_css);
 
 		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_SAVE);
+
 		auto filter = Gtk::FileFilter::create();
 		filter->add_pattern("*.scopesession");
 		filter->set_name("glscopeclient sessions (*.scopesession)");

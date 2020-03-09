@@ -305,11 +305,20 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 				//No, it's a decode
 				else
 				{
-					ProtocolDecoderDialog dialog(m_parent, dynamic_cast<ProtocolDecoder*>(m_selectedChannel), NULL);
-					if(dialog.run() == Gtk::RESPONSE_OK)
+					auto decode = dynamic_cast<ProtocolDecoder*>(m_selectedChannel);
+					if(decode)
 					{
-						dialog.ConfigureDecoder();
-						queue_draw();
+						ProtocolDecoderDialog dialog(m_parent, decode, NULL);
+						if(dialog.run() == Gtk::RESPONSE_OK)
+						{
+							dialog.ConfigureDecoder();
+							queue_draw();
+						}
+					}
+					else
+					{
+						LogError("Channel \"%s\" is neither a protocol decode nor a physical channel\n",
+							m_selectedChannel->m_displayname.c_str());
 					}
 				}
 
