@@ -249,7 +249,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	int spacing = 30;
 	int midline = spacing / 2;
 
-	//Render digital bus waveforms here (TODO: GL stuff)
+	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
 	auto bus = dynamic_cast<DigitalBusCapture*>(m_channel->GetData());
 	if(bus != NULL)
 	{
