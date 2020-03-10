@@ -579,6 +579,11 @@ void WaveformArea::OnWaveformDataReady()
 	{
 		//eye is two UIs wide
 		int64_t eye_width_ps = 2 * eye->GetUIWidth();
+
+		//If decode fails for some reason, don't have an invalid timeline
+		if(eye_width_ps == 0)
+			eye_width_ps = 5;
+
 		m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
 		m_group->m_xAxisOffset = -eye->GetUIWidth();
 	}

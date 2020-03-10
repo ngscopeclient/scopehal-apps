@@ -233,6 +233,10 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	double units_rounded = pow(base, log_units_rounded);
 	int64_t grad_ps_rounded = units_rounded * round_divisor;
 
+	//avoid divide-by-zero in weird cases with no waveform etc
+	if(grad_ps_rounded == 0)
+		return;
+
 	//Calculate number of ticks within a division
 	double nsubticks = 5;
 	double subtick = grad_ps_rounded / nsubticks;
