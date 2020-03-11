@@ -215,57 +215,33 @@ int main(int argc, char* argv[])
 	}
 
 
-	//Initialize the protocol decoder and measurement libraries
+	//Initialize object creation tables
+	TransportStaticInit();
 	ScopeProtocolStaticInit();
 	ScopeMeasurementStaticInit();
 
 	//Connect to the scope(s)
 	for(auto s : scopes)
 	{
-		//Scope format: name:api:host[:port]
+		//Scope format: name:driver:transport:args
 		char nick[128];
 		char driver[128];
 		char trans[128];
-		char host[128];
-		int port = 0;
-		if(5 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127[^:]:%d", nick, driver, trans, host, &port))
+		char args[128];
+		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127s", nick, driver, trans, args))
 		{
-			if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127[^:]", nick, driver, trans, host))
-			{
-				LogError("Invalid scope string %s\n", s.c_str());
-				continue;
-			}
-		}
-
-		//Special case default ports depending on protocol
-		string sdriver = driver;
-		string strans = trans;
-		if(port == 0)
-		{
-			if(strans == "vicp")		//IANA port for SCPI over VICP
-				port = 1861;
-			else if(strans == "lan")	//IANA port for SCPI over TCP
-			{
-				port = 5025;
-				if(sdriver == "rigol")	//Rigol is weird and uses a nonstandard port
-					port = 5555;
-			}
-		}
-
-		//Create the transport
-		SCPITransport* transport = NULL;
-		if(strans == "vicp")
-			transport = new VICPSocketTransport(host, port);
-		else if(strans == "lan")
-			transport = new SCPISocketTransport(host, port);
-		else
-		{
-			LogError("Invalid transport %s\n", trans);
+			LogError("Invalid scope string %s\n", s.c_str());
 			continue;
 		}
 
+		//Create the transport
+		SCPITransport* transport = SCPITransport::CreateTransport(trans, args);
+		if(transport == NULL)
+			continue;
+
 		//Create the scope
 		Oscilloscope* scope = NULL;
+		string sdriver(driver);
 		if(sdriver == "akila")
 			scope = new AntikernelLogicAnalyzer(transport);
 		else if(sdriver == "agilent")
