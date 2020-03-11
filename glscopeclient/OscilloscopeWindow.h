@@ -42,6 +42,8 @@
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
 
+#include <yaml-cpp/yaml.h>
+
 /**
 	@brief Main application window class for an oscilloscope
  */
@@ -186,6 +188,7 @@ public:
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
+	void OnFileOpen();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
 

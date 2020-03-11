@@ -196,7 +196,7 @@ string WaveformGroup::SerializeConfiguration(std::map<void*, int>& idmap, int& n
 	char tmp[1024];
 
 	int id = idmap[this];
-	snprintf(tmp, sizeof(tmp), "        : %%\n");
+	snprintf(tmp, sizeof(tmp), "        : \n");
 	string config = tmp;
 	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
 	config += tmp;

@@ -160,11 +160,9 @@ void OscilloscopeWindow::CreateWidgets()
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Load Layout Only...", false));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Load Waveforms Only...", false));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Load Layout and Waveforms...", false));
+					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
@@ -362,6 +360,49 @@ void OscilloscopeWindow::CreateWidgets()
 // Message handlers
 
 /**
+	@brief Open a saved configuration
+ */
+void OscilloscopeWindow::OnFileOpen()
+{
+	static const char* extension = ".scopesession";
+
+	//Remove the CSS provider so the dialog isn't themed
+	//TODO: how can we un-theme just this one dialog?
+	get_style_context()->remove_provider_for_screen(
+		Gdk::Screen::get_default(), m_css);
+
+	Gtk::FileChooserDialog dlg(*this, "Open", Gtk::FILE_CHOOSER_ACTION_SAVE);
+
+	dlg.add_choice("layout", "Load UI Configuration");
+	dlg.add_choice("waveform", "Load Waveform Data");
+	dlg.add_choice("reconnect", "Reconnect to Instrument (reconfigure using saved settings)");
+
+	dlg.set_choice("layout", "true");
+	dlg.set_choice("waveform", "true");
+	dlg.set_choice("reconnect", "true");
+
+	auto filter = Gtk::FileFilter::create();
+	filter->add_pattern("*.scopesession");
+	filter->set_name("glscopeclient sessions (*.scopesession)");
+	dlg.add_filter(filter);
+	dlg.add_button("Open", Gtk::RESPONSE_OK);
+	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	auto response = dlg.run();
+
+	//Re-add the CSS provider
+	get_style_context()->add_provider_for_screen(
+		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+	if(response != Gtk::RESPONSE_OK)
+		return;
+
+	m_currentFileName = dlg.get_filename();
+
+	//Open the top level
+	auto docs = YAML::LoadAllFromFile(/*m_currentFileName*/"/dev/null");
+}
+
+/**
 	@brief Common handler for save/save as commands
  */
 void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms)
@@ -534,7 +575,7 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
  */
 string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
-	string config = "instruments: @\n";
+	string config = "instruments:\n";
 
 	for(auto scope : m_scopes)
 		config += scope->SerializeConfiguration(idmap, nextID);
@@ -547,7 +588,7 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
  */
 string OscilloscopeWindow::SerializeDecodeConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
-	string config = "decodes: %\n";
+	string config = "decodes:\n";
 
 	for(auto d : m_decoders)
 		config += d->SerializeConfiguration(idmap, nextID);
@@ -558,22 +599,22 @@ string OscilloscopeWindow::SerializeDecodeConfiguration(std::map<void*, int>& id
 string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap, int& nextID)
 {
 	char tmp[1024];
-	string config = "ui_config: %\n";
+	string config = "ui_config:\n";
 
-	config += "    window: %\n";
+	config += "    window:\n";
 	snprintf(tmp, sizeof(tmp), "        width: %d\n", get_width());
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "        height: %d\n", get_height());
 	config += tmp;
 
 	//Waveform areas
-	config += "    areas: @\n";
+	config += "    areas:\n";
 	for(auto area : m_waveformAreas)
 		idmap[area] = nextID++;
 	for(auto area : m_waveformAreas)
 	{
 		int id = idmap[area];
-		snprintf(tmp, sizeof(tmp), "        : %%\n");
+		snprintf(tmp, sizeof(tmp), "        : \n");
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
 		config += tmp;
@@ -589,12 +630,12 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 		//Overlays
 		if(area->GetOverlayCount() != 0)
 		{
-			snprintf(tmp, sizeof(tmp), "            overlays: @\n");
+			snprintf(tmp, sizeof(tmp), "            overlays:\n");
 			config += tmp;
 
 			for(size_t i=0; i<area->GetOverlayCount(); i++)
 			{
-				snprintf(tmp, sizeof(tmp), "                : %%\n");
+				snprintf(tmp, sizeof(tmp), "                :\n");
 				config += tmp;
 				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", idmap[area->GetOverlay(i)]);
 				config += tmp;
@@ -603,21 +644,21 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 	}
 
 	//Waveform groups
-	config += "    groups: @\n";
+	config += "    groups: \n";
 	for(auto group : m_waveformGroups)
 		idmap[group] = nextID++;
 	for(auto group : m_waveformGroups)
 		config += group->SerializeConfiguration(idmap, nextID);
 
 	//Splitters
-	config += "    splitters: @\n";
+	config += "    splitters: \n";
 	for(auto split : m_splitters)
 		idmap[split] = nextID++;
 	for(auto split : m_splitters)
 	{
 		//Splitter config
 		int id = idmap[split];
-		snprintf(tmp, sizeof(tmp), "        : %%\n");
+		snprintf(tmp, sizeof(tmp), "        : \n");
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            id:     %d\n", id);
 		config += tmp;

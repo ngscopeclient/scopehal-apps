@@ -38,6 +38,7 @@ target_link_libraries(glscopeclient
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	GL
+	yaml-cpp
 	)
 
 ###############################################################################
