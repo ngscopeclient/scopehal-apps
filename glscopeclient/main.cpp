@@ -236,74 +236,66 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		string sapi(api);
-
-		//Connect to the scope
-		if(sapi == "lecroy_vicp")
+		//API is formatted as driver_transport
+		char driver[128];
+		char trans[128];
+		if(2 != sscanf(api, "%127[^_]_%127s", driver, trans))
 		{
-			//default port if not specified
-			if(port == 0)
+			LogError("Invalid API %s\n", api);
+			continue;
+		}
+
+		//Special case default ports depending on protocol
+		string sdriver = driver;
+		string strans = trans;
+		if(port == 0)
+		{
+			if(strans == "vicp")		//IANA port for SCPI over VICP
 				port = 1861;
-
-			auto scope = new LeCroyOscilloscope(new VICPSocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
-		}
-		else if(sapi == "rigol_lan")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 5555;
-
-			auto scope = new RigolOscilloscope(new SCPISocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
-		}
-		else if(sapi == "rs_lan")
-		{
-			//default port if not specified
-			if(port == 0)
+			else if(strans == "lan")	//IANA port for SCPI over TCP
+			{
 				port = 5025;
-
-			auto scope = new RohdeSchwarzOscilloscope(new SCPISocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
+				if(sdriver == "rigol")	//Rigol is weird and uses a nonstandard port
+					port = 5555;
+			}
 		}
-		else if(sapi == "akila_lan")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 5555;
 
-			auto scope = new AntikernelLogicAnalyzer(new SCPISocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
-		}
-		else if(sapi == "agilent_lan")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 5025;
-
-			auto scope = new AgilentOscilloscope(new SCPISocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
-		}
-		else if(sapi == "siglent_lan" || sapi == "lecroy_lan")
-		{
-			//default port if not specified
-			if(port == 0)
-				port = 5025;
-
-			auto scope = new SiglentSCPIOscilloscope(new SCPISocketTransport(host, port));
-			scope->m_nickname = nick;
-			app->m_scopes.push_back(scope);
-		}
+		//Create the transport
+		SCPITransport* transport = NULL;
+		if(strans == "vicp")
+			transport = new VICPSocketTransport(host, port);
+		else if(strans == "lan")
+			transport = new SCPISocketTransport(host, port);
 		else
 		{
-			LogError("Unrecognized API \"%s\", use --help\n", api);
-			return 1;
+			LogError("Invalid transport %s\n", trans);
+			continue;
 		}
+
+		//Create the scope
+		Oscilloscope* scope = NULL;
+		if(sdriver == "akila")
+			scope = new AntikernelLogicAnalyzer(transport);
+		else if(sdriver == "agilent")
+			scope = new AgilentOscilloscope(transport);
+		else if(sdriver == "lecroy")
+			scope = new LeCroyOscilloscope(transport);
+		else if(sdriver == "rigol")
+			scope = new RigolOscilloscope(transport);
+		else if(sdriver == "rs")
+			scope = new RohdeSchwarzOscilloscope(transport);
+		else if(sdriver == "siglent")
+			scope = new SiglentSCPIOscilloscope(transport);
+		else
+		{
+			LogError("Unrecognized driver \"%s\"\n", driver);
+			delete transport;
+			continue;
+		}
+
+		//All good, hook it up
+		scope->m_nickname = nick;
+		app->m_scopes.push_back(scope);
 	}
 
 	app->run();
