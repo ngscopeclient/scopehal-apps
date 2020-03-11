@@ -39,7 +39,7 @@
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/AgilentOscilloscope.h"
-#include "../scopehal/LeCroyVICPOscilloscope.h"
+#include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
 			if(port == 0)
 				port = 1861;
 
-			auto scope = new LeCroyVICPOscilloscope(host, port);
+			auto scope = new LeCroyOscilloscope(new VICPSocketTransport(host, port));
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
@@ -295,8 +295,7 @@ int main(int argc, char* argv[])
 			if(port == 0)
 				port = 5025;
 
-			// TODO: update to proper transport convention
-			auto scope = new SiglentSCPIOscilloscope(host, port);
+			auto scope = new SiglentSCPIOscilloscope(new SCPISocketTransport(host, port));
 			scope->m_nickname = nick;
 			app->m_scopes.push_back(scope);
 		}
