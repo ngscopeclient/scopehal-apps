@@ -224,25 +224,17 @@ int main(int argc, char* argv[])
 	{
 		//Scope format: name:api:host[:port]
 		char nick[128];
-		char api[128];
+		char driver[128];
+		char trans[128];
 		char host[128];
 		int port = 0;
-		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%d", nick, api, host, &port))
+		if(5 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127[^:]:%d", nick, driver, trans, host, &port))
 		{
-			if(3 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]", nick, api, host))
+			if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127[^:]", nick, driver, trans, host))
 			{
 				LogError("Invalid scope string %s\n", s.c_str());
 				continue;
 			}
-		}
-
-		//API is formatted as driver_transport
-		char driver[128];
-		char trans[128];
-		if(2 != sscanf(api, "%127[^_]_%127s", driver, trans))
-		{
-			LogError("Invalid API %s\n", api);
-			continue;
 		}
 
 		//Special case default ports depending on protocol
