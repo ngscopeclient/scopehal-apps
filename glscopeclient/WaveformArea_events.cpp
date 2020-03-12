@@ -479,7 +479,10 @@ void WaveformArea::OnProtocolDecode(string name)
 
 	//Only one input with no config required? Do default configuration
 	if( (decode->GetInputCount() == 1) && !decode->NeedsConfig())
+	{
 		decode->SetInput(0, m_selectedChannel);
+		decode->SetDefaultName();
+	}
 
 	//Multiple inputs or config needed? Show the dialog
 	else
