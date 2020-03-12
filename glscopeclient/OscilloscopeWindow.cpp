@@ -1004,6 +1004,8 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 
 	if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+	else
+		ngroup->m_waveformBox.pack_start(*w);
 
 	//Move the new trace after the reference trace, if one was provided
 	if(ref != NULL)
