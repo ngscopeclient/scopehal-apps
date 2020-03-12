@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
 
 	//Initialize object creation tables
 	TransportStaticInit();
+	DriverStaticInit();
 	ScopeProtocolStaticInit();
 	ScopeMeasurementStaticInit();
 
@@ -240,26 +241,9 @@ int main(int argc, char* argv[])
 			continue;
 
 		//Create the scope
-		Oscilloscope* scope = NULL;
-		string sdriver(driver);
-		if(sdriver == "akila")
-			scope = new AntikernelLogicAnalyzer(transport);
-		else if(sdriver == "agilent")
-			scope = new AgilentOscilloscope(transport);
-		else if(sdriver == "lecroy")
-			scope = new LeCroyOscilloscope(transport);
-		else if(sdriver == "rigol")
-			scope = new RigolOscilloscope(transport);
-		else if(sdriver == "rs")
-			scope = new RohdeSchwarzOscilloscope(transport);
-		else if(sdriver == "siglent")
-			scope = new SiglentSCPIOscilloscope(transport);
-		else
-		{
-			LogError("Unrecognized driver \"%s\"\n", driver);
-			delete transport;
+		Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
+		if(scope == NULL)
 			continue;
-		}
 
 		//All good, hook it up
 		scope->m_nickname = nick;
