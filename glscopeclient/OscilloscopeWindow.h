@@ -42,8 +42,6 @@
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
 
-#include <yaml-cpp/yaml.h>
-
 /**
 	@brief Main application window class for an oscilloscope
  */
@@ -113,6 +111,7 @@ public:
 	{ return m_alphaslider.get_value(); }
 
 protected:
+	void SetTitle();
 	void ArmTrigger(bool oneshot);
 
 	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
@@ -189,6 +188,8 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
+	void DoFileOpen(std::vector<YAML::Node>& docs, bool loadLayout, bool loadWaveform, bool reconnect);
+	void LoadInstruments(const YAML::Node& node, bool reconnect, std::map<void*, int>& idmap);
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);

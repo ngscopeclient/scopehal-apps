@@ -51,27 +51,8 @@ using namespace std;
  */
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	: m_scopes(scopes)
-	// m_iconTheme(Gtk::IconTheme::get_default())
 {
-	//Set title
-	string title = "Oscilloscope: ";
-	for(size_t i=0; i<scopes.size(); i++)
-	{
-		auto scope = scopes[i];
-
-		char tt[256];
-		snprintf(tt, sizeof(tt), "%s (%s %s, serial %s)",
-			scope->m_nickname.c_str(),
-			scope->GetVendor().c_str(),
-			scope->GetName().c_str(),
-			scope->GetSerial().c_str()
-			);
-
-		if(i > 0)
-			title += ", ";
-		title += tt;
-	}
-	set_title(title);
+	SetTitle();
 
 	//Initial setup
 	set_reallocate_redraws(true);
@@ -93,6 +74,29 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	m_tHistory = 0;
 	m_tPoll = 0;
 	m_tEvent = 0;
+}
+
+void OscilloscopeWindow::SetTitle()
+{
+	//Set title
+	string title = "Oscilloscope: ";
+	for(size_t i=0; i<m_scopes.size(); i++)
+	{
+		auto scope = m_scopes[i];
+
+		char tt[256];
+		snprintf(tt, sizeof(tt), "%s (%s %s, serial %s)",
+			scope->m_nickname.c_str(),
+			scope->GetVendor().c_str(),
+			scope->GetName().c_str(),
+			scope->GetSerial().c_str()
+			);
+
+		if(i > 0)
+			title += ", ";
+		title += tt;
+	}
+	set_title(title);
 }
 
 /**
@@ -446,7 +450,99 @@ void OscilloscopeWindow::OnFileOpen()
 	CloseSession();
 
 	//Open the top level
+	bool loadLayout = dlg.get_choice("layout") == "true";
+	bool loadWaveform = dlg.get_choice("waveform") == "true";
+	bool reconnect = dlg.get_choice("reconnect") == "true";
 	auto docs = YAML::LoadAllFromFile(m_currentFileName);
+	DoFileOpen(docs, loadLayout, loadWaveform, reconnect);
+}
+
+/**
+	@brief Loads configuration from a file
+ */
+void OscilloscopeWindow::DoFileOpen(
+	std::vector<YAML::Node>& docs,
+	bool loadLayout,
+	bool loadWaveform,
+	bool reconnect)
+{
+	//Create the ID map for resolving all of our pointers etc
+	std::map<void*, int> idmap;
+
+	//Only open the first doc, our file format doesn't ever generate multiple docs in a file.
+	//Ignore any trailing stuff at the end
+	auto node = docs[0];
+
+	//Load the instruments
+	LoadInstruments(node["instruments"], reconnect, idmap);
+
+	//Re-title the window for the new scope
+	SetTitle();
+}
+
+/**
+	@brief Reconnect to existing instruments and reconfigure them
+ */
+void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect, std::map<void*, int>& idmap)
+{
+	if(!node)
+	{
+		LogError("Save file missing instruments node\n");
+		return;
+	}
+
+	if(!reconnect)
+	{
+		LogError("Mock scopes for no-reconnect file load not yet implemented\n");
+		return;
+	}
+
+	//Load each instrument
+	for(auto it : node)
+	{
+		auto inst = it.second;
+
+		//Create the scope
+		auto transport = SCPITransport::CreateTransport(inst["transport"].as<string>(), inst["args"].as<string>());
+		auto scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
+
+		//Sanity check make/model/serial. If mismatch, stop
+		string message;
+		bool fail;
+		if(inst["name"].as<string>() != scope->GetName())
+		{
+			message = string("Unable to connect to oscilloscope: instrument has model name \"") +
+				scope->GetName() + "\", save file has model name \"" + inst["name"].as<string>()  + "\"";
+			fail = true;
+		}
+		else if(inst["vendor"].as<string>() != scope->GetVendor())
+		{
+			message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
+				scope->GetVendor() + "\", save file has vendor \"" + inst["vendor"].as<string>()  + "\"";
+			fail = true;
+		}
+		else if(inst["serial"].as<string>() != scope->GetSerial())
+		{
+			message = string("Unable to connect to oscilloscope: instrument has serial \"") +
+				scope->GetSerial() + "\", save file has serial \"" + inst["serial"].as<string>()  + "\"";
+			fail = true;
+		}
+		if(fail)
+		{
+			Gtk::MessageDialog dlg(*this, message, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+			dlg.run();
+			delete scope;
+			continue;
+		}
+
+		//All good. Add to our list of scopes etc
+		g_app->m_scopes.push_back(scope);
+		m_scopes.push_back(scope);
+		idmap[scope] = inst["id"].as<int>();
+
+		//Configure the scope
+		scope->LoadConfiguration(inst, idmap);
+	}
 }
 
 /**
