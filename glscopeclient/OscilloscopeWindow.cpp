@@ -383,9 +383,22 @@ void OscilloscopeWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
 
-	//TODO: delete stuff from our UI
+	//Delete stuff from our UI
 
-	//TODO: close stuff in the application, terminate threads, etc
+	//Purge our list of scopes (the app will delete them)
+	m_scopes.clear();
+
+	//Clear performance counters
+	m_tAcquire = 0;
+	m_tDecode = 0;
+	m_tView = 0;
+	m_tHistory = 0;
+	m_tPoll = 0;
+	m_tEvent = 0;
+	m_lastWaveformTimes.clear();
+
+	//Close stuff in the application, terminate threads, etc
+	g_app->ShutDownSession();
 }
 
 /**

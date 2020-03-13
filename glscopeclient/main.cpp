@@ -49,8 +49,6 @@ using namespace std;
 //for color selection
 int g_numDecodes = 0;
 
-bool g_terminating = false;
-
 ScopeApp* g_app = NULL;
 
 int main(int argc, char* argv[])
@@ -198,7 +196,7 @@ void ScopeThread(Oscilloscope* scope)
 	uint32_t delay_max = 500 * 1000;
 	uint32_t delay_min = 250;
 	double dt = 0;
-	while(!g_terminating)
+	while(!g_app->IsTerminating())
 	{
 		size_t npending = scope->GetPendingWaveformCount();
 

@@ -39,11 +39,7 @@ using namespace std;
 
 ScopeApp::~ScopeApp()
 {
-	for(auto t : m_threads)
-	{
-		t->join();
-		delete t;
-	}
+	ShutDownSession();
 }
 
 void ScopeApp::run()
@@ -65,10 +61,35 @@ void ScopeApp::run()
 			break;
 	}
 
-	g_terminating = true;
+	m_terminating = true;
 
 	delete m_window;
 	m_window = NULL;
+}
+
+/**
+	@brief Shuts down the current session and disconnects from all instruments but don't close the window
+ */
+void ScopeApp::ShutDownSession()
+{
+	//Set terminating flag so all current ScopeThread's terminate
+	m_terminating = true;
+
+	//Wait for all threads to shut down and remove them
+	for(auto t : m_threads)
+	{
+		t->join();
+		delete t;
+	}
+	m_threads.clear();
+
+	//Clean up scopes
+	for(auto scope : m_scopes)
+		delete scope;
+	m_scopes.clear();
+
+	//Back to normal mode
+	m_terminating = false;
 }
 
 /**

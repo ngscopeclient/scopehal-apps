@@ -43,6 +43,7 @@ class ScopeApp : public Gtk::Application
 public:
 	ScopeApp()
 	 : Gtk::Application()
+	 , m_terminating(false)
 	 , m_window(NULL)
 	{}
 
@@ -52,7 +53,14 @@ public:
 
 	virtual void run();
 
+	void ShutDownSession();
+
+	bool IsTerminating()
+	{ return m_terminating; }
+
 protected:
+	bool m_terminating;
+
 	OscilloscopeWindow* m_window;
 
 	virtual void on_activate();
@@ -63,6 +71,5 @@ protected:
 void ScopeThread(Oscilloscope* scope);
 
 extern ScopeApp* g_app;
-extern bool g_terminating;
 
 #endif
