@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -81,8 +81,8 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-	RohdeSchwarzHMC804xPowerSupply psu(new SCPISocketTransport(spsu, 5025));
-	RohdeSchwarzHMC8012Multimeter dmm(new SCPISocketTransport(sdmm, 5025));
+	RohdeSchwarzHMC804xPowerSupply psu(new SCPISocketTransport(spsu));
+	RohdeSchwarzHMC8012Multimeter dmm(new SCPISocketTransport(sdmm));
 
 	//Initial configuration
 	LogDebug("Initial output configuration\n");

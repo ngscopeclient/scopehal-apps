@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,7 +35,7 @@
 
 #include "../scopehal/scopehal.h"
 #include "../scopehal/Instrument.h"
-#include "../scopehal/LeCroyVICPOscilloscope.h"
+#include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
 
@@ -77,8 +77,8 @@ int main(int argc, char* argv[])
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
 	//Connect to the scopes and sanity check
-	LeCroyVICPOscilloscope fgen(sfgen, 1861);
-	LeCroyVICPOscilloscope scope(sscope, 1861);
+	LeCroyOscilloscope fgen(new SCPISocketTransport(sfgen));
+	LeCroyOscilloscope scope(new SCPISocketTransport(sscope));
 	if(0 == (fgen.GetInstrumentTypes() & Instrument::INST_FUNCTION))
 	{
 		LogError("not a function generator\n");

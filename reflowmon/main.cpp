@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -147,15 +147,11 @@ int main(int argc, char* argv[])
 	//Scope format: name:api:host[:port]
 	char nick[128];
 	char api[128];
-	char host[128];
-	int port = 0;
-	if(4 != sscanf(mname.c_str(), "%127[^:]:%127[^:]:%127[^:]:%d", nick, api, host, &port))
+	char args[128];
+	if(3 != sscanf(mname.c_str(), "%127[^:]:%127[^:]:%127s", nick, api, args))
 	{
-		if(3 != sscanf(mname.c_str(), "%127[^:]:%127[^:]:%127[^:]", nick, api, host))
-		{
-			LogError("Invalid multimeter string %s\n", mname.c_str());
-			return 1;
-		}
+		LogError("Invalid multimeter string %s\n", mname.c_str());
+		return 1;
 	}
 
 	string sapi(api);
@@ -163,11 +159,7 @@ int main(int argc, char* argv[])
 	//Connect to the scope
 	if(sapi == "rs_hmc8")
 	{
-		//default port if not specified
-		if(port == 0)
-			port = 5025;
-
-		auto dmm = new RohdeSchwarzHMC8012Multimeter(new SCPISocketTransport(host, port));
+		auto dmm = new RohdeSchwarzHMC8012Multimeter(new SCPISocketTransport(args));
 		dmm->m_nickname = nick;
 		app->m_meter = dmm;
 	}
