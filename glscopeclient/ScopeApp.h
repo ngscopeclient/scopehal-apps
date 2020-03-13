@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,42 +30,39 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief Top-level application class
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#ifndef ScopeApp_h
+#define ScopeApp_h
 
-#define GL_GLEXT_PROTOTYPES
+/**
+	@brief The main application class
+ */
+class ScopeApp : public Gtk::Application
+{
+public:
+	ScopeApp()
+	 : Gtk::Application()
+	 , m_window(NULL)
+	{}
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
-#include "../scopehal/ProtocolDecoder.h"
-#include "../scopehal/AnalogRenderer.h"
+	virtual ~ScopeApp();
 
-#include <thread>
-#include <vector>
+	std::vector<Oscilloscope*> m_scopes;
 
-#include <giomm.h>
-#include <gtkmm.h>
+	virtual void run();
 
-#include <GL/gl.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+protected:
+	OscilloscopeWindow* m_window;
 
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
-#include "ShaderStorageBuffer.h"
-#include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
+	virtual void on_activate();
 
-#include "OscilloscopeWindow.h"
-#include "ScopeApp.h"
+	std::vector<std::thread*> m_threads;
+};
 
-double GetTime();
+void ScopeThread(Oscilloscope* scope);
+
+extern ScopeApp* g_app;
+extern bool g_terminating;
 
 #endif

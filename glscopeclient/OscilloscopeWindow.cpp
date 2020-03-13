@@ -356,14 +356,45 @@ void OscilloscopeWindow::CreateWidgets()
 		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+/**
+	@brief Shuts down the current session in preparation for opening a saved file etc
+ */
+void OscilloscopeWindow::CloseSession()
+{
+	//Close all of our UI elements
+	for(auto it : m_historyWindows)
+		delete it.second;
+	for(auto a : m_analyzers)
+		delete a;
+	for(auto s : m_splitters)
+		delete s;
+	for(auto g : m_waveformGroups)
+		delete g;
+	for(auto w : m_waveformAreas)
+		delete w;
+
+	//Clear our records of them
+	m_historyWindows.clear();
+	m_analyzers.clear();
+	m_splitters.clear();
+	m_waveformGroups.clear();
+	m_waveformAreas.clear();
+
+	//TODO: delete stuff from our UI
+
+	//TODO: close stuff in the application, terminate threads, etc
+}
 
 /**
 	@brief Open a saved configuration
  */
 void OscilloscopeWindow::OnFileOpen()
 {
+	//TODO: prompt to save changes to the current session
+
 	static const char* extension = ".scopesession";
 
 	//Remove the CSS provider so the dialog isn't themed
@@ -398,8 +429,11 @@ void OscilloscopeWindow::OnFileOpen()
 
 	m_currentFileName = dlg.get_filename();
 
+	//Close everything we have open now
+	CloseSession();
+
 	//Open the top level
-	auto docs = YAML::LoadAllFromFile(/*m_currentFileName*/"/dev/null");
+	auto docs = YAML::LoadAllFromFile(m_currentFileName);
 }
 
 /**

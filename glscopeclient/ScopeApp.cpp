@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,42 +30,58 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief Implementation of main application class
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
 
-#define GL_GLEXT_PROTOTYPES
+#include "glscopeclient.h"
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
-#include "../scopehal/ProtocolDecoder.h"
-#include "../scopehal/AnalogRenderer.h"
+using namespace std;
 
-#include <thread>
-#include <vector>
+ScopeApp::~ScopeApp()
+{
+	for(auto t : m_threads)
+	{
+		t->join();
+		delete t;
+	}
+}
 
-#include <giomm.h>
-#include <gtkmm.h>
+void ScopeApp::run()
+{
+	register_application();
+	on_activate();
 
-#include <GL/gl.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+	while(true)
+	{
+		//Poll the scope to see if we have any new data
+		m_window->PollScopes();
 
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
-#include "ShaderStorageBuffer.h"
-#include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
+		//Dispatch events if we have any
+		while(Gtk::Main::events_pending())
+			Gtk::Main::iteration();
 
-#include "OscilloscopeWindow.h"
-#include "ScopeApp.h"
+		//Stop if the main window got closed
+		if(!m_window->is_visible())
+			break;
+	}
 
-double GetTime();
+	g_terminating = true;
 
-#endif
+	delete m_window;
+	m_window = NULL;
+}
+
+/**
+	@brief Create windows for each instrument
+ */
+void ScopeApp::on_activate()
+{
+	//Start the scope threads
+	for(auto scope : m_scopes)
+		m_threads.push_back(new thread(ScopeThread, scope));
+
+	//Test application
+	m_window = new OscilloscopeWindow(m_scopes);
+	add_window(*m_window);
+	m_window->present();
+}

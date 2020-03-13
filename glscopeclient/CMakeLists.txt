@@ -13,6 +13,7 @@ add_executable(glscopeclient
 	Program.cpp
 	ProtocolAnalyzerWindow.cpp
 	ProtocolDecoderDialog.cpp
+	ScopeApp.cpp
 	Shader.cpp
 	ShaderStorageBuffer.cpp
 	Texture.cpp

@@ -189,6 +189,7 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
+	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
 

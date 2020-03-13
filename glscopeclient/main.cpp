@@ -34,7 +34,6 @@
  */
 
 #include "glscopeclient.h"
-#include "OscilloscopeWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
 #include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/SiglentSCPIOscilloscope.h"
@@ -43,7 +42,6 @@
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
-#include <thread>
 #include <libgen.h>
 
 using namespace std;
@@ -53,92 +51,10 @@ int g_numDecodes = 0;
 
 bool g_terminating = false;
 
-void ScopeThread(Oscilloscope* scope);
-
-/**
-	@brief The main application class
- */
-class ScopeApp : public Gtk::Application
-{
-public:
-	ScopeApp()
-	 : Gtk::Application()
-	 , m_window(NULL)
-	{}
-
-	virtual ~ScopeApp();
-
-	static Glib::RefPtr<ScopeApp> create()
-	{
-		return Glib::RefPtr<ScopeApp>(new ScopeApp);
-	}
-
-	vector<Oscilloscope*> m_scopes;
-
-	virtual void run();
-
-protected:
-	OscilloscopeWindow* m_window;
-
-	virtual void on_activate();
-
-	vector<thread*> m_threads;
-};
-
-ScopeApp::~ScopeApp()
-{
-	for(auto t : m_threads)
-	{
-		t->join();
-		delete t;
-	}
-}
-
-void ScopeApp::run()
-{
-	register_application();
-	on_activate();
-
-	while(true)
-	{
-		//Poll the scope to see if we have any new data
-		m_window->PollScopes();
-
-		//Dispatch events if we have any
-		while(Gtk::Main::events_pending())
-			Gtk::Main::iteration();
-
-		//Stop if the main window got closed
-		if(!m_window->is_visible())
-			break;
-	}
-
-	g_terminating = true;
-
-	delete m_window;
-	m_window = NULL;
-}
-
-/**
-	@brief Create windows for each instrument
- */
-void ScopeApp::on_activate()
-{
-	//Start the scope threads
-	for(auto scope : m_scopes)
-		m_threads.push_back(new thread(ScopeThread, scope));
-
-	//Test application
-	m_window = new OscilloscopeWindow(m_scopes);
-	add_window(*m_window);
-	m_window->present();
-}
+ScopeApp* g_app = NULL;
 
 int main(int argc, char* argv[])
 {
-	auto app = ScopeApp::create();
-
-
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
 
@@ -175,15 +91,10 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-
 	//Change to the binary's directory so we can use relative paths for external resources
 	//FIXME: portability warning: this only works on Linux
-
 	char binDir[1024];
-
-	//Get our binary's full path
 	ssize_t readlinkReturn = readlink("/proc/self/exe", binDir, (sizeof(binDir) - 1) );
-
 	if ( readlinkReturn < 0 )
 	{
 		//FIXME: add errno output
@@ -214,6 +125,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	g_app = new ScopeApp;
 
 	//Initialize object creation tables
 	TransportStaticInit();
@@ -247,10 +159,11 @@ int main(int argc, char* argv[])
 
 		//All good, hook it up
 		scope->m_nickname = nick;
-		app->m_scopes.push_back(scope);
+		g_app->m_scopes.push_back(scope);
 	}
 
-	app->run();
+	g_app->run();
+	delete g_app;
 	return 0;
 }
 
