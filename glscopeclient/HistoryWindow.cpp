@@ -97,7 +97,11 @@ HistoryWindow::~HistoryWindow()
 	{
 		WaveformHistory hist = it[m_columns.m_history];
 		for(auto w : hist)
-			delete w.second;
+		{
+			//Do *not* delete the channel's current data!
+			if(w.second != w.first->GetData())
+				delete w.second;
+		}
 	}
 }
 
