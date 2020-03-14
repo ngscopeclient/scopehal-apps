@@ -93,7 +93,7 @@ public:
 	OscilloscopeWindow* GetParent()
 	{ return m_parent; }
 
-	virtual std::string SerializeConfiguration(std::map<void*, int>& idmap, int& nextID);
+	virtual std::string SerializeConfiguration(IDTable& table);
 
 protected:
 	MeasurementColumn* m_selectedColumn;

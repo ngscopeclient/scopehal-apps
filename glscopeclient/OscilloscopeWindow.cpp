@@ -466,15 +466,17 @@ void OscilloscopeWindow::DoFileOpen(
 	bool loadWaveform,
 	bool reconnect)
 {
-	//Create the ID map for resolving all of our pointers etc
-	std::map<void*, int> idmap;
-
 	//Only open the first doc, our file format doesn't ever generate multiple docs in a file.
 	//Ignore any trailing stuff at the end
 	auto node = docs[0];
 
-	//Load the instruments
-	LoadInstruments(node["instruments"], reconnect, idmap);
+	//Load various sections of the file
+	IDTable table;
+	LoadInstruments(node["instruments"], reconnect, table);
+	if(loadLayout)
+	{
+		LoadDecodes(node["decodes"], table);
+	}
 
 	//Re-title the window for the new scope
 	SetTitle();
@@ -483,7 +485,7 @@ void OscilloscopeWindow::DoFileOpen(
 /**
 	@brief Reconnect to existing instruments and reconfigure them
  */
-void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect, std::map<void*, int>& idmap)
+void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table)
 {
 	if(!node)
 	{
@@ -538,11 +540,48 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		//All good. Add to our list of scopes etc
 		g_app->m_scopes.push_back(scope);
 		m_scopes.push_back(scope);
-		idmap[scope] = inst["id"].as<int>();
+		table.emplace(inst["id"].as<int>(), scope);
 
 		//Configure the scope
-		scope->LoadConfiguration(inst, idmap);
+		scope->LoadConfiguration(inst, table);
 	}
+}
+
+/**
+	@brief Load protocol decoder configuration
+ */
+void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
+{
+	if(!node)
+	{
+		LogError("Save file missing decodes node\n");
+		return;
+	}
+
+	//Load each decode
+	for(auto it : node)
+	{
+		auto dnode = it.second;
+
+		//Create the decode
+		auto decode = ProtocolDecoder::CreateDecoder(dnode["protocol"].as<string>(), dnode["color"].as<string>());
+		table.emplace(dnode["id"].as<int>(), decode);
+		m_decoders.emplace(decode);
+	}
+
+	/*
+	//Make a second pass to configure the decodes, once all of them have been instantiated.
+	//Decoders may depend on other decoders as inputs, and serialization is not guaranteed to be a topological sort.
+	for(auto it : node)
+	{
+		auto dnode = it.second;
+
+		//auto dit = idmap.find(
+	}
+
+	//Configure it
+	decode->LoadConfiguration(dnode, idmap);
+	*/
 }
 
 /**
@@ -693,22 +732,19 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
 {
 	string config = "";
 
-	//Assign integer IDs to everything instead of pointers
-	int nextID = 1;
-	std::map<void*, int> idmap;
-
 	//TODO: save metadata
 
 	//Save instrument config regardless, since data etc needs it
-	config += SerializeInstrumentConfiguration(idmap, nextID);
+	IDTable table;
+	config += SerializeInstrumentConfiguration(table);
 
 	//Decodes depend on scope channels, but need to happen before UI elements that use them
 	if(!m_decoders.empty())
-		config += SerializeDecodeConfiguration(idmap, nextID);
+		config += SerializeDecodeConfiguration(table);
 
 	//UI config
 	if(saveLayout)
-		config += SerializeUIConfiguration(idmap, nextID);
+		config += SerializeUIConfiguration(table);
 
 	return config;
 }
@@ -716,12 +752,12 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
 /**
 	@brief Serialize the configuration for all oscilloscopes
  */
-string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID)
+string OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
 {
 	string config = "instruments:\n";
 
 	for(auto scope : m_scopes)
-		config += scope->SerializeConfiguration(idmap, nextID);
+		config += scope->SerializeConfiguration(table);
 
 	return config;
 }
@@ -729,17 +765,17 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(std::map<void*, int>
 /**
 	@brief Serialize the configuration for all protocol decoders
  */
-string OscilloscopeWindow::SerializeDecodeConfiguration(std::map<void*, int>& idmap, int& nextID)
+string OscilloscopeWindow::SerializeDecodeConfiguration(IDTable& table)
 {
 	string config = "decodes:\n";
 
 	for(auto d : m_decoders)
-		config += d->SerializeConfiguration(idmap, nextID);
+		config += d->SerializeConfiguration(table);
 
 	return config;
 }
 
-string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap, int& nextID)
+string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 {
 	char tmp[1024];
 	string config = "ui_config:\n";
@@ -753,10 +789,10 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 	//Waveform areas
 	config += "    areas:\n";
 	for(auto area : m_waveformAreas)
-		idmap[area] = nextID++;
+		table.emplace(area);
 	for(auto area : m_waveformAreas)
 	{
-		int id = idmap[area];
+		int id = table[area];
 		snprintf(tmp, sizeof(tmp), "        : \n");
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
@@ -767,7 +803,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 		//Channels
 		//By the time we get here, all channels should be accounted for.
 		//So there should be no reason to assign names to channels at this point - just use what's already there
-		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", idmap[area->GetChannel()]);
+		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", table[area->GetChannel()]);
 		config += tmp;
 
 		//Overlays
@@ -780,7 +816,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 			{
 				snprintf(tmp, sizeof(tmp), "                :\n");
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", idmap[area->GetOverlay(i)]);
+				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[area->GetOverlay(i)]);
 				config += tmp;
 			}
 		}
@@ -789,21 +825,20 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 	//Waveform groups
 	config += "    groups: \n";
 	for(auto group : m_waveformGroups)
-		idmap[group] = nextID++;
+		table.emplace(group);
 	for(auto group : m_waveformGroups)
-		config += group->SerializeConfiguration(idmap, nextID);
+		config += group->SerializeConfiguration(table);
 
 	//Splitters
 	config += "    splitters: \n";
 	for(auto split : m_splitters)
-		idmap[split] = nextID++;
+		table.emplace(split);
 	for(auto split : m_splitters)
 	{
 		//Splitter config
-		int id = idmap[split];
 		snprintf(tmp, sizeof(tmp), "        : \n");
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:     %d\n", id);
+		snprintf(tmp, sizeof(tmp), "            id:     %d\n", table[split]);
 		config += tmp;
 
 		if(dynamic_cast<Gtk::HPaned*>(split) != NULL)
@@ -816,9 +851,9 @@ string OscilloscopeWindow::SerializeUIConfiguration(std::map<void*, int>& idmap,
 		config += tmp;
 
 		//Children
-		snprintf(tmp, sizeof(tmp), "            child0: %d\n", idmap[split->get_child1()]);
+		snprintf(tmp, sizeof(tmp), "            child0: %d\n", table[split->get_child1()]);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            child1: %d\n", idmap[split->get_child2()]);
+		snprintf(tmp, sizeof(tmp), "            child1: %d\n", table[split->get_child2()]);
 		config += tmp;
 	}
 

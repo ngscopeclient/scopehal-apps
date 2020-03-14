@@ -191,14 +191,13 @@ void WaveformGroup::OnRemoveMeasurementItem()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-string WaveformGroup::SerializeConfiguration(std::map<void*, int>& idmap, int& nextID)
+string WaveformGroup::SerializeConfiguration(IDTable& table)
 {
 	char tmp[1024];
 
-	int id = idmap[this];
 	snprintf(tmp, sizeof(tmp), "        : \n");
 	string config = tmp;
-	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
+	snprintf(tmp, sizeof(tmp), "            id:             %d\n", table.emplace(this));
 	config += tmp;
 
 	config += "            name:           \"" + m_frame.get_label() + "\"\n";
@@ -246,7 +245,7 @@ string WaveformGroup::SerializeConfiguration(std::map<void*, int>& idmap, int& n
 		config += "            measurements: @\n";
 
 		for(auto col : m_measurementColumns)
-			config += col->m_measurement->SerializeConfiguration(idmap, nextID, col->m_title);
+			config += col->m_measurement->SerializeConfiguration(table, col->m_title);
 	}
 
 	return config;

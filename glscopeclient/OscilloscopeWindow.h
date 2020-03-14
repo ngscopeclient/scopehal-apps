@@ -189,7 +189,8 @@ public:
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
 	void DoFileOpen(std::vector<YAML::Node>& docs, bool loadLayout, bool loadWaveform, bool reconnect);
-	void LoadInstruments(const YAML::Node& node, bool reconnect, std::map<void*, int>& idmap);
+	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
+	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
@@ -216,9 +217,9 @@ public:
 	std::string m_currentDataDirName;
 
 	std::string SerializeConfiguration(bool saveLayout);
-	std::string SerializeInstrumentConfiguration(std::map<void*, int>& idmap, int& nextID);
-	std::string SerializeDecodeConfiguration(std::map<void*, int>& idmap, int& nextID);
-	std::string SerializeUIConfiguration(std::map<void*, int>& idmap, int& nextID);
+	std::string SerializeInstrumentConfiguration(IDTable& table);
+	std::string SerializeDecodeConfiguration(IDTable& table);
+	std::string SerializeUIConfiguration(IDTable& table);
 
 	//Performance counters
 	double m_tAcquire;
