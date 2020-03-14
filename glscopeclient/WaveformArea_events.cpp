@@ -340,7 +340,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_TRIGGER:
 			if(event->button == 1)
 			{
-				m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+				m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
 				m_parent->ClearAllPersistence();
 				queue_draw();
 			}
@@ -376,7 +376,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	{
 		//Trigger drag - update level and refresh
 		case DRAG_TRIGGER:
-			m_scope->SetTriggerVoltage(YPositionToVolts(event->y));
+			m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
 			m_parent->ClearAllPersistence();
 			queue_draw();
 			break;
@@ -569,8 +569,8 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
-	m_scope->SetTriggerChannelIndex(m_channel->GetIndex());
-	m_scope->SetTriggerType(type);
+	m_channel->GetScope()->SetTriggerChannelIndex(m_channel->GetIndex());
+	m_channel->GetScope()->SetTriggerType(type);
 	m_parent->ClearAllPersistence();
 }
 
@@ -625,9 +625,9 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	if(x > m_plotRight)
 	{
 		//On the trigger button?
-		if((m_scope != NULL) && (m_channel->GetIndex() == m_scope->GetTriggerChannelIndex()) )
+		if((m_channel->GetScope() != NULL) && (m_channel->GetIndex() == m_channel->GetScope()->GetTriggerChannelIndex()) )
 		{
-			float vy = VoltsToYPosition(m_scope->GetTriggerVoltage());
+			float vy = VoltsToYPosition(m_channel->GetScope()->GetTriggerVoltage());
 			float radius = 20;
 			if( (fabs(y - vy) < radius) &&
 				(x < (m_plotRight + radius) ) )
@@ -804,7 +804,7 @@ void WaveformArea::UpdateContextMenu()
 				break;
 		}
 
-		if(m_scope->GetTriggerChannelIndex() != m_channel->GetIndex())
+		if(m_channel->GetScope()->GetTriggerChannelIndex() != m_channel->GetIndex())
 		{
 			m_risingTriggerItem.set_inconsistent(true);
 			m_fallingTriggerItem.set_inconsistent(true);
@@ -824,7 +824,7 @@ void WaveformArea::UpdateContextMenu()
 			m_fallingTriggerItem.set_draw_as_radio(true);
 			m_bothTriggerItem.set_draw_as_radio(true);
 
-			switch(m_scope->GetTriggerType())
+			switch(m_channel->GetScope()->GetTriggerType())
 			{
 				case Oscilloscope::TRIGGER_TYPE_RISING:
 					m_risingTriggerItem.set_active();

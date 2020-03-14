@@ -111,7 +111,7 @@ class OscilloscopeWindow;
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea(Oscilloscope* scope, OscilloscopeChannel* channel, OscilloscopeWindow* parent);
+	WaveformArea(OscilloscopeChannel* channel, OscilloscopeWindow* parent);
 	WaveformArea(const WaveformArea* clone);
 	virtual ~WaveformArea();
 
@@ -145,6 +145,15 @@ public:
 
 	bool GetPersistenceEnabled()
 	{ return m_persistence; }
+
+	void SetPersistenceEnabled(bool enabled)
+	{ m_persistence = enabled; }
+
+	void AddOverlay(ProtocolDecoder* decode)
+	{
+		decode->AddRef();
+		m_overlays.push_back(decode);
+	}
 
 protected:
 	void SharedCtorInit();
@@ -342,7 +351,6 @@ protected:
 
 	void OnRemoveOverlay(ProtocolDecoder* decode);
 
-	Oscilloscope* m_scope;
 	OscilloscopeChannel* m_channel;							//The main waveform for this view
 	OscilloscopeChannel* m_selectedChannel;					//The selected channel (either m_channel or an overlay)
 	OscilloscopeWindow* m_parent;

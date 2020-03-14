@@ -206,9 +206,9 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->begin_new_path();
 
 	//See if we're the active trigger
-	if( (m_scope != NULL) && (m_channel->GetIndex() == m_scope->GetTriggerChannelIndex()) )
+	if(m_channel->GetIndex() == m_channel->GetScope()->GetTriggerChannelIndex())
 	{
-		float v = m_scope->GetTriggerVoltage();
+		float v = m_channel->GetScope()->GetTriggerVoltage();
 		float y = VoltsToYPosition(v);
 
 		float trisize = 5;

@@ -319,10 +319,7 @@ void OscilloscopeWindow::CreateWidgets()
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
 			{
-				auto w = new WaveformArea(
-					scope,
-					chan,
-					this);
+				auto w = new WaveformArea(chan, this);
 				w->m_group = group;
 				m_waveformAreas.emplace(w);
 				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
@@ -582,10 +579,20 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 	resize(wnode["width"].as<int>(), wnode["height"].as<int>());
 
 	//Waveform areas
-	auto anode = node["areas"];
-	for(auto it : anode)
+	auto areas = node["areas"];
+	for(auto it : areas)
 	{
+		//Load the area itself
+		auto an = it.second;
+		WaveformArea* area = new WaveformArea(static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]), this);
+		table.emplace(an["id"].as<int>(), area);
+		area->SetPersistenceEnabled(an["persistence"].as<int>() ? true : false);
+		m_waveformAreas.emplace(area);
 
+		//Add any overlays
+		auto overlays = an["overlays"];
+		for(auto jt : overlays)
+			area->AddOverlay(static_cast<ProtocolDecoder*>(table[jt.second["id"].as<int>()]));
 	}
 }
 
@@ -797,10 +804,9 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		table.emplace(area);
 	for(auto area : m_waveformAreas)
 	{
-		int id = table[area];
 		snprintf(tmp, sizeof(tmp), "        : \n");
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
+		snprintf(tmp, sizeof(tmp), "            id:          %d\n", table[area]);
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            persistence: %d\n", area->GetPersistenceEnabled());
 		config += tmp;
@@ -1178,10 +1184,7 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 		AddDecoder(decode);
 
 	//Create the viewer
-	auto w = new WaveformArea(
-		chan->GetScope(),
-		chan,
-		this);
+	auto w = new WaveformArea(chan, this);
 	w->m_group = ngroup;
 	m_waveformAreas.emplace(w);
 

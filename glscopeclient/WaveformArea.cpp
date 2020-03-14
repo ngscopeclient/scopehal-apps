@@ -43,12 +43,10 @@ using namespace std;
 using namespace glm;
 
 WaveformArea::WaveformArea(
-	Oscilloscope* scope,
 	OscilloscopeChannel* channel,
 	OscilloscopeWindow* parent
 	)
 	: m_persistence(false)
-	, m_scope(scope)
 	, m_channel(channel)
 	, m_parent(parent)
 	, m_pixelsPerVolt(1)
@@ -63,7 +61,6 @@ WaveformArea::WaveformArea(
  */
 WaveformArea::WaveformArea(const WaveformArea* clone)
 	: m_persistence(clone->m_persistence)
-	, m_scope(clone->m_scope)
 	, m_channel(clone->m_channel)
 	, m_parent(clone->m_parent)
 	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
