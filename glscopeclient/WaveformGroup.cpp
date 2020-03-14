@@ -130,11 +130,6 @@ void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string col
 	else
 		m->SetInput(0, chan);
 
-	//Make sure the measurements can actually be seen
-	m_measurementFrame.show();
-
-	//TODO: Don't allow adding the same measurement twice
-
 	//Short name of the channel (truncate if too long)
 	string shortname = chan->m_displayname;
 	if(shortname.length() > 12)
@@ -143,13 +138,25 @@ void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string col
 		shortname += "...";
 	}
 
-	//Create the column and figure out the title
-	auto col = new MeasurementColumn;
+	//Name the measurement
 	char tmp[256];
 	snprintf(tmp, sizeof(tmp), "%s: %s", shortname.c_str(), name.c_str());
-	col->m_title = tmp;
+
+	AddColumn(m, color, tmp);
+}
+
+void WaveformGroup::AddColumn(Measurement* meas, string color, string label)
+{
+	//Make sure the measurements can actually be seen
+	m_measurementFrame.show();
+
+	//TODO: Don't allow adding the same measurement twice
+
+	//Create the column and figure out the title
+	auto col = new MeasurementColumn;
+	col->m_title = label;
 	m_measurementColumns.emplace(col);
-	col->m_measurement = m;
+	col->m_measurement = meas;
 
 	//Add to the box and show it
 	m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);

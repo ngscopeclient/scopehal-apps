@@ -594,6 +594,61 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		for(auto jt : overlays)
 			area->AddOverlay(static_cast<ProtocolDecoder*>(table[jt.second["id"].as<int>()]));
 	}
+
+	//Waveform groups
+	auto groups = node["groups"];
+	for(auto it : groups)
+	{
+		//Create the group
+		auto gn = it.second;
+		WaveformGroup* group = new WaveformGroup(this);
+		table.emplace(gn["id"].as<int>(), group);
+		group->m_measurementFrame.set_label(gn["name"].as<string>());
+		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
+		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
+		m_waveformGroups.emplace(group);
+
+		//Cursor config
+		string cursor = gn["cursorConfig"].as<string>();
+		if(cursor == "none")
+			group->m_cursorConfig = WaveformGroup::CURSOR_NONE;
+		else if(cursor == "x_single")
+			group->m_cursorConfig = WaveformGroup::CURSOR_X_SINGLE;
+		else if(cursor == "x_dual")
+			group->m_cursorConfig = WaveformGroup::CURSOR_X_DUAL;
+		else if(cursor == "y_single")
+			group->m_cursorConfig = WaveformGroup::CURSOR_Y_SINGLE;
+		else if(cursor == "y_dual")
+			group->m_cursorConfig = WaveformGroup::CURSOR_Y_DUAL;
+		group->m_xCursorPos[0] = gn["xcursor0"].as<long>();
+		group->m_xCursorPos[1] = gn["xcursor1"].as<long>();
+		group->m_yCursorPos[0] = gn["ycursor0"].as<float>();
+		group->m_yCursorPos[1] = gn["ycursor1"].as<float>();
+
+		//Measurements
+		auto measurements = gn["measurements"];
+		if(measurements)
+		{
+			for(auto jt : measurements)
+			{
+				auto mn = jt.second;
+
+				auto meas = Measurement::CreateMeasurement(mn["measurement"].as<string>());
+				table.emplace(mn["id"].as<int>(), meas);
+
+				//Configure the inputs
+				auto inputs = mn["inputs"];
+				for(auto kt : inputs)
+				{
+					meas->SetInput(
+						kt.first.as<string>(),
+						static_cast<OscilloscopeChannel*>(table[kt.second.as<int>()]) );
+				}
+
+				group->AddColumn(meas, mn["color"].as<string>(), mn["nick"].as<string>());
+			}
+		}
+	}
 }
 
 /**

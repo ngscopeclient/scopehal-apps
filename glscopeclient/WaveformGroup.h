@@ -63,6 +63,7 @@ public:
 	void RefreshMeasurements();
 
 	void AddColumn(std::string name, OscilloscopeChannel* chan, std::string color);
+	void AddColumn(Measurement* meas, std::string color, std::string label);
 
 	Gtk::Frame m_frame;
 		Gtk::VBox m_vbox;
