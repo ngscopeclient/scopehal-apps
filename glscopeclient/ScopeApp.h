@@ -51,7 +51,7 @@ public:
 
 	std::vector<Oscilloscope*> m_scopes;
 
-	virtual void run();
+	virtual void run(std::string fileToLoad);
 
 	void ShutDownSession();
 

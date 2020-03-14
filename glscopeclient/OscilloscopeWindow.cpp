@@ -444,28 +444,21 @@ void OscilloscopeWindow::OnFileOpen()
 	if(response != Gtk::RESPONSE_OK)
 		return;
 
-	m_currentFileName = dlg.get_filename();
-
-	//Close everything we have open now
-	CloseSession();
-
-	//Open the top level
 	bool loadLayout = dlg.get_choice("layout") == "true";
 	bool loadWaveform = dlg.get_choice("waveform") == "true";
 	bool reconnect = dlg.get_choice("reconnect") == "true";
-	auto docs = YAML::LoadAllFromFile(m_currentFileName);
-	DoFileOpen(docs, loadLayout, loadWaveform, reconnect);
+	DoFileOpen(dlg.get_filename(), loadLayout, loadWaveform, reconnect);
 }
 
 /**
-	@brief Loads configuration from a file
+	@brief Open a saved file
  */
-void OscilloscopeWindow::DoFileOpen(
-	std::vector<YAML::Node>& docs,
-	bool loadLayout,
-	bool loadWaveform,
-	bool reconnect)
+void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadWaveform, bool reconnect)
 {
+	m_currentFileName = filename;
+	CloseSession();
+	auto docs = YAML::LoadAllFromFile(m_currentFileName);
+
 	//Only open the first doc, our file format doesn't ever generate multiple docs in a file.
 	//Ignore any trailing stuff at the end
 	auto node = docs[0];
@@ -476,6 +469,7 @@ void OscilloscopeWindow::DoFileOpen(
 	if(loadLayout)
 	{
 		LoadDecodes(node["decodes"], table);
+		LoadUIConfiguration(node["ui_config"], table);
 	}
 
 	//Re-title the window for the new scope
@@ -569,19 +563,30 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 		m_decoders.emplace(decode);
 	}
 
-	/*
 	//Make a second pass to configure the decodes, once all of them have been instantiated.
 	//Decoders may depend on other decoders as inputs, and serialization is not guaranteed to be a topological sort.
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-
-		//auto dit = idmap.find(
+		static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()])->LoadConfiguration(dnode, table);
 	}
+}
 
-	//Configure it
-	decode->LoadConfiguration(dnode, idmap);
-	*/
+/**
+	@brief Load user interface configuration
+ */
+void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& table)
+{
+	//Window configuration
+	auto wnode = node["window"];
+	resize(wnode["width"].as<int>(), wnode["height"].as<int>());
+
+	//Waveform areas
+	auto anode = node["areas"];
+	for(auto it : anode)
+	{
+
+	}
 }
 
 /**

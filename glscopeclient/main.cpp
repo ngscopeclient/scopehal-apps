@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
 
 	//Parse command-line arguments
 	vector<string> scopes;
+	string fileToLoad;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -82,8 +83,20 @@ int main(int argc, char* argv[])
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
 			return 1;
 		}
+
+		//Not a flag. Either a connection string or a save file name.
 		else
-			scopes.push_back(s);
+		{
+			//If there's a colon after the first few characters, it's a connection string
+			//(Windows may have drive letter colons early on)
+			auto colon = s.rfind(":");
+			if( (colon != string::npos) && (colon > 1) )
+				scopes.push_back(s);
+
+			//Otherwise assume it's a save file
+			else
+				fileToLoad = s;
+		}
 	}
 
 	//Set up logging
@@ -160,7 +173,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run();
+	g_app->run(fileToLoad);
 	delete g_app;
 	return 0;
 }

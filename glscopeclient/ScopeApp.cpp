@@ -42,10 +42,13 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run()
+void ScopeApp::run(string fileToLoad)
 {
 	register_application();
 	on_activate();
+
+	if(!fileToLoad.empty())
+		m_window->DoFileOpen(fileToLoad);
 
 	while(true)
 	{
@@ -101,7 +104,7 @@ void ScopeApp::on_activate()
 	for(auto scope : m_scopes)
 		m_threads.push_back(new thread(ScopeThread, scope));
 
-	//Test application
+	//Launch the application
 	m_window = new OscilloscopeWindow(m_scopes);
 	add_window(*m_window);
 	m_window->present();

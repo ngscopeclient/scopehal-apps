@@ -188,9 +188,10 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
-	void DoFileOpen(std::vector<YAML::Node>& docs, bool loadLayout, bool loadWaveform, bool reconnect);
+	void DoFileOpen(std::string filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
+	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);

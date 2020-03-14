@@ -242,7 +242,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	//Measurements
 	if(!m_measurementColumns.empty())
 	{
-		config += "            measurements: @\n";
+		config += "            measurements: \n";
 
 		for(auto col : m_measurementColumns)
 			config += col->m_measurement->SerializeConfiguration(table, col->m_title);
