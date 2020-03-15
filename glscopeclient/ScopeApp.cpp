@@ -34,6 +34,7 @@
  */
 
 #include "glscopeclient.h"
+#include "../scopehal/MockOscilloscope.h"
 
 using namespace std;
 
@@ -49,8 +50,9 @@ void ScopeApp::run(string fileToLoad)
 	m_window = new OscilloscopeWindow(m_scopes);
 	add_window(*m_window);
 
+	//If loading a file on the command line, do not reconnect to the scope
 	if(!fileToLoad.empty())
-		m_window->DoFileOpen(fileToLoad);
+		m_window->DoFileOpen(fileToLoad, true, true, false);
 
 	m_window->present();
 
@@ -107,5 +109,11 @@ void ScopeApp::StartScopeThreads()
 {
 	//Start the scope threads
 	for(auto scope : m_scopes)
+	{
+		//Mock scopes can't trigger, so don't waste time polling them
+		if(dynamic_cast<MockOscilloscope*>(scope) != NULL)
+			continue;
+
 		m_threads.push_back(new thread(ScopeThread, scope));
+	}
 }
