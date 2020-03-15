@@ -192,6 +192,8 @@ public:
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
+	void LoadWaveformData(std::string filename, IDTable& table);
+	void LoadWaveformDataForScope(const YAML::Node& node, Oscilloscope* scope, std::string datadir, IDTable& table);
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);

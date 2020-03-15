@@ -481,12 +481,148 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	//Re-title the window for the new scope
 	SetTitle();
 
-	//TODO: load waveform data
+	//Load data
+	if(loadWaveform)
+		LoadWaveformData(filename, table);
 
 	//TODO: refresh measurements and protocol decodes
 
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
+}
+
+/**
+	@brief Loads waveform data for a save file
+ */
+void OscilloscopeWindow::LoadWaveformData(string filename, IDTable& table)
+{
+	//Figure out data directory
+	string base = filename.substr(0, filename.length() - strlen(".scopesession"));
+	string datadir = base + "_data";
+
+	//Load data for each scope
+	for(auto scope : m_scopes)
+	{
+		int id = table[scope];
+
+		char tmp[512];
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", datadir.c_str(), id);
+		auto docs = YAML::LoadAllFromFile(tmp);
+
+		LoadWaveformDataForScope(docs[0], scope, datadir, table);
+	}
+}
+
+/**
+	@brief Loads waveform data for a single instrument
+ */
+void OscilloscopeWindow::LoadWaveformDataForScope(
+	const YAML::Node& node,
+	Oscilloscope* scope,
+	string datadir,
+	IDTable& table)
+{
+	char tmp[512];
+
+	TimePoint time;
+	time.first = 0;
+	time.second = 0;
+
+	TimePoint newest;
+	newest.first = 0;
+	newest.second = 0;
+
+	auto window = m_historyWindows[scope];
+	int scope_id = table[scope];
+
+	auto wavenode = node["waveforms"];
+	for(auto it : wavenode)
+	{
+		//Top level metadata
+		auto wfm = it.second;
+		time.first = wfm["timestamp"].as<long>();
+		time.second = wfm["time_psec"].as<long>();
+		int waveform_id = wfm["id"].as<int>();
+
+		//Detach old waveforms from our channels (if any)
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+			scope->GetChannel(i)->Detach();
+
+		//Load each cahnnel
+		auto chans = wfm["channels"];
+		for(auto jt : chans)
+		{
+			auto ch = jt.second;
+			int channel_index = ch["index"].as<int>();
+			auto chan = scope->GetChannel(channel_index);
+
+			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
+			CaptureChannelBase* cap = NULL;
+			AnalogCapture* acap = NULL;
+			DigitalCapture* dcap = NULL;
+			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+				cap = acap = new AnalogCapture;
+			else
+				cap = dcap = new DigitalCapture;
+
+			//Channel waveform metadata
+			cap->m_timescale = ch["timescale"].as<long>();
+			cap->m_startTimestamp = time.first;
+			cap->m_startPicoseconds = time.second;
+			cap->m_triggerPhase = ch["trigphase"].as<float>();
+
+			//Load the actual samples
+			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+				datadir.c_str(),
+				scope_id,
+				waveform_id,
+				channel_index);
+			FILE* fp = fopen(tmp, "rb");
+			if(!fp)
+			{
+				LogError("couldn't open %s\n", tmp);
+				return;
+			}
+
+			int64_t stime[2];
+			bool b;
+			float f;
+			while(!feof(fp))
+			{
+				if(2 != fread(stime, sizeof(int64_t), 2, fp))
+					break;
+
+				if(acap)
+				{
+					if(1 != fread(&f, sizeof(float), 1, fp))
+						LogError("fail to read sample\n");
+					acap->m_samples.push_back(AnalogSample(stime[0], stime[1], f));
+				}
+				else
+				{
+					if(1 != fread(&b, sizeof(bool), 1, fp))
+						LogError("fail to read sample\n");
+					dcap->m_samples.push_back(DigitalSample(stime[0], stime[1], b));
+				}
+			}
+
+			chan->SetData(cap);
+
+			fclose(fp);
+		}
+
+		//Add to history
+		window->OnWaveformDataReady();
+
+		//Keep track of the newest waveform (may not be in time order)
+		if( (time.first > newest.first) ||
+			( (time.first == newest.first) &&  (time.second > newest.second) ) )
+		{
+			newest = time;
+		}
+	}
+
+	window->JumpToHistory(newest);
 }
 
 /**
@@ -549,8 +685,6 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		m_scopes.push_back(scope);
 		table.emplace(inst["id"].as<int>(), scope);
 
-		//TODO: start ScopeThread's
-
 		//Configure the scope
 		scope->LoadConfiguration(inst, table);
 	}
@@ -561,11 +695,9 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
  */
 void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 {
+	//No protocol decodes? Skip this section
 	if(!node)
-	{
-		LogError("Save file missing decodes node\n");
 		return;
-	}
 
 	//Load each decode
 	for(auto it : node)
