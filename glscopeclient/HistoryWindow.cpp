@@ -397,3 +397,18 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 	}
 	fclose(fp);
 }
+
+void HistoryWindow::ReplayHistory()
+{
+	//TODO: is there a way to binary search a tree view?
+	//Or get *stable* iterators that aren't invalidated by adding/removing items?
+	auto children = m_model->children();
+	for(auto it : children)
+	{
+		//Select will update all the protocol decoders etc
+		m_tree.get_selection()->select(it);
+
+		//Update analyzers
+		m_parent->OnHistoryUpdated(true);
+	}
+}

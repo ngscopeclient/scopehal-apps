@@ -59,6 +59,8 @@ public:
 	HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope);
 	~HistoryWindow();
 
+	void ReplayHistory();
+
 	void OnWaveformDataReady();
 	void JumpToHistory(TimePoint timestamp);
 

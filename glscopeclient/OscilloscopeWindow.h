@@ -88,7 +88,7 @@ public:
 	void HideHistory()
 	{ m_btnHistory.set_active(0); }
 
-	void OnHistoryUpdated();
+	void OnHistoryUpdated(bool refreshAnalyzers = false);
 	void RemoveHistory(TimePoint timestamp);
 
 	void JumpToHistory(TimePoint timestamp);

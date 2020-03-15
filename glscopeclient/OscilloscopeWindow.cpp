@@ -505,10 +505,16 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 				auto analyzer = new ProtocolAnalyzerWindow(title, this, pdecode, area);
 				m_analyzers.emplace(analyzer);
+
+				//Done
 				analyzer->show();
 			}
 		}
 	}
+
+	//TODO: make this work properly if we have decodes spanning multiple scopes
+	for(auto it : m_historyWindows)
+		it.second->ReplayHistory();
 
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
@@ -1709,7 +1715,7 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 /**
 	@brief Called when the history view selects an old waveform
  */
-void OscilloscopeWindow::OnHistoryUpdated()
+void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 {
 	//Stop triggering if we select a saved waveform
 	OnStop();
@@ -1731,7 +1737,11 @@ void OscilloscopeWindow::OnHistoryUpdated()
 		w->OnWaveformDataReady();
 	}
 
-	//Don't update the protocol analyzers, they should already have this waveform saved
+	if(refreshAnalyzers)
+	{
+		for(auto a : m_analyzers)
+			a->OnWaveformDataReady();
+	}
 }
 
 void OscilloscopeWindow::RemoveHistory(TimePoint timestamp)
