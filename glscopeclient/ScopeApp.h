@@ -58,12 +58,12 @@ public:
 	bool IsTerminating()
 	{ return m_terminating; }
 
+	void StartScopeThreads();
+
 protected:
 	bool m_terminating;
 
 	OscilloscopeWindow* m_window;
-
-	virtual void on_activate();
 
 	std::vector<std::thread*> m_threads;
 };

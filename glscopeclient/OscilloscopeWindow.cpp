@@ -471,6 +471,14 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 	//Re-title the window for the new scope
 	SetTitle();
+
+	//TODO: load waveform data
+
+	//TODO: refresh measurements and protocol decodes
+
+	//Start threads to poll scopes etc
+	g_app->StartScopeThreads();
+	show_all();
 }
 
 /**
@@ -532,6 +540,8 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		g_app->m_scopes.push_back(scope);
 		m_scopes.push_back(scope);
 		table.emplace(inst["id"].as<int>(), scope);
+
+		//TODO: start ScopeThread's
 
 		//Configure the scope
 		scope->LoadConfiguration(inst, table);
@@ -602,7 +612,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		//Create the group
 		auto gn = it.second;
 		WaveformGroup* group = new WaveformGroup(this);
-		table.emplace(gn["id"].as<int>(), group);
+		table.emplace(gn["id"].as<int>(), &group->m_frame);
 		group->m_measurementFrame.set_label(gn["name"].as<string>());
 		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
 		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
@@ -648,7 +658,52 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 				group->AddColumn(meas, mn["color"].as<string>(), mn["nick"].as<string>());
 			}
 		}
+
+		//Waveform areas
+		areas = gn["areas"];
+		for(auto at : areas)
+		{
+			auto area = static_cast<WaveformArea*>(table[at.second["id"].as<int>()]);
+			area->m_group = group;
+			if(area->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+				group->m_waveformBox.pack_start(*area, Gtk::PACK_SHRINK);
+			else
+				group->m_waveformBox.pack_start(*area);
+		}
 	}
+
+	//Splitters
+	auto splitters = node["splitters"];
+	for(auto it : splitters)
+	{
+		//Create the splitter
+		auto sn = it.second;
+		Gtk::Paned* split = NULL;
+		if(sn["dir"].as<string>() == "h")
+			split = new Gtk::HPaned;
+		else
+			split = new Gtk::VPaned;
+		m_splitters.emplace(split);
+		table.emplace(sn["id"].as<int>(), split);
+	}
+	for(auto it : splitters)
+	{
+		auto sn = it.second;
+		Gtk::Paned* split = static_cast<Gtk::Paned*>(table[sn["id"].as<int>()]);
+
+		auto a = static_cast<Gtk::Widget*>(table[sn["child0"].as<int>()]);
+		auto b = static_cast<Gtk::Widget*>(table[sn["child1"].as<int>()]);
+		if(a)
+			split->pack1(*a);
+		if(b)
+			split->pack1(*b);
+		split->set_position(sn["split"].as<int>());
+	}
+
+	//Add the top level splitter right before the status bar
+	m_vbox.remove(m_statusbar);
+	m_vbox.pack_start(*static_cast<Gtk::Paned*>(table[node["top"].as<int>()]), Gtk::PACK_EXPAND_WIDGET);
+	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
 }
 
 /**
@@ -891,7 +946,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 	//Waveform groups
 	config += "    groups: \n";
 	for(auto group : m_waveformGroups)
-		table.emplace(group);
+		table.emplace(&group->m_frame);
 	for(auto group : m_waveformGroups)
 		config += group->SerializeConfiguration(table);
 
@@ -907,7 +962,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		snprintf(tmp, sizeof(tmp), "            id:     %d\n", table[split]);
 		config += tmp;
 
-		if(dynamic_cast<Gtk::HPaned*>(split) != NULL)
+		if(split->get_orientation() == Gtk::ORIENTATION_HORIZONTAL)
 			config +=  "            dir:    h\n";
 		else
 			config +=  "            dir:    v\n";
@@ -921,6 +976,16 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            child1: %d\n", table[split->get_child2()]);
 		config += tmp;
+	}
+
+	//Top level splitter
+	for(auto split : m_splitters)
+	{
+		if(split->get_parent() == &m_vbox)
+		{
+			snprintf(tmp, sizeof(tmp), "    top: %d\n", table[split]);
+			config += tmp;
+		}
 	}
 
 	return config;

@@ -45,10 +45,14 @@ ScopeApp::~ScopeApp()
 void ScopeApp::run(string fileToLoad)
 {
 	register_application();
-	on_activate();
+
+	m_window = new OscilloscopeWindow(m_scopes);
+	add_window(*m_window);
 
 	if(!fileToLoad.empty())
 		m_window->DoFileOpen(fileToLoad);
+
+	m_window->present();
 
 	while(true)
 	{
@@ -95,17 +99,9 @@ void ScopeApp::ShutDownSession()
 	m_terminating = false;
 }
 
-/**
-	@brief Create windows for each instrument
- */
-void ScopeApp::on_activate()
+void ScopeApp::StartScopeThreads()
 {
 	//Start the scope threads
 	for(auto scope : m_scopes)
 		m_threads.push_back(new thread(ScopeThread, scope));
-
-	//Launch the application
-	m_window = new OscilloscopeWindow(m_scopes);
-	add_window(*m_window);
-	m_window->present();
 }

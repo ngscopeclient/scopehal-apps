@@ -204,7 +204,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 
 	snprintf(tmp, sizeof(tmp), "        : \n");
 	string config = tmp;
-	snprintf(tmp, sizeof(tmp), "            id:             %d\n", table.emplace(this));
+	snprintf(tmp, sizeof(tmp), "            id:             %d\n", table.emplace(&m_frame));
 	config += tmp;
 
 	config += "            name:           \"" + m_frame.get_label() + "\"\n";
@@ -253,6 +253,16 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 
 		for(auto col : m_measurementColumns)
 			config += col->m_measurement->SerializeConfiguration(table, col->m_title);
+	}
+
+	//Waveform areas
+	config += "            areas: \n";
+	auto children = m_waveformBox.get_children();
+	for(size_t i=0; i<children.size(); i++)
+	{
+		config += "                : \n";
+		snprintf(tmp, sizeof(tmp), "                    id: %d\n", table[children[i]]);
+		config += tmp;
 	}
 
 	return config;
