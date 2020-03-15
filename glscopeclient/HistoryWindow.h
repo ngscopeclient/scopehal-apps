@@ -62,6 +62,8 @@ public:
 	void OnWaveformDataReady();
 	void JumpToHistory(TimePoint timestamp);
 
+	void SetMaxWaveforms(int n);
+
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
 	virtual void OnSelectionChanged();

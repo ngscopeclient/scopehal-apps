@@ -75,7 +75,7 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 			m_hbox.pack_start(m_maxLabel, Gtk::PACK_SHRINK);
 				m_maxLabel.set_label("Max waveforms");
 			m_hbox.pack_start(m_maxBox, Gtk::PACK_EXPAND_WIDGET);
-				m_maxBox.set_text("100");
+				SetMaxWaveforms(10);
 		m_vbox.pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
 			m_scroller.add(m_tree);
 			m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
@@ -103,6 +103,13 @@ HistoryWindow::~HistoryWindow()
 				delete w.second;
 		}
 	}
+}
+
+void HistoryWindow::SetMaxWaveforms(int n)
+{
+	char tmp[128];
+	snprintf(tmp, sizeof(tmp), "%d", n);
+	m_maxBox.set_text(tmp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,11 +183,8 @@ void HistoryWindow::OnWaveformDataReady()
 	m_tree.get_selection()->select(row);
 
 	//Remove extra waveforms, if we have any.
-	//If not visible, destroy all waveforms other than the most recent
 	string smax = m_maxBox.get_text();
 	size_t nmax = atoi(smax.c_str());
-	if(!is_visible())
-		nmax = 1;
 	auto children = m_model->children();
 	while(children.size() > nmax)
 	{
