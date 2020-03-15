@@ -206,30 +206,34 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->begin_new_path();
 
 	//See if we're the active trigger
-	if(m_channel->GetIndex() == m_channel->GetScope()->GetTriggerChannelIndex())
+	if(m_channel->IsPhysicalChannel())
 	{
-		float v = m_channel->GetScope()->GetTriggerVoltage();
-		float y = VoltsToYPosition(v);
-
-		float trisize = 5;
-
-		if(m_dragState == DRAG_TRIGGER)
+		auto scope = m_channel->GetScope();
+		if(m_channel->GetIndex() == scope->GetTriggerChannelIndex())
 		{
-			cr->set_source_rgba(1, 0, 0, 1);
-			y = m_cursorY;
+			float v = m_channel->GetScope()->GetTriggerVoltage();
+			float y = VoltsToYPosition(v);
+
+			float trisize = 5;
+
+			if(m_dragState == DRAG_TRIGGER)
+			{
+				cr->set_source_rgba(1, 0, 0, 1);
+				y = m_cursorY;
+			}
+			else
+			{
+				cr->set_source_rgba(
+					color.get_red_p(),
+					color.get_green_p(),
+					color.get_blue_p(),
+					1);
+			}
+			cr->move_to(m_plotRight, y);
+			cr->line_to(m_plotRight + trisize, y + trisize);
+			cr->line_to(m_plotRight + trisize, y - trisize);
+			cr->fill();
 		}
-		else
-		{
-			cr->set_source_rgba(
-				color.get_red_p(),
-				color.get_green_p(),
-				color.get_blue_p(),
-				1);
-		}
-		cr->move_to(m_plotRight, y);
-		cr->line_to(m_plotRight + trisize, y + trisize);
-		cr->line_to(m_plotRight + trisize, y - trisize);
-		cr->fill();
 	}
 
 	cr->restore();

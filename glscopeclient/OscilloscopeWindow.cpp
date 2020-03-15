@@ -492,6 +492,24 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 	//TODO: refresh measurements and protocol decodes
 
+	//Create protocol analyzers
+	for(auto area : m_waveformAreas)
+	{
+		for(size_t i=0; i<area->GetOverlayCount(); i++)
+		{
+			auto pdecode = dynamic_cast<PacketDecoder*>(area->GetOverlay(i));
+			if(pdecode != NULL)
+			{
+				char title[256];
+				snprintf(title, sizeof(title), "Protocol Analyzer: %s", pdecode->m_displayname.c_str());
+
+				auto analyzer = new ProtocolAnalyzerWindow(title, this, pdecode, area);
+				m_analyzers.emplace(analyzer);
+				analyzer->show();
+			}
+		}
+	}
+
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
 }
@@ -728,7 +746,8 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-		static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()])->LoadConfiguration(dnode, table);
+		auto decode = static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()]);
+		decode->LoadConfiguration(dnode, table);
 	}
 }
 

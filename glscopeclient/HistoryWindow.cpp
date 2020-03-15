@@ -357,7 +357,7 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 			auto dchan = dynamic_cast<DigitalCapture*>(chan);
 			for(size_t i=0; i<chan->GetDepth(); i++)
 			{
-				int64_t times[2] = { chan->GetSampleStart(i), chan->GetSampleEnd(i) };
+				int64_t times[2] = { chan->GetSampleStart(i), chan->GetSampleLen(i) };
 				if(2 != fwrite(times, sizeof(int64_t), 2, fp))
 					LogError("file write error\n");
 				if(achan)
