@@ -217,10 +217,11 @@ public:
 	std::string m_currentFileName;
 	std::string m_currentDataDirName;
 
-	std::string SerializeConfiguration(bool saveLayout);
+	std::string SerializeConfiguration(bool saveLayout, IDTable& table);
 	std::string SerializeInstrumentConfiguration(IDTable& table);
 	std::string SerializeDecodeConfiguration(IDTable& table);
 	std::string SerializeUIConfiguration(IDTable& table);
+	void SerializeWaveforms(IDTable& table);
 
 	//Performance counters
 	double m_tAcquire;

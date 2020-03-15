@@ -839,7 +839,8 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	}
 
 	//Serialize our configuration and save to the file
-	string config = SerializeConfiguration(saveLayout);
+	IDTable table;
+	string config = SerializeConfiguration(saveLayout, table);
 	FILE* fp = fopen(m_currentFileName.c_str(), "w");
 	if(!fp)
 	{
@@ -857,16 +858,19 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		errdlg.run();
 	}
 	fclose(fp);
+
+	//Serialize waveform data if needed
+	if(saveWaveforms)
+		SerializeWaveforms(table);
 }
 
-string OscilloscopeWindow::SerializeConfiguration(bool saveLayout)
+string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& table)
 {
 	string config = "";
 
 	//TODO: save metadata
 
 	//Save instrument config regardless, since data etc needs it
-	IDTable table;
 	config += SerializeInstrumentConfiguration(table);
 
 	//Decodes depend on scope channels, but need to happen before UI elements that use them
@@ -998,6 +1002,24 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 	}
 
 	return config;
+}
+
+/**
+	@brief Serialize all waveforms for the session
+ */
+void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
+{
+	//Remove all old waveforms in the data directory.
+	//TODO: better way that doesn't involve system()
+	char cwd[PATH_MAX];
+	getcwd(cwd, PATH_MAX);
+	chdir(m_currentDataDirName.c_str());
+	system("rm -rf scope_*");
+	chdir(cwd);
+
+	//Serialize waveforms for each of our instruments
+	for(auto it : m_historyWindows)
+		it.second->SerializeWaveforms(m_currentDataDirName, table);
 }
 
 void OscilloscopeWindow::OnAlphaChanged()

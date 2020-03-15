@@ -54,6 +54,10 @@ void ScopeApp::run(string fileToLoad)
 
 	m_window->present();
 
+	//If no scope threads are running already (from a file load), start them now
+	if(m_threads.empty())
+		StartScopeThreads();
+
 	while(true)
 	{
 		//Poll the scope to see if we have any new data

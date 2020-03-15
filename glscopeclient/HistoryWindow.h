@@ -64,6 +64,8 @@ public:
 
 	void SetMaxWaveforms(int n);
 
+	void SerializeWaveforms(std::string dir, IDTable& table);
+
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
 	virtual void OnSelectionChanged();

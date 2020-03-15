@@ -294,3 +294,106 @@ void HistoryWindow::JumpToHistory(TimePoint timestamp)
 		}
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
+{
+	//Figure out file name, and make the waveform directory
+	char tmp[512];
+	snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dir.c_str(), table[m_scope]);
+	string fname = tmp;
+	snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms", dir.c_str(), table[m_scope]);
+	mkdir(tmp, 0755);
+	string dname = tmp;
+
+	//Serialize waveforms
+	string config = "waveforms:\n";
+	auto children = m_model->children();
+	int id = 1;
+	for(auto it : children)
+	{
+		TimePoint key = (*it)[m_columns.m_capturekey];
+
+		//Save metadata
+		config += "    :\n";
+		snprintf(tmp, sizeof(tmp), "        timestamp: %ld\n", key.first);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "        time_psec: %ld\n", key.second);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "        id:        %d\n", id);
+		config += tmp;
+		config += "        channels:\n";
+
+		//Format directory for this waveform
+		snprintf(tmp, sizeof(tmp), "%s/waveform_%d", dname.c_str(), id);
+		mkdir(tmp, 0755);
+		string wname = tmp;
+
+		//Save waveform data
+		WaveformHistory history = (*it)[m_columns.m_history];
+		for(auto jt : history)
+		{
+			int index = jt.first->GetIndex();
+			auto chan = jt.second;
+			if(chan == NULL)		//trigger, disabled, etc
+				continue;
+
+			snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
+			FILE* fp = fopen(tmp, "wb");
+
+			//Save channel metadata
+			config += "            :\n";
+			snprintf(tmp, sizeof(tmp), "                index:        %d\n", index);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                timescale:    %ld\n", chan->m_timescale);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                trigphase:    %f\n", chan->m_triggerPhase);
+			config += tmp;
+
+			//Save channel data
+			auto achan = dynamic_cast<AnalogCapture*>(chan);
+			auto dchan = dynamic_cast<DigitalCapture*>(chan);
+			for(size_t i=0; i<chan->GetDepth(); i++)
+			{
+				int64_t times[2] = { chan->GetSampleStart(i), chan->GetSampleEnd(i) };
+				if(2 != fwrite(times, sizeof(int64_t), 2, fp))
+					LogError("file write error\n");
+				if(achan)
+				{
+					if(1 != fwrite(&(*achan)[i], sizeof(float), 1, fp))
+						LogError("file write error\n");
+				}
+				else if(dchan)
+				{
+					if(1 != fwrite(&(*dchan)[i], sizeof(bool), 1, fp))
+						LogError("file write error\n");
+				}
+			}
+			//TODO: support not analog or digital channels (e.g. FREESAMPLE eyes)
+			fclose(fp);
+		}
+
+		id ++;
+	}
+
+	//Save waveform metadata
+	FILE* fp = fopen(fname.c_str(), "w");
+	if(!fp)
+	{
+		string msg = string("The data file ") + fname + " could not be created!";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot save session\n");
+		errdlg.run();
+		return;
+	}
+	if(config.length() != fwrite(config.c_str(), 1, config.length(), fp))
+	{
+		string msg = string("Error writing to session file ") + fname + "!";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot save session\n");
+		errdlg.run();
+	}
+	fclose(fp);
+}
