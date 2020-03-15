@@ -468,6 +468,15 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 		LoadDecodes(node["decodes"], table);
 		LoadUIConfiguration(node["ui_config"], table);
 	}
+	show_all();
+
+	//Create history windows for all of our scopes
+	for(auto scope : m_scopes)
+	{
+		auto hist = new HistoryWindow(this, scope);
+		hist->hide();
+		m_historyWindows[scope] = hist;
+	}
 
 	//Re-title the window for the new scope
 	SetTitle();
@@ -478,7 +487,6 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
-	show_all();
 }
 
 /**
@@ -509,7 +517,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 
 		//Sanity check make/model/serial. If mismatch, stop
 		string message;
-		bool fail;
+		bool fail = false;
 		if(inst["name"].as<string>() != scope->GetName())
 		{
 			message = string("Unable to connect to oscilloscope: instrument has model name \"") +
@@ -678,8 +686,9 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 	{
 		//Create the splitter
 		auto sn = it.second;
+		auto dir = sn["dir"].as<string>();
 		Gtk::Paned* split = NULL;
-		if(sn["dir"].as<string>() == "h")
+		if(dir == "h")
 			split = new Gtk::HPaned;
 		else
 			split = new Gtk::VPaned;
@@ -696,7 +705,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		if(a)
 			split->pack1(*a);
 		if(b)
-			split->pack1(*b);
+			split->pack2(*b);
 		split->set_position(sn["split"].as<int>());
 	}
 

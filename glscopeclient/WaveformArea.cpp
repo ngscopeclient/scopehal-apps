@@ -442,8 +442,6 @@ void WaveformArea::CreateWidgets()
 
 void WaveformArea::on_realize()
 {
-	LogDebug("realize waveform area\n");
-
 	//Let the base class create the GL context, then select it
 	Gtk::GLArea::on_realize();
 	make_current();
