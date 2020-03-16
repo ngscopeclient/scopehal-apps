@@ -98,6 +98,7 @@ void WaveformArea::on_resize(int width, int height)
 		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 		eye->SetWidth(m_width/4);
 		eye->SetHeight(m_height);
+		eye->Refresh();
 	}
 	else if(IsWaterfall())
 	{
