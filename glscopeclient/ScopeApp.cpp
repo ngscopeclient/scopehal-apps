@@ -66,8 +66,7 @@ void ScopeApp::run(string fileToLoad)
 		m_window->PollScopes();
 
 		//Dispatch events if we have any
-		while(Gtk::Main::events_pending())
-			Gtk::Main::iteration();
+		DispatchPendingEvents();
 
 		//Stop if the main window got closed
 		if(!m_window->is_visible())
@@ -78,6 +77,12 @@ void ScopeApp::run(string fileToLoad)
 
 	delete m_window;
 	m_window = NULL;
+}
+
+void ScopeApp::DispatchPendingEvents()
+{
+	while(Gtk::Main::events_pending())
+		Gtk::Main::iteration();
 }
 
 /**

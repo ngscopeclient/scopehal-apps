@@ -512,6 +512,11 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 		}
 	}
 
+	//Make sure all resize etc events have been handled before replaying history.
+	//Otherwise eye patterns don't refresh right.
+	show_all();
+	g_app->DispatchPendingEvents();
+
 	//TODO: make this work properly if we have decodes spanning multiple scopes
 	for(auto it : m_historyWindows)
 		it.second->ReplayHistory();

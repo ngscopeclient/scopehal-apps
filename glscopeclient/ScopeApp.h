@@ -53,6 +53,8 @@ public:
 
 	virtual void run(std::string fileToLoad);
 
+	void DispatchPendingEvents();
+
 	void ShutDownSession();
 
 	bool IsTerminating()
