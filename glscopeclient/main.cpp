@@ -138,11 +138,14 @@ int main(int argc, char* argv[])
 
 	g_app = new ScopeApp;
 
-	//Initialize object creation tables
+	//Initialize object creation tables for predefined libraries
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
 	ScopeMeasurementStaticInit();
+
+	//Initialize object creation tables for plugins
+	InitializePlugins();
 
 	//Connect to the scope(s)
 	for(auto s : scopes)
