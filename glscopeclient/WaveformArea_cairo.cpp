@@ -450,7 +450,13 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 			//Format timebase
 			double gsps = 1000.0f / data->m_timescale;
 			if(gsps > 1)
-				snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
+			{
+				//If sample rate isn't a round Gsps number, add more digits
+				if(floor(gsps) != gsps)
+					snprintf(tmp, sizeof(tmp), "%.2f GS/s", gsps);
+				else
+					snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
+			}
 			else if(gsps > 0.001)
 				snprintf(tmp, sizeof(tmp), "%.0f MS/s", gsps * 1000);
 			else
