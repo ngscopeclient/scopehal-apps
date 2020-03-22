@@ -71,6 +71,10 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		row->m_chans.append("NULL");
 		row->m_chanptrs["NULL"] = NULL;
 
+		//Handle null inputs
+		if(decoder->GetInput(i) == NULL)
+			row->m_chans.set_active_text("NULL");
+
 		//Fill the channel list with all channels that are legal to use here
 		for(size_t j=0; j<parent->GetScopeCount(); j++)
 		{
@@ -82,7 +86,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				{
 					row->m_chans.append(c->m_displayname);
 					row->m_chanptrs[c->m_displayname] = c;
-					if( (c == chan) || (c == decoder->GetInput(i)) )
+					if( (c == chan && i==0) || (c == decoder->GetInput(i)) )
 						row->m_chans.set_active_text(c->m_displayname);
 				}
 			}

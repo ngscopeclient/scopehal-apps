@@ -750,15 +750,20 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 		auto decode = ProtocolDecoder::CreateDecoder(dnode["protocol"].as<string>(), dnode["color"].as<string>());
 		table.emplace(dnode["id"].as<int>(), decode);
 		m_decoders.emplace(decode);
+
+		//Load parameters during the first pass.
+		//Parameters can't have dependencies on other channels etc.
+		//More importantly, parameters may change bus width etc
+		decode->LoadParameters(dnode, table);
 	}
 
-	//Make a second pass to configure the decodes, once all of them have been instantiated.
+	//Make a second pass to configure the decoder inputs, once all of them have been instantiated.
 	//Decoders may depend on other decoders as inputs, and serialization is not guaranteed to be a topological sort.
 	for(auto it : node)
 	{
 		auto dnode = it.second;
 		auto decode = static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()]);
-		decode->LoadConfiguration(dnode, table);
+		decode->LoadInputs(dnode, table);
 	}
 }
 
