@@ -251,6 +251,17 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 			{
 				switch(event->button)
 				{
+					//Left
+					case 1:
+
+						//For now, can only change offset on voltage channels
+						if(m_channel->GetYAxisUnits() != Unit::UNIT_VOLTS)
+							return;
+
+						m_dragState = DRAG_OFFSET;
+						m_dragStartVoltage = YPositionToVolts(event->y);
+						break;
+
 					//Right
 					case 3:
 						break;
@@ -387,6 +398,16 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			{
 				m_group->m_xCursorPos[1] = timestamp;
 				m_group->m_vbox.queue_draw();
+			}
+			break;
+
+		//Offset drag - update level and refresh
+		case DRAG_OFFSET:
+			{
+				double dv = YPositionToVolts(event->y) - m_dragStartVoltage;
+				double old_offset = m_channel->GetOffset();
+				m_channel->SetOffset(old_offset + dv);
+				queue_draw();
 			}
 			break;
 

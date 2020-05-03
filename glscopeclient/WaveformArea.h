@@ -392,8 +392,12 @@ protected:
 	{
 		DRAG_NONE,
 		DRAG_TRIGGER,
-		DRAG_CURSOR
+		DRAG_CURSOR,
+		DRAG_OFFSET
 	} m_dragState;
+
+	//Start voltage of a drag (only used in DRAG_OFFSET mode)
+	double	m_dragStartVoltage;
 
 	bool	m_firstFrame;
 };
