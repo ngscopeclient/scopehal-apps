@@ -414,8 +414,6 @@ void OscilloscopeWindow::OnFileOpen()
 {
 	//TODO: prompt to save changes to the current session
 
-	static const char* extension = ".scopesession";
-
 	//Remove the CSS provider so the dialog isn't themed
 	//TODO: how can we un-theme just this one dialog?
 	get_style_context()->remove_provider_for_screen(
@@ -459,36 +457,51 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 {
 	m_currentFileName = filename;
 	CloseSession();
-	auto docs = YAML::LoadAllFromFile(m_currentFileName);
-
-	//Only open the first doc, our file format doesn't ever generate multiple docs in a file.
-	//Ignore any trailing stuff at the end
-	auto node = docs[0];
-
-	//Load various sections of the file
-	IDTable table;
-	LoadInstruments(node["instruments"], reconnect, table);
-	if(loadLayout)
+	try
 	{
-		LoadDecodes(node["decodes"], table);
-		LoadUIConfiguration(node["ui_config"], table);
-	}
-	show_all();
+		auto docs = YAML::LoadAllFromFile(m_currentFileName);
 
-	//Create history windows for all of our scopes
-	for(auto scope : m_scopes)
+		//Only open the first doc, our file format doesn't ever generate multiple docs in a file.
+		//Ignore any trailing stuff at the end
+		auto node = docs[0];
+
+		//Load various sections of the file
+		IDTable table;
+		LoadInstruments(node["instruments"], reconnect, table);
+		if(loadLayout)
+		{
+			LoadDecodes(node["decodes"], table);
+			LoadUIConfiguration(node["ui_config"], table);
+		}
+		show_all();
+
+		//Create history windows for all of our scopes
+		for(auto scope : m_scopes)
+		{
+			auto hist = new HistoryWindow(this, scope);
+			hist->hide();
+			m_historyWindows[scope] = hist;
+		}
+
+		//Re-title the window for the new scope
+		SetTitle();
+
+		//Load data
+		if(loadWaveform)
+			LoadWaveformData(filename, table);
+	}
+	catch(const YAML::BadFile& ex)
 	{
-		auto hist = new HistoryWindow(this, scope);
-		hist->hide();
-		m_historyWindows[scope] = hist;
+		Gtk::MessageDialog dlg(
+			*this,
+			string("Unable to open file ") + filename + ".",
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+		return;
 	}
-
-	//Re-title the window for the new scope
-	SetTitle();
-
-	//Load data
-	if(loadWaveform)
-		LoadWaveformData(filename, table);
 
 	//TODO: refresh measurements and protocol decodes
 
