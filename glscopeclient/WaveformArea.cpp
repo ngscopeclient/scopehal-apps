@@ -417,6 +417,9 @@ void WaveformArea::CreateWidgets()
 		m_measureMenu.append(m_measureHorzItem);
 			m_measureHorzItem.set_label("Horizontal");
 			m_measureHorzItem.set_submenu(m_measureHorzMenu);
+		m_measureMenu.append(m_measureProtoItem);
+			m_measureProtoItem.set_label("Protocol");
+			m_measureProtoItem.set_submenu(m_measureProtoMenu);
 		m_measureMenu.append(m_measureVertItem);
 			m_measureVertItem.set_label("Vertical");
 			m_measureVertItem.set_submenu(m_measureVertMenu);
@@ -434,6 +437,10 @@ void WaveformArea::CreateWidgets()
 			{
 				case Measurement::MEAS_HORZ:
 					m_measureHorzMenu.append(*item);
+					break;
+
+				case Measurement::MEAS_PROTO:
+					m_measureProtoMenu.append(*item);
 					break;
 
 				case Measurement::MEAS_VERT:

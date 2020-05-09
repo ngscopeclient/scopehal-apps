@@ -216,6 +216,8 @@ protected:
 					Gtk::Menu m_measureVertMenu;
 				Gtk::MenuItem m_measureHorzItem;
 					Gtk::Menu m_measureHorzMenu;
+				Gtk::MenuItem m_measureProtoItem;
+					Gtk::Menu m_measureProtoMenu;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
 			Gtk::RadioMenuItem::Group m_triggerGroup;
