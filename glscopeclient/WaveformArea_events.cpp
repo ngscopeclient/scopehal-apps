@@ -892,5 +892,19 @@ void WaveformArea::UpdateContextMenu()
 			break;
 	}
 
+	//Set stats checkbox
+	m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel));
+
 	m_updatingContextMenu = false;
+}
+
+void WaveformArea::OnStatistics()
+{
+	if(m_updatingContextMenu)
+		return;
+
+	if(m_statisticsItem.get_active())
+		m_group->ToggleOn(m_selectedChannel);
+	else
+		m_group->ToggleOff(m_selectedChannel);
 }

@@ -70,6 +70,19 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	m_measurementBox.set_spacing(30);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// New measurements
+
+	m_vbox.pack_start(m_newMeasurementFrame, Gtk::PACK_SHRINK);
+	m_newMeasurementFrame.set_label("Experimental Measurements");
+	m_newMeasurementFrame.add(m_measurementView);
+		m_treeModel = Gtk::TreeStore::create(m_treeColumns);
+		m_measurementView.set_model(m_treeModel);
+		m_measurementView.append_column("Statistic", m_treeColumns.m_filterColumn);
+		for(int i=1; i<32; i++)
+			m_measurementView.append_column("", m_treeColumns.m_columns[i]);
+		m_measurementView.set_size_request(30, 30);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
 
 	m_contextMenu.append(m_removeMeasurementItem);
@@ -92,12 +105,92 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 
 WaveformGroup::~WaveformGroup()
 {
+	//Free each of our channels
+	for(size_t i=1; i<32; i++)
+	{
+		if(m_indexToColumnMap.find(i) != m_indexToColumnMap.end())
+			ToggleOff(m_indexToColumnMap[i]);
+	}
+
+	auto children = m_treeModel->children();
+	for(auto row : children)
+	{
+		Statistic* stat = row[m_treeColumns.m_statColumn];
+		delete stat;
+	}
+
 	for(auto c : m_measurementColumns)
 		delete c;
 }
 
+void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
+{
+	m_newMeasurementFrame.show_all();
+
+	//If the channel is already active, do nothing
+	if(m_columnToIndexMap.find(chan) != m_columnToIndexMap.end())
+		return;
+
+	//Use the first free column
+	size_t ncol=1;
+	for(; ncol<32; ncol ++)
+	{
+		if(m_indexToColumnMap.find(ncol) == m_indexToColumnMap.end())
+			break;
+	}
+
+	m_columnToIndexMap[chan] = ncol;
+	m_indexToColumnMap[ncol] = chan;
+
+	//Set up the column
+	m_measurementView.get_column(ncol)->set_title(chan->m_displayname);
+	m_measurementView.get_column(ncol)->get_first_cell()->property_xalign() = 1.0;
+
+	//If we have no rows, add one for average
+	if(m_treeModel->children().empty())
+	{
+		//DEBUG: add the full set of stats
+		AddStatistic(Statistic::CreateStatistic("Maximum"));
+		AddStatistic(Statistic::CreateStatistic("Average"));
+		AddStatistic(Statistic::CreateStatistic("Minimum"));
+	}
+
+	RefreshMeasurements();
+
+	chan->AddRef();
+}
+
+void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
+{
+	int index = m_columnToIndexMap[chan];
+
+	//Delete the current contents of the channel
+	m_measurementView.get_column(index)->set_title("");
+	auto children = m_treeModel->children();
+	for(auto row : children)
+		row[m_treeColumns.m_columns[index]] = "";
+
+	//Remove everything from our column records and free the channel
+	m_columnToIndexMap.erase(chan);
+	m_indexToColumnMap.erase(index);
+	chan->Release();
+}
+
+bool WaveformGroup::IsShowingStats(OscilloscopeChannel* chan)
+{
+	return (m_columnToIndexMap.find(chan) != m_columnToIndexMap.end());
+}
+
+void WaveformGroup::AddStatistic(Statistic* stat)
+{
+	auto row = *m_treeModel->append();
+	row[m_treeColumns.m_statColumn] = stat;
+	row[m_treeColumns.m_filterColumn] = stat->GetStatisticDisplayName();
+}
+
 void WaveformGroup::RefreshMeasurements()
 {
+	//Old stuff
 	char tmp[256];
 	for(auto m : m_measurementColumns)
 	{
@@ -110,6 +203,39 @@ void WaveformGroup::RefreshMeasurements()
 			"<span rise='-5' font-family='monospace'>%s</span>",
 			m->m_title.c_str(), m->m_measurement->GetValueAsString().c_str());
 		m->m_label.set_markup(tmp);
+	}
+
+	//New tree view
+	auto children = m_treeModel->children();
+	for(auto row : children)
+	{
+		Statistic* stat = row[m_treeColumns.m_statColumn];
+		for(size_t i=1; i<32; i++)
+		{
+			//Figure out the input
+			if(m_indexToColumnMap.find(i) == m_indexToColumnMap.end())
+				continue;
+			auto chan = m_indexToColumnMap[i];
+
+			//Evaluate the statistic
+			double value;
+			if(!stat->Calculate(chan, value))
+				row[m_treeColumns.m_columns[i]] = "(error)";
+			else
+				row[m_treeColumns.m_columns[i]] = chan->GetYAxisUnits().PrettyPrint(value);
+		}
+	}
+
+	//Update column titles in case a channel got renamed
+	for(size_t i=1; i<32; i++)
+	{
+		if(m_indexToColumnMap.find(i) == m_indexToColumnMap.end())
+			continue;
+
+		auto col = m_measurementView.get_column(i);
+		auto name = m_indexToColumnMap[i]->m_displayname;
+		if(col->get_title() != name)
+			col->set_title(name);
 	}
 }
 

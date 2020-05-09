@@ -451,6 +451,12 @@ void WaveformArea::CreateWidgets()
 			delete m;
 		}
 
+	m_contextMenu.append(m_statisticsItem);
+		m_statisticsItem.set_label("Statistics");
+		m_statisticsItem.signal_activate().connect(
+			sigc::mem_fun(*this, &WaveformArea::OnStatistics));
+
+
 	m_contextMenu.show_all();
 }
 

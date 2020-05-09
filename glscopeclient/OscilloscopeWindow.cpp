@@ -354,6 +354,7 @@ void OscilloscopeWindow::CreateWidgets()
 
 	//Don't show measurements by default
 	group->m_measurementFrame.hide();
+	group->m_newMeasurementFrame.hide();
 
 	//Initialize the style sheets
 	m_css = Gtk::CssProvider::create();

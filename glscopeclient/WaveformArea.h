@@ -218,6 +218,7 @@ protected:
 					Gtk::Menu m_measureHorzMenu;
 				Gtk::MenuItem m_measureProtoItem;
 					Gtk::Menu m_measureProtoMenu;
+		Gtk::CheckMenuItem m_statisticsItem;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
 			Gtk::RadioMenuItem::Group m_triggerGroup;
@@ -259,6 +260,7 @@ protected:
 	void OnCopyNewBelow();
 	void OnCopyToExistingGroup(WaveformGroup* group);
 	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
+	void OnStatistics();
 
 	void RefreshMeasurements();
 

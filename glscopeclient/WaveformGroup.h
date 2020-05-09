@@ -54,6 +54,29 @@ public:
 	Measurement* m_measurement;
 };
 
+class MeasurementColumns : public Gtk::TreeModel::ColumnRecord
+{
+public:
+	MeasurementColumns()
+	{
+		//column 0 is never used, we reserve the index for m_filterColumn
+		m_columns.push_back(Gtk::TreeModelColumn<std::string>());
+		add(m_filterColumn);
+
+		for(size_t i=1; i<32; i++)
+		{
+			m_columns.push_back(Gtk::TreeModelColumn<std::string>());
+			add(m_columns[i]);
+		}
+		add(m_statColumn);
+	}
+
+	Gtk::TreeModelColumn<std::string> m_filterColumn;
+	std::vector<Gtk::TreeModelColumn<std::string>> m_columns;
+
+	Gtk::TreeModelColumn<Statistic*> m_statColumn;
+};
+
 class WaveformGroup
 {
 public:
@@ -62,8 +85,21 @@ public:
 
 	void RefreshMeasurements();
 
+	bool IsShowingStats(OscilloscopeChannel* chan);
+
 	void AddColumn(std::string name, OscilloscopeChannel* chan, std::string color);
 	void AddColumn(Measurement* meas, std::string color, std::string label);
+
+	MeasurementColumns m_treeColumns;
+	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
+	void ToggleOn(OscilloscopeChannel* chan);
+	void ToggleOff(OscilloscopeChannel* chan);
+
+	void AddStatistic(Statistic* stat);
+
+	//map of scope channels to measurement column indexes
+	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
+	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;
 
 	Gtk::Frame m_frame;
 		Gtk::VBox m_vbox;
@@ -72,6 +108,8 @@ public:
 			Gtk::Frame m_measurementFrame;
 				Gtk::HBox m_measurementBox;
 					std::set<MeasurementColumn*> m_measurementColumns;
+			Gtk::Frame m_newMeasurementFrame;
+				Gtk::TreeView m_measurementView;
 
 	Gtk::Menu m_contextMenu;
 		Gtk::MenuItem m_removeMeasurementItem;
