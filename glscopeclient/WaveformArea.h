@@ -339,6 +339,16 @@ protected:
 		std::string text,
 		Rect& box,
 		int labelmargin = 3);
+	void RenderComplexSignal(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		int visleft, int visright,
+		float xstart, float xend, float xoff,
+		float ystart, float ymid, float ytop,
+		std::string str,
+		Gdk::Color color);
+	void MakePathSignalBody(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		float xstart, float xoff, float xend, float ybot, float ymid, float ytop);
 
 	void ResetTextureFiltering();
 
