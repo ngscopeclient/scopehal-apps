@@ -632,3 +632,56 @@ float WaveformArea::YPositionToVolts(float y)
 {
 	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel->GetOffset();
 }
+
+float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)
+{
+	static const float step_sizes[24]=
+	{
+		//mV per div
+		0.001,
+		0.0025,
+		0.005,
+
+		0.01,
+		0.025,
+		0.05,
+
+		0.1,
+		0.25,
+		0.5,
+
+		1,
+		2.5,
+		5,
+
+		10,
+		25,
+		50,
+
+		100,
+		250,
+		500,
+
+		1000,
+		2500,
+		5000,
+
+		10000,
+		25000,
+		50000
+	};
+
+	for(int i=0; i<24; i++)
+	{
+		float step = step_sizes[i];
+		float steps_per_half_span = volts_per_half_span / step;
+		if(steps_per_half_span > max_steps)
+			continue;
+		if(steps_per_half_span < min_steps)
+			continue;
+		return step;
+	}
+
+	//if no hits
+	return 1;
+}

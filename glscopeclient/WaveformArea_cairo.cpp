@@ -127,7 +127,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		float volts_per_half_span = PixelsToVolts(halfheight);
 
 		//Decide what voltage step to use. Pick from a list (in volts)
-		float selected_step = AnalogRenderer::PickStepSize(volts_per_half_span);
+		float selected_step = PickStepSize(volts_per_half_span);
 
 		//Calculate grid positions
 		for(float dv=0; ; dv += selected_step)
