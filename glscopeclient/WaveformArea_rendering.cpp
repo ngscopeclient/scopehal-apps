@@ -40,7 +40,6 @@
 #include <map>
 #include "ProfileBlock.h"
 #include "../../lib/scopehal/TextRenderer.h"
-#include "../../lib/scopehal/DigitalRenderer.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
 

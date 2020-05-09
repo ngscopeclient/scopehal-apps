@@ -40,7 +40,6 @@
 #include <map>
 #include "ProfileBlock.h"
 #include "../../lib/scopehal/TextRenderer.h"
-#include "../../lib/scopehal/DigitalRenderer.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
@@ -360,7 +359,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		auto render = o->CreateRenderer();
 		auto data = o->GetData();
 
-		bool digital = dynamic_cast<DigitalRenderer*>(render) != NULL;
+		bool digital = (o->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL);
 
 		double ymid = m_overlayPositions[o];
 		double ytop = ymid - height/2;
