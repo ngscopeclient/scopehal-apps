@@ -128,7 +128,11 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		//Decide what voltage step to use. Pick from a list (in volts)
 		float selected_step = PickStepSize(volts_per_half_span);
 
+		float bottom_edge = (ybot + theight/2);
+		float top_edge = (ytop - theight/2);
+
 		//Calculate grid positions
+		//TODO: make this more efficient if we have large offsets
 		for(float dv=0; ; dv += selected_step)
 		{
 			float yt = VoltsToYPosition(dv);
@@ -136,9 +140,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 			if(dv != 0)
 			{
-				if(yb <= (ytop - theight/2) )
+				if( (yb >= bottom_edge) && (yb <= top_edge ) )
 					gridmap[-dv] = yb;
-				if(yt >= (ybot + theight/2) )
+
+				if( (yt >= bottom_edge ) && (yt <= top_edge) )
 					gridmap[dv] = yt;
 			}
 			else

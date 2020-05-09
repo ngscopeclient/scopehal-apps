@@ -219,7 +219,7 @@ void ScopeThread(Oscilloscope* scope)
 		//LogDebug("delay = %.2f ms, pending=%zu\n", delay_us * 0.001f, npending );
 
 		//If the queue is too big, stop grabbing data
-		if(npending > 5000)
+		if(npending > 100)
 		{
 			usleep(50 * 1000);
 			tlast = GetTime();

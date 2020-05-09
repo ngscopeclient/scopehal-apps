@@ -73,11 +73,11 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	// New measurements
 
 	m_vbox.pack_start(m_newMeasurementFrame, Gtk::PACK_SHRINK);
-	m_newMeasurementFrame.set_label("Experimental Measurements");
+	m_newMeasurementFrame.set_label("Statistics");
 	m_newMeasurementFrame.add(m_measurementView);
 		m_treeModel = Gtk::TreeStore::create(m_treeColumns);
 		m_measurementView.set_model(m_treeModel);
-		m_measurementView.append_column("Statistic", m_treeColumns.m_filterColumn);
+		m_measurementView.append_column("", m_treeColumns.m_filterColumn);
 		for(int i=1; i<32; i++)
 			m_measurementView.append_column("", m_treeColumns.m_columns[i]);
 		m_measurementView.set_size_request(30, 30);
@@ -143,8 +143,10 @@ void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
 	m_indexToColumnMap[ncol] = chan;
 
 	//Set up the column
-	m_measurementView.get_column(ncol)->set_title(chan->m_displayname);
-	m_measurementView.get_column(ncol)->get_first_cell()->property_xalign() = 1.0;
+	auto col = m_measurementView.get_column(ncol);
+	col->set_title(chan->m_displayname);
+	col->get_first_cell()->property_xalign() = 1.0;
+	col->set_alignment(Gtk::ALIGN_END);
 
 	//If we have no rows, add one for average
 	if(m_treeModel->children().empty())
@@ -174,6 +176,10 @@ void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
 	m_columnToIndexMap.erase(chan);
 	m_indexToColumnMap.erase(index);
 	chan->Release();
+
+	//If no channels are visible hide the frame
+	if(m_columnToIndexMap.empty())
+		m_newMeasurementFrame.hide();
 }
 
 bool WaveformGroup::IsShowingStats(OscilloscopeChannel* chan)

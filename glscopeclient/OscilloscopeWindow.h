@@ -198,6 +198,8 @@ public:
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
 
+	virtual bool on_delete_event(GdkEventAny* any_event);
+
 	Glib::RefPtr<Gtk::CssProvider> m_css;
 
 	//Our scope connections

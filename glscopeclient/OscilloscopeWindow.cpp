@@ -367,6 +367,15 @@ void OscilloscopeWindow::CreateWidgets()
 // Message handlers
 
 /**
+	@brief Clean up when we're closed
+ */
+bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
+{
+	CloseSession();
+	return false;
+}
+
+/**
 	@brief Shuts down the current session in preparation for opening a saved file etc
  */
 void OscilloscopeWindow::CloseSession()
