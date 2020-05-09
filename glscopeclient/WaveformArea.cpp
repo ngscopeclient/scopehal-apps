@@ -350,6 +350,9 @@ void WaveformArea::CreateWidgets()
 		m_decodeMenu.append(m_decodeMeasurementItem);
 			m_decodeMeasurementItem.set_label("Measurement");
 			m_decodeMeasurementItem.set_submenu(m_decodeMeasurementMenu);
+		m_decodeMenu.append(m_decodeMemoryItem);
+			m_decodeMemoryItem.set_label("Memory");
+			m_decodeMemoryItem.set_submenu(m_decodeMemoryMenu);
 		m_decodeMenu.append(m_decodeMiscItem);
 			m_decodeMiscItem.set_label("Misc");
 			m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
@@ -388,6 +391,10 @@ void WaveformArea::CreateWidgets()
 
 				case ProtocolDecoder::CAT_MATH:
 					m_decodeMathMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_MEMORY:
+					m_decodeMemoryMenu.append(*item);
 					break;
 
 				case ProtocolDecoder::CAT_SERIAL:

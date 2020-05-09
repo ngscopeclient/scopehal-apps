@@ -204,6 +204,8 @@ protected:
 					Gtk::Menu m_decodeMathMenu;
 				Gtk::MenuItem m_decodeMeasurementItem;
 					Gtk::Menu m_decodeMeasurementMenu;
+				Gtk::MenuItem m_decodeMemoryItem;
+					Gtk::Menu m_decodeMemoryMenu;
 				Gtk::MenuItem m_decodeMiscItem;
 					Gtk::Menu m_decodeMiscMenu;
 				Gtk::MenuItem m_decodeSerialItem;
