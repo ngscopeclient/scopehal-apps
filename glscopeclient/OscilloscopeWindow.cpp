@@ -579,8 +579,6 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	string datadir,
 	IDTable& table)
 {
-	char tmp[512];
-
 	TimePoint time;
 	time.first = 0;
 	time.second = 0;
@@ -605,13 +603,15 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 			scope->GetChannel(i)->Detach();
 
-		//Load each cahnnel
+		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
+		vector<int> channels;
 		for(auto jt : chans)
 		{
 			auto ch = jt.second;
 			int channel_index = ch["index"].as<int>();
 			auto chan = scope->GetChannel(channel_index);
+			channels.push_back(channel_index);
 
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 			CaptureChannelBase* cap = NULL;
@@ -628,7 +628,21 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			cap->m_startPicoseconds = time.second;
 			cap->m_triggerPhase = ch["trigphase"].as<float>();
 
-			//Load the actual samples
+			chan->SetData(cap);
+		}
+
+		//Load data for each channel in parallel to speed parsing
+		#pragma omp parallel for
+		for(size_t i=0; i<channels.size(); i++)
+		{
+			int channel_index = channels[i];
+			auto chan = scope->GetChannel(channel_index);
+			auto cap = chan->GetData();
+			AnalogCapture* acap = dynamic_cast<AnalogCapture*>(cap);
+			DigitalCapture* dcap = dynamic_cast<DigitalCapture*>(cap);
+
+			//Load the actual sample data
+			char tmp[512];
 			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
 				datadir.c_str(),
 				scope_id,
@@ -638,33 +652,51 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			if(!fp)
 			{
 				LogError("couldn't open %s\n", tmp);
-				return;
+				continue;
 			}
 
-			int64_t stime[2];
-			bool b;
-			float f;
-			while(!feof(fp))
+			//Read the whole file into a buffer
+			fseek(fp, 0, SEEK_END);
+			long len = ftell(fp);
+			fseek(fp, 0, SEEK_SET);
+			unsigned char* buf = new unsigned char[len];
+			fread(buf, 1, len, fp);
+
+			for(long offset=0; offset<len; )
 			{
-				if(2 != fread(stime, sizeof(int64_t), 2, fp))
+				long end = offset + 2*sizeof(int64_t);
+				if(end > len)
 					break;
 
+				//Read start time and duration
+				int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
+				offset = end;
+
+				//Read sample data
 				if(acap)
 				{
-					if(1 != fread(&f, sizeof(float), 1, fp))
-						LogError("fail to read sample\n");
-					acap->m_samples.push_back(AnalogSample(stime[0], stime[1], f));
+					end = offset + sizeof(float);
+					if(end > len)
+						break;
+					float* f = reinterpret_cast<float*>(buf+offset);
+					offset = end;
+
+					acap->m_samples.push_back(AnalogSample(stime[0], stime[1], *f));
 				}
+
 				else
 				{
-					if(1 != fread(&b, sizeof(bool), 1, fp))
-						LogError("fail to read sample\n");
-					dcap->m_samples.push_back(DigitalSample(stime[0], stime[1], b));
+					end = offset + sizeof(bool);
+					if(end > len)
+						break;
+					bool *b = reinterpret_cast<bool*>(buf+offset);
+					offset = end;
+
+					dcap->m_samples.push_back(DigitalSample(stime[0], stime[1], *b));
 				}
 			}
 
-			chan->SetData(cap);
-
+			delete[] buf;
 			fclose(fp);
 		}
 
