@@ -27,7 +27,6 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/freqresp")
 #add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
 
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
