@@ -404,15 +404,6 @@ void OscilloscopeWindow::CloseSession()
 	//Purge our list of scopes (the app will delete them)
 	m_scopes.clear();
 
-	//Clear performance counters
-	m_tAcquire = 0;
-	m_tDecode = 0;
-	m_tView = 0;
-	m_tHistory = 0;
-	m_tPoll = 0;
-	m_tEvent = 0;
-	m_lastWaveformTimes.clear();
-
 	//Close stuff in the application, terminate threads, etc
 	g_app->ShutDownSession();
 }
@@ -466,7 +457,18 @@ void OscilloscopeWindow::OnFileOpen()
 void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadWaveform, bool reconnect)
 {
 	m_currentFileName = filename;
+
 	CloseSession();
+
+	//Clear performance counters
+	m_tAcquire = 0;
+	m_tDecode = 0;
+	m_tView = 0;
+	m_tHistory = 0;
+	m_tPoll = 0;
+	m_tEvent = 0;
+	m_lastWaveformTimes.clear();
+
 	try
 	{
 		auto docs = YAML::LoadAllFromFile(m_currentFileName);
@@ -1790,10 +1792,12 @@ void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 		g->RefreshMeasurements();
 
 	//Update our protocol decoders
+	double start = GetTime();
 	for(auto d : m_decoders)
 		d->SetDirty();
 	for(auto d : m_decoders)
 		d->RefreshIfDirty();
+	m_tDecode += GetTime() - start;
 
 	//Update the views
 	for(auto w : m_waveformAreas)
