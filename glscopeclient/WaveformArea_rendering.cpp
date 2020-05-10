@@ -634,7 +634,7 @@ float WaveformArea::YPositionToVolts(float y)
 
 float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)
 {
-	static const float step_sizes[24]=
+	static const float step_sizes[]=
 	{
 		//mV per div
 		0.001,
@@ -665,12 +665,28 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
 		2500,
 		5000,
 
-		10000,
-		25000,
-		50000
+		1.0e4,
+		2.5e4,
+		5.0e4,
+
+		1.0e5,
+		2.5e5,
+		5.0e5,
+
+		1.0e6,
+		2.5e6,
+		5.0e6,
+
+		1.0e7,
+		2.5e7,
+		5.0e7,
+
+		1.0e8,
+		2.5e8,
+		5.0e8
 	};
 
-	for(int i=0; i<24; i++)
+	for(int i=0; i<sizeof(step_sizes)/sizeof(step_sizes[0]); i++)
 	{
 		float step = step_sizes[i];
 		float steps_per_half_span = volts_per_half_span / step;

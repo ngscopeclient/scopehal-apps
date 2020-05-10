@@ -727,10 +727,19 @@ void WaveformArea::UpdateContextMenu()
 	m_copyMenu.show_all();
 
 	//Gray out decoders that don't make sense for the type of channel we've selected
-	auto children = m_decodeMenu.get_children();
-	for(auto submenu : children)
+	vector<Gtk::Menu*> childMenus;
+	childMenus.push_back(&m_decodeAnalysisMenu);
+	childMenus.push_back(&m_decodeClockMenu);
+	childMenus.push_back(&m_decodeConversionMenu);
+	childMenus.push_back(&m_decodeMathMenu);
+	childMenus.push_back(&m_decodeMeasurementMenu);
+	childMenus.push_back(&m_decodeMemoryMenu);
+	childMenus.push_back(&m_decodeMiscMenu);
+	childMenus.push_back(&m_decodeSerialMenu);
+
+	for(auto submenu : childMenus)
 	{
-		auto subchildren = dynamic_cast<Gtk::MenuItem*>(submenu)->get_submenu()->get_children();
+		auto subchildren = submenu->get_children();
 		for(auto item : subchildren)
 		{
 			Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
@@ -746,7 +755,7 @@ void WaveformArea::UpdateContextMenu()
 	}
 
 	//Gray out measurements that don't make sense for the type of channel we've selected
-	children = m_measureHorzMenu.get_children();
+	auto children = m_measureHorzMenu.get_children();
 	UpdateMeasureContextMenu(children);
 	children = m_measureVertMenu.get_children();
 	UpdateMeasureContextMenu(children);

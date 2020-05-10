@@ -332,33 +332,30 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
 	//Decode
-	m_contextMenu.append(m_decodeItem);
-		m_decodeItem.set_label("Filter");
-		m_decodeItem.set_submenu(m_decodeMenu);
-		m_decodeMenu.append(m_decodeAnalysisItem);
-			m_decodeAnalysisItem.set_label("Analysis");
-			m_decodeAnalysisItem.set_submenu(m_decodeAnalysisMenu);
-		m_decodeMenu.append(m_decodeClockItem);
-			m_decodeClockItem.set_label("Clocking");
-			m_decodeClockItem.set_submenu(m_decodeClockMenu);
-		m_decodeMenu.append(m_decodeConversionItem);
-			m_decodeConversionItem.set_label("Conversion");
-			m_decodeConversionItem.set_submenu(m_decodeConversionMenu);
-		m_decodeMenu.append(m_decodeMathItem);
-			m_decodeMathItem.set_label("Math");
-			m_decodeMathItem.set_submenu(m_decodeMathMenu);
-		m_decodeMenu.append(m_decodeMeasurementItem);
-			m_decodeMeasurementItem.set_label("Measurement");
-			m_decodeMeasurementItem.set_submenu(m_decodeMeasurementMenu);
-		m_decodeMenu.append(m_decodeMemoryItem);
-			m_decodeMemoryItem.set_label("Memory");
-			m_decodeMemoryItem.set_submenu(m_decodeMemoryMenu);
-		m_decodeMenu.append(m_decodeMiscItem);
-			m_decodeMiscItem.set_label("Misc");
-			m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
-		m_decodeMenu.append(m_decodeSerialItem);
-			m_decodeSerialItem.set_label("Serial");
-			m_decodeSerialItem.set_submenu(m_decodeSerialMenu);
+	m_contextMenu.append(m_decodeAnalysisItem);
+		m_decodeAnalysisItem.set_label("Analysis");
+		m_decodeAnalysisItem.set_submenu(m_decodeAnalysisMenu);
+	m_contextMenu.append(m_decodeClockItem);
+		m_decodeClockItem.set_label("Clocking");
+		m_decodeClockItem.set_submenu(m_decodeClockMenu);
+	m_contextMenu.append(m_decodeConversionItem);
+		m_decodeConversionItem.set_label("Conversion");
+		m_decodeConversionItem.set_submenu(m_decodeConversionMenu);
+	m_contextMenu.append(m_decodeMathItem);
+		m_decodeMathItem.set_label("Math");
+		m_decodeMathItem.set_submenu(m_decodeMathMenu);
+	m_contextMenu.append(m_decodeMeasurementItem);
+		m_decodeMeasurementItem.set_label("Measurement");
+		m_decodeMeasurementItem.set_submenu(m_decodeMeasurementMenu);
+	m_contextMenu.append(m_decodeMemoryItem);
+		m_decodeMemoryItem.set_label("Memory");
+		m_decodeMemoryItem.set_submenu(m_decodeMemoryMenu);
+	m_contextMenu.append(m_decodeMiscItem);
+		m_decodeMiscItem.set_label("Misc");
+		m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
+	m_contextMenu.append(m_decodeSerialItem);
+		m_decodeSerialItem.set_label("Serial");
+		m_decodeSerialItem.set_submenu(m_decodeSerialMenu);
 
 
 		vector<string> names;
@@ -408,6 +405,9 @@ void WaveformArea::CreateWidgets()
 			}
 			delete d;
 		}
+
+	//TODO: delete measurements once we get rid of them all
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
 	//Measurements
 	m_contextMenu.append(m_measureItem);
