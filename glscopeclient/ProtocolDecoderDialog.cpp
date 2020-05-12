@@ -49,6 +49,9 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
 
+	//hide close button to force user to pick OK or cancel
+	set_deletable(false);
+
 	get_vbox()->pack_start(m_channelDisplayNameBox, Gtk::PACK_SHRINK);
 		m_channelDisplayNameBox.pack_start(m_channelDisplayNameLabel, Gtk::PACK_SHRINK);
 		m_channelDisplayNameLabel.set_text("Display name");

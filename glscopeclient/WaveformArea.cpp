@@ -90,6 +90,9 @@ void WaveformArea::SharedCtorInit()
 	m_firstFrame 			= false;
 	m_waveformRenderData	= NULL;
 
+	m_decodeDialog 			= NULL;
+	m_pendingDecode			= NULL;
+
 	//Configure the OpenGL context we want
 	//TODO: it looks like OpenGL ES 3.1 can do everything we need
 	//Do we want to support this for running on embedded ARM GPUs etc eventually?
@@ -147,6 +150,11 @@ WaveformArea::~WaveformArea()
 	for(auto d : m_overlays)
 		OnRemoveOverlay(d);
 	m_overlays.clear();
+
+	if(m_decodeDialog)
+		delete m_decodeDialog;
+	if(m_pendingDecode)
+		delete m_pendingDecode;
 
 	for(auto m : m_moveExistingGroupItems)
 	{
@@ -702,6 +710,13 @@ bool WaveformArea::IsEye()
 	//TODO: there are other possible sources for eyes, e.g. FREESAMPLE. Maybe define a CHANNEL_TYPE for it?
 	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
 	return (eye != NULL);
+}
+
+bool WaveformArea::IsEyeOrBathtub()
+{
+	//TODO: this should really be "is fixed two UI wide plot"
+	auto bath = dynamic_cast<HorizontalBathtubDecoder*>(m_channel);
+	return IsEye() || (bath != NULL);
 }
 
 bool WaveformArea::IsFFT()

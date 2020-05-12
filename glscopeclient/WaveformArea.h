@@ -36,6 +36,7 @@
 #define WaveformArea_h
 
 #include "WaveformGroup.h"
+#include "ProtocolDecoderDialog.h"
 
 /**
 	@brief Slightly more capable rectangle class
@@ -133,6 +134,7 @@ public:
 	bool IsAnalog();
 	bool IsDigital();
 	bool IsEye();
+	bool IsEyeOrBathtub();
 	bool IsWaterfall();
 	bool IsFFT();
 	bool IsTime();
@@ -247,7 +249,7 @@ protected:
 	bool m_updatingContextMenu;
 	void OnHide();
 	void OnTogglePersistence();
-	void OnProtocolDecode(std::string name);
+
 	void OnMeasure(std::string name);
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
@@ -261,6 +263,14 @@ protected:
 	void OnStatistics();
 
 	void RefreshMeasurements();
+
+	//Pending protocol decodes
+	void OnProtocolDecode(std::string name);
+	ProtocolDecoderDialog* m_decodeDialog;
+	ProtocolDecoder* m_pendingDecode;
+	void OnDecodeDialogResponse(int response);
+	void OnDecodeReconfigureDialogResponse(int response);
+	void OnDecodeSetupComplete();
 
 	int m_width;
 	int m_height;

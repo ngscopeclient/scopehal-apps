@@ -38,7 +38,6 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include "ProfileBlock.h"
-#include "ProtocolDecoderDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
@@ -120,11 +119,11 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			switch(ev->direction)
 			{
 				case GDK_SCROLL_UP:
-					if(!IsEye())
+					if(!IsEyeOrBathtub())
 						m_parent->OnZoomInHorizontal(m_group);
 					break;
 				case GDK_SCROLL_DOWN:
-					if(!IsEye())
+					if(!IsEyeOrBathtub())
 						m_parent->OnZoomOutHorizontal(m_group);
 					break;
 				case GDK_SCROLL_LEFT:
@@ -320,12 +319,10 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					auto decode = dynamic_cast<ProtocolDecoder*>(m_selectedChannel);
 					if(decode)
 					{
-						ProtocolDecoderDialog dialog(m_parent, decode, NULL);
-						if(dialog.run() == Gtk::RESPONSE_OK)
-						{
-							dialog.ConfigureDecoder();
-							queue_draw();
-						}
+						m_decodeDialog = new ProtocolDecoderDialog(m_parent, decode, NULL);
+						m_decodeDialog->show();
+						m_decodeDialog->signal_response().connect(
+							sigc::mem_fun(*this, &WaveformArea::OnDecodeReconfigureDialogResponse));
 					}
 					else
 					{
@@ -497,39 +494,78 @@ void WaveformArea::OnProtocolDecode(string name)
 {
 	//Create a new decoder for the incoming signal
 	string color = GetDefaultChannelColor(g_numDecodes);
-	auto decode = ProtocolDecoder::CreateDecoder(name, color);
+	if(m_pendingDecode)
+		delete m_pendingDecode;
+	m_pendingDecode = ProtocolDecoder::CreateDecoder(name, color);
 
 	//Only one input with no config required? Do default configuration
-	if( (decode->GetInputCount() == 1) && !decode->NeedsConfig())
+	if( (m_pendingDecode->GetInputCount() == 1) && !m_pendingDecode->NeedsConfig())
 	{
-		decode->SetInput(0, m_selectedChannel);
-		decode->SetDefaultName();
+		m_pendingDecode->SetInput(0, m_selectedChannel);
+		m_pendingDecode->SetDefaultName();
+		OnDecodeSetupComplete();
 	}
 
 	//Multiple inputs or config needed? Show the dialog
 	else
 	{
-		ProtocolDecoderDialog dialog(m_parent, decode, m_selectedChannel);
-		if(dialog.run() != Gtk::RESPONSE_OK)
-		{
-			delete decode;
-			return;
-		}
-		dialog.ConfigureDecoder();
+		if(m_decodeDialog)
+			delete m_decodeDialog;
+		m_decodeDialog = new ProtocolDecoderDialog(m_parent, m_pendingDecode, m_selectedChannel);
+		m_decodeDialog->show();
+		m_decodeDialog->signal_response().connect(sigc::mem_fun(*this, &WaveformArea::OnDecodeDialogResponse));
+	}
+}
+
+void WaveformArea::OnDecodeDialogResponse(int response)
+{
+	//Clean up decoder if canceled
+	if(response != Gtk::RESPONSE_OK)
+	{
+		delete m_pendingDecode;
+		m_pendingDecode = NULL;
 	}
 
+	//All good, set it up
+	else
+	{
+		m_decodeDialog->ConfigureDecoder();
+		OnDecodeSetupComplete();
+	}
+
+	//Clean up the dialog
+	delete m_decodeDialog;
+	m_decodeDialog = NULL;
+}
+
+void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
+{
+	//Apply the changes
+	if(response == Gtk::RESPONSE_OK)
+	{
+		m_decodeDialog->ConfigureDecoder();
+		queue_draw();
+	}
+
+	//Clean up the dialog
+	delete m_decodeDialog;
+	m_decodeDialog = NULL;
+}
+
+void WaveformArea::OnDecodeSetupComplete()
+{
 	//Increment the color chooser only after we've decided to add the decode.
 	//If the dialog is canceled, don't do anything.
 	g_numDecodes ++;
 
 	//If it's an eye pattern or waterfall, set the initial size
-	auto eye = dynamic_cast<EyeDecoder2*>(decode);
+	auto eye = dynamic_cast<EyeDecoder2*>(m_pendingDecode);
 	if(eye != NULL)
 	{
 		eye->SetWidth(m_width / 4);
 		eye->SetHeight(m_height);
 	}
-	auto fall = dynamic_cast<WaterfallDecoder*>(decode);
+	auto fall = dynamic_cast<WaterfallDecoder*>(m_pendingDecode);
 	if(fall != NULL)
 	{
 		fall->SetWidth(m_width);
@@ -538,29 +574,29 @@ void WaveformArea::OnProtocolDecode(string name)
 	}
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
-	decode->Refresh();
+	m_pendingDecode->Refresh();
 
 	//Create a new waveform view for the generated signal
-	if(!decode->IsOverlay())
-		m_parent->DoAddChannel(decode, m_group, this);
+	if(!m_pendingDecode->IsOverlay())
+		m_parent->DoAddChannel(m_pendingDecode, m_group, this);
 
 	//It's an overlay. Reference it and add to our overlay list
 	else
 	{
-		decode->AddRef();
-		m_overlays.push_back(decode);
-		m_parent->AddDecoder(decode);
+		m_pendingDecode->AddRef();
+		m_overlays.push_back(m_pendingDecode);
+		m_parent->AddDecoder(m_pendingDecode);
 		queue_draw();
 	}
 
 	//If the decoder is a packet-oriented protocol, pop up a protocol analyzer
 	//TODO: UI for re-opening the analyzer if we close it?
 	//TODO: allow protocol decoder dialogs to reconfigure decoder in the future
-	auto pdecode = dynamic_cast<PacketDecoder*>(decode);
+	auto pdecode = dynamic_cast<PacketDecoder*>(m_pendingDecode);
 	if(pdecode != NULL)
 	{
 		char title[256];
-		snprintf(title, sizeof(title), "Protocol Analyzer: %s", decode->m_displayname.c_str());
+		snprintf(title, sizeof(title), "Protocol Analyzer: %s", m_pendingDecode->m_displayname.c_str());
 
 		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode, this);
 		m_parent->m_analyzers.emplace(analyzer);
@@ -568,6 +604,9 @@ void WaveformArea::OnProtocolDecode(string name)
 		analyzer->OnWaveformDataReady();
 		analyzer->show();
 	}
+
+	//This decode is no longer pending
+	m_pendingDecode = NULL;
 }
 
 void WaveformArea::OnMeasure(string name)
@@ -598,19 +637,23 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 
 void WaveformArea::OnWaveformDataReady()
 {
-	//If we're an eye, refresh the parent's time scale
-	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
-	if(eye != NULL)
+	//If we're a fixed width curve, refresh the parent's time scale
+	if(IsEyeOrBathtub())
 	{
+		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+		if(eye == NULL)
+			eye = dynamic_cast<EyeDecoder2*>(dynamic_cast<ProtocolDecoder*>(m_channel)->GetInput(0));
+		int64_t width = eye->GetUIWidth();
+
 		//eye is two UIs wide
-		int64_t eye_width_ps = 2 * eye->GetUIWidth();
+		int64_t eye_width_ps = 2 * width;
 
 		//If decode fails for some reason, don't have an invalid timeline
 		if(eye_width_ps == 0)
 			eye_width_ps = 5;
 
 		m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
-		m_group->m_xAxisOffset = -eye->GetUIWidth();
+		m_group->m_xAxisOffset = -width;
 	}
 
 	//Update our measurements and redraw the waveform
