@@ -1489,6 +1489,11 @@ void OscilloscopeWindow::GarbageCollectGroups()
 			g->m_measurementFrame.hide();
 		else
 			g->m_measurementFrame.show_all();
+
+		if(g->m_columnToIndexMap.empty())
+			g->m_newMeasurementFrame.hide();
+		else
+			g->m_newMeasurementFrame.show_all();
 	}
 }
 
@@ -1704,8 +1709,8 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 		a->OnWaveformDataReady();
 
 	//Update the history window
+	start = GetTime();
 	m_historyWindows[scope]->OnWaveformDataReady();
-
 	m_tHistory += GetTime() - start;
 }
 
