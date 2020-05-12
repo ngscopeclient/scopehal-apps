@@ -39,8 +39,6 @@
 #include <random>
 #include <map>
 #include "ProfileBlock.h"
-#include "../../lib/scopeprotocols/EyeDecoder2.h"
-#include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
 using namespace std;
 using namespace glm;
@@ -93,7 +91,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	Pango::FontDescription font("monospace normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
-	tlayout->set_text("500 mV_xxx");
+	tlayout->set_text("500.000 mV_xx");
 	tlayout->get_pixel_size(twidth, theight);
 	m_plotRight = m_width - twidth;
 
