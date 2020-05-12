@@ -111,7 +111,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	std::map<float, float> gridmap;
 
 	//Spectra are printed on a logarithmic scale
-	if(IsFFT())
+	if(m_channel->GetYAxisUnits() == Unit::UNIT_DB)
 	{
 		for(float db=0; db >= -60; db -= 10)
 			gridmap[db] = DbToYPosition(db);
@@ -125,6 +125,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 		//Decide what voltage step to use. Pick from a list (in volts)
 		float selected_step = PickStepSize(volts_per_half_span);
+
+		//Special case a few values
+		if(m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
+			selected_step = 2;
 
 		float bottom_edge = (ybot + theight/2);
 		float top_edge = (ytop - theight/2);
@@ -158,6 +162,9 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		cr->line_to(m_plotRight, VoltsToYPosition(0));
 		cr->stroke();
 	}
+
+	if(gridmap.size() > 50)
+		LogFatal("gridmap way too big (%zu)\n", gridmap.size());
 
 	//Dimmed lines above and below
 	cr->set_source_rgba(0.7, 0.7, 0.7, 0.25);
