@@ -340,15 +340,15 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
 	//Decode
-	m_contextMenu.append(m_decodeAnalysisItem);
-		m_decodeAnalysisItem.set_label("Analysis");
-		m_decodeAnalysisItem.set_submenu(m_decodeAnalysisMenu);
+	m_contextMenu.append(m_decodeAlphabeticalItem);
+		m_decodeAlphabeticalItem.set_label("Alphabetical");
+		m_decodeAlphabeticalItem.set_submenu(m_decodeAlphabeticalMenu);
+	m_contextMenu.append(m_decodeBusItem);
+		m_decodeBusItem.set_label("Buses");
+		m_decodeBusItem.set_submenu(m_decodeBusMenu);
 	m_contextMenu.append(m_decodeClockItem);
 		m_decodeClockItem.set_label("Clocking");
 		m_decodeClockItem.set_submenu(m_decodeClockMenu);
-	m_contextMenu.append(m_decodeConversionItem);
-		m_decodeConversionItem.set_label("Conversion");
-		m_decodeConversionItem.set_submenu(m_decodeConversionMenu);
 	m_contextMenu.append(m_decodeMathItem);
 		m_decodeMathItem.set_label("Math");
 		m_decodeMathItem.set_submenu(m_decodeMathMenu);
@@ -361,9 +361,15 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(m_decodeMiscItem);
 		m_decodeMiscItem.set_label("Misc");
 		m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
+	m_contextMenu.append(m_decodeRFItem);
+		m_decodeRFItem.set_label("RF");
+		m_decodeRFItem.set_submenu(m_decodeRFMenu);
 	m_contextMenu.append(m_decodeSerialItem);
 		m_decodeSerialItem.set_label("Serial");
 		m_decodeSerialItem.set_submenu(m_decodeSerialMenu);
+	m_contextMenu.append(m_decodeSignalIntegrityItem);
+		m_decodeSignalIntegrityItem.set_label("Signal Integrity");
+		m_decodeSignalIntegrityItem.set_submenu(m_decodeSignalIntegrityMenu);
 
 
 		vector<string> names;
@@ -379,15 +385,19 @@ void WaveformArea::CreateWidgets()
 			switch(d->GetCategory())
 			{
 				case ProtocolDecoder::CAT_ANALYSIS:
-					m_decodeAnalysisMenu.append(*item);
+					m_decodeSignalIntegrityMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_BUS:
+					m_decodeBusMenu.append(*item);
 					break;
 
 				case ProtocolDecoder::CAT_CLOCK:
 					m_decodeClockMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_CONVERSION:
-					m_decodeConversionMenu.append(*item);
+				case ProtocolDecoder::CAT_RF:
+					m_decodeRFMenu.append(*item);
 					break;
 
 				case ProtocolDecoder::CAT_MEASUREMENT:
@@ -412,6 +422,12 @@ void WaveformArea::CreateWidgets()
 					break;
 			}
 			delete d;
+
+			//Make a second menu item and put on the alphabetical list
+			item = Gtk::manage(new Gtk::MenuItem(p, false));
+			item->signal_activate().connect(
+				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+			m_decodeAlphabeticalMenu.append(*item);
 		}
 
 	//TODO: delete measurements once we get rid of them all

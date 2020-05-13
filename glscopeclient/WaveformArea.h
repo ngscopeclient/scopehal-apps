@@ -194,12 +194,14 @@ protected:
 				Gtk::MenuItem m_copyNewGroupBelowItem;
 				Gtk::MenuItem m_copyNewGroupRightItem;
 				std::set<Gtk::MenuItem*> m_copyExistingGroupItems;
-		Gtk::MenuItem m_decodeAnalysisItem;
-			Gtk::Menu m_decodeAnalysisMenu;
+		Gtk::MenuItem m_decodeAlphabeticalItem;
+			Gtk::Menu m_decodeAlphabeticalMenu;
+		Gtk::MenuItem m_decodeBusItem;
+			Gtk::Menu m_decodeBusMenu;
 		Gtk::MenuItem m_decodeClockItem;
 			Gtk::Menu m_decodeClockMenu;
-		Gtk::MenuItem m_decodeConversionItem;
-			Gtk::Menu m_decodeConversionMenu;
+		Gtk::MenuItem m_decodeRFItem;
+			Gtk::Menu m_decodeRFMenu;
 		Gtk::MenuItem m_decodeMathItem;
 			Gtk::Menu m_decodeMathMenu;
 		Gtk::MenuItem m_decodeMeasurementItem;
@@ -210,6 +212,8 @@ protected:
 			Gtk::Menu m_decodeMiscMenu;
 		Gtk::MenuItem m_decodeSerialItem;
 			Gtk::Menu m_decodeSerialMenu;
+		Gtk::MenuItem m_decodeSignalIntegrityItem;
+			Gtk::Menu m_decodeSignalIntegrityMenu;
 		Gtk::MenuItem m_measureItem;
 			Gtk::Menu m_measureMenu;
 				Gtk::MenuItem m_measureVertItem;

@@ -771,9 +771,10 @@ void WaveformArea::UpdateContextMenu()
 
 	//Gray out decoders that don't make sense for the type of channel we've selected
 	vector<Gtk::Menu*> childMenus;
-	childMenus.push_back(&m_decodeAnalysisMenu);
+	childMenus.push_back(&m_decodeAlphabeticalMenu);
+	childMenus.push_back(&m_decodeBusMenu);
+	childMenus.push_back(&m_decodeSignalIntegrityMenu);
 	childMenus.push_back(&m_decodeClockMenu);
-	childMenus.push_back(&m_decodeConversionMenu);
 	childMenus.push_back(&m_decodeMathMenu);
 	childMenus.push_back(&m_decodeMeasurementMenu);
 	childMenus.push_back(&m_decodeMemoryMenu);
