@@ -319,7 +319,7 @@ void OscilloscopeWindow::CreateWidgets()
 			}
 
 			//See which channels are currently on
-			//DEBUG: enable all analog channels to save time when setting up the client
+			//DEBUG: enable all channels to save time when setting up the client
 			//if(chan->IsEnabled())
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
@@ -485,7 +485,6 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 			LoadDecodes(node["decodes"], table);
 			LoadUIConfiguration(node["ui_config"], table);
 		}
-		show_all();
 
 		//Create history windows for all of our scopes
 		for(auto scope : m_scopes)
@@ -540,6 +539,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
 	show_all();
+	GarbageCollectGroups();
 	g_app->DispatchPendingEvents();
 
 	//TODO: make this work properly if we have decodes spanning multiple scopes
@@ -858,7 +858,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		auto gn = it.second;
 		WaveformGroup* group = new WaveformGroup(this);
 		table.emplace(gn["id"].as<int>(), &group->m_frame);
-		group->m_measurementFrame.set_label(gn["name"].as<string>());
+		group->m_frame.set_label(gn["name"].as<string>());
 		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
 		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
 		m_waveformGroups.emplace(group);
