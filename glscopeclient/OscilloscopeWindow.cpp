@@ -261,6 +261,9 @@ void OscilloscopeWindow::CreateWidgets()
 				m_toolbar.append(m_btnRefresh, sigc::mem_fun(*this, &OscilloscopeWindow::OnRefreshConfig));
 					m_btnRefresh.set_tooltip_text("Reload configuration from scope");
 					m_btnRefresh.set_icon_name("reload");
+				m_toolbar.append(m_btnClearSweeps, sigc::mem_fun(*this, &OscilloscopeWindow::OnClearSweeps));
+					m_btnClearSweeps.set_tooltip_text("Clear sweeps");
+					m_btnClearSweeps.set_icon_name("user-trash");
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
 				m_alphalabel.set_label("Opacity ");
@@ -1494,6 +1497,22 @@ void OscilloscopeWindow::GarbageCollectGroups()
 			g->m_newMeasurementFrame.hide();
 		else
 			g->m_newMeasurementFrame.show_all();
+	}
+}
+
+void OscilloscopeWindow::OnClearSweeps()
+{
+	//TODO: clear regular waveform data and history too?
+
+	//Clear integrated data from all protocol decodes
+	for(auto d : m_decoders)
+		d->ClearSweeps();
+
+	//Clear persistence on all groups
+	for(auto g : m_waveformGroups)
+	{
+		g->ClearStatistics();
+		ClearPersistence(g);
 	}
 }
 

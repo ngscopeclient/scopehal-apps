@@ -194,6 +194,13 @@ void WaveformGroup::AddStatistic(Statistic* stat)
 	row[m_treeColumns.m_filterColumn] = stat->GetStatisticDisplayName();
 }
 
+void WaveformGroup::ClearStatistics()
+{
+	auto children = m_treeModel->children();
+	for(auto row : children)
+		static_cast<Statistic*>(row[m_treeColumns.m_statColumn])->Clear();
+}
+
 void WaveformGroup::RefreshMeasurements()
 {
 	//Old stuff

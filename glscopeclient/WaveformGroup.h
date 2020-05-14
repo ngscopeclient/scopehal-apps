@@ -96,6 +96,7 @@ public:
 	void ToggleOff(OscilloscopeChannel* chan);
 
 	void AddStatistic(Statistic* stat);
+	void ClearStatistics();
 
 	//map of scope channels to measurement column indexes
 	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
