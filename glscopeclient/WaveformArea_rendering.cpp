@@ -119,13 +119,17 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
+
+		DigitalCapture& dd = *digdat;
+
 		#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
-			traceBuffer[j*4] = pdat->GetSampleStart(j) * xscale + xoff;
-			traceBuffer[j*4 + 2] = pdat->GetSampleEnd(j) * xscale + xoff - 1;
+			int64_t off = dd.m_samples[j].m_offset;
+			traceBuffer[j*4] = off * xscale + xoff;
+			traceBuffer[j*4 + 2] = (off + dd.m_samples[j].m_duration) * xscale + xoff - 1;
 
-			float y = ybase + ( (*digdat)[j] ? digheight: 0 );
+			float y = ybase + ( dd.m_samples[j].m_sample ? digheight: 0 );
 			traceBuffer[j*4 + 1] = y;
 			traceBuffer[j*4 + 3] = y;
 		}
@@ -134,18 +138,26 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	{
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
-		#pragma omp parallel for
-		for(size_t j=0; j<count; j++)
+
+		AnalogCapture& ad = *andat;
+
+		if(fft)
 		{
-			traceBuffer[j*2] = pdat->GetSampleStart(j) * xscale + xoff;
-
-			float y;
-			if(fft)
-				y = DbToYPosition(-70 - (20 * log10((*andat)[j])));		//TODO: don't hard code plot limits
-			else
-				y = (m_pixelsPerVolt * ((*andat)[j] + offset)) + ybase;
-
-			traceBuffer[j*2 + 1]	= y;
+			#pragma omp parallel for
+			for(size_t j=0; j<count; j++)
+			{
+				traceBuffer[j*2] 		= ad.m_samples[j].m_offset * xscale + xoff;
+				traceBuffer[j*2 + 1]	= DbToYPosition(-70 - (20 * log10(ad.m_samples[j].m_sample)));	//TODO: don't hard code plot limits
+			}
+		}
+		else
+		{
+			#pragma omp parallel for
+			for(size_t j=0; j<count; j++)
+			{
+				traceBuffer[j*2] = ad.m_samples[j].m_offset * xscale + xoff;
+				traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (ad.m_samples[j].m_sample + offset)) + ybase;
+			}
 		}
 	}
 
