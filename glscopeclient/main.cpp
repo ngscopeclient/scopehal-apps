@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
 	vector<string> scopes;
 	string fileToLoad;
 	bool reconnect = false;
+	bool nodata = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -82,6 +83,8 @@ int main(int argc, char* argv[])
 		}
 		else if(s == "--reconnect")
 			reconnect = true;
+		else if(s == "--nodata")
+			nodata = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -180,7 +183,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run(fileToLoad, reconnect);
+	g_app->run(fileToLoad, reconnect, nodata);
 	delete g_app;
 	return 0;
 }

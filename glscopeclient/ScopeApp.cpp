@@ -43,7 +43,7 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run(string fileToLoad, bool reconnect)
+void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata)
 {
 	register_application();
 
@@ -52,7 +52,7 @@ void ScopeApp::run(string fileToLoad, bool reconnect)
 
 	//Handle file loads specified on the command line
 	if(!fileToLoad.empty())
-		m_window->DoFileOpen(fileToLoad, true, true, reconnect);
+		m_window->DoFileOpen(fileToLoad, true, !nodata, reconnect);
 
 	m_window->present();
 
