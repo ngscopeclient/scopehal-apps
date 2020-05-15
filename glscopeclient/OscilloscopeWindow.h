@@ -110,6 +110,9 @@ public:
 	double GetTraceAlpha()
 	{ return m_alphaslider.get_value(); }
 
+	//has to be public so ScopeApp can call it during startup
+	void OnStart();
+
 protected:
 	void SetTitle();
 	void ArmTrigger(bool oneshot);
@@ -118,7 +121,6 @@ protected:
 	void GarbageCollectGroups();
 
 	//Menu/toolbar message handlers
-	void OnStart();
 	void OnStartSingle();
 	void OnStop();
 	void OnQuit();

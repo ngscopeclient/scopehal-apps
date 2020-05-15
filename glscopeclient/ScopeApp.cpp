@@ -43,7 +43,7 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata)
+void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigger)
 {
 	register_application();
 
@@ -59,6 +59,10 @@ void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata)
 	//If no scope threads are running already (from a file load), start them now
 	if(m_threads.empty())
 		StartScopeThreads();
+
+	//If retriggering, start the trigger
+	if(retrigger)
+		m_window->OnStart();
 
 	while(true)
 	{
