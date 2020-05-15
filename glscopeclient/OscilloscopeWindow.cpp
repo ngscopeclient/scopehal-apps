@@ -74,7 +74,6 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	m_tView = 0;
 	m_tHistory = 0;
 	m_tPoll = 0;
-	m_tEvent = 0;
 
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
@@ -115,12 +114,11 @@ void OscilloscopeWindow::SetTitle()
 OscilloscopeWindow::~OscilloscopeWindow()
 {
 	//Print stats
-	LogDebug("ACQUIRE: %.3f ms\n", m_tAcquire * 1000);
-	LogDebug("DECODE:  %.3f ms\n", m_tDecode * 1000);
-	LogDebug("VIEW:    %.3f ms\n", m_tView * 1000);
-	LogDebug("HISTORY: %.3f ms\n", m_tHistory * 1000);
-	LogDebug("POLL:    %.3f ms\n", m_tPoll * 1000);
-	LogDebug("EVENT:   %.3f ms\n", m_tEvent * 1000);
+	LogDebug("ACQUIRE: %10.3f ms\n", m_tAcquire * 1000);
+	LogDebug("DECODE:  %10.3f ms\n", m_tDecode * 1000);
+	LogDebug("VIEW:    %10.3f ms\n", m_tView * 1000);
+	LogDebug("HISTORY: %10.3f ms\n", m_tHistory * 1000);
+	LogDebug("POLL:    %10.3f ms\n", m_tPoll * 1000);
 
 	for(auto it : m_historyWindows)
 		delete it.second;
@@ -480,7 +478,6 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	m_tView = 0;
 	m_tHistory = 0;
 	m_tPoll = 0;
-	m_tEvent = 0;
 	m_lastWaveformTimes.clear();
 
 	try
@@ -1713,12 +1710,6 @@ bool OscilloscopeWindow::PollScopes()
 			if(scope->HasPendingWaveforms())
 				pending = true;
 		}
-
-		//Process pending draw calls before we do another polling cycle
-		double start = GetTime();
-		while(Gtk::Main::events_pending())
-			Gtk::Main::iteration();
-		m_tEvent += GetTime() - start;
 	}
 
 	return had_waveforms;
