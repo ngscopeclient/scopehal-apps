@@ -512,8 +512,22 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 		SetTitle();
 
 		//Load data
-		if(loadWaveform)
-			LoadWaveformData(filename, table);
+		try
+		{
+			if(loadWaveform)
+				LoadWaveformData(filename, table);
+		}
+		catch(const YAML::BadFile& ex)
+		{
+			Gtk::MessageDialog dlg(
+				*this,
+				"Failed to load saved waveform data",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+		}
 	}
 	catch(const YAML::BadFile& ex)
 	{
