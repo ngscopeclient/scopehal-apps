@@ -119,7 +119,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
-		#pragma omp parallel for num_threads(8)
+		#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
 			traceBuffer[j*4] = pdat->GetSampleStart(j) * xscale + xoff;
@@ -134,7 +134,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	{
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
-		#pragma omp parallel for num_threads(8)
+		#pragma omp parallel for
 		for(size_t j=0; j<count; j++)
 		{
 			traceBuffer[j*2] = pdat->GetSampleStart(j) * xscale + xoff;
