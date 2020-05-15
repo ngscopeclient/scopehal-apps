@@ -43,6 +43,7 @@
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
 #include <libgen.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -208,6 +209,8 @@ void ScopeThread(Oscilloscope* scope)
 	#ifndef _WIN32
 	pthread_setname_np(pthread_self(), "ScopeThread");
 	#endif
+
+	omp_set_num_threads(8);
 
 	uint32_t delay_us = 1000;
 	double tlast = GetTime();
