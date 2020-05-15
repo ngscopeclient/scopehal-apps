@@ -141,6 +141,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 		AnalogCapture& ad = *andat;
 
+		//TODO: can we push this to a compute shader?
 		if(fft)
 		{
 			#pragma omp parallel for
@@ -155,7 +156,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			#pragma omp parallel for
 			for(size_t j=0; j<count; j++)
 			{
-				traceBuffer[j*2] = ad.m_samples[j].m_offset * xscale + xoff;
+				traceBuffer[j*2] 		= ad.m_samples[j].m_offset * xscale + xoff;
 				traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (ad.m_samples[j].m_sample + offset)) + ybase;
 			}
 		}
