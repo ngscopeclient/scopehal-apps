@@ -75,6 +75,11 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	m_tHistory = 0;
 	m_tPoll = 0;
 	m_tEvent = 0;
+
+	//Start a timer for polling for scope updates
+	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
+	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
+	sigc::connection conn = Glib::signal_timeout().connect(slot, 5);
 }
 
 void OscilloscopeWindow::SetTitle()
@@ -368,6 +373,12 @@ void OscilloscopeWindow::CreateWidgets()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Message handlers
+
+bool OscilloscopeWindow::OnTimer(int /*timer*/)
+{
+	PollScopes();
+	return true;
+}
 
 /**
 	@brief Clean up when we're closed
@@ -1637,8 +1648,10 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 	GarbageCollectGroups();
 }
 
-void OscilloscopeWindow::PollScopes()
+bool OscilloscopeWindow::PollScopes()
 {
+	bool had_waveforms = false;
+
 	bool pending = true;
 	while(pending)
 	{
@@ -1659,6 +1672,8 @@ void OscilloscopeWindow::PollScopes()
 			//If triggered, grab the data
 			if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
 				continue;
+
+			had_waveforms = true;
 
 			//If we have a LOT of waveforms ready, don't waste time rendering all of them.
 			//Grab a big pile and only render the last.
@@ -1691,6 +1706,8 @@ void OscilloscopeWindow::PollScopes()
 			Gtk::Main::iteration();
 		m_tEvent += GetTime() - start;
 	}
+
+	return had_waveforms;
 }
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)

@@ -184,7 +184,8 @@ public:
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
 
 	//Event handlers
-	void PollScopes();
+	bool OnTimer(int timer);
+	bool PollScopes();
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);

@@ -62,11 +62,7 @@ void ScopeApp::run(string fileToLoad)
 
 	while(true)
 	{
-		//Poll the scope to see if we have any new data
-		m_window->PollScopes();
-
-		//Dispatch events if we have any
-		DispatchPendingEvents();
+		Gtk::Main::iteration();
 
 		//Stop if the main window got closed
 		if(!m_window->is_visible())
