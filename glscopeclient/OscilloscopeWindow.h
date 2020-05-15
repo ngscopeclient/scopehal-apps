@@ -241,6 +241,7 @@ public:
 	double m_tView;
 	double m_tHistory;
 	double m_tPoll;
+	int64_t m_totalWaveforms;
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;

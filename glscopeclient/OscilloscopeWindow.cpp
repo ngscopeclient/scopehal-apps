@@ -74,6 +74,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	m_tView = 0;
 	m_tHistory = 0;
 	m_tPoll = 0;
+	m_totalWaveforms = 0;
 
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
@@ -292,7 +293,7 @@ void OscilloscopeWindow::CreateWidgets()
 			m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
 			m_triggerConfigLabel.set_size_request(75, 1);
 			m_statusbar.pack_end(m_waveformRateLabel, Gtk::PACK_SHRINK);
-			m_waveformRateLabel.set_size_request(125, 1);
+			m_waveformRateLabel.set_size_request(175, 1);
 
 	//Create history windows
 	for(auto scope : m_scopes)
@@ -478,6 +479,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	m_tView = 0;
 	m_tHistory = 0;
 	m_tPoll = 0;
+	m_totalWaveforms = 0;
 	m_lastWaveformTimes.clear();
 
 	try
@@ -1717,6 +1719,8 @@ bool OscilloscopeWindow::PollScopes()
 
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 {
+	m_totalWaveforms ++;
+
 	//TODO: handle multiple scopes better
 	m_lastWaveformTimes.push_back(GetTime());
 	while(m_lastWaveformTimes.size() > 10)
@@ -1850,7 +1854,7 @@ void OscilloscopeWindow::UpdateStatusBar()
 		double last = m_lastWaveformTimes[m_lastWaveformTimes.size() - 1];
 		double dt = last - first;
 		double wps = m_lastWaveformTimes.size() / dt;
-		snprintf(tmp, sizeof(tmp), "%.1f WFM/s", wps);
+		snprintf(tmp, sizeof(tmp), "%zu WFMs, %.2f WFM/s", m_totalWaveforms, wps);
 		m_waveformRateLabel.set_label(tmp);
 	}
 }
