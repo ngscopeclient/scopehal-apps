@@ -173,8 +173,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	size_t nsample = 0;
 	for(int j=0; j<m_width; j++)
 	{
-		//Default to drawing nothing
-		indexBuffer[j] = count;
+		bool hit = false;
 
 		//Move forward until we find a sample that starts in the current column
 		for(; nsample < count-1; nsample ++)
@@ -185,9 +184,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			{
 				//Start the current column at this sample
 				indexBuffer[j] = nsample;
+				hit = true;
 				break;
 			}
 		}
+
+		//Default to drawing nothing
+		if(!hit)
+			indexBuffer[j] = count;
 	}
 
 	dt = GetTime() - start;
