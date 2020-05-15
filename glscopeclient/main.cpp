@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
 	//Parse command-line arguments
 	vector<string> scopes;
 	string fileToLoad;
+	bool reconnect = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -78,6 +79,8 @@ int main(int argc, char* argv[])
 			//ShowVersion();
 			return 0;
 		}
+		else if(s == "--reconnect")
+			reconnect = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -176,7 +179,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run(fileToLoad);
+	g_app->run(fileToLoad, reconnect);
 	delete g_app;
 	return 0;
 }

@@ -43,16 +43,16 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run(string fileToLoad)
+void ScopeApp::run(string fileToLoad, bool reconnect)
 {
 	register_application();
 
 	m_window = new OscilloscopeWindow(m_scopes);
 	add_window(*m_window);
 
-	//If loading a file on the command line, do not reconnect to the scope
+	//Handle file loads specified on the command line
 	if(!fileToLoad.empty())
-		m_window->DoFileOpen(fileToLoad, true, true, false);
+		m_window->DoFileOpen(fileToLoad, true, true, reconnect);
 
 	m_window->present();
 

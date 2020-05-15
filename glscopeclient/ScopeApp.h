@@ -51,7 +51,7 @@ public:
 
 	std::vector<Oscilloscope*> m_scopes;
 
-	virtual void run(std::string fileToLoad);
+	virtual void run(std::string fileToLoad, bool reconnect);
 
 	void DispatchPendingEvents();
 
