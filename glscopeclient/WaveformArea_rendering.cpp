@@ -120,7 +120,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
 
-		#pragma omp parallel for
+		//#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
@@ -138,9 +138,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		indexBuffer.resize(m_width);
 
 		//TODO: can we push this to a compute shader?
+		//This doesn't look too SIMD-friendly because the inputs aren't all flops
 		if(fft)
 		{
-			#pragma omp parallel for
 			for(size_t j=0; j<count; j++)
 			{
 				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
@@ -149,7 +149,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		}
 		else
 		{
-			#pragma omp parallel for
 			for(size_t j=0; j<count; j++)
 			{
 				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
