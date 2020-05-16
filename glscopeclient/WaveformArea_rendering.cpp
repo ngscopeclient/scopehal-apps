@@ -61,22 +61,22 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		return;
 	}
 	auto pdat = channel->GetData();
-	if( (pdat == NULL) || (pdat->GetDepth() == 0) )
+	size_t count;
+	if( (pdat == NULL) || ((count = pdat->m_offsets.size()) == 0) )
 	{
 		wdata->m_geometryOK = false;
 		return;
 	}
 
 	//Make sure capture is the right type
-	auto andat = dynamic_cast<AnalogCapture*>(pdat);
-	auto digdat = dynamic_cast<DigitalCapture*>(pdat);
+	auto andat = dynamic_cast<AnalogWaveform*>(pdat);
+	auto digdat = dynamic_cast<DigitalWaveform*>(pdat);
 	if(!andat && !digdat)
 	{
 		wdata->m_geometryOK = false;
 		return;
 	}
 
-	size_t count = pdat->GetDepth();
 	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 
@@ -120,16 +120,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
 
-		DigitalCapture& dd = *digdat;
-
 		#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
-			int64_t off = dd.m_samples[j].m_offset;
+			int64_t off = digdat->m_offsets[j];
 			traceBuffer[j*4] = off * xscale + xoff;
-			traceBuffer[j*4 + 2] = (off + dd.m_samples[j].m_duration) * xscale + xoff - 1;
+			traceBuffer[j*4 + 2] = (off + digdat->m_durations[j]) * xscale + xoff - 1;
 
-			float y = ybase + ( dd.m_samples[j].m_sample ? digheight: 0 );
+			float y = ybase + ( digdat->m_samples[j] ? digheight: 0 );
 			traceBuffer[j*4 + 1] = y;
 			traceBuffer[j*4 + 3] = y;
 		}
@@ -139,16 +137,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		traceBuffer.resize(count*2);
 		indexBuffer.resize(m_width);
 
-		AnalogCapture& ad = *andat;
-
 		//TODO: can we push this to a compute shader?
 		if(fft)
 		{
 			#pragma omp parallel for
 			for(size_t j=0; j<count; j++)
 			{
-				traceBuffer[j*2] 		= ad.m_samples[j].m_offset * xscale + xoff;
-				traceBuffer[j*2 + 1]	= DbToYPosition(-70 - (20 * log10(ad.m_samples[j].m_sample)));	//TODO: don't hard code plot limits
+				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
+				traceBuffer[j*2 + 1]	= DbToYPosition(-70 - (20 * log10(andat->m_samples[j])));	//TODO: don't hard code plot limits
 			}
 		}
 		else
@@ -156,8 +152,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			#pragma omp parallel for
 			for(size_t j=0; j<count; j++)
 			{
-				traceBuffer[j*2] 		= ad.m_samples[j].m_offset * xscale + xoff;
-				traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (ad.m_samples[j].m_sample + offset)) + ybase;
+				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
+				traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (andat->m_samples[j] + offset)) + ybase;
 			}
 		}
 	}
@@ -365,7 +361,7 @@ void WaveformArea::RenderOverlayTraces()
 void WaveformArea::RenderEye()
 {
 	auto peye = dynamic_cast<EyeDecoder2*>(m_channel);
-	auto pcap = dynamic_cast<EyeCapture2*>(m_channel->GetData());
+	auto pcap = dynamic_cast<EyeWaveform*>(m_channel->GetData());
 	if(peye == NULL)
 		return;
 	if(pcap == NULL)
@@ -397,7 +393,7 @@ void WaveformArea::RenderEye()
 void WaveformArea::RenderWaterfall()
 {
 	auto pfall = dynamic_cast<WaterfallDecoder*>(m_channel);
-	auto pcap = dynamic_cast<WaterfallCapture*>(m_channel->GetData());
+	auto pcap = dynamic_cast<WaterfallWaveform*>(m_channel->GetData());
 	if(pfall == NULL)
 		return;
 	if(pcap == NULL)
@@ -703,7 +699,7 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
 		5.0e8
 	};
 
-	for(int i=0; i<sizeof(step_sizes)/sizeof(step_sizes[0]); i++)
+	for(size_t i=0; i<sizeof(step_sizes)/sizeof(step_sizes[0]); i++)
 	{
 		float step = step_sizes[i];
 		float steps_per_half_span = volts_per_half_span / step;

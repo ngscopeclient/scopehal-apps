@@ -643,13 +643,13 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			channels.push_back(channel_index);
 
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
-			CaptureChannelBase* cap = NULL;
-			AnalogCapture* acap = NULL;
-			DigitalCapture* dcap = NULL;
+			WaveformBase* cap = NULL;
+			AnalogWaveform* acap = NULL;
+			DigitalWaveform* dcap = NULL;
 			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
-				cap = acap = new AnalogCapture;
+				cap = acap = new AnalogWaveform;
 			else
-				cap = dcap = new DigitalCapture;
+				cap = dcap = new DigitalWaveform;
 
 			//Channel waveform metadata
 			cap->m_timescale = ch["timescale"].as<long>();
@@ -667,8 +667,8 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			int channel_index = channels[i];
 			auto chan = scope->GetChannel(channel_index);
 			auto cap = chan->GetData();
-			AnalogCapture* acap = dynamic_cast<AnalogCapture*>(cap);
-			DigitalCapture* dcap = dynamic_cast<DigitalCapture*>(cap);
+			auto acap = dynamic_cast<AnalogWaveform*>(cap);
+			auto dcap = dynamic_cast<DigitalWaveform*>(cap);
 
 			//Load the actual sample data
 			char tmp[512];
@@ -710,7 +710,9 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 					float* f = reinterpret_cast<float*>(buf+offset);
 					offset = end;
 
-					acap->m_samples.push_back(AnalogSample(stime[0], stime[1], *f));
+					acap->m_offsets.push_back(stime[0]);
+					acap->m_durations.push_back(stime[1]);
+					acap->m_samples.push_back(*f);
 				}
 
 				else
@@ -721,7 +723,9 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 					bool *b = reinterpret_cast<bool*>(buf+offset);
 					offset = end;
 
-					dcap->m_samples.push_back(DigitalSample(stime[0], stime[1], *b));
+					dcap->m_offsets.push_back(stime[0]);
+					dcap->m_durations.push_back(stime[1]);
+					dcap->m_samples.push_back(*b);
 				}
 			}
 

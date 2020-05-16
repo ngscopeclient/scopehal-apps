@@ -119,7 +119,7 @@ void HistoryWindow::OnWaveformDataReady()
 {
 	//Use the timestamp from the first enabled channel
 	OscilloscopeChannel* chan = NULL;
-	CaptureChannelBase* data = NULL;
+	WaveformBase* data = NULL;
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
 		chan = m_scope->GetChannel(i);
@@ -169,7 +169,7 @@ void HistoryWindow::OnWaveformDataReady()
 		hist[c] = dat;
 
 		//Clear excess space out of the waveform buffer
-		auto adat = dynamic_cast<AnalogCapture*>(data);
+		auto adat = dynamic_cast<AnalogWaveform*>(data);
 		if(adat)
 			adat->m_samples.shrink_to_fit();
 	}
@@ -208,34 +208,42 @@ void HistoryWindow::OnWaveformDataReady()
 		hist = (*it)[m_columns.m_history];
 		for(auto jt : hist)
 		{
-			auto acap = dynamic_cast<AnalogCapture*>(jt.second);
+			auto acap = dynamic_cast<AnalogWaveform*>(jt.second);
 			if(acap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(AnalogCapture);
+				bytes_used += sizeof(AnalogWaveform);
 
 				//Add size of each sample
-				bytes_used += sizeof(AnalogSample) * acap->m_samples.capacity();
+				bytes_used += sizeof(float) * acap->m_samples.capacity();
+				bytes_used += sizeof(int64_t) * acap->m_offsets.capacity();
+				bytes_used += sizeof(int64_t) * acap->m_durations.capacity();
 			}
 
-			auto dcap = dynamic_cast<DigitalCapture*>(jt.second);
+			auto dcap = dynamic_cast<DigitalWaveform*>(jt.second);
 			if(dcap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(DigitalCapture);
+				bytes_used += sizeof(DigitalWaveform);
 
 				//Add size of each sample
-				bytes_used += sizeof(DigitalSample) * dcap->m_samples.capacity();
+				bytes_used += sizeof(bool) * dcap->m_samples.capacity();
+				bytes_used += sizeof(int64_t) * dcap->m_offsets.capacity();
+				bytes_used += sizeof(int64_t) * dcap->m_durations.capacity();
 			}
 
-			auto bcap = dynamic_cast<DigitalBusCapture*>(jt.second);
+			auto bcap = dynamic_cast<DigitalBusWaveform*>(jt.second);
 			if(bcap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(DigitalBusCapture);
+				bytes_used += sizeof(DigitalBusWaveform);
 
 				//Add size of each sample
-				bytes_used += (sizeof(DigitalBusSample) + bcap->m_samples[0].m_sample.size()) * bcap->m_samples.capacity();
+				bytes_used +=
+					(bcap->m_samples[0].size() * sizeof(bool) + sizeof(vector<bool>))
+					* bcap->m_samples.capacity();
+				bytes_used += sizeof(int64_t) * bcap->m_offsets.capacity();
+				bytes_used += sizeof(int64_t) * bcap->m_durations.capacity();
 			}
 		}
 	}
@@ -353,25 +361,27 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 			config += tmp;
 
 			//Save channel data
-			auto achan = dynamic_cast<AnalogCapture*>(chan);
-			auto dchan = dynamic_cast<DigitalCapture*>(chan);
-			for(size_t i=0; i<chan->GetDepth(); i++)
+			auto achan = dynamic_cast<AnalogWaveform*>(chan);
+			auto dchan = dynamic_cast<DigitalWaveform*>(chan);
+			size_t len = chan->m_offsets.size();
+			for(size_t i=0; i<len; i++)
 			{
-				int64_t times[2] = { chan->GetSampleStart(i), chan->GetSampleLen(i) };
+				int64_t times[2] = { chan->m_offsets[i], chan->m_durations[i] };
 				if(2 != fwrite(times, sizeof(int64_t), 2, fp))
 					LogError("file write error\n");
 				if(achan)
 				{
-					if(1 != fwrite(&(*achan)[i], sizeof(float), 1, fp))
+					if(1 != fwrite(&achan->m_samples[i], sizeof(float), 1, fp))
 						LogError("file write error\n");
 				}
 				else if(dchan)
 				{
-					if(1 != fwrite(&(*dchan)[i], sizeof(bool), 1, fp))
+					bool b = dchan->m_samples[i];
+					if(1 != fwrite(&b, sizeof(bool), 1, fp))
 						LogError("file write error\n");
 				}
 			}
-			//TODO: support not analog or digital channels (e.g. FREESAMPLE eyes)
+			//TODO: support other waveform types (buses, eyes, etc)
 			fclose(fp);
 		}
 

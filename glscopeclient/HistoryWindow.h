@@ -38,7 +38,7 @@
 
 class OscilloscopeWindow;
 
-typedef std::map<OscilloscopeChannel*, CaptureChannelBase*> WaveformHistory;
+typedef std::map<OscilloscopeChannel*, WaveformBase*> WaveformHistory;
 
 class HistoryColumns : public Gtk::TreeModel::ColumnRecord
 {

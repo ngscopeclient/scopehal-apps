@@ -262,7 +262,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	int midline = spacing / 2;
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
-	auto bus = dynamic_cast<DigitalBusCapture*>(m_channel->GetData());
+	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel->GetData());
 	if(bus != NULL)
 	{
 		int ymid = m_height - 15;
@@ -271,20 +271,21 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 		Gdk::Color color(m_channel->m_displaycolor);
 
-		for(size_t i=0; i<bus->GetDepth(); i++)
+		size_t len = bus->m_offsets.size();
+		for(size_t i=0; i<len; i++)
 		{
-			double start = (bus->GetSampleStart(i) * bus->m_timescale) + bus->m_triggerPhase;
-			double end = start + (bus->GetSampleLen(i) * bus->m_timescale);
+			double start = (bus->m_offsets[i] * bus->m_timescale) + bus->m_triggerPhase;
+			double end = start + (bus->m_durations[i] * bus->m_timescale);
 
 			//Merge with subsequent samples if they have the same value
-			for(size_t j=i+1; j<bus->GetDepth(); j++)
+			for(size_t j=i+1; j<len; j++)
 			{
-				if(bus->m_samples[i].m_sample != bus->m_samples[j].m_sample)
+				if(bus->m_samples[i] != bus->m_samples[j])
 					break;
 
 				//Merge this sample with the next one
 				i++;
-				end = (bus->GetSampleStart(i) + bus->GetSampleLen(i)) * bus->m_timescale + bus->m_triggerPhase;
+				end = (bus->m_offsets[i] + bus->m_durations[i]) * bus->m_timescale + bus->m_triggerPhase;
 			}
 
 			double xs = XAxisUnitsToXPosition(start);
@@ -293,7 +294,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			if( (xe < m_infoBoxRect.get_right()) || (xs > m_plotRight) )
 				continue;
 
-			auto sample = bus->m_samples[i].m_sample;
+			auto sample = bus->m_samples[i];
 
 			uint64_t value = 0;
 			for(size_t j=0; j<sample.size(); j++)
@@ -394,10 +395,11 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		//Handle text
 		if(o->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
 		{
-			for(size_t i=0; i<data->GetDepth(); i++)
+			size_t olen = data->m_offsets.size();
+			for(size_t i=0; i<olen; i++)
 			{
-				double start = (data->GetSampleStart(i) * data->m_timescale) + data->m_triggerPhase;
-				double end = start + (data->GetSampleLen(i) * data->m_timescale);
+				double start = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
+				double end = start + (data->m_durations[i] * data->m_timescale);
 
 				double xs = XAxisUnitsToXPosition(start);
 				double xe = XAxisUnitsToXPosition(end);
@@ -405,16 +407,13 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
 
-				auto text = o->GetText(i);
-				auto color = o->GetColor(i);
-
 				RenderComplexSignal(
 					cr,
 					textright, m_plotRight,
 					xs, xe, 5,
 					ybot, ymid, ytop,
-					text,
-					color);
+					o->GetText(i),
+					o->GetColor(i));
 			}
 		}
 	}
@@ -439,7 +438,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 
 			//Format sample depth
 			char tmp[256];
-			size_t len = data->GetDepth();
+			size_t len = data->m_offsets.size();
 			if(len > 1e6)
 				snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
 			else if(len > 1e3)

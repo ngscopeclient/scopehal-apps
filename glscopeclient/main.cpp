@@ -268,8 +268,8 @@ void ScopeThread(Oscilloscope* scope)
 			double now = GetTime();
 			dt = now - tlast;
 			tlast = now;
-			LogDebug("Triggered, dt = %.3f ms (npolls = %zu)\n",
-				dt*1000, npolls);
+			//LogDebug("Triggered, dt = %.3f ms (npolls = %zu)\n",
+			//	dt*1000, npolls);
 
 			npolls = 0;
 
