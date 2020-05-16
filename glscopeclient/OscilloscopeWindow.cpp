@@ -835,7 +835,20 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 		auto dnode = it.second;
 
 		//Create the decode
-		auto decode = ProtocolDecoder::CreateDecoder(dnode["protocol"].as<string>(), dnode["color"].as<string>());
+		auto proto = dnode["protocol"].as<string>();
+		auto decode = ProtocolDecoder::CreateDecoder(proto, dnode["color"].as<string>());
+		if(decode == NULL)
+		{
+			Gtk::MessageDialog dlg(
+				string("Unable to create filter \"") + proto + "\". Skipping...\n",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+			continue;
+		}
+
 		table.emplace(dnode["id"].as<int>(), decode);
 		m_decoders.emplace(decode);
 
@@ -851,7 +864,8 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 	{
 		auto dnode = it.second;
 		auto decode = static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()]);
-		decode->LoadInputs(dnode, table);
+		if(decode)
+			decode->LoadInputs(dnode, table);
 	}
 }
 
@@ -870,7 +884,10 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 	{
 		//Load the area itself
 		auto an = it.second;
-		WaveformArea* area = new WaveformArea(static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]), this);
+		auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+		if(!channel)	//don't crash on bad IDs or missing decodes
+			continue;
+		WaveformArea* area = new WaveformArea(channel, this);
 		table.emplace(an["id"].as<int>(), area);
 		area->SetPersistenceEnabled(an["persistence"].as<int>() ? true : false);
 		m_waveformAreas.emplace(area);
@@ -878,7 +895,11 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		//Add any overlays
 		auto overlays = an["overlays"];
 		for(auto jt : overlays)
-			area->AddOverlay(static_cast<ProtocolDecoder*>(table[jt.second["id"].as<int>()]));
+		{
+			auto decode = static_cast<ProtocolDecoder*>(table[jt.second["id"].as<int>()]);
+			if(decode)
+				area->AddOverlay(decode);
+		}
 	}
 
 	//Waveform groups
@@ -940,6 +961,8 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		for(auto at : areas)
 		{
 			auto area = static_cast<WaveformArea*>(table[at.second["id"].as<int>()]);
+			if(!area)
+				continue;
 			area->m_group = group;
 			if(area->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 				group->m_waveformBox.pack_start(*area, Gtk::PACK_SHRINK);
