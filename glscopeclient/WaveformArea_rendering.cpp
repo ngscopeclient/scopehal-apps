@@ -98,8 +98,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
-	vector<float> traceBuffer;
-	vector<uint32_t> indexBuffer;
+	vector<EmptyConstructorWrapper<float>> traceBuffer;
+	vector<EmptyConstructorWrapper<uint32_t>> indexBuffer;
 	double offset = channel->GetOffset();
 
 	if(digdat)
