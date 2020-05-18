@@ -52,6 +52,7 @@ using namespace std;
  */
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	: m_scopes(scopes)
+	, m_fullscreen(false)
 {
 	SetTitle();
 
@@ -269,6 +270,9 @@ void OscilloscopeWindow::CreateWidgets()
 				m_toolbar.append(m_btnClearSweeps, sigc::mem_fun(*this, &OscilloscopeWindow::OnClearSweeps));
 					m_btnClearSweeps.set_tooltip_text("Clear sweeps");
 					m_btnClearSweeps.set_icon_name("user-trash");
+				m_toolbar.append(m_btnFullscreen, sigc::mem_fun(*this, &OscilloscopeWindow::OnFullscreen));
+					m_btnFullscreen.set_tooltip_text("Fullscreen");
+					m_btnFullscreen.set_icon_name("view-fullscreen");
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
 				m_alphalabel.set_label("Opacity ");
@@ -293,6 +297,7 @@ void OscilloscopeWindow::CreateWidgets()
 			split->pack1(group->m_frame);
 
 		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+			m_statusbar.get_style_context()->add_class("status");
 			m_statusbar.pack_end(m_triggerConfigLabel, Gtk::PACK_SHRINK);
 			m_triggerConfigLabel.set_size_request(75, 1);
 			m_statusbar.pack_end(m_waveformRateLabel, Gtk::PACK_SHRINK);
@@ -1552,6 +1557,15 @@ void OscilloscopeWindow::GarbageCollectGroups()
 		else
 			g->m_newMeasurementFrame.show_all();
 	}
+}
+
+void OscilloscopeWindow::OnFullscreen()
+{
+	m_fullscreen = !m_fullscreen;
+	if(m_fullscreen)
+		fullscreen();
+	else
+		unfullscreen();
 }
 
 void OscilloscopeWindow::OnClearSweeps()

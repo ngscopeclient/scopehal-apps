@@ -163,6 +163,7 @@ protected:
 				Gtk::ToggleToolButton m_btnHistory;
 				Gtk::ToolButton m_btnRefresh;
 				Gtk::ToolButton m_btnClearSweeps;
+				Gtk::ToolButton m_btnFullscreen;
 			Gtk::Label  m_alphalabel;
 			Gtk::HScale m_alphaslider;
 		//main app windows go here
@@ -201,6 +202,7 @@ public:
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
+	void OnFullscreen();
 	void OnClearSweeps();
 
 	//Protocol decoding etc
@@ -245,6 +247,8 @@ public:
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;
+
+	bool m_fullscreen;
 };
 
 #endif
