@@ -45,9 +45,21 @@ target_link_libraries(glscopeclient
 ###############################################################################
 #Copy the resources to the build directory
 
-add_custom_command(TARGET glscopeclient COMMENT "Copying gradients..." POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/src/glscopeclient/gradients)
+add_custom_target(
+	gradients
+	COMMENT "Copying gradients..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/src/glscopeclient/gradients)
+add_custom_target(
+	shaders
+	COMMENT "Copying shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
+add_custom_target(
+	styles
+	COMMENT "Copying styles..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/src/glscopeclient/styles)
 
-add_custom_command(TARGET glscopeclient COMMENT "Copying shaders..." POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
-
-add_custom_command(TARGET glscopeclient COMMENT "Copying styles..." POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/src/glscopeclient/styles)
-
+add_dependencies(glscopeclient
+	gradients
+	shaders
+	styles
+)
