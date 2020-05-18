@@ -247,6 +247,7 @@ void OscilloscopeWindow::CreateWidgets()
 				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
+			m_vbox.get_style_context()->add_class("toolbar");
 			m_toolbox.pack_start(m_toolbar, Gtk::PACK_EXPAND_WIDGET);
 				m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 					m_btnStart.set_tooltip_text("Start (normal trigger)");
@@ -271,6 +272,7 @@ void OscilloscopeWindow::CreateWidgets()
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
 				m_alphalabel.set_label("Opacity ");
+				m_alphalabel.get_style_context()->add_class("toolbar");
 			m_toolbox.pack_start(m_alphaslider, Gtk::PACK_SHRINK);
 				m_alphaslider.set_size_request(200, 10);
 				m_alphaslider.set_round_digits(3);
@@ -281,6 +283,7 @@ void OscilloscopeWindow::CreateWidgets()
 				m_alphaslider.set_value(0.5);
 				m_alphaslider.signal_value_changed().connect(
 					sigc::mem_fun(*this, &OscilloscopeWindow::OnAlphaChanged));
+				m_alphaslider.get_style_context()->add_class("toolbar");
 
 		auto split = new Gtk::HPaned;
 			m_vbox.pack_start(*split);

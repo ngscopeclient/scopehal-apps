@@ -1,13 +1,13 @@
 frame
 {
 	color: white;
-	background-color: black;
+	background-color: #101010;
 }
 
 treeview
 {
 	color: white;
-	background-color: black;
+	background-color: #101010;
 	background-image: none;
 	font-family: monospace;
 }
@@ -31,15 +31,49 @@ row:hover,
 row:hover:focus,
 .cell:hover
 {
-	background-color: #202020;
+	background-color: #101010;
 }
 
 treeview header button
 {
 	color: white;
-	background-color: black;
+	background-color: #101010;
 	background-image: none;
 	border-top: none;
 	border-left: none;
 	border-right: none;
+}
+
+paned > separator
+{
+	background-color: #101010;
+	border: none;
+}
+
+.toolbar
+{
+	background-color: #101010;
+}
+
+toolbar button:hover
+{
+	background-image: none;
+	background-color: #505050;
+}
+
+toolbar button:hover:active
+{
+	background-image: none;
+	background-color: #808080;
+}
+
+toolbar button:focus
+{
+	border-color: #202020;
+	border-image: none;
+}
+
+label.toolbar
+{
+	color: white;
 }
