@@ -57,6 +57,8 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	, m_updating(false)
 {
 	set_title(string("History: ") + m_scope->m_nickname);
+	set_transient_for(*parent);
+	set_skip_taskbar_hint();
 
 	set_default_size(320, 800);
 

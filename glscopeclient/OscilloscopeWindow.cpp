@@ -1354,7 +1354,10 @@ void OscilloscopeWindow::OnHistory()
 	if(m_btnHistory.get_active())
 	{
 		for(auto it : m_historyWindows)
+		{
 			it.second->show();
+			it.second->grab_focus();
+		}
 	}
 	else
 	{
@@ -1562,6 +1565,7 @@ void OscilloscopeWindow::GarbageCollectGroups()
 void OscilloscopeWindow::OnFullscreen()
 {
 	m_fullscreen = !m_fullscreen;
+
 	if(m_fullscreen)
 		fullscreen();
 	else

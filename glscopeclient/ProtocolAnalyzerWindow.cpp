@@ -74,6 +74,8 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	, m_updating(false)
 {
 	set_title(title);
+	set_transient_for(*parent);
+	set_skip_taskbar_hint();
 
 	m_decoder->AddRef();
 
