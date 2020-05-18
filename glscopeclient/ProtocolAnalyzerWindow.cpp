@@ -67,15 +67,15 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	OscilloscopeWindow* parent,
 	PacketDecoder* decoder,
 	WaveformArea* area)
-	: m_parent(parent)
+	: Gtk::Dialog(title, *parent)
+	, m_parent(parent)
 	, m_decoder(decoder)
 	, m_area(area)
 	, m_columns(decoder)
 	, m_updating(false)
 {
-	set_title(title);
-	set_transient_for(*parent);
 	set_skip_taskbar_hint();
+	set_type_hint(Gdk::WINDOW_TYPE_HINT_TOOLBAR);
 
 	m_decoder->AddRef();
 
@@ -101,7 +101,7 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnSelectionChanged));
 
 	//Set up the widgets
-	add(m_scroller);
+	get_vbox()->pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
 		m_scroller.add(m_tree);
 			m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
 		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);

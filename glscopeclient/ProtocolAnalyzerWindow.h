@@ -57,7 +57,7 @@ public:
 /**
 	@brief Window containing a protocol analyzer
  */
-class ProtocolAnalyzerWindow : public Gtk::Window
+class ProtocolAnalyzerWindow : public Gtk::Dialog
 {
 public:
 	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder, WaveformArea* area);

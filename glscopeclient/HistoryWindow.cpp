@@ -52,13 +52,13 @@ HistoryColumns::HistoryColumns()
 // Construction / destruction
 
 HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
-	: m_parent(parent)
+	: Gtk::Dialog(string("History: ") + scope->m_nickname, *parent)
+	, m_parent(parent)
 	, m_scope(scope)
 	, m_updating(false)
 {
-	set_title(string("History: ") + m_scope->m_nickname);
-	set_transient_for(*parent);
 	set_skip_taskbar_hint();
+	set_type_hint(Gdk::WINDOW_TYPE_HINT_TOOLBAR);
 
 	set_default_size(320, 800);
 
@@ -72,20 +72,19 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	m_tree.append_column("Time", m_columns.m_timestamp);
 
 	//Set up the widgets
-	add(m_vbox);
-		m_vbox.pack_start(m_hbox, Gtk::PACK_SHRINK);
-			m_hbox.pack_start(m_maxLabel, Gtk::PACK_SHRINK);
-				m_maxLabel.set_label("Max waveforms");
-			m_hbox.pack_start(m_maxBox, Gtk::PACK_EXPAND_WIDGET);
-				SetMaxWaveforms(10);
-		m_vbox.pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
-			m_scroller.add(m_tree);
-			m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-				m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
-		m_vbox.pack_start(m_status, Gtk::PACK_SHRINK);
-			m_status.pack_end(m_memoryLabel, Gtk::PACK_SHRINK);
-				m_memoryLabel.set_text("");
-	m_vbox.show_all();
+	get_vbox()->pack_start(m_hbox, Gtk::PACK_SHRINK);
+		m_hbox.pack_start(m_maxLabel, Gtk::PACK_SHRINK);
+			m_maxLabel.set_label("Max waveforms");
+		m_hbox.pack_start(m_maxBox, Gtk::PACK_EXPAND_WIDGET);
+			SetMaxWaveforms(10);
+	get_vbox()->pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
+		m_scroller.add(m_tree);
+		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+			m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
+	get_vbox()->pack_start(m_status, Gtk::PACK_SHRINK);
+		m_status.pack_end(m_memoryLabel, Gtk::PACK_SHRINK);
+			m_memoryLabel.set_text("");
+	show_all();
 
 	//not shown by default
 	hide();

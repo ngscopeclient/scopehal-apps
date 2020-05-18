@@ -53,7 +53,7 @@ public:
 /**
 	@brief Window containing a protocol analyzer
  */
-class HistoryWindow : public Gtk::Window
+class HistoryWindow : public Gtk::Dialog
 {
 public:
 	HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope);
@@ -72,15 +72,14 @@ protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
 	virtual void OnSelectionChanged();
 
-	Gtk::VBox m_vbox;
-		Gtk::HBox m_hbox;
-			Gtk::Label m_maxLabel;
-			Gtk::Entry m_maxBox;
-		Gtk::ScrolledWindow m_scroller;
-			Gtk::TreeView m_tree;
-		Glib::RefPtr<Gtk::TreeStore> m_model;
-		Gtk::HBox m_status;
-			Gtk::Label m_memoryLabel;
+	Gtk::HBox m_hbox;
+		Gtk::Label m_maxLabel;
+		Gtk::Entry m_maxBox;
+	Gtk::ScrolledWindow m_scroller;
+		Gtk::TreeView m_tree;
+	Glib::RefPtr<Gtk::TreeStore> m_model;
+	Gtk::HBox m_status;
+		Gtk::Label m_memoryLabel;
 	HistoryColumns m_columns;
 
 	OscilloscopeWindow* m_parent;
