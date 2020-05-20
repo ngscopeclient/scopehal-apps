@@ -585,7 +585,6 @@ void WaveformArea::OnDecodeSetupComplete()
 	{
 		m_pendingDecode->AddRef();
 		m_overlays.push_back(m_pendingDecode);
-		m_parent->AddDecoder(m_pendingDecode);
 		queue_draw();
 	}
 

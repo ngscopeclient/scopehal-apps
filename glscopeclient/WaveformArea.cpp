@@ -166,10 +166,6 @@ WaveformArea::~WaveformArea()
 
 void WaveformArea::OnRemoveOverlay(ProtocolDecoder* decode)
 {
-	//If we're about to remove the last reference to a decoder, make sure the parent knows
-	if(decode->GetRefCount() == 1)
-		m_parent->RemoveDecoder(decode);
-
 	//Remove the render data for it
 	auto it = m_overlayRenderData.find(decode);
 	if(it != m_overlayRenderData.end())

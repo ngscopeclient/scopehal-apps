@@ -858,7 +858,6 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 		}
 
 		table.emplace(dnode["id"].as<int>(), decode);
-		m_decoders.emplace(decode);
 
 		//Load parameters during the first pass.
 		//Parameters can't have dependencies on other channels etc.
@@ -1173,7 +1172,7 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 	config += SerializeInstrumentConfiguration(table);
 
 	//Decodes depend on scope channels, but need to happen before UI elements that use them
-	if(!m_decoders.empty())
+	if(!ProtocolDecoder::EnumDecodes().empty())
 		config += SerializeDecodeConfiguration(table);
 
 	//UI config
@@ -1203,7 +1202,8 @@ string OscilloscopeWindow::SerializeDecodeConfiguration(IDTable& table)
 {
 	string config = "decodes:\n";
 
-	for(auto d : m_decoders)
+	auto set = ProtocolDecoder::EnumDecodes();
+	for(auto d : set)
 		config += d->SerializeConfiguration(table);
 
 	return config;
@@ -1577,7 +1577,8 @@ void OscilloscopeWindow::OnClearSweeps()
 	//TODO: clear regular waveform data and history too?
 
 	//Clear integrated data from all protocol decodes
-	for(auto d : m_decoders)
+	auto decodes = ProtocolDecoder::EnumDecodes();
+	for(auto d : decodes)
 		d->ClearSweeps();
 
 	//Clear persistence on all groups
@@ -1663,10 +1664,6 @@ void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 
 WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup, WaveformArea* ref)
 {
-	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
-	if(decode)
-		AddDecoder(decode);
-
 	//Create the viewer
 	auto w = new WaveformArea(chan, this);
 	w->m_group = ngroup;
@@ -1694,12 +1691,6 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, Wavefo
 
 void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 {
-	//If we're about to remove the last viewer for a protocol decoder, forget about it
-	auto chan = w->GetChannel();
-	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
-	if(decode && (chan->GetRefCount() == 1) )
-		m_decoders.erase(decode);
-
 	//Get rid of the channel
 	w->get_parent()->remove(*w);
 	m_waveformAreas.erase(w);
@@ -1816,7 +1807,8 @@ void OscilloscopeWindow::RefreshAllDecoders()
 
 	double start = GetTime();
 
-	for(auto d : m_decoders)
+	auto decodes = ProtocolDecoder::EnumDecodes();
+	for(auto d : decodes)
 		d->SetDirty();
 
 	//Prepare to topologically sort filter nodes into blocks capable of parallel evaluation.
@@ -1825,11 +1817,9 @@ void OscilloscopeWindow::RefreshAllDecoders()
 	//Block 2 may depend on 1/0/physical, etc.
 	typedef vector<ProtocolDecoder*> DecodeBlock;
 	vector<DecodeBlock> blocks;
-	set<OscilloscopeChannel*> working;
 
 	//Working set starts out as all decoders
-	for(auto d : m_decoders)
-		working.emplace(d);
+	auto working = ProtocolDecoder::EnumDecodes();
 
 	//Each iteration, put all decodes that only depend on previous blocks into this block.
 	for(int block=0; !working.empty(); block++)
@@ -1845,7 +1835,7 @@ void OscilloscopeWindow::RefreshAllDecoders()
 			for(size_t i=0; i<d->GetInputCount(); i++)
 			{
 				auto in = d->GetInput(i);
-				if(working.find(in) != working.end())
+				if(working.find((ProtocolDecoder*)in) != working.end())
 				{
 					ok = false;
 					break;

@@ -1,4 +1,5 @@
 @define-color glscopeclient_bg_color		#101010;
+@define-color glscopeclient_gradient_color	#303030;
 @define-color glscopeclient_highlight_color #808080;
 @define-color glscopeclient_text_color		#ffffff;
 @define-color glscopeclient_inactive_color	#505050;
@@ -6,6 +7,48 @@
 frame
 {
 	color: 				@glscopeclient_text_color;
+	background-color:	@glscopeclient_bg_color;
+}
+
+label
+{
+	color: @glscopeclient_text_color;
+}
+
+button
+{
+	background-image: -gtk-gradient(
+		linear,
+		left top,
+		left bottom,
+		from (@glscopeclient_bg_color),
+		color-stop (0.5, @glscopeclient_gradient_color),
+		to (@glscopeclient_bg_color)
+		);
+	color:				@glscopeclient_text_color;
+}
+
+combobox *
+{
+	color:				@glscopeclient_text_color;
+}
+
+entry,
+entry:focus
+{
+	background-image:	none;
+	background-color:	@glscopeclient_bg_color;
+	color:				@glscopeclient_text_color;
+}
+
+entry:disabled
+{
+	background-image:	none;
+	background-color:	@glscopeclient_inactive_color;
+}
+
+dialog
+{
 	background-color:	@glscopeclient_bg_color;
 }
 
@@ -78,11 +121,6 @@ toolbar button:focus
 	border-image: none;
 }
 
-label.toolbar
-{
-	color: @glscopeclient_text_color;
-}
-
 .status
 {
 	color: @glscopeclient_text_color;
@@ -143,3 +181,4 @@ menuitem button.flat:active
 	background-color:	@glscopeclient_highlight_color;
 	border-color:		transparent;
 }
+
