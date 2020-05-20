@@ -1529,22 +1529,45 @@ void OscilloscopeWindow::GarbageCollectGroups()
 
 	//If a splitter only has a group in the first half, move it to the parent splitter and delete it
 	//(if there is one)
+	set<Gtk::Paned*> splittersToRemove;
 	for(auto s : m_splitters)
 	{
 		auto first = s->get_child1();
 		auto second = s->get_child2();
 		if( (first != NULL) && (second == NULL) )
 		{
-			//If this is the top level splitter, we have no higher level to move it to
-			if(s->get_parent() == &m_vbox)
+			//Child of another splitter, move us to it
+			auto parent = s->get_parent();
+			if(parent != &m_vbox)
 			{
+				//Move our child to the empty half of our parent
+				auto pparent = dynamic_cast<Gtk::Paned*>(parent);
+				if(pparent->get_child1() == s)
+				{
+					s->remove(*first);
+					pparent->remove(*s);
+					pparent->pack1(*first);
+				}
+				else
+				{
+					s->remove(*first);
+					pparent->remove(*s);
+					pparent->pack2(*first);
+				}
+
+				//Delete us
+				splittersToRemove.emplace(s);
 			}
 
-			else
-			{
-				//TODO: move single occupant of empty splitter to parent
-			}
+			//If this is the top level splitter, we have no higher level to move it to
+			//so no action required? or do we delete the splitter entirely and only have us in the vbox?
 		}
+	}
+
+	for(auto s : splittersToRemove)
+	{
+		m_splitters.erase(s);
+		delete s;
 	}
 
 	//Hide measurement display if there's no measurements in the group
