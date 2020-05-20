@@ -81,7 +81,8 @@ MeasurementDialog::MeasurementDialog(
 		}
 
 		//Add protocol decoders
-		for(auto d : parent->m_decoders)
+		auto decodes = ProtocolDecoder::EnumDecodes();
+		for(auto d : decodes)
 		{
 			if(measurement->ValidateChannel(i, d))
 			{

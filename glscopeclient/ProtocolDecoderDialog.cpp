@@ -97,7 +97,8 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		}
 
 		//Add protocol decoders
-		for(auto d : parent->m_decoders)
+		auto decodes = ProtocolDecoder::EnumDecodes();
+		for(auto d : decodes)
 		{
 			if(decoder->ValidateChannel(i, d))
 			{

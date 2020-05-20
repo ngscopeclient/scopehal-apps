@@ -175,7 +175,6 @@ public:
 	//All of the waveform groups and areas, regardless of where they live
 	std::set<WaveformGroup*> m_waveformGroups;
 	std::set<WaveformArea*> m_waveformAreas;
-	std::set<ProtocolDecoder*> m_decoders;
 
 	//All of the protocol analyzers
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
