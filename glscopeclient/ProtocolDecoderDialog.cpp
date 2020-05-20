@@ -75,7 +75,8 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		row->m_chanptrs["NULL"] = NULL;
 
 		//Handle null inputs
-		if(decoder->GetInput(i) == NULL)
+		OscilloscopeChannel* din = decoder->GetInput(i);
+		if(din == NULL)
 			row->m_chans.set_active_text("NULL");
 
 		//Fill the channel list with all channels that are legal to use here
@@ -89,7 +90,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				{
 					row->m_chans.append(c->m_displayname);
 					row->m_chanptrs[c->m_displayname] = c;
-					if( (c == chan && i==0) || (c == decoder->GetInput(i)) )
+					if( (c == chan && i==0) || (c == din) )
 						row->m_chans.set_active_text(c->m_displayname);
 				}
 			}
@@ -102,7 +103,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 			{
 				row->m_chans.append(d->m_displayname);
 				row->m_chanptrs[d->m_displayname] = d;
-				if(d == chan)
+				if( (d == chan && i==0) || (d == din) )
 					row->m_chans.set_active_text(d->m_displayname);
 			}
 		}
