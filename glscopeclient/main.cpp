@@ -228,7 +228,7 @@ void ScopeThread(Oscilloscope* scope)
 		//If the queue is too big, stop grabbing data
 		if(npending > 100)
 		{
-			LogDebug("Queue is too big, sleeping\n");
+			LogTrace("Queue is too big, sleeping\n");
 			usleep(50 * 1000);
 			tlast = GetTime();
 			continue;
@@ -238,7 +238,7 @@ void ScopeThread(Oscilloscope* scope)
 		//We've gotten ahead of the UI!
 		if(npending*dt > 5)
 		{
-			LogDebug("Capture thread got 5 sec ahead of UI, sleeping\n");
+			LogTrace("Capture thread got 5 sec ahead of UI, sleeping\n");
 			usleep(50 * 1000);
 			tlast = GetTime();
 			continue;
@@ -247,7 +247,7 @@ void ScopeThread(Oscilloscope* scope)
 		//If trigger isn't armed, don't even bother polling for a while.
 		if(!scope->IsTriggerArmed())
 		{
-			LogDebug("Scope isn't armed, sleeping\n");
+			LogTrace("Scope isn't armed, sleeping\n");
 			usleep(50 * 1000);
 			tlast = GetTime();
 			continue;
