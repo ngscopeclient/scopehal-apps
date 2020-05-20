@@ -1,15 +1,20 @@
+@define-color glscopeclient_bg_color		#101010;
+@define-color glscopeclient_highlight_color #808080;
+@define-color glscopeclient_text_color		#ffffff;
+@define-color glscopeclient_inactive_color	#505050;
+
 frame
 {
-	color: white;
-	background-color: #101010;
+	color: 				@glscopeclient_text_color;
+	background-color:	@glscopeclient_bg_color;
 }
 
 treeview
 {
-	color: white;
-	background-color: #101010;
-	background-image: none;
-	font-family: monospace;
+	color: 				@glscopeclient_text_color;
+	background-color: 	@glscopeclient_bg_color;
+	background-image: 	none;
+	font-family: 		monospace;
 }
 
 row
@@ -24,47 +29,47 @@ row:selected:hover,
 row:selected:focus:hover,
 .cell:selected:hover
 {
-	background-color: #505050;
+	background-color: @glscopeclient_highlight_color;
 }
 
 row:hover,
 row:hover:focus,
 .cell:hover
 {
-	background-color: #101010;
+	background-color: @glscopeclient_bg_color;
 }
 
 treeview header button
 {
-	color: white;
-	background-color: #101010;
-	background-image: none;
-	border-top: none;
-	border-left: none;
-	border-right: none;
+	color: 				@glscopeclient_text_color;
+	background-color: 	@glscopeclient_bg_color;
+	background-image: 	none;
+	border-top:			none;
+	border-left: 		none;
+	border-right: 		none;
 }
 
 paned > separator
 {
-	background-color: #101010;
+	background-color: @glscopeclient_bg_color;
 	border: none;
 }
 
 .toolbar
 {
-	background-color: #101010;
+	background-color: @glscopeclient_bg_color;
 }
 
 toolbar button:hover
 {
 	background-image: none;
-	background-color: #505050;
+	background-color: @glscopeclient_highlight_color;
 }
 
 toolbar button:hover:active
 {
 	background-image: none;
-	background-color: #808080;
+	background-color: @glscopeclient_highlight_color;
 }
 
 toolbar button:focus
@@ -75,10 +80,66 @@ toolbar button:focus
 
 label.toolbar
 {
-	color: white;
+	color: @glscopeclient_text_color;
 }
 
 .status
 {
-	color: white;
+	color: @glscopeclient_text_color;
+}
+
+menu,
+.menu
+{
+	background-image:	none;
+	background-color:	@glscopeclient_bg_color;
+	color:				@glscopeclient_text_color;
+}
+
+menu menuitem
+{
+	background-image:	none;
+	background-color:	@glscopeclient_bg_color;
+}
+
+menuitem arrow
+{
+	color:				@glscopeclient_text_color;
+}
+
+menu menuitem:hover
+{
+	background-color:	@glscopeclient_highlight_color;
+	border-color:		transparent;
+}
+
+menuitem:disabled,
+menuitem:disabled *
+{
+	color:				@glscopeclient_highlight_color;
+	text-shadow:		none;
+}
+
+menuitem separator,
+.menu separator,
+menuitem separator
+{
+	color:				@glscopeclient_text_color;
+}
+
+menubar
+{
+	background-image:	none;
+	background-color:	@glscopeclient_bg_color;
+	color:				@glscopeclient_text_color;
+}
+
+menubar menuitem:hover,
+.menubar menuitem:hover,
+menuitem button.flat:hover,
+menuitem button.flat:active
+{
+	background-image:	none;
+	background-color:	@glscopeclient_highlight_color;
+	border-color:		transparent;
 }
