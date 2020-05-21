@@ -1536,6 +1536,17 @@ void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* n
 	else
 		ngroup->m_waveformBox.pack_start(*nw);
 	nw->show();
+
+	//Add stats if needed
+	set<OscilloscopeChannel*> chans;
+	chans.emplace(w->GetChannel());
+	for(size_t i=0; i<w->GetOverlayCount(); i++)
+		chans.emplace(w->GetOverlay(i));
+	for(auto chan : chans)
+	{
+		if(w->m_group->IsShowingStats(chan))
+			ngroup->ToggleOn(chan);
+	}
 }
 
 void OscilloscopeWindow::GarbageCollectGroups()
