@@ -69,21 +69,6 @@ protected:
 	Gtk::Notebook m_tabs;
 		std::map<Oscilloscope*, TimebasePropertiesPage*> m_pages;
 
-	/*
-	Gtk::HBox m_scopeNameBox;
-		Gtk::Label m_scopeNameLabel;
-		Gtk::Label m_scopeNameEntry;
-	*/
-
-	/*
-	Gtk::HBox m_channelNameBox;
-		Gtk::Label m_channelNameLabel;
-		Gtk::Label m_channelNameEntry;
-	Gtk::HBox m_channelDisplayNameBox;
-		Gtk::Label m_channelDisplayNameLabel;
-		Gtk::Entry m_channelDisplayNameEntry;
-	*/
-
 	const std::vector<Oscilloscope*>& m_scopes;
 };
 

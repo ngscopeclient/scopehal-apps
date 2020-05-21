@@ -89,26 +89,9 @@ TimebasePropertiesDialog::TimebasePropertiesDialog(
 		TimebasePropertiesPage* page = new TimebasePropertiesPage(scope);
 		m_tabs.append_page(page->m_grid, scope->m_nickname);
 		page->AddWidgets();
+		m_pages[scope] = page;
 	}
 
-	/*
-	get_vbox()->pack_start(m_channelNameBox, Gtk::PACK_SHRINK);
-		m_channelNameBox.pack_start(m_channelNameLabel, Gtk::PACK_SHRINK);
-		m_channelNameLabel.set_text("Timebase");
-		m_channelNameBox.pack_start(m_channelNameEntry, Gtk::PACK_EXPAND_WIDGET);
-		m_channelNameLabel.set_size_request(150, 1);
-		m_channelNameLabel.set_halign(Gtk::ALIGN_START);
-		m_channelNameEntry.set_text(chan->GetHwname());
-		m_channelNameEntry.set_halign(Gtk::ALIGN_START);
-
-	get_vbox()->pack_start(m_channelDisplayNameBox, Gtk::PACK_SHRINK);
-			m_channelDisplayNameBox.pack_start(m_channelDisplayNameLabel, Gtk::PACK_SHRINK);
-			m_channelDisplayNameLabel.set_text("Display name");
-			m_channelDisplayNameBox.pack_start(m_channelDisplayNameEntry, Gtk::PACK_EXPAND_WIDGET);
-			m_channelDisplayNameLabel.set_size_request(150, 1);
-			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-			m_channelDisplayNameEntry.set_text(chan->m_displayname);
-	*/
 	show_all();
 }
 
@@ -123,7 +106,35 @@ TimebasePropertiesDialog::~TimebasePropertiesDialog()
 
 void TimebasePropertiesDialog::ConfigureTimebase()
 {
-	//m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
+	for(auto it : m_pages)
+	{
+		//Figure out the requested sample rate
+		char scale;
+		long rate;
+		sscanf(it.second->m_sampleRateBox.get_active_text().c_str(), "%ld %cS/s", &rate, &scale);
+		uint64_t frate = rate;
+		if(scale == 'k')
+			frate *= 1000;
+		else if(scale == 'M')
+			frate *= 1000000;
+		else if(scale == 'G')
+			frate *= 1000000000;
+
+		//Figure out the memory depth
+		long depth;
+		sscanf(it.second->m_memoryDepthBox.get_active_text().c_str(), "%ld %cS", &depth, &scale);
+		uint64_t fdepth = depth;
+		if(scale == 'k')
+			fdepth *= 1000;
+		else if(scale == 'M')
+			fdepth *= 1000000;
+		else if(scale == 'G')
+			fdepth *= 1000000000;
+
+		//Apply changes
+		it.first->SetSampleDepth(fdepth);
+		it.first->SetSampleRate(frate);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
