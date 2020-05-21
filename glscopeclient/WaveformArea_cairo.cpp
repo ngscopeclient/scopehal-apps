@@ -535,8 +535,8 @@ void WaveformArea::RenderChannelInfoBox(
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 {
-	int ytop = m_height;
-	int ybot = 0;
+	int ytop = 0;
+	int ybot = m_height;
 
 	Gdk::Color yellow("yellow");
 	Gdk::Color orange("orange");
@@ -569,6 +569,27 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 			cr->line_to(x, ybot);
 			cr->fill();
 		}
+	}
+
+	//Render the insertion bar, if needed
+	Gdk::Color bar("red");
+	cr->set_source_rgba(bar.get_red_p(), bar.get_green_p(), bar.get_blue_p(), 0.5);
+	int barheight = 10;
+	if(m_insertionBarLocation == INSERT_BOTTOM)
+	{
+		cr->move_to(0, ybot);
+		cr->line_to(m_width, ybot);
+		cr->line_to(m_width, ybot - barheight);
+		cr->line_to(0, ybot - barheight);
+		cr->fill();
+	}
+	else if(m_insertionBarLocation == INSERT_TOP)
+	{
+		cr->move_to(0, ytop);
+		cr->line_to(m_width, ytop);
+		cr->line_to(m_width, ytop + barheight);
+		cr->line_to(0, ytop + barheight);
+		cr->fill();
 	}
 }
 

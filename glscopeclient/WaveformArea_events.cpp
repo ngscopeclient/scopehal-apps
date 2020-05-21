@@ -290,6 +290,29 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 			}
 			break;
 
+		//Drag channel name
+		case LOC_CHAN_NAME:
+			{
+				switch(event->button)
+				{
+					//Left
+					case 1:
+
+						if(m_selectedChannel == m_channel)
+							m_dragState = DRAG_WAVEFORM_AREA;
+						else
+						{
+						//	LogDebug("Start dragging overlay (not yet implemented)\n");
+						}
+						break;
+
+					default:
+						break;
+
+				}
+			}
+			break;
+
 		default:
 			break;
 	}
@@ -360,6 +383,33 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				m_group->m_xCursorPos[1] = timestamp;
 			break;
 
+		case DRAG_WAVEFORM_AREA:
+			if(m_dropTarget != NULL)
+			{
+				//Move us to a new group if needed
+				if(m_dropTarget->m_group != m_group)
+					m_parent->OnMoveToExistingGroup(this, m_dropTarget->m_group);
+
+				//Reorder within the group
+				int target_position = 0;
+				auto children = m_group->m_waveformBox.get_children();
+				for(int i=0; i<(int)children.size(); i++)
+				{
+					if(children[i] == m_dropTarget)
+					{
+						if(m_dropTarget->m_insertionBarLocation == INSERT_TOP)
+							target_position = i;
+						else
+							target_position = i+1;
+					}
+				}
+				m_group->m_waveformBox.reorder_child(*this, target_position);
+
+				//Not dragging anymore
+				m_dropTarget->m_insertionBarLocation = INSERT_NONE;
+			}
+			break;
+
 		default:
 			break;
 	}
@@ -367,6 +417,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 	//Stop dragging things
 	if(m_dragState != DRAG_NONE)
 	{
+		m_dropTarget = NULL;
 		m_dragState = DRAG_NONE;
 		queue_draw();
 	}
@@ -405,6 +456,67 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				double old_offset = m_channel->GetOffset();
 				m_channel->SetOffset(old_offset + dv);
 				queue_draw();
+			}
+			break;
+
+		//Move this waveform area to a new place
+		case DRAG_WAVEFORM_AREA:
+			{
+				//Window coordinates of our cursor
+				int window_x;
+				int window_y;
+				get_window()->get_origin(window_x, window_y);
+				auto alloc = get_allocation();
+				int real_x = event->x + alloc.get_x() + window_x;
+				int real_y = event->y + alloc.get_y() + window_y;
+				Gdk::Rectangle rect(real_x, real_y, 1, 1);
+
+				//Check all waveform areas to see which one we hit
+				WaveformArea* target = NULL;
+				for(auto w : m_parent->m_waveformAreas)
+				{
+					int wx;
+					int wy;
+					w->get_window()->get_origin(wx, wy);
+					auto trect = w->get_allocation();
+					trect.set_x(trect.get_x() + wx);
+					trect.set_y(trect.get_y() + wy);
+
+					if(trect.intersects(rect))
+						target = w;
+
+					//If dragging outside another area, clear the insertion mark
+					else if(w->m_insertionBarLocation != INSERT_NONE)
+					{
+						w->m_insertionBarLocation = INSERT_NONE;
+						w->queue_draw();
+					}
+				}
+
+				//Outside the view area, nothing to do
+				if(target == NULL)
+					m_dropTarget = NULL;
+
+				else
+				{
+					alloc = target->get_allocation();
+					m_dropTarget = target;
+
+					int wx;
+					int wy;
+					target->get_window()->get_origin(wx, wy);
+					alloc.set_x(alloc.get_x() + wx);
+					alloc.set_y(alloc.get_y() + wy);
+
+					//int target_x = real_x - alloc.get_x();
+					int target_y = real_y - alloc.get_y();
+
+					if(target_y > target->m_height/2)
+						target->m_insertionBarLocation = INSERT_BOTTOM;
+					else
+						target->m_insertionBarLocation = INSERT_TOP;
+					target->queue_draw();
+				}
 			}
 			break;
 

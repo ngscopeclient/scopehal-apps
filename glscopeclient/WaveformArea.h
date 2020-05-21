@@ -422,11 +422,20 @@ protected:
 		DRAG_NONE,
 		DRAG_TRIGGER,
 		DRAG_CURSOR,
-		DRAG_OFFSET
+		DRAG_OFFSET,
+		DRAG_WAVEFORM_AREA
 	} m_dragState;
 
 	//Start voltage of a drag (only used in DRAG_OFFSET mode)
 	double	m_dragStartVoltage;
+
+	enum DragInsertionBar
+	{
+		INSERT_NONE,
+		INSERT_BOTTOM,
+		INSERT_TOP
+	} m_insertionBarLocation;
+	WaveformArea* m_dropTarget;
 
 	bool	m_firstFrame;
 };

@@ -85,6 +85,8 @@ void WaveformArea::SharedCtorInit()
 	m_updatingContextMenu 	= false;
 	m_selectedChannel		= m_channel;
 	m_dragState 			= DRAG_NONE;
+	m_insertionBarLocation	= INSERT_NONE;
+	m_dropTarget			= NULL;
 	m_padding 				= 2;
 	m_persistenceClear 		= true;
 	m_firstFrame 			= false;
