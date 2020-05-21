@@ -807,6 +807,18 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				delete scope;
 				continue;
 			}
+
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetChannel(i);
+				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+				{
+					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+					item->signal_activate().connect(
+						sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+					m_channelsMenu.append(*item);
+				}
+			}
 		}
 
 		else
