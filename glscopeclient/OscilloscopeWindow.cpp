@@ -369,7 +369,7 @@ void OscilloscopeWindow::CreateWidgets()
 
 	//Don't show measurements by default
 	group->m_measurementFrame.hide();
-	group->m_newMeasurementFrame.hide();
+	group->m_measurementView.hide();
 
 	//Initialize the style sheets
 	m_css = Gtk::CssProvider::create();
@@ -1484,6 +1484,8 @@ void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
 
 void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup)
 {
+	auto oldgroup = w->m_group;
+
 	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
 
@@ -1492,9 +1494,21 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 	else
 		ngroup->m_waveformBox.pack_start(*w);
 
-	//TODO: move any measurements related to this trace to the new group?
+	//Move stats related to this trace to the new group
+	set<OscilloscopeChannel*> chans;
+	chans.emplace(w->GetChannel());
+	for(size_t i=0; i<w->GetOverlayCount(); i++)
+		chans.emplace(w->GetOverlay(i));
+	for(auto chan : chans)
+	{
+		if(oldgroup->IsShowingStats(chan))
+		{
+			oldgroup->ToggleOff(chan);
+			ngroup->ToggleOn(chan);
+		}
+	}
 
-	//Remove any groups that no longer have any waveform views in them,'
+	//Remove any groups that no longer have any waveform views in them,
 	//or splitters that only have one child
 	GarbageCollectGroups();
 }
@@ -1605,9 +1619,9 @@ void OscilloscopeWindow::GarbageCollectGroups()
 			g->m_measurementFrame.show_all();
 
 		if(g->m_columnToIndexMap.empty())
-			g->m_newMeasurementFrame.hide();
+			g->m_measurementView.hide();
 		else
-			g->m_newMeasurementFrame.show_all();
+			g->m_measurementView.show_all();
 	}
 }
 

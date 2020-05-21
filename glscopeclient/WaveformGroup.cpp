@@ -72,15 +72,13 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// New measurements
 
-	m_vbox.pack_start(m_newMeasurementFrame, Gtk::PACK_SHRINK);
-	m_newMeasurementFrame.set_label("Statistics");
-	m_newMeasurementFrame.add(m_measurementView);
+	m_vbox.pack_start(m_measurementView, Gtk::PACK_SHRINK);
 		m_treeModel = Gtk::TreeStore::create(m_treeColumns);
 		m_measurementView.set_model(m_treeModel);
 		m_measurementView.append_column("", m_treeColumns.m_filterColumn);
 		for(int i=1; i<32; i++)
 			m_measurementView.append_column("", m_treeColumns.m_columns[i]);
-		m_measurementView.set_size_request(30, 30);
+		m_measurementView.set_size_request(1, 90);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
@@ -125,11 +123,17 @@ WaveformGroup::~WaveformGroup()
 
 void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
 {
-	m_newMeasurementFrame.show_all();
-
 	//If the channel is already active, do nothing
 	if(m_columnToIndexMap.find(chan) != m_columnToIndexMap.end())
 		return;
+
+	//If we have no rows, add the initial set of stats
+	if(m_treeModel->children().empty())
+	{
+		AddStatistic(Statistic::CreateStatistic("Maximum"));
+		AddStatistic(Statistic::CreateStatistic("Average"));
+		AddStatistic(Statistic::CreateStatistic("Minimum"));
+	}
 
 	//Use the first free column
 	size_t ncol=1;
@@ -148,18 +152,11 @@ void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
 	col->get_first_cell()->property_xalign() = 1.0;
 	col->set_alignment(Gtk::ALIGN_END);
 
-	//If we have no rows, add one for average
-	if(m_treeModel->children().empty())
-	{
-		//DEBUG: add the full set of stats
-		AddStatistic(Statistic::CreateStatistic("Maximum"));
-		AddStatistic(Statistic::CreateStatistic("Average"));
-		AddStatistic(Statistic::CreateStatistic("Minimum"));
-	}
-
 	RefreshMeasurements();
 
 	chan->AddRef();
+
+	m_measurementView.show_all();
 }
 
 void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
@@ -179,7 +176,7 @@ void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
 
 	//If no channels are visible hide the frame
 	if(m_columnToIndexMap.empty())
-		m_newMeasurementFrame.hide();
+		m_measurementView.hide();
 }
 
 bool WaveformGroup::IsShowingStats(OscilloscopeChannel* chan)

@@ -109,8 +109,7 @@ public:
 			Gtk::Frame m_measurementFrame;
 				Gtk::HBox m_measurementBox;
 					std::set<MeasurementColumn*> m_measurementColumns;
-			Gtk::Frame m_newMeasurementFrame;
-				Gtk::TreeView m_measurementView;
+			Gtk::TreeView m_measurementView;
 
 	Gtk::Menu m_contextMenu;
 		Gtk::MenuItem m_removeMeasurementItem;
