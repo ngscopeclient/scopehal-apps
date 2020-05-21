@@ -80,6 +80,8 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 	{
 		if(event->button == 1)
 			m_parent->OnTimebaseSettings();
+
+		m_dragState = DRAG_NONE;
 	}
 
 	return true;
