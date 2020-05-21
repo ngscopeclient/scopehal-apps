@@ -38,9 +38,9 @@
 #include "../scopehal/MockOscilloscope.h"
 #include "OscilloscopeWindow.h"
 #include "TriggerPropertiesDialog.h"
+#include "TimebasePropertiesDialog.h"
 #include <unistd.h>
 #include <fcntl.h>
-#include <map>
 
 using namespace std;
 
@@ -421,6 +421,12 @@ void OscilloscopeWindow::CloseSession()
 	m_waveformAreas.clear();
 
 	//Delete stuff from our UI
+	auto children = m_setupTriggerMenu.get_children();
+	for(auto c : children)
+		m_setupTriggerMenu.remove(*c);
+	children = m_channelsMenu.get_children();
+	for(auto c : children)
+		m_channelsMenu.remove(*c);
 
 	//Purge our list of scopes (the app will delete them)
 	m_scopes.clear();
@@ -807,18 +813,6 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				delete scope;
 				continue;
 			}
-
-			for(size_t i=0; i<scope->GetChannelCount(); i++)
-			{
-				auto chan = scope->GetChannel(i);
-				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
-				{
-					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
-					item->signal_activate().connect(
-						sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
-					m_channelsMenu.append(*item);
-				}
-			}
 		}
 
 		else
@@ -837,6 +831,26 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 
 		//Configure the scope
 		scope->LoadConfiguration(inst, table);
+
+		//Add menu config for the scope (only if reconnecting)
+		if(reconnect)
+		{
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetChannel(i);
+				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+				{
+					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+					item->signal_activate().connect(
+						sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+					m_channelsMenu.append(*item);
+				}
+			}
+			auto item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
+			item->signal_activate().connect(
+				sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnTriggerProperties), scope));
+			m_setupTriggerMenu.append(*item);
+		}
 	}
 }
 
@@ -1995,4 +2009,11 @@ void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)
 	//TODO:  this might not work too well if triggers aren't perfectly synced!
 	for(auto it : m_historyWindows)
 		it.second->JumpToHistory(timestamp);
+}
+
+void OscilloscopeWindow::OnTimebaseSettings()
+{
+	TimebasePropertiesDialog dlg(this, m_scopes);
+	if(dlg.run() == Gtk::RESPONSE_OK)
+		dlg.ConfigureTimebase();
 }

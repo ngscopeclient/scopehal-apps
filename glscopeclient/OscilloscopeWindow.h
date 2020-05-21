@@ -197,6 +197,7 @@ public:
 	void OnTriggerProperties(Oscilloscope* scope);
 	void OnFullscreen();
 	void OnClearSweeps();
+	void OnTimebaseSettings();
 
 	//Protocol decoding etc
 	void RefreshAllDecoders();

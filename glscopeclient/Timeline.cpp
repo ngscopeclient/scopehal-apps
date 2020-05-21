@@ -64,12 +64,22 @@ Timeline::~Timeline()
 
 bool Timeline::on_button_press_event(GdkEventButton* event)
 {
-	//for now, only handle left click
-	if(event->button == 1)
+	if(event->type == GDK_BUTTON_PRESS)
 	{
-		m_dragState = DRAG_TIMELINE;
-		m_dragStartX = event->x;
-		m_originalTimeOffset = m_group->m_xAxisOffset;
+		//for now, only handle left click
+		if(event->button == 1)
+		{
+			m_dragState = DRAG_TIMELINE;
+			m_dragStartX = event->x;
+			m_originalTimeOffset = m_group->m_xAxisOffset;
+		}
+	}
+
+	//Double click
+	else if(event->type == GDK_2BUTTON_PRESS)
+	{
+		if(event->button == 1)
+			m_parent->OnTimebaseSettings();
 	}
 
 	return true;

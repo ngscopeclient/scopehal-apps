@@ -182,3 +182,27 @@ menuitem button.flat:active
 	border-color:		transparent;
 }
 
+notebook
+{
+	background-color:	@glscopeclient_bg_color;
+}
+
+notebook tab,
+notebook header,
+notebook header.top tab
+{
+	background-color:	@glscopeclient_bg_color;
+}
+
+notebook header.top tab
+{
+	background-image: -gtk-gradient(
+		linear,
+		left top,
+		left bottom,
+		from (@glscopeclient_bg_color),
+		color-stop (0.5, @glscopeclient_gradient_color),
+		to (@glscopeclient_bg_color)
+		);
+}
+
