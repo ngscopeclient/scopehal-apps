@@ -48,15 +48,15 @@ public:
 	void ConfigureChannel();
 
 protected:
-	Gtk::HBox m_scopeNameBox;
+	Gtk::Grid m_grid;
 		Gtk::Label m_scopeNameLabel;
-		Gtk::Label m_scopeNameEntry;
-	Gtk::HBox m_channelNameBox;
+			Gtk::Label m_scopeNameEntry;
 		Gtk::Label m_channelNameLabel;
-		Gtk::Label m_channelNameEntry;
-	Gtk::HBox m_channelDisplayNameBox;
+			Gtk::Label m_channelNameEntry;
 		Gtk::Label m_channelDisplayNameLabel;
-		Gtk::Entry m_channelDisplayNameEntry;
+			Gtk::Entry m_channelDisplayNameEntry;
+		Gtk::Label m_channelColorLabel;
+			Gtk::ColorButton m_channelColorButton;
 
 	OscilloscopeChannel* m_chan;
 };
