@@ -320,6 +320,13 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 
 void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*/)
 {
+	//Stop any in-progress drag if we double click
+	if(m_dragState != DRAG_NONE)
+	{
+		m_dragState = DRAG_NONE;
+		queue_draw();
+	}
+
 	switch(m_clickLocation)
 	{
 		//Double click on channel name to pop up the config dialog
@@ -378,11 +385,13 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			}
 			break;
 
+		//Move the cursor
 		case DRAG_CURSOR:
 			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 				m_group->m_xCursorPos[1] = timestamp;
 			break;
 
+		//Drag the entire waveform area to a new location
 		case DRAG_WAVEFORM_AREA:
 			if(m_dropTarget != NULL)
 			{
