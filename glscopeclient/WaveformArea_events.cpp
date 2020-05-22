@@ -390,20 +390,28 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				if(m_dropTarget->m_group != m_group)
 					m_parent->OnMoveToExistingGroup(this, m_dropTarget->m_group);
 
-				//Reorder within the group
-				int target_position = 0;
-				auto children = m_group->m_waveformBox.get_children();
-				for(int i=0; i<(int)children.size(); i++)
+				//Create a new group if we're dragging to the edge of the viewport
+				if(m_dropTarget->m_insertionBarLocation == INSERT_BOTTOM_SPLIT)
+					m_parent->OnMoveNewBelow(this);
+				else if(m_dropTarget->m_insertionBarLocation == INSERT_RIGHT_SPLIT)
+					m_parent->OnMoveNewRight(this);
+
+				else
 				{
-					if(children[i] == m_dropTarget)
+					//Reorder within the group
+					int target_position = m_group->GetIndexOfChild(m_dropTarget);
+					switch(m_dropTarget->m_insertionBarLocation)
 					{
-						if(m_dropTarget->m_insertionBarLocation == INSERT_TOP)
-							target_position = i;
-						else
-							target_position = i+1;
+						case INSERT_BOTTOM:
+							target_position ++;
+							break;
+
+						default:
+							break;
 					}
+
+					m_group->m_waveformBox.reorder_child(*this, target_position);
 				}
-				m_group->m_waveformBox.reorder_child(*this, target_position);
 
 				//Not dragging anymore
 				m_dropTarget->m_insertionBarLocation = INSERT_NONE;
@@ -508,13 +516,23 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 					alloc.set_x(alloc.get_x() + wx);
 					alloc.set_y(alloc.get_y() + wy);
 
-					//int target_x = real_x - alloc.get_x();
+					int target_x = real_x - alloc.get_x();
 					int target_y = real_y - alloc.get_y();
 
-					if(target_y > target->m_height/2)
+					//Split if dragging to the right side of the group
+					if(target_x > target->m_width * 3/4)
+						target->m_insertionBarLocation = INSERT_RIGHT_SPLIT;
+
+					//Split if dragging all the way to the edge of the bottom area in the group
+					else if(target->m_group->IsLastChild(target) && (target_y > target->m_height*3/4) )
+						target->m_insertionBarLocation = INSERT_BOTTOM_SPLIT;
+
+					//No, just reorder
+					else if(target_y > target->m_height/2)
 						target->m_insertionBarLocation = INSERT_BOTTOM;
 					else
 						target->m_insertionBarLocation = INSERT_TOP;
+
 					target->queue_draw();
 				}
 			}

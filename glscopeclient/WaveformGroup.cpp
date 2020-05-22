@@ -403,3 +403,24 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 
 	return config;
 }
+
+int WaveformGroup::GetIndexOfChild(Gtk::Widget* child)
+{
+	auto children = m_waveformBox.get_children();
+	for(int i=0; i<(int)children.size(); i++)
+	{
+		if(children[i] == child)
+			return i;
+	}
+
+	return -1;
+}
+
+bool WaveformGroup::IsLastChild(Gtk::Widget* child)
+{
+	auto children = m_waveformBox.get_children();
+	if(children[children.size() - 1] == child)
+		return true;
+
+	return false;
+}

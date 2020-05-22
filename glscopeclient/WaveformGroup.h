@@ -98,6 +98,9 @@ public:
 	void AddStatistic(Statistic* stat);
 	void ClearStatistics();
 
+	int GetIndexOfChild(Gtk::Widget* child);
+	bool IsLastChild(Gtk::Widget* child);
+
 	//map of scope channels to measurement column indexes
 	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
 	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;

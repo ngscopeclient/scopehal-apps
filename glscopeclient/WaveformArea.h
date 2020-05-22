@@ -433,7 +433,9 @@ protected:
 	{
 		INSERT_NONE,
 		INSERT_BOTTOM,
-		INSERT_TOP
+		INSERT_BOTTOM_SPLIT,
+		INSERT_TOP,
+		INSERT_RIGHT_SPLIT
 	} m_insertionBarLocation;
 	WaveformArea* m_dropTarget;
 

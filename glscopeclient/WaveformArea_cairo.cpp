@@ -572,25 +572,54 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 	}
 
 	//Render the insertion bar, if needed
-	Gdk::Color bar("red");
-	cr->set_source_rgba(bar.get_red_p(), bar.get_green_p(), bar.get_blue_p(), 0.5);
-	int barheight = 10;
-	if(m_insertionBarLocation == INSERT_BOTTOM)
+	Gdk::Color red("red");
+	int barpos = 0;
+	float alpha = 0.75;
+	int barsize = 5;
+	bool barhorz = true;
+	switch(m_insertionBarLocation)
 	{
-		cr->move_to(0, ybot);
-		cr->line_to(m_width, ybot);
-		cr->line_to(m_width, ybot - barheight);
-		cr->line_to(0, ybot - barheight);
-		cr->fill();
+		case INSERT_BOTTOM:
+			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+			barpos = ybot - barsize;
+			break;
+
+		case INSERT_BOTTOM_SPLIT:
+			cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+			barpos = ybot - barsize;
+			break;
+
+		case INSERT_TOP:
+			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+			barpos = 0;
+			break;
+
+		case INSERT_RIGHT_SPLIT:
+			cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+			barhorz = false;
+			barpos = m_width - barsize;
+			break;
+
+		//no bar to draw
+		default:
+			return;
 	}
-	else if(m_insertionBarLocation == INSERT_TOP)
+
+	if(barhorz)
 	{
-		cr->move_to(0, ytop);
-		cr->line_to(m_width, ytop);
-		cr->line_to(m_width, ytop + barheight);
-		cr->line_to(0, ytop + barheight);
-		cr->fill();
+		cr->move_to(0, barpos);
+		cr->line_to(m_width, barpos);
+		cr->line_to(m_width, barpos + barsize);
+		cr->line_to(0, barpos + barsize);
 	}
+	else
+	{
+		cr->move_to(barpos,				0);
+		cr->line_to(barpos + barsize,	0);
+		cr->line_to(barpos + barsize,	m_height);
+		cr->line_to(barpos,				m_height);
+	}
+	cr->fill();
 }
 
 
