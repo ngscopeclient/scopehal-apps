@@ -41,6 +41,7 @@ using namespace std;
 Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
 	: m_group(group)
 	, m_parent(parent)
+	, m_xAxisUnit(Unit::UNIT_PS)
 {
 	m_dragState = DRAG_NONE;
 	m_dragStartX = 0;
@@ -106,10 +107,13 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				double dx = event->x - m_dragStartX;
 				double ps = dx / m_group->m_pixelsPerXUnit;
 
-				//Update offset, but don't allow scrolling before the start of the capture
+				//Update offset, but don't allow scrolling before time zero for time domain waveforms
 				m_group->m_xAxisOffset = m_originalTimeOffset - ps;
-				if(m_group->m_xAxisOffset < 0)
-					m_group->m_xAxisOffset = 0;
+				if(m_xAxisUnit == Unit::UNIT_PS)
+				{
+					if(m_group->m_xAxisOffset < 0)
+						m_group->m_xAxisOffset = 0;
+				}
 
 				//Clear persistence and redraw the group (fixes #46)
 				m_group->GetParent()->ClearPersistence(m_group, false);
@@ -177,22 +181,21 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 	//Figure out the units to use for the axis
 	auto children = m_group->m_waveformBox.get_children();
-	Unit unit(Unit::UNIT_PS);
 	if(!children.empty())
 	{
 		auto view = dynamic_cast<WaveformArea*>(children[0]);
 		if(view != NULL)
-			unit = view->GetChannel()->GetXAxisUnits();
+			m_xAxisUnit = view->GetChannel()->GetXAxisUnits();
 	}
 
 	//And actually draw the rest
-	Render(cr, unit);
+	Render(cr);
 
 	cr->restore();
 	return true;
 }
 
-void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
+void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 {
 	size_t w = get_width();
 	size_t h = get_height();
@@ -293,7 +296,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 		cr->stroke();
 
 		//Render it
-		tlayout->set_text(xAxisUnit.PrettyPrint(t));
+		tlayout->set_text(m_xAxisUnit.PrettyPrint(t));
 		tlayout->get_pixel_size(swidth, sheight);
 		cr->move_to(x+2, ymid + sheight/2);
 		tlayout->update_from_cairo_context(cr);
@@ -328,8 +331,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 				"X2",
 				orange,
 				false,
-				true,
-				xAxisUnit);
+				true);
 		}
 
 		//First cursor
@@ -339,8 +341,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 			"X1",
 			yellow,
 			true,
-			false,
-			xAxisUnit);
+			false);
 	}
 }
 
@@ -350,8 +351,7 @@ void Timeline::DrawCursor(
 	const char* name,
 	Gdk::Color color,
 	bool draw_left,
-	bool show_delta,
-	Unit xAxisUnit)
+	bool show_delta)
 {
 	int h = get_height();
 
@@ -373,7 +373,7 @@ void Timeline::DrawCursor(
 			sizeof(label),
 			"%s: %s",
 			name,
-			xAxisUnit.PrettyPrint(ps).c_str()
+			m_xAxisUnit.PrettyPrint(ps).c_str()
 			);
 	}
 	else
@@ -382,7 +382,7 @@ void Timeline::DrawCursor(
 
 		//Special case for time domain traces
 		//Also show the frequency dual
-		if(xAxisUnit.GetType() == Unit::UNIT_PS)
+		if(m_xAxisUnit.GetType() == Unit::UNIT_PS)
 			format += " (%.3f MHz)\n";
 
 		int64_t dt = m_group->m_xCursorPos[1] - m_group->m_xCursorPos[0];
@@ -392,8 +392,8 @@ void Timeline::DrawCursor(
 			sizeof(label),
 			format.c_str(),
 			name,
-			xAxisUnit.PrettyPrint(ps).c_str(),
-			xAxisUnit.PrettyPrint(dt).c_str(),
+			m_xAxisUnit.PrettyPrint(ps).c_str(),
+			m_xAxisUnit.PrettyPrint(dt).c_str(),
 			1.0e6 / dt);
 	}
 	tlayout->set_text(label);

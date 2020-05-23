@@ -56,7 +56,7 @@ protected:
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 
-	void Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit);
+	void Render(const Cairo::RefPtr<Cairo::Context>& cr);
 
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,
@@ -64,11 +64,12 @@ protected:
 		const char* name,
 		Gdk::Color color,
 		bool draw_left,
-		bool show_delta,
-		Unit xAxisUnit);
+		bool show_delta);
 
 	WaveformGroup* m_group;
 	OscilloscopeWindow* m_parent;
+
+	Unit m_xAxisUnit;
 };
 
 #endif
