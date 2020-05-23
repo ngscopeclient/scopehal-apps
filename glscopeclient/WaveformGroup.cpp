@@ -232,7 +232,7 @@ void WaveformGroup::RefreshMeasurements()
 			if(!stat->Calculate(chan, value))
 				row[m_treeColumns.m_columns[i]] = "(error)";
 			else
-				row[m_treeColumns.m_columns[i]] = chan->GetYAxisUnits().PrettyPrint(value);
+				row[m_treeColumns.m_columns[i]] = stat->GetUnits(chan).PrettyPrint(value);
 		}
 	}
 

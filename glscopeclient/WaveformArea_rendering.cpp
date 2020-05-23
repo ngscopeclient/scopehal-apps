@@ -359,10 +359,9 @@ void WaveformArea::RenderOverlayTraces()
 
 void WaveformArea::RenderEye()
 {
-	auto peye = dynamic_cast<EyeDecoder2*>(m_channel);
-	auto pcap = dynamic_cast<EyeWaveform*>(m_channel->GetData());
-	if(peye == NULL)
+	if(m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_EYE)
 		return;
+	auto pcap = dynamic_cast<EyeWaveform*>(m_channel->GetData());
 	if(pcap == NULL)
 		return;
 
@@ -370,8 +369,8 @@ void WaveformArea::RenderEye()
 	m_eyeTexture.Bind();
 	ResetTextureFiltering();
 	m_eyeTexture.SetData(
-		peye->GetWidth(),
-		peye->GetHeight(),
+		pcap->GetWidth(),
+		pcap->GetHeight(),
 		pcap->GetData(),
 		GL_RED,
 		GL_FLOAT,
