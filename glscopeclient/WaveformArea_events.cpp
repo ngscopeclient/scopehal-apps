@@ -41,6 +41,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
+#include <map>
 
 using namespace std;
 using namespace glm;
@@ -302,7 +303,9 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 							m_dragState = DRAG_WAVEFORM_AREA;
 						else
 						{
-						//	LogDebug("Start dragging overlay (not yet implemented)\n");
+							m_dragState = DRAG_OVERLAY;
+							m_dragOverlayPosition =
+								m_overlayPositions[static_cast<ProtocolDecoder*>(m_selectedChannel)] - 10;
 						}
 						break;
 
@@ -427,6 +430,48 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			}
 			break;
 
+		//Move overlay to a new location
+		case DRAG_OVERLAY:
+			{
+				//Sort overlays by position
+				std::map<int, ProtocolDecoder*> revmap;
+				vector<int> positions;
+				for(auto it : m_overlayPositions)
+				{
+					revmap[it.second] = it.first;
+					positions.push_back(it.second);
+				}
+				std::sort(positions.begin(), positions.end(), less<int>());
+
+				//Make a new, sorted list of decode positions
+				vector<ProtocolDecoder*> sorted;
+				bool inserted = false;
+				for(size_t i=0; i<positions.size(); i++)
+				{
+					int pos = positions[i];
+					if( (pos > m_dragOverlayPosition) && !inserted)
+					{
+						sorted.push_back(static_cast<ProtocolDecoder*>(m_selectedChannel));
+						inserted = true;
+					}
+
+					if(revmap[pos] != m_selectedChannel)
+						sorted.push_back(revmap[pos]);
+				}
+				if(!inserted)
+					sorted.push_back(static_cast<ProtocolDecoder*>(m_selectedChannel));
+
+				//Reposition everything
+				int pos = m_overlaySpacing / 2;
+				for(auto d : sorted)
+				{
+					m_overlayPositions[d] = pos;
+					pos += m_overlaySpacing;
+				}
+				queue_draw();
+			}
+			break;
+
 		default:
 			break;
 	}
@@ -473,6 +518,39 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				double old_offset = m_channel->GetOffset();
 				m_channel->SetOffset(old_offset + dv);
 				queue_draw();
+			}
+			break;
+
+		//Reorder the selected overlay.
+		//TODO: allow overlays to be moved between waveform areas?
+		case DRAG_OVERLAY:
+			{
+				//See what decoder we're above/below
+				int maxpos = 0;
+				ProtocolDecoder* maxover = NULL;
+				for(auto it : m_overlayPositions)
+				{
+					if(event->y > it.second)
+					{
+						if(it.second > maxpos)
+						{
+							maxpos = it.second;
+							maxover = it.first;
+						}
+					}
+				}
+
+				if(maxover)
+				{
+					m_dragOverlayPosition = maxpos + 10;
+					queue_draw();
+				}
+				else
+				{
+					m_dragOverlayPosition = 0;
+					queue_draw();
+				}
+
 			}
 			break;
 

@@ -402,6 +402,7 @@ protected:
 	float m_pixelsPerVolt;
 	float m_padding;
 	float m_plotRight;
+	int m_overlaySpacing;
 
 	//Positions of various UI elements used by hit testing
 	Rect m_infoBoxRect;
@@ -423,7 +424,8 @@ protected:
 		DRAG_TRIGGER,
 		DRAG_CURSOR,
 		DRAG_OFFSET,
-		DRAG_WAVEFORM_AREA
+		DRAG_WAVEFORM_AREA,
+		DRAG_OVERLAY
 	} m_dragState;
 
 	//Start voltage of a drag (only used in DRAG_OFFSET mode)
@@ -437,7 +439,12 @@ protected:
 		INSERT_TOP,
 		INSERT_RIGHT_SPLIT
 	} m_insertionBarLocation;
+
+	//Destination of a drag (only used in DRAG_WAVEFORM_AREA mode)
 	WaveformArea* m_dropTarget;
+
+	//Destination of a drag (only used in DRAG_OVERLAY mode)
+	int m_dragOverlayPosition;
 
 	bool	m_firstFrame;
 };

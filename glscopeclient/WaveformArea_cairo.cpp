@@ -258,8 +258,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//TODO: adjust height/spacing depending on font sizes etc
 	int height = 20;
-	int spacing = 30;
-	int midline = spacing / 2;
+	int midline = m_overlaySpacing / 2;
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
 	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel->GetData());
@@ -342,7 +341,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			continue;
 
 		int pos = m_overlayPositions[o];
-		int index = (pos - midline) / spacing;
+		int index = (pos - midline) / m_overlaySpacing;
 		if( (pos >= 0) && (index < max_overlays) )
 			overlayPositionsUsed[index] = true;
 	}
@@ -357,7 +356,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				if(!overlayPositionsUsed[i])
 				{
 					overlayPositionsUsed[i] = true;
-					m_overlayPositions[o] = midline + spacing*i;
+					m_overlayPositions[o] = midline + m_overlaySpacing*i;
 					break;
 				}
 			}
@@ -540,6 +539,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 
 	Gdk::Color yellow("yellow");
 	Gdk::Color orange("orange");
+	Gdk::Color red("red");
 
 	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
@@ -571,57 +571,72 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		}
 	}
 
-	//Render the insertion bar, if needed
-	if(m_insertionBarLocation != INSERT_NONE)
+	int barsize = 5;
+	switch(m_dragState)
 	{
-		Gdk::Color red("red");
-		int barpos = 0;
-		float alpha = 0.75;
-		int barsize = 5;
-		bool barhorz = true;
-		switch(m_insertionBarLocation)
-		{
-			case INSERT_BOTTOM:
-				cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
-				barpos = ybot - barsize;
-				break;
+		//Render the insertion bar, if needed
+		case DRAG_WAVEFORM_AREA:
+			if(m_insertionBarLocation != INSERT_NONE)
+			{
+				int barpos = 0;
+				float alpha = 0.75;
+				bool barhorz = true;
+				switch(m_insertionBarLocation)
+				{
+					case INSERT_BOTTOM:
+						cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+						barpos = ybot - barsize;
+						break;
 
-			case INSERT_BOTTOM_SPLIT:
-				cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
-				barpos = ybot - barsize;
-				break;
+					case INSERT_BOTTOM_SPLIT:
+						cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+						barpos = ybot - barsize;
+						break;
 
-			case INSERT_TOP:
-				cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
-				barpos = 0;
-				break;
+					case INSERT_TOP:
+						cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+						barpos = 0;
+						break;
 
-			case INSERT_RIGHT_SPLIT:
-				cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
-				barhorz = false;
-				barpos = m_width - barsize;
-				break;
+					case INSERT_RIGHT_SPLIT:
+						cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+						barhorz = false;
+						barpos = m_plotRight - barsize;
+						break;
 
-			//no bar to draw
-			default:
-				break;
-		}
+					//no bar to draw
+					default:
+						break;
+				}
 
-		if(barhorz)
-		{
-			cr->move_to(0, barpos);
-			cr->line_to(m_width, barpos);
-			cr->line_to(m_width, barpos + barsize);
-			cr->line_to(0, barpos + barsize);
-		}
-		else
-		{
-			cr->move_to(barpos,				0);
-			cr->line_to(barpos + barsize,	0);
-			cr->line_to(barpos + barsize,	m_height);
-			cr->line_to(barpos,				m_height);
-		}
-		cr->fill();
+				if(barhorz)
+				{
+					cr->move_to(0, barpos);
+					cr->line_to(m_width, barpos);
+					cr->line_to(m_width, barpos + barsize);
+					cr->line_to(0, barpos + barsize);
+				}
+				else
+				{
+					cr->move_to(barpos,				0);
+					cr->line_to(barpos + barsize,	0);
+					cr->line_to(barpos + barsize,	m_height);
+					cr->line_to(barpos,				m_height);
+				}
+				cr->fill();
+			}
+			break;
+
+		case DRAG_OVERLAY:
+			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.75);
+			cr->move_to(0, 				m_dragOverlayPosition);
+			cr->line_to(m_plotRight,	m_dragOverlayPosition);
+			cr->line_to(m_plotRight,	m_dragOverlayPosition + barsize);
+			cr->line_to(0,				m_dragOverlayPosition + barsize);
+			cr->fill();
+
+		default:
+			break;
 	}
 }
 
