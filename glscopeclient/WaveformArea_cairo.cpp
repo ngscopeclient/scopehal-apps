@@ -193,16 +193,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto it : gridmap)
 	{
 		float v = it.first;
-
-		if(IsFFT())
-		{
-			char tmp[32];
-			snprintf(tmp, sizeof(tmp), "%.0f dB", v);
-			tlayout->set_text(tmp);
-		}
-		else
-			tlayout->set_text(m_channel->GetYAxisUnits().PrettyPrint(v));
-
+		tlayout->set_text(m_channel->GetYAxisUnits().PrettyPrint(v));
 		float y = it.second;
 		if(!IsFFT())
 			y -= theight/2;
