@@ -253,8 +253,8 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	double nsubticks = 5;
 	double subtick = grad_ps_rounded / nsubticks;
 
-	//Find the start time (rounded down as needed)
-	double tstart = floor(m_group->m_xAxisOffset / grad_ps_rounded) * grad_ps_rounded;
+	//Find the start time (rounded as needed)
+	double tstart = round(m_group->m_xAxisOffset / grad_ps_rounded) * grad_ps_rounded;
 
 	//Print tick marks and labels
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
