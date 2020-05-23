@@ -122,6 +122,12 @@ toolbar button:focus
 	border-image: none;
 }
 
+tooltip *,
+.tooltip *
+{
+	color: black;
+}
+
 .status
 {
 	color: @glscopeclient_text_color;
