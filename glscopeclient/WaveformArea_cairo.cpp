@@ -134,22 +134,27 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		float top_edge = (ytop - theight/2);
 
 		//Calculate grid positions
-		//TODO: make this more efficient if we have large offsets
+		float vbot = YPositionToVolts(ybot);
+		float vtop = YPositionToVolts(ytop);
+		float vmid = (vbot + vtop)/2;
 		for(float dv=0; ; dv += selected_step)
 		{
-			float yt = VoltsToYPosition(dv);
-			float yb = VoltsToYPosition(-dv);
+			float vp = vmid + dv;
+			float vn = vmid - dv;
+
+			float yt = VoltsToYPosition(vp);
+			float yb = VoltsToYPosition(vn);
 
 			if(dv != 0)
 			{
 				if( (yb >= bottom_edge) && (yb <= top_edge ) )
-					gridmap[-dv] = yb;
+					gridmap[vn] = yb;
 
 				if( (yt >= bottom_edge ) && (yt <= top_edge) )
-					gridmap[dv] = yt;
+					gridmap[vp] = yt;
 			}
 			else
-				gridmap[dv] = yt;
+				gridmap[vp] = yt;
 
 			//Stop if we're off the edge
 			if( (yb > ytop) && (yt < ybot) )
