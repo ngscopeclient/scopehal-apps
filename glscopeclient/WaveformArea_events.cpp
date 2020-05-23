@@ -481,6 +481,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 	{
 		m_dropTarget = NULL;
 		m_dragState = DRAG_NONE;
+		m_insertionBarLocation = INSERT_NONE;
 		queue_draw();
 	}
 
