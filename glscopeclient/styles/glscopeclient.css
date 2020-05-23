@@ -39,6 +39,7 @@ entry:focus
 	background-image:	none;
 	background-color:	@glscopeclient_bg_color;
 	color:				@glscopeclient_text_color;
+	caret-color:		@glscopeclient_text_color;
 }
 
 entry:disabled
