@@ -234,7 +234,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 		round_divisor = 1E12;
 
 	//Figure out about how much time per graduation to use
-	const double min_label_grad_width = 100;		//Minimum distance between text labels, in pixels
+	const double min_label_grad_width = 75;		//Minimum distance between text labels, in pixels
 	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerXUnit;
 
 	//Round so the division sizes are sane
@@ -243,7 +243,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, Unit xAxisUnit)
 	double log_units = log(units_per_grad) / log(base);
 	double log_units_rounded = ceil(log_units);
 	double units_rounded = pow(base, log_units_rounded);
-	int64_t grad_ps_rounded = units_rounded * round_divisor;
+	int64_t grad_ps_rounded = round(units_rounded * round_divisor);
 
 	//avoid divide-by-zero in weird cases with no waveform etc
 	if(grad_ps_rounded == 0)
