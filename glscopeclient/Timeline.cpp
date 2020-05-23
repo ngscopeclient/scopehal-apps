@@ -107,13 +107,8 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				double dx = event->x - m_dragStartX;
 				double ps = dx / m_group->m_pixelsPerXUnit;
 
-				//Update offset, but don't allow scrolling before time zero for time domain waveforms
+				//Update offset
 				m_group->m_xAxisOffset = m_originalTimeOffset - ps;
-				if(m_xAxisUnit == Unit::UNIT_PS)
-				{
-					if(m_group->m_xAxisOffset < 0)
-						m_group->m_xAxisOffset = 0;
-				}
 
 				//Clear persistence and redraw the group (fixes #46)
 				m_group->GetParent()->ClearPersistence(m_group, false);
