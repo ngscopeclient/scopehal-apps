@@ -2,9 +2,9 @@
 CMake build wrapper for scopehal and scopehal-apps
 
 ## Installation
-Install dependencies with
+Install dependencies on ubuntu with
 ```
-sudo  apt  install  build -essential  cmake pkg -config  libglm -dev libgtkmm -3.0-dev  libsigc ++-2.0-dev  libyaml -cpp -d
+sudo apt-get install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev
 ```
 
 Install FFTS library
