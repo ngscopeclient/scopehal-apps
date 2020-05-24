@@ -1704,7 +1704,18 @@ void OscilloscopeWindow::OnQuit()
 
 void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 {
-	//Add to a random group for now
+	//If all waveform groups were closed, recreate one
+	if(m_waveformGroups.empty())
+	{
+		auto split = *m_splitters.begin();
+		auto group = new WaveformGroup(this);
+		m_waveformGroups.emplace(group);
+		split->pack1(group->m_frame);
+		split->show_all();
+		group->m_measurementView.hide();
+	}
+
+	//Add to a the first group for now
 	DoAddChannel(chan, *m_waveformGroups.begin());
 }
 
