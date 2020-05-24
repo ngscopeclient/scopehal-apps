@@ -43,18 +43,8 @@
 class ChannelSelectorRow
 {
 public:
-	ChannelSelectorRow()
-	{
-		m_box.pack_start(m_label, Gtk::PACK_SHRINK);
-		m_box.pack_start(m_chans, Gtk::PACK_EXPAND_WIDGET);
-		m_label.set_size_request(150, 1);
-		m_label.set_halign(Gtk::ALIGN_END);
-		m_chans.set_size_request(100, 1);
-	}
-
-	Gtk::HBox m_box;
-		Gtk::Label			m_label;
-		Gtk::ComboBoxText	m_chans;
+	Gtk::Label			m_label;
+	Gtk::ComboBoxText	m_chans;
 
 	std::map<std::string, OscilloscopeChannel*> m_chanptrs;
 };
@@ -62,18 +52,8 @@ public:
 class ParameterRow
 {
 public:
-	ParameterRow()
-	{
-		m_box.pack_start(m_label, Gtk::PACK_SHRINK);
-		m_box.pack_start(m_entry, Gtk::PACK_EXPAND_WIDGET);
-		m_label.set_size_request(150, 1);
-		m_label.set_halign(Gtk::ALIGN_END);
-		m_entry.set_size_request(100, 1);
-	}
-
-	Gtk::HBox m_box;
-		Gtk::Label		m_label;
-		Gtk::Entry		m_entry;
+	Gtk::Label		m_label;
+	Gtk::Entry		m_entry;
 };
 
 /**
@@ -90,9 +70,11 @@ public:
 protected:
 	ProtocolDecoder* m_decoder;
 
-	Gtk::HBox m_channelDisplayNameBox;
+	Gtk::Grid m_grid;
 		Gtk::Label m_channelDisplayNameLabel;
-		Gtk::Entry m_channelDisplayNameEntry;
+			Gtk::Entry m_channelDisplayNameEntry;
+		Gtk::Label m_channelColorLabel;
+			Gtk::ColorButton m_channelColorButton;
 
 	std::vector<ChannelSelectorRow*> m_rows;
 	std::vector<ParameterRow*> m_prows;

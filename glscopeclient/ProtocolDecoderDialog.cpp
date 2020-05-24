@@ -43,7 +43,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	OscilloscopeWindow* parent,
 	ProtocolDecoder* decoder,
 	OscilloscopeChannel* chan)
-	: Gtk::Dialog("Protocol Decode", *parent, Gtk::DIALOG_MODAL)
+	: Gtk::Dialog(decoder->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
 	, m_decoder(decoder)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
@@ -52,20 +52,28 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	//hide close button to force user to pick OK or cancel
 	set_deletable(false);
 
-	get_vbox()->pack_start(m_channelDisplayNameBox, Gtk::PACK_SHRINK);
-		m_channelDisplayNameBox.pack_start(m_channelDisplayNameLabel, Gtk::PACK_SHRINK);
-		m_channelDisplayNameLabel.set_text("Display name");
-		m_channelDisplayNameBox.pack_start(m_channelDisplayNameEntry, Gtk::PACK_EXPAND_WIDGET);
-		m_channelDisplayNameLabel.set_size_request(150, 1);
-		m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-		m_channelDisplayNameEntry.set_text(decoder->m_displayname);
+	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
+		m_grid.attach(m_channelDisplayNameLabel, 0, 0, 1, 1);
+			m_channelDisplayNameLabel.set_text("Display name");
+		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
+			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
+			m_channelDisplayNameEntry.set_text(decoder->m_displayname);
 
+		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
+			m_channelColorLabel.set_text("Waveform color");
+			m_channelColorLabel.set_halign(Gtk::ALIGN_START);
+		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
+			m_channelColorButton.set_color(Gdk::Color(decoder->m_displaycolor));
+
+	Gtk::Widget* last_label = &m_channelColorLabel;
 	for(size_t i=0; i<decoder->GetInputCount(); i++)
 	{
 		//Add the row
 		auto row = new ChannelSelectorRow;
-		get_vbox()->pack_start(row->m_box, Gtk::PACK_SHRINK);
+		m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+		m_grid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
 		m_rows.push_back(row);
+		last_label = &row->m_label;
 
 		//Label is just the channel name
 		row->m_label.set_label(decoder->GetInputName(i));
@@ -114,7 +122,9 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	for(auto it = decoder->GetParamBegin(); it != decoder->GetParamEnd(); it ++)
 	{
 		auto row = new ParameterRow;
-		get_vbox()->pack_start(row->m_box, Gtk::PACK_SHRINK);
+		m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+		m_grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
+		last_label = &row->m_label;
 		m_prows.push_back(row);
 
 		row->m_label.set_label(it->first);
@@ -122,7 +132,6 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		//Set initial value
 		row->m_entry.set_text(it->second.ToString());
 	}
-
 	show_all();
 }
 
@@ -152,8 +161,11 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 			m_prows[i]->m_entry.get_text());
 	}
 
+	m_decoder->m_displaycolor = m_channelColorButton.get_color().to_string();
+
 	//Set the name of the decoder based on the input channels etc
 	//TODO: do this any time we change an input or configure stuff
+	//(we should have a "default name" flag)
 	m_decoder->SetDefaultName();
 	auto dname = m_channelDisplayNameEntry.get_text();
 	if(dname != "")
