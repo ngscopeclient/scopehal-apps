@@ -47,12 +47,12 @@ void TimebasePropertiesPage::AddWidgets()
 	m_grid.set_margin_right(10);
 	m_grid.set_column_spacing(10);
 
-	m_grid.attach(m_sampleRateLabel, 0, 0);
+	m_grid.attach(m_sampleRateLabel, 0, 0, 1, 1);
 		m_sampleRateLabel.set_text("Sample rate");
-	m_grid.attach_next_to(m_sampleRateBox, m_sampleRateLabel, Gtk::POS_RIGHT);
-	m_grid.attach_next_to(m_memoryDepthLabel, m_sampleRateLabel, Gtk::POS_BOTTOM);
+	m_grid.attach_next_to(m_sampleRateBox, m_sampleRateLabel, Gtk::POS_RIGHT, 1, 1);
+	m_grid.attach_next_to(m_memoryDepthLabel, m_sampleRateLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_memoryDepthLabel.set_text("Memory depth");
-	m_grid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT);
+	m_grid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT, 1, 1);
 
 	//Set up sample rate box
 	//TODO: interleaving support etc
