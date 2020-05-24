@@ -40,20 +40,6 @@
 
 class OscilloscopeWindow;
 
-class MeasurementColumn
-{
-public:
-	~MeasurementColumn()
-	{
-		delete m_measurement;
-		m_measurement = NULL;
-	}
-
-	Gtk::Label m_label;
-	std::string m_title;
-	Measurement* m_measurement;
-};
-
 class MeasurementColumns : public Gtk::TreeModel::ColumnRecord
 {
 public:
@@ -87,9 +73,6 @@ public:
 
 	bool IsShowingStats(OscilloscopeChannel* chan);
 
-	void AddColumn(std::string name, OscilloscopeChannel* chan, std::string color);
-	void AddColumn(Measurement* meas, std::string color, std::string label);
-
 	MeasurementColumns m_treeColumns;
 	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
 	void ToggleOn(OscilloscopeChannel* chan);
@@ -109,13 +92,9 @@ public:
 		Gtk::VBox m_vbox;
 			Timeline m_timeline;
 			Gtk::VBox m_waveformBox;
-			Gtk::Frame m_measurementFrame;
-				Gtk::HBox m_measurementBox;
-					std::set<MeasurementColumn*> m_measurementColumns;
 			Gtk::TreeView m_measurementView;
 
 	Gtk::Menu m_contextMenu;
-		Gtk::MenuItem m_removeMeasurementItem;
 
 	float m_pixelsPerXUnit;
 	int64_t m_xAxisOffset;
@@ -138,9 +117,6 @@ public:
 	virtual std::string SerializeConfiguration(IDTable& table);
 
 protected:
-	MeasurementColumn* m_selectedColumn;
-	bool OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col);
-	void OnRemoveMeasurementItem();
 
 	static int m_numGroups;
 

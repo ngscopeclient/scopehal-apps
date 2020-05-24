@@ -214,14 +214,6 @@ protected:
 			Gtk::Menu m_decodeSerialMenu;
 		Gtk::MenuItem m_decodeSignalIntegrityItem;
 			Gtk::Menu m_decodeSignalIntegrityMenu;
-		Gtk::MenuItem m_measureItem;
-			Gtk::Menu m_measureMenu;
-				Gtk::MenuItem m_measureVertItem;
-					Gtk::Menu m_measureVertMenu;
-				Gtk::MenuItem m_measureHorzItem;
-					Gtk::Menu m_measureHorzMenu;
-				Gtk::MenuItem m_measureProtoItem;
-					Gtk::Menu m_measureProtoMenu;
 		Gtk::CheckMenuItem m_statisticsItem;
 		Gtk::MenuItem m_triggerItem;
 			Gtk::Menu m_triggerMenu;
@@ -249,12 +241,10 @@ protected:
 				Gtk::RadioMenuItem m_bw200Item;
 				Gtk::RadioMenuItem m_bw20Item;
 	void UpdateContextMenu();
-	void UpdateMeasureContextMenu(std::vector<Widget*> children);
 	bool m_updatingContextMenu;
 	void OnHide();
 	void OnTogglePersistence();
 
-	void OnMeasure(std::string name);
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();

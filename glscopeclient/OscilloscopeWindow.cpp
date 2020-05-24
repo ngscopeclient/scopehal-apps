@@ -368,7 +368,6 @@ void OscilloscopeWindow::CreateWidgets()
 	show_all();
 
 	//Don't show measurements by default
-	group->m_measurementFrame.hide();
 	group->m_measurementView.hide();
 
 	//Initialize the style sheets
@@ -965,29 +964,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		group->m_yCursorPos[0] = gn["ycursor0"].as<float>();
 		group->m_yCursorPos[1] = gn["ycursor1"].as<float>();
 
-		//Measurements
-		auto measurements = gn["measurements"];
-		if(measurements)
-		{
-			for(auto jt : measurements)
-			{
-				auto mn = jt.second;
-
-				auto meas = Measurement::CreateMeasurement(mn["measurement"].as<string>());
-				table.emplace(mn["id"].as<int>(), meas);
-
-				//Configure the inputs
-				auto inputs = mn["inputs"];
-				for(auto kt : inputs)
-				{
-					meas->SetInput(
-						kt.first.as<string>(),
-						static_cast<OscilloscopeChannel*>(table[kt.second.as<int>()]) );
-				}
-
-				group->AddColumn(meas, mn["color"].as<string>(), mn["nick"].as<string>());
-			}
-		}
+		//TODO: statistics
 
 		//Waveform areas
 		areas = gn["areas"];
@@ -1621,14 +1598,9 @@ void OscilloscopeWindow::GarbageCollectGroups()
 		delete s;
 	}
 
-	//Hide measurement display if there's no measurements in the group
+	//Hide stat display if there's no stats in the group
 	for(auto g : m_waveformGroups)
 	{
-		if(g->m_measurementColumns.empty())
-			g->m_measurementFrame.hide();
-		else
-			g->m_measurementFrame.show_all();
-
 		if(g->m_columnToIndexMap.empty())
 			g->m_measurementView.hide();
 		else

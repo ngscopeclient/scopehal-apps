@@ -60,16 +60,6 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	m_frame.set_label(tmp);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Measurements
-
-	m_vbox.pack_start(m_measurementFrame, Gtk::PACK_SHRINK, 5);
-	m_measurementFrame.set_label("Measurements");
-
-	m_measurementFrame.add(m_measurementBox);
-
-	m_measurementBox.set_spacing(30);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// New measurements
 
 	m_vbox.pack_start(m_measurementView, Gtk::PACK_SHRINK);
@@ -83,13 +73,7 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
 
-	m_contextMenu.append(m_removeMeasurementItem);
-		m_removeMeasurementItem.set_label("Remove measurement");
-		m_removeMeasurementItem.signal_activate().connect(
-			sigc::mem_fun(*this, &WaveformGroup::OnRemoveMeasurementItem));
 	m_contextMenu.show_all();
-
-	m_selectedColumn = NULL;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Cursors
@@ -116,9 +100,6 @@ WaveformGroup::~WaveformGroup()
 		Statistic* stat = row[m_treeColumns.m_statColumn];
 		delete stat;
 	}
-
-	for(auto c : m_measurementColumns)
-		delete c;
 }
 
 void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
@@ -200,21 +181,6 @@ void WaveformGroup::ClearStatistics()
 
 void WaveformGroup::RefreshMeasurements()
 {
-	//Old stuff
-	char tmp[256];
-	for(auto m : m_measurementColumns)
-	{
-		//Run the measurement once, then update our text
-		m->m_measurement->Refresh();
-		snprintf(
-			tmp,
-			sizeof(tmp),
-			"<span font-weight='bold' underline='single'>%s</span>\n"
-			"<span rise='-5' font-family='monospace'>%s</span>",
-			m->m_title.c_str(), m->m_measurement->GetValueAsString().c_str());
-		m->m_label.set_markup(tmp);
-	}
-
 	//New tree view
 	auto children = m_treeModel->children();
 	for(auto row : children)
@@ -247,89 +213,6 @@ void WaveformGroup::RefreshMeasurements()
 		if(col->get_title() != name)
 			col->set_title(name);
 	}
-}
-
-void WaveformGroup::AddColumn(string name, OscilloscopeChannel* chan, string color)
-{
-	//Create the measurement itself
-	auto m = Measurement::CreateMeasurement(name);
-	if(m->GetInputCount() > 1)
-	{
-		MeasurementDialog dialog(m_parent, m, chan);
-		if(dialog.run() != Gtk::RESPONSE_OK)
-		{
-			delete m;
-			return;
-		}
-		dialog.ConfigureMeasurement();
-	}
-	else
-		m->SetInput(0, chan);
-
-	//Short name of the channel (truncate if too long)
-	string shortname = chan->m_displayname;
-	if(shortname.length() > 12)
-	{
-		shortname.resize(9);
-		shortname += "...";
-	}
-
-	//Name the measurement
-	char tmp[256];
-	snprintf(tmp, sizeof(tmp), "%s: %s", shortname.c_str(), name.c_str());
-
-	AddColumn(m, color, tmp);
-}
-
-void WaveformGroup::AddColumn(Measurement* meas, string color, string label)
-{
-	//Make sure the measurements can actually be seen
-	m_measurementFrame.show();
-
-	//TODO: Don't allow adding the same measurement twice
-
-	//Create the column and figure out the title
-	auto col = new MeasurementColumn;
-	col->m_title = label;
-	m_measurementColumns.emplace(col);
-	col->m_measurement = meas;
-
-	//Add to the box and show it
-	m_measurementBox.pack_start(col->m_label, Gtk::PACK_SHRINK, 5);
-	col->m_label.override_color(Gdk::RGBA(color));
-	col->m_label.set_justify(Gtk::JUSTIFY_RIGHT);
-	col->m_label.add_events(Gdk::BUTTON_PRESS_MASK);
-	col->m_label.show();
-	col->m_label.set_selectable();
-	col->m_label.signal_button_press_event().connect(
-		sigc::bind<MeasurementColumn*>(sigc::mem_fun(*this, &WaveformGroup::OnMeasurementContextMenu), col),
-		false);
-
-	//Recalculate stuff now that we have more measurements to look at
-	RefreshMeasurements();
-}
-
-bool WaveformGroup::OnMeasurementContextMenu(GdkEventButton* event, MeasurementColumn* col)
-{
-	//SKip anything not right click
-	if(event->button != 3)
-		return true;
-
-	m_selectedColumn = col;
-
-	m_contextMenu.popup(event->button, event->time);
-	return true;
-}
-
-void WaveformGroup::OnRemoveMeasurementItem()
-{
-	m_measurementBox.remove(m_selectedColumn->m_label);
-	m_measurementColumns.erase(m_selectedColumn);
-	delete m_selectedColumn;
-	m_selectedColumn = NULL;
-
-	if(m_measurementColumns.empty())
-		m_measurementFrame.hide();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -382,14 +265,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", m_yCursorPos[1]);
 	config += tmp;
 
-	//Measurements
-	if(!m_measurementColumns.empty())
-	{
-		config += "            measurements: \n";
-
-		for(auto col : m_measurementColumns)
-			config += col->m_measurement->SerializeConfiguration(table, col->m_title);
-	}
+	//TODO: statistics
 
 	//Waveform areas
 	config += "            areas: \n";

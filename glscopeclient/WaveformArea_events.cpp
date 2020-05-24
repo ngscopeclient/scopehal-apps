@@ -826,11 +826,6 @@ void WaveformArea::OnDecodeSetupComplete()
 	m_pendingDecode = NULL;
 }
 
-void WaveformArea::OnMeasure(string name)
-{
-	m_group->AddColumn(name, m_selectedChannel, m_selectedChannel->m_displaycolor);
-}
-
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected
@@ -925,20 +920,6 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	return LOC_PLOT;
 }
 
-void WaveformArea::UpdateMeasureContextMenu(std::vector<Widget*> children)
-{
-	for(auto item : children)
-	{
-		Gtk::MenuItem* menu = dynamic_cast<Gtk::MenuItem*>(item);
-		if(menu == NULL)
-			continue;
-
-		auto m = Measurement::CreateMeasurement(menu->get_label());
-		menu->set_sensitive(m->ValidateChannel(0, m_selectedChannel));
-		delete m;
-	}
-}
-
 /**
 	@brief Enable/disable or show/hide context menu items for the current selection
  */
@@ -1014,12 +995,6 @@ void WaveformArea::UpdateContextMenu()
 			delete decoder;
 		}
 	}
-
-	//Gray out measurements that don't make sense for the type of channel we've selected
-	auto children = m_measureHorzMenu.get_children();
-	UpdateMeasureContextMenu(children);
-	children = m_measureVertMenu.get_children();
-	UpdateMeasureContextMenu(children);
 
 	if(m_selectedChannel->IsPhysicalChannel())
 	{
