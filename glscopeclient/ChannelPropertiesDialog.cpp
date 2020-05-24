@@ -53,10 +53,10 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	char buf[128];
 
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
-		m_grid.attach(m_scopeNameLabel, 0, 0);
+		m_grid.attach(m_scopeNameLabel, 0, 0, 1, 1);
 			m_scopeNameLabel.set_text("Scope");
 			m_scopeNameLabel.set_halign(Gtk::ALIGN_START);
-		m_grid.attach_next_to(m_scopeNameEntry, m_scopeNameLabel, Gtk::POS_RIGHT);
+		m_grid.attach_next_to(m_scopeNameEntry, m_scopeNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_scopeNameEntry.set_halign(Gtk::ALIGN_START);
 			snprintf(buf, sizeof(buf), "%s (%s, serial %s)",
 				chan->GetScope()->m_nickname.c_str(),
@@ -64,23 +64,23 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				chan->GetScope()->GetSerial().c_str());
 			m_scopeNameEntry.set_text(buf);
 
-		m_grid.attach_next_to(m_channelNameLabel, m_scopeNameLabel, Gtk::POS_BOTTOM);
+		m_grid.attach_next_to(m_channelNameLabel, m_scopeNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelNameLabel.set_text("Channel");
 			m_channelNameLabel.set_halign(Gtk::ALIGN_START);
-		m_grid.attach_next_to(m_channelNameEntry, m_channelNameLabel, Gtk::POS_RIGHT);
+		m_grid.attach_next_to(m_channelNameEntry, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelNameEntry.set_text(chan->GetHwname());
 			m_channelNameEntry.set_halign(Gtk::ALIGN_START);
 
-		m_grid.attach_next_to(m_channelDisplayNameLabel, m_channelNameLabel, Gtk::POS_BOTTOM);
+		m_grid.attach_next_to(m_channelDisplayNameLabel, m_channelNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelDisplayNameLabel.set_text("Display name");
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT);
+		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelDisplayNameEntry.set_text(chan->m_displayname);
 
-		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM);
+		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
 			m_channelColorLabel.set_halign(Gtk::ALIGN_START);
-		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT);
+		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
 	show_all();
