@@ -35,7 +35,6 @@
 
 #include "glscopeclient.h"
 #include "../scopeprotocols/scopeprotocols.h"
-#include "../scopemeasurements/scopemeasurements.h"
 #include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/AgilentOscilloscope.h"
 #include "../scopehal/LeCroyOscilloscope.h"
@@ -152,7 +151,6 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
-	ScopeMeasurementStaticInit();
 
 	//Initialize object creation tables for plugins
 	InitializePlugins();

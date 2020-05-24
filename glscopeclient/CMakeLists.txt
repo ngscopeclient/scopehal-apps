@@ -35,7 +35,6 @@ add_executable(glscopeclient
 target_link_libraries(glscopeclient
 	scopehal
 	scopeprotocols
-	scopemeasurements
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	GL
