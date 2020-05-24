@@ -34,7 +34,6 @@
  */
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
-#include "MeasurementDialog.h"
 
 using namespace std;
 
