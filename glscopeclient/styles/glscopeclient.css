@@ -48,9 +48,12 @@ entry:disabled
 	background-color:	@glscopeclient_inactive_color;
 }
 
-dialog
+dialog,
+dialog.*,
+messagedialog *
 {
 	background-color:	@glscopeclient_bg_color;
+	background-image:	none;
 }
 
 treeview
