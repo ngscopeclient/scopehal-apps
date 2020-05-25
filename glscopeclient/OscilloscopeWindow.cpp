@@ -776,45 +776,63 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 	{
 		auto inst = it.second;
 
-		Oscilloscope* scope;
+		Oscilloscope* scope = NULL;
 
 		if(reconnect)
 		{
 			//Create the scope
 			auto transport = SCPITransport::CreateTransport(inst["transport"].as<string>(), inst["args"].as<string>());
-			scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
 
-			//Sanity check make/model/serial. If mismatch, stop
-			string message;
-			bool fail = false;
-			if(inst["name"].as<string>() != scope->GetName())
+			//Check if the transport failed to initialize
+			if(!transport->IsConnected())
 			{
-				message = string("Unable to connect to oscilloscope: instrument has model name \"") +
-					scope->GetName() + "\", save file has model name \"" + inst["name"].as<string>()  + "\"";
-				fail = true;
-			}
-			else if(inst["vendor"].as<string>() != scope->GetVendor())
-			{
-				message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
-					scope->GetVendor() + "\", save file has vendor \"" + inst["vendor"].as<string>()  + "\"";
-				fail = true;
-			}
-			else if(inst["serial"].as<string>() != scope->GetSerial())
-			{
-				message = string("Unable to connect to oscilloscope: instrument has serial \"") +
-					scope->GetSerial() + "\", save file has serial \"" + inst["serial"].as<string>()  + "\"";
-				fail = true;
-			}
-			if(fail)
-			{
-				Gtk::MessageDialog dlg(*this, message, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+				Gtk::MessageDialog dlg(
+					*this,
+					string("Failed to connect to instrument using connection string ") + inst["args"].as<string>(),
+					false,
+					Gtk::MESSAGE_ERROR,
+					Gtk::BUTTONS_OK,
+					true);
 				dlg.run();
-				delete scope;
-				continue;
+			}
+
+			//All good, try to connect
+			else
+			{
+				scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
+
+				//Sanity check make/model/serial. If mismatch, stop
+				string message;
+				bool fail = false;
+				if(inst["name"].as<string>() != scope->GetName())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has model name \"") +
+						scope->GetName() + "\", save file has model name \"" + inst["name"].as<string>()  + "\"";
+					fail = true;
+				}
+				else if(inst["vendor"].as<string>() != scope->GetVendor())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
+						scope->GetVendor() + "\", save file has vendor \"" + inst["vendor"].as<string>()  + "\"";
+					fail = true;
+				}
+				else if(inst["serial"].as<string>() != scope->GetSerial())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has serial \"") +
+						scope->GetSerial() + "\", save file has serial \"" + inst["serial"].as<string>()  + "\"";
+					fail = true;
+				}
+				if(fail)
+				{
+					Gtk::MessageDialog dlg(*this, message, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+					dlg.run();
+					delete scope;
+					scope = NULL;
+				}
 			}
 		}
 
-		else
+		if(!scope)
 		{
 			//Create the mock scope
 			scope = new MockOscilloscope(

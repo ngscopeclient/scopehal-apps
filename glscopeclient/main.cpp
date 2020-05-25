@@ -174,6 +174,20 @@ int main(int argc, char* argv[])
 		if(transport == NULL)
 			continue;
 
+		//Check if the transport failed to initialize
+		if(!transport->IsConnected())
+		{
+			Gtk::MessageDialog dlg(
+				string("Failed to connect to instrument using connection string ") + s,
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+
+			continue;
+		}
+
 		//Create the scope
 		Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
 		if(scope == NULL)
