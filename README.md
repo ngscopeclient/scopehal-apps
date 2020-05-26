@@ -1,6 +1,8 @@
 # scopehal-cmake
 CMake build wrapper for scopehal and scopehal-apps
 
+[C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
+
 ## Installation
 Install dependencies on ubuntu with
 ```
