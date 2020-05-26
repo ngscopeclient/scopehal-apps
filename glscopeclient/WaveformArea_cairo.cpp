@@ -483,12 +483,14 @@ void WaveformArea::RenderChannelInfoBox(
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
 
+	int left = 2;
+
 	//Channel-colored rounded outline
 	cr->save();
 
 		int labelheight = theight + labelmargin*2;
 
-		box.set_x(2);
+		box.set_x(left);
 		box.set_y(bottom - labelheight - 1);
 		box.set_width(twidth + labelmargin*2);
 		box.set_height(labelheight);
@@ -522,7 +524,7 @@ void WaveformArea::RenderChannelInfoBox(
 	//White text
 	cr->save();
 		cr->set_source_rgba(1, 1, 1, 1);
-		cr->move_to(labelmargin, bottom - theight - labelmargin);
+		cr->move_to(labelmargin + left, bottom - theight - labelmargin);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	cr->restore();
