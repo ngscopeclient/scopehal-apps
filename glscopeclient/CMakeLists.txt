@@ -8,6 +8,7 @@ add_executable(glscopeclient
 	ChannelPropertiesDialog.cpp
 	Framebuffer.cpp
 	HistoryWindow.cpp
+	InstrumentConnectionDialog.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
 	ProtocolAnalyzerWindow.cpp

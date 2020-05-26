@@ -41,6 +41,7 @@
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
+#include "InstrumentConnectionDialog.h"
 #include <libgen.h>
 #include <omp.h>
 
@@ -154,6 +155,17 @@ int main(int argc, char* argv[])
 
 	//Initialize object creation tables for plugins
 	InitializePlugins();
+
+	//If there are no scopes and we're not loading a file, show the dialog to connect.
+	//TODO: support multi-scope connection
+	if(scopes.empty() && fileToLoad.empty())
+	{
+		InstrumentConnectionDialog dlg;
+		if(dlg.run() != Gtk::RESPONSE_OK)
+			return 0;
+
+		scopes.push_back(dlg.GetConnectionString());
+	}
 
 	//Connect to the scope(s)
 	for(auto s : scopes)
