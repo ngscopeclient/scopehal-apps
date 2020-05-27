@@ -242,7 +242,9 @@ public:
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;
 
+	//Fullscreen state
 	bool m_fullscreen;
+	Gdk::Rectangle m_originalRect;
 };
 
 #endif

@@ -1630,10 +1630,37 @@ void OscilloscopeWindow::OnFullscreen()
 {
 	m_fullscreen = !m_fullscreen;
 
+	//Enter fullscreen mode
 	if(m_fullscreen)
-		fullscreen();
+	{
+		int x;
+		int y;
+		get_position(x, y);
+		m_originalRect = Gdk::Rectangle(x, y, get_width(), get_height());
+
+		//Figure out the size we need to be in order to become fullscreen
+		auto screen = get_screen();
+		int mon = screen->get_monitor_at_window(get_window());
+		Gdk::Rectangle rect;
+		screen->get_monitor_geometry(mon, rect);
+
+		//Make us fake-fullscreen (on top of everything else and occupying the entire monitor).
+		//We can't just use Gtk::Window::fullscreen() because this messes with popup dialogs
+		//like protocol analyzers.
+		set_keep_above();
+		set_decorated(false);
+		move(rect.get_x(), rect.get_y());
+		resize(rect.get_width(), rect.get_height());
+	}
+
+	//Revert to our old setup
 	else
-		unfullscreen();
+	{
+		set_keep_above(false);
+		set_decorated();
+		resize(m_originalRect.get_width(), m_originalRect.get_height());
+		move(m_originalRect.get_x(), m_originalRect.get_y());
+	}
 }
 
 void OscilloscopeWindow::OnClearSweeps()
