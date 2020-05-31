@@ -416,11 +416,21 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 {
-	//Add sample rate info to physical analog channels
-	//TODO: do this to some decodes too?
 	string label = m_channel->m_displayname;
 	auto data = m_channel->GetData();
-	if(m_channel->IsPhysicalChannel() && (data != NULL))
+
+	//Add RBW to frequency domain channels
+	char tmp[256];
+	auto xunits = m_channel->GetXAxisUnits();
+	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
+	{
+		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(data->m_timescale).c_str());
+		label += tmp;
+	}
+
+	//Add sample rate info to physical analog channels
+	//TODO: do this to some decodes too?
+	else if(m_channel->IsPhysicalChannel() && (data != NULL))
 	{
 		//Do not render sample rate on digital signals unless we have overlays, because this ~doubles the height
 		//of the channel and hurts packing density.
@@ -432,7 +442,6 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 			label += " : ";
 
 			//Format sample depth
-			char tmp[256];
 			size_t len = data->m_offsets.size();
 			if(len > 1e6)
 				snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
