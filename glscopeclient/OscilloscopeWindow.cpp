@@ -1902,11 +1902,6 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 void OscilloscopeWindow::RefreshAllDecoders()
 {
-	//Update the measurements
-	//TODO: remove this when we finish unification of measurements and decodes
-	for(auto g : m_waveformGroups)
-		g->RefreshMeasurements();
-
 	double start = GetTime();
 
 	auto decodes = ProtocolDecoder::EnumDecodes();
@@ -1963,6 +1958,10 @@ void OscilloscopeWindow::RefreshAllDecoders()
 		for(size_t i=0; i<block.size(); i++)
 			block[i]->RefreshIfDirty();
 	}
+
+	//Update statistic displays after the filter graph update is complete
+	for(auto g : m_waveformGroups)
+		g->RefreshMeasurements();
 
 	m_tDecode += GetTime() - start;
 }
