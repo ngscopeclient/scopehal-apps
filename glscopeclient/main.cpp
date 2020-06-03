@@ -52,6 +52,41 @@ int g_numDecodes = 0;
 
 ScopeApp* g_app = NULL;
 
+void help();
+
+void help()
+{
+	fprintf(stderr,
+			"glscopeclient [general options] [logger options] [filename|scope]\n"
+			"\n"
+			"  [general options]:\n"
+			"    --help      : this message...\n"
+			"    --version   : print error message. (not yet implemented)\n"
+			"    --reconnect : ???\n"
+			"    --nodata    : ??\n"
+			"    --retrigger : ??\n"
+			"\n"
+			"  [logger options]:\n"
+			"    levels: ERROR, WARNING, NOTICE, VERBOSE, DEBUG\n"
+			"    --quiet|-q                    : reduce logging level by one step\n"
+			"    --verbose                     : set logging level to VERBOSE\n"
+			"    --debug                       : set logging level to DEBUG\n"
+			"    --trace <classname>           : name of class with tracing messages. (Only relevant when logging level is DEBUG.)\n"
+			"    --logfile|-l <filename>       : output log messages to file\n"
+			"    --logfile-lines|-L <filename> : output log messages to file, with line buffering\n"
+			"    --stdout-only                 : ??\n"
+			"\n"
+			"  [filename|scope]:\n"
+			"    filename : ??\n"
+			"    scope    : <scope name>:<scope driver>:<transport protocol>[:<transport arguments]\n"
+			"\n"
+			"  Examples:\n"
+			"    glscopeclient --debug myscope:siglent:lxi:192.166.1.123\n"
+			"    glscopeclient --debug --trace SCPITMCTransport myscope:siglent:usbtmc:/dev/usbtmc0\n"
+			"\n"
+	);
+}
+
 int main(int argc, char* argv[])
 {
 	//Global settings
@@ -73,7 +108,7 @@ int main(int argc, char* argv[])
 
 		if(s == "--help")
 		{
-			//not implemented
+			help();
 			return 0;
 		}
 		else if(s == "--version")
