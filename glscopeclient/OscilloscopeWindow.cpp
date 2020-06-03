@@ -633,6 +633,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	int scope_id = table[scope];
 
 	auto wavenode = node["waveforms"];
+	window->SetMaxWaveforms(wavenode.size());
 	for(auto it : wavenode)
 	{
 		//Top level metadata
