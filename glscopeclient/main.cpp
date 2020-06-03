@@ -61,7 +61,7 @@ void help()
 			"\n"
 			"  [general options]:\n"
 			"    --help      : this message...\n"
-			"    --version   : print error message. (not yet implemented)\n"
+			"    --version   : print version number. (not yet implemented)\n"
 			"    --reconnect : ???\n"
 			"    --nodata    : ??\n"
 			"    --retrigger : ??\n"
