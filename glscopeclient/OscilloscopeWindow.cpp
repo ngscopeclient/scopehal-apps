@@ -785,7 +785,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 			auto transport = SCPITransport::CreateTransport(inst["transport"].as<string>(), inst["args"].as<string>());
 
 			//Check if the transport failed to initialize
-			if(!transport->IsConnected())
+			if((transport == NULL) || !transport->IsConnected())
 			{
 				Gtk::MessageDialog dlg(
 					*this,
