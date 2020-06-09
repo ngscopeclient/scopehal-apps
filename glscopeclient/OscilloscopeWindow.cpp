@@ -53,6 +53,7 @@ using namespace std;
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	: m_scopes(scopes)
 	, m_fullscreen(false)
+	, m_multiScopeFreeRun(false)
 {
 	SetTitle();
 
@@ -418,6 +419,8 @@ void OscilloscopeWindow::CloseSession()
 	m_splitters.clear();
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
+
+	m_multiScopeFreeRun = false;
 
 	//Delete stuff from our UI
 	auto children = m_setupTriggerMenu.get_children();
@@ -1810,59 +1813,79 @@ bool OscilloscopeWindow::PollScopes()
 	bool pending = true;
 	while(pending)
 	{
-		pending = false;
-
-		//TODO: better sync for multiple instruments (wait for all to trigger THEN download waveforms)
+		//Wait for every scope to have triggered
+		bool ready = true;
+		double start = GetTime();
 		for(auto scope : m_scopes)
 		{
-			double start = GetTime();
-			Oscilloscope::TriggerMode status = scope->PollTriggerFifo();
-			if(status > Oscilloscope::TRIGGER_MODE_COUNT)
+			if(!scope->HasPendingWaveforms())
 			{
-				//Invalid value, skip it
-				continue;
+				ready = false;
+				break;
 			}
-			m_tPoll += GetTime() - start;
-
-			//If triggered, grab the data
-			if(status != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-				continue;
-
-			had_waveforms = true;
-
-			//If we have a LOT of waveforms ready, don't waste time rendering all of them.
-			//Grab a big pile and only render the last.
-			//TODO: batch render with persistence?
-			if(scope->GetPendingWaveformCount() > 30)
-			{
-				for(size_t i=0; i<25; i++)
-					OnWaveformDataReady(scope);
-			}
-			else
-				OnWaveformDataReady(scope);
-
-			//Update the views
-			start = GetTime();
-			for(auto w : m_waveformAreas)
-			{
-				if( (w->GetChannel()->GetScope() == scope) || (w->GetChannel()->GetScope() == NULL) )
-					w->OnWaveformDataReady();
-			}
-			m_tView += GetTime() - start;
-
-			//If there's more waveforms pending, keep going
-			if(scope->HasPendingWaveforms())
-				pending = true;
 		}
+		m_tPoll += GetTime() - start;
+
+		//Keep track of when the primary instrument triggers.
+		if(m_multiScopeFreeRun)
+		{
+			//See when the primary triggered
+			if( (m_tPrimaryTrigger < 0) && m_scopes[0]->HasPendingWaveforms() )
+				m_tPrimaryTrigger = GetTime();
+
+			//All instruments should trigger within 100ms (arbitrary threshold) of the primary.
+			//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
+			if( (m_tPrimaryTrigger > 0) && ( (GetTime() - m_tPrimaryTrigger) > 0.1 ) )
+			{
+				LogWarning("Timed out waiting for one or more secondary instruments to trigger. Resetting...\n");
+
+				//Discard all pending waveform data
+				for(auto scope : m_scopes)
+				{
+					while(scope->HasPendingWaveforms())
+						OnWaveformDataReady(scope);
+				}
+
+				//Re-arm the trigger and get back to polling
+				ArmTrigger(false);
+				return false;
+			}
+		}
+
+		//If not ready, stop
+		if(!ready)
+			break;
+
+		//We have data to download
+		had_waveforms = true;
+
+		//In multi-scope free-run mode, re-arm every instrument's trigger after we've downloaded data from all of them.
+		if(m_multiScopeFreeRun)
+			ArmTrigger(false);
+
+		//Process the waveform data from each instrument
+		//TODO: handle waveforms coming in faster than display framerate can keep up
+		pending = true;
+		for(auto scope : m_scopes)
+		{
+			OnWaveformDataReady(scope);
+
+			if(!scope->HasPendingWaveforms())
+				pending = false;
+		}
+
+		//Update filters etc once every instrument has been updated
+		OnAllWaveformsUpdated();
 	}
 
 	return had_waveforms;
 }
 
+/**
+	@brief Handles new data arriving for a specific instrument
+ */
 void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 {
-	m_totalWaveforms ++;
-
 	//TODO: handle multiple scopes better
 	m_lastWaveformTimes.push_back(GetTime());
 	while(m_lastWaveformTimes.size() > 10)
@@ -1886,19 +1909,32 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	scope->AcquireDataFifo();
 	m_tAcquire += GetTime() - start;
 
+	//Update the history window
+	start = GetTime();
+	m_historyWindows[scope]->OnWaveformDataReady();
+	m_tHistory += GetTime() - start;
+}
+
+/**
+	@brief Handles updating things after all instruments have downloaded their new waveforms
+ */
+void OscilloscopeWindow::OnAllWaveformsUpdated()
+{
+	m_totalWaveforms ++;
+
 	//Update the status
 	UpdateStatusBar();
-
 	RefreshAllDecoders();
 
 	//Update protocol analyzers
 	for(auto a : m_analyzers)
 		a->OnWaveformDataReady();
 
-	//Update the history window
-	start = GetTime();
-	m_historyWindows[scope]->OnWaveformDataReady();
-	m_tHistory += GetTime() - start;
+	//Update the views
+	double start = GetTime();
+	for(auto w : m_waveformAreas)
+		w->OnWaveformDataReady();
+	m_tView += GetTime() - start;
 }
 
 void OscilloscopeWindow::RefreshAllDecoders()
@@ -2011,18 +2047,38 @@ void OscilloscopeWindow::OnStartSingle()
 
 void OscilloscopeWindow::OnStop()
 {
+	m_multiScopeFreeRun = false;
+
 	for(auto scope : m_scopes)
 		scope->Stop();
 }
 
 void OscilloscopeWindow::ArmTrigger(bool oneshot)
 {
-	for(auto scope : m_scopes)
+	/*
+		If we have multiple scopes, always use single trigger to keep them synced.
+		Multi-trigger can lead to race conditions and dropped triggers if we're still downloading a secondary
+		instrument's waveform and the primary re-arms.
+
+		Also, order of arming is critical. Secondaries must be completely armed before the primary (instrument 0) to
+		ensure that the primary doesn't trigger until the secondaries are ready for the event.
+	*/
+	m_tPrimaryTrigger = -1;
+	if(!oneshot && (m_scopes.size() > 1) )
+		m_multiScopeFreeRun = true;
+	else
+		m_multiScopeFreeRun = false;
+
+	for(ssize_t i=m_scopes.size()-1; i >= 0; i--)
 	{
-		if(oneshot)
-			scope->StartSingleTrigger();
+		if(oneshot || m_multiScopeFreeRun)
+			m_scopes[i]->StartSingleTrigger();
 		else
-			scope->Start();
+			m_scopes[i]->Start();
+
+		//Ping the scope to make sure the arm command went through
+		if(m_multiScopeFreeRun && (i != 0) )
+			m_scopes[i]->IDPing();
 	}
 	m_tArm = GetTime();
 }

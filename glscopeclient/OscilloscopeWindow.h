@@ -211,6 +211,7 @@ public:
 
 	//Status polling
 	void OnWaveformDataReady(Oscilloscope* scope);
+	void OnAllWaveformsUpdated();
 
 	//Performance profiling
 	double m_tArm;
@@ -245,6 +246,10 @@ public:
 	//Fullscreen state
 	bool m_fullscreen;
 	Gdk::Rectangle m_originalRect;
+
+	//Special processing needed for multi-scope synchronization
+	bool m_multiScopeFreeRun;
+	double m_tPrimaryTrigger;
 };
 
 #endif
