@@ -251,13 +251,30 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 	//Set trigger to external
 	page->m_progressBar.set_text("Configure trigger source");
-	page->m_progressBar.set_fraction(0.05);
+	page->m_progressBar.set_fraction(0.025);
 	scope->SetTriggerChannelIndex(scope->GetExternalTrigger()->GetIndex());
 
 	//Set reference clock to external
 	page->m_progressBar.set_text("Configure reference clock");
-	page->m_progressBar.set_fraction(0.1);
+	page->m_progressBar.set_fraction(0.05);
 	scope->SetUseExternalRefclk(true);
+
+	//Set the trigger offset to the same as the primary
+	page->m_progressBar.set_text("Configure trigger offset");
+	page->m_progressBar.set_fraction(0.075);
+	scope->SetTriggerOffset(m_parent->GetScope(0)->GetTriggerOffset());
+
+	//Set all channels to zero skew
+	page->m_progressBar.set_text("Configure channel deskew");
+	page->m_progressBar.set_fraction(0.1);
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto chan = scope->GetChannel(i);
+		if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			continue;
+
+		chan->SetDeskew(0);
+	}
 
 	//Arm trigger and acquire a waveform
 	page->m_progressBar.set_text("Acquire skew reference waveform");
@@ -269,6 +286,9 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 void ScopeSyncWizard::OnWaveformDataReady()
 {
+	if(!m_activeSecondaryPage)
+		return;
+
 	//Progress update
 	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
 	m_activeSecondaryPage->m_progressBar.set_fraction(0.25);
@@ -379,12 +399,40 @@ bool ScopeSyncWizard::OnTimer()
 	//Done
 	else
 	{
-		LogDebug("Done. Best correlation = %f (delta = %ld / %ld ps)\n",
-			m_bestCorrelation, m_bestCorrelationOffset, m_bestCorrelationOffset * m_primaryWaveform->m_timescale);
+		auto scope = m_activeSecondaryPage->GetScope();
+		int64_t skew = m_bestCorrelationOffset * m_primaryWaveform->m_timescale;
+		LogTrace("Done deskewing %s. Best correlation = %f (delta = %ld / %ld ps)\n",
+			scope->m_nickname.c_str(), m_bestCorrelation, m_bestCorrelationOffset, skew);
 
 		set_page_complete(m_activeSecondaryPage->m_grid);
 		m_activeSecondaryPage->m_progressBar.set_fraction(1);
 		m_activeSecondaryPage->m_progressBar.set_text("Done");
+
+		//Figure out where we want the secondary to go
+		int64_t targetOffset = scope->GetTriggerOffset() - skew;
+		LogTrace("Target trigger offset %ld\n", targetOffset);
+
+		//Apply the coarse deskew correction
+		scope->SetTriggerOffset(targetOffset);
+
+		//See where we actually ended up
+		int64_t actualOffset = scope->GetTriggerOffset();
+		int64_t remainingSkew = targetOffset - actualOffset;
+		LogTrace("Actual trigger offset %ld, remaining %ld\n", actualOffset, remainingSkew);
+
+		//Apply the remaining delta as per-channel deskew
+		//TODO: how to fine-deskew LA channels?
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+				continue;
+
+			LogDebug("Deskew start = %ld\n", chan->GetDeskew());
+			chan->SetDeskew(remainingSkew);
+			LogDebug("Deskew end = %ld\n", chan->GetDeskew());
+		}
+
 		return false;
 	}
 }
