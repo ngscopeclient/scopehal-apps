@@ -54,6 +54,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	: m_scopes(scopes)
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
+	, m_scopeSyncWizard(NULL)
 {
 	SetTitle();
 
@@ -188,6 +189,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			m_menu.append(m_setupMenuItem);
 				m_setupMenuItem.set_label("Setup");
 				m_setupMenuItem.set_submenu(m_setupMenu);
+				m_setupMenu.append(m_setupSyncMenuItem);
+					m_setupSyncMenuItem.set_label("Instrument Sync...");
+					m_setupSyncMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnScopeSync));
 				m_setupMenu.append(m_setupTriggerMenuItem);
 					m_setupTriggerMenuItem.set_label("Trigger");
 					m_setupTriggerMenuItem.set_submenu(m_setupTriggerMenu);
@@ -366,7 +371,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 	//Done adding widgets
 	show_all();
 
-	//Don't show measurements by default
+	//Don't show measurements or wizards by default
 	group->m_measurementView.hide();
 
 	//Initialize the style sheets
@@ -417,6 +422,9 @@ void OscilloscopeWindow::CloseSession()
 	m_splitters.clear();
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
+
+	delete m_scopeSyncWizard;
+	m_scopeSyncWizard = NULL;
 
 	m_multiScopeFreeRun = false;
 
@@ -1933,6 +1941,10 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto w : m_waveformAreas)
 		w->OnWaveformDataReady();
 	m_tView += GetTime() - start;
+
+	//Update the trigger sync wizard, if it's active
+	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
+		m_scopeSyncWizard->OnWaveformDataReady();
 }
 
 void OscilloscopeWindow::RefreshAllDecoders()
@@ -2123,4 +2135,22 @@ void OscilloscopeWindow::OnTimebaseSettings()
 	TimebasePropertiesDialog dlg(this, m_scopes);
 	if(dlg.run() == Gtk::RESPONSE_OK)
 		dlg.ConfigureTimebase();
+}
+
+/**
+	@brief Shows the synchronization dialog for connecting multiple scopes.
+ */
+void OscilloscopeWindow::OnScopeSync()
+{
+	if(m_scopes.size() > 1)
+	{
+		//Stop triggering
+		OnStop();
+
+		//Prepare sync
+		if(!m_scopeSyncWizard)
+			m_scopeSyncWizard = new ScopeSyncWizard(this);
+
+		m_scopeSyncWizard->show();
+	}
 }

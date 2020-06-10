@@ -41,6 +41,7 @@
 #include "WaveformGroup.h"
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
+#include "ScopeSyncWizard.h"
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -107,9 +108,11 @@ public:
 	//has to be public so ScopeApp can call it during startup
 	void OnStart();
 
+	//has to be public so ScopeSyncWizard can call it
+	void ArmTrigger(bool oneshot);
+
 protected:
 	void SetTitle();
-	void ArmTrigger(bool oneshot);
 
 	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
 	void GarbageCollectGroups();
@@ -134,6 +137,7 @@ protected:
 				Gtk::Menu m_fileMenu;
 			Gtk::MenuItem m_setupMenuItem;
 				Gtk::Menu m_setupMenu;
+					Gtk::MenuItem m_setupSyncMenuItem;
 					Gtk::MenuItem m_setupTriggerMenuItem;
 						Gtk::Menu m_setupTriggerMenu;
 			Gtk::MenuItem m_channelsMenuItem;
@@ -198,6 +202,7 @@ public:
 	void OnFullscreen();
 	void OnClearSweeps();
 	void OnTimebaseSettings();
+	void OnScopeSync();
 
 	//Protocol decoding etc
 	void RefreshAllDecoders();
@@ -250,6 +255,9 @@ public:
 	//Special processing needed for multi-scope synchronization
 	bool m_multiScopeFreeRun;
 	double m_tPrimaryTrigger;
+
+	//Instrument sync wizard
+	ScopeSyncWizard* m_scopeSyncWizard;
 };
 
 #endif

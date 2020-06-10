@@ -1,8 +1,17 @@
-@define-color glscopeclient_bg_color		#101010;
-@define-color glscopeclient_gradient_color	#303030;
-@define-color glscopeclient_highlight_color #808080;
-@define-color glscopeclient_text_color		#ffffff;
-@define-color glscopeclient_inactive_color	#505050;
+/***********************************************************************************************************************
+	Colors
+ **********************************************************************************************************************/
+
+@define-color glscopeclient_bg_color			#101010;
+@define-color glscopeclient_gradient_color		#303030;
+@define-color glscopeclient_highlight_color 	#808080;
+@define-color glscopeclient_text_color			#ffffff;
+@define-color glscopeclient_inactive_color		#505050;
+@define-color glscopeclient_inactive_text_color	#808080;
+
+/***********************************************************************************************************************
+	General settings for all widgets
+ **********************************************************************************************************************/
 
 frame
 {
@@ -12,13 +21,10 @@ frame
 
 toolbar,
 .toolbar,
-notebook *
-{
-	background-color:	@glscopeclient_bg_color;
-}
-
+notebook *,
 dialog,
-dialog.*
+dialog.*,
+actionbar
 {
 	color:				@glscopeclient_text_color;
 	background-color:	@glscopeclient_bg_color;
@@ -39,6 +45,10 @@ box:disabled
 	text-shadow:		none;
 }
 
+/***********************************************************************************************************************
+	Button
+ **********************************************************************************************************************/
+
 button
 {
 	background-image: -gtk-gradient(
@@ -50,6 +60,11 @@ button
 		to (@glscopeclient_bg_color)
 		);
 	color:				@glscopeclient_text_color;
+}
+
+button:disabled
+{
+	color:				@glscopeclient_inactive_text_color;
 }
 
 toolbar button:hover,
@@ -65,6 +80,10 @@ toolbar button:focus
 	border-image:		none;
 }
 
+/***********************************************************************************************************************
+	Entry
+ **********************************************************************************************************************/
+
 entry,
 entry:focus
 {
@@ -79,6 +98,10 @@ entry:disabled
 	background-image:	none;
 	background-color:	@glscopeclient_inactive_color;
 }
+
+/***********************************************************************************************************************
+	Tree view
+ **********************************************************************************************************************/
 
 treeview
 {
@@ -140,6 +163,10 @@ treeview header button
 	border-right: 		none;
 }
 
+/***********************************************************************************************************************
+	Miscellaneous
+ **********************************************************************************************************************/
+
 tooltip *,
 .tooltip *
 {
@@ -150,6 +177,10 @@ tooltip
 {
 	background-color:	#ffffa0;
 }
+
+/***********************************************************************************************************************
+	Menus
+ **********************************************************************************************************************/
 
 menu,
 .menu,
@@ -164,7 +195,7 @@ menu menuitem
 menuitem:disabled,
 menuitem:disabled *
 {
-	color:				@glscopeclient_highlight_color;
+	color:				@glscopeclient_inactive_text_color;
 	text-shadow:		none;
 }
 
@@ -186,4 +217,40 @@ menu menuitem:hover
 	background-image:	none;
 	background-color:	@glscopeclient_highlight_color;
 	border-color:		transparent;
+}
+
+/***********************************************************************************************************************
+	Progress bar
+ **********************************************************************************************************************/
+progressbar.horizontal progress
+{
+	background-color:	@glscopeclient_highlight_color;
+}
+
+/***********************************************************************************************************************
+	Wizards
+ **********************************************************************************************************************/
+assistant box
+{
+	color:				@glscopeclient_bg_color;
+	background-color:	@glscopeclient_bg_color;
+	background-image:	none;
+}
+
+assistant notebook
+{
+	border-color: 		@glscopeclient_highlight_color;
+	border-bottom-width: 1;
+	border-style: 		solid;
+}
+
+box.sidebar label
+{
+	color:				@glscopeclient_inactive_text_color;
+}
+
+box.sidebar label.highlight
+{
+	color:				@glscopeclient_text_color;
+	font-weight:		bold;
 }
