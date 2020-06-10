@@ -48,7 +48,7 @@
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes);
+	OscilloscopeWindow(std::vector<Oscilloscope*> scopes, bool nodigital);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();
@@ -125,7 +125,7 @@ protected:
 	void UpdateStatusBar();
 
 	//Initialization
-	void CreateWidgets();
+	void CreateWidgets(bool nodigital);
 
 	//Widgets
 	Gtk::VBox m_vbox;

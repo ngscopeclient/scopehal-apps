@@ -50,7 +50,7 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
+OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigital)
 	: m_scopes(scopes)
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
@@ -62,7 +62,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes)
 	set_default_size(1280, 800);
 
 	//Add widgets
-	CreateWidgets();
+	CreateWidgets(nodigital);
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
@@ -141,7 +141,7 @@ OscilloscopeWindow::~OscilloscopeWindow()
 /**
 	@brief Helper function for creating widgets and setting up signal handlers
  */
-void OscilloscopeWindow::CreateWidgets()
+void OscilloscopeWindow::CreateWidgets(bool nodigital)
 {
 	//Set up window hierarchy
 	add(m_vbox);
@@ -334,11 +334,9 @@ void OscilloscopeWindow::CreateWidgets()
 				m_channelsMenu.append(*item);
 			}
 
-			//See which channels are currently on
-			//DEBUG: enable all channels to save time when setting up the client
-			//if(chan->IsEnabled())
+			//Enable all channels to save time when setting up the client
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
-				(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
+				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
 			{
 				auto w = new WaveformArea(chan, this);
 				w->m_group = group;

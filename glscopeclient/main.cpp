@@ -61,13 +61,15 @@ void help()
 			"\n"
 			"  [general options]:\n"
 			"    --help      : this message...\n"
-			"    --version   : print version number. (not yet implemented)\n"
-			"    --reconnect : when loading a .scopesession from the command line, reconnect to the instrument\n"
-			"                  (default is to do offline analysis)\n"
 			"    --nodata    : when loading a .scopesession from the command line, only load instrument/UI settings\n"
 			"                  (default is to load waveform data too)\n"
+			"    --nodigital : only display analog channels at startup\n"
+			"                  (default is to display digital channels too)\n"
+			"    --reconnect : when loading a .scopesession from the command line, reconnect to the instrument\n"
+			"                  (default is to do offline analysis)\n"
 			"    --retrigger : when loading a .scopesession from the command line, start triggering immediately\n"
 			"                  (default is to be paused)\n"
+			"    --version   : print version number. (not yet implemented)\n"
 			"\n"
 			"  [logger options]:\n"
 			"    levels: ERROR, WARNING, NOTICE, VERBOSE, DEBUG\n"
@@ -103,6 +105,7 @@ int main(int argc, char* argv[])
 	bool reconnect = false;
 	bool nodata = false;
 	bool retrigger = false;
+	bool nodigital = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -128,6 +131,8 @@ int main(int argc, char* argv[])
 			nodata = true;
 		else if(s == "--retrigger")
 			retrigger = true;
+		else if(s == "--nodigital")
+			nodigital = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -250,7 +255,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run(fileToLoad, reconnect, nodata, retrigger);
+	g_app->run(fileToLoad, reconnect, nodata, retrigger, nodigital);
 	delete g_app;
 	return 0;
 }

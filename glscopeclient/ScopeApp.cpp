@@ -43,11 +43,11 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigger)
+void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigger, bool nodigital)
 {
 	register_application();
 
-	m_window = new OscilloscopeWindow(m_scopes);
+	m_window = new OscilloscopeWindow(m_scopes, nodigital);
 	add_window(*m_window);
 
 	//Handle file loads specified on the command line
