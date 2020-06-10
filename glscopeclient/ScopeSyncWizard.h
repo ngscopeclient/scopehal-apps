@@ -50,7 +50,16 @@ public:
 		Gtk::Label m_secondaryChannelLabel;
 			Gtk::ComboBoxText m_secondaryChannelBox;
 
+	OscilloscopeChannel* GetPrimaryChannel()
+	{ return m_primaryChannels[m_primaryChannelBox.get_active_text()]; }
+
+	OscilloscopeChannel* GetSecondaryChannel()
+	{ return m_secondaryChannels[m_secondaryChannelBox.get_active_text()]; }
+
 protected:
+	std::map<std::string, OscilloscopeChannel*> m_primaryChannels;
+	std::map<std::string, OscilloscopeChannel*> m_secondaryChannels;
+
 	OscilloscopeWindow* m_parent;
 	size_t m_nscope;
 };
@@ -97,7 +106,17 @@ protected:
 
 	OscilloscopeWindow* m_parent;
 
+	bool OnTimer();
+
+	//Cross-correlation
+	ScopeSyncDeskewSetupPage* m_activeSetupPage;
 	ScopeSyncDeskewProgressPage* m_activeSecondaryPage;
+	int64_t m_bestCorrelationOffset;
+	double m_bestCorrelation;
+	AnalogWaveform* m_primaryWaveform;
+	AnalogWaveform* m_secondaryWaveform;
+	int64_t m_delta;
+	int64_t m_maxSkewSamples;
 };
 
 #endif

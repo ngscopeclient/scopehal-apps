@@ -47,6 +47,9 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 {
 	m_grid.attach(m_label, 0, 0, 1, 1);
 
+	auto primary = parent->GetScope(0);
+	auto secondary = parent->GetScope(nscope);
+
 	m_label.set_markup(
 		string("Select a signal on the DUT to use as a skew reference. This signal should have minimal autocorrelation,\n") +
 		string("and should contain at least one fast edge visible with the current trigger settings.\n") +
@@ -62,21 +65,41 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		string("* Clocks\n") +
 		string("* 8B/10B coded serial links\n") +
 		string("\n") +
-		string("Touch a probe from ") + parent->GetScope(0)->m_nickname + " and another probe from " +
-			parent->GetScope(nscope)->m_nickname + " to the reference point.\n"
+		string("Touch a probe from ") + primary->m_nickname + " and another probe from " +
+			secondary->m_nickname + " to the reference point.\n"
 		);
 
 	m_grid.attach_next_to(m_primaryChannelLabel, m_label, Gtk::POS_BOTTOM, 1, 1);
 		m_primaryChannelLabel.set_text("Primary channel");
 		m_primaryChannelLabel.set_halign(Gtk::ALIGN_START);
 	m_grid.attach_next_to(m_primaryChannelBox, m_primaryChannelLabel, Gtk::POS_RIGHT, 1, 1);
-		//TODO: fill
+		for(size_t i=0; i<primary->GetChannelCount(); i++)
+		{
+			//For now, we can only use analog channels to deskew
+			auto chan = primary->GetChannel(i);
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+				continue;
+
+			//Add to the box
+			m_primaryChannelBox.append(chan->m_displayname);
+			m_primaryChannels[chan->m_displayname] = chan;
+		}
 
 	m_grid.attach_next_to(m_secondaryChannelLabel, m_primaryChannelLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_secondaryChannelLabel.set_text("Secondary channel");
 		m_secondaryChannelLabel.set_halign(Gtk::ALIGN_START);
 	m_grid.attach_next_to(m_secondaryChannelBox, m_secondaryChannelLabel, Gtk::POS_RIGHT, 1, 1);
-		//TODO: fill
+		for(size_t i=0; i<secondary->GetChannelCount(); i++)
+		{
+			//For now, we can only use analog channels to deskew
+			auto chan = secondary->GetChannel(i);
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+				continue;
+
+			//Add to the box
+			m_secondaryChannelBox.append(chan->m_displayname);
+			m_secondaryChannels[chan->m_displayname] = chan;
+		}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,7 +124,14 @@ Oscilloscope* ScopeSyncDeskewProgressPage::GetScope()
 
 ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 	: m_parent(parent)
+	, m_activeSetupPage(NULL)
 	, m_activeSecondaryPage(NULL)
+	, m_bestCorrelationOffset(0)
+	, m_bestCorrelation(0)
+	, m_primaryWaveform(0)
+	, m_secondaryWaveform(0)
+	, m_delta(0)
+	, m_maxSkewSamples(0)
 {
 	set_transient_for(*parent);
 
@@ -171,13 +201,20 @@ void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 	for(auto p : m_deskewSetupPages)
 	{
 		if(page == &p->m_grid)
+		{
+			m_activeSetupPage = p;
 			set_page_complete(*page);
+		}
 	}
 
+	//Process deskew stuff
 	for(auto p : m_deskewProgressPages)
 	{
 		if(page == &p->m_grid)
+		{
+			m_activeSecondaryPage = p;
 			ConfigureSecondaryScope(p, p->GetScope());
+		}
 	}
 }
 
@@ -210,31 +247,144 @@ void ScopeSyncWizard::ConfigurePrimaryScope(Oscilloscope* scope)
 
 void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page, Oscilloscope* scope)
 {
-	m_activeSecondaryPage = page;
-
 	page->m_progressBar.set_fraction(0);
 
 	//Set trigger to external
 	page->m_progressBar.set_text("Configure trigger source");
-	page->m_progressBar.set_fraction(10);
+	page->m_progressBar.set_fraction(0.05);
 	scope->SetTriggerChannelIndex(scope->GetExternalTrigger()->GetIndex());
 
 	//Set reference clock to external
 	page->m_progressBar.set_text("Configure reference clock");
-	page->m_progressBar.set_fraction(20);
+	page->m_progressBar.set_fraction(0.1);
 	scope->SetUseExternalRefclk(true);
 
 	//Arm trigger and acquire a waveform
 	page->m_progressBar.set_text("Acquire skew reference waveform");
-	page->m_progressBar.set_fraction(30);
+	page->m_progressBar.set_fraction(0.15);
 	m_parent->ArmTrigger(true);
+
+	//TODO: set timeout, in case it doesn't trigger stop and re-arm the trigger
 }
 
 void ScopeSyncWizard::OnWaveformDataReady()
 {
-	if(!m_activeSecondaryPage)
+	//Progress update
+	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
+	m_activeSecondaryPage->m_progressBar.set_fraction(0.25);
+
+	//We must have active pages (sanity check)
+	if(!m_activeSecondaryPage || !m_activeSetupPage)
 		return;
 
-	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
-	m_activeSecondaryPage->m_progressBar.set_fraction(40);
+	//We must have selected channels
+	auto pri = m_activeSetupPage->GetPrimaryChannel();
+	auto sec = m_activeSetupPage->GetSecondaryChannel();
+	if(!pri || !sec)
+		return;
+
+	//Verify we have data to work with
+	auto pw = dynamic_cast<AnalogWaveform*>(pri->GetData());
+	auto sw = dynamic_cast<AnalogWaveform*>(sec->GetData());
+	if(!pw || !sw)
+		return;
+
+	//Set up state
+	m_bestCorrelation = -999999;
+	m_bestCorrelationOffset = 0;
+	m_primaryWaveform = pw;
+	m_secondaryWaveform = sw;
+
+	//Don't allow more than 50K samples of skew between instruments.
+	//The cross-correlation would start to get expensive at that point!
+	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
+	m_maxSkewSamples = min(m_maxSkewSamples, 50000L);
+	m_delta = - m_maxSkewSamples;
+
+	//Set the timer
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnTimer), 10);
+}
+
+bool ScopeSyncWizard::OnTimer()
+{
+	//Calculate cross-correlation between the primary and secondary waveforms at up to +/- half the waveform length
+	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	int64_t samplesPerBlock = 1000;
+	int64_t blockEnd = min(m_delta + samplesPerBlock, len/2);
+	blockEnd = min(blockEnd, m_maxSkewSamples);
+
+	//Update the progress bar
+	int64_t blockpos = m_delta + m_maxSkewSamples;
+	float frac = blockpos * 1.0f / m_maxSkewSamples;
+	m_activeSecondaryPage->m_progressBar.set_fraction((frac * 0.75) + 0.25);
+
+	for(; m_delta < blockEnd; m_delta ++)
+	{
+		//Convert delta from samples of the primary waveform to picoseconds
+		int64_t deltaPs = m_primaryWaveform->m_timescale * m_delta;
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		size_t isecondary = 0;
+		double correlation = 0;
+		for(size_t i=0; i<(size_t)len; i++)
+		{
+			//Timestamp of this sample, in ps
+			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale;
+
+			//Target timestamp in the secondary waveform
+			int64_t target = start + deltaPs;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			//Skip secondary samples if the current secondary sample ends before the primary sample starts
+			bool done = false;
+			while( ((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
+						m_secondaryWaveform->m_timescale) < target)
+			{
+				isecondary ++;
+
+				//If off the end of the waveform, stop
+				if(isecondary >= slen)
+				{
+					done = true;
+					break;
+				}
+			}
+			if(done)
+				break;
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = m_delta;
+		}
+	}
+
+	if(m_delta < len/2)
+		return true;
+
+	//Done
+	else
+	{
+		LogDebug("Done. Best correlation = %f (delta = %ld / %ld ps)\n",
+			m_bestCorrelation, m_bestCorrelationOffset, m_bestCorrelationOffset * m_primaryWaveform->m_timescale);
+
+		set_page_complete(m_activeSecondaryPage->m_grid);
+		m_activeSecondaryPage->m_progressBar.set_fraction(1);
+		m_activeSecondaryPage->m_progressBar.set_text("Done");
+		return false;
+	}
 }

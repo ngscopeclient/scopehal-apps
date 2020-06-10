@@ -2086,8 +2086,8 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 		else
 			m_scopes[i]->Start();
 
-		//Ping the scope to make sure the arm command went through
-		if(m_multiScopeFreeRun && (i != 0) )
+		//If we have multiple scopes, ping the scope to make sure the arm command went through
+		if(i != 0)
 			m_scopes[i]->IDPing();
 	}
 	m_tArm = GetTime();
