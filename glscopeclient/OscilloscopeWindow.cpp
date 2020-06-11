@@ -1850,19 +1850,24 @@ bool OscilloscopeWindow::PollScopes()
 
 			//All instruments should trigger within 100ms (arbitrary threshold) of the primary.
 			//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
-			if( (m_tPrimaryTrigger > 0) && ( (GetTime() - m_tPrimaryTrigger) > 0.1 ) )
+			double twait = GetTime() - m_tPrimaryTrigger;
+			if( (m_tPrimaryTrigger > 0) && ( twait > 0.1 ) )
 			{
-				LogWarning("Timed out waiting for one or more secondary instruments to trigger. Resetting...\n");
+				LogWarning("Timed out waiting for one or more secondary instruments to trigger (%.2f ms). Resetting...\n",
+					twait*1000);
+
+				//Cancel any pending triggers
+				OnStop();
 
 				//Discard all pending waveform data
 				for(auto scope : m_scopes)
 				{
-					while(scope->HasPendingWaveforms())
-						OnWaveformDataReady(scope);
+					scope->IDPing();
+					scope->ClearPendingWaveforms();
 				}
 
 				//Re-arm the trigger and get back to polling
-				ArmTrigger(false);
+				OnStart();
 				return false;
 			}
 		}
