@@ -317,7 +317,7 @@ void ScopeThread(Oscilloscope* scope)
 		if(!scope->IsTriggerArmed())
 		{
 			LogTrace("Scope isn't armed, sleeping\n");
-			usleep(50 * 1000);
+			usleep(5 * 1000);
 			tlast = GetTime();
 			continue;
 		}
@@ -344,6 +344,11 @@ void ScopeThread(Oscilloscope* scope)
 
 			continue;
 		}
+
+		//Wait 1ms before polling again, so the UI thread has a chance to grab the mutex
+		else
+			usleep(1*1000);
+
 		npolls ++;
 	}
 }
