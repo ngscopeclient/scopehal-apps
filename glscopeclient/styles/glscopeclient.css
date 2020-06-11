@@ -240,7 +240,7 @@ assistant box
 assistant notebook
 {
 	border-color: 		@glscopeclient_highlight_color;
-	border-bottom-width: 1;
+	border-bottom-width: 1px;
 	border-style: 		solid;
 }
 
