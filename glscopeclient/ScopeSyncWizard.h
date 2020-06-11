@@ -97,7 +97,10 @@ protected:
 		Gtk::ProgressBar m_primaryProgressBar;
 	std::vector<ScopeSyncDeskewSetupPage*> m_deskewSetupPages;
 	std::vector<ScopeSyncDeskewProgressPage*> m_deskewProgressPages;
+	Gtk::Grid m_donePage;
+		Gtk::Label m_doneLabel;
 
+	virtual void on_apply();
 	virtual void on_cancel();
 	virtual void on_prepare(Gtk::Widget* page);
 
@@ -117,6 +120,14 @@ protected:
 	AnalogWaveform* m_secondaryWaveform;
 	int64_t m_delta;
 	int64_t m_maxSkewSamples;
+	std::vector<int64_t> m_averageSkews;
+	size_t m_numAverages;
+
+	//Trigger checks
+	bool m_waitingForWaveform;
+	bool OnWaveformTimeout();
+
+	void RequestWaveform();
 };
 
 #endif

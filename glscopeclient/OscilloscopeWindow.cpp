@@ -78,6 +78,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	m_tHistory = 0;
 	m_tPoll = 0;
 	m_totalWaveforms = 0;
+	m_syncComplete = false;
 
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
@@ -387,6 +388,14 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
 	PollScopes();
+
+	//Clean up the scope sync wizard if it's completed
+	if(m_syncComplete)
+	{
+		delete m_scopeSyncWizard;
+		m_scopeSyncWizard = NULL;
+	}
+
 	return true;
 }
 
@@ -2152,5 +2161,11 @@ void OscilloscopeWindow::OnScopeSync()
 			m_scopeSyncWizard = new ScopeSyncWizard(this);
 
 		m_scopeSyncWizard->show();
+		m_syncComplete = false;
 	}
+}
+
+void OscilloscopeWindow::OnSyncComplete()
+{
+	m_syncComplete = true;
 }

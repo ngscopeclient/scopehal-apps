@@ -110,6 +110,10 @@ public:
 
 	//has to be public so ScopeSyncWizard can call it
 	void ArmTrigger(bool oneshot);
+	void OnStop();
+
+	//Clean up the sync wizard
+	void OnSyncComplete();
 
 protected:
 	void SetTitle();
@@ -119,7 +123,6 @@ protected:
 
 	//Menu/toolbar message handlers
 	void OnStartSingle();
-	void OnStop();
 	void OnQuit();
 	void OnHistory();
 	void OnAlphaChanged();
@@ -258,6 +261,7 @@ public:
 
 	//Instrument sync wizard
 	ScopeSyncWizard* m_scopeSyncWizard;
+	bool m_syncComplete;
 };
 
 #endif

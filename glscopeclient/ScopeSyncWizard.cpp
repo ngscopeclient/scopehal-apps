@@ -132,6 +132,8 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 	, m_secondaryWaveform(0)
 	, m_delta(0)
 	, m_maxSkewSamples(0)
+	, m_numAverages(10)
+	, m_waitingForWaveform(false)
 {
 	set_transient_for(*parent);
 
@@ -172,6 +174,17 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 		set_page_title(progpage->m_grid, string("Deskew ") + m_parent->GetScope(i)->m_nickname);
 	}
 
+	//Last page
+	append_page(m_donePage);
+		set_page_type(m_donePage, Gtk::ASSISTANT_PAGE_CONFIRM);
+		m_donePage.attach(m_doneLabel, 0, 0, 1, 1);
+			set_page_title(m_donePage, "Complete");
+			m_doneLabel.set_markup(
+				string("Instrument synchronization successfully completed!\n") +
+				string("\n") +
+				string("The sync wizard may be re-run at any time to tune if necessary.\n")
+				);
+
 	//Mark the first page as complete, so we can move on
 	set_page_complete(m_welcomePage);
 
@@ -192,10 +205,19 @@ void ScopeSyncWizard::on_cancel()
 	hide();
 }
 
+void ScopeSyncWizard::on_apply()
+{
+	hide();
+	m_parent->OnSyncComplete();
+}
+
 void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 {
 	if(page == &m_primaryProgressPage)
 		ConfigurePrimaryScope(m_parent->GetScope(0));
+
+	if(page == &m_donePage)
+		set_page_complete(*page);
 
 	//Mark setup pages complete immediately
 	for(auto p : m_deskewSetupPages)
@@ -251,22 +273,18 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 	//Set trigger to external
 	page->m_progressBar.set_text("Configure trigger source");
-	page->m_progressBar.set_fraction(0.025);
 	scope->SetTriggerChannelIndex(scope->GetExternalTrigger()->GetIndex());
 
 	//Set reference clock to external
 	page->m_progressBar.set_text("Configure reference clock");
-	page->m_progressBar.set_fraction(0.05);
 	scope->SetUseExternalRefclk(true);
 
 	//Set the trigger offset to the same as the primary
 	page->m_progressBar.set_text("Configure trigger offset");
-	page->m_progressBar.set_fraction(0.075);
 	scope->SetTriggerOffset(m_parent->GetScope(0)->GetTriggerOffset());
 
 	//Set all channels to zero skew
 	page->m_progressBar.set_text("Configure channel deskew");
-	page->m_progressBar.set_fraction(0.1);
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
 		auto chan = scope->GetChannel(i);
@@ -277,21 +295,16 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 	}
 
 	//Arm trigger and acquire a waveform
-	page->m_progressBar.set_text("Acquire skew reference waveform");
-	page->m_progressBar.set_fraction(0.15);
-	m_parent->ArmTrigger(true);
+	RequestWaveform();
 
-	//TODO: set timeout, in case it doesn't trigger stop and re-arm the trigger
+	//Clean out stats
+	m_averageSkews.clear();
 }
 
 void ScopeSyncWizard::OnWaveformDataReady()
 {
 	if(!m_activeSecondaryPage)
 		return;
-
-	//Progress update
-	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
-	m_activeSecondaryPage->m_progressBar.set_fraction(0.25);
 
 	//We must have active pages (sanity check)
 	if(!m_activeSecondaryPage || !m_activeSetupPage)
@@ -308,6 +321,9 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	auto sw = dynamic_cast<AnalogWaveform*>(sec->GetData());
 	if(!pw || !sw)
 		return;
+
+	//Good, not waiting
+	m_waitingForWaveform = false;
 
 	//Set up state
 	m_bestCorrelation = -999999;
@@ -336,9 +352,13 @@ bool ScopeSyncWizard::OnTimer()
 	blockEnd = min(blockEnd, m_maxSkewSamples);
 
 	//Update the progress bar
+	float blockfrac = m_averageSkews.size() * 1.0f / m_numAverages;
 	int64_t blockpos = m_delta + m_maxSkewSamples;
-	float frac = blockpos * 1.0f / m_maxSkewSamples;
-	m_activeSecondaryPage->m_progressBar.set_fraction((frac * 0.75) + 0.25);
+	float infrac = blockpos * 1.0f / (2*m_maxSkewSamples);
+	float frac = blockfrac + infrac/m_numAverages;
+	float progress = (frac * 0.9) + 0.1;
+	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
+	m_activeSecondaryPage->m_progressBar.set_fraction(progress);
 
 	for(; m_delta < blockEnd; m_delta ++)
 	{
@@ -393,20 +413,46 @@ bool ScopeSyncWizard::OnTimer()
 		}
 	}
 
+	//Need more data to go on
 	if(m_delta < len/2)
 		return true;
 
-	//Done
+	//Collect the skew from this round
+	auto scope = m_activeSecondaryPage->GetScope();
+	int64_t skew = m_bestCorrelationOffset * m_primaryWaveform->m_timescale;
+	LogTrace("Best correlation = %f (delta = %ld / %ld ps)\n",
+		m_bestCorrelation, m_bestCorrelationOffset, skew);
+	m_averageSkews.push_back(skew);
+
+	//Do we have additional averages to collect?
+	if(m_averageSkews.size() < m_numAverages)
+	{
+		char tmp[128];
+		snprintf(
+			tmp,
+			sizeof(tmp),
+			"Acquire skew reference waveform (%zu/%zu)",
+			m_averageSkews.size()+1,
+			m_numAverages);
+		m_activeSecondaryPage->m_progressBar.set_text(tmp);
+
+		RequestWaveform();
+		return false;
+	}
+
+	//Last iteration
 	else
 	{
-		auto scope = m_activeSecondaryPage->GetScope();
-		int64_t skew = m_bestCorrelationOffset * m_primaryWaveform->m_timescale;
-		LogTrace("Done deskewing %s. Best correlation = %f (delta = %ld / %ld ps)\n",
-			scope->m_nickname.c_str(), m_bestCorrelation, m_bestCorrelationOffset, skew);
-
 		set_page_complete(m_activeSecondaryPage->m_grid);
 		m_activeSecondaryPage->m_progressBar.set_fraction(1);
 		m_activeSecondaryPage->m_progressBar.set_text("Done");
+
+		//Average skew
+		double sum = 0;
+		for(auto f : m_averageSkews)
+			sum += f;
+		skew = static_cast<int64_t>(round(sum / m_numAverages));
+		LogTrace("Average skew = %ld ps\n", skew);
 
 		//Figure out where we want the secondary to go
 		int64_t targetOffset = scope->GetTriggerOffset() - skew;
@@ -428,11 +474,30 @@ bool ScopeSyncWizard::OnTimer()
 			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 				continue;
 
-			LogDebug("Deskew start = %ld\n", chan->GetDeskew());
 			chan->SetDeskew(remainingSkew);
-			LogDebug("Deskew end = %ld\n", chan->GetDeskew());
 		}
-
-		return false;
 	}
+
+	return false;
+}
+
+bool ScopeSyncWizard::OnWaveformTimeout()
+{
+	if(!m_waitingForWaveform)
+		return false;
+
+	LogWarning("Timed out waiting for waveform, retriggering...\n");
+	m_parent->OnStop();
+	RequestWaveform();
+	return false;
+}
+
+/**
+	@brief Request a new waveform and set a timeout in case the scope doesn't trigger in time
+ */
+void ScopeSyncWizard::RequestWaveform()
+{
+	m_parent->ArmTrigger(true);
+	m_waitingForWaveform = true;
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 500);
 }
