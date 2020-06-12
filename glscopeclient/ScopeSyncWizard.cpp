@@ -331,10 +331,12 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_primaryWaveform = pw;
 	m_secondaryWaveform = sw;
 
-	//Don't allow more than 50K samples of skew between instruments.
-	//The cross-correlation would start to get expensive at that point!
+	/*
+		Max allowed skew between instruments is 10K points.
+		At 10 Gsps this is a whopping 1000 ns, typical values are in the low tens of ns.
+	*/
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
-	m_maxSkewSamples = min(m_maxSkewSamples, 50000L);
+	m_maxSkewSamples = min(m_maxSkewSamples, 10000L);
 	m_delta = - m_maxSkewSamples;
 
 	//Set the timer
@@ -347,7 +349,7 @@ bool ScopeSyncWizard::OnTimer()
 	int64_t len = m_primaryWaveform->m_offsets.size();
 	size_t slen = m_secondaryWaveform->m_offsets.size();
 
-	int64_t samplesPerBlock = 1000;
+	int64_t samplesPerBlock = 5000;
 	int64_t blockEnd = min(m_delta + samplesPerBlock, len/2);
 	blockEnd = min(blockEnd, m_maxSkewSamples);
 
@@ -360,10 +362,12 @@ bool ScopeSyncWizard::OnTimer()
 	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
 	m_activeSecondaryPage->m_progressBar.set_fraction(progress);
 
-	for(; m_delta < blockEnd; m_delta ++)
+	std::mutex cmutex;
+	#pragma omp parallel for
+	for(int64_t d = m_delta; d < blockEnd; d ++)
 	{
 		//Convert delta from samples of the primary waveform to picoseconds
-		int64_t deltaPs = m_primaryWaveform->m_timescale * m_delta;
+		int64_t deltaPs = m_primaryWaveform->m_timescale * d;
 
 		//Loop over samples in the primary waveform
 		ssize_t samplesProcessed = 0;
@@ -406,15 +410,17 @@ bool ScopeSyncWizard::OnTimer()
 		double normalizedCorrelation = correlation / samplesProcessed;
 
 		//Update correlation
+		lock_guard<mutex> lock(cmutex);
 		if(normalizedCorrelation > m_bestCorrelation)
 		{
 			m_bestCorrelation = normalizedCorrelation;
 			m_bestCorrelationOffset = m_delta;
 		}
 	}
+	m_delta = blockEnd;
 
 	//Need more data to go on
-	if(m_delta < len/2)
+	if(m_delta < m_maxSkewSamples)
 		return true;
 
 	//Collect the skew from this round
