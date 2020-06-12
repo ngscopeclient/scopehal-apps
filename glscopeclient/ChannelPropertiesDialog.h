@@ -57,6 +57,8 @@ protected:
 			Gtk::Entry m_channelDisplayNameEntry;
 		Gtk::Label m_channelColorLabel;
 			Gtk::ColorButton m_channelColorButton;
+		Gtk::Label m_deskewLabel;
+			Gtk::Entry m_deskewEntry;
 
 	OscilloscopeChannel* m_chan;
 };

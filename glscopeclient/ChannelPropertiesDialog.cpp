@@ -83,6 +83,18 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
+		//Deskew - only on physical analog channels for now
+		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
+		{
+			m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
+				m_deskewLabel.set_text("Deskew");
+				m_deskewLabel.set_halign(Gtk::ALIGN_START);
+			m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
+
+			Unit unit(Unit::UNIT_PS);
+			m_deskewEntry.set_text(unit.PrettyPrint(chan->GetDeskew()));
+		}
+
 	show_all();
 }
 
@@ -98,6 +110,9 @@ void ChannelPropertiesDialog::ConfigureChannel()
 {
 	m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
+
+	Unit unit(Unit::UNIT_PS);
+	m_chan->SetDeskew(unit.ParseString(m_deskewEntry.get_text()));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
