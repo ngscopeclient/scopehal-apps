@@ -414,7 +414,7 @@ bool ScopeSyncWizard::OnTimer()
 		if(normalizedCorrelation > m_bestCorrelation)
 		{
 			m_bestCorrelation = normalizedCorrelation;
-			m_bestCorrelationOffset = m_delta;
+			m_bestCorrelationOffset = d;
 		}
 	}
 	m_delta = blockEnd;
