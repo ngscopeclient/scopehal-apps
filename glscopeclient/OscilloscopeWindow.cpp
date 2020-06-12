@@ -124,20 +124,6 @@ OscilloscopeWindow::~OscilloscopeWindow()
 	LogDebug("VIEW:    %10.3f ms\n", m_tView * 1000);
 	LogDebug("HISTORY: %10.3f ms\n", m_tHistory * 1000);
 	LogDebug("POLL:    %10.3f ms\n", m_tPoll * 1000);
-
-	for(auto it : m_historyWindows)
-		delete it.second;
-
-	for(auto a : m_analyzers)
-		delete a;
-	for(auto s : m_splitters)
-		delete s;
-	for(auto g : m_waveformGroups)
-		delete g;
-	for(auto w : m_waveformAreas)
-		delete w;
-
-	//decoders should self-delete when the last reference to them is removed
 }
 
 /**
@@ -2029,6 +2015,9 @@ void OscilloscopeWindow::RefreshAllDecoders()
 
 void OscilloscopeWindow::UpdateStatusBar()
 {
+	if(m_scopes.empty())
+		return;
+
 	//TODO: redo this for multiple scopes
 	auto scope = m_scopes[0];
 	char tmp[256];
