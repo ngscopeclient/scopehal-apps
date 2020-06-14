@@ -361,6 +361,9 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(m_decodeMiscItem);
 		m_decodeMiscItem.set_label("Misc");
 		m_decodeMiscItem.set_submenu(m_decodeMiscMenu);
+	m_contextMenu.append(m_decodePowerItem);
+		m_decodePowerItem.set_label("Power");
+		m_decodePowerItem.set_submenu(m_decodePowerMenu);
 	m_contextMenu.append(m_decodeRFItem);
 		m_decodeRFItem.set_label("RF");
 		m_decodeRFItem.set_submenu(m_decodeRFMenu);
@@ -394,6 +397,10 @@ void WaveformArea::CreateWidgets()
 
 				case ProtocolDecoder::CAT_CLOCK:
 					m_decodeClockMenu.append(*item);
+					break;
+
+				case ProtocolDecoder::CAT_POWER:
+					m_decodePowerMenu.append(*item);
 					break;
 
 				case ProtocolDecoder::CAT_RF:

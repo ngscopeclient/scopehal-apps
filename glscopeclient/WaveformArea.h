@@ -210,6 +210,8 @@ protected:
 			Gtk::Menu m_decodeMemoryMenu;
 		Gtk::MenuItem m_decodeMiscItem;
 			Gtk::Menu m_decodeMiscMenu;
+		Gtk::MenuItem m_decodePowerItem;
+			Gtk::Menu m_decodePowerMenu;
 		Gtk::MenuItem m_decodeSerialItem;
 			Gtk::Menu m_decodeSerialMenu;
 		Gtk::MenuItem m_decodeSignalIntegrityItem;

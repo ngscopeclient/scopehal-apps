@@ -977,6 +977,7 @@ void WaveformArea::UpdateContextMenu()
 	childMenus.push_back(&m_decodeMeasurementMenu);
 	childMenus.push_back(&m_decodeMemoryMenu);
 	childMenus.push_back(&m_decodeMiscMenu);
+	childMenus.push_back(&m_decodePowerMenu);
 	childMenus.push_back(&m_decodeSerialMenu);
 
 	for(auto submenu : childMenus)
