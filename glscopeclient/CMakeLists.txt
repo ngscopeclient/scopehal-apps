@@ -1,5 +1,17 @@
+# GLEW and OpenGL are required
+find_package(GLEW REQUIRED)
+find_package(OpenGL REQUIRED)
+
+# Additional libraries on Windows
+if(WIN32)
+	set(WIN_LIBS shlwapi)
+	
+	# For some reason, find_package does not manage to find glew32 on Windows. Hardcoding for now.
+	set(GLEW_LIBRARIES "glew32") 
+endif()
+
 #Set up include paths
-include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
+include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 
 ###############################################################################
@@ -39,7 +51,9 @@ target_link_libraries(glscopeclient
 	scopeprotocols
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
-	GL
+	${OPENGL_LIBRARY}
+	${WIN_LIBS}
+	${GLEW_LIBRARIES}
 	yaml-cpp
 	)
 
