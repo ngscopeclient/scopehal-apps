@@ -42,7 +42,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#endif
+
 using namespace std;
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -1098,12 +1104,10 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	//Format the directory name
 	m_currentDataDirName = m_currentFileName.substr(0, m_currentFileName.length() - strlen(extension)) + "_data";
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// FIXME: a fair bit of the code below is POSIX specific and will need to be fixed for portability eventually
-
-#ifndef _WIN32
 	//See if the directory exists
 	bool dir_exists = false;
+	
+#ifndef _WIN32
 	int hfile = open(m_currentDataDirName.c_str(), O_RDONLY);
 	if(hfile >= 0)
 	{
@@ -1128,15 +1132,47 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 			return;
 		}
 	}
+#else
+	auto fileType = GetFileAttributes(m_currentDataDirName.c_str());
+	
+	// Check if any file exists at this path
+	if(fileType != INVALID_FILE_ATTRIBUTES)
+	{
+		if(fileType & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			// directory exists
+			dir_exists = true;
+		}
+		else
+		{
+			// Its some other file
+			string msg = string("The data directory ") + m_currentDataDirName + " already exists, but is not a directory!";
+			Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+			errdlg.set_title("Cannot save session\n");
+			errdlg.run();
+			return;
+		}
+	}
+#endif
 
 	//See if the file exists
 	bool file_exists = false;
+	
+#ifndef _WIN32
 	hfile = open(m_currentFileName.c_str(), O_RDONLY);
 	if(hfile >= 0)
 	{
 		file_exists = true;
 		::close(hfile);
 	}
+#else
+	auto fileAttr = GetFileAttributes(m_currentFileName.c_str());
+
+	file_exists = (fileAttr != INVALID_FILE_ATTRIBUTES
+		&& !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
+
+#endif
+	
 
 	//If we are trying to create a new file, warn if the directory exists but the file does not
 	//If the file exists GTK will warn, and we don't want to prompt the user twice if both exist!
@@ -1193,8 +1229,6 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	//Serialize waveform data if needed
 	if(saveWaveforms)
 		SerializeWaveforms(table);
-	
-#endif
 }
 
 string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& table)
