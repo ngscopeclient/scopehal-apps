@@ -16,17 +16,25 @@ pkg_check_modules(GLM glm>=0.9.8)
 pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 
-add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
+# Texlive does not work well in MinGW. Building docs isnt really needed on Windows right now.
+# We might find a fix for this in the future.
+if(NOT WIN32)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
+endif()
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
-add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
-#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
+
+if(NOT WIN32)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
+endif()
 
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
