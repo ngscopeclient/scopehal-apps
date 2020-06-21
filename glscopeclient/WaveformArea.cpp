@@ -42,6 +42,8 @@
 using namespace std;
 using namespace glm;
 
+bool WaveformArea::isGlewInitialized = false;
+
 WaveformArea::WaveformArea(
 	OscilloscopeChannel* channel,
 	OscilloscopeWindow* parent
@@ -455,6 +457,19 @@ void WaveformArea::on_realize()
 	//Let the base class create the GL context, then select it
 	Gtk::GLArea::on_realize();
 	make_current();
+	
+	// Initialize GLEW
+	if(!isGlewInitialized)
+	{
+		GLenum glewResult = glewInit();
+		if (glewResult != GLEW_OK)
+		{
+			LogError("Error: Failed to initialize GLEW");
+			return;
+		}
+		
+		isGlewInitialized = true;
+	}
 
 	//We're about to draw the first frame after realization.
 	//This means we need to save some configuration (like the current FBO) that GTK doesn't tell us directly
