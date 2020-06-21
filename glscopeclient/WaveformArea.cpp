@@ -42,7 +42,7 @@
 using namespace std;
 using namespace glm;
 
-bool WaveformArea::isGlewInitialized = false;
+bool WaveformArea::m_isGlewInitialized = false;
 
 WaveformArea::WaveformArea(
 	OscilloscopeChannel* channel,
@@ -459,7 +459,7 @@ void WaveformArea::on_realize()
 	make_current();
 	
 	// Initialize GLEW
-	if(!isGlewInitialized)
+	if(!m_isGlewInitialized)
 	{
 		GLenum glewResult = glewInit();
 		if (glewResult != GLEW_OK)
@@ -468,7 +468,7 @@ void WaveformArea::on_realize()
 			return;
 		}
 		
-		isGlewInitialized = true;
+		m_isGlewInitialized = true;
 	}
 
 	//We're about to draw the first frame after realization.

@@ -279,7 +279,7 @@ protected:
 	bool m_persistenceClear;
 	
 	// Whether GLEW is already initialized
-	static bool isGlewInitialized;
+	static bool m_isGlewInitialized;
 
 	Framebuffer m_windowFramebuffer;
 
