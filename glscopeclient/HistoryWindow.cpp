@@ -142,7 +142,13 @@ void HistoryWindow::OnWaveformDataReady()
 	//Format timestamp
 	char tmp[128];
 	struct tm ltime;
+	
+#ifdef _WIN32
+	localtime_s(&ltime, &data->m_startTimestamp);
+#else
 	localtime_r(&data->m_startTimestamp, &ltime);
+#endif
+
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
 	snprintf(tmp, sizeof(tmp), "%010zu", data->m_startPicoseconds / 100);	//round to nearest 100ps for display
@@ -314,7 +320,13 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 	snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dir.c_str(), table[m_scope]);
 	string fname = tmp;
 	snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms", dir.c_str(), table[m_scope]);
+	
+#ifdef _WIN32
+	mkdir(tmp);
+#else
 	mkdir(tmp, 0755);
+#endif
+	
 	string dname = tmp;
 
 	//Serialize waveforms
@@ -337,7 +349,13 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 
 		//Format directory for this waveform
 		snprintf(tmp, sizeof(tmp), "%s/waveform_%d", dname.c_str(), id);
-		mkdir(tmp, 0755);
+		
+#ifdef _WIN32
+	mkdir(tmp);
+#else
+	mkdir(tmp, 0755);
+#endif
+
 		string wname = tmp;
 
 		//Save waveform data
