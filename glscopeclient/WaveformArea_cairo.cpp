@@ -33,6 +33,11 @@
 	@brief  Cairo rendering code for WaveformArea
  */
 
+#ifdef _WIN32
+#define _USE_MATH_DEFINES
+#include <cmath>
+#endif
+
 #include "glscopeclient.h"
 #include "WaveformArea.h"
 #include "OscilloscopeWindow.h"
