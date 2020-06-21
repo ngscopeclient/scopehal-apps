@@ -32,6 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Program entry point
  */
+ 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#endif
 
 #include "glscopeclient.h"
 #include "../scopeprotocols/scopeprotocols.h"
@@ -44,6 +49,9 @@
 #include "InstrumentConnectionDialog.h"
 #include <libgen.h>
 #include <omp.h>
+#include <chrono>
+#include <iostream>
+#include <thread>
 
 using namespace std;
 
@@ -159,6 +167,31 @@ int main(int argc, char* argv[])
 
 	//Change to the binary's directory so we can use relative paths for external resources
 	//FIXME: portability warning: this only works on Linux
+#ifdef _WIN32
+	// Retrieve the file name of the current process image
+	TCHAR binPath[MAX_PATH];
+	
+	if( GetModuleFileName(NULL, binPath, MAX_PATH) == 0 )
+	{
+		LogError("Error: GetModuleFileName() failed.\n");
+		return 1;
+	}
+	
+	// Remove file name from path
+	if( !PathRemoveFileSpec(binPath) )
+	{
+		LogError("Error: PathRemoveFileSpec() failed.\n");
+		return 1;
+	}
+	
+	// Set it as current working directory
+	if( SetCurrentDirectory(binPath) == 0 )
+	{
+		LogError("Error: SetCurrentDirectory() failed.\n");
+		return 1;
+	}
+
+#else
 	char binDir[1024];
 	ssize_t readlinkReturn = readlink("/proc/self/exe", binDir, (sizeof(binDir) - 1) );
 	if ( readlinkReturn < 0 )
@@ -190,6 +223,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 	}
+#endif
 
 	g_app = new ScopeApp;
 
@@ -298,7 +332,7 @@ void ScopeThread(Oscilloscope* scope)
 		if(npending > 100)
 		{
 			LogTrace("Queue is too big, sleeping\n");
-			usleep(50 * 1000);
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			tlast = GetTime();
 			continue;
 		}
@@ -308,7 +342,7 @@ void ScopeThread(Oscilloscope* scope)
 		if(npending*dt > 5)
 		{
 			LogTrace("Capture thread got 5 sec ahead of UI, sleeping\n");
-			usleep(50 * 1000);
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			tlast = GetTime();
 			continue;
 		}
@@ -317,7 +351,7 @@ void ScopeThread(Oscilloscope* scope)
 		if(!scope->IsTriggerArmed())
 		{
 			LogTrace("Scope isn't armed, sleeping\n");
-			usleep(5 * 1000);
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			tlast = GetTime();
 			continue;
 		}
@@ -347,7 +381,7 @@ void ScopeThread(Oscilloscope* scope)
 
 		//Wait 1ms before polling again, so the UI thread has a chance to grab the mutex
 		else
-			usleep(1*1000);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		npolls ++;
 	}
