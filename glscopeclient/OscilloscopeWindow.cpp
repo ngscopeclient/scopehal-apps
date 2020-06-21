@@ -642,8 +642,8 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	{
 		//Top level metadata
 		auto wfm = it.second;
-		time.first = wfm["timestamp"].as<long>();
-		time.second = wfm["time_psec"].as<long>();
+		time.first = wfm["timestamp"].as<long long>();
+		time.second = wfm["time_psec"].as<long long>();
 		int waveform_id = wfm["id"].as<int>();
 
 		//Detach old waveforms from our channels (if any)
@@ -1101,6 +1101,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// FIXME: a fair bit of the code below is POSIX specific and will need to be fixed for portability eventually
 
+#ifndef _WIN32
 	//See if the directory exists
 	bool dir_exists = false;
 	int hfile = open(m_currentDataDirName.c_str(), O_RDONLY);
@@ -1152,7 +1153,13 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	//Create the directory we're saving to (if needed)
 	if(!dir_exists)
 	{
-		if(0 != mkdir(m_currentDataDirName.c_str(), 0755))
+#ifdef _WIN32
+		auto result = mkdir(m_currentDataDirName.c_str());
+#else
+		auto result = mkdir(m_currentDataDirName.c_str(), 0755);
+#endif
+		
+		if(0 != result)
 		{
 			string msg = string("The data directory ") + m_currentDataDirName + " could not be created!";
 			Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
@@ -1186,6 +1193,8 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	//Serialize waveform data if needed
 	if(saveWaveforms)
 		SerializeWaveforms(table);
+	
+#endif
 }
 
 string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& table)

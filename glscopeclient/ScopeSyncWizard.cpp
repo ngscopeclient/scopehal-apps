@@ -336,7 +336,9 @@ void ScopeSyncWizard::OnWaveformDataReady()
 		At 10 Gsps this is a whopping 1000 ns, typical values are in the low tens of ns.
 	*/
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
-	m_maxSkewSamples = min(m_maxSkewSamples, 10000L);
+	
+	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
+	
 	m_delta = - m_maxSkewSamples;
 
 	//Set the timer

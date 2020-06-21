@@ -49,7 +49,15 @@
 #include <giomm.h>
 #include <gtkmm.h>
 
+#include <GL/glew.h>
 #include <GL/gl.h>
+
+#ifdef _WIN32
+#include <GL/glcorearb.h>
+#include <GL/glext.h>
+#endif
+
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
