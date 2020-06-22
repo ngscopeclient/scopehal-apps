@@ -23,6 +23,7 @@ add_executable(glscopeclient
 	InstrumentConnectionDialog.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
+	Preference.cpp
 	ProtocolAnalyzerWindow.cpp
 	ProtocolDecoderDialog.cpp
 	ScopeApp.cpp
