@@ -37,41 +37,41 @@
 
 #include "Preference.h"
 
-const std::string& Preference::get_identifier() const
+const std::string& Preference::GetIdentifier() const
 {
     return m_identifier;
 }
 
-const std::string& Preference::get_description() const
+const std::string& Preference::GetDescription() const
 {
     return m_description;
 }
 
-PreferenceType Preference::get_type() const
+PreferenceType Preference::GetType() const
 {
     return m_type;
 }
 
-bool Preference::get_bool() const
+bool Preference::GetBool() const
 {
     if(m_type != PreferenceType::Boolean)
         throw std::runtime_error("Preference type mismatch");
 
-    return get_value_raw<bool>();
+    return GetValueRaw<bool>();
 }
 
-double Preference::get_real() const
+double Preference::GetReal() const
 {
     if(m_type != PreferenceType::Real)
         throw std::runtime_error("Preference type mismatch");
 
-    return get_value_raw<double>();
+    return GetValueRaw<double>();
 }
 
-const std::string& Preference::get_string() const
+const std::string& Preference::GetString() const
 {
     if(m_type != PreferenceType::String)
         throw std::runtime_error("Preference type mismatch");
 
-    return get_value_raw<std::string>();
+    return GetValueRaw<std::string>();
 }

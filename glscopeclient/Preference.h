@@ -91,16 +91,16 @@ public:
     Preference& operator=(Preference&&) = default;
     
 public:
-    const std::string& get_identifier() const;
-    const std::string& get_description() const;
-    PreferenceType get_type() const;
-    bool get_bool() const;
-    double get_real() const;
-    const std::string& get_string() const;
+    const std::string& GetIdentifier() const;
+    const std::string& GetDescription() const;
+    PreferenceType GetType() const;
+    bool GetBool() const;
+    double GetReal() const;
+    const std::string& GetString() const;
     
 private:
     template<typename T>
-    const T& get_value_raw() const
+    const T& GetValueRaw() const
     {
         return *reinterpret_cast<const T*>(&m_value);
     }
