@@ -17,7 +17,7 @@ git clone https://github.com/anthonix/ffts.git
 cd ffts
 mkdir build
 cd build
-cmake ../
+cmake ..
 make
 sudo make install
 ```
@@ -28,7 +28,7 @@ git clone https://github.com/azonenberg/scopehal-cmake.git --recurse-submodules
 cd scopehal-cmake
 mkdir build
 cd build
-cmake ../
+cmake ..
 make
 ```
 
