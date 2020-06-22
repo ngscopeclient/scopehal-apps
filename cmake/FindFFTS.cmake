@@ -9,7 +9,7 @@ if(NOT LIBFFTS_FOUND)
 	/usr/local/include/ffts
 	$ENV{HOME}/.local/include/ffts
   )
-  find_library(LIBFFTS_LIBRARIES NAMES ffts
+  find_library(LIBFFTS_LIBRARIES NAMES ffts libffts_static
 	PATHS
 	${LIBFFTS_PKG_LIBRARY_DIRS}
 	/usr/lib
