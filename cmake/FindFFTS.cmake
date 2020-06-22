@@ -4,10 +4,12 @@ if(NOT LIBFFTS_FOUND)
   find_path(LIBFFTS_INCLUDE_DIR NAMES ffts.h
 	PATHS
 	${LIBFFTS_PKG_INCLUDE_DIRS}
+	/usr
+	/usr/local
+	$ENV{HOME}/.local
+
+	PATH_SUFFIXES
 	include/ffts
-	/usr/include/ffts
-	/usr/local/include/ffts
-	$ENV{HOME}/.local/include/ffts
   )
   find_library(LIBFFTS_LIBRARIES NAMES ffts libffts_static
 	PATHS
