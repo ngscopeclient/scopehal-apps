@@ -4,6 +4,7 @@ if(NOT LIBFFTS_FOUND)
   find_path(LIBFFTS_INCLUDE_DIR NAMES ffts.h
 	PATHS
 	${LIBFFTS_PKG_INCLUDE_DIRS}
+	include/ffts
 	/usr/include/ffts
 	/usr/local/include/ffts
 	$ENV{HOME}/.local/include/ffts
