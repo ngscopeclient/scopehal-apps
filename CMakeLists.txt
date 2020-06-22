@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.3)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 
+set(BUILD_DOCS CACHE BOOL "Build the documentation")
+
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
 set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
@@ -16,9 +18,7 @@ pkg_check_modules(GLM glm>=0.9.8)
 pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 
-# Texlive does not work well in MinGW. Building docs isnt really needed on Windows right now.
-# We might find a fix for this in the future.
-if(NOT WIN32)
+if(BUILD_DOCS)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
 endif()
 
