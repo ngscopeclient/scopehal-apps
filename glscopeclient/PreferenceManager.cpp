@@ -93,8 +93,10 @@ void PreferenceManager::LoadPreferences()
                         break;
                         
                     case PreferenceType::String:
-                    default:
                         preference.SetString(node.as<std::string>());
+                        break;
+                        
+                    default:
                         break;
                 }
             }
