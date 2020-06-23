@@ -91,8 +91,9 @@ std::string Preference::ToString() const
         case PreferenceType::Boolean:
             return GetBool() ? "true" : "false";
         case PreferenceType::Real:
-        default:
             return std::to_string(GetReal());
+        default:
+            throw std::runtime_error("tried to retrieve value from preference in moved-from state");
     }
 }
 
