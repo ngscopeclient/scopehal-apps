@@ -87,15 +87,21 @@ void PreferenceDialog::CreateUi()
                 
                 break;
             }
+            
+            case PreferenceType::Real:
             case PreferenceType::String:
             {
                 auto row = unique_ptr<StringRealRow>{ new StringRealRow() };
                 row->m_identifier = preference.GetIdentifier();
                 row->m_label.set_label(preference.GetLabel());
                 row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_value.set_text(preference.GetString());
                 row->m_label.set_tooltip_text(preference.GetDescription());
                 row->m_value.set_tooltip_text(preference.GetDescription());
+                    
+                const auto text = (preference.GetType() == PreferenceType::Real) ?
+                    to_string(preference.GetReal()) : preference.GetString();
+         
+                row->m_value.set_text(text);
                 
                 if(!last)
                     m_grid.attach(row->m_label, 0, 0, 1, 1);
@@ -108,30 +114,7 @@ void PreferenceDialog::CreateUi()
                 m_stringRealRows.push_back(std::move(row));
                 
                 break;
-            }
-                
-            case PreferenceType::Real:
-            {
-                auto row = unique_ptr<StringRealRow>{ new StringRealRow() };
-                row->m_identifier = preference.GetIdentifier();
-                row->m_label.set_label(preference.GetLabel());
-                row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_value.set_text(to_string(preference.GetReal()));
-                row->m_label.set_tooltip_text(preference.GetDescription());
-                row->m_value.set_tooltip_text(preference.GetDescription());
-              
-                if(!last)
-                    m_grid.attach(row->m_label, 0, 0, 1, 1);
-                else
-                    m_grid.attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
-                    
-                m_grid.attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
-                
-                last = &(row->m_label);
-                m_stringRealRows.push_back(std::move(row));
-                
-                break;
-            }
+            }   
                 
             default:
                 break;
