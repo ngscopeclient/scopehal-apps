@@ -51,14 +51,24 @@ public:
     }
     
 public:
+    // Disallow copy
+    PreferenceManager(const PreferenceManager&) = delete;
+    PreferenceManager(PreferenceManager&&) = default;
+    
+    PreferenceManager& operator=(const PreferenceManager&) = delete;
+    PreferenceManager& operator=(PreferenceManager&&) = default;
+    
+public:
     void SavePreferences();
     std::map<std::string, Preference>& AllPreferences();
     
+    // Value retrieval methods
     const std::string& GetString(const std::string& identifier) const;
     double GetReal(const std::string& identifier) const;
     bool GetBool(const std::string& identifier) const;
     
 private:
+    // Internal helpers
     void DeterminePath();
     void InitializeDefaults();
     void LoadPreferences();

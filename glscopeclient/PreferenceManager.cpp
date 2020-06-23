@@ -14,7 +14,10 @@
 #include "PreferenceManager.h"
 
 #ifndef _WIN32
-static std::string ExpandDirectory(const std::string& in)
+// POSIX-specific filesystem helpers. These will be moved to xptools in a generalized form later.
+
+// Expand things like ~ in path
+static std::string ExpandPath(const std::string& in)
 {
     wordexp_t result;
     wordexp(in.c_str(), &result, 0);
@@ -26,7 +29,7 @@ static std::string ExpandDirectory(const std::string& in)
 
 static void CreateDirectory(const std::string& path)
 {
-    const auto expanded = ExpandDirectory(path);
+    const auto expanded = ExpandPath(path);
 
     struct stat fst{ };
     
@@ -128,7 +131,7 @@ void PreferenceManager::DeterminePath()
     CreateDirectory("~/.config");
     CreateDirectory("~/.config/glscopeclient");
 
-    m_filePath = ExpandDirectory("~/.config/glscopeclient/preferences.yml");
+    m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
 #endif
 }
 
