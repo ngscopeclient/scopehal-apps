@@ -175,7 +175,14 @@ void PreferenceDialog::SaveChanges()
                     
                 if(preference.GetType() == PreferenceType::Real)
                 {
-                    preference.SetReal(stod(text));
+                    try
+                    {
+                        preference.SetReal(stod(text));
+                    }
+                    catch(...)
+                    {
+                        LogError("Ignoring value %s for preference %s: Wrong number format", text.c_str(), preference.GetIdentifier().c_str());
+                    }
                 }
                 else
                 {
@@ -189,6 +196,8 @@ void PreferenceDialog::SaveChanges()
                 break;
         }
     }
+    
+    m_preferences.SavePreferences();
 }
  
  
