@@ -42,6 +42,7 @@
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
 #include "ScopeSyncWizard.h"
+#include "PreferenceManager.h"
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -177,6 +178,9 @@ protected:
 
 	//shared by all scopes/channels
 	std::map<Oscilloscope*, HistoryWindow*> m_historyWindows;
+	
+	//Preferences state
+	PreferenceManager m_preferences;
 
 public:
 	//All of the waveform groups and areas, regardless of where they live

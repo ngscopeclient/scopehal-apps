@@ -106,10 +106,6 @@ void help()
 
 int main(int argc, char* argv[])
 {
-    PreferenceManager mgr{ };
-    mgr.SavePreferences();
-
-
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
 
