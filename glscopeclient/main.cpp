@@ -106,7 +106,7 @@ void help()
 
 int main(int argc, char* argv[])
 {
-    PreferenceManager mgr{ "test.yml" };
+    PreferenceManager mgr{ };
     mgr.SavePreferences();
 
 

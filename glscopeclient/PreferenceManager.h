@@ -43,9 +43,9 @@
 class PreferenceManager
 {
 public:
-    PreferenceManager(std::string filePath)
-        : m_filePath{std::move(filePath)}
+    PreferenceManager()
     {
+        DeterminePath();
         InitializeDefaults();
         LoadPreferences();
     }
@@ -59,6 +59,7 @@ public:
     bool GetBool(const std::string& identifier) const;
     
 private:
+    void DeterminePath();
     void InitializeDefaults();
     void LoadPreferences();
     bool HasPreferenceFile() const;

@@ -4,12 +4,50 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#include <shlobj.h>
 #else
 #include <sys/stat.h>
+#include <wordexp.h>
 #endif
 
 #include "glscopeclient.h"
 #include "PreferenceManager.h"
+
+#ifndef _WIN32
+static std::string ExpandDirectory(const std::string& in)
+{
+    wordexp_t result;
+    wordexp(in.c_str(), &result, 0);
+    auto expanded = result.we_wordv[0];
+    std::string out{ expanded };
+    wordfree(&result);
+    return out;
+}
+
+static void CreateDirectory(const std::string& path)
+{
+    const auto expanded = ExpandDirectory(path);
+
+    struct stat fst{ };
+    
+    // Check if it exists
+    if(stat(expanded.c_str(), &fst) != 0)
+    {
+        // If not, create it
+        if(mkdir(expanded.c_str(), 0755) != 0 && errno != EEXIST)
+        {
+            perror("");
+            throw std::runtime_error("failed to create preferences directory");
+        }    
+    }
+    else if(!S_ISDIR(fst.st_mode))
+    {
+        // Exists, but is not a directory
+        throw std::runtime_error("preferences directory exists but is not a directory");
+    }
+}
+#endif
+
 
 void PreferenceManager::InitializeDefaults()
 {
@@ -27,7 +65,7 @@ bool PreferenceManager::HasPreferenceFile() const
 {
 #ifdef _WIN32
     const auto fattr = GetFileAttributes(m_filePath.c_str());
-    return (fattr !0 INVALID_FILE_ATTRIBUTE) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
+    return (fattr != INVALID_FILE_ATTRIBUTE) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
 #else
     struct stat fs{ };
     const auto result = stat(m_filePath.c_str(), &fs);
@@ -48,6 +86,50 @@ const Preference& PreferenceManager::GetPreference(const std::string& identifier
     {
         return it->second;
     }
+}
+
+void PreferenceManager::DeterminePath()
+{
+#ifdef _WIN32
+    TCHAR stem[MAX_PATH];
+    if(S_OK != SHGetKnownFolderPath(
+        FOLDERID_RoamingAppData,
+        KF_FLAG_CREATE,
+        NULL,
+        stem))
+    {
+        throw std::runtime_error("failed to resolve %appdata%");
+    }
+    
+    TCHAR directory[MAX_PATH];
+    if(NULL == PathCombine(directory, stem, "glscopeclient"))
+    {
+        throw std::runtime_error("failed to build directory path");
+    }
+    
+    // Ensure the directory exists
+    const auto result = CreateDirectory(directory, NULL);
+    
+    if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
+    {
+        throw std::runtime_error("failed to create preferences directory");
+    }
+    
+    // Build final path
+    TCHAR config[MAX_PATH];
+    if(NULL == PathCombine(config, directory, "preferences.yml"))
+    {
+        throw std::runtime_error("failed to build directory path");
+    }
+    
+    m_filePath = std::string(config);
+#else
+    // Ensure all directories in path exist
+    CreateDirectory("~/.config");
+    CreateDirectory("~/.config/glscopeclient");
+
+    m_filePath = ExpandDirectory("~/.config/glscopeclient/preferences.yml");
+#endif
 }
 
 const std::string& PreferenceManager::GetString(const std::string& identifier) const
