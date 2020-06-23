@@ -78,8 +78,8 @@ const std::string& Preference::GetString() const
 
 void Preference::CleanUp()
 {
-    //if(m_type == PreferenceType::String)
-    //    (reinterpret_cast<std::string*>(&m_value))->~basic_string();
+    if(m_type == PreferenceType::String)
+        (reinterpret_cast<std::string*>(&m_value))->~basic_string();
 }
 
 std::string Preference::ToString() const
