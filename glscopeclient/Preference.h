@@ -33,8 +33,8 @@
 	@brief  Basic preference class and auxilliary types
  */
 
-#ifndef Preference_H
-#define Preference_H
+#ifndef Preference_h
+#define Preference_h
 
 #include <string>
 #include <type_traits>
@@ -148,4 +148,4 @@ private:
     PreferenceValue m_value;
 };
 
-#endif // Preference_H
+#endif // Preference_h

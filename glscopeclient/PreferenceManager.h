@@ -33,8 +33,8 @@
 	@brief  Stores and manages preference values
  */
 
-#ifndef PreferenceManager_H
-#define PreferenceManager_H
+#ifndef PreferenceManager_h
+#define PreferenceManager_h
 
 #include <map>
 #include <string>
@@ -87,4 +87,4 @@ private:
     std::string m_filePath;
 };
 
-#endif // PreferenceManager_H
+#endif // PreferenceManager_h

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -37,12 +37,14 @@
 
 #include "Preference.h"
 
-const std::string& Preference::GetIdentifier() const
+using namespace std;
+
+const string& Preference::GetIdentifier() const
 {
     return m_identifier;
 }
 
-const std::string& Preference::GetDescription() const
+const string& Preference::GetDescription() const
 {
     return m_description;
 }
@@ -55,7 +57,7 @@ PreferenceType Preference::GetType() const
 bool Preference::GetBool() const
 {
     if(m_type != PreferenceType::Boolean)
-        throw std::runtime_error("Preference type mismatch");
+        throw runtime_error("Preference type mismatch");
 
     return GetValueRaw<bool>();
 }
@@ -63,7 +65,7 @@ bool Preference::GetBool() const
 double Preference::GetReal() const
 {
     if(m_type != PreferenceType::Real)
-        throw std::runtime_error("Preference type mismatch");
+        throw runtime_error("Preference type mismatch");
 
     return GetValueRaw<double>();
 }
@@ -71,7 +73,7 @@ double Preference::GetReal() const
 const std::string& Preference::GetString() const
 {
     if(m_type != PreferenceType::String)
-        throw std::runtime_error("Preference type mismatch");
+        throw runtime_error("Preference type mismatch");
 
     return GetValueRaw<std::string>();
 }
@@ -79,10 +81,10 @@ const std::string& Preference::GetString() const
 void Preference::CleanUp()
 {
     if(m_type == PreferenceType::String)
-        (reinterpret_cast<std::string*>(&m_value))->~basic_string();
+        (reinterpret_cast<string*>(&m_value))->~basic_string();
 }
 
-std::string Preference::ToString() const
+string Preference::ToString() const
 {
     switch(m_type)
     {
@@ -91,17 +93,17 @@ std::string Preference::ToString() const
         case PreferenceType::Boolean:
             return GetBool() ? "true" : "false";
         case PreferenceType::Real:
-            return std::to_string(GetReal());
+            return to_string(GetReal());
         default:
-            throw std::runtime_error("tried to retrieve value from preference in moved-from state");
+            throw runtime_error("tried to retrieve value from preference in moved-from state");
     }
 }
 
 void Preference::MoveFrom(Preference& other)
 {
     m_type = other.m_type;
-    m_identifier = std::move(other.m_identifier);
-    m_description = std::move(other.m_description);
+    m_identifier = move(other.m_identifier);
+    m_description = move(other.m_description);
     
     switch(other.m_type)
     {
@@ -114,7 +116,7 @@ void Preference::MoveFrom(Preference& other)
             break;
             
         case PreferenceType::String:
-            Construct<std::string>(std::move(other.GetValueRaw<std::string>()));
+            Construct<string>(move(other.GetValueRaw<string>()));
             break;
             
         default:
@@ -136,8 +138,8 @@ void Preference::SetReal(double value)
     Construct<double>(value);
 }
 
-void Preference::SetString(std::string value)
+void Preference::SetString(string value)
 {
     CleanUp();
-    Construct<std::string>(std::move(value));
+    Construct<string>(move(value));
 }

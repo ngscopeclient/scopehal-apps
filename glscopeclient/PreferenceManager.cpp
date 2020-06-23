@@ -1,3 +1,31 @@
+/***********************************************************************************************************************
+*                                                                                                                      *
+* ANTIKERNEL v0.1                                                                                                      *
+*                                                                                                                      *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* All rights reserved.                                                                                                 *
+*                                                                                                                      *
+* Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
+* following conditions are met:                                                                                        *
+*                                                                                                                      *
+*    * Redistributions of source code must retain the above copyright notice, this list of conditions, and the         *
+*      following disclaimer.                                                                                           *
+*                                                                                                                      *
+*    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the       *
+*      following disclaimer in the documentation and/or other materials provided with the distribution.                *
+*                                                                                                                      *
+*    * Neither the name of the author nor the names of any contributors may be used to endorse or promote products     *
+*      derived from this software without specific prior written permission.                                           *
+*                                                                                                                      *
+* THIS SOFTWARE IS PROVIDED BY THE AUTHORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED   *
+* TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL *
+* THE AUTHORS BE HELD LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES        *
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR       *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT *
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE       *
+* POSSIBILITY OF SUCH DAMAGE.                                                                                          *
+*                                                                                                                      *
+***********************************************************************************************************************/
 
 #include <fstream>
 
@@ -13,21 +41,23 @@
 #include "glscopeclient.h"
 #include "PreferenceManager.h"
 
+using namespace std;
+
 #ifndef _WIN32
 // POSIX-specific filesystem helpers. These will be moved to xptools in a generalized form later.
 
 // Expand things like ~ in path
-static std::string ExpandPath(const std::string& in)
+static std::string ExpandPath(const string& in)
 {
     wordexp_t result;
     wordexp(in.c_str(), &result, 0);
     auto expanded = result.we_wordv[0];
-    std::string out{ expanded };
+    string out{ expanded };
     wordfree(&result);
     return out;
 }
 
-static void CreateDirectory(const std::string& path)
+static void CreateDirectory(const string& path)
 {
     const auto expanded = ExpandPath(path);
 
@@ -40,13 +70,13 @@ static void CreateDirectory(const std::string& path)
         if(mkdir(expanded.c_str(), 0755) != 0 && errno != EEXIST)
         {
             perror("");
-            throw std::runtime_error("failed to create preferences directory");
+            throw runtime_error("failed to create preferences directory");
         }    
     }
     else if(!S_ISDIR(fst.st_mode))
     {
         // Exists, but is not a directory
-        throw std::runtime_error("preferences directory exists but is not a directory");
+        throw runtime_error("preferences directory exists but is not a directory");
     }
 }
 #endif
@@ -59,7 +89,7 @@ void PreferenceManager::InitializeDefaults()
     AddPreference("test_bool", "Third test value", true);
 }
 
-std::map<std::string, Preference>& PreferenceManager::AllPreferences()
+map<string, Preference>& PreferenceManager::AllPreferences()
 {
     return m_preferences;
 }
@@ -77,13 +107,13 @@ bool PreferenceManager::HasPreferenceFile() const
 #endif
 }
 
-const Preference& PreferenceManager::GetPreference(const std::string& identifier) const
+const Preference& PreferenceManager::GetPreference(const string& identifier) const
 {
     const auto it = m_preferences.find(identifier);
     
     if(it == m_preferences.end())
     {
-        throw std::runtime_error("tried to access non-existant preference");
+        throw runtime_error("tried to access non-existant preference");
     }
     else
     {
@@ -107,7 +137,7 @@ void PreferenceManager::DeterminePath()
     TCHAR directory[MAX_PATH];
     if(NULL == PathCombine(directory, stem, "glscopeclient"))
     {
-        throw std::runtime_error("failed to build directory path");
+        throw runtime_error("failed to build directory path");
     }
     
     // Ensure the directory exists
@@ -115,17 +145,17 @@ void PreferenceManager::DeterminePath()
     
     if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
     {
-        throw std::runtime_error("failed to create preferences directory");
+        throw runtime_error("failed to create preferences directory");
     }
     
     // Build final path
     TCHAR config[MAX_PATH];
     if(NULL == PathCombine(config, directory, "preferences.yml"))
     {
-        throw std::runtime_error("failed to build directory path");
+        throw runtime_error("failed to build directory path");
     }
     
-    m_filePath = std::string(config);
+    m_filePath = string(config);
 #else
     // Ensure all directories in path exist
     CreateDirectory("~/.config");
@@ -135,17 +165,17 @@ void PreferenceManager::DeterminePath()
 #endif
 }
 
-const std::string& PreferenceManager::GetString(const std::string& identifier) const
+const std::string& PreferenceManager::GetString(const string& identifier) const
 {
     return GetPreference(identifier).GetString();
 }
 
-double PreferenceManager::GetReal(const std::string& identifier) const
+double PreferenceManager::GetReal(const string& identifier) const
 {
     return GetPreference(identifier).GetReal();
 }
 
-bool PreferenceManager::GetBool(const std::string& identifier) const
+bool PreferenceManager::GetBool(const string& identifier) const
 {
     return GetPreference(identifier).GetBool();
 }
@@ -178,7 +208,7 @@ void PreferenceManager::LoadPreferences()
                         break;
                         
                     case PreferenceType::String:
-                        preference.SetString(node.as<std::string>());
+                        preference.SetString(node.as<string>());
                         break;
                         
                     default:
@@ -187,7 +217,7 @@ void PreferenceManager::LoadPreferences()
             }
         }
     }
-    catch(const std::exception& ex)
+    catch(const exception& ex)
     {
         LogWarning("Warning: Preference file was present, but couldn't be read. Ignoring. (%s)", ex.what());
     }
@@ -202,7 +232,7 @@ void PreferenceManager::SavePreferences()
         node[entry.first] = entry.second.ToString();
     }
     
-    std::ofstream outfs{ m_filePath };
+    ofstream outfs{ m_filePath };
     
     if(!outfs)
     {
