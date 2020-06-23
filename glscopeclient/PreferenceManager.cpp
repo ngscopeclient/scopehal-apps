@@ -197,22 +197,30 @@ void PreferenceManager::LoadPreferences()
             {
                 auto& preference = entry.second;
             
-                switch(preference.GetType())
+                try
                 {
-                    case PreferenceType::Boolean:
-                        preference.SetBool(node.as<bool>());
-                        break;
-                        
-                    case PreferenceType::Real:
-                        preference.SetReal(node.as<double>());
-                        break;
-                        
-                    case PreferenceType::String:
-                        preference.SetString(node.as<string>());
-                        break;
-                        
-                    default:
-                        break;
+                    switch(preference.GetType())
+                    {
+                        case PreferenceType::Boolean:
+                            preference.SetBool(node.as<bool>());
+                            break;
+                            
+                        case PreferenceType::Real:
+                            preference.SetReal(node.as<double>());
+                            break;
+                            
+                        case PreferenceType::String:
+                            preference.SetString(node.as<string>());
+                            break;
+                            
+                        default:
+                            break;
+                    }
+                }
+                catch(...)
+                {
+                    LogWarning("Warning: Can't parse preference value %s for preference %s, ignoring",
+                        node.as<string>().c_str(), preference.GetIdentifier().c_str());
                 }
             }
         }
