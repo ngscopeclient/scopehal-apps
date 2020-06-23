@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2018 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,113 +30,50 @@
 /**
 	@file
 	@author Katharina B.
-	@brief  Implementation of Preference
+	@brief  Stores and manages preference values
  */
- 
-#include <stdexcept>
 
+#ifndef PreferenceManager_H
+#define PreferenceManager_H
+
+#include <map>
+#include <string>
 #include "Preference.h"
 
-const std::string& Preference::GetIdentifier() const
+class PreferenceManager
 {
-    return m_identifier;
-}
-
-const std::string& Preference::GetDescription() const
-{
-    return m_description;
-}
-
-PreferenceType Preference::GetType() const
-{
-    return m_type;
-}
-
-bool Preference::GetBool() const
-{
-    if(m_type != PreferenceType::Boolean)
-        throw std::runtime_error("Preference type mismatch");
-
-    return GetValueRaw<bool>();
-}
-
-double Preference::GetReal() const
-{
-    if(m_type != PreferenceType::Real)
-        throw std::runtime_error("Preference type mismatch");
-
-    return GetValueRaw<double>();
-}
-
-const std::string& Preference::GetString() const
-{
-    if(m_type != PreferenceType::String)
-        throw std::runtime_error("Preference type mismatch");
-
-    return GetValueRaw<std::string>();
-}
-
-void Preference::CleanUp()
-{
-    //if(m_type == PreferenceType::String)
-    //    (reinterpret_cast<std::string*>(&m_value))->~basic_string();
-}
-
-std::string Preference::ToString() const
-{
-    switch(m_type)
+public:
+    PreferenceManager(std::string filePath)
+        : m_filePath{std::move(filePath)}
     {
-        case PreferenceType::String:
-            return GetString();
-        case PreferenceType::Boolean:
-            return GetBool() ? "true" : "false";
-        case PreferenceType::Real:
-        default:
-            return std::to_string(GetReal());
-    }
-}
-
-void Preference::MoveFrom(Preference& other)
-{
-    m_type = other.m_type;
-    m_identifier = std::move(other.m_identifier);
-    m_description = std::move(other.m_description);
-    
-    switch(other.m_type)
-    {
-        case PreferenceType::Boolean:
-            Construct<bool>(other.GetBool());
-            break;
-            
-        case PreferenceType::Real:
-            Construct<double>(other.GetReal());
-            break;
-            
-        case PreferenceType::String:
-            Construct<std::string>(std::move(other.GetValueRaw<std::string>()));
-            break;
-            
-        default:
-            break;
+        InitializeDefaults();
+        LoadPreferences();
     }
     
-    other.m_type = PreferenceType::None;
-}
+public:
+    void SavePreferences();
+    std::map<std::string, Preference>& AllPreferences();
+    
+    const std::string& GetString(const std::string& identifier) const;
+    double GetReal(const std::string& identifier) const;
+    bool GetBool(const std::string& identifier) const;
+    
+private:
+    void InitializeDefaults();
+    void LoadPreferences();
+    bool HasPreferenceFile() const;
+    const Preference& GetPreference(const std::string& identifier) const;
+    
+    template<typename T>
+    void AddPreference(std::string identifier, std::string description, T defaultValue)
+    {
+        auto pref = Preference(identifier, std::move(description), std::move(defaultValue));   
+        m_preferences.emplace(identifier, std::move(pref));
+    }
 
-void Preference::SetBool(bool value)
-{
-    CleanUp();
-    Construct<bool>(value);
-}
+private:
+    std::map<std::string, Preference> m_preferences{ };
+    std::string m_filePath;
+};
 
-void Preference::SetReal(double value)
-{
-    CleanUp();
-    Construct<double>(value);
-}
-
-void Preference::SetString(std::string value)
-{
-    CleanUp();
-    Construct<std::string>(std::move(value));
-}
+#endif // PreferenceManager_H

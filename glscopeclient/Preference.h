@@ -49,7 +49,8 @@ enum class PreferenceType
 {
     Boolean,
     String,
-    Real
+    Real,
+    None // Only for moved-from values
 };
 
 class Preference
@@ -83,12 +84,25 @@ public:
         new (&m_value) double(defaultValue);
     }
     
+    ~Preference()
+    {
+        CleanUp();
+    }
+    
 public:
     Preference(const Preference&) = delete;
-    Preference(Preference&&) = default;
+    Preference(Preference&& other)
+    {
+        MoveFrom(other);
+    }
     
     Preference& operator=(const Preference&) = delete;
-    Preference& operator=(Preference&&) = default;
+    Preference& operator=(Preference&& other)
+    {
+        CleanUp();
+        MoveFrom(other);
+        return *this;
+    }
     
 public:
     const std::string& GetIdentifier() const;
@@ -97,6 +111,12 @@ public:
     bool GetBool() const;
     double GetReal() const;
     const std::string& GetString() const;
+    std::string ToString() const;
+    
+    void SetBool(bool value);
+    void SetReal(double value);
+    void SetString(std::string value);
+    
     
 private:
     template<typename T>
@@ -104,6 +124,22 @@ private:
     {
         return *reinterpret_cast<const T*>(&m_value);
     }
+    
+    template<typename T>
+    T& GetValueRaw()
+    {
+        return *reinterpret_cast<T*>(&m_value);
+    }
+    
+    void CleanUp();
+    
+    template<typename T>
+    void Construct(T value)
+    {
+        new (&m_value) T(std::move(value));
+    }
+    
+    void MoveFrom(Preference& other);
     
 private:
     std::string m_identifier;

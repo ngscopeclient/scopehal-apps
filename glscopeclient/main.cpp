@@ -53,6 +53,8 @@
 #include <iostream>
 #include <thread>
 
+#include "PreferenceManager.h"
+
 using namespace std;
 
 //for color selection
@@ -104,6 +106,10 @@ void help()
 
 int main(int argc, char* argv[])
 {
+    PreferenceManager mgr{ "test.yml" };
+    mgr.SavePreferences();
+
+
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
 
