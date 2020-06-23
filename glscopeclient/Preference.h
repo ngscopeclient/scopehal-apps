@@ -77,6 +77,13 @@ public:
         new (&m_value) std::string(std::move(defaultValue));
     }
     
+    Preference(std::string identifier, std::string description, const char* defaultValue)
+        :   m_identifier{std::move(identifier)}, m_description{std::move(description)},
+            m_type{PreferenceType::String}
+    {
+        new (&m_value) std::string(defaultValue);
+    }
+    
     Preference(std::string identifier, std::string description, double defaultValue)
         :   m_identifier{std::move(identifier)}, m_description{std::move(description)},
             m_type{PreferenceType::Real}
