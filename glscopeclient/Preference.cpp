@@ -104,6 +104,7 @@ void Preference::MoveFrom(Preference& other)
     m_type = other.m_type;
     m_identifier = move(other.m_identifier);
     m_description = move(other.m_description);
+    m_label = move(other.m_label);
     
     switch(other.m_type)
     {
@@ -124,6 +125,12 @@ void Preference::MoveFrom(Preference& other)
     }
     
     other.m_type = PreferenceType::None;
+}
+
+
+const std::string& Preference::GetLabel() const
+{
+    return m_label;
 }
 
 void Preference::SetBool(bool value)

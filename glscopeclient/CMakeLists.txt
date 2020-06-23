@@ -25,6 +25,7 @@ add_executable(glscopeclient
 	Program.cpp
 	Preference.cpp
 	PreferenceManager.cpp
+	PreferenceDialog.cpp
 	ProtocolAnalyzerWindow.cpp
 	ProtocolDecoderDialog.cpp
 	ScopeApp.cpp

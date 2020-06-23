@@ -76,9 +76,9 @@ private:
     const Preference& GetPreference(const std::string& identifier) const;
     
     template<typename T>
-    void AddPreference(std::string identifier, std::string description, T defaultValue)
+    void AddPreference(std::string identifier, std::string label, std::string description, T defaultValue)
     {
-        auto pref = Preference(identifier, std::move(description), std::move(defaultValue));   
+        auto pref = Preference(identifier, std::move(label), std::move(description), std::move(defaultValue));   
         m_preferences.emplace(identifier, std::move(pref));
     }
 

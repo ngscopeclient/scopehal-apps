@@ -84,9 +84,9 @@ static void CreateDirectory(const string& path)
 
 void PreferenceManager::InitializeDefaults()
 {
-    AddPreference("test_string", "First test value", "string");
-    AddPreference("test_real", "Second test value", 42.09);
-    AddPreference("test_bool", "Third test value", true);
+    AddPreference("test_string", "Test string", "First test value", "string");
+    AddPreference("test_real", "Test real", "Second test value", 42.09);
+    AddPreference("test_bool", "Test boolean", "Third test value", true);
 }
 
 map<string, Preference>& PreferenceManager::AllPreferences()

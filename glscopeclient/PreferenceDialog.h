@@ -30,131 +30,51 @@
 /**
 	@file
 	@author Katharina B.
-	@brief  Basic preference class and auxilliary types
+	@brief  A window that allows manipulation of preference values
  */
+ 
+#ifndef PreferenceDialog_h
+#define PreferenceDialog_h
 
-#ifndef Preference_h
-#define Preference_h
+#include <memory>
+#include <vector>
+#include "glscopeclient.h"
+#include "PreferenceManager.h"
 
-#include <string>
-#include <type_traits>
-#include <utility>
+class OscilloscopeWindow;
 
-constexpr std::size_t max(std::size_t a, std::size_t b)
+struct BooleanRow
 {
-    return (a > b) ? a : b;
-}
-
-enum class PreferenceType
-{
-    Boolean,
-    String,
-    Real,
-    None // Only for moved-from values
-};
-
-class Preference
-{
-private:
-    using PreferenceValue = typename std::aligned_union<
-        max(max(sizeof(bool), sizeof(double)), sizeof(std::string)),
-        bool, std::string, double
-    >::type;
-
-public:
-    // Taking string as value and then moving is intended
-    Preference(std::string identifier, std::string label, std::string description, bool defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Boolean}
-    {
-        new (&m_value) bool(defaultValue);
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
-    {
-        new (&m_value) std::string(std::move(defaultValue));
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
-    {
-        new (&m_value) std::string(defaultValue);
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, double defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Real}
-    {
-        new (&m_value) double(defaultValue);
-    }
-    
-    ~Preference()
-    {
-        CleanUp();
-    }
-    
-public:
-    Preference(const Preference&) = delete;
-    Preference(Preference&& other)
-    {
-        MoveFrom(other);
-    }
-    
-    Preference& operator=(const Preference&) = delete;
-    Preference& operator=(Preference&& other)
-    {
-        CleanUp();
-        MoveFrom(other);
-        return *this;
-    }
-    
-public:
-    const std::string& GetIdentifier() const;
-    const std::string& GetLabel() const;
-    const std::string& GetDescription() const;
-    PreferenceType GetType() const;
-    bool GetBool() const;
-    double GetReal() const;
-    const std::string& GetString() const;
-    std::string ToString() const;
-    
-    void SetBool(bool value);
-    void SetReal(double value);
-    void SetString(std::string value);
-    
-    
-private:
-    template<typename T>
-    const T& GetValueRaw() const
-    {
-        return *reinterpret_cast<const T*>(&m_value);
-    }
-    
-    template<typename T>
-    T& GetValueRaw()
-    {
-        return *reinterpret_cast<T*>(&m_value);
-    }
-    
-    void CleanUp();
-    
-    template<typename T>
-    void Construct(T value)
-    {
-        new (&m_value) T(std::move(value));
-    }
-    
-    void MoveFrom(Preference& other);
-    
-private:
     std::string m_identifier;
-    std::string m_label;
-    std::string m_description;
-    PreferenceType m_type;
-    PreferenceValue m_value;
+    Gtk::Label m_label;
+    Gtk::CheckButton m_check;
 };
 
-#endif // Preference_h
+struct StringRealRow
+{
+    std::string m_identifier;
+    Gtk::Label m_label;
+    Gtk::Entry m_value;
+};
+
+
+class PreferenceDialog : public Gtk::Dialog
+{
+public:
+    PreferenceDialog(OscilloscopeWindow* parent, PreferenceManager& preferences);
+ 
+    void SaveChanges();
+ 
+protected:
+    void CreateUi();
+ 
+protected:
+    PreferenceManager& m_preferences;
+    std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
+    std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
+    
+    Gtk::Grid m_grid;
+};
+
+
+#endif // PreferenceDialog_h

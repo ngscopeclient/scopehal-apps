@@ -37,6 +37,7 @@
 #include "../scopehal/Instrument.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "OscilloscopeWindow.h"
+#include "PreferenceDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include <unistd.h>
@@ -189,6 +190,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 				m_setupMenu.append(m_setupTriggerMenuItem);
 					m_setupTriggerMenuItem.set_label("Trigger");
 					m_setupTriggerMenuItem.set_submenu(m_setupTriggerMenu);
+			    m_setupMenu.append(m_preferencesMenuItem);
+			        m_preferencesMenuItem.set_label("Preferences");
+			         m_preferencesMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnPreferences));
 			m_menu.append(m_viewMenuItem);
 				m_viewMenuItem.set_label("View");
 				m_viewMenuItem.set_submenu(m_viewMenu);
@@ -389,6 +394,28 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	}
 
 	return true;
+}
+
+void OscilloscopeWindow::OnPreferences()
+{
+    if(m_preferenceDialog)
+        delete m_preferenceDialog;
+
+    m_preferenceDialog = new PreferenceDialog{ this, m_preferences };
+    m_preferenceDialog->show();
+    m_preferenceDialog->signal_response().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnPreferenceDialogResponse));
+}
+
+void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
+{
+	if(response == Gtk::RESPONSE_OK)
+	{
+		m_preferenceDialog->SaveChanges();
+	}
+
+	//Clean up the dialog
+	delete m_preferenceDialog;
+	m_preferenceDialog = NULL;
 }
 
 /**
