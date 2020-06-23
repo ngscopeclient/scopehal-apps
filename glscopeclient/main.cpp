@@ -53,6 +53,8 @@
 #include <iostream>
 #include <thread>
 
+#include "PreferenceManager.h"
+
 using namespace std;
 
 //for color selection

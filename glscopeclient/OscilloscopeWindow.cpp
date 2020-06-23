@@ -405,6 +405,9 @@ bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
  */
 void OscilloscopeWindow::CloseSession()
 {
+    //Save preferences
+    m_preferences.SavePreferences();
+
 	//Close all of our UI elements
 	for(auto it : m_historyWindows)
 		delete it.second;
