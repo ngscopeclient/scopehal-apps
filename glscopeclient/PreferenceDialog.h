@@ -66,7 +66,7 @@ public:
     void SaveChanges();
  
 protected:
-    void CreateUi();
+    void CreateWidgets();
  
 protected:
     PreferenceManager& m_preferences;

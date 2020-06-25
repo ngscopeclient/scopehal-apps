@@ -432,6 +432,14 @@ bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
  */
 void OscilloscopeWindow::CloseSession()
 {
+    //Close preferences dialog, if it exists
+    if(m_preferenceDialog)
+    {
+        m_preferenceDialog->hide();
+        delete m_preferenceDialog;
+        m_preferenceDialog = nullptr;
+    }
+
     //Save preferences
     m_preferences.SavePreferences();
 

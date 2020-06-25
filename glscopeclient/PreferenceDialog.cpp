@@ -27,6 +27,12 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
+/**
+	@file
+	@author Katharina B.
+	@brief Implementation of the preference dialog class.
+ */
+
 #include "PreferenceDialog.h"
 
 #include <utility>
@@ -41,11 +47,11 @@ PreferenceDialog::PreferenceDialog(OscilloscopeWindow* parent, PreferenceManager
     : Gtk::Dialog("Preferences", *parent, Gtk::DIALOG_MODAL)
     , m_preferences(preferences)
 {
-    CreateUi();
+    CreateWidgets();
     show_all();
 }
 
-void PreferenceDialog::CreateUi()
+void PreferenceDialog::CreateWidgets()
 {
     add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
