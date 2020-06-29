@@ -61,6 +61,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
 	, m_scopeSyncWizard(NULL)
+	, m_haltConditionsDialog(this)
 {
 	SetTitle();
 
@@ -189,6 +190,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 				m_setupMenu.append(m_setupTriggerMenuItem);
 					m_setupTriggerMenuItem.set_label("Trigger");
 					m_setupTriggerMenuItem.set_submenu(m_setupTriggerMenu);
+				m_setupMenu.append(m_setupHaltMenuItem);
+					m_setupHaltMenuItem.set_label("Halt Conditions...");
+					m_setupHaltMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnHaltConditions));
 			m_menu.append(m_viewMenuItem);
 				m_viewMenuItem.set_label("View");
 				m_viewMenuItem.set_submenu(m_viewMenu);
@@ -366,6 +371,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 	//Don't show measurements or wizards by default
 	group->m_measurementView.hide();
+	m_haltConditionsDialog.hide();
 
 	//Initialize the style sheets
 	m_css = Gtk::CssProvider::create();
@@ -1106,7 +1112,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 
 	//See if the directory exists
 	bool dir_exists = false;
-	
+
 #ifndef _WIN32
 	int hfile = open(m_currentDataDirName.c_str(), O_RDONLY);
 	if(hfile >= 0)
@@ -1134,7 +1140,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	}
 #else
 	auto fileType = GetFileAttributes(m_currentDataDirName.c_str());
-	
+
 	// Check if any file exists at this path
 	if(fileType != INVALID_FILE_ATTRIBUTES)
 	{
@@ -1157,7 +1163,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 
 	//See if the file exists
 	bool file_exists = false;
-	
+
 #ifndef _WIN32
 	hfile = open(m_currentFileName.c_str(), O_RDONLY);
 	if(hfile >= 0)
@@ -1172,7 +1178,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		&& !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
 
 #endif
-	
+
 
 	//If we are trying to create a new file, warn if the directory exists but the file does not
 	//If the file exists GTK will warn, and we don't want to prompt the user twice if both exist!
@@ -1194,7 +1200,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 #else
 		auto result = mkdir(m_currentDataDirName.c_str(), 0755);
 #endif
-		
+
 		if(0 != result)
 		{
 			string msg = string("The data directory ") + m_currentDataDirName + " could not be created!";
@@ -1988,6 +1994,10 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	//Update the trigger sync wizard, if it's active
 	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
 		m_scopeSyncWizard->OnWaveformDataReady();
+
+	//Check if a conditional halt applies
+	if(m_haltConditionsDialog.ShouldHalt())
+		OnStop();
 }
 
 void OscilloscopeWindow::RefreshAllDecoders()
@@ -2205,4 +2215,13 @@ void OscilloscopeWindow::OnScopeSync()
 void OscilloscopeWindow::OnSyncComplete()
 {
 	m_syncComplete = true;
+}
+
+/**
+	@brief Shows the halt conditions dialog
+ */
+void OscilloscopeWindow::OnHaltConditions()
+{
+	m_haltConditionsDialog.show();
+	m_haltConditionsDialog.RefreshChannels();
 }

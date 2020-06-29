@@ -42,6 +42,7 @@
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
 #include "ScopeSyncWizard.h"
+#include "HaltConditionsDialog.h"
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -143,6 +144,7 @@ protected:
 					Gtk::MenuItem m_setupSyncMenuItem;
 					Gtk::MenuItem m_setupTriggerMenuItem;
 						Gtk::Menu m_setupTriggerMenu;
+					Gtk::MenuItem m_setupHaltMenuItem;
 			Gtk::MenuItem m_channelsMenuItem;
 				Gtk::Menu m_channelsMenu;
 			Gtk::MenuItem m_viewMenuItem;
@@ -206,6 +208,7 @@ public:
 	void OnClearSweeps();
 	void OnTimebaseSettings();
 	void OnScopeSync();
+	void OnHaltConditions();
 
 	//Protocol decoding etc
 	void RefreshAllDecoders();
@@ -262,6 +265,9 @@ public:
 	//Instrument sync wizard
 	ScopeSyncWizard* m_scopeSyncWizard;
 	bool m_syncComplete;
+
+	//Conditional halting
+	HaltConditionsDialog m_haltConditionsDialog;
 };
 
 #endif

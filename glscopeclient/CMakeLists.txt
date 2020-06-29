@@ -5,9 +5,9 @@ find_package(OpenGL REQUIRED)
 # Additional libraries on Windows
 if(WIN32)
 	set(WIN_LIBS shlwapi)
-	
+
 	# For some reason, find_package does not manage to find glew32 on Windows. Hardcoding for now.
-	set(GLEW_LIBRARIES "glew32") 
+	set(GLEW_LIBRARIES "glew32")
 endif()
 
 #Set up include paths
@@ -19,6 +19,7 @@ link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 add_executable(glscopeclient
 	ChannelPropertiesDialog.cpp
 	Framebuffer.cpp
+	HaltConditionsDialog.cpp
 	HistoryWindow.cpp
 	InstrumentConnectionDialog.cpp
 	OscilloscopeWindow.cpp
