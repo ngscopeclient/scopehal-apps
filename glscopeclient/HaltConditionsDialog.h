@@ -47,11 +47,17 @@ public:
 
 	void RefreshChannels();
 
-	bool ShouldHalt();
+	bool ShouldHalt(int64_t& timestamp);
+	bool ShouldMoveToHalt()
+	{ return m_moveToEventButton.get_active(); }
+
+	OscilloscopeChannel* GetHaltChannel()
+	{ return m_chanptrs[m_channelNameBox.get_active_text()]; }
 
 protected:
 	Gtk::Grid m_grid;
 		Gtk::CheckButton m_haltEnabledButton;
+		Gtk::CheckButton m_moveToEventButton;
 		Gtk::Label m_channelNameLabel;
 			Gtk::ComboBoxText m_channelNameBox;
 			Gtk::ComboBoxText m_operatorBox;

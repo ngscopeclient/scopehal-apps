@@ -62,6 +62,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	, m_multiScopeFreeRun(false)
 	, m_scopeSyncWizard(NULL)
 	, m_haltConditionsDialog(this)
+	, m_triggerArmed(false)
 {
 	SetTitle();
 
@@ -385,7 +386,16 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
-	PollScopes();
+	if(m_triggerArmed)
+		PollScopes();
+
+	//Discard all pending waveform data if the trigger isn't armed.
+	//Failure to do this can lead to a spurious trigger after we wanted to stop.
+	else
+	{
+		for(auto scope : m_scopes)
+			scope->ClearPendingWaveforms();
+	}
 
 	//Clean up the scope sync wizard if it's completed
 	if(m_syncComplete)
@@ -1996,8 +2006,35 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 		m_scopeSyncWizard->OnWaveformDataReady();
 
 	//Check if a conditional halt applies
-	if(m_haltConditionsDialog.ShouldHalt())
+	int64_t timestamp;
+	if(m_haltConditionsDialog.ShouldHalt(timestamp))
+	{
+		auto chan = m_haltConditionsDialog.GetHaltChannel();
+
 		OnStop();
+
+		if(m_haltConditionsDialog.ShouldMoveToHalt())
+		{
+			//Find the waveform area(s) for this channel
+			for(auto a : m_waveformAreas)
+			{
+				if(a->GetChannel() == chan)
+				{
+					a->m_group->m_xAxisOffset = timestamp;
+					a->m_group->m_frame.queue_draw();
+				}
+
+				for(size_t i=0; i<a->GetOverlayCount(); i++)
+				{
+					if(a->GetOverlay(i) == chan)
+					{
+						a->m_group->m_xAxisOffset = timestamp;
+						a->m_group->m_frame.queue_draw();
+					}
+				}
+			}
+		}
+	}
 }
 
 void OscilloscopeWindow::RefreshAllDecoders()
@@ -2114,6 +2151,7 @@ void OscilloscopeWindow::OnStartSingle()
 void OscilloscopeWindow::OnStop()
 {
 	m_multiScopeFreeRun = false;
+	m_triggerArmed = false;
 
 	for(auto scope : m_scopes)
 		scope->Stop();
@@ -2147,6 +2185,7 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 			m_scopes[i]->IDPing();
 	}
 	m_tArm = GetTime();
+	m_triggerArmed = true;
 }
 
 /**

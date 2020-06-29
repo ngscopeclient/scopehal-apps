@@ -51,8 +51,10 @@ HaltConditionsDialog::HaltConditionsDialog(
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_haltEnabledButton, 0, 0, 1, 1);
 			m_haltEnabledButton.set_label("Halt Enabled");
+		m_grid.attach_next_to(m_moveToEventButton, m_haltEnabledButton, Gtk::POS_BOTTOM, 1, 1);
+			m_moveToEventButton.set_label("Move To Event");
 
-		m_grid.attach_next_to(m_channelNameLabel, m_haltEnabledButton, Gtk::POS_BOTTOM, 1, 1);
+		m_grid.attach_next_to(m_channelNameLabel, m_moveToEventButton, Gtk::POS_BOTTOM, 1, 1);
 			m_channelNameLabel.set_label("Halt when");
 		m_grid.attach_next_to(m_channelNameBox, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
 		m_grid.attach_next_to(m_operatorBox, m_channelNameBox, Gtk::POS_RIGHT, 1, 1);
@@ -116,14 +118,14 @@ void HaltConditionsDialog::RefreshChannels()
 /**
 	@brief Check if we should halt the trigger
  */
-bool HaltConditionsDialog::ShouldHalt()
+bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 {
 	//If conditional halt is not enabled, no sense checking conditions
 	if(!m_haltEnabledButton.get_active())
 		return false;
 
 	//Get the channel we're looking at
-	auto chan = m_chanptrs[m_channelNameBox.get_active_text()];
+	auto chan = GetHaltChannel();
 	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
 
 	//Don't check if no data to look at
@@ -148,7 +150,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(adata->m_samples[i] < value)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 
@@ -161,7 +166,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(adata->m_samples[i] <= value)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 
@@ -173,7 +181,10 @@ bool HaltConditionsDialog::ShouldHalt()
 			for(size_t i=0; i<len; i++)
 			{
 				if(adata->m_samples[i] == value)
+				{
+					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
+				}
 			}
 		}
 
@@ -185,7 +196,10 @@ bool HaltConditionsDialog::ShouldHalt()
 			for(size_t i=0; i<len; i++)
 			{
 				if(decode->GetText(i) == text)
+				{
+					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
+				}
 			}
 		}
 	}
@@ -198,7 +212,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(adata->m_samples[i] >= value)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 
@@ -211,7 +228,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(adata->m_samples[i] > value)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 
@@ -223,7 +243,10 @@ bool HaltConditionsDialog::ShouldHalt()
 			for(size_t i=0; i<len; i++)
 			{
 				if(adata->m_samples[i] != value)
+				{
+					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
+				}
 			}
 		}
 
@@ -235,7 +258,10 @@ bool HaltConditionsDialog::ShouldHalt()
 			for(size_t i=0; i<len; i++)
 			{
 				if(decode->GetText(i) != text)
+				{
+					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
+				}
 			}
 		}
 	}
@@ -249,7 +275,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(decode->GetText(i).find(text) == 0)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 
@@ -262,7 +291,10 @@ bool HaltConditionsDialog::ShouldHalt()
 		for(size_t i=0; i<len; i++)
 		{
 			if(decode->GetText(i).find(text) != string::npos)
+			{
+				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
+			}
 		}
 	}
 

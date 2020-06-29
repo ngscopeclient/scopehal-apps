@@ -268,6 +268,9 @@ public:
 
 	//Conditional halting
 	HaltConditionsDialog m_haltConditionsDialog;
+
+	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
+	bool m_triggerArmed;
 };
 
 #endif
