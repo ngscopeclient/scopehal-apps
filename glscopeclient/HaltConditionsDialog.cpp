@@ -56,8 +56,13 @@ HaltConditionsDialog::HaltConditionsDialog(
 			m_channelNameLabel.set_label("Halt when");
 		m_grid.attach_next_to(m_channelNameBox, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
 		m_grid.attach_next_to(m_operatorBox, m_channelNameBox, Gtk::POS_RIGHT, 1, 1);
+			m_operatorBox.append("<");
+			m_operatorBox.append("<=");
 			m_operatorBox.append("==");
+			m_operatorBox.append(">");
+			m_operatorBox.append(">=");
 			m_operatorBox.append("!=");
+			m_operatorBox.append("starts with");
 		m_grid.attach_next_to(m_targetEntry, m_operatorBox, Gtk::POS_RIGHT, 1, 1);
 
 	show_all();
@@ -73,35 +78,38 @@ HaltConditionsDialog::~HaltConditionsDialog()
 
 void HaltConditionsDialog::RefreshChannels()
 {
-	//TODO: save previous state
+	string old_chan = m_channelNameBox.get_active_text();
 
 	m_channelNameBox.remove_all();
 	m_chanptrs.clear();
 
 	//Populate channel list
-	/*
+	bool first = true;
 	for(size_t j=0; j<m_parent->GetScopeCount(); j++)
 	{
 		auto scope = m_parent->GetScope(j);
 		for(size_t k=0; k<scope->GetChannelCount(); k++)
 		{
 			auto c = scope->GetChannel(k);
-
 			m_channelNameBox.append(c->m_displayname);
 			m_chanptrs[c->m_displayname] = c;
+
+			if(first && (old_chan == ""))
+			{
+				first = false;
+				m_channelNameBox.set_active_text(c->m_displayname);
+			}
 		}
 	}
-	*/
-
-	//For now, only allow conditional triggering on complex decodes
 	auto decodes = ProtocolDecoder::EnumDecodes();
 	for(auto d : decodes)
 	{
-		if(d->GetType() != OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
-			continue;
 		m_channelNameBox.append(d->m_displayname);
 		m_chanptrs[d->m_displayname] = d;
 	}
+
+	if(old_chan != "")
+		m_channelNameBox.set_active_text(old_chan);
 }
 
 /**
@@ -116,6 +124,10 @@ bool HaltConditionsDialog::ShouldHalt()
 	//Get the channel we're looking at
 	auto chan = m_chanptrs[m_channelNameBox.get_active_text()];
 	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
+
+	//
+
+	/*
 	if(decode == NULL)
 		return false;
 
@@ -144,6 +156,7 @@ bool HaltConditionsDialog::ShouldHalt()
 				return true;
 		}
 	}
+	*/
 
 	return false;
 }
