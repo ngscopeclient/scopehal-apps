@@ -63,6 +63,7 @@ HaltConditionsDialog::HaltConditionsDialog(
 			m_operatorBox.append(">=");
 			m_operatorBox.append("!=");
 			m_operatorBox.append("starts with");
+			m_operatorBox.append("contains");
 		m_grid.attach_next_to(m_targetEntry, m_operatorBox, Gtk::POS_RIGHT, 1, 1);
 
 	show_all();
@@ -125,38 +126,145 @@ bool HaltConditionsDialog::ShouldHalt()
 	auto chan = m_chanptrs[m_channelNameBox.get_active_text()];
 	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
 
-	//
-
-	/*
-	if(decode == NULL)
-		return false;
-
 	//Don't check if no data to look at
-	auto data = decode->GetData();
+	auto data = chan->GetData();
+	auto adata = dynamic_cast<AnalogWaveform*>(data);
 	if(data->m_offsets.empty())
 		return false;
 
-	//TODO: support more than just == / !=
-	bool match_equal = (m_operatorBox.get_active_text() == "==");
-
-	//Loop over the decode and see if anything matches
-	size_t len = data->m_offsets.size();
+	//Target for matching
 	auto text = m_targetEntry.get_text();
-	for(size_t i=0; i<len; i++)
+	double value = chan->GetYAxisUnits().ParseString(text);
+
+	//Figure out the match filter and check
+	auto sfilter = m_operatorBox.get_active_text();
+	size_t len = data->m_offsets.size();
+	if(sfilter == "<")
 	{
-		auto target = decode->GetText(i);
-		if(match_equal)
+		//Expect analog data
+		if(adata == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
 		{
-			if(target == text)
-				return true;
-		}
-		else
-		{
-			if(target != text)
+			if(adata->m_samples[i] < value)
 				return true;
 		}
 	}
-	*/
+
+	else if(sfilter == "<=")
+	{
+		//Expect analog data
+		if(adata == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
+		{
+			if(adata->m_samples[i] <= value)
+				return true;
+		}
+	}
+
+	else if(sfilter == "==")
+	{
+		//Match analog data
+		if(adata != NULL)
+		{
+			for(size_t i=0; i<len; i++)
+			{
+				if(adata->m_samples[i] == value)
+					return true;
+			}
+		}
+
+		//TODO: match digital data
+
+		//Match protocol decodes
+		else if(decode != NULL)
+		{
+			for(size_t i=0; i<len; i++)
+			{
+				if(decode->GetText(i) == text)
+					return true;
+			}
+		}
+	}
+	else if(sfilter == ">=")
+	{
+		//Expect analog data
+		if(adata == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
+		{
+			if(adata->m_samples[i] >= value)
+				return true;
+		}
+	}
+
+	else if(sfilter == ">")
+	{
+		//Expect analog data
+		if(adata == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
+		{
+			if(adata->m_samples[i] > value)
+				return true;
+		}
+	}
+
+	else if(sfilter == "!=")
+	{
+		//Match analog data
+		if(adata != NULL)
+		{
+			for(size_t i=0; i<len; i++)
+			{
+				if(adata->m_samples[i] != value)
+					return true;
+			}
+		}
+
+		//TODO: match digital data
+
+		//Match protocol decodes
+		else if(decode != NULL)
+		{
+			for(size_t i=0; i<len; i++)
+			{
+				if(decode->GetText(i) != text)
+					return true;
+			}
+		}
+	}
+
+	else if(sfilter == "starts with")
+	{
+		//Expect decode data
+		if(decode == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
+		{
+			if(decode->GetText(i).find(text) == 0)
+				return true;
+		}
+	}
+
+	else if(sfilter == "contains")
+	{
+		//Expect decode data
+		if(decode == NULL)
+			return false;
+
+		for(size_t i=0; i<len; i++)
+		{
+			if(decode->GetText(i).find(text) != string::npos)
+				return true;
+		}
+	}
 
 	return false;
 }
