@@ -40,12 +40,6 @@
 
 #include "glscopeclient.h"
 #include "../scopeprotocols/scopeprotocols.h"
-#include "../scopehal/SiglentSCPIOscilloscope.h"
-#include "../scopehal/AgilentOscilloscope.h"
-#include "../scopehal/LeCroyOscilloscope.h"
-#include "../scopehal/RigolOscilloscope.h"
-#include "../scopehal/RohdeSchwarzOscilloscope.h"
-#include "../scopehal/AntikernelLogicAnalyzer.h"
 #include "InstrumentConnectionDialog.h"
 #include <libgen.h>
 #include <omp.h>
