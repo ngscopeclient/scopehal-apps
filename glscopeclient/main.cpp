@@ -45,6 +45,7 @@
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/RohdeSchwarzOscilloscope.h"
+#include "../scopehal/TektronixOscilloscope.h"
 #include "../scopehal/AntikernelLogicAnalyzer.h"
 #include "InstrumentConnectionDialog.h"
 #include <libgen.h>
