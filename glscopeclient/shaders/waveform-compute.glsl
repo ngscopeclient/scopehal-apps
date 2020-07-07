@@ -22,6 +22,7 @@ layout(std430, binding=2) buffer config
 	uint windowWidth;
 	uint memDepth;
 	uint alpha_scaled;
+	uint digital;
 };
 
 //Indexes so we know which samples go to which X pixel range
@@ -102,12 +103,16 @@ void main()
 		float starty = left.y;
 		float endy = right.y;
 
-		//Interpolate if either end is outside our column
-		float slope = (right.y - left.y) / (right.x - left.x);
-		if(left.x < gl_GlobalInvocationID.x)
-			starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
-		if(right.x > gl_GlobalInvocationID.x + 1)
-			endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+		//Interpolate analog signals if either end is outside our column
+		//We want digital signals to be nice and square, so don't do this!
+		if(digital == 0)
+		{
+			float slope = (right.y - left.y) / (right.x - left.x);
+			if(left.x < gl_GlobalInvocationID.x)
+				starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
+			if(right.x > gl_GlobalInvocationID.x + 1)
+				endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+		}
 
 		//Sort Y coordinates from min to max
 		int ymin = int(min(starty, endy));

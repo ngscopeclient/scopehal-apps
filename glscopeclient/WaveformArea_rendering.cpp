@@ -198,11 +198,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	glBufferData(GL_SHADER_STORAGE_BUFFER, traceBuffer.size()*sizeof(float), &traceBuffer[0], GL_STREAM_DRAW);
 
 	//Config stuff
-	uint32_t config[4];
+	uint32_t config[5];
 	config[0] = m_height;							//windowHeight
 	config[1] = m_plotRight;						//windowWidth
 	config[2] = count;								//depth
 	config[3] = m_parent->GetTraceAlpha() * 256;	//alpha
+	config[4] = digdat ? 1 : 0;						//digital
 	wdata->m_waveformConfigBuffer.Bind();
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
 
