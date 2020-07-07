@@ -377,8 +377,9 @@ void Timeline::DrawCursor(
 
 		//Special case for time domain traces
 		//Also show the frequency dual
+		Unit hz(Unit::UNIT_HZ);
 		if(m_xAxisUnit.GetType() == Unit::UNIT_PS)
-			format += " (%.3f MHz)\n";
+			format += " (%s)\n";
 
 		int64_t dt = m_group->m_xCursorPos[1] - m_group->m_xCursorPos[0];
 
@@ -389,7 +390,7 @@ void Timeline::DrawCursor(
 			name,
 			m_xAxisUnit.PrettyPrint(ps).c_str(),
 			m_xAxisUnit.PrettyPrint(dt).c_str(),
-			1.0e6 / dt);
+			hz.PrettyPrint(1e12 / dt).c_str());
 	}
 	tlayout->set_text(label);
 	tlayout->get_pixel_size(swidth, sheight);
