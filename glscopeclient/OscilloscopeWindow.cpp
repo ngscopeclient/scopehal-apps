@@ -989,6 +989,8 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		table.emplace(gn["id"].as<int>(), &group->m_frame);
 		group->m_frame.set_label(gn["name"].as<string>());
 		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
+		if(group->m_pixelsPerXUnit < 1e-8)	//Sanity check impractically small zoom levels
+			group->m_pixelsPerXUnit = 0.05;
 		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
 		m_waveformGroups.emplace(group);
 
