@@ -257,28 +257,39 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
 			m_vbox.get_style_context()->add_class("toolbar");
 			m_toolbox.pack_start(m_toolbar, Gtk::PACK_EXPAND_WIDGET);
+
+				//TODO: preference for this (scopehal-apps:132)
+				//m_toolbar.set_toolbar_style(Gtk::TOOLBAR_BOTH);
+
 				m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 					m_btnStart.set_tooltip_text("Start (normal trigger)");
+					m_btnStart.set_label("Start");
 					m_btnStart.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-start.png")));
 				m_toolbar.append(m_btnStartSingle, sigc::mem_fun(*this, &OscilloscopeWindow::OnStartSingle));
 					m_btnStartSingle.set_tooltip_text("Start (single trigger)");
+					m_btnStartSingle.set_label("Single");
 					m_btnStartSingle.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-single.png")));
 				m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 					m_btnStop.set_tooltip_text("Stop trigger");
+					m_btnStop.set_label("Stop");
 					m_btnStop.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-stop.png")));
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 				m_toolbar.append(m_btnHistory, sigc::mem_fun(*this, &OscilloscopeWindow::OnHistory));
 					m_btnHistory.set_tooltip_text("History");
+					m_btnHistory.set_label("History");
 					m_btnHistory.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/history.png")));
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 				m_toolbar.append(m_btnRefresh, sigc::mem_fun(*this, &OscilloscopeWindow::OnRefreshConfig));
 					m_btnRefresh.set_tooltip_text("Reload configuration from scope");
+					m_btnRefresh.set_label("Reload Config");
 					m_btnRefresh.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/refresh-settings.png")));
 				m_toolbar.append(m_btnClearSweeps, sigc::mem_fun(*this, &OscilloscopeWindow::OnClearSweeps));
 					m_btnClearSweeps.set_tooltip_text("Clear sweeps");
+					m_btnClearSweeps.set_label("Clear Sweeps");
 					m_btnClearSweeps.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/clear-sweeps.png")));
 				m_toolbar.append(m_btnFullscreen, sigc::mem_fun(*this, &OscilloscopeWindow::OnFullscreen));
 					m_btnFullscreen.set_tooltip_text("Fullscreen");
+					m_btnFullscreen.set_label("Fullscreen");
 					m_btnFullscreen.set_icon_widget(m_iconEnterFullscreen);
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
