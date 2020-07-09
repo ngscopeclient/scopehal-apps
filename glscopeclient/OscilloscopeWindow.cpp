@@ -273,6 +273,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					m_btnStop.set_tooltip_text("Stop trigger");
 					m_btnStop.set_label("Stop");
 					m_btnStop.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-stop.png")));
+				m_toolbar.append(m_btnForce, sigc::mem_fun(*this, &OscilloscopeWindow::OnForce));
+					m_btnForce.set_tooltip_text("Force trigger");
+					m_btnForce.set_label("Force");
+					m_btnForce.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-force.png")));
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 				m_toolbar.append(m_btnHistory, sigc::mem_fun(*this, &OscilloscopeWindow::OnHistory));
 					m_btnHistory.set_tooltip_text("History");
@@ -2168,6 +2172,14 @@ void OscilloscopeWindow::OnStart()
 void OscilloscopeWindow::OnStartSingle()
 {
 	ArmTrigger(true);
+}
+
+void OscilloscopeWindow::OnForce()
+{
+	for(ssize_t i=m_scopes.size()-1; i >= 0; i--)
+	{
+			m_scopes[i]->ForceTrigger();
+	}
 }
 
 void OscilloscopeWindow::OnStop()

@@ -124,6 +124,7 @@ protected:
 
 	//Menu/toolbar message handlers
 	void OnStartSingle();
+	void OnForce();
 	void OnQuit();
 	void OnHistory();
 	void OnAlphaChanged();
@@ -163,6 +164,7 @@ protected:
 				Gtk::ToolButton m_btnStart;
 				Gtk::ToolButton m_btnStartSingle;
 				Gtk::ToolButton m_btnStop;
+				Gtk::ToolButton m_btnForce;
 				Gtk::ToggleToolButton m_btnHistory;
 				Gtk::ToolButton m_btnRefresh;
 				Gtk::ToolButton m_btnClearSweeps;
