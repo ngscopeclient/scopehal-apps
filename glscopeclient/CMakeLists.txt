@@ -73,9 +73,14 @@ add_custom_target(
 	styles
 	COMMENT "Copying styles..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/src/glscopeclient/styles)
+add_custom_target(
+	icons
+	COMMENT "Copying icons..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/src/glscopeclient/icons)
 
 add_dependencies(glscopeclient
 	gradients
 	shaders
 	styles
+	icons
 )

@@ -57,7 +57,9 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigital)
-	: m_scopes(scopes)
+	: m_iconEnterFullscreen("icons/24x24/fullscreen-enter.png")
+	, m_iconExitFullscreen("icons/24x24/fullscreen-exit.png")
+	, m_scopes(scopes)
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
 	, m_scopeSyncWizard(NULL)
@@ -257,27 +259,27 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			m_toolbox.pack_start(m_toolbar, Gtk::PACK_EXPAND_WIDGET);
 				m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 					m_btnStart.set_tooltip_text("Start (normal trigger)");
-					m_btnStart.set_icon_name("media-playback-start");
+					m_btnStart.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-start.png")));
 				m_toolbar.append(m_btnStartSingle, sigc::mem_fun(*this, &OscilloscopeWindow::OnStartSingle));
 					m_btnStartSingle.set_tooltip_text("Start (single trigger)");
-					m_btnStartSingle.set_icon_name("media-skip-forward");
+					m_btnStartSingle.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-single.png")));
 				m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 					m_btnStop.set_tooltip_text("Stop trigger");
-					m_btnStop.set_icon_name("media-playback-stop");
+					m_btnStop.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/trigger-stop.png")));
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 				m_toolbar.append(m_btnHistory, sigc::mem_fun(*this, &OscilloscopeWindow::OnHistory));
 					m_btnHistory.set_tooltip_text("History");
-					m_btnHistory.set_icon_name("search");
+					m_btnHistory.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/history.png")));
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 				m_toolbar.append(m_btnRefresh, sigc::mem_fun(*this, &OscilloscopeWindow::OnRefreshConfig));
 					m_btnRefresh.set_tooltip_text("Reload configuration from scope");
-					m_btnRefresh.set_icon_name("reload");
+					m_btnRefresh.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/refresh-settings.png")));
 				m_toolbar.append(m_btnClearSweeps, sigc::mem_fun(*this, &OscilloscopeWindow::OnClearSweeps));
 					m_btnClearSweeps.set_tooltip_text("Clear sweeps");
-					m_btnClearSweeps.set_icon_name("user-trash");
+					m_btnClearSweeps.set_icon_widget(*Gtk::manage(new Gtk::Image("icons/24x24/clear-sweeps.png")));
 				m_toolbar.append(m_btnFullscreen, sigc::mem_fun(*this, &OscilloscopeWindow::OnFullscreen));
 					m_btnFullscreen.set_tooltip_text("Fullscreen");
-					m_btnFullscreen.set_icon_name("view-fullscreen");
+					m_btnFullscreen.set_icon_widget(m_iconEnterFullscreen);
 				m_toolbar.append(*Gtk::manage(new Gtk::SeparatorToolItem));
 			m_toolbox.pack_start(m_alphalabel, Gtk::PACK_SHRINK);
 				m_alphalabel.set_label("Opacity ");
@@ -1699,6 +1701,10 @@ void OscilloscopeWindow::OnFullscreen()
 	//Enter fullscreen mode
 	if(m_fullscreen)
 	{
+		//Update toolbar button icon
+		m_btnFullscreen.set_icon_widget(m_iconExitFullscreen);
+		m_iconExitFullscreen.show();
+
 		int x;
 		int y;
 		get_position(x, y);
@@ -1726,6 +1732,9 @@ void OscilloscopeWindow::OnFullscreen()
 		set_decorated();
 		resize(m_originalRect.get_width(), m_originalRect.get_height());
 		move(m_originalRect.get_x(), m_originalRect.get_y());
+
+		//Update toolbar button icon
+		m_btnFullscreen.set_icon_widget(m_iconEnterFullscreen);
 	}
 }
 

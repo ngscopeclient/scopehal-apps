@@ -167,6 +167,8 @@ protected:
 				Gtk::ToolButton m_btnRefresh;
 				Gtk::ToolButton m_btnClearSweeps;
 				Gtk::ToolButton m_btnFullscreen;
+					Gtk::Image m_iconEnterFullscreen;
+					Gtk::Image m_iconExitFullscreen;
 			Gtk::Label  m_alphalabel;
 			Gtk::HScale m_alphaslider;
 		//main app windows go here
