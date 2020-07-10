@@ -56,6 +56,7 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	m_grid.attach(m_nicknameLabel, 0, 0, 1, 1);
 		m_nicknameLabel.set_text("Nickname");
 	m_grid.attach_next_to(m_nicknameEntry, m_nicknameLabel, Gtk::POS_RIGHT, 1, 1);
+		m_nicknameEntry.set_text("scope");
 
 	m_grid.attach_next_to(m_driverLabel, m_nicknameLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_driverLabel.set_text("Driver");
@@ -94,6 +95,10 @@ InstrumentConnectionDialog::~InstrumentConnectionDialog()
 
 string InstrumentConnectionDialog::GetConnectionString()
 {
+	//If no nickname is specified, assign a default
+	if(m_nicknameEntry.get_text() == "")
+		m_nicknameEntry.set_text("scope");
+
 	char tmp[256];
 	snprintf(tmp, sizeof(tmp), "%s:%s:%s:%s",
 		m_nicknameEntry.get_text().c_str(),
