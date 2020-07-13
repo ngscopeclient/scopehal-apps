@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.3)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+project(scopehal-cmake)
+
+set(BUILD_DOCS CACHE BOOL "Build the documentation")
+
+set(WARNINGS "-Wall -Wextra -Wuninitialized ")
+set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
+set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
+set(CMAKE_CXX_FLAGS "-g -fopenmp ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
+
+find_package(PkgConfig)
+pkg_check_modules(GTKMM gtkmm-3.0)
+pkg_check_modules(SIGCXX sigc++-2.0)
+pkg_check_modules(GLM glm>=0.9.8)
+pkg_search_module(GLM REQUIRED glm>=0.9.8)
+find_package(FFTS)
+
+if(BUILD_DOCS)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
+endif()
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
+
+if(NOT WIN32)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
+endif()
+
+set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET xptools PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET scopeprotocols PROPERTY POSITION_INDEPENDENT_CODE ON)
