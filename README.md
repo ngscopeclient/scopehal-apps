@@ -1,5 +1,6 @@
-# scopehal-cmake
-CMake build wrapper for scopehal and scopehal-apps
+# scopehal-apps
+
+Applications for libscopehal
 
 [C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
 
@@ -24,8 +25,8 @@ sudo make install
 
 Build scopehal and scopehal-apps
 ```
-git clone https://github.com/azonenberg/scopehal-cmake.git --recurse-submodules
-cd scopehal-cmake
+git clone https://github.com/azonenberg/scopehal-apps.git --recurse-submodules
+cd scopehal-apps
 mkdir build
 cd build
 cmake ..
