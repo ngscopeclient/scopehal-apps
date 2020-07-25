@@ -34,6 +34,7 @@ if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
+	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/ibistest")
 endif()
 
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
