@@ -80,92 +80,22 @@ int main(int argc, char* argv[])
 	if(!model)
 		LogFatal("couldn't find model\n");
 
-	//Look up some properties of this buffer
-	float vcc = model->m_voltages[CORNER_TYP];
-	auto& pulldown = model->m_pulldown[CORNER_TYP];
-	auto& pullup = model->m_pullup[CORNER_TYP];
-	float cap = model->m_dieCapacitance[CORNER_TYP];
+	//Run the simulation
+	auto waveform = model->SimulatePRBS(
+		CORNER_TYP,
+		5,			//200 Gsps
+		20000,
+		160			//1.25 Gbps
+		);
 
-	//Find the rising and falling edge waveform terminated to the lowest voltage (ground or so)
-	VTCurves* rising = model->GetHighestRisingWaveform();
-	VTCurves* falling = model->GetHighestFallingWaveform();
-
-	const float dt = 5e-12;
-
-	//PRBS-31 generator
-	uint32_t prbs = 0x5eadbeef;
-
-	//Play rising/falling waveforms
-	size_t ui_ticks = 160;	//1.25 Gbps
-	size_t last_ui_start	= 0;
-	size_t ui_start			= 0;
-	LogDebug("ns, v, current_v, last_v, delta, current_edge_started, last_ui_start\n");
-	bool current_bit		= false;
-	bool last_bit			= false;
-	float	current_v_old	= 0;
-	bool current_edge_started	= false;
-	for(size_t nstep=0; nstep<10000; nstep ++)
+	//Print out the waveform
+	LogDebug("time, voltage\n");
+	for(size_t i=0; i<waveform->m_samples.size(); i++)
 	{
-		float time = dt*nstep;
-
-		//Advance to next UI
-		if(0 == (nstep % ui_ticks))
-		{
-			last_bit		= current_bit;
-
-			if(nstep != 0)
-			{
-				//PRBS-31 generator
-				uint32_t next = ( (prbs >> 31) ^ (prbs >> 28) ) & 1;
-				prbs = (prbs << 1) | next;
-				current_bit = next ? true : false;
-
-				//Keep the old edge going
-				current_edge_started = false;
-			}
-
-			ui_start		= nstep;
-		}
-
-		//Get phase of current and previous UI
-		size_t	current_phase	= nstep - ui_start;
-		size_t	last_phase		= nstep - last_ui_start;
-
-		//Get value for current and previous edge
-		float current_v;
-		if(current_bit)
-			current_v = rising->InterpolateVoltage(CORNER_TYP, current_phase*dt);
-		else
-			current_v = falling->InterpolateVoltage(CORNER_TYP, current_phase*dt);
-
-		float last_v;
-		if(last_bit)
-			last_v = rising->InterpolateVoltage(CORNER_TYP, last_phase*dt);
-		else
-			last_v = falling->InterpolateVoltage(CORNER_TYP, last_phase*dt);
-
-		//See if the current UI's edge has started
-		float delta = current_v - current_v_old;
-		if(current_phase < 1)
-			delta = 0;
-		if( (fabs(delta) > 0.001) && (last_bit != current_bit) )
-		{
-			last_ui_start	= ui_start;
-			current_edge_started = true;
-		}
-
-		//If so, use the new value. If propagation delay isn't over, keep the old edge going
-		float v;
-		if(current_edge_started)
-			v = current_v;
-		else
-			v = last_v;
-
-		current_v_old	= current_v;
-
-		//Look up the old bit value and continue the transition a bit longer if possible.
-		LogDebug("%f, %f, %f, %f, %f, %d, %zu\n", time*1e9, v, current_v + 1, last_v + 2, delta, current_edge_started, last_ui_start);
+		LogDebug("%f, %f\n", i*0.005, (double)waveform->m_samples[i]);
 	}
+	delete waveform;
+
 
 	return 0;
 }
