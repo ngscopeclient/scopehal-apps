@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
 
 	//Run the simulation
 	auto waveform = model->SimulatePRBS(
+		0x5eadbeef,
 		CORNER_TYP,
 		5,			//200 Gsps
 		20000,
