@@ -254,3 +254,22 @@ box.sidebar label.highlight
 	color:				@glscopeclient_text_color;
 	font-weight:		bold;
 }
+
+/***********************************************************************************************************************
+	File chooser dialog
+ **********************************************************************************************************************/
+
+dialog filechooser placessidebar.sidebar.frame viewport.frame list,
+dialog filechooser placessidebar.sidebar.frame viewport.frame list row.activatable.sidebar-row
+{
+	background-image:	none;
+	background-color:	@glscopeclient_bg_color;
+	font-family:		sans-serif;
+}
+
+dialog filechooser,
+dialog filechooser treeview,
+dialog filechooser treeview header
+{
+	font-family:		sans-serif;
+}

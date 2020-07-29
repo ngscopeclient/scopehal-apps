@@ -486,11 +486,6 @@ void OscilloscopeWindow::OnFileOpen()
 {
 	//TODO: prompt to save changes to the current session
 
-	//Remove the CSS provider so the dialog isn't themed
-	//TODO: how can we un-theme just this one dialog?
-	get_style_context()->remove_provider_for_screen(
-		Gdk::Screen::get_default(), m_css);
-
 	Gtk::FileChooserDialog dlg(*this, "Open", Gtk::FILE_CHOOSER_ACTION_SAVE);
 
 	dlg.add_choice("layout", "Load UI Configuration");
@@ -508,10 +503,6 @@ void OscilloscopeWindow::OnFileOpen()
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 	auto response = dlg.run();
-
-	//Re-add the CSS provider
-	get_style_context()->add_provider_for_screen(
-		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 	if(response != Gtk::RESPONSE_OK)
 		return;
