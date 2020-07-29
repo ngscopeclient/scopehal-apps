@@ -67,18 +67,19 @@ public:
 	ParameterRowString(ProtocolDecoderDialog* parent);
 	virtual ~ParameterRowString();
 
-	Gtk::Entry		m_entry;
+	Gtk::Entry					m_entry;
 };
 
 class ParameterRowFilename : public ParameterRowString
 {
 public:
-	ParameterRowFilename(ProtocolDecoderDialog* parent);
+	ParameterRowFilename(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param);
 	virtual ~ParameterRowFilename();
 
 	void OnBrowser();
 
 	Gtk::Button		m_button;
+	ProtocolDecoderParameter& 	m_param;
 };
 
 /**

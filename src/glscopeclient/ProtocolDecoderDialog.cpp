@@ -66,8 +66,9 @@ ParameterRowString::~ParameterRowString()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilename
 
-ParameterRowFilename::ParameterRowFilename(ProtocolDecoderDialog* parent)
+ParameterRowFilename::ParameterRowFilename(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param)
 	: ParameterRowString(parent)
+	, m_param(param)
 {
 	m_button.set_label("...");
 	m_button.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
@@ -82,11 +83,9 @@ void ParameterRowFilename::OnBrowser()
 	Gtk::FileChooserDialog dlg(*m_parent, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
 	dlg.set_filename(m_entry.get_text());
 
-	//TODO: get filter from parameter somehow
-
 	auto filter = Gtk::FileFilter::create();
-	filter->add_pattern("*.s2p");
-	filter->set_name("Touchstone S-parameter files (*.s2p)");
+	filter->add_pattern(m_param.m_fileFilterMask);
+	filter->set_name(m_param.m_fileFilterName);
 	dlg.add_filter(filter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -191,7 +190,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		{
 			case ProtocolDecoderParameter::TYPE_FILENAME:
 				{
-					auto row = new ParameterRowFilename(this);
+					auto row = new ParameterRowFilename(this, it->second);
 					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
 					m_grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
 					m_grid.attach_next_to(row->m_button, row->m_entry, Gtk::POS_RIGHT, 1, 1);
