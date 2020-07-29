@@ -273,6 +273,9 @@ public:
 
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;
+
+	//True if shutting down (don't process any more updates after this point
+	bool m_shuttingDown;
 };
 
 #endif

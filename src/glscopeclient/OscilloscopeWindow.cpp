@@ -65,6 +65,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	, m_scopeSyncWizard(NULL)
 	, m_haltConditionsDialog(this)
 	, m_triggerArmed(false)
+	, m_shuttingDown(false)
 {
 	SetTitle();
 
@@ -399,6 +400,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
+	if(m_shuttingDown)
+		return false;
+
 	if(m_triggerArmed)
 		PollScopes();
 
@@ -425,6 +429,8 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
  */
 bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
 {
+	m_shuttingDown = true;
+
 	CloseSession();
 	return false;
 }
