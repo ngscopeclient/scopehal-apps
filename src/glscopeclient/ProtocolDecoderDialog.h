@@ -49,11 +49,36 @@ public:
 	std::map<std::string, OscilloscopeChannel*> m_chanptrs;
 };
 
-class ParameterRow
+class ProtocolDecoderDialog;
+
+class ParameterRowBase
 {
 public:
-	Gtk::Label		m_label;
+	ParameterRowBase(ProtocolDecoderDialog* parent);
+	virtual ~ParameterRowBase();
+
+	ProtocolDecoderDialog*	m_parent;
+	Gtk::Label				m_label;
+};
+
+class ParameterRowString : public ParameterRowBase
+{
+public:
+	ParameterRowString(ProtocolDecoderDialog* parent);
+	virtual ~ParameterRowString();
+
 	Gtk::Entry		m_entry;
+};
+
+class ParameterRowFilename : public ParameterRowString
+{
+public:
+	ParameterRowFilename(ProtocolDecoderDialog* parent);
+	virtual ~ParameterRowFilename();
+
+	void OnBrowser();
+
+	Gtk::Button		m_button;
 };
 
 /**
@@ -77,7 +102,7 @@ protected:
 			Gtk::ColorButton m_channelColorButton;
 
 	std::vector<ChannelSelectorRow*> m_rows;
-	std::vector<ParameterRow*> m_prows;
+	std::vector<ParameterRowBase*> m_prows;
 };
 
 #endif
