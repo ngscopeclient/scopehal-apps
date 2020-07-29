@@ -82,6 +82,22 @@ public:
 	ProtocolDecoderParameter& 	m_param;
 };
 
+class ParameterRowFilenames : public ParameterRowBase
+{
+public:
+	ParameterRowFilenames(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param);
+	virtual ~ParameterRowFilenames();
+
+	Gtk::ListViewText				m_list;
+	Gtk::Button						m_buttonAdd;
+	Gtk::Button						m_buttonRemove;
+
+	void OnAdd();
+	void OnRemove();
+
+	ProtocolDecoderParameter& 	m_param;
+};
+
 /**
 	@brief Main application window class for an oscilloscope
  */

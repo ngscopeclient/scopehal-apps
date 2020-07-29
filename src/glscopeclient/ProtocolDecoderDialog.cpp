@@ -56,7 +56,7 @@ ParameterRowBase::~ParameterRowBase()
 ParameterRowString::ParameterRowString(ProtocolDecoderDialog* parent)
 	: ParameterRowBase(parent)
 {
-	m_entry.set_size_request(250, 1);
+	m_entry.set_size_request(500, 1);
 }
 
 ParameterRowString::~ParameterRowString()
@@ -95,6 +95,52 @@ void ParameterRowFilename::OnBrowser()
 		return;
 
 	m_entry.set_text(dlg.get_filename());
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ParameterRowFilenames
+
+ParameterRowFilenames::ParameterRowFilenames(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param)
+	: ParameterRowBase(parent)
+	, m_list(1)
+	, m_param(param)
+{
+	m_list.set_size_request(500, 200);
+	m_list.set_column_title(0, "Filename");
+
+	m_buttonAdd.set_label("+");
+	m_buttonRemove.set_label("-");
+
+	m_buttonAdd.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilenames::OnAdd));
+	m_buttonRemove.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilenames::OnRemove));
+}
+
+ParameterRowFilenames::~ParameterRowFilenames()
+{
+}
+
+void ParameterRowFilenames::OnAdd()
+{
+	Gtk::FileChooserDialog dlg(*m_parent, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
+
+	auto filter = Gtk::FileFilter::create();
+	filter->add_pattern(m_param.m_fileFilterMask);
+	filter->set_name(m_param.m_fileFilterName);
+	dlg.add_filter(filter);
+	dlg.add_button("Open", Gtk::RESPONSE_OK);
+	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	auto response = dlg.run();
+
+	if(response != Gtk::RESPONSE_OK)
+		return;
+
+	m_list.append(dlg.get_filename());
+}
+
+void ParameterRowFilenames::OnRemove()
+{
+	auto store = Glib::RefPtr<Gtk::ListStore>::cast_dynamic(m_list.get_model());
+	store->erase(m_list.get_selection()->get_selected());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,6 +251,27 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				}
 				break;
 
+			case ProtocolDecoderParameter::TYPE_FILENAMES:
+				{
+					auto row = new ParameterRowFilenames(this, it->second);
+					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 2);
+					m_grid.attach_next_to(row->m_list, row->m_label, Gtk::POS_RIGHT, 1, 2);
+					m_grid.attach_next_to(row->m_buttonAdd, row->m_list, Gtk::POS_RIGHT, 1, 1);
+					m_grid.attach_next_to(row->m_buttonRemove, row->m_buttonAdd, Gtk::POS_BOTTOM, 1, 1);
+					last_label = &row->m_label;
+					m_prows.push_back(row);
+
+					row->m_label.set_label(it->first);
+
+					//Set initial value
+					auto files = it->second.GetFileNames();
+					for(auto f : files)
+						row->m_list.append(f);
+
+					break;
+				}
+				break;
+
 			default:
 				{
 					auto row = new ParameterRowString(this);
@@ -248,13 +315,26 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 		m_decoder->SetInput(i, m_rows[i]->m_chanptrs[chname]);
 	}
 
+	//Extract file names
 	for(size_t i=0; i<m_prows.size(); i++)
 	{
 		auto row = m_prows[i];
 		auto srow = dynamic_cast<ParameterRowString*>(row);
+		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
+		auto name = row->m_label.get_label();
+
+		//Strings are easy
 		if(srow)
-			m_decoder->GetParameter(srow->m_label.get_label()).ParseString(srow->m_entry.get_text());
-		//TODO: other types
+			m_decoder->GetParameter(name).ParseString(srow->m_entry.get_text());
+
+		//List of file names
+		else if(frow)
+		{
+			vector<string> paths;
+			for(size_t j=0; j<frow->m_list.size(); j++)
+				paths.push_back(frow->m_list.get_text(j));
+			m_decoder->GetParameter(name).SetFileNames(paths);
+		}
 	}
 
 	m_decoder->m_displaycolor = m_channelColorButton.get_color().to_string();
