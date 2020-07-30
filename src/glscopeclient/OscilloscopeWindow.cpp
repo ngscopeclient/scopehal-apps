@@ -356,6 +356,12 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
 			{
+				//Test if channel can be enabled. If it returns false, we're interleaving or something,
+				//which means it's unavailable.
+				chan->Enable();
+				if(!chan->IsEnabled())
+					continue;
+
 				auto w = new WaveformArea(chan, this);
 				w->m_group = group;
 				m_waveformAreas.emplace(w);
