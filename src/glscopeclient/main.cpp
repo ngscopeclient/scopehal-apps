@@ -333,7 +333,7 @@ void ScopeThread(Oscilloscope* scope)
 
 		//If the queue is more than 5 sec long, wait for a while before polling any more.
 		//We've gotten ahead of the UI!
-		if(npending*dt > 5)
+		if(npending > 1 && npending*dt > 5)
 		{
 			LogTrace("Capture thread got 5 sec ahead of UI, sleeping\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
