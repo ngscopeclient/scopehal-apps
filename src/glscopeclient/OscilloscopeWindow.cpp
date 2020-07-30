@@ -1104,11 +1104,6 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		if(saveWaveforms)
 			title += "Waveforms";
 
-		//Remove the CSS provider so the dialog isn't themed
-		//TODO: how can we un-theme just this one dialog?
-		get_style_context()->remove_provider_for_screen(
-			Gdk::Screen::get_default(), m_css);
-
 		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_SAVE);
 
 		auto filter = Gtk::FileFilter::create();
@@ -1120,10 +1115,6 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		dlg.set_uri(m_currentFileName);
 		dlg.set_do_overwrite_confirmation();
 		auto response = dlg.run();
-
-		//Re-add the CSS provider
-		get_style_context()->add_provider_for_screen(
-			Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
 		if(response != Gtk::RESPONSE_OK)
 			return;
