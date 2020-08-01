@@ -50,8 +50,15 @@ public:
 			Gtk::ComboBoxText	m_sampleRateBox;
 		Gtk::Label			m_memoryDepthLabel;
 			Gtk::ComboBoxText	m_memoryDepthBox;
+		Gtk::Label			m_interleaveLabel;
+			Gtk::Switch			m_interleaveSwitch;
+
+	void RefreshSampleRates(bool interleaving);
+	void RefreshSampleDepths(bool interleaving);
 
 	void AddWidgets();
+
+	bool OnInterleaveSwitchChanged(bool state);
 };
 
 /**

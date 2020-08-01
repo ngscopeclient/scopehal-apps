@@ -46,28 +46,96 @@ void TimebasePropertiesPage::AddWidgets()
 	m_grid.set_margin_left(10);
 	m_grid.set_margin_right(10);
 	m_grid.set_column_spacing(10);
+	m_grid.set_row_spacing(5);
 
 	m_grid.attach(m_sampleRateLabel, 0, 0, 1, 1);
-		m_sampleRateLabel.set_text("Sample rate");
+		m_sampleRateLabel.set_text("Sample Rate");
 	m_grid.attach_next_to(m_sampleRateBox, m_sampleRateLabel, Gtk::POS_RIGHT, 1, 1);
 	m_grid.attach_next_to(m_memoryDepthLabel, m_sampleRateLabel, Gtk::POS_BOTTOM, 1, 1);
-		m_memoryDepthLabel.set_text("Memory depth");
+		m_memoryDepthLabel.set_text("Memory Depth");
 	m_grid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT, 1, 1);
 
-	//Set up sample rate box
-	//TODO: interleaving support etc
+	m_grid.attach_next_to(m_interleaveLabel, m_memoryDepthLabel, Gtk::POS_BOTTOM, 1, 1);
+		m_interleaveLabel.set_text("Channel Combining");
+	m_grid.attach_next_to(m_interleaveSwitch, m_interleaveLabel, Gtk::POS_RIGHT, 1, 1);
+
+	bool interleaving = m_scope->IsInterleaving();
+	m_interleaveSwitch.set_state(interleaving);
+	m_interleaveSwitch.set_sensitive(m_scope->CanInterleave());
+
+	m_interleaveSwitch.signal_state_set().connect(
+		sigc::mem_fun(*this, &TimebasePropertiesPage::OnInterleaveSwitchChanged), false);
+
+	RefreshSampleRates(interleaving);
+	RefreshSampleDepths(interleaving);
+}
+
+/**
+	@brief Update the list of sample rates (these may change when, for example, interleaving is turned on/off)
+ */
+void TimebasePropertiesPage::RefreshSampleRates(bool interleaving)
+{
+	m_sampleRateBox.remove_all();
+
+	vector<uint64_t> rates;
+	if(interleaving)
+		rates = m_scope->GetSampleRatesInterleaved();
+	else
+		rates = m_scope->GetSampleRatesNonInterleaved();
+
 	Unit unit(Unit::UNIT_SAMPLERATE);
-	auto rates = m_scope->GetSampleRatesNonInterleaved();
+	string last_rate;
 	for(auto rate : rates)
-		m_sampleRateBox.append(unit.PrettyPrint(rate));
+	{
+		last_rate = unit.PrettyPrint(rate);
+		m_sampleRateBox.append(last_rate);
+	}
 	m_sampleRateBox.set_active_text(unit.PrettyPrint(m_scope->GetSampleRate()));
 
-	//Set up memory depth box
-	unit = Unit(Unit::UNIT_SAMPLEDEPTH);
-	auto depths = m_scope->GetSampleDepthsNonInterleaved();
+	//If no text was selected, select the highest valid rate
+	if(m_sampleRateBox.get_active_text() == "")
+		m_sampleRateBox.set_active_text(last_rate);
+}
+
+/**
+	@brief Update the list of sample depths (these may change when, for example, interleaving is turned on/off)
+ */
+void TimebasePropertiesPage::RefreshSampleDepths(bool interleaving)
+{
+	m_memoryDepthBox.remove_all();
+
+	vector<uint64_t> depths;
+	if(interleaving)
+		depths = m_scope->GetSampleDepthsInterleaved();
+	else
+		depths = m_scope->GetSampleDepthsNonInterleaved();
+
+	Unit unit(Unit::UNIT_SAMPLEDEPTH);
+	string last_depth;
 	for(auto depth : depths)
-		m_memoryDepthBox.append(unit.PrettyPrint(depth));
+	{
+		last_depth = unit.PrettyPrint(depth);
+		m_memoryDepthBox.append(last_depth);
+	}
+
 	m_memoryDepthBox.set_active_text(unit.PrettyPrint(m_scope->GetSampleDepth()));
+
+	//If no text was selected, select the highest valid depth
+	if(m_memoryDepthBox.get_active_text() == "")
+		m_memoryDepthBox.set_active_text(last_depth);
+}
+
+/**
+	@brief Handle the interleaving switch being hit
+ */
+bool TimebasePropertiesPage::OnInterleaveSwitchChanged(bool state)
+{
+	//Refresh the list of legal timebase/memory configurations
+	RefreshSampleRates(state);
+	RefreshSampleDepths(state);
+
+	//run default handler
+	return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,6 +176,9 @@ void TimebasePropertiesDialog::ConfigureTimebase()
 {
 	for(auto it : m_pages)
 	{
+		//Configure interleaving
+		it.first->SetInterleaving(it.second->m_interleaveSwitch.get_state());
+
 		//Figure out the requested sample rate
 		char scale;
 		long rate;
