@@ -44,6 +44,7 @@
 #include <random>
 #include <map>
 #include "ProfileBlock.h"
+#include "../scopeprotocols/EyeDecoder2.h"
 
 using namespace std;
 using namespace glm;
@@ -424,12 +425,29 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	string label = m_channel->m_displayname;
 	auto data = m_channel->GetData();
 
+	auto eye = dynamic_cast<EyeWaveform*>(data);
+
 	//Add RBW to frequency domain channels
 	char tmp[256];
 	auto xunits = m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
 		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(data->m_timescale).c_str());
+		label += tmp;
+	}
+
+	//Add count info to eye channels
+	else if(eye != NULL)
+	{
+		size_t uis = eye->GetTotalUIs();
+		float gbps = 1e3f / eye->GetUIWidth();
+
+		if(uis < 1e6)
+			snprintf(tmp, sizeof(tmp), "\n%.2fk UI    %.4f Gbps", uis * 1e-3f, gbps);
+		else if(uis < 1e9)
+			snprintf(tmp, sizeof(tmp), "\n%.2fM UI    %.4f Gbps", uis * 1e-6f, gbps);
+		else
+			snprintf(tmp, sizeof(tmp), "\n%.2fG UI    %.4f Gbps", uis * 1e-6f, gbps);
 		label += tmp;
 	}
 

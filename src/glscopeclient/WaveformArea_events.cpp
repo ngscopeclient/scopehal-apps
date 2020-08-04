@@ -852,20 +852,23 @@ void WaveformArea::OnWaveformDataReady()
 	//If we're a fixed width curve, refresh the parent's time scale
 	if(IsEyeOrBathtub())
 	{
-		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+		auto eye = dynamic_cast<EyeWaveform*>(m_channel->GetData());
 		if(eye == NULL)
-			eye = dynamic_cast<EyeDecoder2*>(dynamic_cast<ProtocolDecoder*>(m_channel)->GetInput(0));
-		int64_t width = eye->GetUIWidth();
+			eye = dynamic_cast<EyeWaveform*>(dynamic_cast<ProtocolDecoder*>(m_channel)->GetInput(0)->GetData());
+		if(eye != NULL)
+		{
+			float width = eye->GetUIWidth();
 
-		//eye is two UIs wide
-		int64_t eye_width_ps = 2 * width;
+			//eye is two UIs wide
+			float eye_width_ps = 2 * width;
 
-		//If decode fails for some reason, don't have an invalid timeline
-		if(eye_width_ps == 0)
-			eye_width_ps = 5;
+			//If decode fails for some reason, don't have an invalid timeline
+			if(eye_width_ps == 0)
+				eye_width_ps = 5;
 
-		m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
-		m_group->m_xAxisOffset = -width;
+			m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
+			m_group->m_xAxisOffset = -width;
+		}
 	}
 
 	//Update our measurements and redraw the waveform
