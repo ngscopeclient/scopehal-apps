@@ -277,7 +277,7 @@ protected:
 	//Display options
 	bool m_persistence;
 	bool m_persistenceClear;
-	
+
 	// Whether GLEW is already initialized
 	static bool m_isGlewInitialized;
 
@@ -332,6 +332,7 @@ protected:
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;

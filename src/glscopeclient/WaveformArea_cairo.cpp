@@ -251,9 +251,37 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
+	//Eye mask should be under channel infobox and other stuff
+	if(IsEye())
+		RenderEyeMask(cr);
+
 	RenderDecodeOverlays(cr);
-	RenderChannelLabel(cr);
 	RenderCursors(cr);
+	RenderChannelLabel(cr);
+}
+
+void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
+{
+	//Make sure it's really an eye
+	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+	if(!eye)
+		return;
+	auto waveform = dynamic_cast<EyeWaveform*>(eye->GetData());
+
+	//If no mask is selected, we have nothing to draw
+	auto& mask = eye->GetMask();
+	if(mask.GetMaskName() == "")
+		return;
+
+	//Do the actual drawing
+	mask.RenderForDisplay(
+		cr,
+		waveform,
+		m_group->m_pixelsPerXUnit,
+		m_group->m_xAxisOffset,
+		m_pixelsPerVolt,
+		m_channel->GetOffset(),
+		m_height);
 }
 
 void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
@@ -426,6 +454,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto data = m_channel->GetData();
 
 	auto eye = dynamic_cast<EyeWaveform*>(data);
+	auto ed = dynamic_cast<EyeDecoder2*>(m_channel);
 
 	//Add RBW to frequency domain channels
 	char tmp[256];
@@ -437,8 +466,9 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	}
 
 	//Add count info to eye channels
-	else if(eye != NULL)
+	else if( (eye != NULL) && (ed != NULL) )
 	{
+
 		size_t uis = eye->GetTotalUIs();
 		float gbps = 1e3f / eye->GetUIWidth();
 
@@ -449,6 +479,13 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		else
 			snprintf(tmp, sizeof(tmp), "\n%.2fG UI    %.4f Gbps", uis * 1e-6f, gbps);
 		label += tmp;
+
+		auto maskname = ed->GetMask().GetMaskName();
+		if(maskname != "")
+		{
+			snprintf(tmp, sizeof(tmp), "\nMask: %s", maskname.c_str());
+			label += tmp;
+		}
 	}
 
 	//Add sample rate info to physical analog channels
