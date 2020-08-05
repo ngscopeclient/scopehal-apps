@@ -1,0 +1,134 @@
+protocol:
+    name:       100BaseTX
+    reference:  ANSI X3.263-1995 Figure J.1
+displaylimits:
+    ymin:       -1100
+    ymax:        1100
+units:
+    xscale:     ps
+    # todo: should be normalized to actual voltages?
+    yscale:     mv
+mask:
+
+    # Upper limit
+    - points:
+        -   x:  -8000
+            y:   1100
+        -   x:   8000
+            y:   1100
+        -   x:   8000
+            y:   1500
+        -   x:  -8000
+            y:   1500
+
+    # Lower limit
+    - points:
+        -   x:  -8000
+            y:  -1100
+        -   x:   8000
+            y:  -1100
+        -   x:   8000
+            y:  -1500
+        -   x:  -8000
+            y:  -1500
+
+    # Lower eye opening
+    - points:
+        -   x:   -3232
+            y:    -500
+        -   x:    -720
+            y:    -900
+        -   x:     720
+            y:    -900
+        -   x:    3232
+            y:    -500
+        -   x:     720
+            y:    -100
+        -   x:    -720
+            y:    -100
+
+    # Upper eye opening
+    - points:
+        -   x:   -3232
+            y:     500
+        -   x:    -720
+            y:     900
+        -   x:     720
+            y:     900
+        -   x:    3232
+            y:     500
+        -   x:     720
+            y:     100
+        -   x:    -720
+            y:     100
+
+    # Bottom left triangles
+    - points:
+        -   x:   -4837
+            y:    -900
+        -   x:   -3163
+            y:    -900
+        -   x:   -4000
+            y:    -690
+
+    - points:
+        -   x:   -4837
+            y:    -100
+        -   x:   -3163
+            y:    -100
+        -   x:   -4000
+            y:    -310
+
+     # Top left triangles
+    - points:
+        -   x:   -4837
+            y:     900
+        -   x:   -3163
+            y:     900
+        -   x:   -4000
+            y:     690
+
+    - points:
+        -   x:   -4837
+            y:     100
+        -   x:   -3163
+            y:     100
+        -   x:   -4000
+            y:     310
+
+    # Bottom right triangles
+    - points:
+        -   x:    4837
+            y:    -900
+        -   x:    3163
+            y:    -900
+        -   x:    4000
+            y:    -690
+
+    - points:
+        -   x:    4837
+            y:    -100
+        -   x:    3163
+            y:    -100
+        -   x:    4000
+            y:    -310
+
+     # Top right triangles
+    - points:
+        -   x:    4837
+            y:     900
+        -   x:    3163
+            y:     900
+        -   x:    4000
+            y:     690
+
+    - points:
+        -   x:    4837
+            y:     100
+        -   x:    3163
+            y:     100
+        -   x:    4000
+            y:     310
+
+conditions:
+    hitrate: 0
