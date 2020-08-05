@@ -96,7 +96,7 @@ void WaveformArea::on_resize(int width, int height)
 	if(IsEye())
 	{
 		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
-		eye->SetWidth(m_width/4);
+		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
 		eye->Refresh();
 	}
@@ -780,7 +780,7 @@ void WaveformArea::OnDecodeSetupComplete()
 	auto eye = dynamic_cast<EyeDecoder2*>(m_pendingDecode);
 	if(eye != NULL)
 	{
-		eye->SetWidth(m_width / 4);
+		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
 	}
 	auto fall = dynamic_cast<WaterfallDecoder*>(m_pendingDecode);
@@ -867,7 +867,14 @@ void WaveformArea::OnWaveformDataReady()
 				eye_width_ps = 5;
 
 			m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
-			m_group->m_xAxisOffset = -width;
+			m_group->m_xAxisOffset = -round(width);
+
+			auto d = dynamic_cast<EyeDecoder2*>(m_channel);
+			if(d)
+			{
+				d->SetXOffset(m_group->m_xAxisOffset);
+				d->SetXScale(m_group->m_pixelsPerXUnit);
+			}
 		}
 	}
 

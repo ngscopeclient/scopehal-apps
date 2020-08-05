@@ -267,6 +267,8 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 	if(!eye)
 		return;
 	auto waveform = dynamic_cast<EyeWaveform*>(eye->GetData());
+	if(!waveform)
+		return;
 
 	//If no mask is selected, we have nothing to draw
 	auto& mask = eye->GetMask();
@@ -473,18 +475,30 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		float gbps = 1e3f / eye->GetUIWidth();
 
 		if(uis < 1e6)
-			snprintf(tmp, sizeof(tmp), "\n%.2fk UI    %.4f Gbps", uis * 1e-3f, gbps);
+			snprintf(tmp, sizeof(tmp), "\n%6.2fk UI\t%.4f Gbps", uis * 1e-3f, gbps);
 		else if(uis < 1e9)
-			snprintf(tmp, sizeof(tmp), "\n%.2fM UI    %.4f Gbps", uis * 1e-6f, gbps);
+			snprintf(tmp, sizeof(tmp), "\n%6.2fM UI\t%.4f Gbps", uis * 1e-6f, gbps);
 		else
-			snprintf(tmp, sizeof(tmp), "\n%.2fG UI    %.4f Gbps", uis * 1e-6f, gbps);
+			snprintf(tmp, sizeof(tmp), "\n%6.2fG UI\t%.4f Gbps", uis * 1e-6f, gbps);
 		label += tmp;
 
-		auto maskname = ed->GetMask().GetMaskName();
+		auto mask = ed->GetMask();
+		auto maskname = mask.GetMaskName();
 		if(maskname != "")
 		{
-			snprintf(tmp, sizeof(tmp), "\nMask: %s", maskname.c_str());
+			//Mask information
+			snprintf(tmp, sizeof(tmp), "\nMask: %-10s", maskname.c_str());
 			label += tmp;
+
+			//Hit rate
+			auto rate = eye->GetMaskHitRate();
+			snprintf(tmp, sizeof(tmp), "\tHit rate: %.2e", rate);
+			label += tmp;
+
+			if(rate > mask.GetAllowedHitRate())
+				label += "(FAIL)";
+			else
+				label += "(PASS)";
 		}
 	}
 
