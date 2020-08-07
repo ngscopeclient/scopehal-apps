@@ -98,7 +98,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
-	vector<EmptyConstructorWrapper<float>> traceBuffer;
+	vector<EmptyConstructorWrapper<float>> xBuffer;
+	vector<EmptyConstructorWrapper<float>> yBuffer;
 	vector<EmptyConstructorWrapper<uint32_t>> indexBuffer;
 	double offset = channel->GetOffset();
 
@@ -117,24 +118,26 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		traceBuffer.resize(count*2);
+		xBuffer.resize(count);
+		yBuffer.resize(count);
 		indexBuffer.resize(m_width);
 
 		//#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
-			traceBuffer[j*4] = off * xscale + xoff;
-			traceBuffer[j*4 + 2] = (off + digdat->m_durations[j]) * xscale + xoff - 1;
+			xBuffer[j*2] 		= off * xscale + xoff;
+			xBuffer[j*2 + 1]	= (off + digdat->m_durations[j]) * xscale + xoff - 1;
 
 			float y = ybase + ( digdat->m_samples[j] ? digheight: 0 );
-			traceBuffer[j*4 + 1] = y;
-			traceBuffer[j*4 + 3] = y;
+			yBuffer[j*2] 		= y;
+			yBuffer[j*2 + 1]	= y;
 		}
 	}
 	else
 	{
-		traceBuffer.resize(count*2);
+		xBuffer.resize(count);
+		yBuffer.resize(count);
 		indexBuffer.resize(m_width);
 
 		//TODO: can we push this to a compute shader?
@@ -143,16 +146,16 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		{
 			for(size_t j=0; j<count; j++)
 			{
-				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
-				traceBuffer[j*2 + 1]	= DbToYPosition(-70 - (20 * log10(andat->m_samples[j])));	//TODO: don't hard code plot limits
+				xBuffer[j] 	= andat->m_offsets[j] * xscale + xoff;
+				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(andat->m_samples[j])));	//TODO: don't hard code plot limits
 			}
 		}
 		else
 		{
 			for(size_t j=0; j<count; j++)
 			{
-				traceBuffer[j*2] 		= andat->m_offsets[j] * xscale + xoff;
-				traceBuffer[j*2 + 1]	= (m_pixelsPerVolt * (andat->m_samples[j] + offset)) + ybase;
+				xBuffer[j]	= andat->m_offsets[j] * xscale + xoff;
+				yBuffer[j]	= (m_pixelsPerVolt * (andat->m_samples[j] + offset)) + ybase;
 			}
 		}
 	}
@@ -174,7 +177,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		for(; nsample < count-1; nsample ++)
 		{
 			//If the next sample ends after the start of the current pixel. stop
-			float end = traceBuffer[(nsample+1)*2];
+			float end = xBuffer[nsample+1];
 			if(end >= j)
 			{
 				//Start the current column at this sample
@@ -194,8 +197,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	start = GetTime();
 
 	//Download it
-	wdata->m_waveformStorageBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, traceBuffer.size()*sizeof(float), &traceBuffer[0], GL_STREAM_DRAW);
+	wdata->m_waveformXBuffer.Bind();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, xBuffer.size()*sizeof(float), &xBuffer[0], GL_STREAM_DRAW);
+	wdata->m_waveformYBuffer.Bind();
+	glBufferData(GL_SHADER_STORAGE_BUFFER, yBuffer.size()*sizeof(float), &yBuffer[0], GL_STREAM_DRAW);
 
 	//Config stuff
 	uint32_t config[5];
@@ -460,7 +465,8 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 
 	m_waveformComputeProgram.Bind();
 	m_waveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
-	data->m_waveformStorageBuffer.BindBase(1);
+	data->m_waveformXBuffer.BindBase(1);
+	data->m_waveformYBuffer.BindBase(4);
 	data->m_waveformConfigBuffer.BindBase(2);
 	data->m_waveformIndexBuffer.BindBase(3);
 	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);

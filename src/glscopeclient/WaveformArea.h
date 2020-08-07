@@ -96,7 +96,8 @@ public:
 	bool					m_geometryOK;
 
 	//SSBOs with waveform data
-	ShaderStorageBuffer		m_waveformStorageBuffer;
+	ShaderStorageBuffer		m_waveformXBuffer;
+	ShaderStorageBuffer		m_waveformYBuffer;
 	ShaderStorageBuffer		m_waveformConfigBuffer;
 	ShaderStorageBuffer		m_waveformIndexBuffer;
 
