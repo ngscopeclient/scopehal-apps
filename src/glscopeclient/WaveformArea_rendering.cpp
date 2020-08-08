@@ -109,7 +109,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		count *= 2;
 
 	float* xBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
-	float* yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+	float* yBuffer = NULL;
+	bool needToFreeYBuffer = true;
 	uint32_t* indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
 
 	if(digdat)
@@ -119,6 +120,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			digheight = m_height - 5;
 		else
 			digheight = 20;
+
+		yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
 
 		//#pragma omp parallel for
 		yoff = ybase;
@@ -146,6 +149,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 		if(fft)
 		{
+			yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
 			yscale = 1;
 			for(size_t j=0; j<count; j++)
 				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
@@ -154,8 +158,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		{
 			yoff = ybase;
 			yscale = m_pixelsPerVolt;
-			for(size_t j=0; j<count; j++)
-				yBuffer[j]	= psamps[j] + offset;
+			needToFreeYBuffer = false;
+			yBuffer = psamps;
 		}
 	}
 
@@ -182,7 +186,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), yBuffer, GL_STREAM_DRAW);
 
 	//Config stuff
-	uint32_t config[9];
+	uint32_t config[10];
 	float* fconfig = reinterpret_cast<float*>(config);
 	config[0] = m_height;							//windowHeight
 	config[1] = m_plotRight;						//windowWidth
@@ -193,6 +197,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	fconfig[6] = xscale;							//xscale
 	fconfig[7] = yoff;								//ybase
 	fconfig[8] = yscale;							//yscale
+	fconfig[9] = offset;							//yoff
 	wdata->m_waveformConfigBuffer.Bind();
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
 
@@ -206,7 +211,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	wdata->m_geometryOK = true;
 
 	free(xBuffer);
-	free(yBuffer);
+	if(needToFreeYBuffer)
+		free(yBuffer);
 	free(indexBuffer);
 }
 

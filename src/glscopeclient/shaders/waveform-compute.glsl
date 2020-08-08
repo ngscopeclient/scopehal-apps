@@ -25,6 +25,7 @@ layout(std430, binding=2) buffer config
 	float xscale;
 	float ybase;
 	float yscale;
+	float yoff;
 };
 
 //Indexes so we know which samples go to which X pixel range
@@ -83,12 +84,12 @@ void main()
 
 	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
-	vec2 left = vec2(xpos[istart]*xscale + xoff, voltage[istart]*yscale + ybase);
+	vec2 left = vec2(xpos[istart]*xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
 	vec2 right;
 	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
-		right = vec2(xpos[i+1]*xscale + xoff, voltage[i+1]*yscale + ybase);
+		right = vec2(xpos[i+1]*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 
 		//If the current point is right of us, stop
 		if(left.x > gl_GlobalInvocationID.x + 1)
