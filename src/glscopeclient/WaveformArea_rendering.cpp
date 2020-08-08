@@ -228,11 +228,24 @@ void WaveformArea::Int64ToFloat(float* dst, int64_t* src, size_t len)
 		pdst[j] 	= psrc[j];
 }
 
+__attribute__((target("avx512dq")))
 void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
 {
-	LogDebug("Src = %p\n", src);
+	//Round length down to multiple of 8 so we can SIMD the loop
+	size_t len_rounded = len - (len % 8);
 
-	Int64ToFloat(dst, src, len);
+	//Main unrolled loop
+	#pragma omp parallel for
+	for(size_t j=0; j<len_rounded; j+= 8)
+	{
+		__m512i i64x8 = _mm512_load_epi64(src + j);
+		__m256 f32x8 = _mm512_cvt_roundepi64_ps(i64x8, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+		_mm256_store_ps(dst + j, f32x8);
+	}
+
+	//Do anything we missed
+	for(size_t j=len_rounded; j < len; j++)
+		dst[j] 	= src[j];
 }
 
 /**
