@@ -94,66 +94,68 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 10);
 	}
 
-	//Calculate X/Y coordinate of each sample point
-	//TODO: some of this can probably move to GPU too?
-	float* xBuffer = NULL;
-	float* yBuffer = NULL;
-	vector<EmptyConstructorWrapper<uint32_t>> indexBuffer;
 	float offset = channel->GetOffset();
+
+	//Y axis scaling in shader
+	float yoff = 0;
+	float yscale = 1;
+
+	//We need to stretch every sample to two samples, one at the very left and one at the very right,
+	//so interpolation works right.
+	//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
+	//TODO: only add extra samples if the left and right values are not the same?
+	size_t realcount = count;
+	if(digdat)
+		count *= 2;
+
+	float* xBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+	float* yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+	uint32_t* indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
 
 	if(digdat)
 	{
-		//We need to stretch every sample to two samples, one at the very left and one at the very right,
-		//so interpolation works right.
-		//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
-		//TODO: only add extra samples if the left and right values are not the same
-		size_t realcount = count;
-		count *= 2;
-
 		float digheight;
 		if(channel == m_channel)
 			digheight = m_height - 5;
 		else
 			digheight = 20;
 
-		xBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
-		yBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
-		indexBuffer.resize(m_width);
-
 		//#pragma omp parallel for
+		yoff = ybase;
+		yscale = digheight;
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
 			xBuffer[j*2] 		= off;
 			xBuffer[j*2 + 1]	= off + digdat->m_durations[j];
 
-			float y = ybase + ( digdat->m_samples[j] ? digheight: 0 );
-			yBuffer[j*2] 		= y;
-			yBuffer[j*2 + 1]	= y;
+			yBuffer[j*2] 		= digdat->m_samples[j];
+			yBuffer[j*2 + 1]	= digdat->m_samples[j];
 		}
 	}
 	else
 	{
-		xBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
-		yBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
-		indexBuffer.resize(m_width);
-
-		int64_t* poffs = reinterpret_cast<int64_t*>(__builtin_assume_aligned(&andat->m_offsets[0], 16));
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
+		float* pdst = reinterpret_cast<float*>(__builtin_assume_aligned(xBuffer, 32));
+		int64_t* psrc = reinterpret_cast<int64_t*>(__builtin_assume_aligned(&andat->m_offsets[0], 16));
 
-		//TODO: can we push this to a compute shader?
-		//This doesn't look too SIMD-friendly because the inputs aren't all flops
-		for(size_t j=0; j<count; j++)
-			xBuffer[j] 	= poffs[j];
+		//Not possible to push this to a compute shader without GL_ARB_gpu_shader_int64,
+		//which isn't well supported on integrated gfx yet :(
+		for(size_t j=0; j < count; j++)
+			pdst[j] 	= psrc[j];
+
 		if(fft)
 		{
+			yscale = 1;
 			for(size_t j=0; j<count; j++)
 				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
 		}
 		else
 		{
+			yoff = ybase;
+			yscale = m_pixelsPerVolt;
 			for(size_t j=0; j<count; j++)
-				yBuffer[j]	= (m_pixelsPerVolt * (psamps[j] + offset)) + ybase;
+				yBuffer[j]	= psamps[j] + offset;
 		}
 	}
 
@@ -165,30 +167,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
-	size_t nsample = 0;
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
-	{
-		bool hit = false;
-
-		//Move forward until we find a sample that starts in the current column
-		for(; nsample < count-1; nsample ++)
-		{
-			//If the next sample ends after the start of the current pixel. stop
-			float end = xBuffer[nsample+1]*xscale + xoff;
-			if(end >= j)
-			{
-				//Start the current column at this sample
-				indexBuffer[j] = nsample;
-				hit = true;
-				break;
-			}
-		}
-
-		//Default to drawing nothing
-		if(!hit)
-			indexBuffer[j] = count;
-	}
+		indexBuffer[j] = BinarySearchForGequal(xBuffer, count, (j - xoff) / xscale);
 
 	dt = GetTime() - start;
 	m_indexTime += dt;
@@ -201,7 +182,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), yBuffer, GL_STREAM_DRAW);
 
 	//Config stuff
-	uint32_t config[7];
+	uint32_t config[9];
 	float* fconfig = reinterpret_cast<float*>(config);
 	config[0] = m_height;							//windowHeight
 	config[1] = m_plotRight;						//windowWidth
@@ -210,12 +191,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	config[4] = digdat ? 1 : 0;						//digital
 	fconfig[5] = xoff;								//xoff
 	fconfig[6] = xscale;							//xscale
+	fconfig[7] = yoff;								//ybase
+	fconfig[8] = yscale;							//yscale
 	wdata->m_waveformConfigBuffer.Bind();
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
 
 	//Indexing
 	wdata->m_waveformIndexBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, indexBuffer.size()*sizeof(uint32_t), &indexBuffer[0], GL_STREAM_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, m_width*sizeof(uint32_t), indexBuffer, GL_STREAM_DRAW);
 
 	dt = GetTime() - start;
 	m_downloadTime += dt;
@@ -223,6 +206,51 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	wdata->m_geometryOK = true;
 
 	free(xBuffer);
+	free(yBuffer);
+	free(indexBuffer);
+}
+
+/**
+	@brief Look for a value greater than or equal to "value" in buf and return the index
+ */
+size_t WaveformArea::BinarySearchForGequal(float* buf, size_t len, float value)
+{
+	size_t pos = len/2;
+	size_t last_lo = 0;
+	size_t last_hi = len-1;
+
+	//Clip if out of range
+	if(buf[0] >= value)
+		return 0;
+	if(buf[last_hi] < value)
+		return len;
+
+	while(true)
+	{
+		LogIndenter li;
+
+		//Stop if we've bracketed the target
+		if( (last_hi - last_lo) <= 1)
+			break;
+
+		//Move down
+		if(buf[pos] > value)
+		{
+			size_t delta = pos - last_lo;
+			last_hi = pos;
+			pos = last_lo + delta/2;
+		}
+
+		//Move up
+		else
+		{
+			size_t delta = last_hi - pos;
+			last_lo = pos;
+			pos = last_hi - delta/2;
+		}
+	}
+
+	return last_lo;
 }
 
 void WaveformArea::ResetTextureFiltering()

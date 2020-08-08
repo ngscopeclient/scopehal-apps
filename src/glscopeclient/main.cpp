@@ -32,7 +32,7 @@
 	@author Andrew D. Zonenberg
 	@brief Program entry point
  */
- 
+
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
@@ -53,6 +53,8 @@ using namespace std;
 int g_numDecodes = 0;
 
 ScopeApp* g_app = NULL;
+
+bool g_hasAvx512F = false;
 
 void help();
 
@@ -159,25 +161,30 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
+	//Check CPU features
+	g_hasAvx512F = __builtin_cpu_supports("avx512f");
+	if(g_hasAvx512F)
+		LogDebug("CPU supports AVX512F\n");
+
 	//Change to the binary's directory so we can use relative paths for external resources
 	//FIXME: portability warning: this only works on Linux
 #ifdef _WIN32
 	// Retrieve the file name of the current process image
 	TCHAR binPath[MAX_PATH];
-	
+
 	if( GetModuleFileName(NULL, binPath, MAX_PATH) == 0 )
 	{
 		LogError("Error: GetModuleFileName() failed.\n");
 		return 1;
 	}
-	
+
 	// Remove file name from path
 	if( !PathRemoveFileSpec(binPath) )
 	{
 		LogError("Error: PathRemoveFileSpec() failed.\n");
 		return 1;
 	}
-	
+
 	// Set it as current working directory
 	if( SetCurrentDirectory(binPath) == 0 )
 	{

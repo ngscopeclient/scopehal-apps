@@ -374,6 +374,7 @@ protected:
 	float XAxisUnitsToPixels(int64_t t);
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
+	size_t BinarySearchForGequal(float* buf, size_t len, float value);
 
 	void OnRemoveOverlay(ProtocolDecoder* decode);
 

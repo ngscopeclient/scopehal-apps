@@ -75,4 +75,6 @@
 
 double GetTime();
 
+extern bool g_hasAvx512F;
+
 #endif
