@@ -77,9 +77,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		return;
 	}
 
-	double xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
-	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
-
+	float xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
 	bool fft = IsFFT();
 
 	//Zero voltage level
@@ -98,10 +96,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Calculate X/Y coordinate of each sample point
 	//TODO: some of this can probably move to GPU too?
-	vector<EmptyConstructorWrapper<float>> xBuffer;
-	vector<EmptyConstructorWrapper<float>> yBuffer;
+	float* xBuffer = NULL;
+	float* yBuffer = NULL;
 	vector<EmptyConstructorWrapper<uint32_t>> indexBuffer;
-	double offset = channel->GetOffset();
+	float offset = channel->GetOffset();
 
 	if(digdat)
 	{
@@ -118,16 +116,16 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		xBuffer.resize(count);
-		yBuffer.resize(count);
+		xBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
+		yBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
 		indexBuffer.resize(m_width);
 
 		//#pragma omp parallel for
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
-			xBuffer[j*2] 		= off * xscale + xoff;
-			xBuffer[j*2 + 1]	= (off + digdat->m_durations[j]) * xscale + xoff - 1;
+			xBuffer[j*2] 		= off;
+			xBuffer[j*2 + 1]	= off + digdat->m_durations[j];
 
 			float y = ybase + ( digdat->m_samples[j] ? digheight: 0 );
 			yBuffer[j*2] 		= y;
@@ -136,27 +134,26 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	}
 	else
 	{
-		xBuffer.resize(count);
-		yBuffer.resize(count);
+		xBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
+		yBuffer = reinterpret_cast<float*>(aligned_alloc(16, count*sizeof(float)));
 		indexBuffer.resize(m_width);
+
+		int64_t* poffs = reinterpret_cast<int64_t*>(__builtin_assume_aligned(&andat->m_offsets[0], 16));
+		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
 
 		//TODO: can we push this to a compute shader?
 		//This doesn't look too SIMD-friendly because the inputs aren't all flops
+		for(size_t j=0; j<count; j++)
+			xBuffer[j] 	= poffs[j];
 		if(fft)
 		{
 			for(size_t j=0; j<count; j++)
-			{
-				xBuffer[j] 	= andat->m_offsets[j] * xscale + xoff;
-				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(andat->m_samples[j])));	//TODO: don't hard code plot limits
-			}
+				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
 		}
 		else
 		{
 			for(size_t j=0; j<count; j++)
-			{
-				xBuffer[j]	= andat->m_offsets[j] * xscale + xoff;
-				yBuffer[j]	= (m_pixelsPerVolt * (andat->m_samples[j] + offset)) + ybase;
-			}
+				yBuffer[j]	= (m_pixelsPerVolt * (psamps[j] + offset)) + ybase;
 		}
 	}
 
@@ -169,6 +166,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
 	size_t nsample = 0;
+	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
 	{
 		bool hit = false;
@@ -177,7 +175,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		for(; nsample < count-1; nsample ++)
 		{
 			//If the next sample ends after the start of the current pixel. stop
-			float end = xBuffer[nsample+1];
+			float end = xBuffer[nsample+1]*xscale + xoff;
 			if(end >= j)
 			{
 				//Start the current column at this sample
@@ -198,17 +196,20 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Download it
 	wdata->m_waveformXBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, xBuffer.size()*sizeof(float), &xBuffer[0], GL_STREAM_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), xBuffer, GL_STREAM_DRAW);
 	wdata->m_waveformYBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, yBuffer.size()*sizeof(float), &yBuffer[0], GL_STREAM_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), yBuffer, GL_STREAM_DRAW);
 
 	//Config stuff
-	uint32_t config[5];
+	uint32_t config[7];
+	float* fconfig = reinterpret_cast<float*>(config);
 	config[0] = m_height;							//windowHeight
 	config[1] = m_plotRight;						//windowWidth
 	config[2] = count;								//depth
 	config[3] = m_parent->GetTraceAlpha() * 256;	//alpha
 	config[4] = digdat ? 1 : 0;						//digital
+	fconfig[5] = xoff;								//xoff
+	fconfig[6] = xscale;							//xscale
 	wdata->m_waveformConfigBuffer.Bind();
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
 
@@ -220,6 +221,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	m_downloadTime += dt;
 
 	wdata->m_geometryOK = true;
+
+	free(xBuffer);
 }
 
 void WaveformArea::ResetTextureFiltering()
