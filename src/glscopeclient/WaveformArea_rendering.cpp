@@ -108,7 +108,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	if(digdat)
 		count *= 2;
 
-	float* xBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+	float* xBuffer = reinterpret_cast<float*>(aligned_alloc(64, count*sizeof(float)));
 	float* yBuffer = NULL;
 	bool needToFreeYBuffer = true;
 	uint32_t* indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
@@ -138,15 +138,13 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	}
 	else
 	{
+		//Need AVX512DQ or AVX512VL for VCTVQQ2PS
+		if(g_hasAvx512DQ || g_hasAvx512VL)
+			Int64ToFloatAVX512(xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+		else
+			Int64ToFloat(xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
-		float* pdst = reinterpret_cast<float*>(__builtin_assume_aligned(xBuffer, 32));
-		int64_t* psrc = reinterpret_cast<int64_t*>(__builtin_assume_aligned(&andat->m_offsets[0], 16));
-
-		//Not possible to push this to a compute shader without GL_ARB_gpu_shader_int64,
-		//which isn't well supported on integrated gfx yet :(
-		for(size_t j=0; j < count; j++)
-			pdst[j] 	= psrc[j];
-
 		if(fft)
 		{
 			yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
@@ -214,6 +212,27 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	if(needToFreeYBuffer)
 		free(yBuffer);
 	free(indexBuffer);
+}
+
+/**
+	@brief Convert an array of int64_t's to floats
+ */
+void WaveformArea::Int64ToFloat(float* dst, int64_t* src, size_t len)
+{
+	float* pdst = reinterpret_cast<float*>(__builtin_assume_aligned(dst, 32));
+	int64_t* psrc = reinterpret_cast<int64_t*>(__builtin_assume_aligned(src, 16));
+
+	//Not possible to push this to a compute shader without GL_ARB_gpu_shader_int64,
+	//which isn't well supported on integrated gfx yet :(
+	for(size_t j=0; j < len; j++)
+		pdst[j] 	= psrc[j];
+}
+
+void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
+{
+	LogDebug("Src = %p\n", src);
+
+	Int64ToFloat(dst, src, len);
 }
 
 /**
