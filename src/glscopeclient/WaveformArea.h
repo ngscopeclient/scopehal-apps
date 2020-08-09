@@ -87,12 +87,7 @@ public:
 	WaveformRenderData(OscilloscopeChannel* channel)
 	: m_channel(channel)
 	, m_geometryOK(false)
-	, m_xBuffer(NULL)
-	, m_yBuffer(NULL)
-	, m_indexBuffer(NULL)
-	, m_needToFreeYBuffer(false)
-	, m_floatConfigBuffer((float*)&m_configBuffer)
-	, m_dirty(false)
+	, m_count(0)
 	{}
 
 	//The channel of interest
@@ -110,17 +105,19 @@ public:
 	//RGBA32 but only alpha actually used
 	Texture					m_waveformTexture;
 
-	//Internal buffers used for managing the data
-	float*					m_xBuffer;
-	float*					m_yBuffer;
-	uint32_t*				m_indexBuffer;
-	bool					m_needToFreeYBuffer;
-	uint32_t				m_configBuffer[10];
-	float*					m_floatConfigBuffer;
+	//Number of samples in the buffer
 	size_t					m_count;
 
-	//true if we have data to download
-	bool					m_dirty;
+	//OpenGL-mapped buffers for the data
+	float*					m_mappedXBuffer;
+	float*					m_mappedYBuffer;
+	uint32_t*				m_mappedIndexBuffer;
+	uint32_t*				m_mappedConfigBuffer;
+	float*					m_mappedFloatConfigBuffer;
+
+	//Map all buffers for download
+	void MapBuffers(size_t width);
+	void UnmapBuffers();
 };
 
 float sinc(float x, float width);
@@ -180,6 +177,8 @@ public:
 
 	//Calls PrepareGeometry() for all waveforms
 	void PrepareAllGeometry();
+	void MapAllBuffers();
+	void UnmapAllBuffers();
 
 protected:
 	void SharedCtorInit();
@@ -311,7 +310,6 @@ protected:
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
 	void PrepareGeometry(WaveformRenderData* wdata);
-	void DownloadGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
 	WaveformRenderData*								m_waveformRenderData;
 	std::map<ProtocolDecoder*, WaveformRenderData*>	m_overlayRenderData;
@@ -421,7 +419,6 @@ protected:
 
 	double m_prepareTime;
 	double m_indexTime;
-	double m_downloadTime;
 
 	float m_pixelsPerVolt;
 	float m_padding;

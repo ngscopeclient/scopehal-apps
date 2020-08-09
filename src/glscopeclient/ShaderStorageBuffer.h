@@ -71,6 +71,21 @@ public:
 
 	static void BulkInit(std::vector<ShaderStorageBuffer*>& arr);
 
+	//Map this buffer for direct memory access
+	void* Map(size_t size, GLenum access = GL_WRITE_ONLY)
+	{
+		Bind();
+		glBufferData(GL_SHADER_STORAGE_BUFFER, size, NULL, GL_STREAM_DRAW);
+		return glMapBuffer(GL_SHADER_STORAGE_BUFFER, access);
+	}
+
+	//Unmap the buffer
+	void Unmap()
+	{
+		Bind();
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	}
+
 protected:
 
 	/**

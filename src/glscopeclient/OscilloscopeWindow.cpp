@@ -2017,14 +2017,22 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto w : m_waveformAreas)
 		areas.push_back(w);
 
-	//Update the views
-	//PrepareAllGeometry() is multithreadable, but OnWaveformDataReady() may call UI functions
+	//Map all GL buffers for every waveform area (has to be done in main thread)
+	for(auto w : m_waveformAreas)
+		w->MapAllBuffers();
+
+	//Do geometry conversion in as many threads as we can
 	double start = GetTime();
 	#pragma omp parallel for
 	for(size_t i=0; i<areas.size(); i++)
 		areas[i]->PrepareAllGeometry();
+
+	//Unmap the buffers (has to be done in main thread) and tell them to update
 	for(auto w : m_waveformAreas)
+	{
+		w->UnmapAllBuffers();
 		w->OnWaveformDataReady();
+	}
 	m_tView += GetTime() - start;
 
 	//Update the trigger sync wizard, if it's active

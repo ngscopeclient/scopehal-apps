@@ -77,7 +77,6 @@ void WaveformArea::SharedCtorInit()
 	m_frameCount 			= 0;
 	m_renderTime 			= 0;
 	m_prepareTime 			= 0;
-	m_downloadTime 			= 0;
 	m_cairoTime				= 0;
 	m_texDownloadTime		= 0;
 	m_compositeTime			= 0;
@@ -146,8 +145,6 @@ WaveformArea::~WaveformArea()
 			m_prepareTime * 1000, m_prepareTime * 1000 / m_frameCount, m_prepareTime * 100 / m_renderTime);
 		LogDebug("Build index       | %10.1f |   %10.3f | %.1f %%\n",
 			m_indexTime * 1000, m_indexTime * 1000 / m_frameCount, m_indexTime * 100 / m_renderTime);
-		LogDebug("Geometry download | %10.1f |   %10.3f | %.1f %%\n",
-			m_downloadTime * 1000, m_downloadTime * 1000 / m_frameCount, m_downloadTime * 100 / m_renderTime);
 		LogDebug("Composite         | %10.1f |   %10.3f | %.1f %%\n",
 			m_compositeTime * 1000, m_compositeTime * 1000 / m_frameCount, m_compositeTime * 100 / m_renderTime);
 	}

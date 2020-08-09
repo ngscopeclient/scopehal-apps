@@ -46,6 +46,41 @@ using namespace std;
 using namespace glm;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// WaveformRenderData
+
+void WaveformRenderData::MapBuffers(size_t width)
+{
+	//Calculate the number of points we'll need to draw. Default to 1 if no data
+	if( (m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
+		(m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	{
+		m_count = 1;
+	}
+	else
+	{
+		auto pdat = m_channel->GetData();
+		if( (pdat == NULL) || ((m_count = pdat->m_offsets.size()) == 0) )
+			m_count = 1;
+		if(dynamic_cast<DigitalWaveform*>(pdat) != NULL)
+			m_count *= 2;
+	}
+
+	m_mappedXBuffer = (float*)m_waveformXBuffer.Map(m_count*sizeof(float), GL_READ_WRITE);
+	m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
+	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
+	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*10);
+	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
+}
+
+void WaveformRenderData::UnmapBuffers()
+{
+	m_waveformXBuffer.Unmap();
+	m_waveformYBuffer.Unmap();
+	m_waveformIndexBuffer.Unmap();
+	m_waveformConfigBuffer.Unmap();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
 void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
@@ -61,8 +96,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		return;
 	}
 	auto pdat = channel->GetData();
-	size_t count;
-	if( (pdat == NULL) || ((count = pdat->m_offsets.size()) == 0) )
+	if( (pdat == NULL) || pdat->m_offsets.empty() )
 	{
 		wdata->m_geometryOK = false;
 		return;
@@ -104,16 +138,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//so interpolation works right.
 	//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
 	//TODO: only add extra samples if the left and right values are not the same?
-	size_t realcount = count;
+	size_t realcount = wdata->m_count;
 	if(digdat)
-		count *= 2;
-
-	//TODO: avoid needless allocations if we can
-	//by using a vector we can resize
-	wdata->m_xBuffer = reinterpret_cast<float*>(aligned_alloc(64, count*sizeof(float)));
-	wdata->m_yBuffer = NULL;
-	wdata->m_needToFreeYBuffer = true;
-	wdata->m_indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
+		realcount /= 2;
 
 	if(digdat)
 	{
@@ -123,43 +150,40 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		wdata->m_yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
-
 		//#pragma omp parallel for
 		yoff = ybase;
 		yscale = digheight;
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
-			wdata->m_xBuffer[j*2] 		= off;
-			wdata->m_xBuffer[j*2 + 1]	= off + digdat->m_durations[j];
+			wdata->m_mappedXBuffer[j*2] 	= off;
+			wdata->m_mappedXBuffer[j*2 + 1]	= off + digdat->m_durations[j];
 
-			wdata->m_yBuffer[j*2] 		= digdat->m_samples[j];
-			wdata->m_yBuffer[j*2 + 1]	= digdat->m_samples[j];
+			wdata->m_mappedYBuffer[j*2] 	= digdat->m_samples[j];
+			wdata->m_mappedYBuffer[j*2 + 1]	= digdat->m_samples[j];
 		}
 	}
 	else
 	{
 		//Need AVX512DQ or AVX512VL for VCTVQQ2PS
 		if(g_hasAvx512DQ || g_hasAvx512VL)
-			Int64ToFloatAVX512(wdata->m_xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+			Int64ToFloatAVX512(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
 		else
-			Int64ToFloat(wdata->m_xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+			Int64ToFloat(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
 
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
 		if(fft)
 		{
-			wdata->m_yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+			wdata->m_mappedYBuffer = reinterpret_cast<float*>(aligned_alloc(32, wdata->m_count*sizeof(float)));
 			yscale = 1;
-			for(size_t j=0; j<count; j++)
-				wdata->m_yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
+			for(size_t j=0; j<wdata->m_count; j++)
+				wdata->m_mappedYBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
 		}
 		else
 		{
 			yoff = ybase;
 			yscale = m_pixelsPerVolt;
-			wdata->m_needToFreeYBuffer = false;
-			wdata->m_yBuffer = psamps;
+			memcpy(wdata->m_mappedYBuffer, psamps, wdata->m_count*sizeof(float));
 		}
 	}
 
@@ -173,57 +197,25 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//TODO: can we parallelize this? move to a compute shader?
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
-		wdata->m_indexBuffer[j] = BinarySearchForGequal(wdata->m_xBuffer, count, (j - xoff) / xscale);
+		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(wdata->m_mappedXBuffer, wdata->m_count, (j - xoff) / xscale);
 
 	dt = GetTime() - start;
 	m_indexTime += dt;
 
 	//Config stuff
-	wdata->m_configBuffer[0] = m_height;						//windowHeight
-	wdata->m_configBuffer[1] = m_plotRight;						//windowWidth
-	wdata->m_configBuffer[2] = count;							//depth
-	wdata->m_configBuffer[3] = m_parent->GetTraceAlpha() * 256;	//alpha
-	wdata->m_configBuffer[4] = digdat ? 1 : 0;					//digital
-	wdata->m_floatConfigBuffer[5] = xoff;						//xoff
-	wdata->m_floatConfigBuffer[6] = xscale;						//xscale
-	wdata->m_floatConfigBuffer[7] = yoff;						//ybase
-	wdata->m_floatConfigBuffer[8] = yscale;						//yscale
-	wdata->m_floatConfigBuffer[9] = offset;						//yoff
-	wdata->m_count = count;
-	wdata->m_dirty = true;
-}
+	wdata->m_mappedConfigBuffer[0] = m_height;							//windowHeight
+	wdata->m_mappedConfigBuffer[1] = m_plotRight;						//windowWidth
+	wdata->m_mappedConfigBuffer[2] = wdata->m_count;					//depth
+	wdata->m_mappedConfigBuffer[3] = m_parent->GetTraceAlpha() * 256;	//alpha
+	wdata->m_mappedConfigBuffer[4] = digdat ? 1 : 0;					//digital
+	wdata->m_mappedFloatConfigBuffer[5] = xoff;							//xoff
+	wdata->m_mappedFloatConfigBuffer[6] = xscale;						//xscale
+	wdata->m_mappedFloatConfigBuffer[7] = yoff;							//ybase
+	wdata->m_mappedFloatConfigBuffer[8] = yscale;						//yscale
+	wdata->m_mappedFloatConfigBuffer[9] = offset;						//yoff
 
-void WaveformArea::DownloadGeometry(WaveformRenderData* wdata)
-{
-	if(!wdata->m_dirty)
-		return;
-
-	double start = GetTime();
-
-	//Download it
-	wdata->m_waveformXBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, wdata->m_count*sizeof(float), wdata->m_xBuffer, GL_STREAM_DRAW);
-	wdata->m_waveformYBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, wdata->m_count*sizeof(float), wdata->m_yBuffer, GL_STREAM_DRAW);
-	wdata->m_waveformConfigBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(wdata->m_configBuffer), wdata->m_configBuffer, GL_STREAM_DRAW);
-	wdata->m_waveformIndexBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, m_width*sizeof(uint32_t), wdata->m_indexBuffer, GL_STREAM_DRAW);
-
-	double dt = GetTime() - start;
-	m_downloadTime += dt;
-
+	//Done
 	wdata->m_geometryOK = true;
-
-	free(wdata->m_xBuffer);
-	if(wdata->m_needToFreeYBuffer)
-		free(wdata->m_yBuffer);
-	free(wdata->m_indexBuffer);
-	wdata->m_xBuffer = NULL;
-	wdata->m_yBuffer = NULL;
-	wdata->m_indexBuffer = NULL;
-
-	wdata->m_dirty = false;
 }
 
 /**
@@ -330,6 +322,42 @@ void WaveformArea::PrepareAllGeometry()
 	}
 }
 
+void WaveformArea::MapAllBuffers()
+{
+	make_current();
+
+	//Main waveform
+	if(IsAnalog() || IsDigital())
+		m_waveformRenderData->MapBuffers(m_width);
+
+	for(auto overlay : m_overlays)
+	{
+		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			continue;
+
+		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
+			m_overlayRenderData[overlay]->MapBuffers(m_width);
+	}
+}
+
+void WaveformArea::UnmapAllBuffers()
+{
+	make_current();
+
+	//Main waveform
+	if(IsAnalog() || IsDigital())
+		m_waveformRenderData->UnmapBuffers();
+
+	for(auto overlay : m_overlays)
+	{
+		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			continue;
+
+		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
+			m_overlayRenderData[overlay]->UnmapBuffers();
+	}
+}
+
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	LogIndenter li;
@@ -344,9 +372,13 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	}
 	m_lastFrameStart = start;
 
-	//Prepare geometry if it's not done yet
+	//Update geometry if needed
 	if(m_geometryDirty)
+	{
+		MapAllBuffers();
 		PrepareAllGeometry();
+		UnmapAllBuffers();
+	}
 
 	//Everything we draw is 2D painter's algorithm.
 	//Turn off some stuff we don't need, but leave blending on.
@@ -374,12 +406,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		RenderPersistenceOverlay();
 	*/
 
-	//Download the main waveform to the GPU and kick off the compute shader for rendering it
+	//Draw the main waveform
 	if(IsAnalog() || IsDigital())
-	{
-		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(m_waveformRenderData);
-	}
 
 	//Launch software rendering passes and push the resulting data to the GPU
 	ComputeAndDownloadCairoUnderlays();
@@ -402,7 +431,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 		ResetTextureFiltering();
 
-		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(wdat);
 	}
 
