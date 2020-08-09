@@ -878,8 +878,7 @@ void WaveformArea::OnWaveformDataReady()
 		}
 	}
 
-	//Update our measurements and redraw the waveform
-	SetGeometryDirty();
+	//Redraw everything
 	queue_draw();
 	m_group->m_timeline.queue_draw();
 }

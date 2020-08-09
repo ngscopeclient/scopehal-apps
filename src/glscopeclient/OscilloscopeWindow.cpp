@@ -2011,8 +2011,18 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto a : m_analyzers)
 		a->OnWaveformDataReady();
 
+	//Make a vector of our waveform areas so we can parallelize PrepareAllGeometry() calls
+	//(OpenMP can't iterate over a set)
+	vector<WaveformArea*> areas;
+	for(auto w : m_waveformAreas)
+		areas.push_back(w);
+
 	//Update the views
+	//PrepareAllGeometry() is multithreadable, but OnWaveformDataReady() may call UI functions
 	double start = GetTime();
+	#pragma omp parallel for
+	for(size_t i=0; i<areas.size(); i++)
+		areas[i]->PrepareAllGeometry();
 	for(auto w : m_waveformAreas)
 		w->OnWaveformDataReady();
 	m_tView += GetTime() - start;

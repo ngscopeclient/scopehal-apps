@@ -141,11 +141,13 @@ public:
 	{ return m_channel; }
 
 	void ClearPersistence()
-	{ m_persistenceClear = true; }
+	{
+		m_persistenceClear = true;
+		SetGeometryDirty();
+	}
 
-	//TODO: dirtiness needs complete revamp
 	void SetGeometryDirty()
-	{  }
+	{ m_geometryDirty = true; }
 
 	WaveformGroup* m_group;
 
@@ -175,6 +177,9 @@ public:
 		decode->AddRef();
 		m_overlays.push_back(decode);
 	}
+
+	//Calls PrepareGeometry() for all waveforms
+	void PrepareAllGeometry();
 
 protected:
 	void SharedCtorInit();
@@ -466,6 +471,7 @@ protected:
 	int m_dragOverlayPosition;
 
 	bool	m_firstFrame;
+	bool	m_geometryDirty;
 };
 
 #endif

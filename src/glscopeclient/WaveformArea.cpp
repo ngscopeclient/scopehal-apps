@@ -94,7 +94,8 @@ void WaveformArea::SharedCtorInit()
 	m_persistenceClear 		= true;
 	m_firstFrame 			= false;
 	m_waveformRenderData	= NULL;
-	m_dragOverlayPosition = 0;
+	m_dragOverlayPosition	= 0;
+	m_geometryDirty			= false;
 
 	m_decodeDialog 			= NULL;
 	m_pendingDecode			= NULL;
@@ -457,7 +458,7 @@ void WaveformArea::on_realize()
 	//Let the base class create the GL context, then select it
 	Gtk::GLArea::on_realize();
 	make_current();
-	
+
 	// Initialize GLEW
 	if(!m_isGlewInitialized)
 	{
@@ -467,7 +468,7 @@ void WaveformArea::on_realize()
 			LogError("Error: Failed to initialize GLEW");
 			return;
 		}
-		
+
 		m_isGlewInitialized = true;
 	}
 

@@ -109,6 +109,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		count *= 2;
 
 	//TODO: avoid needless allocations if we can
+	//by using a vector we can resize
 	wdata->m_xBuffer = reinterpret_cast<float*>(aligned_alloc(64, count*sizeof(float)));
 	wdata->m_yBuffer = NULL;
 	wdata->m_needToFreeYBuffer = true;
@@ -311,6 +312,24 @@ void WaveformArea::ResetTextureFiltering()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
+void WaveformArea::PrepareAllGeometry()
+{
+	m_geometryDirty = false;
+
+	//Main waveform
+	if(IsAnalog() || IsDigital())
+		PrepareGeometry(m_waveformRenderData);
+
+	for(auto overlay : m_overlays)
+	{
+		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			continue;
+
+		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
+			PrepareGeometry(m_overlayRenderData[overlay]);
+	}
+}
+
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	LogIndenter li;
@@ -324,6 +343,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		m_frameCount ++;
 	}
 	m_lastFrameStart = start;
+
+	//Prepare geometry if it's not done yet
+	if(m_geometryDirty)
+		PrepareAllGeometry();
 
 	//Everything we draw is 2D painter's algorithm.
 	//Turn off some stuff we don't need, but leave blending on.
@@ -354,7 +377,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Download the main waveform to the GPU and kick off the compute shader for rendering it
 	if(IsAnalog() || IsDigital())
 	{
-		PrepareGeometry(m_waveformRenderData);
 		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(m_waveformRenderData);
 	}
@@ -380,7 +402,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
 		ResetTextureFiltering();
 
-		PrepareGeometry(wdat);
 		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(wdat);
 	}
