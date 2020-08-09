@@ -313,7 +313,8 @@ void ScopeThread(Oscilloscope* scope)
 	pthread_setname_np(pthread_self(), "ScopeThread");
 	#endif
 
-	omp_set_num_threads(8);
+	//Assume hyperthreading is enabled and only use one thread per physical core
+	omp_set_num_threads(omp_get_num_procs() / 2);
 
 	double tlast = GetTime();
 	size_t npolls = 0;

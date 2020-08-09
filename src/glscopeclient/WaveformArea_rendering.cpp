@@ -235,7 +235,7 @@ void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
 	size_t len_rounded = len - (len % 8);
 
 	//Main unrolled loop
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for(size_t j=0; j<len_rounded; j+= 8)
 	{
 		__m512i i64x8 = _mm512_load_epi64(src + j);
