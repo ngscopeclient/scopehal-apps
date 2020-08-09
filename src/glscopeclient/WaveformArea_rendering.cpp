@@ -108,10 +108,11 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	if(digdat)
 		count *= 2;
 
-	float* xBuffer = reinterpret_cast<float*>(aligned_alloc(64, count*sizeof(float)));
-	float* yBuffer = NULL;
-	bool needToFreeYBuffer = true;
-	uint32_t* indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
+	//TODO: avoid needless allocations if we can
+	wdata->m_xBuffer = reinterpret_cast<float*>(aligned_alloc(64, count*sizeof(float)));
+	wdata->m_yBuffer = NULL;
+	wdata->m_needToFreeYBuffer = true;
+	wdata->m_indexBuffer = reinterpret_cast<uint32_t*>(aligned_alloc(32, m_width*sizeof(uint32_t)));
 
 	if(digdat)
 	{
@@ -121,7 +122,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+		wdata->m_yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
 
 		//#pragma omp parallel for
 		yoff = ybase;
@@ -129,35 +130,35 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		for(size_t j=0; j<realcount; j++)
 		{
 			int64_t off = digdat->m_offsets[j];
-			xBuffer[j*2] 		= off;
-			xBuffer[j*2 + 1]	= off + digdat->m_durations[j];
+			wdata->m_xBuffer[j*2] 		= off;
+			wdata->m_xBuffer[j*2 + 1]	= off + digdat->m_durations[j];
 
-			yBuffer[j*2] 		= digdat->m_samples[j];
-			yBuffer[j*2 + 1]	= digdat->m_samples[j];
+			wdata->m_yBuffer[j*2] 		= digdat->m_samples[j];
+			wdata->m_yBuffer[j*2 + 1]	= digdat->m_samples[j];
 		}
 	}
 	else
 	{
 		//Need AVX512DQ or AVX512VL for VCTVQQ2PS
 		if(g_hasAvx512DQ || g_hasAvx512VL)
-			Int64ToFloatAVX512(xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+			Int64ToFloatAVX512(wdata->m_xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
 		else
-			Int64ToFloat(xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
+			Int64ToFloat(wdata->m_xBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), count);
 
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
 		if(fft)
 		{
-			yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
+			wdata->m_yBuffer = reinterpret_cast<float*>(aligned_alloc(32, count*sizeof(float)));
 			yscale = 1;
 			for(size_t j=0; j<count; j++)
-				yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
+				wdata->m_yBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
 		}
 		else
 		{
 			yoff = ybase;
 			yscale = m_pixelsPerVolt;
-			needToFreeYBuffer = false;
-			yBuffer = psamps;
+			wdata->m_needToFreeYBuffer = false;
+			wdata->m_yBuffer = psamps;
 		}
 	}
 
@@ -171,47 +172,57 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//TODO: can we parallelize this? move to a compute shader?
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
-		indexBuffer[j] = BinarySearchForGequal(xBuffer, count, (j - xoff) / xscale);
+		wdata->m_indexBuffer[j] = BinarySearchForGequal(wdata->m_xBuffer, count, (j - xoff) / xscale);
 
 	dt = GetTime() - start;
 	m_indexTime += dt;
-	start = GetTime();
+
+	//Config stuff
+	wdata->m_configBuffer[0] = m_height;						//windowHeight
+	wdata->m_configBuffer[1] = m_plotRight;						//windowWidth
+	wdata->m_configBuffer[2] = count;							//depth
+	wdata->m_configBuffer[3] = m_parent->GetTraceAlpha() * 256;	//alpha
+	wdata->m_configBuffer[4] = digdat ? 1 : 0;					//digital
+	wdata->m_floatConfigBuffer[5] = xoff;						//xoff
+	wdata->m_floatConfigBuffer[6] = xscale;						//xscale
+	wdata->m_floatConfigBuffer[7] = yoff;						//ybase
+	wdata->m_floatConfigBuffer[8] = yscale;						//yscale
+	wdata->m_floatConfigBuffer[9] = offset;						//yoff
+	wdata->m_count = count;
+	wdata->m_dirty = true;
+}
+
+void WaveformArea::DownloadGeometry(WaveformRenderData* wdata)
+{
+	if(!wdata->m_dirty)
+		return;
+
+	double start = GetTime();
 
 	//Download it
 	wdata->m_waveformXBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), xBuffer, GL_STREAM_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, wdata->m_count*sizeof(float), wdata->m_xBuffer, GL_STREAM_DRAW);
 	wdata->m_waveformYBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, count*sizeof(float), yBuffer, GL_STREAM_DRAW);
-
-	//Config stuff
-	uint32_t config[10];
-	float* fconfig = reinterpret_cast<float*>(config);
-	config[0] = m_height;							//windowHeight
-	config[1] = m_plotRight;						//windowWidth
-	config[2] = count;								//depth
-	config[3] = m_parent->GetTraceAlpha() * 256;	//alpha
-	config[4] = digdat ? 1 : 0;						//digital
-	fconfig[5] = xoff;								//xoff
-	fconfig[6] = xscale;							//xscale
-	fconfig[7] = yoff;								//ybase
-	fconfig[8] = yscale;							//yscale
-	fconfig[9] = offset;							//yoff
+	glBufferData(GL_SHADER_STORAGE_BUFFER, wdata->m_count*sizeof(float), wdata->m_yBuffer, GL_STREAM_DRAW);
 	wdata->m_waveformConfigBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(config), config, GL_STREAM_DRAW);
-
-	//Indexing
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(wdata->m_configBuffer), wdata->m_configBuffer, GL_STREAM_DRAW);
 	wdata->m_waveformIndexBuffer.Bind();
-	glBufferData(GL_SHADER_STORAGE_BUFFER, m_width*sizeof(uint32_t), indexBuffer, GL_STREAM_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, m_width*sizeof(uint32_t), wdata->m_indexBuffer, GL_STREAM_DRAW);
 
-	dt = GetTime() - start;
+	double dt = GetTime() - start;
 	m_downloadTime += dt;
 
 	wdata->m_geometryOK = true;
 
-	free(xBuffer);
-	if(needToFreeYBuffer)
-		free(yBuffer);
-	free(indexBuffer);
+	free(wdata->m_xBuffer);
+	if(wdata->m_needToFreeYBuffer)
+		free(wdata->m_yBuffer);
+	free(wdata->m_indexBuffer);
+	wdata->m_xBuffer = NULL;
+	wdata->m_yBuffer = NULL;
+	wdata->m_indexBuffer = NULL;
+
+	wdata->m_dirty = false;
 }
 
 /**
@@ -344,6 +355,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	if(IsAnalog() || IsDigital())
 	{
 		PrepareGeometry(m_waveformRenderData);
+		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(m_waveformRenderData);
 	}
 
@@ -369,6 +381,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		ResetTextureFiltering();
 
 		PrepareGeometry(wdat);
+		DownloadGeometry(m_waveformRenderData);
 		RenderTrace(wdat);
 	}
 

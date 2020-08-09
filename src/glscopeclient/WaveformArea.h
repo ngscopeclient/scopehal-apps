@@ -87,6 +87,12 @@ public:
 	WaveformRenderData(OscilloscopeChannel* channel)
 	: m_channel(channel)
 	, m_geometryOK(false)
+	, m_xBuffer(NULL)
+	, m_yBuffer(NULL)
+	, m_indexBuffer(NULL)
+	, m_needToFreeYBuffer(false)
+	, m_floatConfigBuffer((float*)&m_configBuffer)
+	, m_dirty(false)
 	{}
 
 	//The channel of interest
@@ -103,6 +109,18 @@ public:
 
 	//RGBA32 but only alpha actually used
 	Texture					m_waveformTexture;
+
+	//Internal buffers used for managing the data
+	float*					m_xBuffer;
+	float*					m_yBuffer;
+	uint32_t*				m_indexBuffer;
+	bool					m_needToFreeYBuffer;
+	uint32_t				m_configBuffer[10];
+	float*					m_floatConfigBuffer;
+	size_t					m_count;
+
+	//true if we have data to download
+	bool					m_dirty;
 };
 
 float sinc(float x, float width);
@@ -288,6 +306,7 @@ protected:
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
 	void PrepareGeometry(WaveformRenderData* wdata);
+	void DownloadGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
 	WaveformRenderData*								m_waveformRenderData;
 	std::map<ProtocolDecoder*, WaveformRenderData*>	m_overlayRenderData;
