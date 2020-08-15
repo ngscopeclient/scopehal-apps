@@ -796,7 +796,14 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	//Create a new waveform view for the generated signal
 	if(!m_pendingDecode->IsOverlay())
-		m_parent->DoAddChannel(m_pendingDecode, m_group, this);
+	{
+		auto area = m_parent->DoAddChannel(m_pendingDecode, m_group, this);
+
+		//If the decode is incompatible with our timebase, make a new group
+		//TODO: better way to determine fixed-width stuff like eye patterns
+		if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel->GetXAxisUnits()) )
+			m_parent->OnMoveNewBelow(area);
+	}
 
 	//It's an overlay. Reference it and add to our overlay list
 	else
@@ -879,7 +886,6 @@ void WaveformArea::OnWaveformDataReady()
 	}
 
 	//Redraw everything
-	SetGeometryDirty();
 	queue_draw();
 	m_group->m_timeline.queue_draw();
 }

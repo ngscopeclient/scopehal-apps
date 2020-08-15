@@ -43,7 +43,6 @@
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
 
 using namespace std;
-using namespace glm;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
@@ -175,10 +174,19 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
 		if(fft)
 		{
-			yoff = 0;
-			yscale = 1;
+			//Scaling for display
+			//TODO: don't hard code plot limits
+			float plotheight = m_height - 2*m_padding;
+			float db_range = 70;
+			float db_offset = -db_range/2;
+			yoff = plotheight;
+			yscale = plotheight / db_range;
+			offset = db_offset + db_range/2;
+
+			//Convert V to dBm
+			const float impedance = 50;
 			for(size_t j=0; j<wdata->m_count; j++)
-				wdata->m_mappedYBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
+				wdata->m_mappedYBuffer[j]	= (10 * log10(psamps[j]*psamps[j] / impedance) + 30);
 		}
 		else
 		{
