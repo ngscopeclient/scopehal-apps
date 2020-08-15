@@ -879,6 +879,7 @@ void WaveformArea::OnWaveformDataReady()
 	}
 
 	//Redraw everything
+	SetGeometryDirty();
 	queue_draw();
 	m_group->m_timeline.queue_draw();
 }

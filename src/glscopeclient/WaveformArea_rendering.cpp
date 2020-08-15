@@ -166,6 +166,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	else
 	{
 		//Need AVX512DQ or AVX512VL for VCTVQQ2PS
+		//TODO: see if there is any way to speed this up at least a little on AVX2?
 		if(g_hasAvx512DQ || g_hasAvx512VL)
 			Int64ToFloatAVX512(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
 		else
@@ -174,7 +175,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
 		if(fft)
 		{
-			wdata->m_mappedYBuffer = reinterpret_cast<float*>(aligned_alloc(32, wdata->m_count*sizeof(float)));
+			yoff = 0;
 			yscale = 1;
 			for(size_t j=0; j<wdata->m_count; j++)
 				wdata->m_mappedYBuffer[j]	= DbToYPosition(-70 - (20 * log10(psamps[j])));	//TODO: don't hard code plot limits
