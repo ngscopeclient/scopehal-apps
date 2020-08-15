@@ -117,6 +117,10 @@ void main()
 				endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
 		}
 
+		//Clip to window size
+		starty = min(starty, MAX_HEIGHT);
+		endy = min(endy, MAX_HEIGHT);
+
 		//Sort Y coordinates from min to max
 		int ymin = int(min(starty, endy));
 		int ymax = int(max(starty, endy));
@@ -126,9 +130,7 @@ void main()
 
 		//Fill in the space between min and max for this segment
 		for(int y=ymin; y <= ymax; y++)
-		{
 			g_workingBuffer[gl_LocalInvocationID.x][y] += alpha;
-		}
 
 		//TODO: antialiasing
 		//TODO: decimation at very wide zooms
