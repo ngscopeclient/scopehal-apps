@@ -253,11 +253,6 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 				{
 					//Left
 					case 1:
-
-						//For now, can only change offset on voltage channels
-						if(m_channel->GetYAxisUnits() != Unit::UNIT_VOLTS)
-							return;
-
 						m_dragState = DRAG_OFFSET;
 						m_dragStartVoltage = YPositionToVolts(event->y);
 						break;

@@ -154,7 +154,6 @@ public:
 	bool IsEye();
 	bool IsEyeOrBathtub();
 	bool IsWaterfall();
-	bool IsFFT();
 	bool IsTime();
 
 	size_t GetOverlayCount()
@@ -390,7 +389,6 @@ protected:
 	float VoltsToPixels(float volt);
 	float VoltsToYPosition(float volt);
 	float YPositionToVolts(float y);
-	float DbToYPosition(float db);
 	int64_t XPositionToXAxisUnits(float pix);
 	int64_t PixelsToXAxisUnits(float pix);
 	float XAxisUnitsToPixels(int64_t t);

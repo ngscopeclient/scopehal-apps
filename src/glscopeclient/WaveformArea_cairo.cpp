@@ -116,63 +116,52 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 	std::map<float, float> gridmap;
 
-	//Spectra are printed on a logarithmic scale
-	if(m_channel->GetYAxisUnits() == Unit::UNIT_DBM)
+	//Volts from the center line of our graph to the top. May not be the max value in the signal.
+	float volts_per_half_span = PixelsToVolts(halfheight);
+
+	//Decide what voltage step to use. Pick from a list (in volts)
+	float selected_step = PickStepSize(volts_per_half_span);
+
+	//Special case a few values
+	if(m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
+		selected_step = 2;
+
+	float bottom_edge = (ybot + theight/2);
+	float top_edge = (ytop - theight/2);
+
+	//Calculate grid positions
+	float vbot = YPositionToVolts(ybot);
+	float vtop = YPositionToVolts(ytop);
+	float vmid = (vbot + vtop)/2;
+	for(float dv=0; ; dv += selected_step)
 	{
-		for(float db=0; db >= -60; db -= 10)
-			gridmap[db] = DbToYPosition(db);
-	}
+		float vp = vmid + dv;
+		float vn = vmid - dv;
 
-	//Normal analog waveform
-	else
-	{
-		//Volts from the center line of our graph to the top. May not be the max value in the signal.
-		float volts_per_half_span = PixelsToVolts(halfheight);
+		float yt = VoltsToYPosition(vp);
+		float yb = VoltsToYPosition(vn);
 
-		//Decide what voltage step to use. Pick from a list (in volts)
-		float selected_step = PickStepSize(volts_per_half_span);
-
-		//Special case a few values
-		if(m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
-			selected_step = 2;
-
-		float bottom_edge = (ybot + theight/2);
-		float top_edge = (ytop - theight/2);
-
-		//Calculate grid positions
-		float vbot = YPositionToVolts(ybot);
-		float vtop = YPositionToVolts(ytop);
-		float vmid = (vbot + vtop)/2;
-		for(float dv=0; ; dv += selected_step)
+		if(dv != 0)
 		{
-			float vp = vmid + dv;
-			float vn = vmid - dv;
+			if( (yb >= bottom_edge) && (yb <= top_edge ) )
+				gridmap[vn] = yb;
 
-			float yt = VoltsToYPosition(vp);
-			float yb = VoltsToYPosition(vn);
-
-			if(dv != 0)
-			{
-				if( (yb >= bottom_edge) && (yb <= top_edge ) )
-					gridmap[vn] = yb;
-
-				if( (yt >= bottom_edge ) && (yt <= top_edge) )
-					gridmap[vp] = yt;
-			}
-			else
+			if( (yt >= bottom_edge ) && (yt <= top_edge) )
 				gridmap[vp] = yt;
-
-			//Stop if we're off the edge
-			if( (yb > ytop) && (yt < ybot) )
-				break;
 		}
+		else
+			gridmap[vp] = yt;
 
-		//Center line is solid
-		cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
-		cr->move_to(0, VoltsToYPosition(0));
-		cr->line_to(m_plotRight, VoltsToYPosition(0));
-		cr->stroke();
+		//Stop if we're off the edge
+		if( (yb > ytop) && (yt < ybot) )
+			break;
 	}
+
+	//Center line is solid
+	cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
+	cr->move_to(0, VoltsToYPosition(0));
+	cr->line_to(m_plotRight, VoltsToYPosition(0));
+	cr->stroke();
 
 	if(gridmap.size() > 50)
 		LogFatal("gridmap way too big (%zu)\n", gridmap.size());
@@ -200,9 +189,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	{
 		float v = it.first;
 		tlayout->set_text(m_channel->GetYAxisUnits().PrettyPrint(v));
-		float y = it.second;
-		if(!IsFFT())
-			y -= theight/2;
+		float y = it.second - theight/2;
 		if(y < ybot)
 			continue;
 		if(y > ytop)

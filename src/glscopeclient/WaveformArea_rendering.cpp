@@ -111,7 +111,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	}
 
 	float xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
-	bool fft = IsFFT();
 
 	//Zero voltage level
 	//TODO: properly calculate decoder positions once RenderDecodeOverlays() isn't doing that anymore
@@ -127,10 +126,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 10);
 	}
 
-	float offset = channel->GetOffset();
+	float yoff = channel->GetOffset();
 
 	//Y axis scaling in shader
-	float yoff = 0;
 	float yscale = 1;
 
 	//We need to stretch every sample to two samples, one at the very left and one at the very right,
@@ -150,7 +148,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			digheight = 20;
 
 		//#pragma omp parallel for
-		yoff = ybase;
+		//TODO: AVX
 		yscale = digheight;
 		for(size_t j=0; j<realcount; j++)
 		{
@@ -171,26 +169,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			Int64ToFloat(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
 
-		float* psamps = reinterpret_cast<float*>(__builtin_assume_aligned(&andat->m_samples[0], 16));
-		if(fft)
-		{
-			//Scaling for display
-			//TODO: don't hard code plot limits
-			float plotheight = m_height - 2*m_padding;
-			float db_range = 70;
-			float db_offset = -db_range/2;
-			yoff = plotheight;
-			yscale = plotheight / db_range;
-			offset = db_offset + db_range/2;
-		}
-		else
-		{
-			yoff = ybase;
-			yscale = m_pixelsPerVolt;
-		}
+		yscale = m_pixelsPerVolt;
 
 		//Copy the waveform
-		memcpy(wdata->m_mappedYBuffer, psamps, wdata->m_count*sizeof(float));
+		memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
 	}
 
 	double dt = GetTime() - start;
@@ -216,9 +198,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	wdata->m_mappedConfigBuffer[4] = digdat ? 1 : 0;					//digital
 	wdata->m_mappedFloatConfigBuffer[5] = xoff;							//xoff
 	wdata->m_mappedFloatConfigBuffer[6] = xscale;						//xscale
-	wdata->m_mappedFloatConfigBuffer[7] = yoff;							//ybase
+	wdata->m_mappedFloatConfigBuffer[7] = ybase;						//ybase
 	wdata->m_mappedFloatConfigBuffer[8] = yscale;						//yscale
-	wdata->m_mappedFloatConfigBuffer[9] = offset;						//yoff
+	wdata->m_mappedFloatConfigBuffer[9] = yoff;							//yoff
 
 	//Done
 	wdata->m_geometryOK = true;
@@ -774,12 +756,6 @@ float WaveformArea::VoltsToPixels(float volt)
 float WaveformArea::VoltsToYPosition(float volt)
 {
 	return m_height/2 - VoltsToPixels(volt + m_channel->GetOffset());
-}
-
-float WaveformArea::DbToYPosition(float db)
-{
-	float plotheight = m_height - 2*m_padding;
-	return m_padding - (db/70 * plotheight);
 }
 
 float WaveformArea::YPositionToVolts(float y)

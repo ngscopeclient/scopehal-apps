@@ -714,11 +714,6 @@ bool WaveformArea::IsEyeOrBathtub()
 	return IsEye() || (bath != NULL);
 }
 
-bool WaveformArea::IsFFT()
-{
-	return (m_channel->GetYAxisUnits().GetType() == Unit::UNIT_DBM);
-}
-
 bool WaveformArea::IsTime()
 {
 	return (m_channel->GetYAxisUnits().GetType() == Unit::UNIT_PS);
