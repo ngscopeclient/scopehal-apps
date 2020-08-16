@@ -117,7 +117,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	std::map<float, float> gridmap;
 
 	//Spectra are printed on a logarithmic scale
-	if(m_channel->GetYAxisUnits() == Unit::UNIT_DB)
+	if(m_channel->GetYAxisUnits() == Unit::UNIT_DBM)
 	{
 		for(float db=0; db >= -60; db -= 10)
 			gridmap[db] = DbToYPosition(db);

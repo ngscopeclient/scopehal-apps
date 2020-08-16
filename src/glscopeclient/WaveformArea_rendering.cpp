@@ -182,18 +182,15 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			yoff = plotheight;
 			yscale = plotheight / db_range;
 			offset = db_offset + db_range/2;
-
-			//Convert V to dBm
-			const float impedance = 50;
-			for(size_t j=0; j<wdata->m_count; j++)
-				wdata->m_mappedYBuffer[j]	= (10 * log10(psamps[j]*psamps[j] / impedance) + 30);
 		}
 		else
 		{
 			yoff = ybase;
 			yscale = m_pixelsPerVolt;
-			memcpy(wdata->m_mappedYBuffer, psamps, wdata->m_count*sizeof(float));
 		}
+
+		//Copy the waveform
+		memcpy(wdata->m_mappedYBuffer, psamps, wdata->m_count*sizeof(float));
 	}
 
 	double dt = GetTime() - start;
