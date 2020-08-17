@@ -353,6 +353,8 @@ protected:
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
@@ -394,7 +396,8 @@ protected:
 	float XAxisUnitsToPixels(int64_t t);
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
-	size_t BinarySearchForGequal(float* buf, size_t len, float value);
+	template<class T> size_t BinarySearchForGequal(T* buf, size_t len, T value);
+	float GetValueAtTime(int64_t time_ps);
 	void Int64ToFloat(float* dst, int64_t* src, size_t len);
 	void Int64ToFloatAVX512(float* dst, int64_t* src, size_t len);
 
@@ -441,7 +444,8 @@ protected:
 	{
 		DRAG_NONE,
 		DRAG_TRIGGER,
-		DRAG_CURSOR,
+		DRAG_CURSOR_0,
+		DRAG_CURSOR_1,
 		DRAG_OFFSET,
 		DRAG_WAVEFORM_AREA,
 		DRAG_OVERLAY

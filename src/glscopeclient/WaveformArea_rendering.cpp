@@ -44,6 +44,9 @@
 
 using namespace std;
 
+template size_t WaveformArea::BinarySearchForGequal<float>(float* buf, size_t len, float value);
+template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_t len, int64_t value);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
@@ -147,7 +150,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		//#pragma omp parallel for
 		//TODO: AVX
 		yscale = digheight;
 		for(size_t j=0; j<realcount; j++)
@@ -227,7 +229,6 @@ void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
 	size_t len_rounded = len - (len % 8);
 
 	//Main unrolled loop
-	//#pragma omp parallel for
 	for(size_t j=0; j<len_rounded; j+= 8)
 	{
 		__m512i i64x8 = _mm512_load_epi64(src + j);
@@ -243,7 +244,8 @@ void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
 /**
 	@brief Look for a value greater than or equal to "value" in buf and return the index
  */
-size_t WaveformArea::BinarySearchForGequal(float* buf, size_t len, float value)
+template<class T>
+size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
 {
 	size_t pos = len/2;
 	size_t last_lo = 0;

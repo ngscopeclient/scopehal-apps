@@ -120,6 +120,10 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			switch(ev->direction)
 			{
 				case GDK_SCROLL_UP:
+					{
+						//TODO: zoom to center
+					}
+
 					if(!IsEyeOrBathtub())
 						m_parent->OnZoomInHorizontal(m_group);
 					break;
@@ -210,7 +214,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 						//Start dragging the second cursor
 						if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 						{
-							m_dragState = DRAG_CURSOR;
+							m_dragState = DRAG_CURSOR_1;
 							m_group->m_xCursorPos[1] = timestamp;
 						}
 
@@ -384,7 +388,11 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			break;
 
 		//Move the cursor
-		case DRAG_CURSOR:
+		case DRAG_CURSOR_0:
+			m_group->m_xCursorPos[0] = timestamp;
+			break;
+
+		case DRAG_CURSOR_1:
 			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 				m_group->m_xCursorPos[1] = timestamp;
 			break;
@@ -499,10 +507,40 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			queue_draw();
 			break;
 
-		case DRAG_CURSOR:
+		case DRAG_CURSOR_0:
+			m_group->m_xCursorPos[0] = timestamp;
+
+			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+			{
+				//Cursor 0 should always be left of 1.
+				//If they cross, flip them
+				if(m_group->m_xCursorPos[0] > m_group->m_xCursorPos[1])
+				{
+					m_dragState = DRAG_CURSOR_1;
+					int64_t tmp = m_group->m_xCursorPos[1];
+					m_group->m_xCursorPos[1] = m_group->m_xCursorPos[0];
+					m_group->m_xCursorPos[0] = tmp;
+				}
+			}
+
+			m_group->m_vbox.queue_draw();
+			break;
+
+		case DRAG_CURSOR_1:
 			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 			{
 				m_group->m_xCursorPos[1] = timestamp;
+
+				//Cursor 0 should always be left of 1
+				//If they cross, flip them
+				if(m_group->m_xCursorPos[0] > m_group->m_xCursorPos[1])
+				{
+					m_dragState = DRAG_CURSOR_0;
+					int64_t tmp = m_group->m_xCursorPos[1];
+					m_group->m_xCursorPos[1] = m_group->m_xCursorPos[0];
+					m_group->m_xCursorPos[0] = tmp;
+				}
+
 				m_group->m_vbox.queue_draw();
 			}
 			break;

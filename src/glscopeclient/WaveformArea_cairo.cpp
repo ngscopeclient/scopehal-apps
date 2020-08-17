@@ -244,6 +244,7 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
+	RenderInsertionBar(cr);
 	RenderChannelLabel(cr);
 }
 
@@ -600,6 +601,88 @@ void WaveformArea::RenderChannelInfoBox(
 	cr->restore();
 }
 
+void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left)
+{
+	//Draw the actual cursor
+	double x = XAxisUnitsToXPosition(pos);
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->move_to(x, 0);
+	cr->line_to(x, m_height);
+	cr->stroke();
+
+	//For now, only display labels on analog channels
+	if(!IsAnalog())
+		return;
+
+	//Draw the value label at the bottom
+	string text = m_channel->GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
+
+	//Figure out text size
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Pango::FontDescription font("sans normal 10");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	tlayout->set_text(text);
+	tlayout->get_pixel_size(twidth, theight);
+
+	//Draw background
+	int labelmargin = 2;
+	int left;
+	int right;
+	if(label_to_left)
+	{
+		right = x - labelmargin;
+		left = x - (twidth + 2*labelmargin);
+	}
+	else
+	{
+		left = x + labelmargin;
+		right = x + (twidth + 2*labelmargin);
+	}
+	int bottom = m_height;
+	int top = m_height - (theight + 2*labelmargin);
+	cr->set_source_rgba(0, 0, 0, 0.75);
+	cr->move_to(left, bottom);
+	cr->line_to(right, bottom);
+	cr->line_to(right, top);
+	cr->line_to(left, top);
+	cr->fill();
+
+	//Draw text
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->save();
+		cr->move_to(labelmargin + left, top + labelmargin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
+}
+
+/**
+	@brief Gets the value of our channel at the specified timestamp (absolute, not waveform ticks)
+ */
+float WaveformArea::GetValueAtTime(int64_t time_ps)
+{
+	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel->GetData());
+	if(!waveform)
+		return 0;
+
+	//Find the index of the sample of interest
+	double ticks = 1.0f * (time_ps - waveform->m_triggerPhase)  / waveform->m_timescale;
+	size_t index = BinarySearchForGequal(
+		(int64_t*)&waveform->m_offsets[0],
+		waveform->m_offsets.size(),
+		(int64_t)ceil(ticks));
+
+	//Stop if start of waveform (no lerping possible)
+	if(index == 0)
+		return waveform->m_samples[index];
+
+	//Linear interpolate to find the value better
+	return ProtocolDecoder::InterpolateValue(waveform, index-1, ticks - waveform->m_offsets[index-1]);
+}
+
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 {
 	int ytop = 0;
@@ -614,20 +697,14 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 	{
 		//Draw first vertical cursor
 		double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
-		cr->move_to(x, ytop);
-		cr->line_to(x, ybot);
-		cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
-		cr->stroke();
+		RenderCursor(cr, m_group->m_xCursorPos[0], yellow, true);
 
 		//Dual cursors
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw second vertical cursor
 			double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
-			cr->move_to(x2, ytop);
-			cr->line_to(x2, ybot);
-			cr->set_source_rgb(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p());
-			cr->stroke();
+			RenderCursor(cr, m_group->m_xCursorPos[1], orange, false);
 
 			//Draw filled area between them
 			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
@@ -638,8 +715,14 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 			cr->fill();
 		}
 	}
+}
 
+void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
+{
 	int barsize = 5;
+
+	Gdk::Color yellow("yellow");
+	Gdk::Color orange("orange");
 
 	if(m_insertionBarLocation != INSERT_NONE)
 	{
@@ -650,12 +733,12 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		{
 			case INSERT_BOTTOM:
 				cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
-				barpos = ybot - barsize;
+				barpos = m_height - barsize;
 				break;
 
 			case INSERT_BOTTOM_SPLIT:
 				cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
-				barpos = ybot - barsize;
+				barpos = m_height - barsize;
 				break;
 
 			case INSERT_TOP:
@@ -701,7 +784,6 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		cr->fill();
 	}
 }
-
 
 void WaveformArea::MakePathSignalBody(
 	const Cairo::RefPtr<Cairo::Context>& cr,
