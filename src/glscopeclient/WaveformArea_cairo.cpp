@@ -152,6 +152,9 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		else
 			gridmap[vp] = yt;
 
+		if(gridmap.size() > 50)
+			break;
+
 		//Stop if we're off the edge
 		if( (yb > ytop) && (yt < ybot) )
 			break;
@@ -162,9 +165,6 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->move_to(0, VoltsToYPosition(0));
 	cr->line_to(m_plotRight, VoltsToYPosition(0));
 	cr->stroke();
-
-	if(gridmap.size() > 50)
-		LogFatal("gridmap way too big (%zu)\n", gridmap.size());
 
 	//Dimmed lines above and below
 	cr->set_source_rgba(0.7, 0.7, 0.7, 0.25);
