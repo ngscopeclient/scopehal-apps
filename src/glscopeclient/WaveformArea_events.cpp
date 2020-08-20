@@ -120,16 +120,12 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			switch(ev->direction)
 			{
 				case GDK_SCROLL_UP:
-					{
-						//TODO: zoom to center
-					}
-
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomInHorizontal(m_group);
+						m_parent->OnZoomInHorizontal(m_group, XPositionToXAxisUnits(ev->x));
 					break;
 				case GDK_SCROLL_DOWN:
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomOutHorizontal(m_group);
+						m_parent->OnZoomOutHorizontal(m_group, XPositionToXAxisUnits(ev->x));
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");

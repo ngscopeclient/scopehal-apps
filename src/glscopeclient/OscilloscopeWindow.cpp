@@ -1773,15 +1773,35 @@ void OscilloscopeWindow::OnAutofitHorizontal()
 	//
 }
 
-void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group)
+/**
+	@brief Zoom in, keeping timestamp "target" at the same position within the group
+ */
+void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group, int64_t target)
 {
-	group->m_pixelsPerXUnit *= 1.5;
+	//Calculate the *current* position of the target within the window
+	float delta = target - group->m_xAxisOffset;
+
+	//Change the zoom
+	float step = 1.5;
+	group->m_pixelsPerXUnit *= step;
+	group->m_xAxisOffset = target - (delta/step);
+
 	ClearPersistence(group);
 }
 
-void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group)
+/**
+	@brief Zoom out, keeping timestamp "target" at the same position within the group
+ */
+void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t target)
 {
-	group->m_pixelsPerXUnit /= 1.5;
+	//Calculate the *current* position of the target within the window
+	float delta = target - group->m_xAxisOffset;
+
+	//Change the zoom
+	float step = 1.5;
+	group->m_pixelsPerXUnit /= step;
+	group->m_xAxisOffset = target - (delta*step);
+
 	ClearPersistence(group);
 }
 

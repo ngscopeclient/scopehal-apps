@@ -54,8 +54,8 @@ public:
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();
-	void OnZoomInHorizontal(WaveformGroup* group);
-	void OnZoomOutHorizontal(WaveformGroup* group);
+	void OnZoomInHorizontal(WaveformGroup* group, int64_t target);
+	void OnZoomOutHorizontal(WaveformGroup* group, int64_t target);
 	void ClearPersistence(WaveformGroup* group, bool dirty = true);
 	void ClearAllPersistence();
 

@@ -124,20 +124,22 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 
 bool Timeline::on_scroll_event (GdkEventScroll* ev)
 {
+	int64_t timestamp = (ev->x / m_group->m_pixelsPerXUnit) + m_group->m_xAxisOffset;
+
 	switch(ev->direction)
 	{
 		case GDK_SCROLL_LEFT:
-			m_parent->OnZoomInHorizontal(m_group);
+			m_parent->OnZoomInHorizontal(m_group, timestamp);
 			break;
 		case GDK_SCROLL_RIGHT:
-			m_parent->OnZoomOutHorizontal(m_group);
+			m_parent->OnZoomOutHorizontal(m_group, timestamp);
 			break;
 
 		case GDK_SCROLL_SMOOTH:
 			if(ev->delta_y < 0)
-				m_parent->OnZoomInHorizontal(m_group);
+				m_parent->OnZoomInHorizontal(m_group, timestamp);
 			else
-				m_parent->OnZoomOutHorizontal(m_group);
+				m_parent->OnZoomOutHorizontal(m_group, timestamp);
 			break;
 
 		default:
