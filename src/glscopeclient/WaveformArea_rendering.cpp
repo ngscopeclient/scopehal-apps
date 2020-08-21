@@ -192,11 +192,16 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	dt = GetTime() - start;
 	m_indexTime += dt;
 
+	//Scale alpha by zoom.
+	//As we zoom out more, reduce alpha to get proper intensity grading
+	float samplesPerPixel = 1.0f / (m_group->m_pixelsPerXUnit * pdat->m_timescale);
+	float alpha_scaled = m_parent->GetTraceAlpha() * 2 / samplesPerPixel;
+
 	//Config stuff
 	wdata->m_mappedConfigBuffer[0] = m_height;							//windowHeight
 	wdata->m_mappedConfigBuffer[1] = m_plotRight;						//windowWidth
 	wdata->m_mappedConfigBuffer[2] = wdata->m_count;					//depth
-	wdata->m_mappedFloatConfigBuffer[3] = m_parent->GetTraceAlpha();	//alpha
+	wdata->m_mappedFloatConfigBuffer[3] = alpha_scaled;					//alpha
 	wdata->m_mappedConfigBuffer[4] = digdat ? 1 : 0;					//digital
 	wdata->m_mappedFloatConfigBuffer[5] = xoff;							//xoff
 	wdata->m_mappedFloatConfigBuffer[6] = xscale;						//xscale
