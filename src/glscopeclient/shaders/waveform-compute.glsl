@@ -19,7 +19,7 @@ layout(std430, binding=2) buffer config
 	uint windowHeight;
 	uint windowWidth;
 	uint memDepth;
-	uint alpha_scaled;
+	float alpha;
 	uint digital;
 	float xoff;
 	float xscale;
@@ -69,9 +69,6 @@ void main()
 		return;
 	if(gl_GlobalInvocationID.x > windowWidth)
 		return;
-
-	//Save some constants
-	float alpha = float(alpha_scaled) / 256;
 
 	//Clear column to blank in the first thread of the block
 	if(gl_LocalInvocationID.y == 0)
