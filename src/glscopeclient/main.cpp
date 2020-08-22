@@ -220,7 +220,8 @@ int main(int argc, char* argv[])
 #endif
 
 	//Complain if the OpenMP wait policy isn't set right
-	if(strcmp(getenv("OMP_WAIT_POLICY"), "PASSIVE") != 0)
+	const char* policy = getenv("OMP_WAIT_POLICY");
+	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )
 		LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
 
 	g_app = new ScopeApp;
