@@ -38,6 +38,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include <map>
+#include <immintrin.h>
 #include "ProfileBlock.h"
 #include "../../lib/scopeprotocols/EyeDecoder2.h"
 #include "../../lib/scopeprotocols/WaterfallDecoder.h"
