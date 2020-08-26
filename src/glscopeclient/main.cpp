@@ -361,7 +361,7 @@ void ScopeThread(Oscilloscope* scope)
 		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 		{
 			//Collect the data, fail if that doesn't work
-			if(!scope->AcquireData(true))
+			if(!scope->AcquireData())
 			{
 				tlast = GetTime();
 				continue;

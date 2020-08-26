@@ -45,7 +45,7 @@ using namespace glm;
 bool WaveformArea::m_isGlewInitialized = false;
 
 WaveformArea::WaveformArea(
-	OscilloscopeChannel* channel,
+	StreamDescriptor channel,
 	OscilloscopeWindow* parent
 	)
 	: m_persistence(false)
@@ -119,12 +119,12 @@ void WaveformArea::SharedCtorInit()
 
 	m_group = NULL;
 
-	m_channel->AddRef();
+	m_channel.m_channel->AddRef();
 }
 
 WaveformArea::~WaveformArea()
 {
-	LogDebug("Shutting down view for waveform %s\n", m_channel->m_displayname.c_str());
+	LogDebug("Shutting down view for waveform %s\n", m_channel.m_channel->m_displayname.c_str());
 	{
 		LogIndenter li;
 
@@ -149,7 +149,7 @@ WaveformArea::~WaveformArea()
 			m_compositeTime * 1000, m_compositeTime * 1000 / m_frameCount, m_compositeTime * 100 / m_renderTime);
 	}
 
-	m_channel->Release();
+	m_channel.m_channel->Release();
 
 	for(auto d : m_overlays)
 		OnRemoveOverlay(d);
@@ -168,14 +168,14 @@ WaveformArea::~WaveformArea()
 	m_moveExistingGroupItems.clear();
 }
 
-void WaveformArea::OnRemoveOverlay(ProtocolDecoder* decode)
+void WaveformArea::OnRemoveOverlay(StreamDescriptor filter)
 {
 	//Remove the render data for it
-	auto it = m_overlayRenderData.find(decode);
+	auto it = m_overlayRenderData.find(filter);
 	if(it != m_overlayRenderData.end())
 		m_overlayRenderData.erase(it);
 
-	decode->Release();
+	filter.m_channel->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -376,7 +376,7 @@ void WaveformArea::CreateWidgets()
 
 
 		vector<string> names;
-		ProtocolDecoder::EnumProtocols(names);
+		Filter::EnumProtocols(names);
 		for(auto p : names)
 		{
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
@@ -384,47 +384,47 @@ void WaveformArea::CreateWidgets()
 				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
 
 			//Create a test decode and see where it goes
-			auto d = ProtocolDecoder::CreateDecoder(p, "");
+			auto d = Filter::CreateFilter(p, "");
 			switch(d->GetCategory())
 			{
-				case ProtocolDecoder::CAT_ANALYSIS:
+				case Filter::CAT_ANALYSIS:
 					m_decodeSignalIntegrityMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_BUS:
+				case Filter::CAT_BUS:
 					m_decodeBusMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_CLOCK:
+				case Filter::CAT_CLOCK:
 					m_decodeClockMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_POWER:
+				case Filter::CAT_POWER:
 					m_decodePowerMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_RF:
+				case Filter::CAT_RF:
 					m_decodeRFMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_MEASUREMENT:
+				case Filter::CAT_MEASUREMENT:
 					m_decodeMeasurementMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_MATH:
+				case Filter::CAT_MATH:
 					m_decodeMathMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_MEMORY:
+				case Filter::CAT_MEMORY:
 					m_decodeMemoryMenu.append(*item);
 					break;
 
-				case ProtocolDecoder::CAT_SERIAL:
+				case Filter::CAT_SERIAL:
 					m_decodeSerialMenu.append(*item);
 					break;
 
 				default:
-				case ProtocolDecoder::CAT_MISC:
+				case Filter::CAT_MISC:
 					m_decodeMiscMenu.append(*item);
 					break;
 			}
@@ -686,35 +686,33 @@ void WaveformArea::InitializeCairoPass()
 
 bool WaveformArea::IsWaterfall()
 {
-	auto fall = dynamic_cast<WaterfallDecoder*>(m_channel);
+	auto fall = dynamic_cast<Waterfall*>(m_channel.m_channel);
 	return (fall != NULL);
 }
 
 bool WaveformArea::IsDigital()
 {
-	return (m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL);
+	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL);
 }
 
 bool WaveformArea::IsAnalog()
 {
-	return (m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG);
+	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG);
 }
 
 bool WaveformArea::IsEye()
 {
-	//TODO: there are other possible sources for eyes, e.g. FREESAMPLE. Maybe define a CHANNEL_TYPE for it?
-	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
-	return (eye != NULL);
+	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_EYE);
 }
 
 bool WaveformArea::IsEyeOrBathtub()
 {
 	//TODO: this should really be "is fixed two UI wide plot"
-	auto bath = dynamic_cast<HorizontalBathtubDecoder*>(m_channel);
+	auto bath = dynamic_cast<HorizontalBathtub*>(m_channel.m_channel);
 	return IsEye() || (bath != NULL);
 }
 
 bool WaveformArea::IsTime()
 {
-	return (m_channel->GetYAxisUnits().GetType() == Unit::UNIT_PS);
+	return (m_channel.m_channel->GetYAxisUnits().GetType() == Unit::UNIT_PS);
 }

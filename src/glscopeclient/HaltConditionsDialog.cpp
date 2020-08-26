@@ -87,6 +87,7 @@ void HaltConditionsDialog::RefreshChannels()
 	m_chanptrs.clear();
 
 	//Populate channel list
+	//Assume hardware channels only have one output for now
 	bool first = true;
 	for(size_t j=0; j<m_parent->GetScopeCount(); j++)
 	{
@@ -95,7 +96,7 @@ void HaltConditionsDialog::RefreshChannels()
 		{
 			auto c = scope->GetChannel(k);
 			m_channelNameBox.append(c->m_displayname);
-			m_chanptrs[c->m_displayname] = c;
+			m_chanptrs[c->m_displayname] = StreamDescriptor(c, 0);
 
 			if(first && (old_chan == ""))
 			{
@@ -104,11 +105,21 @@ void HaltConditionsDialog::RefreshChannels()
 			}
 		}
 	}
-	auto decodes = ProtocolDecoder::EnumDecodes();
-	for(auto d : decodes)
+
+	//Populate filters
+	auto filters = Filter::GetAllInstances();
+	for(auto d : filters)
 	{
-		m_channelNameBox.append(d->m_displayname);
-		m_chanptrs[d->m_displayname] = d;
+		auto nstreams = d->GetStreamCount();
+		for(size_t i=0; i<nstreams; i++)
+		{
+			string name = d->m_displayname;
+			if(nstreams > 1)
+				name += string(".") + d->GetStreamName(i);
+
+			m_channelNameBox.append(name);
+			m_chanptrs[name] = StreamDescriptor(d, i);
+		}
 	}
 
 	if(old_chan != "")
@@ -126,17 +137,17 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	//Get the channel we're looking at
 	auto chan = GetHaltChannel();
-	auto decode = dynamic_cast<ProtocolDecoder*>(chan);
+	auto filter = dynamic_cast<Filter*>(chan.m_channel);
 
 	//Don't check if no data to look at
-	auto data = chan->GetData();
+	auto data = chan.m_channel->GetData(chan.m_stream);
 	auto adata = dynamic_cast<AnalogWaveform*>(data);
 	if(data->m_offsets.empty())
 		return false;
 
 	//Target for matching
 	auto text = m_targetEntry.get_text();
-	double value = chan->GetYAxisUnits().ParseString(text);
+	double value = chan.m_channel->GetYAxisUnits().ParseString(text);
 
 	//Figure out the match filter and check
 	auto sfilter = m_operatorBox.get_active_text();
@@ -190,12 +201,12 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 		//TODO: match digital data
 
-		//Match protocol decodes
-		else if(decode != NULL)
+		//Match filters
+		else if(filter != NULL)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(decode->GetText(i) == text)
+				if(filter->GetText(i) == text)
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -252,12 +263,12 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 		//TODO: match digital data
 
-		//Match protocol decodes
-		else if(decode != NULL)
+		//Match filters
+		else if(filter != NULL)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(decode->GetText(i) != text)
+				if(filter->GetText(i) != text)
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -268,13 +279,13 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	else if(sfilter == "starts with")
 	{
-		//Expect decode data
-		if(decode == NULL)
+		//Expect filter data
+		if(filter == NULL)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(decode->GetText(i).find(text) == 0)
+			if(filter->GetText(i).find(text) == 0)
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
@@ -284,13 +295,13 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	else if(sfilter == "contains")
 	{
-		//Expect decode data
-		if(decode == NULL)
+		//Expect filter data
+		if(filter == NULL)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(decode->GetText(i).find(text) != string::npos)
+			if(filter->GetText(i).find(text) != string::npos)
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;

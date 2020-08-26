@@ -40,8 +40,8 @@
 #include <map>
 #include <immintrin.h>
 #include "ProfileBlock.h"
-#include "../../lib/scopeprotocols/EyeDecoder2.h"
-#include "../../lib/scopeprotocols/WaterfallDecoder.h"
+#include "../../lib/scopeprotocols/EyePattern.h"
+#include "../../lib/scopeprotocols/Waterfall.h"
 
 using namespace std;
 
@@ -54,14 +54,14 @@ template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_
 void WaveformRenderData::MapBuffers(size_t width)
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
-	if( (m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
-		(m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	if( (m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
+		(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
 	{
 		m_count = 1;
 	}
 	else
 	{
-		auto pdat = m_channel->GetData();
+		auto pdat = m_channel.GetData();
 		if( (pdat == NULL) || ((m_count = pdat->m_offsets.size()) == 0) )
 			m_count = 1;
 		if(dynamic_cast<DigitalWaveform*>(pdat) != NULL)
@@ -91,14 +91,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	double start = GetTime();
 
 	//We need analog or digital data to render
-	auto channel = wdata->m_channel;
+	auto channel = wdata->m_channel.m_channel;
 	if( (channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
 		(channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
 	{
 		wdata->m_geometryOK = false;
 		return;
 	}
-	auto pdat = channel->GetData();
+	auto pdat = wdata->m_channel.GetData();
 	if( (pdat == NULL) || pdat->m_offsets.empty() )
 	{
 		wdata->m_geometryOK = false;
@@ -122,12 +122,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	if(digdat)
 	{
 		//Main channel
-		if(channel == m_channel)
+		if(wdata->m_channel == m_channel)
 			ybase = 2;
 
 		//Overlay
 		else
-			ybase = m_height - (m_overlayPositions[dynamic_cast<ProtocolDecoder*>(channel)] + 10);
+			ybase = m_height - (m_overlayPositions[wdata->m_channel] + 10);
 	}
 
 	float yoff = channel->GetOffset();
@@ -146,7 +146,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	if(digdat)
 	{
 		float digheight;
-		if(channel == m_channel)
+		if(wdata->m_channel == m_channel)
 			digheight = m_height - 5;
 		else
 			digheight = 20;
@@ -310,7 +310,7 @@ void WaveformArea::PrepareAllGeometry()
 
 	for(auto overlay : m_overlays)
 	{
-		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
@@ -328,7 +328,7 @@ void WaveformArea::MapAllBuffers()
 
 	for(auto overlay : m_overlays)
 	{
-		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
@@ -346,7 +346,7 @@ void WaveformArea::UnmapAllBuffers()
 
 	for(auto overlay : m_overlays)
 	{
-		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
@@ -389,7 +389,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	}
 
 	//Pull vertical size from the scope early on no matter how we're rendering
-	m_pixelsPerVolt = m_height / m_channel->GetVoltageRange();
+	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
 
 	//TODO: Do persistence processing
 
@@ -413,7 +413,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Do compute shader rendering for digital waveforms
 	for(auto overlay : m_overlays)
 	{
-		if(overlay->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		//Create render data if needed
@@ -449,7 +449,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_renderTime += dt;
 
 	//If our channel is digital, set us to minimal size
-	if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 	{
 		//Base height
 		int height = m_infoBoxRect.get_bottom() - m_infoBoxRect.get_top() + 5;
@@ -492,9 +492,9 @@ void WaveformArea::RenderOverlayTraces()
 
 void WaveformArea::RenderEye()
 {
-	if(m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_EYE)
+	if(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_EYE)
 		return;
-	auto pcap = dynamic_cast<EyeWaveform*>(m_channel->GetData());
+	auto pcap = dynamic_cast<EyeWaveform*>(m_channel.GetData());
 	if(pcap == NULL)
 		return;
 
@@ -523,8 +523,8 @@ void WaveformArea::RenderEye()
 
 void WaveformArea::RenderWaterfall()
 {
-	auto pfall = dynamic_cast<WaterfallDecoder*>(m_channel);
-	auto pcap = dynamic_cast<WaterfallWaveform*>(m_channel->GetData());
+	auto pfall = dynamic_cast<Waterfall*>(m_channel.m_channel);
+	auto pcap = dynamic_cast<WaterfallWaveform*>(m_channel.GetData());
 	if(pfall == NULL)
 		return;
 	if(pcap == NULL)
@@ -613,7 +613,7 @@ void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)
 
 	//Draw the offscreen buffer to the onscreen buffer
 	//as a textured quad. Apply color correction as we do this.
-	Gdk::Color color(data->m_channel->m_displaycolor);
+	Gdk::Color color(data->m_channel.m_channel->m_displaycolor);
 	m_colormapProgram.SetUniform(data->m_waveformTexture, "fbtex");
 	m_colormapProgram.SetUniform(color.get_red_p(), "r");
 	m_colormapProgram.SetUniform(color.get_green_p(), "g");
@@ -763,12 +763,12 @@ float WaveformArea::VoltsToPixels(float volt)
 
 float WaveformArea::VoltsToYPosition(float volt)
 {
-	return m_height/2 - VoltsToPixels(volt + m_channel->GetOffset());
+	return m_height/2 - VoltsToPixels(volt + m_channel.m_channel->GetOffset());
 }
 
 float WaveformArea::YPositionToVolts(float y)
 {
-	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel->GetOffset();
+	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel.m_channel->GetOffset();
 }
 
 float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)

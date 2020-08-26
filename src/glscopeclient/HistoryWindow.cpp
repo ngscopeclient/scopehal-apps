@@ -100,7 +100,7 @@ HistoryWindow::~HistoryWindow()
 		for(auto w : hist)
 		{
 			//Do *not* delete the channel's current data!
-			if(w.second != w.first->GetData())
+			if(w.second != w.first.m_channel->GetData(w.first.m_stream))
 				delete w.second;
 		}
 	}
@@ -126,7 +126,7 @@ void HistoryWindow::OnWaveformDataReady()
 		chan = m_scope->GetChannel(i);
 		if(chan->IsEnabled())
 		{
-			data = chan->GetData();
+			data = chan->GetData(0);
 			break;
 		}
 	}
@@ -142,7 +142,7 @@ void HistoryWindow::OnWaveformDataReady()
 	//Format timestamp
 	char tmp[128];
 	struct tm ltime;
-	
+
 #ifdef _WIN32
 	localtime_s(&ltime, &data->m_startTimestamp);
 #else
@@ -165,20 +165,23 @@ void HistoryWindow::OnWaveformDataReady()
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
 		auto c = m_scope->GetChannel(i);
-		auto dat = c->GetData();
-		if(!c->IsEnabled())		//don't save historical waveforms from disabled channels
+		for(size_t j=0; j<c->GetStreamCount(); j++)
 		{
-			hist[c] = NULL;
-			continue;
-		}
-		if(!dat)
-			continue;
-		hist[c] = dat;
+			auto dat = c->GetData(j);
+			if(!c->IsEnabled())		//don't save historical waveforms from disabled channels
+			{
+				hist[StreamDescriptor(c, j)] = NULL;
+				continue;
+			}
+			if(!dat)
+				continue;
+			hist[StreamDescriptor(c, j)] = dat;
 
-		//Clear excess space out of the waveform buffer
-		auto adat = dynamic_cast<AnalogWaveform*>(data);
-		if(adat)
-			adat->m_samples.shrink_to_fit();
+			//Clear excess space out of the waveform buffer
+			auto adat = dynamic_cast<AnalogWaveform*>(data);
+			if(adat)
+				adat->m_samples.shrink_to_fit();
+		}
 	}
 	row[m_columns.m_history] = hist;
 
@@ -286,8 +289,10 @@ void HistoryWindow::OnSelectionChanged()
 	//Reload the scope with the saved waveforms
 	for(auto it : hist)
 	{
-		it.first->Detach();
-		it.first->SetData(it.second);
+		auto chan = it.first.m_channel;
+		auto stream = it.first.m_stream;
+		chan->Detach(stream);
+		chan->SetData(it.second, stream);
 	}
 
 	//Tell the window to refresh everything
@@ -320,13 +325,13 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 	snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dir.c_str(), table[m_scope]);
 	string fname = tmp;
 	snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms", dir.c_str(), table[m_scope]);
-	
+
 #ifdef _WIN32
 	mkdir(tmp);
 #else
 	mkdir(tmp, 0755);
 #endif
-	
+
 	string dname = tmp;
 
 	//Serialize waveforms
@@ -349,7 +354,7 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 
 		//Format directory for this waveform
 		snprintf(tmp, sizeof(tmp), "%s/waveform_%d", dname.c_str(), id);
-		
+
 #ifdef _WIN32
 	mkdir(tmp);
 #else
@@ -362,30 +367,39 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 		WaveformHistory history = (*it)[m_columns.m_history];
 		for(auto jt : history)
 		{
-			int index = jt.first->GetIndex();
-			auto chan = jt.second;
-			if(chan == NULL)		//trigger, disabled, etc
+			auto chan = jt.first.m_channel;
+			int index = chan->GetIndex();
+			size_t stream = jt.first.m_stream;
+			auto wave = jt.second;
+			if(wave == NULL)		//trigger, disabled, etc
 				continue;
 
-			snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
+			//First stream has no suffix for compat
+			if(stream == 0)
+				snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
+			else
+				snprintf(tmp, sizeof(tmp), "%s/channel_%d_stream%zu.bin", wname.c_str(), index, stream);
+
 			FILE* fp = fopen(tmp, "wb");
 
 			//Save channel metadata
 			config += "            :\n";
 			snprintf(tmp, sizeof(tmp), "                index:        %d\n", index);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                timescale:    %ld\n", chan->m_timescale);
+			snprintf(tmp, sizeof(tmp), "                stream:       %zu\n", stream);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                trigphase:    %f\n", chan->m_triggerPhase);
+			snprintf(tmp, sizeof(tmp), "                timescale:    %ld\n", wave->m_timescale);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                trigphase:    %f\n", wave->m_triggerPhase);
 			config += tmp;
 
 			//Save channel data
-			auto achan = dynamic_cast<AnalogWaveform*>(chan);
-			auto dchan = dynamic_cast<DigitalWaveform*>(chan);
-			size_t len = chan->m_offsets.size();
+			auto achan = dynamic_cast<AnalogWaveform*>(wave);
+			auto dchan = dynamic_cast<DigitalWaveform*>(wave);
+			size_t len = wave->m_offsets.size();
 			for(size_t i=0; i<len; i++)
 			{
-				int64_t times[2] = { chan->m_offsets[i], chan->m_durations[i] };
+				int64_t times[2] = { wave->m_offsets[i], wave->m_durations[i] };
 				if(2 != fwrite(times, sizeof(int64_t), 2, fp))
 					LogError("file write error\n");
 				if(achan)

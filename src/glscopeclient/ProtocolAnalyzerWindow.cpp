@@ -118,7 +118,7 @@ ProtocolAnalyzerWindow::~ProtocolAnalyzerWindow()
 
 void ProtocolAnalyzerWindow::OnWaveformDataReady()
 {
-	auto data = m_decoder->GetData();
+	auto data = m_decoder->GetData(0);
 	auto packets = m_decoder->GetPackets();
 	if(packets.empty())
 		return;

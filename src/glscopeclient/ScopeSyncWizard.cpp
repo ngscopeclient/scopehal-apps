@@ -317,8 +317,8 @@ void ScopeSyncWizard::OnWaveformDataReady()
 		return;
 
 	//Verify we have data to work with
-	auto pw = dynamic_cast<AnalogWaveform*>(pri->GetData());
-	auto sw = dynamic_cast<AnalogWaveform*>(sec->GetData());
+	auto pw = dynamic_cast<AnalogWaveform*>(pri->GetData(0));
+	auto sw = dynamic_cast<AnalogWaveform*>(sec->GetData(0));
 	if(!pw || !sw)
 		return;
 

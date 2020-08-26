@@ -18,6 +18,7 @@ link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 #C++ compilation
 add_executable(glscopeclient
 	ChannelPropertiesDialog.cpp
+	FilterDialog.cpp
 	Framebuffer.cpp
 	HaltConditionsDialog.cpp
 	HistoryWindow.cpp
@@ -25,7 +26,6 @@ add_executable(glscopeclient
 	OscilloscopeWindow.cpp
 	Program.cpp
 	ProtocolAnalyzerWindow.cpp
-	ProtocolDecoderDialog.cpp
 	ScopeApp.cpp
 	ScopeSyncWizard.cpp
 	Shader.cpp

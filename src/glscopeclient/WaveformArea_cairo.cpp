@@ -44,7 +44,7 @@
 #include <random>
 #include <map>
 #include "ProfileBlock.h"
-#include "../scopeprotocols/EyeDecoder2.h"
+#include "../scopeprotocols/EyePattern.h"
 
 using namespace std;
 using namespace glm;
@@ -66,7 +66,7 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 	float top_brightness = 0.1;
 	float bottom_brightness = 0.0;
 
-	Gdk::Color color(m_channel->m_displaycolor);
+	Gdk::Color color(m_channel.m_channel->m_displaycolor);
 
 	Cairo::RefPtr<Cairo::LinearGradient> background_gradient = Cairo::LinearGradient::create(0, ytop, 0, ybot);
 	background_gradient->add_color_stop_rgb(
@@ -87,7 +87,7 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//If we're a digital channel, no grid or anything else makes sense
-	if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		return;
 
 	//Calculate width of right side axis label
@@ -106,7 +106,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 	cr->save();
 
-	Gdk::Color color(m_channel->m_displaycolor);
+	Gdk::Color color(m_channel.m_channel->m_displaycolor);
 
 	float ytop = m_height - m_padding;
 	float ybot = m_padding;
@@ -123,7 +123,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	float selected_step = PickStepSize(volts_per_half_span);
 
 	//Special case a few values
-	if(m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
+	if(m_channel.m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
 		selected_step = 2;
 
 	float bottom_edge = (ybot + theight/2);
@@ -188,7 +188,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto it : gridmap)
 	{
 		float v = it.first;
-		tlayout->set_text(m_channel->GetYAxisUnits().PrettyPrint(v));
+		tlayout->set_text(m_channel.m_channel->GetYAxisUnits().PrettyPrint(v));
 		float y = it.second - theight/2;
 		if(y < ybot)
 			continue;
@@ -203,12 +203,12 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->begin_new_path();
 
 	//See if we're the active trigger
-	if(m_channel->IsPhysicalChannel())
+	if(m_channel.m_channel->IsPhysicalChannel())
 	{
-		auto scope = m_channel->GetScope();
-		if(m_channel->GetIndex() == scope->GetTriggerChannelIndex())
+		auto scope = m_channel.m_channel->GetScope();
+		if(m_channel.m_channel->GetIndex() == scope->GetTriggerChannelIndex())
 		{
-			float v = m_channel->GetScope()->GetTriggerVoltage();
+			float v = m_channel.m_channel->GetScope()->GetTriggerVoltage();
 			float y = VoltsToYPosition(v);
 
 			float trisize = 5;
@@ -251,10 +251,10 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//Make sure it's really an eye
-	auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+	auto eye = dynamic_cast<EyePattern*>(m_channel.m_channel);
 	if(!eye)
 		return;
-	auto waveform = dynamic_cast<EyeWaveform*>(eye->GetData());
+	auto waveform = dynamic_cast<EyeWaveform*>(m_channel.GetData());
 	if(!waveform)
 		return;
 
@@ -270,7 +270,7 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 		m_group->m_pixelsPerXUnit,
 		m_group->m_xAxisOffset,
 		m_pixelsPerVolt,
-		m_channel->GetOffset(),
+		m_channel.m_channel->GetOffset(),
 		m_height);
 }
 
@@ -281,14 +281,14 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	int midline = m_overlaySpacing / 2;
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
-	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel->GetData());
+	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel.GetData());
 	if(bus != NULL)
 	{
 		int ymid = m_height - 15;
 		int ytop = ymid - 8;
 		int ybot = ymid + 8;
 
-		Gdk::Color color(m_channel->m_displaycolor);
+		Gdk::Color color(m_channel.m_channel->m_displaycolor);
 
 		size_t len = bus->m_offsets.size();
 		for(size_t i=0; i<len; i++)
@@ -385,13 +385,13 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	for(auto o : m_overlays)
 	{
-		auto data = o->GetData();
+		auto data = o.GetData();
 
 		double ymid = m_overlayPositions[o];
 		double ytop = ymid - height/2;
 		double ybot = ymid + height/2;
 
-		if(o->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(o.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		{
 			//Render the grayed-out background
 			cr->set_source_rgba(0,0,0, 0.6);
@@ -403,7 +403,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		}
 
 		Rect chanbox;
-		RenderChannelInfoBox(o, cr, ybot, o->m_displayname, chanbox, 2);
+		RenderChannelInfoBox(o, cr, ybot, o.m_channel->m_displayname, chanbox, 2);
 		m_overlayBoxRects[o] = chanbox;
 
 		int textright = chanbox.get_right() + 4;
@@ -412,7 +412,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			continue;
 
 		//Handle text
-		if(o->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
+		if(o.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
 		{
 			size_t olen = data->m_offsets.size();
 			for(size_t i=0; i<olen; i++)
@@ -426,13 +426,14 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				if( (xe < textright) || (xs > m_plotRight) )
 					continue;
 
+				auto f = dynamic_cast<Filter*>(o.m_channel);
 				RenderComplexSignal(
 					cr,
 					textright, m_plotRight,
 					xs, xe, 5,
 					ybot, ymid, ytop,
-					o->GetText(i),
-					o->GetColor(i));
+					f->GetText(i),
+					f->GetColor(i));
 			}
 		}
 	}
@@ -440,15 +441,15 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 {
-	string label = m_channel->m_displayname;
-	auto data = m_channel->GetData();
+	string label = m_channel.GetName();
+	auto data = m_channel.GetData();
 
 	auto eye = dynamic_cast<EyeWaveform*>(data);
-	auto ed = dynamic_cast<EyeDecoder2*>(m_channel);
+	auto ed = dynamic_cast<EyePattern*>(m_channel.m_channel);
 
 	//Add RBW to frequency domain channels
 	char tmp[256];
-	auto xunits = m_channel->GetXAxisUnits();
+	auto xunits = m_channel.m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
 		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(data->m_timescale).c_str());
@@ -492,11 +493,11 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Add sample rate info to physical analog channels
 	//TODO: do this to some decodes too?
-	else if(m_channel->IsPhysicalChannel() && (data != NULL))
+	else if(m_channel.m_channel->IsPhysicalChannel() && (data != NULL))
 	{
 		//Do not render sample rate on digital signals unless we have overlays, because this ~doubles the height
 		//of the channel and hurts packing density.
-		if( (m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && m_overlays.empty() )
+		if( (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && m_overlays.empty() )
 		{}
 
 		else
@@ -537,7 +538,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 }
 
 void WaveformArea::RenderChannelInfoBox(
-		OscilloscopeChannel* chan,
+		StreamDescriptor chan,
 		Cairo::RefPtr< Cairo::Context > cr,
 		int bottom,
 		string text,
@@ -585,7 +586,7 @@ void WaveformArea::RenderChannelInfoBox(
 		cr->fill_preserve();
 
 		//Draw the outline
-		Gdk::Color color(chan->m_displaycolor);
+		Gdk::Color color(chan.m_channel->m_displaycolor);
 		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1);
 		cr->set_line_width(1);
 		cr->stroke();
@@ -615,7 +616,7 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 		return;
 
 	//Draw the value label at the bottom
-	string text = m_channel->GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
+	string text = m_channel.m_channel->GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
 
 	//Figure out text size
 	int twidth;
@@ -664,7 +665,7 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
  */
 float WaveformArea::GetValueAtTime(int64_t time_ps)
 {
-	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel->GetData());
+	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
 	if(!waveform)
 		return 0;
 
@@ -680,7 +681,7 @@ float WaveformArea::GetValueAtTime(int64_t time_ps)
 		return waveform->m_samples[index];
 
 	//Linear interpolate to find the value better
-	return ProtocolDecoder::InterpolateValue(waveform, index-1, ticks - waveform->m_offsets[index-1]);
+	return Filter::InterpolateValue(waveform, index-1, ticks - waveform->m_offsets[index-1]);
 }
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)

@@ -30,18 +30,18 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of ProtocolDecoderDialog
+	@brief Implementation of FilterDialog
  */
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
-#include "ProtocolDecoderDialog.h"
+#include "FilterDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowBase
 
-ParameterRowBase::ParameterRowBase(ProtocolDecoderDialog* parent)
+ParameterRowBase::ParameterRowBase(FilterDialog* parent)
 : m_parent(parent)
 {
 }
@@ -53,7 +53,7 @@ ParameterRowBase::~ParameterRowBase()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowString
 
-ParameterRowString::ParameterRowString(ProtocolDecoderDialog* parent)
+ParameterRowString::ParameterRowString(FilterDialog* parent)
 	: ParameterRowBase(parent)
 {
 	m_entry.set_size_request(500, 1);
@@ -66,7 +66,7 @@ ParameterRowString::~ParameterRowString()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilename
 
-ParameterRowFilename::ParameterRowFilename(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param)
+ParameterRowFilename::ParameterRowFilename(FilterDialog* parent, FilterParameter& param)
 	: ParameterRowString(parent)
 	, m_param(param)
 {
@@ -100,7 +100,7 @@ void ParameterRowFilename::OnBrowser()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilenames
 
-ParameterRowFilenames::ParameterRowFilenames(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param)
+ParameterRowFilenames::ParameterRowFilenames(FilterDialog* parent, FilterParameter& param)
 	: ParameterRowBase(parent)
 	, m_list(1)
 	, m_param(param)
@@ -146,12 +146,12 @@ void ParameterRowFilenames::OnRemove()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ProtocolDecoderDialog::ProtocolDecoderDialog(
+FilterDialog::FilterDialog(
 	OscilloscopeWindow* parent,
-	ProtocolDecoder* decoder,
-	OscilloscopeChannel* chan)
-	: Gtk::Dialog(decoder->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
-	, m_decoder(decoder)
+	Filter* filter,
+	StreamDescriptor chan)
+	: Gtk::Dialog(filter->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
+	, m_filter(filter)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -164,16 +164,16 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 			m_channelDisplayNameLabel.set_text("Display name");
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-			m_channelDisplayNameEntry.set_text(decoder->m_displayname);
+			m_channelDisplayNameEntry.set_text(filter->m_displayname);
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
 			m_channelColorLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
-			m_channelColorButton.set_color(Gdk::Color(decoder->m_displaycolor));
+			m_channelColorButton.set_color(Gdk::Color(filter->m_displaycolor));
 
 	Gtk::Widget* last_label = &m_channelColorLabel;
-	for(size_t i=0; i<decoder->GetInputCount(); i++)
+	for(size_t i=0; i<filter->GetInputCount(); i++)
 	{
 		//Add the row
 		auto row = new ChannelSelectorRow;
@@ -183,58 +183,70 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 		last_label = &row->m_label;
 
 		//Label is just the channel name
-		row->m_label.set_label(decoder->GetInputName(i));
+		row->m_label.set_label(filter->GetInputName(i));
 
-		//always allow not connecting an input
-		row->m_chans.append("NULL");
-		row->m_chanptrs["NULL"] = NULL;
+		//Allow NULL for optional inputs
+		auto din = filter->GetInput(i);
+		if(filter->ValidateChannel(i, StreamDescriptor(NULL, 0)))
+		{
+			row->m_chans.append("NULL");
+			row->m_chanptrs["NULL"] = StreamDescriptor(NULL, 0);
 
-		//Handle null inputs
-		OscilloscopeChannel* din = decoder->GetInput(i);
-		if(din == NULL)
-			row->m_chans.set_active_text("NULL");
+			//Handle null inputs
+			if(din.m_channel == NULL)
+				row->m_chans.set_active_text("NULL");
+		}
 
 		//Fill the channel list with all channels that are legal to use here
+		//TODO: multiple streams
 		for(size_t j=0; j<parent->GetScopeCount(); j++)
 		{
 			Oscilloscope* scope = parent->GetScope(j);
 			for(size_t k=0; k<scope->GetChannelCount(); k++)
 			{
-				auto c = scope->GetChannel(k);
-				if(decoder->ValidateChannel(i, c))
+				auto c = StreamDescriptor(scope->GetChannel(k), 0);
+				if(filter->ValidateChannel(i, c))
 				{
-					row->m_chans.append(c->m_displayname);
-					row->m_chanptrs[c->m_displayname] = c;
+					auto name = c.m_channel->m_displayname;
+					row->m_chans.append(name);
+					row->m_chanptrs[name] = c;
 					if( (c == chan && i==0) || (c == din) )
-						row->m_chans.set_active_text(c->m_displayname);
+						row->m_chans.set_active_text(name);
 				}
 			}
 		}
 
-		//Add protocol decoders
-		auto decodes = ProtocolDecoder::EnumDecodes();
-		for(auto d : decodes)
+		//Add filters
+		auto filters = Filter::GetAllInstances();
+		for(auto d : filters)
 		{
 			//Don't allow circular dependencies
-			if(d == decoder)
+			if(d == filter)
 				continue;
 
-			if(decoder->ValidateChannel(i, d))
+			auto nstreams = d->GetStreamCount();
+			for(size_t j=0; j<nstreams; j++)
 			{
-				row->m_chans.append(d->m_displayname);
-				row->m_chanptrs[d->m_displayname] = d;
-				if( (d == chan && i==0) || (d == din) )
-					row->m_chans.set_active_text(d->m_displayname);
+				auto desc = StreamDescriptor(d, j);
+				if(filter->ValidateChannel(i, desc))
+				{
+					string name = desc.GetName();
+
+					row->m_chans.append(name);
+					row->m_chanptrs[name] = desc;
+					if( (desc == chan && i==0) || (desc == din) )
+						row->m_chans.set_active_text(name);
+				}
 			}
 		}
 	}
 
 	//Add parameters
-	for(auto it = decoder->GetParamBegin(); it != decoder->GetParamEnd(); it ++)
+	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
 	{
 		switch(it->second.GetType())
 		{
-			case ProtocolDecoderParameter::TYPE_FILENAME:
+			case FilterParameter::TYPE_FILENAME:
 				{
 					auto row = new ParameterRowFilename(this, it->second);
 					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
@@ -251,7 +263,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 				}
 				break;
 
-			case ProtocolDecoderParameter::TYPE_FILENAMES:
+			case FilterParameter::TYPE_FILENAMES:
 				{
 					auto row = new ParameterRowFilenames(this, it->second);
 					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 2);
@@ -291,7 +303,7 @@ ProtocolDecoderDialog::ProtocolDecoderDialog(
 	show_all();
 }
 
-ProtocolDecoderDialog::~ProtocolDecoderDialog()
+FilterDialog::~FilterDialog()
 {
 	for(auto r : m_rows)
 		delete r;
@@ -303,16 +315,16 @@ ProtocolDecoderDialog::~ProtocolDecoderDialog()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Output
 
-void ProtocolDecoderDialog::ConfigureDecoder()
+void FilterDialog::ConfigureDecoder()
 {
 	//See if we're using the default name
-	string old_name = m_decoder->m_displayname;
-	bool default_name = (m_decoder->GetHwname() == old_name);
+	string old_name = m_filter->m_displayname;
+	bool default_name = (m_filter->GetHwname() == old_name);
 
 	for(size_t i=0; i<m_rows.size(); i++)
 	{
 		auto chname = m_rows[i]->m_chans.get_active_text();
-		m_decoder->SetInput(i, m_rows[i]->m_chanptrs[chname]);
+		m_filter->SetInput(i, m_rows[i]->m_chanptrs[chname]);
 	}
 
 	//Extract file names
@@ -325,7 +337,7 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 
 		//Strings are easy
 		if(srow)
-			m_decoder->GetParameter(name).ParseString(srow->m_entry.get_text());
+			m_filter->GetParameter(name).ParseString(srow->m_entry.get_text());
 
 		//List of file names
 		else if(frow)
@@ -333,19 +345,19 @@ void ProtocolDecoderDialog::ConfigureDecoder()
 			vector<string> paths;
 			for(size_t j=0; j<frow->m_list.size(); j++)
 				paths.push_back(frow->m_list.get_text(j));
-			m_decoder->GetParameter(name).SetFileNames(paths);
+			m_filter->GetParameter(name).SetFileNames(paths);
 		}
 	}
 
-	m_decoder->m_displaycolor = m_channelColorButton.get_color().to_string();
+	m_filter->m_displaycolor = m_channelColorButton.get_color().to_string();
 
 	//Set the name of the decoder based on the input channels etc.
 	//If the user specified a new name, use that.
 	//But if they left the old autogenerated name, update appropriately.
-	m_decoder->SetDefaultName();
+	m_filter->SetDefaultName();
 	auto dname = m_channelDisplayNameEntry.get_text();
 	if( (dname != "") && (!default_name || (old_name != dname)) )
-		m_decoder->m_displayname = dname;
+		m_filter->m_displayname = dname;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

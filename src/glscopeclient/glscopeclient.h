@@ -41,7 +41,7 @@
 #include "../scopehal/Instrument.h"
 #include "../scopehal/Multimeter.h"
 #include "../scopehal/OscilloscopeChannel.h"
-#include "../scopehal/ProtocolDecoder.h"
+#include "../scopehal/Filter.h"
 
 #include <thread>
 #include <vector>

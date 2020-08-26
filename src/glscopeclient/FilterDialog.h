@@ -30,11 +30,11 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Dialog for configuring protocol decoders
+	@brief Dialog for configuring filters
  */
 
-#ifndef ProtocolDecoderDialog_h
-#define ProtocolDecoderDialog_h
+#ifndef FilterDialog_h
+#define FilterDialog_h
 
 #include "../scopehal/Oscilloscope.h"
 #include "WaveformArea.h"
@@ -46,25 +46,25 @@ public:
 	Gtk::Label			m_label;
 	Gtk::ComboBoxText	m_chans;
 
-	std::map<std::string, OscilloscopeChannel*> m_chanptrs;
+	std::map<std::string, StreamDescriptor> m_chanptrs;
 };
 
-class ProtocolDecoderDialog;
+class FilterDialog;
 
 class ParameterRowBase
 {
 public:
-	ParameterRowBase(ProtocolDecoderDialog* parent);
+	ParameterRowBase(FilterDialog* parent);
 	virtual ~ParameterRowBase();
 
-	ProtocolDecoderDialog*	m_parent;
+	FilterDialog*	m_parent;
 	Gtk::Label				m_label;
 };
 
 class ParameterRowString : public ParameterRowBase
 {
 public:
-	ParameterRowString(ProtocolDecoderDialog* parent);
+	ParameterRowString(FilterDialog* parent);
 	virtual ~ParameterRowString();
 
 	Gtk::Entry					m_entry;
@@ -73,19 +73,19 @@ public:
 class ParameterRowFilename : public ParameterRowString
 {
 public:
-	ParameterRowFilename(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param);
+	ParameterRowFilename(FilterDialog* parent, FilterParameter& param);
 	virtual ~ParameterRowFilename();
 
 	void OnBrowser();
 
-	Gtk::Button		m_button;
-	ProtocolDecoderParameter& 	m_param;
+	Gtk::Button			m_button;
+	FilterParameter& 	m_param;
 };
 
 class ParameterRowFilenames : public ParameterRowBase
 {
 public:
-	ParameterRowFilenames(ProtocolDecoderDialog* parent, ProtocolDecoderParameter& param);
+	ParameterRowFilenames(FilterDialog* parent, FilterParameter& param);
 	virtual ~ParameterRowFilenames();
 
 	Gtk::ListViewText				m_list;
@@ -95,22 +95,22 @@ public:
 	void OnAdd();
 	void OnRemove();
 
-	ProtocolDecoderParameter& 	m_param;
+	FilterParameter& 	m_param;
 };
 
 /**
 	@brief Main application window class for an oscilloscope
  */
-class ProtocolDecoderDialog	: public Gtk::Dialog
+class FilterDialog	: public Gtk::Dialog
 {
 public:
-	ProtocolDecoderDialog(OscilloscopeWindow* parent, ProtocolDecoder* decoder, OscilloscopeChannel* chan);
-	virtual ~ProtocolDecoderDialog();
+	FilterDialog(OscilloscopeWindow* parent, Filter* filter, StreamDescriptor chan);
+	virtual ~FilterDialog();
 
 	void ConfigureDecoder();
 
 protected:
-	ProtocolDecoder* m_decoder;
+	Filter* m_filter;
 
 	Gtk::Grid m_grid;
 		Gtk::Label m_channelDisplayNameLabel;

@@ -182,7 +182,7 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	{
 		auto view = dynamic_cast<WaveformArea*>(children[0]);
 		if(view != NULL)
-			m_xAxisUnit = view->GetChannel()->GetXAxisUnits();
+			m_xAxisUnit = view->GetChannel().m_channel->GetXAxisUnits();
 	}
 
 	//And actually draw the rest

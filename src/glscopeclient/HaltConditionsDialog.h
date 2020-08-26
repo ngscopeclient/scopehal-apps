@@ -51,7 +51,7 @@ public:
 	bool ShouldMoveToHalt()
 	{ return m_moveToEventButton.get_active(); }
 
-	OscilloscopeChannel* GetHaltChannel()
+	StreamDescriptor GetHaltChannel()
 	{ return m_chanptrs[m_channelNameBox.get_active_text()]; }
 
 protected:
@@ -64,7 +64,7 @@ protected:
 			Gtk::Entry m_targetEntry;
 
 	OscilloscopeWindow* m_parent;
-	std::map<std::string, OscilloscopeChannel*> m_chanptrs;
+	std::map<std::string, StreamDescriptor> m_chanptrs;
 };
 
 #endif

@@ -36,7 +36,7 @@
 #define WaveformArea_h
 
 #include "WaveformGroup.h"
-#include "ProtocolDecoderDialog.h"
+#include "FilterDialog.h"
 
 /**
 	@brief Slightly more capable rectangle class
@@ -84,14 +84,14 @@ public:
 class WaveformRenderData
 {
 public:
-	WaveformRenderData(OscilloscopeChannel* channel)
+	WaveformRenderData(StreamDescriptor channel)
 	: m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
 	{}
 
 	//The channel of interest
-	OscilloscopeChannel*	m_channel;
+	StreamDescriptor		m_channel;
 
 	//True if everything is good to render
 	bool					m_geometryOK;
@@ -128,13 +128,13 @@ class OscilloscopeWindow;
 class WaveformArea : public Gtk::GLArea
 {
 public:
-	WaveformArea(OscilloscopeChannel* channel, OscilloscopeWindow* parent);
+	WaveformArea(StreamDescriptor channel, OscilloscopeWindow* parent);
 	WaveformArea(const WaveformArea* clone);
 	virtual ~WaveformArea();
 
 	void OnWaveformDataReady();
 
-	OscilloscopeChannel* GetChannel()
+	StreamDescriptor GetChannel()
 	{ return m_channel; }
 
 	void ClearPersistence()
@@ -159,7 +159,7 @@ public:
 	size_t GetOverlayCount()
 	{ return m_overlays.size(); }
 
-	ProtocolDecoder* GetOverlay(size_t i)
+	StreamDescriptor GetOverlay(size_t i)
 	{ return m_overlays[i]; }
 
 	bool GetPersistenceEnabled()
@@ -168,10 +168,10 @@ public:
 	void SetPersistenceEnabled(bool enabled)
 	{ m_persistence = enabled; }
 
-	void AddOverlay(ProtocolDecoder* decode)
+	void AddOverlay(StreamDescriptor stream)
 	{
-		decode->AddRef();
-		m_overlays.push_back(decode);
+		stream.m_channel->AddRef();
+		m_overlays.push_back(stream);
 	}
 
 	//Calls PrepareGeometry() for all waveforms
@@ -284,8 +284,8 @@ protected:
 
 	//Pending protocol decodes
 	void OnProtocolDecode(std::string name);
-	ProtocolDecoderDialog* m_decodeDialog;
-	ProtocolDecoder* m_pendingDecode;
+	FilterDialog* m_decodeDialog;
+	Filter* m_pendingDecode;
 	void OnDecodeDialogResponse(int response);
 	void OnDecodeReconfigureDialogResponse(int response);
 	void OnDecodeSetupComplete();
@@ -310,8 +310,8 @@ protected:
 	void InitializeWaveformPass();
 	void PrepareGeometry(WaveformRenderData* wdata);
 	Program m_waveformComputeProgram;
-	WaveformRenderData*								m_waveformRenderData;
-	std::map<ProtocolDecoder*, WaveformRenderData*>	m_overlayRenderData;
+	WaveformRenderData*						m_waveformRenderData;
+	std::map<StreamDescriptor, WaveformRenderData*>	m_overlayRenderData;
 
 	//Final compositing
 	void RenderMainTrace();
@@ -367,7 +367,7 @@ protected:
 
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(
-		OscilloscopeChannel* chan,
+		StreamDescriptor chan,
 		Cairo::RefPtr< Cairo::Context > cr,
 		int bottom,
 		std::string text,
@@ -401,14 +401,14 @@ protected:
 	void Int64ToFloat(float* dst, int64_t* src, size_t len);
 	void Int64ToFloatAVX512(float* dst, int64_t* src, size_t len);
 
-	void OnRemoveOverlay(ProtocolDecoder* decode);
+	void OnRemoveOverlay(StreamDescriptor filter);
 
-	OscilloscopeChannel* m_channel;							//The main waveform for this view
-	OscilloscopeChannel* m_selectedChannel;					//The selected channel (either m_channel or an overlay)
+	StreamDescriptor m_channel;						//The main waveform for this view
+	StreamDescriptor m_selectedChannel;				//The selected channel (either m_channel or an overlay)
 	OscilloscopeWindow* m_parent;
 
-	std::vector<ProtocolDecoder*> m_overlays;				//List of protocol decoders drawn on top of the signal
-	std::map<ProtocolDecoder*, int> m_overlayPositions;
+	std::vector<StreamDescriptor> m_overlays;		//List of protocol decoders drawn on top of the signal
+	std::map<StreamDescriptor, int> m_overlayPositions;
 
 	double m_lastFrameStart;
 	double m_frameTime;
@@ -428,7 +428,7 @@ protected:
 
 	//Positions of various UI elements used by hit testing
 	Rect m_infoBoxRect;
-	std::map<ProtocolDecoder*, Rect> m_overlayBoxRects;
+	std::map<StreamDescriptor, Rect> m_overlayBoxRects;
 
 	enum ClickLocation
 	{

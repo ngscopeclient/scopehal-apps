@@ -72,8 +72,8 @@ public:
 	void OnCopyNewBelow(WaveformArea* w);
 	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
 
-	void OnAddChannel(OscilloscopeChannel* w);
-	WaveformArea* DoAddChannel(OscilloscopeChannel* w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
+	void OnAddChannel(StreamDescriptor w);
+	WaveformArea* DoAddChannel(StreamDescriptor w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
 
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }
@@ -213,7 +213,7 @@ public:
 	void OnHaltConditions();
 
 	//Protocol decoding etc
-	void RefreshAllDecoders();
+	void RefreshAllFilters();
 
 	virtual bool on_delete_event(GdkEventAny* any_event);
 
@@ -241,7 +241,7 @@ public:
 
 	std::string SerializeConfiguration(bool saveLayout, IDTable& table);
 	std::string SerializeInstrumentConfiguration(IDTable& table);
-	std::string SerializeDecodeConfiguration(IDTable& table);
+	std::string SerializeFilterConfiguration(IDTable& table);
 	std::string SerializeUIConfiguration(IDTable& table);
 	void SerializeWaveforms(IDTable& table);
 

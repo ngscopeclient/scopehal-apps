@@ -348,7 +348,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			{
 				item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
 				item->signal_activate().connect(
-					sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
+						StreamDescriptor(chan, 0) ));
 				m_channelsMenu.append(*item);
 			}
 
@@ -362,7 +363,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 				if(!chan->IsEnabled())
 					continue;
 
-				auto w = new WaveformArea(chan, this);
+				//For now, assume all instrument channels have only one output stream
+				auto w = new WaveformArea(StreamDescriptor(chan, 0), this);
 				w->m_group = group;
 				m_waveformAreas.emplace(w);
 				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
@@ -603,7 +605,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	{
 		for(size_t i=0; i<area->GetOverlayCount(); i++)
 		{
-			auto pdecode = dynamic_cast<PacketDecoder*>(area->GetOverlay(i));
+			auto pdecode = dynamic_cast<PacketDecoder*>(area->GetOverlay(i).m_channel);
 			if(pdecode != NULL)
 			{
 				char title[256];
@@ -684,9 +686,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		time.second = wfm["time_psec"].as<long long>();
 		int waveform_id = wfm["id"].as<int>();
 
-		//Detach old waveforms from our channels (if any)
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
-			scope->GetChannel(i)->Detach();
+		//Don't worry about detaching or deleting old waveforms, they'll get cleaned up when we SetData
 
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
@@ -695,6 +695,9 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		{
 			auto ch = jt.second;
 			int channel_index = ch["index"].as<int>();
+			int stream = 0;
+			if(ch["stream"])
+				stream = ch["stream"].as<int>();
 			auto chan = scope->GetChannel(channel_index);
 			channels.push_back(channel_index);
 
@@ -713,7 +716,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			cap->m_startPicoseconds = time.second;
 			cap->m_triggerPhase = ch["trigphase"].as<float>();
 
-			chan->SetData(cap);
+			chan->SetData(cap, stream);
 		}
 
 		//Load data for each channel in parallel to speed parsing
@@ -722,71 +725,87 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		{
 			int channel_index = channels[i];
 			auto chan = scope->GetChannel(channel_index);
-			auto cap = chan->GetData();
-			auto acap = dynamic_cast<AnalogWaveform*>(cap);
-			auto dcap = dynamic_cast<DigitalWaveform*>(cap);
 
-			//Load the actual sample data
-			char tmp[512];
-			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
-				datadir.c_str(),
-				scope_id,
-				waveform_id,
-				channel_index);
-			FILE* fp = fopen(tmp, "rb");
-			if(!fp)
+			for(size_t stream=0; stream<chan->GetStreamCount(); stream ++)
 			{
-				LogError("couldn't open %s\n", tmp);
-				continue;
-			}
+				auto cap = chan->GetData(stream);
+				auto acap = dynamic_cast<AnalogWaveform*>(cap);
+				auto dcap = dynamic_cast<DigitalWaveform*>(cap);
 
-			//Read the whole file into a buffer
-			fseek(fp, 0, SEEK_END);
-			long len = ftell(fp);
-			fseek(fp, 0, SEEK_SET);
-			unsigned char* buf = new unsigned char[len];
-			fread(buf, 1, len, fp);
-
-			for(long offset=0; offset<len; )
-			{
-				long end = offset + 2*sizeof(int64_t);
-				if(end > len)
-					break;
-
-				//Read start time and duration
-				int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
-				offset = end;
-
-				//Read sample data
-				if(acap)
+				//Load the actual sample data
+				char tmp[512];
+				if(stream == 0)
 				{
-					end = offset + sizeof(float);
-					if(end > len)
-						break;
-					float* f = reinterpret_cast<float*>(buf+offset);
-					offset = end;
-
-					acap->m_offsets.push_back(stime[0]);
-					acap->m_durations.push_back(stime[1]);
-					acap->m_samples.push_back(*f);
+					snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+						datadir.c_str(),
+						scope_id,
+						waveform_id,
+						channel_index);
 				}
-
 				else
 				{
-					end = offset + sizeof(bool);
+					snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%zu.bin",
+						datadir.c_str(),
+						scope_id,
+						waveform_id,
+						channel_index,
+						stream);
+				}
+				FILE* fp = fopen(tmp, "rb");
+				if(!fp)
+				{
+					LogError("couldn't open %s\n", tmp);
+					continue;
+				}
+
+				//Read the whole file into a buffer
+				fseek(fp, 0, SEEK_END);
+				long len = ftell(fp);
+				fseek(fp, 0, SEEK_SET);
+				unsigned char* buf = new unsigned char[len];
+				fread(buf, 1, len, fp);
+
+				for(long offset=0; offset<len; )
+				{
+					long end = offset + 2*sizeof(int64_t);
 					if(end > len)
 						break;
-					bool *b = reinterpret_cast<bool*>(buf+offset);
+
+					//Read start time and duration
+					int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
 					offset = end;
 
-					dcap->m_offsets.push_back(stime[0]);
-					dcap->m_durations.push_back(stime[1]);
-					dcap->m_samples.push_back(*b);
-				}
-			}
+					//Read sample data
+					if(acap)
+					{
+						end = offset + sizeof(float);
+						if(end > len)
+							break;
+						float* f = reinterpret_cast<float*>(buf+offset);
+						offset = end;
 
-			delete[] buf;
-			fclose(fp);
+						acap->m_offsets.push_back(stime[0]);
+						acap->m_durations.push_back(stime[1]);
+						acap->m_samples.push_back(*f);
+					}
+
+					else
+					{
+						end = offset + sizeof(bool);
+						if(end > len)
+							break;
+						bool *b = reinterpret_cast<bool*>(buf+offset);
+						offset = end;
+
+						dcap->m_offsets.push_back(stime[0]);
+						dcap->m_durations.push_back(stime[1]);
+						dcap->m_samples.push_back(*b);
+					}
+				}
+
+				delete[] buf;
+				fclose(fp);
+			}
 		}
 
 		//Add to history
@@ -902,7 +921,8 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				{
 					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
 					item->signal_activate().connect(
-						sigc::bind<OscilloscopeChannel*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), chan));
+						sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
+							StreamDescriptor(chan, 0)));
 					m_channelsMenu.append(*item);
 				}
 			}
@@ -930,8 +950,8 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 
 		//Create the decode
 		auto proto = dnode["protocol"].as<string>();
-		auto decode = ProtocolDecoder::CreateDecoder(proto, dnode["color"].as<string>());
-		if(decode == NULL)
+		auto filter = Filter::CreateFilter(proto, dnode["color"].as<string>());
+		if(filter == NULL)
 		{
 			Gtk::MessageDialog dlg(
 				string("Unable to create filter \"") + proto + "\". Skipping...\n",
@@ -943,22 +963,22 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 			continue;
 		}
 
-		table.emplace(dnode["id"].as<int>(), decode);
+		table.emplace(dnode["id"].as<int>(), filter);
 
 		//Load parameters during the first pass.
 		//Parameters can't have dependencies on other channels etc.
 		//More importantly, parameters may change bus width etc
-		decode->LoadParameters(dnode, table);
+		filter->LoadParameters(dnode, table);
 	}
 
-	//Make a second pass to configure the decoder inputs, once all of them have been instantiated.
-	//Decoders may depend on other decoders as inputs, and serialization is not guaranteed to be a topological sort.
+	//Make a second pass to configure the filter inputs, once all of them have been instantiated.
+	//Filters may depend on other filters as inputs, and serialization is not guaranteed to be a topological sort.
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-		auto decode = static_cast<ProtocolDecoder*>(table[dnode["id"].as<int>()]);
-		if(decode)
-			decode->LoadInputs(dnode, table);
+		auto filter = static_cast<Filter*>(table[dnode["id"].as<int>()]);
+		if(filter)
+			filter->LoadInputs(dnode, table);
 	}
 }
 
@@ -980,7 +1000,10 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
 		if(!channel)	//don't crash on bad IDs or missing decodes
 			continue;
-		WaveformArea* area = new WaveformArea(channel, this);
+		size_t stream = 0;
+		if(an["stream"])
+			stream = an["stream"].as<int>();
+		WaveformArea* area = new WaveformArea(StreamDescriptor(channel, stream), this);
 		table.emplace(an["id"].as<int>(), area);
 		area->SetPersistenceEnabled(an["persistence"].as<int>() ? true : false);
 		m_waveformAreas.emplace(area);
@@ -989,9 +1012,12 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		auto overlays = an["overlays"];
 		for(auto jt : overlays)
 		{
-			auto decode = static_cast<ProtocolDecoder*>(table[jt.second["id"].as<int>()]);
-			if(decode)
-				area->AddOverlay(decode);
+			auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+			stream = 0;
+			if(jt.second["id"])
+				stream = jt.second["id"].as<int>();
+			if(filter)
+				area->AddOverlay(StreamDescriptor(filter, stream));
 		}
 	}
 
@@ -1037,7 +1063,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			if(!area)
 				continue;
 			area->m_group = group;
-			if(area->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			if(area->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 				group->m_waveformBox.pack_start(*area, Gtk::PACK_SHRINK);
 			else
 				group->m_waveformBox.pack_start(*area);
@@ -1266,8 +1292,8 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 	config += SerializeInstrumentConfiguration(table);
 
 	//Decodes depend on scope channels, but need to happen before UI elements that use them
-	if(!ProtocolDecoder::EnumDecodes().empty())
-		config += SerializeDecodeConfiguration(table);
+	if(!Filter::GetAllInstances().empty())
+		config += SerializeFilterConfiguration(table);
 
 	//UI config
 	if(saveLayout)
@@ -1292,11 +1318,11 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
 /**
 	@brief Serialize the configuration for all protocol decoders
  */
-string OscilloscopeWindow::SerializeDecodeConfiguration(IDTable& table)
+string OscilloscopeWindow::SerializeFilterConfiguration(IDTable& table)
 {
 	string config = "decodes:\n";
 
-	auto set = ProtocolDecoder::EnumDecodes();
+	auto set = Filter::GetAllInstances();
 	for(auto d : set)
 		config += d->SerializeConfiguration(table);
 
@@ -1330,7 +1356,10 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		//Channels
 		//By the time we get here, all channels should be accounted for.
 		//So there should be no reason to assign names to channels at this point - just use what's already there
-		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", table[area->GetChannel()]);
+		auto chan = area->GetChannel();
+		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", table[chan.m_channel]);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            stream:      %zu\n", chan.m_stream);
 		config += tmp;
 
 		//Overlays
@@ -1343,7 +1372,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 			{
 				snprintf(tmp, sizeof(tmp), "                :\n");
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[area->GetOverlay(i)]);
+				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[area->GetOverlay(i).m_channel]);
 				config += tmp;
 			}
 		}
@@ -1557,22 +1586,23 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
 
-	if(w->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(w->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*w);
 
 	//Move stats related to this trace to the new group
-	set<OscilloscopeChannel*> chans;
+	set<StreamDescriptor> chans;
 	chans.emplace(w->GetChannel());
 	for(size_t i=0; i<w->GetOverlayCount(); i++)
 		chans.emplace(w->GetOverlay(i));
 	for(auto chan : chans)
 	{
-		if(oldgroup->IsShowingStats(chan))
+		//TODO: multi stream stats
+		if(oldgroup->IsShowingStats(chan.m_channel))
 		{
-			oldgroup->ToggleOff(chan);
-			ngroup->ToggleOn(chan);
+			oldgroup->ToggleOff(chan.m_channel);
+			ngroup->ToggleOn(chan.m_channel);
 		}
 	}
 
@@ -1599,21 +1629,22 @@ void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* n
 
 	//Then add it like normal
 	nw->m_group = ngroup;
-	if(nw->GetChannel()->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(nw->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*nw, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*nw);
 	nw->show();
 
 	//Add stats if needed
-	set<OscilloscopeChannel*> chans;
+	set<StreamDescriptor> chans;
 	chans.emplace(w->GetChannel());
 	for(size_t i=0; i<w->GetOverlayCount(); i++)
 		chans.emplace(w->GetOverlay(i));
 	for(auto chan : chans)
 	{
-		if(w->m_group->IsShowingStats(chan))
-			ngroup->ToggleOn(chan);
+		//TODO: multi stream stats
+		if(w->m_group->IsShowingStats(chan.m_channel))
+			ngroup->ToggleOn(chan.m_channel);
 	}
 }
 
@@ -1747,10 +1778,10 @@ void OscilloscopeWindow::OnClearSweeps()
 {
 	//TODO: clear regular waveform data and history too?
 
-	//Clear integrated data from all protocol decodes
-	auto decodes = ProtocolDecoder::EnumDecodes();
-	for(auto d : decodes)
-		d->ClearSweeps();
+	//Clear integrated data from all pfilters
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		f->ClearSweeps();
 
 	//Clear persistence on all groups
 	for(auto g : m_waveformGroups)
@@ -1847,7 +1878,7 @@ void OscilloscopeWindow::OnQuit()
 	close();
 }
 
-void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
+void OscilloscopeWindow::OnAddChannel(StreamDescriptor chan)
 {
 	//If all waveform groups were closed, recreate one
 	if(m_waveformGroups.empty())
@@ -1864,14 +1895,14 @@ void OscilloscopeWindow::OnAddChannel(OscilloscopeChannel* chan)
 	DoAddChannel(chan, *m_waveformGroups.begin());
 }
 
-WaveformArea* OscilloscopeWindow::DoAddChannel(OscilloscopeChannel* chan, WaveformGroup* ngroup, WaveformArea* ref)
+WaveformArea* OscilloscopeWindow::DoAddChannel(StreamDescriptor chan, WaveformGroup* ngroup, WaveformArea* ref)
 {
 	//Create the viewer
 	auto w = new WaveformArea(chan, this);
 	w->m_group = ngroup;
 	m_waveformAreas.emplace(w);
 
-	if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(chan.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*w);
@@ -2002,12 +2033,16 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 	//Make sure we don't free the old waveform data
 	//LogTrace("Detaching\n");
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
-		scope->GetChannel(i)->Detach();
+	{
+		auto chan = scope->GetChannel(i);
+		for(size_t j=0; j<chan->GetStreamCount(); j++)
+			chan->Detach(j);
+	}
 
 	//Download the data
 	//LogTrace("Acquiring\n");
 	double start = GetTime();
-	scope->AcquireDataFifo();
+	scope->PopPendingWaveform();
 	m_tAcquire += GetTime() - start;
 
 	//Update the history window
@@ -2025,7 +2060,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 	//Update the status
 	UpdateStatusBar();
-	RefreshAllDecoders();
+	RefreshAllFilters();
 
 	//Update protocol analyzers
 	for(auto a : m_analyzers)
@@ -2091,39 +2126,39 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	}
 }
 
-void OscilloscopeWindow::RefreshAllDecoders()
+void OscilloscopeWindow::RefreshAllFilters()
 {
 	double start = GetTime();
 
-	auto decodes = ProtocolDecoder::EnumDecodes();
-	for(auto d : decodes)
-		d->SetDirty();
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		f->SetDirty();
 
 	//Prepare to topologically sort filter nodes into blocks capable of parallel evaluation.
 	//Block 0 may only depend on physical scope channels.
 	//Block 1 may depend on decodes in block 0 or physical channels.
 	//Block 2 may depend on 1/0/physical, etc.
-	typedef vector<ProtocolDecoder*> DecodeBlock;
-	vector<DecodeBlock> blocks;
+	typedef vector<Filter*> FilterBlock;
+	vector<FilterBlock> blocks;
 
 	//Working set starts out as all decoders
-	auto working = ProtocolDecoder::EnumDecodes();
+	auto working = filters;
 
 	//Each iteration, put all decodes that only depend on previous blocks into this block.
 	for(int block=0; !working.empty(); block++)
 	{
-		DecodeBlock current_block;
+		FilterBlock current_block;
 
 		for(auto w : working)
 		{
-			ProtocolDecoder* d = static_cast<ProtocolDecoder*>(w);
+			auto d = static_cast<Filter*>(w);
 
 			//Check if we have any inputs that are still in the working set.
 			bool ok = true;
 			for(size_t i=0; i<d->GetInputCount(); i++)
 			{
-				auto in = d->GetInput(i);
-				if(working.find((ProtocolDecoder*)in) != working.end())
+				auto in = d->GetInput(i).m_channel;
+				if(working.find((Filter*)in) != working.end())
 				{
 					ok = false;
 					break;
@@ -2250,7 +2285,7 @@ void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 	//Stop triggering if we select a saved waveform
 	OnStop();
 
-	RefreshAllDecoders();
+	RefreshAllFilters();
 
 	//Update the views
 	for(auto w : m_waveformAreas)

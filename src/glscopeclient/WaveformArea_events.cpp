@@ -39,8 +39,8 @@
 #include <random>
 #include "ProfileBlock.h"
 #include "ChannelPropertiesDialog.h"
-#include "../../lib/scopeprotocols/EyeDecoder2.h"
-#include "../../lib/scopeprotocols/WaterfallDecoder.h"
+#include "../../lib/scopeprotocols/EyePattern.h"
+#include "../../lib/scopeprotocols/Waterfall.h"
 #include <map>
 
 using namespace std;
@@ -95,14 +95,14 @@ void WaveformArea::on_resize(int width, int height)
 	//If it's an eye pattern or waterfall, resize it
 	if(IsEye())
 	{
-		auto eye = dynamic_cast<EyeDecoder2*>(m_channel);
+		auto eye = dynamic_cast<EyePattern*>(m_channel.m_channel);
 		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
 		eye->Refresh();
 	}
 	else if(IsWaterfall())
 	{
-		auto waterfall = dynamic_cast<WaterfallDecoder*>(m_channel);
+		auto waterfall = dynamic_cast<Waterfall*>(m_channel.m_channel);
 		waterfall->SetWidth(m_width);
 		waterfall->SetHeight(m_height);
 	}
@@ -142,16 +142,16 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 		//Adjust volts/div
 		case LOC_VSCALE:
 			{
-				double vrange = m_channel->GetVoltageRange();
+				double vrange = m_channel.m_channel->GetVoltageRange();
 				switch(ev->direction)
 				{
 					case GDK_SCROLL_UP:
-						m_channel->SetVoltageRange(vrange * 0.9);
+						m_channel.m_channel->SetVoltageRange(vrange * 0.9);
 						SetGeometryDirty();
 						queue_draw();
 						break;
 					case GDK_SCROLL_DOWN:
-						m_channel->SetVoltageRange(vrange / 0.9);
+						m_channel.m_channel->SetVoltageRange(vrange / 0.9);
 						SetGeometryDirty();
 						queue_draw();
 						break;
@@ -299,8 +299,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 						else
 						{
 							m_dragState = DRAG_OVERLAY;
-							m_dragOverlayPosition =
-								m_overlayPositions[static_cast<ProtocolDecoder*>(m_selectedChannel)] - 10;
+							m_dragOverlayPosition =	m_overlayPositions[m_selectedChannel] - 10;
 						}
 						break;
 
@@ -331,9 +330,9 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 		case LOC_CHAN_NAME:
 			{
 				//See if it's a physical channel
-				if(m_selectedChannel->IsPhysicalChannel())
+				if(m_selectedChannel.m_channel->IsPhysicalChannel())
 				{
-					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel);
+					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel.m_channel);
 					if(dialog.run() == Gtk::RESPONSE_OK)
 					{
 						dialog.ConfigureChannel();
@@ -344,10 +343,10 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 				//No, it's a decode
 				else
 				{
-					auto decode = dynamic_cast<ProtocolDecoder*>(m_selectedChannel);
+					auto decode = dynamic_cast<Filter*>(m_selectedChannel.m_channel);
 					if(decode)
 					{
-						m_decodeDialog = new ProtocolDecoderDialog(m_parent, decode, NULL);
+						m_decodeDialog = new FilterDialog(m_parent, decode, StreamDescriptor(NULL, 0));
 						m_decodeDialog->show();
 						m_decodeDialog->signal_response().connect(
 							sigc::mem_fun(*this, &WaveformArea::OnDecodeReconfigureDialogResponse));
@@ -355,7 +354,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					else
 					{
 						LogError("Channel \"%s\" is neither a protocol decode nor a physical channel\n",
-							m_selectedChannel->m_displayname.c_str());
+							m_selectedChannel.m_channel->m_displayname.c_str());
 					}
 				}
 
@@ -377,7 +376,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_TRIGGER:
 			if(event->button == 1)
 			{
-				m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
+				m_channel.m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
 				m_parent->ClearAllPersistence();
 				queue_draw();
 			}
@@ -433,7 +432,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_OVERLAY:
 			{
 				//Sort overlays by position
-				std::map<int, ProtocolDecoder*> revmap;
+				std::map<int, StreamDescriptor> revmap;
 				vector<int> positions;
 				for(auto it : m_overlayPositions)
 				{
@@ -443,14 +442,14 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				std::sort(positions.begin(), positions.end(), less<int>());
 
 				//Make a new, sorted list of decode positions
-				vector<ProtocolDecoder*> sorted;
+				vector<StreamDescriptor> sorted;
 				bool inserted = false;
 				for(size_t i=0; i<positions.size(); i++)
 				{
 					int pos = positions[i];
 					if( (pos > m_dragOverlayPosition) && !inserted)
 					{
-						sorted.push_back(static_cast<ProtocolDecoder*>(m_selectedChannel));
+						sorted.push_back(m_selectedChannel);
 						inserted = true;
 					}
 
@@ -458,7 +457,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 						sorted.push_back(revmap[pos]);
 				}
 				if(!inserted)
-					sorted.push_back(static_cast<ProtocolDecoder*>(m_selectedChannel));
+					sorted.push_back(m_selectedChannel);
 
 				//Reposition everything
 				int pos = m_overlaySpacing / 2;
@@ -498,7 +497,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	{
 		//Trigger drag - update level and refresh
 		case DRAG_TRIGGER:
-			m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
+			m_channel.m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
 			m_parent->ClearAllPersistence();
 			queue_draw();
 			break;
@@ -545,8 +544,8 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_OFFSET:
 			{
 				double dv = YPositionToVolts(event->y) - m_dragStartVoltage;
-				double old_offset = m_channel->GetOffset();
-				m_channel->SetOffset(old_offset + dv);
+				double old_offset = m_channel.m_channel->GetOffset();
+				m_channel.m_channel->SetOffset(old_offset + dv);
 				queue_draw();
 			}
 			break;
@@ -557,7 +556,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			{
 				//See what decoder we're above/below
 				int maxpos = 0;
-				ProtocolDecoder* maxover = NULL;
+				StreamDescriptor maxover(NULL, 0);
 				for(auto it : m_overlayPositions)
 				{
 					if(event->y > it.second)
@@ -570,7 +569,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 					}
 				}
 
-				if(maxover)
+				if(maxover.m_channel != NULL)
 				{
 					m_dragOverlayPosition = maxpos + 10;
 					queue_draw();
@@ -743,7 +742,7 @@ void WaveformArea::OnProtocolDecode(string name)
 	string color = GetDefaultChannelColor(g_numDecodes);
 	if(m_pendingDecode)
 		delete m_pendingDecode;
-	m_pendingDecode = ProtocolDecoder::CreateDecoder(name, color);
+	m_pendingDecode = Filter::CreateFilter(name, color);
 
 	//Only one input with no config required? Do default configuration
 	if( (m_pendingDecode->GetInputCount() == 1) && !m_pendingDecode->NeedsConfig())
@@ -758,7 +757,7 @@ void WaveformArea::OnProtocolDecode(string name)
 	{
 		if(m_decodeDialog)
 			delete m_decodeDialog;
-		m_decodeDialog = new ProtocolDecoderDialog(m_parent, m_pendingDecode, m_selectedChannel);
+		m_decodeDialog = new FilterDialog(m_parent, m_pendingDecode, m_selectedChannel);
 		m_decodeDialog->show();
 		m_decodeDialog->signal_response().connect(sigc::mem_fun(*this, &WaveformArea::OnDecodeDialogResponse));
 	}
@@ -806,13 +805,13 @@ void WaveformArea::OnDecodeSetupComplete()
 	g_numDecodes ++;
 
 	//If it's an eye pattern or waterfall, set the initial size
-	auto eye = dynamic_cast<EyeDecoder2*>(m_pendingDecode);
+	auto eye = dynamic_cast<EyePattern*>(m_pendingDecode);
 	if(eye != NULL)
 	{
 		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
 	}
-	auto fall = dynamic_cast<WaterfallDecoder*>(m_pendingDecode);
+	auto fall = dynamic_cast<Waterfall*>(m_pendingDecode);
 	if(fall != NULL)
 	{
 		fall->SetWidth(m_width);
@@ -826,19 +825,25 @@ void WaveformArea::OnDecodeSetupComplete()
 	//Create a new waveform view for the generated signal
 	if(!m_pendingDecode->IsOverlay())
 	{
-		auto area = m_parent->DoAddChannel(m_pendingDecode, m_group, this);
+		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
+		{
+			auto area = m_parent->DoAddChannel(StreamDescriptor(m_pendingDecode, i), m_group, this);
 
-		//If the decode is incompatible with our timebase, make a new group
-		//TODO: better way to determine fixed-width stuff like eye patterns
-		if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel->GetXAxisUnits()) )
-			m_parent->OnMoveNewBelow(area);
+			//If the decode is incompatible with our timebase, make a new group
+			//TODO: better way to determine fixed-width stuff like eye patterns
+			if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel.m_channel->GetXAxisUnits()) )
+				m_parent->OnMoveNewBelow(area);
+		}
 	}
 
 	//It's an overlay. Reference it and add to our overlay list
 	else
 	{
-		m_pendingDecode->AddRef();
-		m_overlays.push_back(m_pendingDecode);
+		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
+		{
+			m_pendingDecode->AddRef();
+			m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
+		}
 		queue_draw();
 	}
 
@@ -868,7 +873,7 @@ void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
-	m_selectedChannel->SetBandwidthLimit(mhz);
+	m_selectedChannel.m_channel->SetBandwidthLimit(mhz);
 	ClearPersistence();
 }
 
@@ -878,8 +883,9 @@ void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuI
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
-	m_channel->GetScope()->SetTriggerChannelIndex(m_channel->GetIndex());
-	m_channel->GetScope()->SetTriggerType(type);
+	auto scope = m_channel.m_channel->GetScope();
+	scope->SetTriggerChannelIndex(m_channel.m_channel->GetIndex());
+	scope->SetTriggerType(type);
 	m_parent->ClearAllPersistence();
 }
 
@@ -888,9 +894,10 @@ void WaveformArea::OnWaveformDataReady()
 	//If we're a fixed width curve, refresh the parent's time scale
 	if(IsEyeOrBathtub())
 	{
-		auto eye = dynamic_cast<EyeWaveform*>(m_channel->GetData());
+		auto eye = dynamic_cast<EyeWaveform*>(m_channel.m_channel->GetData(0));
+		auto f = dynamic_cast<Filter*>(m_channel.m_channel);
 		if(eye == NULL)
-			eye = dynamic_cast<EyeWaveform*>(dynamic_cast<ProtocolDecoder*>(m_channel)->GetInput(0)->GetData());
+			eye = dynamic_cast<EyeWaveform*>(f->GetInput(0).m_channel->GetData(0));
 		if(eye != NULL)
 		{
 			float width = eye->GetUIWidth();
@@ -905,7 +912,7 @@ void WaveformArea::OnWaveformDataReady()
 			m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
 			m_group->m_xAxisOffset = -round(width);
 
-			auto d = dynamic_cast<EyeDecoder2*>(m_channel);
+			auto d = dynamic_cast<EyePattern*>(f);
 			if(d)
 			{
 				d->SetXOffset(m_group->m_xAxisOffset);
@@ -947,9 +954,11 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	if(x > m_plotRight)
 	{
 		//On the trigger button?
-		if((m_channel->GetScope() != NULL) && (m_channel->GetIndex() == m_channel->GetScope()->GetTriggerChannelIndex()) )
+		auto scope = m_channel.m_channel->GetScope();
+		if((scope != NULL) &&
+			(m_channel.m_channel->GetIndex() == scope->GetTriggerChannelIndex()) )
 		{
-			float vy = VoltsToYPosition(m_channel->GetScope()->GetTriggerVoltage());
+			float vy = VoltsToYPosition(scope->GetTriggerVoltage());
 			float radius = 20;
 			if( (fabs(y - vy) < radius) &&
 				(x < (m_plotRight + radius) ) )
@@ -1034,22 +1043,22 @@ void WaveformArea::UpdateContextMenu()
 			if(menu == NULL)
 				continue;
 
-			auto decoder = ProtocolDecoder::CreateDecoder(
+			auto filter = Filter::CreateFilter(
 				menu->get_label(),
 				"");
-			menu->set_sensitive(decoder->ValidateChannel(0, m_selectedChannel));
-			delete decoder;
+			menu->set_sensitive(filter->ValidateChannel(0, m_selectedChannel));
+			delete filter;
 		}
 	}
 
-	if(m_selectedChannel->IsPhysicalChannel())
+	if(m_selectedChannel.m_channel->IsPhysicalChannel())
 	{
 		m_bwMenu.set_sensitive(true);
 		m_attenMenu.set_sensitive(true);
 		m_couplingMenu.set_sensitive(true);
 
 		//Update the current coupling setting
-		auto coupling = m_selectedChannel->GetCoupling();
+		auto coupling = m_selectedChannel.m_channel->GetCoupling();
 		m_couplingItem.set_sensitive(true);
 		switch(coupling)
 		{
@@ -1076,7 +1085,7 @@ void WaveformArea::UpdateContextMenu()
 		}
 
 		//Update the current attenuation
-		int atten = static_cast<int>(m_selectedChannel->GetAttenuation());
+		int atten = static_cast<int>(m_selectedChannel.m_channel->GetAttenuation());
 		switch(atten)
 		{
 			case 1:
@@ -1097,7 +1106,7 @@ void WaveformArea::UpdateContextMenu()
 		}
 
 		//Update the bandwidth limit
-		int bwl = m_selectedChannel->GetBandwidthLimit();
+		int bwl = m_selectedChannel.m_channel->GetBandwidthLimit();
 		switch(bwl)
 		{
 			case 0:
@@ -1117,7 +1126,7 @@ void WaveformArea::UpdateContextMenu()
 				break;
 		}
 
-		if(m_channel->GetScope()->GetTriggerChannelIndex() != m_channel->GetIndex())
+		if(m_channel.m_channel->GetScope()->GetTriggerChannelIndex() != m_channel.m_channel->GetIndex())
 		{
 			m_risingTriggerItem.set_inconsistent(true);
 			m_fallingTriggerItem.set_inconsistent(true);
@@ -1137,7 +1146,7 @@ void WaveformArea::UpdateContextMenu()
 			m_fallingTriggerItem.set_draw_as_radio(true);
 			m_bothTriggerItem.set_draw_as_radio(true);
 
-			switch(m_channel->GetScope()->GetTriggerType())
+			switch(m_channel.m_channel->GetScope()->GetTriggerType())
 			{
 				case Oscilloscope::TRIGGER_TYPE_RISING:
 					m_risingTriggerItem.set_active();
@@ -1184,7 +1193,7 @@ void WaveformArea::UpdateContextMenu()
 	}
 
 	//Set stats checkbox
-	m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel));
+	m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel.m_channel));
 
 	m_updatingContextMenu = false;
 }
@@ -1195,7 +1204,7 @@ void WaveformArea::OnStatistics()
 		return;
 
 	if(m_statisticsItem.get_active())
-		m_group->ToggleOn(m_selectedChannel);
+		m_group->ToggleOn(m_selectedChannel.m_channel);
 	else
-		m_group->ToggleOff(m_selectedChannel);
+		m_group->ToggleOff(m_selectedChannel.m_channel);
 }
