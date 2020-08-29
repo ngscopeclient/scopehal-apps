@@ -353,6 +353,7 @@ protected:
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);

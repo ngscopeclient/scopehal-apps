@@ -612,7 +612,7 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 	cr->stroke();
 
 	//For now, only display labels on analog channels
-	if(!IsAnalog())
+	if(!IsAnalog() && !IsWaterfall())
 		return;
 
 	//Draw the value label at the bottom
@@ -714,8 +714,78 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 			cr->line_to(x2, ybot);
 			cr->line_to(x, ybot);
 			cr->fill();
+
+			//If it's a FFT trace, render in-band power
+			if(m_channel.m_channel->GetYAxisUnits() == Unit::UNIT_DBM)
+				RenderInBandPower(cr);
 		}
 	}
+}
+
+/**
+	@brief Displays in-band power between two cursors on a frequency domain waveform
+ */
+void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
+{
+	//If no data, we obviously can't do anything
+	auto data = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
+	if(!data)
+		return;
+
+	//Sum up the total power
+	//This gets a bit more complicated because we can't just sum dB!
+	size_t ifirst = round(m_group->m_xCursorPos[0] * 1.0 / data->m_timescale);
+	size_t isecond = round(m_group->m_xCursorPos[1] * 1.0 / data->m_timescale);
+	float total_watts = 0;
+	for(size_t i=ifirst; i<=isecond; i++)
+		total_watts += pow(10, (data->m_samples[i] - 30) / 10);
+	float total_dbm = 10 * log10(total_watts) + 30;
+	auto text = string("Band: ") + m_channel.m_channel->GetYAxisUnits().PrettyPrint(total_dbm);
+
+	//Calculate text size
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Pango::FontDescription font("sans normal 10");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	tlayout->set_text(text);
+	tlayout->get_pixel_size(twidth, theight);
+
+	//Add some margin
+	const int margin = 2;
+	int totalwidth = twidth + 2*margin;
+	int totalheight = theight + 2*margin;
+
+	//Calculate left/right cursor positions.
+	//Hide text if it's too fat to fit between the cursors.
+	float left_cursor = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
+	float right_cursor = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
+	float aperture = right_cursor - left_cursor;
+	if(aperture < totalwidth)
+		return;
+
+	//Draw the dark background
+	float midpoint = left_cursor + aperture/2;
+	float left = midpoint - totalwidth * 0.5f;
+	float right = midpoint + totalwidth * 0.5f;
+	float bottom = m_height;
+	float top = m_height - totalheight;
+	cr->set_source_rgba(0, 0, 0, 0.75);
+	cr->move_to(left, bottom);
+	cr->line_to(right, bottom);
+	cr->line_to(right, top);
+	cr->line_to(left, top);
+	cr->fill();
+
+	//Draw the text
+	Gdk::Color yellow("yellow");
+	cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
+	cr->save();
+		cr->move_to(left + margin, top + margin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
 }
 
 void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
