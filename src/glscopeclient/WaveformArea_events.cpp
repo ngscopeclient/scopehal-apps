@@ -199,6 +199,19 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 {
 	switch(m_clickLocation)
 	{
+		//Move cursors if we click on them
+		case LOC_XCURSOR_0:
+			m_dragState = DRAG_CURSOR_0;
+			m_group->m_xCursorPos[0] = timestamp;
+			m_group->m_vbox.queue_draw();
+			break;
+
+		case LOC_XCURSOR_1:
+			m_dragState = DRAG_CURSOR_1;
+			m_group->m_xCursorPos[1] = timestamp;
+			m_group->m_vbox.queue_draw();
+			break;
+
 		//Waveform area
 		case LOC_PLOT:
 			{
@@ -207,18 +220,24 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 					//Left
 					case 1:
 
-						//Start dragging the second cursor
-						if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+						switch(m_group->m_cursorConfig)
 						{
-							m_dragState = DRAG_CURSOR_1;
-							m_group->m_xCursorPos[1] = timestamp;
-						}
+							//Move existing cursors or place a new pair
+							case WaveformGroup::CURSOR_X_DUAL:
+								//Not moving existing cursors, start a new pair
+								m_dragState = DRAG_CURSOR_1;
+								m_group->m_xCursorPos[0] = timestamp;
+								m_group->m_xCursorPos[1] = timestamp;
+								break;
 
-						//Place the first cursor
-						if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
-							(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE))
-						{
-							m_group->m_xCursorPos[0] = timestamp;
+							//Place the first cursor
+							case WaveformGroup::CURSOR_X_SINGLE:
+								m_dragState = DRAG_CURSOR_0;
+								m_group->m_xCursorPos[0] = timestamp;
+								break;
+
+							default:
+								break;
 						}
 
 						//Redraw if we have any cursor
@@ -255,6 +274,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 					case 1:
 						m_dragState = DRAG_OFFSET;
 						m_dragStartVoltage = YPositionToVolts(event->y);
+						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
 						break;
 
 					//Right
@@ -470,6 +490,11 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			}
 			break;
 
+		//Done dragging the offset
+		case DRAG_OFFSET:
+			get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
+			break;
+
 		default:
 			break;
 	}
@@ -492,6 +517,10 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	m_cursorY = event->y;
 
 	int64_t timestamp = XPositionToXAxisUnits(event->x);
+
+	//Figure out what UI element (if any) the cursor currently is on top of
+	ClickLocation oldLocation = m_mouseElementPosition;
+	m_mouseElementPosition = HitTest(event->x, event->y);
 
 	switch(m_dragState)
 	{
@@ -651,6 +680,44 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 
 					target->queue_draw();
 				}
+			}
+			break;
+
+		//Not dragging. Update mouse cursor based on where we are
+		case DRAG_NONE:
+			if(oldLocation != m_mouseElementPosition)
+			{
+				//New cursor shape!
+				string shape = "default";
+				switch(m_mouseElementPosition)
+				{
+					case LOC_XCURSOR_0:
+					case LOC_XCURSOR_1:
+						shape = "ew-resize";
+						break;
+
+					case LOC_VSCALE:
+						shape = "grab";
+						break;
+
+					case LOC_TRIGGER:
+						shape = "ns-resize";
+						break;
+
+					case LOC_CHAN_NAME:
+						shape = "default";
+						break;
+
+					case LOC_PLOT:
+						shape = "crosshair";
+						break;
+
+					default:
+						break;
+				}
+
+				//Create the cursor
+				get_window()->set_cursor(Gdk::Cursor::create(get_display(), shape));
 			}
 			break;
 
@@ -951,6 +1018,7 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 		}
 	}
 
+	//Right side of plot area
 	if(x > m_plotRight)
 	{
 		//On the trigger button?
@@ -969,6 +1037,27 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 
 		//Nope, just the scale bar
 		return LOC_VSCALE;
+	}
+
+	//In the plot area. Check for hits on cursors
+	float currentCursor0Pos = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
+	float currentCursor1Pos = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
+	switch(m_group->m_cursorConfig)
+	{
+		//Only check cursor 1 if enabled
+		case WaveformGroup::CURSOR_X_DUAL:
+			if(fabs(currentCursor1Pos - x) < 5)
+				return LOC_XCURSOR_1;
+
+		//fall through
+		//Check cursor 0 regardless
+		case WaveformGroup::CURSOR_X_SINGLE:
+			if(fabs(currentCursor0Pos - x) < 5)
+				return LOC_XCURSOR_0;
+			break;
+
+		default:
+			break;
 	}
 
 	return LOC_PLOT;

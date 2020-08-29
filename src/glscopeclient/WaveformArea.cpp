@@ -95,6 +95,7 @@ void WaveformArea::SharedCtorInit()
 	m_waveformRenderData	= NULL;
 	m_dragOverlayPosition	= 0;
 	m_geometryDirty			= false;
+	m_mouseElementPosition	= LOC_PLOT;
 
 	m_decodeDialog 			= NULL;
 	m_pendingDecode			= NULL;

@@ -56,6 +56,8 @@ protected:
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 
+	virtual void on_realize();
+
 	void Render(const Cairo::RefPtr<Cairo::Context>& cr);
 
 	virtual void DrawCursor(

@@ -431,15 +431,21 @@ protected:
 	Rect m_infoBoxRect;
 	std::map<StreamDescriptor, Rect> m_overlayBoxRects;
 
+	///Clickable UI elements
 	enum ClickLocation
 	{
 		LOC_PLOT,
 		LOC_VSCALE,
 		LOC_TRIGGER,
-		LOC_CHAN_NAME
+		LOC_CHAN_NAME,
+		LOC_XCURSOR_0,
+		LOC_XCURSOR_1
 	} m_clickLocation;
 
 	ClickLocation HitTest(double x, double y);
+
+	//Location of what the mouse was over last time it moved
+	ClickLocation m_mouseElementPosition;
 
 	enum DragStates
 	{

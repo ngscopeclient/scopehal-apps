@@ -73,6 +73,8 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 			m_dragState = DRAG_TIMELINE;
 			m_dragStartX = event->x;
 			m_originalTimeOffset = m_group->m_xAxisOffset;
+
+			get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
 		}
 	}
 
@@ -93,6 +95,7 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 	if(event->button == 1)
 	{
 		m_dragState = DRAG_NONE;
+		get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
 	}
 	return true;
 }
@@ -428,4 +431,11 @@ void Timeline::DrawCursor(
 	cr->line_to(x, h);
 	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 	cr->stroke();
+}
+
+void Timeline::on_realize()
+{
+	Gtk::Layout::on_realize();
+
+	get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
 }
