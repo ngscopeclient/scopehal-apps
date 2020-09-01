@@ -676,6 +676,14 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	auto window = m_historyWindows[scope];
 	int scope_id = table[scope];
 
+	//Clear out any old waveforms the instrument may have
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto chan = scope->GetChannel(i);
+		for(size_t j=0; j<chan->GetStreamCount(); j++)
+			chan->SetData(NULL, j);
+	}
+
 	auto wavenode = node["waveforms"];
 	window->SetMaxWaveforms(wavenode.size());
 	for(auto it : wavenode)
@@ -685,8 +693,6 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		time.first = wfm["timestamp"].as<long long>();
 		time.second = wfm["time_psec"].as<long long>();
 		int waveform_id = wfm["id"].as<int>();
-
-		//Don't worry about detaching or deleting old waveforms, they'll get cleaned up when we SetData
 
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
@@ -716,6 +722,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			cap->m_startPicoseconds = time.second;
 			cap->m_triggerPhase = ch["trigphase"].as<float>();
 
+			chan->Detach(stream);
 			chan->SetData(cap, stream);
 		}
 
