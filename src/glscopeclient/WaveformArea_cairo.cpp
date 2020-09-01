@@ -202,7 +202,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	}
 	cr->begin_new_path();
 
-	//See if we're the active trigger
+	//Render arrow for trigger
 	if(m_channel.m_channel->IsPhysicalChannel())
 	{
 		auto scope = m_channel.m_channel->GetScope();
@@ -213,11 +213,13 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 			float trisize = 5;
 
+			//Dragging? Arrow follows mouse
 			if(m_dragState == DRAG_TRIGGER)
 			{
 				cr->set_source_rgba(1, 0, 0, 1);
 				y = m_cursorY;
 			}
+
 			else
 			{
 				cr->set_source_rgba(
@@ -225,7 +227,37 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 					color.get_green_p(),
 					color.get_blue_p(),
 					1);
+				cr->set_line_width(1);
+				float x = m_plotRight + trisize*2;
+
+				//If the trigger is outside the displayed area, clip to the edge of the displayed area
+				//and display an "out of range" symbol
+				float tbottom = m_height - trisize;
+				float ttop = trisize;
+				if(y > tbottom)
+				{
+					y = tbottom;
+
+					cr->move_to(x,					y - trisize);
+					cr->line_to(x,					y + trisize);
+					cr->line_to(x - trisize*0.5,	y);
+					cr->move_to(x,					y + trisize);
+					cr->line_to(x + trisize*0.5,	y);
+					cr->stroke();
+				}
+				else if(y < ttop)
+				{
+					y = ttop;
+
+					cr->move_to(x,					y + trisize);
+					cr->line_to(x,					y - trisize);
+					cr->line_to(x - trisize*0.5,	y);
+					cr->move_to(x,					y - trisize);
+					cr->line_to(x + trisize*0.5,	y);
+					cr->stroke();
+				}
 			}
+
 			cr->move_to(m_plotRight, y);
 			cr->line_to(m_plotRight + trisize, y + trisize);
 			cr->line_to(m_plotRight + trisize, y - trisize);

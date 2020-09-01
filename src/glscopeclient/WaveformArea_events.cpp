@@ -1028,10 +1028,17 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 		{
 			float vy = VoltsToYPosition(scope->GetTriggerVoltage());
 			float radius = 20;
-			if( (fabs(y - vy) < radius) &&
-				(x < (m_plotRight + radius) ) )
+			if(x < (m_plotRight + radius) )
 			{
-				return LOC_TRIGGER;
+				//If on top of the trigger, obviously we're a hit
+				if(fabs(y - vy) < radius)
+					return LOC_TRIGGER;
+
+				//but also check the edges of the plot if trigger is off scale
+				if( (vy > m_height) && (fabs(m_height - y) < radius) )
+					return LOC_TRIGGER;
+				if( (vy < 0) && (y < radius) )
+					return LOC_TRIGGER;
 			}
 		}
 
