@@ -944,6 +944,24 @@ void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
 	ClearPersistence();
 }
 
+void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item)
+{
+	//ignore spurious events while loading menu config, or from item being deselected
+	if(m_updatingContextMenu || !item->get_active())
+		return;
+
+	m_selectedChannel.m_channel->SetCoupling(type);
+}
+
+void WaveformArea::OnAttenuation(double atten, Gtk::RadioMenuItem* item)
+{
+	//ignore spurious events while loading menu config, or from item being deselected
+	if(m_updatingContextMenu || !item->get_active())
+		return;
+
+	m_selectedChannel.m_channel->SetAttenuation(atten);
+}
+
 void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected

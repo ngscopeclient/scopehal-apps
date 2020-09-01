@@ -293,12 +293,18 @@ void WaveformArea::CreateWidgets()
 		m_attenItem.set_submenu(m_attenMenu);
 			m_atten1xItem.set_label("1x");
 				m_atten1xItem.set_group(m_attenGroup);
+				m_atten1xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 1, &m_atten1xItem));
 				m_attenMenu.append(m_atten1xItem);
 			m_atten10xItem.set_label("10x");
 				m_atten10xItem.set_group(m_attenGroup);
+				m_atten10xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 10, &m_atten10xItem));
 				m_attenMenu.append(m_atten10xItem);
 			m_atten20xItem.set_label("20x");
 				m_atten20xItem.set_group(m_attenGroup);
+				m_atten20xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
+					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 20, &m_atten20xItem));
 				m_attenMenu.append(m_atten20xItem);
 
 	//Bandwidth
@@ -327,15 +333,31 @@ void WaveformArea::CreateWidgets()
 		m_couplingItem.set_submenu(m_couplingMenu);
 			m_ac1MCouplingItem.set_label("AC 1M");
 				m_ac1MCouplingItem.set_group(m_couplingGroup);
+				m_ac1MCouplingItem.signal_activate().connect(
+					sigc::bind<OscilloscopeChannel::CouplingType, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
+						OscilloscopeChannel::COUPLE_AC_1M, &m_ac1MCouplingItem));
 				m_couplingMenu.append(m_ac1MCouplingItem);
 			m_dc1MCouplingItem.set_label("DC 1M");
 				m_dc1MCouplingItem.set_group(m_couplingGroup);
+				m_dc1MCouplingItem.signal_activate().connect(
+					sigc::bind<OscilloscopeChannel::CouplingType, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
+						OscilloscopeChannel::COUPLE_DC_1M, &m_dc1MCouplingItem));
 				m_couplingMenu.append(m_dc1MCouplingItem);
 			m_dc50CouplingItem.set_label("DC 50Ω");
 				m_dc50CouplingItem.set_group(m_couplingGroup);
+				m_dc50CouplingItem.signal_activate().connect(
+					sigc::bind<OscilloscopeChannel::CouplingType, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
+						OscilloscopeChannel::COUPLE_DC_50, &m_dc50CouplingItem));
 				m_couplingMenu.append(m_dc50CouplingItem);
 			m_gndCouplingItem.set_label("GND");
 				m_gndCouplingItem.set_group(m_couplingGroup);
+				m_gndCouplingItem.signal_activate().connect(
+					sigc::bind<OscilloscopeChannel::CouplingType, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
+						OscilloscopeChannel::COUPLE_GND, &m_gndCouplingItem));
 				m_couplingMenu.append(m_gndCouplingItem);
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));

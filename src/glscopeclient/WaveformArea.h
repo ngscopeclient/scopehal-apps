@@ -271,6 +271,8 @@ protected:
 
 	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
+	void OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item);
+	void OnAttenuation(double atten, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();
 	void OnMoveNewBelow();
 	void OnMoveToExistingGroup(WaveformGroup* group);
