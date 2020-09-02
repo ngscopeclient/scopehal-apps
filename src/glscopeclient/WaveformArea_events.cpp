@@ -857,6 +857,7 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 	if(response == Gtk::RESPONSE_OK)
 	{
 		m_decodeDialog->ConfigureDecoder();
+		m_parent->RefreshAllFilters();
 		queue_draw();
 	}
 
