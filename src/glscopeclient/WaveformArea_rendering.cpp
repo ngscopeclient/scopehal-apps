@@ -199,6 +199,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	float alpha_scaled = m_parent->GetTraceAlpha() * 2 / samplesPerPixel;
 
 	//Config stuff
+	//TODO: we should be able to only update this stuff if we pan/zoom, without redoing the waveform data itself
 	wdata->m_mappedConfigBuffer[0] = m_height;							//windowHeight
 	wdata->m_mappedConfigBuffer[1] = m_plotRight;						//windowWidth
 	wdata->m_mappedConfigBuffer[2] = wdata->m_count;					//depth

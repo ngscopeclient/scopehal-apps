@@ -1323,3 +1323,11 @@ void WaveformArea::OnStatistics()
 	else
 		m_group->ToggleOff(m_selectedChannel.m_channel);
 }
+
+void WaveformArea::CenterTimestamp(int64_t time)
+{
+	//Figure out how wide our view is, then offset the point by half that
+	int64_t width = PixelsToXAxisUnits(m_width);
+	m_group->m_xAxisOffset = time - width/2;
+	m_parent->ClearPersistence(m_group);
+}

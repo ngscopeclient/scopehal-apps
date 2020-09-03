@@ -179,6 +179,8 @@ public:
 	void MapAllBuffers();
 	void UnmapAllBuffers();
 
+	void CenterTimestamp(int64_t time);
+
 protected:
 	void SharedCtorInit();
 
