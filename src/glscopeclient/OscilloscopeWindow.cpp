@@ -1021,8 +1021,8 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		{
 			auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
 			stream = 0;
-			if(jt.second["id"])
-				stream = jt.second["id"].as<int>();
+			if(jt.second["stream"])
+				stream = jt.second["stream"].as<int>();
 			if(filter)
 				area->AddOverlay(StreamDescriptor(filter, stream));
 		}
@@ -1380,6 +1380,8 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 				snprintf(tmp, sizeof(tmp), "                :\n");
 				config += tmp;
 				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[area->GetOverlay(i).m_channel]);
+				config += tmp;
+				snprintf(tmp, sizeof(tmp), "                    stream:  %zu\n", area->GetOverlay(i).m_stream);
 				config += tmp;
 			}
 		}

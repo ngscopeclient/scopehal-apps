@@ -418,6 +418,8 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto o : m_overlays)
 	{
 		auto data = o.GetData();
+		if(data == NULL)
+			continue;
 
 		double ymid = m_overlayPositions[o];
 		double ytop = ymid - height/2;
@@ -439,9 +441,6 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		m_overlayBoxRects[o] = chanbox;
 
 		int textright = chanbox.get_right() + 4;
-
-		if(data == NULL)
-			continue;
 
 		//Handle text
 		if(o.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
