@@ -1,11 +1,12 @@
-#version 430
+#version 450
+#extension GL_ARB_gpu_shader_int64 : require
 
 //The output texture (for now, only alpha channel is used)
 layout(binding=0, rgba32f) uniform image2D outputTex;
 
 layout(std430, binding=1) buffer waveform_x
 {
-	float xpos[];		//x pixel position (fractional)
+	int64_t xpos[];		//x position, in time ticks
 };
 
 layout(std430, binding=4) buffer waveform_y
@@ -81,12 +82,12 @@ void main()
 
 	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
-	vec2 left = vec2(xpos[istart]*xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+	vec2 left = vec2(float(xpos[istart]) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
 	vec2 right;
 	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
-		right = vec2(xpos[i+1]*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+		right = vec2(float(xpos[i+1])*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 
 		//If the current point is right of us, stop
 		if(left.x > gl_GlobalInvocationID.x + 1)

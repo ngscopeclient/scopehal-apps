@@ -68,7 +68,7 @@ void WaveformRenderData::MapBuffers(size_t width)
 			m_count *= 2;
 	}
 
-	m_mappedXBuffer = (float*)m_waveformXBuffer.Map(m_count*sizeof(float), GL_READ_WRITE);
+	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
 	m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*10);
@@ -165,16 +165,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	}
 	else
 	{
-		//Need AVX512DQ or AVX512VL for VCTVQQ2PS
-		//TODO: see if there is any way to speed this up at least a little on AVX2?
-		if(g_hasAvx512DQ || g_hasAvx512VL)
-			Int64ToFloatAVX512(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
-		else
-			Int64ToFloat(wdata->m_mappedXBuffer, reinterpret_cast<int64_t*>(&andat->m_offsets[0]), wdata->m_count);
-
 		yscale = m_pixelsPerVolt;
 
 		//Copy the waveform
+		memcpy(wdata->m_mappedXBuffer, &andat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 		memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
 	}
 
@@ -188,7 +182,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//TODO: can we parallelize this? move to a compute shader?
 	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
-		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(wdata->m_mappedXBuffer, wdata->m_count, (j - xoff) / xscale);
+	{
+		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
+			wdata->m_mappedXBuffer,
+			wdata->m_count,
+			static_cast<int64_t>(floor(j - xoff) / xscale));
+	}
 
 	dt = GetTime() - start;
 	m_indexTime += dt;
@@ -213,39 +212,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Done
 	wdata->m_geometryOK = true;
-}
-
-/**
-	@brief Convert an array of int64_t's to floats
- */
-void WaveformArea::Int64ToFloat(float* dst, int64_t* src, size_t len)
-{
-	float* pdst = reinterpret_cast<float*>(__builtin_assume_aligned(dst, 32));
-	int64_t* psrc = reinterpret_cast<int64_t*>(__builtin_assume_aligned(src, 16));
-
-	//Not possible to push this to a compute shader without GL_ARB_gpu_shader_int64,
-	//which isn't well supported on integrated gfx yet :(
-	for(size_t j=0; j < len; j++)
-		pdst[j] 	= psrc[j];
-}
-
-__attribute__((target("avx512dq")))
-void WaveformArea::Int64ToFloatAVX512(float* dst, int64_t* src, size_t len)
-{
-	//Round length down to multiple of 8 so we can SIMD the loop
-	size_t len_rounded = len - (len % 8);
-
-	//Main unrolled loop
-	for(size_t j=0; j<len_rounded; j+= 8)
-	{
-		__m512i i64x8 = _mm512_load_epi64(src + j);
-		__m256 f32x8 = _mm512_cvt_roundepi64_ps(i64x8, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
-		_mm256_store_ps(dst + j, f32x8);
-	}
-
-	//Do anything we missed
-	for(size_t j=len_rounded; j < len; j++)
-		dst[j] 	= src[j];
 }
 
 /**

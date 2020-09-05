@@ -109,7 +109,7 @@ public:
 	size_t					m_count;
 
 	//OpenGL-mapped buffers for the data
-	float*					m_mappedXBuffer;
+	int64_t*				m_mappedXBuffer;
 	float*					m_mappedYBuffer;
 	uint32_t*				m_mappedIndexBuffer;
 	uint32_t*				m_mappedConfigBuffer;
@@ -403,8 +403,6 @@ protected:
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
 	template<class T> size_t BinarySearchForGequal(T* buf, size_t len, T value);
 	float GetValueAtTime(int64_t time_ps);
-	void Int64ToFloat(float* dst, int64_t* src, size_t len);
-	void Int64ToFloatAVX512(float* dst, int64_t* src, size_t len);
 
 	void OnRemoveOverlay(StreamDescriptor filter);
 
