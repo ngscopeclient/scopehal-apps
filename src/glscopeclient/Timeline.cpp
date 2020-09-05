@@ -114,7 +114,7 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				m_group->m_xAxisOffset = m_originalTimeOffset - ps;
 
 				//Clear persistence and redraw the group (fixes #46)
-				m_group->GetParent()->ClearPersistence(m_group, false);
+				m_group->GetParent()->ClearPersistence(m_group, false, true);
 			}
 			break;
 

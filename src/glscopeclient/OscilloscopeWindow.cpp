@@ -1843,7 +1843,7 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	ClearPersistence(group);
 }
 
-void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool dirty)
+void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_dirty, bool position_dirty)
 {
 	auto children = group->m_vbox.get_children();
 	for(auto w : children)
@@ -1859,9 +1859,11 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool dirty)
 				auto area = dynamic_cast<WaveformArea*>(a);
 				if(area != NULL)
 				{
-					if(dirty)
+					if(geometry_dirty)
 						area->SetGeometryDirty();
-					area->ClearPersistence();
+					if(position_dirty)
+						area->SetPositionDirty();
+					area->ClearPersistence(false);
 				}
 			}
 		}

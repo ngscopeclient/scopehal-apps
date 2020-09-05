@@ -51,7 +51,7 @@ template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
-void WaveformRenderData::MapBuffers(size_t width)
+void WaveformRenderData::MapBuffers(size_t width, bool update_y)
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
 	if( (m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
@@ -67,27 +67,32 @@ void WaveformRenderData::MapBuffers(size_t width)
 	}
 
 	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
-	if(IsDigital())
+	if(update_y)
 	{
-		//round up to next multiple of 4 since buffer is actually made of int32's
-		m_mappedDigitalYBuffer = (bool*)m_waveformYBuffer.Map((m_count*sizeof(bool) | 3) + 1);
-		m_mappedYBuffer = NULL;
+		if(IsDigital())
+		{
+			//round up to next multiple of 4 since buffer is actually made of int32's
+			m_mappedDigitalYBuffer = (bool*)m_waveformYBuffer.Map((m_count*sizeof(bool) | 3) + 1);
+			m_mappedYBuffer = NULL;
+		}
+		else
+		{
+			m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
+			m_mappedDigitalYBuffer = NULL;
+		}
 	}
-	else
-	{
-		m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
-		m_mappedDigitalYBuffer = NULL;
-	}
+
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
 	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
 
-void WaveformRenderData::UnmapBuffers()
+void WaveformRenderData::UnmapBuffers(bool update_y)
 {
 	m_waveformXBuffer.Unmap();
-	m_waveformYBuffer.Unmap();
+	if(update_y)
+		m_waveformYBuffer.Unmap();
 	m_waveformIndexBuffer.Unmap();
 	m_waveformConfigBuffer.Unmap();
 }
@@ -95,7 +100,7 @@ void WaveformRenderData::UnmapBuffers()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
+void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform)
 {
 	double start = GetTime();
 
@@ -137,8 +142,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			ybase = m_height - (m_overlayPositions[wdata->m_channel] + 10);
 	}
 
-	//Y axis scaling in shader
-	float yscale = 1;
+	//Figure out scaling
+	float yscale = m_pixelsPerVolt;
 	if(digdat)
 	{
 		float digheight;
@@ -148,14 +153,15 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			digheight = 20;
 
 		yscale = digheight;
-		memcpy(wdata->m_mappedDigitalYBuffer, &digdat->m_samples[0], wdata->m_count*sizeof(bool));
 	}
-	else
-	{
-		yscale = m_pixelsPerVolt;
 
-		//Copy the waveform
-		memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
+	//Download actual waveform timestamps and voltages
+	if(update_waveform)
+	{
+		if(digdat)
+			memcpy(wdata->m_mappedDigitalYBuffer, &digdat->m_samples[0], wdata->m_count*sizeof(bool));
+		else
+			memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
 	}
 
 	//Copy the X axis timestamps, no conversion needed
@@ -255,31 +261,33 @@ void WaveformArea::ResetTextureFiltering()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void WaveformArea::PrepareAllGeometry()
+void WaveformArea::PrepareAllGeometry(bool update_waveform)
 {
 	m_geometryDirty = false;
+	m_positionDirty = false;
 
 	//Main waveform
 	if(IsAnalog() || IsDigital())
-		PrepareGeometry(m_waveformRenderData);
+		PrepareGeometry(m_waveformRenderData, update_waveform);
 
+	//TODO: multithread this?
 	for(auto overlay : m_overlays)
 	{
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			PrepareGeometry(m_overlayRenderData[overlay]);
+			PrepareGeometry(m_overlayRenderData[overlay], update_waveform);
 	}
 }
 
-void WaveformArea::MapAllBuffers()
+void WaveformArea::MapAllBuffers(bool update_y)
 {
 	make_current();
 
 	//Main waveform
 	if(IsAnalog() || IsDigital())
-		m_waveformRenderData->MapBuffers(m_width);
+		m_waveformRenderData->MapBuffers(m_width, update_y);
 
 	for(auto overlay : m_overlays)
 	{
@@ -287,17 +295,17 @@ void WaveformArea::MapAllBuffers()
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			m_overlayRenderData[overlay]->MapBuffers(m_width);
+			m_overlayRenderData[overlay]->MapBuffers(m_width, update_y);
 	}
 }
 
-void WaveformArea::UnmapAllBuffers()
+void WaveformArea::UnmapAllBuffers(bool update_y)
 {
 	make_current();
 
 	//Main waveform
 	if(IsAnalog() || IsDigital())
-		m_waveformRenderData->UnmapBuffers();
+		m_waveformRenderData->UnmapBuffers(update_y);
 
 	for(auto overlay : m_overlays)
 	{
@@ -305,7 +313,7 @@ void WaveformArea::UnmapAllBuffers()
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			m_overlayRenderData[overlay]->UnmapBuffers();
+			m_overlayRenderData[overlay]->UnmapBuffers(update_y);
 	}
 }
 
@@ -332,9 +340,17 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Update geometry if needed
 	if(m_geometryDirty)
 	{
+		LogDebug("on_render dirty geometry\n");
 		MapAllBuffers();
 		PrepareAllGeometry();
 		UnmapAllBuffers();
+	}
+	else if(m_positionDirty)
+	{
+		LogDebug("on_render dirty position only\n");
+		MapAllBuffers(false);
+		PrepareAllGeometry(false);
+		UnmapAllBuffers(false);
 	}
 
 	//Everything we draw is 2D painter's algorithm.

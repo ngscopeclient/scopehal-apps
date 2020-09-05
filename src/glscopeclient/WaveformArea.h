@@ -121,8 +121,8 @@ public:
 	float*					m_mappedFloatConfigBuffer;
 
 	//Map all buffers for download
-	void MapBuffers(size_t width);
-	void UnmapBuffers();
+	void MapBuffers(size_t width, bool update_y = true);
+	void UnmapBuffers(bool update_y = true);
 };
 
 float sinc(float x, float width);
@@ -142,14 +142,18 @@ public:
 	StreamDescriptor GetChannel()
 	{ return m_channel; }
 
-	void ClearPersistence()
+	void ClearPersistence(bool geometry_dirty = true)
 	{
 		m_persistenceClear = true;
-		SetGeometryDirty();
+		if(geometry_dirty)
+			SetGeometryDirty();
 	}
 
 	void SetGeometryDirty()
 	{ m_geometryDirty = true; }
+
+	void SetPositionDirty()
+	{ m_positionDirty = true; }
 
 	WaveformGroup* m_group;
 
@@ -180,9 +184,9 @@ public:
 	}
 
 	//Calls PrepareGeometry() for all waveforms
-	void PrepareAllGeometry();
-	void MapAllBuffers();
-	void UnmapAllBuffers();
+	void PrepareAllGeometry(bool update_waveform = true);
+	void MapAllBuffers(bool update_y = true);
+	void UnmapAllBuffers(bool update_y = true);
 
 	void CenterTimestamp(int64_t time);
 
@@ -317,7 +321,7 @@ protected:
 	//Trace rendering
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
-	void PrepareGeometry(WaveformRenderData* wdata);
+	void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform = true);
 	Program m_analogWaveformComputeProgram;
 	Program m_digitalWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
@@ -486,6 +490,7 @@ protected:
 
 	bool	m_firstFrame;
 	bool	m_geometryDirty;
+	bool	m_positionDirty;
 };
 
 #endif
