@@ -106,7 +106,6 @@ void main()
 		float endy = right.y;
 
 		//Interpolate analog signals if either end is outside our column
-		//We want digital signals to be nice and square, so don't do this!
 		if(digital == 0)
 		{
 			float slope = (right.y - left.y) / (right.x - left.x);
@@ -114,6 +113,12 @@ void main()
 				starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
 			if(right.x > gl_GlobalInvocationID.x + 1)
 				endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+		}
+
+		//Digital signal - do not interpolate
+		else
+		{
+			//Draw the vertical line exactly one sample wide at edges
 		}
 
 		//Clip to window size

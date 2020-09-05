@@ -64,8 +64,6 @@ void WaveformRenderData::MapBuffers(size_t width)
 		auto pdat = m_channel.GetData();
 		if( (pdat == NULL) || ((m_count = pdat->m_offsets.size()) == 0) )
 			m_count = 1;
-		if(dynamic_cast<DigitalWaveform*>(pdat) != NULL)
-			m_count *= 2;
 	}
 
 	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
@@ -131,14 +129,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Y axis scaling in shader
 	float yscale = 1;
-
-	//We need to stretch every sample to two samples, one at the very left and one at the very right,
-	//so interpolation works right.
-	//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
-	size_t realcount = wdata->m_count;
-	if(digdat)
-		realcount /= 2;
-
 	if(digdat)
 	{
 		float digheight;
@@ -147,26 +137,21 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		//TODO: AVX
+		//TODO: AVX this conversion
 		yscale = digheight;
-		for(size_t j=0; j<realcount; j++)
-		{
-			int64_t off = digdat->m_offsets[j];
-			wdata->m_mappedXBuffer[j*2] 	= off;
-			wdata->m_mappedXBuffer[j*2 + 1]	= off + digdat->m_durations[j];
-
-			wdata->m_mappedYBuffer[j*2] 	= digdat->m_samples[j];
-			wdata->m_mappedYBuffer[j*2 + 1]	= digdat->m_samples[j];
-		}
+		for(size_t j=0; j<wdata->m_count; j++)
+			wdata->m_mappedYBuffer[j] 	= digdat->m_samples[j];
 	}
 	else
 	{
 		yscale = m_pixelsPerVolt;
 
 		//Copy the waveform
-		memcpy(wdata->m_mappedXBuffer, &andat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 		memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
 	}
+
+	//Copy the X axis timestamps, no conversion needed
+	memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 
 	double dt = GetTime() - start;
 	m_prepareTime += dt;
