@@ -562,6 +562,27 @@ void WaveformArea::on_realize()
 			exit(1);
 		}
 
+		//Make sure we have the GL_ARB_gpu_shader_int64 extension
+		if(!GLEW_ARB_gpu_shader_int64)
+		{
+			string err =
+				"Your graphics card or driver does not appear to support the GL_ARB_gpu_shader_int64 extension, \n"
+				"which is required to perform GPU-accelerated 64-bit integer arithmetic.\n"
+				"\n"
+				"Unfortunately, glscopeclient cannot run on your system.\n";
+
+			Gtk::MessageDialog dlg(
+				err,
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true
+				);
+
+			dlg.run();
+			exit(1);
+		}
+
 		m_isGlewInitialized = true;
 	}
 
