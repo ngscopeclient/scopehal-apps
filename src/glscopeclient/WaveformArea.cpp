@@ -479,20 +479,77 @@ void WaveformArea::on_realize()
 	Gtk::GLArea::on_realize();
 	make_current();
 
-	// Initialize GLEW
+	//Set up GLEW
 	if(!m_isGlewInitialized)
 	{
+		//Check if GL was initialized OK
+		if(has_error())
+		{
+			//doesn't seem to be any way to get this error without throwing it??
+			try
+			{
+				throw_if_error();
+			}
+			catch(Glib::Error& gerr)
+			{
+				string err =
+					"glscopeclient was unable to initialize OpenGL and cannot continue.\n"
+					"This probably indicates a problem with your graphics card drivers.\n"
+					"\n"
+					"GL error: ";
+				err += gerr.what();
+
+				Gtk::MessageDialog dlg(
+					err,
+					false,
+					Gtk::MESSAGE_ERROR,
+					Gtk::BUTTONS_OK,
+					true
+					);
+
+				dlg.run();
+				exit(1);
+			}
+		}
+
+		//Print some debug info
+		auto context = get_context();
+		if(!context)
+			LogFatal("context is null but we don't have an error set in GTK\n");
+		int major, minor;
+		context->get_version(major, minor);
+		string profile = "compatibility";
+		if(context->is_legacy())
+			profile = "legacy";
+		else if(context->get_forward_compatible())
+			profile = "core";
+		string type = "";
+		if(context->get_use_es())
+			type = " ES";
+		LogDebug("Context: OpenGL%s %d.%d %s profile\n",
+			type.c_str(),
+			major, minor,
+			profile.c_str());
+		{
+			LogIndenter li;
+			LogDebug("GL_VENDOR = %s\n", glGetString(GL_VENDOR));
+			LogDebug("GL_RENDERER = %s\n", glGetString(GL_RENDERER));
+			LogDebug("GL_VERSION = %s\n", glGetString(GL_VERSION));
+			LogDebug("GL_SHADING_LANGUAGE_VERSION = %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+			LogDebug("Initial GL error code: %d\n", glGetError());
+		}
+
+		//Initialize GLEW
 		GLenum glewResult = glewInit();
-
-		string err =
-			"glscopeclient was unable to initialize GLEW and cannot continue.\n"
-			"This probably indicates a problem with your graphics card drivers.\n"
-			"\n"
-			"GLEW error: ";
-		err += (const char*)glewGetErrorString(glewResult);
-
 		if (glewResult != GLEW_OK)
 		{
+			string err =
+				"glscopeclient was unable to initialize GLEW and cannot continue.\n"
+				"This probably indicates a problem with your graphics card drivers.\n"
+				"\n"
+				"GLEW error: ";
+			err += (const char*)glewGetErrorString(glewResult);
+
 			Gtk::MessageDialog dlg(
 				err,
 				false,
@@ -500,8 +557,8 @@ void WaveformArea::on_realize()
 				Gtk::BUTTONS_OK,
 				true
 				);
-			dlg.run();
 
+			dlg.run();
 			exit(1);
 		}
 

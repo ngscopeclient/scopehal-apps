@@ -118,7 +118,7 @@ void main()
 		//Digital signal - do not interpolate
 		else
 		{
-			//Draw the vertical line exactly one sample wide at edges
+			//TODO: Draw the vertical line exactly one sample wide at edges
 		}
 
 		//Clip to window size
