@@ -17,6 +17,7 @@ layout(std430, binding=4) buffer waveform_y
 //Global configuration for the run
 layout(std430, binding=2) buffer config
 {
+	int64_t innerXoff;
 	uint windowHeight;
 	uint windowWidth;
 	uint memDepth;
@@ -82,12 +83,12 @@ void main()
 
 	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
-	vec2 left = vec2(float(xpos[istart]) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+	vec2 left = vec2(float(xpos[istart] + innerXoff) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
 	vec2 right;
 	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
-		right = vec2(float(xpos[i+1])*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+		right = vec2(float(xpos[i+1] + innerXoff)*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 
 		//If the current point is right of us, stop
 		if(left.x > gl_GlobalInvocationID.x + 1)

@@ -71,8 +71,9 @@ void WaveformRenderData::MapBuffers(size_t width)
 	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
 	m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
-	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*10);
+	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*12);
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
+	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
 
 void WaveformRenderData::UnmapBuffers()
@@ -180,13 +181,13 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
-	float xoff = (pdat->m_triggerPhase - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+	float xoff = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
 	{
 		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
 			wdata->m_mappedXBuffer,
 			wdata->m_count,
-			static_cast<int64_t>(floor(j - xoff) / xscale));
+			(j /*- pdat->m_triggerPhase*/ + m_group->m_xAxisOffset) / pdat->m_timescale);
 	}
 
 	dt = GetTime() - start;
@@ -199,16 +200,17 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 
 	//Config stuff
 	//TODO: we should be able to only update this stuff if we pan/zoom, without redoing the waveform data itself
-	wdata->m_mappedConfigBuffer[0] = m_height;							//windowHeight
-	wdata->m_mappedConfigBuffer[1] = m_plotRight;						//windowWidth
-	wdata->m_mappedConfigBuffer[2] = wdata->m_count;					//depth
-	wdata->m_mappedFloatConfigBuffer[3] = alpha_scaled;					//alpha
-	wdata->m_mappedConfigBuffer[4] = digdat ? 1 : 0;					//digital
-	wdata->m_mappedFloatConfigBuffer[5] = xoff;							//xoff
-	wdata->m_mappedFloatConfigBuffer[6] = xscale;						//xscale
-	wdata->m_mappedFloatConfigBuffer[7] = ybase;						//ybase
-	wdata->m_mappedFloatConfigBuffer[8] = yscale;						//yscale
-	wdata->m_mappedFloatConfigBuffer[9] = yoff;							//yoff
+	wdata->m_mappedConfigBuffer64[0] = -m_group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
+	wdata->m_mappedConfigBuffer[2] = m_height;							//windowHeight
+	wdata->m_mappedConfigBuffer[3] = m_plotRight;						//windowWidth
+	wdata->m_mappedConfigBuffer[4] = wdata->m_count;					//depth
+	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;					//alpha
+	wdata->m_mappedConfigBuffer[6] = digdat ? 1 : 0;					//digital
+	wdata->m_mappedFloatConfigBuffer[7] = xoff;							//xoff
+	wdata->m_mappedFloatConfigBuffer[8] = xscale;						//xscale
+	wdata->m_mappedFloatConfigBuffer[9] = ybase;						//ybase
+	wdata->m_mappedFloatConfigBuffer[10] = yscale;						//yscale
+	wdata->m_mappedFloatConfigBuffer[11] = yoff;						//yoff
 
 	//Done
 	wdata->m_geometryOK = true;

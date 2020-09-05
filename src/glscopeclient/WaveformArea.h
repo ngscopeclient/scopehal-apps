@@ -113,6 +113,7 @@ public:
 	float*					m_mappedYBuffer;
 	uint32_t*				m_mappedIndexBuffer;
 	uint32_t*				m_mappedConfigBuffer;
+	int64_t*				m_mappedConfigBuffer64;
 	float*					m_mappedFloatConfigBuffer;
 
 	//Map all buffers for download
