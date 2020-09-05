@@ -319,6 +319,12 @@ void WaveformArea::UnmapAllBuffers()
 
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
+	//If a file load is in progress don't waste time on expensive render calls.
+	//Many render events get dispatched as various parts of the UI config and waveform data load,
+	//and we only want to actually draw on the very last one.
+	if(m_parent->IsLoadInProgress())
+		return true;
+
 	LogIndenter li;
 
 	double start = GetTime();

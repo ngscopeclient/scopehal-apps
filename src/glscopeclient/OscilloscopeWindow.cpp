@@ -66,6 +66,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	, m_haltConditionsDialog(this)
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
+	, m_loadInProgress(false)
 {
 	SetTitle();
 
@@ -528,6 +529,8 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 {
 	m_currentFileName = filename;
 
+	m_loadInProgress = true;
+
 	CloseSession();
 
 	//Clear performance counters
@@ -632,6 +635,10 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
+
+	//Done loading, we can render everything for good now
+	m_loadInProgress = false;
+	ClearAllPersistence();
 }
 
 /**

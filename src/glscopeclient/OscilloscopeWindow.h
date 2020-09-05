@@ -116,6 +116,14 @@ public:
 	//Clean up the sync wizard
 	void OnSyncComplete();
 
+	/**
+		@brief Checks if a file load is in progress.
+
+		Spurious render etc events may be dispatched during loading and should be ignored for best performance
+	 */
+	bool IsLoadInProgress()
+	{ return m_loadInProgress; }
+
 protected:
 	void SetTitle();
 
@@ -276,6 +284,9 @@ public:
 
 	//True if shutting down (don't process any more updates after this point
 	bool m_shuttingDown;
+
+	//True if file load is in progress
+	bool m_loadInProgress;
 };
 
 #endif
