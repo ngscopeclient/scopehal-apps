@@ -255,27 +255,6 @@ void WaveformArea::ResetTextureFiltering()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void WaveformArea::PrepareAllGeometry(bool update_waveform)
-{
-	m_geometryDirty = false;
-	m_positionDirty = false;
-
-	//Main waveform
-	if(IsAnalog() || IsDigital())
-		PrepareGeometry(m_waveformRenderData, update_waveform, m_parent->GetTraceAlpha());
-
-	//TODO: multithread this?
-	auto alpha = m_parent->GetTraceAlpha();
-	for(auto overlay : m_overlays)
-	{
-		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-			continue;
-
-		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			PrepareGeometry(m_overlayRenderData[overlay], update_waveform, alpha);
-	}
-}
-
 void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 {
 	if(IsAnalog() || IsDigital())
@@ -348,17 +327,22 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_lastFrameStart = start;
 
 	//Update geometry if needed
-	if(m_geometryDirty)
+	if(m_geometryDirty || m_positionDirty)
 	{
-		MapAllBuffers();
-		PrepareAllGeometry();
-		UnmapAllBuffers();
-	}
-	else if(m_positionDirty)
-	{
-		MapAllBuffers(false);
-		PrepareAllGeometry(false);
-		UnmapAllBuffers(false);
+		MapAllBuffers(m_geometryDirty);
+
+		double alpha = m_parent->GetTraceAlpha();
+
+		vector<WaveformRenderData*> data;
+		GetAllRenderData(data);
+
+		for(auto d : data)
+			PrepareGeometry(d, m_geometryDirty, alpha);
+
+		UnmapAllBuffers(m_geometryDirty);
+
+		m_geometryDirty = false;
+		m_positionDirty = false;
 	}
 
 	//Everything we draw is 2D painter's algorithm.

@@ -2107,7 +2107,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 	//Map all of the buffers we need to update in each area
 	for(auto w : m_waveformAreas)
-		w->MapAllBuffers();
+		w->MapAllBuffers(true);
 
 	float alpha = GetTraceAlpha();
 
@@ -2125,7 +2125,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto w : m_waveformAreas)
 	{
 		w->SetNotDirty();
-		w->UnmapAllBuffers();
+		w->UnmapAllBuffers(true);
 	}
 
 	//Submit update requests for each area

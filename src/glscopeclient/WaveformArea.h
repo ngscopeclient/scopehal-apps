@@ -194,14 +194,11 @@ public:
 		m_overlays.push_back(stream);
 	}
 
-	//Calls PrepareGeometry() for all waveforms
-	void PrepareAllGeometry(bool update_waveform = true);
-
 	//Helper to get all geometry that needs to be updated
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha);
-	void MapAllBuffers(bool update_y = true);
-	void UnmapAllBuffers(bool update_y = true);
+	void MapAllBuffers(bool update_y);
+	void UnmapAllBuffers(bool update_y);
 
 	void CenterTimestamp(int64_t time);
 
