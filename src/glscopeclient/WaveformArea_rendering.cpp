@@ -67,7 +67,17 @@ void WaveformRenderData::MapBuffers(size_t width)
 	}
 
 	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
-	m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
+	if(IsDigital())
+	{
+		//round up to next multiple of 4 since buffer is actually made of int32's
+		m_mappedDigitalYBuffer = (bool*)m_waveformYBuffer.Map((m_count*sizeof(bool) | 3) + 1);
+		m_mappedYBuffer = NULL;
+	}
+	else
+	{
+		m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
+		m_mappedDigitalYBuffer = NULL;
+	}
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
@@ -137,10 +147,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		else
 			digheight = 20;
 
-		//TODO: AVX this conversion
 		yscale = digheight;
-		for(size_t j=0; j<wdata->m_count; j++)
-			wdata->m_mappedYBuffer[j] 	= digdat->m_samples[j];
+		memcpy(wdata->m_mappedDigitalYBuffer, &digdat->m_samples[0], wdata->m_count*sizeof(bool));
 	}
 	else
 	{

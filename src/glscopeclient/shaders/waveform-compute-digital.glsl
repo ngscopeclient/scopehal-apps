@@ -11,7 +11,7 @@ layout(std430, binding=1) buffer waveform_x
 
 layout(std430, binding=4) buffer waveform_y
 {
-	float voltage[];	//y value of the sample, in volts
+	int voltage[];	//y value of the sample, boolean 0/1 for 4 samples per int
 };
 
 //Global configuration for the run
@@ -63,6 +63,12 @@ Assuming 2K max line height, that's up to 12 pixels of width per local
 //Shared buffer for the local working buffer
 shared float g_workingBuffer[COLS_PER_BLOCK][MAX_HEIGHT];
 
+int GetBoolean(uint i)
+{
+	int block = voltage[i/4];
+	return (block >> (8*i) ) & 0xff;
+}
+
 void main()
 {
 	//Abort if window height is too big, or if we're off the end of the window
@@ -82,12 +88,12 @@ void main()
 
 	//Loop over the waveform, starting at the leftmost point that overlaps this column
 	uint istart = xind[gl_GlobalInvocationID.x];
-	vec2 left = vec2(float(xpos[istart] + innerXoff) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+	vec2 left = vec2(float(xpos[istart] + innerXoff) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
 	vec2 right;
 	for(uint i=istart; i<(memDepth-1); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
-		right = vec2(float(xpos[i+1] + innerXoff)*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+		right = vec2(float(xpos[i+1] + innerXoff)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 
 		//If the current point is right of us, stop
 		if(left.x > gl_GlobalInvocationID.x + 1)
@@ -104,7 +110,7 @@ void main()
 		float endy;
 
 		//If we are very near the left edge, draw vertical line
-		if(abs(left.x - gl_GlobalInvocationID.x + 1) <= 2)
+		if(abs(left.x - gl_GlobalInvocationID.x) <= 1)
 		{
 			starty = left.y;
 			endy = right.y;
