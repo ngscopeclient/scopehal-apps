@@ -483,10 +483,26 @@ void WaveformArea::on_realize()
 	if(!m_isGlewInitialized)
 	{
 		GLenum glewResult = glewInit();
+
+		string err =
+			"glscopeclient was unable to initialize GLEW and cannot continue.\n"
+			"This probably indicates a problem with your graphics card drivers.\n"
+			"\n"
+			"GLEW error: ";
+		err += (const char*)glewGetErrorString(glewResult);
+
 		if (glewResult != GLEW_OK)
 		{
-			LogError("Error: Failed to initialize GLEW");
-			return;
+			Gtk::MessageDialog dlg(
+				err,
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true
+				);
+			dlg.run();
+
+			exit(1);
 		}
 
 		m_isGlewInitialized = true;
