@@ -78,20 +78,25 @@ public:
 	}
 };
 
+class WaveformArea;
+
 /**
-	@rbief GL buffers etc needed to render a single waveform
+	@brief GL buffers etc needed to render a single waveform
  */
 class WaveformRenderData
 {
 public:
-	WaveformRenderData(StreamDescriptor channel)
-	: m_channel(channel)
+	WaveformRenderData(StreamDescriptor channel, WaveformArea* area)
+	: m_area(area)
+	, m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
 	{}
 
 	bool IsDigital()
 	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
+
+	WaveformArea*			m_area;
 
 	//The channel of interest
 	StreamDescriptor		m_channel;
@@ -121,8 +126,8 @@ public:
 	float*					m_mappedFloatConfigBuffer;
 
 	//Map all buffers for download
-	void MapBuffers(size_t width, bool update_y = true);
-	void UnmapBuffers(bool update_y = true);
+	void MapBuffers(size_t width, bool update_waveform = true);
+	void UnmapBuffers(bool update_waveform = true);
 };
 
 float sinc(float x, float width);
@@ -155,6 +160,12 @@ public:
 	void SetPositionDirty()
 	{ m_positionDirty = true; }
 
+	void SetNotDirty()
+	{
+		m_positionDirty = false;
+		m_geometryDirty = false;
+	}
+
 	WaveformGroup* m_group;
 
 	//Helpers for figuring out what kind of signal our primary trace is
@@ -185,6 +196,10 @@ public:
 
 	//Calls PrepareGeometry() for all waveforms
 	void PrepareAllGeometry(bool update_waveform = true);
+
+	//Helper to get all geometry that needs to be updated
+	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
+	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha);
 	void MapAllBuffers(bool update_y = true);
 	void UnmapAllBuffers(bool update_y = true);
 
@@ -321,7 +336,6 @@ protected:
 	//Trace rendering
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
-	void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform = true);
 	Program m_analogWaveformComputeProgram;
 	Program m_digitalWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
@@ -411,7 +425,7 @@ protected:
 	float XAxisUnitsToPixels(int64_t t);
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
-	template<class T> size_t BinarySearchForGequal(T* buf, size_t len, T value);
+	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
 	float GetValueAtTime(int64_t time_ps);
 
 	void OnRemoveOverlay(StreamDescriptor filter);

@@ -1845,7 +1845,9 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 
 void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_dirty, bool position_dirty)
 {
+	//Make the list of stuff being updated
 	auto children = group->m_vbox.get_children();
+	vector<WaveformArea*> areas;
 	for(auto w : children)
 	{
 		//Redraw all views in the waveform box
@@ -1858,19 +1860,47 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 				//Clear persistence on waveform areas
 				auto area = dynamic_cast<WaveformArea*>(a);
 				if(area != NULL)
-				{
-					if(geometry_dirty)
-						area->SetGeometryDirty();
-					if(position_dirty)
-						area->SetPositionDirty();
-					area->ClearPersistence(false);
-				}
+					areas.push_back(area);
 			}
 		}
-
-		//Redraw everything (timeline included)
-		w->queue_draw();
 	}
+
+	//Mark each area as dirty and map the buffers needed for update
+	for(auto w : areas)
+	{
+		w->ClearPersistence(false);
+
+		if(geometry_dirty)
+			w->MapAllBuffers(true);
+		else if(position_dirty)
+			w->MapAllBuffers(false);
+	}
+
+	//Do the actual updates
+	float alpha = GetTraceAlpha();
+	if(geometry_dirty || position_dirty)
+	{
+		//Make the list of data to update
+		vector<WaveformRenderData*> data;
+		for(auto w : areas)
+			w->GetAllRenderData(data);
+
+		//Do the updates in parallel
+		#pragma omp parallel for
+		for(size_t i=0; i<data.size(); i++)
+			WaveformArea::PrepareGeometry(data[i], geometry_dirty, alpha);
+
+		//Clean up
+		for(auto w : areas)
+		{
+			w->SetNotDirty();
+			w->UnmapAllBuffers(geometry_dirty);
+		}
+	}
+
+	//Submit update requests for each area (and the timeline)
+	for(auto w : children)
+		w->queue_draw();
 }
 
 void OscilloscopeWindow::ClearAllPersistence()
@@ -2075,29 +2105,32 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto a : m_analyzers)
 		a->OnWaveformDataReady();
 
-	//Make a vector of our waveform areas so we can parallelize PrepareAllGeometry() calls
-	//(OpenMP can't iterate over a set)
-	vector<WaveformArea*> areas;
-	for(auto w : m_waveformAreas)
-		areas.push_back(w);
-
-	//Map all GL buffers for every waveform area (has to be done in main thread)
+	//Map all of the buffers we need to update in each area
 	for(auto w : m_waveformAreas)
 		w->MapAllBuffers();
 
-	//Do geometry conversion in as many threads as we can
-	double start = GetTime();
-	#pragma omp parallel for
-	for(size_t i=0; i<areas.size(); i++)
-		areas[i]->PrepareAllGeometry();
+	float alpha = GetTraceAlpha();
 
-	//Unmap the buffers (has to be done in main thread) and tell them to update
+	//Make the list of data to update (waveforms plus overlays)
+	vector<WaveformRenderData*> data;
+	for(auto w : m_waveformAreas)
+		w->GetAllRenderData(data);
+
+	//Do the updates in parallel
+	#pragma omp parallel for
+	for(size_t i=0; i<data.size(); i++)
+		WaveformArea::PrepareGeometry(data[i], true, alpha);
+
+	//Clean up
 	for(auto w : m_waveformAreas)
 	{
+		w->SetNotDirty();
 		w->UnmapAllBuffers();
-		w->OnWaveformDataReady();
 	}
-	m_tView += GetTime() - start;
+
+	//Submit update requests for each area
+	for(auto w : m_waveformAreas)
+		w->queue_draw();
 
 	//Update the trigger sync wizard, if it's active
 	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())

@@ -592,7 +592,7 @@ void WaveformArea::on_realize()
 	m_firstFrame = true;
 
 	//Create waveform render data for our main trace
-	m_waveformRenderData = new WaveformRenderData(m_channel);
+	m_waveformRenderData = new WaveformRenderData(m_channel, this);
 
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();

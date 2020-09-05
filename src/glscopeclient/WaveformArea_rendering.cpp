@@ -51,7 +51,7 @@ template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
-void WaveformRenderData::MapBuffers(size_t width, bool update_y)
+void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
 	if( (m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
@@ -66,9 +66,9 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_y)
 			m_count = 1;
 	}
 
-	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
-	if(update_y)
+	if(update_waveform)
 	{
+		m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t));
 		if(IsDigital())
 		{
 			//round up to next multiple of 4 since buffer is actually made of int32's
@@ -88,11 +88,13 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_y)
 	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
 
-void WaveformRenderData::UnmapBuffers(bool update_y)
+void WaveformRenderData::UnmapBuffers(bool update_waveform)
 {
-	m_waveformXBuffer.Unmap();
-	if(update_y)
+	if(update_waveform)
+	{
+		m_waveformXBuffer.Unmap();
 		m_waveformYBuffer.Unmap();
+	}
 	m_waveformIndexBuffer.Unmap();
 	m_waveformConfigBuffer.Unmap();
 }
@@ -100,10 +102,8 @@ void WaveformRenderData::UnmapBuffers(bool update_y)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform)
+void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha)
 {
-	double start = GetTime();
-
 	//We need analog or digital data to render
 	auto channel = wdata->m_channel.m_channel;
 	if( (channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
@@ -128,29 +128,29 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 
-	//Zero voltage level
+	//Figure out zero voltage level and scaling
 	//TODO: properly calculate overlay positions once RenderDecodeOverlays() isn't doing that anymore
-	float ybase = m_height/2;
-	if(digdat)
-	{
-		//Main channel
-		if(wdata->m_channel == m_channel)
-			ybase = 2;
-
-		//Overlay
-		else
-			ybase = m_height - (m_overlayPositions[wdata->m_channel] + 10);
-	}
-
-	//Figure out scaling
-	float yscale = m_pixelsPerVolt;
+	auto height = wdata->m_area->m_height;
+	float ybase = height/2;
+	float yscale = wdata->m_area->m_pixelsPerVolt;
 	if(digdat)
 	{
 		float digheight;
-		if(wdata->m_channel == m_channel)
-			digheight = m_height - 5;
-		else
+
+		//Overlay?
+		auto f = dynamic_cast<Filter*>(wdata->m_channel.m_channel);
+		if((f != NULL) && f->IsOverlay())
+		{
+			ybase = wdata->m_area->m_height - (wdata->m_area->m_overlayPositions[wdata->m_channel] + 10);
 			digheight = 20;
+		}
+
+		//Main channel
+		else
+		{
+			ybase = 2;
+			digheight = height - 5;
+		}
 
 		yscale = digheight;
 	}
@@ -162,44 +162,38 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 			memcpy(wdata->m_mappedDigitalYBuffer, &digdat->m_samples[0], wdata->m_count*sizeof(bool));
 		else
 			memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
+
+		//Copy the X axis timestamps, no conversion needed
+		memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 	}
-
-	//Copy the X axis timestamps, no conversion needed
-	memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
-
-	double dt = GetTime() - start;
-	m_prepareTime += dt;
-	start = GetTime();
 
 	//Calculate indexes for rendering.
 	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
-	for(int j=0; j<m_width; j++)
+	auto group = wdata->m_area->m_group;
+	for(int j=0; j<wdata->m_area->m_width; j++)
 	{
 		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
-			wdata->m_mappedXBuffer,
+			(int64_t*)&pdat->m_offsets[0],
 			wdata->m_count,
-			(j + m_group->m_xAxisOffset) / pdat->m_timescale);
+			(j + group->m_xAxisOffset) / pdat->m_timescale);
 	}
-
-	dt = GetTime() - start;
-	m_indexTime += dt;
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float samplesPerPixel = 1.0f / (m_group->m_pixelsPerXUnit * pdat->m_timescale);
-	float alpha_scaled = m_parent->GetTraceAlpha() * 2 / samplesPerPixel;
+	float samplesPerPixel = 1.0f / (group->m_pixelsPerXUnit * pdat->m_timescale);
+	float alpha_scaled = alpha * 2 / samplesPerPixel;
 
 	//Config stuff
 	//TODO: we should be able to only update this stuff if we pan/zoom, without redoing the waveform data itself
-	wdata->m_mappedConfigBuffer64[0] = -m_group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
-	wdata->m_mappedConfigBuffer[2] = m_height;												//windowHeight
-	wdata->m_mappedConfigBuffer[3] = m_plotRight;											//windowWidth
+	wdata->m_mappedConfigBuffer64[0] = -group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
+	wdata->m_mappedConfigBuffer[2] = height;												//windowHeight
+	wdata->m_mappedConfigBuffer[3] = wdata->m_area->m_plotRight;							//windowWidth
 	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
 	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
-	wdata->m_mappedFloatConfigBuffer[6] = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;	//xoff
-	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * m_group->m_pixelsPerXUnit;	//xscale
+	wdata->m_mappedFloatConfigBuffer[6] = pdat->m_triggerPhase * group->m_pixelsPerXUnit;	//xoff
+	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * group->m_pixelsPerXUnit;	//xscale
 	wdata->m_mappedFloatConfigBuffer[8] = ybase;											//ybase
 	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
 	wdata->m_mappedFloatConfigBuffer[10] = channel->GetOffset();							//yoff
@@ -268,16 +262,32 @@ void WaveformArea::PrepareAllGeometry(bool update_waveform)
 
 	//Main waveform
 	if(IsAnalog() || IsDigital())
-		PrepareGeometry(m_waveformRenderData, update_waveform);
+		PrepareGeometry(m_waveformRenderData, update_waveform, m_parent->GetTraceAlpha());
 
 	//TODO: multithread this?
+	auto alpha = m_parent->GetTraceAlpha();
 	for(auto overlay : m_overlays)
 	{
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			PrepareGeometry(m_overlayRenderData[overlay], update_waveform);
+			PrepareGeometry(m_overlayRenderData[overlay], update_waveform, alpha);
+	}
+}
+
+void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
+{
+	if(IsAnalog() || IsDigital())
+		data.push_back(m_waveformRenderData);
+
+	for(auto overlay : m_overlays)
+	{
+		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			continue;
+
+		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
+			data.push_back(m_overlayRenderData[overlay]);
 	}
 }
 
@@ -340,14 +350,12 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Update geometry if needed
 	if(m_geometryDirty)
 	{
-		LogDebug("on_render dirty geometry\n");
 		MapAllBuffers();
 		PrepareAllGeometry();
 		UnmapAllBuffers();
 	}
 	else if(m_positionDirty)
 	{
-		LogDebug("on_render dirty position only\n");
 		MapAllBuffers(false);
 		PrepareAllGeometry(false);
 		UnmapAllBuffers(false);
@@ -394,9 +402,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 			continue;
 
 		//Create render data if needed
-		//(can't do this when m_waveformRenderData is created because decoders are added later on)
+		//(can't do this when m_waveformRenderData is created because filters can be added later on)
 		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
-			m_overlayRenderData[overlay] = new WaveformRenderData(overlay);
+			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
 
 		//Create the texture
 		auto wdat = m_overlayRenderData[overlay];
