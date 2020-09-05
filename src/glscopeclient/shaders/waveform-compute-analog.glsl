@@ -11,7 +11,7 @@ layout(std430, binding=1) buffer waveform_x
 
 layout(std430, binding=4) buffer waveform_y
 {
-	float voltage[];	//y value of this sample, in pixels
+	float voltage[];	//y value of the sample, in volts
 };
 
 //Global configuration for the run
@@ -22,7 +22,6 @@ layout(std430, binding=2) buffer config
 	uint windowWidth;
 	uint memDepth;
 	float alpha;
-	uint digital;
 	float xoff;
 	float xscale;
 	float ybase;
@@ -106,32 +105,11 @@ void main()
 		float endy = right.y;
 
 		//Interpolate analog signals if either end is outside our column
-		if(digital == 0)
-		{
-			float slope = (right.y - left.y) / (right.x - left.x);
-			if(left.x < gl_GlobalInvocationID.x)
-				starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
-			if(right.x > gl_GlobalInvocationID.x + 1)
-				endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
-		}
-
-		//Digital signal - do not interpolate
-		else
-		{
-			//If we are very near the left edge, draw vertical line
-			if(abs(left.x - gl_GlobalInvocationID.x + 1) <= 2)
-			{
-				starty = left.y;
-				endy = right.y;
-			}
-
-			//otherwise draw a single pixel
-			else
-			{
-				starty = right.y;
-				endy = right.y;
-			}
-		}
+		float slope = (right.y - left.y) / (right.x - left.x);
+		if(left.x < gl_GlobalInvocationID.x)
+			starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
+		if(right.x > gl_GlobalInvocationID.x + 1)
+			endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
 
 		//Clip to window size
 		starty = min(starty, MAX_HEIGHT);

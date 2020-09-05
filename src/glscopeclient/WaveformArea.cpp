@@ -613,7 +613,8 @@ void WaveformArea::on_unrealize()
 void WaveformArea::CleanupGLHandles()
 {
 	//Clean up old shaders
-	m_waveformComputeProgram.Destroy();
+	m_digitalWaveformComputeProgram.Destroy();
+	m_analogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_persistProgram.Destroy();
 	m_eyeProgram.Destroy();
@@ -651,12 +652,20 @@ void WaveformArea::CleanupGLHandles()
 void WaveformArea::InitializeWaveformPass()
 {
 	//ProfileBlock pb("Load waveform shaders");
-	ComputeShader wc;
-	if(!wc.Load("shaders/waveform-compute.glsl"))
-		LogFatal("failed to load waveform compute shader, aborting\n");
-	m_waveformComputeProgram.Add(wc);
-	if(!m_waveformComputeProgram.Link())
-		LogFatal("failed to link shader program, aborting\n");
+
+	ComputeShader dwc;
+	if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
+		LogFatal("failed to load digital waveform compute shader, aborting\n");
+	m_digitalWaveformComputeProgram.Add(dwc);
+	if(!m_digitalWaveformComputeProgram.Link())
+		LogFatal("failed to link digital waveform shader program, aborting\n");
+
+	ComputeShader awc;
+	if(!awc.Load("shaders/waveform-compute-analog.glsl"))
+		LogFatal("failed to load analog waveform compute shader, aborting\n");
+	m_analogWaveformComputeProgram.Add(awc);
+	if(!m_analogWaveformComputeProgram.Link())
+		LogFatal("failed to link analog waveform shader program, aborting\n");
 }
 
 void WaveformArea::InitializeColormapPass()

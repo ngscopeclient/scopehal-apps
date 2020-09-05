@@ -69,7 +69,7 @@ void WaveformRenderData::MapBuffers(size_t width)
 	m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t), GL_READ_WRITE);
 	m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
-	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*12);
+	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
 	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
@@ -184,12 +184,11 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	wdata->m_mappedConfigBuffer[3] = m_plotRight;											//windowWidth
 	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
 	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
-	wdata->m_mappedConfigBuffer[6] = digdat ? 1 : 0;										//digital
-	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;	//xoff
-	wdata->m_mappedFloatConfigBuffer[8] = pdat->m_timescale * m_group->m_pixelsPerXUnit;	//xscale
-	wdata->m_mappedFloatConfigBuffer[9] = ybase;											//ybase
-	wdata->m_mappedFloatConfigBuffer[10] = yscale;											//yscale
-	wdata->m_mappedFloatConfigBuffer[11] = channel->GetOffset();							//yoff
+	wdata->m_mappedFloatConfigBuffer[6] = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;	//xoff
+	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * m_group->m_pixelsPerXUnit;	//xscale
+	wdata->m_mappedFloatConfigBuffer[8] = ybase;											//ybase
+	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
+	wdata->m_mappedFloatConfigBuffer[10] = channel->GetOffset();							//yoff
 
 	//Done
 	wdata->m_geometryOK = true;
@@ -385,7 +384,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	}
 
 	//Make sure all compute shaders are done before we composite
-	m_waveformComputeProgram.MemoryBarrier();
+	if(IsDigital())
+		m_digitalWaveformComputeProgram.MemoryBarrier();
+	else
+		m_analogWaveformComputeProgram.MemoryBarrier();
 
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -544,13 +546,24 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	}
 	int numGroups = numCols / localSize;
 
-	m_waveformComputeProgram.Bind();
-	m_waveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+	if(data->IsDigital())
+	{
+		m_digitalWaveformComputeProgram.Bind();
+		m_digitalWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+	}
+	else
+	{
+		m_analogWaveformComputeProgram.Bind();
+		m_analogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+	}
 	data->m_waveformXBuffer.BindBase(1);
 	data->m_waveformYBuffer.BindBase(4);
 	data->m_waveformConfigBuffer.BindBase(2);
 	data->m_waveformIndexBuffer.BindBase(3);
-	m_waveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+	if(data->IsDigital())
+		m_digitalWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+	else
+		m_analogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 }
 
 void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)

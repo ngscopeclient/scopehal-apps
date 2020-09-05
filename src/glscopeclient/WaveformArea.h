@@ -90,6 +90,9 @@ public:
 	, m_count(0)
 	{}
 
+	bool IsDigital()
+	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
+
 	//The channel of interest
 	StreamDescriptor		m_channel;
 
@@ -111,6 +114,7 @@ public:
 	//OpenGL-mapped buffers for the data
 	int64_t*				m_mappedXBuffer;
 	float*					m_mappedYBuffer;
+	bool*					m_mappedDigitalYBuffer;
 	uint32_t*				m_mappedIndexBuffer;
 	uint32_t*				m_mappedConfigBuffer;
 	int64_t*				m_mappedConfigBuffer64;
@@ -314,7 +318,8 @@ protected:
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
 	void PrepareGeometry(WaveformRenderData* wdata);
-	Program m_waveformComputeProgram;
+	Program m_analogWaveformComputeProgram;
+	Program m_digitalWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
 	std::map<StreamDescriptor, WaveformRenderData*>	m_overlayRenderData;
 
