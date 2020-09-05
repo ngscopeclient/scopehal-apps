@@ -118,7 +118,19 @@ void main()
 		//Digital signal - do not interpolate
 		else
 		{
-			//TODO: Draw the vertical line exactly one sample wide at edges
+			//If we are very near the left edge, draw vertical line
+			if(abs(left.x - gl_GlobalInvocationID.x + 1) <= 2)
+			{
+				starty = left.y;
+				endy = right.y;
+			}
+
+			//otherwise draw a single pixel
+			else
+			{
+				starty = right.y;
+				endy = right.y;
+			}
 		}
 
 		//Clip to window size
