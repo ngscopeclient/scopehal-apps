@@ -78,6 +78,8 @@ protected:
 
 	void OnSelectionChanged();
 
+	void FillOutRow(const Gtk::TreeRow& row, Packet* p, WaveformBase* data, std::vector<std::string>& headers);
+
 	bool m_updating;
 };
 

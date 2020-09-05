@@ -127,71 +127,46 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 
 	m_updating = true;
 
-	for(auto p : packets)
+	Packet* first_packet_in_group = NULL;
+	Gtk::TreeModel::iterator last_top_row = m_model->children().end();
+
+	auto npackets = packets.size();
+	for(size_t i=0; i<npackets; i++)
 	{
-		//Need a bit of math in case the capture is >1 second long
-		time_t capstart = data->m_startTimestamp;
-		int64_t ps = data->m_startPicoseconds + p->m_offset;
-		const int64_t seconds_per_ps = 1000ll * 1000ll * 1000ll * 1000ll;
-		if(ps > seconds_per_ps)
+		auto p = packets[i];
+
+		//See if we should start a new merge group
+		if( (first_packet_in_group == NULL) &&
+			(i+1 < npackets) &&
+			m_decoder->CanMerge(p, packets[i+1]) )
 		{
-			capstart += (ps / seconds_per_ps);
-			ps %= seconds_per_ps;
+			//Create the summary packet
+			first_packet_in_group = p;
+			auto parent_packet = m_decoder->CreateMergedHeader(p);
+
+			//Add it
+			last_top_row = *m_model->append();
+			FillOutRow(*last_top_row, parent_packet, data, headers);
+			delete parent_packet;
 		}
 
-		//Format timestamp
-		char tmp[128];
-		strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&capstart));
-		string stime = tmp;
-		snprintf(tmp, sizeof(tmp), "%010zu", ps / 100);	//round to nearest 100ps for display
-		stime += tmp;
+		//End a merge group
+		else if( (first_packet_in_group != NULL) && !m_decoder->CanMerge(first_packet_in_group, p) )
+			first_packet_in_group = NULL;
 
-		//Create the row
-		auto row = *m_model->append();
-		row[m_columns.m_timestamp] = stime;
-		row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
-		row[m_columns.m_offset] = p->m_offset;
-
-		//Just copy headers without any processing
-		for(size_t i=0; i<headers.size(); i++)
-			row[m_columns.m_headers[i]] = p->m_headers[headers[i]];
-
-		//Convert data to hex
-		string sdata;
-		for(auto b : p->m_data)
+		//Create a row for the new packet. This might be top level or under a merge group
+		Gtk::TreeModel::iterator row;
+		if(first_packet_in_group != NULL)
+			row = m_model->append(last_top_row->children());
+		else
 		{
-			char t[4];
-			snprintf(t, sizeof(t), "%02x ", b);
-			sdata += t;
-		}
-		row[m_columns.m_data] = sdata;
-
-		//Add the image for video packets
-		auto vp = dynamic_cast<VideoScanlinePacket*>(p);
-		if(vp != NULL)
-		{
-			size_t rowsize = p->m_data.size();
-			size_t width = rowsize / 3;
-			size_t height = 24;
-
-			Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create(
-				Gdk::COLORSPACE_RGB,
-				false,
-				8,
-				width,
-				height);
-
-			//Make a 2D image
-			uint8_t* pixels = image->get_pixels();
-			size_t bcount = rowsize * height;
-			for(size_t y=0; y<height; y++)
-				memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
-
-			row[m_columns.m_image] = image;
+			row = m_model->append();
+			last_top_row = row;
 		}
 
-		//Select the newly added row
-		m_tree.get_selection()->select(row);
+		//Populate the row
+		FillOutRow(*row, p, data, headers);
+		m_tree.get_selection()->select(*row);
 	}
 
 	//auto scroll to bottom
@@ -199,6 +174,72 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 	adj->set_value(adj->get_upper());
 
 	m_updating = false;
+}
+
+void ProtocolAnalyzerWindow::FillOutRow(
+	const Gtk::TreeRow& row,
+	Packet* p,
+	WaveformBase* data,
+	vector<string>& headers)
+{
+	//Need a bit of math in case the capture is >1 second long
+	time_t capstart = data->m_startTimestamp;
+	int64_t ps = data->m_startPicoseconds + p->m_offset;
+	const int64_t seconds_per_ps = 1000ll * 1000ll * 1000ll * 1000ll;
+	if(ps > seconds_per_ps)
+	{
+		capstart += (ps / seconds_per_ps);
+		ps %= seconds_per_ps;
+	}
+
+	//Format timestamp
+	char tmp[128];
+	strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&capstart));
+	string stime = tmp;
+	snprintf(tmp, sizeof(tmp), "%010zu", ps / 100);	//round to nearest 100ps for display
+	stime += tmp;
+
+	//Create the row
+	row[m_columns.m_timestamp] = stime;
+	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+	row[m_columns.m_offset] = p->m_offset;
+
+	//Just copy headers without any processing
+	for(size_t i=0; i<headers.size(); i++)
+		row[m_columns.m_headers[i]] = p->m_headers[headers[i]];
+
+	//Convert data to hex
+	string sdata;
+	for(auto b : p->m_data)
+	{
+		char t[4];
+		snprintf(t, sizeof(t), "%02x ", b);
+		sdata += t;
+	}
+	row[m_columns.m_data] = sdata;
+
+	//Add the image for video packets
+	auto vp = dynamic_cast<VideoScanlinePacket*>(p);
+	if(vp != NULL)
+	{
+		size_t rowsize = p->m_data.size();
+		size_t width = rowsize / 3;
+		size_t height = 24;
+
+		Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create(
+			Gdk::COLORSPACE_RGB,
+			false,
+			8,
+			width,
+			height);
+
+		//Make a 2D image
+		uint8_t* pixels = image->get_pixels();
+		for(size_t y=0; y<height; y++)
+			memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
+
+		row[m_columns.m_image] = image;
+	}
 }
 
 void ProtocolAnalyzerWindow::OnSelectionChanged()
@@ -221,6 +262,9 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 	m_area->m_group->m_frame.queue_draw();
 }
 
+/**
+	@brief Remove history before a certain point
+ */
 void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 {
 	//This always happens from the start of time, so just remove from the beginning of our list
