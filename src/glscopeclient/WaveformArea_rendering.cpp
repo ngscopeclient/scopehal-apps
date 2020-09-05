@@ -115,10 +115,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 		return;
 	}
 
-	float xscale = pdat->m_timescale * m_group->m_pixelsPerXUnit;
-
 	//Zero voltage level
-	//TODO: properly calculate decoder positions once RenderDecodeOverlays() isn't doing that anymore
+	//TODO: properly calculate overlay positions once RenderDecodeOverlays() isn't doing that anymore
 	float ybase = m_height/2;
 	if(digdat)
 	{
@@ -131,15 +129,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 			ybase = m_height - (m_overlayPositions[wdata->m_channel] + 10);
 	}
 
-	float yoff = channel->GetOffset();
-
 	//Y axis scaling in shader
 	float yscale = 1;
 
 	//We need to stretch every sample to two samples, one at the very left and one at the very right,
 	//so interpolation works right.
 	//TODO: we can probably avoid this by rewriting the compute shader to not interpolate like this
-	//TODO: only add extra samples if the left and right values are not the same?
 	size_t realcount = wdata->m_count;
 	if(digdat)
 		realcount /= 2;
@@ -181,13 +176,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
-	float xoff = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;
 	for(int j=0; j<m_width; j++)
 	{
 		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
 			wdata->m_mappedXBuffer,
 			wdata->m_count,
-			(j /*- pdat->m_triggerPhase*/ + m_group->m_xAxisOffset) / pdat->m_timescale);
+			(j + m_group->m_xAxisOffset) / pdat->m_timescale);
 	}
 
 	dt = GetTime() - start;
@@ -201,16 +195,16 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata)
 	//Config stuff
 	//TODO: we should be able to only update this stuff if we pan/zoom, without redoing the waveform data itself
 	wdata->m_mappedConfigBuffer64[0] = -m_group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
-	wdata->m_mappedConfigBuffer[2] = m_height;							//windowHeight
-	wdata->m_mappedConfigBuffer[3] = m_plotRight;						//windowWidth
-	wdata->m_mappedConfigBuffer[4] = wdata->m_count;					//depth
-	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;					//alpha
-	wdata->m_mappedConfigBuffer[6] = digdat ? 1 : 0;					//digital
-	wdata->m_mappedFloatConfigBuffer[7] = xoff;							//xoff
-	wdata->m_mappedFloatConfigBuffer[8] = xscale;						//xscale
-	wdata->m_mappedFloatConfigBuffer[9] = ybase;						//ybase
-	wdata->m_mappedFloatConfigBuffer[10] = yscale;						//yscale
-	wdata->m_mappedFloatConfigBuffer[11] = yoff;						//yoff
+	wdata->m_mappedConfigBuffer[2] = m_height;												//windowHeight
+	wdata->m_mappedConfigBuffer[3] = m_plotRight;											//windowWidth
+	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
+	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
+	wdata->m_mappedConfigBuffer[6] = digdat ? 1 : 0;										//digital
+	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_triggerPhase * m_group->m_pixelsPerXUnit;	//xoff
+	wdata->m_mappedFloatConfigBuffer[8] = pdat->m_timescale * m_group->m_pixelsPerXUnit;	//xscale
+	wdata->m_mappedFloatConfigBuffer[9] = ybase;											//ybase
+	wdata->m_mappedFloatConfigBuffer[10] = yscale;											//yscale
+	wdata->m_mappedFloatConfigBuffer[11] = channel->GetOffset();							//yoff
 
 	//Done
 	wdata->m_geometryOK = true;
