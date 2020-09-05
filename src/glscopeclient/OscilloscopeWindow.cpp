@@ -772,42 +772,33 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				unsigned char* buf = new unsigned char[len];
 				fread(buf, 1, len, fp);
 
-				for(long offset=0; offset<len; )
+				//Figure out how many samples we have
+				size_t samplesize = 2*sizeof(int64_t);
+				if(acap)
+					samplesize += sizeof(float);
+				else
+					samplesize += sizeof(bool);
+				size_t nsamples = len / samplesize;
+				cap->Resize(nsamples);
+
+				//TODO: AVX this?
+				for(size_t j=0; j<nsamples; j++)
 				{
-					long end = offset + 2*sizeof(int64_t);
-					if(end > len)
-						break;
+					size_t offset = j*samplesize;
 
 					//Read start time and duration
 					int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
-					offset = end;
+					offset += 2*sizeof(int64_t);
+
+					cap->m_offsets[j] = stime[0];
+					cap->m_durations[j] = stime[1];
 
 					//Read sample data
 					if(acap)
-					{
-						end = offset + sizeof(float);
-						if(end > len)
-							break;
-						float* f = reinterpret_cast<float*>(buf+offset);
-						offset = end;
-
-						acap->m_offsets.push_back(stime[0]);
-						acap->m_durations.push_back(stime[1]);
-						acap->m_samples.push_back(*f);
-					}
+						acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
 
 					else
-					{
-						end = offset + sizeof(bool);
-						if(end > len)
-							break;
-						bool *b = reinterpret_cast<bool*>(buf+offset);
-						offset = end;
-
-						dcap->m_offsets.push_back(stime[0]);
-						dcap->m_durations.push_back(stime[1]);
-						dcap->m_samples.push_back(*b);
-					}
+						dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
 				}
 
 				delete[] buf;
