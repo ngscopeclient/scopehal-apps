@@ -393,7 +393,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		//Create render data if needed
 		//(can't do this when m_waveformRenderData is created because filters can be added later on)
 		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
+		{
 			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
+			m_geometryDirty = true;
+		}
 
 		//Create the texture
 		auto wdat = m_overlayRenderData[overlay];

@@ -636,8 +636,11 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	//Start threads to poll scopes etc
 	g_app->StartScopeThreads();
 
-	//Done loading, we can render everything for good now
+	//Done loading, we can render everything for good now.
+	//Issue 2 render calls since the very first render does some setup stuff
 	m_loadInProgress = false;
+	ClearAllPersistence();
+	g_app->DispatchPendingEvents();
 	ClearAllPersistence();
 }
 
