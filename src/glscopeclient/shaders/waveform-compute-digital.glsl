@@ -66,7 +66,8 @@ shared float g_workingBuffer[COLS_PER_BLOCK][MAX_HEIGHT];
 int GetBoolean(uint i)
 {
 	int block = voltage[i/4];
-	return (block >> (8*i) ) & 0xff;
+	uint nbyte = (i & 3);
+	return (block >> (8*nbyte) ) & 0xff;
 }
 
 void main()
