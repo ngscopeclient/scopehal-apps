@@ -444,15 +444,29 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		if(o.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
 		{
 			size_t olen = data->m_offsets.size();
+
+			int64_t start_ps = XPositionToXAxisUnits(textright);
+			int64_t start_samples = start_ps / data->m_timescale;
+
+			int64_t end_ps = XPositionToXAxisUnits(m_plotRight);
+			int64_t end_samples = end_ps / data->m_timescale;
+
+			double last_end = textright;
 			for(size_t i=0; i<olen; i++)
 			{
+				if(data->m_offsets[i] < start_samples)
+					continue;
+				if(data->m_offsets[i] + data->m_durations[i] > end_samples)
+					continue;
+
 				double start = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
 				double end = start + (data->m_durations[i] * data->m_timescale);
 
 				double xs = XAxisUnitsToXPosition(start);
 				double xe = XAxisUnitsToXPosition(end);
 
-				if( (xe < textright) || (xs > m_plotRight) )
+				//If this sample is basically on top of the last one, don't render it.
+				if( (xe - last_end) < 2)
 					continue;
 
 				auto f = dynamic_cast<Filter*>(o.m_channel);
@@ -463,6 +477,8 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					ybot, ymid, ytop,
 					f->GetText(i),
 					f->GetColor(i));
+
+				last_end = xe;
 			}
 		}
 	}
