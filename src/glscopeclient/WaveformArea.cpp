@@ -52,7 +52,16 @@ WaveformArea::WaveformArea(
 	, m_channel(channel)
 	, m_parent(parent)
 	, m_pixelsPerVolt(1)
+	, m_axisLabelFont("monospace normal 10")
+	, m_infoBoxFont("sans normal 10")
+	, m_cursorLabelFont("sans normal 10")
+	, m_decodeFont("sans normal 10")
 {
+	m_axisLabelFont.set_weight(Pango::WEIGHT_NORMAL);
+	m_infoBoxFont.set_weight(Pango::WEIGHT_NORMAL);
+	m_cursorLabelFont.set_weight(Pango::WEIGHT_NORMAL);
+	m_decodeFont.set_weight(Pango::WEIGHT_NORMAL);
+
 	SharedCtorInit();
 }
 
@@ -66,6 +75,10 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 	, m_channel(clone->m_channel)
 	, m_parent(clone->m_parent)
 	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
+	, m_axisLabelFont(clone->m_axisLabelFont)
+	, m_infoBoxFont(clone->m_infoBoxFont)
+	, m_cursorLabelFont(clone->m_cursorLabelFont)
+	, m_decodeFont(clone->m_decodeFont)
 {
 	SharedCtorInit();
 }

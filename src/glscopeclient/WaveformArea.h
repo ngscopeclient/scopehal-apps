@@ -498,6 +498,12 @@ protected:
 	bool	m_firstFrame;
 	bool	m_geometryDirty;
 	bool	m_positionDirty;
+
+	//Fonts used for drawing various UI elements
+	Pango::FontDescription m_axisLabelFont;
+	Pango::FontDescription m_infoBoxFont;
+	Pango::FontDescription m_cursorLabelFont;
+	Pango::FontDescription m_decodeFont;
 };
 
 #endif

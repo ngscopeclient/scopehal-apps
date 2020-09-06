@@ -94,9 +94,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("monospace normal 10");
-	font.set_weight(Pango::WEIGHT_NORMAL);
-	tlayout->set_font_description(font);
+	tlayout->set_font_description(m_axisLabelFont);
 	tlayout->set_text("500.000 mV_xx");
 	tlayout->get_pixel_size(twidth, theight);
 	m_plotRight = m_width - twidth;
@@ -580,9 +578,7 @@ void WaveformArea::RenderChannelInfoBox(
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("sans normal 10");
-	font.set_weight(Pango::WEIGHT_NORMAL);
-	tlayout->set_font_description(font);
+	tlayout->set_font_description(m_infoBoxFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
 
@@ -653,9 +649,7 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("sans normal 10");
-	font.set_weight(Pango::WEIGHT_NORMAL);
-	tlayout->set_font_description(font);
+	tlayout->set_font_description(m_cursorLabelFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
 
@@ -777,9 +771,7 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	Pango::FontDescription font("sans normal 10");
-	font.set_weight(Pango::WEIGHT_NORMAL);
-	tlayout->set_font_description(font);
+	tlayout->set_font_description(m_cursorLabelFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
 
@@ -919,15 +911,19 @@ void WaveformArea::RenderComplexSignal(
 		string str,
 		Gdk::Color color)
 {
-	Pango::FontDescription font("sans normal 10");
-	int width = 0, sheight = 0;
-	GetStringWidth(cr, str, width, sheight, font);
-
 	//First-order guess of position: center of the value
 	float xp = xstart + (xend-xstart)/2;
 
 	//Width within this signal outline
 	float available_width = xend - xstart - 2*xoff;
+
+	//Figure out how wide the text is
+	int width;
+	int sheight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	tlayout->set_font_description(m_decodeFont);
+	tlayout->set_text(str);
+	tlayout->get_pixel_size(width, sheight);
 
 	//Minimum width (if outline ends up being smaller than this, just fill)
 	float min_width = 40;
@@ -1003,7 +999,9 @@ void WaveformArea::RenderComplexSignal(
 					str_render = "..." + str.substr(str.length() - len - 1);
 
 				int twidth = 0, theight = 0;
-				GetStringWidth(cr, str_render, twidth, theight, font);
+				tlayout->set_text(str_render);
+				tlayout->get_pixel_size(twidth, theight);
+
 				if(twidth < available_width)
 				{
 					//Re-center text in available space
@@ -1017,11 +1015,7 @@ void WaveformArea::RenderComplexSignal(
 		}
 
 		cr->save();
-			Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
 			cr->move_to(xp, ymid - sheight/2);
-			font.set_weight(Pango::WEIGHT_NORMAL);
-			tlayout->set_font_description(font);
-			tlayout->set_text(str_render);
 			tlayout->update_from_cairo_context(cr);
 			tlayout->show_in_cairo_context(cr);
 		cr->restore();
