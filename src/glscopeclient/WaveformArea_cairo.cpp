@@ -86,10 +86,6 @@ void WaveformArea::RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 {
-	//If we're a digital channel, no grid or anything else makes sense
-	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-		return;
-
 	//Calculate width of right side axis label
 	int twidth;
 	int theight;
@@ -98,6 +94,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	tlayout->set_text("500.000 mV_xx");
 	tlayout->get_pixel_size(twidth, theight);
 	m_plotRight = m_width - twidth;
+
+	//If we're a digital channel, no grid or anything else makes sense.
+	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		return;
 
 	if(IsWaterfall())
 		return;
@@ -881,26 +881,21 @@ void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::MakePathSignalBody(
 	const Cairo::RefPtr<Cairo::Context>& cr,
-	float xstart, float /*xoff*/, float xend, float ybot, float /*ymid*/, float ytop)
+	float xstart, float /*xoff*/, float xend, float ybot, float ymid, float ytop)
 {
-	//If the signal is really tiny, shrink the rounding to avoid going out of bounds
-	float rounding = 10;
-	if(xstart + 2*rounding > xend)
-		rounding = (xend - xstart) / 2;
+	//Square off edges if really tiny
+	float rounding = 5;
+	if((xend-xstart) < 2*rounding)
+		rounding = 0;
 
 	cr->begin_new_sub_path();
-	cr->arc(xstart + rounding, ytop + rounding, rounding, M_PI, M_PI*1.5f);	//top left corner
-	cr->move_to(xstart + rounding, ytop);									//top edge
-	cr->line_to(xend - rounding, ytop);
-	cr->arc(xend - rounding, ytop + rounding, rounding, M_PI*1.5f, 0);		//top right corner
-	cr->move_to(xend, ytop + rounding);										//right edge
-	cr->line_to(xend, ybot - rounding);
-	cr->arc(xend - rounding, ybot - rounding, rounding, 0, M_PI_2);			//bottom right corner
-	cr->move_to(xend - rounding, ybot);										//bottom edge
-	cr->line_to(xstart + rounding, ybot);
-	cr->arc(xstart + rounding, ybot - rounding, rounding, M_PI_2, M_PI);	//bottom left corner
-	cr->move_to(xstart, ybot - rounding);									//left edge
-	cr->line_to(xstart, ytop + rounding);
+	cr->move_to(xstart, 			ymid);		//left point
+	cr->line_to(xstart + rounding,	ytop);		//top left corner
+	cr->line_to(xend - rounding, 	ytop);		//top right corner
+	cr->line_to(xend,				ymid);		//right point
+	cr->line_to(xend - rounding,	ybot);		//bottom right corner
+	cr->line_to(xstart + rounding,	ybot);		//bottom left corner
+	cr->line_to(xstart, 			ymid);		//left point again
 }
 
 void WaveformArea::RenderComplexSignal(
@@ -917,112 +912,123 @@ void WaveformArea::RenderComplexSignal(
 	//Width within this signal outline
 	float available_width = xend - xstart - 2*xoff;
 
-	//Figure out how wide the text is
-	int width;
-	int sheight;
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
-	tlayout->set_font_description(m_decodeFont);
-	tlayout->set_text(str);
-	tlayout->get_pixel_size(width, sheight);
-
-	//Minimum width (if outline ends up being smaller than this, just fill)
-	float min_width = 40;
-	if(width < min_width)
-		min_width = width;
-
-	//Does the string fit at all? If not, skip all of the messy math
-	if(available_width < min_width)
-		str = "";
-	else
+	//If the space is tiny, don't even attempt to render it.
+	//Figuring out text size is expensive when we have hundreds or thousands of packets on screen, but in this case
+	//we *know* it won't fit.
+	bool drew_text = false;
+	if(available_width > 15)
 	{
-		//Center the text by moving it left half a width
-		xp -= width/2;
+		int width;
+		int sheight;
 
-		//Off the left end? Push it right
-		int padding = 5;
-		if(xp < (visleft + padding))
-		{
-			xp = visleft + padding;
-			available_width = xend - xp - xoff;
-		}
+		Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+		tlayout->set_font_description(m_decodeFont);
+		tlayout->set_text(str);
+		tlayout->get_pixel_size(width, sheight);
 
-		//Off the right end? Push it left
-		else if( (xp + width + padding) > visright)
-		{
-			xp = visright - (width + padding + xoff);
-			if(xp < xstart)
-				xp = xstart + xoff;
+		//Minimum width (if outline ends up being smaller than this, just fill)
+		float min_width = 40;
+		if(width < min_width)
+			min_width = width;
 
-			if(xend < visright)
-				available_width = xend - xp - xoff;
-			else
-				available_width = visright - xp - xoff;
-		}
-
-		//If we don't fit under the new constraints, give up
+		//Does the string fit at all? If not, skip all of the messy math
 		if(available_width < min_width)
 			str = "";
-	}
-
-	//Draw the text
-	if(str != "")
-	{
-		//Text is always white (TODO: only in overlays?)
-		cr->set_source_rgb(1, 1, 1);
-
-		//If we need to trim, decide which way to do it.
-		//If the text is all caps and includes an underscore, it's probably a macro with a prefix.
-		//Trim from the left in this case. Otherwise, trim from the right.
-		bool trim_from_right = true;
-		bool is_all_upper = true;
-		for(size_t i=0; i<str.length(); i++)
+		else
 		{
-			if(islower(str[i]))
-				is_all_upper = false;
-		}
-		if(is_all_upper && (str.find("_") != string::npos))
-			trim_from_right = false;
+			//Center the text by moving it left half a width
+			xp -= width/2;
 
-		//Some text fits, but maybe not all of it
-		//We know there's enough room for "some" text
-		//Try shortening the string a bit at a time until it fits
-		//(Need to do an O(n) search since character width is variable and unknown to us without knowing details
-		//of the font currently in use)
-		string str_render = str;
-		if(width > available_width)
-		{
-			for(int len = str.length() - 1; len > 1; len--)
+			//Off the left end? Push it right
+			int padding = 5;
+			if(xp < (visleft + padding))
 			{
-				if(trim_from_right)
-					str_render = str.substr(0, len) + "...";
+				xp = visleft + padding;
+				available_width = xend - xp - xoff;
+			}
+
+			//Off the right end? Push it left
+			else if( (xp + width + padding) > visright)
+			{
+				xp = visright - (width + padding + xoff);
+				if(xp < xstart)
+					xp = xstart + xoff;
+
+				if(xend < visright)
+					available_width = xend - xp - xoff;
 				else
-					str_render = "..." + str.substr(str.length() - len - 1);
+					available_width = visright - xp - xoff;
+			}
 
-				int twidth = 0, theight = 0;
-				tlayout->set_text(str_render);
-				tlayout->get_pixel_size(twidth, theight);
+			//If we don't fit under the new constraints, give up
+			if(available_width < min_width)
+				str = "";
+		}
 
-				if(twidth < available_width)
+		//Draw the text
+		if(str != "")
+		{
+			//Text is always white (TODO: only in overlays?)
+			cr->set_source_rgb(1, 1, 1);
+
+			//If we need to trim, decide which way to do it.
+			//If the text is all caps and includes an underscore, it's probably a macro with a prefix.
+			//Trim from the left in this case. Otherwise, trim from the right.
+			bool trim_from_right = true;
+			bool is_all_upper = true;
+			for(size_t i=0; i<str.length(); i++)
+			{
+				if(islower(str[i]))
+					is_all_upper = false;
+			}
+			if(is_all_upper && (str.find("_") != string::npos))
+				trim_from_right = false;
+
+			//Some text fits, but maybe not all of it
+			//We know there's enough room for "some" text
+			//Try shortening the string a bit at a time until it fits
+			//(Need to do an O(n) search since character width is variable and unknown to us without knowing details
+			//of the font currently in use)
+			string str_render = str;
+			if(width > available_width)
+			{
+				for(int len = str.length() - 1; len > 1; len--)
 				{
-					//Re-center text in available space
-					//TODO: Move to avoid any time-split lines
-					xp += (available_width - twidth)/2;
-					if(xp < (xstart + xoff))
-						xp = (xstart + xoff);
-					break;
+					if(trim_from_right)
+						str_render = str.substr(0, len) + "...";
+					else
+						str_render = "..." + str.substr(str.length() - len - 1);
+
+					int twidth = 0, theight = 0;
+					tlayout->set_text(str_render);
+					tlayout->get_pixel_size(twidth, theight);
+
+					if(twidth < available_width)
+					{
+						//Re-center text in available space
+						//TODO: Move to avoid any time-split lines
+						xp += (available_width - twidth)/2;
+						if(xp < (xstart + xoff))
+							xp = (xstart + xoff);
+						break;
+					}
 				}
 			}
-		}
 
-		cr->save();
-			cr->move_to(xp, ymid - sheight/2);
-			tlayout->update_from_cairo_context(cr);
-			tlayout->show_in_cairo_context(cr);
-		cr->restore();
+			drew_text = true;
+			cr->save();
+				cr->move_to(xp, ymid - sheight/2);
+				tlayout->update_from_cairo_context(cr);
+				tlayout->show_in_cairo_context(cr);
+			cr->restore();
+		}
 	}
 
+	if(xend > visright)
+		xend = visright;
+
 	//If no text fit, draw filler instead
-	else
+	if(!drew_text)
 	{
 		cr->set_source_rgb(color.get_red_p() * 0.25, color.get_green_p() * 0.25, color.get_blue_p() * 0.25);
 		MakePathSignalBody(cr, xstart, xoff, xend, ybot, ymid, ytop);
@@ -1030,8 +1036,6 @@ void WaveformArea::RenderComplexSignal(
 	}
 
 	//Draw the body outline after any filler so it shows up on top
-	if(xend > visright)
-		xend = visright;
 	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 	MakePathSignalBody(cr, xstart, xoff, xend, ybot, ymid, ytop);
 	cr->stroke();
