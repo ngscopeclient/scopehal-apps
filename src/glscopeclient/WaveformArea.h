@@ -437,10 +437,6 @@ protected:
 	double m_lastFrameStart;
 	double m_frameTime;
 	long m_frameCount;
-	double m_renderTime;
-	double m_cairoTime;
-	double m_texDownloadTime;
-	double m_compositeTime;
 
 	double m_prepareTime;
 	double m_indexTime;

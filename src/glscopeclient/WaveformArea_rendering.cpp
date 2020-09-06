@@ -425,9 +425,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	if(err != 0)
 		LogNotice("Render: err = %x\n", err);
 
-	dt = GetTime() - start;
-	m_renderTime += dt;
-
 	//If our channel is digital, set us to minimal size
 	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 	{
@@ -615,8 +612,6 @@ void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)
 
 void WaveformArea::ComputeAndDownloadCairoUnderlays()
 {
-	double tstart = GetTime();
-
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -634,9 +629,6 @@ void WaveformArea::ComputeAndDownloadCairoUnderlays()
 	//Software rendering
 	DoRenderCairoUnderlays(cr);
 
-	m_cairoTime += (GetTime() - tstart);
-	tstart = GetTime();
-
 	//Update the texture
 	//Tell GL it's RGBA even though it's BGRA, faster to invert in the shader than when downloading
 	m_cairoTexture.Bind();
@@ -645,14 +637,10 @@ void WaveformArea::ComputeAndDownloadCairoUnderlays()
 		m_width,
 		m_height,
 		surface->get_data());
-
-	m_texDownloadTime += (GetTime() - tstart);
 }
 
 void WaveformArea::RenderCairoUnderlays()
 {
-	double tstart = GetTime();
-
 	glDisable(GL_BLEND);
 
 	//Draw the actual image
@@ -661,14 +649,10 @@ void WaveformArea::RenderCairoUnderlays()
 	m_cairoProgram.SetUniform(m_cairoTexture, "fbtex");
 	m_cairoTexture.Bind();
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-	m_compositeTime += (GetTime() - tstart);
 }
 
 void WaveformArea::ComputeAndDownloadCairoOverlays()
 {
-	double tstart = GetTime();
-
 	//Create the Cairo surface we're drawing on
 	Cairo::RefPtr< Cairo::ImageSurface > surface =
 		Cairo::ImageSurface::create(Cairo::FORMAT_ARGB32, m_width, m_height);
@@ -687,9 +671,6 @@ void WaveformArea::ComputeAndDownloadCairoOverlays()
 
 	DoRenderCairoOverlays(cr);
 
-	m_cairoTime += GetTime() - tstart;
-	tstart = GetTime();
-
 	//Get the image data and make a texture from it
 	//Tell GL it's RGBA even though it's BGRA, faster to invert in the shader than when downloading
 	m_cairoTextureOver.Bind();
@@ -698,14 +679,10 @@ void WaveformArea::ComputeAndDownloadCairoOverlays()
 		m_width,
 		m_height,
 		surface->get_data());
-
-	m_texDownloadTime += GetTime() - tstart;
 }
 
 void WaveformArea::RenderCairoOverlays()
 {
-	double tstart = GetTime();
-
 	//Configure blending for Cairo's premultiplied alpha
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -718,8 +695,6 @@ void WaveformArea::RenderCairoOverlays()
 	m_cairoVAO.Bind();
 	m_cairoProgram.SetUniform(m_cairoTextureOver, "fbtex");
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-	m_compositeTime += GetTime() - tstart;
 }
 
 int64_t WaveformArea::XPositionToXAxisUnits(float pix)

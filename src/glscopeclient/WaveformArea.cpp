@@ -75,12 +75,6 @@ void WaveformArea::SharedCtorInit()
 	//performance counters
 	m_frameTime 			= 0;
 	m_frameCount 			= 0;
-	m_renderTime 			= 0;
-	m_prepareTime 			= 0;
-	m_cairoTime				= 0;
-	m_texDownloadTime		= 0;
-	m_compositeTime			= 0;
-	m_indexTime 			= 0;
 	m_lastFrameStart 		= -1;
 
 	m_updatingContextMenu 	= false;
@@ -126,30 +120,9 @@ void WaveformArea::SharedCtorInit()
 
 WaveformArea::~WaveformArea()
 {
-	LogDebug("Shutting down view for waveform %s\n", m_channel.m_channel->m_displayname.c_str());
-	{
-		LogIndenter li;
-
-		double tavg = m_frameTime / m_frameCount;
-		LogDebug("Average frame interval: %.3f ms (%.2f FPS, %zu frames)\n",
-			tavg*1000, 1/tavg, m_frameCount);
-
-		LogDebug("----------------------------------------------------------\n");
-		LogDebug("Task              | Total (ms) | Average (ms) | Percentage\n");
-		LogDebug("----------------------------------------------------------\n");
-		LogDebug("Render            | %10.1f |   %10.3f | %.1f %%\n",
-			m_renderTime * 1000, m_renderTime * 1000 / m_frameCount, 100.0f);
-		LogDebug("Cairo             | %10.1f |   %10.3f | %.1f %%\n",
-			m_cairoTime * 1000, m_cairoTime * 1000 / m_frameCount, m_cairoTime * 100 / m_renderTime);
-		LogDebug("Texture download  | %10.1f |   %10.3f | %.1f %%\n",
-			m_texDownloadTime * 1000, m_texDownloadTime * 1000 / m_frameCount, m_texDownloadTime * 100 / m_renderTime);
-		LogDebug("Prepare           | %10.1f |   %10.3f | %.1f %%\n",
-			m_prepareTime * 1000, m_prepareTime * 1000 / m_frameCount, m_prepareTime * 100 / m_renderTime);
-		LogDebug("Build index       | %10.1f |   %10.3f | %.1f %%\n",
-			m_indexTime * 1000, m_indexTime * 1000 / m_frameCount, m_indexTime * 100 / m_renderTime);
-		LogDebug("Composite         | %10.1f |   %10.3f | %.1f %%\n",
-			m_compositeTime * 1000, m_compositeTime * 1000 / m_frameCount, m_compositeTime * 100 / m_renderTime);
-	}
+	double tavg = m_frameTime / m_frameCount;
+	LogDebug("Average frame interval for %s: %.3f ms (%.2f FPS, %zu frames)\n",
+		m_channel.m_channel->m_displayname.c_str(), tavg*1000, 1/tavg, m_frameCount);
 
 	m_channel.m_channel->Release();
 
