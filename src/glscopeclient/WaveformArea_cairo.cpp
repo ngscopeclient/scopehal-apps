@@ -906,6 +906,10 @@ void WaveformArea::RenderComplexSignal(
 		string str,
 		Gdk::Color color)
 {
+	//Clamp start point to left side of display
+	if(xstart < visleft)
+		xstart = visleft;
+
 	//First-order guess of position: center of the value
 	float xp = xstart + (xend-xstart)/2;
 
