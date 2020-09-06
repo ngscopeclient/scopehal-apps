@@ -1827,7 +1827,7 @@ void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group, int64_t target
 	group->m_pixelsPerXUnit *= step;
 	group->m_xAxisOffset = target - (delta/step);
 
-	ClearPersistence(group);
+	ClearPersistence(group, false, true);
 }
 
 /**
@@ -1843,7 +1843,7 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	group->m_pixelsPerXUnit /= step;
 	group->m_xAxisOffset = target - (delta*step);
 
-	ClearPersistence(group);
+	ClearPersistence(group, false, true);
 }
 
 void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_dirty, bool position_dirty)
