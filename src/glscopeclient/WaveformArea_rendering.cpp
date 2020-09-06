@@ -172,12 +172,17 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	//trivially map sample indexes to X pixel coordinates.
 	//TODO: can we parallelize this? move to a compute shader?
 	auto group = wdata->m_area->m_group;
+	int64_t offset_samples = (group->m_xAxisOffset / pdat->m_timescale);
+	float xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
 	for(int j=0; j<wdata->m_area->m_width; j++)
 	{
+		int64_t target = floor(j / xscale) + offset_samples;
 		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
 			(int64_t*)&pdat->m_offsets[0],
 			wdata->m_count,
-			(j + group->m_xAxisOffset) / pdat->m_timescale);
+			target - 5);	//Small fudge factor to fix graphical artifacts (some columns of pixels not being drawn)
+							//I think these might be floating point rounding issues somewhere? Need to debug more
+							//but for now, this fixes rendering.
 	}
 
 	//Scale alpha by zoom.
@@ -193,7 +198,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
 	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
 	wdata->m_mappedFloatConfigBuffer[6] = pdat->m_triggerPhase * group->m_pixelsPerXUnit;	//xoff
-	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * group->m_pixelsPerXUnit;	//xscale
+	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * group->m_pixelsPerXUnit;		//xscale
 	wdata->m_mappedFloatConfigBuffer[8] = ybase;											//ybase
 	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
 	wdata->m_mappedFloatConfigBuffer[10] = channel->GetOffset();							//yoff
