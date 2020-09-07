@@ -53,6 +53,7 @@ public:
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
 	Gtk::TreeModelColumn<Gdk::Color>					m_color;
+	Gtk::TreeModelColumn<bool>							m_visible;
 };
 
 /**
@@ -75,6 +76,7 @@ protected:
 	Gtk::ScrolledWindow m_scroller;
 		Gtk::TreeView m_tree;
 	Glib::RefPtr<Gtk::TreeStore> m_model;
+	Glib::RefPtr<Gtk::TreeModelFilter> m_filtermodel;
 	ProtocolAnalyzerColumns m_columns;
 
 	void OnSelectionChanged();

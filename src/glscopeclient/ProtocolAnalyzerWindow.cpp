@@ -44,6 +44,8 @@ using namespace std;
 
 ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 {
+	add(m_visible);
+	add(m_color);
 	add(m_timestamp);
 	add(m_capturekey);
 	add(m_offset);
@@ -57,7 +59,6 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 
 	add(m_image);
 	add(m_data);
-	add(m_color);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +85,9 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 
 	//Set up the tree view
 	m_model = Gtk::TreeStore::create(m_columns);
-	m_tree.set_model(m_model);
+	m_filtermodel = Gtk::TreeModelFilter::create(m_model);
+	m_tree.set_model(m_filtermodel);
+	m_filtermodel->set_visible_column(m_columns.m_visible);
 
 	//Add the columns
 	m_tree.append_column("Time", m_columns.m_timestamp);
@@ -100,13 +103,12 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 
 	//Set background color
 	int ncols = headers.size() + 2;
-	int ncolorcol = m_columns.size() - 1;
 	for(int col=0; col<ncols; col ++)
 	{
 		auto pcol = m_tree.get_column(col);
 		vector<Gtk::CellRenderer*> cells = pcol->get_cells();
 		for(auto c : cells)
-			pcol->add_attribute(*c, "background-gdk", ncolorcol);
+			pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is color
 	}
 
 	m_tree.get_selection()->signal_changed().connect(
@@ -216,6 +218,7 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
 	row[m_columns.m_offset] = p->m_offset;
+	row[m_columns.m_visible] = true;
 
 	//Just copy headers without any processing
 	for(size_t i=0; i<headers.size(); i++)
