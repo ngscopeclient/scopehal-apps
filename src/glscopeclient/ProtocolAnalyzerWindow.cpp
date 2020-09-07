@@ -57,6 +57,7 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 
 	add(m_image);
 	add(m_data);
+	add(m_color);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,6 +97,17 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 
 	if(decoder->GetShowDataColumn())
 		m_tree.append_column("Data", m_columns.m_data);
+
+	//Set background color
+	int ncols = headers.size() + 2;
+	int ncolorcol = m_columns.size() - 1;
+	for(int col=0; col<ncols; col ++)
+	{
+		auto pcol = m_tree.get_column(col);
+		vector<Gtk::CellRenderer*> cells = pcol->get_cells();
+		for(auto c : cells)
+			pcol->add_attribute(*c, "background-gdk", ncolorcol);
+	}
 
 	m_tree.get_selection()->signal_changed().connect(
 		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnSelectionChanged));
@@ -200,6 +212,7 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	stime += tmp;
 
 	//Create the row
+	row[m_columns.m_color] = p->m_displayBackgroundColor;
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
 	row[m_columns.m_offset] = p->m_offset;

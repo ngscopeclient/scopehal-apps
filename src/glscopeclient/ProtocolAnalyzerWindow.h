@@ -52,6 +52,7 @@ public:
 	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
+	Gtk::TreeModelColumn<Gdk::Color>					m_color;
 };
 
 /**
