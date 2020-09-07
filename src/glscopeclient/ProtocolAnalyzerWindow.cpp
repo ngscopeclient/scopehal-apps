@@ -215,6 +215,10 @@ void ProtocolAnalyzerWindow::FillOutRow(
 		char t[4];
 		snprintf(t, sizeof(t), "%02x ", b);
 		sdata += t;
+
+		//Truncate really long packets to keep UI responsive
+		if(sdata.length() > 1024)
+			break;
 	}
 	row[m_columns.m_data] = sdata;
 

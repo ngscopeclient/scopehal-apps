@@ -1004,12 +1004,15 @@ void WaveformArea::OnWaveformDataReady()
 				d->SetXOffset(m_group->m_xAxisOffset);
 				d->SetXScale(m_group->m_pixelsPerXUnit);
 			}
+
+			//TODO: only if stuff changed
+			//TODO: clear sweeps if this happens?
+			m_group->m_timeline.queue_draw();
 		}
 	}
 
 	//Redraw everything
 	queue_draw();
-	m_group->m_timeline.queue_draw();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1862,7 +1862,7 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 			{
 				//Clear persistence on waveform areas
 				auto area = dynamic_cast<WaveformArea*>(a);
-				if(area != NULL)
+				if(area != NULL && w->get_realized())
 					areas.push_back(area);
 			}
 		}
@@ -1908,11 +1908,8 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 
 void OscilloscopeWindow::ClearAllPersistence()
 {
-	for(auto w : m_waveformAreas)
-	{
-		w->ClearPersistence();
-		w->queue_draw();
-	}
+	for(auto g : m_waveformGroups)
+		ClearPersistence(g, true, false);
 }
 
 void OscilloscopeWindow::OnQuit()
@@ -2335,9 +2332,10 @@ void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 	//Update the views
 	for(auto w : m_waveformAreas)
 	{
-		w->ClearPersistence();
-		w->OnWaveformDataReady();
+		if(w->get_realized())
+			w->OnWaveformDataReady();
 	}
+	ClearAllPersistence();
 
 	if(refreshAnalyzers)
 	{
