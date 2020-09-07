@@ -39,6 +39,7 @@
 #include "OscilloscopeWindow.h"
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
+#include "FileProgressDialog.h"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -649,20 +650,26 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
  */
 void OscilloscopeWindow::LoadWaveformData(string filename, IDTable& table)
 {
+	//Create and show progress dialog
+	FileProgressDialog progress;
+	progress.show();
+
 	//Figure out data directory
 	string base = filename.substr(0, filename.length() - strlen(".scopesession"));
 	string datadir = base + "_data";
 
 	//Load data for each scope
-	for(auto scope : m_scopes)
+	float progress_per_scope = 1.0f / m_scopes.size();
+	for(size_t i=0; i<m_scopes.size(); i++)
 	{
+		auto scope = m_scopes[i];
 		int id = table[scope];
 
 		char tmp[512];
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", datadir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
-		LoadWaveformDataForScope(docs[0], scope, datadir, table);
+		LoadWaveformDataForScope(docs[0], scope, datadir, table, progress, i*progress_per_scope, progress_per_scope);
 	}
 }
 
@@ -673,8 +680,14 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	const YAML::Node& node,
 	Oscilloscope* scope,
 	string datadir,
-	IDTable& table)
+	IDTable& table,
+	FileProgressDialog& progress,
+	float base_progress,
+	float progress_range
+	)
 {
+	progress.Update("Loading oscilloscope configuration", base_progress);
+
 	TimePoint time;
 	time.first = 0;
 	time.second = 0;
@@ -694,10 +707,17 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			chan->SetData(NULL, j);
 	}
 
+	//Preallocate size
 	auto wavenode = node["waveforms"];
 	window->SetMaxWaveforms(wavenode.size());
+
+	//Load the data for each waveform
+	float waveform_progress = progress_range / wavenode.size();
+	size_t iwave = 0;
 	for(auto it : wavenode)
 	{
+		iwave ++;
+
 		//Top level metadata
 		auto wfm = it.second;
 		time.first = wfm["timestamp"].as<long long>();
@@ -736,84 +756,68 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			chan->SetData(cap, stream);
 		}
 
-		//Load data for each channel in parallel to speed parsing
-		#pragma omp parallel for
+		//Kick off a thread to load data for each channel
+		vector<thread*> threads;
+		size_t nchans = channels.size();
+		volatile float* channel_progress = new float[nchans];
+		volatile int* channel_done = new int[nchans];
 		for(size_t i=0; i<channels.size(); i++)
 		{
-			int channel_index = channels[i];
-			auto chan = scope->GetChannel(channel_index);
+			channel_progress[i] = 0;
+			channel_done[i] = 0;
 
-			for(size_t stream=0; stream<chan->GetStreamCount(); stream ++)
+			threads.push_back(new thread(
+				&OscilloscopeWindow::DoLoadWaveformDataForScope,
+				channels[i],
+				scope,
+				datadir,
+				scope_id,
+				waveform_id,
+				channel_progress + i,
+				channel_done + i
+				));
+		}
+
+		//Process events and update the display with each thread's progress
+		while(true)
+		{
+			//Figure out total progress across each channel. Stop if all threads are done
+			bool done = true;
+			float frac = 0;
+			for(size_t i=0; i<nchans; i++)
 			{
-				auto cap = chan->GetData(stream);
-				auto acap = dynamic_cast<AnalogWaveform*>(cap);
-				auto dcap = dynamic_cast<DigitalWaveform*>(cap);
-
-				//Load the actual sample data
-				char tmp[512];
-				if(stream == 0)
-				{
-					snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
-						datadir.c_str(),
-						scope_id,
-						waveform_id,
-						channel_index);
-				}
-				else
-				{
-					snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%zu.bin",
-						datadir.c_str(),
-						scope_id,
-						waveform_id,
-						channel_index,
-						stream);
-				}
-				FILE* fp = fopen(tmp, "rb");
-				if(!fp)
-				{
-					LogError("couldn't open %s\n", tmp);
-					continue;
-				}
-
-				//Read the whole file into a buffer
-				fseek(fp, 0, SEEK_END);
-				long len = ftell(fp);
-				fseek(fp, 0, SEEK_SET);
-				unsigned char* buf = new unsigned char[len];
-				fread(buf, 1, len, fp);
-
-				//Figure out how many samples we have
-				size_t samplesize = 2*sizeof(int64_t);
-				if(acap)
-					samplesize += sizeof(float);
-				else
-					samplesize += sizeof(bool);
-				size_t nsamples = len / samplesize;
-				cap->Resize(nsamples);
-
-				//TODO: AVX this?
-				for(size_t j=0; j<nsamples; j++)
-				{
-					size_t offset = j*samplesize;
-
-					//Read start time and duration
-					int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
-					offset += 2*sizeof(int64_t);
-
-					cap->m_offsets[j] = stime[0];
-					cap->m_durations[j] = stime[1];
-
-					//Read sample data
-					if(acap)
-						acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
-
-					else
-						dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
-				}
-
-				delete[] buf;
-				fclose(fp);
+				if(!channel_done[i])
+					done = false;
+				frac += channel_progress[i];
 			}
+			if(done)
+				break;
+			frac /= nchans;
+
+			//Update the UI
+			char tmp[256];
+			snprintf(
+				tmp,
+				sizeof(tmp),
+				"Loading waveform %zu/%zu for instrument %s: %.0f %% complete",
+				iwave,
+				wavenode.size(),
+				scope->m_nickname.c_str(),
+				frac * 100);
+			progress.Update(tmp, base_progress + frac*waveform_progress);
+			usleep(1000 * 50);
+
+			g_app->DispatchPendingEvents();
+		}
+
+		delete[] channel_progress;
+		delete[] channel_done;
+
+		//Wait for threads to complete
+		for(auto t : threads)
+		{
+			t->join();
+			delete t;
 		}
 
 		//Add to history
@@ -825,9 +829,115 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		{
 			newest = time;
 		}
+
+		base_progress += waveform_progress;
 	}
 
 	window->JumpToHistory(newest);
+}
+
+void OscilloscopeWindow::DoLoadWaveformDataForScope(
+	int channel_index,
+	Oscilloscope* scope,
+	string datadir,
+	int scope_id,
+	int waveform_id,
+	volatile float* progress,
+	volatile int* done
+	)
+{
+	auto chan = scope->GetChannel(channel_index);
+
+	float progress_per_stream = 1.0f / chan->GetStreamCount();
+
+	for(size_t stream=0; stream<chan->GetStreamCount(); stream ++)
+	{
+		auto cap = chan->GetData(stream);
+		auto acap = dynamic_cast<AnalogWaveform*>(cap);
+		auto dcap = dynamic_cast<DigitalWaveform*>(cap);
+
+		//Load the actual sample data
+		char tmp[512];
+		if(stream == 0)
+		{
+			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+				datadir.c_str(),
+				scope_id,
+				waveform_id,
+				channel_index);
+		}
+		else
+		{
+			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%zu.bin",
+				datadir.c_str(),
+				scope_id,
+				waveform_id,
+				channel_index,
+				stream);
+		}
+		FILE* fp = fopen(tmp, "rb");
+		if(!fp)
+		{
+			LogError("couldn't open %s\n", tmp);
+			continue;
+		}
+
+		//Read the whole file into a buffer a megabyte at a time
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		unsigned char* buf = new unsigned char[len];
+		long len_remaining = len;
+		long blocksize = 1024*1024;
+		long read_offset = 0;
+		while(len_remaining > 0)
+		{
+			if(blocksize > len_remaining)
+				blocksize = len_remaining;
+
+			*progress = progress_per_stream*(stream + (read_offset * 1.0 / len));
+
+			fread(buf + read_offset, 1, blocksize, fp);
+
+			len_remaining -= blocksize;
+			read_offset += blocksize;
+		}
+
+		//Figure out how many samples we have
+		size_t samplesize = 2*sizeof(int64_t);
+		if(acap)
+			samplesize += sizeof(float);
+		else
+			samplesize += sizeof(bool);
+		size_t nsamples = len / samplesize;
+		cap->Resize(nsamples);
+
+		//TODO: AVX this?
+		for(size_t j=0; j<nsamples; j++)
+		{
+			size_t offset = j*samplesize;
+
+			//Read start time and duration
+			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
+			offset += 2*sizeof(int64_t);
+
+			cap->m_offsets[j] = stime[0];
+			cap->m_durations[j] = stime[1];
+
+			//Read sample data
+			if(acap)
+				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+
+			else
+				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+		}
+
+		delete[] buf;
+		fclose(fp);
+	}
+
+	*done = 1;
+	*progress = 1;
 }
 
 /**

@@ -43,6 +43,7 @@
 #include "HistoryWindow.h"
 #include "ScopeSyncWizard.h"
 #include "HaltConditionsDialog.h"
+#include "FileProgressDialog.h"
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -210,7 +211,23 @@ public:
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
 	void LoadWaveformData(std::string filename, IDTable& table);
-	void LoadWaveformDataForScope(const YAML::Node& node, Oscilloscope* scope, std::string datadir, IDTable& table);
+	void LoadWaveformDataForScope(
+		const YAML::Node& node,
+		Oscilloscope* scope,
+		std::string datadir,
+		IDTable& table,
+		FileProgressDialog& progress,
+		float base_progress,
+		float progress_range);
+	static void DoLoadWaveformDataForScope(
+		int channel_index,
+		Oscilloscope* scope,
+		std::string datadir,
+		int scope_id,
+		int waveform_id,
+		volatile float* progress,
+		volatile int* done
+		);
 	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
