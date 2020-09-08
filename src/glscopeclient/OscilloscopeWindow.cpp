@@ -85,11 +85,6 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 
 	m_eyeColor = EYE_CRT;
 
-	m_tAcquire = 0;
-	m_tDecode = 0;
-	m_tView = 0;
-	m_tHistory = 0;
-	m_tPoll = 0;
 	m_totalWaveforms = 0;
 	m_syncComplete = false;
 
@@ -131,12 +126,6 @@ void OscilloscopeWindow::SetTitle()
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
-	//Print stats
-	LogDebug("ACQUIRE: %10.3f ms\n", m_tAcquire * 1000);
-	LogDebug("DECODE:  %10.3f ms\n", m_tDecode * 1000);
-	LogDebug("VIEW:    %10.3f ms\n", m_tView * 1000);
-	LogDebug("HISTORY: %10.3f ms\n", m_tHistory * 1000);
-	LogDebug("POLL:    %10.3f ms\n", m_tPoll * 1000);
 }
 
 /**
@@ -535,11 +524,6 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	CloseSession();
 
 	//Clear performance counters
-	m_tAcquire = 0;
-	m_tDecode = 0;
-	m_tView = 0;
-	m_tHistory = 0;
-	m_tPoll = 0;
 	m_totalWaveforms = 0;
 	m_lastWaveformTimes.clear();
 
@@ -2091,7 +2075,6 @@ bool OscilloscopeWindow::PollScopes()
 	{
 		//Wait for every scope to have triggered
 		bool ready = true;
-		double start = GetTime();
 		for(auto scope : m_scopes)
 		{
 			if(!scope->HasPendingWaveforms())
@@ -2100,7 +2083,6 @@ bool OscilloscopeWindow::PollScopes()
 				break;
 			}
 		}
-		m_tPoll += GetTime() - start;
 
 		//Keep track of when the primary instrument triggers.
 		if(m_multiScopeFreeRun)
@@ -2190,14 +2172,10 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 
 	//Download the data
 	//LogTrace("Acquiring\n");
-	double start = GetTime();
 	scope->PopPendingWaveform();
-	m_tAcquire += GetTime() - start;
 
 	//Update the history window
-	start = GetTime();
 	m_historyWindows[scope]->OnWaveformDataReady();
-	m_tHistory += GetTime() - start;
 }
 
 /**
@@ -2280,8 +2258,6 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 void OscilloscopeWindow::RefreshAllFilters()
 {
-	double start = GetTime();
-
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		f->SetDirty();
@@ -2340,8 +2316,6 @@ void OscilloscopeWindow::RefreshAllFilters()
 	//Update statistic displays after the filter graph update is complete
 	for(auto g : m_waveformGroups)
 		g->RefreshMeasurements();
-
-	m_tDecode += GetTime() - start;
 }
 
 void OscilloscopeWindow::UpdateStatusBar()

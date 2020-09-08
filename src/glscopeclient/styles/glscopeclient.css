@@ -72,7 +72,8 @@ button
 	color:				@glscopeclient_text_color;
 }
 
-button:disabled
+button:disabled,
+button label:disabled
 {
 	color:				@glscopeclient_inactive_text_color;
 }
@@ -107,6 +108,29 @@ entry:disabled
 {
 	background-image:	none;
 	background-color:	@glscopeclient_inactive_color;
+}
+
+#invalidfilter
+{
+	background-color:	#400000;
+	color:				@glscopeclient_text_color
+}
+
+#validfilter
+{
+	background-color:	#004000;
+	color:				@glscopeclient_text_color
+}
+
+#activefilter
+{
+	background-color:	#003000;
+}
+
+selection
+{
+	background-color: #6699aa;
+	background-image: none;
 }
 
 /***********************************************************************************************************************

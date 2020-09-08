@@ -69,6 +69,10 @@ public:
 
 	bool Validate(std::vector<std::string> headers);
 
+	std::string Evaluate(
+		const Gtk::TreeRow& row,
+		ProtocolAnalyzerColumns& cols);
+
 	enum
 	{
 		TYPE_IDENTIFIER,
@@ -82,6 +86,8 @@ public:
 	std::string m_string;
 	float m_number;
 	ProtocolDisplayFilter* m_expression;
+
+	size_t m_cachedIndex;
 };
 
 class ProtocolDisplayFilter
@@ -95,6 +101,13 @@ public:
 	static void EatSpaces(std::string str, size_t& i);
 
 	bool Validate(std::vector<std::string> headers);
+
+	bool Match(
+		const Gtk::TreeRow& row,
+		ProtocolAnalyzerColumns& cols);
+	std::string Evaluate(
+		const Gtk::TreeRow& row,
+		ProtocolAnalyzerColumns& cols);
 
 protected:
 	std::vector<ProtocolDisplayFilterClause*> m_clauses;

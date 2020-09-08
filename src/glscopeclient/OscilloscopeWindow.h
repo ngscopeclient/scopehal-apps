@@ -271,11 +271,6 @@ public:
 	void SerializeWaveforms(IDTable& table);
 
 	//Performance counters
-	double m_tAcquire;
-	double m_tDecode;
-	double m_tView;
-	double m_tHistory;
-	double m_tPoll;
 	int64_t m_totalWaveforms;
 
 	//WFM/s performance info

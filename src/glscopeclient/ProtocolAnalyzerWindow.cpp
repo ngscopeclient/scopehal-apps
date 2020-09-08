@@ -59,7 +59,11 @@ ProtocolDisplayFilter::ProtocolDisplayFilter(string str, size_t& i)
 		string tmp;
 		while(i < str.length())
 		{
-			if(isalnum(str[i]) || isspace(str[i]) || (str[i] == '\"') || (str[i] == '(') || (str[i] == ')') )
+			if(isspace(str[i]) || (str[i] == '\"') || (str[i] == '(') || (str[i] == ')') )
+				break;
+
+			//An alphanumeric character after an operator other than text terminates it
+			if( (tmp != "") && !isalnum(tmp[0]) && isalnum(str[i]) )
 				break;
 
 			tmp += str[i];
@@ -88,8 +92,16 @@ bool ProtocolDisplayFilter::Validate(vector<string> headers)
 	//Operators must make sense. For now only equal/unequal and boolean and/or allowed
 	for(auto op : m_operators)
 	{
-		if( (op != "==") && (op != "!=") && (op != "||") && (op != "&&"))
+		if( (op != "==") &&
+			(op != "!=") &&
+			(op != "||") &&
+			(op != "&&") &&
+			(op != "startswith") &&
+			(op != "contains")
+		)
+		{
 			return false;
+		}
 	}
 
 	//If any clause is invalid, we're invalid
@@ -115,6 +127,54 @@ void ProtocolDisplayFilter::EatSpaces(string str, size_t& i)
 		i++;
 }
 
+bool ProtocolDisplayFilter::Match(
+	const Gtk::TreeRow& row,
+	ProtocolAnalyzerColumns& cols)
+{
+	return Evaluate(row, cols) != "0";
+}
+
+std::string ProtocolDisplayFilter::Evaluate(
+	const Gtk::TreeRow& row,
+	ProtocolAnalyzerColumns& cols)
+{
+	//Calling code checks for validity so no need to verify here
+
+	//For now, all operators have equal precedence and are evaluated left to right.
+	string current = m_clauses[0]->Evaluate(row, cols);
+	for(size_t i=1; i<m_clauses.size(); i++)
+	{
+		string rhs = m_clauses[i]->Evaluate(row, cols);
+		string op = m_operators[i-1];
+
+		bool a = (current != "0");
+		bool b = (rhs != "0");
+
+		//== and != do exact string equality checks
+		bool temp = false;
+		if(op == "==")
+			temp = (current == rhs);
+		else if(op == "!=")
+			temp = (current != rhs);
+
+		//&& and || do boolean operations
+		else if(op == "&&")
+			temp = (a && b);
+		else if(op == "||")
+			temp = (a || b);
+
+		//String prefix
+		else if(op == "startswith")
+			temp = (current.find(rhs) == 0);
+		else if(op == "contains")
+			temp = (current.find(rhs) != string::npos);
+
+		//done, convert back to string
+		current = temp ? "1" : "0";
+	}
+	return current;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProtocolDisplayFilterClause
 
@@ -124,6 +184,8 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 
 	m_number = 0;
 	m_expression = 0;
+
+	m_cachedIndex = 0;
 
 	//Parenthetical expression
 	if(str[i] == '(')
@@ -193,6 +255,33 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 	}
 }
 
+string ProtocolDisplayFilterClause::Evaluate(
+	const Gtk::TreeRow& row,
+	ProtocolAnalyzerColumns& cols)
+{
+	char tmp[32];
+
+	switch(m_type)
+	{
+		case TYPE_IDENTIFIER:
+			return (Glib::ustring)row[cols.m_headers[m_cachedIndex]];
+
+		case TYPE_STRING:
+			return m_string;
+
+		case TYPE_NUMBER:
+			snprintf(tmp, sizeof(tmp), "%f", m_number);
+			return tmp;
+
+		case TYPE_EXPRESSION:
+			return m_expression->Evaluate(row, cols);
+
+		case TYPE_ERROR:
+		default:
+			return "NaN";
+	}
+}
+
 ProtocolDisplayFilterClause::~ProtocolDisplayFilterClause()
 {
 	if(m_expression)
@@ -209,10 +298,23 @@ bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
 		//If we're an identifier, we must be a valid header field
 		//TODO: support comparisons on data
 		case TYPE_IDENTIFIER:
-			for(auto str : headers)
+			for(size_t i=0; i<headers.size(); i++)
 			{
-				if(str == m_identifier)
+				//Match, removing spaces from header names if needed
+				string h;
+				string header = headers[i];
+				for(size_t j=0; j<header.length(); j++)
+				{
+					char ch = header[j];
+					if(!isspace(ch))
+						h += ch;
+				}
+
+				if(h == m_identifier)
+				{
+					m_cachedIndex = i;
 					return true;
+				}
 			}
 
 			return false;
@@ -336,6 +438,11 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 
 	m_updating = true;
 
+	//Get ready to filter new packets
+	size_t j = 0;
+	ProtocolDisplayFilter filter(m_filterBox.get_text(), j);
+	bool filtering = filter.Validate(m_decoder->GetHeaders());
+
 	Packet* first_packet_in_group = NULL;
 	Gtk::TreeModel::iterator last_top_row = m_model->children().end();
 
@@ -357,6 +464,9 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 			last_top_row = *m_internalmodel->append();
 			FillOutRow(*last_top_row, parent_packet, data, headers);
 			delete parent_packet;
+
+			//Default to not being shown
+			(*last_top_row)[m_columns.m_visible] = false;
 		}
 
 		//End a merge group
@@ -375,8 +485,29 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 
 		//Populate the row
 		FillOutRow(*row, p, data, headers);
-		//m_tree.get_selection()->select(*row);
+
+		//Check against filters
+		if(filtering)
+		{
+			bool visible = filter.Match(*row, m_columns);
+			(*row)[m_columns.m_visible] = visible;
+
+			//Show expandable rows if at least one is visible
+			if(visible && first_packet_in_group != NULL)
+				(*last_top_row)[m_columns.m_visible] = true;
+		}
+		else
+		{
+			(*row)[m_columns.m_visible] = true;
+
+			//If not filtering, show the parent row
+			if(first_packet_in_group != NULL)
+				(*last_top_row)[m_columns.m_visible] = true;
+		}
 	}
+
+	//TODO: select the last row
+	//m_tree.get_selection()->select(*m);
 
 	//auto scroll to bottom
 	auto adj = m_scroller.get_vadjustment();
@@ -413,7 +544,6 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
 	row[m_columns.m_offset] = p->m_offset;
-	row[m_columns.m_visible] = true;
 
 	//Just copy headers without any processing
 	for(size_t i=0; i<headers.size(); i++)
@@ -507,13 +637,36 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
 
 	//If filter is invalid, can't do anything!
-	if(!filter.Validate(m_decoder->GetHeaders()))
+	auto headers = m_decoder->GetHeaders();
+	if(!filter.Validate(headers))
 		return;
 
-	//TODO
+	auto children = m_internalmodel->children();
+	for(auto row : children)
+	{
+		//No children? Filter this row
+		auto rowchildren = row->children();
+		if(rowchildren.empty())
+			row[m_columns.m_visible] = filter.Match(row, m_columns);
+
+		//Children? Visible if any child is visible
+		else
+		{
+			row[m_columns.m_visible] = false;
+			for(auto child : children)
+			{
+				if(filter.Match(child, m_columns))
+				{
+					row[m_columns.m_visible] = true;
+					break;
+				}
+			}
+		}
+	}
 
 	//Done
-	m_filterBox.override_background_color(Gdk::RGBA("#101010"));
+	m_filterBox.set_name("activefilter");
+	m_filterApplyButton.set_sensitive(false);
 }
 
 void ProtocolAnalyzerWindow::OnFilterChanged()
@@ -523,7 +676,13 @@ void ProtocolAnalyzerWindow::OnFilterChanged()
 	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
 
 	if(filter.Validate(m_decoder->GetHeaders()))
-		m_filterBox.override_background_color(Gdk::RGBA("#004000"));
+	{
+		m_filterBox.set_name("validfilter");
+		m_filterApplyButton.set_sensitive();
+	}
 	else
-		m_filterBox.override_background_color(Gdk::RGBA("#400000"));
+	{
+		m_filterBox.set_name("invalidfilter");
+		m_filterApplyButton.set_sensitive(false);
+	}
 }
