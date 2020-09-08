@@ -676,7 +676,7 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 		else
 		{
 			row[m_columns.m_visible] = false;
-			for(auto child : children)
+			for(auto child : rowchildren)
 			{
 				if(filter.Match(child, m_columns))
 				{
