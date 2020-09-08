@@ -56,6 +56,51 @@ public:
 	Gtk::TreeModelColumn<bool>							m_visible;
 };
 
+class ProtocolDisplayFilter;
+
+class ProtocolDisplayFilterClause
+{
+public:
+	ProtocolDisplayFilterClause(std::string str, size_t& i);
+	ProtocolDisplayFilterClause(const ProtocolDisplayFilterClause&) =delete;
+	ProtocolDisplayFilterClause& operator=(const ProtocolDisplayFilterClause&) =delete;
+
+	virtual ~ProtocolDisplayFilterClause();
+
+	bool Validate(std::vector<std::string> headers);
+
+	enum
+	{
+		TYPE_IDENTIFIER,
+		TYPE_STRING,
+		TYPE_NUMBER,
+		TYPE_EXPRESSION,
+		TYPE_ERROR
+	} m_type;
+
+	std::string m_identifier;
+	std::string m_string;
+	float m_number;
+	ProtocolDisplayFilter* m_expression;
+};
+
+class ProtocolDisplayFilter
+{
+public:
+	ProtocolDisplayFilter(std::string str, size_t& i);
+	ProtocolDisplayFilter(const ProtocolDisplayFilterClause&) =delete;
+	ProtocolDisplayFilter& operator=(const ProtocolDisplayFilter&) =delete;
+	virtual ~ProtocolDisplayFilter();
+
+	static void EatSpaces(std::string str, size_t& i);
+
+	bool Validate(std::vector<std::string> headers);
+
+protected:
+	std::vector<ProtocolDisplayFilterClause*> m_clauses;
+	std::vector<std::string> m_operators;
+};
+
 /**
 	@brief Window containing a protocol analyzer
  */
@@ -73,10 +118,17 @@ protected:
 	PacketDecoder* m_decoder;
 	WaveformArea* m_area;
 
+	void OnApplyFilter();
+	void OnFilterChanged();
+
+	Gtk::HBox m_filterRow;
+		Gtk::Entry m_filterBox;
+		Gtk::Button m_filterApplyButton;
+
 	Gtk::ScrolledWindow m_scroller;
 		Gtk::TreeView m_tree;
-	Glib::RefPtr<Gtk::TreeStore> m_model;
-	Glib::RefPtr<Gtk::TreeModelFilter> m_filtermodel;
+	Glib::RefPtr<Gtk::TreeStore> m_internalmodel;
+	Glib::RefPtr<Gtk::TreeModelFilter> m_model;
 	ProtocolAnalyzerColumns m_columns;
 
 	void OnSelectionChanged();

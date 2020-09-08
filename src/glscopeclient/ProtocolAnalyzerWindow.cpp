@@ -40,6 +40,193 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ProtocolDisplayFilter
+
+ProtocolDisplayFilter::ProtocolDisplayFilter(string str, size_t& i)
+{
+	//One or more clauses separated by operators
+	while(i < str.length())
+	{
+		//Read the clause
+		m_clauses.push_back(new ProtocolDisplayFilterClause(str, i));
+
+		//Remove spaces before the operator
+		EatSpaces(str, i);
+		if( (i >= str.length()) || (str[i] == ')') )
+			break;
+
+		//Read the operator, if any
+		string tmp;
+		while(i < str.length())
+		{
+			if(isalnum(str[i]) || isspace(str[i]) || (str[i] == '\"') || (str[i] == '(') || (str[i] == ')') )
+				break;
+
+			tmp += str[i];
+			i++;
+		}
+		m_operators.push_back(tmp);
+	}
+}
+
+ProtocolDisplayFilter::~ProtocolDisplayFilter()
+{
+	for(auto c : m_clauses)
+		delete c;
+}
+
+bool ProtocolDisplayFilter::Validate(vector<string> headers)
+{
+	//No clauses? error
+	if(m_clauses.empty())
+		return false;
+
+	//We should always have one more clause than operator
+	if( (m_operators.size() + 1) != m_clauses.size())
+		return false;
+
+	//Operators must make sense. For now only equal/unequal and boolean and/or allowed
+	for(auto op : m_operators)
+	{
+		if( (op != "==") && (op != "!=") && (op != "||") && (op != "&&"))
+			return false;
+	}
+
+	//If any clause is invalid, we're invalid
+	for(auto c : m_clauses)
+	{
+		if(!c->Validate(headers))
+			return false;
+	}
+
+	//A single literal is not a legal filter, it has to be compared to something
+	if(m_clauses.size() == 1)
+	{
+		if(m_clauses[0]->m_type != ProtocolDisplayFilterClause::TYPE_EXPRESSION)
+			return false;
+	}
+
+	return true;
+}
+
+void ProtocolDisplayFilter::EatSpaces(string str, size_t& i)
+{
+	while( (i < str.length()) && isspace(str[i]) )
+		i++;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ProtocolDisplayFilterClause
+
+ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
+{
+	ProtocolDisplayFilter::EatSpaces(str, i);
+
+	m_number = 0;
+	m_expression = 0;
+
+	//Parenthetical expression
+	if(str[i] == '(')
+	{
+		i++;
+		m_type = TYPE_EXPRESSION;
+		m_expression = new ProtocolDisplayFilter(str, i);
+
+		//eat trailing spaces
+		ProtocolDisplayFilter::EatSpaces(str, i);
+
+		//expect closing parentheses
+		if(str[i] != ')')
+			m_type = TYPE_ERROR;
+		i++;
+	}
+
+	//Quoted string
+	else if(str[i] == '\"')
+	{
+		m_type = TYPE_STRING;
+		i++;
+
+		while( (i < str.length()) && (str[i] != '\"') )
+		{
+			m_string += str[i];
+			i++;
+		}
+
+		if(str[i] != '\"')
+			m_type = TYPE_ERROR;
+
+		i++;
+	}
+
+	//Number
+	else if(isdigit(str[i]) || (str[i] == '-') || (str[i] == '.') )
+	{
+		m_type = TYPE_NUMBER;
+
+		string tmp;
+		while( (i < str.length()) && (isdigit(str[i]) || (str[i] == '-')  || (str[i] == '.') ) )
+		{
+			tmp += str[i];
+			i++;
+		}
+
+		m_number = atof(tmp.c_str());
+	}
+
+	//Identifier
+	else
+	{
+		m_type = TYPE_IDENTIFIER;
+
+		while( (i < str.length()) && isalnum(str[i]) )
+		{
+			m_identifier += str[i];
+			i++;
+		}
+
+		if(m_identifier == "")
+		{
+			i++;
+			m_type = TYPE_ERROR;
+		}
+	}
+}
+
+ProtocolDisplayFilterClause::~ProtocolDisplayFilterClause()
+{
+	if(m_expression)
+		delete m_expression;
+}
+
+bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
+{
+	switch(m_type)
+	{
+		case TYPE_ERROR:
+			return false;
+
+		//If we're an identifier, we must be a valid header field
+		//TODO: support comparisons on data
+		case TYPE_IDENTIFIER:
+			for(auto str : headers)
+			{
+				if(str == m_identifier)
+					return true;
+			}
+
+			return false;
+
+		//If we're an expression, it must be valid
+		case TYPE_EXPRESSION:
+			return m_expression->Validate(headers);
+
+		default:
+			return true;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProtocolAnalyzerColumns
 
 ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
@@ -84,10 +271,10 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	set_default_size(1024, 600);
 
 	//Set up the tree view
-	m_model = Gtk::TreeStore::create(m_columns);
-	m_filtermodel = Gtk::TreeModelFilter::create(m_model);
-	m_tree.set_model(m_filtermodel);
-	m_filtermodel->set_visible_column(m_columns.m_visible);
+	m_internalmodel = Gtk::TreeStore::create(m_columns);
+	m_model = Gtk::TreeModelFilter::create(m_internalmodel);
+	m_tree.set_model(m_model);
+	m_model->set_visible_column(m_columns.m_visible);
 
 	//Add the columns
 	m_tree.append_column("Time", m_columns.m_timestamp);
@@ -113,8 +300,16 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 
 	m_tree.get_selection()->signal_changed().connect(
 		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnSelectionChanged));
+	m_filterApplyButton.signal_clicked().connect(
+		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnApplyFilter));
+	m_filterBox.signal_changed().connect(
+		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnFilterChanged));
 
 	//Set up the widgets
+	get_vbox()->pack_start(m_filterRow, Gtk::PACK_SHRINK);
+		m_filterRow.pack_start(m_filterBox, Gtk::PACK_EXPAND_WIDGET);
+		m_filterRow.pack_start(m_filterApplyButton, Gtk::PACK_SHRINK);
+			m_filterApplyButton.set_label("Apply");
 	get_vbox()->pack_start(m_scroller, Gtk::PACK_EXPAND_WIDGET);
 		m_scroller.add(m_tree);
 			m_tree.get_selection()->set_mode(Gtk::SELECTION_BROWSE);
@@ -159,7 +354,7 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 			auto parent_packet = m_decoder->CreateMergedHeader(p);
 
 			//Add it
-			last_top_row = *m_model->append();
+			last_top_row = *m_internalmodel->append();
 			FillOutRow(*last_top_row, parent_packet, data, headers);
 			delete parent_packet;
 		}
@@ -171,16 +366,16 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		//Create a row for the new packet. This might be top level or under a merge group
 		Gtk::TreeModel::iterator row;
 		if(first_packet_in_group != NULL)
-			row = m_model->append(last_top_row->children());
+			row = m_internalmodel->append(last_top_row->children());
 		else
 		{
-			row = m_model->append();
+			row = m_internalmodel->append();
 			last_top_row = row;
 		}
 
 		//Populate the row
 		FillOutRow(*row, p, data, headers);
-		m_tree.get_selection()->select(*row);
+		//m_tree.get_selection()->select(*row);
 	}
 
 	//auto scroll to bottom
@@ -289,7 +484,7 @@ void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 {
 	//This always happens from the start of time, so just remove from the beginning of our list
 	//until we have nothing that matches.
-	auto children = m_model->children();
+	auto children = m_internalmodel->children();
 	while(!children.empty())
 	{
 		//Stop if the timestamp is before our first point
@@ -301,6 +496,34 @@ void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 			break;
 
 		//Remove it
-		m_model->erase(it);
+		m_internalmodel->erase(it);
 	}
+}
+
+void ProtocolAnalyzerWindow::OnApplyFilter()
+{
+	//Parse the filter
+	size_t i = 0;
+	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
+
+	//If filter is invalid, can't do anything!
+	if(!filter.Validate(m_decoder->GetHeaders()))
+		return;
+
+	//TODO
+
+	//Done
+	m_filterBox.override_background_color(Gdk::RGBA("#101010"));
+}
+
+void ProtocolAnalyzerWindow::OnFilterChanged()
+{
+	//Parse the filter
+	size_t i = 0;
+	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
+
+	if(filter.Validate(m_decoder->GetHeaders()))
+		m_filterBox.override_background_color(Gdk::RGBA("#004000"));
+	else
+		m_filterBox.override_background_color(Gdk::RGBA("#400000"));
 }
