@@ -86,6 +86,7 @@ public:
 	std::string m_string;
 	float m_number;
 	ProtocolDisplayFilter* m_expression;
+	bool m_invert;
 
 	size_t m_cachedIndex;
 };

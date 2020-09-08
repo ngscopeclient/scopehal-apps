@@ -184,12 +184,27 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 
 	m_number = 0;
 	m_expression = 0;
+	m_invert = false;
 
 	m_cachedIndex = 0;
 
 	//Parenthetical expression
-	if(str[i] == '(')
+	if( (str[i] == '(') || (str[i] == '!') )
 	{
+		//Inversion
+		if(str[i] == '!')
+		{
+			m_invert = true;
+			i++;
+
+			if(str[i] != '(')
+			{
+				m_type = TYPE_ERROR;
+				i++;
+				return;
+			}
+		}
+
 		i++;
 		m_type = TYPE_EXPRESSION;
 		m_expression = new ProtocolDisplayFilter(str, i);
@@ -274,7 +289,15 @@ string ProtocolDisplayFilterClause::Evaluate(
 			return tmp;
 
 		case TYPE_EXPRESSION:
-			return m_expression->Evaluate(row, cols);
+			if(m_invert)
+			{
+				if(m_expression->Evaluate(row, cols) == "1")
+					return "0";
+				else
+					return "1";
+			}
+			else
+				return m_expression->Evaluate(row, cols);
 
 		case TYPE_ERROR:
 		default:
