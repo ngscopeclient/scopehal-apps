@@ -858,6 +858,8 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 	{
 		m_decodeDialog->ConfigureDecoder();
 		m_parent->RefreshAllFilters();
+
+		SetGeometryDirty();
 		queue_draw();
 	}
 
@@ -889,6 +891,7 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	m_pendingDecode->Refresh();
+	SetGeometryDirty();
 
 	//Create a new waveform view for the generated signal
 	if(!m_pendingDecode->IsOverlay())
