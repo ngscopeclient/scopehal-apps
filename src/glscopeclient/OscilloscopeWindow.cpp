@@ -246,6 +246,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			m_menu.append(m_channelsMenuItem);
 				m_channelsMenuItem.set_label("Add");
 				m_channelsMenuItem.set_submenu(m_channelsMenu);
+			m_menu.append(m_windowMenuItem);
+				m_windowMenuItem.set_label("Window");
+				m_windowMenuItem.set_submenu(m_windowMenu);
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
 			m_vbox.get_style_context()->add_class("toolbar");
 			m_toolbox.pack_start(m_toolbar, Gtk::PACK_EXPAND_WIDGET);
@@ -334,16 +337,6 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 			auto type = chan->GetType();
 
-			//Add a menu item - but not for the external trigger(s)
-			if(type != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
-			{
-				item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
-				item->signal_activate().connect(
-					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
-						StreamDescriptor(chan, 0) ));
-				m_channelsMenu.append(*item);
-			}
-
 			//Enable all channels to save time when setting up the client
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
@@ -375,8 +368,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 		m_setupTriggerMenu.append(*item);
 	}
 
-	m_channelsMenu.show_all();
+	//Reconfigure menus
+	RefreshChannelsMenu();
 
+	//History isn't shown by default
 	for(auto it : m_historyWindows)
 		it.second->hide();
 
@@ -467,9 +462,6 @@ void OscilloscopeWindow::CloseSession()
 	auto children = m_setupTriggerMenu.get_children();
 	for(auto c : children)
 		m_setupTriggerMenu.remove(*c);
-	children = m_channelsMenu.get_children();
-	for(auto c : children)
-		m_channelsMenu.remove(*c);
 
 	//Purge our list of scopes (the app will delete them)
 	m_scopes.clear();
@@ -607,6 +599,9 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 			}
 		}
 	}
+
+	//Reconfigure menus
+	RefreshChannelsMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -2479,4 +2474,34 @@ void OscilloscopeWindow::OnHaltConditions()
 {
 	m_haltConditionsDialog.show();
 	m_haltConditionsDialog.RefreshChannels();
+}
+
+void OscilloscopeWindow::RefreshChannelsMenu()
+{
+	//Remove the old items
+	auto children = m_channelsMenu.get_children();
+	for(auto c : children)
+		m_channelsMenu.remove(*c);
+
+	//Add new ones
+	for(auto scope : m_scopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			auto type = chan->GetType();
+
+			//Add a menu item - but not for the external trigger(s)
+			if(type != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			{
+				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+				item->signal_activate().connect(
+					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
+						StreamDescriptor(chan, 0) ));
+				m_channelsMenu.append(*item);
+			}
+		}
+	}
+
+	m_channelsMenu.show_all();
 }

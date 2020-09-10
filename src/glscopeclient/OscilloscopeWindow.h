@@ -167,6 +167,8 @@ protected:
 							Gtk::RadioMenuItem m_eyeColorKRainItem;
 							Gtk::RadioMenuItem m_eyeColorRainbowItem;
 							Gtk::RadioMenuItem m_eyeColorViridisItem;
+			Gtk::MenuItem m_windowMenuItem;
+				Gtk::Menu m_windowMenu;
 		Gtk::HBox m_toolbox;
 			Gtk::Toolbar m_toolbar;
 				Gtk::ToolButton m_btnStart;
@@ -236,6 +238,9 @@ public:
 	void OnTimebaseSettings();
 	void OnScopeSync();
 	void OnHaltConditions();
+
+	//Reconfigure menus
+	void RefreshChannelsMenu();
 
 	//Protocol decoding etc
 	void RefreshAllFilters();

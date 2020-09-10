@@ -356,6 +356,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					if(dialog.run() == Gtk::RESPONSE_OK)
 					{
 						dialog.ConfigureChannel();
+						m_parent->RefreshChannelsMenu();	//update the menu with the channel's new name
 						queue_draw();
 					}
 				}
