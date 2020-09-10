@@ -110,8 +110,8 @@ void main()
 		float starty;
 		float endy;
 
-		//If we are very near the left edge, draw vertical line
-		if(abs(left.x - gl_GlobalInvocationID.x) <= 1)
+		//If we are very near the right edge, draw vertical line
+		if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
 		{
 			starty = left.y;
 			endy = right.y;
@@ -120,8 +120,8 @@ void main()
 		//otherwise draw a single pixel
 		else
 		{
-			starty = right.y;
-			endy = right.y;
+			starty = left.y;
+			endy = left.y;
 		}
 
 		//Clip to window size

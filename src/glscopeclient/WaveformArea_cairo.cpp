@@ -455,9 +455,9 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			double last_end = textright;
 			for(size_t i=0; i<olen; i++)
 			{
-				if(data->m_offsets[i] < start_samples)
+				if(data->m_offsets[i] + data->m_durations[i] < start_samples)
 					continue;
-				if(data->m_offsets[i] + data->m_durations[i] > end_samples)
+				if(data->m_offsets[i] > end_samples)
 					continue;
 
 				double start = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
