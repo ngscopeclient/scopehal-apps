@@ -64,6 +64,19 @@ ParameterRowString::~ParameterRowString()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ParameterRowEnum
+
+ParameterRowEnum::ParameterRowEnum(FilterDialog* parent)
+	: ParameterRowBase(parent)
+{
+	m_box.set_size_request(500, 1);
+}
+
+ParameterRowEnum::~ParameterRowEnum()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilename
 
 ParameterRowFilename::ParameterRowFilename(FilterDialog* parent, FilterParameter& param)
@@ -284,6 +297,27 @@ FilterDialog::FilterDialog(
 				}
 				break;
 
+			case FilterParameter::TYPE_ENUM:
+				{
+					auto row = new ParameterRowEnum(this);
+					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+					m_grid.attach_next_to(row->m_box, row->m_label, Gtk::POS_RIGHT, 1, 1);
+					last_label = &row->m_label;
+					m_prows.push_back(row);
+
+					row->m_label.set_label(it->first);
+
+					//Populate box
+					vector<string> names;
+					it->second.GetEnumValues(names);
+					for(auto name : names)
+						row->m_box.append(name);
+
+					//Set initial value
+					row->m_box.set_active_text(it->second.ToString());
+				}
+				break;
+
 			default:
 				{
 					auto row = new ParameterRowString(this);
@@ -332,12 +366,17 @@ void FilterDialog::ConfigureDecoder()
 	{
 		auto row = m_prows[i];
 		auto srow = dynamic_cast<ParameterRowString*>(row);
+		auto erow = dynamic_cast<ParameterRowEnum*>(row);
 		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
 		auto name = row->m_label.get_label();
 
 		//Strings are easy
 		if(srow)
 			m_filter->GetParameter(name).ParseString(srow->m_entry.get_text());
+
+		//Enums
+		else if(erow)
+			m_filter->GetParameter(name).ParseString(erow->m_box.get_active_text());
 
 		//List of file names
 		else if(frow)

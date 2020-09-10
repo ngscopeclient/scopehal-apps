@@ -57,8 +57,8 @@ public:
 	ParameterRowBase(FilterDialog* parent);
 	virtual ~ParameterRowBase();
 
-	FilterDialog*	m_parent;
-	Gtk::Label				m_label;
+	FilterDialog*		m_parent;
+	Gtk::Label			m_label;
 };
 
 class ParameterRowString : public ParameterRowBase
@@ -67,7 +67,16 @@ public:
 	ParameterRowString(FilterDialog* parent);
 	virtual ~ParameterRowString();
 
-	Gtk::Entry					m_entry;
+	Gtk::Entry			m_entry;
+};
+
+class ParameterRowEnum : public ParameterRowBase
+{
+public:
+	ParameterRowEnum(FilterDialog* parent);
+	virtual ~ParameterRowEnum();
+
+	Gtk::ComboBoxText	m_box;
 };
 
 class ParameterRowFilename : public ParameterRowString
@@ -88,9 +97,9 @@ public:
 	ParameterRowFilenames(FilterDialog* parent, FilterParameter& param);
 	virtual ~ParameterRowFilenames();
 
-	Gtk::ListViewText				m_list;
-	Gtk::Button						m_buttonAdd;
-	Gtk::Button						m_buttonRemove;
+	Gtk::ListViewText	m_list;
+	Gtk::Button			m_buttonAdd;
+	Gtk::Button			m_buttonRemove;
 
 	void OnAdd();
 	void OnRemove();
