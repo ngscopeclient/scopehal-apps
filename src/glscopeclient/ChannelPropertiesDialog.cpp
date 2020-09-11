@@ -47,6 +47,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	: Gtk::Dialog(string("Channel properties"), *parent, Gtk::DIALOG_MODAL)
 	, m_groupList(1)
 	, m_chan(chan)
+	, m_hasThreshold(false)
+	, m_hasHysteresis(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -117,6 +119,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				m_thresholdEntry.set_text(volts.PrettyPrint(scope->GetDigitalThreshold(index)));
 
 				anchorLabel = &m_thresholdLabel;
+
+				m_hasThreshold = true;
 			}
 
 			if(scope->IsDigitalHysteresisConfigurable())
@@ -129,6 +133,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				m_hysteresisEntry.set_text(volts.PrettyPrint(scope->GetDigitalHysteresis(index)));
 
 				anchorLabel = &m_hysteresisLabel;
+
+				m_hasHysteresis = true;
 			}
 
 			//See what else is in the bank
@@ -168,10 +174,16 @@ void ChannelPropertiesDialog::ConfigureChannel()
 	m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
 
+	Unit volts(Unit::UNIT_VOLTS);
+
+	if(m_hasThreshold)
+		m_chan->SetDigitalThreshold(volts.ParseString(m_thresholdEntry.get_text()));
+
+	if(m_hasHysteresis)
+		m_chan->SetDigitalHysteresis(volts.ParseString(m_hysteresisEntry.get_text()));
+
 	Unit ps(Unit::UNIT_PS);
 	m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
-
-	//TODO
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

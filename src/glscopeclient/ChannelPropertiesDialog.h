@@ -71,6 +71,9 @@ protected:
 			Gtk::ListViewText m_groupList;
 
 	OscilloscopeChannel* m_chan;
+
+	bool m_hasThreshold;
+	bool m_hasHysteresis;
 };
 
 #endif
