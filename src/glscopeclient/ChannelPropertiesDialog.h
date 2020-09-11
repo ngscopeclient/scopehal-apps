@@ -49,6 +49,8 @@ public:
 
 protected:
 	Gtk::Grid m_grid;
+
+		//General properties shared by everything
 		Gtk::Label m_scopeNameLabel;
 			Gtk::Label m_scopeNameEntry;
 		Gtk::Label m_channelNameLabel;
@@ -59,6 +61,14 @@ protected:
 			Gtk::ColorButton m_channelColorButton;
 		Gtk::Label m_deskewLabel;
 			Gtk::Entry m_deskewEntry;
+
+		//Logic channel configuration
+		Gtk::Label m_thresholdLabel;
+			Gtk::Entry m_thresholdEntry;
+		Gtk::Label m_hysteresisLabel;
+			Gtk::Entry m_hysteresisEntry;
+		Gtk::Label m_groupLabel;
+			Gtk::ListViewText m_groupList;
 
 	OscilloscopeChannel* m_chan;
 };

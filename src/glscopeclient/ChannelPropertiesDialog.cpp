@@ -45,6 +45,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	OscilloscopeWindow* parent,
 	OscilloscopeChannel* chan)
 	: Gtk::Dialog(string("Channel properties"), *parent, Gtk::DIALOG_MODAL)
+	, m_groupList(1)
 	, m_chan(chan)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
@@ -84,6 +85,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
 		//Deskew - only on physical analog channels for now
+		Gtk::Label* anchorLabel = &m_channelColorLabel;
 		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
 		{
 			m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -93,6 +95,61 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 
 			Unit unit(Unit::UNIT_PS);
 			m_deskewEntry.set_text(unit.PrettyPrint(chan->GetDeskew()));
+
+			anchorLabel = &m_deskewLabel;
+		}
+
+		//Logic properties - only on physical digital channels
+		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
+		{
+			auto scope = chan->GetScope();
+			auto index = chan->GetIndex();
+
+			Unit volts(Unit::UNIT_VOLTS);
+
+			if(scope->IsDigitalThresholdConfigurable())
+			{
+				m_grid.attach_next_to(m_thresholdLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+						m_thresholdLabel.set_text("Threshold");
+					m_thresholdLabel.set_halign(Gtk::ALIGN_START);
+				m_grid.attach_next_to(m_thresholdEntry, m_thresholdLabel, Gtk::POS_RIGHT, 1, 1);
+
+				m_thresholdEntry.set_text(volts.PrettyPrint(scope->GetDigitalThreshold(index)));
+
+				anchorLabel = &m_thresholdLabel;
+			}
+
+			if(scope->IsDigitalHysteresisConfigurable())
+			{
+				m_grid.attach_next_to(m_hysteresisLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+					m_hysteresisLabel.set_text("Hysteresis");
+					m_hysteresisLabel.set_halign(Gtk::ALIGN_START);
+				m_grid.attach_next_to(m_hysteresisEntry, m_hysteresisLabel, Gtk::POS_RIGHT, 1, 1);
+
+				m_hysteresisEntry.set_text(volts.PrettyPrint(scope->GetDigitalHysteresis(index)));
+
+				anchorLabel = &m_hysteresisLabel;
+			}
+
+			//See what else is in the bank
+			auto bank = scope->GetDigitalBank(index);
+			if(bank.size() > 1)
+			{
+				m_grid.attach_next_to(m_groupLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+					m_groupLabel.set_text("Bank");
+					m_groupLabel.set_halign(Gtk::ALIGN_START);
+				m_grid.attach_next_to(m_groupList, m_groupLabel, Gtk::POS_RIGHT, 1, 1);
+
+				for(auto c : bank)
+				{
+					if(c == chan)
+						continue;
+
+					m_groupList.append(c->m_displayname.c_str());
+				}
+
+				m_groupList.set_headers_visible(false);
+			}
 		}
 
 	show_all();
@@ -111,8 +168,10 @@ void ChannelPropertiesDialog::ConfigureChannel()
 	m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
 
-	Unit unit(Unit::UNIT_PS);
-	m_chan->SetDeskew(unit.ParseString(m_deskewEntry.get_text()));
+	Unit ps(Unit::UNIT_PS);
+	m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+
+	//TODO
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
