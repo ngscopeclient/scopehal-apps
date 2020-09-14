@@ -247,27 +247,27 @@ void WaveformArea::CreateWidgets()
 		m_triggerItem.set_submenu(m_triggerMenu);
 			m_risingTriggerItem.set_label("Rising edge");
 			m_risingTriggerItem.signal_activate().connect(
-				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
 					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					Oscilloscope::TRIGGER_TYPE_RISING,
+					EdgeTrigger::EDGE_RISING,
 					&m_risingTriggerItem));
 			m_risingTriggerItem.set_group(m_triggerGroup);
 			m_triggerMenu.append(m_risingTriggerItem);
 
 			m_fallingTriggerItem.set_label("Falling edge");
 			m_fallingTriggerItem.signal_activate().connect(
-				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
 					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					Oscilloscope::TRIGGER_TYPE_FALLING,
+					EdgeTrigger::EDGE_FALLING,
 					&m_fallingTriggerItem));
 			m_fallingTriggerItem.set_group(m_triggerGroup);
 			m_triggerMenu.append(m_fallingTriggerItem);
 
 			m_bothTriggerItem.set_label("Both edges");
 			m_bothTriggerItem.signal_activate().connect(
-				sigc::bind<Oscilloscope::TriggerType, Gtk::RadioMenuItem*>(
+				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
 					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					Oscilloscope::TRIGGER_TYPE_CHANGE,
+					EdgeTrigger::EDGE_ANY,
 					&m_bothTriggerItem));
 			m_bothTriggerItem.set_group(m_triggerGroup);
 			m_triggerMenu.append(m_bothTriggerItem);

@@ -37,6 +37,7 @@
 
 #include "WaveformGroup.h"
 #include "FilterDialog.h"
+#include "EdgeTrigger.h"
 
 /**
 	@brief Slightly more capable rectangle class
@@ -292,7 +293,7 @@ protected:
 	void OnHide();
 	void OnTogglePersistence();
 
-	void OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item);
+	void OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item);
 	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item);
 	void OnAttenuation(double atten, Gtk::RadioMenuItem* item);

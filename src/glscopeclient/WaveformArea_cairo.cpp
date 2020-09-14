@@ -204,9 +204,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	if(m_channel.m_channel->IsPhysicalChannel())
 	{
 		auto scope = m_channel.m_channel->GetScope();
-		if(m_channel.m_channel->GetIndex() == scope->GetTriggerChannelIndex())
+		auto trig = scope->GetTrigger();
+		if( (trig != NULL) && (trig->GetInput(0) == m_channel) )
 		{
-			float v = m_channel.m_channel->GetScope()->GetTriggerVoltage();
+			float v = trig->GetLevel();
 			float y = VoltsToYPosition(v);
 
 			float trisize = 5;

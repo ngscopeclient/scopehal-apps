@@ -2320,21 +2320,20 @@ void OscilloscopeWindow::UpdateStatusBar()
 
 	//TODO: redo this for multiple scopes
 	auto scope = m_scopes[0];
+	auto trig = scope->GetTrigger();
+	if(!trig)
+		return;
+
 	char tmp[256];
-	size_t trig_idx = scope->GetTriggerChannelIndex();
-	OscilloscopeChannel* chan = scope->GetChannel(trig_idx);
+	auto chan = trig->GetInput(0).m_channel;
 	if(chan == NULL)
 	{
-		LogWarning("Trigger channel (index %zu) is NULL\n", trig_idx);
+		LogWarning("Trigger channel is NULL\n");
 		return;
 	}
 	string name = chan->GetHwname();
-	float voltage = scope->GetTriggerVoltage();
-	if(voltage < 1)
-		snprintf(tmp, sizeof(tmp), "%s %.0f mV", name.c_str(), voltage*1000);
-	else
-		snprintf(tmp, sizeof(tmp), "%s %.3f V", name.c_str(), voltage);
-	m_triggerConfigLabel.set_label(tmp);
+	Unit volts(Unit::UNIT_VOLTS);
+	m_triggerConfigLabel.set_label(volts.PrettyPrint(trig->GetLevel()));
 
 	//Update WFM/s counter
 	if(m_lastWaveformTimes.size() >= 2)

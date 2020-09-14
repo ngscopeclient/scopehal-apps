@@ -273,7 +273,11 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 	//Set trigger to external
 	page->m_progressBar.set_text("Configure trigger source");
-	scope->SetTriggerChannelIndex(scope->GetExternalTrigger()->GetIndex());
+	auto trig = new EdgeTrigger(scope);
+	trig->SetInput(0, StreamDescriptor(scope->GetExternalTrigger(), 0));
+	trig->SetType(EdgeTrigger::EDGE_RISING);
+	trig->SetLevel(0.25);	//hard coded 250 mV threshold for now
+	scope->SetTrigger(trig);
 
 	//Set reference clock to external
 	page->m_progressBar.set_text("Configure reference clock");

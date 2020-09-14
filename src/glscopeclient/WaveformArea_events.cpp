@@ -397,7 +397,10 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_TRIGGER:
 			if(event->button == 1)
 			{
-				m_channel.m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
+				auto scope = m_channel.m_channel->GetScope();
+				auto trig = scope->GetTrigger();
+				trig->SetLevel(YPositionToVolts(event->y));
+				scope->PushTrigger();
 				m_parent->ClearAllPersistence();
 				queue_draw();
 			}
@@ -527,9 +530,14 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	{
 		//Trigger drag - update level and refresh
 		case DRAG_TRIGGER:
-			m_channel.m_channel->GetScope()->SetTriggerVoltage(YPositionToVolts(event->y));
-			m_parent->ClearAllPersistence();
-			queue_draw();
+			{
+				auto scope = m_channel.m_channel->GetScope();
+				auto trig = scope->GetTrigger();
+				trig->SetLevel(YPositionToVolts(event->y));
+				scope->PushTrigger();
+				m_parent->ClearAllPersistence();
+				queue_draw();
+			}
 			break;
 
 		case DRAG_CURSOR_0:
@@ -967,15 +975,20 @@ void WaveformArea::OnAttenuation(double atten, Gtk::RadioMenuItem* item)
 	m_selectedChannel.m_channel->SetAttenuation(atten);
 }
 
-void WaveformArea::OnTriggerMode(Oscilloscope::TriggerType type, Gtk::RadioMenuItem* item)
+void WaveformArea::OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
 	auto scope = m_channel.m_channel->GetScope();
-	scope->SetTriggerChannelIndex(m_channel.m_channel->GetIndex());
-	scope->SetTriggerType(type);
+	auto trig = dynamic_cast<EdgeTrigger*>(scope->GetTrigger());
+	if(!trig)
+		return;
+	trig->SetInput(0, m_channel);
+	trig->SetType(type);
+	scope->PushTrigger();
+
 	m_parent->ClearAllPersistence();
 }
 
@@ -1049,10 +1062,10 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	{
 		//On the trigger button?
 		auto scope = m_channel.m_channel->GetScope();
-		if((scope != NULL) &&
-			(m_channel.m_channel->GetIndex() == scope->GetTriggerChannelIndex()) )
+		auto trig = scope->GetTrigger();
+		if( (scope != NULL) && (trig != NULL) && (m_channel == trig->GetInput(0)) )
 		{
-			float vy = VoltsToYPosition(scope->GetTriggerVoltage());
+			float vy = VoltsToYPosition(trig->GetLevel());
 			float radius = 20;
 			if(x < (m_plotRight + radius) )
 			{
@@ -1248,7 +1261,8 @@ void WaveformArea::UpdateContextMenu()
 				break;
 		}
 
-		if(m_channel.m_channel->GetScope()->GetTriggerChannelIndex() != m_channel.m_channel->GetIndex())
+		auto trig = m_channel.m_channel->GetScope()->GetTrigger();
+		if( (trig == NULL) || (trig->GetInput(0) != m_channel) )
 		{
 			m_risingTriggerItem.set_inconsistent(true);
 			m_fallingTriggerItem.set_inconsistent(true);
@@ -1268,23 +1282,27 @@ void WaveformArea::UpdateContextMenu()
 			m_fallingTriggerItem.set_draw_as_radio(true);
 			m_bothTriggerItem.set_draw_as_radio(true);
 
-			switch(m_channel.m_channel->GetScope()->GetTriggerType())
+			auto et = dynamic_cast<EdgeTrigger*>(trig);
+			if(et)
 			{
-				case Oscilloscope::TRIGGER_TYPE_RISING:
-					m_risingTriggerItem.set_active();
-					break;
+				switch(et->GetType())
+				{
+					case EdgeTrigger::EDGE_RISING:
+						m_risingTriggerItem.set_active();
+						break;
 
-				case Oscilloscope::TRIGGER_TYPE_FALLING:
-					m_fallingTriggerItem.set_active();
-					break;
+					case EdgeTrigger::EDGE_FALLING:
+						m_fallingTriggerItem.set_active();
+						break;
 
-				case Oscilloscope::TRIGGER_TYPE_CHANGE:
-					m_bothTriggerItem.set_active();
-					break;
+					case EdgeTrigger::EDGE_ANY:
+						m_bothTriggerItem.set_active();
+						break;
 
-				//unsupported trigger
-				default:
-					break;
+					//unsupported trigger
+					default:
+						break;
+				}
 			}
 		}
 	}
