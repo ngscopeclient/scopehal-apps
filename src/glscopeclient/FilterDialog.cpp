@@ -41,8 +41,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowBase
 
-ParameterRowBase::ParameterRowBase(FilterDialog* parent)
-: m_parent(parent)
+ParameterRowBase::ParameterRowBase()
 {
 }
 
@@ -53,8 +52,7 @@ ParameterRowBase::~ParameterRowBase()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowString
 
-ParameterRowString::ParameterRowString(FilterDialog* parent)
-	: ParameterRowBase(parent)
+ParameterRowString::ParameterRowString()
 {
 	m_entry.set_size_request(500, 1);
 }
@@ -66,8 +64,7 @@ ParameterRowString::~ParameterRowString()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowEnum
 
-ParameterRowEnum::ParameterRowEnum(FilterDialog* parent)
-	: ParameterRowBase(parent)
+ParameterRowEnum::ParameterRowEnum()
 {
 	m_box.set_size_request(500, 1);
 }
@@ -79,8 +76,8 @@ ParameterRowEnum::~ParameterRowEnum()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilename
 
-ParameterRowFilename::ParameterRowFilename(FilterDialog* parent, FilterParameter& param)
-	: ParameterRowString(parent)
+ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param)
+	: m_parent(parent)
 	, m_param(param)
 {
 	m_button.set_label("...");
@@ -113,8 +110,8 @@ void ParameterRowFilename::OnBrowser()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilenames
 
-ParameterRowFilenames::ParameterRowFilenames(FilterDialog* parent, FilterParameter& param)
-	: ParameterRowBase(parent)
+ParameterRowFilenames::ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param)
+	: m_parent(parent)
 	, m_list(1)
 	, m_param(param)
 {
@@ -256,84 +253,7 @@ FilterDialog::FilterDialog(
 
 	//Add parameters
 	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
-	{
-		switch(it->second.GetType())
-		{
-			case FilterParameter::TYPE_FILENAME:
-				{
-					auto row = new ParameterRowFilename(this, it->second);
-					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-					m_grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-					m_grid.attach_next_to(row->m_button, row->m_entry, Gtk::POS_RIGHT, 1, 1);
-					last_label = &row->m_label;
-					m_prows.push_back(row);
-
-					row->m_label.set_label(it->first);
-
-					//Set initial value
-					row->m_entry.set_text(it->second.ToString());
-					break;
-				}
-				break;
-
-			case FilterParameter::TYPE_FILENAMES:
-				{
-					auto row = new ParameterRowFilenames(this, it->second);
-					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 2);
-					m_grid.attach_next_to(row->m_list, row->m_label, Gtk::POS_RIGHT, 1, 2);
-					m_grid.attach_next_to(row->m_buttonAdd, row->m_list, Gtk::POS_RIGHT, 1, 1);
-					m_grid.attach_next_to(row->m_buttonRemove, row->m_buttonAdd, Gtk::POS_BOTTOM, 1, 1);
-					last_label = &row->m_label;
-					m_prows.push_back(row);
-
-					row->m_label.set_label(it->first);
-
-					//Set initial value
-					auto files = it->second.GetFileNames();
-					for(auto f : files)
-						row->m_list.append(f);
-
-					break;
-				}
-				break;
-
-			case FilterParameter::TYPE_ENUM:
-				{
-					auto row = new ParameterRowEnum(this);
-					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-					m_grid.attach_next_to(row->m_box, row->m_label, Gtk::POS_RIGHT, 1, 1);
-					last_label = &row->m_label;
-					m_prows.push_back(row);
-
-					row->m_label.set_label(it->first);
-
-					//Populate box
-					vector<string> names;
-					it->second.GetEnumValues(names);
-					for(auto name : names)
-						row->m_box.append(name);
-
-					//Set initial value
-					row->m_box.set_active_text(it->second.ToString());
-				}
-				break;
-
-			default:
-				{
-					auto row = new ParameterRowString(this);
-					m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-					m_grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-					last_label = &row->m_label;
-					m_prows.push_back(row);
-
-					row->m_label.set_label(it->first);
-
-					//Set initial value
-					row->m_entry.set_text(it->second.ToString());
-					break;
-				}
-		}
-	}
+		m_prows.push_back(CreateRow(m_grid, it->first, it->second, last_label, this));
 	show_all();
 }
 
@@ -341,9 +261,122 @@ FilterDialog::~FilterDialog()
 {
 	for(auto r : m_rows)
 		delete r;
+	m_rows.clear();
 	for(auto r : m_prows)
 		delete r;
-	m_rows.clear();
+	m_prows.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI glue
+
+/**
+	@brief Adds a row to the dialog for a given parameter
+
+	TODO: move this to common base class or something?
+ */
+ParameterRowBase* FilterDialog::CreateRow(
+	Gtk::Grid& grid,
+	string name,
+	FilterParameter& param,
+	Gtk::Widget*& last_label,
+	Gtk::Dialog* parent)
+{
+	int width = 100;
+
+	switch(param.GetType())
+	{
+		case FilterParameter::TYPE_FILENAME:
+			{
+				auto row = new ParameterRowFilename(parent, param);
+				if(!last_label)
+					grid.attach(row->m_label, 0, 0, 1, 1);
+				else
+					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+				row->m_label.set_size_request(width, 1);
+
+				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_button, row->m_entry, Gtk::POS_RIGHT, 1, 1);
+				last_label = &row->m_label;
+
+				row->m_label.set_label(name);
+
+				//Set initial value
+				row->m_entry.set_text(param.ToString());
+
+				return row;
+			}
+
+		case FilterParameter::TYPE_FILENAMES:
+			{
+				auto row = new ParameterRowFilenames(parent, param);
+				if(!last_label)
+					grid.attach(row->m_label, 0, 0, 1, 1);
+				else
+					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+				row->m_label.set_size_request(width, 1);
+
+				grid.attach_next_to(row->m_list, row->m_label, Gtk::POS_RIGHT, 1, 2);
+				grid.attach_next_to(row->m_buttonAdd, row->m_list, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_buttonRemove, row->m_buttonAdd, Gtk::POS_BOTTOM, 1, 1);
+				last_label = &row->m_label;
+
+				row->m_label.set_label(name);
+
+				//Set initial value
+				auto files = param.GetFileNames();
+				for(auto f : files)
+					row->m_list.append(f);
+
+				return row;
+			}
+
+		case FilterParameter::TYPE_ENUM:
+			{
+				auto row = new ParameterRowEnum;
+				if(!last_label)
+					grid.attach(row->m_label, 0, 0, 1, 1);
+				else
+					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+				row->m_label.set_size_request(width, 1);
+
+				grid.attach_next_to(row->m_box, row->m_label, Gtk::POS_RIGHT, 1, 1);
+				last_label = &row->m_label;
+
+				row->m_label.set_label(name);
+
+				//Populate box
+				vector<string> names;
+				param.GetEnumValues(names);
+				for(auto ename : names)
+					row->m_box.append(ename);
+
+				//Set initial value
+				row->m_box.set_active_text(param.ToString());
+
+				return row;
+			}
+
+		default:
+			{
+				auto row = new ParameterRowString;
+				if(!last_label)
+					grid.attach(row->m_label, 0, 0, 1, 1);
+				else
+					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+				row->m_label.set_size_request(width, 1);
+
+				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
+				last_label = &row->m_label;
+
+				row->m_label.set_label(name);
+
+				//Set initial value
+				row->m_entry.set_text(param.ToString());
+
+				return row;
+			}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

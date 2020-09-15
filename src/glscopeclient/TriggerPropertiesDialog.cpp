@@ -52,43 +52,55 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 
 	char buf[128];
 
-	get_vbox()->pack_start(m_scopeNameBox, Gtk::PACK_SHRINK);
-		m_scopeNameBox.pack_start(m_scopeNameLabel, Gtk::PACK_SHRINK);
+	get_vbox()->pack_start(m_grid, Gtk::PACK_SHRINK);
+
+	//Scope information
+	m_grid.attach(m_scopeNameLabel, 0, 0, 1, 1);
 		m_scopeNameLabel.set_text("Scope");
-		m_scopeNameBox.pack_start(m_scopeNameEntry, Gtk::PACK_EXPAND_WIDGET);
-		m_scopeNameLabel.set_size_request(150, 1);
-		m_scopeNameLabel.set_halign(Gtk::ALIGN_START);
-		m_scopeNameEntry.set_halign(Gtk::ALIGN_START);
-		snprintf(buf, sizeof(buf), "%s (%s, serial %s)",
-			scope->m_nickname.c_str(),
-			scope->GetName().c_str(),
-			scope->GetSerial().c_str());
-		m_scopeNameEntry.set_text(buf);
+			m_scopeNameLabel.set_halign(Gtk::ALIGN_START);
+			m_scopeNameLabel.set_size_request(100, 1);
+		m_grid.attach_next_to(m_scopeNameEntry, m_scopeNameLabel, Gtk::POS_RIGHT, 1, 1);
+			m_scopeNameEntry.set_halign(Gtk::ALIGN_START);
+			snprintf(buf, sizeof(buf), "%s (%s, serial %s)",
+				scope->m_nickname.c_str(),
+				scope->GetName().c_str(),
+				scope->GetSerial().c_str());
+			m_scopeNameEntry.set_text(buf);
 
-	/*
-	get_vbox()->pack_start(m_channelNameBox, Gtk::PACK_SHRINK);
-		m_channelNameBox.pack_start(m_channelNameLabel, Gtk::PACK_SHRINK);
-		m_channelNameLabel.set_text("Trigger");
-		m_channelNameBox.pack_start(m_channelNameEntry, Gtk::PACK_EXPAND_WIDGET);
-		m_channelNameLabel.set_size_request(150, 1);
-		m_channelNameLabel.set_halign(Gtk::ALIGN_START);
-		m_channelNameEntry.set_text(chan->GetHwname());
-		m_channelNameEntry.set_halign(Gtk::ALIGN_START);
+	//List of trigger types
+	m_grid.attach_next_to(m_triggerTypeLabel, m_scopeNameLabel, Gtk::POS_BOTTOM, 1, 1);
+		m_triggerTypeLabel.set_text("Trigger Type");
+		m_grid.attach_next_to(m_triggerTypeBox, m_triggerTypeLabel, Gtk::POS_RIGHT, 1, 1);
+			auto types = scope->GetTriggerTypes();
+			for(auto t : types)
+				m_triggerTypeBox.append(t);
+			auto trig = scope->GetTrigger();
+			if(trig)
+				m_triggerTypeBox.set_active_text(trig->GetTriggerDisplayName());
+			m_triggerTypeBox.signal_changed().connect(
+				sigc::mem_fun(*this, &TriggerPropertiesDialog::OnTriggerTypeChanged));
 
-	get_vbox()->pack_start(m_channelDisplayNameBox, Gtk::PACK_SHRINK);
-			m_channelDisplayNameBox.pack_start(m_channelDisplayNameLabel, Gtk::PACK_SHRINK);
-			m_channelDisplayNameLabel.set_text("Display name");
-			m_channelDisplayNameBox.pack_start(m_channelDisplayNameEntry, Gtk::PACK_EXPAND_WIDGET);
-			m_channelDisplayNameLabel.set_size_request(150, 1);
-			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-			m_channelDisplayNameEntry.set_text(chan->m_displayname);
-	*/
+	//Actual content
+	get_vbox()->pack_start(m_contentGrid, Gtk::PACK_SHRINK);
+	AddRows(trig);
+
 	show_all();
 }
 
 TriggerPropertiesDialog::~TriggerPropertiesDialog()
 {
+	Clear();
+}
 
+void TriggerPropertiesDialog::Clear()
+{
+	auto children = m_contentGrid.get_children();
+	for(auto c : children)
+		m_contentGrid.remove(*c);
+
+	for(auto r : m_prows)
+		delete r;
+	m_prows.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,3 +113,35 @@ void TriggerPropertiesDialog::ConfigureTrigger()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
+
+void TriggerPropertiesDialog::OnTriggerTypeChanged()
+{
+	//Remove the old trigger stuff
+	Clear();
+
+	//See what type the new trigger is
+	auto type = m_triggerTypeBox.get_active_text();
+
+	//If it's the same trigger type currently set on the scope, load UI with those settings
+	auto current_trig = m_scope->GetTrigger();
+	if(current_trig->GetTriggerDisplayName() == type)
+		AddRows(current_trig);
+
+	//Nope, create a new trigger
+	else
+	{
+		auto temp_trig = Trigger::CreateTrigger(type, m_scope);
+		temp_trig->SetLevel(current_trig->GetLevel());
+		AddRows(temp_trig);
+		delete temp_trig;
+	}
+}
+
+void TriggerPropertiesDialog::AddRows(Trigger* trig)
+{
+	Gtk::Widget* last_label = NULL;
+	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
+		m_prows.push_back(FilterDialog::CreateRow(m_contentGrid, it->first, it->second, last_label, this));
+
+	m_contentGrid.show_all();
+}

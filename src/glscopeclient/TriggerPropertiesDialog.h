@@ -36,6 +36,8 @@
 #ifndef TriggerPropertiesDialog_h
 #define TriggerPropertiesDialog_h
 
+#include "FilterDialog.h"
+
 /**
 	@brief Dialog for configuring trigger settings for a scope
  */
@@ -48,20 +50,21 @@ public:
 	void ConfigureTrigger();
 
 protected:
-	Gtk::HBox m_scopeNameBox;
-		Gtk::Label m_scopeNameLabel;
-		Gtk::Label m_scopeNameEntry;
+	void OnTriggerTypeChanged();
+	void AddRows(Trigger* trig);
 
-	/*
-	Gtk::HBox m_channelNameBox;
-		Gtk::Label m_channelNameLabel;
-		Gtk::Label m_channelNameEntry;
-	Gtk::HBox m_channelDisplayNameBox;
-		Gtk::Label m_channelDisplayNameLabel;
-		Gtk::Entry m_channelDisplayNameEntry;
-	*/
+	void Clear();
+
+	Gtk::Grid m_grid;
+		Gtk::Label m_scopeNameLabel;
+			Gtk::Label m_scopeNameEntry;
+		Gtk::Label m_triggerTypeLabel;
+			Gtk::ComboBoxText m_triggerTypeBox;
+	Gtk::Grid m_contentGrid;
 
 	Oscilloscope* m_scope;
+
+	std::vector<ParameterRowBase*> m_prows;
 };
 
 #endif

@@ -1550,6 +1550,7 @@ void OscilloscopeWindow::OnAlphaChanged()
 
 void OscilloscopeWindow::OnTriggerProperties(Oscilloscope* scope)
 {
+	//TODO: make this dialog modeless
 	TriggerPropertiesDialog dlg(this, scope);
 	if(Gtk::RESPONSE_OK != dlg.run())
 		return;

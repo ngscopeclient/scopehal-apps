@@ -54,17 +54,16 @@ class FilterDialog;
 class ParameterRowBase
 {
 public:
-	ParameterRowBase(FilterDialog* parent);
+	ParameterRowBase();
 	virtual ~ParameterRowBase();
 
-	FilterDialog*		m_parent;
 	Gtk::Label			m_label;
 };
 
 class ParameterRowString : public ParameterRowBase
 {
 public:
-	ParameterRowString(FilterDialog* parent);
+	ParameterRowString();
 	virtual ~ParameterRowString();
 
 	Gtk::Entry			m_entry;
@@ -73,7 +72,7 @@ public:
 class ParameterRowEnum : public ParameterRowBase
 {
 public:
-	ParameterRowEnum(FilterDialog* parent);
+	ParameterRowEnum();
 	virtual ~ParameterRowEnum();
 
 	Gtk::ComboBoxText	m_box;
@@ -82,11 +81,12 @@ public:
 class ParameterRowFilename : public ParameterRowString
 {
 public:
-	ParameterRowFilename(FilterDialog* parent, FilterParameter& param);
+	ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param);
 	virtual ~ParameterRowFilename();
 
 	void OnBrowser();
 
+	Gtk::Dialog*		m_parent;
 	Gtk::Button			m_button;
 	FilterParameter& 	m_param;
 };
@@ -94,8 +94,10 @@ public:
 class ParameterRowFilenames : public ParameterRowBase
 {
 public:
-	ParameterRowFilenames(FilterDialog* parent, FilterParameter& param);
+	ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param);
 	virtual ~ParameterRowFilenames();
+
+	Gtk::Dialog*		m_parent;
 
 	Gtk::ListViewText	m_list;
 	Gtk::Button			m_buttonAdd;
@@ -117,6 +119,13 @@ public:
 	virtual ~FilterDialog();
 
 	void ConfigureDecoder();
+
+	static ParameterRowBase* CreateRow(
+		Gtk::Grid& grid,
+		std::string name,
+		FilterParameter& param,
+		Gtk::Widget*& last_label,
+		Gtk::Dialog* parent);
 
 protected:
 	Filter* m_filter;
