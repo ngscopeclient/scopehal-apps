@@ -127,6 +127,9 @@ public:
 		Gtk::Widget*& last_label,
 		Gtk::Dialog* parent);
 
+	static void ConfigureInputs(FlowGraphNode* node, std::vector<ChannelSelectorRow*>& rows);
+	static void ConfigureParameters(FlowGraphNode* node, std::vector<ParameterRowBase*>& rows);
+
 protected:
 	Filter* m_filter;
 

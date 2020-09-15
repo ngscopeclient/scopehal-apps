@@ -98,8 +98,11 @@ void TriggerPropertiesDialog::Clear()
 	for(auto c : children)
 		m_contentGrid.remove(*c);
 
+	for(auto r : m_rows)
+		delete r;
 	for(auto r : m_prows)
 		delete r;
+	m_rows.clear();
 	m_prows.clear();
 }
 
@@ -108,7 +111,15 @@ void TriggerPropertiesDialog::Clear()
 
 void TriggerPropertiesDialog::ConfigureTrigger()
 {
-	//m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
+	//Create the trigger
+	auto trig = Trigger::CreateTrigger(m_triggerTypeBox.get_active_text(), m_scope);
+
+	//Hook up the input(s)
+	FilterDialog::ConfigureInputs(trig, m_rows);
+	FilterDialog::ConfigureParameters(trig, m_prows);
+
+	//and feed it to the scope
+	m_scope->SetTrigger(trig);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,7 +142,11 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 	else
 	{
 		auto temp_trig = Trigger::CreateTrigger(type, m_scope);
+
+		//Copy level and first input from the current trigger
 		temp_trig->SetLevel(current_trig->GetLevel());
+		temp_trig->SetInput(0, current_trig->GetInput(0));
+
 		AddRows(temp_trig);
 		delete temp_trig;
 	}
@@ -140,6 +155,48 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 void TriggerPropertiesDialog::AddRows(Trigger* trig)
 {
 	Gtk::Widget* last_label = NULL;
+
+	//Add inputs
+	for(size_t i=0; i<trig->GetInputCount(); i++)
+	{
+		//Add the row
+		auto row = new ChannelSelectorRow;
+		if(last_label)
+			m_contentGrid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
+		else
+		{
+			m_contentGrid.attach(row->m_label, 0, 0, 1, 1);
+			last_label = &row->m_label;
+		}
+		m_contentGrid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
+		m_rows.push_back(row);
+		last_label = &row->m_label;
+
+		auto cur_in = trig->GetInput(i);
+
+		//Label is just the channel name
+		row->m_label.set_label(trig->GetInputName(i));
+
+		//Fill the channel list with all channels that are legal to use here.
+		//They must be from the current instrument, so don't bother checking others.
+		//TODO: multiple streams
+		for(size_t k=0; k<m_scope->GetChannelCount(); k++)
+		{
+			auto c = StreamDescriptor(m_scope->GetChannel(k), 0);
+			if(trig->ValidateChannel(i, c))
+			{
+				auto name = c.m_channel->m_displayname;
+				row->m_chans.append(name);
+				row->m_chanptrs[name] = c;
+
+				if(c == cur_in)
+					row->m_chans.set_active_text(name);
+			}
+		}
+
+	}
+
+	//Add parameters
 	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
 		m_prows.push_back(FilterDialog::CreateRow(m_contentGrid, it->first, it->second, last_label, this));
 

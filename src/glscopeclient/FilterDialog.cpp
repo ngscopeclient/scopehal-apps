@@ -388,38 +388,8 @@ void FilterDialog::ConfigureDecoder()
 	string old_name = m_filter->m_displayname;
 	bool default_name = (m_filter->GetHwname() == old_name);
 
-	for(size_t i=0; i<m_rows.size(); i++)
-	{
-		auto chname = m_rows[i]->m_chans.get_active_text();
-		m_filter->SetInput(i, m_rows[i]->m_chanptrs[chname]);
-	}
-
-	//Extract file names
-	for(size_t i=0; i<m_prows.size(); i++)
-	{
-		auto row = m_prows[i];
-		auto srow = dynamic_cast<ParameterRowString*>(row);
-		auto erow = dynamic_cast<ParameterRowEnum*>(row);
-		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
-		auto name = row->m_label.get_label();
-
-		//Strings are easy
-		if(srow)
-			m_filter->GetParameter(name).ParseString(srow->m_entry.get_text());
-
-		//Enums
-		else if(erow)
-			m_filter->GetParameter(name).ParseString(erow->m_box.get_active_text());
-
-		//List of file names
-		else if(frow)
-		{
-			vector<string> paths;
-			for(size_t j=0; j<frow->m_list.size(); j++)
-				paths.push_back(frow->m_list.get_text(j));
-			m_filter->GetParameter(name).SetFileNames(paths);
-		}
-	}
+	ConfigureInputs(m_filter, m_rows);
+	ConfigureParameters(m_filter, m_prows);
 
 	m_filter->m_displaycolor = m_channelColorButton.get_color().to_string();
 
@@ -430,6 +400,44 @@ void FilterDialog::ConfigureDecoder()
 	auto dname = m_channelDisplayNameEntry.get_text();
 	if( (dname != "") && (!default_name || (old_name != dname)) )
 		m_filter->m_displayname = dname;
+}
+
+void FilterDialog::ConfigureInputs(FlowGraphNode* node, vector<ChannelSelectorRow*>& rows)
+{
+	//Hook up input(s)
+	for(size_t i=0; i<rows.size(); i++)
+	{
+		auto chname = rows[i]->m_chans.get_active_text();
+		node->SetInput(i, rows[i]->m_chanptrs[chname]);
+	}
+}
+
+void FilterDialog::ConfigureParameters(FlowGraphNode* node, vector<ParameterRowBase*>& rows)
+{
+	for(auto row : rows)
+	{
+		auto srow = dynamic_cast<ParameterRowString*>(row);
+		auto erow = dynamic_cast<ParameterRowEnum*>(row);
+		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
+		auto name = row->m_label.get_label();
+
+		//Strings are easy
+		if(srow)
+			node->GetParameter(name).ParseString(srow->m_entry.get_text());
+
+		//Enums
+		else if(erow)
+			node->GetParameter(name).ParseString(erow->m_box.get_active_text());
+
+		//List of file names
+		else if(frow)
+		{
+			vector<string> paths;
+			for(size_t j=0; j<frow->m_list.size(); j++)
+				paths.push_back(frow->m_list.get_text(j));
+			node->GetParameter(name).SetFileNames(paths);
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
