@@ -36,7 +36,6 @@
 #include "WaveformArea.h"
 #include "OscilloscopeWindow.h"
 #include <random>
-#include "ProfileBlock.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
@@ -638,8 +637,6 @@ void WaveformArea::CleanupGLHandles()
 
 void WaveformArea::InitializeWaveformPass()
 {
-	//ProfileBlock pb("Load waveform shaders");
-
 	ComputeShader dwc;
 	if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
 		LogFatal("failed to load digital waveform compute shader, aborting\n");
@@ -657,8 +654,6 @@ void WaveformArea::InitializeWaveformPass()
 
 void WaveformArea::InitializeColormapPass()
 {
-	//ProfileBlock pb("Load colormap shaders");
-
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
@@ -739,8 +734,6 @@ void WaveformArea::InitializeEyePass()
 
 void WaveformArea::InitializePersistencePass()
 {
-	//ProfileBlock pb("Load persistence shaders");
-
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;

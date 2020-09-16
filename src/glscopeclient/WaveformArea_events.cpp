@@ -38,7 +38,6 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include <map>
-#include "ProfileBlock.h"
 #include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/Waterfall.h"

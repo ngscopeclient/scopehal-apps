@@ -39,7 +39,6 @@
 #include <random>
 #include <map>
 #include <immintrin.h>
-#include "ProfileBlock.h"
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/Waterfall.h"
 

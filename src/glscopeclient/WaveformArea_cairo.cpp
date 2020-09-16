@@ -43,7 +43,6 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include <map>
-#include "ProfileBlock.h"
 #include "../scopeprotocols/EyePattern.h"
 #include "../../lib/scopehal/WindowTrigger.h"
 
