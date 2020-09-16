@@ -45,6 +45,7 @@
 #include <map>
 #include "ProfileBlock.h"
 #include "../scopeprotocols/EyePattern.h"
+#include "../../lib/scopehal/WindowTrigger.h"
 
 using namespace std;
 using namespace glm;
@@ -207,64 +208,78 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 		auto trig = scope->GetTrigger();
 		if( (trig != NULL) && (trig->GetInput(0) == m_channel) )
 		{
-			float v = trig->GetLevel();
-			float y = VoltsToYPosition(v);
+			//Main arrow
+			RenderTriggerArrow(cr, trig->GetLevel(), (m_dragState == DRAG_TRIGGER), color );
 
-			float trisize = 5;
-
-			//Dragging? Arrow follows mouse
-			if(m_dragState == DRAG_TRIGGER)
-			{
-				cr->set_source_rgba(1, 0, 0, 1);
-				y = m_cursorY;
-			}
-
-			else
-			{
-				cr->set_source_rgba(
-					color.get_red_p(),
-					color.get_green_p(),
-					color.get_blue_p(),
-					1);
-				cr->set_line_width(1);
-				float x = m_plotRight + trisize*2;
-
-				//If the trigger is outside the displayed area, clip to the edge of the displayed area
-				//and display an "out of range" symbol
-				float tbottom = m_height - trisize;
-				float ttop = trisize;
-				if(y > tbottom)
-				{
-					y = tbottom;
-
-					cr->move_to(x,					y - trisize);
-					cr->line_to(x,					y + trisize);
-					cr->line_to(x - trisize*0.5,	y);
-					cr->move_to(x,					y + trisize);
-					cr->line_to(x + trisize*0.5,	y);
-					cr->stroke();
-				}
-				else if(y < ttop)
-				{
-					y = ttop;
-
-					cr->move_to(x,					y + trisize);
-					cr->line_to(x,					y - trisize);
-					cr->line_to(x - trisize*0.5,	y);
-					cr->move_to(x,					y - trisize);
-					cr->line_to(x + trisize*0.5,	y);
-					cr->stroke();
-				}
-			}
-
-			cr->move_to(m_plotRight, y);
-			cr->line_to(m_plotRight + trisize, y + trisize);
-			cr->line_to(m_plotRight + trisize, y - trisize);
-			cr->fill();
+			//Secondary arrow for window trigger
+			auto wt = dynamic_cast<WindowTrigger*>(trig);
+			if(wt)
+				RenderTriggerArrow(cr, wt->GetLowerBound(), (m_dragState == DRAG_TRIGGER_SECONDARY), color );
 		}
 	}
 
 	cr->restore();
+}
+
+void WaveformArea::RenderTriggerArrow(
+	Cairo::RefPtr< Cairo::Context > cr,
+	float voltage,
+	bool dragging,
+	Gdk::Color color)
+{
+	float y = VoltsToYPosition(voltage);
+
+	float trisize = 5;
+
+	//Dragging? Arrow follows mouse
+	if(dragging)
+	{
+		cr->set_source_rgba(1, 0, 0, 1);
+		y = m_cursorY;
+	}
+
+	else
+	{
+		cr->set_source_rgba(
+			color.get_red_p(),
+			color.get_green_p(),
+			color.get_blue_p(),
+			1);
+		cr->set_line_width(1);
+		float x = m_plotRight + trisize*2;
+
+		//If the trigger is outside the displayed area, clip to the edge of the displayed area
+		//and display an "out of range" symbol
+		float tbottom = m_height - trisize;
+		float ttop = trisize;
+		if(y > tbottom)
+		{
+			y = tbottom;
+
+			cr->move_to(x,					y - trisize);
+			cr->line_to(x,					y + trisize);
+			cr->line_to(x - trisize*0.5,	y);
+			cr->move_to(x,					y + trisize);
+			cr->line_to(x + trisize*0.5,	y);
+			cr->stroke();
+		}
+		else if(y < ttop)
+		{
+			y = ttop;
+
+			cr->move_to(x,					y + trisize);
+			cr->line_to(x,					y - trisize);
+			cr->line_to(x - trisize*0.5,	y);
+			cr->move_to(x,					y - trisize);
+			cr->line_to(x + trisize*0.5,	y);
+			cr->stroke();
+		}
+	}
+
+	cr->move_to(m_plotRight, y);
+	cr->line_to(m_plotRight + trisize, y + trisize);
+	cr->line_to(m_plotRight + trisize, y - trisize);
+	cr->fill();
 }
 
 void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)

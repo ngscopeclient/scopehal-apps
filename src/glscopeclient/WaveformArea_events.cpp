@@ -37,11 +37,12 @@
 #include "WaveformArea.h"
 #include "OscilloscopeWindow.h"
 #include <random>
+#include <map>
 #include "ProfileBlock.h"
 #include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/Waterfall.h"
-#include <map>
+#include "../../lib/scopehal/WindowTrigger.h"
 
 using namespace std;
 using namespace glm;
@@ -306,6 +307,23 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 			}
 			break;
 
+		case LOC_TRIGGER_SECONDARY:
+			{
+				switch(event->button)
+				{
+					//Left
+					case 1:
+						m_dragState = DRAG_TRIGGER_SECONDARY;
+						queue_draw();
+						break;
+
+					default:
+						//LogDebug("Button %d pressed on trigger\n", event->button);
+						break;
+				}
+			}
+			break;
+
 		//Drag channel name
 		case LOC_CHAN_NAME:
 			{
@@ -401,6 +419,21 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				auto trig = scope->GetTrigger();
 				trig->SetLevel(YPositionToVolts(event->y));
 				scope->PushTrigger();
+				m_parent->ClearAllPersistence();
+				queue_draw();
+			}
+			break;
+
+		case DRAG_TRIGGER_SECONDARY:
+			if(event->button == 1)
+			{
+				auto scope = m_channel.m_channel->GetScope();
+				auto trig = dynamic_cast<WindowTrigger*>(scope->GetTrigger());
+				if(trig)
+				{
+					trig->SetLowerBound(YPositionToVolts(event->y));
+					scope->PushTrigger();
+				}
 				m_parent->ClearAllPersistence();
 				queue_draw();
 			}
@@ -529,13 +562,26 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	switch(m_dragState)
 	{
 		//Trigger drag - update level and refresh
+		//TODO: what happens if window trigger arrows cross?
 		case DRAG_TRIGGER:
 			{
 				auto scope = m_channel.m_channel->GetScope();
 				auto trig = scope->GetTrigger();
 				trig->SetLevel(YPositionToVolts(event->y));
 				scope->PushTrigger();
-				m_parent->ClearAllPersistence();
+				queue_draw();
+			}
+			break;
+
+		case DRAG_TRIGGER_SECONDARY:
+			{
+				auto scope = m_channel.m_channel->GetScope();
+				auto trig = dynamic_cast<WindowTrigger*>(scope->GetTrigger());
+				if(trig)
+				{
+					trig->SetLowerBound(YPositionToVolts(event->y));
+					scope->PushTrigger();
+				}
 				queue_draw();
 			}
 			break;
@@ -710,6 +756,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 						break;
 
 					case LOC_TRIGGER:
+					case LOC_TRIGGER_SECONDARY:
 						shape = "ns-resize";
 						break;
 
@@ -1078,6 +1125,25 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 					return LOC_TRIGGER;
 				if( (vy < 0) && (y < radius) )
 					return LOC_TRIGGER;
+			}
+
+			//Check if it's a window trigger (second arrow)
+			auto wt = dynamic_cast<WindowTrigger*>(trig);
+			if(wt)
+			{
+				vy = VoltsToYPosition(wt->GetLowerBound());
+				if(x < (m_plotRight + radius) )
+				{
+					//If on top of the trigger, obviously we're a hit
+					if(fabs(y - vy) < radius)
+						return LOC_TRIGGER_SECONDARY;
+
+					//but also check the edges of the plot if trigger is off scale
+					if( (vy > m_height) && (fabs(m_height - y) < radius) )
+						return LOC_TRIGGER_SECONDARY;
+					if( (vy < 0) && (y < radius) )
+						return LOC_TRIGGER_SECONDARY;
+				}
 			}
 		}
 

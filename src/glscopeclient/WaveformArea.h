@@ -376,6 +376,7 @@ protected:
 	void DoRenderCairoUnderlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderGrid(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderTriggerArrow(Cairo::RefPtr< Cairo::Context > cr, float voltage, bool dragging, Gdk::Color color);
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
@@ -457,6 +458,7 @@ protected:
 		LOC_PLOT,
 		LOC_VSCALE,
 		LOC_TRIGGER,
+		LOC_TRIGGER_SECONDARY,	//lower spot for window trigger or similar
 		LOC_CHAN_NAME,
 		LOC_XCURSOR_0,
 		LOC_XCURSOR_1
@@ -471,6 +473,7 @@ protected:
 	{
 		DRAG_NONE,
 		DRAG_TRIGGER,
+		DRAG_TRIGGER_SECONDARY,
 		DRAG_CURSOR_0,
 		DRAG_CURSOR_1,
 		DRAG_OFFSET,
