@@ -356,14 +356,19 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		int64_t timestamp = scope->GetTriggerOffset();
 		double x = (timestamp - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 
-		Gdk::Color color(scope->GetTrigger()->GetInput(0).m_channel->m_displaycolor);
-		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+		auto trig = scope->GetTrigger();
+		if(trig)
+		{
+			Gdk::Color color(trig->GetInput(0).m_channel->m_displaycolor);
+			cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
 
-		int size = 5;
-		cr->move_to(x-size, h-size);
-		cr->line_to(x,		h);
-		cr->line_to(x+size, h-size);
-		cr->fill();
+			int size = 5;
+			cr->move_to(x-size, h-size);
+			cr->line_to(x,		h);
+			cr->line_to(x+size, h-size);
+			cr->fill();
+		}
+
 	}
 }
 
