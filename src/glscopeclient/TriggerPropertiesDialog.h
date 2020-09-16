@@ -60,6 +60,8 @@ protected:
 			Gtk::Label m_scopeNameEntry;
 		Gtk::Label m_triggerTypeLabel;
 			Gtk::ComboBoxText m_triggerTypeBox;
+		Gtk::Label m_triggerOffsetLabel;
+			Gtk::Entry m_triggerOffsetEntry;
 	Gtk::Grid m_contentGrid;
 
 	Oscilloscope* m_scope;
