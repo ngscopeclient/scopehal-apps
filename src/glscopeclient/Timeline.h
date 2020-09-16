@@ -58,7 +58,7 @@ protected:
 
 	virtual void on_realize();
 
-	void Render(const Cairo::RefPtr<Cairo::Context>& cr);
+	void Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChannel* chan);
 
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,

@@ -181,21 +181,25 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 	//Figure out the units to use for the axis
 	auto children = m_group->m_waveformBox.get_children();
+	OscilloscopeChannel* chan = NULL;
 	if(!children.empty())
 	{
 		auto view = dynamic_cast<WaveformArea*>(children[0]);
 		if(view != NULL)
-			m_xAxisUnit = view->GetChannel().m_channel->GetXAxisUnits();
+		{
+			chan = view->GetChannel().m_channel;
+			m_xAxisUnit = chan->GetXAxisUnits();
+		}
 	}
 
 	//And actually draw the rest
-	Render(cr);
+	Render(cr, chan);
 
 	cr->restore();
 	return true;
 }
 
-void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr)
+void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChannel* chan)
 {
 	size_t w = get_width();
 	size_t h = get_height();
@@ -342,6 +346,24 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 			yellow,
 			true,
 			false);
+	}
+
+	//Draw trigger position for the first scope in the plot
+	//TODO: handle more than one scope
+	if(chan)
+	{
+		auto scope = chan->GetScope();
+		int64_t timestamp = scope->GetTriggerOffset();
+		double x = (timestamp - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+
+		Gdk::Color color(scope->GetTrigger()->GetInput(0).m_channel->m_displaycolor);
+		cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+
+		int size = 5;
+		cr->move_to(x-size, h-size);
+		cr->line_to(x,		h);
+		cr->line_to(x+size, h-size);
+		cr->fill();
 	}
 }
 
