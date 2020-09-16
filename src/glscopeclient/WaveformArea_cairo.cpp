@@ -44,7 +44,7 @@
 #include <random>
 #include <map>
 #include "../scopeprotocols/EyePattern.h"
-#include "../../lib/scopehal/WindowTrigger.h"
+#include "../../lib/scopehal/TwoLevelTrigger.h"
 
 using namespace std;
 using namespace glm;
@@ -210,8 +210,8 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 			//Main arrow
 			RenderTriggerArrow(cr, trig->GetLevel(), (m_dragState == DRAG_TRIGGER), color );
 
-			//Secondary arrow for window trigger
-			auto wt = dynamic_cast<WindowTrigger*>(trig);
+			//Secondary arrow for two-level triggers
+			auto wt = dynamic_cast<TwoLevelTrigger*>(trig);
 			if(wt)
 				RenderTriggerArrow(cr, wt->GetLowerBound(), (m_dragState == DRAG_TRIGGER_SECONDARY), color );
 		}

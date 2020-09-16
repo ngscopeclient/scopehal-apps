@@ -41,7 +41,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/Waterfall.h"
-#include "../../lib/scopehal/WindowTrigger.h"
+#include "../../lib/scopehal/TwoLevelTrigger.h"
 
 using namespace std;
 using namespace glm;
@@ -427,7 +427,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			if(event->button == 1)
 			{
 				auto scope = m_channel.m_channel->GetScope();
-				auto trig = dynamic_cast<WindowTrigger*>(scope->GetTrigger());
+				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
 					trig->SetLowerBound(YPositionToVolts(event->y));
@@ -575,7 +575,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_TRIGGER_SECONDARY:
 			{
 				auto scope = m_channel.m_channel->GetScope();
-				auto trig = dynamic_cast<WindowTrigger*>(scope->GetTrigger());
+				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
 					trig->SetLowerBound(YPositionToVolts(event->y));
@@ -1126,8 +1126,8 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 					return LOC_TRIGGER;
 			}
 
-			//Check if it's a window trigger (second arrow)
-			auto wt = dynamic_cast<WindowTrigger*>(trig);
+			//Check if it's a two-level trigger (second arrow)
+			auto wt = dynamic_cast<TwoLevelTrigger*>(trig);
 			if(wt)
 			{
 				vy = VoltsToYPosition(wt->GetLowerBound());
