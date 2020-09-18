@@ -1108,40 +1108,43 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	{
 		//On the trigger button?
 		auto scope = m_channel.m_channel->GetScope();
-		auto trig = scope->GetTrigger();
-		if( (scope != NULL) && (trig != NULL) && (m_channel == trig->GetInput(0)) )
+		if(scope != NULL)
 		{
-			float vy = VoltsToYPosition(trig->GetLevel());
-			float radius = 20;
-			if(x < (m_plotRight + radius) )
+			auto trig = scope->GetTrigger();
+			if( (trig != NULL) && (m_channel == trig->GetInput(0)) )
 			{
-				//If on top of the trigger, obviously we're a hit
-				if(fabs(y - vy) < radius)
-					return LOC_TRIGGER;
-
-				//but also check the edges of the plot if trigger is off scale
-				if( (vy > m_height) && (fabs(m_height - y) < radius) )
-					return LOC_TRIGGER;
-				if( (vy < 0) && (y < radius) )
-					return LOC_TRIGGER;
-			}
-
-			//Check if it's a two-level trigger (second arrow)
-			auto wt = dynamic_cast<TwoLevelTrigger*>(trig);
-			if(wt)
-			{
-				vy = VoltsToYPosition(wt->GetLowerBound());
+				float vy = VoltsToYPosition(trig->GetLevel());
+				float radius = 20;
 				if(x < (m_plotRight + radius) )
 				{
 					//If on top of the trigger, obviously we're a hit
 					if(fabs(y - vy) < radius)
-						return LOC_TRIGGER_SECONDARY;
+						return LOC_TRIGGER;
 
 					//but also check the edges of the plot if trigger is off scale
 					if( (vy > m_height) && (fabs(m_height - y) < radius) )
-						return LOC_TRIGGER_SECONDARY;
+						return LOC_TRIGGER;
 					if( (vy < 0) && (y < radius) )
-						return LOC_TRIGGER_SECONDARY;
+						return LOC_TRIGGER;
+				}
+
+				//Check if it's a two-level trigger (second arrow)
+				auto wt = dynamic_cast<TwoLevelTrigger*>(trig);
+				if(wt)
+				{
+					vy = VoltsToYPosition(wt->GetLowerBound());
+					if(x < (m_plotRight + radius) )
+					{
+						//If on top of the trigger, obviously we're a hit
+						if(fabs(y - vy) < radius)
+							return LOC_TRIGGER_SECONDARY;
+
+						//but also check the edges of the plot if trigger is off scale
+						if( (vy > m_height) && (fabs(m_height - y) < radius) )
+							return LOC_TRIGGER_SECONDARY;
+						if( (vy < 0) && (y < radius) )
+							return LOC_TRIGGER_SECONDARY;
+					}
 				}
 			}
 		}
