@@ -946,7 +946,6 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	m_pendingDecode->Refresh();
-	SetGeometryDirty();
 
 	//Create a new waveform view for the generated signal
 	if(!m_pendingDecode->IsOverlay())
@@ -970,7 +969,6 @@ void WaveformArea::OnDecodeSetupComplete()
 			m_pendingDecode->AddRef();
 			m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
 		}
-		queue_draw();
 	}
 
 	//If the decoder is a packet-oriented protocol, pop up a protocol analyzer
@@ -991,6 +989,9 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	//This decode is no longer pending
 	m_pendingDecode = NULL;
+
+	SetGeometryDirty();
+	queue_draw();
 }
 
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)

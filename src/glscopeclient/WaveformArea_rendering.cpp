@@ -128,7 +128,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	}
 
 	//Figure out zero voltage level and scaling
-	//TODO: properly calculate overlay positions once RenderDecodeOverlays() isn't doing that anymore
 	auto height = wdata->m_area->m_height;
 	float ybase = height/2;
 	float yscale = wdata->m_area->m_pixelsPerVolt;
@@ -266,11 +265,18 @@ void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 
 	for(auto overlay : m_overlays)
 	{
+		//Skip anything not digital
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
-		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			data.push_back(m_overlayRenderData[overlay]);
+		//Create render data if needed
+		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
+		{
+			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
+			m_geometryDirty = true;
+		}
+
+		data.push_back(m_overlayRenderData[overlay]);
 	}
 }
 
@@ -320,19 +326,23 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	LogIndenter li;
 
+	//Overlay positions need to be calculated before geometry download,
+	//since scaling data is pushed to the GPU at this time
+	CalculateOverlayPositions();
+
 	//Update geometry if needed
 	if(m_geometryDirty || m_positionDirty)
 	{
-		MapAllBuffers(m_geometryDirty);
-
 		double alpha = m_parent->GetTraceAlpha();
 
+		//Need to get render data first, since this creates buffers we might need in MapBuffers
 		vector<WaveformRenderData*> data;
 		GetAllRenderData(data);
 
+		//Do the actual update
+		MapAllBuffers(m_geometryDirty);
 		for(auto d : data)
 			PrepareGeometry(d, m_geometryDirty, alpha);
-
 		UnmapAllBuffers(m_geometryDirty);
 
 		m_geometryDirty = false;
@@ -378,14 +388,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	{
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
-
-		//Create render data if needed
-		//(can't do this when m_waveformRenderData is created because filters can be added later on)
-		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
-		{
-			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
-			m_geometryDirty = true;
-		}
 
 		//Create the texture
 		auto wdat = m_overlayRenderData[overlay];

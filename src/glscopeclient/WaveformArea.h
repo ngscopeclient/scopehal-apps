@@ -393,6 +393,8 @@ protected:
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
 
+	void CalculateOverlayPositions();
+
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(
 		StreamDescriptor chan,

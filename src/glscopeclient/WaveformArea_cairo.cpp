@@ -323,7 +323,6 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//TODO: adjust height/spacing depending on font sizes etc
 	int height = 20;
-	int midline = m_overlaySpacing / 2;
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
 	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel.GetData());
@@ -397,37 +396,6 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		}
 	}
 
-	//Find which overlay slots are in use
-	const int max_overlays = 10;
-	bool overlayPositionsUsed[max_overlays] = {0};
-	for(auto o : m_overlays)
-	{
-		if(m_overlayPositions.find(o) == m_overlayPositions.end())
-			continue;
-
-		int pos = m_overlayPositions[o];
-		int index = (pos - midline) / m_overlaySpacing;
-		if( (pos >= 0) && (index < max_overlays) )
-			overlayPositionsUsed[index] = true;
-	}
-
-	//Assign first unused position to all overlays
-	for(auto o : m_overlays)
-	{
-		if(m_overlayPositions.find(o) == m_overlayPositions.end())
-		{
-			for(int i=0; i<max_overlays; i++)
-			{
-				if(!overlayPositionsUsed[i])
-				{
-					overlayPositionsUsed[i] = true;
-					m_overlayPositions[o] = midline + m_overlaySpacing*i;
-					break;
-				}
-			}
-		}
-	}
-
 	for(auto o : m_overlays)
 	{
 		auto data = o.GetData();
@@ -495,6 +463,42 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					f->GetColor(i));
 
 				last_end = xe;
+			}
+		}
+	}
+}
+
+void WaveformArea::CalculateOverlayPositions()
+{
+	int midline = m_overlaySpacing / 2;
+
+	//Find which overlay slots are in use
+	const int max_overlays = 10;
+	bool overlayPositionsUsed[max_overlays] = {0};
+	for(auto o : m_overlays)
+	{
+		if(m_overlayPositions.find(o) == m_overlayPositions.end())
+			continue;
+
+		int pos = m_overlayPositions[o];
+		int index = (pos - midline) / m_overlaySpacing;
+		if( (pos >= 0) && (index < max_overlays) )
+			overlayPositionsUsed[index] = true;
+	}
+
+	//Assign first unused position to all overlays
+	for(auto o : m_overlays)
+	{
+		if(m_overlayPositions.find(o) == m_overlayPositions.end())
+		{
+			for(int i=0; i<max_overlays; i++)
+			{
+				if(!overlayPositionsUsed[i])
+				{
+					overlayPositionsUsed[i] = true;
+					m_overlayPositions[o] = midline + m_overlaySpacing*i;
+					break;
+				}
 			}
 		}
 	}
