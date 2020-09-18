@@ -441,6 +441,8 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 			m_fileMenuItem.set_submenu(m_fileMenu);
 			m_fileMenu.append(m_fileExportMenuItem);
 				m_fileExportMenuItem.set_label("Export...");
+				m_fileExportMenuItem.signal_activate().connect(sigc::mem_fun(
+					*this, &ProtocolAnalyzerWindow::OnFileExport));
 
 	get_vbox()->pack_start(m_filterRow, Gtk::PACK_SHRINK);
 		m_filterRow.pack_start(m_filterBox, Gtk::PACK_EXPAND_WIDGET);
@@ -592,8 +594,8 @@ void ProtocolAnalyzerWindow::FillOutRow(
 		snprintf(t, sizeof(t), "%02x ", b);
 		sdata += t;
 
-		//Truncate really long packets to keep UI responsive
-		if(sdata.length() > 1024)
+		//Truncate really long packets to keep UI from going nuts
+		if(sdata.length() > 2048)
 			break;
 	}
 	row[m_columns.m_data] = sdata;
@@ -720,4 +722,54 @@ void ProtocolAnalyzerWindow::OnFilterChanged()
 		m_filterBox.set_name("invalidfilter");
 		m_filterApplyButton.set_sensitive(false);
 	}
+}
+
+void ProtocolAnalyzerWindow::OnFileExport()
+{
+	//Prompt for the file
+	Gtk::FileChooserDialog dlg(*this, "Export CSV", Gtk::FILE_CHOOSER_ACTION_SAVE);
+	auto filter = Gtk::FileFilter::create();
+	filter->add_pattern("*.csv");
+	filter->set_name("CSV files (*.csv)");
+	dlg.add_filter(filter);
+	dlg.add_button("Save", Gtk::RESPONSE_OK);
+	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	dlg.set_do_overwrite_confirmation();
+	auto response = dlg.run();
+	if(response != Gtk::RESPONSE_OK)
+		return;
+
+	//Write initial headers
+	auto fname = dlg.get_filename();
+	FILE* fp = fopen(fname.c_str(), "w");
+	if(!fp)
+	{
+		string msg = string("Output file") + fname + " cannot be opened";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot export protocol data\n");
+		errdlg.run();
+		return;
+	}
+	auto headers = m_decoder->GetHeaders();
+	fprintf(fp,"Time,");
+	for(auto h : headers)
+		fprintf(fp, "%s,", h.c_str());
+	fprintf(fp, "Data\n");
+
+	//Write packet data
+	auto children = m_internalmodel->children();
+	for(auto row : children)
+	{
+		//TODO: output individual sub-rows for child nodes?
+		//For now, just output top level rows
+		fprintf(fp, "%s,", static_cast<Glib::ustring>(row[m_columns.m_timestamp]).c_str());
+
+		for(size_t i=0; i<headers.size(); i++)
+			fprintf(fp, "%s,", static_cast<Glib::ustring>(row[m_columns.m_headers[i]]).c_str());
+
+		fprintf(fp, "%s\n", static_cast<Glib::ustring>(row[m_columns.m_data]).c_str());
+	}
+
+	//Done
+	fclose(fp);
 }

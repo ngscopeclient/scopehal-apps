@@ -135,6 +135,7 @@ protected:
 
 	void OnApplyFilter();
 	void OnFilterChanged();
+	void OnFileExport();
 
 	Gtk::MenuBar m_menu;
 		Gtk::MenuItem m_fileMenuItem;
