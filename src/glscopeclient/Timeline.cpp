@@ -353,6 +353,8 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	if(chan)
 	{
 		auto scope = chan->GetScope();
+		if(scope == NULL)
+			return;
 		int64_t timestamp = scope->GetTriggerOffset();
 		double x = (timestamp - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 
