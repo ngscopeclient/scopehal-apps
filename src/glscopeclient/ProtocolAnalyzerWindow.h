@@ -52,7 +52,8 @@ public:
 	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
-	Gtk::TreeModelColumn<Gdk::Color>					m_color;
+	Gtk::TreeModelColumn<Gdk::Color>					m_bgcolor;
+	Gtk::TreeModelColumn<Gdk::Color>					m_fgcolor;
 	Gtk::TreeModelColumn<bool>							m_visible;
 };
 
@@ -135,6 +136,10 @@ protected:
 	void OnApplyFilter();
 	void OnFilterChanged();
 
+	Gtk::MenuBar m_menu;
+		Gtk::MenuItem m_fileMenuItem;
+			Gtk::Menu m_fileMenu;
+				Gtk::MenuItem m_fileExportMenuItem;
 	Gtk::HBox m_filterRow;
 		Gtk::Entry m_filterBox;
 		Gtk::Button m_filterApplyButton;

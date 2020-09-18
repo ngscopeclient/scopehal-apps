@@ -357,7 +357,8 @@ bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
 ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 {
 	add(m_visible);
-	add(m_color);
+	add(m_bgcolor);
+	add(m_fgcolor);
 	add(m_timestamp);
 	add(m_capturekey);
 	add(m_offset);
@@ -420,7 +421,10 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 		auto pcol = m_tree.get_column(col);
 		vector<Gtk::CellRenderer*> cells = pcol->get_cells();
 		for(auto c : cells)
-			pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is color
+		{
+			pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is bg color
+			pcol->add_attribute(*c, "foreground-gdk", 2);	//column 2 is fg color
+		}
 	}
 
 	m_tree.get_selection()->signal_changed().connect(
@@ -431,6 +435,13 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 		sigc::mem_fun(*this, &ProtocolAnalyzerWindow::OnFilterChanged));
 
 	//Set up the widgets
+	get_vbox()->pack_start(m_menu, Gtk::PACK_SHRINK);
+		m_menu.append(m_fileMenuItem);
+			m_fileMenuItem.set_label("File");
+			m_fileMenuItem.set_submenu(m_fileMenu);
+			m_fileMenu.append(m_fileExportMenuItem);
+				m_fileExportMenuItem.set_label("Export...");
+
 	get_vbox()->pack_start(m_filterRow, Gtk::PACK_SHRINK);
 		m_filterRow.pack_start(m_filterBox, Gtk::PACK_EXPAND_WIDGET);
 		m_filterRow.pack_start(m_filterApplyButton, Gtk::PACK_SHRINK);
@@ -563,7 +574,8 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	stime += tmp;
 
 	//Create the row
-	row[m_columns.m_color] = p->m_displayBackgroundColor;
+	row[m_columns.m_bgcolor] = p->m_displayBackgroundColor;
+	row[m_columns.m_fgcolor] = p->m_displayForegroundColor;
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
 	row[m_columns.m_offset] = p->m_offset;
