@@ -61,8 +61,12 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 	else
 	{
 		auto pdat = m_channel.GetData();
-		if( (pdat == NULL) || ((m_count = pdat->m_offsets.size()) == 0) )
-			m_count = 1;
+		m_count = 1;
+		if(pdat != NULL)
+		{
+			m_count = pdat->m_offsets.size();
+			m_count = max((size_t)1, m_count);
+		}
 	}
 
 	if(update_waveform)
@@ -112,7 +116,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 	auto pdat = wdata->m_channel.GetData();
-	if( (pdat == NULL) || pdat->m_offsets.empty() )
+	if( (pdat == NULL) || pdat->m_offsets.empty() || (wdata->m_count == 0) )
 	{
 		wdata->m_geometryOK = false;
 		return;
@@ -189,7 +193,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	float alpha_scaled = alpha * 2 / samplesPerPixel;
 
 	//Config stuff
-	//TODO: we should be able to only update this stuff if we pan/zoom, without redoing the waveform data itself
 	wdata->m_mappedConfigBuffer64[0] = -group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
 	wdata->m_mappedConfigBuffer[2] = height;												//windowHeight
 	wdata->m_mappedConfigBuffer[3] = wdata->m_area->m_plotRight;							//windowWidth
@@ -219,7 +222,7 @@ size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
 	if(buf[0] >= value)
 		return 0;
 	if(buf[last_hi] < value)
-		return len;
+		return len-1;
 
 	while(true)
 	{

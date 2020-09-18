@@ -84,7 +84,7 @@ void main()
 	uint istart = xind[gl_GlobalInvocationID.x];
 	vec2 left = vec2(float(xpos[istart] + innerXoff) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
 	vec2 right;
-	for(uint i=istart; i<(memDepth-1); i++)
+	for(uint i=istart; i<(memDepth-2); i++)
 	{
 		//Fetch coordinates of the current and upcoming sample
 		right = vec2(float(xpos[i+1] + innerXoff)*xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);

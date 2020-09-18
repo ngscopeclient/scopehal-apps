@@ -200,6 +200,7 @@ public:
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha);
 	void MapAllBuffers(bool update_y);
 	void UnmapAllBuffers(bool update_y);
+	void CalculateOverlayPositions();
 
 	void CenterTimestamp(int64_t time);
 
@@ -392,8 +393,6 @@ protected:
 	VertexArray m_cairoVAO;
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
-
-	void CalculateOverlayPositions();
 
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(

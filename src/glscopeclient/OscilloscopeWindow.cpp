@@ -1965,6 +1965,7 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 	//Mark each area as dirty and map the buffers needed for update
 	for(auto w : areas)
 	{
+		w->CalculateOverlayPositions();
 		w->ClearPersistence(false);
 
 		if(geometry_dirty)
@@ -2195,7 +2196,10 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 	//Map all of the buffers we need to update in each area
 	for(auto w : m_waveformAreas)
+	{
+		w->CalculateOverlayPositions();
 		w->MapAllBuffers(true);
+	}
 
 	float alpha = GetTraceAlpha();
 
