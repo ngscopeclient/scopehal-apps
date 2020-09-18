@@ -436,13 +436,6 @@ protected:
 	std::vector<StreamDescriptor> m_overlays;		//List of protocol decoders drawn on top of the signal
 	std::map<StreamDescriptor, int> m_overlayPositions;
 
-	double m_lastFrameStart;
-	double m_frameTime;
-	long m_frameCount;
-
-	double m_prepareTime;
-	double m_indexTime;
-
 	float m_pixelsPerVolt;
 	float m_padding;
 	float m_plotRight;

@@ -320,16 +320,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	LogIndenter li;
 
-	double start = GetTime();
-	double dt = start - m_lastFrameStart;
-	if(m_lastFrameStart > 0)
-	{
-		//LogDebug("Inter-frame time: %.3f ms (%.2f FPS)\n", dt*1000, 1/dt);
-		m_frameTime += dt;
-		m_frameCount ++;
-	}
-	m_lastFrameStart = start;
-
 	//Update geometry if needed
 	if(m_geometryDirty || m_positionDirty)
 	{

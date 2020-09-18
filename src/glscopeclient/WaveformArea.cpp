@@ -84,11 +84,6 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 
 void WaveformArea::SharedCtorInit()
 {
-	//performance counters
-	m_frameTime 			= 0;
-	m_frameCount 			= 0;
-	m_lastFrameStart 		= -1;
-
 	m_updatingContextMenu 	= false;
 	m_selectedChannel		= m_channel;
 	m_dragState 			= DRAG_NONE;
@@ -132,10 +127,6 @@ void WaveformArea::SharedCtorInit()
 
 WaveformArea::~WaveformArea()
 {
-	double tavg = m_frameTime / m_frameCount;
-	LogDebug("Average frame interval for %s: %.3f ms (%.2f FPS, %zu frames)\n",
-		m_channel.m_channel->m_displayname.c_str(), tavg*1000, 1/tavg, m_frameCount);
-
 	m_channel.m_channel->Release();
 
 	for(auto d : m_overlays)
