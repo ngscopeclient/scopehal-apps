@@ -604,6 +604,25 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	RenderChannelInfoBox(m_channel, cr, m_height, label, m_infoBoxRect);
 }
 
+void WaveformArea::MakePathRoundedRect(
+		Cairo::RefPtr< Cairo::Context > cr,
+		Rect& box,
+		int rounding)
+{
+	Rect innerBox = box;
+	innerBox.shrink(rounding, rounding);
+
+	cr->begin_new_sub_path();
+	cr->arc(	innerBox.get_left(), 	innerBox.get_bottom(),	rounding, M_PI_2, M_PI);		//bottom left
+	cr->line_to(box.get_left(), 		innerBox.get_y());
+	cr->arc(	innerBox.get_left(), 	innerBox.get_top(), 	rounding, M_PI, 1.5*M_PI);		//top left
+	cr->line_to(innerBox.get_right(),	box.get_top());
+	cr->arc(	innerBox.get_right(),	innerBox.get_top(), 	rounding, 1.5*M_PI, 2*M_PI);	//top right
+	cr->line_to(box.get_right(),		innerBox.get_bottom());
+	cr->arc(	innerBox.get_right(),	innerBox.get_bottom(),	rounding, 2*M_PI, M_PI_2);		//bottom right
+	cr->line_to(innerBox.get_left(),	box.get_bottom());
+}
+
 void WaveformArea::RenderChannelInfoBox(
 		StreamDescriptor chan,
 		Cairo::RefPtr< Cairo::Context > cr,
@@ -632,21 +651,8 @@ void WaveformArea::RenderChannelInfoBox(
 		box.set_width(twidth + labelmargin*2);
 		box.set_height(labelheight);
 
-		Rect innerBox = box;
-		innerBox.shrink(labelmargin, labelmargin);
-
-		//Path for the outline
-		cr->begin_new_sub_path();
-		cr->arc(innerBox.get_left(), innerBox.get_bottom(), labelmargin, M_PI_2, M_PI);		//bottom left
-		cr->line_to(box.get_left(), innerBox.get_y());
-		cr->arc(innerBox.get_left(), innerBox.get_top(), labelmargin, M_PI, 1.5*M_PI);		//top left
-		cr->line_to(innerBox.get_right(), box.get_top());
-		cr->arc(innerBox.get_right(), innerBox.get_top(), labelmargin, 1.5*M_PI, 2*M_PI);	//top right
-		cr->line_to(box.get_right(), innerBox.get_bottom());
-		cr->arc(innerBox.get_right(), innerBox.get_bottom(), labelmargin, 2*M_PI, M_PI_2);	//bottom right
-		cr->line_to(innerBox.get_left(), box.get_bottom());
-
-		//Fill it
+		//Fill background
+		MakePathRoundedRect(cr, box, labelmargin);
 		cr->set_source_rgba(0, 0, 0, 0.75);
 		cr->fill_preserve();
 
@@ -1083,6 +1089,9 @@ void WaveformArea::RenderComplexSignal(
 	cr->stroke();
 }
 
+/**
+	@brief Draw peaks on the FFT
+ */
 void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 {
 	auto filter = dynamic_cast<FFTFilter*>(m_channel.m_channel);
@@ -1091,6 +1100,7 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 
 	const vector<FFTPeak>& peaks = filter->GetPeaks();
 
+	//Settings for the text
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
 	tlayout->set_font_description(m_cursorLabelFont);
 	int twidth;
@@ -1100,6 +1110,11 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	Unit hz(Unit::UNIT_HZ);
 	Unit dbm(Unit::UNIT_DBM);
 
+	//First pass: get nominal locations of each peak label and discard offscreen ones
+	float radius = 4;
+	vector<string> texts;
+	vector<vec2f> centers;
+	vector<Rect> rects;
 	for(size_t i=0; i<peaks.size(); i++)
 	{
 		//Format the text
@@ -1112,36 +1127,139 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 		float x = XAxisUnitsToXPosition(peaks[i].m_freq);
 		float y = VoltsToYPosition(peaks[i].m_mag);
 
-		float radius = 4;
-
-		float left = x + radius + margin;
-		float right = left + twidth + margin;
-		float top = y - (theight/2 + margin);
-		float bottom = y + (theight/2 + margin);
-
-		//Crop
-		if( (left < 0) || (right > m_plotRight) )
+		//Don't show labels for offscreen peaks
+		if( (x < 0) || (x > m_plotRight) )
 			continue;
 
+		texts.push_back(text);
+		rects.push_back(Rect(x, y, twidth + 2*margin, theight + 2*margin));
+		centers.push_back(vec2f(x, y));
+	}
+
+	//Move the labels around to remove overlaps
+	RemoveOverlaps(rects, centers);
+
+	//Second pass: Lines from rectangle location to peak location
+	cr->set_source_rgba(0, 0.6, 0, 1);
+	for(size_t i=0; i<rects.size(); i++)
+	{
+		//Draw a line from the rectangle's closest point to the peak location
+		auto center = centers[i];
+		vec2f closest = rects[i].ClosestPoint(center);
+		cr->move_to(closest.x, closest.y);
+		cr->line_to(center.x, center.y);
+		cr->stroke();
+	}
+
+	//Third pass: Background and text
+	for(size_t i=0; i<rects.size(); i++)
+	{
+		tlayout->set_text(texts[i]);
+
 		//Draw the background
-		cr->set_source_rgba(0, 0, 0, 0.5);
-		cr->move_to(left, top);
-		cr->line_to(right, top);
-		cr->line_to(right, bottom);
-		cr->line_to(left, bottom);
-		cr->fill();
+		int rounding = 4;
+		auto rect = rects[i];
+		cr->set_source_rgba(0, 0, 0, 0.75);
+		MakePathRoundedRect(cr, rect, rounding);
+		cr->fill_preserve();
+
+		//Draw the outline
+		cr->set_source_rgba(0, 0.6, 0, 1);
+		cr->stroke();
 
 		//Draw the text
 		cr->set_source_rgba(1, 1, 1, 1);
 		cr->save();
-			cr->move_to(left + margin, y - theight/2);
+			cr->move_to(rect.get_left() + margin, rect.get_top() + margin);
 			tlayout->update_from_cairo_context(cr);
 			tlayout->show_in_cairo_context(cr);
 		cr->restore();
 
 		//Draw the actual peak marker
+		auto center = centers[i];
 		cr->begin_new_path();
-		cr->arc(x, y, radius, 0, 2*M_PI);
+		cr->arc(center.x, center.y, radius, 0, 2*M_PI);
 		cr->stroke();
+	}
+}
+
+/**
+	@brief Performs point-feature label placement given a list of nominal label positions
+
+	Simple energy minimization using linear springs.
+ */
+void WaveformArea::RemoveOverlaps(vector<Rect>& rects, vector<vec2f>& peaks)
+{
+	//Centroids of each rectangle
+	vector<vec2f> centers;
+	for(auto r : rects)
+		centers.push_back(r.center());
+	for(auto c : peaks)
+		centers.push_back(c);
+
+	int margin = 3;
+
+	for(int i=0; i<100; i++)
+	{
+		//Things we can collide with
+		int clearance = 8;
+		vector<Rect> targets = rects;
+		for(auto c : peaks)
+			targets.push_back(Rect(c.x - clearance, c.y - clearance, 2*clearance, 2*clearance));
+
+		bool done = true;
+
+		for(size_t j=0; j<rects.size(); j++)
+		{
+			vec2f force(0, 0);
+
+			//Repulsive force pushing us away from the centroid of all other rectangles.
+			for(size_t k=0; k<targets.size(); k++)
+			{
+				//no self-intersection
+				if(j == k)
+					continue;
+
+				Rect rj = rects[j];
+				Rect rk = targets[k];
+				rj.expand(margin, margin);
+				rk.expand(margin, margin);
+
+				//if no overlap, ignore
+				if(!rj.intersects(rk))
+					continue;
+
+				done = false;
+
+				//Scale force by amount of overlap.
+				rj.intersect(rk);
+				float scale = rj.get_width() * rj.get_height();
+
+				auto delta = (centers[k] - centers[j]);
+				force -= delta.norm() * scale * 0.01;
+			}
+
+			//Move it
+			centers[j] += force;
+
+			//Move rectangle (rounding coordinates to nearest integer)
+			rects[j].recenter(centers[j]);
+
+			//If it moved off screen, clamp it
+			if(rects[j].get_y() < 0)
+			{
+				rects[j].set_y(0);
+				centers[j].y = rects[j].center().y;
+			}
+
+			if(rects[j].get_right() > m_plotRight)
+			{
+				rects[j].set_x(m_plotRight - rects[j].get_width());
+				centers[j].x = rects[j].center().x;
+			}
+		}
+
+		if(done)
+			break;
 	}
 }

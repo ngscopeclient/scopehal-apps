@@ -38,46 +38,7 @@
 #include "WaveformGroup.h"
 #include "FilterDialog.h"
 #include "EdgeTrigger.h"
-
-/**
-	@brief Slightly more capable rectangle class
- */
-class Rect : public Gdk::Rectangle
-{
-public:
-	int get_left()
-	{ return get_x(); }
-
-	int get_top()
-	{ return get_y(); }
-
-	int get_right()
-	{ return get_x() + get_width(); }
-
-	int get_bottom()
-	{ return get_y() + get_height(); }
-
-	/**
-		@brief moves all corners in by (dx, dy)
-	 */
-	void shrink(int dx, int dy)
-	{
-		set_x(get_x() + dx);
-		set_y(get_y() + dy);
-		set_width(get_width() - 2*dx);
-		set_height(get_height() - 2*dy);
-	}
-
-	bool HitTest(int x, int y)
-	{
-		if( (x < get_left()) || (x > get_right()) )
-			return false;
-		if( (y < get_top()) || (y > get_bottom()) )
-			return false;
-
-		return true;
-	}
-};
+#include "Rect.h"
 
 class WaveformArea;
 
@@ -403,6 +364,10 @@ protected:
 		std::string text,
 		Rect& box,
 		int labelmargin = 3);
+	void MakePathRoundedRect(
+		Cairo::RefPtr< Cairo::Context > cr,
+		Rect& box,
+		int rounding);
 	void RenderComplexSignal(
 		const Cairo::RefPtr<Cairo::Context>& cr,
 		int visleft, int visright,
@@ -413,6 +378,7 @@ protected:
 	void MakePathSignalBody(
 		const Cairo::RefPtr<Cairo::Context>& cr,
 		float xstart, float xoff, float xend, float ybot, float ymid, float ytop);
+	void RemoveOverlaps(std::vector<Rect>& rects, std::vector<vec2f>& peaks);
 
 	void ResetTextureFiltering();
 
