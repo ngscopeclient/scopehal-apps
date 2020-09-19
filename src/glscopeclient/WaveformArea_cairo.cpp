@@ -44,6 +44,7 @@
 #include <random>
 #include <map>
 #include "../scopeprotocols/EyePattern.h"
+#include "../scopeprotocols/FFTFilter.h"
 #include "../../lib/scopehal/TwoLevelTrigger.h"
 
 using namespace std;
@@ -289,6 +290,7 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
+	RenderFFTPeaks(cr);
 	RenderInsertionBar(cr);
 	RenderChannelLabel(cr);
 }
@@ -1079,4 +1081,67 @@ void WaveformArea::RenderComplexSignal(
 	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 	MakePathSignalBody(cr, xstart, xoff, xend, ybot, ymid, ytop);
 	cr->stroke();
+}
+
+void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
+{
+	auto filter = dynamic_cast<FFTFilter*>(m_channel.m_channel);
+	if(!filter)
+		return;
+
+	const vector<FFTPeak>& peaks = filter->GetPeaks();
+
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	tlayout->set_font_description(m_cursorLabelFont);
+	int twidth;
+	int theight;
+	int margin = 2;
+
+	Unit hz(Unit::UNIT_HZ);
+	Unit dbm(Unit::UNIT_DBM);
+
+	for(size_t i=0; i<peaks.size(); i++)
+	{
+		//Format the text
+		string text = hz.PrettyPrint(peaks[i].m_freq) + "\n" + dbm.PrettyPrint(peaks[i].m_mag);
+
+		//Calculate text size
+		tlayout->set_text(text);
+		tlayout->get_pixel_size(twidth, theight);
+
+		float x = XAxisUnitsToXPosition(peaks[i].m_freq);
+		float y = VoltsToYPosition(peaks[i].m_mag);
+
+		float radius = 4;
+
+		float left = x + radius + margin;
+		float right = left + twidth + margin;
+		float top = y - (theight/2 + margin);
+		float bottom = y + (theight/2 + margin);
+
+		//Crop
+		if( (left < 0) || (right > m_plotRight) )
+			continue;
+
+		//Draw the background
+		cr->set_source_rgba(0, 0, 0, 0.5);
+		cr->move_to(left, top);
+		cr->line_to(right, top);
+		cr->line_to(right, bottom);
+		cr->line_to(left, bottom);
+		cr->fill();
+
+		//Draw the text
+		cr->set_source_rgba(1, 1, 1, 1);
+		cr->save();
+			cr->move_to(left + margin, y - theight/2);
+			tlayout->update_from_cairo_context(cr);
+			tlayout->show_in_cairo_context(cr);
+		cr->restore();
+
+		//Draw the actual peak marker
+		cr->begin_new_path();
+		cr->arc(x, y, radius, 0, 2*M_PI);
+		cr->stroke();
+	}
 }

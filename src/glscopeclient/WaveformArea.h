@@ -387,6 +387,7 @@ protected:
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr);
 	void InitializeCairoPass();
 	Texture m_cairoTexture;
 	Texture m_cairoTextureOver;
