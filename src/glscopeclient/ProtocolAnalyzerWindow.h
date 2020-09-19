@@ -128,6 +128,9 @@ public:
 	void OnWaveformDataReady();
 	void RemoveHistory(TimePoint timestamp);
 
+	PacketDecoder* GetDecoder()
+	{ return m_decoder; }
+
 protected:
 	OscilloscopeWindow* m_parent;
 	PacketDecoder* m_decoder;

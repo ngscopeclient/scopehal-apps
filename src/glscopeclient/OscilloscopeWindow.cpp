@@ -249,6 +249,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
+					m_windowMenu.append(m_windowAnalyzerMenuItem);
+						m_windowAnalyzerMenuItem.set_label("Analyzer");
+						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
+
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
 			m_vbox.get_style_context()->add_class("toolbar");
 			m_toolbox.pack_start(m_toolbar, Gtk::PACK_EXPAND_WIDGET);
@@ -602,6 +606,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 
 	//Reconfigure menus
 	RefreshChannelsMenu();
+	RefreshAnalyzerMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -2484,6 +2489,9 @@ void OscilloscopeWindow::OnHaltConditions()
 	m_haltConditionsDialog.RefreshChannels();
 }
 
+/**
+	@brief Update the channels menu when we connect to a new instrument
+ */
 void OscilloscopeWindow::RefreshChannelsMenu()
 {
 	//Remove the old items
@@ -2512,4 +2520,33 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 	}
 
 	m_channelsMenu.show_all();
+}
+
+/**
+	@brief Update the protocol analyzer menu when we create or destroy an analyzer
+ */
+void OscilloscopeWindow::RefreshAnalyzerMenu()
+{
+	LogDebug("RefreshAnalyzerMenu\n");
+
+	//Remove the old items
+	auto children = m_windowAnalyzerMenu.get_children();
+	for(auto c : children)
+		m_windowAnalyzerMenu.remove(*c);
+
+	//Add new ones
+	for(auto a : m_analyzers)
+	{
+		auto item = Gtk::manage(new Gtk::MenuItem(a->GetDecoder()->m_displayname, false));
+		item->signal_activate().connect(
+			sigc::bind<ProtocolAnalyzerWindow*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowAnalyzer), a ));
+		m_windowAnalyzerMenu.append(*item);
+	}
+
+	m_windowAnalyzerMenu.show_all();
+}
+
+void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
+{
+	window->show();
 }

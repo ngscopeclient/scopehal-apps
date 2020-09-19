@@ -169,6 +169,8 @@ protected:
 							Gtk::RadioMenuItem m_eyeColorViridisItem;
 			Gtk::MenuItem m_windowMenuItem;
 				Gtk::Menu m_windowMenu;
+					Gtk::MenuItem m_windowAnalyzerMenuItem;
+						Gtk::Menu m_windowAnalyzerMenu;
 		Gtk::HBox m_toolbox;
 			Gtk::Toolbar m_toolbar;
 				Gtk::ToolButton m_btnStart;
@@ -238,9 +240,11 @@ public:
 	void OnTimebaseSettings();
 	void OnScopeSync();
 	void OnHaltConditions();
+	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 
 	//Reconfigure menus
 	void RefreshChannelsMenu();
+	void RefreshAnalyzerMenu();
 
 	//Protocol decoding etc
 	void RefreshAllFilters();
