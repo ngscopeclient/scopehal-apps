@@ -1094,11 +1094,16 @@ void WaveformArea::RenderComplexSignal(
  */
 void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 {
-	auto filter = dynamic_cast<FFTFilter*>(m_channel.m_channel);
+	//Grab input and stop if there's nothing for us to do
+	auto filter = dynamic_cast<PeakDetectionFilter*>(m_channel.m_channel);
 	if(!filter)
 		return;
+	const vector<Peak>& peaks = filter->GetPeaks();
+	auto data = filter->GetData(0);
+	if(peaks.empty() || (data == NULL) )
+		return;
 
-	const vector<FFTPeak>& peaks = filter->GetPeaks();
+	int64_t timescale = data->m_timescale;
 
 	//Settings for the text
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
@@ -1107,8 +1112,8 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	int theight;
 	int margin = 2;
 
-	Unit hz(Unit::UNIT_HZ);
-	Unit dbm(Unit::UNIT_DBM);
+	auto xunit = filter->GetXAxisUnits();
+	auto yunit = filter->GetYAxisUnits();
 
 	//First pass: get nominal locations of each peak label and discard offscreen ones
 	float radius = 4;
@@ -1117,15 +1122,17 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	vector<Rect> rects;
 	for(size_t i=0; i<peaks.size(); i++)
 	{
+		int64_t nx = peaks[i].m_x * timescale;
+
 		//Format the text
-		string text = hz.PrettyPrint(peaks[i].m_freq) + "\n" + dbm.PrettyPrint(peaks[i].m_mag);
+		string text = xunit.PrettyPrint(nx) + "\n" + yunit.PrettyPrint(peaks[i].m_y);
 
 		//Calculate text size
 		tlayout->set_text(text);
 		tlayout->get_pixel_size(twidth, theight);
 
-		float x = XAxisUnitsToXPosition(peaks[i].m_freq);
-		float y = VoltsToYPosition(peaks[i].m_mag);
+		float x = XAxisUnitsToXPosition(nx);
+		float y = VoltsToYPosition(peaks[i].m_y);
 
 		//Don't show labels for offscreen peaks
 		if( (x < 0) || (x > m_plotRight) )
