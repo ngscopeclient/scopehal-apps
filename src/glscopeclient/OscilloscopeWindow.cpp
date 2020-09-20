@@ -2527,8 +2527,6 @@ void OscilloscopeWindow::RefreshChannelsMenu()
  */
 void OscilloscopeWindow::RefreshAnalyzerMenu()
 {
-	LogDebug("RefreshAnalyzerMenu\n");
-
 	//Remove the old items
 	auto children = m_windowAnalyzerMenu.get_children();
 	for(auto c : children)
