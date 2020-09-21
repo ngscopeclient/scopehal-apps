@@ -99,6 +99,10 @@ void WaveformArea::SharedCtorInit()
 	m_positionDirty			= false;
 	m_mouseElementPosition	= LOC_PLOT;
 
+	m_plotRight = 1;
+	m_width		= 1;
+	m_height 	= 1;
+
 	m_decodeDialog 			= NULL;
 	m_pendingDecode			= NULL;
 
