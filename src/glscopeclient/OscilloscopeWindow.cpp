@@ -37,6 +37,7 @@
 #include "../scopehal/Instrument.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "OscilloscopeWindow.h"
+#include "PreferenceDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
@@ -189,6 +190,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					m_setupHaltMenuItem.set_label("Halt Conditions...");
 					m_setupHaltMenuItem.signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnHaltConditions));
+				m_setupMenu.append(m_preferencesMenuItem);
+					m_preferencesMenuItem.set_label("Preferences");
+					m_preferencesMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnPreferences));
 			m_menu.append(m_viewMenuItem);
 				m_viewMenuItem.set_label("View");
 				m_viewMenuItem.set_submenu(m_viewMenu);
@@ -422,6 +427,28 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	return true;
 }
 
+void OscilloscopeWindow::OnPreferences()
+{
+    if(m_preferenceDialog)
+        delete m_preferenceDialog;
+
+    m_preferenceDialog = new PreferenceDialog{ this, m_preferences };
+    m_preferenceDialog->show();
+    m_preferenceDialog->signal_response().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnPreferenceDialogResponse));
+}
+
+void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
+{
+	if(response == Gtk::RESPONSE_OK)
+	{
+		m_preferenceDialog->SaveChanges();
+	}
+
+	//Clean up the dialog
+	delete m_preferenceDialog;
+	m_preferenceDialog = NULL;
+}
+
 /**
 	@brief Clean up when we're closed
  */
@@ -438,6 +465,17 @@ bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
  */
 void OscilloscopeWindow::CloseSession()
 {
+    //Close preferences dialog, if it exists
+    if(m_preferenceDialog)
+    {
+        m_preferenceDialog->hide();
+        delete m_preferenceDialog;
+        m_preferenceDialog = nullptr;
+    }
+
+    //Save preferences
+    m_preferences.SavePreferences();
+
 	//Close all of our UI elements
 	for(auto it : m_historyWindows)
 		delete it.second;
