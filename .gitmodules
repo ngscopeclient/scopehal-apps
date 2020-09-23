@@ -1,6 +1,6 @@
 [submodule "lib"]
 	path = lib
-	url = git@github.com:azonenberg/scopehal.git
+	url = https://github.com/azonenberg/scopehal.git
 [submodule "doc"]
 	path = doc
-	url = git@github.com:azonenberg/scopehal-docs.git
+	url = https://github.com/azonenberg/scopehal-docs.git
