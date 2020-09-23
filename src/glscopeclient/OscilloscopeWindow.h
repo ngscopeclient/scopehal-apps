@@ -39,11 +39,15 @@
 #include "../scopehal/Oscilloscope.h"
 #include "WaveformArea.h"
 #include "WaveformGroup.h"
+#include "PreferenceDialog.h"
 #include "ProtocolAnalyzerWindow.h"
 #include "HistoryWindow.h"
 #include "ScopeSyncWizard.h"
 #include "HaltConditionsDialog.h"
 #include "FileProgressDialog.h"
+#include "PreferenceManager.h"
+
+class PreferenceDialog;
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -154,6 +158,7 @@ protected:
 					Gtk::MenuItem m_setupTriggerMenuItem;
 						Gtk::Menu m_setupTriggerMenu;
 					Gtk::MenuItem m_setupHaltMenuItem;
+					Gtk::MenuItem m_preferencesMenuItem;
 			Gtk::MenuItem m_channelsMenuItem;
 				Gtk::Menu m_channelsMenu;
 			Gtk::MenuItem m_viewMenuItem;
@@ -194,6 +199,9 @@ protected:
 
 	//shared by all scopes/channels
 	std::map<Oscilloscope*, HistoryWindow*> m_historyWindows;
+	
+	//Preferences state
+	PreferenceManager m_preferences;
 
 public:
 	//All of the waveform groups and areas, regardless of where they live
@@ -242,6 +250,8 @@ public:
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 
+	void OnPreferences();
+	void OnPreferenceDialogResponse(int response);
 	//Reconfigure menus
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
@@ -284,6 +294,7 @@ public:
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;
+	PreferenceDialog* m_preferenceDialog{nullptr};
 
 	//Fullscreen state
 	bool m_fullscreen;
