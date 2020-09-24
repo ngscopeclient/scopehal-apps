@@ -361,8 +361,12 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		auto trig = scope->GetTrigger();
 		if(trig)
 		{
-			Gdk::Color color(trig->GetInput(0).m_channel->m_displaycolor);
-			cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+			auto chan = trig->GetInput(0).m_channel;
+			if(chan)
+			{
+				Gdk::Color color(chan->m_displaycolor);
+				cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+			}
 
 			int size = 5;
 			cr->move_to(x-size, h-size);
