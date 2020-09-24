@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
 		LogNotice("%5d,%5.3f,",i,v);
 
 		//wait 25ms to stabilize
-		usleep(25 * 1000);
+		std::this_thread::sleep_for(std::chrono::microseconds(25 * 1000));
 
 		LogNotice("%5.7f\n", dmm.GetCurrent());
 
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 
 	//Make sure all writes have committed before we close the socket
 	psu.GetSerial();
-	usleep(50 * 1000);
+	std::this_thread::sleep_for(std::chrono::microseconds(50 * 1000));
 
 	return 0;
 }
