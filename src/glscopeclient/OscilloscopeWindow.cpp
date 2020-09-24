@@ -789,7 +789,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				scope->m_nickname.c_str(),
 				frac * 100);
 			progress.Update(tmp, base_progress + frac*waveform_progress);
-			usleep(1000 * 50);
+			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
 
 			g_app->DispatchPendingEvents();
 		}
