@@ -374,6 +374,10 @@ void ScopeThread(Oscilloscope* scope)
 			//LogDebug("Triggered, dt = %.3f ms (npolls = %zu)\n",
 			//	dt*1000, npolls);
 
+			//If this is a really slow connection (VPN etc), wait a while to let the UI thread do stuff.
+			if(dt > 1000)
+				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
 			npolls = 0;
 
 			continue;
