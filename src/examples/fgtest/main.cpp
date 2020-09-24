@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 		for(float mhz=0.5; mhz<5; mhz += 0.01)
 		{
 			scope.SetFunctionChannelFrequency(0, mhz * 1.0e6f);
-			usleep(1000 * 50);
+			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
 		}
 	}
 
