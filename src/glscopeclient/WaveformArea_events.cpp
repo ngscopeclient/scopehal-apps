@@ -83,8 +83,6 @@ void WaveformArea::on_resize(int width, int height)
 		ResetTextureFiltering();
 	}
 
-	SetGeometryDirty();
-
 	err = glGetError();
 	if(err != 0)
 		LogNotice("resize 3, err = %x\n", err);
@@ -106,6 +104,10 @@ void WaveformArea::on_resize(int width, int height)
 		waterfall->SetWidth(m_width);
 		waterfall->SetHeight(m_height);
 	}
+
+	SetGeometryDirty();
+	SetPositionDirty();
+	queue_draw();
 }
 
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)

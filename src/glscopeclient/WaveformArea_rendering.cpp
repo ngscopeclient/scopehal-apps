@@ -333,6 +333,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//since scaling data is pushed to the GPU at this time
 	CalculateOverlayPositions();
 
+	//Pull vertical size from the scope early on no matter how we're rendering
+	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
+
 	//Update geometry if needed
 	if(m_geometryDirty || m_positionDirty)
 	{
@@ -363,9 +366,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
 		m_firstFrame = false;
 	}
-
-	//Pull vertical size from the scope early on no matter how we're rendering
-	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
 
 	//TODO: Do persistence processing
 
