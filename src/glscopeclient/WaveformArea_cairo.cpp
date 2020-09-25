@@ -569,22 +569,13 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 
 		else
 		{
-			label += " : ";
-
-			//Format sample depth
-			size_t len = data->m_offsets.size();
-			if(len > 1e6)
-				snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
-			else if(len > 1e3)
-				snprintf(tmp, sizeof(tmp), "%.0f kS", len * 1e-3f);
-			else
-				snprintf(tmp, sizeof(tmp), "%zu S", len);
-			label += tmp;
-			label += "\n";
-
-			//Format timebase
+			//Format sample rate and timebase
+			Unit depth(Unit::UNIT_SAMPLEDEPTH);
 			Unit rate(Unit::UNIT_SAMPLERATE);
-			label += rate.PrettyPrint(1e12 / data->m_timescale);
+			label +=
+				" : " +
+				depth.PrettyPrint(data->m_offsets.size()) + "\n" +
+				rate.PrettyPrint(1e12 / data->m_timescale);
 		}
 	}
 
