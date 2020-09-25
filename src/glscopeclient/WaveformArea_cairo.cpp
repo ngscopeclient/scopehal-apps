@@ -583,20 +583,8 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 			label += "\n";
 
 			//Format timebase
-			double gsps = 1000.0f / data->m_timescale;
-			if(gsps > 1)
-			{
-				//If sample rate isn't a round Gsps number, add more digits
-				if(floor(gsps) != gsps)
-					snprintf(tmp, sizeof(tmp), "%.2f GS/s", gsps);
-				else
-					snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
-			}
-			else if(gsps > 0.001)
-				snprintf(tmp, sizeof(tmp), "%.0f MS/s", gsps * 1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%.1f kS/s", gsps * 1000 * 1000);
-			label += tmp;
+			Unit rate(Unit::UNIT_SAMPLERATE);
+			label += rate.PrettyPrint(1e12 / data->m_timescale);
 		}
 	}
 
