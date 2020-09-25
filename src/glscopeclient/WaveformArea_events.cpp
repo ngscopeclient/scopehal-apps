@@ -631,6 +631,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				double dv = YPositionToVolts(event->y) - m_dragStartVoltage;
 				double old_offset = m_channel.m_channel->GetOffset();
 				m_channel.m_channel->SetOffset(old_offset + dv);
+				SetGeometryDirty();
 				queue_draw();
 			}
 			break;
