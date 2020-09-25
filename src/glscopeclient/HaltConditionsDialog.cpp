@@ -46,8 +46,6 @@ HaltConditionsDialog::HaltConditionsDialog(
 	: Gtk::Dialog("Halt Conditions", *parent)
 	, m_parent(parent)
 {
-	char buf[128];
-
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_haltEnabledButton, 0, 0, 1, 1);
 			m_haltEnabledButton.set_label("Halt Enabled");
