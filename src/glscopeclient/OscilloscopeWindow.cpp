@@ -1547,7 +1547,7 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
 		
-#ifndef _WIN32
+#ifdef _WIN32
     WIN32_FIND_DATA findData{ };
     HANDLE fileSearch{ };
     const auto* path = "scope_*";
@@ -1596,9 +1596,9 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
     if(globResult.gl_pathc > 0)
     {
         const auto deleteTree =
-            [](const char* path, const struct stat* st, int tflag, struct FTW* ftw) -> int
+            [](const char* path, const struct stat*, int, struct FTW*) -> int
             {
-                remove(path);
+                ::remove(path);
                 return 0;
             };
         
