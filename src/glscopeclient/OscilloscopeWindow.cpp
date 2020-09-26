@@ -51,6 +51,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <ftw.h>
+#include <stdio.h>
 #endif
 
 using namespace std;
@@ -1547,7 +1548,7 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 #ifndef _WIN32
 #else
     glob_t globResult{ };
-    glob("./scope_*", GLOB_ONLYDIR, &globResult);
+    glob("./scope_*", GLOB_ONLYDIR, NULL, &globResult);
     
     if(globResult.gl_pathc > 0)
     {
