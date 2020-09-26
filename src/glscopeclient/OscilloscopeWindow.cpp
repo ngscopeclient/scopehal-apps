@@ -46,6 +46,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#include <fileapi.h>
+#include <shellapi.h>
 #else
 #include <glob.h>
 #include <stdlib.h>
@@ -1546,6 +1548,47 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 	chdir(m_currentDataDirName.c_str());
 		
 #ifndef _WIN32
+    WIN32_FIND_DATA findData{ };
+    HANDLE fileSearch{ };
+    const auto* path = "scope_*";
+    
+    fileSearch = FindFirstFileEx(
+        path,
+        FindExInfoStandard,
+        &findData,
+        FindExSearchLimitToDirectories,
+        NULL,
+        0
+    );
+    
+    if(fileSearch != INVALID_HANDLE_VALUE)
+    {
+        while(FindNextFile(fileSearch, &findData))
+        {
+            const auto* dir = findData.cFileName;
+            
+            if(!strcmp(dir, "..") || !strcmp(dir, "."))
+                continue;
+                
+            if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                SHFILEOPSTRUCT deleteDir = {
+                    NULL,
+                    FO_DELETE,
+                    dir,
+                    NULL,
+                    FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMATION,
+                    FALSE,
+                    NULL,
+                    NULL
+                };
+                
+                SHFileOperation(&deleteDir);
+            }
+        }
+        
+        FindClose(fileSearch);
+    }
 #else
     glob_t globResult{ };
     glob("./scope_*", GLOB_ONLYDIR, NULL, &globResult);
@@ -1567,7 +1610,6 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
     }
     
     globfree(&globResult);
-    
 #endif
 
     chdir(cwd);
