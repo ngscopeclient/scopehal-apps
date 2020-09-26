@@ -46,6 +46,11 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#else
+#include <glob.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <ftw.h>
 #endif
 
 using namespace std;
@@ -1535,13 +1540,36 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
  */
 void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 {
-	//Remove all old waveforms in the data directory.
-	//TODO: better way that doesn't involve system()
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
-	system("rm -rf scope_*");
-	chdir(cwd);
+		
+#ifndef _WIN32
+#else
+    glob_t globResult{ };
+    glob("./scope_*", GLOB_ONLYDIR, &globResult);
+    
+    if(globResult.gl_pathc > 0)
+    {
+        const auto deleteTree =
+            [](const char* path, const struct stat* st, int tflag, struct FTW* ftw) -> int
+            {
+                remove(path);
+                return 0;
+            };
+        
+        for(auto ix = 0U; ix < globResult.gl_pathc; ++ix)
+        {
+            const auto* dir = globResult.gl_pathv[ix];
+            nftw(dir, deleteTree, 32, FTW_DEPTH);
+        }
+    }
+    
+    globfree(&globResult);
+    
+#endif
+
+    chdir(cwd);
 
 	//Serialize waveforms for each of our instruments
 	for(auto it : m_historyWindows)
