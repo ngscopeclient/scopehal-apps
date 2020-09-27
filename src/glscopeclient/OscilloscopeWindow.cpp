@@ -40,20 +40,13 @@
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
+#include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
-#include <fileapi.h>
-#include <shellapi.h>
-#else
-#include <glob.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <ftw.h>
-#include <stdio.h>
 #endif
 
 using namespace std;
@@ -1547,70 +1540,10 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
 		
-#ifdef _WIN32
-    WIN32_FIND_DATA findData{ };
-    HANDLE fileSearch{ };
-    const auto* path = "scope_*";
+    const auto directories = ::Glob("scope_*", true);
     
-    fileSearch = FindFirstFileEx(
-        path,
-        FindExInfoStandard,
-        &findData,
-        FindExSearchLimitToDirectories,
-        NULL,
-        0
-    );
-    
-    if(fileSearch != INVALID_HANDLE_VALUE)
-    {
-        while(FindNextFile(fileSearch, &findData))
-        {
-            const auto* dir = findData.cFileName;
-            
-            if(!strcmp(dir, "..") || !strcmp(dir, "."))
-                continue;
-                
-            if(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            {
-                SHFILEOPSTRUCT deleteDir = {
-                    NULL,
-                    FO_DELETE,
-                    dir,
-                    NULL,
-                    FOF_SILENT | FOF_NOERRORUI | FOF_NOCONFIRMATION,
-                    FALSE,
-                    NULL,
-                    NULL
-                };
-                
-                SHFileOperation(&deleteDir);
-            }
-        }
-        
-        FindClose(fileSearch);
-    }
-#else
-    glob_t globResult{ };
-    glob("./scope_*", GLOB_ONLYDIR, NULL, &globResult);
-    
-    if(globResult.gl_pathc > 0)
-    {
-        const auto deleteTree =
-            [](const char* path, const struct stat*, int, struct FTW*) -> int
-            {
-                ::remove(path);
-                return 0;
-            };
-        
-        for(auto ix = 0U; ix < globResult.gl_pathc; ++ix)
-        {
-            const auto* dir = globResult.gl_pathv[ix];
-            nftw(dir, deleteTree, 32, FTW_DEPTH);
-        }
-    }
-    
-    globfree(&globResult);
-#endif
+    for(const auto& directory: directories)
+        ::RemoveDirectory(directory);
 
     chdir(cwd);
 
