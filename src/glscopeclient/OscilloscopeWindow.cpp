@@ -1540,12 +1540,12 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
 		
-    const auto directories = ::Glob("scope_*", true);
-    
-    for(const auto& directory: directories)
-        ::RemoveDirectory(directory);
+	const auto directories = ::Glob("scope_*", true);
+	
+	for(const auto& directory: directories)
+		::RemoveDirectory(directory);
 
-    chdir(cwd);
+	chdir(cwd);
 
 	//Serialize waveforms for each of our instruments
 	for(auto it : m_historyWindows)
