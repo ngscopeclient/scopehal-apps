@@ -40,6 +40,7 @@
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
+#include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -1535,12 +1536,15 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
  */
 void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 {
-	//Remove all old waveforms in the data directory.
-	//TODO: better way that doesn't involve system()
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
-	system("rm -rf scope_*");
+		
+	const auto directories = ::Glob("scope_*", true);
+	
+	for(const auto& directory: directories)
+		::RemoveDirectory(directory);
+
 	chdir(cwd);
 
 	//Serialize waveforms for each of our instruments

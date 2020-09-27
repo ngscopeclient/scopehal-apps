@@ -20,6 +20,7 @@ add_executable(glscopeclient
 	ChannelPropertiesDialog.cpp
 	FileProgressDialog.cpp
 	FilterDialog.cpp
+	FileSystem.cpp
 	Framebuffer.cpp
 	HaltConditionsDialog.cpp
 	HistoryWindow.cpp
