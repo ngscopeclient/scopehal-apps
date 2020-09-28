@@ -1074,11 +1074,12 @@ void WaveformArea::RenderComplexSignal(
 void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//Grab input and stop if there's nothing for us to do
-	auto filter = dynamic_cast<PeakDetectionFilter*>(m_channel.m_channel);
+	auto chan = m_channel.m_channel;
+	auto filter = dynamic_cast<PeakDetector*>(chan);
 	if(!filter)
 		return;
 	const vector<Peak>& peaks = filter->GetPeaks();
-	auto data = filter->GetData(0);
+	auto data = chan->GetData(0);
 	if(peaks.empty() || (data == NULL) )
 		return;
 
@@ -1091,8 +1092,8 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	int theight;
 	int margin = 2;
 
-	auto xunit = filter->GetXAxisUnits();
-	auto yunit = filter->GetYAxisUnits();
+	auto xunit = chan->GetXAxisUnits();
+	auto yunit = chan->GetYAxisUnits();
 
 	//First pass: get nominal locations of each peak label and discard offscreen ones
 	float radius = 4;
