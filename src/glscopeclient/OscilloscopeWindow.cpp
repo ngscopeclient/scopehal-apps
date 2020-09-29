@@ -1539,9 +1539,9 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
-		
+
 	const auto directories = ::Glob("scope_*", true);
-	
+
 	for(const auto& directory: directories)
 		::RemoveDirectory(directory);
 
@@ -2206,6 +2206,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	//Map all of the buffers we need to update in each area
 	for(auto w : m_waveformAreas)
 	{
+		w->OnWaveformDataReady();
 		w->CalculateOverlayPositions();
 		w->MapAllBuffers(true);
 	}
