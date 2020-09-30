@@ -13,14 +13,12 @@
 #include <stdio.h>
 #endif
 
-
 using namespace std;
-
 
 vector<string> Glob(const string& pathPattern, bool onlyDirectories)
 {
-    vector<string> result{ };
- 
+	vector<string> result{ };
+
 #ifdef _WIN32
 	WIN32_FIND_DATA findData{ };
 	HANDLE fileSearch{ };
@@ -29,7 +27,7 @@ vector<string> Glob(const string& pathPattern, bool onlyDirectories)
 		pathPattern.c_str(),
 		FindExInfoStandard,
 		&findData,
-		onlyDirectories ? FindExSearchLimitToDirectories : 0,
+		onlyDirectories ? FindExSearchLimitToDirectories : FindExSearchNameMatch,
 		NULL,
 		0
 	);
@@ -45,7 +43,7 @@ vector<string> Glob(const string& pathPattern, bool onlyDirectories)
 
 			if(!onlyDirectories || (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 			{
-				results.push_back(string{dir});
+				result.push_back(string{dir});
 			}
 		}
 	}
