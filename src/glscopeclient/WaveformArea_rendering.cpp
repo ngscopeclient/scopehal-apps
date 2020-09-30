@@ -189,7 +189,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float samplesPerPixel = 1.0f / (group->m_pixelsPerXUnit * pdat->m_timescale);
+	//First order approximation of average sample length: use first sample's duration
+	float samplesPerPixel = 1.0f / (group->m_pixelsPerXUnit * pdat->m_timescale * pdat->m_durations[0]);
 	float alpha_scaled = alpha * 2 / samplesPerPixel;
 
 	//Config stuff
