@@ -252,6 +252,13 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					m_windowMenu.append(m_windowAnalyzerMenuItem);
 						m_windowAnalyzerMenuItem.set_label("Analyzer");
 						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
+			m_menu.append(m_helpMenuItem);
+				m_helpMenuItem.set_label("Help");
+				m_helpMenuItem.set_submenu(m_helpMenu);
+					m_helpMenu.append(m_aboutMenuItem);
+					m_aboutMenuItem.set_label("About...");
+					m_aboutMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnAboutDialog));
 
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
 			m_vbox.get_style_context()->add_class("toolbar");
@@ -2547,4 +2554,50 @@ void OscilloscopeWindow::RefreshAnalyzerMenu()
 void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
 {
 	window->show();
+}
+
+void OscilloscopeWindow::OnAboutDialog()
+{
+	Gtk::AboutDialog aboutDialog;
+	
+	aboutDialog.set_logo_default();
+	aboutDialog.set_version("0.1"); // TODO: CMakeLists trickery for versioning?
+	aboutDialog.set_copyright("2012-present Andrew Zonenberg");
+	aboutDialog.set_license(
+		"Redistribution and use in source and binary forms, with or without modification, "
+		"are permitted provided that the following conditions are met:\n\n"
+		"* Redistributions of source code must retain the above copyright notice, this list "
+		"of conditions, and the following disclaimer.\n\n"
+		"* Redistributions in binary form must reproduce the above copyright notice, this list "
+		"of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n\n"
+		"* Neither the name of the author nor the names of any contributors may be used to "
+		"endorse or promote products derived from this software without specific prior written permission.\n\n"
+		"THIS SOFTWARE IS PROVIDED BY THE AUTHORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED "
+		"TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL "
+		"THE AUTHORS BE HELD LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES "
+		"(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR "
+		"BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT "
+		"(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE "
+		"POSSIBILITY OF SUCH DAMAGE.    "
+	);
+	aboutDialog.set_wrap_license(true);
+	
+	std::vector<Glib::ustring> contributors
+	{
+		"azonenberg",
+		"bvernoux",
+		"nshcat",
+		"9names",
+		"antikerneldev",
+		"tomverbeure",
+		"whitequark",
+		"x44203",
+		"miek",
+		"smunaut",
+		"four0four",
+		"noopwafel"
+	};
+	aboutDialog.add_credit_section("Contributors", contributors);
+	
+	aboutDialog.run();
 }
