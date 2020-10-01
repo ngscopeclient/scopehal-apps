@@ -2567,7 +2567,7 @@ void OscilloscopeWindow::OnAboutDialog()
 	Gtk::AboutDialog aboutDialog;
 
 	aboutDialog.set_logo_default();
-	aboutDialog.set_version(GLSCOPECLIENT_VERSION);
+	aboutDialog.set_version(string("Version ") + GLSCOPECLIENT_VERSION);
 	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg");
 	aboutDialog.set_license(
 		"Redistribution and use in source and binary forms, with or without modification, "
