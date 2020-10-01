@@ -2,6 +2,9 @@
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# Git is used for git-describe based version generation if we have it
+find_package(Git)
+
 # Additional libraries on Windows
 if(WIN32)
 	set(WIN_LIBS shlwapi)
@@ -13,6 +16,19 @@ endif()
 #Set up include paths
 include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
+
+#Set up versioning (with a dummy string for now if Git isn't present)
+if(Git_FOUND)
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} describe --always --tags
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE GLSCOPECLIENT_VERSION
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+	set(GLSCOPECLIENT_VERSION "v0.1-unknown")
+endif()
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+configure_file(glscopeclient-version.h.in glscopeclient-version.h)
 
 ###############################################################################
 #C++ compilation
