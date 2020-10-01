@@ -70,10 +70,15 @@ protected:
 		Gtk::Label m_groupLabel;
 			Gtk::ListViewText m_groupList;
 
+		//Frequency domain channel configuration
+		Gtk::Label m_centerLabel;
+			Gtk::Entry m_centerEntry;
+
 	OscilloscopeChannel* m_chan;
 
 	bool m_hasThreshold;
 	bool m_hasHysteresis;
+	bool m_hasFrequency;
 };
 
 #endif
