@@ -24,7 +24,9 @@ toolbar,
 notebook *,
 dialog,
 dialog.*,
-actionbar
+actionbar,
+textview *,
+grid
 {
 	color:				@glscopeclient_text_color;
 	background-color:	@glscopeclient_bg_color;
