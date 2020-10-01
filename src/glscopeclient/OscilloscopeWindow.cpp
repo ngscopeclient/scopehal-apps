@@ -2564,10 +2564,10 @@ void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
 void OscilloscopeWindow::OnAboutDialog()
 {
 	Gtk::AboutDialog aboutDialog;
-	
+
 	aboutDialog.set_logo_default();
 	aboutDialog.set_version("0.1"); // TODO: CMakeLists trickery for versioning?
-	aboutDialog.set_copyright("2012-present Andrew Zonenberg");
+	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg");
 	aboutDialog.set_license(
 		"Redistribution and use in source and binary forms, with or without modification, "
 		"are permitted provided that the following conditions are met:\n\n"
@@ -2586,23 +2586,44 @@ void OscilloscopeWindow::OnAboutDialog()
 		"POSSIBILITY OF SUCH DAMAGE.    "
 	);
 	aboutDialog.set_wrap_license(true);
-	
-	std::vector<Glib::ustring> contributors
+
+	vector<Glib::ustring> authors
 	{
-		"azonenberg",
-		"bvernoux",
-		"nshcat",
 		"9names",
+		"Andres Manelli",
+		"Andrew D. Zonenberg",
 		"antikerneldev",
-		"tomverbeure",
-		"whitequark",
-		"x44203",
-		"miek",
-		"smunaut",
+		"Benjamin Vernoux",
 		"four0four",
-		"noopwafel"
+		"miek",
+		"noopwafel",
+		"nshcat",
+		"Pepijn De Vos",
+		"randomplum",
+		"rqou",
+		"smunaut",
+		"Tom Verbeuere",
+		"whitequark",
+		"x44203"
 	};
-	aboutDialog.add_credit_section("Contributors", contributors);
-	
+	aboutDialog.set_authors(authors);
+
+	vector<Glib::ustring> artists
+	{
+		"Collateral Damage Studios"
+	};
+	aboutDialog.set_artists(artists);
+
+	vector<Glib::ustring> hardware
+	{
+		"Andrew D. Zonenberg",
+		"whitequark",
+		"and several anonymous donors"
+	};
+	aboutDialog.add_credit_section("Hardware Contributions", hardware);
+
+	aboutDialog.set_website("https://www.github.com/azonenberg/scopehal-apps");
+	aboutDialog.set_website_label("Visit us on GitHub");
+
 	aboutDialog.run();
 }
