@@ -137,6 +137,7 @@ protected:
 	void OnHistory();
 	void OnAlphaChanged();
 	void OnRefreshConfig();
+	void OnAboutDialog();
 
 	void UpdateStatusBar();
 
@@ -171,6 +172,9 @@ protected:
 				Gtk::Menu m_windowMenu;
 					Gtk::MenuItem m_windowAnalyzerMenuItem;
 						Gtk::Menu m_windowAnalyzerMenu;
+			Gtk::MenuItem m_helpMenuItem;
+				Gtk::Menu m_helpMenu;
+					Gtk::MenuItem m_aboutMenuItem;
 		Gtk::HBox m_toolbox;
 			Gtk::Toolbar m_toolbar;
 				Gtk::ToolButton m_btnStart;
