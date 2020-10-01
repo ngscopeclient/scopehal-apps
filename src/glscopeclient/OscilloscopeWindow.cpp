@@ -2602,6 +2602,7 @@ void OscilloscopeWindow::OnAboutDialog()
 		"randomplum",
 		"rqou",
 		"smunaut",
+		"tarunik",
 		"Tom Verbeuere",
 		"whitequark",
 		"x44203"
