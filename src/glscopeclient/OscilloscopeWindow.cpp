@@ -315,7 +315,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					sigc::mem_fun(*this, &OscilloscopeWindow::OnAlphaChanged));
 				m_alphaslider.get_style_context()->add_class("toolbar");
 
-		auto split = new Gtk::HPaned;
+		auto split = new Gtk::VPaned;
 			m_vbox.pack_start(*split);
 			m_splitters.emplace(split);
 			auto group = new WaveformGroup(this);
@@ -332,6 +332,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 	//Create history windows
 	for(auto scope : m_scopes)
 		m_historyWindows[scope] = new HistoryWindow(this, scope);
+
+	WaveformGroup* spectrumGroup = NULL;
 
 	//Process all of the channels
 	for(auto scope : m_scopes)
@@ -360,14 +362,31 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 				if(!chan->IsEnabled())
 					continue;
 
+				//Put in the normal waveform group unless they're frequency domain.
+				//Put those in a new group.
+				//TODO: for pure specan support we should check if we have any time domain channels?
+				auto wg = group;
+				if(chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
+				{
+					//This is the first frequency domain channel, make a new group
+					if(!spectrumGroup)
+					{
+						spectrumGroup = new WaveformGroup(this);
+						m_waveformGroups.emplace(spectrumGroup);
+						split->pack2(spectrumGroup->m_frame);
+					}
+
+					wg = spectrumGroup;
+				}
+
 				//For now, assume all instrument channels have only one output stream
 				auto w = new WaveformArea(StreamDescriptor(chan, 0), this);
-				w->m_group = group;
+				w->m_group = wg;
 				m_waveformAreas.emplace(w);
 				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-					group->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+					wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 				else
-					group->m_waveformBox.pack_start(*w);
+					wg->m_waveformBox.pack_start(*w);
 			}
 		}
 	}
@@ -393,6 +412,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 	//Don't show measurements or wizards by default
 	group->m_measurementView.hide();
+	if(spectrumGroup)
+		spectrumGroup->m_measurementView.hide();
 	m_haltConditionsDialog.hide();
 
 	//Initialize the style sheets
