@@ -107,12 +107,10 @@ void WaveformArea::SharedCtorInit()
 	m_pendingDecode			= NULL;
 
 	//Configure the OpenGL context we want
-	//TODO: it looks like OpenGL ES 3.1 can do everything we need
-	//Do we want to support this for running on embedded ARM GPUs etc eventually?
 	set_has_alpha();
 	set_has_depth_buffer(false);
 	set_has_stencil_buffer(false);
-	set_required_version(4, 3);
+	set_required_version(4, 2);
 	set_use_es(false);
 
 	add_events(
@@ -543,12 +541,42 @@ void WaveformArea::on_realize()
 			exit(1);
 		}
 
-		//Make sure we have the GL_ARB_gpu_shader_int64 extension
-		if(!GLEW_ARB_gpu_shader_int64)
+		//Check for GL 4.2 (required for glBindImageTexture)
+		if(!GLEW_VERSION_4_2)
 		{
 			string err =
-				"Your graphics card or driver does not appear to support the GL_ARB_gpu_shader_int64 extension, \n"
-				"which is required to perform GPU-accelerated 64-bit integer arithmetic.\n"
+				"Your graphics card or driver does not appear to support OpenGL 4.2.\n"
+				"\n"
+				"Unfortunately, glscopeclient cannot run on your system.\n";
+
+			Gtk::MessageDialog dlg(
+				err,
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true
+				);
+
+			dlg.run();
+			exit(1);
+		}
+
+		//Make sure we have the required extensions
+		if(	!GLEW_EXT_blend_equation_separate ||
+			!GL_EXT_framebuffer_object ||
+			!GL_ARB_vertex_array_object ||
+			!GL_ARB_shader_storage_buffer_object ||
+			!GL_ARB_compute_shader ||
+			!GL_ARB_gpu_shader_int64 )
+		{
+			string err =
+				"Your graphics card or driver does not appear to support one or more of the following required extensions:\n"
+				"* GL_ARB_compute_shader\n"
+				"* GL_ARB_gpu_shader_int64\n"
+				"* GL_ARB_shader_storage_buffer_object\n"
+				"* GL_ARB_vertex_array_object\n"
+				"* GL_EXT_blend_equation_separate\n"
+				"* GL_EXT_framebuffer_object\n"
 				"\n"
 				"Unfortunately, glscopeclient cannot run on your system.\n";
 
