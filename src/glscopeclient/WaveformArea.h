@@ -165,6 +165,9 @@ public:
 
 	void CenterTimestamp(int64_t time);
 
+	static bool IsGLInitComplete()
+	{ return m_isGlewInitialized; }
+
 protected:
 	void SharedCtorInit();
 

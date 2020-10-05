@@ -2232,36 +2232,41 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto a : m_analyzers)
 		a->OnWaveformDataReady();
 
-	//Map all of the buffers we need to update in each area
-	for(auto w : m_waveformAreas)
+	//Update waveform areas.
+	//Skip this if loading a file from the command line and loading isn't done
+	if(WaveformArea::IsGLInitComplete())
 	{
-		w->OnWaveformDataReady();
-		w->CalculateOverlayPositions();
-		w->MapAllBuffers(true);
+		//Map all of the buffers we need to update in each area
+		for(auto w : m_waveformAreas)
+		{
+			w->OnWaveformDataReady();
+			w->CalculateOverlayPositions();
+			w->MapAllBuffers(true);
+		}
+
+		float alpha = GetTraceAlpha();
+
+		//Make the list of data to update (waveforms plus overlays)
+		vector<WaveformRenderData*> data;
+		for(auto w : m_waveformAreas)
+			w->GetAllRenderData(data);
+
+		//Do the updates in parallel
+		#pragma omp parallel for
+		for(size_t i=0; i<data.size(); i++)
+			WaveformArea::PrepareGeometry(data[i], true, alpha);
+
+		//Clean up
+		for(auto w : m_waveformAreas)
+		{
+			w->SetNotDirty();
+			w->UnmapAllBuffers(true);
+		}
+
+		//Submit update requests for each area
+		for(auto w : m_waveformAreas)
+			w->queue_draw();
 	}
-
-	float alpha = GetTraceAlpha();
-
-	//Make the list of data to update (waveforms plus overlays)
-	vector<WaveformRenderData*> data;
-	for(auto w : m_waveformAreas)
-		w->GetAllRenderData(data);
-
-	//Do the updates in parallel
-	#pragma omp parallel for
-	for(size_t i=0; i<data.size(); i++)
-		WaveformArea::PrepareGeometry(data[i], true, alpha);
-
-	//Clean up
-	for(auto w : m_waveformAreas)
-	{
-		w->SetNotDirty();
-		w->UnmapAllBuffers(true);
-	}
-
-	//Submit update requests for each area
-	for(auto w : m_waveformAreas)
-		w->queue_draw();
 
 	//Update the trigger sync wizard, if it's active
 	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
