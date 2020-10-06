@@ -1400,8 +1400,17 @@ void WaveformArea::UpdateContextMenu()
 			break;
 	}
 
-	//Set stats checkbox
-	m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel.m_channel));
+	//Hide stats for non-analog channels
+	if(m_selectedChannel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+	{
+		m_statisticsItem.set_sensitive(false);
+		m_statisticsItem.set_active(false);
+	}
+	else
+	{
+		m_statisticsItem.set_sensitive(true);
+		m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel.m_channel));
+	}
 
 	m_updatingContextMenu = false;
 }
