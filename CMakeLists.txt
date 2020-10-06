@@ -3,6 +3,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
+set(ANALYZE CACHE BOOL "Run static analysis on the code")
 
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
 set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
@@ -12,7 +13,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
 
 if(WIN32)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS")
 endif()
 
 find_package(PkgConfig)
@@ -24,6 +25,10 @@ find_package(FFTS)
 
 if(BUILD_DOCS)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
+endif()
+
+if(ANALYZE)
+	set(CMAKE_CXX_CPPCHECK "/usr/bin/cppcheck;-DFT_USE_AUTOCONF_SIZEOF_TYPES")
 endif()
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
