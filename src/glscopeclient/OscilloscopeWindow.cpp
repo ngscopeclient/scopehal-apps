@@ -356,10 +356,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
 			{
-				//Test if channel can be enabled. If it returns false, we're interleaving or something,
-				//which means it's unavailable.
-				chan->Enable();
-				if(!chan->IsEnabled())
+				//Skip channels we can't enable
+				if(!scope->CanEnableChannel(i))
 					continue;
 
 				//Put in the normal waveform group unless they're frequency domain.
@@ -2496,7 +2494,13 @@ void OscilloscopeWindow::OnTimebaseSettings()
 {
 	TimebasePropertiesDialog dlg(this, m_scopes);
 	if(dlg.run() == Gtk::RESPONSE_OK)
+	{
 		dlg.ConfigureTimebase();
+
+		//Need to refresh the menu in case we changed interleaving settings.
+		//The set of available channels might have changed.
+		RefreshChannelsMenu();
+	}
 }
 
 /**
@@ -2548,10 +2552,13 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
-			auto type = chan->GetType();
+
+			//Skip channels that can't be enabled for some reason
+			if(!scope->CanEnableChannel(i))
+				continue;
 
 			//Add a menu item - but not for the external trigger(s)
-			if(type != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 			{
 				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
 				item->signal_activate().connect(
