@@ -194,7 +194,14 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 		//TODO: multiple streams
 		for(size_t k=0; k<m_scope->GetChannelCount(); k++)
 		{
-			auto c = StreamDescriptor(m_scope->GetChannel(k), 0);
+			auto chan = m_scope->GetChannel(k);
+
+			//Hide channels we can't enable due to interleave conflicts etc
+			//Trigger channel can't be enabled for display, but is always a legal source
+			if( !m_scope->CanEnableChannel(k) && (chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+				continue;
+
+			auto c = StreamDescriptor(chan, 0);
 			if(trig->ValidateChannel(i, c))
 			{
 				auto name = c.m_channel->m_displayname;

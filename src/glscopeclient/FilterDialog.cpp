@@ -214,7 +214,13 @@ FilterDialog::FilterDialog(
 			Oscilloscope* scope = parent->GetScope(j);
 			for(size_t k=0; k<scope->GetChannelCount(); k++)
 			{
-				auto c = StreamDescriptor(scope->GetChannel(k), 0);
+				//If we can't enable the channel, don't show it.
+				//Aux inputs can't be enabled, but show those if they are legal
+				auto cn = scope->GetChannel(k);
+				if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+					continue;
+
+				auto c = StreamDescriptor(cn, 0);
 				if(filter->ValidateChannel(i, c))
 				{
 					auto name = c.m_channel->m_displayname;
