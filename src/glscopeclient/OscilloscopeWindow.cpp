@@ -2107,6 +2107,10 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 
 bool OscilloscopeWindow::PollScopes()
 {
+	//Avoid infinite loop if we have no scope to poll
+	if(m_scopes.empty())
+		return false;
+
 	bool had_waveforms = false;
 
 	bool pending = true;
