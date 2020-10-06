@@ -510,6 +510,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 {
 	string label = m_channel.GetName();
 	auto data = m_channel.GetData();
+	auto scope = m_channel.m_channel->GetScope();
 
 	auto eye = dynamic_cast<EyeWaveform*>(data);
 	auto ed = dynamic_cast<EyePattern*>(m_channel.m_channel);
@@ -519,7 +520,11 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto xunits = m_channel.m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
-		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(data->m_timescale).c_str());
+		double rbw = data->m_timescale;
+		if(scope)
+			rbw = scope->GetResolutionBandwidth();
+
+		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(rbw).c_str());
 		label += tmp;
 	}
 
