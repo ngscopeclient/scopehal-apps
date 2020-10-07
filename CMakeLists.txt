@@ -28,7 +28,8 @@ if(BUILD_DOCS)
 endif()
 
 if(ANALYZE)
-	set(CMAKE_CXX_CPPCHECK "/usr/bin/cppcheck;-DFT_USE_AUTOCONF_SIZEOF_TYPES")
+	find_program(CPPCHECK_PATH cppcheck DOC "Path to cppcheck when ANALYZE is enabled" REQUIRED)
+	set(CMAKE_CXX_CPPCHECK "${CPPCHECK_PATH};-DFT_USE_AUTOCONF_SIZEOF_TYPES;--enable=warning,performance,portability")
 endif()
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
