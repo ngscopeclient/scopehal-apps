@@ -47,7 +47,7 @@ namespace internal
     class PreferencePath
     {
         public:
-            PreferencePath(const std::string& path);
+            explicit PreferencePath(const std::string& path);
 
         protected:
             PreferencePath(std::vector<std::string> segments);
@@ -119,7 +119,7 @@ public:
     PreferenceCategory(std::string identifier);
 
 public:
-    const Preference& GetLeaf(const std::string& path);
+    Preference& GetLeaf(const std::string& path);
     virtual void ToYAML(YAML::Node& node) const;
     virtual void FromYAML(const YAML::Node& node);
     virtual Preference& GetLeaf(const PreferencePath& path);

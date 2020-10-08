@@ -38,12 +38,13 @@
 
 #include <map>
 #include <string>
-#include "Preference.h"
+#include "PreferenceTree.h"
 
 class PreferenceManager
 {
 public:
     PreferenceManager()
+        : m_treeRoot{ "" }
     {
         DeterminePath();
         InitializeDefaults();
@@ -60,7 +61,7 @@ public:
     
 public:
     void SavePreferences();
-    std::map<std::string, Preference>& AllPreferences();
+    PreferenceCategory& AllPreferences();
     
     // Value retrieval methods
     const std::string& GetString(const std::string& identifier) const;
@@ -73,17 +74,10 @@ private:
     void InitializeDefaults();
     void LoadPreferences();
     bool HasPreferenceFile() const;
-    const Preference& GetPreference(const std::string& identifier) const;
-    
-    template<typename T>
-    void AddPreference(std::string identifier, std::string label, std::string description, T defaultValue)
-    {
-        auto pref = Preference(identifier, std::move(label), std::move(description), std::move(defaultValue));   
-        m_preferences.emplace(identifier, std::move(pref));
-    }
+    const Preference& GetPreference(const std::string& path) const;
 
 private:
-    std::map<std::string, Preference> m_preferences{ };
+    PreferenceCategory m_treeRoot;
     std::string m_filePath;
 };
 

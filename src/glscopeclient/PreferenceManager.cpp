@@ -84,14 +84,16 @@ static void CreateDirectory(const string& path)
 
 void PreferenceManager::InitializeDefaults()
 {
-    AddPreference("test_string", "Test string", "First test value", "string");
-    AddPreference("test_real", "Test real", "Second test value", 42.09);
-    AddPreference("test_bool", "Test boolean", "Third test value", true);
+    auto& testSettings = this->m_treeRoot.AddCategory("test_settings");
+
+    testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
+    testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+    testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
 }
 
-map<string, Preference>& PreferenceManager::AllPreferences()
+PreferenceCategory& PreferenceManager::AllPreferences()
 {
-    return m_preferences;
+    return this->m_treeRoot;
 }
 
 bool PreferenceManager::HasPreferenceFile() const
@@ -107,18 +109,9 @@ bool PreferenceManager::HasPreferenceFile() const
 #endif
 }
 
-const Preference& PreferenceManager::GetPreference(const string& identifier) const
+const Preference& PreferenceManager::GetPreference(const string& path) const
 {
-    const auto it = m_preferences.find(identifier);
-    
-    if(it == m_preferences.end())
-    {
-        throw runtime_error("tried to access non-existant preference");
-    }
-    else
-    {
-        return it->second;
-    }
+    return this->m_treeRoot.GetLeaf(path);
 }
 
 void PreferenceManager::DeterminePath()
@@ -188,42 +181,7 @@ void PreferenceManager::LoadPreferences()
     try
     {
         auto doc = YAML::LoadAllFromFile(m_filePath)[0];
-    
-        for(auto& entry: m_preferences)
-        {
-            // Check if the preferences file contains an entry with that matches the
-            // current preference identifier. If so, we overwrite the stored default value.
-            if(const auto& node = doc[entry.first])
-            {
-                auto& preference = entry.second;
-            
-                try
-                {
-                    switch(preference.GetType())
-                    {
-                        case PreferenceType::Boolean:
-                            preference.SetBool(node.as<bool>());
-                            break;
-                            
-                        case PreferenceType::Real:
-                            preference.SetReal(node.as<double>());
-                            break;
-                            
-                        case PreferenceType::String:
-                            preference.SetString(node.as<string>());
-                            break;
-                            
-                        default:
-                            break;
-                    }
-                }
-                catch(...)
-                {
-                    LogWarning("Warning: Can't parse preference value %s for preference %s, ignoring",
-                        node.as<string>().c_str(), preference.GetIdentifier().c_str());
-                }
-            }
-        }
+        this->m_treeRoot.FromYAML(doc);
     }
     catch(const exception& ex)
     {
@@ -235,10 +193,7 @@ void PreferenceManager::SavePreferences()
 {
     YAML::Node node{ };
     
-    for(const auto& entry: m_preferences)
-    {
-        node[entry.first] = entry.second.ToString();
-    }
+    this->m_treeRoot.ToYAML(node);
     
     ofstream outfs{ m_filePath };
     

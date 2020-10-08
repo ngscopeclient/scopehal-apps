@@ -137,7 +137,7 @@ namespace internal
     }
 }
 
-const Preference& PreferenceCategory::GetLeaf(const std::string& path)
+Preference& PreferenceCategory::GetLeaf(const std::string& path)
 {
     return this->GetLeaf(internal::PreferencePath{ path });
 }
