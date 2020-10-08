@@ -184,3 +184,24 @@ PreferenceCategory::PreferenceCategory(std::string identifier)
 {
 
 }
+
+void PreferenceCategory::AddPreference(Preference pref)
+{
+    if(this->m_children.count(pref.GetIdentifier()) > 0)
+        throw std::runtime_error("Preference category already contains child with given name");
+
+    const auto identifier = pref.GetIdentifier();
+    auto ptr = std::make_unique<internal::PreferenceHolder>(std::move(pref));
+    this->m_children[identifier] = std::move(ptr);
+}
+
+PreferenceCategory& PreferenceCategory::AddCategory(std::string identifier)
+{
+    if(this->m_children.count(identifier) > 0)
+        throw std::runtime_error("Preference category already contains child with given name");
+
+    auto ptr = std::make_unique<PreferenceCategory>(identifier);
+    this->m_children[identifier] = std::move(ptr);
+
+    return *this->m_children[identifier];
+}

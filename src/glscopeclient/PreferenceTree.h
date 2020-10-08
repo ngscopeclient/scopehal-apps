@@ -123,6 +123,8 @@ public:
     virtual void ToYAML(YAML::Node& node) const;
     virtual void FromYAML(const YAML::Node& node);
     virtual Preference& GetLeaf(const PreferencePath& path);
+    void AddPreference(Preference pref);
+    PreferenceCategory& AddCategory(std::string identifier);
 
 protected:
     map_type m_children;
