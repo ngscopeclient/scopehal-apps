@@ -29,7 +29,7 @@ endif()
 
 if(ANALYZE)
 	find_program(CPPCHECK_PATH cppcheck DOC "Path to cppcheck when ANALYZE is enabled" REQUIRED)
-	set(CMAKE_CXX_CPPCHECK "${CPPCHECK_PATH};-DFT_USE_AUTOCONF_SIZEOF_TYPES;--enable=warning,performance,portability")
+	set(CMAKE_CXX_CPPCHECK "${CPPCHECK_PATH};-DFT_USE_AUTOCONF_SIZEOF_TYPES;--enable=warning,performance,portability;--suppress=*:*sigc*")
 endif()
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
