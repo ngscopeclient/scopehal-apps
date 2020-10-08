@@ -411,11 +411,14 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	if(decoder->GetShowImageColumn())
 		m_tree.append_column("Image", m_columns.m_image);
 
+	int ncols = headers.size() + 1;
 	if(decoder->GetShowDataColumn())
+	{
 		m_tree.append_column("Data", m_columns.m_data);
+		ncols = headers.size() + 2;
+	}
 
 	//Set background color
-	int ncols = headers.size() + 2;
 	for(int col=0; col<ncols; col ++)
 	{
 		auto pcol = m_tree.get_column(col);
@@ -480,6 +483,7 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 	bool filtering = filter.Validate(m_decoder->GetHeaders());
 
 	Packet* first_packet_in_group = NULL;
+	Packet* last_packet = NULL;
 	Gtk::TreeModel::iterator last_top_row = m_model->children().end();
 
 	auto npackets = packets.size();
@@ -488,13 +492,21 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		auto p = packets[i];
 
 		//See if we should start a new merge group
-		if( (first_packet_in_group == NULL) &&
-			(i+1 < npackets) &&
-			m_decoder->CanMerge(p, packets[i+1]) )
+		bool starting_new_group;
+		if(i+1 >= npackets)									//No next packet to merge with
+			starting_new_group = false;
+		else if(!m_decoder->CanMerge(p, p, packets[i+1]))	//This packet isn't compatible with the next
+			starting_new_group = false;
+		else if(first_packet_in_group == NULL)				//If we get here, we're merging. But are we already?
+			starting_new_group = true;
+		else												//Already in a group, but it's not the same as the new one
+			starting_new_group = !m_decoder->CanMerge(first_packet_in_group, last_packet, p);
+
+		if(starting_new_group)
 		{
 			//Create the summary packet
 			first_packet_in_group = p;
-			auto parent_packet = m_decoder->CreateMergedHeader(p);
+			auto parent_packet = m_decoder->CreateMergedHeader(p, i);
 
 			//Add it
 			last_top_row = *m_internalmodel->append();
@@ -506,7 +518,7 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		}
 
 		//End a merge group
-		else if( (first_packet_in_group != NULL) && !m_decoder->CanMerge(first_packet_in_group, p) )
+		else if( (first_packet_in_group != NULL) && !m_decoder->CanMerge(first_packet_in_group, last_packet, p) )
 			first_packet_in_group = NULL;
 
 		//Create a row for the new packet. This might be top level or under a merge group
@@ -540,6 +552,8 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 			if(first_packet_in_group != NULL)
 				(*last_top_row)[m_columns.m_visible] = true;
 		}
+
+		last_packet = p;
 	}
 
 	//TODO: select the last row
