@@ -27,6 +27,7 @@ add_executable(glscopeclient
 	OscilloscopeWindow.cpp
 	Program.cpp
 	Preference.cpp
+	PreferenceTree.cpp
 	PreferenceManager.cpp
 	PreferenceDialog.cpp
 	ProtocolAnalyzerWindow.cpp

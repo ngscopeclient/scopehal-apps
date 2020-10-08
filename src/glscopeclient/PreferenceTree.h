@@ -37,11 +37,31 @@
 #define PreferenceTree_h
 
 #include <string>
+#include <vector>
 
 #include "glscopeclient.h"
 
+class Preference;
+
 namespace internal
 {
+    class PreferencePath
+    {
+        public:
+            PreferencePath(const std::string& path);
+
+        protected:
+            PreferencePath(std::vector<std::string> segments);
+
+        public:
+            PreferencePath NextLevel() const;
+            std::size_t GetLength() const;
+            const std::string& GetCurrentSegment() const;
+
+        protected:
+            std::vector<std::string> m_segments;
+    };
+
     class PreferenceTreeNodeBase
     {
     public:
@@ -65,6 +85,7 @@ namespace internal
     public:
         virtual YAML::Node ToYAML() = 0;
         virtual void FromYAML(const YAML::Node& node) = 0;
+        virtual const Preference& GetLeaf(const PreferencePath& path) = 0;
 
     public:
         const std::string& GetIdentifier() const;
@@ -73,5 +94,24 @@ namespace internal
         std::string m_identifier; //< The identifier of this node
     };
 }
+
+class PreferenceCategory
+    : public internal::PreferenceTreeNodeBase
+{
+protected:
+    using map_type = std::map<std::string, std::unique_ptr<internal::PreferenceTreeNodeBase>>;
+
+public:
+    PreferenceCategory(std::string identifier);
+
+public:
+    const Preference& GetLeaf(const std::string& path);
+    virtual YAML::Node ToYAML();
+    virtual void FromYAML(const YAML::Node& node);
+    virtual const Preference& GetLeaf(const PreferencePath& path);
+
+protected:
+    map_type m_children;
+};
 
 #endif // PreferenceTree_h

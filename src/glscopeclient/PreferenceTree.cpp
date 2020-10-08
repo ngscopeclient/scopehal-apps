@@ -35,10 +35,92 @@
 
 #include "PreferenceTree.h"
 
+#include <stdexcept>
+#include <utility>
+#include <iterator>
+#include <algorithm>
+#include <sstream>
+
 namespace internal
 {
+    PreferencePath::PreferencePath(const std::string& path)
+    {
+        std::istringstream p{path};
+        std::string token{ };
+
+        while(std::getline(p, token, '.'))
+        {
+            if(!token.empty())
+                this->m_segments.push_back(token);
+        }
+    }
+
+    PreferencePath::PreferencePath(std::vector<std::string> segments)
+        : m_segments{ std::move(segments) }
+    {
+
+    }
+
+    PreferencePath PreferencePath::NextLevel() const
+    {
+        if(this->GetLength() <= 1)
+            throw std::runtime_error("Not enough segments left to go to next level");
+
+        std::vector<std::string> newSegments{ this->m_segments.begin(), std::prev(this->m_segments.end()) };
+        return PreferencePath{ std::move(newSegments) };
+    }
+    
+    std::size_t PreferencePath::GetLength() const
+    {
+        return this->m_segments.size();
+    }
+
+    const std::string& PreferencePath::GetCurrentSegment() const
+    {
+        if(this->GetLength() == 0)
+            throw std::runtime_error("Empty preference path");
+
+        return this->m_segments[0];
+    }
+
+
     const std::string& PreferenceTree::GetIdentifier() const
     {
         return this->m_identifier;
     }
+}
+
+const Preference& PreferenceCategory::GetLeaf(const std::string& path)
+{
+    return this->GetLeaf(internal::PreferencePath{ path });
+}
+
+const Preference& PreferenceCategory::GetLeaf(const PreferencePath& path)
+{
+    if(path.GetLength() == 0)
+        throw std::runtime_error("Path too short");
+
+    const auto& segment = path.GetCurrentSegment();
+
+    auto iter = this->m_children.find(segment);
+    if(iter == this->m_children.end())
+        throw std::runtime_error("Couldnt find path segment in preference category");
+
+    return iter->second->GetLeaf(path.NextLevel());
+}
+
+YAML::Node PreferenceCategory::ToYAML()
+{
+    throw std::runtime_error("not implemented");
+}
+
+void PreferenceCategory::FromYAML(const YAML::Node& node)
+{
+    throw std::runtime_error("not implemented");
+}
+
+PreferenceCategory::PreferenceCategory(std::string identifier)
+    : PreferenceTreeNodeBase(std::move(identifier))
+{
+
 }
