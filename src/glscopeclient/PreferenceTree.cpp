@@ -63,9 +63,6 @@ namespace internal
 
     PreferencePath PreferencePath::NextLevel() const
     {
-        if(this->GetLength() <= 1)
-            throw std::runtime_error("Not enough segments left to go to next level");
-
         std::vector<std::string> newSegments{ this->m_segments.begin(), std::prev(this->m_segments.end()) };
         return PreferencePath{ std::move(newSegments) };
     }
@@ -83,10 +80,60 @@ namespace internal
         return this->m_segments[0];
     }
 
-
     const std::string& PreferenceTree::GetIdentifier() const
     {
         return this->m_identifier;
+    }
+
+    PreferenceHolder::PreferenceHolder(Preference pref)
+        : PreferenceTreeNodeBase(pref.GetIdentifier()), m_pref{ std::move(pref) }
+    {
+
+    }
+
+    void PreferenceHolder::ToYAML(YAML::Node& node) const
+    {
+        node[this->m_identifier] = this->m_pref.ToString();
+    }
+
+    void PreferenceHolder::FromYAML(const YAML::Node& node)
+    {
+        if(const auto& n = node[this->m_identifier])
+        {
+            try
+            {
+                switch(this->m_pref.GetType())
+                {
+                    case PreferenceType::Boolean:
+                        this->m_pref.SetBool(n.as<bool>());
+                        break;
+                        
+                    case PreferenceType::Real:
+                        this->m_pref.SetReal(n.as<double>());
+                        break;
+                        
+                    case PreferenceType::String:
+                        this->m_pref.SetString(n.as<string>());
+                        break;
+                        
+                    default:
+                        break;
+                }
+            }
+            catch(...)
+            {
+                LogWarning("Warning: Can't parse preference value %s for preference %s, ignoring",
+                    n.as<string>().c_str(), this->m_identifier.c_str());
+            }
+        }
+    }
+
+    Preference& PreferenceHolder::GetLeaf(const PreferencePath& path)
+    {
+        if(path.GetLength() > 0)
+            throw std::runtime_error("Reached tree leaf, but path isnt empty");
+
+        return this->m_pref;
     }
 }
 
@@ -95,7 +142,7 @@ const Preference& PreferenceCategory::GetLeaf(const std::string& path)
     return this->GetLeaf(internal::PreferencePath{ path });
 }
 
-const Preference& PreferenceCategory::GetLeaf(const PreferencePath& path)
+Preference& PreferenceCategory::GetLeaf(const PreferencePath& path)
 {
     if(path.GetLength() == 0)
         throw std::runtime_error("Path too short");
@@ -109,14 +156,27 @@ const Preference& PreferenceCategory::GetLeaf(const PreferencePath& path)
     return iter->second->GetLeaf(path.NextLevel());
 }
 
-YAML::Node PreferenceCategory::ToYAML()
+void PreferenceCategory::ToYAML(YAML::Node& node) const
 {
-    throw std::runtime_error("not implemented");
+    YAML::Node child{ };
+
+    for(const auto& entry: this->m_children)
+    {
+        entry.second->ToYAML(child);
+    }
+
+    node[this->m_identifier] = child;
 }
 
 void PreferenceCategory::FromYAML(const YAML::Node& node)
 {
-    throw std::runtime_error("not implemented");
+    if(const auto& n = node[this->m_identifier])
+    {
+        for(auto& entry: this->m_children)
+        {
+            entry.second->FromYAML(n);
+        }
+    }
 }
 
 PreferenceCategory::PreferenceCategory(std::string identifier)

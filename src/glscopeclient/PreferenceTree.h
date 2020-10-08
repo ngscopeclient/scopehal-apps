@@ -40,8 +40,7 @@
 #include <vector>
 
 #include "glscopeclient.h"
-
-class Preference;
+#include "Preference.h"
 
 namespace internal
 {
@@ -83,15 +82,30 @@ namespace internal
         PreferenceTreeNodeBase& operator=(PreferenceTreeNodeBase&&) = default;
 
     public:
-        virtual YAML::Node ToYAML() = 0;
+        virtual void ToYAML(YAML::Node& node) const = 0;
         virtual void FromYAML(const YAML::Node& node) = 0;
-        virtual const Preference& GetLeaf(const PreferencePath& path) = 0;
+        virtual Preference& GetLeaf(const PreferencePath& path) = 0;
 
     public:
         const std::string& GetIdentifier() const;
 
     protected:
         std::string m_identifier; //< The identifier of this node
+    };
+
+    class PreferenceHolder
+        : public PreferenceTreeNodeBase
+    {
+    public:
+        PreferenceHolder(Preference pref);
+
+    public:
+        virtual void ToYAML(YAML::Node& node) const;
+        virtual void FromYAML(const YAML::Node& node);
+        virtual Preference& GetLeaf(const PreferencePath& path); 
+
+    protected:
+        Preference m_pref;
     };
 }
 
@@ -106,9 +120,9 @@ public:
 
 public:
     const Preference& GetLeaf(const std::string& path);
-    virtual YAML::Node ToYAML();
+    virtual void ToYAML(YAML::Node& node) const;
     virtual void FromYAML(const YAML::Node& node);
-    virtual const Preference& GetLeaf(const PreferencePath& path);
+    virtual Preference& GetLeaf(const PreferencePath& path);
 
 protected:
     map_type m_children;
