@@ -58,7 +58,7 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	, m_updating(false)
 {
 	set_skip_taskbar_hint();
-	set_type_hint(Gdk::WINDOW_TYPE_HINT_TOOLBAR);
+	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
 
 	set_default_size(320, 800);
 
