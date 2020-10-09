@@ -174,7 +174,7 @@ FilterDialog::FilterDialog(
 			m_channelDisplayNameLabel.set_text("Display name");
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-			m_channelDisplayNameEntry.set_text(filter->m_displayname);
+			m_channelDisplayNameEntry.set_text(filter->GetDisplayName());
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
@@ -223,7 +223,7 @@ FilterDialog::FilterDialog(
 				auto c = StreamDescriptor(cn, 0);
 				if(filter->ValidateChannel(i, c))
 				{
-					auto name = c.m_channel->m_displayname;
+					auto name = c.m_channel->GetDisplayName();
 					row->m_chans.append(name);
 					row->m_chanptrs[name] = c;
 					if( (c == chan && i==0) || (c == din) )
@@ -391,7 +391,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 void FilterDialog::ConfigureDecoder()
 {
 	//See if we're using the default name
-	string old_name = m_filter->m_displayname;
+	string old_name = m_filter->GetDisplayName();
 	bool default_name = (m_filter->GetHwname() == old_name);
 
 	ConfigureInputs(m_filter, m_rows);
@@ -405,7 +405,7 @@ void FilterDialog::ConfigureDecoder()
 	m_filter->SetDefaultName();
 	auto dname = m_channelDisplayNameEntry.get_text();
 	if( (dname != "") && (!default_name || (old_name != dname)) )
-		m_filter->m_displayname = dname;
+		m_filter->SetDisplayName(dname);
 }
 
 void FilterDialog::ConfigureInputs(FlowGraphNode* node, vector<ChannelSelectorRow*>& rows)

@@ -344,11 +344,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 			//Qualify the channel name by the scope name if we have >1 scope enabled
 			if(m_scopes.size() > 1)
-			{
-				char tmp[128];
-				snprintf(tmp, sizeof(tmp), "%s:%s", scope->m_nickname.c_str(), chan->GetHwname().c_str());
-				chan->m_displayname = tmp;
-			}
+				chan->SetDisplayName(scope->m_nickname + ":" + chan->GetHwname());
 
 			auto type = chan->GetType();
 
@@ -621,7 +617,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 			if(pdecode != NULL)
 			{
 				char title[256];
-				snprintf(title, sizeof(title), "Protocol Analyzer: %s", pdecode->m_displayname.c_str());
+				snprintf(title, sizeof(title), "Protocol Analyzer: %s", pdecode->GetDisplayName().c_str());
 
 				auto analyzer = new ProtocolAnalyzerWindow(title, this, pdecode, area);
 				m_analyzers.emplace(analyzer);
@@ -1049,7 +1045,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				auto chan = scope->GetChannel(i);
 				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 				{
-					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+					auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
 					item->signal_activate().connect(
 						sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
 							StreamDescriptor(chan, 0)));
@@ -2560,7 +2556,7 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 			//Add a menu item - but not for the external trigger(s)
 			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 			{
-				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+				auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
 				item->signal_activate().connect(
 					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
 						StreamDescriptor(chan, 0) ));
@@ -2585,7 +2581,7 @@ void OscilloscopeWindow::RefreshAnalyzerMenu()
 	//Add new ones
 	for(auto a : m_analyzers)
 	{
-		auto item = Gtk::manage(new Gtk::MenuItem(a->GetDecoder()->m_displayname, false));
+		auto item = Gtk::manage(new Gtk::MenuItem(a->GetDecoder()->GetDisplayName(), false));
 		item->signal_activate().connect(
 			sigc::bind<ProtocolAnalyzerWindow*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowAnalyzer), a ));
 		m_windowAnalyzerMenu.append(*item);

@@ -93,13 +93,13 @@ void HaltConditionsDialog::RefreshChannels()
 		for(size_t k=0; k<scope->GetChannelCount(); k++)
 		{
 			auto c = scope->GetChannel(k);
-			m_channelNameBox.append(c->m_displayname);
-			m_chanptrs[c->m_displayname] = StreamDescriptor(c, 0);
+			m_channelNameBox.append(c->GetDisplayName());
+			m_chanptrs[c->GetDisplayName()] = StreamDescriptor(c, 0);
 
 			if(first && (old_chan == ""))
 			{
 				first = false;
-				m_channelNameBox.set_active_text(c->m_displayname);
+				m_channelNameBox.set_active_text(c->GetDisplayName());
 			}
 		}
 	}
@@ -111,7 +111,7 @@ void HaltConditionsDialog::RefreshChannels()
 		auto nstreams = d->GetStreamCount();
 		for(size_t i=0; i<nstreams; i++)
 		{
-			string name = d->m_displayname;
+			string name = d->GetDisplayName();
 			if(nstreams > 1)
 				name += string(".") + d->GetStreamName(i);
 

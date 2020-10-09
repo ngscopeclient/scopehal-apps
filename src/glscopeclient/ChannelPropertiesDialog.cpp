@@ -81,7 +81,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelDisplayNameLabel.set_text("Display name");
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
-			m_channelDisplayNameEntry.set_text(chan->m_displayname);
+			m_channelDisplayNameEntry.set_text(chan->GetDisplayName());
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
@@ -148,7 +148,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 					if(c == chan)
 						continue;
 
-					m_groupList.append(c->m_displayname.c_str());
+					m_groupList.append(c->GetDisplayName().c_str());
 				}
 
 				m_groupList.set_headers_visible(false);
@@ -185,7 +185,7 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
 
 void ChannelPropertiesDialog::ConfigureChannel()
 {
-	m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
+	m_chan->SetDisplayName(m_channelDisplayNameEntry.get_text());
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
 
 	Unit volts(Unit::UNIT_VOLTS);

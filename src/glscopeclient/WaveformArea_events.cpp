@@ -411,7 +411,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					else
 					{
 						LogError("Channel \"%s\" is neither a protocol decode nor a physical channel\n",
-							m_selectedChannel.m_channel->m_displayname.c_str());
+							m_selectedChannel.m_channel->GetDisplayName().c_str());
 					}
 				}
 
@@ -855,7 +855,7 @@ void WaveformArea::OnHide()
 	//Deleting an overlay
 	else
 	{
-		//LogDebug("Deleting overlay %s\n", m_selectedChannel->m_displayname.c_str());
+		//LogDebug("Deleting overlay %s\n", m_selectedChannel->GetDisplayName().c_str());
 
 		//Remove the overlay from the list
 		for(size_t i=0; i<m_overlays.size(); i++)
@@ -996,7 +996,7 @@ void WaveformArea::OnDecodeSetupComplete()
 	if(pdecode != NULL)
 	{
 		char title[256];
-		snprintf(title, sizeof(title), "Protocol Analyzer: %s", m_pendingDecode->m_displayname.c_str());
+		snprintf(title, sizeof(title), "Protocol Analyzer: %s", m_pendingDecode->GetDisplayName().c_str());
 
 		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode, this);
 		m_parent->m_analyzers.emplace(analyzer);

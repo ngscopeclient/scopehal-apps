@@ -418,7 +418,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		}
 
 		Rect chanbox;
-		RenderChannelInfoBox(o, cr, ybot, o.m_channel->m_displayname, chanbox, 2);
+		RenderChannelInfoBox(o, cr, ybot, o.m_channel->GetDisplayName(), chanbox, 2);
 		m_overlayBoxRects[o] = chanbox;
 
 		int textright = chanbox.get_right() + 4;

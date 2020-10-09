@@ -204,7 +204,7 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 			auto c = StreamDescriptor(chan, 0);
 			if(trig->ValidateChannel(i, c))
 			{
-				auto name = c.m_channel->m_displayname;
+				auto name = c.m_channel->GetDisplayName();
 				row->m_chans.append(name);
 				row->m_chanptrs[name] = c;
 

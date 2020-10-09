@@ -81,8 +81,8 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 				continue;
 
 			//Add to the box
-			m_primaryChannelBox.append(chan->m_displayname);
-			m_primaryChannels[chan->m_displayname] = chan;
+			m_primaryChannelBox.append(chan->GetDisplayName());
+			m_primaryChannels[chan->GetDisplayName()] = chan;
 		}
 
 	m_grid.attach_next_to(m_secondaryChannelLabel, m_primaryChannelLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -97,8 +97,8 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 				continue;
 
 			//Add to the box
-			m_secondaryChannelBox.append(chan->m_displayname);
-			m_secondaryChannels[chan->m_displayname] = chan;
+			m_secondaryChannelBox.append(chan->GetDisplayName());
+			m_secondaryChannels[chan->GetDisplayName()] = chan;
 		}
 }
 
