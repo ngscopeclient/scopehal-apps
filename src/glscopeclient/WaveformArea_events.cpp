@@ -123,11 +123,28 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			{
 				case GDK_SCROLL_UP:
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomInHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					{
+						if(ev->state & GDK_SHIFT_MASK)
+						{
+							m_group->m_xAxisOffset -= 50.0 / m_group->m_pixelsPerXUnit;
+							m_group->GetParent()->ClearPersistence(m_group, false, true);
+						}
+
+						else
+							m_parent->OnZoomInHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					}
 					break;
 				case GDK_SCROLL_DOWN:
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomOutHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					{
+						if(ev->state & GDK_SHIFT_MASK)
+						{
+							m_group->m_xAxisOffset += 50.0 / m_group->m_pixelsPerXUnit;
+							m_group->GetParent()->ClearPersistence(m_group, false, true);
+						}
+						else
+							m_parent->OnZoomOutHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					}
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");
