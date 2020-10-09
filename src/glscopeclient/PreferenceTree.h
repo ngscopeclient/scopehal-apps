@@ -39,8 +39,8 @@
 #include <string>
 #include <vector>
 
-#include "glscopeclient.h"
 #include "Preference.h"
+#include "yaml-cpp/yaml.h"
 
 namespace internal
 {
@@ -120,9 +120,10 @@ public:
 
 public:
     Preference& GetLeaf(const std::string& path);
+    const Preference& GetLeaf(const std::string& path) const;
     virtual void ToYAML(YAML::Node& node) const;
     virtual void FromYAML(const YAML::Node& node);
-    virtual Preference& GetLeaf(const PreferencePath& path);
+    virtual Preference& GetLeaf(const internal::PreferencePath& path);
     void AddPreference(Preference pref);
     PreferenceCategory& AddCategory(std::string identifier);
 

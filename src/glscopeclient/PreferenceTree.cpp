@@ -33,6 +33,7 @@
 	@brief  PropertyTree implementation
  */
 
+#include "glscopeclient.h"
 #include "PreferenceTree.h"
 
 #include <stdexcept>
@@ -40,53 +41,57 @@
 #include <iterator>
 #include <algorithm>
 #include <sstream>
+#include <utility>
+#include <memory>
+
+using namespace std;
 
 namespace internal
 {
-    PreferencePath::PreferencePath(const std::string& path)
+    PreferencePath::PreferencePath(const string& path)
     {
-        std::istringstream p{path};
-        std::string token{ };
+        istringstream p{path};
+        string token{ };
 
-        while(std::getline(p, token, '.'))
+        while(getline(p, token, '.'))
         {
             if(!token.empty())
                 this->m_segments.push_back(token);
         }
     }
 
-    PreferencePath::PreferencePath(std::vector<std::string> segments)
-        : m_segments{ std::move(segments) }
+    PreferencePath::PreferencePath(vector<string> segments)
+        : m_segments{ move(segments) }
     {
 
     }
 
     PreferencePath PreferencePath::NextLevel() const
     {
-        std::vector<std::string> newSegments{ this->m_segments.begin(), std::prev(this->m_segments.end()) };
-        return PreferencePath{ std::move(newSegments) };
+        vector<string> newSegments{ this->m_segments.begin(), prev(this->m_segments.end()) };
+        return PreferencePath{ move(newSegments) };
     }
     
-    std::size_t PreferencePath::GetLength() const
+    size_t PreferencePath::GetLength() const
     {
         return this->m_segments.size();
     }
 
-    const std::string& PreferencePath::GetCurrentSegment() const
+    const string& PreferencePath::GetCurrentSegment() const
     {
         if(this->GetLength() == 0)
-            throw std::runtime_error("Empty preference path");
+            throw runtime_error("Empty preference path");
 
         return this->m_segments[0];
     }
 
-    const std::string& PreferenceTree::GetIdentifier() const
+    const string& PreferenceTreeNodeBase::GetIdentifier() const
     {
         return this->m_identifier;
     }
 
     PreferenceHolder::PreferenceHolder(Preference pref)
-        : PreferenceTreeNodeBase(pref.GetIdentifier()), m_pref{ std::move(pref) }
+        : PreferenceTreeNodeBase(pref.GetIdentifier()), m_pref{ move(pref) }
     {
 
     }
@@ -137,21 +142,21 @@ namespace internal
     }
 }
 
-Preference& PreferenceCategory::GetLeaf(const std::string& path)
+Preference& PreferenceCategory::GetLeaf(const string& path)
 {
     return this->GetLeaf(internal::PreferencePath{ path });
 }
 
-Preference& PreferenceCategory::GetLeaf(const PreferencePath& path)
+Preference& PreferenceCategory::GetLeaf(const internal::PreferencePath& path)
 {
     if(path.GetLength() == 0)
-        throw std::runtime_error("Path too short");
+        throw runtime_error("Path too short");
 
     const auto& segment = path.GetCurrentSegment();
 
     auto iter = this->m_children.find(segment);
     if(iter == this->m_children.end())
-        throw std::runtime_error("Couldnt find path segment in preference category");
+        throw runtime_error("Couldnt find path segment in preference category");
 
     return iter->second->GetLeaf(path.NextLevel());
 }
@@ -179,29 +184,35 @@ void PreferenceCategory::FromYAML(const YAML::Node& node)
     }
 }
 
-PreferenceCategory::PreferenceCategory(std::string identifier)
-    : PreferenceTreeNodeBase(std::move(identifier))
+PreferenceCategory::PreferenceCategory(string identifier)
+    : PreferenceTreeNodeBase(move(identifier))
 {
 
+}
+
+const Preference& PreferenceCategory::GetLeaf(const string& path) const
+{
+    const auto* thisNonConst = const_cast<PreferenceCategory*>(this);
+    return thisNonConst->GetLeaf(path);
 }
 
 void PreferenceCategory::AddPreference(Preference pref)
 {
     if(this->m_children.count(pref.GetIdentifier()) > 0)
-        throw std::runtime_error("Preference category already contains child with given name");
+        throw runtime_error("Preference category already contains child with given name");
 
     const auto identifier = pref.GetIdentifier();
-    auto ptr = std::make_unique<internal::PreferenceHolder>(std::move(pref));
-    this->m_children[identifier] = std::move(ptr);
+    unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new internal::PreferenceHolder{ move(pref) } };
+    this->m_children[identifier] = move(ptr);
 }
 
-PreferenceCategory& PreferenceCategory::AddCategory(std::string identifier)
+PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
 {
     if(this->m_children.count(identifier) > 0)
-        throw std::runtime_error("Preference category already contains child with given name");
+        throw runtime_error("Preference category already contains child with given name");
 
-    auto ptr = std::make_unique<PreferenceCategory>(identifier);
-    this->m_children[identifier] = std::move(ptr);
+    unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new PreferenceCategory{ identifier } };
+    this->m_children[identifier] = move(ptr);
 
-    return *this->m_children[identifier];
+    return *static_cast<PreferenceCategory*>(this->m_children[identifier].get());
 }
