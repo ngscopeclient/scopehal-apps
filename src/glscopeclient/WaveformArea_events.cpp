@@ -1011,6 +1011,9 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	SetGeometryDirty();
 	queue_draw();
+
+	//Refresh the channels menu with the new channel name etc
+	m_parent->RefreshChannelsMenu();
 }
 
 void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)

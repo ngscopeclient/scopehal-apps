@@ -131,6 +131,9 @@ WaveformArea::~WaveformArea()
 {
 	m_channel.m_channel->Release();
 
+	//Need to reload the menu in case we deleted the last reference to this channel
+	m_parent->RefreshChannelsMenu();
+
 	for(auto d : m_overlays)
 		OnRemoveOverlay(d);
 	m_overlays.clear();
@@ -156,6 +159,9 @@ void WaveformArea::OnRemoveOverlay(StreamDescriptor filter)
 		m_overlayRenderData.erase(it);
 
 	filter.m_channel->Release();
+
+	//Need to reload the menu in case we deleted the last reference to this overlay
+	m_parent->RefreshChannelsMenu();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

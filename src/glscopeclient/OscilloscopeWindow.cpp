@@ -2565,6 +2565,22 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 		}
 	}
 
+	//Add filters
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		//For now, only add ones that are not overlays.
+		//TODO: we want to be able to add overlays, but how do we decide where to attach them??
+		if(f->IsOverlay())
+			continue;
+
+		auto item = Gtk::manage(new Gtk::MenuItem(f->GetDisplayName(), false));
+		item->signal_activate().connect(
+			sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
+				StreamDescriptor(f, 0) ));
+		m_channelsMenu.append(*item);
+	}
+
 	m_channelsMenu.show_all();
 }
 
