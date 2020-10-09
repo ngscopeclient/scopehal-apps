@@ -64,7 +64,7 @@ void PreferenceDialog::CreateWidgets()
     
     Gtk::Widget* last = nullptr;
     
-    for(auto& entry: m_preferences.AllPreferences())
+    /*for(auto& entry: m_preferences.AllPreferences())
     {
         auto& preference = entry.second;
         
@@ -125,12 +125,12 @@ void PreferenceDialog::CreateWidgets()
             default:
                 break;
         }
-    }
+    }*/
 }
 
 void PreferenceDialog::SaveChanges()
 {
-    for(auto& entry: m_preferences.AllPreferences())
+    /*for(auto& entry: m_preferences.AllPreferences())
     {
         auto& preference = entry.second;
         
@@ -186,7 +186,7 @@ void PreferenceDialog::SaveChanges()
         }
     }
     
-    m_preferences.SavePreferences();
+    m_preferences.SavePreferences();*/
 }
  
  

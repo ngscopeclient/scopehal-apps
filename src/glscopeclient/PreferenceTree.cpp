@@ -68,7 +68,7 @@ namespace internal
 
     PreferencePath PreferencePath::NextLevel() const
     {
-        vector<string> newSegments{ this->m_segments.begin(), prev(this->m_segments.end()) };
+        vector<string> newSegments{ next(this->m_segments.begin()), this->m_segments.end() };
         return PreferencePath{ move(newSegments) };
     }
     
@@ -90,8 +90,39 @@ namespace internal
         return this->m_identifier;
     }
 
+    PreferenceTreeNodeType PreferenceTreeNodeBase::GetType() const
+    {
+        return this->m_type;
+    }
+
+    bool PreferenceTreeNodeBase::IsCategory() const
+    {
+        return this->GetType() == PreferenceTreeNodeType::Category;
+    }
+
+    bool PreferenceTreeNodeBase::IsPreference() const
+    {
+        return this->GetType() == PreferenceTreeNodeType::Preference;
+    }
+
+    PreferenceCategory& PreferenceTreeNodeBase::AsCategory()
+    {
+        if(!this->IsCategory())
+            throw runtime_error("Node is not a category");
+
+        return *static_cast<PreferenceCategory*>(this);
+    }
+
+    Preference& PreferenceTreeNodeBase::AsPreference()
+    {
+        if(!this->IsPreference())
+            throw runtime_error("Node is not a preference");
+
+        return static_cast<PreferenceHolder*>(this)->Get();
+    }
+
     PreferenceHolder::PreferenceHolder(Preference pref)
-        : PreferenceTreeNodeBase(pref.GetIdentifier()), m_pref{ move(pref) }
+        : PreferenceTreeNodeBase(PreferenceTreeNodeType::Preference, pref.GetIdentifier()), m_pref{ move(pref) }
     {
 
     }
@@ -140,6 +171,16 @@ namespace internal
 
         return this->m_pref;
     }
+
+    Preference& PreferenceHolder::Get()
+    {
+        return this->m_pref;
+    }
+
+    const Preference& PreferenceHolder::Get() const
+    {
+        return this->m_pref;
+    }
 }
 
 Preference& PreferenceCategory::GetLeaf(const string& path)
@@ -169,30 +210,43 @@ void PreferenceCategory::ToYAML(YAML::Node& node) const
     {
         entry.second->ToYAML(child);
     }
-
-    node[this->m_identifier] = child;
+ 
+    if(this->m_identifier == "")
+        node = child;
+    else
+        node[this->m_identifier] = child;
 }
+
 
 void PreferenceCategory::FromYAML(const YAML::Node& node)
 {
-    if(const auto& n = node[this->m_identifier])
+    const auto readChildren = [this](const YAML::Node& n)
     {
         for(auto& entry: this->m_children)
         {
             entry.second->FromYAML(n);
         }
+    };
+
+    if(this->m_identifier == "")
+    {
+        readChildren(node);
+    }
+    else if(const auto& n = node[this->m_identifier])
+    {
+        readChildren(n);
     }
 }
 
 PreferenceCategory::PreferenceCategory(string identifier)
-    : PreferenceTreeNodeBase(move(identifier))
+    : PreferenceTreeNodeBase(PreferenceTreeNodeType::Category, move(identifier))
 {
 
 }
 
 const Preference& PreferenceCategory::GetLeaf(const string& path) const
 {
-    const auto* thisNonConst = const_cast<PreferenceCategory*>(this);
+    auto* thisNonConst = const_cast<PreferenceCategory*>(this);
     return thisNonConst->GetLeaf(path);
 }
 

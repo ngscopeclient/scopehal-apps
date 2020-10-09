@@ -42,6 +42,14 @@
 #include "Preference.h"
 #include "yaml-cpp/yaml.h"
 
+enum class PreferenceTreeNodeType
+{
+    Preference,
+    Category
+};
+
+class PreferenceCategory;
+
 namespace internal
 {
     class PreferencePath
@@ -64,8 +72,8 @@ namespace internal
     class PreferenceTreeNodeBase
     {
     public:
-        PreferenceTreeNodeBase(std::string identifier)
-            : m_identifier{ std::move(identifier) }
+        PreferenceTreeNodeBase(PreferenceTreeNodeType type, std::string identifier)
+            : m_identifier{ std::move(identifier) }, m_type{ type }
         {
         }
 
@@ -88,9 +96,16 @@ namespace internal
 
     public:
         const std::string& GetIdentifier() const;
+        PreferenceTreeNodeType GetType() const;
+        bool IsCategory() const;
+        bool IsPreference() const;
+        PreferenceCategory& AsCategory();
+        Preference& AsPreference();
+
 
     protected:
-        std::string m_identifier; //< The identifier of this node
+        std::string m_identifier;       //< The identifier of this node
+        PreferenceTreeNodeType m_type;  //< What particular type this node has
     };
 
     class PreferenceHolder
@@ -103,6 +118,8 @@ namespace internal
         virtual void ToYAML(YAML::Node& node) const;
         virtual void FromYAML(const YAML::Node& node);
         virtual Preference& GetLeaf(const PreferencePath& path); 
+        Preference& Get();
+        const Preference& Get() const;
 
     protected:
         Preference m_pref;

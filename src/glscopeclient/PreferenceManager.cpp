@@ -182,6 +182,10 @@ void PreferenceManager::LoadPreferences()
     {
         auto doc = YAML::LoadAllFromFile(m_filePath)[0];
         this->m_treeRoot.FromYAML(doc);
+
+        auto a = this->GetBool("test_settings.test_bool");
+        auto b = this->GetReal("test_settings.test_real");
+        auto c = this->GetString("test_settings.test_string");
     }
     catch(const exception& ex)
     {
