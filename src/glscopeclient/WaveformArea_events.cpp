@@ -1016,16 +1016,6 @@ void WaveformArea::OnDecodeSetupComplete()
 	m_parent->RefreshChannelsMenu();
 }
 
-void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
-{
-	//ignore spurious events while loading menu config, or from item being deselected
-	if(m_updatingContextMenu || !item->get_active())
-		return;
-
-	m_selectedChannel.m_channel->SetBandwidthLimit(mhz);
-	ClearPersistence();
-}
-
 void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected
@@ -1276,7 +1266,6 @@ void WaveformArea::UpdateContextMenu()
 
 	if(m_selectedChannel.m_channel->IsPhysicalChannel())
 	{
-		m_bwMenu.set_sensitive(true);
 		m_attenMenu.set_sensitive(true);
 		m_couplingMenu.set_sensitive(true);
 
@@ -1321,27 +1310,6 @@ void WaveformArea::UpdateContextMenu()
 
 			case 20:
 				m_atten20xItem.set_active(true);
-				break;
-
-			default:
-				//TODO: how to handle this?
-				break;
-		}
-
-		//Update the bandwidth limit
-		int bwl = m_selectedChannel.m_channel->GetBandwidthLimit();
-		switch(bwl)
-		{
-			case 0:
-				m_bwFullItem.set_active(true);
-				break;
-
-			case 20:
-				m_bw20Item.set_active(true);
-				break;
-
-			case 200:
-				m_bw200Item.set_active(true);
 				break;
 
 			default:
@@ -1396,7 +1364,6 @@ void WaveformArea::UpdateContextMenu()
 	}
 	else
 	{
-		m_bwMenu.set_sensitive(false);
 		m_attenMenu.set_sensitive(false);
 		m_couplingMenu.set_sensitive(false);
 	}

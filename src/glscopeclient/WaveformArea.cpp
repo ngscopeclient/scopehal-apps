@@ -292,26 +292,6 @@ void WaveformArea::CreateWidgets()
 					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 20, &m_atten20xItem));
 				m_attenMenu.append(m_atten20xItem);
 
-	//Bandwidth
-	m_contextMenu.append(m_bwItem);
-		m_bwItem.set_label("Bandwidth");
-		m_bwItem.set_submenu(m_bwMenu);
-			m_bwFullItem.set_label("Full");
-				m_bwFullItem.set_group(m_bwGroup);
-				m_bwFullItem.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 0, &m_bwFullItem));
-				m_bwMenu.append(m_bwFullItem);
-			m_bw200Item.set_label("200 MHz");
-				m_bw200Item.set_group(m_bwGroup);
-				m_bw200Item.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 200, &m_bw200Item));
-				m_bwMenu.append(m_bw200Item);
-			m_bw20Item.set_label("20 MHz");
-				m_bw20Item.set_group(m_bwGroup);
-				m_bw20Item.signal_activate().connect(sigc::bind<int, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnBandwidthLimit), 20, &m_bw20Item));
-				m_bwMenu.append(m_bw20Item);
-
 	//Coupling
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
