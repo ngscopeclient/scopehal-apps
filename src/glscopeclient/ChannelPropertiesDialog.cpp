@@ -50,6 +50,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	, m_hasThreshold(false)
 	, m_hasHysteresis(false)
 	, m_hasFrequency(false)
+	, m_hasBandwidth(false)
+	, m_hasDeskew(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -89,18 +91,45 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
-		//Deskew - only on physical analog channels for now
 		Gtk::Label* anchorLabel = &m_channelColorLabel;
 		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
 		{
+			//Deskew - only on physical analog channels for now
 			m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
 				m_deskewLabel.set_text("Deskew");
 				m_deskewLabel.set_halign(Gtk::ALIGN_START);
 			m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
 
+			m_hasDeskew = true;
+
 			m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
 
 			anchorLabel = &m_deskewLabel;
+
+			//Bandwidth limiters
+			m_grid.attach_next_to(m_bandwidthLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+					m_bandwidthLabel.set_text("BW Limit");
+				m_bandwidthLabel.set_halign(Gtk::ALIGN_START);
+			m_grid.attach_next_to(m_bandwidthBox, m_bandwidthLabel, Gtk::POS_RIGHT, 1, 1);
+
+			m_hasBandwidth = true;
+
+			//Populate bandwidth limiter box
+			auto limits = scope->GetChannelBandwidthLimiters(index);
+			for(auto limit : limits)
+			{
+				if(limit == 0)
+					m_bandwidthBox.append("Full");
+				else
+					m_bandwidthBox.append(hz.PrettyPrint(limit * 1e6));
+			}
+			unsigned int limit = scope->GetChannelBandwidthLimit(index);
+			if(limit == 0)
+				m_bandwidthBox.set_active_text("Full");
+			else
+				m_bandwidthBox.set_active_text(hz.PrettyPrint(limit * 1e6));
+
+			anchorLabel = &m_bandwidthLabel;
 		}
 
 		//Logic properties - only on physical digital channels
@@ -148,7 +177,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 					if(c == chan)
 						continue;
 
-					m_groupList.append(c->GetDisplayName().c_str());
+					m_groupList.append(c->GetDisplayName());
 				}
 
 				m_groupList.set_headers_visible(false);
@@ -201,7 +230,17 @@ void ChannelPropertiesDialog::ConfigureChannel()
 	if(m_hasFrequency)
 		m_chan->SetCenterFrequency(hz.ParseString(m_centerEntry.get_text()));
 
-	m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+	if(m_hasDeskew)
+		m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+
+	if(m_hasBandwidth)
+	{
+		auto sbw = m_bandwidthBox.get_active_text();
+		if(sbw == "Full")
+			m_chan->SetBandwidthLimit(0);
+		else
+			m_chan->SetBandwidthLimit(Unit(Unit::UNIT_HZ).ParseString(sbw)/1e6);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
