@@ -535,13 +535,8 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		size_t uis = eye->GetTotalUIs();
 		float gbps = 1e3f / eye->GetUIWidth();
 
-		if(uis < 1e6)
-			snprintf(tmp, sizeof(tmp), "\n%6.2fk UI\t%.4f Gbps", uis * 1e-3f, gbps);
-		else if(uis < 1e9)
-			snprintf(tmp, sizeof(tmp), "\n%6.2fM UI\t%.4f Gbps", uis * 1e-6f, gbps);
-		else
-			snprintf(tmp, sizeof(tmp), "\n%6.2fG UI\t%.4f Gbps", uis * 1e-6f, gbps);
-		label += tmp;
+		label += string("\n") + Unit(Unit::UNIT_UI).PrettyPrint(uis) + "\t" +
+					Unit(Unit::UNIT_BITRATE).PrettyPrint(1e12f / eye->GetUIWidth());
 
 		auto mask = ed->GetMask();
 		auto maskname = mask.GetMaskName();
