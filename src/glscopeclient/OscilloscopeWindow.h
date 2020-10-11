@@ -61,6 +61,7 @@ public:
 	void ClearAllPersistence();
 
 	void OnRemoveChannel(WaveformArea* w);
+	void GarbageCollectAnalyzers();
 
 	//need to be public so it can be called by WaveformArea
 	void OnMoveNew(WaveformArea* w, bool horizontal);

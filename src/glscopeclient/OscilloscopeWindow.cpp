@@ -2099,6 +2099,35 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 	GarbageCollectGroups();
 }
 
+void OscilloscopeWindow::GarbageCollectAnalyzers()
+{
+	//Check out our analyzers and see if any of them now have no references other than the analyzer window itself.
+	//If the analyzer is hidden, and there's no waveform views for it, get rid of it
+	set<ProtocolAnalyzerWindow*> garbage;
+	for(auto a : m_analyzers)
+	{
+		//It's visible. Still active.
+		if(a->get_visible())
+			continue;
+
+		//If there is only one reference, it's to the analyzer itself.
+		//Which is hidden, so we want to get rid of it.
+		auto chan = a->GetDecoder();
+		if(chan->GetRefCount() == 1)
+			garbage.emplace(a);
+	}
+
+	for(auto a : garbage)
+	{
+		m_analyzers.erase(a);
+		delete a;
+	}
+
+	//Need to reload the menu in case we deleted the last reference to something
+	RefreshChannelsMenu();
+	RefreshAnalyzerMenu();
+}
+
 bool OscilloscopeWindow::PollScopes()
 {
 	//Avoid infinite loop if we have no scope to poll

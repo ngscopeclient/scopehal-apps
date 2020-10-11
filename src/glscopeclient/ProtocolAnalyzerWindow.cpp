@@ -787,3 +787,9 @@ void ProtocolAnalyzerWindow::OnFileExport()
 	//Done
 	fclose(fp);
 }
+
+void ProtocolAnalyzerWindow::on_hide()
+{
+	Gtk::Widget::on_hide();
+	m_parent->GarbageCollectAnalyzers();
+}

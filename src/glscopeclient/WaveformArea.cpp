@@ -160,8 +160,7 @@ void WaveformArea::OnRemoveOverlay(StreamDescriptor filter)
 
 	filter.m_channel->Release();
 
-	//Need to reload the menu in case we deleted the last reference to this overlay
-	m_parent->RefreshChannelsMenu();
+	m_parent->GarbageCollectAnalyzers();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

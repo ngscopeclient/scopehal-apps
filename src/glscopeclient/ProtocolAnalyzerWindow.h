@@ -136,6 +136,8 @@ protected:
 	PacketDecoder* m_decoder;
 	WaveformArea* m_area;
 
+	virtual void on_hide();
+
 	void OnApplyFilter();
 	void OnFilterChanged();
 	void OnFileExport();
