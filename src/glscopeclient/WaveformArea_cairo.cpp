@@ -531,11 +531,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	//Add count info to eye channels
 	else if( (eye != NULL) && (ed != NULL) )
 	{
-
-		size_t uis = eye->GetTotalUIs();
-		float gbps = 1e3f / eye->GetUIWidth();
-
-		label += string("\n") + Unit(Unit::UNIT_UI).PrettyPrint(uis) + "\t" +
+		label += string("\n") + Unit(Unit::UNIT_UI).PrettyPrint(eye->GetTotalUIs()) + "\t" +
 					Unit(Unit::UNIT_BITRATE).PrettyPrint(1e12f / eye->GetUIWidth());
 
 		auto mask = ed->GetMask();
