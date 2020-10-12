@@ -46,6 +46,7 @@ add_executable(glscopeclient
 	HaltConditionsDialog.cpp
 	HistoryWindow.cpp
 	InstrumentConnectionDialog.cpp
+	MultimeterDialog.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
 	ProtocolAnalyzerWindow.cpp

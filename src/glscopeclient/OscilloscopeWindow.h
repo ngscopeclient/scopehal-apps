@@ -45,6 +45,8 @@
 #include "HaltConditionsDialog.h"
 #include "FileProgressDialog.h"
 
+class MultimeterDialog;
+
 /**
 	@brief Main application window class for an oscilloscope
  */
@@ -173,6 +175,8 @@ protected:
 				Gtk::Menu m_windowMenu;
 					Gtk::MenuItem m_windowAnalyzerMenuItem;
 						Gtk::Menu m_windowAnalyzerMenu;
+					Gtk::MenuItem m_windowMultimeterMenuItem;
+						Gtk::Menu m_windowMultimeterMenu;
 			Gtk::MenuItem m_helpMenuItem;
 				Gtk::Menu m_helpMenu;
 					Gtk::MenuItem m_aboutMenuItem;
@@ -207,6 +211,9 @@ public:
 
 	//All of the protocol analyzers
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
+
+	//All of the multimeter dialogs
+	std::map<Multimeter*, MultimeterDialog*> m_meterDialogs;
 
 	//Event handlers
 	bool OnTimer(int timer);
@@ -246,10 +253,12 @@ public:
 	void OnScopeSync();
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
+	void OnShowMultimeter(Multimeter* meter);
 
 	//Reconfigure menus
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
+	void RefreshMultimeterMenu();
 
 	//Protocol decoding etc
 	void RefreshAllFilters();

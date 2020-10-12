@@ -41,6 +41,7 @@
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
+#include "MultimeterDialog.h"
 #include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -254,6 +255,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					m_windowMenu.append(m_windowAnalyzerMenuItem);
 						m_windowAnalyzerMenuItem.set_label("Analyzer");
 						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
+					m_windowMenu.append(m_windowMultimeterMenuItem);
+						m_windowMultimeterMenuItem.set_label("Multimeter");
+						m_windowMultimeterMenuItem.set_submenu(m_windowMultimeterMenu);
 			m_menu.append(m_helpMenuItem);
 				m_helpMenuItem.set_label("Help");
 				m_helpMenuItem.set_submenu(m_helpMenu);
@@ -396,6 +400,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 	//Reconfigure menus
 	RefreshChannelsMenu();
+	RefreshMultimeterMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -477,12 +482,15 @@ void OscilloscopeWindow::CloseSession()
 		delete g;
 	for(auto w : m_waveformAreas)
 		delete w;
+	for(auto it : m_meterDialogs)
+		delete it.second;
 
 	//Clear our records of them
 	m_historyWindows.clear();
 	m_splitters.clear();
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
+	m_meterDialogs.clear();
 
 	delete m_scopeSyncWizard;
 	m_scopeSyncWizard = NULL;
@@ -634,6 +642,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	//Reconfigure menus
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
+	RefreshMultimeterMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -2638,9 +2647,49 @@ void OscilloscopeWindow::RefreshAnalyzerMenu()
 	m_windowAnalyzerMenu.show_all();
 }
 
+/**
+	@brief Update the multimeter menu when we load a new session
+ */
+void OscilloscopeWindow::RefreshMultimeterMenu()
+{
+	//Remove the old items
+	auto children = m_windowMultimeterMenu.get_children();
+	for(auto c : children)
+		m_windowMultimeterMenu.remove(*c);
+
+	//Add new stuff
+	//TODO: support pure multimeters
+	for(auto scope : m_scopes)
+	{
+		auto meter = dynamic_cast<Multimeter*>(scope);
+		if(!meter)
+			continue;
+
+		auto item = Gtk::manage(new Gtk::MenuItem(meter->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<Multimeter*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowMultimeter), meter ));
+		m_windowMultimeterMenu.append(*item);
+	}
+}
+
 void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
 {
 	window->show();
+}
+
+void OscilloscopeWindow::OnShowMultimeter(Multimeter* meter)
+{
+	//Did we have a dialog for the meter already?
+	if(m_meterDialogs.find(meter) != m_meterDialogs.end())
+		m_meterDialogs[meter]->show();
+
+	//Need to create it
+	else
+	{
+		auto dlg = new MultimeterDialog(meter);
+		m_meterDialogs[meter] = dlg;
+		dlg->show();
+	}
 }
 
 void OscilloscopeWindow::OnAboutDialog()
