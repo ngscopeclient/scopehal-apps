@@ -462,11 +462,15 @@ bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
  */
 void OscilloscopeWindow::CloseSession()
 {
+	//Need to clear the analyzers before we delete waveform areas.
+	//Otherwise waveform areas will try to delete them too
+	for(auto a : m_analyzers)
+		delete a;
+	m_analyzers.clear();
+
 	//Close all of our UI elements
 	for(auto it : m_historyWindows)
 		delete it.second;
-	for(auto a : m_analyzers)
-		delete a;
 	for(auto s : m_splitters)
 		delete s;
 	for(auto g : m_waveformGroups)
@@ -476,7 +480,6 @@ void OscilloscopeWindow::CloseSession()
 
 	//Clear our records of them
 	m_historyWindows.clear();
-	m_analyzers.clear();
 	m_splitters.clear();
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
