@@ -46,7 +46,24 @@ public:
 	virtual ~MultimeterDialog();
 
 protected:
+	virtual void on_show();
+	virtual void on_hide();
+
+	void OnInputChanged();
+	void OnModeChanged();
+
+	void AddMode(Multimeter::MeasurementTypes type, const std::string& label);
+	std::map<std::string, Multimeter::MeasurementTypes> m_modemap;
+
 	Multimeter* m_meter;
+
+	//TODO: support second measurements
+
+	Gtk::Grid m_grid;
+		Gtk::Label			m_inputLabel;
+			Gtk::ComboBoxText	m_inputBox;
+		Gtk::Label			m_typeLabel;
+			Gtk::ComboBoxText	m_typeBox;
 };
 
 #endif

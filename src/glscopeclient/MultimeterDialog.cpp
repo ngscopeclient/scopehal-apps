@@ -41,14 +41,44 @@ using namespace std;
 // Construction / destruction
 
 MultimeterDialog::MultimeterDialog(Multimeter* meter)
-	: Gtk::Dialog("Multimeter")
+	: Gtk::Dialog( string("Multimeter: ") + meter->m_nickname )
+	, m_meter(meter)
 {
-	/*get_vbox()->pack_start(m_progressBar, Gtk::PACK_SHRINK);
+	get_vbox()->add(m_grid);
 
-	m_progressBar.set_show_text();
-	set_size_request(640, 50);*/
+	//TODO: hide input selector if we only have one input?
+	//TODO: have some means of refreshing channel list when a channel is renamed
+	//TODO: hide illegal channels (digital probes on Tek MSO)? Means we can't use row number as channel number
+	m_grid.attach(m_inputLabel, 0, 0, 1, 1);
+		m_inputLabel.set_text("Input Select");
+	m_grid.attach_next_to(m_inputBox, m_inputLabel, Gtk::POS_RIGHT, 1, 1);
+		for(int i=0; i<meter->GetMeterChannelCount(); i++)
+			m_inputBox.append(meter->GetMeterChannelName(i));
+	m_grid.attach_next_to(m_typeLabel, m_inputLabel, Gtk::POS_BOTTOM, 1, 1);
+		m_typeLabel.set_text("Measurement Type");
+	m_grid.attach_next_to(m_typeBox, m_typeLabel, Gtk::POS_RIGHT, 1, 1);
 
-	show_all();
+	AddMode(Multimeter::DC_VOLTAGE, "DC Voltage");
+	AddMode(Multimeter::DC_RMS_AMPLITUDE, "RMS Amplitude (DC coupled)");
+	AddMode(Multimeter::AC_RMS_AMPLITUDE, "RMS Amplitude (AC coupled)");
+	AddMode(Multimeter::FREQUENCY, "Frequency");
+	AddMode(Multimeter::DC_CURRENT, "DC Current");
+	AddMode(Multimeter::AC_CURRENT, "AC Current");
+	AddMode(Multimeter::TEMPERATURE, "Temperature");
+
+	//Put meter in DC voltage mode by default
+	//TODO: load selected mode instead
+	//TODO: what happens if meter doesn't support DC voltage?
+	m_typeBox.set_active_text("DC Voltage");
+	meter->SetMeterMode(Multimeter::DC_VOLTAGE);
+
+	//Event handlers
+	m_inputBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnInputChanged));
+	m_typeBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnModeChanged));
+
+	//Enable the meter on the first channel by default
+	m_inputBox.set_active_text(meter->GetMeterChannelName(0));
+	meter->SetCurrentMeterChannel(0);
 }
 
 MultimeterDialog::~MultimeterDialog()
@@ -57,5 +87,39 @@ MultimeterDialog::~MultimeterDialog()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Output
+// Event handlers
 
+void MultimeterDialog::AddMode(Multimeter::MeasurementTypes type, const std::string& label)
+{
+	if(m_meter->GetMeasurementTypes() & type)
+	{
+		m_typeBox.append(label);
+		m_modemap[label] = type;
+	}
+}
+
+void MultimeterDialog::on_show()
+{
+	Gtk::Dialog::on_show();
+	show_all();
+
+	m_meter->StartMeter();
+}
+
+void MultimeterDialog::on_hide()
+{
+	Gtk::Dialog::on_hide();
+
+	m_meter->StopMeter();
+}
+
+void MultimeterDialog::OnInputChanged()
+{
+	m_meter->SetCurrentMeterChannel(m_inputBox.get_active_row_number());
+}
+
+void MultimeterDialog::OnModeChanged()
+{
+	auto mode = m_modemap[m_typeBox.get_active_text()];
+	m_meter->SetMeterMode(mode);
+}
