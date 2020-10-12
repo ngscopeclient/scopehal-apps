@@ -80,10 +80,10 @@ ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter&
 	: m_parent(parent)
 	, m_param(param)
 {
-	m_clearButton.set_image_from_icon_name("edit-clear", Gtk::IconSize(16));
+	m_clearButton.set_image_from_icon_name("edit-clear");
 	m_clearButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnClear));
 
-	m_browserButton.set_image_from_icon_name("filefind", Gtk::IconSize(16));
+	m_browserButton.set_image_from_icon_name("filefind");
 	m_browserButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
 }
 
