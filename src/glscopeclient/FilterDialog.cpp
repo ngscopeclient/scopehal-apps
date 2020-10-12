@@ -80,12 +80,20 @@ ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter&
 	: m_parent(parent)
 	, m_param(param)
 {
-	m_button.set_label("...");
-	m_button.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
+	m_clearButton.set_image_from_icon_name("edit-clear", Gtk::IconSize(16));
+	m_clearButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnClear));
+
+	m_browserButton.set_image_from_icon_name("filefind", Gtk::IconSize(16));
+	m_browserButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
 }
 
 ParameterRowFilename::~ParameterRowFilename()
 {
+}
+
+void ParameterRowFilename::OnClear()
+{
+	m_entry.set_text("");
 }
 
 void ParameterRowFilename::OnBrowser()
@@ -302,7 +310,8 @@ ParameterRowBase* FilterDialog::CreateRow(
 				row->m_label.set_size_request(width, 1);
 
 				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-				grid.attach_next_to(row->m_button, row->m_entry, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_clearButton, row->m_entry, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_browserButton, row->m_clearButton, Gtk::POS_RIGHT, 1, 1);
 				last_label = &row->m_label;
 
 				row->m_label.set_label(name);
