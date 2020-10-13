@@ -55,15 +55,24 @@ protected:
 	void AddMode(Multimeter::MeasurementTypes type, const std::string& label);
 	std::map<std::string, Multimeter::MeasurementTypes> m_modemap;
 
+	bool OnTimer();
+
 	Multimeter* m_meter;
 
-	//TODO: support second measurements
+	//TODO: support secondary measurements
 
 	Gtk::Grid m_grid;
 		Gtk::Label			m_inputLabel;
 			Gtk::ComboBoxText	m_inputBox;
 		Gtk::Label			m_typeLabel;
 			Gtk::ComboBoxText	m_typeBox;
+		Gtk::Label			m_valueLabel;
+			Gtk::Label			m_valueBox;
+		Graph m_graph;
+			Graphable m_graphData;
+
+	double m_minval;
+	double m_maxval;
 };
 
 #endif

@@ -142,7 +142,7 @@ void MainWindow::CreateWidgets()
 bool MainWindow::OnTimer(int /*timer*/)
 {
 	double t = GetTime();
-	double temp = m_dmm->GetTemperature();
+	double temp = m_dmm->GetMeterValue();
 
 	m_tempData.GetSeries("temp")->push_back(GraphPoint(t, temp));
 

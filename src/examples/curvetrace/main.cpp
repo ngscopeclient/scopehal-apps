@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 		//wait 25ms to stabilize
 		std::this_thread::sleep_for(std::chrono::microseconds(25 * 1000));
 
-		LogNotice("%5.7f\n", dmm.GetCurrent());
+		LogNotice("%5.7f\n", dmm.GetMeterValue());
 
 		if(psu.IsPowerConstantCurrent(channel))
 			break;
