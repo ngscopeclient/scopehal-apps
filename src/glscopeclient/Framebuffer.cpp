@@ -36,8 +36,8 @@
 #include "Framebuffer.h"
 
 Framebuffer::Framebuffer()
+	: m_handle(0)
 {
-	m_handle = 0;
 }
 
 Framebuffer::~Framebuffer()

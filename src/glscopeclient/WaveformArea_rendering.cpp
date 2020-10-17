@@ -275,7 +275,10 @@ void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
-		//Create render data if needed
+		//Create render data if needed.
+		//Despite what cppcheck says we do have to check before inserting,
+		//since we're dynamically creating the data being pushed in.
+		//cppcheck-suppress stlFindInsert
 		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
 		{
 			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);

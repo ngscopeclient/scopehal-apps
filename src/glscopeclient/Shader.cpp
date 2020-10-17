@@ -38,9 +38,8 @@
 using namespace std;
 
 Shader::Shader(GLenum type)
+	: m_handle(glCreateShader(type))
 {
-	m_handle = glCreateShader(type);
-
 	if(m_handle == 0)
 		LogError("Failed to create shader (of type %d)\n", type);
 }

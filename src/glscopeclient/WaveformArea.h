@@ -53,6 +53,13 @@ public:
 	, m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
+	, m_mappedXBuffer(NULL)
+	, m_mappedYBuffer(NULL)
+	, m_mappedDigitalYBuffer(NULL)
+	, m_mappedIndexBuffer(NULL)
+	, m_mappedConfigBuffer(NULL)
+	, m_mappedConfigBuffer64(NULL)
+	, m_mappedFloatConfigBuffer(NULL)
 	{}
 
 	bool IsDigital()

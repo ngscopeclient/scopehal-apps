@@ -194,7 +194,9 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				m_centerLabel.set_halign(Gtk::ALIGN_START);
 			m_grid.attach_next_to(m_centerEntry, m_centerLabel, Gtk::POS_RIGHT, 1, 1);
 
-			anchorLabel = &m_centerLabel;
+			//Commented out to prevent compile warning about unused value.
+			//Uncomment if adding new widgets later in the dialog.
+			//anchorLabel = &m_centerLabel;
 
 			m_centerEntry.set_text(hz.PrettyPrint(scope->GetCenterFrequency(index)));
 
