@@ -87,6 +87,9 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
+	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
+	//A struct is probably the better long term solution...
+	//cppcheck-suppress invalidPointerCast
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
 	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
@@ -277,10 +280,10 @@ void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 
 		//Create render data if needed.
 		//Despite what cppcheck says we do have to check before inserting,
-		//since we're dynamically creating the data being pushed in.
-		//cppcheck-suppress stlFindInsert
+		//since we're dynamically creating
 		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
 		{
+			//cppcheck-suppress stlFindInsert
 			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
 			m_geometryDirty = true;
 		}

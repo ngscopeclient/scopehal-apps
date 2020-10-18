@@ -60,7 +60,7 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigital)
+OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital)
 	: m_iconEnterFullscreen("icons/24x24/fullscreen-enter.png")
 	, m_iconExitFullscreen("icons/24x24/fullscreen-exit.png")
 	, m_scopes(scopes)
@@ -545,7 +545,7 @@ void OscilloscopeWindow::OnFileOpen()
 /**
 	@brief Open a saved file
  */
-void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadWaveform, bool reconnect)
+void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, bool loadWaveform, bool reconnect)
 {
 	m_currentFileName = filename;
 
@@ -945,7 +945,12 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 
 			//Read sample data
 			if(acap)
+			{
+				//The file format assumes "float" is IEEE754 32-bit float.
+				//If your platform doesn't do that, good luck.
+				//cppcheck-suppress invalidPointerCast
 				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+			}
 
 			else
 				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);

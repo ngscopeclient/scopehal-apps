@@ -90,7 +90,8 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 
 	//Actual content
 	get_vbox()->pack_start(m_contentGrid, Gtk::PACK_SHRINK);
-	AddRows(trig);
+	if(trig)
+		AddRows(trig);
 
 	show_all();
 }
@@ -147,7 +148,7 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 
 	//If it's the same trigger type currently set on the scope, load UI with those settings
 	auto current_trig = m_scope->GetTrigger();
-	if(current_trig->GetTriggerDisplayName() == type)
+	if((current_trig != NULL) && (current_trig->GetTriggerDisplayName() == type) )
 		AddRows(current_trig);
 
 	//Nope, create a new trigger

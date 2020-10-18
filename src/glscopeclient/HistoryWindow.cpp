@@ -149,9 +149,10 @@ void HistoryWindow::OnWaveformDataReady()
 	localtime_r(&data->m_startTimestamp, &ltime);
 #endif
 
+	//round to nearest 100ps for display
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
-	snprintf(tmp, sizeof(tmp), "%010zu", data->m_startPicoseconds / 100);	//round to nearest 100ps for display
+	snprintf(tmp, sizeof(tmp), "%010zd", static_cast<size_t>(data->m_startPicoseconds / 100));
 	stime += tmp;
 
 	//Create the row

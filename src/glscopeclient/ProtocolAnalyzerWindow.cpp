@@ -378,7 +378,7 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 // Construction / destruction
 
 ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
-	string title,
+	const string& title,
 	OscilloscopeWindow* parent,
 	PacketDecoder* decoder,
 	WaveformArea* area)

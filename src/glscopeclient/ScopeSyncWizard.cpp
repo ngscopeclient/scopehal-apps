@@ -307,9 +307,6 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 void ScopeSyncWizard::OnWaveformDataReady()
 {
-	if(!m_activeSecondaryPage)
-		return;
-
 	//We must have active pages (sanity check)
 	if(!m_activeSecondaryPage || !m_activeSetupPage)
 		return;

@@ -53,7 +53,7 @@ class MultimeterDialog;
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes, bool nodigital);
+	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();
@@ -222,7 +222,7 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
-	void DoFileOpen(std::string filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
+	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
@@ -294,7 +294,7 @@ public:
 	void SerializeWaveforms(IDTable& table);
 
 	//Performance counters
-	int64_t m_totalWaveforms;
+	size_t m_totalWaveforms;
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;
