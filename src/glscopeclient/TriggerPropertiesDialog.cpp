@@ -148,7 +148,10 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 
 	//If it's the same trigger type currently set on the scope, load UI with those settings
 	auto current_trig = m_scope->GetTrigger();
-	if((current_trig != NULL) && (current_trig->GetTriggerDisplayName() == type) )
+	if(current_trig == NULL)
+		return;
+
+	if(current_trig->GetTriggerDisplayName() == type)
 		AddRows(current_trig);
 
 	//Nope, create a new trigger
@@ -177,10 +180,7 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 		if(last_label)
 			m_contentGrid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
 		else
-		{
 			m_contentGrid.attach(row->m_label, 0, 0, 1, 1);
-			last_label = &row->m_label;
-		}
 		m_contentGrid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
 		m_rows.push_back(row);
 		last_label = &row->m_label;

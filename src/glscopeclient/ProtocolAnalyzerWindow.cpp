@@ -586,7 +586,7 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	char tmp[128];
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&capstart));
 	string stime = tmp;
-	snprintf(tmp, sizeof(tmp), "%010zu", ps / 100);	//round to nearest 100ps for display
+	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(ps / 100));	//round to nearest 100ps for display
 	stime += tmp;
 
 	//Create the row
