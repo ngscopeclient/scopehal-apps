@@ -1,0 +1,13 @@
+before_install:
+  - sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
+
+install:
+  - git clone https://github.com/anthonix/ffts.git
+  - pushd ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd
+
+before_script:
+  - git submodule init
+  - git submodule update
+
+script:
+  - pushd scopehal-apps && mkdir build && cd build && cmake .. && make && popd
