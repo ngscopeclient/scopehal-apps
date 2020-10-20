@@ -6,7 +6,7 @@ os:
   - windows
 
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev; fi
   - |-
     case $TRAVIS_OS_NAME in
       windows)
@@ -29,16 +29,16 @@ before_install:
 
 install:
   - git clone https://github.com/anthonix/ffts.git
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; pushd ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; pushd ffts && mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j && mingw32-make install && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then pushd ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then pushd ffts && mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j && mingw32-make install && popd; fi
 
 before_script:
   - git submodule init
   - git submodule update
 
 script:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; mkdir build && pushd build && cmake .. && make && popd; fi
-  - if [ "$TRAVIS_OS_NAME" = "windows" ]; mkdir build && pushd build && cmake -G "MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j 32 && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then mkdir build && pushd build && cmake .. && make && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; then mkdir build && pushd build && cmake -G "MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j 32 && popd; fi
 
 before_cache:
   - |-
