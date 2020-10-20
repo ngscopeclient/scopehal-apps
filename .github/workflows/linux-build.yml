@@ -2,8 +2,6 @@ name: Linux Build
 
 on: [push]
 
-env:
-
 jobs:
   build:
     runs-on: ubuntu-latest
