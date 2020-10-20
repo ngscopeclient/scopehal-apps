@@ -20,6 +20,5 @@ jobs:
       run: pushd /tmp/ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd
 
     - name: Build
-      working-directory: ${{runner.workspace}}
       shell: bash
-      run: mkdir build && pushd build && cmake .. && make && popd
+      run: mkdir build && cd build && cmake .. && make
