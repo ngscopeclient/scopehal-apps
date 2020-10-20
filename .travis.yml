@@ -1,15 +1,55 @@
+language: cpp
 dist: bionic
 
+os:
+  - linux
+  - windows
+
 before_install:
-  - sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev; fi
+  - |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        [[ ! -f C:/tools/msys64/msys2_shell.cmd ]] && rm -rf C:/tools/msys64
+        choco uninstall -y mingw
+        choco upgrade --no-progress -y msys2
+        export msys2='cmd //C RefreshEnv.cmd '
+        export msys2+='& set MSYS=winsymlinks:nativestrict '
+        export msys2+='& C:\\tools\\msys64\\msys2_shell.cmd -defterm -no-start'
+        export mingw64="$msys2 -mingw64 -full-path -here -c "\"\$@"\" --"
+        export msys2+=" -msys2 -c "\"\$@"\" --"
+        $msys2 pacman --sync --noconfirm --needed mingw-w64-x86_64-toolchain
+        $msys2 pacman --sync --noconfirm --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make # build tools
+        $msys2 pacman --sync --noconfirm --needed mingw-w64-x86_64-glm mingw-w64-x86_64-libsigc++ mingw-w64-x86_64-gtkmm3 mingw-w64-x86_64-yaml-cpp mingw-w64-x86_64-glew # dependencies
+        taskkill //IM gpg-agent.exe //F  # https://travis-ci.community/t/4967
+        export PATH=/C/tools/msys64/mingw64/bin:$PATH
+        export MAKE=mingw32-make  # so that Autotools can find it
+        ;;
+    esac
 
 install:
   - git clone https://github.com/anthonix/ffts.git
-  - pushd ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; pushd ffts && mkdir build && cd build && cmake .. && make && sudo make install && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; pushd ffts && mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j && mingw32-make install && popd; fi
 
 before_script:
   - git submodule init
   - git submodule update
 
 script:
-  - mkdir build && pushd build && cmake .. && make && popd
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; mkdir build && pushd build && cmake .. && make && popd; fi
+  - if [ "$TRAVIS_OS_NAME" = "windows" ]; mkdir build && pushd build && cmake -G "MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j 32 && popd; fi
+
+before_cache:
+  - |-
+    case $TRAVIS_OS_NAME in
+      windows)
+        # https://unix.stackexchange.com/a/137322/107554
+        $msys2 pacman --sync --clean --noconfirm
+        ;;
+    esac
+
+cache:
+    directories:
+    - $HOME/AppData/Local/Temp/chocolatey
+    - /C/tools/msys64
