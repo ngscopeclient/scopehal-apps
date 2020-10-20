@@ -12,4 +12,4 @@ before_script:
   - git submodule update
 
 script:
-  - pushd scopehal-apps && mkdir build && cd build && cmake .. && make && popd
+  - mkdir build && pushd build && cmake .. && make && popd
