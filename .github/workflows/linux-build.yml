@@ -3,7 +3,7 @@ name: Linux Build
 on: [push]
 
 jobs:
-  build:
+  linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,4 +24,4 @@ jobs:
     - name: Build
       shell: bash
       working-directory: ${{runner.workspace}}
-      run: mkdir build && cd build && cmake .. && make
+      run: mkdir build && cd build && cmake ../ && make
