@@ -24,4 +24,4 @@ jobs:
     - name: Build
       shell: bash
       working-directory: ${{runner.workspace}}
-      run: mkdir build && cd build && cmake ../ && make
+      run: ls && mkdir build && cd build && cmake ../ && make
