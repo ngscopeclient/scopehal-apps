@@ -25,3 +25,32 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake ../ && make
+
+  windows:
+    runs-on: windows-latest
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-glm mingw-w64-x86_64-libsigc++ mingw-w64-x86_64-gtkmm3 mingw-w64-x86_64-yaml-cpp mingw-w64-x86_64-glew
+
+    - name: Clone FFTS Repository
+      working-directory: ${{runner.workspace}}
+      run: git clone https://github.com/anthonix/ffts.git
+
+    - name: Build FFTS Library
+      working-directory: ${{runner.workspace}}/ffts
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DC_MAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j && mingw32-make install
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j
