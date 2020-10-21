@@ -54,6 +54,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
+add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
