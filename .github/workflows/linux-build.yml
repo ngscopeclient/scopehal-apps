@@ -23,5 +23,5 @@ jobs:
 
     - name: Build
       shell: bash
-      working-directory: ${{runner.workspace}}
-      run: ls && mkdir build && cd build && cmake ../ && make
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: mkdir build && cd build && cmake ../ && make
