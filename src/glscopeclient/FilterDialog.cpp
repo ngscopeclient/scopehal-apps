@@ -98,7 +98,10 @@ void ParameterRowFilename::OnClear()
 
 void ParameterRowFilename::OnBrowser()
 {
-	Gtk::FileChooserDialog dlg(*m_parent, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
+	Gtk::FileChooserDialog dlg(
+		*m_parent,
+		m_param.m_fileIsOutput ? "Save" : "Open",
+		m_param.m_fileIsOutput ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN);
 	dlg.set_filename(m_entry.get_text());
 
 	auto filter = Gtk::FileFilter::create();
@@ -107,6 +110,8 @@ void ParameterRowFilename::OnBrowser()
 	dlg.add_filter(filter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	if(m_param.m_fileIsOutput)
+		dlg.set_do_overwrite_confirmation();;
 	auto response = dlg.run();
 
 	if(response != Gtk::RESPONSE_OK)
