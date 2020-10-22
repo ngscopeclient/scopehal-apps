@@ -54,4 +54,4 @@ jobs:
 
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j 8
