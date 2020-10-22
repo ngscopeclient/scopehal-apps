@@ -19,12 +19,12 @@ jobs:
 
     - name: Build FFTS Library
       shell: bash
-      run: pushd /tmp/ffts && mkdir build && cd build && cmake ../ && make && sudo make install && popd
+      run: pushd /tmp/ffts && mkdir build && cd build && cmake ../ && make -j4 && sudo make install && popd
 
     - name: Build
       shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake ../ && make
+      run: mkdir build && cd build && cmake ../ && make -j4
 
   windows:
     runs-on: windows-latest
@@ -50,8 +50,8 @@ jobs:
 
     - name: Build FFTS Library
       working-directory: ${{runner.workspace}}/ffts
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DC_MAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j && mingw32-make install
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DC_MAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX .. && mingw32-make -j4 && mingw32-make install
 
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j 8
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
