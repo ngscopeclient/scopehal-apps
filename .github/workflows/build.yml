@@ -29,6 +29,16 @@ jobs:
     - name: List Artifacts
       shell: bash
       run: ls -R
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-linux
+        path: |
+          build/src/glscopeclient/glscopeclient
+          build/lib/graphwidget/libgraphwidget.so
+          build/lib/scopehal/libscopehal.so
+          build/lib/scopeprotocols/libscopeprotocols.so
   windows:
     runs-on: windows-latest
     
@@ -62,5 +72,11 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: glscopeclient.exe
-        path: build/src/glscopeclient/glscopeclient.exe
+        name: glscopeclient-windows
+        path: |
+          build/src/glscopeclient/glscopeclient.exe
+          build/lib/graphwidget/libgraphwidget.dll
+          build/lib/log/liblog.dll
+          build/lib/scopehal/libscopehal.dll
+          build/lib/scopeprotocols/libscopeprotocols.dll
+          build/lib/scopeprotocols/libscopeprotocols.dll
