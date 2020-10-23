@@ -55,3 +55,7 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
+
+    - name: Upload Artifacts
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: ls -R
