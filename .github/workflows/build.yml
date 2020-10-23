@@ -19,7 +19,7 @@ jobs:
 
     - name: Build FFTS Library
       shell: bash
-      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED/ && make -j4 && sudo make install && popd
+      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED && make -j4 && sudo make install && popd
 
     - name: Build
       shell: bash
