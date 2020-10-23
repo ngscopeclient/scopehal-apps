@@ -75,6 +75,9 @@ jobs:
         name: glscopeclient-windows
         path: |
           build/src/glscopeclient/glscopeclient.exe
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
           build/lib/graphwidget/libgraphwidget.dll
           build/lib/log/liblog.dll
           build/lib/scopehal/libscopehal.dll
