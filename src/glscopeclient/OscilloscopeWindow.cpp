@@ -60,7 +60,7 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital)
+OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum)
 	: m_iconEnterFullscreen("icons/24x24/fullscreen-enter.png")
 	, m_iconExitFullscreen("icons/24x24/fullscreen-exit.png")
 	, m_scopes(scopes)
@@ -79,7 +79,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	set_default_size(1280, 800);
 
 	//Add widgets
-	CreateWidgets(nodigital);
+	CreateWidgets(nodigital, nospectrum);
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
@@ -133,7 +133,7 @@ OscilloscopeWindow::~OscilloscopeWindow()
 /**
 	@brief Helper function for creating widgets and setting up signal handlers
  */
-void OscilloscopeWindow::CreateWidgets(bool nodigital)
+void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 {
 	//Set up window hierarchy
 	add(m_vbox);
@@ -365,6 +365,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 				auto wg = group;
 				if(chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
 				{
+					//Skip spectrum channels on request
+					if(nospectrum)
+						continue;
+
 					//This is the first frequency domain channel, make a new group
 					if(!spectrumGroup)
 					{

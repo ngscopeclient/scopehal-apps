@@ -53,7 +53,7 @@ class MultimeterDialog;
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital);
+	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();
@@ -145,7 +145,7 @@ protected:
 	void UpdateStatusBar();
 
 	//Initialization
-	void CreateWidgets(bool nodigital);
+	void CreateWidgets(bool nodigital, bool nospectrum);
 
 	//Widgets
 	Gtk::VBox m_vbox;

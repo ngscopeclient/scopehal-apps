@@ -108,6 +108,7 @@ int main(int argc, char* argv[])
 	bool nodata = false;
 	bool retrigger = false;
 	bool nodigital = false;
+	bool nospectrum = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -135,6 +136,8 @@ int main(int argc, char* argv[])
 			retrigger = true;
 		else if(s == "--nodigital")
 			nodigital = true;
+		else if(s == "--nospectrum")
+			nospectrum = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -288,7 +291,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run(fileToLoad, reconnect, nodata, retrigger, nodigital);
+	g_app->run(fileToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
 	delete g_app;
 	return 0;
 }
