@@ -2735,6 +2735,7 @@ void OscilloscopeWindow::OnAboutDialog()
 		"Benjamin Vernoux",
 		"four0four",
 		"Katharina B",
+		"Kenley Cheung",
 		"Mike Walters",
 		"noopwafel",
 		"Pepijn De Vos",
