@@ -26,10 +26,6 @@ jobs:
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake ../ && make -j4
 
-    - name: List Artifacts
-      shell: bash
-      run: ls -R
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -39,6 +35,12 @@ jobs:
           build/lib/graphwidget/libgraphwidget.so
           build/lib/scopehal/libscopehal.so
           build/lib/scopeprotocols/libscopeprotocols.so
+          
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-manual
+        path: doc/glscopeclient-manual.tex
   windows:
     runs-on: windows-latest
     
