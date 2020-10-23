@@ -24,8 +24,26 @@ jobs:
     - name: Build
       shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake ../ && make -j4
+      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
 
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-linux
+        path: |
+          build/src/glscopeclient/glscopeclient
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
+          build/lib/graphwidget/libgraphwidget.so
+          build/lib/scopehal/libscopehal.so
+          build/lib/scopeprotocols/libscopeprotocols.so
+          
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-manual
+        path: build/doc/glscopeclient-manual.pdf
   windows:
     runs-on: windows-latest
     
@@ -55,3 +73,17 @@ jobs:
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows
+        path: |
+          build/src/glscopeclient/glscopeclient.exe
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
+          build/lib/graphwidget/libgraphwidget.dll
+          build/lib/log/liblog.dll
+          build/lib/scopehal/libscopehal.dll
+          build/lib/scopeprotocols/libscopeprotocols.dll
