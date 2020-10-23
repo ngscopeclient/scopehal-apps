@@ -19,7 +19,7 @@ jobs:
 
     - name: Build FFTS Library
       shell: bash
-      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED && make -j4 && sudo make install && popd
+      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
 
     - name: Build
       shell: bash
@@ -50,7 +50,7 @@ jobs:
 
     - name: Build FFTS Library
       working-directory: ${{runner.workspace}}/ffts
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX -DENABLE_SHARED .. && mingw32-make -j4 && mingw32-make install
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX -DENABLE_SHARED=ON .. && mingw32-make -j4 && mingw32-make install
 
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
