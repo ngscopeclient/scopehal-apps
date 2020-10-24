@@ -163,6 +163,50 @@ int main(int argc, char* argv[])
 			);
 	}
 
+	//Calculate the 10-90 and 20-80% thresholds for the S21 curve
+	AnalogWaveform wfm;
+	for(size_t i=groupdelay_samples; i<npoints; i++)
+	{
+		wfm.m_offsets.push_back(i);
+		wfm.m_durations.push_back(ps_per_sample);
+		wfm.m_samples.push_back(dttime[1][0][i]);
+	}
+	float base = Filter::GetBaseVoltage(&wfm);
+	float top = Filter::GetTopVoltage(&wfm);
+	float delta = top - base;
+	float v10 = base + 0.1*delta;
+	float v20 = base + 0.2*delta;
+	float v80 = base + 0.8*delta;
+	float v90 = base + 0.9*delta;
+	Unit volts(Unit::UNIT_VOLTS);
+	LogWarning("Base: %s\n", volts.PrettyPrint(base).c_str());
+	LogWarning("Top: %s\n", volts.PrettyPrint(top).c_str());
+	LogWarning("10-90 thresholds: %s, %s\n", volts.PrettyPrint(v10).c_str(), volts.PrettyPrint(v90).c_str());
+	LogWarning("20-80 thresholds: %s, %s\n", volts.PrettyPrint(v20).c_str(), volts.PrettyPrint(v80).c_str());
+
+	//Find when we hit them
+	size_t t10 = 0;
+	size_t t20 = 0;
+	size_t t80 = 0;
+	size_t t90 = 0;
+	for(size_t i=groupdelay_samples; i<npoints; i++)
+	{
+		float v = dttime[1][0][i];
+		if((t10 == 0) && v > v10)
+			t10 = i;
+		if((t20 == 0) && v > v20)
+			t20 = i;
+		if((t80 == 0) && v > v80)
+			t80 = i;
+		if((t90 == 0) && v > v90)
+			t90 = i;
+	}
+
+	//Print stats
+	Unit ps(Unit::UNIT_PS);
+	LogWarning("20-80%%: %s\n", ps.PrettyPrint( (t80-t20) * ps_per_sample).c_str());
+	LogWarning("10-90%%: %s\n", ps.PrettyPrint( (t90-t10) * ps_per_sample).c_str());
+
 	//Clean up
 	ffts_free(forwardPlan);
 	ffts_free(reversePlan);
