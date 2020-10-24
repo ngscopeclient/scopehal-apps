@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.3)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 
+include(CTest)
+
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 
@@ -54,7 +56,10 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
-add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+
+if(BUILD_TESTING)
+	add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+endif()
 
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
