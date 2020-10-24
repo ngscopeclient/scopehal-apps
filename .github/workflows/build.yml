@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -20,6 +20,13 @@ jobs:
     - name: Build FFTS Library
       shell: bash
       run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
+
+    - name: Clone Catch2 Repository
+      run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
+
+    - name: Build Catch2 Library
+      shell: bash
+      run: pushd /tmp/catch2 && git checkout v2.13.2 && mkdir build && cd build && cmake .. && make -j 4 && sudo make install && popd
 
     - name: Build
       shell: bash
