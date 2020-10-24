@@ -33,6 +33,11 @@ jobs:
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
 
+    - name: Run Tests
+      shell: bash
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: cd build && make test
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
