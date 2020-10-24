@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
 
 	//Calculate maximum group delay for the first few S21 bins (approx propagation delay of the channel)
 	int64_t groupdelay_samples = ceil( GetGroupDelay(params[SPair(2,1)]) / ps_per_sample );
-	if( (groupdelay_samples < 0) || (groupdelay_samples >= npoints) )
+	if( (groupdelay_samples < 0) || (groupdelay_samples >= (int64_t)npoints) )
 	{
 		LogWarning("Calculated invalid group delay = %ld\n", groupdelay_samples);
 		groupdelay_samples = 0;
