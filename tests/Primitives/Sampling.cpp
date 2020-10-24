@@ -30,94 +30,112 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for FrequencyMeasurement filter
+	@brief Unit test for SampleOn* primitives
  */
 #include <catch2/catch.hpp>
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
-#include "Filters.h"
+#include "Primitives.h"
 
 using namespace std;
 
-TEST_CASE("Filter_FrequencyMeasurement")
+TEST_CASE("Primitive_SampleOnRisingEdges")
 {
-	TestWaveformSource source(g_rng);
-	auto filter = dynamic_cast<FrequencyMeasurement*>(Filter::CreateFilter("Frequency", "#ffffff"));
-	REQUIRE(filter != NULL);
-	filter->AddRef();
+	const size_t wavelen = 1000000;
 
-	const size_t niter = 25;
-	for(size_t i=0; i<niter; i++)
+	SECTION("DigitalWaveform")
 	{
-		SECTION(string("Iteration ") + to_string(i))
+		//Generate a random data/clock waveform
+		DigitalWaveform data;
+		DigitalWaveform clock;
+		data.m_timescale = 5;
+		clock.m_timescale = 5;
+		DigitalWaveform samples_expected;
+		uniform_int_distribution<int> edgeprob(0, 3);
+		uniform_int_distribution<int> dataprob(0, 1);
+		size_t nsamples = 0;
+		bool last_was_high = false;
+		for(size_t i=0; i<wavelen; i++)
 		{
-			LogVerbose("Iteration %zu\n", i);
 			LogIndenter li;
 
-			//Select random frequency, amplitude, and phase
-			float gen_freq = uniform_real_distribution<float>(0.5e9, 5e9)(g_rng);
-			float gen_period = 1e12 / gen_freq;
-			float gen_amp = uniform_real_distribution<float>(0.01, 1)(g_rng);
-
-			//Starting phase
-			float start_phase = uniform_real_distribution<float>(-M_PI, M_PI)(g_rng);
-
-			//Generate the input signal.
-			//50 Gsps, 1M points, no added noise
-			g_scope.GetChannel(0)->SetData(
-				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20, 1000000, 0),
-				0);
-
-			Unit hz(Unit::UNIT_HZ);
-			LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());
-			LogVerbose("Period:    %s\n", Unit(Unit::UNIT_PS).PrettyPrint(gen_period).c_str());
-			LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
-
-			//Run the filter
-			filter->SetInput("din", StreamDescriptor(g_scope.GetChannel(0), 0));
-			filter->Refresh();
-
-			//Get the output data
-			auto data = dynamic_cast<AnalogWaveform*>(filter->GetData(0));
-			REQUIRE(data != NULL);
-
-			//Counts for each array must be consistent
-			REQUIRE(data->m_offsets.size() == data->m_durations.size());
-			REQUIRE(data->m_offsets.size() == data->m_samples.size());
-
-			//Process the individual frequency measurements and sanity check them
-			//TODO: check timestamps and durations of samples too
-			float fmin = FLT_MAX;
-			float fmax = 0;
-			float avg = 0;
-			for(auto f : data->m_samples)
+			//75% chance of emitting a random data bit with clock low.
+			//Always emit a 0 bit for the first clock sample, since rising edges at time zero
+			//are indistinguishable from a constant-high clock.
+			//Also, always emit a clock-low sample if the clock was high, since we need a low period before
+			//the next rising edge.
+			if( (edgeprob(g_rng) == 0) || (i == 0) || last_was_high)
 			{
-				fmin = min(fmin, (float)f);
-				fmax = max(fmax, (float)f);
-				avg += f;
+				//Create the data bit
+				data.m_offsets.push_back(i);
+				data.m_durations.push_back(1);
+				data.m_samples.push_back(dataprob(g_rng));
+
+				//Create the clock bit
+				//TODO: generate test waveforms with multi-cycle clock samples
+				clock.m_offsets.push_back(i);
+				clock.m_durations.push_back(1);
+				clock.m_samples.push_back(0);
+
+				last_was_high = false;
 			}
-			avg /= data->m_samples.size();
-			LogVerbose("Results:\n");
-			LogIndenter li2;
-			float davg = gen_freq - avg;
-			float dmin = gen_freq - fmin;
-			float dmax = fmax - gen_freq;
-			LogVerbose("Min: %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
-			LogVerbose("Avg: %s (err = %s)\n", hz.PrettyPrint(avg).c_str(), hz.PrettyPrint(davg).c_str());
-			LogVerbose("Max: %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
 
-			//Average frequency must be +/- 0.1% (arbitrary threshold for now)
-			REQUIRE(fabs(davg) < 0.001 * gen_freq);
+			//25% chance of emitting a rising clock edge with the same data value as last clock
+			else
+			{
+				bool value = data.m_samples[data.m_samples.size()-1];
 
-			//Min and max must be +/- 5% (arbitrary threshold for now)
-			REQUIRE(fabs(dmin) < 0.05 * gen_freq);
-			REQUIRE(fabs(dmax) < 0.05 * gen_freq);
+				//Create the data bit
+				data.m_offsets.push_back(i);
+				data.m_durations.push_back(1);
+				data.m_samples.push_back(value);
 
-			//TODO: verify stdev?
+				//Create the clock bit
+				//TODO: generate test waveforms with multi-cycle clock samples
+				clock.m_offsets.push_back(i);
+				clock.m_durations.push_back(1);
+				clock.m_samples.push_back(1);
+
+				//Extend the last data bit, if present
+				if(nsamples)
+				{
+					samples_expected.m_durations[nsamples-1] =
+						(i * data.m_timescale) - samples_expected.m_offsets[nsamples-1];
+				}
+
+				//Save this as an expected data bit
+				//Duration is 1 until we get another clock edge.
+				//The last sample in the waveform always has duration 1, because we don't have an endpoint.
+				//TODO: should we extend to end of the waveform instead?
+				samples_expected.m_samples.push_back(value);
+				samples_expected.m_offsets.push_back(i * data.m_timescale);
+				samples_expected.m_durations.push_back(1);
+				nsamples ++;
+
+				last_was_high = true;
+			}
+		}
+
+		//Sample it
+		DigitalWaveform samples;
+		Filter::SampleOnRisingEdges(&data, &clock, samples);
+
+		//Initial sanity check: we should have the same number of data bits as we generated,
+		//and all sizes should be consistent
+		REQUIRE(nsamples == samples.m_offsets.size());
+		REQUIRE(nsamples == samples.m_durations.size());
+		REQUIRE(nsamples == samples.m_samples.size());
+
+		//Check each of the bits
+		for(size_t i=0; i<nsamples; i++)
+		{
+			REQUIRE(samples.m_offsets[i].m_value == samples_expected.m_offsets[i].m_value);
+			REQUIRE(samples.m_durations[i].m_value == samples_expected.m_durations[i].m_value);
+			REQUIRE(samples.m_samples[i].m_value == samples_expected.m_samples[i].m_value);
 		}
 	}
 
-	filter->Release();
+	//TODO: add test for DigitalBusWaveform version
 }
