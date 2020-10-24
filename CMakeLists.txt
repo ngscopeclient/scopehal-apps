@@ -58,6 +58,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 
 if(BUILD_TESTING)
+	find_package(Catch2 REQUIRED)
+	include(Catch)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 endif()
 

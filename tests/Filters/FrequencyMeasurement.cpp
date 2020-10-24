@@ -32,109 +32,88 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for FrequencyMeasurement filter
  */
+#include <catch2/catch.hpp>
+
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
-#include "../../lib/scopehal/TestCase.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
+#include "Filters.h"
 
 using namespace std;
 
-class FrequencyMeasurementTest : public TestCase
+TEST_CASE("Filter_FrequencyMeasurement")
 {
-public:
-	FrequencyMeasurementTest(int argc, char* argv[])
-		: TestCase(argc, argv, "Frequency")
-		, m_source(m_rng)
+	TestWaveformSource source(g_rng);
+	auto filter = dynamic_cast<FrequencyMeasurement*>(Filter::CreateFilter("Frequency", "#ffffff"));
+	REQUIRE(filter != NULL);
+	filter->AddRef();
+
+	const size_t niter = 25;
+	for(size_t i=0; i<niter; i++)
 	{
-		//Create the channels for our test
-		m_scope.AddChannel(new OscilloscopeChannel(
-			&m_scope, "CH1", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "#ffffff", 1, 0, true));
-	}
-
-	virtual ~FrequencyMeasurementTest()
-	{
-	}
-
-	virtual bool Iteration(size_t i)
-	{
-		LogNotice("Iteration %zu\n", i);
-		LogIndenter li;
-
-		//Select random frequency, amplitude, and phase
-		float gen_freq = uniform_real_distribution<float>(0.5e9, 5e9)(m_rng);
-		float gen_period = 1e12 / gen_freq;
-		float gen_amp = uniform_real_distribution<float>(0.01, 1)(m_rng);
-
-		//Starting phase
-		float start_phase = uniform_real_distribution<float>(-M_PI, M_PI)(m_rng);
-
-		//Generate the input signal.
-		//50 Gsps, 1M points, no added noise
-		m_scope.GetChannel(0)->SetData(
-			m_source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20, 1000000, 0),
-			0);
-
-		Unit hz(Unit::UNIT_HZ);
-		LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());
-		LogVerbose("Period:    %s\n", Unit(Unit::UNIT_PS).PrettyPrint(gen_period).c_str());
-		LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
-
-		//Run the filter
-		m_filter->SetInput("din", StreamDescriptor(m_scope.GetChannel(0), 0));
-		m_filter->Refresh();
-
-		//Get the output data
-		auto data = dynamic_cast<AnalogWaveform*>(m_filter->GetData(0));
-		if(!data)
+		SECTION(string("Iteration ") + to_string(i))
 		{
-			LogError("Filter generated an invalid or null waveform\n");
-			return false;
+			LogVerbose("Iteration %zu\n", i);
+			LogIndenter li;
+
+			//Select random frequency, amplitude, and phase
+			float gen_freq = uniform_real_distribution<float>(0.5e9, 5e9)(g_rng);
+			float gen_period = 1e12 / gen_freq;
+			float gen_amp = uniform_real_distribution<float>(0.01, 1)(g_rng);
+
+			//Starting phase
+			float start_phase = uniform_real_distribution<float>(-M_PI, M_PI)(g_rng);
+
+			//Generate the input signal.
+			//50 Gsps, 1M points, no added noise
+			g_scope.GetChannel(0)->SetData(
+				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20, 1000000, 0),
+				0);
+
+			Unit hz(Unit::UNIT_HZ);
+			LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());
+			LogVerbose("Period:    %s\n", Unit(Unit::UNIT_PS).PrettyPrint(gen_period).c_str());
+			LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
+
+			//Run the filter
+			filter->SetInput("din", StreamDescriptor(g_scope.GetChannel(0), 0));
+			filter->Refresh();
+
+			//Get the output data
+			auto data = dynamic_cast<AnalogWaveform*>(filter->GetData(0));
+			REQUIRE(data != NULL);
+
+			//Process the individual frequency measurements and sanity check them
+			//TODO: check timestamps and durations of samples too
+			float fmin = FLT_MAX;
+			float fmax = 0;
+			float avg = 0;
+			for(auto f : data->m_samples)
+			{
+				fmin = min(fmin, (float)f);
+				fmax = max(fmax, (float)f);
+				avg += f;
+			}
+			avg /= data->m_samples.size();
+			LogVerbose("Results:\n");
+			LogIndenter li2;
+			float davg = gen_freq - avg;
+			float dmin = gen_freq - fmin;
+			float dmax = fmax - gen_freq;
+			LogVerbose("Min: %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
+			LogVerbose("Avg: %s (err = %s)\n", hz.PrettyPrint(avg).c_str(), hz.PrettyPrint(davg).c_str());
+			LogVerbose("Max: %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
+
+			//Average frequency must be +/- 0.1% (arbitrary threshold for now)
+			REQUIRE(fabs(davg) < 0.001 * gen_freq);
+
+			//Min and max must be +/- 5% (arbitrary threshold for now)
+			REQUIRE(fabs(dmin) < 0.05 * gen_freq);
+			REQUIRE(fabs(dmax) < 0.05 * gen_freq);
+
+			//TODO: verify stdev?
 		}
-
-		//Process the individual frequency measurements and sanity check them
-		//TODO: check timestamps and durations of samples too
-		float fmin = FLT_MAX;
-		float fmax = 0;
-		float avg = 0;
-		for(auto f : data->m_samples)
-		{
-			fmin = min(fmin, (float)f);
-			fmax = max(fmax, (float)f);
-			avg += f;
-		}
-		avg /= data->m_samples.size();
-		LogDebug("Results:\n");
-		LogIndenter li2;
-		float davg = gen_freq - avg;
-		float dmin = gen_freq - fmin;
-		float dmax = fmax - gen_freq;
-		LogDebug("Min: %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
-		LogDebug("Avg: %s (err = %s)\n", hz.PrettyPrint(avg).c_str(), hz.PrettyPrint(davg).c_str());
-		LogDebug("Max: %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
-
-		//Fail if the average frequency is more than 0.1% off the nominal
-		if(fabs(davg) > 0.001 * gen_freq)
-			return false;
-
-		//Min and max should be within 5% of nominal
-		if(fabs(dmin) > 0.05 * gen_freq)
-			return false;
-		if(fabs(dmax) > 0.05 * gen_freq)
-			return false;
-
-		//TODO: verify stdev?
-
-		return true;
 	}
 
-	TestWaveformSource m_source;
-};
-
-int main(int argc, char* argv[])
-{
-	ScopeProtocolStaticInit();
-	FrequencyMeasurementTest test(argc, argv);
-	if(!test.Run())
-		return -1;
-	return 0;
+	filter->Release();
 }
