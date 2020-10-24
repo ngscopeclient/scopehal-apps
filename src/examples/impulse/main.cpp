@@ -147,7 +147,12 @@ int main(int argc, char* argv[])
 	}
 
 	//Calculate maximum group delay for the first few S21 bins (approx propagation delay of the channel)
-	int64_t groupdelay_samples =ceil( GetGroupDelay(params[SPair(2,1)]) / ps_per_sample );
+	int64_t groupdelay_samples = ceil( GetGroupDelay(params[SPair(2,1)]) / ps_per_sample );
+	if( (groupdelay_samples < 0) || (groupdelay_samples >= npoints) )
+	{
+		LogWarning("Calculated invalid group delay = %ld\n", groupdelay_samples);
+		groupdelay_samples = 0;
+	}
 
 	//Write the output
 	LogNotice("ps, s11, s21, s12, s22\n");
@@ -225,7 +230,8 @@ int main(int argc, char* argv[])
 int64_t GetGroupDelay(SParameterVector& vec)
 {
 	float max_delay = 0;
-	for(size_t i=0; i<vec.size()-1 && i<50; i++)
+	size_t n = vec.size();
+	for(size_t i=n/4; i<n*3/4; i++)
 		max_delay = max(max_delay, vec.GetGroupDelay(i));
 	return max_delay * 1e12;
 }
