@@ -188,6 +188,16 @@ Preference& PreferenceCategory::GetLeaf(const string& path)
     return this->GetLeaf(internal::PreferencePath{ path });
 }
 
+PreferenceCategory::map_type& PreferenceCategory::GetChildren()
+{
+    return this->m_children;
+}
+
+const PreferenceCategory::seq_type& PreferenceCategory::GetOrdering() const
+{
+    return this->m_ordering;
+}
+
 Preference& PreferenceCategory::GetLeaf(const internal::PreferencePath& path)
 {
     if(path.GetLength() == 0)
@@ -258,6 +268,7 @@ void PreferenceCategory::AddPreference(Preference pref)
     const auto identifier = pref.GetIdentifier();
     unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new internal::PreferenceHolder{ move(pref) } };
     this->m_children[identifier] = move(ptr);
+    this->m_ordering.push_back(identifier);
 }
 
 PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
@@ -267,6 +278,7 @@ PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
 
     unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new PreferenceCategory{ identifier } };
     this->m_children[identifier] = move(ptr);
+    this->m_ordering.push_back(identifier);
 
     return *static_cast<PreferenceCategory*>(this->m_children[identifier].get());
 }

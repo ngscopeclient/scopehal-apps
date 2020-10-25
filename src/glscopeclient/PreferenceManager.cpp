@@ -84,11 +84,23 @@ static void CreateDirectory(const string& path)
 
 void PreferenceManager::InitializeDefaults()
 {
-    auto& testSettings = this->m_treeRoot.AddCategory("test_settings");
+    auto& instrument = this->m_treeRoot.AddCategory("Instrument");
+        auto& trans = instrument.AddCategory("Transports");
+            trans.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
+            trans.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+            trans.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
+        auto& decode = instrument.AddCategory("Decoders");
+            decode.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
+            decode.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+            decode.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
 
-    testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
-    testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
-    testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
+    auto& debug = this->m_treeRoot.AddCategory("Debug");
+        auto& testSettings = debug.AddCategory("Test Settings");
+            testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
+            testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+            testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
+        auto& miscSettings = debug.AddCategory("Misc");
+            miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37));
 }
 
 PreferenceCategory& PreferenceManager::AllPreferences()
@@ -182,10 +194,6 @@ void PreferenceManager::LoadPreferences()
     {
         auto doc = YAML::LoadAllFromFile(m_filePath)[0];
         this->m_treeRoot.FromYAML(doc);
-
-        auto a = this->GetBool("test_settings.test_bool");
-        auto b = this->GetReal("test_settings.test_real");
-        auto c = this->GetString("test_settings.test_string");
     }
     catch(const exception& ex)
     {

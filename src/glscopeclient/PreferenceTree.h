@@ -131,6 +131,7 @@ class PreferenceCategory
 {
 protected:
     using map_type = std::map<std::string, std::unique_ptr<internal::PreferenceTreeNodeBase>>;
+    using seq_type = std::vector<std::string>;
 
 public:
     PreferenceCategory(std::string identifier);
@@ -143,9 +144,12 @@ public:
     virtual Preference& GetLeaf(const internal::PreferencePath& path);
     void AddPreference(Preference pref);
     PreferenceCategory& AddCategory(std::string identifier);
+    map_type& GetChildren();
+    const seq_type& GetOrdering() const;
 
 protected:
     map_type m_children;
+    seq_type m_ordering;
 };
 
 #endif // PreferenceTree_h

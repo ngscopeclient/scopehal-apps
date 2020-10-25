@@ -57,9 +57,40 @@ struct StringRealRow
     Gtk::Entry m_value;
 };
 
+class PreferencePage : public Gtk::Grid
+{
+    
+    public:
+        PreferencePage(PreferenceCategory& category);
+
+    public:
+        void SaveChanges();
+
+    protected:
+        void CreateWidgets();
+
+    protected:
+        PreferenceCategory& m_category;
+        std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
+        std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
+};
+
 
 class PreferenceDialog : public Gtk::Dialog
 {
+protected:
+    class ModelColumns : public Gtk::TreeModel::ColumnRecord
+    {
+    public:
+        ModelColumns()
+        {
+            add(m_col_category); add(m_col_page);
+        }
+
+        Gtk::TreeModelColumn<Glib::ustring> m_col_category;
+        Gtk::TreeModelColumn<void*> m_col_page;
+    };
+
 public:
     PreferenceDialog(OscilloscopeWindow* parent, PreferenceManager& preferences);
  
@@ -67,14 +98,22 @@ public:
  
 protected:
     void CreateWidgets();
- 
+    void SetupTree();
+    void ProcessCategory(PreferenceCategory& category, Gtk::TreeModel::Row& parent);
+    void ProcessRootCategories(PreferenceCategory& root);
+    void OnSelectionChanged();
+    void ActivatePage(PreferencePage* page);
+
 protected:
     PreferenceManager& m_preferences;
-    std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
-    std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
-    
-    Gtk::Grid m_grid;
-};
+    std::vector<std::unique_ptr<PreferencePage>> m_pages;
+    ModelColumns m_columns;
+    Glib::RefPtr<Gtk::TreeStore> m_treeModel;
 
+    Gtk::Paned m_root;
+        Gtk::ScrolledWindow m_wnd;
+                Gtk::TreeView m_tree;
+        Gtk::Grid m_grid;
+};
 
 #endif // PreferenceDialog_h

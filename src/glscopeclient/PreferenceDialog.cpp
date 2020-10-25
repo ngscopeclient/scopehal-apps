@@ -40,33 +40,32 @@
 #include <memory>
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 using namespace std;
 
-PreferenceDialog::PreferenceDialog(OscilloscopeWindow* parent, PreferenceManager& preferences)
-    : Gtk::Dialog("Preferences", *parent, Gtk::DIALOG_MODAL)
-    , m_preferences(preferences)
+PreferencePage::PreferencePage(PreferenceCategory& category)
+    : m_category{category}
 {
+    set_row_spacing(5);
+    set_column_spacing(150);
     CreateWidgets();
-    show_all();
 }
 
-void PreferenceDialog::CreateWidgets()
+void PreferencePage::CreateWidgets()
 {
-    add_button("OK", Gtk::RESPONSE_OK);
-	add_button("Cancel", Gtk::RESPONSE_CANCEL);
-    set_deletable(false);
-
-    m_grid.set_row_spacing(5);
-    m_grid.set_column_spacing(150);
-
-    get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
-    
     Gtk::Widget* last = nullptr;
-    
-    /*for(auto& entry: m_preferences.AllPreferences())
+
+    auto& entries = m_category.GetChildren();
+
+    for(const auto& identifier: m_category.GetOrdering())
     {
-        auto& preference = entry.second;
+        auto& node = entries[identifier];
+
+        if(!node->IsPreference())
+            continue;
+
+        auto& preference = node->AsPreference();
         
         switch(preference.GetType())
         {
@@ -82,11 +81,11 @@ void PreferenceDialog::CreateWidgets()
                 row->m_check.set_tooltip_text(preference.GetDescription());
                 
                 if(!last)
-                    m_grid.attach(row->m_label, 0, 0, 1, 1);
+                    attach(row->m_label, 0, 0, 1, 1);
                 else
-                    m_grid.attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
+                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
                     
-                m_grid.attach_next_to(row->m_check, row->m_label, Gtk::POS_RIGHT, 1, 1);
+                attach_next_to(row->m_check, row->m_label, Gtk::POS_RIGHT, 1, 1);
                 
                 last = &(row->m_label);
                 m_booleanRows.push_back(std::move(row));
@@ -110,11 +109,11 @@ void PreferenceDialog::CreateWidgets()
                 row->m_value.set_text(text);
                 
                 if(!last)
-                    m_grid.attach(row->m_label, 0, 0, 1, 1);
+                    attach(row->m_label, 0, 0, 1, 1);
                 else
-                    m_grid.attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
+                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
                     
-                m_grid.attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
+                attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
                 
                 last = &(row->m_label);
                 m_stringRealRows.push_back(std::move(row));
@@ -125,14 +124,19 @@ void PreferenceDialog::CreateWidgets()
             default:
                 break;
         }
-    }*/
+    }
 }
 
-void PreferenceDialog::SaveChanges()
+void PreferencePage::SaveChanges()
 {
-    /*for(auto& entry: m_preferences.AllPreferences())
+    for(auto& entry: m_category.GetChildren())
     {
-        auto& preference = entry.second;
+        auto* node = entry.second.get();
+
+        if(!node->IsPreference())
+            continue;
+
+        auto& preference = node->AsPreference();
         
         switch(preference.GetType())
         {
@@ -185,8 +189,123 @@ void PreferenceDialog::SaveChanges()
                 break;
         }
     }
+}
+
+PreferenceDialog::PreferenceDialog(OscilloscopeWindow* parent, PreferenceManager& preferences)
+    : Gtk::Dialog("Preferences", *parent, Gtk::DIALOG_MODAL)
+    , m_preferences(preferences)
+{
+    set_position(Gtk::WIN_POS_CENTER);
+    CreateWidgets();
+    show_all();
+}
+
+void PreferenceDialog::SetupTree()
+{
+    m_treeModel = Gtk::TreeStore::create(m_columns);
+    m_tree.set_model(m_treeModel);
+    m_tree.append_column("Category", m_columns.m_col_category);
+
+    m_tree.set_headers_visible(false);
+
+    auto& prefTree = m_preferences.AllPreferences();
+    this->ProcessRootCategories(prefTree);
+
+    m_tree.get_selection()->signal_changed().connect(
+		sigc::mem_fun(*this, &PreferenceDialog::OnSelectionChanged));
+}
+
+void PreferenceDialog::OnSelectionChanged()
+{
+    auto selection = m_tree.get_selection();
+	if(!selection->count_selected_rows())
+		return;
+
+	auto row = *selection->get_selected();
+    void* newPageVp = row[m_columns.m_col_page];
+    PreferencePage* newPage = reinterpret_cast<PreferencePage*>(newPageVp);
+
+    ActivatePage(newPage);
+}
+
+void PreferenceDialog::ActivatePage(PreferencePage* page)
+{
+    auto* child = m_root.get_child2();
+
+    if(child)
+        m_root.remove(*child);
+
+    m_root.add2(*page);
+    show_all();
+}
+
+void PreferenceDialog::ProcessCategory(PreferenceCategory& category, Gtk::TreeModel::Row& parent)
+{
+    auto& children = category.GetChildren();
+    for(const auto& identifier: category.GetOrdering())
+    {
+        auto& node = children[identifier];
+
+        if(node->IsCategory())
+        {
+            auto& subCategory = node->AsCategory();
+
+            unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+
+            Gtk::TreeModel::Row childrow = *(m_treeModel->append(parent.children()));
+            childrow[m_columns.m_col_category] = identifier.c_str();
+            childrow[m_columns.m_col_page] = pagePtr.get();
+
+            ProcessCategory(subCategory, childrow);
+            m_pages.push_back(std::move(pagePtr));
+        }
+    }
+}
+
+void PreferenceDialog::ProcessRootCategories(PreferenceCategory& root)
+{
+    auto& children = root.GetChildren();
+    for(const auto& identifier: root.GetOrdering())
+    {
+        auto& node = children[identifier];
+
+        if(node->IsCategory())
+        {
+            auto& subCategory = node->AsCategory();
+
+            unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+
+            Gtk::TreeModel::Row row = *(m_treeModel->append());
+            row[m_columns.m_col_category] = identifier.c_str();
+            row[m_columns.m_col_page] = pagePtr.get();
+            ProcessCategory(subCategory, row);
+            m_pages.push_back(std::move(pagePtr));
+        }
+    }
+}
+
+void PreferenceDialog::CreateWidgets()
+{
+    resize(650, 500);
+    add_button("OK", Gtk::RESPONSE_OK);
+	add_button("Cancel", Gtk::RESPONSE_CANCEL);
+    set_deletable(false);
+
+    SetupTree();
+
+    get_vbox()->pack_start(m_root, Gtk::PACK_EXPAND_WIDGET);
+        m_root.add1(m_wnd);
+            m_wnd.add(m_tree);
+            m_wnd.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+        m_root.set_position(200);
+}
+
+void PreferenceDialog::SaveChanges()
+{
+    for(auto& page: m_pages)
+        page->SaveChanges();
     
-    m_preferences.SavePreferences();*/
+    m_preferences.SavePreferences();
 }
  
  

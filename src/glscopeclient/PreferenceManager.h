@@ -64,9 +64,9 @@ public:
     PreferenceCategory& AllPreferences();
     
     // Value retrieval methods
-    const std::string& GetString(const std::string& identifier) const;
-    double GetReal(const std::string& identifier) const;
-    bool GetBool(const std::string& identifier) const;
+    const std::string& GetString(const std::string& path) const;
+    double GetReal(const std::string& path) const;
+    bool GetBool(const std::string& path) const;
     
 private:
     // Internal helpers
