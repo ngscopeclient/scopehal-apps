@@ -112,7 +112,7 @@ bool PreferenceManager::HasPreferenceFile() const
 {
 #ifdef _WIN32
     const auto fattr = GetFileAttributes(m_filePath.c_str());
-    return (fattr != INVALID_FILE_ATTRIBUTE) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
+    return (fattr != INVALID_FILE_ATTRIBUTES) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
 #else
     struct stat fs{ };
     const auto result = stat(m_filePath.c_str(), &fs);
@@ -129,7 +129,7 @@ const Preference& PreferenceManager::GetPreference(const string& path) const
 void PreferenceManager::DeterminePath()
 {
 #ifdef _WIN32
-    TCHAR stem[MAX_PATH];
+    WCHAR stem[MAX_PATH];
     if(S_OK != SHGetKnownFolderPath(
         FOLDERID_RoamingAppData,
         KF_FLAG_CREATE,
@@ -139,7 +139,7 @@ void PreferenceManager::DeterminePath()
         throw std::runtime_error("failed to resolve %appdata%");
     }
     
-    TCHAR directory[MAX_PATH];
+    WCHAR directory[MAX_PATH];
     if(NULL == PathCombine(directory, stem, "glscopeclient"))
     {
         throw runtime_error("failed to build directory path");
@@ -154,7 +154,7 @@ void PreferenceManager::DeterminePath()
     }
     
     // Build final path
-    TCHAR config[MAX_PATH];
+    WCHAR config[MAX_PATH];
     if(NULL == PathCombine(config, directory, "preferences.yml"))
     {
         throw runtime_error("failed to build directory path");
