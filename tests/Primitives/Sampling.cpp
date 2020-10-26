@@ -30,68 +30,112 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Shader
+	@brief Unit test for SampleOn* primitives
  */
-#include "glscopeclient.h"
-#include "Shader.h"
+#include <catch2/catch.hpp>
+
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
+#include "Primitives.h"
 
 using namespace std;
 
-Shader::Shader(GLenum type)
-	: m_handle(glCreateShader(type))
+TEST_CASE("Primitive_SampleOnRisingEdges")
 {
-	if(m_handle == 0)
-		LogError("Failed to create shader (of type %d)\n", type);
-}
+	const size_t wavelen = 1000000;
 
-Shader::~Shader()
-{
-	glDeleteShader(m_handle);
-}
-
-bool Shader::Load(string path)
-{
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
+	SECTION("DigitalWaveform")
 	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
+		//Generate a random data/clock waveform
+		DigitalWaveform data;
+		DigitalWaveform clock;
+		data.m_timescale = 5;
+		clock.m_timescale = 5;
+		DigitalWaveform samples_expected;
+		uniform_int_distribution<int> edgeprob(0, 3);
+		uniform_int_distribution<int> dataprob(0, 1);
+		size_t nsamples = 0;
+		bool last_was_high = false;
+		for(size_t i=0; i<wavelen; i++)
+		{
+			LogIndenter li;
+
+			//75% chance of emitting a random data bit with clock low.
+			//Always emit a 0 bit for the first clock sample, since rising edges at time zero
+			//are indistinguishable from a constant-high clock.
+			//Also, always emit a clock-low sample if the clock was high, since we need a low period before
+			//the next rising edge.
+			if( (edgeprob(g_rng) == 0) || (i == 0) || last_was_high)
+			{
+				//Create the data bit
+				data.m_offsets.push_back(i);
+				data.m_durations.push_back(1);
+				data.m_samples.push_back(dataprob(g_rng));
+
+				//Create the clock bit
+				//TODO: generate test waveforms with multi-cycle clock samples
+				clock.m_offsets.push_back(i);
+				clock.m_durations.push_back(1);
+				clock.m_samples.push_back(0);
+
+				last_was_high = false;
+			}
+
+			//25% chance of emitting a rising clock edge with the same data value as last clock
+			else
+			{
+				bool value = data.m_samples[data.m_samples.size()-1];
+
+				//Create the data bit
+				data.m_offsets.push_back(i);
+				data.m_durations.push_back(1);
+				data.m_samples.push_back(value);
+
+				//Create the clock bit
+				//TODO: generate test waveforms with multi-cycle clock samples
+				clock.m_offsets.push_back(i);
+				clock.m_durations.push_back(1);
+				clock.m_samples.push_back(1);
+
+				//Extend the last data bit, if present
+				if(nsamples)
+				{
+					samples_expected.m_durations[nsamples-1] =
+						(i * data.m_timescale) - samples_expected.m_offsets[nsamples-1];
+				}
+
+				//Save this as an expected data bit
+				//Duration is 1 until we get another clock edge.
+				//The last sample in the waveform always has duration 1, because we don't have an endpoint.
+				//TODO: should we extend to end of the waveform instead?
+				samples_expected.m_samples.push_back(value);
+				samples_expected.m_offsets.push_back(i * data.m_timescale);
+				samples_expected.m_durations.push_back(1);
+				nsamples ++;
+
+				last_was_high = true;
+			}
+		}
+
+		//Sample it
+		DigitalWaveform samples;
+		Filter::SampleOnRisingEdges(&data, &clock, samples);
+
+		//Initial sanity check: we should have the same number of data bits as we generated,
+		//and all sizes should be consistent
+		REQUIRE(nsamples == samples.m_offsets.size());
+		REQUIRE(nsamples == samples.m_durations.size());
+		REQUIRE(nsamples == samples.m_samples.size());
+
+		//Check each of the bits
+		for(size_t i=0; i<nsamples; i++)
+		{
+			REQUIRE(samples.m_offsets[i].m_value == samples_expected.m_offsets[i].m_value);
+			REQUIRE(samples.m_durations[i].m_value == samples_expected.m_durations[i].m_value);
+			REQUIRE(samples.m_samples[i].m_value == samples_expected.m_samples[i].m_value);
+		}
 	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
 
-	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
-	glCompileShader(m_handle);
-
-	//Check status
-	int status;
-	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
-	if(status == GL_TRUE)
-	{
-		delete[] buf;
-		return true;
-	}
-
-	//Compile failed, return error
-	char log[4096];
-	int len;
-	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
-
-	delete[] buf;
-	return false;
+	//TODO: add test for DigitalBusWaveform version
 }

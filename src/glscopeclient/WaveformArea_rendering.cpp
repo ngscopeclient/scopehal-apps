@@ -87,6 +87,9 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
+	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
+	//A struct is probably the better long term solution...
+	//cppcheck-suppress invalidPointerCast
 	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
 	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
 }
@@ -189,8 +192,11 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float samplesPerPixel = 1.0f / (group->m_pixelsPerXUnit * pdat->m_timescale);
-	float alpha_scaled = alpha * 2 / samplesPerPixel;
+	float capture_len = pdat->m_offsets[pdat->m_offsets.size() - 1] * pdat->m_timescale;
+	float avg_sample_len = capture_len / pdat->m_offsets.size();
+	float samplesPerPixel = 1.0 / (group->m_pixelsPerXUnit * avg_sample_len);
+	float alpha_scaled = alpha / sqrt(samplesPerPixel);
+	alpha_scaled = min(1.0f, alpha_scaled) * 2;
 
 	//Config stuff
 	wdata->m_mappedConfigBuffer64[0] = -group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
@@ -272,9 +278,12 @@ void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
 			continue;
 
-		//Create render data if needed
+		//Create render data if needed.
+		//Despite what cppcheck says we do have to check before inserting,
+		//since we're dynamically creating
 		if(m_overlayRenderData.find(overlay) == m_overlayRenderData.end())
 		{
+			//cppcheck-suppress stlFindInsert
 			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
 			m_geometryDirty = true;
 		}
@@ -333,6 +342,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//since scaling data is pushed to the GPU at this time
 	CalculateOverlayPositions();
 
+	//Pull vertical size from the scope early on no matter how we're rendering
+	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
+
 	//Update geometry if needed
 	if(m_geometryDirty || m_positionDirty)
 	{
@@ -363,9 +375,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
 		m_firstFrame = false;
 	}
-
-	//Pull vertical size from the scope early on no matter how we're rendering
-	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
 
 	//TODO: Do persistence processing
 

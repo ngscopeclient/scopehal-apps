@@ -30,68 +30,49 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Shader
+	@brief Dialog for connecting to a scope
  */
-#include "glscopeclient.h"
-#include "Shader.h"
 
-using namespace std;
+#ifndef MultimeterDialog_h
+#define MultimeterDialog_h
 
-Shader::Shader(GLenum type)
-	: m_handle(glCreateShader(type))
+/**
+	@brief Dialog for interacting with a Multimeter (which may or may not be part of an Oscilloscope)
+ */
+class MultimeterDialog	: public Gtk::Dialog
 {
-	if(m_handle == 0)
-		LogError("Failed to create shader (of type %d)\n", type);
-}
+public:
+	MultimeterDialog(Multimeter* meter);
+	virtual ~MultimeterDialog();
 
-Shader::~Shader()
-{
-	glDeleteShader(m_handle);
-}
+protected:
+	virtual void on_show();
+	virtual void on_hide();
 
-bool Shader::Load(string path)
-{
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
-	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
+	void OnInputChanged();
+	void OnModeChanged();
 
-	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
-	glCompileShader(m_handle);
+	void AddMode(Multimeter::MeasurementTypes type, const std::string& label);
+	std::map<std::string, Multimeter::MeasurementTypes> m_modemap;
 
-	//Check status
-	int status;
-	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
-	if(status == GL_TRUE)
-	{
-		delete[] buf;
-		return true;
-	}
+	bool OnTimer();
 
-	//Compile failed, return error
-	char log[4096];
-	int len;
-	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
+	Multimeter* m_meter;
 
-	delete[] buf;
-	return false;
-}
+	//TODO: support secondary measurements
+
+	Gtk::Grid m_grid;
+		Gtk::Label			m_inputLabel;
+			Gtk::ComboBoxText	m_inputBox;
+		Gtk::Label			m_typeLabel;
+			Gtk::ComboBoxText	m_typeBox;
+		Gtk::Label			m_valueLabel;
+			Gtk::Label			m_valueBox;
+		Graph m_graph;
+			Graphable m_graphData;
+
+	double m_minval;
+	double m_maxval;
+};
+
+#endif

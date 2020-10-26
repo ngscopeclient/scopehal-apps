@@ -7,6 +7,7 @@ if(NOT LIBFFTS_FOUND)
 	/usr
 	/usr/local
 	$ENV{HOME}/.local
+	/mingw64
 
 	PATH_SUFFIXES
 	include/ffts
@@ -17,6 +18,7 @@ if(NOT LIBFFTS_FOUND)
 	/usr/lib
 	/usr/local/lib
 	$ENV{HOME}/.local/lib
+	/mingw64/lib/
   )
 
 if(LIBFFTS_INCLUDE_DIR AND LIBFFTS_LIBRARIES)

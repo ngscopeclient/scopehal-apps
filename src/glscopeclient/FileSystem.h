@@ -29,69 +29,20 @@
 
 /**
 	@file
-	@author Andrew D. Zonenberg
-	@brief  Implementation of Shader
+	@author Katharina B
+	@brief Common file system utilities
  */
-#include "glscopeclient.h"
-#include "Shader.h"
+ 
+#ifndef FileSystem_h
+#define FileSystem_h
 
-using namespace std;
+#include <string>
+#include <vector>
 
-Shader::Shader(GLenum type)
-	: m_handle(glCreateShader(type))
-{
-	if(m_handle == 0)
-		LogError("Failed to create shader (of type %d)\n", type);
-}
+// Find all files/directories matching given pattern
+std::vector<std::string> Glob(const std::string& pathPattern, bool onlyDirectories);
 
-Shader::~Shader()
-{
-	glDeleteShader(m_handle);
-}
+// Remove given directory and all its contents
+void RemoveDirectory(const std::string& basePath);
 
-bool Shader::Load(string path)
-{
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
-	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
-
-	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
-	glCompileShader(m_handle);
-
-	//Check status
-	int status;
-	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
-	if(status == GL_TRUE)
-	{
-		delete[] buf;
-		return true;
-	}
-
-	//Compile failed, return error
-	char log[4096];
-	int len;
-	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
-
-	delete[] buf;
-	return false;
-}
+#endif // FileSystem_h

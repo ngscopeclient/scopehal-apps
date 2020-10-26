@@ -30,68 +30,29 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Implementation of Shader
+	@brief Main code for Primitives test case
  */
-#include "glscopeclient.h"
-#include "Shader.h"
+
+#define CATCH_CONFIG_RUNNER
+#include <catch2/catch.hpp>
+#include "Primitives.h"
 
 using namespace std;
 
-Shader::Shader(GLenum type)
-	: m_handle(glCreateShader(type))
+mt19937 g_rng;
+
+int main(int argc, char* argv[])
 {
-	if(m_handle == 0)
-		LogError("Failed to create shader (of type %d)\n", type);
-}
+	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
-Shader::~Shader()
-{
-	glDeleteShader(m_handle);
-}
+	//Global scopehal initialization
+	TransportStaticInit();
+	DriverStaticInit();
+	InitializePlugins();
 
-bool Shader::Load(string path)
-{
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
-	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
+	//Initialize the RNG
+	g_rng.seed(0);
 
-	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
-	glCompileShader(m_handle);
-
-	//Check status
-	int status;
-	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
-	if(status == GL_TRUE)
-	{
-		delete[] buf;
-		return true;
-	}
-
-	//Compile failed, return error
-	char log[4096];
-	int len;
-	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
-
-	delete[] buf;
-	return false;
+	//Run the actual test
+	return Catch::Session().run(argc, argv);
 }

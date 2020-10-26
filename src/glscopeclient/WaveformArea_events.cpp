@@ -83,8 +83,6 @@ void WaveformArea::on_resize(int width, int height)
 		ResetTextureFiltering();
 	}
 
-	SetGeometryDirty();
-
 	err = glGetError();
 	if(err != 0)
 		LogNotice("resize 3, err = %x\n", err);
@@ -106,6 +104,10 @@ void WaveformArea::on_resize(int width, int height)
 		waterfall->SetWidth(m_width);
 		waterfall->SetHeight(m_height);
 	}
+
+	SetGeometryDirty();
+	SetPositionDirty();
+	queue_draw();
 }
 
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
@@ -121,11 +123,28 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 			{
 				case GDK_SCROLL_UP:
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomInHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					{
+						if(ev->state & GDK_SHIFT_MASK)
+						{
+							m_group->m_xAxisOffset -= 50.0 / m_group->m_pixelsPerXUnit;
+							m_group->GetParent()->ClearPersistence(m_group, false, true);
+						}
+
+						else
+							m_parent->OnZoomInHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					}
 					break;
 				case GDK_SCROLL_DOWN:
 					if(!IsEyeOrBathtub())
-						m_parent->OnZoomOutHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					{
+						if(ev->state & GDK_SHIFT_MASK)
+						{
+							m_group->m_xAxisOffset += 50.0 / m_group->m_pixelsPerXUnit;
+							m_group->GetParent()->ClearPersistence(m_group, false, true);
+						}
+						else
+							m_parent->OnZoomOutHorizontal(m_group, XPositionToXAxisUnits(ev->x));
+					}
 					break;
 				case GDK_SCROLL_LEFT:
 					LogDebug("scroll left\n");
@@ -392,7 +411,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					else
 					{
 						LogError("Channel \"%s\" is neither a protocol decode nor a physical channel\n",
-							m_selectedChannel.m_channel->m_displayname.c_str());
+							m_selectedChannel.m_channel->GetDisplayName().c_str());
 					}
 				}
 
@@ -629,6 +648,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				double dv = YPositionToVolts(event->y) - m_dragStartVoltage;
 				double old_offset = m_channel.m_channel->GetOffset();
 				m_channel.m_channel->SetOffset(old_offset + dv);
+				SetGeometryDirty();
 				queue_draw();
 			}
 			break;
@@ -835,7 +855,7 @@ void WaveformArea::OnHide()
 	//Deleting an overlay
 	else
 	{
-		//LogDebug("Deleting overlay %s\n", m_selectedChannel->m_displayname.c_str());
+		//LogDebug("Deleting overlay %s\n", m_selectedChannel->GetDisplayName().c_str());
 
 		//Remove the overlay from the list
 		for(size_t i=0; i<m_overlays.size(); i++)
@@ -976,7 +996,7 @@ void WaveformArea::OnDecodeSetupComplete()
 	if(pdecode != NULL)
 	{
 		char title[256];
-		snprintf(title, sizeof(title), "Protocol Analyzer: %s", m_pendingDecode->m_displayname.c_str());
+		snprintf(title, sizeof(title), "Protocol Analyzer: %s", m_pendingDecode->GetDisplayName().c_str());
 
 		auto analyzer = new ProtocolAnalyzerWindow(title, m_parent, pdecode, this);
 		m_parent->m_analyzers.emplace(analyzer);
@@ -991,16 +1011,9 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	SetGeometryDirty();
 	queue_draw();
-}
 
-void WaveformArea::OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item)
-{
-	//ignore spurious events while loading menu config, or from item being deselected
-	if(m_updatingContextMenu || !item->get_active())
-		return;
-
-	m_selectedChannel.m_channel->SetBandwidthLimit(mhz);
-	ClearPersistence();
+	//Refresh the channels menu with the new channel name etc
+	m_parent->RefreshChannelsMenu();
 }
 
 void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item)
@@ -1073,9 +1086,6 @@ void WaveformArea::OnWaveformDataReady()
 			m_group->m_timeline.queue_draw();
 		}
 	}
-
-	//Redraw everything
-	queue_draw();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1256,7 +1266,6 @@ void WaveformArea::UpdateContextMenu()
 
 	if(m_selectedChannel.m_channel->IsPhysicalChannel())
 	{
-		m_bwMenu.set_sensitive(true);
 		m_attenMenu.set_sensitive(true);
 		m_couplingMenu.set_sensitive(true);
 
@@ -1301,27 +1310,6 @@ void WaveformArea::UpdateContextMenu()
 
 			case 20:
 				m_atten20xItem.set_active(true);
-				break;
-
-			default:
-				//TODO: how to handle this?
-				break;
-		}
-
-		//Update the bandwidth limit
-		int bwl = m_selectedChannel.m_channel->GetBandwidthLimit();
-		switch(bwl)
-		{
-			case 0:
-				m_bwFullItem.set_active(true);
-				break;
-
-			case 20:
-				m_bw20Item.set_active(true);
-				break;
-
-			case 200:
-				m_bw200Item.set_active(true);
 				break;
 
 			default:
@@ -1376,7 +1364,6 @@ void WaveformArea::UpdateContextMenu()
 	}
 	else
 	{
-		m_bwMenu.set_sensitive(false);
 		m_attenMenu.set_sensitive(false);
 		m_couplingMenu.set_sensitive(false);
 	}
@@ -1400,8 +1387,17 @@ void WaveformArea::UpdateContextMenu()
 			break;
 	}
 
-	//Set stats checkbox
-	m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel.m_channel));
+	//Hide stats for non-analog channels
+	if(m_selectedChannel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+	{
+		m_statisticsItem.set_sensitive(false);
+		m_statisticsItem.set_active(false);
+	}
+	else
+	{
+		m_statisticsItem.set_sensitive(true);
+		m_statisticsItem.set_active(m_group->IsShowingStats(m_selectedChannel.m_channel));
+	}
 
 	m_updatingContextMenu = false;
 }

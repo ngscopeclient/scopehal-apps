@@ -45,13 +45,21 @@ public:
 
 	Oscilloscope* m_scope;
 
-	Gtk::Grid m_grid;
-		Gtk::Label			m_sampleRateLabel;
-			Gtk::ComboBoxText	m_sampleRateBox;
-		Gtk::Label			m_memoryDepthLabel;
-			Gtk::ComboBoxText	m_memoryDepthBox;
-		Gtk::Label			m_interleaveLabel;
-			Gtk::Switch			m_interleaveSwitch;
+	Gtk::HBox m_box;
+		Gtk::StackSidebar m_sidebar;
+		Gtk::Stack m_stack;
+			Gtk::Grid m_tgrid;
+				Gtk::Label			m_sampleRateLabel;
+					Gtk::ComboBoxText	m_sampleRateBox;
+				Gtk::Label			m_memoryDepthLabel;
+					Gtk::ComboBoxText	m_memoryDepthBox;
+				Gtk::Label			m_interleaveLabel;
+					Gtk::Switch			m_interleaveSwitch;
+			Gtk::Grid m_fgrid;
+				Gtk::Label			m_spanLabel;
+					Gtk::Entry			m_spanEntry;
+				Gtk::Label			m_rbwLabel;
+					Gtk::Entry			m_rbwEntry;
 
 	void RefreshSampleRates(bool interleaving);
 	void RefreshSampleDepths(bool interleaving);

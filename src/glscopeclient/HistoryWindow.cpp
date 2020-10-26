@@ -58,7 +58,7 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	, m_updating(false)
 {
 	set_skip_taskbar_hint();
-	set_type_hint(Gdk::WINDOW_TYPE_HINT_TOOLBAR);
+	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
 
 	set_default_size(320, 800);
 
@@ -149,9 +149,10 @@ void HistoryWindow::OnWaveformDataReady()
 	localtime_r(&data->m_startTimestamp, &ltime);
 #endif
 
+	//round to nearest 100ps for display
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
-	snprintf(tmp, sizeof(tmp), "%010zu", data->m_startPicoseconds / 100);	//round to nearest 100ps for display
+	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(data->m_startPicoseconds / 100));
 	stime += tmp;
 
 	//Create the row
