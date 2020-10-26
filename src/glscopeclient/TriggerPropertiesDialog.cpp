@@ -90,7 +90,8 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 
 	//Actual content
 	get_vbox()->pack_start(m_contentGrid, Gtk::PACK_SHRINK);
-	AddRows(trig);
+	if(trig)
+		AddRows(trig);
 
 	show_all();
 }
@@ -147,6 +148,9 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 
 	//If it's the same trigger type currently set on the scope, load UI with those settings
 	auto current_trig = m_scope->GetTrigger();
+	if(current_trig == NULL)
+		return;
+
 	if(current_trig->GetTriggerDisplayName() == type)
 		AddRows(current_trig);
 
@@ -176,10 +180,7 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 		if(last_label)
 			m_contentGrid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
 		else
-		{
 			m_contentGrid.attach(row->m_label, 0, 0, 1, 1);
-			last_label = &row->m_label;
-		}
 		m_contentGrid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
 		m_rows.push_back(row);
 		last_label = &row->m_label;
@@ -194,10 +195,17 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 		//TODO: multiple streams
 		for(size_t k=0; k<m_scope->GetChannelCount(); k++)
 		{
-			auto c = StreamDescriptor(m_scope->GetChannel(k), 0);
+			auto chan = m_scope->GetChannel(k);
+
+			//Hide channels we can't enable due to interleave conflicts etc
+			//Trigger channel can't be enabled for display, but is always a legal source
+			if( !m_scope->CanEnableChannel(k) && (chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+				continue;
+
+			auto c = StreamDescriptor(chan, 0);
 			if(trig->ValidateChannel(i, c))
 			{
-				auto name = c.m_channel->m_displayname;
+				auto name = c.m_channel->GetDisplayName();
 				row->m_chans.append(name);
 				row->m_chanptrs[name] = c;
 

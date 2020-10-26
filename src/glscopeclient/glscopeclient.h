@@ -43,6 +43,7 @@
 #include "../scopehal/OscilloscopeChannel.h"
 #include "../scopehal/Filter.h"
 
+#include <chrono>
 #include <thread>
 #include <vector>
 

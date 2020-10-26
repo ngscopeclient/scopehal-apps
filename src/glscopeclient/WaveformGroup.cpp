@@ -128,7 +128,7 @@ void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
 
 	//Set up the column
 	auto col = m_measurementView.get_column(ncol);
-	col->set_title(chan->m_displayname);
+	col->set_title(chan->GetDisplayName());
 	col->get_first_cell()->property_xalign() = 1.0;
 	col->set_alignment(Gtk::ALIGN_END);
 
@@ -208,7 +208,7 @@ void WaveformGroup::RefreshMeasurements()
 			continue;
 
 		auto col = m_measurementView.get_column(i);
-		auto name = m_indexToColumnMap[i]->m_displayname;
+		auto name = m_indexToColumnMap[i]->GetDisplayName();
 		if(col->get_title() != name)
 			col->set_title(name);
 	}

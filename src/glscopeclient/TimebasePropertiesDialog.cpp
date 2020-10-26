@@ -43,21 +43,32 @@ using namespace std;
 
 void TimebasePropertiesPage::AddWidgets()
 {
-	m_grid.set_margin_left(10);
-	m_grid.set_margin_right(10);
-	m_grid.set_column_spacing(10);
-	m_grid.set_row_spacing(5);
+	//Stack setup
+	m_box.pack_start(m_sidebar, Gtk::PACK_EXPAND_WIDGET);
+	m_box.pack_start(m_stack, Gtk::PACK_EXPAND_WIDGET);
+	m_sidebar.set_stack(m_stack);
+	m_stack.set_homogeneous();
 
-	m_grid.attach(m_sampleRateLabel, 0, 0, 1, 1);
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Time domain settings
+
+	m_stack.add(m_tgrid, "Time Domain", "Time Domain");
+
+	m_tgrid.set_margin_left(10);
+	m_tgrid.set_margin_right(10);
+	m_tgrid.set_column_spacing(10);
+	m_tgrid.set_row_spacing(5);
+
+	m_tgrid.attach(m_sampleRateLabel, 0, 0, 1, 1);
 		m_sampleRateLabel.set_text("Sample Rate");
-	m_grid.attach_next_to(m_sampleRateBox, m_sampleRateLabel, Gtk::POS_RIGHT, 1, 1);
-	m_grid.attach_next_to(m_memoryDepthLabel, m_sampleRateLabel, Gtk::POS_BOTTOM, 1, 1);
+	m_tgrid.attach_next_to(m_sampleRateBox, m_sampleRateLabel, Gtk::POS_RIGHT, 1, 1);
+	m_tgrid.attach_next_to(m_memoryDepthLabel, m_sampleRateLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_memoryDepthLabel.set_text("Memory Depth");
-	m_grid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT, 1, 1);
+	m_tgrid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT, 1, 1);
 
-	m_grid.attach_next_to(m_interleaveLabel, m_memoryDepthLabel, Gtk::POS_BOTTOM, 1, 1);
+	m_tgrid.attach_next_to(m_interleaveLabel, m_memoryDepthLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_interleaveLabel.set_text("Channel Combining");
-	m_grid.attach_next_to(m_interleaveSwitch, m_interleaveLabel, Gtk::POS_RIGHT, 1, 1);
+	m_tgrid.attach_next_to(m_interleaveSwitch, m_interleaveLabel, Gtk::POS_RIGHT, 1, 1);
 
 	bool interleaving = m_scope->IsInterleaving();
 	m_interleaveSwitch.set_state(interleaving);
@@ -65,6 +76,32 @@ void TimebasePropertiesPage::AddWidgets()
 
 	m_interleaveSwitch.signal_state_set().connect(
 		sigc::mem_fun(*this, &TimebasePropertiesPage::OnInterleaveSwitchChanged), false);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Frequency domain settings
+
+	if(m_scope->HasFrequencyControls())
+	{
+		m_stack.add(m_fgrid, "Frequency Domain", "Frequency Domain");
+
+		m_fgrid.set_margin_left(10);
+		m_fgrid.set_margin_right(10);
+		m_fgrid.set_column_spacing(10);
+		m_fgrid.set_row_spacing(5);
+
+		m_fgrid.attach(m_spanLabel, 0, 0, 1, 1);
+		m_spanLabel.set_text("Span");
+		m_fgrid.attach_next_to(m_spanEntry, m_spanLabel, Gtk::POS_RIGHT, 1, 1);
+		m_spanEntry.set_text(Unit(Unit::UNIT_HZ).PrettyPrint(m_scope->GetSpan()));
+
+		m_fgrid.attach_next_to(m_rbwLabel, m_spanLabel, Gtk::POS_BOTTOM, 1, 1);
+		m_rbwLabel.set_text("RBW");
+		m_fgrid.attach_next_to(m_rbwEntry, m_rbwLabel, Gtk::POS_RIGHT, 1, 1);
+		m_rbwEntry.set_text(Unit(Unit::UNIT_HZ).PrettyPrint(m_scope->GetResolutionBandwidth()));
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Done, pull stuff from the instrment
 
 	RefreshSampleRates(interleaving);
 	RefreshSampleDepths(interleaving);
@@ -155,7 +192,7 @@ TimebasePropertiesDialog::TimebasePropertiesDialog(
 	for(auto scope : scopes)
 	{
 		TimebasePropertiesPage* page = new TimebasePropertiesPage(scope);
-		m_tabs.append_page(page->m_grid, scope->m_nickname);
+		m_tabs.append_page(page->m_box, scope->m_nickname);
 		page->AddWidgets();
 		m_pages[scope] = page;
 	}
@@ -174,37 +211,28 @@ TimebasePropertiesDialog::~TimebasePropertiesDialog()
 
 void TimebasePropertiesDialog::ConfigureTimebase()
 {
+	Unit hz(Unit::UNIT_HZ);
+	Unit depth(Unit::UNIT_SAMPLEDEPTH);
+	Unit rate(Unit::UNIT_SAMPLERATE);
+
 	for(auto it : m_pages)
 	{
+		auto page = it.second;
+		auto scope = it.first;
+
 		//Configure interleaving
-		it.first->SetInterleaving(it.second->m_interleaveSwitch.get_state());
+		scope->SetInterleaving(page->m_interleaveSwitch.get_state());
 
-		//Figure out the requested sample rate
-		char scale;
-		long rate;
-		sscanf(it.second->m_sampleRateBox.get_active_text().c_str(), "%ld %cS/s", &rate, &scale);
-		uint64_t frate = rate;
-		if(scale == 'k')
-			frate *= 1000;
-		else if(scale == 'M')
-			frate *= 1000000;
-		else if(scale == 'G')
-			frate *= 1000000000;
+		//Set timebase
+		scope->SetSampleDepth(round(depth.ParseString(page->m_memoryDepthBox.get_active_text())));
+		scope->SetSampleRate(round(rate.ParseString(page->m_sampleRateBox.get_active_text())));
 
-		//Figure out the memory depth
-		long depth;
-		sscanf(it.second->m_memoryDepthBox.get_active_text().c_str(), "%ld %cS", &depth, &scale);
-		uint64_t fdepth = depth;
-		if(scale == 'k')
-			fdepth *= 1000;
-		else if(scale == 'M')
-			fdepth *= 1000000;
-		else if(scale == 'G')
-			fdepth *= 1000000000;
-
-		//Apply changes
-		it.first->SetSampleDepth(fdepth);
-		it.first->SetSampleRate(frate);
+		//Frequency domain options
+		if(scope->HasFrequencyControls())
+		{
+			scope->SetSpan(round(hz.ParseString(page->m_spanEntry.get_text())));
+			scope->SetResolutionBandwidth(round(hz.ParseString(page->m_rbwEntry.get_text())));
+		}
 	}
 }
 

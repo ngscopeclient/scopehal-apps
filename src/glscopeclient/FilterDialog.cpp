@@ -80,17 +80,28 @@ ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter&
 	: m_parent(parent)
 	, m_param(param)
 {
-	m_button.set_label("...");
-	m_button.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
+	m_clearButton.set_image_from_icon_name("edit-clear");
+	m_clearButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnClear));
+
+	m_browserButton.set_image_from_icon_name("filefind");
+	m_browserButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnBrowser));
 }
 
 ParameterRowFilename::~ParameterRowFilename()
 {
 }
 
+void ParameterRowFilename::OnClear()
+{
+	m_entry.set_text("");
+}
+
 void ParameterRowFilename::OnBrowser()
 {
-	Gtk::FileChooserDialog dlg(*m_parent, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
+	Gtk::FileChooserDialog dlg(
+		*m_parent,
+		m_param.m_fileIsOutput ? "Save" : "Open",
+		m_param.m_fileIsOutput ? Gtk::FILE_CHOOSER_ACTION_SAVE : Gtk::FILE_CHOOSER_ACTION_OPEN);
 	dlg.set_filename(m_entry.get_text());
 
 	auto filter = Gtk::FileFilter::create();
@@ -99,6 +110,8 @@ void ParameterRowFilename::OnBrowser()
 	dlg.add_filter(filter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	if(m_param.m_fileIsOutput)
+		dlg.set_do_overwrite_confirmation();;
 	auto response = dlg.run();
 
 	if(response != Gtk::RESPONSE_OK)
@@ -174,7 +187,7 @@ FilterDialog::FilterDialog(
 			m_channelDisplayNameLabel.set_text("Display name");
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
-			m_channelDisplayNameEntry.set_text(filter->m_displayname);
+			m_channelDisplayNameEntry.set_text(filter->GetDisplayName());
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
@@ -214,10 +227,16 @@ FilterDialog::FilterDialog(
 			Oscilloscope* scope = parent->GetScope(j);
 			for(size_t k=0; k<scope->GetChannelCount(); k++)
 			{
-				auto c = StreamDescriptor(scope->GetChannel(k), 0);
+				//If we can't enable the channel, don't show it.
+				//Aux inputs can't be enabled, but show those if they are legal
+				auto cn = scope->GetChannel(k);
+				if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+					continue;
+
+				auto c = StreamDescriptor(cn, 0);
 				if(filter->ValidateChannel(i, c))
 				{
-					auto name = c.m_channel->m_displayname;
+					auto name = c.m_channel->GetDisplayName();
 					row->m_chans.append(name);
 					row->m_chanptrs[name] = c;
 					if( (c == chan && i==0) || (c == din) )
@@ -296,7 +315,8 @@ ParameterRowBase* FilterDialog::CreateRow(
 				row->m_label.set_size_request(width, 1);
 
 				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-				grid.attach_next_to(row->m_button, row->m_entry, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_clearButton, row->m_entry, Gtk::POS_RIGHT, 1, 1);
+				grid.attach_next_to(row->m_browserButton, row->m_clearButton, Gtk::POS_RIGHT, 1, 1);
 				last_label = &row->m_label;
 
 				row->m_label.set_label(name);
@@ -385,7 +405,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 void FilterDialog::ConfigureDecoder()
 {
 	//See if we're using the default name
-	string old_name = m_filter->m_displayname;
+	string old_name = m_filter->GetDisplayName();
 	bool default_name = (m_filter->GetHwname() == old_name);
 
 	ConfigureInputs(m_filter, m_rows);
@@ -399,7 +419,7 @@ void FilterDialog::ConfigureDecoder()
 	m_filter->SetDefaultName();
 	auto dname = m_channelDisplayNameEntry.get_text();
 	if( (dname != "") && (!default_name || (old_name != dname)) )
-		m_filter->m_displayname = dname;
+		m_filter->SetDisplayName(dname);
 }
 
 void FilterDialog::ConfigureInputs(FlowGraphNode* node, vector<ChannelSelectorRow*>& rows)

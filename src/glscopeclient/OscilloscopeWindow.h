@@ -49,13 +49,15 @@
 
 class PreferenceDialog;
 
+class MultimeterDialog;
+
 /**
 	@brief Main application window class for an oscilloscope
  */
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(std::vector<Oscilloscope*> scopes, bool nodigital);
+	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal();
@@ -65,6 +67,7 @@ public:
 	void ClearAllPersistence();
 
 	void OnRemoveChannel(WaveformArea* w);
+	void GarbageCollectAnalyzers();
 
 	//need to be public so it can be called by WaveformArea
 	void OnMoveNew(WaveformArea* w, bool horizontal);
@@ -141,11 +144,12 @@ protected:
 	void OnHistory();
 	void OnAlphaChanged();
 	void OnRefreshConfig();
+	void OnAboutDialog();
 
 	void UpdateStatusBar();
 
 	//Initialization
-	void CreateWidgets(bool nodigital);
+	void CreateWidgets(bool nodigital, bool nospectrum);
 
 	//Widgets
 	Gtk::VBox m_vbox;
@@ -176,6 +180,11 @@ protected:
 				Gtk::Menu m_windowMenu;
 					Gtk::MenuItem m_windowAnalyzerMenuItem;
 						Gtk::Menu m_windowAnalyzerMenu;
+					Gtk::MenuItem m_windowMultimeterMenuItem;
+						Gtk::Menu m_windowMultimeterMenu;
+			Gtk::MenuItem m_helpMenuItem;
+				Gtk::Menu m_helpMenu;
+					Gtk::MenuItem m_aboutMenuItem;
 		Gtk::HBox m_toolbox;
 			Gtk::Toolbar m_toolbar;
 				Gtk::ToolButton m_btnStart;
@@ -211,6 +220,9 @@ public:
 	//All of the protocol analyzers
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
 
+	//All of the multimeter dialogs
+	std::map<Multimeter*, MultimeterDialog*> m_meterDialogs;
+
 	//Event handlers
 	bool OnTimer(int timer);
 	bool PollScopes();
@@ -218,7 +230,7 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
-	void DoFileOpen(std::string filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
+	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
@@ -249,12 +261,14 @@ public:
 	void OnScopeSync();
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
+	void OnShowMultimeter(Multimeter* meter);
 
 	void OnPreferences();
 	void OnPreferenceDialogResponse(int response);
 	//Reconfigure menus
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
+	void RefreshMultimeterMenu();
 
 	//Protocol decoding etc
 	void RefreshAllFilters();
@@ -290,7 +304,7 @@ public:
 	void SerializeWaveforms(IDTable& table);
 
 	//Performance counters
-	int64_t m_totalWaveforms;
+	size_t m_totalWaveforms;
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;

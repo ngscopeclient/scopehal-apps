@@ -418,7 +418,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		}
 
 		Rect chanbox;
-		RenderChannelInfoBox(o, cr, ybot, o.m_channel->m_displayname, chanbox, 2);
+		RenderChannelInfoBox(o, cr, ybot, o.m_channel->GetDisplayName(), chanbox, 2);
 		m_overlayBoxRects[o] = chanbox;
 
 		int textright = chanbox.get_right() + 4;
@@ -510,6 +510,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 {
 	string label = m_channel.GetName();
 	auto data = m_channel.GetData();
+	auto scope = m_channel.m_channel->GetScope();
 
 	auto eye = dynamic_cast<EyeWaveform*>(data);
 	auto ed = dynamic_cast<EyePattern*>(m_channel.m_channel);
@@ -519,24 +520,19 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto xunits = m_channel.m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
-		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(data->m_timescale).c_str());
+		double rbw = data->m_timescale;
+		if(scope)
+			rbw = scope->GetResolutionBandwidth();
+
+		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(rbw).c_str());
 		label += tmp;
 	}
 
 	//Add count info to eye channels
 	else if( (eye != NULL) && (ed != NULL) )
 	{
-
-		size_t uis = eye->GetTotalUIs();
-		float gbps = 1e3f / eye->GetUIWidth();
-
-		if(uis < 1e6)
-			snprintf(tmp, sizeof(tmp), "\n%6.2fk UI\t%.4f Gbps", uis * 1e-3f, gbps);
-		else if(uis < 1e9)
-			snprintf(tmp, sizeof(tmp), "\n%6.2fM UI\t%.4f Gbps", uis * 1e-6f, gbps);
-		else
-			snprintf(tmp, sizeof(tmp), "\n%6.2fG UI\t%.4f Gbps", uis * 1e-6f, gbps);
-		label += tmp;
+		label += string("\n") + Unit(Unit::UNIT_UI).PrettyPrint(eye->GetTotalUIs()) + "\t" +
+					Unit(Unit::UNIT_BITRATE).PrettyPrint(1e12f / eye->GetUIWidth());
 
 		auto mask = ed->GetMask();
 		auto maskname = mask.GetMaskName();
@@ -569,34 +565,13 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 
 		else
 		{
-			label += " : ";
-
-			//Format sample depth
-			size_t len = data->m_offsets.size();
-			if(len > 1e6)
-				snprintf(tmp, sizeof(tmp), "%.0f MS", len * 1e-6f);
-			else if(len > 1e3)
-				snprintf(tmp, sizeof(tmp), "%.0f kS", len * 1e-3f);
-			else
-				snprintf(tmp, sizeof(tmp), "%zu S", len);
-			label += tmp;
-			label += "\n";
-
-			//Format timebase
-			double gsps = 1000.0f / data->m_timescale;
-			if(gsps > 1)
-			{
-				//If sample rate isn't a round Gsps number, add more digits
-				if(floor(gsps) != gsps)
-					snprintf(tmp, sizeof(tmp), "%.2f GS/s", gsps);
-				else
-					snprintf(tmp, sizeof(tmp), "%.0f GS/s", gsps);
-			}
-			else if(gsps > 0.001)
-				snprintf(tmp, sizeof(tmp), "%.0f MS/s", gsps * 1000);
-			else
-				snprintf(tmp, sizeof(tmp), "%.1f kS/s", gsps * 1000 * 1000);
-			label += tmp;
+			//Format sample rate and timebase
+			Unit depth(Unit::UNIT_SAMPLEDEPTH);
+			Unit rate(Unit::UNIT_SAMPLERATE);
+			label +=
+				" : " +
+				depth.PrettyPrint(data->m_offsets.size()) + "\n" +
+				rate.PrettyPrint(1e12 / data->m_timescale);
 		}
 	}
 
@@ -1095,11 +1070,12 @@ void WaveformArea::RenderComplexSignal(
 void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//Grab input and stop if there's nothing for us to do
-	auto filter = dynamic_cast<PeakDetectionFilter*>(m_channel.m_channel);
+	auto chan = m_channel.m_channel;
+	auto filter = dynamic_cast<PeakDetector*>(chan);
 	if(!filter)
 		return;
 	const vector<Peak>& peaks = filter->GetPeaks();
-	auto data = filter->GetData(0);
+	auto data = chan->GetData(0);
 	if(peaks.empty() || (data == NULL) )
 		return;
 
@@ -1112,8 +1088,8 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	int theight;
 	int margin = 2;
 
-	auto xunit = filter->GetXAxisUnits();
-	auto yunit = filter->GetYAxisUnits();
+	auto xunit = chan->GetXAxisUnits();
+	auto yunit = chan->GetYAxisUnits();
 
 	//First pass: get nominal locations of each peak label and discard offscreen ones
 	float radius = 4;

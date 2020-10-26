@@ -122,7 +122,11 @@ protected:
 class ProtocolAnalyzerWindow : public Gtk::Dialog
 {
 public:
-	ProtocolAnalyzerWindow(std::string title, OscilloscopeWindow* parent, PacketDecoder* decoder, WaveformArea* area);
+	ProtocolAnalyzerWindow(
+		const std::string& title,
+		OscilloscopeWindow* parent,
+		PacketDecoder* decoder,
+		WaveformArea* area);
 	~ProtocolAnalyzerWindow();
 
 	void OnWaveformDataReady();
@@ -135,6 +139,8 @@ protected:
 	OscilloscopeWindow* m_parent;
 	PacketDecoder* m_decoder;
 	WaveformArea* m_area;
+
+	virtual void on_hide();
 
 	void OnApplyFilter();
 	void OnFilterChanged();

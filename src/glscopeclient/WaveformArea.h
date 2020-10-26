@@ -53,6 +53,13 @@ public:
 	, m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
+	, m_mappedXBuffer(NULL)
+	, m_mappedYBuffer(NULL)
+	, m_mappedDigitalYBuffer(NULL)
+	, m_mappedIndexBuffer(NULL)
+	, m_mappedConfigBuffer(NULL)
+	, m_mappedConfigBuffer64(NULL)
+	, m_mappedFloatConfigBuffer(NULL)
 	{}
 
 	bool IsDigital()
@@ -165,6 +172,9 @@ public:
 
 	void CenterTimestamp(int64_t time);
 
+	static bool IsGLInitComplete()
+	{ return m_isGlewInitialized; }
+
 protected:
 	void SharedCtorInit();
 
@@ -244,19 +254,12 @@ protected:
 				Gtk::RadioMenuItem m_atten1xItem;
 				Gtk::RadioMenuItem m_atten10xItem;
 				Gtk::RadioMenuItem m_atten20xItem;
-		Gtk::MenuItem m_bwItem;
-			Gtk::Menu m_bwMenu;
-				Gtk::RadioMenuItem::Group m_bwGroup;
-				Gtk::RadioMenuItem m_bwFullItem;
-				Gtk::RadioMenuItem m_bw200Item;
-				Gtk::RadioMenuItem m_bw20Item;
 	void UpdateContextMenu();
 	bool m_updatingContextMenu;
 	void OnHide();
 	void OnTogglePersistence();
 
 	void OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item);
-	void OnBandwidthLimit(int mhz, Gtk::RadioMenuItem* item);
 	void OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item);
 	void OnAttenuation(double atten, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();

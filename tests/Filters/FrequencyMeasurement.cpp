@@ -30,73 +30,94 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Program entry point
+	@brief Unit test for FrequencyMeasurement filter
  */
+#include <catch2/catch.hpp>
 
-#include "../scopehal/scopehal.h"
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
+#include "Filters.h"
 
 using namespace std;
 
-int main(int argc, char* argv[])
+TEST_CASE("Filter_FrequencyMeasurement")
 {
-	Severity console_verbosity = Severity::NOTICE;
+	TestWaveformSource source(g_rng);
+	auto filter = dynamic_cast<FrequencyMeasurement*>(Filter::CreateFilter("Frequency", "#ffffff"));
+	REQUIRE(filter != NULL);
+	filter->AddRef();
 
-	//Parse command-line arguments
-	string hostname;
-	for(int i=1; i<argc; i++)
+	const size_t niter = 25;
+	for(size_t i=0; i<niter; i++)
 	{
-		string s(argv[i]);
-
-		//Let the logger eat its args first
-		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
-			continue;
-
-		if(s == "--help")
+		SECTION(string("Iteration ") + to_string(i))
 		{
-			//not implemented
-			return 0;
-		}
-		else if(s == "--host")
-			hostname = argv[++i];
-		else
-		{
-			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
-			return 1;
+			LogVerbose("Iteration %zu\n", i);
+			LogIndenter li;
+
+			//Select random frequency, amplitude, and phase
+			float gen_freq = uniform_real_distribution<float>(0.5e9, 5e9)(g_rng);
+			float gen_period = 1e12 / gen_freq;
+			float gen_amp = uniform_real_distribution<float>(0.01, 1)(g_rng);
+
+			//Starting phase
+			float start_phase = uniform_real_distribution<float>(-M_PI, M_PI)(g_rng);
+
+			//Generate the input signal.
+			//50 Gsps, 1M points, no added noise
+			g_scope.GetChannel(0)->SetData(
+				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20, 1000000, 0),
+				0);
+
+			Unit hz(Unit::UNIT_HZ);
+			LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());
+			LogVerbose("Period:    %s\n", Unit(Unit::UNIT_PS).PrettyPrint(gen_period).c_str());
+			LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
+
+			//Run the filter
+			filter->SetInput("din", StreamDescriptor(g_scope.GetChannel(0), 0));
+			filter->Refresh();
+
+			//Get the output data
+			auto data = dynamic_cast<AnalogWaveform*>(filter->GetData(0));
+			REQUIRE(data != NULL);
+
+			//Counts for each array must be consistent
+			REQUIRE(data->m_offsets.size() == data->m_durations.size());
+			REQUIRE(data->m_offsets.size() == data->m_samples.size());
+
+			//Process the individual frequency measurements and sanity check them
+			//TODO: check timestamps and durations of samples too
+			float fmin = FLT_MAX;
+			float fmax = 0;
+			float avg = 0;
+			for(auto f : data->m_samples)
+			{
+				fmin = min(fmin, (float)f);
+				fmax = max(fmax, (float)f);
+				avg += f;
+			}
+			avg /= data->m_samples.size();
+			LogVerbose("Results:\n");
+			LogIndenter li2;
+			float davg = gen_freq - avg;
+			float dmin = gen_freq - fmin;
+			float dmax = fmax - gen_freq;
+			LogVerbose("Min: %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
+			LogVerbose("Avg: %s (err = %s)\n", hz.PrettyPrint(avg).c_str(), hz.PrettyPrint(davg).c_str());
+			LogVerbose("Max: %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
+
+			//Average frequency must be +/- 0.1% (arbitrary threshold for now)
+			REQUIRE(fabs(davg) < 0.001 * gen_freq);
+
+			//Min and max must be +/- 5% (arbitrary threshold for now)
+			REQUIRE(fabs(dmin) < 0.05 * gen_freq);
+			REQUIRE(fabs(dmax) < 0.05 * gen_freq);
+
+			//TODO: verify stdev?
 		}
 	}
 
-	//Set up logging
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-
-	//Load the IBIS file
-	IBISParser ibis;
-	ibis.Load("/nfs4/share/datasheets/Xilinx/7_series/kintex-7/kintex7.ibs");
-	/*LogDebug("IBIS file loaded! Component is %s by %s\n",
-		ibis.m_component.c_str(),
-		ibis.m_manufacturer.c_str());*/
-
-	//Look up one particular I/O standard
-	auto model = ibis.m_models["LVDS_HP_O"];
-	if(!model)
-		LogFatal("couldn't find model\n");
-
-	//Run the simulation
-	auto waveform = model->SimulatePRBS(
-		0x5eadbeef,
-		CORNER_TYP,
-		5,			//200 Gsps
-		20000,
-		160			//1.25 Gbps
-		);
-
-	//Print out the waveform
-	LogDebug("time, voltage\n");
-	for(size_t i=0; i<waveform->m_samples.size(); i++)
-	{
-		LogDebug("%f, %f\n", i*0.005, (double)waveform->m_samples[i]);
-	}
-	delete waveform;
-
-
-	return 0;
+	filter->Release();
 }

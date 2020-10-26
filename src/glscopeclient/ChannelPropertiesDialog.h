@@ -62,6 +62,10 @@ protected:
 		Gtk::Label m_deskewLabel;
 			Gtk::Entry m_deskewEntry;
 
+		//Analog channel configuration
+		Gtk::Label m_bandwidthLabel;
+			Gtk::ComboBoxText m_bandwidthBox;
+
 		//Logic channel configuration
 		Gtk::Label m_thresholdLabel;
 			Gtk::Entry m_thresholdEntry;
@@ -70,10 +74,17 @@ protected:
 		Gtk::Label m_groupLabel;
 			Gtk::ListViewText m_groupList;
 
+		//Frequency domain channel configuration
+		Gtk::Label m_centerLabel;
+			Gtk::Entry m_centerEntry;
+
 	OscilloscopeChannel* m_chan;
 
 	bool m_hasThreshold;
 	bool m_hasHysteresis;
+	bool m_hasFrequency;
+	bool m_hasBandwidth;
+	bool m_hasDeskew;
 };
 
 #endif

@@ -49,11 +49,19 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	, m_chan(chan)
 	, m_hasThreshold(false)
 	, m_hasHysteresis(false)
+	, m_hasFrequency(false)
+	, m_hasBandwidth(false)
+	, m_hasDeskew(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
 
-	char buf[128];
+	auto scope = chan->GetScope();
+	auto index = chan->GetIndex();
+
+	Unit ps(Unit::UNIT_PS);
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit hz(Unit::UNIT_HZ);
 
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_scopeNameLabel, 0, 0, 1, 1);
@@ -61,11 +69,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_scopeNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_scopeNameEntry, m_scopeNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_scopeNameEntry.set_halign(Gtk::ALIGN_START);
-			snprintf(buf, sizeof(buf), "%s (%s, serial %s)",
-				chan->GetScope()->m_nickname.c_str(),
-				chan->GetScope()->GetName().c_str(),
-				chan->GetScope()->GetSerial().c_str());
-			m_scopeNameEntry.set_text(buf);
+			m_scopeNameEntry.set_text(
+				scope->m_nickname + "(" + scope->GetName() + ", serial " + scope->GetSerial() + ")");
 
 		m_grid.attach_next_to(m_channelNameLabel, m_scopeNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelNameLabel.set_text("Channel");
@@ -78,7 +83,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelDisplayNameLabel.set_text("Display name");
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
-			m_channelDisplayNameEntry.set_text(chan->m_displayname);
+			m_channelDisplayNameEntry.set_text(chan->GetDisplayName());
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelColorLabel.set_text("Waveform color");
@@ -86,29 +91,50 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
-		//Deskew - only on physical analog channels for now
 		Gtk::Label* anchorLabel = &m_channelColorLabel;
 		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
 		{
+			//Deskew - only on physical analog channels for now
 			m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
 				m_deskewLabel.set_text("Deskew");
 				m_deskewLabel.set_halign(Gtk::ALIGN_START);
 			m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
 
-			Unit unit(Unit::UNIT_PS);
-			m_deskewEntry.set_text(unit.PrettyPrint(chan->GetDeskew()));
+			m_hasDeskew = true;
+
+			m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
 
 			anchorLabel = &m_deskewLabel;
+
+			//Bandwidth limiters
+			m_grid.attach_next_to(m_bandwidthLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+					m_bandwidthLabel.set_text("BW Limit");
+				m_bandwidthLabel.set_halign(Gtk::ALIGN_START);
+			m_grid.attach_next_to(m_bandwidthBox, m_bandwidthLabel, Gtk::POS_RIGHT, 1, 1);
+
+			m_hasBandwidth = true;
+
+			//Populate bandwidth limiter box
+			auto limits = scope->GetChannelBandwidthLimiters(index);
+			for(auto limit : limits)
+			{
+				if(limit == 0)
+					m_bandwidthBox.append("Full");
+				else
+					m_bandwidthBox.append(hz.PrettyPrint(limit * 1e6));
+			}
+			unsigned int limit = scope->GetChannelBandwidthLimit(index);
+			if(limit == 0)
+				m_bandwidthBox.set_active_text("Full");
+			else
+				m_bandwidthBox.set_active_text(hz.PrettyPrint(limit * 1e6));
+
+			anchorLabel = &m_bandwidthLabel;
 		}
 
 		//Logic properties - only on physical digital channels
-		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
+		if(chan->IsPhysicalChannel() && (chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
 		{
-			auto scope = chan->GetScope();
-			auto index = chan->GetIndex();
-
-			Unit volts(Unit::UNIT_VOLTS);
-
 			if(scope->IsDigitalThresholdConfigurable())
 			{
 				m_grid.attach_next_to(m_thresholdLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -151,11 +177,30 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 					if(c == chan)
 						continue;
 
-					m_groupList.append(c->m_displayname.c_str());
+					m_groupList.append(c->GetDisplayName());
 				}
 
 				m_groupList.set_headers_visible(false);
+
+				anchorLabel = &m_groupLabel;
 			}
+		}
+
+		//Spectrum properties - only on physical frequency domain channels
+		if(chan->IsPhysicalChannel() && (chan->GetXAxisUnits() == hz) )
+		{
+			m_grid.attach_next_to(m_centerLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+				m_centerLabel.set_text("Center Frequency");
+				m_centerLabel.set_halign(Gtk::ALIGN_START);
+			m_grid.attach_next_to(m_centerEntry, m_centerLabel, Gtk::POS_RIGHT, 1, 1);
+
+			//Commented out to prevent compile warning about unused value.
+			//Uncomment if adding new widgets later in the dialog.
+			//anchorLabel = &m_centerLabel;
+
+			m_centerEntry.set_text(hz.PrettyPrint(scope->GetCenterFrequency(index)));
+
+			m_hasFrequency = true;
 		}
 
 	show_all();
@@ -171,10 +216,12 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
 
 void ChannelPropertiesDialog::ConfigureChannel()
 {
-	m_chan->m_displayname = m_channelDisplayNameEntry.get_text();
+	m_chan->SetDisplayName(m_channelDisplayNameEntry.get_text());
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
 
 	Unit volts(Unit::UNIT_VOLTS);
+	Unit ps(Unit::UNIT_PS);
+	Unit hz(Unit::UNIT_HZ);
 
 	if(m_hasThreshold)
 		m_chan->SetDigitalThreshold(volts.ParseString(m_thresholdEntry.get_text()));
@@ -182,8 +229,20 @@ void ChannelPropertiesDialog::ConfigureChannel()
 	if(m_hasHysteresis)
 		m_chan->SetDigitalHysteresis(volts.ParseString(m_hysteresisEntry.get_text()));
 
-	Unit ps(Unit::UNIT_PS);
-	m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+	if(m_hasFrequency)
+		m_chan->SetCenterFrequency(hz.ParseString(m_centerEntry.get_text()));
+
+	if(m_hasDeskew)
+		m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+
+	if(m_hasBandwidth)
+	{
+		auto sbw = m_bandwidthBox.get_active_text();
+		if(sbw == "Full")
+			m_chan->SetBandwidthLimit(0);
+		else
+			m_chan->SetBandwidthLimit(Unit(Unit::UNIT_HZ).ParseString(sbw)/1e6);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

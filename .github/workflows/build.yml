@@ -1,0 +1,101 @@
+name: Build
+
+on: [push]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Dependencies
+      run: sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
+
+    - name: Clone FFTS Repository
+      run: git clone https://github.com/anthonix/ffts.git /tmp/ffts
+
+    - name: Build FFTS Library
+      shell: bash
+      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
+
+    - name: Clone Catch2 Repository
+      run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
+
+    - name: Build Catch2 Library
+      shell: bash
+      run: pushd /tmp/catch2 && git checkout v2.13.2 && mkdir build && cd build && cmake .. && make -j 4 && sudo make install && popd
+
+    - name: Build
+      shell: bash
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
+
+    - name: Run Tests
+      shell: bash
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: cd build && make test
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-linux
+        path: |
+          build/src/glscopeclient/glscopeclient
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
+          build/lib/graphwidget/libgraphwidget.so
+          build/lib/scopehal/libscopehal.so
+          build/lib/scopeprotocols/libscopeprotocols.so
+
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-manual
+        path: build/doc/glscopeclient-manual.pdf
+  windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-glm mingw-w64-x86_64-libsigc++ mingw-w64-x86_64-gtkmm3 mingw-w64-x86_64-yaml-cpp mingw-w64-x86_64-glew
+
+    - name: Clone FFTS Repository
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: git clone https://github.com/anthonix/ffts.git
+
+    - name: Build FFTS Library
+      working-directory: ${{runner.workspace}}/ffts
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX -DENABLE_SHARED=ON .. && mingw32-make -j4 && mingw32-make install
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/scopehal-apps
+      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DBUILD_TESTING=OFF -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows
+        path: |
+          build/src/glscopeclient/glscopeclient.exe
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
+          build/lib/graphwidget/libgraphwidget.dll
+          build/lib/log/liblog.dll
+          build/lib/scopehal/libscopehal.dll
+          build/lib/scopeprotocols/libscopeprotocols.dll

@@ -38,8 +38,8 @@
 using namespace std;
 
 Program::Program()
+	: m_handle(0) //invalid program by default
 {
-	m_handle = 0;	//invalid program by default
 }
 
 Program::~Program()

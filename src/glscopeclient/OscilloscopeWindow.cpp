@@ -34,6 +34,7 @@
  */
 
 #include "glscopeclient.h"
+#include "glscopeclient-version.h"
 #include "../scopehal/Instrument.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "OscilloscopeWindow.h"
@@ -41,6 +42,8 @@
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
+#include "MultimeterDialog.h"
+#include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -58,7 +61,7 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigital)
+OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum)
 	: m_iconEnterFullscreen("icons/24x24/fullscreen-enter.png")
 	, m_iconExitFullscreen("icons/24x24/fullscreen-exit.png")
 	, m_scopes(scopes)
@@ -77,7 +80,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 	set_default_size(1280, 800);
 
 	//Add widgets
-	CreateWidgets(nodigital);
+	CreateWidgets(nodigital, nospectrum);
 
 	ArmTrigger(false);
 	m_toggleInProgress = false;
@@ -91,8 +94,7 @@ OscilloscopeWindow::OscilloscopeWindow(vector<Oscilloscope*> scopes, bool nodigi
 
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
-	sigc::slot<bool> slot = sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1);
-	sigc::connection conn = Glib::signal_timeout().connect(slot, 5);
+	Glib::signal_timeout().connect(sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1), 5);
 }
 
 void OscilloscopeWindow::SetTitle()
@@ -132,7 +134,7 @@ OscilloscopeWindow::~OscilloscopeWindow()
 /**
 	@brief Helper function for creating widgets and setting up signal handlers
  */
-void OscilloscopeWindow::CreateWidgets(bool nodigital)
+void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 {
 	//Set up window hierarchy
 	add(m_vbox);
@@ -257,6 +259,16 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					m_windowMenu.append(m_windowAnalyzerMenuItem);
 						m_windowAnalyzerMenuItem.set_label("Analyzer");
 						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
+					m_windowMenu.append(m_windowMultimeterMenuItem);
+						m_windowMultimeterMenuItem.set_label("Multimeter");
+						m_windowMultimeterMenuItem.set_submenu(m_windowMultimeterMenu);
+			m_menu.append(m_helpMenuItem);
+				m_helpMenuItem.set_label("Help");
+				m_helpMenuItem.set_submenu(m_helpMenu);
+					m_helpMenu.append(m_aboutMenuItem);
+					m_aboutMenuItem.set_label("About...");
+					m_aboutMenuItem.signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnAboutDialog));
 
 		m_vbox.pack_start(m_toolbox, Gtk::PACK_SHRINK);
 			m_vbox.get_style_context()->add_class("toolbar");
@@ -311,7 +323,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 					sigc::mem_fun(*this, &OscilloscopeWindow::OnAlphaChanged));
 				m_alphaslider.get_style_context()->add_class("toolbar");
 
-		auto split = new Gtk::HPaned;
+		auto split = new Gtk::VPaned;
 			m_vbox.pack_start(*split);
 			m_splitters.emplace(split);
 			auto group = new WaveformGroup(this);
@@ -329,6 +341,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 	for(auto scope : m_scopes)
 		m_historyWindows[scope] = new HistoryWindow(this, scope);
 
+	WaveformGroup* spectrumGroup = NULL;
+
 	//Process all of the channels
 	for(auto scope : m_scopes)
 	{
@@ -338,11 +352,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 			//Qualify the channel name by the scope name if we have >1 scope enabled
 			if(m_scopes.size() > 1)
-			{
-				char tmp[128];
-				snprintf(tmp, sizeof(tmp), "%s:%s", scope->m_nickname.c_str(), chan->GetHwname().c_str());
-				chan->m_displayname = tmp;
-			}
+				chan->SetDisplayName(scope->m_nickname + ":" + chan->GetHwname());
 
 			auto type = chan->GetType();
 
@@ -350,20 +360,39 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
 				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
 			{
-				//Test if channel can be enabled. If it returns false, we're interleaving or something,
-				//which means it's unavailable.
-				chan->Enable();
-				if(!chan->IsEnabled())
+				//Skip channels we can't enable
+				if(!scope->CanEnableChannel(i))
 					continue;
+
+				//Put in the normal waveform group unless they're frequency domain.
+				//Put those in a new group.
+				//TODO: for pure specan support we should check if we have any time domain channels?
+				auto wg = group;
+				if(chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
+				{
+					//Skip spectrum channels on request
+					if(nospectrum)
+						continue;
+
+					//This is the first frequency domain channel, make a new group
+					if(!spectrumGroup)
+					{
+						spectrumGroup = new WaveformGroup(this);
+						m_waveformGroups.emplace(spectrumGroup);
+						split->pack2(spectrumGroup->m_frame);
+					}
+
+					wg = spectrumGroup;
+				}
 
 				//For now, assume all instrument channels have only one output stream
 				auto w = new WaveformArea(StreamDescriptor(chan, 0), this);
-				w->m_group = group;
+				w->m_group = wg;
 				m_waveformAreas.emplace(w);
 				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-					group->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+					wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 				else
-					group->m_waveformBox.pack_start(*w);
+					wg->m_waveformBox.pack_start(*w);
 			}
 		}
 	}
@@ -379,6 +408,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 	//Reconfigure menus
 	RefreshChannelsMenu();
+	RefreshMultimeterMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -389,6 +419,8 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital)
 
 	//Don't show measurements or wizards by default
 	group->m_measurementView.hide();
+	if(spectrumGroup)
+		spectrumGroup->m_measurementView.hide();
 	m_haltConditionsDialog.hide();
 
 	//Initialize the style sheets
@@ -476,24 +508,30 @@ void OscilloscopeWindow::CloseSession()
     //Save preferences
     m_preferences.SavePreferences();
 
+	//Need to clear the analyzers before we delete waveform areas.
+	//Otherwise waveform areas will try to delete them too
+	for(auto a : m_analyzers)
+		delete a;
+	m_analyzers.clear();
+
 	//Close all of our UI elements
 	for(auto it : m_historyWindows)
 		delete it.second;
-	for(auto a : m_analyzers)
-		delete a;
 	for(auto s : m_splitters)
 		delete s;
 	for(auto g : m_waveformGroups)
 		delete g;
 	for(auto w : m_waveformAreas)
 		delete w;
+	for(auto it : m_meterDialogs)
+		delete it.second;
 
 	//Clear our records of them
 	m_historyWindows.clear();
-	m_analyzers.clear();
 	m_splitters.clear();
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
+	m_meterDialogs.clear();
 
 	delete m_scopeSyncWizard;
 	m_scopeSyncWizard = NULL;
@@ -549,7 +587,7 @@ void OscilloscopeWindow::OnFileOpen()
 /**
 	@brief Open a saved file
  */
-void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadWaveform, bool reconnect)
+void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, bool loadWaveform, bool reconnect)
 {
 	m_currentFileName = filename;
 
@@ -631,7 +669,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 			if(pdecode != NULL)
 			{
 				char title[256];
-				snprintf(title, sizeof(title), "Protocol Analyzer: %s", pdecode->m_displayname.c_str());
+				snprintf(title, sizeof(title), "Protocol Analyzer: %s", pdecode->GetDisplayName().c_str());
 
 				auto analyzer = new ProtocolAnalyzerWindow(title, this, pdecode, area);
 				m_analyzers.emplace(analyzer);
@@ -645,6 +683,7 @@ void OscilloscopeWindow::DoFileOpen(string filename, bool loadLayout, bool loadW
 	//Reconfigure menus
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
+	RefreshMultimeterMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -827,7 +866,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				scope->m_nickname.c_str(),
 				frac * 100);
 			progress.Update(tmp, base_progress + frac*waveform_progress);
-			usleep(1000 * 50);
+			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
 
 			g_app->DispatchPendingEvents();
 		}
@@ -948,7 +987,12 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 
 			//Read sample data
 			if(acap)
+			{
+				//The file format assumes "float" is IEEE754 32-bit float.
+				//If your platform doesn't do that, good luck.
+				//cppcheck-suppress invalidPointerCast
 				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+			}
 
 			else
 				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
@@ -1059,7 +1103,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				auto chan = scope->GetChannel(i);
 				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 				{
-					auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+					auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
 					item->signal_activate().connect(
 						sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
 							StreamDescriptor(chan, 0)));
@@ -1573,12 +1617,15 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
  */
 void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 {
-	//Remove all old waveforms in the data directory.
-	//TODO: better way that doesn't involve system()
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
-	system("rm -rf scope_*");
+
+	const auto directories = ::Glob("scope_*", true);
+
+	for(const auto& directory: directories)
+		::RemoveDirectory(directory);
+
 	chdir(cwd);
 
 	//Serialize waveforms for each of our instruments
@@ -2110,8 +2157,41 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 	GarbageCollectGroups();
 }
 
+void OscilloscopeWindow::GarbageCollectAnalyzers()
+{
+	//Check out our analyzers and see if any of them now have no references other than the analyzer window itself.
+	//If the analyzer is hidden, and there's no waveform views for it, get rid of it
+	set<ProtocolAnalyzerWindow*> garbage;
+	for(auto a : m_analyzers)
+	{
+		//It's visible. Still active.
+		if(a->get_visible())
+			continue;
+
+		//If there is only one reference, it's to the analyzer itself.
+		//Which is hidden, so we want to get rid of it.
+		auto chan = a->GetDecoder();
+		if(chan->GetRefCount() == 1)
+			garbage.emplace(a);
+	}
+
+	for(auto a : garbage)
+	{
+		m_analyzers.erase(a);
+		delete a;
+	}
+
+	//Need to reload the menu in case we deleted the last reference to something
+	RefreshChannelsMenu();
+	RefreshAnalyzerMenu();
+}
+
 bool OscilloscopeWindow::PollScopes()
 {
+	//Avoid infinite loop if we have no scope to poll
+	if(m_scopes.empty())
+		return false;
+
 	bool had_waveforms = false;
 
 	bool pending = true;
@@ -2237,35 +2317,41 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	for(auto a : m_analyzers)
 		a->OnWaveformDataReady();
 
-	//Map all of the buffers we need to update in each area
-	for(auto w : m_waveformAreas)
+	//Update waveform areas.
+	//Skip this if loading a file from the command line and loading isn't done
+	if(WaveformArea::IsGLInitComplete())
 	{
-		w->CalculateOverlayPositions();
-		w->MapAllBuffers(true);
+		//Map all of the buffers we need to update in each area
+		for(auto w : m_waveformAreas)
+		{
+			w->OnWaveformDataReady();
+			w->CalculateOverlayPositions();
+			w->MapAllBuffers(true);
+		}
+
+		float alpha = GetTraceAlpha();
+
+		//Make the list of data to update (waveforms plus overlays)
+		vector<WaveformRenderData*> data;
+		for(auto w : m_waveformAreas)
+			w->GetAllRenderData(data);
+
+		//Do the updates in parallel
+		#pragma omp parallel for
+		for(size_t i=0; i<data.size(); i++)
+			WaveformArea::PrepareGeometry(data[i], true, alpha);
+
+		//Clean up
+		for(auto w : m_waveformAreas)
+		{
+			w->SetNotDirty();
+			w->UnmapAllBuffers(true);
+		}
+
+		//Submit update requests for each area
+		for(auto w : m_waveformAreas)
+			w->queue_draw();
 	}
-
-	float alpha = GetTraceAlpha();
-
-	//Make the list of data to update (waveforms plus overlays)
-	vector<WaveformRenderData*> data;
-	for(auto w : m_waveformAreas)
-		w->GetAllRenderData(data);
-
-	//Do the updates in parallel
-	#pragma omp parallel for
-	for(size_t i=0; i<data.size(); i++)
-		WaveformArea::PrepareGeometry(data[i], true, alpha);
-
-	//Clean up
-	for(auto w : m_waveformAreas)
-	{
-		w->SetNotDirty();
-		w->UnmapAllBuffers(true);
-	}
-
-	//Submit update requests for each area
-	for(auto w : m_waveformAreas)
-		w->queue_draw();
 
 	//Update the trigger sync wizard, if it's active
 	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
@@ -2491,7 +2577,13 @@ void OscilloscopeWindow::OnTimebaseSettings()
 {
 	TimebasePropertiesDialog dlg(this, m_scopes);
 	if(dlg.run() == Gtk::RESPONSE_OK)
+	{
 		dlg.ConfigureTimebase();
+
+		//Need to refresh the menu in case we changed interleaving settings.
+		//The set of available channels might have changed.
+		RefreshChannelsMenu();
+	}
 }
 
 /**
@@ -2543,18 +2635,37 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
-			auto type = chan->GetType();
+
+			//Skip channels that can't be enabled for some reason
+			if(!scope->CanEnableChannel(i))
+				continue;
 
 			//Add a menu item - but not for the external trigger(s)
-			if(type != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
 			{
-				auto item = Gtk::manage(new Gtk::MenuItem(chan->m_displayname, false));
+				auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
 				item->signal_activate().connect(
 					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
 						StreamDescriptor(chan, 0) ));
 				m_channelsMenu.append(*item);
 			}
 		}
+	}
+
+	//Add filters
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		//For now, only add ones that are not overlays.
+		//TODO: we want to be able to add overlays, but how do we decide where to attach them??
+		if(f->IsOverlay())
+			continue;
+
+		auto item = Gtk::manage(new Gtk::MenuItem(f->GetDisplayName(), false));
+		item->signal_activate().connect(
+			sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
+				StreamDescriptor(f, 0) ));
+		m_channelsMenu.append(*item);
 	}
 
 	m_channelsMenu.show_all();
@@ -2573,7 +2684,7 @@ void OscilloscopeWindow::RefreshAnalyzerMenu()
 	//Add new ones
 	for(auto a : m_analyzers)
 	{
-		auto item = Gtk::manage(new Gtk::MenuItem(a->GetDecoder()->m_displayname, false));
+		auto item = Gtk::manage(new Gtk::MenuItem(a->GetDecoder()->GetDisplayName(), false));
 		item->signal_activate().connect(
 			sigc::bind<ProtocolAnalyzerWindow*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowAnalyzer), a ));
 		m_windowAnalyzerMenu.append(*item);
@@ -2582,7 +2693,116 @@ void OscilloscopeWindow::RefreshAnalyzerMenu()
 	m_windowAnalyzerMenu.show_all();
 }
 
+/**
+	@brief Update the multimeter menu when we load a new session
+ */
+void OscilloscopeWindow::RefreshMultimeterMenu()
+{
+	//Remove the old items
+	auto children = m_windowMultimeterMenu.get_children();
+	for(auto c : children)
+		m_windowMultimeterMenu.remove(*c);
+
+	//Add new stuff
+	//TODO: support pure multimeters
+	for(auto scope : m_scopes)
+	{
+		auto meter = dynamic_cast<Multimeter*>(scope);
+		if(!meter)
+			continue;
+
+		auto item = Gtk::manage(new Gtk::MenuItem(meter->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<Multimeter*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowMultimeter), meter ));
+		m_windowMultimeterMenu.append(*item);
+	}
+}
+
 void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
 {
 	window->show();
+}
+
+void OscilloscopeWindow::OnShowMultimeter(Multimeter* meter)
+{
+	//Did we have a dialog for the meter already?
+	if(m_meterDialogs.find(meter) != m_meterDialogs.end())
+		m_meterDialogs[meter]->show();
+
+	//Need to create it
+	else
+	{
+		auto dlg = new MultimeterDialog(meter);
+		m_meterDialogs[meter] = dlg;
+		dlg->show();
+	}
+}
+
+void OscilloscopeWindow::OnAboutDialog()
+{
+	Gtk::AboutDialog aboutDialog;
+
+	aboutDialog.set_logo_default();
+	aboutDialog.set_version(string("Version ") + GLSCOPECLIENT_VERSION);
+	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg");
+	aboutDialog.set_license(
+		"Redistribution and use in source and binary forms, with or without modification, "
+		"are permitted provided that the following conditions are met:\n\n"
+		"* Redistributions of source code must retain the above copyright notice, this list "
+		"of conditions, and the following disclaimer.\n\n"
+		"* Redistributions in binary form must reproduce the above copyright notice, this list "
+		"of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n\n"
+		"* Neither the name of the author nor the names of any contributors may be used to "
+		"endorse or promote products derived from this software without specific prior written permission.\n\n"
+		"THIS SOFTWARE IS PROVIDED BY THE AUTHORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED "
+		"TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL "
+		"THE AUTHORS BE HELD LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES "
+		"(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR "
+		"BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT "
+		"(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE "
+		"POSSIBILITY OF SUCH DAMAGE.    "
+	);
+	aboutDialog.set_wrap_license(true);
+
+	vector<Glib::ustring> authors
+	{
+		"9names",
+		"Andres Manelli",
+		"Andrew D. Zonenberg",
+		"antikerneldev",
+		"Benjamin Vernoux",
+		"four0four",
+		"Katharina B",
+		"Kenley Cheung",
+		"Mike Walters",
+		"noopwafel",
+		"Pepijn De Vos",
+		"randomplum",
+		"rqou",
+		"smunaut",
+		"tarunik",
+		"Tom Verbeuere",
+		"whitequark",
+		"x44203"
+	};
+	aboutDialog.set_authors(authors);
+
+	vector<Glib::ustring> artists
+	{
+		"Collateral Damage Studios"
+	};
+	aboutDialog.set_artists(artists);
+
+	vector<Glib::ustring> hardware
+	{
+		"Andrew D. Zonenberg",
+		"whitequark",
+		"and several anonymous donors"
+	};
+	aboutDialog.add_credit_section("Hardware Contributions", hardware);
+
+	aboutDialog.set_website("https://www.github.com/azonenberg/scopehal-apps");
+	aboutDialog.set_website_label("Visit us on GitHub");
+
+	aboutDialog.run();
 }

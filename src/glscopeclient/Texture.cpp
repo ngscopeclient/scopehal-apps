@@ -36,8 +36,8 @@
 #include "Texture.h"
 
 Texture::Texture()
+	: m_handle(0)
 {
-	m_handle = 0;
 }
 
 Texture::~Texture()

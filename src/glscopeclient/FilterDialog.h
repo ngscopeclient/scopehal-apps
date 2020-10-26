@@ -85,9 +85,11 @@ public:
 	virtual ~ParameterRowFilename();
 
 	void OnBrowser();
+	void OnClear();
 
 	Gtk::Dialog*		m_parent;
-	Gtk::Button			m_button;
+	Gtk::Button			m_clearButton;
+	Gtk::Button			m_browserButton;
 	FilterParameter& 	m_param;
 };
 
