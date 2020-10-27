@@ -34,7 +34,6 @@
  */
  
 #include <stdexcept>
-#include <iostream>
 
 #include "Preference.h"
 
@@ -57,7 +56,6 @@ PreferenceType Preference::GetType() const
 
 bool Preference::GetIsVisible() const
 {
-    cout << m_identifier << ": " << boolalpha << m_isVisible << endl;
     return m_isVisible;
 }
 
