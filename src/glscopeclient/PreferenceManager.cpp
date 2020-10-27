@@ -88,20 +88,20 @@ void PreferenceManager::InitializeDefaults()
     auto& instrument = this->m_treeRoot.AddCategory("Instrument");
         auto& trans = instrument.AddCategory("Transports");
             trans.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
-            trans.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+            trans.AddPreference(Preference::New("test_real", "Test real", "Second test value", 42.09).WithUnit(Unit::UNIT_VOLTS).Build());
             trans.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
         auto& decode = instrument.AddCategory("Decoders");
             decode.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
-            decode.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
+            decode.AddPreference(Preference::New("test_real", "Test real", "Second test value", 42.09).WithUnit(Unit::UNIT_AMPS).Build());
             decode.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
 
     auto& debug = this->m_treeRoot.AddCategory("Debug");
         auto& testSettings = debug.AddCategory("Test Settings");
             testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
             testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
-            testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true, false));
+            testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
         auto& miscSettings = debug.AddCategory("Misc");
-            miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37, false));
+            miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37));
 }
 
 PreferenceCategory& PreferenceManager::AllPreferences()

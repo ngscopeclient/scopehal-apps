@@ -39,6 +39,32 @@
 
 using namespace std;
 
+namespace impl
+{
+    PreferenceBuilder::PreferenceBuilder(Preference&& pref)
+        : m_pref{move(pref)}
+    {
+
+    }
+
+    PreferenceBuilder&& PreferenceBuilder::IsVisible(bool isVisible) &&
+    {
+        this->m_pref.m_isVisible = isVisible;
+        return move(*this);
+    }
+
+    PreferenceBuilder&& PreferenceBuilder::WithUnit(Unit::UnitType type) &&
+    {
+        this->m_pref.m_unit = Unit{ type };
+        return move(*this);
+    }
+
+    Preference&& PreferenceBuilder::Build() &&
+    {
+        return move(this->m_pref);
+    }
+}
+
 const string& Preference::GetIdentifier() const
 {
     return m_identifier;
@@ -73,6 +99,16 @@ double Preference::GetReal() const
         throw runtime_error("Preference type mismatch");
 
     return GetValueRaw<double>();
+}
+
+bool Preference::HasUnit()
+{
+    return this->m_unit.GetType() != Unit::UNIT_COUNTS;
+}
+
+Unit& Preference::GetUnit()
+{
+    return this->m_unit;
 }
 
 const std::string& Preference::GetString() const
@@ -111,6 +147,7 @@ void Preference::MoveFrom(Preference& other)
     m_description = move(other.m_description);
     m_label = move(other.m_label);
     m_isVisible = move(other.m_isVisible);
+    m_unit = move(other.m_unit);
     
     switch(other.m_type)
     {
@@ -155,4 +192,32 @@ void Preference::SetString(string value)
 {
     CleanUp();
     Construct<string>(move(value));
+}
+
+impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, bool defaultValue)
+{
+    return impl::PreferenceBuilder(
+        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
+    );
+}
+
+impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, double defaultValue)
+{
+    return impl::PreferenceBuilder(
+        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
+    );
+}
+
+impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, const char* defaultValue)
+{
+    return impl::PreferenceBuilder(
+        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
+    );
+}
+
+impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, std::string defaultValue)
+{
+    return impl::PreferenceBuilder(
+        Preference(std::move(identifier), std::move(label), std::move(description), std::move(defaultValue))
+    );
 }

@@ -39,6 +39,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include "Unit.h"
 
 constexpr std::size_t max(std::size_t a, std::size_t b)
 {
@@ -53,8 +54,15 @@ enum class PreferenceType
     None // Only for moved-from values
 };
 
+namespace impl
+{
+    class PreferenceBuilder;
+}
+
 class Preference
 {
+    friend class impl::PreferenceBuilder;
+
 private:
     using PreferenceValue = typename std::aligned_union<
         max(max(sizeof(bool), sizeof(double)), sizeof(std::string)),
@@ -63,30 +71,30 @@ private:
 
 public:
     // Taking string as value and then moving is intended
-    Preference(std::string identifier, std::string label, std::string description, bool defaultValue, bool isVisible = true)
+    Preference(std::string identifier, std::string label, std::string description, bool defaultValue)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Boolean}, m_isVisible{isVisible}
+            m_type{PreferenceType::Boolean}
     {
         new (&m_value) bool(defaultValue);
     }
     
-    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue, bool isVisible = true)
+    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}, m_isVisible{isVisible}
+            m_type{PreferenceType::String}
     {
         new (&m_value) std::string(std::move(defaultValue));
     }
     
-    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue, bool isVisible = true)
+    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}, m_isVisible{isVisible}
+            m_type{PreferenceType::String}
     {
         new (&m_value) std::string(defaultValue);
     }
     
-    Preference(std::string identifier, std::string label, std::string description, double defaultValue, bool isVisible = true)
+    Preference(std::string identifier, std::string label, std::string description, double defaultValue)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Real}, m_isVisible{isVisible}
+            m_type{PreferenceType::Real}
     {
         new (&m_value) double(defaultValue);
     }
@@ -95,6 +103,12 @@ public:
     {
         CleanUp();
     }
+
+public:
+    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, bool defaultValue);
+    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, double defaultValue);
+    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, const char* defaultValue);
+    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, std::string defaultValue);
     
 public:
     Preference(const Preference&) = delete;
@@ -126,6 +140,8 @@ public:
     void SetReal(double value);
     void SetString(std::string value);
     
+    bool HasUnit();
+    Unit& GetUnit();
     
 private:
     template<typename T>
@@ -156,7 +172,25 @@ private:
     std::string m_description;
     PreferenceType m_type;
     PreferenceValue m_value;
-    bool m_isVisible;
+    bool m_isVisible{true};
+    Unit m_unit{Unit::UNIT_COUNTS};
 };
+
+namespace impl
+{
+    class PreferenceBuilder
+    {
+        public:
+            PreferenceBuilder(Preference&& pref);
+
+        public:
+            PreferenceBuilder&& IsVisible(bool isVisible) &&;
+            PreferenceBuilder&& WithUnit(Unit::UnitType type) &&;
+            Preference&& Build() &&;
+
+        protected:
+            Preference m_pref;
+    };
+}
 
 #endif // Preference_h
