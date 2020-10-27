@@ -141,7 +141,7 @@ void PreferenceManager::DeterminePath()
     }
     
     wchar_t directory[MAX_PATH];
-    if(NULL == PathCombineW(directory, stem, "glscopeclient"))
+    if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
     {
         throw runtime_error("failed to build directory path");
     }
@@ -156,15 +156,15 @@ void PreferenceManager::DeterminePath()
     
     // Build final path
     wchar_t config[MAX_PATH];
-    if(NULL == PathCombineW(config, directory, "preferences.yml"))
+    if(NULL == PathCombineW(config, directory, L"preferences.yml"))
     {
         throw runtime_error("failed to build directory path");
     }
     
     char configNarrow[MAX_PATH];
-    const auto result = wcstombs(configNarrow, config, MAX_PATH);
+    const auto len = wcstombs(configNarrow, config, MAX_PATH);
 
-    if(result == static_cast<std::size_t>(-1))
+    if(len == static_cast<size_t>(-1))
         throw runtime_error("Failed to convert wide string");
 
     m_filePath = string(configNarrow);
