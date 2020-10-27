@@ -46,6 +46,7 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	set_default_response(Gtk::RESPONSE_OK);
 
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 
@@ -81,6 +82,8 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	m_grid.attach_next_to(m_pathEntry, m_pathLabel, Gtk::POS_RIGHT, 1, 1);
 
 	m_pathEntry.set_size_request(250, 1);
+	
+	m_pathEntry.set_activates_default(true);
 
 	show_all();
 }
