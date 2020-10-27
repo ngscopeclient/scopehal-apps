@@ -47,7 +47,7 @@ Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
 	m_dragStartX = 0;
 	m_originalTimeOffset = 0;
 
-	set_size_request(1, 32 * get_pango_context()->get_resolution() / 96);
+	set_size_request(1, 45 * get_pango_context()->get_resolution() / 96);
 
 	add_events(
 		Gdk::POINTER_MOTION_MASK |
