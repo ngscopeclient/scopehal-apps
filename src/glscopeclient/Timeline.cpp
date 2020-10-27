@@ -264,7 +264,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	double tstart = round(m_group->m_xAxisOffset / grad_ps_rounded) * grad_ps_rounded;
 
 	//Print tick marks and labels
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
@@ -390,7 +390,7 @@ void Timeline::DrawCursor(
 
 	Gdk::Color black("black");
 
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	Pango::FontDescription font("sans normal 10");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);

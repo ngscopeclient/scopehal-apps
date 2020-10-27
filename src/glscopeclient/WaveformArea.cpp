@@ -60,7 +60,6 @@ WaveformArea::WaveformArea(
 	m_infoBoxFont.set_weight(Pango::WEIGHT_NORMAL);
 	m_cursorLabelFont.set_weight(Pango::WEIGHT_NORMAL);
 	m_decodeFont.set_weight(Pango::WEIGHT_NORMAL);
-
 	SharedCtorInit();
 }
 

@@ -90,7 +90,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	//Calculate width of right side axis label
 	int twidth;
 	int theight;
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_axisLabelFont);
 	tlayout->set_text("500.000 mV_xx");
 	tlayout->get_pixel_size(twidth, theight);
@@ -609,7 +609,7 @@ void WaveformArea::RenderChannelInfoBox(
 	//Figure out text size
 	int twidth;
 	int theight;
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_infoBoxFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
@@ -667,7 +667,7 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 	//Figure out text size
 	int twidth;
 	int theight;
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_cursorLabelFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
@@ -789,7 +789,7 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	//Calculate text size
 	int twidth;
 	int theight;
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_cursorLabelFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
@@ -944,7 +944,7 @@ void WaveformArea::RenderComplexSignal(
 		int width;
 		int sheight;
 
-		Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+		Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 		tlayout->set_font_description(m_decodeFont);
 		tlayout->set_text(str);
 		tlayout->get_pixel_size(width, sheight);
@@ -1082,7 +1082,7 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	int64_t timescale = data->m_timescale;
 
 	//Settings for the text
-	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create (cr);
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_cursorLabelFont);
 	int twidth;
 	int theight;
