@@ -28,6 +28,7 @@
 ***********************************************************************************************************************/
 
 #include <fstream>
+#include <stdexcept>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -129,24 +130,24 @@ const Preference& PreferenceManager::GetPreference(const string& path) const
 void PreferenceManager::DeterminePath()
 {
 #ifdef _WIN32
-    WCHAR stem[MAX_PATH];
+    wchar_t* stem;
     if(S_OK != SHGetKnownFolderPath(
         FOLDERID_RoamingAppData,
         KF_FLAG_CREATE,
         NULL,
-        stem))
+        &stem))
     {
         throw std::runtime_error("failed to resolve %appdata%");
     }
     
-    WCHAR directory[MAX_PATH];
-    if(NULL == PathCombine(directory, stem, "glscopeclient"))
+    wchar_t directory[MAX_PATH];
+    if(NULL == PathCombineW(directory, stem, "glscopeclient"))
     {
         throw runtime_error("failed to build directory path");
     }
     
     // Ensure the directory exists
-    const auto result = CreateDirectory(directory, NULL);
+    const auto result = CreateDirectoryW(directory, NULL);
     
     if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
     {
@@ -154,13 +155,22 @@ void PreferenceManager::DeterminePath()
     }
     
     // Build final path
-    WCHAR config[MAX_PATH];
-    if(NULL == PathCombine(config, directory, "preferences.yml"))
+    wchar_t config[MAX_PATH];
+    if(NULL == PathCombineW(config, directory, "preferences.yml"))
     {
         throw runtime_error("failed to build directory path");
     }
     
-    m_filePath = string(config);
+    char configNarrow[MAX_PATH];
+    const auto result = wcstombs(configNarrow, config, MAX_PATH);
+
+    if(result == static_cast<std::size_t>(-1))
+        throw runtime_error("Failed to convert wide string");
+
+    m_filePath = string(configNarrow);
+
+
+    CoTaskMemFree(static_cast<void*>(stem));
 #else
     // Ensure all directories in path exist
     CreateDirectory("~/.config");
