@@ -49,6 +49,10 @@ add_executable(glscopeclient
 	MultimeterDialog.cpp
 	OscilloscopeWindow.cpp
 	Program.cpp
+	Preference.cpp
+	PreferenceTree.cpp
+	PreferenceManager.cpp
+	PreferenceDialog.cpp
 	ProtocolAnalyzerWindow.cpp
 	ScopeApp.cpp
 	ScopeSyncWizard.cpp
