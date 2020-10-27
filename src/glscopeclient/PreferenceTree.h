@@ -93,6 +93,7 @@ namespace internal
         virtual void ToYAML(YAML::Node& node) const = 0;
         virtual void FromYAML(const YAML::Node& node) = 0;
         virtual Preference& GetLeaf(const PreferencePath& path) = 0;
+        virtual bool IsVisible() const = 0;
 
     public:
         const std::string& GetIdentifier() const;
@@ -120,6 +121,7 @@ namespace internal
         virtual Preference& GetLeaf(const PreferencePath& path); 
         Preference& Get();
         const Preference& Get() const;
+        virtual bool IsVisible() const;
 
     protected:
         Preference m_pref;
@@ -146,6 +148,7 @@ public:
     PreferenceCategory& AddCategory(std::string identifier);
     map_type& GetChildren();
     const seq_type& GetOrdering() const;
+    virtual bool IsVisible() const;
 
 protected:
     map_type m_children;

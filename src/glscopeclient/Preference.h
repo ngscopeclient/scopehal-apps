@@ -63,30 +63,30 @@ private:
 
 public:
     // Taking string as value and then moving is intended
-    Preference(std::string identifier, std::string label, std::string description, bool defaultValue)
+    Preference(std::string identifier, std::string label, std::string description, bool defaultValue, bool isVisible = true)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Boolean}
+            m_type{PreferenceType::Boolean}, m_isVisible{isVisible}
     {
         new (&m_value) bool(defaultValue);
     }
     
-    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue)
+    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue, bool isVisible = true)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
+            m_type{PreferenceType::String}, m_isVisible{isVisible}
     {
         new (&m_value) std::string(std::move(defaultValue));
     }
     
-    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue)
+    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue, bool isVisible = true)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
+            m_type{PreferenceType::String}, m_isVisible{isVisible}
     {
         new (&m_value) std::string(defaultValue);
     }
     
-    Preference(std::string identifier, std::string label, std::string description, double defaultValue)
+    Preference(std::string identifier, std::string label, std::string description, double defaultValue, bool isVisible = true)
         :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Real}
+            m_type{PreferenceType::Real}, m_isVisible{isVisible}
     {
         new (&m_value) double(defaultValue);
     }
@@ -120,6 +120,7 @@ public:
     double GetReal() const;
     const std::string& GetString() const;
     std::string ToString() const;
+    bool GetIsVisible() const;
     
     void SetBool(bool value);
     void SetReal(double value);
@@ -155,6 +156,7 @@ private:
     std::string m_description;
     PreferenceType m_type;
     PreferenceValue m_value;
+    bool m_isVisible;
 };
 
 #endif // Preference_h

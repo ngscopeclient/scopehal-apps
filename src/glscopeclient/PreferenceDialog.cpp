@@ -66,6 +66,9 @@ void PreferencePage::CreateWidgets()
             continue;
 
         auto& preference = node->AsPreference();
+
+        if(!preference.GetIsVisible())
+            continue;
         
         switch(preference.GetType())
         {
@@ -250,14 +253,17 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& category, Gtk::TreeMo
         {
             auto& subCategory = node->AsCategory();
 
-            unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+            if(subCategory.IsVisible())
+            {
+                unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
 
-            Gtk::TreeModel::Row childrow = *(m_treeModel->append(parent.children()));
-            childrow[m_columns.m_col_category] = identifier.c_str();
-            childrow[m_columns.m_col_page] = pagePtr.get();
+                Gtk::TreeModel::Row childrow = *(m_treeModel->append(parent.children()));
+                childrow[m_columns.m_col_category] = identifier.c_str();
+                childrow[m_columns.m_col_page] = pagePtr.get();
 
-            ProcessCategory(subCategory, childrow);
-            m_pages.push_back(std::move(pagePtr));
+                ProcessCategory(subCategory, childrow);
+                m_pages.push_back(std::move(pagePtr));
+            }
         }
     }
 }
@@ -273,13 +279,16 @@ void PreferenceDialog::ProcessRootCategories(PreferenceCategory& root)
         {
             auto& subCategory = node->AsCategory();
 
-            unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+            if(subCategory.IsVisible())
+            {
+                unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
 
-            Gtk::TreeModel::Row row = *(m_treeModel->append());
-            row[m_columns.m_col_category] = identifier.c_str();
-            row[m_columns.m_col_page] = pagePtr.get();
-            ProcessCategory(subCategory, row);
-            m_pages.push_back(std::move(pagePtr));
+                Gtk::TreeModel::Row row = *(m_treeModel->append());
+                row[m_columns.m_col_category] = identifier.c_str();
+                row[m_columns.m_col_page] = pagePtr.get();
+                ProcessCategory(subCategory, row);
+                m_pages.push_back(std::move(pagePtr));
+            }
         }
     }
 }
