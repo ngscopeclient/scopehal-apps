@@ -71,6 +71,9 @@ protected:
 	WaveformGroup* m_group;
 	OscilloscopeWindow* m_parent;
 
+	float GetDPIScale()
+	{ return get_pango_context()->get_resolution() / 96; }
+
 	Unit m_xAxisUnit;
 };
 

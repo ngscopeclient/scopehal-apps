@@ -229,7 +229,7 @@ void WaveformArea::RenderTriggerArrow(
 {
 	float y = VoltsToYPosition(voltage);
 
-	float trisize = 5;
+	float trisize = 5 * GetDPIScale();
 
 	//Dragging? Arrow follows mouse
 	if(dragging)
@@ -323,8 +323,7 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 
 void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 {
-	//TODO: adjust height/spacing depending on font sizes etc
-	int height = 20;
+	int height = 20 * GetDPIScale();
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
 	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel.GetData());

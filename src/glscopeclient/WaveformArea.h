@@ -398,6 +398,9 @@ protected:
 	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
 	float GetValueAtTime(int64_t time_ps);
 
+	float GetDPIScale()
+	{ return get_pango_context()->get_resolution() / 96; }
+
 	void OnRemoveOverlay(StreamDescriptor filter);
 
 	StreamDescriptor m_channel;						//The main waveform for this view

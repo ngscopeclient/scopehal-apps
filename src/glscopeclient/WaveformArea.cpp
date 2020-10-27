@@ -89,7 +89,7 @@ void WaveformArea::SharedCtorInit()
 	m_insertionBarLocation	= INSERT_NONE;
 	m_dropTarget			= NULL;
 	m_padding 				= 2;
-	m_overlaySpacing		= 30;
+	m_overlaySpacing		= 25 * GetDPIScale();
 	m_persistenceClear 		= true;
 	m_firstFrame 			= false;
 	m_waveformRenderData	= NULL;
