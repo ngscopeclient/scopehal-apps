@@ -132,6 +132,11 @@ namespace internal
         node[this->m_identifier] = this->m_pref.ToString();
     }
 
+    bool PreferenceHolder::IsVisible() const
+    {
+        return this->m_pref.GetIsVisible();
+    }
+
     void PreferenceHolder::FromYAML(const YAML::Node& node)
     {
         if(const auto& n = node[this->m_identifier])
@@ -191,6 +196,16 @@ Preference& PreferenceCategory::GetLeaf(const string& path)
 PreferenceCategory::map_type& PreferenceCategory::GetChildren()
 {
     return this->m_children;
+}
+
+bool PreferenceCategory::IsVisible() const
+{
+    // Preference category is only visible if theres at least one visible entry in it
+    return any_of(m_children.begin(), m_children.end(),
+        [](const map_type::value_type& element) -> bool
+        {
+            return element.second->IsVisible();
+        });
 }
 
 const PreferenceCategory::seq_type& PreferenceCategory::GetOrdering() const
