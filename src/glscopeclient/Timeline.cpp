@@ -47,7 +47,7 @@ Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
 	m_dragStartX = 0;
 	m_originalTimeOffset = 0;
 
-	set_size_request(1, 40);
+	set_size_request(1, 32 * get_pango_context()->get_resolution() / 96);
 
 	add_events(
 		Gdk::POINTER_MOTION_MASK |
@@ -207,6 +207,8 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	double ybot = h - 10;
 	double ymid = (h-10) / 2;
 
+	float dpi_scale = get_pango_context()->get_resolution() / 96;
+
 	//Figure out rounding granularity, based on our time scales
 	int64_t width_ps = w / m_group->m_pixelsPerXUnit;
 	int64_t round_divisor = 1;
@@ -241,7 +243,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		round_divisor = 1E12;
 
 	//Figure out about how much time per graduation to use
-	const double min_label_grad_width = 75;		//Minimum distance between text labels, in pixels
+	const double min_label_grad_width = 75 * dpi_scale;	//Minimum distance between text labels, in pixels
 	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerXUnit;
 
 	//Round so the division sizes are sane
@@ -302,7 +304,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		//Render it
 		tlayout->set_text(m_xAxisUnit.PrettyPrint(t));
 		tlayout->get_pixel_size(swidth, sheight);
-		cr->move_to(x+2, ymid + sheight/2);
+		cr->move_to(x+2, ymid);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	}
