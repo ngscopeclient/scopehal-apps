@@ -99,9 +99,9 @@ void PreferenceManager::InitializeDefaults()
         auto& testSettings = debug.AddCategory("Test Settings");
             testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
             testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
-            testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
+            testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true, false));
         auto& miscSettings = debug.AddCategory("Misc");
-            miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37));
+            miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37, false));
 }
 
 PreferenceCategory& PreferenceManager::AllPreferences()

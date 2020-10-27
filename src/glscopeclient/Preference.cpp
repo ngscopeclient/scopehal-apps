@@ -112,6 +112,7 @@ void Preference::MoveFrom(Preference& other)
     m_identifier = move(other.m_identifier);
     m_description = move(other.m_description);
     m_label = move(other.m_label);
+    m_isVisible = move(other.m_isVisible);
     
     switch(other.m_type)
     {
