@@ -161,6 +161,8 @@ protected:
 	Glib::RefPtr<Gtk::TreeModelFilter> m_model;
 	ProtocolAnalyzerColumns m_columns;
 
+	size_t m_imageWidth;
+
 	void OnSelectionChanged();
 
 	void FillOutRow(const Gtk::TreeRow& row, Packet* p, WaveformBase* data, std::vector<std::string>& headers);

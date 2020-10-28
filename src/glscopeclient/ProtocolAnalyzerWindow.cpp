@@ -388,6 +388,7 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	, m_decoder(decoder)
 	, m_area(area)
 	, m_columns(decoder)
+	, m_imageWidth(0)
 	, m_updating(false)
 {
 	set_skip_taskbar_hint();
@@ -430,8 +431,12 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 		vector<Gtk::CellRenderer*> cells = pcol->get_cells();
 		for(auto c : cells)
 		{
-			pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is bg color
-			pcol->add_attribute(*c, "foreground-gdk", 2);	//column 2 is fg color
+			//Pixbuf cells don't have fg/bg attributes
+			if(dynamic_cast<Gtk::CellRendererPixbuf*>(c) == NULL)
+			{
+				pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is bg color
+				pcol->add_attribute(*c, "foreground-gdk", 2);	//column 2 is fg color
+			}
 
 			if(decoder->GetShowImageColumn())
 				pcol->add_attribute(*c, "height", 3);		//column 3 is height
@@ -628,6 +633,8 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	{
 		size_t rowsize = p->m_data.size();
 		size_t width = rowsize / 3;
+		size_t rowsize_rounded = width*3;
+		m_imageWidth = max(m_imageWidth, width);
 		if(width > 0)
 		{
 			size_t height = 12;
@@ -636,13 +643,41 @@ void ProtocolAnalyzerWindow::FillOutRow(
 				Gdk::COLORSPACE_RGB,
 				false,
 				8,
-				width,
+				m_imageWidth,
 				height);
 
-			//Make a 2D image
+			//Stretch it into a 2D image
 			uint8_t* pixels = image->get_pixels();
+			size_t stride = image->get_rowstride();
 			for(size_t y=0; y<height; y++)
-				memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
+			{
+				//Copy the pixel data for this row
+				auto rowpix = pixels + y*stride;
+				memcpy(rowpix, &p->m_data[0], rowsize_rounded);
+
+				//If this scanline is truncated, pad with a light/dark gray checkerboard
+				if(width < m_imageWidth)
+				{
+					uint8_t a = 0x80;
+					uint8_t b = 0xc0;
+
+					for(size_t x=width; x<m_imageWidth; x++)
+					{
+						if( (x/6 ^ y/6) & 0x1)
+						{
+							rowpix[x*3 + 0] = a;
+							rowpix[x*3 + 1] = a;
+							rowpix[x*3 + 2] = a;
+						}
+						else
+						{
+							rowpix[x*3 + 0] = b;
+							rowpix[x*3 + 1] = b;
+							rowpix[x*3 + 2] = b;
+						}
+					}
+				}
+			}
 
 			row[m_columns.m_image] = image;
 			row[m_columns.m_height] = height;
