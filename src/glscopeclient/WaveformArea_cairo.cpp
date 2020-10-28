@@ -310,6 +310,14 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 	if(mask.GetMaskName() == "")
 		return;
 
+	//Clip mask to the plot area
+	cr->save();
+	cr->move_to(0, 0);
+	cr->line_to(m_plotRight, 0);
+	cr->line_to(m_plotRight, m_height);
+	cr->line_to(0, m_height);
+	cr->clip();
+
 	//Do the actual drawing
 	mask.RenderForDisplay(
 		cr,
@@ -319,6 +327,8 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 		m_pixelsPerVolt,
 		m_channel.m_channel->GetOffset(),
 		m_height);
+
+	cr->restore();
 }
 
 void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
