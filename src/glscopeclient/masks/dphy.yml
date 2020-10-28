@@ -1,0 +1,43 @@
+protocol:
+    name:       D-PHY
+    reference:  D-PHY 1.00.00 Specification Table 16/17 for upper/lower limits. Opening guesstimated from compliance software screenshots.
+displaylimits:
+    ymin:       -400
+    ymax:        400
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+
+    - points:
+        -   x:   -2
+            y: -270
+        -   x:    2
+            y: -270
+        -   x:    2
+            y: -450
+        -   x:   -2
+            y: -450
+
+    - points:
+        -   x:   -2
+            y:  270
+        -   x:    2
+            y:  270
+        -   x:    2
+            y:  450
+        -   x:   -2
+            y:  450
+
+    - points:
+        -   x: -0.2
+            y: 0
+        -   x: 0
+            y: 138
+        -   x: 0.2
+            y: 0
+        -   x: 0
+            y: -138
+
+conditions:
+    hitrate: 0.0
