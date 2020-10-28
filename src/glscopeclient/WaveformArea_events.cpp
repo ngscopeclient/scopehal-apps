@@ -96,6 +96,10 @@ void WaveformArea::on_resize(int width, int height)
 		auto eye = dynamic_cast<EyePattern*>(m_channel.m_channel);
 		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
+		eye->ClearSweeps();
+		eye->RecalculateUIWidth();
+		auto wave = dynamic_cast<EyeWaveform*>(eye->GetData(0));
+		RescaleEye(eye, wave);
 		eye->Refresh();
 	}
 	else if(IsWaterfall())
@@ -1061,31 +1065,34 @@ void WaveformArea::OnWaveformDataReady()
 		if(eye == NULL)
 			eye = dynamic_cast<EyeWaveform*>(f->GetInput(0).m_channel->GetData(0));
 		if(eye != NULL)
-		{
-			float width = eye->GetUIWidth();
-
-			//eye is two UIs wide
-			float eye_width_ps = 2 * width;
-
-			//If decode fails for some reason, don't have an invalid timeline
-			if(eye_width_ps == 0)
-				eye_width_ps = 5;
-
-			m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
-			m_group->m_xAxisOffset = -round(width);
-
-			auto d = dynamic_cast<EyePattern*>(f);
-			if(d)
-			{
-				d->SetXOffset(m_group->m_xAxisOffset);
-				d->SetXScale(m_group->m_pixelsPerXUnit);
-			}
-
-			//TODO: only if stuff changed
-			//TODO: clear sweeps if this happens?
-			m_group->m_timeline.queue_draw();
-		}
+			RescaleEye(f, eye);
 	}
+}
+
+void WaveformArea::RescaleEye(Filter* f, EyeWaveform* eye)
+{
+	float width = eye->GetUIWidth();
+
+	//eye is two UIs wide
+	float eye_width_ps = 2 * width;
+
+	//If decode fails for some reason, don't have an invalid timeline
+	if(eye_width_ps == 0)
+		eye_width_ps = 5;
+
+	m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
+	m_group->m_xAxisOffset = -round(width);
+
+	auto d = dynamic_cast<EyePattern*>(f);
+	if(d)
+	{
+		d->SetXOffset(m_group->m_xAxisOffset);
+		d->SetXScale(m_group->m_pixelsPerXUnit);
+	}
+
+	//TODO: only if stuff changed
+	//TODO: clear sweeps if this happens?
+	m_group->m_timeline.queue_draw();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

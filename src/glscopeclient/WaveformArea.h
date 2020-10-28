@@ -41,6 +41,7 @@
 #include "Rect.h"
 
 class WaveformArea;
+class EyeWaveform;
 
 /**
 	@brief GL buffers etc needed to render a single waveform
@@ -190,6 +191,8 @@ protected:
 
 	void OnSingleClick(GdkEventButton* event, int64_t timestamp);
 	void OnDoubleClick(GdkEventButton* event, int64_t timestamp);
+
+	void RescaleEye(Filter* f, EyeWaveform* eye);
 
 	void CreateWidgets();
 
