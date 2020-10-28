@@ -359,6 +359,7 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 	add(m_visible);
 	add(m_bgcolor);
 	add(m_fgcolor);
+	add(m_height);
 	add(m_timestamp);
 	add(m_capturekey);
 	add(m_offset);
@@ -408,17 +409,21 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	for(size_t i=0; i<headers.size(); i++)
 		m_tree.append_column(headers[i], m_columns.m_headers[i]);
 
-	if(decoder->GetShowImageColumn())
-		m_tree.append_column("Image", m_columns.m_image);
-
 	int ncols = headers.size() + 1;
+	if(decoder->GetShowImageColumn())
+	{
+		m_tree.append_column("Image", m_columns.m_image);
+		m_tree.get_style_context()->add_class("video");
+		ncols ++;
+	}
+
 	if(decoder->GetShowDataColumn())
 	{
 		m_tree.append_column("Data", m_columns.m_data);
-		ncols = headers.size() + 2;
+		ncols ++;
 	}
 
-	//Set background color
+	//Set up colors and images
 	for(int col=0; col<ncols; col ++)
 	{
 		auto pcol = m_tree.get_column(col);
@@ -427,6 +432,9 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 		{
 			pcol->add_attribute(*c, "background-gdk", 1);	//column 1 is bg color
 			pcol->add_attribute(*c, "foreground-gdk", 2);	//column 2 is fg color
+
+			if(decoder->GetShowImageColumn())
+				pcol->add_attribute(*c, "height", 3);		//column 3 is height
 		}
 	}
 
@@ -620,21 +628,25 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	{
 		size_t rowsize = p->m_data.size();
 		size_t width = rowsize / 3;
-		size_t height = 24;
+		if(width > 0)
+		{
+			size_t height = 12;
 
-		Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create(
-			Gdk::COLORSPACE_RGB,
-			false,
-			8,
-			width,
-			height);
+			Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create(
+				Gdk::COLORSPACE_RGB,
+				false,
+				8,
+				width,
+				height);
 
-		//Make a 2D image
-		uint8_t* pixels = image->get_pixels();
-		for(size_t y=0; y<height; y++)
-			memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
+			//Make a 2D image
+			uint8_t* pixels = image->get_pixels();
+			for(size_t y=0; y<height; y++)
+				memcpy(pixels + y*rowsize, &p->m_data[0], rowsize);
 
-		row[m_columns.m_image] = image;
+			row[m_columns.m_image] = image;
+			row[m_columns.m_height] = height;
+		}
 	}
 }
 

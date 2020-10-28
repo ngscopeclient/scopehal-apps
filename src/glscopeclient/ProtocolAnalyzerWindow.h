@@ -54,6 +54,7 @@ public:
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
 	Gtk::TreeModelColumn<Gdk::Color>					m_bgcolor;
 	Gtk::TreeModelColumn<Gdk::Color>					m_fgcolor;
+	Gtk::TreeModelColumn<int>					m_height;
 	Gtk::TreeModelColumn<bool>							m_visible;
 };
 

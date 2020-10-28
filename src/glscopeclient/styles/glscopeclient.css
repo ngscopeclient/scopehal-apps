@@ -167,6 +167,12 @@ row
 	font-family: monospace;
 }
 
+.video
+{
+	font-size: 8pt;
+	padding: 0px;
+}
+
 row:selected,
 row:selected:focus,
 .cell:selected,
@@ -176,7 +182,6 @@ row:selected:focus:hover,
 {
 	background-color: @glscopeclient_highlight_color;
 }
-
 
 notebook,
 notebook tab,
