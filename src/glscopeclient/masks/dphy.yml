@@ -33,11 +33,11 @@ mask:
         -   x: -0.2
             y: 0
         -   x: 0
-            y: 138
+            y: 140
         -   x: 0.2
             y: 0
         -   x: 0
-            y: -138
+            y: -140
 
 conditions:
     hitrate: 0.0
