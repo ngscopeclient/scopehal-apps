@@ -105,9 +105,25 @@ void PreferencePage::CreateWidgets()
                 row->m_label.set_halign(Gtk::ALIGN_START);
                 row->m_label.set_tooltip_text(preference.GetDescription());
                 row->m_value.set_tooltip_text(preference.GetDescription());
-                    
-                const auto text = (preference.GetType() == PreferenceType::Real) ?
-                    to_string(preference.GetReal()) : preference.GetString();
+
+                std::string text;
+
+                if(preference.GetType() == PreferenceType::Real)
+                {
+                    if(preference.HasUnit())
+                    {
+                        auto unit = preference.GetUnit();
+                        text = unit.PrettyPrint(preference.GetReal());
+                    }
+                    else
+                    {
+                        text = to_string(preference.GetReal());
+                    }             
+                }
+                else
+                {
+                    text = preference.GetString();
+                }
          
                 row->m_value.set_text(text);
                 
@@ -173,7 +189,15 @@ void PreferencePage::SaveChanges()
                 {
                     try
                     {
-                        preference.SetReal(stod(text));
+                        if(preference.HasUnit())
+                        {
+                            auto unit = preference.GetUnit();
+                            preference.SetReal(unit.ParseString(text));
+                        }
+                        else
+                        {
+                            preference.SetReal(stod(text));
+                        }
                     }
                     catch(...)
                     {
