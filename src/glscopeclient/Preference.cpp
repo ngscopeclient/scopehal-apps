@@ -93,6 +93,27 @@ bool Preference::GetBool() const
     return GetValueRaw<bool>();
 }
 
+Gdk::Color Preference::GetColor() const
+{
+    if(m_type != PreferenceType::Color)
+        throw runtime_error("Preference type mismatch");
+
+    const auto& value = GetValueRaw<impl::Color>();
+    Gdk::Color color{};
+    color.set_red(value.m_r);
+    color.set_green(value.m_g);
+    color.set_blue(value.m_b);
+    return color;
+}
+
+const impl::Color& Preference::GetColorRaw() const
+{
+    if(m_type != PreferenceType::Color)
+        throw runtime_error("Preference type mismatch");
+
+    return GetValueRaw<impl::Color>();
+}
+
 double Preference::GetReal() const
 {
     if(m_type != PreferenceType::Real)
@@ -135,6 +156,8 @@ string Preference::ToString() const
             return GetBool() ? "true" : "false";
         case PreferenceType::Real:
             return to_string(GetReal());
+        case PreferenceType::Color:
+            return "Color";
         default:
             throw runtime_error("tried to retrieve value from preference in moved-from state");
     }
@@ -161,6 +184,10 @@ void Preference::MoveFrom(Preference& other)
             
         case PreferenceType::String:
             Construct<string>(move(other.GetValueRaw<string>()));
+            break;
+
+        case PreferenceType::Color:
+            Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
             break;
             
         default:
@@ -192,6 +219,19 @@ void Preference::SetString(string value)
 {
     CleanUp();
     Construct<string>(move(value));
+}
+
+void Preference::SetColor(const Gdk::Color& color)
+{
+    CleanUp();
+    impl::Color clr{ color.get_red(), color.get_green(), color.get_blue() };
+    Construct<impl::Color>(move(clr));
+}
+
+void Preference::SetColorRaw(const impl::Color& color)
+{
+    CleanUp();
+    Construct<impl::Color>(color);
 }
 
 impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, bool defaultValue)

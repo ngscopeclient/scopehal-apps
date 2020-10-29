@@ -96,6 +96,30 @@ void PreferencePage::CreateWidgets()
                 break;
             }
             
+            case PreferenceType::Color:
+            {
+                auto row = unique_ptr<ColorRow>{ new ColorRow() };
+                row->m_identifier = preference.GetIdentifier();
+                row->m_label.set_label(preference.GetLabel());
+                row->m_label.set_halign(Gtk::ALIGN_START);
+                row->m_colorbutton.set_color(preference.GetColor());
+                row->m_colorbutton.set_halign(Gtk::ALIGN_CENTER);
+                row->m_label.set_tooltip_text(preference.GetDescription());
+                row->m_colorbutton.set_tooltip_text(preference.GetDescription());
+                
+                if(!last)
+                    attach(row->m_label, 0, 0, 1, 1);
+                else
+                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
+                    
+                attach_next_to(row->m_colorbutton, row->m_label, Gtk::POS_RIGHT, 1, 1);
+                
+                last = &(row->m_label);
+                m_colorRows.push_back(std::move(row));
+                
+                break;
+            }
+
             case PreferenceType::Real:
             case PreferenceType::String:
             {
@@ -159,6 +183,20 @@ void PreferencePage::SaveChanges()
         
         switch(preference.GetType())
         {
+            case PreferenceType::Color:
+            {
+                // This will always succeed
+                const auto it = find_if(m_colorRows.begin(), m_colorRows.end(),
+                    [&preference](const unique_ptr<ColorRow>& x) -> bool 
+                    {
+                        return x->m_identifier == preference.GetIdentifier(); 
+                    });
+                    
+                preference.SetColor((*it)->m_colorbutton.get_color());
+                
+                break;
+            }
+
             case PreferenceType::Boolean:
             {
                 // This will always succeed
