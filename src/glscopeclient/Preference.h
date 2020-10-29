@@ -39,6 +39,11 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <cstdint>
+
+#include <giomm.h>
+#include <gtkmm.h>
+
 #include "Unit.h"
 
 constexpr std::size_t max(std::size_t a, std::size_t b)
@@ -51,12 +56,24 @@ enum class PreferenceType
     Boolean,
     String,
     Real,
+    Color,
     None // Only for moved-from values
 };
 
 namespace impl
 {
     class PreferenceBuilder;
+
+    struct Color
+    {
+        Color(std::uint16_t r, std::uint16_t g, std::uint16_t b)
+            : m_r{r}, m_g{g}, m_b{b}
+        {
+
+        }
+
+        std::uint16_t m_r, m_g, m_b;
+    };
 }
 
 class Preference
@@ -65,8 +82,8 @@ class Preference
 
 private:
     using PreferenceValue = typename std::aligned_union<
-        max(max(sizeof(bool), sizeof(double)), sizeof(std::string)),
-        bool, std::string, double
+        max(sizeof(impl::Color), max(max(sizeof(bool), sizeof(double)), sizeof(std::string))),
+        bool, std::string, double, impl::Color
     >::type;
 
 public:
@@ -98,6 +115,13 @@ public:
     {
         new (&m_value) double(defaultValue);
     }
+
+    Preference(std::string identifier, std::string label, std::string description, const Gdk::Color& defaultValue)
+        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
+            m_type{PreferenceType::Color}
+    {
+        new (&m_value) impl::Color(defaultValue.get_red(), defaultValue.get_green(), defaultValue.get_blue());
+    }
     
     ~Preference()
     {
@@ -109,7 +133,8 @@ public:
     static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, double defaultValue);
     static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, const char* defaultValue);
     static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, std::string defaultValue);
-    
+    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, const Gdk::Color& defaultValue);
+
 public:
     Preference(const Preference&) = delete;
     Preference(Preference&& other)
@@ -135,11 +160,15 @@ public:
     const std::string& GetString() const;
     std::string ToString() const;
     bool GetIsVisible() const;
-    
+    Gdk::Color GetColor() const;
+    const impl::Color& GetColorRaw() const;
+
     void SetBool(bool value);
     void SetReal(double value);
     void SetString(std::string value);
-    
+    void SetColor(const Gdk::Color& value);
+    void SetColorRaw(const impl::Color& value);
+
     bool HasUnit();
     Unit& GetUnit();
     

@@ -129,7 +129,22 @@ namespace internal
 
     void PreferenceHolder::ToYAML(YAML::Node& node) const
     {
-        node[this->m_identifier] = this->m_pref.ToString();
+        if(this->m_pref.GetType() == PreferenceType::Color)
+        {
+            YAML::Node child{ };
+  
+            const auto& color = this->m_pref.GetColorRaw();
+
+            child["r"] = color.m_r;
+            child["g"] = color.m_g;
+            child["b"] = color.m_b;
+
+            node[this->m_identifier] = child;
+        }
+        else
+        {
+            node[this->m_identifier] = this->m_pref.ToString();
+        }
     }
 
     bool PreferenceHolder::IsVisible() const
@@ -156,7 +171,17 @@ namespace internal
                     case PreferenceType::String:
                         this->m_pref.SetString(n.as<string>());
                         break;
-                        
+                    
+                    case PreferenceType::Color:
+                    {
+                        const auto n_r = n["r"].as<std::uint16_t>();
+                        const auto n_g = n["g"].as<std::uint16_t>();
+                        const auto n_b = n["b"].as<std::uint16_t>();
+
+                        this->m_pref.SetColorRaw(impl::Color(n_r, n_g, n_b));
+                        break;
+                    }
+
                     default:
                         break;
                 }

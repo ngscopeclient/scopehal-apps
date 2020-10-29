@@ -57,6 +57,13 @@ struct StringRealRow
     Gtk::Entry m_value;
 };
 
+struct ColorRow
+{
+    std::string m_identifier;
+    Gtk::Label m_label;
+    Gtk::ColorButton m_colorbutton;
+};
+
 class PreferencePage : public Gtk::Grid
 {
     
@@ -73,6 +80,7 @@ class PreferencePage : public Gtk::Grid
         PreferenceCategory& m_category;
         std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
         std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
+        std::vector<std::unique_ptr<ColorRow>> m_colorRows;
 };
 
 
