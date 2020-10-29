@@ -615,10 +615,15 @@ void WaveformArea::RenderChannelInfoBox(
 		Rect& box,
 		int labelmargin)
 {
+	//Set up tab stops for eye labels etc
+	Pango::TabArray tabs(1, true);
+	tabs.set_tab(0, Pango::TAB_LEFT, 300);
+
 	//Figure out text size
 	int twidth;
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+	tlayout->set_tabs(tabs);
 	tlayout->set_font_description(m_infoBoxFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
