@@ -85,6 +85,40 @@ static void CreateDirectory(const string& path)
 
 void PreferenceManager::InitializeDefaults()
 {
+    auto& appearance = this->m_treeRoot.AddCategory("Appearance");
+        auto& cursors = appearance.AddCategory("Cursors");
+            cursors.AddPreference(Preference(
+                "cursor_1_color",
+                "Cursor #1 color",
+                "Color for the left or top cursor",
+                Gdk::Color("yellow")));
+            cursors.AddPreference(Preference(
+                "cursor_2_color",
+                "Cursor #2 color",
+                "Color for the right or bottom cursor",
+                Gdk::Color("orange")));
+            cursors.AddPreference(Preference(
+                "cursor_fill_color",
+                "Cursor fill color",
+                "Color for the filled area between cursors",
+                Gdk::Color("yellow")));
+            cursors.AddPreference(Preference(
+                "cursor_fill_text_color",
+                "Cursor fill text color",
+                "Color for in-band power and other text drawn between cursors",
+                Gdk::Color("yellow")));
+        auto& windows = appearance.AddCategory("Windows");
+            windows.AddPreference(Preference(
+                "insertion_bar_color",
+                "Insertion bar color (insert)",
+                "Color for the insertion bar when dragging a waveform within a group",
+                Gdk::Color("yellow")));
+            windows.AddPreference(Preference(
+                "insertion_bar_split_color",
+                "Insertion bar color (split)",
+                "Color for the insertion bar when splitting a waveform group",
+                Gdk::Color("orange")));
+
     auto& instrument = this->m_treeRoot.AddCategory("Instrument");
         auto& trans = instrument.AddCategory("Transports");
             trans.AddPreference(Preference("test_string", "Test string", "First test value", "string"));

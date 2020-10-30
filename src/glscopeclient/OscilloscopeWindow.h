@@ -132,6 +132,9 @@ public:
 	bool IsLoadInProgress()
 	{ return m_loadInProgress; }
 
+	PreferenceManager& GetPreferences()
+	{ return m_preferences; }
+
 protected:
 	void SetTitle();
 
@@ -208,7 +211,7 @@ protected:
 
 	//shared by all scopes/channels
 	std::map<Oscilloscope*, HistoryWindow*> m_historyWindows;
-	
+
 	//Preferences state
 	PreferenceManager m_preferences;
 

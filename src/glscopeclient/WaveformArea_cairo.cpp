@@ -747,26 +747,26 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 	int ytop = 0;
 	int ybot = m_height;
 
-	Gdk::Color yellow("yellow");
-	Gdk::Color orange("orange");
-	Gdk::Color red("red");
+	Gdk::Color cursor1 = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_1_color");
+	Gdk::Color cursor2 = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_2_color");
 
 	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
 	{
 		//Draw first vertical cursor
 		double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
-		RenderCursor(cr, m_group->m_xCursorPos[0], yellow, true);
+		RenderCursor(cr, m_group->m_xCursorPos[0], cursor1, true);
 
 		//Dual cursors
 		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 		{
 			//Draw second vertical cursor
 			double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
-			RenderCursor(cr, m_group->m_xCursorPos[1], orange, false);
+			RenderCursor(cr, m_group->m_xCursorPos[1], cursor2, false);
 
 			//Draw filled area between them
-			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
+			Gdk::Color cursor_fill = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_fill_color");
+			cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
 			cr->move_to(x, ytop);
 			cr->line_to(x2, ytop);
 			cr->line_to(x2, ybot);
@@ -835,8 +835,8 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	cr->fill();
 
 	//Draw the text
-	Gdk::Color yellow("yellow");
-	cr->set_source_rgb(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p());
+	Gdk::Color cursor_fill_text = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_fill_text_color");
+	cr->set_source_rgb(cursor_fill_text.get_red_p(), cursor_fill_text.get_green_p(), cursor_fill_text.get_blue_p());
 	cr->save();
 		cr->move_to(left + margin, top + margin);
 		tlayout->update_from_cairo_context(cr);
@@ -848,8 +848,8 @@ void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
 {
 	int barsize = 5;
 
-	Gdk::Color yellow("yellow");
-	Gdk::Color orange("orange");
+	Gdk::Color bar_color = m_parent->GetPreferences().GetColor("Appearance.Windows.insertion_bar_color");
+	Gdk::Color bar_split_color = m_parent->GetPreferences().GetColor("Appearance.Windows.insertion_bar_split_color");
 
 	if(m_insertionBarLocation != INSERT_NONE)
 	{
@@ -859,22 +859,30 @@ void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
 		switch(m_insertionBarLocation)
 		{
 			case INSERT_BOTTOM:
-				cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+				cr->set_source_rgba(bar_color.get_red_p(), bar_color.get_green_p(), bar_color.get_blue_p(), alpha);
 				barpos = m_height - barsize;
 				break;
 
 			case INSERT_BOTTOM_SPLIT:
-				cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+				cr->set_source_rgba(
+					bar_split_color.get_red_p(),
+					bar_split_color.get_green_p(),
+					bar_split_color.get_blue_p(),
+					alpha);
 				barpos = m_height - barsize;
 				break;
 
 			case INSERT_TOP:
-				cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), alpha);
+				cr->set_source_rgba(bar_color.get_red_p(), bar_color.get_green_p(), bar_color.get_blue_p(), alpha);
 				barpos = 0;
 				break;
 
 			case INSERT_RIGHT_SPLIT:
-				cr->set_source_rgba(orange.get_red_p(), orange.get_green_p(), orange.get_blue_p(), alpha);
+				cr->set_source_rgba(
+					bar_split_color.get_red_p(),
+					bar_split_color.get_green_p(),
+					bar_split_color.get_blue_p(),
+					alpha);
 				barhorz = false;
 				barpos = m_plotRight - barsize;
 				break;
@@ -903,7 +911,7 @@ void WaveformArea::RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr)
 
 	else if(m_dragState == DRAG_OVERLAY)
 	{
-		cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.75);
+		cr->set_source_rgba(bar_color.get_red_p(), bar_color.get_green_p(), bar_color.get_blue_p(), 0.75);
 		cr->move_to(0, 				m_dragOverlayPosition);
 		cr->line_to(m_plotRight,	m_dragOverlayPosition);
 		cr->line_to(m_plotRight,	m_dragOverlayPosition + barsize);

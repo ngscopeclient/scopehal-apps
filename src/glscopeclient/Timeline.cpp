@@ -323,9 +323,6 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 
 
 	//Draw cursor positions if requested
-	Gdk::Color yellow("yellow");
-	Gdk::Color orange("orange");
-
 	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
 	{
@@ -335,7 +332,8 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 			//Draw filled area between them
 			double x = (m_group->m_xCursorPos[0] - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
 			double x2 = (m_group->m_xCursorPos[1] - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
-			cr->set_source_rgba(yellow.get_red_p(), yellow.get_green_p(), yellow.get_blue_p(), 0.2);
+			Gdk::Color cursor_fill = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_fill_color");
+			cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
 			cr->move_to(x, 0);
 			cr->line_to(x2, 0);
 			cr->line_to(x2, h);
@@ -347,7 +345,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 				cr,
 				m_group->m_xCursorPos[1],
 				"X2",
-				orange,
+				m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_2_color"),
 				false,
 				true);
 		}
@@ -357,7 +355,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 			cr,
 			m_group->m_xCursorPos[0],
 			"X1",
-			yellow,
+			m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_1_color"),
 			true,
 			false);
 	}
