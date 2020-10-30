@@ -145,6 +145,7 @@ public:
     virtual void FromYAML(const YAML::Node& node);
     virtual Preference& GetLeaf(const internal::PreferencePath& path);
     void AddPreference(Preference pref);
+    void AddPreference(impl::PreferenceBuilder&& pref);
     PreferenceCategory& AddCategory(std::string identifier);
     map_type& GetChildren();
     const seq_type& GetOrdering() const;

@@ -53,6 +53,7 @@ add_executable(glscopeclient
 	PreferenceTree.cpp
 	PreferenceManager.cpp
 	PreferenceDialog.cpp
+	PreferenceSchema.cpp
 	ProtocolAnalyzerWindow.cpp
 	ScopeApp.cpp
 	ScopeSyncWizard.cpp

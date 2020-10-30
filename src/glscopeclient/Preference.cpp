@@ -47,22 +47,79 @@ namespace impl
 
     }
 
-    PreferenceBuilder&& PreferenceBuilder::IsVisible(bool isVisible) &&
+    PreferenceBuilder PreferenceBuilder::Invisible() &&
     {
-        this->m_pref.m_isVisible = isVisible;
+        this->m_pref.m_isVisible = false;
         return move(*this);
     }
 
-    PreferenceBuilder&& PreferenceBuilder::WithUnit(Unit::UnitType type) &&
+    PreferenceBuilder PreferenceBuilder::Label(std::string label) &&
     {
-        this->m_pref.m_unit = Unit{ type };
+        this->m_pref.m_label = std::move(label);
         return move(*this);
     }
 
-    Preference&& PreferenceBuilder::Build() &&
+    PreferenceBuilder PreferenceBuilder::Description(std::string description) &&
+    {
+        this->m_pref.m_description = std::move(description);
+        return move(*this);
+    }
+
+    PreferenceBuilder PreferenceBuilder::Unit(Unit::UnitType type) &&
+    {
+        this->m_pref.m_unit = ::Unit{ type };
+        return move(*this);
+    }
+
+    Preference PreferenceBuilder::Build() &&
     {
         return move(this->m_pref);
     }
+}
+
+void EnumMapping::AddEnumMember(const std::string& name, base_type value)
+{
+    if(this->m_forwardMap.count(name) != 0)
+        throw std::runtime_error("Enum mapping already contains given enum value");
+
+    this->m_forwardMap.insert(std::make_pair(name, value));
+    this->m_backwardMap.insert(std::make_pair(value, name));
+    this->m_names.push_back(name);
+}
+
+const std::string& EnumMapping::GetName(base_type value)
+{
+    const auto it = this->m_backwardMap.find(value);
+
+    if(it == this->m_backwardMap.end())
+        throw std::runtime_error("Enum mapping doesnt contain requested entry");
+
+    return it->second;
+}
+
+EnumMapping::base_type EnumMapping::GetValue(const std::string& name)
+{
+    const auto it = this->m_forwardMap.find(name);
+
+     if(it == this->m_forwardMap.end())
+        throw std::runtime_error("Enum mapping doesnt contain requested entry");
+
+    return it->second;
+}
+
+const std::vector<std::string>& EnumMapping::GetNames()
+{
+    return this->m_names;
+}
+
+void Preference::SetLabel(std::string label)
+{
+    this->m_label = std::move(label);
+}
+
+void Preference::SetDescription(std::string description)
+{
+    this->m_description = std::move(description);
 }
 
 const string& Preference::GetIdentifier() const
@@ -142,7 +199,7 @@ const std::string& Preference::GetString() const
 
 void Preference::CleanUp()
 {
-    if(m_type == PreferenceType::String)
+    if(m_hasValue && m_type == PreferenceType::String)
         (reinterpret_cast<string*>(&m_value))->~basic_string();
 }
 
@@ -171,27 +228,31 @@ void Preference::MoveFrom(Preference& other)
     m_label = move(other.m_label);
     m_isVisible = move(other.m_isVisible);
     m_unit = move(other.m_unit);
+    m_hasValue = move(other.m_hasValue);
     
-    switch(other.m_type)
+    if(m_hasValue)
     {
-        case PreferenceType::Boolean:
-            Construct<bool>(other.GetBool());
-            break;
-            
-        case PreferenceType::Real:
-            Construct<double>(other.GetReal());
-            break;
-            
-        case PreferenceType::String:
-            Construct<string>(move(other.GetValueRaw<string>()));
-            break;
+        switch(other.m_type)
+        {
+            case PreferenceType::Boolean:
+                Construct<bool>(other.GetBool());
+                break;
+                
+            case PreferenceType::Real:
+                Construct<double>(other.GetReal());
+                break;
+                
+            case PreferenceType::String:
+                Construct<string>(move(other.GetValueRaw<string>()));
+                break;
 
-        case PreferenceType::Color:
-            Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
-            break;
-            
-        default:
-            break;
+            case PreferenceType::Color:
+                Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
+                break;
+                
+            default:
+                break;
+        }
     }
     
     other.m_type = PreferenceType::None;
@@ -234,30 +295,37 @@ void Preference::SetColorRaw(const impl::Color& color)
     Construct<impl::Color>(color);
 }
 
-impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, bool defaultValue)
+impl::PreferenceBuilder Preference::Real(std::string identifier, double defaultValue)
 {
-    return impl::PreferenceBuilder(
-        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
-    );
+    Preference pref(PreferenceType::Real, std::move(identifier));
+    pref.Construct<double>(defaultValue);
+
+    return impl::PreferenceBuilder{ std::move(pref) };
 }
 
-impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, double defaultValue)
+impl::PreferenceBuilder Preference::Bool(std::string identifier, bool defaultValue)
 {
-    return impl::PreferenceBuilder(
-        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
-    );
+    Preference pref(PreferenceType::Boolean, std::move(identifier));
+    pref.Construct<bool>(defaultValue);
+
+    return impl::PreferenceBuilder{ std::move(pref) };
 }
 
-impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, const char* defaultValue)
+impl::PreferenceBuilder Preference::String(std::string identifier, std::string defaultValue)
 {
-    return impl::PreferenceBuilder(
-        Preference(std::move(identifier), std::move(label), std::move(description), defaultValue)
-    );
+    Preference pref(PreferenceType::String, std::move(identifier));
+    pref.Construct<std::string>(defaultValue);
+
+    return impl::PreferenceBuilder{ std::move(pref) };
 }
 
-impl::PreferenceBuilder Preference::New(std::string identifier, std::string label, std::string description, std::string defaultValue)
+impl::PreferenceBuilder Preference::Color(std::string identifier, const Gdk::Color& defaultValue)
 {
-    return impl::PreferenceBuilder(
-        Preference(std::move(identifier), std::move(label), std::move(description), std::move(defaultValue))
-    );
+    Preference pref(PreferenceType::Color, std::move(identifier));
+    pref.Construct<impl::Color>(impl::Color{
+        defaultValue.get_red(), defaultValue.get_green(), defaultValue.get_blue()
+    });
+
+    return impl::PreferenceBuilder{ std::move(pref) };
 }
+
