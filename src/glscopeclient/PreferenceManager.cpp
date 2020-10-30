@@ -134,7 +134,6 @@ void PreferenceManager::InitializeDefaults()
             testSettings.AddPreference(Preference("test_string", "Test string", "First test value", "string"));
             testSettings.AddPreference(Preference("test_real", "Test real", "Second test value", 42.09));
             testSettings.AddPreference(Preference("test_bool", "Test boolean", "Third test value", true));
-            testSettings.AddPreference(Preference("test_color", "Test color", "Some test color", Gdk::Color{}));
         auto& miscSettings = debug.AddCategory("Misc");
             miscSettings.AddPreference(Preference("misc_test_1", "Misc test real", "blabla", 13.37));
 }
