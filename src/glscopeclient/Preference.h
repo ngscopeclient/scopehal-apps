@@ -39,6 +39,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <type_traits>
 #include <cstdint>
 
 #include <giomm.h>
@@ -76,6 +77,42 @@ namespace impl
     };
 }
 
+class EnumMapping
+{
+    using base_type = signed long long;
+
+    public:
+        EnumMapping()
+        {
+
+        }
+
+    public:
+        void AddEnumMember(const std::string& name, base_type value);
+        const std::string& GetName(base_type value);
+        base_type GetValue(const std::string& name);
+        const std::vector<std::string>& GetNames();
+
+    public:
+        template<
+            typename E,
+            typename = typename std::enable_if<
+                std::is_convertible<E, base_type>::value &&
+                not std::is_same<E, base_type>::value
+            >::type
+        >
+        void AddEnumMember(const std::string& name, E value)
+        {
+            const auto val = static_cast<base_type>(value);
+            this->AddEnumMember(name, val);
+        }
+
+    protected:
+        std::map<std::string, base_type> m_forwardMap;
+        std::map<base_type, std::string> m_backwardMap;
+        std::vector<std::string> m_names;
+};
+
 class Preference
 {
     friend class impl::PreferenceBuilder;
@@ -87,53 +124,16 @@ private:
     >::type;
 
 public:
-    // Taking string as value and then moving is intended
-    Preference(std::string identifier, std::string label, std::string description, bool defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Boolean}
+    Preference(PreferenceType type, std::string identifier)
+        : m_identifier{std::move(identifier)}, m_type{type}
     {
-        new (&m_value) bool(defaultValue);
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, std::string defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
-    {
-        new (&m_value) std::string(std::move(defaultValue));
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, const char* defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::String}
-    {
-        new (&m_value) std::string(defaultValue);
-    }
-    
-    Preference(std::string identifier, std::string label, std::string description, double defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Real}
-    {
-        new (&m_value) double(defaultValue);
-    }
 
-    Preference(std::string identifier, std::string label, std::string description, const Gdk::Color& defaultValue)
-        :   m_identifier{std::move(identifier)}, m_label{std::move(label)}, m_description{std::move(description)},
-            m_type{PreferenceType::Color}
-    {
-        new (&m_value) impl::Color(defaultValue.get_red(), defaultValue.get_green(), defaultValue.get_blue());
     }
     
     ~Preference()
     {
         CleanUp();
     }
-
-public:
-    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, bool defaultValue);
-    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, double defaultValue);
-    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, const char* defaultValue);
-    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, std::string defaultValue);
-    static impl::PreferenceBuilder New(std::string identifier, std::string label, std::string description, const Gdk::Color& defaultValue);
 
 public:
     Preference(const Preference&) = delete;
@@ -162,15 +162,21 @@ public:
     bool GetIsVisible() const;
     Gdk::Color GetColor() const;
     const impl::Color& GetColorRaw() const;
-
     void SetBool(bool value);
     void SetReal(double value);
     void SetString(std::string value);
     void SetColor(const Gdk::Color& value);
     void SetColorRaw(const impl::Color& value);
-
+    void SetLabel(std::string label);
+    void SetDescription(std::string description);
     bool HasUnit();
     Unit& GetUnit();
+
+public:
+    static impl::PreferenceBuilder Real(std::string identifier, double defaultValue);
+    static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
+    static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
+    static impl::PreferenceBuilder Color(std::string identifier, const Gdk::Color& defaultValue);
     
 private:
     template<typename T>
@@ -191,6 +197,7 @@ private:
     void Construct(T value)
     {
         new (&m_value) T(std::move(value));
+        m_hasValue = true;
     }
     
     void MoveFrom(Preference& other);
@@ -203,6 +210,7 @@ private:
     PreferenceValue m_value;
     bool m_isVisible{true};
     Unit m_unit{Unit::UNIT_COUNTS};
+    bool m_hasValue{false};
 };
 
 namespace impl
@@ -213,9 +221,11 @@ namespace impl
             PreferenceBuilder(Preference&& pref);
 
         public:
-            PreferenceBuilder&& IsVisible(bool isVisible) &&;
-            PreferenceBuilder&& WithUnit(Unit::UnitType type) &&;
-            Preference&& Build() &&;
+            PreferenceBuilder Invisible() &&;
+            PreferenceBuilder Label(std::string label) &&;
+            PreferenceBuilder Description(std::string description) &&;
+            PreferenceBuilder Unit(Unit::UnitType type) &&;
+            Preference Build() &&;
 
         protected:
             Preference m_pref;

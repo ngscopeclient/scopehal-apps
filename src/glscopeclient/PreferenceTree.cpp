@@ -311,6 +311,11 @@ void PreferenceCategory::AddPreference(Preference pref)
     this->m_ordering.push_back(identifier);
 }
 
+void PreferenceCategory::AddPreference(impl::PreferenceBuilder&& pref)
+{
+    this->AddPreference(std::move(pref).Build());
+}
+
 PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
 {
     if(this->m_children.count(identifier) > 0)
