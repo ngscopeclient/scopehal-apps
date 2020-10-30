@@ -50,24 +50,25 @@ public:
         InitializeDefaults();
         LoadPreferences();
     }
-    
+
 public:
     // Disallow copy
     PreferenceManager(const PreferenceManager&) = delete;
     PreferenceManager(PreferenceManager&&) = default;
-    
+
     PreferenceManager& operator=(const PreferenceManager&) = delete;
     PreferenceManager& operator=(PreferenceManager&&) = default;
-    
+
 public:
     void SavePreferences();
     PreferenceCategory& AllPreferences();
-    
+
     // Value retrieval methods
     const std::string& GetString(const std::string& path) const;
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;
-    
+    Gdk::Color GetColor(const std::string& path) const;
+
 private:
     // Internal helpers
     void DeterminePath();

@@ -63,7 +63,7 @@ static void CreateDirectory(const string& path)
     const auto expanded = ExpandPath(path);
 
     struct stat fst{ };
-    
+
     // Check if it exists
     if(stat(expanded.c_str(), &fst) != 0)
     {
@@ -72,7 +72,7 @@ static void CreateDirectory(const string& path)
         {
             perror("");
             throw runtime_error("failed to create preferences directory");
-        }    
+        }
     }
     else if(!S_ISDIR(fst.st_mode))
     {
@@ -118,7 +118,7 @@ bool PreferenceManager::HasPreferenceFile() const
 #else
     struct stat fs{ };
     const auto result = stat(m_filePath.c_str(), &fs);
-    
+
     return (result == 0) && (fs.st_mode & S_IFREG);
 #endif
 }
@@ -140,28 +140,28 @@ void PreferenceManager::DeterminePath()
     {
         throw std::runtime_error("failed to resolve %appdata%");
     }
-    
+
     wchar_t directory[MAX_PATH];
     if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
     {
         throw runtime_error("failed to build directory path");
     }
-    
+
     // Ensure the directory exists
     const auto result = CreateDirectoryW(directory, NULL);
-    
+
     if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
     {
         throw runtime_error("failed to create preferences directory");
     }
-    
+
     // Build final path
     wchar_t config[MAX_PATH];
     if(NULL == PathCombineW(config, directory, L"preferences.yml"))
     {
         throw runtime_error("failed to build directory path");
     }
-    
+
     char configNarrow[MAX_PATH];
     const auto len = wcstombs(configNarrow, config, MAX_PATH);
 
@@ -181,19 +181,24 @@ void PreferenceManager::DeterminePath()
 #endif
 }
 
-const std::string& PreferenceManager::GetString(const string& identifier) const
+const std::string& PreferenceManager::GetString(const string& path) const
 {
-    return GetPreference(identifier).GetString();
+    return GetPreference(path).GetString();
 }
 
-double PreferenceManager::GetReal(const string& identifier) const
+double PreferenceManager::GetReal(const string& path) const
 {
-    return GetPreference(identifier).GetReal();
+    return GetPreference(path).GetReal();
 }
 
-bool PreferenceManager::GetBool(const string& identifier) const
+bool PreferenceManager::GetBool(const string& path) const
 {
-    return GetPreference(identifier).GetBool();
+    return GetPreference(path).GetBool();
+}
+
+Gdk::Color PreferenceManager::GetColor(const std::string& path) const
+{
+    return GetPreference(path).GetColor();
 }
 
 void PreferenceManager::LoadPreferences()
@@ -215,20 +220,20 @@ void PreferenceManager::LoadPreferences()
 void PreferenceManager::SavePreferences()
 {
     YAML::Node node{ };
-    
+
     this->m_treeRoot.ToYAML(node);
-    
+
     ofstream outfs{ m_filePath };
-    
+
     if(!outfs)
     {
         LogError("couldn't open preferences file for writing");
         return;
     }
-    
+
     outfs << node;
     outfs.close();
-    
+
     if(!outfs)
     {
         LogError("couldn't write preferences file to disk");
