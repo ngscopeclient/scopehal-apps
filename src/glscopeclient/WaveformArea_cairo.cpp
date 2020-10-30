@@ -229,7 +229,7 @@ void WaveformArea::RenderTriggerArrow(
 {
 	float y = VoltsToYPosition(voltage);
 
-	float trisize = 5 * GetDPIScale();
+	float trisize = 5 * GetDPIScale() * get_window()->get_scale_factor();
 
 	//Dragging? Arrow follows mouse
 	if(dragging)

@@ -442,6 +442,10 @@ void WaveformArea::on_realize()
 	Gtk::GLArea::on_realize();
 	make_current();
 
+	//Apply DPI scaling to Pango fonts since we are not using Cairo scaling
+	auto c = get_pango_context();
+	c->set_resolution(c->get_resolution() * get_window()->get_scale_factor());
+
 	//Set up GLEW
 	if(!m_isGlewInitialized)
 	{

@@ -116,6 +116,11 @@ void WaveformArea::on_resize(int width, int height)
 
 bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 {
+	//Scaling for hi-dpi
+	auto scale = get_window()->get_scale_factor();
+	ev->x *= scale;
+	ev->y *= scale;
+
 	m_clickLocation = HitTest(ev->x, ev->y);
 
 	switch(m_clickLocation)
@@ -194,6 +199,11 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 
 bool WaveformArea::on_button_press_event(GdkEventButton* event)
 {
+	//Scaling for hi-dpi
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	//TODO: See if we right clicked on our main channel or a protocol decoder.
 	//If a decoder, filter for that instead
 	m_selectedChannel = m_channel;
@@ -220,6 +230,11 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 
 void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 {
+	//Scaling for hi-dpi
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	switch(m_clickLocation)
 	{
 		//Move cursors if we click on them
@@ -429,6 +444,11 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 
 bool WaveformArea::on_button_release_event(GdkEventButton* event)
 {
+	//Scaling for hi-dpi
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	int64_t timestamp = XPositionToXAxisUnits(event->x);
 
 	switch(m_dragState)
@@ -572,6 +592,11 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 
 bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 {
+	//Scaling for hi-dpi
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	m_cursorX = event->x;
 	m_cursorY = event->y;
 
