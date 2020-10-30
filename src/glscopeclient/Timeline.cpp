@@ -65,6 +65,10 @@ Timeline::~Timeline()
 
 bool Timeline::on_button_press_event(GdkEventButton* event)
 {
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	if(event->type == GDK_BUTTON_PRESS)
 	{
 		//for now, only handle left click
@@ -102,6 +106,10 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 
 bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 {
+	auto scale = get_window()->get_scale_factor();
+	event->x *= scale;
+	event->y *= scale;
+
 	switch(m_dragState)
 	{
 		//Dragging the horizontal offset
@@ -127,6 +135,10 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 
 bool Timeline::on_scroll_event (GdkEventScroll* ev)
 {
+	auto scale = get_window()->get_scale_factor();
+	ev->x *= scale;
+	ev->y *= scale;
+
 	int64_t timestamp = (ev->x / m_group->m_pixelsPerXUnit) + m_group->m_xAxisOffset;
 
 	switch(ev->direction)
@@ -201,6 +213,8 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChannel* chan)
 {
+	float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
+
 	size_t w = get_width();
 	size_t h = get_height();
 	double ytop = 2;
@@ -208,7 +222,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	double ymid = (h-10) / 2;
 
 	//Figure out rounding granularity, based on our time scales
-	int64_t width_ps = w / m_group->m_pixelsPerXUnit;
+	int64_t width_ps = w / xscale;
 	int64_t round_divisor = 1;
 	if(width_ps < 1E4)
 	{
@@ -242,7 +256,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 
 	//Figure out about how much time per graduation to use
 	const double min_label_grad_width = 75 * GetDPIScale();	//Minimum distance between text labels, in pixels
-	double grad_ps_nominal = min_label_grad_width / m_group->m_pixelsPerXUnit;
+	double grad_ps_nominal = min_label_grad_width / xscale;
 
 	//Round so the division sizes are sane
 	double units_per_grad = grad_ps_nominal * 1.0 / round_divisor;
@@ -272,12 +286,12 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	int sheight;
 	for(double t = tstart; t < (tstart + width_ps + grad_ps_rounded); t += grad_ps_rounded)
 	{
-		double x = (t - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+		double x = (t - m_group->m_xAxisOffset) * xscale;
 
 		//Draw fine ticks first (even if the labeled graduation doesn't fit)
 		for(int tick=1; tick < nsubticks; tick++)
 		{
-			double subx = (t - m_group->m_xAxisOffset + tick*subtick) * m_group->m_pixelsPerXUnit;
+			double subx = (t - m_group->m_xAxisOffset + tick*subtick) * xscale;
 
 			if(subx < 0)
 				continue;
@@ -356,7 +370,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		if(scope == NULL)
 			return;
 		int64_t timestamp = scope->GetTriggerOffset();
-		double x = (timestamp - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+		double x = (timestamp - m_group->m_xAxisOffset) * xscale;
 
 		auto trig = scope->GetTrigger();
 		if(trig)
@@ -386,6 +400,8 @@ void Timeline::DrawCursor(
 	bool draw_left,
 	bool show_delta)
 {
+	float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
+
 	int h = get_height();
 
 	Gdk::Color black("black");
@@ -434,7 +450,7 @@ void Timeline::DrawCursor(
 	tlayout->get_pixel_size(swidth, sheight);
 
 	//Decide which side of the line to draw on
-	double x = (ps - m_group->m_xAxisOffset) * m_group->m_pixelsPerXUnit;
+	double x = (ps - m_group->m_xAxisOffset) * xscale;
 	double right = x-5;
 	double left = right - swidth - 5;
 	if(!draw_left)
