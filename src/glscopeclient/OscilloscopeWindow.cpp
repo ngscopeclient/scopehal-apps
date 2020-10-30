@@ -428,6 +428,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 	m_css->load_from_path("styles/glscopeclient.css");
 	get_style_context()->add_provider_for_screen(
 		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+	//Initialize filter colors from preferences
+	SyncFilterColors();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -469,11 +472,39 @@ void OscilloscopeWindow::OnPreferences()
     m_preferenceDialog->signal_response().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnPreferenceDialogResponse));
 }
 
+/**
+	@brief Update filter colors from the preferences manager
+ */
+void OscilloscopeWindow::SyncFilterColors()
+{
+	Filter::m_standardColors[Filter::COLOR_DATA] =
+		m_preferences.GetColor("Appearance.Decodes.data_color");
+	Filter::m_standardColors[Filter::COLOR_CONTROL] =
+		m_preferences.GetColor("Appearance.Decodes.control_color");
+	Filter::m_standardColors[Filter::COLOR_ADDRESS] =
+		m_preferences.GetColor("Appearance.Decodes.address_color");
+	Filter::m_standardColors[Filter::COLOR_PREAMBLE] =
+		m_preferences.GetColor("Appearance.Decodes.preamble_color");
+	Filter::m_standardColors[Filter::COLOR_CHECKSUM_OK] =
+		m_preferences.GetColor("Appearance.Decodes.checksum_ok_color");
+	Filter::m_standardColors[Filter::COLOR_CHECKSUM_BAD] =
+		m_preferences.GetColor("Appearance.Decodes.checksum_bad_color");
+	Filter::m_standardColors[Filter::COLOR_ERROR] =
+		m_preferences.GetColor("Appearance.Decodes.error_color");
+	Filter::m_standardColors[Filter::COLOR_IDLE] =
+		m_preferences.GetColor("Appearance.Decodes.idle_color");
+}
+
 void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
 {
 	if(response == Gtk::RESPONSE_OK)
 	{
 		m_preferenceDialog->SaveChanges();
+
+		//Update the UI since we might have changed colors or other display settings
+		SyncFilterColors();
+		for(auto w : m_waveformAreas)
+			w->queue_draw();
 	}
 
 	//Clean up the dialog
@@ -2391,6 +2422,8 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 void OscilloscopeWindow::RefreshAllFilters()
 {
+	SyncFilterColors();
+
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		f->SetDirty();

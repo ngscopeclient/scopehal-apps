@@ -275,6 +275,7 @@ public:
 
 	//Protocol decoding etc
 	void RefreshAllFilters();
+	void SyncFilterColors();
 
 	virtual bool on_delete_event(GdkEventAny* any_event);
 

@@ -107,6 +107,48 @@ void PreferenceManager::InitializeDefaults()
                 "Cursor fill text color",
                 "Color for in-band power and other text drawn between cursors",
                 Gdk::Color("yellow")));
+        auto& decode_colors = appearance.AddCategory("Decodes");
+            decode_colors.AddPreference(Preference(
+                "address_color",
+                "Address color",
+                "Color for register/memory addresses",
+                Gdk::Color("#ffff00")));
+             decode_colors.AddPreference(Preference(
+                "checksum_bad_color",
+                "Checksum/CRC color (Bad)",
+                "Color for incorrect checksums/CRCs",
+                Gdk::Color("#ff0000")));
+            decode_colors.AddPreference(Preference(
+                "checksum_ok_color",
+                "Checksum/CRC color (OK)",
+                "Color for correct checksums/CRCs",
+                Gdk::Color("#00ff00")));
+            decode_colors.AddPreference(Preference(
+                "control_color",
+                "Control color",
+                "Color for control events",
+                Gdk::Color("#c000a0")));
+            decode_colors.AddPreference(Preference(
+                "data_color",
+                "Data color",
+                "Color for generic protocol data bytes",
+                Gdk::Color("#336699")));
+            decode_colors.AddPreference(Preference(
+                "error_color",
+                "Error color",
+                "Color for malformed data or error conditions",
+                Gdk::Color("#ff0000")));
+            decode_colors.AddPreference(Preference(
+                "idle_color",
+                "Idle color",
+                "Color for idle sequences between meaningful data",
+                Gdk::Color("#404040")));
+            decode_colors.AddPreference(Preference(
+                "preamble_color",
+                "Preamble color",
+                "Color for preambles, sync bytes, and other fixed header data",
+                Gdk::Color("#808080")));
+
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(Preference(
                 "insertion_bar_color",
