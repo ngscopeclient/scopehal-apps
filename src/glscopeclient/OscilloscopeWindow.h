@@ -234,6 +234,8 @@ public:
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileOpen();
 	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
+	void OnFileImport();
+	void DoImportCSV(const std::string& filename);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
@@ -255,7 +257,6 @@ public:
 		volatile float* progress,
 		volatile int* done
 		);
-	void CloseSession();
 	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
 	void OnFullscreen();
@@ -266,12 +267,19 @@ public:
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
 
+	//Session handling
+	void CloseSession();
+	void OnLoadComplete();
+	void CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital=false, bool nospectrum=false);
+
 	void OnPreferences();
 	void OnPreferenceDialogResponse(int response);
+
 	//Reconfigure menus
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
+	void RefreshTriggerMenu();
 
 	//Protocol decoding etc
 	void RefreshAllFilters();

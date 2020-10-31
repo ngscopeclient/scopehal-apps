@@ -136,6 +136,9 @@ OscilloscopeWindow::~OscilloscopeWindow()
  */
 void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 {
+	//Initialize filter colors from preferences
+	SyncFilterColors();
+
 	//Set up window hierarchy
 	add(m_vbox);
 		m_vbox.pack_start(m_menu, Gtk::PACK_SHRINK);
@@ -171,6 +174,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Import...", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileImport));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
@@ -326,9 +333,6 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 		auto split = new Gtk::VPaned;
 			m_vbox.pack_start(*split);
 			m_splitters.emplace(split);
-			auto group = new WaveformGroup(this);
-			m_waveformGroups.emplace(group);
-			split->pack1(group->m_frame);
 
 		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
 			m_statusbar.get_style_context()->add_class("status");
@@ -337,13 +341,44 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 			m_statusbar.pack_end(m_waveformRateLabel, Gtk::PACK_SHRINK);
 			m_waveformRateLabel.set_size_request(175, 1);
 
+	//Reconfigure menus
+	RefreshChannelsMenu();
+	RefreshMultimeterMenu();
+	RefreshTriggerMenu();
+
+	//History isn't shown by default
+	for(auto it : m_historyWindows)
+		it.second->hide();
+
+	//Create the waveform areas for all enabled channels
+	CreateDefaultWaveformAreas(split, nodigital, nospectrum);
+
+	//Don't show measurements or wizards by default
+	m_haltConditionsDialog.hide();
+
+	//Initialize the style sheets
+	m_css = Gtk::CssProvider::create();
+	m_css->load_from_path("styles/glscopeclient.css");
+	get_style_context()->add_provider_for_screen(
+		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+}
+
+/**
+	@brief Creates the waveform areas for a new scope.
+ */
+void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital, bool nospectrum)
+{
+	//Create top level waveform group
+	auto group = new WaveformGroup(this);
+	m_waveformGroups.emplace(group);
+	split->pack1(group->m_frame);
+
 	//Create history windows
 	for(auto scope : m_scopes)
 		m_historyWindows[scope] = new HistoryWindow(this, scope);
 
-	WaveformGroup* spectrumGroup = NULL;
-
 	//Process all of the channels
+	WaveformGroup* spectrumGroup = NULL;
 	for(auto scope : m_scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -397,40 +432,11 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 		}
 	}
 
-	//Add trigger config menu items for each scope
-	for(auto scope : m_scopes)
-	{
-		item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
-		item->signal_activate().connect(
-			sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnTriggerProperties), scope));
-		m_setupTriggerMenu.append(*item);
-	}
-
-	//Reconfigure menus
-	RefreshChannelsMenu();
-	RefreshMultimeterMenu();
-
-	//History isn't shown by default
-	for(auto it : m_historyWindows)
-		it.second->hide();
-
-	//Done adding widgets
+	//Done
 	show_all();
-
-	//Don't show measurements or wizards by default
-	group->m_measurementView.hide();
 	if(spectrumGroup)
 		spectrumGroup->m_measurementView.hide();
-	m_haltConditionsDialog.hide();
-
-	//Initialize the style sheets
-	m_css = Gtk::CssProvider::create();
-	m_css->load_from_path("styles/glscopeclient.css");
-	get_style_context()->add_provider_for_screen(
-		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-
-	//Initialize filter colors from preferences
-	SyncFilterColors();
+	group->m_measurementView.hide();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -582,13 +588,91 @@ void OscilloscopeWindow::CloseSession()
 }
 
 /**
+	@brief Import waveform data not in the native glscopeclient format
+ */
+void OscilloscopeWindow::OnFileImport()
+{
+	//TODO: prompt to save changes to the current session
+	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
+
+	auto filter = Gtk::FileFilter::create();
+	filter->add_pattern("*.csv");
+	filter->set_name("Comma Separated Value (*.csv)");
+	dlg.add_filter(filter);
+	dlg.add_button("Open", Gtk::RESPONSE_OK);
+	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	auto response = dlg.run();
+
+	if(response != Gtk::RESPONSE_OK)
+		return;
+
+	DoImportCSV(dlg.get_filename());
+
+	//Done
+	OnLoadComplete();
+}
+
+/**
+	@brief Import a CSV file
+ */
+void OscilloscopeWindow::DoImportCSV(const string& filename)
+{
+	LogDebug("Importing CSV file \"%s\"\n", filename.c_str());
+	LogIndenter li;
+
+	//Setup
+	CloseSession();
+	m_currentFileName = filename;
+	m_loadInProgress = true;
+
+	//Clear performance counters
+	m_totalWaveforms = 0;
+	m_lastWaveformTimes.clear();
+
+	FILE* fp = fopen(filename.c_str(), "r");
+	if(!fp)
+		return;
+
+	char line[1024];
+	bool first = true;
+	size_t ncols = 0;
+	while(!feof(fp))
+	{
+		if(!fgets(line, sizeof(line), fp))
+			break;
+
+		//If this is the first line, figure out how many columns we have.
+		//First column is always timestamp in seconds.
+		//TODO: support timestamp in abstract sample units instead
+		if(first)
+		{
+			for(size_t i=0; i<sizeof(line); i++)
+			{
+				if(line[i] == '\0')
+					break;
+				else if(line[i] == ',')
+					ncols ++;
+			}
+
+			LogDebug("Found %zu signal columns, no header row\n", ncols);
+
+			first = false;
+
+			//
+		}
+	}
+
+	fclose(fp);
+}
+
+/**
 	@brief Open a saved configuration
  */
 void OscilloscopeWindow::OnFileOpen()
 {
 	//TODO: prompt to save changes to the current session
 
-	Gtk::FileChooserDialog dlg(*this, "Open", Gtk::FILE_CHOOSER_ACTION_SAVE);
+	Gtk::FileChooserDialog dlg(*this, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
 	dlg.add_choice("layout", "Load UI Configuration");
 	dlg.add_choice("waveform", "Load Waveform Data");
@@ -689,6 +773,14 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, boo
 		return;
 	}
 
+	OnLoadComplete();
+}
+
+/**
+	@brief Refresh everything in the UI when a new file has been loaded
+ */
+void OscilloscopeWindow::OnLoadComplete()
+{
 	//TODO: refresh measurements and protocol decodes
 
 	//Create protocol analyzers
@@ -715,6 +807,7 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, boo
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
 	RefreshMultimeterMenu();
+	RefreshTriggerMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -1125,27 +1218,6 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 
 		//Configure the scope
 		scope->LoadConfiguration(inst, table);
-
-		//Add menu config for the scope (only if reconnecting)
-		if(reconnect)
-		{
-			for(size_t i=0; i<scope->GetChannelCount(); i++)
-			{
-				auto chan = scope->GetChannel(i);
-				if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
-				{
-					auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
-					item->signal_activate().connect(
-						sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
-							StreamDescriptor(chan, 0)));
-					m_channelsMenu.append(*item);
-				}
-			}
-			auto item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
-			item->signal_activate().connect(
-				sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnTriggerProperties), scope));
-			m_setupTriggerMenu.append(*item);
-		}
 	}
 }
 
@@ -2702,6 +2774,25 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 	}
 
 	m_channelsMenu.show_all();
+}
+
+/**
+	@brief Refresh the trigger menu when we connect to a new instrument
+ */
+void OscilloscopeWindow::RefreshTriggerMenu()
+{
+	//Remove the old items
+	auto children = m_setupTriggerMenu.get_children();
+	for(auto c : children)
+		m_setupTriggerMenu.remove(*c);
+
+	for(auto scope : m_scopes)
+	{
+		auto item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnTriggerProperties), scope));
+		m_setupTriggerMenu.append(*item);
+	}
 }
 
 /**
