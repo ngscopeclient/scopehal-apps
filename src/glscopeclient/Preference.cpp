@@ -217,7 +217,7 @@ const std::string& Preference::GetString() const
 
 void Preference::CleanUp()
 {
-    if(m_hasValue && m_type == PreferenceType::String)
+    if(m_hasValue && (m_type == PreferenceType::String || m_type == PreferenceType::Font))
         (reinterpret_cast<string*>(&m_value))->~basic_string();
 }
 
