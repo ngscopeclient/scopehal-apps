@@ -64,6 +64,30 @@ struct ColorRow
     Gtk::ColorButton m_colorbutton;
 };
 
+struct EnumRow
+{
+    struct ModelColumns
+        : public Gtk::TreeModel::ColumnRecord
+    {
+        ModelColumns()
+        {
+            add(m_col_name);
+        }
+
+        Gtk::TreeModelColumn<Glib::ustring> m_col_name;
+    };
+
+    EnumRow(const Preference& pref);
+
+    std::string GetActiveName();
+
+    ModelColumns m_columns;
+    Glib::RefPtr<Gtk::ListStore> m_refTreeModel;
+    std::string m_identifier;
+    Gtk::Label m_label;
+    Gtk::ComboBox m_value;
+};
+
 class PreferencePage : public Gtk::Grid
 {
     
@@ -81,6 +105,7 @@ class PreferencePage : public Gtk::Grid
         std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
         std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
         std::vector<std::unique_ptr<ColorRow>> m_colorRows;
+        std::vector<std::unique_ptr<EnumRow>> m_enumRows;
 };
 
 

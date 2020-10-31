@@ -129,21 +129,26 @@ namespace internal
 
     void PreferenceHolder::ToYAML(YAML::Node& node) const
     {
-        if(this->m_pref.GetType() == PreferenceType::Color)
+        switch(this->m_pref.GetType())
         {
-            YAML::Node child{ };
-  
-            const auto& color = this->m_pref.GetColorRaw();
+            case PreferenceType::Color:
+            {
+                YAML::Node child{ };
+    
+                const auto& color = this->m_pref.GetColorRaw();
 
-            child["r"] = color.m_r;
-            child["g"] = color.m_g;
-            child["b"] = color.m_b;
+                child["r"] = color.m_r;
+                child["g"] = color.m_g;
+                child["b"] = color.m_b;
 
-            node[this->m_identifier] = child;
-        }
-        else
-        {
-            node[this->m_identifier] = this->m_pref.ToString();
+                node[this->m_identifier] = child;
+                break;
+            }
+            default:
+            {
+                node[this->m_identifier] = this->m_pref.ToString();
+                break;
+            }
         }
     }
 
@@ -171,6 +176,14 @@ namespace internal
                     case PreferenceType::String:
                         this->m_pref.SetString(n.as<string>());
                         break;
+
+                    case PreferenceType::Enum:
+                    {
+                        const auto value = n.as<string>();
+                        const auto& mapper = this->m_pref.GetMapping();
+                        this->m_pref.SetEnumRaw(mapper.GetValue(value));
+                        break;
+                    }
                     
                     case PreferenceType::Color:
                     {

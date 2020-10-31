@@ -87,7 +87,7 @@ void EnumMapping::AddEnumMember(const std::string& name, base_type value)
     this->m_names.push_back(name);
 }
 
-const std::string& EnumMapping::GetName(base_type value)
+const std::string& EnumMapping::GetName(base_type value) const
 {
     const auto it = this->m_backwardMap.find(value);
 
@@ -97,7 +97,17 @@ const std::string& EnumMapping::GetName(base_type value)
     return it->second;
 }
 
-EnumMapping::base_type EnumMapping::GetValue(const std::string& name)
+bool EnumMapping::HasNameFor(base_type value) const
+{
+    return this->m_backwardMap.count(value) > 0;
+}
+
+bool EnumMapping::HasValueFor(const std::string& name) const
+{
+    return this->m_forwardMap.count(name) > 0;
+}
+
+EnumMapping::base_type EnumMapping::GetValue(const std::string& name) const
 {
     const auto it = this->m_forwardMap.find(name);
 
@@ -107,7 +117,7 @@ EnumMapping::base_type EnumMapping::GetValue(const std::string& name)
     return it->second;
 }
 
-const std::vector<std::string>& EnumMapping::GetNames()
+const std::vector<std::string>& EnumMapping::GetNames() const
 {
     return this->m_names;
 }
@@ -148,6 +158,14 @@ bool Preference::GetBool() const
         throw runtime_error("Preference type mismatch");
 
     return GetValueRaw<bool>();
+}
+
+std::int64_t Preference::GetEnumRaw() const
+{
+    if(m_type != PreferenceType::Enum)
+        throw runtime_error("Preference type mismatch");
+
+    return GetValueRaw<std::int64_t>();
 }
 
 Gdk::Color Preference::GetColor() const
@@ -215,6 +233,12 @@ string Preference::ToString() const
             return to_string(GetReal());
         case PreferenceType::Color:
             return "Color";
+        case PreferenceType::Enum:
+        {
+            const auto& mapper = this->GetMapping();
+            const auto value = this->GetEnumRaw();
+            return mapper.GetName(value);
+        }
         default:
             throw runtime_error("tried to retrieve value from preference in moved-from state");
     }
@@ -229,6 +253,7 @@ void Preference::MoveFrom(Preference& other)
     m_isVisible = move(other.m_isVisible);
     m_unit = move(other.m_unit);
     m_hasValue = move(other.m_hasValue);
+    m_mapping = move(other.m_mapping);
     
     if(m_hasValue)
     {
@@ -248,6 +273,10 @@ void Preference::MoveFrom(Preference& other)
 
             case PreferenceType::Color:
                 Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
+                break;
+
+            case PreferenceType::Enum:
+                Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
                 break;
                 
             default:
@@ -276,6 +305,12 @@ void Preference::SetReal(double value)
     Construct<double>(value);
 }
 
+void Preference::SetEnumRaw(std::int64_t value)
+{
+    CleanUp();
+    Construct<std::int64_t>(value);
+}
+
 void Preference::SetString(string value)
 {
     CleanUp();
@@ -293,6 +328,16 @@ void Preference::SetColorRaw(const impl::Color& color)
 {
     CleanUp();
     Construct<impl::Color>(color);
+}
+
+const EnumMapping& Preference::GetMapping() const
+{
+    return this->m_mapping;
+}
+
+void Preference::SetMapping(EnumMapping mapping)
+{
+    this->m_mapping = std::move(mapping);
 }
 
 impl::PreferenceBuilder Preference::Real(std::string identifier, double defaultValue)
@@ -325,6 +370,14 @@ impl::PreferenceBuilder Preference::Color(std::string identifier, const Gdk::Col
     pref.Construct<impl::Color>(impl::Color{
         defaultValue.get_red(), defaultValue.get_green(), defaultValue.get_blue()
     });
+
+    return impl::PreferenceBuilder{ std::move(pref) };
+}
+
+impl::PreferenceBuilder Preference::EnumRaw(std::string identifier, std::int64_t defaultValue)
+{
+    Preference pref(PreferenceType::Enum, std::move(identifier));
+    pref.Construct<std::int64_t>(defaultValue);
 
     return impl::PreferenceBuilder{ std::move(pref) };
 }

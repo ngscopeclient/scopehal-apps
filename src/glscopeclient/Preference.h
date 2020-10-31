@@ -58,6 +58,7 @@ enum class PreferenceType
     String,
     Real,
     Color,
+    Enum,
     None // Only for moved-from values
 };
 
@@ -79,7 +80,7 @@ namespace impl
 
 class EnumMapping
 {
-    using base_type = signed long long;
+    using base_type = std::int64_t;
 
     public:
         EnumMapping()
@@ -89,17 +90,19 @@ class EnumMapping
 
     public:
         void AddEnumMember(const std::string& name, base_type value);
-        const std::string& GetName(base_type value);
-        base_type GetValue(const std::string& name);
-        const std::vector<std::string>& GetNames();
+        const std::string& GetName(base_type value) const;
+        base_type GetValue(const std::string& name) const;
+        const std::vector<std::string>& GetNames() const;
+        bool HasNameFor(base_type value) const;
+        bool HasValueFor(const std::string& name) const;
 
     public:
         template<
-            typename E,
+            typename E/*,
             typename = typename std::enable_if<
                 std::is_convertible<E, base_type>::value &&
                 not std::is_same<E, base_type>::value
-            >::type
+            >::type*/
         >
         void AddEnumMember(const std::string& name, E value)
         {
@@ -119,8 +122,8 @@ class Preference
 
 private:
     using PreferenceValue = typename std::aligned_union<
-        max(sizeof(impl::Color), max(max(sizeof(bool), sizeof(double)), sizeof(std::string))),
-        bool, std::string, double, impl::Color
+        max(sizeof(std::int64_t), max(sizeof(impl::Color), max(max(sizeof(bool), sizeof(double)), sizeof(std::string)))),
+        bool, std::string, double, impl::Color, std::int64_t
     >::type;
 
 public:
@@ -154,6 +157,8 @@ public:
     const std::string& GetIdentifier() const;
     const std::string& GetLabel() const;
     const std::string& GetDescription() const;
+    std::int64_t GetEnumRaw() const;
+    void SetEnumRaw(std::int64_t value);
     PreferenceType GetType() const;
     bool GetBool() const;
     double GetReal() const;
@@ -171,14 +176,33 @@ public:
     void SetDescription(std::string description);
     bool HasUnit();
     Unit& GetUnit();
+    const EnumMapping& GetMapping() const;
+
+    template< typename E >
+    E GetEnum() const
+    {
+        return static_cast<E>(this->GetEnumRaw());
+    }
+
+    template< typename E >
+    void SetEnum(E value)
+    {
+        this->SetEnumRaw(static_cast<std::int64_t>(value));
+    }
 
 public:
     static impl::PreferenceBuilder Real(std::string identifier, double defaultValue);
     static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
     static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
     static impl::PreferenceBuilder Color(std::string identifier, const Gdk::Color& defaultValue);
-    
+    static impl::PreferenceBuilder EnumRaw(std::string identifier, std::int64_t defaultValue);
+
+    template< typename E >
+    static impl::PreferenceBuilder Enum(std::string identifier, E defaultValue);
+
 private:
+    void SetMapping(EnumMapping mapping);
+
     template<typename T>
     const T& GetValueRaw() const
     {
@@ -211,6 +235,7 @@ private:
     bool m_isVisible{true};
     Unit m_unit{Unit::UNIT_COUNTS};
     bool m_hasValue{false};
+    EnumMapping m_mapping;
 };
 
 namespace impl
@@ -227,9 +252,22 @@ namespace impl
             PreferenceBuilder Unit(Unit::UnitType type) &&;
             Preference Build() &&;
 
+            template< typename E >
+            PreferenceBuilder EnumValue(const std::string& name, E value) &&
+            {
+                this->m_pref.m_mapping.AddEnumMember<E>(name, value);
+                return std::move(*this);
+            }
+
         protected:
             Preference m_pref;
     };
+}
+
+template< typename E >
+impl::PreferenceBuilder Preference::Enum(std::string identifier, E defaultValue)
+{
+    return EnumRaw(std::move(identifier), static_cast<std::int64_t>(defaultValue));
 }
 
 #endif // Preference_h

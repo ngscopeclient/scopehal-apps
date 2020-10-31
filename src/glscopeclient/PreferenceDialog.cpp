@@ -52,6 +52,35 @@ PreferencePage::PreferencePage(PreferenceCategory& category)
     CreateWidgets();
 }
 
+EnumRow::EnumRow(const Preference& pref)
+{
+    const auto& mapper = pref.GetMapping();
+
+    this->m_refTreeModel = Gtk::ListStore::create(this->m_columns);
+    this->m_value.set_model(this->m_refTreeModel);
+
+    for(const auto& name: mapper.GetNames())
+    {
+        Gtk::TreeModel::Row row = *(m_refTreeModel->append());
+        row[this->m_columns.m_col_name] = name.c_str();
+        const auto value = mapper.GetValue(name);
+
+        if(pref.GetEnumRaw() == value)
+            this->m_value.set_active(row);
+    }
+
+    this->m_value.pack_start(this->m_columns.m_col_name);
+}
+
+std::string EnumRow::GetActiveName()
+{
+    Gtk::TreeModel::iterator iter = this->m_value.get_active();
+    Gtk::TreeModel::Row row = *iter;
+
+    Glib::ustring str = row[this->m_columns.m_col_name];
+    return (std::string)str;
+}
+
 void PreferencePage::CreateWidgets()
 {
     Gtk::Widget* last = nullptr;
@@ -72,6 +101,29 @@ void PreferencePage::CreateWidgets()
         
         switch(preference.GetType())
         {
+            case PreferenceType::Enum:
+            {
+                auto row = unique_ptr<EnumRow>{ new EnumRow(preference) };
+                row->m_identifier = preference.GetIdentifier();
+                row->m_label.set_label(preference.GetLabel());
+                row->m_label.set_halign(Gtk::ALIGN_START);
+                row->m_value.set_halign(Gtk::ALIGN_CENTER);
+                row->m_label.set_tooltip_text(preference.GetDescription());
+                row->m_value.set_tooltip_text(preference.GetDescription());
+                
+                if(!last)
+                    attach(row->m_label, 0, 0, 1, 1);
+                else
+                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
+                    
+                attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
+                
+                last = &(row->m_label);
+                m_enumRows.push_back(std::move(row));
+                
+                break;
+            }
+
             case PreferenceType::Boolean:
             {
                 auto row = unique_ptr<BooleanRow>{ new BooleanRow() };
@@ -194,6 +246,20 @@ void PreferencePage::SaveChanges()
                     
                 preference.SetColor((*it)->m_colorbutton.get_color());
                 
+                break;
+            }
+
+            case PreferenceType::Enum:
+            {
+                // This will always succeed
+                const auto it = find_if(m_enumRows.begin(), m_enumRows.end(),
+                    [&preference](const unique_ptr<EnumRow>& x) -> bool 
+                    {
+                        return x->m_identifier == preference.GetIdentifier(); 
+                    });
+                
+                const auto& mapping = preference.GetMapping();
+                preference.SetEnumRaw(mapping.GetValue((*it)->GetActiveName()));   
                 break;
             }
 
