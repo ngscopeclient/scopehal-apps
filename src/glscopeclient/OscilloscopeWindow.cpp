@@ -614,87 +614,154 @@ void OscilloscopeWindow::OnFileImport()
 void OscilloscopeWindow::DoImportCSV(const string& filename)
 {
 	LogDebug("Importing CSV file \"%s\"\n", filename.c_str());
-	LogIndenter li;
-
-	//Setup
-	CloseSession();
-	m_currentFileName = filename;
-	m_loadInProgress = true;
-
-	//Clear performance counters
-	m_totalWaveforms = 0;
-	m_lastWaveformTimes.clear();
-
-	//Create the mock scope
-	auto scope = new MockOscilloscope("CSV Import", "Generic", "12345");
-	scope->m_nickname = "import";
-	g_app->m_scopes.push_back(scope);
-	m_scopes.push_back(scope);
-
-	FILE* fp = fopen(filename.c_str(), "r");
-	if(!fp)
 	{
-		LogError("Failed to open file\n");
-		return;
-	}
+		LogIndenter li;
 
-	std::map<int, AnalogWaveform*> waveforms;
+		//Setup
+		CloseSession();
+		m_currentFileName = filename;
+		m_loadInProgress = true;
 
-	char line[1024];
-	bool first = true;
-	size_t ncols = 0;
-	while(!feof(fp))
-	{
-		if(!fgets(line, sizeof(line), fp))
-			break;
+		//Clear performance counters
+		m_totalWaveforms = 0;
+		m_lastWaveformTimes.clear();
 
-		//If this is the first line, figure out how many columns we have.
-		//First column is always timestamp in seconds.
-		//TODO: support timestamp in abstract sample units instead
-		if(first)
+		//Create the mock scope
+		auto scope = new MockOscilloscope("CSV Import", "Generic", "12345");
+		scope->m_nickname = "import";
+		g_app->m_scopes.push_back(scope);
+		m_scopes.push_back(scope);
+
+		//Set up history for it
+		auto hist = new HistoryWindow(this, scope);
+		hist->hide();
+		m_historyWindows[scope] = hist;
+
+		FILE* fp = fopen(filename.c_str(), "r");
+		if(!fp)
 		{
-			for(size_t i=0; i<sizeof(line); i++)
+			LogError("Failed to open file\n");
+			return;
+		}
+
+		std::map<int, AnalogWaveform*> waveforms;
+
+		char line[1024];
+		bool first = true;
+		size_t ncols = 0;
+		while(!feof(fp))
+		{
+			if(!fgets(line, sizeof(line), fp))
+				break;
+
+			//If this is the first line, figure out how many columns we have.
+			//First column is always timestamp in seconds.
+			//TODO: support timestamp in abstract sample units instead
+			if(first)
 			{
-				if(line[i] == '\0')
-					break;
-				else if(line[i] == ',')
-					ncols ++;
+				for(size_t i=0; i<sizeof(line); i++)
+				{
+					if(line[i] == '\0')
+						break;
+					else if(line[i] == ',')
+						ncols ++;
+				}
+
+				LogDebug("Found %zu signal columns, no header row\n", ncols);
+
+				first = false;
+
+				//Create the columns
+				for(size_t i=0; i<ncols; i++)
+				{
+					//Create the channel
+					auto chan = new OscilloscopeChannel(
+						scope,
+						string("CH") + to_string(i+1),
+						OscilloscopeChannel::CHANNEL_TYPE_ANALOG,
+						GetDefaultChannelColor(i),
+						1,
+						i,
+						true);
+					scope->AddChannel(chan);
+					chan->SetDefaultDisplayName();
+
+					//Create the waveform for the channel
+					auto wfm = new AnalogWaveform;
+					wfm->m_timescale = 1;
+					wfm->m_startTimestamp = 0;
+					wfm->m_startPicoseconds = 0;
+					wfm->m_triggerPhase = 0;
+					waveforms[i] = wfm;
+					chan->SetData(wfm, 0);
+				}
 			}
 
-			LogDebug("Found %zu signal columns, no header row\n", ncols);
+			//Parse the samples for each row
+			//TODO: be more efficient about this
+			vector<float> row;
+			string tmp;
+			for(size_t i=0; i < sizeof(line); i++)
+			{
+				if(line[i] == '\0' || line[i] == ',')
+				{
+					float f;
+					sscanf(tmp.c_str(), "%f", &f);
+					row.push_back(f);
 
-			first = false;
+					if(line[i] == '\0')
+						break;
+					else
+						tmp = "";
+				}
+				else
+					tmp += line[i];
+			}
 
-			//Create the columns
+			int64_t timestamp = row[0] * 1e12;
 			for(size_t i=0; i<ncols; i++)
 			{
-				//Create the channel
-				auto chan = new OscilloscopeChannel(
-					scope,
-					string("CH") + to_string(i+1),
-					OscilloscopeChannel::CHANNEL_TYPE_ANALOG,
-					GetDefaultChannelColor(i),
-					1,
-					i,
-					false);
-				scope->AddChannel(chan);
-				chan->SetDefaultDisplayName();
+				if(i+1 >= row.size())
+					break;
 
-				//Create the waveform for the channel
-				auto wfm = new AnalogWaveform;
-				wfm->m_timescale = 1;
-				wfm->m_startTimestamp = 0;
-				wfm->m_startPicoseconds = 0;
-				wfm->m_triggerPhase = 0;
-				waveforms[i] = wfm;
-				chan->SetData(wfm, 0);
+				auto w = waveforms[i];
+				w->m_offsets.push_back(timestamp);
+				w->m_samples.push_back(row[i+1]);
+
+				//Extend last sample
+				if(!w->m_durations.empty())
+				{
+					size_t last = w->m_durations.size() - 1;
+					w->m_durations[last] = timestamp - w->m_offsets[last];
+				}
+
+				//Add duration for this sample
+				w->m_durations.push_back(1);
 			}
 		}
 
-		//Parse the samples for each row
-	}
+		hist->OnWaveformDataReady();
+		fclose(fp);
 
-	fclose(fp);
+		//Calculate gain/offset for each channel
+		for(size_t i=0; i<ncols; i++)
+		{
+			float vmin = FLT_MAX;
+			float vmax = -FLT_MAX;
+
+			for(auto v : waveforms[i]->m_samples)
+			{
+				vmax = max(vmax, (float)v);
+				vmin = min(vmin, (float)v);
+			}
+
+			LogDebug("vmax = %f, vmin = %f\n", vmax, vmin);
+
+			auto chan = scope->GetChannel(i);
+			chan->SetVoltageRange(vmax - vmin);
+			chan->SetOffset((vmin-vmax) / 2);
+		}
+	}
 
 	//Add the top level splitter right before the status bar
 	auto split = new Gtk::VPaned;
@@ -709,6 +776,9 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 	//Done
 	SetTitle();
 	OnLoadComplete();
+
+	//Process the new data
+	OnAllWaveformsUpdated();
 }
 
 /**
