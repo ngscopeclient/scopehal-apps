@@ -160,6 +160,22 @@ namespace impl
         return (std::string)str;
     }
 
+    Gtk::Widget& FontRow::GetValueWidget()
+    {
+        return this->m_button;
+    }
+
+    FontRow::FontRow(Preference& preference)
+        : PreferenceRowBase(preference)
+    {
+        this->m_button.set_font_name(preference.GetFontRaw().c_str());
+    }
+
+    Gtk::FontButton& FontRow::GetFontButton()
+    {
+        return this->m_button;
+    }
+
     PreferencePage::PreferencePage(PreferenceCategory& category)
         : m_category{category}
     {
@@ -213,7 +229,13 @@ namespace impl
                 {
                     row = unique_ptr<PreferenceRowBase>{ new StringRealRow(preference) };            
                     break;
-                }   
+                } 
+
+                case PreferenceType::Font:
+                {
+                    row = unique_ptr<PreferenceRowBase>{ new FontRow(preference) };
+                    break;
+                }
                     
                 default:
                     break;
@@ -256,6 +278,13 @@ namespace impl
 
             switch(preference.GetType())
             {
+                case PreferenceType::Font:
+                {
+                    FontRow* row = dynamic_cast<FontRow*>(rowBase);
+                    preference.SetFontRaw(row->GetFontButton().get_font_name());
+                    break;
+                }
+
                 case PreferenceType::Color:
                 {
                     ColorRow* row = dynamic_cast<ColorRow*>(rowBase);

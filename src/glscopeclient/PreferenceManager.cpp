@@ -178,6 +178,11 @@ Gdk::Color PreferenceManager::GetColor(const std::string& path) const
     return GetPreference(path).GetColor();
 }
 
+Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
+{
+    return GetPreference(path).GetFont();
+}
+
 void PreferenceManager::LoadPreferences()
 {
     if(!HasPreferenceFile())

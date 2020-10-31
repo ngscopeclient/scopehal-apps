@@ -177,6 +177,10 @@ namespace internal
                         this->m_pref.SetString(n.as<string>());
                         break;
 
+                    case PreferenceType::Font:
+                        this->m_pref.SetFontRaw(n.as<string>());
+                        break;
+
                     case PreferenceType::Enum:
                     {
                         const auto value = n.as<string>();

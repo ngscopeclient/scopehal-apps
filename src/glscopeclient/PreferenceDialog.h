@@ -141,6 +141,20 @@ namespace impl
             Gtk::ComboBox m_value;
     };
 
+    class FontRow
+        : public PreferenceRowBase
+    {
+        public:
+            FontRow(Preference& pref);
+
+        public:
+            virtual Gtk::Widget& GetValueWidget();
+            Gtk::FontButton& GetFontButton();
+
+        protected:
+            Gtk::FontButton m_button;
+    };
+
 
     class PreferencePage
         : public Gtk::Grid
