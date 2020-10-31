@@ -720,24 +720,24 @@ float WaveformArea::XAxisUnitsToXPosition(int64_t t)
 	return XAxisUnitsToPixels(t - m_group->m_xAxisOffset);
 }
 
-float WaveformArea::PixelsToVolts(float pix)
+float WaveformArea::PixelToYAxisUnits(float pix)
 {
 	return pix / m_pixelsPerVolt;
 }
 
-float WaveformArea::VoltsToPixels(float volt)
+float WaveformArea::YAxisUnitsToPixels(float volt)
 {
 	return volt * m_pixelsPerVolt;
 }
 
-float WaveformArea::VoltsToYPosition(float volt)
+float WaveformArea::YAxisUnitsToYPosition(float volt)
 {
-	return m_height/2 - VoltsToPixels(volt + m_channel.m_channel->GetOffset());
+	return m_height/2 - YAxisUnitsToPixels(volt + m_channel.m_channel->GetOffset());
 }
 
-float WaveformArea::YPositionToVolts(float y)
+float WaveformArea::YPositionToYAxisUnits(float y)
 {
-	return PixelsToVolts(-1 * (y - m_height/2) ) - m_channel.m_channel->GetOffset();
+	return PixelToYAxisUnits(-1 * (y - m_height/2) ) - m_channel.m_channel->GetOffset();
 }
 
 float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)

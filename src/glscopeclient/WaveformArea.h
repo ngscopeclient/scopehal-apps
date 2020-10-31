@@ -389,10 +389,10 @@ protected:
 	void ResetTextureFiltering();
 
 	//Math helpers
-	float PixelsToVolts(float pix);
-	float VoltsToPixels(float volt);
-	float VoltsToYPosition(float volt);
-	float YPositionToVolts(float y);
+	float PixelToYAxisUnits(float pix);
+	float YAxisUnitsToPixels(float volt);
+	float YAxisUnitsToYPosition(float volt);
+	float YPositionToYAxisUnits(float y);
 	int64_t XPositionToXAxisUnits(float pix);
 	int64_t PixelsToXAxisUnits(float pix);
 	float XAxisUnitsToPixels(int64_t t);

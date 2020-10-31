@@ -311,7 +311,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 					//Left
 					case 1:
 						m_dragState = DRAG_OFFSET;
-						m_dragStartVoltage = YPositionToVolts(event->y);
+						m_dragStartVoltage = YPositionToYAxisUnits(event->y);
 						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
 						break;
 
@@ -459,7 +459,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			{
 				auto scope = m_channel.m_channel->GetScope();
 				auto trig = scope->GetTrigger();
-				trig->SetLevel(YPositionToVolts(event->y));
+				trig->SetLevel(YPositionToYAxisUnits(event->y));
 				scope->PushTrigger();
 				m_parent->ClearAllPersistence();
 				queue_draw();
@@ -473,7 +473,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
-					trig->SetLowerBound(YPositionToVolts(event->y));
+					trig->SetLowerBound(YPositionToYAxisUnits(event->y));
 					scope->PushTrigger();
 				}
 				m_parent->ClearAllPersistence();
@@ -614,7 +614,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			{
 				auto scope = m_channel.m_channel->GetScope();
 				auto trig = scope->GetTrigger();
-				trig->SetLevel(YPositionToVolts(event->y));
+				trig->SetLevel(YPositionToYAxisUnits(event->y));
 				scope->PushTrigger();
 				queue_draw();
 			}
@@ -626,7 +626,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
-					trig->SetLowerBound(YPositionToVolts(event->y));
+					trig->SetLowerBound(YPositionToYAxisUnits(event->y));
 					scope->PushTrigger();
 				}
 				queue_draw();
@@ -674,7 +674,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		//Offset drag - update level and refresh
 		case DRAG_OFFSET:
 			{
-				double dv = YPositionToVolts(event->y) - m_dragStartVoltage;
+				double dv = YPositionToYAxisUnits(event->y) - m_dragStartVoltage;
 				double old_offset = m_channel.m_channel->GetOffset();
 				m_channel.m_channel->SetOffset(old_offset + dv);
 				SetGeometryDirty();
@@ -1155,7 +1155,7 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 			auto trig = scope->GetTrigger();
 			if( (trig != NULL) && (m_channel == trig->GetInput(0)) )
 			{
-				float vy = VoltsToYPosition(trig->GetLevel());
+				float vy = YAxisUnitsToYPosition(trig->GetLevel());
 				float radius = 20;
 				if(x < (m_plotRight + radius) )
 				{
@@ -1174,7 +1174,7 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 				auto wt = dynamic_cast<TwoLevelTrigger*>(trig);
 				if(wt)
 				{
-					vy = VoltsToYPosition(wt->GetLowerBound());
+					vy = YAxisUnitsToYPosition(wt->GetLowerBound());
 					if(x < (m_plotRight + radius) )
 					{
 						//If on top of the trigger, obviously we're a hit

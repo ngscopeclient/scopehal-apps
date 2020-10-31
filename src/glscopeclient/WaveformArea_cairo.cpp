@@ -116,7 +116,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	std::map<float, float> gridmap;
 
 	//Volts from the center line of our graph to the top. May not be the max value in the signal.
-	float volts_per_half_span = PixelsToVolts(halfheight);
+	float volts_per_half_span = PixelToYAxisUnits(halfheight);
 
 	//Decide what voltage step to use. Pick from a list (in volts)
 	float selected_step = PickStepSize(volts_per_half_span);
@@ -129,16 +129,16 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	float top_edge = (ytop - theight/2);
 
 	//Calculate grid positions
-	float vbot = YPositionToVolts(ybot);
-	float vtop = YPositionToVolts(ytop);
+	float vbot = YPositionToYAxisUnits(ybot);
+	float vtop = YPositionToYAxisUnits(ytop);
 	float vmid = (vbot + vtop)/2;
 	for(float dv=0; ; dv += selected_step)
 	{
 		float vp = vmid + dv;
 		float vn = vmid - dv;
 
-		float yt = VoltsToYPosition(vp);
-		float yb = VoltsToYPosition(vn);
+		float yt = YAxisUnitsToYPosition(vp);
+		float yb = YAxisUnitsToYPosition(vn);
 
 		if(dv != 0)
 		{
@@ -161,8 +161,8 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Center line is solid
 	cr->set_source_rgba(0.7, 0.7, 0.7, 1.0);
-	cr->move_to(0, VoltsToYPosition(0));
-	cr->line_to(m_plotRight, VoltsToYPosition(0));
+	cr->move_to(0, YAxisUnitsToYPosition(0));
+	cr->line_to(m_plotRight, YAxisUnitsToYPosition(0));
 	cr->stroke();
 
 	//Dimmed lines above and below
@@ -227,7 +227,7 @@ void WaveformArea::RenderTriggerArrow(
 	bool dragging,
 	Gdk::Color color)
 {
-	float y = VoltsToYPosition(voltage);
+	float y = YAxisUnitsToYPosition(voltage);
 
 	float trisize = 5 * GetDPIScale() * get_window()->get_scale_factor();
 
@@ -1130,7 +1130,7 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 		tlayout->get_pixel_size(twidth, theight);
 
 		float x = XAxisUnitsToXPosition(nx);
-		float y = VoltsToYPosition(peaks[i].m_y);
+		float y = YAxisUnitsToYPosition(peaks[i].m_y);
 
 		//Don't show labels for offscreen peaks
 		if( (x < 0) || (x > m_plotRight) )
