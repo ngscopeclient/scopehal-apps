@@ -44,280 +44,306 @@
 
 using namespace std;
 
-PreferencePage::PreferencePage(PreferenceCategory& category)
-    : m_category{category}
+namespace impl
 {
-    set_row_spacing(5);
-    set_column_spacing(150);
-    CreateWidgets();
-}
-
-EnumRow::EnumRow(const Preference& pref)
-{
-    const auto& mapper = pref.GetMapping();
-
-    this->m_refTreeModel = Gtk::ListStore::create(this->m_columns);
-    this->m_value.set_model(this->m_refTreeModel);
-
-    for(const auto& name: mapper.GetNames())
+    PreferenceRowBase::PreferenceRowBase(Preference& preference)
+        : m_identifier{preference.GetIdentifier()}
     {
-        Gtk::TreeModel::Row row = *(m_refTreeModel->append());
-        row[this->m_columns.m_col_name] = name.c_str();
-        const auto value = mapper.GetValue(name);
+        this->m_label.set_label(preference.GetLabel());
+        this->m_label.set_halign(Gtk::ALIGN_START);
+        this->m_label.set_label(preference.GetLabel());
+        this->m_label.set_tooltip_text(preference.GetDescription());
+    }
+    
+    PreferenceRowBase::~PreferenceRowBase()
+    {
 
-        if(pref.GetEnumRaw() == value)
-            this->m_value.set_active(row);
     }
 
-    this->m_value.pack_start(this->m_columns.m_col_name);
-}
-
-std::string EnumRow::GetActiveName()
-{
-    Gtk::TreeModel::iterator iter = this->m_value.get_active();
-    Gtk::TreeModel::Row row = *iter;
-
-    Glib::ustring str = row[this->m_columns.m_col_name];
-    return (std::string)str;
-}
-
-void PreferencePage::CreateWidgets()
-{
-    Gtk::Widget* last = nullptr;
-
-    auto& entries = m_category.GetChildren();
-
-    for(const auto& identifier: m_category.GetOrdering())
+    Gtk::Label& PreferenceRowBase::GetLabelWidget()
     {
-        auto& node = entries[identifier];
+        return this->m_label;
+    }
 
-        if(!node->IsPreference())
-            continue;
+    const std::string& PreferenceRowBase::GetIdentifier()
+    {
+        return this->m_identifier;
+    }
 
-        auto& preference = node->AsPreference();
+    Gtk::Widget& BooleanRow::GetValueWidget()
+    {
+        return this->m_check;
+    }
 
-        if(!preference.GetIsVisible())
-            continue;
-        
-        switch(preference.GetType())
+    Gtk::CheckButton& BooleanRow::GetCheckBox()
+    {
+        return this->m_check;
+    }
+
+    Gtk::Widget& StringRealRow::GetValueWidget()
+    {
+        return this->m_value;
+    }
+    
+    Gtk::Entry& StringRealRow::GetEntry()
+    {
+        return this->m_value;
+    }
+
+    StringRealRow::StringRealRow(Preference& preference)
+        : PreferenceRowBase(preference)
+    {
+         std::string text;
+
+        if(preference.GetType() == PreferenceType::Real)
         {
-            case PreferenceType::Enum:
+            if(preference.HasUnit())
             {
-                auto row = unique_ptr<EnumRow>{ new EnumRow(preference) };
-                row->m_identifier = preference.GetIdentifier();
-                row->m_label.set_label(preference.GetLabel());
-                row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_value.set_halign(Gtk::ALIGN_CENTER);
-                row->m_label.set_tooltip_text(preference.GetDescription());
-                row->m_value.set_tooltip_text(preference.GetDescription());
-                
-                if(!last)
-                    attach(row->m_label, 0, 0, 1, 1);
-                else
-                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
-                    
-                attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
-                
-                last = &(row->m_label);
-                m_enumRows.push_back(std::move(row));
-                
-                break;
+                auto unit = preference.GetUnit();
+                text = unit.PrettyPrint(preference.GetReal());
             }
-
-            case PreferenceType::Boolean:
+            else
             {
-                auto row = unique_ptr<BooleanRow>{ new BooleanRow() };
-                row->m_identifier = preference.GetIdentifier();
-                row->m_label.set_label(preference.GetLabel());
-                row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_check.set_active(preference.GetBool());
-                row->m_check.set_halign(Gtk::ALIGN_CENTER);
-                row->m_label.set_tooltip_text(preference.GetDescription());
-                row->m_check.set_tooltip_text(preference.GetDescription());
-                
-                if(!last)
-                    attach(row->m_label, 0, 0, 1, 1);
-                else
-                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
-                    
-                attach_next_to(row->m_check, row->m_label, Gtk::POS_RIGHT, 1, 1);
-                
-                last = &(row->m_label);
-                m_booleanRows.push_back(std::move(row));
-                
-                break;
-            }
-            
-            case PreferenceType::Color:
+                text = to_string(preference.GetReal());
+            }             
+        }
+        else
+        {
+            text = preference.GetString();
+        }
+
+        this->m_value.set_text(text);
+    }
+
+    Gtk::Widget& ColorRow::GetValueWidget()
+    {
+        return this->m_colorbutton;
+    }
+
+    Gtk::ColorButton& ColorRow::GetColorButton()
+    {
+        return this->m_colorbutton;
+    }
+
+    Gtk::Widget& EnumRow::GetValueWidget()
+    {
+        return this->m_value;
+    }
+
+    EnumRow::EnumRow(Preference& pref)
+        : PreferenceRowBase(pref)
+    {
+        const auto& mapper = pref.GetMapping();
+
+        this->m_refTreeModel = Gtk::ListStore::create(this->m_columns);
+        this->m_value.set_model(this->m_refTreeModel);
+
+        for(const auto& name: mapper.GetNames())
+        {
+            Gtk::TreeModel::Row row = *(m_refTreeModel->append());
+            row[this->m_columns.m_col_name] = name.c_str();
+            const auto value = mapper.GetValue(name);
+
+            if(pref.GetEnumRaw() == value)
+                this->m_value.set_active(row);
+        }
+
+        this->m_value.pack_start(this->m_columns.m_col_name);
+    }
+
+    std::string EnumRow::GetActiveName()
+    {
+        Gtk::TreeModel::iterator iter = this->m_value.get_active();
+        Gtk::TreeModel::Row row = *iter;
+
+        Glib::ustring str = row[this->m_columns.m_col_name];
+        return (std::string)str;
+    }
+
+    Gtk::Widget& FontRow::GetValueWidget()
+    {
+        return this->m_button;
+    }
+
+    FontRow::FontRow(Preference& preference)
+        : PreferenceRowBase(preference)
+    {
+        this->m_button.set_font_name(preference.GetFontRaw().c_str());
+    }
+
+    Gtk::FontButton& FontRow::GetFontButton()
+    {
+        return this->m_button;
+    }
+
+    PreferencePage::PreferencePage(PreferenceCategory& category)
+        : m_category{category}
+    {
+        set_row_spacing(5);
+        set_column_spacing(150);
+        CreateWidgets();
+    }
+
+    void PreferencePage::CreateWidgets()
+    {
+        Gtk::Widget* last = nullptr;
+
+        auto& entries = m_category.GetChildren();
+
+        for(const auto& identifier: m_category.GetOrdering())
+        {
+            auto& node = entries[identifier];
+
+            if(!node->IsPreference())
+                continue;
+
+            auto& preference = node->AsPreference();
+
+            if(!preference.GetIsVisible())
+                continue;
+
+            std::unique_ptr<PreferenceRowBase> row;
+
+            switch(preference.GetType())       
             {
-                auto row = unique_ptr<ColorRow>{ new ColorRow() };
-                row->m_identifier = preference.GetIdentifier();
-                row->m_label.set_label(preference.GetLabel());
-                row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_colorbutton.set_color(preference.GetColor());
-                row->m_colorbutton.set_halign(Gtk::ALIGN_CENTER);
-                row->m_label.set_tooltip_text(preference.GetDescription());
-                row->m_colorbutton.set_tooltip_text(preference.GetDescription());
-                
-                if(!last)
-                    attach(row->m_label, 0, 0, 1, 1);
-                else
-                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
-                    
-                attach_next_to(row->m_colorbutton, row->m_label, Gtk::POS_RIGHT, 1, 1);
-                
-                last = &(row->m_label);
-                m_colorRows.push_back(std::move(row));
-                
-                break;
-            }
-
-            case PreferenceType::Real:
-            case PreferenceType::String:
-            {
-                auto row = unique_ptr<StringRealRow>{ new StringRealRow() };
-                row->m_identifier = preference.GetIdentifier();
-                row->m_label.set_label(preference.GetLabel());
-                row->m_label.set_halign(Gtk::ALIGN_START);
-                row->m_label.set_tooltip_text(preference.GetDescription());
-                row->m_value.set_tooltip_text(preference.GetDescription());
-
-                std::string text;
-
-                if(preference.GetType() == PreferenceType::Real)
+                case PreferenceType::Enum:
                 {
-                    if(preference.HasUnit())
+                    row = unique_ptr<PreferenceRowBase>{ new EnumRow(preference) };       
+                    break;
+                }
+
+                case PreferenceType::Boolean:
+                {
+                    row = unique_ptr<PreferenceRowBase>{ new BooleanRow(preference) };  
+                    break;
+                }
+                
+                case PreferenceType::Color:
+                {
+                    row = unique_ptr<PreferenceRowBase>{ new ColorRow(preference) };  
+                    break;
+                }
+
+                case PreferenceType::Real:
+                case PreferenceType::String:
+                {
+                    row = unique_ptr<PreferenceRowBase>{ new StringRealRow(preference) };            
+                    break;
+                } 
+
+                case PreferenceType::Font:
+                {
+                    row = unique_ptr<PreferenceRowBase>{ new FontRow(preference) };
+                    break;
+                }
+                    
+                default:
+                    break;
+            }
+        
+        
+            row->GetValueWidget().set_halign(Gtk::ALIGN_CENTER);
+            row->GetValueWidget().set_tooltip_text(preference.GetDescription());
+                    
+            if(!last)
+                attach(row->GetLabelWidget(), 0, 0, 1, 1);
+            else
+                attach_next_to(row->GetLabelWidget(), *last, Gtk::POS_BOTTOM, 1, 1);
+                
+            attach_next_to(row->GetValueWidget(), row->GetLabelWidget(), Gtk::POS_RIGHT, 1, 1);
+            
+            last = &(row->GetLabelWidget());
+            this->m_rows.push_back(std::move(row));
+        }  
+    }
+
+    void PreferencePage::SaveChanges()
+    {
+        for(auto& entry: m_category.GetChildren())
+        {
+            auto* node = entry.second.get();
+
+            if(!node->IsPreference())
+                continue;
+
+            auto& preference = node->AsPreference();
+
+            const auto it = find_if(m_rows.begin(), m_rows.end(),
+                [&preference](const unique_ptr<PreferenceRowBase>& x) -> bool 
+                {
+                    return x->GetIdentifier() == preference.GetIdentifier(); 
+                });
+
+            PreferenceRowBase* rowBase = it->get();
+
+            switch(preference.GetType())
+            {
+                case PreferenceType::Font:
+                {
+                    FontRow* row = dynamic_cast<FontRow*>(rowBase);
+                    preference.SetFontRaw(row->GetFontButton().get_font_name());
+                    break;
+                }
+
+                case PreferenceType::Color:
+                {
+                    ColorRow* row = dynamic_cast<ColorRow*>(rowBase);
+                    preference.SetColor(row->GetColorButton().get_color());
+                    break;
+                }
+
+                case PreferenceType::Enum:
+                {
+                    EnumRow* row = dynamic_cast<EnumRow*>(rowBase);
+                    const auto& mapping = preference.GetMapping();
+                    preference.SetEnumRaw(mapping.GetValue(row->GetActiveName()));   
+                    break;
+                }
+
+                case PreferenceType::Boolean:
+                {
+                    BooleanRow* row = dynamic_cast<BooleanRow*>(rowBase);
+                    preference.SetBool(row->GetCheckBox().get_active());    
+                    break;
+                }
+                
+                case PreferenceType::Real:
+                case PreferenceType::String:
+                {
+                    StringRealRow* row = dynamic_cast<StringRealRow*>(rowBase);
+                        
+                    const auto text = row->GetEntry().get_text();
+                        
+                    if(preference.GetType() == PreferenceType::Real)
                     {
-                        auto unit = preference.GetUnit();
-                        text = unit.PrettyPrint(preference.GetReal());
+                        try
+                        {
+                            if(preference.HasUnit())
+                            {
+                                auto unit = preference.GetUnit();
+                                preference.SetReal(unit.ParseString(text));
+                            }
+                            else
+                            {
+                                preference.SetReal(stod(text));
+                            }
+                        }
+                        catch(...)
+                        {
+                            LogError("Ignoring value %s for preference %s: Wrong number format", text.c_str(), preference.GetIdentifier().c_str());
+                        }
                     }
                     else
                     {
-                        text = to_string(preference.GetReal());
-                    }             
-                }
-                else
-                {
-                    text = preference.GetString();
-                }
-         
-                row->m_value.set_text(text);
-                
-                if(!last)
-                    attach(row->m_label, 0, 0, 1, 1);
-                else
-                    attach_next_to(row->m_label, *last, Gtk::POS_BOTTOM, 1, 1);
-                    
-                attach_next_to(row->m_value, row->m_label, Gtk::POS_RIGHT, 1, 1);
-                
-                last = &(row->m_label);
-                m_stringRealRows.push_back(std::move(row));
-                
-                break;
-            }   
-                
-            default:
-                break;
-        }
-    }
-}
-
-void PreferencePage::SaveChanges()
-{
-    for(auto& entry: m_category.GetChildren())
-    {
-        auto* node = entry.second.get();
-
-        if(!node->IsPreference())
-            continue;
-
-        auto& preference = node->AsPreference();
-        
-        switch(preference.GetType())
-        {
-            case PreferenceType::Color:
-            {
-                // This will always succeed
-                const auto it = find_if(m_colorRows.begin(), m_colorRows.end(),
-                    [&preference](const unique_ptr<ColorRow>& x) -> bool 
-                    {
-                        return x->m_identifier == preference.GetIdentifier(); 
-                    });
-                    
-                preference.SetColor((*it)->m_colorbutton.get_color());
-                
-                break;
-            }
-
-            case PreferenceType::Enum:
-            {
-                // This will always succeed
-                const auto it = find_if(m_enumRows.begin(), m_enumRows.end(),
-                    [&preference](const unique_ptr<EnumRow>& x) -> bool 
-                    {
-                        return x->m_identifier == preference.GetIdentifier(); 
-                    });
-                
-                const auto& mapping = preference.GetMapping();
-                preference.SetEnumRaw(mapping.GetValue((*it)->GetActiveName()));   
-                break;
-            }
-
-            case PreferenceType::Boolean:
-            {
-                // This will always succeed
-                const auto it = find_if(m_booleanRows.begin(), m_booleanRows.end(),
-                    [&preference](const unique_ptr<BooleanRow>& x) -> bool 
-                    {
-                        return x->m_identifier == preference.GetIdentifier(); 
-                    });
-                    
-                preference.SetBool((*it)->m_check.get_active());
-                   
-                break;
-            }
-            
-            case PreferenceType::Real:
-            case PreferenceType::String:
-            {
-                // This will always succeed
-                const auto it = find_if(m_stringRealRows.begin(), m_stringRealRows.end(),
-                    [&preference](const unique_ptr<StringRealRow>& x) -> bool 
-                    {
-                        return x->m_identifier == preference.GetIdentifier(); 
-                    });
-                    
-                const auto text = (*it)->m_value.get_text();
-                    
-                if(preference.GetType() == PreferenceType::Real)
-                {
-                    try
-                    {
-                        if(preference.HasUnit())
-                        {
-                            auto unit = preference.GetUnit();
-                            preference.SetReal(unit.ParseString(text));
-                        }
-                        else
-                        {
-                            preference.SetReal(stod(text));
-                        }
+                        preference.SetString(text);
                     }
-                    catch(...)
-                    {
-                        LogError("Ignoring value %s for preference %s: Wrong number format", text.c_str(), preference.GetIdentifier().c_str());
-                    }
+                    
+                    break;
                 }
-                else
-                {
-                    preference.SetString(text);
-                }
-                   
-                break;
+                
+                default:
+                    break;
             }
-               
-            default:
-                break;
         }
     }
 }
@@ -354,12 +380,12 @@ void PreferenceDialog::OnSelectionChanged()
 
 	auto row = *selection->get_selected();
     void* newPageVp = row[m_columns.m_col_page];
-    PreferencePage* newPage = reinterpret_cast<PreferencePage*>(newPageVp);
+    impl::PreferencePage* newPage = reinterpret_cast<impl::PreferencePage*>(newPageVp);
 
     ActivatePage(newPage);
 }
 
-void PreferenceDialog::ActivatePage(PreferencePage* page)
+void PreferenceDialog::ActivatePage(impl::PreferencePage* page)
 {
     auto* child = m_root.get_child2();
 
@@ -383,7 +409,7 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& category, Gtk::TreeMo
 
             if(subCategory.IsVisible())
             {
-                unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+                unique_ptr<impl::PreferencePage> pagePtr{ new impl::PreferencePage(subCategory) };
 
                 Gtk::TreeModel::Row childrow = *(m_treeModel->append(parent.children()));
                 childrow[m_columns.m_col_category] = identifier.c_str();
@@ -409,7 +435,7 @@ void PreferenceDialog::ProcessRootCategories(PreferenceCategory& root)
 
             if(subCategory.IsVisible())
             {
-                unique_ptr<PreferencePage> pagePtr{ new PreferencePage(subCategory) };
+                unique_ptr<impl::PreferencePage> pagePtr{ new impl::PreferencePage(subCategory) };
 
                 Gtk::TreeModel::Row row = *(m_treeModel->append());
                 row[m_columns.m_col_category] = identifier.c_str();

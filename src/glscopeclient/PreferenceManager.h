@@ -68,6 +68,7 @@ public:
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;
     Gdk::Color GetColor(const std::string& path) const;
+    Pango::FontDescription GetFont(const std::string& path) const;
 
     template< typename E >
     E GetEnum(const std::string& path) const

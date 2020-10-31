@@ -44,6 +44,7 @@
 
 #include <giomm.h>
 #include <gtkmm.h>
+#include <pangomm/fontdescription.h>
 
 #include "Unit.h"
 
@@ -59,6 +60,7 @@ enum class PreferenceType
     Real,
     Color,
     Enum,
+    Font,
     None // Only for moved-from values
 };
 
@@ -157,6 +159,10 @@ public:
     const std::string& GetIdentifier() const;
     const std::string& GetLabel() const;
     const std::string& GetDescription() const;
+    const std::string& GetFontRaw() const;
+    void SetFontRaw(const std::string& fontRaw);
+    void SetFont(const Pango::FontDescription& font);
+    Pango::FontDescription GetFont() const;
     std::int64_t GetEnumRaw() const;
     void SetEnumRaw(std::int64_t value);
     PreferenceType GetType() const;
@@ -196,6 +202,7 @@ public:
     static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
     static impl::PreferenceBuilder Color(std::string identifier, const Gdk::Color& defaultValue);
     static impl::PreferenceBuilder EnumRaw(std::string identifier, std::int64_t defaultValue);
+    static impl::PreferenceBuilder Font(std::string identifier, std::string defaultValue);
 
     template< typename E >
     static impl::PreferenceBuilder Enum(std::string identifier, E defaultValue);
