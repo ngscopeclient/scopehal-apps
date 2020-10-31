@@ -740,7 +740,6 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 			}
 		}
 
-		hist->OnWaveformDataReady();
 		fclose(fp);
 
 		//Calculate gain/offset for each channel
@@ -778,6 +777,7 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 	OnLoadComplete();
 
 	//Process the new data
+	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
 	OnAllWaveformsUpdated();
 }
 
