@@ -69,6 +69,12 @@ public:
     bool GetBool(const std::string& path) const;
     Gdk::Color GetColor(const std::string& path) const;
 
+    template< typename E >
+    E GetEnum(const std::string& path) const
+    {
+        return this->GetPreference(path).GetEnum<E>();
+    }
+
 private:
     // Internal helpers
     void DeterminePath();

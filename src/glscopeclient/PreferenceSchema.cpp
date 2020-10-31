@@ -1,5 +1,12 @@
 #include "PreferenceManager.h"
 
+enum class TestEnum
+{
+    Choice1 = 0,
+    Choice2,
+    Choice3
+};
+
 void PreferenceManager::InitializeDefaults()
 {
     auto& appearance = this->m_treeRoot.AddCategory("Appearance");
@@ -78,6 +85,14 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Bool("test_bool", true)
                 .Label("Test boolean")
                 .Description("Third test value"));
+            trans.AddPreference(
+                Preference::Enum("test_enum", TestEnum::Choice1)
+                .Label("Test enum")
+                .Description("Fourth test value")
+                .EnumValue("Choice 1", TestEnum::Choice1)
+                .EnumValue("Choice 2", TestEnum::Choice2)
+                .EnumValue("Choice 3", TestEnum::Choice3)
+            );
         auto& decode = instrument.AddCategory("Decoders");
             decode.AddPreference(
                 Preference::Real("hidden_setting", 13.37)
