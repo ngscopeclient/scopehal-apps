@@ -43,73 +43,125 @@
 
 class OscilloscopeWindow;
 
-struct BooleanRow
+namespace impl
 {
-    std::string m_identifier;
-    Gtk::Label m_label;
-    Gtk::CheckButton m_check;
-};
-
-struct StringRealRow
-{
-    std::string m_identifier;
-    Gtk::Label m_label;
-    Gtk::Entry m_value;
-};
-
-struct ColorRow
-{
-    std::string m_identifier;
-    Gtk::Label m_label;
-    Gtk::ColorButton m_colorbutton;
-};
-
-struct EnumRow
-{
-    struct ModelColumns
-        : public Gtk::TreeModel::ColumnRecord
+    class PreferenceRowBase
     {
-        ModelColumns()
-        {
-            add(m_col_name);
-        }
+        public:
+            PreferenceRowBase(Preference& preference);
+            virtual ~PreferenceRowBase();
 
-        Gtk::TreeModelColumn<Glib::ustring> m_col_name;
+        public:
+            virtual Gtk::Widget& GetValueWidget() = 0;
+
+        public:
+            Gtk::Label& GetLabelWidget();
+            const std::string& GetIdentifier();
+
+        protected:
+            std::string m_identifier;
+            Gtk::Label m_label;
     };
 
-    EnumRow(const Preference& pref);
+    class BooleanRow
+        : public PreferenceRowBase
+    {
+        public:
+            BooleanRow(Preference& preference)
+                : PreferenceRowBase(preference)
+            {
+                this->m_check.set_active(preference.GetBool());
+            }
 
-    std::string GetActiveName();
+        public:
+            virtual Gtk::Widget& GetValueWidget();
+            Gtk::CheckButton& GetCheckBox();
 
-    ModelColumns m_columns;
-    Glib::RefPtr<Gtk::ListStore> m_refTreeModel;
-    std::string m_identifier;
-    Gtk::Label m_label;
-    Gtk::ComboBox m_value;
-};
+        protected:
+            Gtk::CheckButton m_check;
+    };
 
-class PreferencePage : public Gtk::Grid
-{
-    
-    public:
-        PreferencePage(PreferenceCategory& category);
+    class StringRealRow
+        : public PreferenceRowBase
+    {
+        public:
+            StringRealRow(Preference& preference);
 
-    public:
-        void SaveChanges();
+        public:
+            virtual Gtk::Widget& GetValueWidget();
+            Gtk::Entry& GetEntry();
 
-    protected:
-        void CreateWidgets();
+        protected:
+            Gtk::Entry m_value;
+    };
 
-    protected:
-        PreferenceCategory& m_category;
-        std::vector<std::unique_ptr<BooleanRow>> m_booleanRows;
-        std::vector<std::unique_ptr<StringRealRow>> m_stringRealRows;
-        std::vector<std::unique_ptr<ColorRow>> m_colorRows;
-        std::vector<std::unique_ptr<EnumRow>> m_enumRows;
-};
+    class ColorRow
+        : public PreferenceRowBase
+    {
+        public:
+            ColorRow(Preference& preference)
+                : PreferenceRowBase(preference)
+            {
+                this->m_colorbutton.set_color(preference.GetColor());
+            }
+
+        public:
+            virtual Gtk::Widget& GetValueWidget();
+            Gtk::ColorButton& GetColorButton();
+
+        protected:
+            Gtk::ColorButton m_colorbutton;
+    };
+
+    class EnumRow
+        : public PreferenceRowBase
+    {
+        protected:
+            struct ModelColumns
+                : public Gtk::TreeModel::ColumnRecord
+            {
+                ModelColumns()
+                {
+                    add(m_col_name);
+                }
+
+                Gtk::TreeModelColumn<Glib::ustring> m_col_name;
+            };
+
+        public:
+            EnumRow(Preference& pref);
+
+        public:
+            std::string GetActiveName();
+            virtual Gtk::Widget& GetValueWidget();
+
+        protected:
+            ModelColumns m_columns;
+            Glib::RefPtr<Gtk::ListStore> m_refTreeModel;
+            Gtk::ComboBox m_value;
+    };
 
 
-class PreferenceDialog : public Gtk::Dialog
+    class PreferencePage
+        : public Gtk::Grid
+    {
+        public:
+            PreferencePage(PreferenceCategory& category);
+
+        public:
+            void SaveChanges();
+
+        protected:
+            void CreateWidgets();
+
+        protected:
+            PreferenceCategory& m_category;
+            std::vector<std::unique_ptr<PreferenceRowBase>> m_rows;
+    };
+}
+
+class PreferenceDialog
+    : public Gtk::Dialog
 {
 protected:
     class ModelColumns : public Gtk::TreeModel::ColumnRecord
@@ -135,11 +187,11 @@ protected:
     void ProcessCategory(PreferenceCategory& category, Gtk::TreeModel::Row& parent);
     void ProcessRootCategories(PreferenceCategory& root);
     void OnSelectionChanged();
-    void ActivatePage(PreferencePage* page);
+    void ActivatePage(impl::PreferencePage* page);
 
 protected:
     PreferenceManager& m_preferences;
-    std::vector<std::unique_ptr<PreferencePage>> m_pages;
+    std::vector<std::unique_ptr<impl::PreferencePage>> m_pages;
     ModelColumns m_columns;
     Glib::RefPtr<Gtk::TreeStore> m_treeModel;
 
