@@ -54,7 +54,6 @@
 
 using namespace std;
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -607,9 +606,6 @@ void OscilloscopeWindow::OnFileImport()
 		return;
 
 	DoImportCSV(dlg.get_filename());
-
-	//Done
-	OnLoadComplete();
 }
 
 /**
@@ -629,9 +625,20 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 	m_totalWaveforms = 0;
 	m_lastWaveformTimes.clear();
 
+	//Create the mock scope
+	auto scope = new MockOscilloscope("CSV Import", "Generic", "12345");
+	scope->m_nickname = "import";
+	g_app->m_scopes.push_back(scope);
+	m_scopes.push_back(scope);
+
 	FILE* fp = fopen(filename.c_str(), "r");
 	if(!fp)
+	{
+		LogError("Failed to open file\n");
 		return;
+	}
+
+	std::map<int, AnalogWaveform*> waveforms;
 
 	char line[1024];
 	bool first = true;
@@ -658,11 +665,50 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 
 			first = false;
 
-			//
+			//Create the columns
+			for(size_t i=0; i<ncols; i++)
+			{
+				//Create the channel
+				auto chan = new OscilloscopeChannel(
+					scope,
+					string("CH") + to_string(i+1),
+					OscilloscopeChannel::CHANNEL_TYPE_ANALOG,
+					GetDefaultChannelColor(i),
+					1,
+					i,
+					false);
+				scope->AddChannel(chan);
+				chan->SetDefaultDisplayName();
+
+				//Create the waveform for the channel
+				auto wfm = new AnalogWaveform;
+				wfm->m_timescale = 1;
+				wfm->m_startTimestamp = 0;
+				wfm->m_startPicoseconds = 0;
+				wfm->m_triggerPhase = 0;
+				waveforms[i] = wfm;
+				chan->SetData(wfm, 0);
+			}
 		}
+
+		//Parse the samples for each row
 	}
 
 	fclose(fp);
+
+	//Add the top level splitter right before the status bar
+	auto split = new Gtk::VPaned;
+	m_splitters.emplace(split);
+	m_vbox.remove(m_statusbar);
+	m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
+	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+
+	//Add all of the UI stuff
+	CreateDefaultWaveformAreas(split);
+
+	//Done
+	SetTitle();
+	OnLoadComplete();
 }
 
 /**
