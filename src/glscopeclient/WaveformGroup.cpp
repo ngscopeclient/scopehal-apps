@@ -34,6 +34,8 @@
  */
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
+#include "ChannelPropertiesDialog.h"
+#include "FilterDialog.h"
 
 using namespace std;
 
@@ -76,6 +78,10 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
+
+	m_contextMenu.append(m_propertiesItem);
+		m_propertiesItem.set_label("Properties...");
+		m_propertiesItem.signal_activate().connect(sigc::mem_fun(*this, &WaveformGroup::OnStatisticProperties));
 
 	m_contextMenu.append(m_hideItem);
 		m_hideItem.set_label("Hide");
@@ -345,6 +351,36 @@ void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)
 		//Show the context menu
 		m_contextMenu.popup(event->button, event->time);
 	}
+}
+
+void WaveformGroup::OnStatisticProperties()
+{
+	auto oldname = m_measurementContextMenuChannel->GetDisplayName();
+
+	//Show the properties
+	if(m_measurementContextMenuChannel->IsPhysicalChannel())
+	{
+		ChannelPropertiesDialog dialog(m_parent, m_measurementContextMenuChannel);
+		if(dialog.run() != Gtk::RESPONSE_OK)
+			return;
+
+		dialog.ConfigureChannel();
+	}
+
+	else
+	{
+		auto decode = dynamic_cast<Filter*>(m_measurementContextMenuChannel);
+		FilterDialog dialog(m_parent, decode, StreamDescriptor(NULL, 0));
+		if(dialog.run() != Gtk::RESPONSE_OK)
+			return;
+
+		dialog.ConfigureDecoder();
+	}
+
+	if(m_measurementContextMenuChannel->GetDisplayName() != oldname)
+		m_parent->OnChannelRenamed(m_measurementContextMenuChannel);
+
+	m_parent->RefreshChannelsMenu();
 }
 
 void WaveformGroup::OnHideStatistic()

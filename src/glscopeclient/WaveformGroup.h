@@ -124,8 +124,10 @@ protected:
 	OscilloscopeWindow* m_parent;
 
 	Gtk::Menu m_contextMenu;
+		Gtk::MenuItem m_propertiesItem;
 		Gtk::MenuItem m_hideItem;
 
+	void OnStatisticProperties();
 	void OnHideStatistic();
 
 	OscilloscopeChannel* m_measurementContextMenuChannel;
