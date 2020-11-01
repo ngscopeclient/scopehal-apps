@@ -60,6 +60,19 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("preamble_color", Gdk::Color("#808080"))
                 .Label("Preamble color")
                 .Description("Color for preambles, sync bytes, and other fixed header data"));
+        auto& peaks = appearance.AddCategory("Peaks");
+            peaks.AddPreference(
+                Preference::Color("peak_outline_color", Gdk::Color("#009900"))
+                .Label("Outline color")
+                .Description("Color for the outline of peak labels"));
+            peaks.AddPreference(
+                Preference::Color("peak_text_color", Gdk::Color("#ffffff"))
+                .Label("Text color")
+                .Description("Color for the text on peak labels"));
+            peaks.AddPreference(
+                Preference::Color("peak_background_color", Gdk::Color("#000000"))
+                .Label("Background color")
+                .Description("Color for the background of peak labels"));
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(
                 Preference::Color("insertion_bar_color", Gdk::Color("yellow"))

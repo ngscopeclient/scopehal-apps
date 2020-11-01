@@ -1145,7 +1145,11 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	RemoveOverlaps(rects, centers);
 
 	//Second pass: Lines from rectangle location to peak location
-	cr->set_source_rgba(0, 0.6, 0, 1);
+	Gdk::Color outline_color = m_parent->GetPreferences().GetColor("Appearance.Peaks.peak_outline_color");
+	Gdk::Color text_color = m_parent->GetPreferences().GetColor("Appearance.Peaks.peak_text_color");
+	Gdk::Color background_color = m_parent->GetPreferences().GetColor("Appearance.Peaks.peak_background_color");
+
+	cr->set_source_rgba(outline_color.get_red_p(), outline_color.get_green_p(), outline_color.get_blue_p(), 1);
 	for(size_t i=0; i<rects.size(); i++)
 	{
 		//Draw a line from the rectangle's closest point to the peak location
@@ -1164,16 +1168,20 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 		//Draw the background
 		int rounding = 4;
 		auto rect = rects[i];
-		cr->set_source_rgba(0, 0, 0, 0.75);
+		cr->set_source_rgba(
+			background_color.get_red_p(),
+			background_color.get_green_p(),
+			background_color.get_blue_p(),
+			0.75);
 		MakePathRoundedRect(cr, rect, rounding);
 		cr->fill_preserve();
 
 		//Draw the outline
-		cr->set_source_rgba(0, 0.6, 0, 1);
+		cr->set_source_rgba(outline_color.get_red_p(), outline_color.get_green_p(), outline_color.get_blue_p(), 1);
 		cr->stroke();
 
 		//Draw the text
-		cr->set_source_rgba(1, 1, 1, 1);
+		cr->set_source_rgba(text_color.get_red_p(), text_color.get_green_p(), text_color.get_blue_p(), 1);
 		cr->save();
 			cr->move_to(rect.get_left() + margin, rect.get_top() + margin);
 			tlayout->update_from_cairo_context(cr);
