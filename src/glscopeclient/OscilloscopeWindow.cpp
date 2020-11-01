@@ -2836,7 +2836,25 @@ void OscilloscopeWindow::OnSyncComplete()
  */
 void OscilloscopeWindow::OnChannelRenamed(OscilloscopeChannel* chan)
 {
-	LogDebug("Channel %s renamed\n", chan->GetDisplayName().c_str());
+	//Check all filters to see if they use this as input
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		//If using a custom name, don't change that
+		if(!f->IsUsingDefaultName())
+			continue;
+
+		for(size_t i=0; i<f->GetInputCount(); i++)
+		{
+			//We matched!
+			if(f->GetInput(i).m_channel == chan)
+			{
+				f->SetDefaultName();
+				OnChannelRenamed(f);
+				break;
+			}
+		}
+	}
 }
 
 /**
