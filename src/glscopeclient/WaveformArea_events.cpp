@@ -410,7 +410,11 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel.m_channel);
 					if(dialog.run() == Gtk::RESPONSE_OK)
 					{
+						auto oldname = m_selectedChannel.m_channel->GetDisplayName();
 						dialog.ConfigureChannel();
+						if(m_selectedChannel.m_channel->GetDisplayName() != oldname)
+							m_parent->OnChannelRenamed(m_selectedChannel.m_channel);
+
 						m_parent->RefreshChannelsMenu();	//update the menu with the channel's new name
 						queue_draw();
 					}
@@ -960,7 +964,13 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 	//Apply the changes
 	if(response == Gtk::RESPONSE_OK)
 	{
+		auto name = m_pendingDecode->GetDisplayName();
+
 		m_decodeDialog->ConfigureDecoder();
+
+		if(name != m_pendingDecode->GetDisplayName())
+			m_parent->OnChannelRenamed(m_pendingDecode);
+
 		m_parent->RefreshAllFilters();
 
 		SetGeometryDirty();

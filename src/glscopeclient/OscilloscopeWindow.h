@@ -272,6 +272,8 @@ public:
 	void OnLoadComplete();
 	void CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital=false, bool nospectrum=false);
 
+	void OnChannelRenamed(OscilloscopeChannel* chan);
+
 	void OnPreferences();
 	void OnPreferenceDialogResponse(int response);
 

@@ -2832,6 +2832,14 @@ void OscilloscopeWindow::OnSyncComplete()
 }
 
 /**
+	@brief Propagate name changes from one channel to filters that use it as input
+ */
+void OscilloscopeWindow::OnChannelRenamed(OscilloscopeChannel* chan)
+{
+	LogDebug("Channel %s renamed\n", chan->GetDisplayName().c_str());
+}
+
+/**
 	@brief Shows the halt conditions dialog
  */
 void OscilloscopeWindow::OnHaltConditions()
