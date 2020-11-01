@@ -482,6 +482,7 @@ void OscilloscopeWindow::OnPreferences()
  */
 void OscilloscopeWindow::SyncFilterColors()
 {
+	//Filter colors
 	Filter::m_standardColors[Filter::COLOR_DATA] =
 		m_preferences.GetColor("Appearance.Decodes.data_color");
 	Filter::m_standardColors[Filter::COLOR_CONTROL] =
@@ -498,6 +499,22 @@ void OscilloscopeWindow::SyncFilterColors()
 		m_preferences.GetColor("Appearance.Decodes.error_color");
 	Filter::m_standardColors[Filter::COLOR_IDLE] =
 		m_preferences.GetColor("Appearance.Decodes.idle_color");
+
+	//Protocol analyzer colors
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DEFAULT] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.default_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_ERROR] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.error_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_STATUS] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.status_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_CONTROL] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.control_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DATA_READ] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.data_read_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DATA_WRITE] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.data_write_color");
+	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_COMMAND] =
+		m_preferences.GetColor("Appearance.Protocol Analyzer.command_color");
 }
 
 void OscilloscopeWindow::OnPreferenceDialogResponse(int response)

@@ -73,6 +73,38 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("peak_background_color", Gdk::Color("#000000"))
                 .Label("Background color")
                 .Description("Color for the background of peak labels"));
+
+        auto& proto = appearance.AddCategory("Protocol Analyzer");
+            proto.AddPreference(
+                Preference::Color("command_color", Gdk::Color("#600050"))
+                .Label("Command color")
+                .Description("Color for packets that execute commands"));
+            proto.AddPreference(
+                Preference::Color("control_color", Gdk::Color("#808000"))
+                .Label("Control color")
+                .Description("Color for packets that have control functionality"));
+            proto.AddPreference(
+                Preference::Color("data_read_color", Gdk::Color("#336699"))
+                .Label("Data read color")
+                .Description("Color for packets that read information from a peripheral"));
+            proto.AddPreference(
+                Preference::Color("data_write_color", Gdk::Color("#339966"))
+                .Label("Data write color")
+                .Description("Color for packets that write information from a peripheral"));
+            proto.AddPreference(
+                Preference::Color("error_color", Gdk::Color("#800000"))
+                .Label("Error color")
+                .Description("Color for packets that are malformed or indicate an error condition"));
+            proto.AddPreference(
+                Preference::Color("status_color", Gdk::Color("#000080"))
+                .Label("Status color")
+                .Description("Color for packets that convey status information"));
+            proto.AddPreference(
+                Preference::Color("default_color", Gdk::Color("#101010"))
+                .Label("Default color")
+                .Description("Color for packets that don't fit any other category"));
+
+
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(
                 Preference::Color("insertion_bar_color", Gdk::Color("yellow"))
