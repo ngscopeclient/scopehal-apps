@@ -964,12 +964,13 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 	//Apply the changes
 	if(response == Gtk::RESPONSE_OK)
 	{
-		auto name = m_pendingDecode->GetDisplayName();
+		auto decode = m_decodeDialog->GetFilter();
+		auto name = decode->GetDisplayName();
 
 		m_decodeDialog->ConfigureDecoder();
 
-		if(name != m_pendingDecode->GetDisplayName())
-			m_parent->OnChannelRenamed(m_pendingDecode);
+		if(name != decode->GetDisplayName())
+			m_parent->OnChannelRenamed(decode);
 
 		m_parent->RefreshAllFilters();
 

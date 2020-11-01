@@ -120,6 +120,9 @@ public:
 	FilterDialog(OscilloscopeWindow* parent, Filter* filter, StreamDescriptor chan);
 	virtual ~FilterDialog();
 
+	Filter* GetFilter()
+	{ return m_filter; }
+
 	void ConfigureDecoder();
 
 	static ParameterRowBase* CreateRow(
