@@ -84,6 +84,8 @@ public:
 	int GetIndexOfChild(Gtk::Widget* child);
 	bool IsLastChild(Gtk::Widget* child);
 
+	void OnChannelRenamed(OscilloscopeChannel* chan);
+
 	//map of scope channels to measurement column indexes
 	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
 	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;
@@ -93,8 +95,6 @@ public:
 			Timeline m_timeline;
 			Gtk::VBox m_waveformBox;
 			Gtk::TreeView m_measurementView;
-
-	Gtk::Menu m_contextMenu;
 
 	float m_pixelsPerXUnit;
 	int64_t m_xAxisOffset;
@@ -117,10 +117,18 @@ public:
 	virtual std::string SerializeConfiguration(IDTable& table);
 
 protected:
+	void OnMeasurementButtonPressEvent(GdkEventButton* event);
 
 	static int m_numGroups;
 
 	OscilloscopeWindow* m_parent;
+
+	Gtk::Menu m_contextMenu;
+		Gtk::MenuItem m_hideItem;
+
+	void OnHideStatistic();
+
+	OscilloscopeChannel* m_measurementContextMenuChannel;
 };
 
 #endif

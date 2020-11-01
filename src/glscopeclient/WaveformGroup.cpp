@@ -45,6 +45,7 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	, m_xAxisOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
 	, m_parent(parent)
+	, m_measurementContextMenuChannel(NULL)
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Initial GUI hierarchy, title, etc
@@ -59,7 +60,7 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	m_frame.set_label(tmp);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// New measurements
+	// Statistics
 
 	m_vbox.pack_start(m_measurementView, Gtk::PACK_SHRINK);
 		m_treeModel = Gtk::TreeStore::create(m_treeColumns);
@@ -68,9 +69,17 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 		for(int i=1; i<32; i++)
 			m_measurementView.append_column("", m_treeColumns.m_columns[i]);
 		m_measurementView.set_size_request(1, 90);
+		m_measurementView.get_selection()->set_mode(Gtk::SELECTION_NONE);
+
+	m_measurementView.signal_button_press_event().connect_notify(
+		sigc::mem_fun(*this, &WaveformGroup::OnMeasurementButtonPressEvent));
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
+
+	m_contextMenu.append(m_hideItem);
+		m_hideItem.set_label("Hide");
+		m_hideItem.signal_activate().connect(sigc::mem_fun(*this, &WaveformGroup::OnHideStatistic));
 
 	m_contextMenu.show_all();
 
@@ -298,4 +307,53 @@ bool WaveformGroup::IsLastChild(Gtk::Widget* child)
 		return true;
 
 	return false;
+}
+
+void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)
+{
+	//Right click
+	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 3) )
+	{
+		Gtk::TreeModel::Path ignored;
+		Gtk::TreeViewColumn* col;
+		int cell_x;
+		int cell_y;
+
+		if(!m_measurementView.get_path_at_pos(event->x, event->y, ignored, col, cell_x, cell_y))
+			return;
+
+		//Get the filter we clicked on
+		auto cols = m_measurementView.get_columns();
+		for(size_t i=0; i<cols.size(); i++)
+		{
+			if(cols[i] == col)
+			{
+				//Column 0 is the stat names
+				if(col == 0)
+					return;
+
+				//See if we have a valid channel at this column
+				if(m_indexToColumnMap.find(i) == m_indexToColumnMap.end())
+					return;
+				m_measurementContextMenuChannel = m_indexToColumnMap[i];
+				break;
+			}
+		}
+		if(!m_measurementContextMenuChannel)
+			return;
+
+		//Show the context menu
+		m_contextMenu.popup(event->button, event->time);
+	}
+}
+
+void WaveformGroup::OnHideStatistic()
+{
+	ToggleOff(m_measurementContextMenuChannel);
+}
+
+void WaveformGroup::OnChannelRenamed(OscilloscopeChannel* chan)
+{
+	if(IsShowingStats(chan))
+		m_measurementView.get_column(m_columnToIndexMap[chan])->set_title(chan->GetDisplayName());
 }

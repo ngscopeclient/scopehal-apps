@@ -2855,6 +2855,13 @@ void OscilloscopeWindow::OnChannelRenamed(OscilloscopeChannel* chan)
 			}
 		}
 	}
+
+	//Check if we have any groups that are showing stats for it
+	for(auto g : m_waveformGroups)
+	{
+		if(g->IsShowingStats(chan))
+			g->OnChannelRenamed(chan);
+	}
 }
 
 /**
