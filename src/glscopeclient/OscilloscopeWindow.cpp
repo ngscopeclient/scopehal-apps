@@ -69,7 +69,6 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
-	, m_toolbarIconSize(0)
 {
 	SetTitle();
 
@@ -337,14 +336,13 @@ void OscilloscopeWindow::PopulateToolbar()
 	for(auto c : children)
 		m_toolbar.remove(*c);
 
-	m_toolbarIconSize = m_preferences.GetEnum<int>("Appearance.Toolbar.icon_size");
-	string base_path = "icons/" + to_string(m_toolbarIconSize) + "x" + to_string(m_toolbarIconSize) + "/";
+	int size = m_preferences.GetEnum<int>("Appearance.Toolbar.icon_size");
+	string base_path = "icons/" + to_string(size) + "x" + to_string(size) + "/";
 
 	m_iconEnterFullscreen = Gtk::Image(base_path + "fullscreen-enter.png");
 	m_iconExitFullscreen = Gtk::Image(base_path + "fullscreen-exit.png");
 
-	//TODO: preference for this (scopehal-apps:132)
-	//m_toolbar.set_toolbar_style(Gtk::TOOLBAR_BOTH);
+	m_toolbar.set_toolbar_style(m_preferences.GetEnum<Gtk::ToolbarStyle>("Appearance.Toolbar.button_style"));
 
 	m_toolbar.append(m_btnStart, sigc::mem_fun(*this, &OscilloscopeWindow::OnStart));
 		m_btnStart.set_tooltip_text("Start (normal trigger)");
@@ -544,12 +542,9 @@ void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
 
 		//Update the UI since we might have changed colors or other display settings
 		SyncFilterColors();
+		PopulateToolbar();
 		for(auto w : m_waveformAreas)
 			w->queue_draw();
-
-		//Update the toolbar if we changed the icon size
-		if(m_toolbarIconSize != m_preferences.GetEnum<int>("Appearance.Toolbar.icon_size"))
-			PopulateToolbar();
 	}
 
 	//Clean up the dialog

@@ -348,9 +348,6 @@ public:
 
 	//True if file load is in progress
 	bool m_loadInProgress;
-
-	//Current toolbar icon size
-	int m_toolbarIconSize;
 };
 
 #endif

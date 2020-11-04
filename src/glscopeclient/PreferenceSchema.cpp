@@ -134,6 +134,14 @@ void PreferenceManager::InitializeDefaults()
                 .Description("Color for packets that don't fit any other category"));
          auto& toolbar = appearance.AddCategory("Toolbar");
             toolbar.AddPreference(
+                Preference::Enum("button_style", Gtk::TOOLBAR_ICONS)
+                    .Label("Button Style")
+                    .Description("Toolbar button style (icon, text, or both)")
+                    .EnumValue("Icon only", Gtk::TOOLBAR_ICONS)
+                    .EnumValue("Text only", Gtk::TOOLBAR_TEXT)
+                    .EnumValue("Icon + text", Gtk::TOOLBAR_BOTH)
+                );
+            toolbar.AddPreference(
                 Preference::Enum("icon_size", 24)
                     .Label("Icon Size")
                     .Description("Toolbar icon size, in pixels")
