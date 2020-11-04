@@ -209,11 +209,6 @@ void PreferenceManager::InitializeDefaults()
                 .EnumValue("Choice 2", TestEnum::Choice2)
                 .EnumValue("Choice 3", TestEnum::Choice3)
             );
-            trans.AddPreference(
-                Preference::Font("test_font", "sans normal 10")
-                .Label("Test font")
-                .Description("Fifth test value")
-            );
         auto& decode = instrument.AddCategory("Decoders");
             decode.AddPreference(
                 Preference::Real("hidden_setting", 13.37)
