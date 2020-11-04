@@ -56,39 +56,49 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("cursor_fill_text_color", Gdk::Color("yellow"))
                 .Label("Cursor fill text color")
                 .Description("Color for in-band power and other text drawn between cursors"));
-        auto& decode_colors = appearance.AddCategory("Decodes");
-            decode_colors.AddPreference(
+            cursors.AddPreference(
+                Preference::Font("label_font", "sans normal 10")
+                .Label("Cursor label font")
+                .Description("Font used for voltage measurements displayed next to cursors"));
+
+        auto& decodes = appearance.AddCategory("Decodes");
+            decodes.AddPreference(
+                Preference::Font("protocol_font", "sans normal 10")
+                .Label("Protocol font")
+                .Description("Font used for protocol decode overlay text"));
+            decodes.AddPreference(
                 Preference::Color("address_color", Gdk::Color("#ffff00"))
                 .Label("Address color")
                 .Description("Color for register/memory addresses"));
-             decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("checksum_bad_color", Gdk::Color("#ff0000"))
                 .Label("Checksum/CRC color (Bad)")
                 .Description("Color for incorrect checksums/CRCs"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("checksum_ok_color", Gdk::Color("#00ff00"))
                 .Label("Checksum/CRC color (OK)")
                 .Description("Color for correct checksums/CRCs"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("control_color", Gdk::Color("#c000a0"))
                 .Label("Control color")
                 .Description("Color for control events"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("data_color", Gdk::Color("#336699"))
                 .Label("Data color")
                 .Description("Color for generic protocol data bytes"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("error_color", Gdk::Color("#ff0000"))
                 .Label("Error color")
                 .Description("Color for malformed data or error conditions"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("idle_color", Gdk::Color("#404040"))
                 .Label("Idle color")
                 .Description("Color for idle sequences between meaningful data"));
-            decode_colors.AddPreference(
+            decodes.AddPreference(
                 Preference::Color("preamble_color", Gdk::Color("#808080"))
                 .Label("Preamble color")
                 .Description("Color for preambles, sync bytes, and other fixed header data"));
+
         auto& peaks = appearance.AddCategory("Peaks");
             peaks.AddPreference(
                 Preference::Color("peak_outline_color", Gdk::Color("#009900"))
@@ -132,7 +142,14 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("default_color", Gdk::Color("#101010"))
                 .Label("Default color")
                 .Description("Color for packets that don't fit any other category"));
-         auto& toolbar = appearance.AddCategory("Toolbar");
+
+        auto& timeline = appearance.AddCategory("Timeline");
+            timeline.AddPreference(
+                Preference::Font("tick_label_font", "sans normal 10")
+                .Label("Tick font")
+                .Description("Font used for tickmark labels on the timeline"));
+
+        auto& toolbar = appearance.AddCategory("Toolbar");
             toolbar.AddPreference(
                 Preference::Enum("button_style", Gtk::TOOLBAR_ICONS)
                     .Label("Button Style")
@@ -148,6 +165,16 @@ void PreferenceManager::InitializeDefaults()
                     .EnumValue("24x24", 24)
                     .EnumValue("48x48", 48)
                 );
+
+        auto& waveforms = appearance.AddCategory("Waveforms");
+            waveforms.AddPreference(
+                Preference::Font("infobox_font", "sans normal 10")
+                .Label("Info box font")
+                .Description("Font used for channel information box"));
+            waveforms.AddPreference(
+                Preference::Font("y_axis_font", "monospace normal 10")
+                .Label("Y axis font")
+                .Description("Font used for text on the vertical axis of waveforms"));
 
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(

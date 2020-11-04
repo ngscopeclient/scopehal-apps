@@ -51,15 +51,7 @@ WaveformArea::WaveformArea(
 	, m_channel(channel)
 	, m_parent(parent)
 	, m_pixelsPerVolt(1)
-	, m_axisLabelFont("monospace normal 10")
-	, m_infoBoxFont("sans normal 10")
-	, m_cursorLabelFont("sans normal 10")
-	, m_decodeFont("sans normal 10")
 {
-	m_axisLabelFont.set_weight(Pango::WEIGHT_NORMAL);
-	m_infoBoxFont.set_weight(Pango::WEIGHT_NORMAL);
-	m_cursorLabelFont.set_weight(Pango::WEIGHT_NORMAL);
-	m_decodeFont.set_weight(Pango::WEIGHT_NORMAL);
 	SharedCtorInit();
 }
 
@@ -167,6 +159,9 @@ void WaveformArea::OnRemoveOverlay(StreamDescriptor filter)
 
 void WaveformArea::CreateWidgets()
 {
+	//Set up fonts
+	SyncFontPreferences();
+
 	//Delete
 	auto item = Gtk::manage(new Gtk::MenuItem("Delete", false));
 		item->signal_activate().connect(

@@ -176,6 +176,8 @@ public:
 	static bool IsGLInitComplete()
 	{ return m_isGlewInitialized; }
 
+	void SyncFontPreferences();
+
 protected:
 	void SharedCtorInit();
 

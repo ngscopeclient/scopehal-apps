@@ -1463,3 +1463,11 @@ void WaveformArea::CenterTimestamp(int64_t time)
 	m_group->m_xAxisOffset = time - width/2;
 	m_parent->ClearPersistence(m_group, false, true);
 }
+
+void WaveformArea::SyncFontPreferences()
+{
+	m_axisLabelFont = m_parent->GetPreferences().GetFont("Appearance.Waveforms.y_axis_font");
+	m_infoBoxFont = m_parent->GetPreferences().GetFont("Appearance.Waveforms.infobox_font");
+	m_cursorLabelFont = m_parent->GetPreferences().GetFont("Appearance.Cursors.label_font");
+	m_decodeFont = m_parent->GetPreferences().GetFont("Appearance.Decodes.protocol_font");
+}

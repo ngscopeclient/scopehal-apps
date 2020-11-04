@@ -279,7 +279,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 
 	//Print tick marks and labels
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
-	Pango::FontDescription font("sans normal 10");
+	Pango::FontDescription font = m_parent->GetPreferences().GetFont("Appearance.Timeline.tick_label_font");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
 	int swidth;
@@ -405,7 +405,7 @@ void Timeline::DrawCursor(
 	Gdk::Color black("black");
 
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
-	Pango::FontDescription font("sans normal 10");
+	Pango::FontDescription font = m_parent->GetPreferences().GetFont("Appearance.Cursors.label_font");
 	font.set_weight(Pango::WEIGHT_NORMAL);
 	tlayout->set_font_description(font);
 	int swidth;

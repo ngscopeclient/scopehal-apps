@@ -544,7 +544,12 @@ void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
 		SyncFilterColors();
 		PopulateToolbar();
 		for(auto w : m_waveformAreas)
+		{
+			w->SyncFontPreferences();
 			w->queue_draw();
+		}
+		for(auto g : m_waveformGroups)
+			g->m_timeline.queue_draw();
 	}
 
 	//Clean up the dialog
