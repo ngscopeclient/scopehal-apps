@@ -132,7 +132,14 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("default_color", Gdk::Color("#101010"))
                 .Label("Default color")
                 .Description("Color for packets that don't fit any other category"));
-
+         auto& toolbar = appearance.AddCategory("Toolbar");
+            toolbar.AddPreference(
+                Preference::Enum("icon_size", 24)
+                    .Label("Icon Size")
+                    .Description("Toolbar icon size, in pixels")
+                    .EnumValue("24x24", 24)
+                    .EnumValue("48x48", 48)
+                );
 
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(

@@ -153,6 +153,7 @@ protected:
 
 	//Initialization
 	void CreateWidgets(bool nodigital, bool nospectrum);
+	void PopulateToolbar();
 
 	//Widgets
 	Gtk::VBox m_vbox;
@@ -347,6 +348,9 @@ public:
 
 	//True if file load is in progress
 	bool m_loadInProgress;
+
+	//Current toolbar icon size
+	int m_toolbarIconSize;
 };
 
 #endif
