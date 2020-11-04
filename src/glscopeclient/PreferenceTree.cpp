@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -71,7 +71,7 @@ namespace internal
         vector<string> newSegments{ next(this->m_segments.begin()), this->m_segments.end() };
         return PreferencePath{ move(newSegments) };
     }
-    
+
     size_t PreferencePath::GetLength() const
     {
         return this->m_segments.size();
@@ -134,7 +134,7 @@ namespace internal
             case PreferenceType::Color:
             {
                 YAML::Node child{ };
-    
+
                 const auto& color = this->m_pref.GetColorRaw();
 
                 child["r"] = color.m_r;
@@ -168,11 +168,11 @@ namespace internal
                     case PreferenceType::Boolean:
                         this->m_pref.SetBool(n.as<bool>());
                         break;
-                        
+
                     case PreferenceType::Real:
                         this->m_pref.SetReal(n.as<double>());
                         break;
-                        
+
                     case PreferenceType::String:
                         this->m_pref.SetString(n.as<string>());
                         break;
@@ -188,7 +188,7 @@ namespace internal
                         this->m_pref.SetEnumRaw(mapper.GetValue(value));
                         break;
                     }
-                    
+
                     case PreferenceType::Color:
                     {
                         const auto n_r = n["r"].as<std::uint16_t>();
@@ -277,7 +277,7 @@ void PreferenceCategory::ToYAML(YAML::Node& node) const
     {
         entry.second->ToYAML(child);
     }
- 
+
     if(this->m_identifier == "")
         node = child;
     else

@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -32,7 +32,7 @@
 	@author Katharina B.
 	@brief  Implementation of Preference
  */
- 
+
 #include <stdexcept>
 
 #include "Preference.h"
@@ -256,7 +256,7 @@ void Preference::MoveFrom(Preference& other)
     m_unit = move(other.m_unit);
     m_hasValue = move(other.m_hasValue);
     m_mapping = move(other.m_mapping);
-    
+
     if(m_hasValue)
     {
         switch(other.m_type)
@@ -264,11 +264,11 @@ void Preference::MoveFrom(Preference& other)
             case PreferenceType::Boolean:
                 Construct<bool>(other.GetBool());
                 break;
-                
+
             case PreferenceType::Real:
                 Construct<double>(other.GetReal());
                 break;
-                
+
             case PreferenceType::String:
             case PreferenceType::Font:
                 Construct<string>(move(other.GetValueRaw<string>()));
@@ -281,12 +281,12 @@ void Preference::MoveFrom(Preference& other)
             case PreferenceType::Enum:
                 Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
                 break;
-                
+
             default:
                 break;
         }
     }
-    
+
     other.m_type = PreferenceType::None;
 }
 

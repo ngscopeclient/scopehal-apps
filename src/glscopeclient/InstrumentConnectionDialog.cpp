@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -82,7 +82,7 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	m_grid.attach_next_to(m_pathEntry, m_pathLabel, Gtk::POS_RIGHT, 1, 1);
 
 	m_pathEntry.set_size_request(250, 1);
-	
+
 	m_pathEntry.set_activates_default(true);
 
 	show_all();

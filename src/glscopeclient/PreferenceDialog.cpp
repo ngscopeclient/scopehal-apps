@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -54,7 +54,7 @@ namespace impl
         this->m_label.set_label(preference.GetLabel());
         this->m_label.set_tooltip_text(preference.GetDescription());
     }
-    
+
     PreferenceRowBase::~PreferenceRowBase()
     {
 
@@ -84,7 +84,7 @@ namespace impl
     {
         return this->m_value;
     }
-    
+
     Gtk::Entry& StringRealRow::GetEntry()
     {
         return this->m_value;
@@ -105,7 +105,7 @@ namespace impl
             else
             {
                 text = to_string(preference.GetReal());
-            }             
+            }
         }
         else
         {
@@ -204,57 +204,57 @@ namespace impl
 
             std::unique_ptr<PreferenceRowBase> row;
 
-            switch(preference.GetType())       
+            switch(preference.GetType())
             {
                 case PreferenceType::Enum:
                 {
-                    row = unique_ptr<PreferenceRowBase>{ new EnumRow(preference) };       
+                    row = unique_ptr<PreferenceRowBase>{ new EnumRow(preference) };
                     break;
                 }
 
                 case PreferenceType::Boolean:
                 {
-                    row = unique_ptr<PreferenceRowBase>{ new BooleanRow(preference) };  
+                    row = unique_ptr<PreferenceRowBase>{ new BooleanRow(preference) };
                     break;
                 }
-                
+
                 case PreferenceType::Color:
                 {
-                    row = unique_ptr<PreferenceRowBase>{ new ColorRow(preference) };  
+                    row = unique_ptr<PreferenceRowBase>{ new ColorRow(preference) };
                     break;
                 }
 
                 case PreferenceType::Real:
                 case PreferenceType::String:
                 {
-                    row = unique_ptr<PreferenceRowBase>{ new StringRealRow(preference) };            
+                    row = unique_ptr<PreferenceRowBase>{ new StringRealRow(preference) };
                     break;
-                } 
+                }
 
                 case PreferenceType::Font:
                 {
                     row = unique_ptr<PreferenceRowBase>{ new FontRow(preference) };
                     break;
                 }
-                    
+
                 default:
                     break;
             }
-        
-        
+
+
             row->GetValueWidget().set_halign(Gtk::ALIGN_CENTER);
             row->GetValueWidget().set_tooltip_text(preference.GetDescription());
-                    
+
             if(!last)
                 attach(row->GetLabelWidget(), 0, 0, 1, 1);
             else
                 attach_next_to(row->GetLabelWidget(), *last, Gtk::POS_BOTTOM, 1, 1);
-                
+
             attach_next_to(row->GetValueWidget(), row->GetLabelWidget(), Gtk::POS_RIGHT, 1, 1);
-            
+
             last = &(row->GetLabelWidget());
             this->m_rows.push_back(std::move(row));
-        }  
+        }
     }
 
     void PreferencePage::SaveChanges()
@@ -269,9 +269,9 @@ namespace impl
             auto& preference = node->AsPreference();
 
             const auto it = find_if(m_rows.begin(), m_rows.end(),
-                [&preference](const unique_ptr<PreferenceRowBase>& x) -> bool 
+                [&preference](const unique_ptr<PreferenceRowBase>& x) -> bool
                 {
-                    return x->GetIdentifier() == preference.GetIdentifier(); 
+                    return x->GetIdentifier() == preference.GetIdentifier();
                 });
 
             PreferenceRowBase* rowBase = it->get();
@@ -296,24 +296,24 @@ namespace impl
                 {
                     EnumRow* row = dynamic_cast<EnumRow*>(rowBase);
                     const auto& mapping = preference.GetMapping();
-                    preference.SetEnumRaw(mapping.GetValue(row->GetActiveName()));   
+                    preference.SetEnumRaw(mapping.GetValue(row->GetActiveName()));
                     break;
                 }
 
                 case PreferenceType::Boolean:
                 {
                     BooleanRow* row = dynamic_cast<BooleanRow*>(rowBase);
-                    preference.SetBool(row->GetCheckBox().get_active());    
+                    preference.SetBool(row->GetCheckBox().get_active());
                     break;
                 }
-                
+
                 case PreferenceType::Real:
                 case PreferenceType::String:
                 {
                     StringRealRow* row = dynamic_cast<StringRealRow*>(rowBase);
-                        
+
                     const auto text = row->GetEntry().get_text();
-                        
+
                     if(preference.GetType() == PreferenceType::Real)
                     {
                         try
@@ -337,10 +337,10 @@ namespace impl
                     {
                         preference.SetString(text);
                     }
-                    
+
                     break;
                 }
-                
+
                 default:
                     break;
             }
@@ -467,8 +467,8 @@ void PreferenceDialog::SaveChanges()
 {
     for(auto& page: m_pages)
         page->SaveChanges();
-    
+
     m_preferences.SavePreferences();
 }
- 
- 
+
+

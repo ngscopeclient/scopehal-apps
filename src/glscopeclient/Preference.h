@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -134,7 +134,7 @@ public:
     {
 
     }
-    
+
     ~Preference()
     {
         CleanUp();
@@ -146,7 +146,7 @@ public:
     {
         MoveFrom(other);
     }
-    
+
     Preference& operator=(const Preference&) = delete;
     Preference& operator=(Preference&& other)
     {
@@ -154,7 +154,7 @@ public:
         MoveFrom(other);
         return *this;
     }
-    
+
 public:
     const std::string& GetIdentifier() const;
     const std::string& GetLabel() const;
@@ -215,24 +215,24 @@ private:
     {
         return *reinterpret_cast<const T*>(&m_value);
     }
-    
+
     template<typename T>
     T& GetValueRaw()
     {
         return *reinterpret_cast<T*>(&m_value);
     }
-    
+
     void CleanUp();
-    
+
     template<typename T>
     void Construct(T value)
     {
         new (&m_value) T(std::move(value));
         m_hasValue = true;
     }
-    
+
     void MoveFrom(Preference& other);
-    
+
 private:
     std::string m_identifier;
     std::string m_label;

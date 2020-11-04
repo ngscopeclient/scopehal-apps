@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -32,7 +32,7 @@
 	@author Katharina B
 	@brief Common file system utilities
  */
- 
+
 #ifndef FileSystem_h
 #define FileSystem_h
 

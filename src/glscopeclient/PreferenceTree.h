@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -78,14 +78,14 @@ namespace internal
         }
 
         virtual ~PreferenceTreeNodeBase()
-        {       
+        {
         }
-        
+
     public:
         // Disallow copy
         PreferenceTreeNodeBase(const PreferenceTreeNodeBase&) = delete;
         PreferenceTreeNodeBase(PreferenceTreeNodeBase&&) = default;
-        
+
         PreferenceTreeNodeBase& operator=(const PreferenceTreeNodeBase&) = delete;
         PreferenceTreeNodeBase& operator=(PreferenceTreeNodeBase&&) = default;
 
@@ -118,7 +118,7 @@ namespace internal
     public:
         virtual void ToYAML(YAML::Node& node) const;
         virtual void FromYAML(const YAML::Node& node);
-        virtual Preference& GetLeaf(const PreferencePath& path); 
+        virtual Preference& GetLeaf(const PreferencePath& path);
         Preference& Get();
         const Preference& Get() const;
         virtual bool IsVisible() const;
