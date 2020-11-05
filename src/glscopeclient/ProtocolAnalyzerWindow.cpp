@@ -840,3 +840,30 @@ void ProtocolAnalyzerWindow::on_hide()
 	Gtk::Widget::on_hide();
 	m_parent->GarbageCollectAnalyzers();
 }
+
+void ProtocolAnalyzerWindow::SelectPacket(TimePoint cap, int64_t offset)
+{
+	//Loop over packets from last to to first, looking for this packet
+	//TODO: can we do this more efficiently?
+
+	auto sel = m_tree.get_selection();
+
+	auto children = m_model->children();
+	for(auto row : children)
+	{
+		TimePoint rowtime = row[m_columns.m_capturekey];
+
+		//Get the timestamp for this row
+		if(rowtime != cap)
+			continue;
+
+		if(row[m_columns.m_offset] != offset)
+			continue;
+
+		//We found a hit!
+		m_updating = true;
+		sel->select(row);
+		m_tree.scroll_to_row(m_model->get_path(row));
+		m_updating = false;
+	}
+}

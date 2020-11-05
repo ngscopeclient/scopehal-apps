@@ -42,6 +42,7 @@
 
 class WaveformArea;
 class EyeWaveform;
+class PacketDecoder;
 
 /**
 	@brief GL buffers etc needed to render a single waveform
@@ -452,6 +453,9 @@ protected:
 		DRAG_WAVEFORM_AREA,
 		DRAG_OVERLAY
 	} m_dragState;
+
+	void OnCursorMoved();
+	void HighlightPacketAtTime(PacketDecoder* p, int64_t time);
 
 	//Start voltage of a drag (only used in DRAG_OFFSET mode)
 	double	m_dragStartVoltage;

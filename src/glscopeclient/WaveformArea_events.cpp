@@ -241,12 +241,14 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 		case LOC_XCURSOR_0:
 			m_dragState = DRAG_CURSOR_0;
 			m_group->m_xCursorPos[0] = timestamp;
+			OnCursorMoved();
 			m_group->m_vbox.queue_draw();
 			break;
 
 		case LOC_XCURSOR_1:
 			m_dragState = DRAG_CURSOR_1;
 			m_group->m_xCursorPos[1] = timestamp;
+			OnCursorMoved();
 			m_group->m_vbox.queue_draw();
 			break;
 
@@ -280,7 +282,10 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 
 						//Redraw if we have any cursor
 						if(m_group->m_cursorConfig != WaveformGroup::CURSOR_NONE)
+						{
+							OnCursorMoved();
 							m_group->m_vbox.queue_draw();
+						}
 
 						break;
 
@@ -488,11 +493,15 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		//Move the cursor
 		case DRAG_CURSOR_0:
 			m_group->m_xCursorPos[0] = timestamp;
+			OnCursorMoved();
 			break;
 
 		case DRAG_CURSOR_1:
 			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
+			{
 				m_group->m_xCursorPos[1] = timestamp;
+				OnCursorMoved();
+			}
 			break;
 
 		//Drag the entire waveform area to a new location
@@ -653,6 +662,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				}
 			}
 
+			OnCursorMoved();
 			m_group->m_vbox.queue_draw();
 			break;
 
@@ -671,6 +681,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 					m_group->m_xCursorPos[0] = tmp;
 				}
 
+				OnCursorMoved();
 				m_group->m_vbox.queue_draw();
 			}
 			break;
@@ -1462,6 +1473,11 @@ void WaveformArea::CenterTimestamp(int64_t time)
 	int64_t width = PixelsToXAxisUnits(m_width);
 	m_group->m_xAxisOffset = time - width/2;
 	m_parent->ClearPersistence(m_group, false, true);
+
+	//If we have a single X cursor, move it to this point too
+	//TODO: preference to enable/disable this?
+	if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE)
+		m_group->m_xCursorPos[0] = time;
 }
 
 void WaveformArea::SyncFontPreferences()
@@ -1470,4 +1486,75 @@ void WaveformArea::SyncFontPreferences()
 	m_infoBoxFont = m_parent->GetPreferences().GetFont("Appearance.Waveforms.infobox_font");
 	m_cursorLabelFont = m_parent->GetPreferences().GetFont("Appearance.Cursors.label_font");
 	m_decodeFont = m_parent->GetPreferences().GetFont("Appearance.Decodes.protocol_font");
+}
+
+/**
+	@brief Update stuff when a cursor is dragged
+ */
+void WaveformArea::OnCursorMoved()
+{
+	//Single cursor - find the timestamp of the cursor and see if it it hit a packet for a protocol analyzer
+	if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE)
+	{
+		for(auto d : m_overlays)
+		{
+			auto p = dynamic_cast<PacketDecoder*>(d.m_channel);
+			if(!p)
+				continue;
+
+			HighlightPacketAtTime(p, m_group->m_xCursorPos[0]);
+		}
+	}
+}
+
+void WaveformArea::HighlightPacketAtTime(PacketDecoder* p, int64_t time)
+{
+	bool hit = false;
+
+	TimePoint packetTimestamp;
+	int64_t packetOffset = 0;
+
+	//TODO: binary search or something more efficient
+	auto packets = p->GetPackets();
+	for(size_t i=0; i<packets.size(); i++)
+	{
+		auto pack = packets[i];
+		auto end = pack->m_offset + pack->m_len;
+
+		//Too early?
+		if(end < time)
+			continue;
+
+		//Too late?
+		if(pack->m_offset > time)
+			break;
+
+		hit = true;
+		auto data = p->GetData(0);
+		packetTimestamp = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+		packetOffset = pack->m_offset;
+	}
+
+	if(!hit)
+		return;
+
+	//Find the protocol analyzer window
+	ProtocolAnalyzerWindow* a = NULL;
+	for(auto w : m_parent->m_analyzers)
+	{
+		if(w->GetDecoder() == p)
+		{
+			a = w;
+			break;
+		}
+	}
+	if(!a)
+		return;
+
+	//If it's not visible, don't bother
+	if(!a->is_visible())
+		return;
+
+	//Hit?
+	a->SelectPacket(packetTimestamp, packetOffset);
 }

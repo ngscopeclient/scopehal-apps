@@ -136,6 +136,8 @@ public:
 	PacketDecoder* GetDecoder()
 	{ return m_decoder; }
 
+	void SelectPacket(TimePoint cap, int64_t offset);
+
 protected:
 	OscilloscopeWindow* m_parent;
 	PacketDecoder* m_decoder;
