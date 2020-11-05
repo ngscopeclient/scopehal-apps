@@ -857,7 +857,26 @@ void ProtocolAnalyzerWindow::SelectPacket(TimePoint cap, int64_t offset)
 		if(rowtime != cap)
 			continue;
 
-		if(row[m_columns.m_offset] != offset)
+		//If row has children, check them
+		auto rowchildren = row->children();
+		if(rowchildren.size())
+		{
+			for(auto child : rowchildren)
+			{
+				if(child[m_columns.m_offset] != offset)
+					continue;
+
+				m_updating = true;
+				sel->select(child);
+				auto path = m_model->get_path(child);
+				m_tree.expand_to_path(path);
+				m_tree.scroll_to_row(path);
+				m_updating = false;
+				return;
+			}
+		}
+
+		else if(row[m_columns.m_offset] != offset)
 			continue;
 
 		//We found a hit!
