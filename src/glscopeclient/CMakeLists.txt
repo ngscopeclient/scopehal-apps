@@ -6,6 +6,7 @@ endif()
 # GLEW and OpenGL are required
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(Yaml REQUIRED)
 
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
@@ -19,7 +20,7 @@ if(WIN32)
 endif()
 
 #Set up include paths
-include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS} ${YAML_INCLUDES})
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 
 #Set up versioning (with a dummy string for now if Git isn't present)
@@ -84,7 +85,7 @@ target_link_libraries(glscopeclient
 	${OPENGL_LIBRARY}
 	${WIN_LIBS}
 	${GLEW_LIBRARIES}
-	yaml-cpp
+	${YAML_LIBRARIES}
 	)
 
 ###############################################################################
