@@ -569,12 +569,10 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 		last_packet = p;
 	}
 
-	//TODO: select the last row
-	//m_tree.get_selection()->select(*m);
-
-	//auto scroll to bottom
-	auto adj = m_scroller.get_vadjustment();
-	adj->set_value(adj->get_upper());
+	//Select the last row
+	auto path = m_model->get_path(*last_top_row);
+	m_tree.expand_to_path(path);
+	m_tree.scroll_to_row(path);
 
 	m_updating = false;
 }
