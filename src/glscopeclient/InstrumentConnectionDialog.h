@@ -47,6 +47,8 @@ public:
 
 	std::string GetConnectionString();
 
+	bool ValidateConfig();
+
 protected:
 
 	Gtk::Grid m_grid;

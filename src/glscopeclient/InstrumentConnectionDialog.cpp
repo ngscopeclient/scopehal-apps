@@ -110,3 +110,22 @@ string InstrumentConnectionDialog::GetConnectionString()
 		m_pathEntry.get_text().c_str());
 	return tmp;
 }
+
+bool InstrumentConnectionDialog::ValidateConfig()
+{
+	//Must have stuff in each box
+	if(m_driverBox.get_active_text() == "")
+		return false;
+	if(m_transportBox.get_active_text() == "")
+		return false;
+	if(m_pathEntry.get_text() == "")
+		return false;
+
+	//For now, hard code check of null being legal only with siggen
+	if(m_transportBox.get_active_text() != "null")
+		return true;
+	if(m_driverBox.get_active_text() == "siggen")
+		return true;
+
+	return false;
+}

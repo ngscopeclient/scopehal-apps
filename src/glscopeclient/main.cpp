@@ -244,8 +244,32 @@ int main(int argc, char* argv[])
 	if(scopes.empty() && fileToLoad.empty())
 	{
 		InstrumentConnectionDialog dlg;
-		if(dlg.run() != Gtk::RESPONSE_OK)
-			return 0;
+
+		while(true)
+		{
+			if(dlg.run() != Gtk::RESPONSE_OK)
+				return 0;
+
+			//If the user requested an illegal configuration, repeat
+
+			if(!dlg.ValidateConfig())
+			{
+				Gtk::MessageDialog mdlg(
+					"Invalid configuration specified.\n"
+					"\n"
+					"A driver and transport must always be selected.\n"
+					"\n"
+					"The NULL transport is only legal with the \"siggen\" driver.",
+					false,
+					Gtk::MESSAGE_ERROR,
+					Gtk::BUTTONS_OK,
+					true);
+				mdlg.run();
+			}
+
+			else
+				break;
+		}
 
 		scopes.push_back(dlg.GetConnectionString());
 	}
