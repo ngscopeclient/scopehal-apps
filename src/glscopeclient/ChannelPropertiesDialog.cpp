@@ -99,19 +99,24 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				m_deskewLabel.set_text("Deskew");
 				m_deskewLabel.set_halign(Gtk::ALIGN_START);
 			m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
-
 			m_hasDeskew = true;
-
 			m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
 
-			anchorLabel = &m_deskewLabel;
+			//Attenuation
+			m_grid.attach_next_to(m_attenuationLabel, m_deskewLabel, Gtk::POS_BOTTOM, 1, 1);
+				m_attenuationLabel.set_text("Attenuation");
+				m_attenuationLabel.set_halign(Gtk::ALIGN_START);
+			m_grid.attach_next_to(m_attenuationEntry, m_attenuationLabel, Gtk::POS_RIGHT, 1, 1);
+			m_hasAttenuation = true;
+			m_attenuationEntry.set_text(to_string(chan->GetAttenuation()));
+
+			anchorLabel = &m_attenuationLabel;
 
 			//Bandwidth limiters
 			m_grid.attach_next_to(m_bandwidthLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
 					m_bandwidthLabel.set_text("BW Limit");
 				m_bandwidthLabel.set_halign(Gtk::ALIGN_START);
 			m_grid.attach_next_to(m_bandwidthBox, m_bandwidthLabel, Gtk::POS_RIGHT, 1, 1);
-
 			m_hasBandwidth = true;
 
 			//Populate bandwidth limiter box
@@ -234,6 +239,9 @@ void ChannelPropertiesDialog::ConfigureChannel()
 
 	if(m_hasDeskew)
 		m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+
+	if(m_hasAttenuation)
+		m_chan->SetAttenuation(stof(m_attenuationEntry.get_text()));
 
 	if(m_hasBandwidth)
 	{

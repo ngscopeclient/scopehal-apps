@@ -1076,15 +1076,6 @@ void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::Radio
 	m_selectedChannel.m_channel->SetCoupling(type);
 }
 
-void WaveformArea::OnAttenuation(double atten, Gtk::RadioMenuItem* item)
-{
-	//ignore spurious events while loading menu config, or from item being deselected
-	if(m_updatingContextMenu || !item->get_active())
-		return;
-
-	m_selectedChannel.m_channel->SetAttenuation(atten);
-}
-
 void WaveformArea::OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item)
 {
 	//ignore spurious events while loading menu config, or from item being deselected
@@ -1320,7 +1311,6 @@ void WaveformArea::UpdateContextMenu()
 
 	if(m_selectedChannel.m_channel->IsPhysicalChannel())
 	{
-		m_attenMenu.set_sensitive(true);
 		m_couplingMenu.set_sensitive(true);
 
 		//Update the current coupling setting
@@ -1347,27 +1337,6 @@ void WaveformArea::UpdateContextMenu()
 			//coupling not possible, it's not an analog channel
 			default:
 				m_couplingItem.set_sensitive(false);
-				break;
-		}
-
-		//Update the current attenuation
-		int atten = static_cast<int>(m_selectedChannel.m_channel->GetAttenuation());
-		switch(atten)
-		{
-			case 1:
-				m_atten1xItem.set_active(true);
-				break;
-
-			case 10:
-				m_atten10xItem.set_active(true);
-				break;
-
-			case 20:
-				m_atten20xItem.set_active(true);
-				break;
-
-			default:
-				//TODO: how to handle this?
 				break;
 		}
 
@@ -1417,10 +1386,7 @@ void WaveformArea::UpdateContextMenu()
 		}
 	}
 	else
-	{
-		m_attenMenu.set_sensitive(false);
 		m_couplingMenu.set_sensitive(false);
-	}
 
 	//Select cursor config
 	switch(m_group->m_cursorConfig)

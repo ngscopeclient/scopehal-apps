@@ -61,6 +61,8 @@ protected:
 			Gtk::ColorButton m_channelColorButton;
 		Gtk::Label m_deskewLabel;
 			Gtk::Entry m_deskewEntry;
+		Gtk::Label m_attenuationLabel;
+			Gtk::Entry m_attenuationEntry;
 
 		//Analog channel configuration
 		Gtk::Label m_bandwidthLabel;
@@ -85,6 +87,7 @@ protected:
 	bool m_hasFrequency;
 	bool m_hasBandwidth;
 	bool m_hasDeskew;
+	bool m_hasAttenuation;
 };
 
 #endif

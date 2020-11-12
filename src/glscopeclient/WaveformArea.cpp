@@ -265,26 +265,6 @@ void WaveformArea::CreateWidgets()
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
-	//Attenuation
-	m_contextMenu.append(m_attenItem);
-		m_attenItem.set_label("Attenuation");
-		m_attenItem.set_submenu(m_attenMenu);
-			m_atten1xItem.set_label("1x");
-				m_atten1xItem.set_group(m_attenGroup);
-				m_atten1xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 1, &m_atten1xItem));
-				m_attenMenu.append(m_atten1xItem);
-			m_atten10xItem.set_label("10x");
-				m_atten10xItem.set_group(m_attenGroup);
-				m_atten10xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 10, &m_atten10xItem));
-				m_attenMenu.append(m_atten10xItem);
-			m_atten20xItem.set_label("20x");
-				m_atten20xItem.set_group(m_attenGroup);
-				m_atten20xItem.signal_activate().connect(sigc::bind<double, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnAttenuation), 20, &m_atten20xItem));
-				m_attenMenu.append(m_atten20xItem);
-
 	//Coupling
 	m_contextMenu.append(m_couplingItem);
 		m_couplingItem.set_label("Coupling");
