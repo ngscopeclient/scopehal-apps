@@ -223,9 +223,15 @@ void TimebasePropertiesDialog::ConfigureTimebase()
 		//Configure interleaving
 		scope->SetInterleaving(page->m_interleaveSwitch.get_state());
 
+		//Get the old trigger offset
+		int64_t offset = scope->GetTriggerOffset();
+		LogDebug("ConfigureTimebase: offset = %s\n", Unit(Unit::UNIT_PS).PrettyPrint(offset).c_str());
+
 		//Set timebase
-		scope->SetSampleDepth(round(depth.ParseString(page->m_memoryDepthBox.get_active_text())));
 		scope->SetSampleRate(round(rate.ParseString(page->m_sampleRateBox.get_active_text())));
+		scope->SetSampleDepth(round(depth.ParseString(page->m_memoryDepthBox.get_active_text())));
+
+		scope->SetTriggerOffset(offset);
 
 		//Frequency domain options
 		if(scope->HasFrequencyControls())
