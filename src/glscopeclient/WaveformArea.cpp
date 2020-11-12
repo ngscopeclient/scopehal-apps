@@ -193,6 +193,8 @@ void WaveformArea::CreateWidgets()
 				m_copyNewGroupRightItem.signal_activate().connect(
 					sigc::mem_fun(*this, &WaveformArea::OnCopyNewRight));
 
+	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
+
 	//Persistence
 	m_contextMenu.append(m_persistenceItem);
 		m_persistenceItem.set_label("Persistence");
@@ -229,39 +231,6 @@ void WaveformArea::CreateWidgets()
 						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
 						WaveformGroup::CURSOR_X_DUAL,
 						&m_cursorDualVerticalItem));
-
-	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
-
-	//Trigger
-	m_contextMenu.append(m_triggerItem);
-		m_triggerItem.set_label("Trigger");
-		m_triggerItem.set_submenu(m_triggerMenu);
-			m_risingTriggerItem.set_label("Rising edge");
-			m_risingTriggerItem.signal_activate().connect(
-				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					EdgeTrigger::EDGE_RISING,
-					&m_risingTriggerItem));
-			m_risingTriggerItem.set_group(m_triggerGroup);
-			m_triggerMenu.append(m_risingTriggerItem);
-
-			m_fallingTriggerItem.set_label("Falling edge");
-			m_fallingTriggerItem.signal_activate().connect(
-				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					EdgeTrigger::EDGE_FALLING,
-					&m_fallingTriggerItem));
-			m_fallingTriggerItem.set_group(m_triggerGroup);
-			m_triggerMenu.append(m_fallingTriggerItem);
-
-			m_bothTriggerItem.set_label("Both edges");
-			m_bothTriggerItem.signal_activate().connect(
-				sigc::bind<EdgeTrigger::EdgeType, Gtk::RadioMenuItem*>(
-					sigc::mem_fun(*this, &WaveformArea::OnTriggerMode),
-					EdgeTrigger::EDGE_ANY,
-					&m_bothTriggerItem));
-			m_bothTriggerItem.set_group(m_triggerGroup);
-			m_triggerMenu.append(m_bothTriggerItem);
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 

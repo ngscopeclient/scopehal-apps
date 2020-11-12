@@ -1076,23 +1076,6 @@ void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::Radio
 	m_selectedChannel.m_channel->SetCoupling(type);
 }
 
-void WaveformArea::OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item)
-{
-	//ignore spurious events while loading menu config, or from item being deselected
-	if(m_updatingContextMenu || !item->get_active())
-		return;
-
-	auto scope = m_channel.m_channel->GetScope();
-	auto trig = dynamic_cast<EdgeTrigger*>(scope->GetTrigger());
-	if(!trig)
-		return;
-	trig->SetInput(0, m_channel);
-	trig->SetType(type);
-	scope->PushTrigger();
-
-	m_parent->ClearAllPersistence();
-}
-
 void WaveformArea::OnWaveformDataReady()
 {
 	//If we're a fixed width curve, refresh the parent's time scale
@@ -1338,51 +1321,6 @@ void WaveformArea::UpdateContextMenu()
 			default:
 				m_couplingItem.set_sensitive(false);
 				break;
-		}
-
-		auto trig = m_channel.m_channel->GetScope()->GetTrigger();
-		if( (trig == NULL) || (trig->GetInput(0) != m_channel) )
-		{
-			m_risingTriggerItem.set_inconsistent(true);
-			m_fallingTriggerItem.set_inconsistent(true);
-			m_bothTriggerItem.set_inconsistent(true);
-
-			m_risingTriggerItem.set_draw_as_radio(false);
-			m_fallingTriggerItem.set_draw_as_radio(false);
-			m_bothTriggerItem.set_draw_as_radio(false);
-		}
-		else
-		{
-			m_risingTriggerItem.set_inconsistent(false);
-			m_fallingTriggerItem.set_inconsistent(false);
-			m_bothTriggerItem.set_inconsistent(false);
-
-			m_risingTriggerItem.set_draw_as_radio(true);
-			m_fallingTriggerItem.set_draw_as_radio(true);
-			m_bothTriggerItem.set_draw_as_radio(true);
-
-			auto et = dynamic_cast<EdgeTrigger*>(trig);
-			if(et)
-			{
-				switch(et->GetType())
-				{
-					case EdgeTrigger::EDGE_RISING:
-						m_risingTriggerItem.set_active();
-						break;
-
-					case EdgeTrigger::EDGE_FALLING:
-						m_fallingTriggerItem.set_active();
-						break;
-
-					case EdgeTrigger::EDGE_ANY:
-						m_bothTriggerItem.set_active();
-						break;
-
-					//unsupported trigger
-					default:
-						break;
-				}
-			}
 		}
 	}
 	else

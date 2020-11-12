@@ -241,12 +241,6 @@ protected:
 		Gtk::MenuItem m_decodeSignalIntegrityItem;
 			Gtk::Menu m_decodeSignalIntegrityMenu;
 		Gtk::CheckMenuItem m_statisticsItem;
-		Gtk::MenuItem m_triggerItem;
-			Gtk::Menu m_triggerMenu;
-			Gtk::RadioMenuItem::Group m_triggerGroup;
-			Gtk::RadioMenuItem m_risingTriggerItem;
-			Gtk::RadioMenuItem m_fallingTriggerItem;
-			Gtk::RadioMenuItem m_bothTriggerItem;
 		Gtk::MenuItem m_couplingItem;
 			Gtk::Menu m_couplingMenu;
 				Gtk::RadioMenuItem::Group m_couplingGroup;
@@ -259,7 +253,6 @@ protected:
 	void OnHide();
 	void OnTogglePersistence();
 
-	void OnTriggerMode(EdgeTrigger::EdgeType type, Gtk::RadioMenuItem* item);
 	void OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item);
 	void OnMoveNewRight();
 	void OnMoveNewBelow();
