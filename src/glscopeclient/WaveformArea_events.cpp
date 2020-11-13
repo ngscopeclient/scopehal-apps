@@ -156,10 +156,18 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 					}
 					break;
 				case GDK_SCROLL_LEFT:
-					LogDebug("scroll left\n");
+					if(!IsEyeOrBathtub())
+					{
+						m_group->m_xAxisOffset -= 50.0 / m_group->m_pixelsPerXUnit;
+						m_group->GetParent()->ClearPersistence(m_group, false, true);
+					}
 					break;
 				case GDK_SCROLL_RIGHT:
-					LogDebug("scroll right\n");
+					if(!IsEyeOrBathtub())
+					{
+						m_group->m_xAxisOffset += 50.0 / m_group->m_pixelsPerXUnit;
+						m_group->GetParent()->ClearPersistence(m_group, false, true);
+					}
 					break;
 
 				default:
