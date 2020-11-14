@@ -73,6 +73,12 @@ protected:
 			Gtk::Entry m_thresholdEntry;
 		Gtk::Label m_hysteresisLabel;
 			Gtk::Entry m_hysteresisEntry;
+
+		//Analog channel configuration
+		Gtk::Label m_adcModeLabel;
+			Gtk::ComboBoxText m_adcModeBox;
+
+		//Logic or analog channel configuration
 		Gtk::Label m_groupLabel;
 			Gtk::ListViewText m_groupList;
 
@@ -88,6 +94,7 @@ protected:
 	bool m_hasBandwidth;
 	bool m_hasDeskew;
 	bool m_hasAttenuation;
+	bool m_hasAdcMode;
 };
 
 #endif

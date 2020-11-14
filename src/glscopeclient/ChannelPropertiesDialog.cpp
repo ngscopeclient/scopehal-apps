@@ -92,107 +92,161 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
 
 		Gtk::Label* anchorLabel = &m_channelColorLabel;
-		if(chan->IsPhysicalChannel() && chan->GetType() == (OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
+
+	if(chan->IsPhysicalChannel())
+	{
+		switch(chan->GetType())
 		{
-			//Deskew - only on physical analog channels for now
-			m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
-				m_deskewLabel.set_text("Deskew");
-				m_deskewLabel.set_halign(Gtk::ALIGN_START);
-			m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
-			m_hasDeskew = true;
-			m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
-
-			//Attenuation
-			m_grid.attach_next_to(m_attenuationLabel, m_deskewLabel, Gtk::POS_BOTTOM, 1, 1);
-				m_attenuationLabel.set_text("Attenuation");
-				m_attenuationLabel.set_halign(Gtk::ALIGN_START);
-			m_grid.attach_next_to(m_attenuationEntry, m_attenuationLabel, Gtk::POS_RIGHT, 1, 1);
-			m_hasAttenuation = true;
-			m_attenuationEntry.set_text(to_string(chan->GetAttenuation()));
-
-			anchorLabel = &m_attenuationLabel;
-
-			//Bandwidth limiters
-			m_grid.attach_next_to(m_bandwidthLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
-					m_bandwidthLabel.set_text("BW Limit");
-				m_bandwidthLabel.set_halign(Gtk::ALIGN_START);
-			m_grid.attach_next_to(m_bandwidthBox, m_bandwidthLabel, Gtk::POS_RIGHT, 1, 1);
-			m_hasBandwidth = true;
-
-			//Populate bandwidth limiter box
-			auto limits = scope->GetChannelBandwidthLimiters(index);
-			for(auto limit : limits)
-			{
-				if(limit == 0)
-					m_bandwidthBox.append("Full");
-				else
-					m_bandwidthBox.append(hz.PrettyPrint(limit * 1e6));
-			}
-			unsigned int limit = scope->GetChannelBandwidthLimit(index);
-			if(limit == 0)
-				m_bandwidthBox.set_active_text("Full");
-			else
-				m_bandwidthBox.set_active_text(hz.PrettyPrint(limit * 1e6));
-
-			anchorLabel = &m_bandwidthLabel;
-		}
-
-		//Logic properties - only on physical digital channels
-		if(chan->IsPhysicalChannel() && (chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
-		{
-			if(scope->IsDigitalThresholdConfigurable())
-			{
-				m_grid.attach_next_to(m_thresholdLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
-						m_thresholdLabel.set_text("Threshold");
-					m_thresholdLabel.set_halign(Gtk::ALIGN_START);
-				m_grid.attach_next_to(m_thresholdEntry, m_thresholdLabel, Gtk::POS_RIGHT, 1, 1);
-
-				m_thresholdEntry.set_text(volts.PrettyPrint(scope->GetDigitalThreshold(index)));
-
-				anchorLabel = &m_thresholdLabel;
-
-				m_hasThreshold = true;
-			}
-
-			if(scope->IsDigitalHysteresisConfigurable())
-			{
-				m_grid.attach_next_to(m_hysteresisLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
-					m_hysteresisLabel.set_text("Hysteresis");
-					m_hysteresisLabel.set_halign(Gtk::ALIGN_START);
-				m_grid.attach_next_to(m_hysteresisEntry, m_hysteresisLabel, Gtk::POS_RIGHT, 1, 1);
-
-				m_hysteresisEntry.set_text(volts.PrettyPrint(scope->GetDigitalHysteresis(index)));
-
-				anchorLabel = &m_hysteresisLabel;
-
-				m_hasHysteresis = true;
-			}
-
-			//See what else is in the bank
-			auto bank = scope->GetDigitalBank(index);
-			if(bank.size() > 1)
-			{
-				m_grid.attach_next_to(m_groupLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
-					m_groupLabel.set_text("Bank");
-					m_groupLabel.set_halign(Gtk::ALIGN_START);
-				m_grid.attach_next_to(m_groupList, m_groupLabel, Gtk::POS_RIGHT, 1, 1);
-
-				for(auto c : bank)
+			case OscilloscopeChannel::CHANNEL_TYPE_ANALOG:
 				{
-					if(c == chan)
-						continue;
+					//Deskew - only on physical analog channels for now
+					m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
+						m_deskewLabel.set_text("Deskew");
+						m_deskewLabel.set_halign(Gtk::ALIGN_START);
+					m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
+					m_hasDeskew = true;
+					m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
 
-					m_groupList.append(c->GetDisplayName());
+					//Attenuation
+					m_grid.attach_next_to(m_attenuationLabel, m_deskewLabel, Gtk::POS_BOTTOM, 1, 1);
+						m_attenuationLabel.set_text("Attenuation");
+						m_attenuationLabel.set_halign(Gtk::ALIGN_START);
+					m_grid.attach_next_to(m_attenuationEntry, m_attenuationLabel, Gtk::POS_RIGHT, 1, 1);
+					m_hasAttenuation = true;
+					m_attenuationEntry.set_text(to_string(chan->GetAttenuation()));
+
+					anchorLabel = &m_attenuationLabel;
+
+					//Bandwidth limiters
+					m_grid.attach_next_to(m_bandwidthLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+							m_bandwidthLabel.set_text("BW Limit");
+						m_bandwidthLabel.set_halign(Gtk::ALIGN_START);
+					m_grid.attach_next_to(m_bandwidthBox, m_bandwidthLabel, Gtk::POS_RIGHT, 1, 1);
+					m_hasBandwidth = true;
+
+					//Populate bandwidth limiter box
+					auto limits = scope->GetChannelBandwidthLimiters(index);
+					for(auto limit : limits)
+					{
+						if(limit == 0)
+							m_bandwidthBox.append("Full");
+						else
+							m_bandwidthBox.append(hz.PrettyPrint(limit * 1e6));
+					}
+					unsigned int limit = scope->GetChannelBandwidthLimit(index);
+					if(limit == 0)
+						m_bandwidthBox.set_active_text("Full");
+					else
+						m_bandwidthBox.set_active_text(hz.PrettyPrint(limit * 1e6));
+
+					anchorLabel = &m_bandwidthLabel;
+
+					//ADC configuration
+					if(scope->IsADCModeConfigurable())
+					{
+						//Populate bank
+						auto bank = scope->GetAnalogBank(index);
+						if(bank.size() > 1)
+						{
+							m_grid.attach_next_to(m_groupLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+								m_groupLabel.set_text("Bank");
+								m_groupLabel.set_halign(Gtk::ALIGN_START);
+							m_grid.attach_next_to(m_groupList, m_groupLabel, Gtk::POS_RIGHT, 1, 1);
+
+							for(auto c : bank)
+							{
+								if(c == chan)
+									continue;
+
+								m_groupList.append(c->GetDisplayName());
+							}
+
+							m_groupList.set_headers_visible(false);
+
+							anchorLabel = &m_groupLabel;
+						}
+
+						//Add ADC mode box
+						m_grid.attach_next_to(m_adcModeLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+								m_adcModeLabel.set_text("ADC Mode");
+							m_adcModeLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_adcModeBox, m_adcModeLabel, Gtk::POS_RIGHT, 1, 1);
+						m_hasBandwidth = true;
+
+						//Populate mode box
+						auto modes = scope->GetADCModeNames(index);
+						for(auto mode : modes)
+							m_adcModeBox.append(mode);
+						m_adcModeBox.set_active_text(modes[scope->GetADCMode(index)]);
+
+						anchorLabel = &m_adcModeLabel;
+
+						m_hasAdcMode = true;
+					}
 				}
+				break;
 
-				m_groupList.set_headers_visible(false);
+			//Logic properties - only on physical digital channels
+			case OscilloscopeChannel::CHANNEL_TYPE_DIGITAL:
+				{
+					if(scope->IsDigitalThresholdConfigurable())
+					{
+						m_grid.attach_next_to(m_thresholdLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+								m_thresholdLabel.set_text("Threshold");
+							m_thresholdLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_thresholdEntry, m_thresholdLabel, Gtk::POS_RIGHT, 1, 1);
 
-				anchorLabel = &m_groupLabel;
-			}
+						m_thresholdEntry.set_text(volts.PrettyPrint(scope->GetDigitalThreshold(index)));
+
+						anchorLabel = &m_thresholdLabel;
+
+						m_hasThreshold = true;
+					}
+
+					if(scope->IsDigitalHysteresisConfigurable())
+					{
+						m_grid.attach_next_to(m_hysteresisLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+							m_hysteresisLabel.set_text("Hysteresis");
+							m_hysteresisLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_hysteresisEntry, m_hysteresisLabel, Gtk::POS_RIGHT, 1, 1);
+
+						m_hysteresisEntry.set_text(volts.PrettyPrint(scope->GetDigitalHysteresis(index)));
+
+						anchorLabel = &m_hysteresisLabel;
+
+						m_hasHysteresis = true;
+					}
+
+					//See what else is in the bank
+					auto bank = scope->GetDigitalBank(index);
+					if(bank.size() > 1)
+					{
+						m_grid.attach_next_to(m_groupLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+							m_groupLabel.set_text("Bank");
+							m_groupLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_groupList, m_groupLabel, Gtk::POS_RIGHT, 1, 1);
+
+						for(auto c : bank)
+						{
+							if(c == chan)
+								continue;
+
+							m_groupList.append(c->GetDisplayName());
+						}
+
+						m_groupList.set_headers_visible(false);
+
+						anchorLabel = &m_groupLabel;
+					}
+				}
+				break;
+
+			default:
+				break;
 		}
 
 		//Spectrum properties - only on physical frequency domain channels
-		if(chan->IsPhysicalChannel() && (chan->GetXAxisUnits() == hz) )
+		if(chan->GetXAxisUnits() == hz)
 		{
 			m_grid.attach_next_to(m_centerLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
 				m_centerLabel.set_text("Center Frequency");
@@ -207,6 +261,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 
 			m_hasFrequency = true;
 		}
+	}
 
 	show_all();
 }
@@ -242,6 +297,9 @@ void ChannelPropertiesDialog::ConfigureChannel()
 
 	if(m_hasAttenuation)
 		m_chan->SetAttenuation(stof(m_attenuationEntry.get_text()));
+
+	if(m_hasAdcMode)
+		m_chan->GetScope()->SetADCMode(m_chan->GetIndex(), m_adcModeBox.get_active_row_number());
 
 	if(m_hasBandwidth)
 	{
