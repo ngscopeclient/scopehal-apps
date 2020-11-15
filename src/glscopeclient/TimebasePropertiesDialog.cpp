@@ -225,7 +225,6 @@ void TimebasePropertiesDialog::ConfigureTimebase()
 
 		//Get the old trigger offset
 		int64_t offset = scope->GetTriggerOffset();
-		LogDebug("ConfigureTimebase: offset = %s\n", Unit(Unit::UNIT_PS).PrettyPrint(offset).c_str());
 
 		//Set timebase
 		scope->SetSampleRate(round(rate.ParseString(page->m_sampleRateBox.get_active_text())));
