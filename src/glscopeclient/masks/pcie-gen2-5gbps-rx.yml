@@ -1,6 +1,6 @@
 protocol:
-    name:       PCIe gen 2 RX (5 Gbps)
-    reference:  PCIe 2.0 base spec, table 4-11, figure 4-41
+    name:       PCIe gen 2 RX (5 Gbps) data clocked
+    reference:  PCIe 2.0 base spec, table 4-11, table 4-12, figure 4-41
 displaylimits:
     ymin:       -500
     ymax:        500
@@ -17,6 +17,26 @@ mask:
             y:   0
         -   x:   0
             y: -50
+
+    - points:
+        -   x:  -1
+            y: 600
+        -   x:   1
+            y: 600
+        -   x:   1
+            y: 800
+        -   x:  -1
+            y: 800
+
+    - points:
+        -   x:   -1
+            y: -600
+        -   x:    1
+            y: -600
+        -   x:    1
+            y: -800
+        -   x:   -1
+            y: -800
 
 conditions:
     hitrate: 0
