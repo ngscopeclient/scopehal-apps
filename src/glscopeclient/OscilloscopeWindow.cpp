@@ -687,55 +687,15 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 		std::map<int, AnalogWaveform*> waveforms;
 
 		char line[1024];
-		bool first = true;
+		size_t nrow = 0;
 		size_t ncols = 0;
+		vector<string> channel_names;
 		while(!feof(fp))
 		{
+			nrow ++;
+
 			if(!fgets(line, sizeof(line), fp))
 				break;
-
-			//If this is the first line, figure out how many columns we have.
-			//First column is always timestamp in seconds.
-			//TODO: support timestamp in abstract sample units instead
-			if(first)
-			{
-				for(size_t i=0; i<sizeof(line); i++)
-				{
-					if(line[i] == '\0')
-						break;
-					else if(line[i] == ',')
-						ncols ++;
-				}
-
-				LogDebug("Found %zu signal columns, no header row\n", ncols);
-
-				first = false;
-
-				//Create the columns
-				for(size_t i=0; i<ncols; i++)
-				{
-					//Create the channel
-					auto chan = new OscilloscopeChannel(
-						scope,
-						string("CH") + to_string(i+1),
-						OscilloscopeChannel::CHANNEL_TYPE_ANALOG,
-						GetDefaultChannelColor(i),
-						1,
-						i,
-						true);
-					scope->AddChannel(chan);
-					chan->SetDefaultDisplayName();
-
-					//Create the waveform for the channel
-					auto wfm = new AnalogWaveform;
-					wfm->m_timescale = 1;
-					wfm->m_startTimestamp = 0;
-					wfm->m_startPicoseconds = 0;
-					wfm->m_triggerPhase = 0;
-					waveforms[i] = wfm;
-					chan->SetData(wfm, 0);
-				}
-			}
 
 			//Parse the samples for each row
 			//TODO: be more efficient about this
@@ -756,6 +716,86 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 				}
 				else
 					tmp += line[i];
+			}
+
+			//If this is the first line, figure out how many columns we have.
+			//First column is always timestamp in seconds.
+			//TODO: support timestamp in abstract sample units instead
+			if(nrow == 1)
+			{
+				ncols = row.size() - 1;
+
+				//See if the first row is numeric
+				bool numeric = true;
+				for(size_t i=0; (i<sizeof(line)) && (line[i] != '\0'); i++)
+				{
+					if(!isdigit(line[i]) && !isspace(line[i]) && (line[i] != ',') && (line[i] != '.') )
+					{
+						numeric = false;
+						break;
+					}
+				}
+
+				if(!numeric)
+				{
+					LogDebug("Found %zu signal columns, with header row\n", ncols);
+
+					//Extract names of the headers
+					tmp = "";
+					for(size_t i=0; i < sizeof(line); i++)
+					{
+						if(line[i] == '\0' || line[i] == ',')
+						{
+							channel_names.push_back(tmp);
+
+							if(line[i] == '\0')
+								break;
+							else
+								tmp = "";
+						}
+						else
+							tmp += line[i];
+					}
+
+					continue;
+				}
+
+				else
+				{
+					for(size_t i=0; i<ncols; i++)
+						channel_names.push_back(string("CH") + to_string(i+1));
+
+					LogDebug("Found %zu signal columns, no header row\n", ncols);
+				}
+			}
+
+			//If we don't have any channels, create them
+			if(scope->GetChannelCount() == 0)
+			{
+				//Create the columns
+				for(size_t i=0; i<ncols; i++)
+				{
+					//Create the channel
+					auto chan = new OscilloscopeChannel(
+						scope,
+						channel_names[i],
+						OscilloscopeChannel::CHANNEL_TYPE_ANALOG,
+						GetDefaultChannelColor(i),
+						1,
+						i,
+						true);
+					scope->AddChannel(chan);
+					chan->SetDefaultDisplayName();
+
+					//Create the waveform for the channel
+					auto wfm = new AnalogWaveform;
+					wfm->m_timescale = 1;
+					wfm->m_startTimestamp = 0;
+					wfm->m_startPicoseconds = 0;
+					wfm->m_triggerPhase = 0;
+					waveforms[i] = wfm;
+					chan->SetData(wfm, 0);
+				}
 			}
 
 			int64_t timestamp = row[0] * 1e12;
