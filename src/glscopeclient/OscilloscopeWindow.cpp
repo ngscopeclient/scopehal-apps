@@ -757,6 +757,9 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 							tmp += line[i];
 					}
 
+					//Discard name of timestamp column
+					channel_names.erase(channel_names.begin());
+
 					continue;
 				}
 
