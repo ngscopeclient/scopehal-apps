@@ -268,6 +268,9 @@ public:
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
 
+	//Hotkey event handlers
+	virtual bool on_key_press_event(GdkEventKey* key_event);
+
 	//Session handling
 	void CloseSession();
 	void OnLoadComplete();

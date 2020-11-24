@@ -2940,6 +2940,24 @@ void OscilloscopeWindow::OnShowMultimeter(Multimeter* meter)
 	}
 }
 
+bool OscilloscopeWindow::on_key_press_event(GdkEventKey* key_event)
+{
+	//Hotkeys for various special commands.
+	//TODO: make this configurable
+
+	switch(key_event->keyval)
+	{
+		case GDK_KEY_TouchpadToggle:
+			OnStartSingle();
+			break;
+
+		default:
+			break;
+	}
+
+	return true;
+}
+
 void OscilloscopeWindow::OnAboutDialog()
 {
 	Gtk::AboutDialog aboutDialog;

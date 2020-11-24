@@ -243,21 +243,39 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp)
 	event->x *= scale;
 	event->y *= scale;
 
+	//Hotkeys
+	switch(event->button)
+	{
+		case 9:
+			m_parent->OnStart();
+			break;
+
+		case 8:
+			m_parent->OnStop();
+			break;
+	}
+
 	switch(m_clickLocation)
 	{
 		//Move cursors if we click on them
 		case LOC_XCURSOR_0:
-			m_dragState = DRAG_CURSOR_0;
-			m_group->m_xCursorPos[0] = timestamp;
-			OnCursorMoved();
-			m_group->m_vbox.queue_draw();
+			if(event->button == 1)
+			{
+				m_dragState = DRAG_CURSOR_0;
+				m_group->m_xCursorPos[0] = timestamp;
+				OnCursorMoved();
+				m_group->m_vbox.queue_draw();
+			}
 			break;
 
 		case LOC_XCURSOR_1:
-			m_dragState = DRAG_CURSOR_1;
-			m_group->m_xCursorPos[1] = timestamp;
-			OnCursorMoved();
-			m_group->m_vbox.queue_draw();
+			if(event->button == 1)
+			{
+				m_dragState = DRAG_CURSOR_1;
+				m_group->m_xCursorPos[1] = timestamp;
+				OnCursorMoved();
+				m_group->m_vbox.queue_draw();
+			}
 			break;
 
 		//Waveform area
