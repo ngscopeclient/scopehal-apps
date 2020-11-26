@@ -388,7 +388,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	*/
 
 	//Draw the main waveform
-	if(IsAnalog() || IsDigital())
+	if(IsAnalog() || IsDigital() )
 		RenderTrace(m_waveformRenderData);
 
 	//Launch software rendering passes and push the resulting data to the GPU
@@ -413,6 +413,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	//Make sure all compute shaders are done before we composite
 	if(IsDigital())
 		m_digitalWaveformComputeProgram.MemoryBarrier();
+	else if(m_waveformRenderData->IsHistogram())
+		m_histogramWaveformComputeProgram.MemoryBarrier();
 	else
 		m_analogWaveformComputeProgram.MemoryBarrier();
 
@@ -575,17 +577,26 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		m_digitalWaveformComputeProgram.Bind();
 		m_digitalWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
 	}
+	else if(data->IsHistogram())
+	{
+		m_histogramWaveformComputeProgram.Bind();
+		m_histogramWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+	}
 	else
 	{
 		m_analogWaveformComputeProgram.Bind();
 		m_analogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
 	}
+
 	data->m_waveformXBuffer.BindBase(1);
 	data->m_waveformYBuffer.BindBase(4);
 	data->m_waveformConfigBuffer.BindBase(2);
 	data->m_waveformIndexBuffer.BindBase(3);
+
 	if(data->IsDigital())
 		m_digitalWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+	else if(data->IsHistogram())
+		m_histogramWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 	else
 		m_analogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 }

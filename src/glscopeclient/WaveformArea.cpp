@@ -554,6 +554,7 @@ void WaveformArea::on_unrealize()
 void WaveformArea::CleanupGLHandles()
 {
 	//Clean up old shaders
+	m_histogramWaveformComputeProgram.Destroy();
 	m_digitalWaveformComputeProgram.Destroy();
 	m_analogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
@@ -592,6 +593,13 @@ void WaveformArea::CleanupGLHandles()
 
 void WaveformArea::InitializeWaveformPass()
 {
+	ComputeShader hwc;
+	if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
+		LogFatal("failed to load histogram waveform compute shader, aborting\n");
+	m_histogramWaveformComputeProgram.Add(hwc);
+	if(!m_histogramWaveformComputeProgram.Link())
+		LogFatal("failed to link histogram waveform shader program, aborting\n");
+
 	ComputeShader dwc;
 	if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
 		LogFatal("failed to load digital waveform compute shader, aborting\n");

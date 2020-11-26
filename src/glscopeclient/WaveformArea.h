@@ -67,6 +67,9 @@ public:
 	bool IsDigital()
 	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
 
+	bool IsHistogram()
+	{ return m_channel.m_channel->GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
+
 	WaveformArea*			m_area;
 
 	//The channel of interest
@@ -293,6 +296,7 @@ protected:
 	void InitializeWaveformPass();
 	Program m_analogWaveformComputeProgram;
 	Program m_digitalWaveformComputeProgram;
+	Program m_histogramWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
 	std::map<StreamDescriptor, WaveformRenderData*>	m_overlayRenderData;
 
