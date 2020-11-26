@@ -2342,6 +2342,8 @@ bool OscilloscopeWindow::PollScopes()
 
 	bool had_waveforms = false;
 
+	double tstart = GetTime();
+
 	bool pending = true;
 	while(pending)
 	{
@@ -2411,6 +2413,14 @@ bool OscilloscopeWindow::PollScopes()
 
 		//Update filters etc once every instrument has been updated
 		OnAllWaveformsUpdated();
+
+		//Pull as many waveforms as we can in 50 ms, then handle events
+		double dt = GetTime() - tstart;
+		if(dt > 0.05)
+		{
+			g_app->DispatchPendingEvents();
+			break;
+		}
 	}
 
 	return had_waveforms;
