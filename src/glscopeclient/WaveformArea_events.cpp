@@ -1118,24 +1118,13 @@ void WaveformArea::OnWaveformDataReady()
 
 void WaveformArea::RescaleEye(Filter* f, EyeWaveform* eye)
 {
-	float width = eye->GetUIWidth();
-
-	//eye is two UIs wide
-	float eye_width_ps = 2 * width;
-
-	//If decode fails for some reason, don't have an invalid timeline
-	if(eye_width_ps == 0)
-		eye_width_ps = 5;
-
-	m_group->m_pixelsPerXUnit = m_width * 1.0f / eye_width_ps;
-	m_group->m_xAxisOffset = -round(width);
-
 	auto d = dynamic_cast<EyePattern*>(f);
-	if(d)
-	{
-		d->SetXOffset(m_group->m_xAxisOffset);
-		d->SetXScale(m_group->m_pixelsPerXUnit);
-	}
+	if(!d)
+		return;
+
+	f->Refresh();
+	m_group->m_pixelsPerXUnit = d->GetXScale();
+	m_group->m_xAxisOffset = d->GetXOffset();
 
 	//TODO: only if stuff changed
 	//TODO: clear sweeps if this happens?
