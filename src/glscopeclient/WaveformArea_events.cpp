@@ -1044,8 +1044,12 @@ void WaveformArea::OnDecodeSetupComplete()
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	m_pendingDecode->Refresh();
 
+	//If the pending filter is a scalar output, add a statistic instead
+	if(m_pendingDecode->IsScalarOutput())
+		m_group->ToggleOn(m_pendingDecode);
+
 	//Create a new waveform view for the generated signal
-	if(!m_pendingDecode->IsOverlay())
+	else if(!m_pendingDecode->IsOverlay())
 	{
 		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
 		{
@@ -1116,7 +1120,7 @@ void WaveformArea::OnWaveformDataReady()
 	}
 }
 
-void WaveformArea::RescaleEye(Filter* f, EyeWaveform* eye)
+void WaveformArea::RescaleEye(Filter* f, EyeWaveform* /*eye*/)
 {
 	auto d = dynamic_cast<EyePattern*>(f);
 	if(!d)
