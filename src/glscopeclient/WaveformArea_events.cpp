@@ -948,8 +948,10 @@ void WaveformArea::OnTogglePersistence()
 	queue_draw();
 }
 
-void WaveformArea::OnProtocolDecode(string name)
+void WaveformArea::OnProtocolDecode(string name, bool forceStats)
 {
+	m_showPendingDecodeAsStats = forceStats;
+
 	//Create a new decoder for the incoming signal
 	string color = GetDefaultChannelColor(g_numDecodes);
 	if(m_pendingDecode)
@@ -1044,8 +1046,9 @@ void WaveformArea::OnDecodeSetupComplete()
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	m_pendingDecode->Refresh();
 
-	//If the pending filter is a scalar output, add a statistic instead
-	if(m_pendingDecode->IsScalarOutput())
+	//If the pending filter is a scalar output, add a statistic instead.
+	//Also do this if requested from the measurement menu
+	if(m_pendingDecode->IsScalarOutput() || m_showPendingDecodeAsStats)
 		m_group->ToggleOn(m_pendingDecode);
 
 	//Create a new waveform view for the generated signal

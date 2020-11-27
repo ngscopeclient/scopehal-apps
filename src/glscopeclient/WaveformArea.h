@@ -269,9 +269,10 @@ protected:
 	void RefreshMeasurements();
 
 	//Pending protocol decodes
-	void OnProtocolDecode(std::string name);
+	void OnProtocolDecode(std::string name, bool forceStats);
 	FilterDialog* m_decodeDialog;
 	Filter* m_pendingDecode;
+	bool m_showPendingDecodeAsStats;
 	void OnDecodeDialogResponse(int response);
 	void OnDecodeReconfigureDialogResponse(int response);
 	void OnDecodeSetupComplete();

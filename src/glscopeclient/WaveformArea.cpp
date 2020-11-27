@@ -75,20 +75,21 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 
 void WaveformArea::SharedCtorInit()
 {
-	m_updatingContextMenu 	= false;
-	m_selectedChannel		= m_channel;
-	m_dragState 			= DRAG_NONE;
-	m_insertionBarLocation	= INSERT_NONE;
-	m_dropTarget			= NULL;
-	m_padding 				= 2;
-	m_overlaySpacing		= 25 * GetDPIScale();
-	m_persistenceClear 		= true;
-	m_firstFrame 			= false;
-	m_waveformRenderData	= NULL;
-	m_dragOverlayPosition	= 0;
-	m_geometryDirty			= false;
-	m_positionDirty			= false;
-	m_mouseElementPosition	= LOC_PLOT;
+	m_updatingContextMenu 		= false;
+	m_selectedChannel			= m_channel;
+	m_dragState 				= DRAG_NONE;
+	m_insertionBarLocation		= INSERT_NONE;
+	m_dropTarget				= NULL;
+	m_padding 					= 2;
+	m_overlaySpacing			= 25 * GetDPIScale();
+	m_persistenceClear 			= true;
+	m_firstFrame 				= false;
+	m_waveformRenderData		= NULL;
+	m_dragOverlayPosition		= 0;
+	m_geometryDirty				= false;
+	m_positionDirty				= false;
+	m_mouseElementPosition		= LOC_PLOT;
+	m_showPendingDecodeAsStats	= false;
 
 	m_plotRight = 1;
 	m_width		= 1;
@@ -311,7 +312,7 @@ void WaveformArea::CreateWidgets()
 		{
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
 			item->signal_activate().connect(
-				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+				sigc::bind<string, bool>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p, false));
 
 			//Create a test decode and see where it goes
 			auto d = Filter::CreateFilter(p, "");
@@ -337,8 +338,31 @@ void WaveformArea::CreateWidgets()
 					m_decodeRFMenu.append(*item);
 					break;
 
+				//Measurements need some special processing
 				case Filter::CAT_MEASUREMENT:
-					m_decodeMeasurementMenu.append(*item);
+
+					//Scalar measurement? Just add this item
+					if(d->IsScalarOutput())
+						m_decodeMeasurementMenu.append(*item);
+
+					//Vector measurements have two possible displays (graph and statistics)
+					else
+					{
+						auto childmenu = Gtk::manage(new Gtk::Menu);
+						childmenu->append(*item);
+						item->set_label("Graph");
+
+						//Summarize
+						item = Gtk::manage(new Gtk::MenuItem("Stats", false));
+						item->signal_activate().connect(
+							sigc::bind<string, bool>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p, true));
+						childmenu->append(*item);
+
+						auto m = Gtk::manage(new Gtk::MenuItem(p, false));
+						m->set_submenu(*childmenu);
+						m_decodeMeasurementMenu.append(*m);
+					}
+
 					break;
 
 				case Filter::CAT_MATH:
@@ -363,11 +387,10 @@ void WaveformArea::CreateWidgets()
 			//Make a second menu item and put on the alphabetical list
 			item = Gtk::manage(new Gtk::MenuItem(p, false));
 			item->signal_activate().connect(
-				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p));
+				sigc::bind<string>(sigc::mem_fun(*this, &WaveformArea::OnProtocolDecode), p, false));
 			m_decodeAlphabeticalMenu.append(*item);
 		}
 
-	//TODO: delete measurements once we get rid of them all
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
 	//Statistics
