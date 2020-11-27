@@ -224,6 +224,14 @@ void WaveformGroup::RefreshMeasurements()
 
 		auto col = m_measurementView.get_column(i);
 		auto name = m_indexToColumnMap[i]->GetDisplayName();
+
+		//Truncate names if they are too long
+		if(name.length() > 20)
+		{
+			name.resize(17);
+			name += "...";
+		}
+
 		if(col->get_title() != name)
 			col->set_title(name);
 	}
