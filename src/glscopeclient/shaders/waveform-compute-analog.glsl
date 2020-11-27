@@ -70,6 +70,8 @@ void main()
 		return;
 	if(gl_GlobalInvocationID.x > windowWidth)
 		return;
+	if(memDepth < 2)
+		return;
 
 	//Clear column to blank in the first thread of the block
 	if(gl_LocalInvocationID.y == 0)
