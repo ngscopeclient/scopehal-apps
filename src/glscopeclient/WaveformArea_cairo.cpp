@@ -774,7 +774,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 			cr->fill();
 
 			//If it's a FFT trace, render in-band power
-			if(m_channel.m_channel->GetYAxisUnits() == Unit::UNIT_DBM)
+			if(m_channel.m_channel->GetXAxisUnits() == Unit::UNIT_HZ)
 				RenderInBandPower(cr);
 		}
 	}
@@ -791,14 +791,29 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 		return;
 
 	//Sum up the total power
-	//This gets a bit more complicated because we can't just sum dB!
 	size_t ifirst = round(m_group->m_xCursorPos[0] * 1.0 / data->m_timescale);
 	size_t isecond = round(m_group->m_xCursorPos[1] * 1.0 / data->m_timescale);
-	float total_watts = 0;
-	for(size_t i=ifirst; i<=isecond; i++)
-		total_watts += pow(10, (data->m_samples[i] - 30) / 10);
-	float total_dbm = 10 * log10(total_watts) + 30;
-	auto text = string("Band: ") + m_channel.m_channel->GetYAxisUnits().PrettyPrint(total_dbm);
+
+	//This gets a bit more complicated because we can't just sum dB!
+	string text;
+	auto yunit = m_channel.m_channel->GetYAxisUnits();
+	if(yunit == Unit(Unit::UNIT_DBM))
+	{
+		float total_watts = 0;
+		for(size_t i=ifirst; i<=isecond; i++)
+			total_watts += pow(10, (data->m_samples[i] - 30) / 10);
+		float total_dbm = 10 * log10(total_watts) + 30;
+		text = string("Band: ") + yunit.PrettyPrint(total_dbm);
+	}
+
+	//But if we're using linear display it's easy
+	else
+	{
+		float total = 0;
+		for(size_t i=ifirst; i<=isecond; i++)
+			total += data->m_samples[i];
+		text = string("Band: ") + yunit.PrettyPrint(total);
+	}
 
 	//Calculate text size
 	int twidth;
