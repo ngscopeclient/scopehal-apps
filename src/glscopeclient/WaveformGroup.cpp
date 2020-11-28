@@ -252,7 +252,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 
 	snprintf(tmp, sizeof(tmp), "            timebaseResolution: fs\n");
 	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %f\n", m_pixelsPerXUnit);
+	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %e\n", m_pixelsPerXUnit);
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", m_xAxisOffset);
 	config += tmp;

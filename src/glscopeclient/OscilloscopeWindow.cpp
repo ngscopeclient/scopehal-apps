@@ -1019,7 +1019,6 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				datadir,
 				scope_id,
 				waveform_id,
-				timebase_is_ps,
 				channel_progress + i,
 				channel_done + i
 				));
@@ -1089,7 +1088,6 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	string datadir,
 	int scope_id,
 	int waveform_id,
-	bool timebase_is_ps,
 	volatile float* progress,
 	volatile int* done
 	)
@@ -1168,17 +1166,8 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			//Read start time and duration
 			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
 			offset += 2*sizeof(int64_t);
-
-			if(timebase_is_ps)
-			{
-				cap->m_offsets[j] = stime[0] * 1000;
-				cap->m_durations[j] = stime[1] * 1000;
-			}
-			else
-			{
-				cap->m_offsets[j] = stime[0];
-				cap->m_durations[j] = stime[1];
-			}
+			cap->m_offsets[j] = stime[0];
+			cap->m_durations[j] = stime[1];
 
 			//Read sample data
 			if(acap)
@@ -1420,7 +1409,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 
 		if(timestamps_are_ps)
 		{
-			group->m_pixelsPerXUnit *= 1000;
+			group->m_pixelsPerXUnit /= 1000;
 			group->m_xAxisOffset *= 1000;
 			group->m_xCursorPos[0] *= 1000;
 			group->m_xCursorPos[1] *= 1000;

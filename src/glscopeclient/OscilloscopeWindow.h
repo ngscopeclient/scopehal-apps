@@ -255,7 +255,6 @@ public:
 		std::string datadir,
 		int scope_id,
 		int waveform_id,
-		bool timebase_is_ps,
 		volatile float* progress,
 		volatile int* done
 		);
