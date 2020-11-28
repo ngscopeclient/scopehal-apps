@@ -369,8 +369,8 @@ bool ScopeSyncWizard::OnTimer()
 	#pragma omp parallel for
 	for(int64_t d = m_delta; d < blockEnd; d ++)
 	{
-		//Convert delta from samples of the primary waveform to picoseconds
-		int64_t deltaPs = m_primaryWaveform->m_timescale * d;
+		//Convert delta from samples of the primary waveform to femtoseconds
+		int64_t deltaFs = m_primaryWaveform->m_timescale * d;
 
 		//Loop over samples in the primary waveform
 		//TODO: AVX
@@ -379,11 +379,11 @@ bool ScopeSyncWizard::OnTimer()
 		double correlation = 0;
 		for(size_t i=0; i<(size_t)len; i++)
 		{
-			//Timestamp of this sample, in ps
+			//Timestamp of this sample, in fs
 			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale;
 
 			//Target timestamp in the secondary waveform
-			int64_t target = start + deltaPs;
+			int64_t target = start + deltaFs;
 
 			//If off the start of the waveform, skip it
 			if(target < 0)
@@ -430,7 +430,7 @@ bool ScopeSyncWizard::OnTimer()
 	//Collect the skew from this round
 	auto scope = m_activeSecondaryPage->GetScope();
 	int64_t skew = m_bestCorrelationOffset * m_primaryWaveform->m_timescale;
-	LogTrace("Best correlation = %f (delta = %ld / %ld ps)\n",
+	LogTrace("Best correlation = %f (delta = %ld / %ld fs)\n",
 		m_bestCorrelation, m_bestCorrelationOffset, skew);
 	m_averageSkews.push_back(skew);
 
@@ -462,7 +462,7 @@ bool ScopeSyncWizard::OnTimer()
 		for(auto f : m_averageSkews)
 			sum += f;
 		skew = static_cast<int64_t>(round(sum / m_numAverages));
-		LogTrace("Average skew = %ld ps\n", skew);
+		LogTrace("Average skew = %ld fs\n", skew);
 
 		//Figure out where we want the secondary to go
 		int64_t targetOffset = scope->GetTriggerOffset() - skew;

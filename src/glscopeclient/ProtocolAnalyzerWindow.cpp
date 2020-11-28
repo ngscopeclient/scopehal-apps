@@ -585,26 +585,25 @@ void ProtocolAnalyzerWindow::FillOutRow(
 {
 	//Need a bit of math in case the capture is >1 second long
 	time_t capstart = data->m_startTimestamp;
-	int64_t ps = data->m_startPicoseconds + p->m_offset;
-	const int64_t seconds_per_ps = 1000ll * 1000ll * 1000ll * 1000ll;
-	if(ps > seconds_per_ps)
+	int64_t fs = data->m_startFemtoseconds + p->m_offset;
+	if(fs > SECONDS_PER_FS)
 	{
-		capstart += (ps / seconds_per_ps);
-		ps %= seconds_per_ps;
+		capstart += (fs / SECONDS_PER_FS);
+		fs %= (int64_t)SECONDS_PER_FS;
 	}
 
 	//Format timestamp
 	char tmp[128];
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", localtime(&capstart));
 	string stime = tmp;
-	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(ps / 100));	//round to nearest 100ps for display
+	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(fs / 100000));	//round to nearest 100ps for display
 	stime += tmp;
 
 	//Create the row
 	row[m_columns.m_bgcolor] = p->m_displayBackgroundColor;
 	row[m_columns.m_fgcolor] = p->m_displayForegroundColor;
 	row[m_columns.m_timestamp] = stime;
-	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	row[m_columns.m_offset] = p->m_offset;
 
 	//Just copy headers without any processing

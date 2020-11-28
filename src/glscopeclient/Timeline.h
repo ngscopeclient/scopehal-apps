@@ -62,7 +62,7 @@ protected:
 
 	virtual void DrawCursor(
 		const Cairo::RefPtr<Cairo::Context>& cr,
-		int64_t ps,
+		int64_t fs,
 		const char* name,
 		Gdk::Color color,
 		bool draw_left,

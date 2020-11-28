@@ -59,7 +59,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	auto scope = chan->GetScope();
 	auto index = chan->GetIndex();
 
-	Unit ps(Unit::UNIT_PS);
+	Unit fs(Unit::UNIT_FS);
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit hz(Unit::UNIT_HZ);
 
@@ -105,7 +105,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 						m_deskewLabel.set_halign(Gtk::ALIGN_START);
 					m_grid.attach_next_to(m_deskewEntry, m_deskewLabel, Gtk::POS_RIGHT, 1, 1);
 					m_hasDeskew = true;
-					m_deskewEntry.set_text(ps.PrettyPrint(chan->GetDeskew()));
+					m_deskewEntry.set_text(fs.PrettyPrint(chan->GetDeskew()));
 
 					//Attenuation
 					m_grid.attach_next_to(m_attenuationLabel, m_deskewLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -280,7 +280,7 @@ void ChannelPropertiesDialog::ConfigureChannel()
 	m_chan->m_displaycolor = m_channelColorButton.get_color().to_string();
 
 	Unit volts(Unit::UNIT_VOLTS);
-	Unit ps(Unit::UNIT_PS);
+	Unit fs(Unit::UNIT_FS);
 	Unit hz(Unit::UNIT_HZ);
 
 	if(m_hasThreshold)
@@ -293,7 +293,7 @@ void ChannelPropertiesDialog::ConfigureChannel()
 		m_chan->SetCenterFrequency(hz.ParseString(m_centerEntry.get_text()));
 
 	if(m_hasDeskew)
-		m_chan->SetDeskew(ps.ParseString(m_deskewEntry.get_text()));
+		m_chan->SetDeskew(fs.ParseString(m_deskewEntry.get_text()));
 
 	if(m_hasAttenuation)
 		m_chan->SetAttenuation(stof(m_attenuationEntry.get_text()));

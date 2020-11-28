@@ -979,7 +979,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			//Channel waveform metadata
 			cap->m_timescale = ch["timescale"].as<long>();
 			cap->m_startTimestamp = time.first;
-			cap->m_startPicoseconds = time.second;
+			cap->m_startFemtoseconds = time.second;
 			cap->m_triggerPhase = ch["trigphase"].as<float>();
 
 			chan->Detach(stream);

@@ -41,7 +41,7 @@ using namespace std;
 Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
 	: m_group(group)
 	, m_parent(parent)
-	, m_xAxisUnit(Unit::UNIT_PS)
+	, m_xAxisUnit(Unit::UNIT_FS)
 {
 	m_dragState = DRAG_NONE;
 	m_dragStartX = 0;
@@ -116,10 +116,10 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_TIMELINE:
 			{
 				double dx = event->x - m_dragStartX;
-				double ps = dx / m_group->m_pixelsPerXUnit;
+				double fs = dx / m_group->m_pixelsPerXUnit;
 
 				//Update offset
-				m_group->m_xAxisOffset = m_originalTimeOffset - ps;
+				m_group->m_xAxisOffset = m_originalTimeOffset - fs;
 
 				//Clear persistence and redraw the group (fixes #46)
 				m_group->GetParent()->ClearPersistence(m_group, false, true);
@@ -222,60 +222,62 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	double ymid = (h-10) / 2;
 
 	//Figure out rounding granularity, based on our time scales
-	int64_t width_ps = w / xscale;
+	int64_t width_fs = w / xscale;
 	int64_t round_divisor = 1;
-	if(width_ps < 1E4)
+	if(width_fs < 1E7)
 	{
-		//ps, leave default
-		if(width_ps < 100)
-			round_divisor = 10;
-		else if(width_ps < 500)
-			round_divisor = 50;
-		else if(width_ps < 1000)
-			round_divisor = 100;
-		else if(width_ps < 2500)
-			round_divisor = 250;
-		else if(width_ps < 5000)
-			round_divisor = 500;
-		else
-			round_divisor = 1000;
-	}
-	else if(width_ps < 1E6)
-		round_divisor = 1E3;
-	else if(width_ps < 1E9)
-	{
-		if(width_ps < 1e8)
+		//fs, leave default
+		if(width_fs < 1e2)
+			round_divisor = 1e1;
+		else if(width_fs < 1e5)
+			round_divisor = 1e4;
+		else if(width_fs < 5e5)
+			round_divisor = 5e4;
+		else if(width_fs < 1e6)
 			round_divisor = 1e5;
+		else if(width_fs < 2.5e6)
+			round_divisor = 2.5e5;
+		else if(width_fs < 5e6)
+			round_divisor = 5e5;
 		else
-			round_divisor = 1E6;
+			round_divisor = 1e6;
 	}
-	else if(width_ps < 1E11)
-		round_divisor = 1E9;
-	else
+	else if(width_fs < 1e9)
+		round_divisor = 1e6;
+	else if(width_fs < 1e12)
+	{
+		if(width_fs < 1e11)
+			round_divisor = 1e8;
+		else
+			round_divisor = 1e9;
+	}
+	else if(width_fs < 1E14)
 		round_divisor = 1E12;
+	else
+		round_divisor = 1E15;
 
 	//Figure out about how much time per graduation to use
 	const double min_label_grad_width = 75 * GetDPIScale();	//Minimum distance between text labels, in pixels
-	double grad_ps_nominal = min_label_grad_width / xscale;
+	double grad_fs_nominal = min_label_grad_width / xscale;
 
 	//Round so the division sizes are sane
-	double units_per_grad = grad_ps_nominal * 1.0 / round_divisor;
+	double units_per_grad = grad_fs_nominal * 1.0 / round_divisor;
 	double base = 5;
 	double log_units = log(units_per_grad) / log(base);
 	double log_units_rounded = ceil(log_units);
 	double units_rounded = pow(base, log_units_rounded);
-	int64_t grad_ps_rounded = round(units_rounded * round_divisor);
+	int64_t grad_fs_rounded = round(units_rounded * round_divisor);
 
 	//avoid divide-by-zero in weird cases with no waveform etc
-	if(grad_ps_rounded == 0)
+	if(grad_fs_rounded == 0)
 		return;
 
 	//Calculate number of ticks within a division
 	double nsubticks = 5;
-	double subtick = grad_ps_rounded / nsubticks;
+	double subtick = grad_fs_rounded / nsubticks;
 
 	//Find the start time (rounded as needed)
-	double tstart = round(m_group->m_xAxisOffset / grad_ps_rounded) * grad_ps_rounded;
+	double tstart = round(m_group->m_xAxisOffset / grad_fs_rounded) * grad_fs_rounded;
 
 	//Print tick marks and labels
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
@@ -284,7 +286,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	tlayout->set_font_description(font);
 	int swidth;
 	int sheight;
-	for(double t = tstart; t < (tstart + width_ps + grad_ps_rounded); t += grad_ps_rounded)
+	for(double t = tstart; t < (tstart + width_fs + grad_fs_rounded); t += grad_fs_rounded)
 	{
 		double x = (t - m_group->m_xAxisOffset) * xscale;
 
@@ -392,7 +394,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 
 void Timeline::DrawCursor(
 	const Cairo::RefPtr<Cairo::Context>& cr,
-	int64_t ps,
+	int64_t fs,
 	const char* name,
 	Gdk::Color color,
 	bool draw_left,
@@ -420,7 +422,7 @@ void Timeline::DrawCursor(
 			sizeof(label),
 			"%s: %s",
 			name,
-			m_xAxisUnit.PrettyPrint(ps).c_str()
+			m_xAxisUnit.PrettyPrint(fs).c_str()
 			);
 	}
 	else
@@ -430,7 +432,7 @@ void Timeline::DrawCursor(
 		//Special case for time domain traces
 		//Also show the frequency dual
 		Unit hz(Unit::UNIT_HZ);
-		if(m_xAxisUnit.GetType() == Unit::UNIT_PS)
+		if(m_xAxisUnit.GetType() == Unit::UNIT_FS)
 			format += " (%s)\n";
 
 		int64_t dt = m_group->m_xCursorPos[1] - m_group->m_xCursorPos[0];
@@ -440,15 +442,15 @@ void Timeline::DrawCursor(
 			sizeof(label),
 			format.c_str(),
 			name,
-			m_xAxisUnit.PrettyPrint(ps).c_str(),
+			m_xAxisUnit.PrettyPrint(fs).c_str(),
 			m_xAxisUnit.PrettyPrint(dt).c_str(),
-			hz.PrettyPrint(1e12 / dt).c_str());
+			hz.PrettyPrint(FS_PER_SECOND / dt).c_str());
 	}
 	tlayout->set_text(label);
 	tlayout->get_pixel_size(swidth, sheight);
 
 	//Decide which side of the line to draw on
-	double x = (ps - m_group->m_xAxisOffset) * xscale;
+	double x = (fs - m_group->m_xAxisOffset) * xscale;
 	double right = x-5;
 	double left = right - swidth - 5;
 	if(!draw_left)

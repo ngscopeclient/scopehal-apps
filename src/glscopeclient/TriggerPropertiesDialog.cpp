@@ -81,12 +81,12 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 				sigc::mem_fun(*this, &TriggerPropertiesDialog::OnTriggerTypeChanged));
 
 	//Trigger horizontal offset
-	Unit ps(Unit::UNIT_PS);
+	Unit fs(Unit::UNIT_FS);
 	m_grid.attach_next_to(m_triggerOffsetLabel, m_triggerTypeLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_triggerOffsetLabel.set_text("Trigger Offset");
 		m_grid.attach_next_to(m_triggerOffsetEntry, m_triggerOffsetLabel, Gtk::POS_RIGHT, 1, 1);
 			auto offset = m_scope->GetTriggerOffset();
-			m_triggerOffsetEntry.set_text(ps.PrettyPrint(offset));
+			m_triggerOffsetEntry.set_text(fs.PrettyPrint(offset));
 
 	//Actual content
 	get_vbox()->pack_start(m_contentGrid, Gtk::PACK_SHRINK);
@@ -131,8 +131,8 @@ void TriggerPropertiesDialog::ConfigureTrigger()
 	m_scope->SetTrigger(trig);
 
 	//Also, set the trigger offset
-	Unit ps(Unit::UNIT_PS);
-	m_scope->SetTriggerOffset(ps.ParseString(m_triggerOffsetEntry.get_text()));
+	Unit fs(Unit::UNIT_FS);
+	m_scope->SetTriggerOffset(fs.ParseString(m_triggerOffsetEntry.get_text()));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

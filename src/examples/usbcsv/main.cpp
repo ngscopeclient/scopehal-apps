@@ -137,7 +137,7 @@ bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDec
 		return false;
 	}
 
-	Unit ps(Unit::UNIT_PS);
+	Unit fs(Unit::UNIT_FS);
 
 	//Print the protocol analyzer data
 	LogNotice("Printing packets\n");
@@ -150,8 +150,8 @@ bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDec
 			auto pack = packets[i];
 
 			LogNotice("[%11s] len=%s type=%6s dev=%1s endp=%1s len=%3s info=%s\n",
-				ps.PrettyPrint(pack->m_offset).c_str(),
-				ps.PrettyPrint(pack->m_len).c_str(),
+				fs.PrettyPrint(pack->m_offset).c_str(),
+				fs.PrettyPrint(pack->m_len).c_str(),
 				pack->m_headers["Type"].c_str(),
 				pack->m_headers["Device"].c_str(),
 				pack->m_headers["Endpoint"].c_str(),
@@ -284,8 +284,8 @@ bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDec
 			}
 
 			LogNotice("[%11s] len=%11s     %-15s %02x\n",
-				ps.PrettyPrint(timestamp).c_str(),
-				ps.PrettyPrint(duration).c_str(),
+				fs.PrettyPrint(timestamp).c_str(),
+				fs.PrettyPrint(duration).c_str(),
 				type.c_str(),
 				sym.m_data);
 		}

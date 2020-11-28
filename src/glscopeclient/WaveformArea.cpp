@@ -806,5 +806,5 @@ bool WaveformArea::IsEyeOrBathtub()
 
 bool WaveformArea::IsTime()
 {
-	return (m_channel.m_channel->GetYAxisUnits().GetType() == Unit::UNIT_PS);
+	return (m_channel.m_channel->GetYAxisUnits().GetType() == Unit::UNIT_FS);
 }

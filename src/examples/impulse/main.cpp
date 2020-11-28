@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 	//Initialize
 	AlignedAllocator< float, 64 > allocator;
 	size_t npoints = 131072;
-	size_t ps_per_sample = 1;
+	size_t fs_per_sample = 1000;
 	double sample_ghz = 1000;
 	double bin_hz = round((0.5f * sample_ghz * 1e9f) / npoints);
 	ffts_plan_t* forwardPlan = ffts_init_1d_real(npoints, FFTS_FORWARD);
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Calculate maximum group delay for the first few S21 bins (approx propagation delay of the channel)
-	int64_t groupdelay_samples = ceil( GetGroupDelay(params[SPair(2,1)]) / ps_per_sample );
+	int64_t groupdelay_samples = ceil( GetGroupDelay(params[SPair(2,1)]) / fs_per_sample );
 	if( (groupdelay_samples < 0) || (groupdelay_samples >= (int64_t)npoints) )
 	{
 		LogWarning("Calculated invalid group delay = %ld\n", groupdelay_samples);
@@ -155,12 +155,12 @@ int main(int argc, char* argv[])
 	}
 
 	//Write the output
-	LogNotice("ps, s11, s21, s12, s22\n");
+	LogNotice("fs, s11, s21, s12, s22\n");
 	float tstart = nmid;
 	for(size_t i=groupdelay_samples; i<npoints; i++)
 	{
 		LogNotice("%.0f, %f, %f, %f, %f\n",
-			(i*ps_per_sample) - tstart,
+			(i*fs_per_sample) - tstart,
 			dttime[0][0][i],
 			dttime[1][0][i],
 			dttime[0][1][i],
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 	for(size_t i=groupdelay_samples; i<npoints; i++)
 	{
 		wfm.m_offsets.push_back(i);
-		wfm.m_durations.push_back(ps_per_sample);
+		wfm.m_durations.push_back(fs_per_sample);
 		wfm.m_samples.push_back(dttime[1][0][i]);
 	}
 	float base = Filter::GetBaseVoltage(&wfm);
@@ -208,9 +208,9 @@ int main(int argc, char* argv[])
 	}
 
 	//Print stats
-	Unit ps(Unit::UNIT_PS);
-	LogWarning("20-80%%: %s\n", ps.PrettyPrint( (t80-t20) * ps_per_sample).c_str());
-	LogWarning("10-90%%: %s\n", ps.PrettyPrint( (t90-t10) * ps_per_sample).c_str());
+	Unit fs(Unit::UNIT_FS);
+	LogWarning("20-80%%: %s\n", fs.PrettyPrint( (t80-t20) * fs_per_sample).c_str());
+	LogWarning("10-90%%: %s\n", fs.PrettyPrint( (t90-t10) * fs_per_sample).c_str());
 
 	//Clean up
 	ffts_free(forwardPlan);
@@ -233,5 +233,5 @@ int64_t GetGroupDelay(SParameterVector& vec)
 	size_t n = vec.size();
 	for(size_t i=n/4; i<n*3/4; i++)
 		max_delay = max(max_delay, vec.GetGroupDelay(i));
-	return max_delay * 1e12;
+	return max_delay * FS_PER_SECOND;
 }

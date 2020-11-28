@@ -541,7 +541,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	else if( (eye != NULL) && (ed != NULL) )
 	{
 		label += string("\n") + Unit(Unit::UNIT_UI).PrettyPrint(eye->GetTotalUIs()) + "\t" +
-					Unit(Unit::UNIT_BITRATE).PrettyPrint(1e12f / eye->GetUIWidth());
+					Unit(Unit::UNIT_BITRATE).PrettyPrint(FS_PER_SECOND / eye->GetUIWidth());
 
 		auto mask = ed->GetMask();
 		auto maskname = mask.GetMaskName();
@@ -580,7 +580,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 			label +=
 				" : " +
 				depth.PrettyPrint(data->m_offsets.size()) + "\n" +
-				rate.PrettyPrint(1e12 / data->m_timescale);
+				rate.PrettyPrint(FS_PER_SECOND / data->m_timescale);
 		}
 	}
 

@@ -1457,7 +1457,7 @@ void WaveformArea::HighlightPacketAtTime(PacketDecoder* p, int64_t time)
 
 		hit = true;
 		auto data = p->GetData(0);
-		packetTimestamp = TimePoint(data->m_startTimestamp, data->m_startPicoseconds);
+		packetTimestamp = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 		packetOffset = pack->m_offset;
 	}
 

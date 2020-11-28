@@ -58,7 +58,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 
 			//Select random frequency, amplitude, and phase
 			float gen_freq = uniform_real_distribution<float>(0.5e9, 5e9)(g_rng);
-			float gen_period = 1e12 / gen_freq;
+			float gen_period = FS_PER_SECOND / gen_freq;
 			float gen_amp = uniform_real_distribution<float>(0.01, 1)(g_rng);
 
 			//Starting phase
@@ -67,12 +67,12 @@ TEST_CASE("Filter_FrequencyMeasurement")
 			//Generate the input signal.
 			//50 Gsps, 1M points, no added noise
 			g_scope.GetChannel(0)->SetData(
-				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20, 1000000, 0),
+				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20000, 1000000, 0),
 				0);
 
 			Unit hz(Unit::UNIT_HZ);
 			LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());
-			LogVerbose("Period:    %s\n", Unit(Unit::UNIT_PS).PrettyPrint(gen_period).c_str());
+			LogVerbose("Period:    %s\n", Unit(Unit::UNIT_FS).PrettyPrint(gen_period).c_str());
 			LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
 
 			//Run the filter
