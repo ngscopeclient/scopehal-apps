@@ -949,9 +949,19 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		iwave ++;
 
 		//Top level metadata
+		bool timebase_is_ps = true;
 		auto wfm = it.second;
 		time.first = wfm["timestamp"].as<long long>();
-		time.second = wfm["time_psec"].as<long long>();
+		if(wfm["time_psec"])
+		{
+			time.second = wfm["time_psec"].as<long long>() * 1000;
+			timebase_is_ps = true;
+		}
+		else
+		{
+			time.second = wfm["time_fsec"].as<long long>();
+			timebase_is_ps = false;
+		}
 		int waveform_id = wfm["id"].as<int>();
 
 		//Set up channel metadata first (serialized)
@@ -980,7 +990,13 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			cap->m_timescale = ch["timescale"].as<long>();
 			cap->m_startTimestamp = time.first;
 			cap->m_startFemtoseconds = time.second;
-			cap->m_triggerPhase = ch["trigphase"].as<float>();
+			if(timebase_is_ps)
+			{
+				cap->m_timescale *= 1000;
+				cap->m_triggerPhase = ch["trigphase"].as<float>() * 1000;
+			}
+			else
+				cap->m_triggerPhase = ch["trigphase"].as<long>();
 
 			chan->Detach(stream);
 			chan->SetData(cap, stream);
@@ -1003,6 +1019,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				datadir,
 				scope_id,
 				waveform_id,
+				timebase_is_ps,
 				channel_progress + i,
 				channel_done + i
 				));
@@ -1072,6 +1089,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	string datadir,
 	int scope_id,
 	int waveform_id,
+	bool timebase_is_ps,
 	volatile float* progress,
 	volatile int* done
 	)
@@ -1151,8 +1169,16 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
 			offset += 2*sizeof(int64_t);
 
-			cap->m_offsets[j] = stime[0];
-			cap->m_durations[j] = stime[1];
+			if(timebase_is_ps)
+			{
+				cap->m_offsets[j] = stime[0] * 1000;
+				cap->m_durations[j] = stime[1] * 1000;
+			}
+			else
+			{
+				cap->m_offsets[j] = stime[0];
+				cap->m_durations[j] = stime[1];
+			}
 
 			//Read sample data
 			if(acap)
@@ -1362,9 +1388,16 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		WaveformGroup* group = new WaveformGroup(this);
 		table.emplace(gn["id"].as<int>(), &group->m_frame);
 		group->m_frame.set_label(gn["name"].as<string>());
+
+		//Scale if needed
+		bool timestamps_are_ps = true;
+		if(gn["timebaseResolution"])
+		{
+			if(gn["timebaseResolution"].as<string>() == "fs")
+				timestamps_are_ps = false;
+		}
+
 		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
-		if(group->m_pixelsPerXUnit < 1e-8)	//Sanity check impractically small zoom levels
-			group->m_pixelsPerXUnit = 0.05;
 		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
 		m_waveformGroups.emplace(group);
 
@@ -1384,6 +1417,16 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		group->m_xCursorPos[1] = gn["xcursor1"].as<long>();
 		group->m_yCursorPos[0] = gn["ycursor0"].as<float>();
 		group->m_yCursorPos[1] = gn["ycursor1"].as<float>();
+
+		if(timestamps_are_ps)
+		{
+			group->m_pixelsPerXUnit *= 1000;
+			group->m_xAxisOffset *= 1000;
+			group->m_xCursorPos[0] *= 1000;
+			group->m_xCursorPos[1] *= 1000;
+			group->m_yCursorPos[0] *= 1000;
+			group->m_yCursorPos[1] *= 1000;
+		}
 
 		//TODO: statistics
 

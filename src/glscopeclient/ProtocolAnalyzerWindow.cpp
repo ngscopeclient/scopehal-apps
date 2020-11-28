@@ -586,10 +586,10 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	//Need a bit of math in case the capture is >1 second long
 	time_t capstart = data->m_startTimestamp;
 	int64_t fs = data->m_startFemtoseconds + p->m_offset;
-	if(fs > SECONDS_PER_FS)
+	if(fs > FS_PER_SECOND)
 	{
-		capstart += (fs / SECONDS_PER_FS);
-		fs %= (int64_t)SECONDS_PER_FS;
+		capstart += (fs / FS_PER_SECOND);
+		fs %= (int64_t)FS_PER_SECOND;
 	}
 
 	//Format timestamp

@@ -43,7 +43,7 @@ int WaveformGroup::m_numGroups = 1;
 
 WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	: m_timeline(parent, this)
-	, m_pixelsPerXUnit(0.05)
+	, m_pixelsPerXUnit(0.00005)
 	, m_xAxisOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
 	, m_parent(parent)
@@ -250,6 +250,8 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 
 	config += "            name:           \"" + m_frame.get_label() + "\"\n";
 
+	snprintf(tmp, sizeof(tmp), "            timebaseResolution: fs\n");
+	config += tmp;
 	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %f\n", m_pixelsPerXUnit);
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", m_xAxisOffset);
