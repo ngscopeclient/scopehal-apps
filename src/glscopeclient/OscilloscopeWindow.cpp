@@ -2583,6 +2583,8 @@ void OscilloscopeWindow::RefreshAllFilters()
 {
 	SyncFilterColors();
 
+	Filter::ClearAnalysisCache();
+
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		f->SetDirty();
