@@ -721,18 +721,18 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 /**
 	@brief Gets the value of our channel at the specified timestamp (absolute, not waveform ticks)
  */
-float WaveformArea::GetValueAtTime(int64_t time_ps)
+float WaveformArea::GetValueAtTime(int64_t time_fs)
 {
 	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
 	if(!waveform)
 		return 0;
 
 	//Find the index of the sample of interest
-	double ticks = 1.0f * (time_ps - waveform->m_triggerPhase)  / waveform->m_timescale;
+	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
 	size_t index = BinarySearchForGequal(
 		(int64_t*)&waveform->m_offsets[0],
 		waveform->m_offsets.size(),
-		(int64_t)ceil(ticks));
+		(int64_t)round(ticks));
 
 	//Stop if start of waveform (no lerping possible)
 	if(index == 0)
