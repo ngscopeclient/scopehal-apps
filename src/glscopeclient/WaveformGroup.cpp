@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "WaveformGroup.h"
 #include "ChannelPropertiesDialog.h"
+#include "WaveformGroupPropertiesDialog.h"
 #include "FilterDialog.h"
 
 using namespace std;
@@ -47,19 +48,21 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	, m_xAxisOffset(0)
 	, m_cursorConfig(CURSOR_NONE)
 	, m_parent(parent)
+	, m_propertiesDialog(NULL)
 	, m_measurementContextMenuChannel(NULL)
 {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Initial GUI hierarchy, title, etc
 
-	m_frame.add(m_vbox);
-		m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
-		m_vbox.pack_start(m_waveformBox, Gtk::PACK_EXPAND_WIDGET);
+	m_frame.add(m_realframe);
+		m_realframe.add(m_vbox);
+			m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
+			m_vbox.pack_start(m_waveformBox, Gtk::PACK_EXPAND_WIDGET);
 
 	char tmp[64];
 	snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
 	m_numGroups ++;
-	m_frame.set_label(tmp);
+	m_realframe.set_label(tmp);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Statistics
@@ -75,6 +78,10 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 
 	m_measurementView.signal_button_press_event().connect_notify(
 		sigc::mem_fun(*this, &WaveformGroup::OnMeasurementButtonPressEvent));
+
+	m_frame.add_events(Gdk::BUTTON_PRESS_MASK);
+	m_frame.signal_button_press_event().connect_notify(
+		sigc::mem_fun(*this, &WaveformGroup::OnTitleButtonPressEvent));
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Context menu
@@ -101,6 +108,9 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 
 WaveformGroup::~WaveformGroup()
 {
+	if(m_propertiesDialog)
+		delete m_propertiesDialog;
+
 	//Free each of our channels
 	for(size_t i=1; i<32; i++)
 	{
@@ -248,7 +258,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	snprintf(tmp, sizeof(tmp), "            id:             %d\n", table.emplace(&m_frame));
 	config += tmp;
 
-	config += "            name:           \"" + m_frame.get_label() + "\"\n";
+	config += "            name:           \"" + m_realframe.get_label() + "\"\n";
 
 	snprintf(tmp, sizeof(tmp), "            timebaseResolution: fs\n");
 	config += tmp;
@@ -323,6 +333,26 @@ bool WaveformGroup::IsLastChild(Gtk::Widget* child)
 		return true;
 
 	return false;
+}
+
+void WaveformGroup::OnTitleButtonPressEvent(GdkEventButton* event)
+{
+	if(event->type == GDK_2BUTTON_PRESS)
+	{
+		m_propertiesDialog = new WaveformGroupPropertiesDialog(m_parent, this);
+		m_propertiesDialog->signal_response().connect(
+			sigc::mem_fun(*this, &WaveformGroup::OnPropertiesDialogResponse));
+		m_propertiesDialog->show();
+	}
+}
+
+void WaveformGroup::OnPropertiesDialogResponse(int response)
+{
+	if(response == Gtk::RESPONSE_OK)
+		m_propertiesDialog->ConfigureGroup();
+
+	delete m_propertiesDialog;
+	m_propertiesDialog = NULL;
 }
 
 void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)

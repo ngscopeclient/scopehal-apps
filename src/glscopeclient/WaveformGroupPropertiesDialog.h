@@ -30,113 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief A group of one or more WaveformArea's
+	@brief Dialog for configuring channel properties
  */
 
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
+#ifndef WaveformGroupPropertiesDialog_h
+#define WaveformGroupPropertiesDialog_h
 
-#include "Timeline.h"
-
-class OscilloscopeWindow;
-class WaveformGroupPropertiesDialog;
-
-class MeasurementColumns : public Gtk::TreeModel::ColumnRecord
+/**
+	@brief Dialog for configuring a single scope channel
+ */
+class WaveformGroupPropertiesDialog	: public Gtk::Dialog
 {
 public:
-	MeasurementColumns()
-	{
-		//column 0 is never used, we reserve the index for m_filterColumn
-		m_columns.push_back(Gtk::TreeModelColumn<std::string>());
-		add(m_filterColumn);
+	WaveformGroupPropertiesDialog(OscilloscopeWindow* parent, WaveformGroup* group);
+	virtual ~WaveformGroupPropertiesDialog();
 
-		for(size_t i=1; i<32; i++)
-		{
-			m_columns.push_back(Gtk::TreeModelColumn<std::string>());
-			add(m_columns[i]);
-		}
-		add(m_statColumn);
-	}
-
-	Gtk::TreeModelColumn<std::string> m_filterColumn;
-	std::vector<Gtk::TreeModelColumn<std::string>> m_columns;
-
-	Gtk::TreeModelColumn<Statistic*> m_statColumn;
-};
-
-class WaveformGroup
-{
-public:
-	WaveformGroup(OscilloscopeWindow* parent);
-	virtual ~WaveformGroup();
-
-	void RefreshMeasurements();
-
-	bool IsShowingStats(OscilloscopeChannel* chan);
-
-	MeasurementColumns m_treeColumns;
-	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
-	void ToggleOn(OscilloscopeChannel* chan);
-	void ToggleOff(OscilloscopeChannel* chan);
-
-	void AddStatistic(Statistic* stat);
-	void ClearStatistics();
-
-	int GetIndexOfChild(Gtk::Widget* child);
-	bool IsLastChild(Gtk::Widget* child);
-
-	void OnChannelRenamed(OscilloscopeChannel* chan);
-
-	//map of scope channels to measurement column indexes
-	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
-	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;
-
-	Gtk::EventBox m_frame;
-		Gtk::Frame m_realframe;
-			Gtk::VBox m_vbox;
-				Timeline m_timeline;
-				Gtk::VBox m_waveformBox;
-				Gtk::TreeView m_measurementView;
-
-	float m_pixelsPerXUnit;
-	int64_t m_xAxisOffset;
-
-	enum CursorConfig
-	{
-		CURSOR_NONE,
-		CURSOR_X_SINGLE,
-		CURSOR_X_DUAL,
-		CURSOR_Y_SINGLE,
-		CURSOR_Y_DUAL
-	} m_cursorConfig;
-
-	int64_t m_xCursorPos[2];
-	double m_yCursorPos[2];
-
-	OscilloscopeWindow* GetParent()
-	{ return m_parent; }
-
-	virtual std::string SerializeConfiguration(IDTable& table);
+	void ConfigureGroup();
 
 protected:
-	void OnMeasurementButtonPressEvent(GdkEventButton* event);
-	void OnTitleButtonPressEvent(GdkEventButton* event);
+	Gtk::Grid m_grid;
 
-	static int m_numGroups;
+		Gtk::Label m_groupNameLabel;
+			Gtk::Entry m_groupNameEntry;
 
-	OscilloscopeWindow* m_parent;
-
-	Gtk::Menu m_contextMenu;
-		Gtk::MenuItem m_propertiesItem;
-		Gtk::MenuItem m_hideItem;
-
-	void OnStatisticProperties();
-	void OnHideStatistic();
-
-	WaveformGroupPropertiesDialog* m_propertiesDialog;
-	void OnPropertiesDialogResponse(int response);
-
-	OscilloscopeChannel* m_measurementContextMenuChannel;
+	WaveformGroup* m_group;
 };
 
 #endif

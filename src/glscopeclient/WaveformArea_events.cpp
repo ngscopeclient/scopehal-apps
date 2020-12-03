@@ -1264,7 +1264,7 @@ void WaveformArea::UpdateContextMenu()
 	{
 		//Move
 		auto item = new Gtk::MenuItem;
-		item->set_label(g->m_frame.get_label());
+		item->set_label(g->m_realframe.get_label());
 		m_moveMenu.append(*item);
 		m_moveExistingGroupItems.emplace(item);
 		if(get_parent() == &g->m_waveformBox)
@@ -1274,7 +1274,7 @@ void WaveformArea::UpdateContextMenu()
 
 		//Copy
 		item = new Gtk::MenuItem;
-		item->set_label(g->m_frame.get_label());
+		item->set_label(g->m_realframe.get_label());
 		m_copyMenu.append(*item);
 		m_copyExistingGroupItems.emplace(item);
 		//don't disable if in this group, it's OK to copy to ourself

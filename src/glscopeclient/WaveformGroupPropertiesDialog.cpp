@@ -30,113 +30,49 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief A group of one or more WaveformArea's
+	@brief Implementation of WaveformGroupPropertiesDialog
  */
+#include "glscopeclient.h"
+#include "OscilloscopeWindow.h"
+#include "WaveformGroupPropertiesDialog.h"
 
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
+using namespace std;
 
-#include "Timeline.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-class OscilloscopeWindow;
-class WaveformGroupPropertiesDialog;
-
-class MeasurementColumns : public Gtk::TreeModel::ColumnRecord
+WaveformGroupPropertiesDialog::WaveformGroupPropertiesDialog(
+	OscilloscopeWindow* parent,
+	WaveformGroup* group)
+	: Gtk::Dialog(string("Waveform group properties"), *parent, Gtk::DIALOG_MODAL)
+	, m_group(group)
 {
-public:
-	MeasurementColumns()
-	{
-		//column 0 is never used, we reserve the index for m_filterColumn
-		m_columns.push_back(Gtk::TreeModelColumn<std::string>());
-		add(m_filterColumn);
+	add_button("OK", Gtk::RESPONSE_OK);
+	add_button("Cancel", Gtk::RESPONSE_CANCEL);
 
-		for(size_t i=1; i<32; i++)
-		{
-			m_columns.push_back(Gtk::TreeModelColumn<std::string>());
-			add(m_columns[i]);
-		}
-		add(m_statColumn);
-	}
+	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
+		m_grid.attach(m_groupNameLabel, 0, 0, 1, 1);
+			m_groupNameLabel.set_text("Name");
+			m_groupNameLabel.set_halign(Gtk::ALIGN_START);
+		m_grid.attach_next_to(m_groupNameEntry, m_groupNameLabel, Gtk::POS_RIGHT, 1, 1);
+			m_groupNameEntry.set_halign(Gtk::ALIGN_START);
+			m_groupNameEntry.set_text(group->m_realframe.get_label());
 
-	Gtk::TreeModelColumn<std::string> m_filterColumn;
-	std::vector<Gtk::TreeModelColumn<std::string>> m_columns;
+	show_all();
+}
 
-	Gtk::TreeModelColumn<Statistic*> m_statColumn;
-};
-
-class WaveformGroup
+WaveformGroupPropertiesDialog::~WaveformGroupPropertiesDialog()
 {
-public:
-	WaveformGroup(OscilloscopeWindow* parent);
-	virtual ~WaveformGroup();
 
-	void RefreshMeasurements();
+}
 
-	bool IsShowingStats(OscilloscopeChannel* chan);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Output
 
-	MeasurementColumns m_treeColumns;
-	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
-	void ToggleOn(OscilloscopeChannel* chan);
-	void ToggleOff(OscilloscopeChannel* chan);
+void WaveformGroupPropertiesDialog::ConfigureGroup()
+{
+	m_group->m_realframe.set_label(m_groupNameEntry.get_text());
+}
 
-	void AddStatistic(Statistic* stat);
-	void ClearStatistics();
-
-	int GetIndexOfChild(Gtk::Widget* child);
-	bool IsLastChild(Gtk::Widget* child);
-
-	void OnChannelRenamed(OscilloscopeChannel* chan);
-
-	//map of scope channels to measurement column indexes
-	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
-	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;
-
-	Gtk::EventBox m_frame;
-		Gtk::Frame m_realframe;
-			Gtk::VBox m_vbox;
-				Timeline m_timeline;
-				Gtk::VBox m_waveformBox;
-				Gtk::TreeView m_measurementView;
-
-	float m_pixelsPerXUnit;
-	int64_t m_xAxisOffset;
-
-	enum CursorConfig
-	{
-		CURSOR_NONE,
-		CURSOR_X_SINGLE,
-		CURSOR_X_DUAL,
-		CURSOR_Y_SINGLE,
-		CURSOR_Y_DUAL
-	} m_cursorConfig;
-
-	int64_t m_xCursorPos[2];
-	double m_yCursorPos[2];
-
-	OscilloscopeWindow* GetParent()
-	{ return m_parent; }
-
-	virtual std::string SerializeConfiguration(IDTable& table);
-
-protected:
-	void OnMeasurementButtonPressEvent(GdkEventButton* event);
-	void OnTitleButtonPressEvent(GdkEventButton* event);
-
-	static int m_numGroups;
-
-	OscilloscopeWindow* m_parent;
-
-	Gtk::Menu m_contextMenu;
-		Gtk::MenuItem m_propertiesItem;
-		Gtk::MenuItem m_hideItem;
-
-	void OnStatisticProperties();
-	void OnHideStatistic();
-
-	WaveformGroupPropertiesDialog* m_propertiesDialog;
-	void OnPropertiesDialogResponse(int response);
-
-	OscilloscopeChannel* m_measurementContextMenuChannel;
-};
-
-#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
