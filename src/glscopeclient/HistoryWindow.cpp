@@ -194,8 +194,14 @@ void HistoryWindow::OnWaveformDataReady()
 	m_tree.get_selection()->select(row);
 
 	//Remove extra waveforms, if we have any.
+	//Clamp to 1 if the user types zero or something non-numeric
 	string smax = m_maxBox.get_text();
 	size_t nmax = atoi(smax.c_str());
+	if(nmax < 1)
+	{
+		m_maxBox.set_text("1");
+		nmax = 1;
+	}
 	auto children = m_model->children();
 	while(children.size() > nmax)
 	{
