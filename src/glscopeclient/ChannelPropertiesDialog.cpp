@@ -52,6 +52,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	, m_hasFrequency(false)
 	, m_hasBandwidth(false)
 	, m_hasDeskew(false)
+	, m_hasInvert(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -140,6 +141,20 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 						m_bandwidthBox.set_active_text(hz.PrettyPrint(limit * 1e6));
 
 					anchorLabel = &m_bandwidthLabel;
+
+					//Inversion
+					if(chan->CanInvert())
+					{
+						m_grid.attach_next_to(m_invertLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+								m_invertLabel.set_text("Invert");
+							m_invertLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_invertButton, m_invertLabel, Gtk::POS_RIGHT, 1, 1);
+							m_invertButton.set_active(chan->IsInverted());
+
+						anchorLabel = &m_invertLabel;
+
+						m_hasInvert = true;
+					}
 
 					//ADC configuration
 					if(scope->IsADCModeConfigurable())
@@ -300,6 +315,9 @@ void ChannelPropertiesDialog::ConfigureChannel()
 
 	if(m_hasAdcMode)
 		m_chan->GetScope()->SetADCMode(m_chan->GetIndex(), m_adcModeBox.get_active_row_number());
+
+	if(m_hasInvert)
+		m_chan->Invert(m_invertButton.get_active());
 
 	if(m_hasBandwidth)
 	{
