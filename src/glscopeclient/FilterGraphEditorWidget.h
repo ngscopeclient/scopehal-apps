@@ -38,6 +38,8 @@
 
 class FilterGraphEditor;
 class FilterGraphEditorWidget;
+class ChannelPropertiesDialog;
+class FilterDialog;
 
 class FilterGraphEditorPort
 {
@@ -74,6 +76,8 @@ public:
 
 protected:
 	Glib::RefPtr<Pango::Layout> m_titleLayout;
+	Glib::RefPtr<Pango::Layout> m_paramLayout;
+	Rect m_paramRect;
 
 	Rect m_titleRect;
 	std::vector<FilterGraphEditorPort> m_inputPorts;
@@ -129,17 +133,29 @@ public:
 
 	void Refresh();
 
-	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
-
 	PreferenceManager& GetPreferences();
 
 	void OnNodeDeleted(FilterGraphEditorNode* node);
 
 protected:
+
+	//Event handlers
+	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
+	virtual bool on_button_press_event(GdkEventButton* event);
+	void OnDoubleClick(GdkEventButton* event);
+	void OnFilterPropertiesDialogResponse(int response);
+	void OnChannelPropertiesDialogResponse(int response);
+
+	//Input helpers
+	FilterGraphEditorNode* HitTestNode(int x, int y);
+
+	//Refresh logic
 	void RemoveStaleNodes();
 	void CreateNodes();
 	void UpdateSizes();
 	void UpdatePositions();
+	void AssignNodesToColumns();
+	void UpdateColumnPositions();
 	void AssignInitialPositions(std::set<FilterGraphEditorNode*>& nodes);
 
 	void RemoveStalePaths();
@@ -156,6 +172,9 @@ protected:
 	std::map<NodePort, FilterGraphEditorPath*> m_paths;
 
 	std::vector<FilterGraphRoutingColumn*> m_columns;
+
+	ChannelPropertiesDialog* m_channelPropertiesDialog;
+	FilterDialog* m_filterDialog;
 };
 
 #endif

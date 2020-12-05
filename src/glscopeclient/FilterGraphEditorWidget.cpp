@@ -36,6 +36,8 @@
 #include "OscilloscopeWindow.h"
 #include "FilterGraphEditorWidget.h"
 #include "FilterGraphEditor.h"
+#include "ChannelPropertiesDialog.h"
+#include "FilterDialog.h"
 
 using namespace std;
 
@@ -100,12 +102,21 @@ void FilterGraphEditorNode::UpdateSize()
 {
 	auto headerfont = m_parent->GetPreferences().GetFont("Appearance.Filter Graph.node_name_font");
 	auto portfont = m_parent->GetPreferences().GetFont("Appearance.Filter Graph.port_font");
+	auto paramfont = m_parent->GetPreferences().GetFont("Appearance.Filter Graph.param_font");
+
+	//Clear out old ports in preparation for recreating them
+	m_inputPorts.clear();
+	m_outputPorts.clear();
 
 	//Channel name text
 	int twidth, theight;
 	m_titleLayout = Pango::Layout::create(m_parent->get_pango_context());
 	m_titleLayout->set_font_description(headerfont);
-	m_titleLayout->set_text(m_channel->GetDisplayName());
+	auto filter = dynamic_cast<Filter*>(m_channel);
+	if( (filter != NULL) && filter->IsUsingDefaultName() )
+		m_titleLayout->set_text(filter->GetProtocolDisplayName());
+	else
+		m_titleLayout->set_text(m_channel->GetDisplayName());
 	m_titleLayout->get_pixel_size(twidth, theight);
 
 	//Title box
@@ -118,7 +129,6 @@ void FilterGraphEditorNode::UpdateSize()
 	int right = twidth + 2*m_margin;
 
 	//Input ports
-	auto filter = dynamic_cast<Filter*>(m_channel);
 	if(filter != NULL)
 	{
 		for(size_t i=0; i<filter->GetInputCount(); i++)
@@ -131,11 +141,11 @@ void FilterGraphEditorNode::UpdateSize()
 			port.m_layout->get_pixel_size(twidth, theight);
 
 			port.m_rect.set_x(0);
-			port.m_rect.set_y(bottom);
+			port.m_rect.set_y(bottom + 2*m_margin);
 			port.m_rect.set_width(twidth + 2*m_margin);
 			port.m_rect.set_height(theight + 2*m_margin);
 
-			bottom = port.m_rect.get_bottom() + 2*m_margin;
+			bottom = port.m_rect.get_bottom();
 
 			m_inputPorts.push_back(port);
 		}
@@ -148,8 +158,64 @@ void FilterGraphEditorNode::UpdateSize()
 	for(auto& p : m_inputPorts)
 		p.m_rect.set_width(w);
 
-	//Output ports
 	int y = m_titleRect.get_bottom();
+
+	const int param_margin = 10;
+
+	//Parameters
+	m_paramLayout = Pango::Layout::create(m_parent->get_pango_context());
+	m_paramLayout->set_font_description(paramfont);
+	string paramText;
+	Pango::TabArray tabs(1, true);
+	if(filter != NULL)
+	{
+		tabs.set_tab(0, Pango::TAB_LEFT, 150);
+		for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
+			paramText += it->first + ": \t" + it->second.ToString() + "\n";
+	}
+	else if(m_channel->IsPhysicalChannel())
+	{
+		tabs.set_tab(0, Pango::TAB_LEFT, 100);
+
+		Unit v(Unit::UNIT_VOLTS);
+		Unit hz(Unit::UNIT_HZ);
+
+		if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+		{
+			switch(m_channel->GetCoupling())
+			{
+				case OscilloscopeChannel::COUPLE_DC_1M:
+					paramText += "Coupling:\tDC 1MΩ\n";
+					break;
+				case OscilloscopeChannel::COUPLE_AC_1M:
+					paramText += "Coupling:\tAC 1MΩ\n";
+					break;
+				case OscilloscopeChannel::COUPLE_DC_50:
+					paramText += "Coupling:\tDC 50Ω\n";
+					break;
+				default:
+					break;
+			}
+
+			paramText += string("Attenuation:\t") + to_string(m_channel->GetAttenuation()) + "x\n";
+
+			int bwl = m_channel->GetBandwidthLimit();
+			if(bwl != 0)
+				paramText += string("Bandwidth:\t") + hz.PrettyPrint(bwl * 1e6) + "\n";
+
+			paramText += string("Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange()) + "\n";
+			paramText += string("Offset:\t") + v.PrettyPrint(m_channel->GetOffset()) + "\n";
+		}
+	}
+	m_paramLayout->set_text(paramText);
+	m_paramLayout->set_tabs(tabs);
+	m_paramLayout->get_pixel_size(twidth, theight);
+	m_paramRect.set_x(w + param_margin);
+	m_paramRect.set_width(twidth + 2*m_margin);
+	m_paramRect.set_y(y + 2*m_margin);
+	m_paramRect.set_height(theight + 2*m_margin);
+
+	//Output ports
 	for(size_t i=0; i<m_channel->GetStreamCount(); i++)
 	{
 		FilterGraphEditorPort port;
@@ -160,15 +226,16 @@ void FilterGraphEditorNode::UpdateSize()
 		port.m_layout->get_pixel_size(twidth, theight);
 
 		port.m_rect.set_x(0);
-		port.m_rect.set_y(y);
+		port.m_rect.set_y(y + 2*m_margin);
 		port.m_rect.set_width(twidth + 2*m_margin);
 		port.m_rect.set_height(theight + 2*m_margin);
 
-		y = port.m_rect.get_bottom() + 2*m_margin;
+		y = port.m_rect.get_bottom();
 
 		m_outputPorts.push_back(port);
 	}
-	bottom = max(y, bottom);
+	bottom = max(bottom, y);
+	bottom = max(bottom, m_paramRect.get_bottom());
 
 	//Normalize output ports to the same width
 	int rw = 0;
@@ -178,12 +245,9 @@ void FilterGraphEditorNode::UpdateSize()
 		p.m_rect.set_width(rw);
 
 	//Calculate overall width
-	const int in_out_spacing = 25;
-	int width1 = w + rw + in_out_spacing;
+	int width1 = w + rw + 2*param_margin + m_paramRect.get_width();
 	right = max(right, width1);
 	int outleft = right - rw;
-
-	//TODO: display of parameters?
 
 	//Move output ports to the right side
 	for(auto& p : m_outputPorts)
@@ -202,6 +266,8 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 	auto outline_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.outline_color");
 	auto fill_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.node_color");
 	auto text_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.node_text_color");
+	auto title_text_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.node_title_text_color");
+	Gdk::Color channel_color(m_channel->m_displaycolor);
 
 	auto analog_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.analog_port_color");
 	auto complex_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.complex_port_color");
@@ -215,17 +281,31 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 		cr->translate(m_rect.get_left(), m_rect.get_top());
 		cr->set_line_width(2);
 
-		//Draw the box
+		//Box background
+		cr->set_source_rgba(fill_color.get_red_p(), fill_color.get_green_p(), fill_color.get_blue_p(), 1);
 		cr->move_to(0,					0);
 		cr->line_to(m_rect.get_width(),	0);
 		cr->line_to(m_rect.get_width(),	m_rect.get_height());
 		cr->line_to(0, 					m_rect.get_height());
 		cr->line_to(0, 					0);
+		cr->fill();
 
-		cr->set_source_rgba(fill_color.get_red_p(), fill_color.get_green_p(), fill_color.get_blue_p(), 1);
-		cr->fill_preserve();
+		//Title background (in channel color)
+		cr->set_source_rgba(channel_color.get_red_p(), channel_color.get_green_p(), channel_color.get_blue_p(), 1);
+		cr->move_to(0,					0);
+		cr->line_to(m_rect.get_width(),	0);
+		cr->line_to(m_rect.get_width(),	m_titleRect.get_bottom());
+		cr->line_to(0, 					m_titleRect.get_bottom());
+		cr->line_to(0, 					0);
+		cr->fill();
 
+		//Box outline
 		cr->set_source_rgba(outline_color.get_red_p(), outline_color.get_green_p(), outline_color.get_blue_p(), 1);
+		cr->move_to(0,					0);
+		cr->line_to(m_rect.get_width(),	0);
+		cr->line_to(m_rect.get_width(),	m_rect.get_height());
+		cr->line_to(0, 					m_rect.get_height());
+		cr->line_to(0, 					0);
 		cr->stroke();
 
 		//Draw input ports
@@ -313,8 +393,17 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 			cr->restore();
 		}
 
-		//Draw the title
+		//Draw filter parameters
 		cr->set_source_rgba(text_color.get_red_p(), text_color.get_green_p(), text_color.get_blue_p(), 1);
+		cr->save();
+			cr->move_to(m_paramRect.get_x(), m_paramRect.get_y());
+			m_paramLayout->update_from_cairo_context(cr);
+			m_paramLayout->show_in_cairo_context(cr);
+		cr->restore();
+
+		//Draw the title
+		cr->set_source_rgba(
+			title_text_color.get_red_p(), title_text_color.get_green_p(), title_text_color.get_blue_p(), 1);
 		cr->save();
 			cr->move_to(m_titleRect.get_x(), m_titleRect.get_y());
 			m_titleLayout->update_from_cairo_context(cr);
@@ -329,8 +418,10 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 
 FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	: m_parent(parent)
+	, m_channelPropertiesDialog(NULL)
+	, m_filterDialog(NULL)
 {
-
+	add_events(Gdk::BUTTON_PRESS_MASK);
 }
 
 FilterGraphEditorWidget::~FilterGraphEditorWidget()
@@ -346,6 +437,9 @@ FilterGraphEditorWidget::~FilterGraphEditorWidget()
 	for(auto col : m_columns)
 		delete col;
 	m_columns.clear();
+
+	delete m_channelPropertiesDialog;
+	delete m_filterDialog;
 }
 
 PreferenceManager& FilterGraphEditorWidget::GetPreferences()
@@ -447,15 +541,10 @@ void FilterGraphEditorWidget::UpdateSizes()
 }
 
 /**
-	@brief Assigns initial positions to each graph node
+	@brief Figure out what column each node belongs in
  */
-void FilterGraphEditorWidget::UpdatePositions()
+void FilterGraphEditorWidget::AssignNodesToColumns()
 {
-	const int left_margin			= 5;
-	const int column_spacing		= 75;
-	const int routing_margin		= 10;
-	const int col_route_spacing		= 10;
-
 	//Figure out all nodes that do not currently have assigned positions
 	set<FilterGraphEditorNode*> unassignedNodes;
 	for(auto it : m_nodes)
@@ -475,13 +564,11 @@ void FilterGraphEditorWidget::UpdatePositions()
 		if(node->m_channel->IsPhysicalChannel() &&
 			(node->m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
 		{
-			node->m_rect.set_x(left_margin);
 			node->m_column = 0;
 			m_columns[0]->m_nodes.emplace(node);
 			assignedNodes.emplace(node);
 		}
 	}
-	AssignInitialPositions(assignedNodes);
 	for(auto node : assignedNodes)
 		unassignedNodes.erase(node);
 	assignedNodes.clear();
@@ -491,41 +578,25 @@ void FilterGraphEditorWidget::UpdatePositions()
 	{
 		if(node->m_channel->IsPhysicalChannel() )
 		{
-			node->m_rect.set_x(left_margin);
 			node->m_column = 0;
 			m_columns[0]->m_nodes.emplace(node);
 			assignedNodes.emplace(node);
 		}
 	}
-	AssignInitialPositions(assignedNodes);
 	for(auto node : assignedNodes)
 		unassignedNodes.erase(node);
 	assignedNodes.clear();
-
-	//Figure out the width of our widest physical node
-	int physical_right = 0;
-	for(auto it : m_nodes)
-	{
-		if(!it.second->m_positionValid || !it.second->m_channel->IsPhysicalChannel())
-			continue;
-		physical_right = max(physical_right, it.second->m_rect.get_right());
-	}
-	int next_left = physical_right + column_spacing;
-
-	//Create/update routing column
-	m_columns[0]->m_left = physical_right + routing_margin;
-	m_columns[0]->m_right = next_left - routing_margin;
 
 	//Filters left to assign
 	set<OscilloscopeChannel*> unassignedChannels;
 	for(auto node : unassignedNodes)
 		unassignedChannels.emplace(node->m_channel);
 
-	size_t ncol = 1;
+	int ncol = 1;
 	while(!unassignedNodes.empty())
 	{
 		//Make a new column if needed
-		if(m_columns.size() <= ncol)
+		if(m_columns.size() <= (size_t)ncol)
 			m_columns.push_back(new FilterGraphRoutingColumn);
 
 		//Find all nodes which live exactly one column to our right.
@@ -537,8 +608,20 @@ void FilterGraphEditorWidget::UpdatePositions()
 			auto d = dynamic_cast<Filter*>(node->m_channel);
 			for(size_t i=0; i<d->GetInputCount(); i++)
 			{
+				//If no input, we can put it anywhere
 				auto in = d->GetInput(i).m_channel;
+				if(in == NULL)
+					continue;
+
+				//Check if it's in a previous column
 				if(unassignedChannels.find(in) != unassignedChannels.end())
+				{
+					ok = false;
+					break;
+				}
+
+				//Also check *assigned* inputs to see if they're in the same or a rightmost column
+				if(m_nodes[in]->m_positionValid && (m_nodes[in]->m_column >= ncol) )
 				{
 					ok = false;
 					break;
@@ -553,21 +636,9 @@ void FilterGraphEditorWidget::UpdatePositions()
 		//Assign positions
 		for(auto node : nextNodes)
 		{
-			node->m_rect.set_x(next_left);
 			node->m_column = ncol;
 			m_columns[ncol]->m_nodes.emplace(node);
 		}
-		AssignInitialPositions(nextNodes);
-
-		//Update width
-		int colwidth = 0;
-		for(auto node : nextNodes)
-			colwidth = max(colwidth, node->m_rect.get_width());
-		next_left += colwidth;
-
-		m_columns[ncol]->m_left = next_left + routing_margin;
-		next_left += column_spacing;
-		m_columns[ncol]->m_right = next_left - routing_margin;
 
 		//Remove working set
 		for(auto node : nextNodes)
@@ -577,6 +648,39 @@ void FilterGraphEditorWidget::UpdatePositions()
 		}
 
 		ncol ++;
+	}
+}
+
+/**
+	@brief Calculate width and spacing of each column
+ */
+void FilterGraphEditorWidget::UpdateColumnPositions()
+{
+	const int left_margin			= 5;
+	const int routing_column_width	= 75;
+	const int routing_margin		= 10;
+	const int col_route_spacing		= 10;
+
+	//Adjust column spacing and node widths
+	int left = left_margin;
+	for(size_t i=0; i<m_columns.size(); i++)
+	{
+		auto col = m_columns[i];
+
+		//Find width of the nodes left of the routing column, and align them to our left edge
+		int width = 0;
+		for(auto node : col->m_nodes)
+		{
+			width = max(node->m_rect.get_width(), width);
+			node->m_rect.set_x(left);
+		}
+
+		//Set the column position
+		col->m_left = left + width + routing_margin;
+		col->m_right = col->m_left + routing_column_width;
+
+		//Position the next column
+		left = col->m_right + routing_margin;
 	}
 
 	//Create routing channels
@@ -588,10 +692,39 @@ void FilterGraphEditorWidget::UpdatePositions()
 		for(int i=col->m_left; i<col->m_right; i += col_route_spacing)
 			col->m_freeVerticalChannels.push_back(i);
 	}
+
+	//Assign vertical positions to any unplaced nodes
+	for(auto col : m_columns)
+	{
+		set<FilterGraphEditorNode*> nodes;
+		for(auto node : col->m_nodes)
+		{
+			if(!node->m_positionValid)
+				nodes.emplace(node);
+		}
+
+		AssignInitialPositions(nodes);
+	}
+}
+
+/**
+	@brief Assigns initial positions to each graph node
+ */
+void FilterGraphEditorWidget::UpdatePositions()
+{
+	AssignNodesToColumns();
+	UpdateColumnPositions();
 }
 
 void FilterGraphEditorWidget::AssignInitialPositions(set<FilterGraphEditorNode*>& nodes)
 {
+	for(auto node : nodes)
+	{
+		//If Y position is zero, move us down by a little bit so we're not touching the edge
+		if(node->m_rect.get_y() == 0)
+			node->m_rect.set_y(5);
+	}
+
 	for(auto node : nodes)
 	{
 		while(true)
@@ -638,6 +771,17 @@ void FilterGraphEditorWidget::RemoveStalePaths()
 	for(auto it : m_paths)
 	{
 		auto path = it.second;
+
+		//Check if we have a node for the source/dest.
+		//If either node no longer exists, don't check for connectivity or deref any pointers
+		//(as the nodes they refer to don't exist anymore)
+		if( (m_nodes.find(path->m_fromNode->m_channel) == m_nodes.end()) ||
+			(m_nodes.find(path->m_toNode->m_channel) == m_nodes.end()) )
+		{
+			pathsToDelete.emplace(it.first);
+			continue;
+		}
+
 		auto input = dynamic_cast<Filter*>(path->m_toNode->m_channel)->GetInput(path->m_toPort);
 		if(input != StreamDescriptor(path->m_fromNode->m_channel, path->m_fromPort))
 			pathsToDelete.emplace(it.first);
@@ -789,16 +933,132 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		it.second->Render(cr);
 
 	//Draw all paths
+	const int dot_radius = 3;
 	auto linecolor = GetPreferences().GetColor("Appearance.Filter Graph.line_color");
 	cr->set_source_rgba(linecolor.get_red_p(), linecolor.get_green_p(), linecolor.get_blue_p(), 1);
 	for(auto it : m_paths)
 	{
 		auto path = it.second;
+
+		//Draw the lines
 		cr->move_to(path->m_polyline[0].x, path->m_polyline[0].y);
 		for(size_t i=1; i<path->m_polyline.size(); i++)
 			cr->line_to(path->m_polyline[i].x, path->m_polyline[i].y);
 		cr->stroke();
+
+		//Dot joiners
+		//TODO: only at positions where multiple paths meet?
+		for(size_t i=1; i<path->m_polyline.size()-1; i++)
+		{
+			cr->arc(path->m_polyline[i].x, path->m_polyline[i].y, dot_radius, 0, 2*M_PI);
+			cr->fill();
+		}
 	}
 
 	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
+
+bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
+{
+	if(event->type == GDK_2BUTTON_PRESS)
+		OnDoubleClick(event);
+
+	return true;
+}
+
+void FilterGraphEditorWidget::OnDoubleClick(GdkEventButton* event)
+{
+	//See what we hit
+	auto node = HitTestNode(event->x, event->y);
+	if(!node)
+		return;
+
+	auto f = dynamic_cast<Filter*>(node->m_channel);
+	if(f)
+	{
+		if(m_filterDialog)
+			delete m_filterDialog;
+		m_filterDialog = new FilterDialog(m_parent->GetParent(), f, StreamDescriptor(NULL, 0));
+		m_filterDialog->signal_response().connect(
+			sigc::mem_fun(*this, &FilterGraphEditorWidget::OnFilterPropertiesDialogResponse));
+		m_filterDialog->show();
+	}
+
+	else
+	{
+		if(m_channelPropertiesDialog)
+			delete m_channelPropertiesDialog;
+		m_channelPropertiesDialog = new ChannelPropertiesDialog(m_parent->GetParent(), node->m_channel);
+		m_channelPropertiesDialog->signal_response().connect(
+			sigc::mem_fun(*this, &FilterGraphEditorWidget::OnChannelPropertiesDialogResponse));
+		m_channelPropertiesDialog->show();
+	}
+}
+
+void FilterGraphEditorWidget::OnFilterPropertiesDialogResponse(int response)
+{
+	//Apply the changes
+	if(response == Gtk::RESPONSE_OK)
+	{
+		auto window = m_parent->GetParent();
+		auto f = m_filterDialog->GetFilter();
+		auto name = f->GetDisplayName();
+
+		m_filterDialog->ConfigureDecoder();
+
+		if(name != f->GetDisplayName())
+			window->OnChannelRenamed(f);
+
+		window->RefreshAllFilters();
+
+		//TODO: redraw any waveform areas it contains
+		//SetGeometryDirty();
+		//queue_draw();
+
+		Refresh();
+	}
+
+	delete m_filterDialog;
+	m_filterDialog = NULL;
+}
+
+void FilterGraphEditorWidget::OnChannelPropertiesDialogResponse(int response)
+{
+	if(response == Gtk::RESPONSE_OK)
+	{
+		auto window = m_parent->GetParent();
+		auto chan = m_channelPropertiesDialog->GetChannel();
+		auto name = chan->GetDisplayName();
+
+		m_channelPropertiesDialog->ConfigureChannel();
+
+		if(name != chan->GetDisplayName())
+			window->OnChannelRenamed(chan);
+
+		//TODO: redraw any waveform areas it contains
+		//SetGeometryDirty();
+		//queue_draw();
+
+		Refresh();
+	}
+
+	delete m_channelPropertiesDialog;
+	m_channelPropertiesDialog = NULL;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Input helpers
+
+FilterGraphEditorNode* FilterGraphEditorWidget::HitTestNode(int x, int y)
+{
+	for(auto it : m_nodes)
+	{
+		if(it.second->m_rect.HitTest(x, y))
+			return it.second;
+	}
+
+	return NULL;
 }

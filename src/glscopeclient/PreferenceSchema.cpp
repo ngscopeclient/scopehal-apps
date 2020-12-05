@@ -105,9 +105,13 @@ void PreferenceManager::InitializeDefaults()
                 .Label("Background color")
                 .Description("Color for the background of the filter graph editor"));
             graph.AddPreference(
-                Preference::Color("node_color", Gdk::Color("#101010"))
+                Preference::Color("node_color", Gdk::Color("#404040"))
                 .Label("Node color")
                 .Description("Color for node background"));
+            graph.AddPreference(
+                Preference::Color("node_title_text_color", Gdk::Color("#000000"))
+                .Label("Node title text color")
+                .Description("Color for node title"));
             graph.AddPreference(
                 Preference::Color("node_text_color", Gdk::Color("#ffffff"))
                 .Label("Node text color")
@@ -124,6 +128,10 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Font("port_font", "sans 10")
                 .Label("Port font")
                 .Description("Font used for port names"));
+            graph.AddPreference(
+                Preference::Font("param_font", "sans 10")
+                .Label("Parameter font")
+                .Description("Font used for parameters"));
             graph.AddPreference(
                 Preference::Color("analog_port_color", Gdk::Color("#000080"))
                 .Label("Analog port color")

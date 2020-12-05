@@ -47,6 +47,9 @@ public:
 
 	void ConfigureChannel();
 
+	OscilloscopeChannel* GetChannel()
+	{ return m_chan; }
+
 protected:
 	Gtk::Grid m_grid;
 
