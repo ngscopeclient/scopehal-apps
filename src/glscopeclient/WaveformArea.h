@@ -121,6 +121,10 @@ public:
 	StreamDescriptor GetChannel()
 	{ return m_channel; }
 
+	///@brief Get the top level frame for the group
+	Gtk::Widget* GetGroupFrame()
+	{ return &m_group->m_frame; }
+
 	void ClearPersistence(bool geometry_dirty = true)
 	{
 		m_persistenceClear = true;

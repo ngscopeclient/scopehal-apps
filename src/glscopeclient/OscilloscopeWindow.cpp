@@ -1883,7 +1883,8 @@ void OscilloscopeWindow::OnMoveNewBelow(WaveformArea* w)
 
 void OscilloscopeWindow::SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal)
 {
-	//Hierarchy is WaveformArea -> WaveformGroup waveform box -> WaveformGroup box -> WaveformGroup frame -> splitter
+	//Hierarchy is WaveformArea -> WaveformGroup waveform box -> WaveformGroup box ->
+	//WaveformGroup frame -> WaveformGroup event box -> splitter
 	auto split = dynamic_cast<Gtk::Paned*>(frame->get_parent());
 	if(split == NULL)
 	{
@@ -1941,7 +1942,7 @@ void OscilloscopeWindow::OnMoveNew(WaveformArea* w, bool horizontal)
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
-	SplitGroup(w->get_parent()->get_parent()->get_parent(), group, horizontal);
+	SplitGroup(w->GetGroupFrame(), group, horizontal);
 
 	//Move the waveform into the new group
 	OnMoveToExistingGroup(w, group);
@@ -1955,7 +1956,7 @@ void OscilloscopeWindow::OnCopyNew(WaveformArea* w, bool horizontal)
 	m_waveformGroups.emplace(group);
 
 	//Split the existing group and add the new group to it
-	SplitGroup(w->get_parent()->get_parent()->get_parent(), group, horizontal);
+	SplitGroup(w->GetGroupFrame(), group, horizontal);
 
 	//Make a copy of the current waveform view and add to that group
 	OnCopyToExistingGroup(w, group);
