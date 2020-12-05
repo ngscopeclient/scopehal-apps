@@ -2344,6 +2344,7 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 
 	//Clean up in case it was the last channel in the group
 	GarbageCollectGroups();
+	RefreshFilterGraphEditor();
 }
 
 void OscilloscopeWindow::GarbageCollectAnalyzers()

@@ -920,8 +920,13 @@ void WaveformArea::OnCopyToExistingGroup(WaveformGroup* group)
 void WaveformArea::OnHide()
 {
 	//Delete the entire waveform area
+	//After we call OnRemoveChannel(this) we're going to get deleted and must return immediately,
+	//without touching any other member variables.
 	if(m_selectedChannel == m_channel)
+	{
 		m_parent->OnRemoveChannel(this);
+		return;
+	}
 
 	//Deleting an overlay
 	else
@@ -941,8 +946,6 @@ void WaveformArea::OnHide()
 
 		queue_draw();
 	}
-
-	m_parent->RefreshFilterGraphEditor();
 }
 
 void WaveformArea::OnTogglePersistence()
