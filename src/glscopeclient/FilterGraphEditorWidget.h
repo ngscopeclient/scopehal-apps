@@ -160,6 +160,7 @@ protected:
 
 	void RemoveStalePaths();
 	void CreatePaths();
+	void ResolvePathConflicts();
 	void RoutePath(FilterGraphEditorPath* path);
 
 protected:

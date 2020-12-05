@@ -461,6 +461,7 @@ void FilterGraphEditorWidget::Refresh()
 	//Route
 	RemoveStalePaths();
 	CreatePaths();
+	ResolvePathConflicts();
 
 	queue_draw();
 }
@@ -557,23 +558,8 @@ void FilterGraphEditorWidget::AssignNodesToColumns()
 	if(m_columns.empty())
 		m_columns.push_back(new FilterGraphRoutingColumn);
 
-	//First, place physical analog channels
+	//First, place physical channels
 	set<FilterGraphEditorNode*> assignedNodes;
-	for(auto node : unassignedNodes)
-	{
-		if(node->m_channel->IsPhysicalChannel() &&
-			(node->m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) )
-		{
-			node->m_column = 0;
-			m_columns[0]->m_nodes.emplace(node);
-			assignedNodes.emplace(node);
-		}
-	}
-	for(auto node : assignedNodes)
-		unassignedNodes.erase(node);
-	assignedNodes.clear();
-
-	//Then other physical channels
 	for(auto node : unassignedNodes)
 	{
 		if(node->m_channel->IsPhysicalChannel() )
@@ -657,7 +643,7 @@ void FilterGraphEditorWidget::AssignNodesToColumns()
 void FilterGraphEditorWidget::UpdateColumnPositions()
 {
 	const int left_margin			= 5;
-	const int routing_column_width	= 75;
+	const int routing_column_width	= 100;
 	const int routing_margin		= 10;
 	const int col_route_spacing		= 10;
 
@@ -696,13 +682,22 @@ void FilterGraphEditorWidget::UpdateColumnPositions()
 	//Assign vertical positions to any unplaced nodes
 	for(auto col : m_columns)
 	{
+		//Analog first
 		set<FilterGraphEditorNode*> nodes;
+		for(auto node : col->m_nodes)
+		{
+			if(!node->m_positionValid && (node->m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+				nodes.emplace(node);
+		}
+		AssignInitialPositions(nodes);
+
+		//Then any remaining unplaced nodes
+		nodes.clear();
 		for(auto node : col->m_nodes)
 		{
 			if(!node->m_positionValid)
 				nodes.emplace(node);
 		}
-
 		AssignInitialPositions(nodes);
 	}
 }
@@ -906,6 +901,65 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 	path->m_polyline.push_back(end);
 }
 
+/**
+	@brief Find cases of overlapping line segments and fix them.
+ */
+void FilterGraphEditorWidget::ResolvePathConflicts()
+{
+	//We ensure that collisions in the vertical routing channels cannot happen by design.
+	//The only possible collisions are horizontal between columns, or horizontal within a column.
+
+	for(auto it : m_paths)
+	{
+		//Check each segment individually.
+		//We always have an even number of points in the line, forming an odd number of segments.
+		//The first segment is always horizontal, then we alternate vertical and horizontal.
+		auto path = it.second;
+		for(size_t i=0; i<path->m_polyline.size(); i+= 2)
+		{
+			int first_y = path->m_polyline[i].y;
+			int left = path->m_polyline[i].x;
+			int right = path->m_polyline[i+1].x;
+
+			//Check against all other paths
+			for(auto jt : m_paths)
+			{
+				auto target = jt.second;
+				if(target == path)
+					continue;
+
+				for(size_t j=0; j<target->m_polyline.size(); j+= 2)
+				{
+					//Collisions with the same net are OK
+					if( (target->m_fromNode == path->m_fromNode) && (target->m_fromPort == path->m_fromPort) )
+						continue;
+
+					//Different row?
+					int second_y = target->m_polyline[j].y;
+					if(second_y != first_y)
+						continue;
+
+					//Same row, check for X collision
+					if( (target->m_polyline[j+1].x < left) || (target->m_polyline[j].x > right) )
+						continue;
+
+					//If we get here, we have a collision. Log it.
+					LogDebug("Collision found!\n");
+					LogIndenter li;
+					LogDebug("From: %s port %zu\n",
+						path->m_fromNode->m_channel->GetDisplayName().c_str(),
+						path->m_fromPort);
+					LogDebug("To: %s port %zu\n",
+						path->m_toNode->m_channel->GetDisplayName().c_str(),
+						path->m_toPort);
+					LogDebug("Collision: y=%d\n", first_y);
+					LogDebug("i=%zu\n", i);
+				}
+			}
+		}
+	}
+}
+
 void FilterGraphEditorWidget::OnNodeDeleted(FilterGraphEditorNode* node)
 {
 	m_columns[node->m_column]->m_nodes.erase(node);
@@ -933,7 +987,7 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		it.second->Render(cr);
 
 	//Draw all paths
-	const int dot_radius = 3;
+	//const int dot_radius = 3;
 	auto linecolor = GetPreferences().GetColor("Appearance.Filter Graph.line_color");
 	cr->set_source_rgba(linecolor.get_red_p(), linecolor.get_green_p(), linecolor.get_blue_p(), 1);
 	for(auto it : m_paths)
@@ -948,11 +1002,13 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 		//Dot joiners
 		//TODO: only at positions where multiple paths meet?
+		/*
 		for(size_t i=1; i<path->m_polyline.size()-1; i++)
 		{
 			cr->arc(path->m_polyline[i].x, path->m_polyline[i].y, dot_radius, 0, 2*M_PI);
 			cr->fill();
 		}
+		*/
 	}
 
 	return true;
