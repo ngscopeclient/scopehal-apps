@@ -148,6 +148,14 @@ public:
 		return true;
 	}
 
+	bool HitTestY(int y)
+	{
+		if( (y < get_top()) || (y > get_bottom()) )
+			return false;
+
+		return true;
+	}
+
 	Rect& operator+=(const vec2f& rhs)
 	{
 		set_x(get_x() + rhs.x);

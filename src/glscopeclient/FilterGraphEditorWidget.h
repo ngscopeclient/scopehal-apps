@@ -48,12 +48,13 @@ public:
 };
 
 /**
-	@brief Graphical representation of a single FlowGraphNode
+	@brief Graphical representation of a single OscilloscopeChannel
  */
 class FilterGraphEditorNode
 {
 public:
 	FilterGraphEditorNode(FilterGraphEditorWidget* parent, OscilloscopeChannel* chan);
+	virtual ~FilterGraphEditorNode();
 
 	void UpdateSize();
 	void Render(const Cairo::RefPtr<Cairo::Context>& cr);
@@ -63,6 +64,13 @@ public:
 	Rect m_rect;
 	bool m_positionValid;
 	int m_margin;
+	int m_column;
+
+	const std::vector<FilterGraphEditorPort>& GetInputPorts()
+	{ return m_inputPorts; }
+
+	const std::vector<FilterGraphEditorPort>& GetOutputPorts()
+	{ return m_outputPorts; }
 
 protected:
 	Glib::RefPtr<Pango::Layout> m_titleLayout;
@@ -70,6 +78,40 @@ protected:
 	Rect m_titleRect;
 	std::vector<FilterGraphEditorPort> m_inputPorts;
 	std::vector<FilterGraphEditorPort> m_outputPorts;
+};
+
+/**
+	@brief A path between two FilterGraphEditorNode's
+ */
+class FilterGraphEditorPath
+{
+public:
+	FilterGraphEditorPath(
+		FilterGraphEditorNode* fromnode,
+		size_t fromport,
+		FilterGraphEditorNode* tonode,
+		size_t toport);
+
+	FilterGraphEditorNode* m_fromNode;
+	size_t m_fromPort;
+
+	FilterGraphEditorNode* m_toNode;
+	size_t m_toPort;
+
+	//The actual polyline
+	std::vector<vec2f> m_polyline;
+};
+
+/**
+	@brief A column of routing space between columns of nodes
+ */
+class FilterGraphRoutingColumn
+{
+public:
+	int m_left;
+	int m_right;
+
+	std::set<FilterGraphEditorNode*> m_nodes;
 };
 
 /**
@@ -87,6 +129,8 @@ public:
 
 	PreferenceManager& GetPreferences();
 
+	void OnNodeDeleted(FilterGraphEditorNode* node);
+
 protected:
 	void RemoveStaleNodes();
 	void CreateNodes();
@@ -94,10 +138,20 @@ protected:
 	void UpdatePositions();
 	void AssignInitialPositions(std::set<FilterGraphEditorNode*>& nodes);
 
+	void RemoveStalePaths();
+	void CreatePaths();
+	void RoutePath(FilterGraphEditorPath* path);
+
 protected:
 	FilterGraphEditor* m_parent;
 
 	std::map<OscilloscopeChannel*, FilterGraphEditorNode*> m_nodes;
+
+	//Paths are indexed by destination, since an input can have only one connection
+	typedef std::pair<FilterGraphEditorNode*, size_t> NodePort;
+	std::map<NodePort, FilterGraphEditorPath*> m_paths;
+
+	std::vector<FilterGraphRoutingColumn*> m_columns;
 };
 
 #endif

@@ -136,6 +136,10 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("complex_port_color", Gdk::Color("#808000"))
                 .Label("Complex port color")
                 .Description("Color for complex node ports"));
+            graph.AddPreference(
+                Preference::Color("line_color", Gdk::Color("#c0c0c0"))
+                .Label("Line color")
+                .Description("Color for lines between nodes"));
 
         auto& peaks = appearance.AddCategory("Peaks");
             peaks.AddPreference(
