@@ -40,6 +40,29 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FilterGraphRoutingColumn
+
+int FilterGraphRoutingColumn::GetVerticalChannel(StreamDescriptor stream)
+{
+	//Reuse an existing channel if we find one for the same source signal
+	auto it = m_usedVerticalChannels.find(stream);
+	if(it != m_usedVerticalChannels.end())
+		return it->second;
+	else
+	{
+		//If no channels to use, abort (TODO: increase column spacing and re-layout)
+		if(m_freeVerticalChannels.empty())
+			return -1;
+
+		//Find a vertical space in the channel to use
+		int x = *m_freeVerticalChannels.begin();
+		m_freeVerticalChannels.pop_front();
+		m_usedVerticalChannels[stream] = x;
+		return x;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FilterGraphEditorPath
 
 FilterGraphEditorPath::FilterGraphEditorPath(
@@ -428,9 +451,10 @@ void FilterGraphEditorWidget::UpdateSizes()
  */
 void FilterGraphEditorWidget::UpdatePositions()
 {
-	const int left_margin = 5;
-	const int column_spacing = 75;
-	const int routing_margin = 10;
+	const int left_margin			= 5;
+	const int column_spacing		= 75;
+	const int routing_margin		= 10;
+	const int col_route_spacing		= 10;
 
 	//Figure out all nodes that do not currently have assigned positions
 	set<FilterGraphEditorNode*> unassignedNodes;
@@ -554,6 +578,16 @@ void FilterGraphEditorWidget::UpdatePositions()
 
 		ncol ++;
 	}
+
+	//Create routing channels
+	for(auto col : m_columns)
+	{
+		col->m_freeVerticalChannels.clear();
+		col->m_usedVerticalChannels.clear();
+
+		for(int i=col->m_left; i<col->m_right; i += col_route_spacing)
+			col->m_freeVerticalChannels.push_back(i);
+	}
 }
 
 void FilterGraphEditorWidget::AssignInitialPositions(set<FilterGraphEditorNode*>& nodes)
@@ -615,6 +649,10 @@ void FilterGraphEditorWidget::RemoveStalePaths()
 		delete m_paths[p];
 		m_paths.erase(p);
 	}
+
+	//Remove existing routing from all paths (we re-autoroute everything each update)
+	for(auto it : m_paths)
+		it.second->m_polyline.clear();
 }
 
 void FilterGraphEditorWidget::CreatePaths()
@@ -660,23 +698,26 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 	start = vec2f(fromrect.get_right(), fromrect.get_top() + fromrect.get_height()/2);
 	end = vec2f(torect.get_left(), torect.get_top() + torect.get_height()/2);
 
+	StreamDescriptor stream(path->m_fromNode->m_channel, path->m_fromPort);
+
 	//Begin at the starting point
 	path->m_polyline.push_back(start);
 
 	int y = start.y;
 	for(int col = path->m_fromNode->m_column; col < path->m_toNode->m_column; col++)
 	{
-		//TODO: Find a vertical space in the channel to use
-		int x = m_columns[col]->m_left;
+		auto fromcol = m_columns[col];
 
 		//Horizontal segment into the column
+		int x = fromcol->GetVerticalChannel(stream);
 		path->m_polyline.push_back(vec2f(x, y));
 
 		//If we have more hops to do, find a horizontal routing channel
 		if(col+1 < path->m_toNode->m_column)
 		{
 			//Find the set of nodes we could potentially collide with
-			auto& targets = m_columns[col+1]->m_nodes;
+			auto tocol = m_columns[col+1];
+			auto& targets = tocol->m_nodes;
 
 			//Find a free horizontal routing channel going from this column to the one to its right.
 			//Always go down, never up.
@@ -702,13 +743,12 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 					break;
 			}
 
-			int x2 = m_columns[col+1]->m_left;
-
 			//Vertical segment to the horizontal leg
 			path->m_polyline.push_back(vec2f(x, ychan));
 
 			//Horizontal segment to the next column
-			path->m_polyline.push_back(vec2f(x2, ychan));
+			x = tocol->GetVerticalChannel(stream);
+			path->m_polyline.push_back(vec2f(x, ychan));
 
 			y = ychan;
 		}

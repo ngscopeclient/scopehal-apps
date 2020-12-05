@@ -112,6 +112,10 @@ public:
 	int m_right;
 
 	std::set<FilterGraphEditorNode*> m_nodes;
+	std::list<int> m_freeVerticalChannels;
+	std::map<StreamDescriptor, int> m_usedVerticalChannels;
+
+	int GetVerticalChannel(StreamDescriptor stream);
 };
 
 /**
