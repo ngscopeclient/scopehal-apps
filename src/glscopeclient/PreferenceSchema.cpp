@@ -99,6 +99,44 @@ void PreferenceManager::InitializeDefaults()
                 .Label("Preamble color")
                 .Description("Color for preambles, sync bytes, and other fixed header data"));
 
+        auto& graph = appearance.AddCategory("Filter Graph");
+            graph.AddPreference(
+                Preference::Color("background_color", Gdk::Color("#101010"))
+                .Label("Background color")
+                .Description("Color for the background of the filter graph editor"));
+            graph.AddPreference(
+                Preference::Color("node_color", Gdk::Color("#101010"))
+                .Label("Node color")
+                .Description("Color for node background"));
+            graph.AddPreference(
+                Preference::Color("node_text_color", Gdk::Color("#ffffff"))
+                .Label("Node text color")
+                .Description("Color for node text"));
+            graph.AddPreference(
+                Preference::Color("outline_color", Gdk::Color("#009900"))
+                .Label("Outline color")
+                .Description("Color for node outlines"));
+            graph.AddPreference(
+                Preference::Font("node_name_font", "sans bold 12")
+                .Label("Node name font")
+                .Description("Font used for graph node title"));
+            graph.AddPreference(
+                Preference::Font("port_font", "sans 10")
+                .Label("Port font")
+                .Description("Font used for port names"));
+            graph.AddPreference(
+                Preference::Color("analog_port_color", Gdk::Color("#000080"))
+                .Label("Analog port color")
+                .Description("Color for analog node ports"));
+            graph.AddPreference(
+                Preference::Color("digital_port_color", Gdk::Color("#800080"))
+                .Label("Digital port color")
+                .Description("Color for digital node ports"));
+            graph.AddPreference(
+                Preference::Color("complex_port_color", Gdk::Color("#808000"))
+                .Label("Complex port color")
+                .Description("Color for complex node ports"));
+
         auto& peaks = appearance.AddCategory("Peaks");
             peaks.AddPreference(
                 Preference::Color("peak_outline_color", Gdk::Color("#009900"))

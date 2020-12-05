@@ -446,7 +446,8 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 						if(m_selectedChannel.m_channel->GetDisplayName() != oldname)
 							m_parent->OnChannelRenamed(m_selectedChannel.m_channel);
 
-						m_parent->RefreshChannelsMenu();	//update the menu with the channel's new name
+						m_parent->RefreshChannelsMenu();		//update the menu with the channel's new name
+						m_parent->RefreshFilterGraphEditor();
 						queue_draw();
 					}
 				}
@@ -940,6 +941,8 @@ void WaveformArea::OnHide()
 
 		queue_draw();
 	}
+
+	m_parent->RefreshFilterGraphEditor();
 }
 
 void WaveformArea::OnTogglePersistence()
@@ -1015,6 +1018,8 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 
 		SetGeometryDirty();
 		queue_draw();
+
+		m_parent->RefreshFilterGraphEditor();
 	}
 
 	//Clean up the dialog
@@ -1098,6 +1103,7 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	//Refresh the channels menu with the new channel name etc
 	m_parent->RefreshChannelsMenu();
+	m_parent->RefreshFilterGraphEditor();
 }
 
 void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item)

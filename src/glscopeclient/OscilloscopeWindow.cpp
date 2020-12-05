@@ -65,6 +65,8 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
 	, m_scopeSyncWizard(NULL)
+	, m_syncComplete(false)
+	, m_graphEditor(NULL)
 	, m_haltConditionsDialog(this)
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
@@ -87,7 +89,6 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	m_eyeColor = EYE_CRT;
 
 	m_totalWaveforms = 0;
-	m_syncComplete = false;
 
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
@@ -260,6 +261,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
+					m_windowMenu.append(m_windowFilterGraphItem);
+						m_windowFilterGraphItem.set_label("Filter Graph");
+						m_windowFilterGraphItem.signal_activate().connect(
+							sigc::mem_fun(*this, &OscilloscopeWindow::OnFilterGraph));
 					m_windowMenu.append(m_windowAnalyzerMenuItem);
 						m_windowAnalyzerMenuItem.set_label("Analyzer");
 						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
@@ -611,6 +616,9 @@ void OscilloscopeWindow::CloseSession()
 
 	delete m_scopeSyncWizard;
 	m_scopeSyncWizard = NULL;
+
+	delete m_graphEditor;
+	m_graphEditor = NULL;
 
 	m_multiScopeFreeRun = false;
 
@@ -3008,7 +3016,7 @@ void OscilloscopeWindow::OnAboutDialog()
 
 	aboutDialog.set_logo_default();
 	aboutDialog.set_version(string("Version ") + GLSCOPECLIENT_VERSION);
-	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg");
+	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg and contributors");
 	aboutDialog.set_license(
 		"Redistribution and use in source and binary forms, with or without modification, "
 		"are permitted provided that the following conditions are met:\n\n"
@@ -3069,4 +3077,12 @@ void OscilloscopeWindow::OnAboutDialog()
 	aboutDialog.set_website_label("Visit us on GitHub");
 
 	aboutDialog.run();
+}
+
+void OscilloscopeWindow::OnFilterGraph()
+{
+	if(!m_graphEditor)
+		m_graphEditor = new FilterGraphEditor(this);
+	m_graphEditor->Refresh();
+	m_graphEditor->show();
 }

@@ -46,9 +46,10 @@
 #include "HaltConditionsDialog.h"
 #include "FileProgressDialog.h"
 #include "PreferenceManager.h"
+#include "FilterGraphEditor.h"
 
+class FilterGraphEditor;
 class PreferenceDialog;
-
 class MultimeterDialog;
 
 /**
@@ -182,6 +183,7 @@ protected:
 							Gtk::RadioMenuItem m_eyeColorViridisItem;
 			Gtk::MenuItem m_windowMenuItem;
 				Gtk::Menu m_windowMenu;
+					Gtk::MenuItem m_windowFilterGraphItem;
 					Gtk::MenuItem m_windowAnalyzerMenuItem;
 						Gtk::Menu m_windowAnalyzerMenu;
 					Gtk::MenuItem m_windowMultimeterMenuItem;
@@ -267,6 +269,7 @@ public:
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
+	void OnFilterGraph();
 
 	//Hotkey event handlers
 	virtual bool on_key_press_event(GdkEventKey* key_event);
@@ -286,6 +289,12 @@ public:
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
 	void RefreshTriggerMenu();
+
+	void RefreshFilterGraphEditor()
+	{
+		if(m_graphEditor)
+			m_graphEditor->Refresh();
+	}
 
 	//Protocol decoding etc
 	void RefreshAllFilters();
@@ -339,6 +348,9 @@ public:
 	//Instrument sync wizard
 	ScopeSyncWizard* m_scopeSyncWizard;
 	bool m_syncComplete;
+
+	//Filter graph editor
+	FilterGraphEditor* m_graphEditor;
 
 	//Conditional halting
 	HaltConditionsDialog m_haltConditionsDialog;
