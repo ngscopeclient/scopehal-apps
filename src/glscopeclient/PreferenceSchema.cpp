@@ -148,6 +148,10 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("line_color", Gdk::Color("#c0c0c0"))
                 .Label("Line color")
                 .Description("Color for lines between nodes"));
+            graph.AddPreference(
+                Preference::Color("line_highlight_color", Gdk::Color("#ff8000"))
+                .Label("Highlighted line color")
+                .Description("Color for highlighted lines between nodes"));
 
         auto& peaks = appearance.AddCategory("Peaks");
             peaks.AddPreference(

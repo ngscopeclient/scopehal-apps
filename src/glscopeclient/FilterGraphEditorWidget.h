@@ -142,12 +142,14 @@ protected:
 	//Event handlers
 	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 	virtual bool on_button_press_event(GdkEventButton* event);
+	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	void OnDoubleClick(GdkEventButton* event);
 	void OnFilterPropertiesDialogResponse(int response);
 	void OnChannelPropertiesDialogResponse(int response);
 
 	//Input helpers
 	FilterGraphEditorNode* HitTestNode(int x, int y);
+	FilterGraphEditorPath* HitTestPath(int x, int y);
 
 	//Refresh logic
 	void RemoveStaleNodes();
@@ -176,6 +178,8 @@ protected:
 
 	ChannelPropertiesDialog* m_channelPropertiesDialog;
 	FilterDialog* m_filterDialog;
+
+	FilterGraphEditorPath* m_highlightedPath;
 };
 
 #endif

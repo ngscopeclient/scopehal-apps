@@ -420,8 +420,9 @@ FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	: m_parent(parent)
 	, m_channelPropertiesDialog(NULL)
 	, m_filterDialog(NULL)
+	, m_highlightedPath(NULL)
 {
-	add_events(Gdk::BUTTON_PRESS_MASK);
+	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
 }
 
 FilterGraphEditorWidget::~FilterGraphEditorWidget()
@@ -785,6 +786,8 @@ void FilterGraphEditorWidget::RemoveStalePaths()
 	//Remove them
 	for(auto p : pathsToDelete)
 	{
+		if(m_paths[p] == m_highlightedPath)
+			m_highlightedPath = NULL;
 		delete m_paths[p];
 		m_paths.erase(p);
 	}
@@ -917,44 +920,59 @@ void FilterGraphEditorWidget::ResolvePathConflicts()
 		auto path = it.second;
 		for(size_t i=0; i<path->m_polyline.size(); i+= 2)
 		{
-			int first_y = path->m_polyline[i].y;
-			int left = path->m_polyline[i].x;
-			int right = path->m_polyline[i+1].x;
-
-			//Check against all other paths
-			for(auto jt : m_paths)
+			bool collision_found = false;
+			for(size_t iter=0; iter<5; iter ++)
 			{
-				auto target = jt.second;
-				if(target == path)
-					continue;
+				int first_y = path->m_polyline[i].y;
+				int left = path->m_polyline[i].x;
+				int right = path->m_polyline[i+1].x;
 
-				for(size_t j=0; j<target->m_polyline.size(); j+= 2)
+				//Check against all other paths
+				for(auto jt : m_paths)
 				{
-					//Collisions with the same net are OK
-					if( (target->m_fromNode == path->m_fromNode) && (target->m_fromPort == path->m_fromPort) )
+					auto target = jt.second;
+					if(target == path)
 						continue;
 
-					//Different row?
-					int second_y = target->m_polyline[j].y;
-					if(second_y != first_y)
-						continue;
+					for(size_t j=0; j<target->m_polyline.size(); j+= 2)
+					{
+						//Collisions with the same net are OK
+						if( (target->m_fromNode == path->m_fromNode) && (target->m_fromPort == path->m_fromPort) )
+							continue;
 
-					//Same row, check for X collision
-					if( (target->m_polyline[j+1].x < left) || (target->m_polyline[j].x > right) )
-						continue;
+						//Different row? Skip.
+						//Consider very close approaches to be collisions.
+						int second_y = target->m_polyline[j].y;
+						if(abs(second_y - first_y) > 3)
+							continue;
 
-					//If we get here, we have a collision. Log it.
-					LogDebug("Collision found!\n");
-					LogIndenter li;
-					LogDebug("From: %s port %zu\n",
-						path->m_fromNode->m_channel->GetDisplayName().c_str(),
-						path->m_fromPort);
-					LogDebug("To: %s port %zu\n",
-						path->m_toNode->m_channel->GetDisplayName().c_str(),
-						path->m_toPort);
-					LogDebug("Collision: y=%d\n", first_y);
-					LogDebug("i=%zu\n", i);
+						//Same row, check for X collision
+						if( (target->m_polyline[j+1].x < left) || (target->m_polyline[j].x > right) )
+							continue;
+
+						//Found a collision. Now we need to avoid it.
+						//For now, very simple strategy: move our segment down a bunch and try again.
+						const int step = 10;
+						int newy = first_y + step;
+						path->m_polyline[i].y = newy;
+						path->m_polyline[i+1].y = newy;
+
+						//If we're the last segment in the net, add another little segment to patch up the end
+						if( (i+2 >= path->m_polyline.size()) && (path->m_polyline.size() < 20) )
+						{
+							int cornerx = right - step;
+							path->m_polyline[i+1].x = cornerx;
+							path->m_polyline.push_back(vec2f(cornerx, first_y));
+							path->m_polyline.push_back(vec2f(right, first_y));
+						}
+
+						collision_found = true;
+						break;
+					}
 				}
+
+				if(!collision_found)
+					break;
 			}
 		}
 	}
@@ -989,10 +1007,20 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	//Draw all paths
 	//const int dot_radius = 3;
 	auto linecolor = GetPreferences().GetColor("Appearance.Filter Graph.line_color");
-	cr->set_source_rgba(linecolor.get_red_p(), linecolor.get_green_p(), linecolor.get_blue_p(), 1);
+	auto hlinecolor = GetPreferences().GetColor("Appearance.Filter Graph.line_highlight_color");
 	for(auto it : m_paths)
 	{
 		auto path = it.second;
+
+		//Draw highlighted net in a different color
+		if( (m_highlightedPath != NULL) &&
+			(path->m_fromNode == m_highlightedPath->m_fromNode) &&
+			(path->m_fromPort == m_highlightedPath->m_fromPort) )
+		{
+			cr->set_source_rgba(hlinecolor.get_red_p(), hlinecolor.get_green_p(), hlinecolor.get_blue_p(), 1);
+		}
+		else
+			cr->set_source_rgba(linecolor.get_red_p(), linecolor.get_green_p(), linecolor.get_blue_p(), 1);
 
 		//Draw the lines
 		cr->move_to(path->m_polyline[0].x, path->m_polyline[0].y);
@@ -1105,6 +1133,19 @@ void FilterGraphEditorWidget::OnChannelPropertiesDialogResponse(int response)
 	m_channelPropertiesDialog = NULL;
 }
 
+bool FilterGraphEditorWidget::on_motion_notify_event(GdkEventMotion* event)
+{
+	//Highlight paths when we mouse over them
+	auto path = HitTestPath(event->x, event->y);
+	if(path != m_highlightedPath)
+	{
+		m_highlightedPath = path;
+		queue_draw();
+	}
+
+	return true;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input helpers
 
@@ -1114,6 +1155,34 @@ FilterGraphEditorNode* FilterGraphEditorWidget::HitTestNode(int x, int y)
 	{
 		if(it.second->m_rect.HitTest(x, y))
 			return it.second;
+	}
+
+	return NULL;
+}
+
+FilterGraphEditorPath* FilterGraphEditorWidget::HitTestPath(int x, int y)
+{
+	int clearance = 2;
+
+	for(auto it : m_paths)
+	{
+		auto path = it.second;
+		for(size_t i=0; i<path->m_polyline.size() - 1; i++)
+		{
+			//Check each segment
+			int left = min(path->m_polyline[i].x, path->m_polyline[i+1].x);
+			int right = max(path->m_polyline[i].x, path->m_polyline[i+1].x);
+			int top = min(path->m_polyline[i].y, path->m_polyline[i+1].y);
+			int bottom = max(path->m_polyline[i].y, path->m_polyline[i+1].y);
+
+			if( (x+clearance < left) || (x-clearance > right) )
+				continue;
+
+			if( (y+clearance < top) || (y-clearance > bottom) )
+				continue;
+
+			return path;
+		}
 	}
 
 	return NULL;
