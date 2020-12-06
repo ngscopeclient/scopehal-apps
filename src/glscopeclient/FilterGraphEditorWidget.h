@@ -134,8 +134,8 @@ public:
 
 	void Refresh();
 
-	FilterGraphEditorNode* GetDraggedNode()
-	{ return m_draggedNode; }
+	FilterGraphEditorNode* GetSelectedNode()
+	{ return m_selectedNode; }
 
 	PreferenceManager& GetPreferences();
 
@@ -162,6 +162,8 @@ protected:
 	//Event handlers
 	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 	virtual bool on_button_press_event(GdkEventButton* event);
+	void OnLeftClick(GdkEventButton* event);
+	void OnRightClick(GdkEventButton* event);
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	void OnDoubleClick(GdkEventButton* event);
@@ -189,7 +191,12 @@ protected:
 	void ResolvePathConflicts();
 	void RoutePath(FilterGraphEditorPath* path);
 
+	//Context menu handlers
+	void OnDelete();
+
 protected:
+	Gtk::Menu m_contextMenu;
+
 	FilterGraphEditor* m_parent;
 
 	std::map<OscilloscopeChannel*, FilterGraphEditorNode*> m_nodes;
@@ -207,13 +214,8 @@ protected:
 	FilterGraphEditorPath* m_highlightedPath;
 
 	DragMode m_dragMode;
-
-	//Node currently being dragged
-	FilterGraphEditorNode* m_draggedNode;
+	FilterGraphEditorNode* m_selectedNode;
 	int m_dragDeltaY;
-
-	//Source of the net being drawn
-	FilterGraphEditorNode* m_sourceNode;
 	size_t m_sourcePort;
 
 	//Current mouse position

@@ -287,7 +287,7 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 	auto disabled_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.disabled_port_color");
 	auto line_highlight_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.line_highlight_color");
 
-	if(this == m_parent->GetDraggedNode() )
+	if(this == m_parent->GetSelectedNode() )
 		outline_color = line_highlight_color;
 
 	//This is a bit messy... but there's no other good way to figure out what type of input a port wants!
@@ -466,12 +466,18 @@ FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	, m_filterDialog(NULL)
 	, m_highlightedPath(NULL)
 	, m_dragMode(DRAG_NONE)
-	, m_draggedNode(NULL)
+	, m_selectedNode(NULL)
 	, m_dragDeltaY(0)
-	, m_sourceNode(NULL)
 	, m_sourcePort(0)
 {
 	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::POINTER_MOTION_MASK);
+
+	auto item = Gtk::manage(new Gtk::MenuItem("Delete", false));
+	item->signal_activate().connect(
+		sigc::mem_fun(*this, &FilterGraphEditorWidget::OnDelete));
+	m_contextMenu.append(*item);
+
+	m_contextMenu.show_all();
 }
 
 FilterGraphEditorWidget::~FilterGraphEditorWidget()
@@ -1108,7 +1114,7 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 	//Draw the node being dragged last (if there is one) so it shows up in the foreground
 	if(m_dragMode == DRAG_NODE)
-		m_draggedNode->Render(cr);
+		m_selectedNode->Render(cr);
 
 	//Draw all paths
 	//const int dot_radius = 3;
@@ -1155,10 +1161,10 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		cr->set_dash(dashes, 0);
 
 		//Find the start position
-		auto sourcerect = m_sourceNode->GetOutputPorts()[m_sourcePort].m_rect;
+		auto sourcerect = m_selectedNode->GetOutputPorts()[m_sourcePort].m_rect;
 		cr->move_to(
-			sourcerect.get_right() + m_sourceNode->m_rect.get_x(),
-			sourcerect.get_top() + sourcerect.get_height()/2 + m_sourceNode->m_rect.get_y());
+			sourcerect.get_right() + m_selectedNode->m_rect.get_x(),
+			sourcerect.get_top() + sourcerect.get_height()/2 + m_selectedNode->m_rect.get_y());
 		cr->line_to(m_mousePosition.x, m_mousePosition.y);
 		cr->stroke();
 
@@ -1173,50 +1179,65 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 {
+	if(event->type == GDK_BUTTON_PRESS)
+	{
+		if(event->button == 1)
+			OnLeftClick(event);
+		else if(event->button == 3)
+			OnRightClick(event);
+	}
+
+	if(event->type == GDK_2BUTTON_PRESS)
+		OnDoubleClick(event);
+
+	return true;
+}
+
+void FilterGraphEditorWidget::OnLeftClick(GdkEventButton* event)
+{
 	auto node = HitTestNode(event->x, event->y);
 
-	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 1) )
+	switch(m_dragMode)
 	{
-		switch(m_dragMode)
-		{
-			//Complete drawing a net
-			case DRAG_NET_SOURCE:
+		//Complete drawing a net
+		case DRAG_NET_SOURCE:
+			{
+				//Get the source signal
+				auto source = GetSourceStream();
+
+				//Make sure we clicked on a destination port
+				if(!node)
+					return;
+				auto f = dynamic_cast<Filter*>(node->m_channel);
+				if(!f)
+					return;
+				auto dest = HitTestNodeInput(event->x, event->y);
+
+				//Configure the input, if it's legal
+				if(f->ValidateChannel(dest->m_index, source))
 				{
-					//Get the source signal
-					auto source = GetSourceStream();
+					f->SetInput(dest->m_index, source);
+					if(f->IsUsingDefaultName())
+						f->UseDefaultName(true);
 
-					//Make sure we clicked on a destination port
-					if(!node)
-						return true;
-					auto f = dynamic_cast<Filter*>(node->m_channel);
-					if(!f)
-						return true;
-					auto dest = HitTestNodeInput(event->x, event->y);
+					m_parent->GetParent()->RefreshAllFilters();
+					m_parent->GetParent()->RefreshAllViews();
 
-					//Configure the input, if it's legal
-					if(f->ValidateChannel(dest->m_index, source))
-					{
-						f->SetInput(dest->m_index, source);
-						if(f->IsUsingDefaultName())
-							f->UseDefaultName(true);
-
-						m_parent->GetParent()->RefreshAllFilters();
-						m_parent->GetParent()->RefreshAllViews();
-
-						Refresh();
-					}
-
-					m_dragMode = DRAG_NONE;
-					queue_draw();
+					Refresh();
 				}
-				break;
 
-			//Normal
-			default:
+				m_dragMode = DRAG_NONE;
+				queue_draw();
+			}
+			break;
+
+		//Normal
+		default:
+			{
+				m_selectedNode = node;
+
+				if(node)
 				{
-					if(!node)
-						return true;
-
 					//We clicked on a node. Where on it?
 					auto source = HitTestNodeOutput(event->x, event->y);
 
@@ -1224,7 +1245,6 @@ bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 					if(source != NULL)
 					{
 						m_dragMode = DRAG_NET_SOURCE;
-						m_sourceNode = node;
 						m_sourcePort = source->m_index;
 					}
 
@@ -1232,22 +1252,26 @@ bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 					else
 					{
 						m_dragMode = DRAG_NODE;
-						m_draggedNode = node;
 						m_dragDeltaY = event->y - node->m_rect.get_y();
 					}
 
 					m_highlightedPath = NULL;
-					queue_draw();
 				}
-				break;
 
-		}
+				queue_draw();
+			}
+			break;
+
 	}
+}
 
-	if(event->type == GDK_2BUTTON_PRESS)
-		OnDoubleClick(event);
+void FilterGraphEditorWidget::OnRightClick(GdkEventButton* event)
+{
+	//Update display with the node we clicked on highlighted
+	m_selectedNode = HitTestNode(event->x, event->y);
+	queue_draw();
 
-	return true;
+	m_contextMenu.popup(event->button, event->time);
 }
 
 bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
@@ -1266,14 +1290,14 @@ bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
 		case DRAG_NODE:
 			{
 				//Target for collision detection (allow a bit of margin beyond the actual box bounds)
-				auto target = m_draggedNode->m_rect;
+				auto target = m_selectedNode->m_rect;
 				target.expand(0, 5);
 
 				//If we collided with anything, unplace it and reassign to the first free space it fits in
-				auto cols = m_columns[m_draggedNode->m_column];
+				auto cols = m_columns[m_selectedNode->m_column];
 				for(auto node : cols->m_nodes)
 				{
-					if(node == m_draggedNode)
+					if(node == m_selectedNode)
 						continue;
 
 					if(node->m_rect.intersects(target))
@@ -1281,7 +1305,6 @@ bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
 				}
 
 				//Done
-				m_draggedNode = NULL;
 				m_dragMode = DRAG_NONE;
 				Refresh();
 			}
@@ -1308,7 +1331,7 @@ bool FilterGraphEditorWidget::on_motion_notify_event(GdkEventMotion* event)
 		//Move the node
 		case DRAG_NODE:
 			m_highlightedPath = NULL;
-			m_draggedNode->m_rect.set_y(event->y - m_dragDeltaY);
+			m_selectedNode->m_rect.set_y(event->y - m_dragDeltaY);
 			Refresh();
 			break;
 
@@ -1417,7 +1440,12 @@ StreamDescriptor FilterGraphEditorWidget::GetSourceStream()
 		return StreamDescriptor(NULL, 0);
 
 	else
-		return StreamDescriptor(m_sourceNode->m_channel, m_sourcePort);
+		return StreamDescriptor(m_selectedNode->m_channel, m_sourcePort);
+}
+
+void FilterGraphEditorWidget::OnDelete()
+{
+	LogDebug("delete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
