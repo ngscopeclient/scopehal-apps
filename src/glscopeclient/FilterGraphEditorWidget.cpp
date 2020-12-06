@@ -793,6 +793,20 @@ void FilterGraphEditorWidget::UpdatePositions()
 	UnplaceMisplacedNodes();
 	AssignNodesToColumns();
 	UpdateColumnPositions();
+
+	//Calculate overall size
+	int right = 0;
+	int bottom = 0;
+	for(auto it : m_nodes)
+	{
+		auto node = it.second;
+		right = max(node->m_rect.get_right(), right);
+		bottom = max(node->m_rect.get_bottom(), bottom);
+	}
+	right += 20;
+	bottom += 20;
+
+	set_size_request(right, bottom);
 }
 
 void FilterGraphEditorWidget::AssignInitialPositions(set<FilterGraphEditorNode*>& nodes)

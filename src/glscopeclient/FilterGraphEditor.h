@@ -55,7 +55,8 @@ public:
 protected:
 	OscilloscopeWindow* m_parent;
 
-	FilterGraphEditorWidget m_editor;
+	Gtk::ScrolledWindow m_scroller;
+		FilterGraphEditorWidget m_editor;
 };
 
 #endif

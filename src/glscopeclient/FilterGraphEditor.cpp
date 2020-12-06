@@ -46,9 +46,11 @@ FilterGraphEditor::FilterGraphEditor(OscilloscopeWindow* parent)
 	, m_editor(this)
 {
 	set_title("Filter Graph Editor");
-	set_size_request(800, 600);
+	set_size_request(320, 240);
 
-	add(m_editor);
+	add(m_scroller);
+		m_scroller.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+		m_scroller.add(m_editor);
 
 	show_all();
 }
