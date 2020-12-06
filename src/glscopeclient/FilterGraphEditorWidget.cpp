@@ -113,8 +113,13 @@ void FilterGraphEditorNode::UpdateSize()
 	m_titleLayout = Pango::Layout::create(m_parent->get_pango_context());
 	m_titleLayout->set_font_description(headerfont);
 	auto filter = dynamic_cast<Filter*>(m_channel);
-	if( (filter != NULL) && filter->IsUsingDefaultName() )
-		m_titleLayout->set_text(filter->GetProtocolDisplayName());
+	if(filter != NULL)
+	{
+		if(filter->IsUsingDefaultName())
+			m_titleLayout->set_text(filter->GetProtocolDisplayName());
+		else
+			m_titleLayout->set_text(filter->GetProtocolDisplayName() + ": " + m_channel->GetDisplayName());
+	}
 	else
 		m_titleLayout->set_text(m_channel->GetDisplayName());
 	m_titleLayout->get_pixel_size(twidth, theight);
@@ -172,6 +177,7 @@ void FilterGraphEditorNode::UpdateSize()
 	if(filter != NULL)
 	{
 		tabs.set_tab(0, Pango::TAB_LEFT, 150);
+
 		for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
 			paramText += it->first + ": \t" + it->second.ToString() + "\n";
 	}
@@ -181,6 +187,8 @@ void FilterGraphEditorNode::UpdateSize()
 
 		Unit v(Unit::UNIT_VOLTS);
 		Unit hz(Unit::UNIT_HZ);
+
+		paramText += string("Channel: \t") + m_channel->GetHwname() + "\n";
 
 		if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 		{
@@ -811,12 +819,9 @@ void FilterGraphEditorWidget::UpdatePositions()
 
 void FilterGraphEditorWidget::AssignInitialPositions(set<FilterGraphEditorNode*>& nodes)
 {
+	//Start just below the top edge (with a bit of margin)
 	for(auto node : nodes)
-	{
-		//If Y position is zero, move us down by a little bit so we're not touching the edge
-		if(node->m_rect.get_y() == 0)
-			node->m_rect.set_y(5);
-	}
+		node->m_rect.set_y(5);
 
 	for(auto node : nodes)
 	{
@@ -1101,6 +1106,10 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	for(auto it : m_nodes)
 		it.second->Render(cr);
 
+	//Draw the node being dragged last (if there is one) so it shows up in the foreground
+	if(m_dragMode == DRAG_NODE)
+		m_draggedNode->Render(cr);
+
 	//Draw all paths
 	//const int dot_radius = 3;
 	auto linecolor = GetPreferences().GetColor("Appearance.Filter Graph.line_color");
@@ -1253,11 +1262,29 @@ bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
 			//no action
 			break;
 
-		//TODO: Snap into final place?
+		//We just finished dragging a node
 		case DRAG_NODE:
-			m_draggedNode = NULL;
-			queue_draw();
-			m_dragMode = DRAG_NONE;
+			{
+				//Target for collision detection (allow a bit of margin beyond the actual box bounds)
+				auto target = m_draggedNode->m_rect;
+				target.expand(0, 5);
+
+				//If we collided with anything, unplace it and reassign to the first free space it fits in
+				auto cols = m_columns[m_draggedNode->m_column];
+				for(auto node : cols->m_nodes)
+				{
+					if(node == m_draggedNode)
+						continue;
+
+					if(node->m_rect.intersects(target))
+						node->m_positionValid = false;
+				}
+
+				//Done
+				m_draggedNode = NULL;
+				m_dragMode = DRAG_NONE;
+				Refresh();
+			}
 			break;
 
 		default:
