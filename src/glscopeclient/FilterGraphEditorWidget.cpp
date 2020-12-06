@@ -145,6 +145,8 @@ void FilterGraphEditorNode::UpdateSize()
 			port.m_rect.set_width(twidth + 2*m_margin);
 			port.m_rect.set_height(theight + 2*m_margin);
 
+			port.m_index = i;
+
 			bottom = port.m_rect.get_bottom();
 
 			m_inputPorts.push_back(port);
@@ -225,6 +227,8 @@ void FilterGraphEditorNode::UpdateSize()
 		port.m_layout->set_text(port.m_label);
 		port.m_layout->get_pixel_size(twidth, theight);
 
+		port.m_index = i;
+
 		port.m_rect.set_x(0);
 		port.m_rect.set_y(y + 2*m_margin);
 		port.m_rect.set_width(twidth + 2*m_margin);
@@ -272,9 +276,11 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 	auto analog_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.analog_port_color");
 	auto complex_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.complex_port_color");
 	auto digital_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.digital_port_color");
+	auto disabled_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.disabled_port_color");
+	auto line_highlight_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.line_highlight_color");
 
 	if(this == m_parent->GetDraggedNode() )
-		outline_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.line_highlight_color");
+		outline_color = line_highlight_color;
 
 	//This is a bit messy... but there's no other good way to figure out what type of input a port wants!
 	OscilloscopeChannel dummy_analog(NULL, "", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "");
@@ -324,8 +330,29 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 			cr->line_to(port.m_rect.get_left(), 	port.m_rect.get_bottom());
 			cr->line_to(port.m_rect.get_left(), 	port.m_rect.get_top());
 
-			//See what type of port it is
-			if(f->ValidateChannel(i, StreamDescriptor(&dummy_analog, 0)))
+			//See if we're on top of it
+			auto prect = port.m_rect;
+			prect += vec2f(m_rect.get_left(), m_rect.get_top());
+			auto mouse = m_parent->GetMousePosition();
+			bool mouseover = prect.HitTest(mouse.x, mouse.y);
+
+			//Special coloring for dragging
+			if( (m_parent->GetDragMode() == FilterGraphEditorWidget::DRAG_NET_SOURCE) &&
+				!f->ValidateChannel(i, m_parent->GetSourceStream()) )
+			{
+				cr->set_source_rgba(
+					disabled_color.get_red_p(), disabled_color.get_green_p(), disabled_color.get_blue_p(), 1);
+			}
+			else if( (m_parent->GetDragMode() == FilterGraphEditorWidget::DRAG_NET_SOURCE) && mouseover )
+			{
+				cr->set_source_rgba(
+					line_highlight_color.get_red_p(),
+					line_highlight_color.get_green_p(),
+					line_highlight_color.get_blue_p(), 1);
+			}
+
+			//Color code by type
+			else if(f->ValidateChannel(i, StreamDescriptor(&dummy_analog, 0)))
 			{
 				cr->set_source_rgba(
 					analog_color.get_red_p(), analog_color.get_green_p(), analog_color.get_blue_p(), 1);
@@ -367,7 +394,13 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 			cr->line_to(port.m_rect.get_left(), 	port.m_rect.get_top());
 
 			//See what type of port it is
-			if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if( (m_parent->GetDragMode() == FilterGraphEditorWidget::DRAG_NET_SOURCE) &&
+				(m_parent->GetSourceStream() != StreamDescriptor(m_channel, i)) )
+			{
+				cr->set_source_rgba(
+					disabled_color.get_red_p(), disabled_color.get_green_p(), disabled_color.get_blue_p(), 1);
+			}
+			else if(m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
 			{
 				cr->set_source_rgba(
 					analog_color.get_red_p(), analog_color.get_green_p(), analog_color.get_blue_p(), 1);
@@ -424,8 +457,11 @@ FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	, m_channelPropertiesDialog(NULL)
 	, m_filterDialog(NULL)
 	, m_highlightedPath(NULL)
+	, m_dragMode(DRAG_NONE)
 	, m_draggedNode(NULL)
 	, m_dragDeltaY(0)
+	, m_sourceNode(NULL)
+	, m_sourcePort(0)
 {
 	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::POINTER_MOTION_MASK);
 }
@@ -545,6 +581,47 @@ void FilterGraphEditorWidget::UpdateSizes()
 {
 	for(auto it : m_nodes)
 		it.second->UpdateSize();
+}
+
+/**
+	@brief Un-place any nodes in illegal locations
+ */
+void FilterGraphEditorWidget::UnplaceMisplacedNodes()
+{
+	while(true)
+	{
+		bool madeChanges = false;
+
+		for(auto it : m_nodes)
+		{
+			//Can't unplace anything already unplaced. Non-filter nodes are always in col 0.
+			auto node = it.second;
+			auto d = dynamic_cast<Filter*>(node->m_channel);
+			if(!node->m_positionValid || !d)
+				continue;
+
+			//Check each input
+			for(size_t i=0; i<d->GetInputCount(); i++)
+			{
+				//If no input, we're not misplaced
+				auto in = d->GetInput(i).m_channel;
+				if(in == NULL)
+					continue;
+
+				//We have an input. See what column it's in
+				auto inode = m_nodes[in];
+				if( !inode->m_positionValid || (inode->m_column >= node->m_column) )
+				{
+					node->m_positionValid = false;
+					madeChanges = true;
+					break;
+				}
+			}
+		}
+
+		if(!madeChanges)
+			break;
+	}
 }
 
 /**
@@ -713,6 +790,7 @@ void FilterGraphEditorWidget::UpdateColumnPositions()
  */
 void FilterGraphEditorWidget::UpdatePositions()
 {
+	UnplaceMisplacedNodes();
 	AssignNodesToColumns();
 	UpdateColumnPositions();
 }
@@ -1044,6 +1122,26 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 		*/
 	}
 
+	//Draw the in-progress net
+	if(m_dragMode == DRAG_NET_SOURCE)
+	{
+		vector<double> dashes;
+		dashes.push_back(5);
+		dashes.push_back(5);
+		cr->set_source_rgba(hlinecolor.get_red_p(), hlinecolor.get_green_p(), hlinecolor.get_blue_p(), 1);
+		cr->set_dash(dashes, 0);
+
+		//Find the start position
+		auto sourcerect = m_sourceNode->GetOutputPorts()[m_sourcePort].m_rect;
+		cr->move_to(
+			sourcerect.get_right() + m_sourceNode->m_rect.get_x(),
+			sourcerect.get_top() + sourcerect.get_height()/2 + m_sourceNode->m_rect.get_y());
+		cr->line_to(m_mousePosition.x, m_mousePosition.y);
+		cr->stroke();
+
+		cr->unset_dash();
+	}
+
 	return true;
 }
 
@@ -1052,18 +1150,75 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 {
+	auto node = HitTestNode(event->x, event->y);
+
 	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 1) )
 	{
-		auto node = HitTestNode(event->x, event->y);
-		if(!node)
-			return true;
+		switch(m_dragMode)
+		{
+			//Complete drawing a net
+			case DRAG_NET_SOURCE:
+				{
+					//Get the source signal
+					auto source = GetSourceStream();
 
-		//Start dragging
-		m_draggedNode = node;
-		m_dragDeltaY = event->y - node->m_rect.get_y();
+					//Make sure we clicked on a destination port
+					if(!node)
+						return true;
+					auto f = dynamic_cast<Filter*>(node->m_channel);
+					if(!f)
+						return true;
+					auto dest = HitTestNodeInput(event->x, event->y);
 
-		m_highlightedPath = NULL;
-		queue_draw();
+					//Configure the input, if it's legal
+					if(f->ValidateChannel(dest->m_index, source))
+					{
+						f->SetInput(dest->m_index, source);
+						if(f->IsUsingDefaultName())
+							f->UseDefaultName(true);
+
+						m_parent->GetParent()->RefreshAllFilters();
+						m_parent->GetParent()->RefreshAllViews();
+
+						Refresh();
+					}
+
+					m_dragMode = DRAG_NONE;
+					queue_draw();
+				}
+				break;
+
+			//Normal
+			default:
+				{
+					if(!node)
+						return true;
+
+					//We clicked on a node. Where on it?
+					auto source = HitTestNodeOutput(event->x, event->y);
+
+					//Start drawing a net from a source
+					if(source != NULL)
+					{
+						m_dragMode = DRAG_NET_SOURCE;
+						m_sourceNode = node;
+						m_sourcePort = source->m_index;
+					}
+
+					//Start dragging the node
+					else
+					{
+						m_dragMode = DRAG_NODE;
+						m_draggedNode = node;
+						m_dragDeltaY = event->y - node->m_rect.get_y();
+					}
+
+					m_highlightedPath = NULL;
+					queue_draw();
+				}
+				break;
+
+		}
 	}
 
 	if(event->type == GDK_2BUTTON_PRESS)
@@ -1074,12 +1229,25 @@ bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 
 bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
 {
-	if(m_draggedNode != NULL)
-	{
-		//TODO: Snap into final place
+	//ignore anything but left button
+	if(event->button != 1)
+		return true;
 
-		m_draggedNode = NULL;
-		queue_draw();
+	switch(m_dragMode)
+	{
+		case DRAG_NET_SOURCE:
+			//no action
+			break;
+
+		//TODO: Snap into final place?
+		case DRAG_NODE:
+			m_draggedNode = NULL;
+			queue_draw();
+			m_dragMode = DRAG_NONE;
+			break;
+
+		default:
+			break;
 	}
 
 	return true;
@@ -1087,27 +1255,36 @@ bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
 
 bool FilterGraphEditorWidget::on_motion_notify_event(GdkEventMotion* event)
 {
-	//Dragging a node
-	if(m_draggedNode != NULL)
+	m_mousePosition = vec2f(event->x, event->y);
+
+	switch(m_dragMode)
 	{
-		m_highlightedPath = NULL;
+		//Draw net
+		case DRAG_NET_SOURCE:
+			queue_draw();
+			break;
 
 		//Move the node
-		m_draggedNode->m_rect.set_y(event->y - m_dragDeltaY);
+		case DRAG_NODE:
+			m_highlightedPath = NULL;
+			m_draggedNode->m_rect.set_y(event->y - m_dragDeltaY);
+			Refresh();
+			break;
 
-		//Reroute everything
-		Refresh();
-	}
-
-	else
-	{
 		//Highlight paths when we mouse over them
-		auto path = HitTestPath(event->x, event->y);
-		if(path != m_highlightedPath)
-		{
-			m_highlightedPath = path;
-			queue_draw();
-		}
+		case DRAG_NONE:
+			{
+				auto path = HitTestPath(event->x, event->y);
+				if(path != m_highlightedPath)
+				{
+					m_highlightedPath = path;
+					queue_draw();
+				}
+			}
+			break;
+
+		default:
+			break;
 	}
 
 	return true;
@@ -1193,9 +1370,21 @@ void FilterGraphEditorWidget::OnChannelPropertiesDialogResponse(int response)
 	m_channelPropertiesDialog = NULL;
 }
 
+StreamDescriptor FilterGraphEditorWidget::GetSourceStream()
+{
+	if(m_dragMode != DRAG_NET_SOURCE)
+		return StreamDescriptor(NULL, 0);
+
+	else
+		return StreamDescriptor(m_sourceNode->m_channel, m_sourcePort);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input helpers
 
+/**
+	@brief Find the node, if any, a position is on
+ */
 FilterGraphEditorNode* FilterGraphEditorWidget::HitTestNode(int x, int y)
 {
 	for(auto it : m_nodes)
@@ -1207,6 +1396,9 @@ FilterGraphEditorNode* FilterGraphEditorWidget::HitTestNode(int x, int y)
 	return NULL;
 }
 
+/**
+	@brief Find the path, if any, a position is on
+ */
 FilterGraphEditorPath* FilterGraphEditorWidget::HitTestPath(int x, int y)
 {
 	int clearance = 2;
@@ -1230,6 +1422,52 @@ FilterGraphEditorPath* FilterGraphEditorWidget::HitTestPath(int x, int y)
 
 			return path;
 		}
+	}
+
+	return NULL;
+}
+
+/**
+	@brief Find the output port, if any, a position is on
+ */
+FilterGraphEditorPort* FilterGraphEditorWidget::HitTestNodeOutput(int x, int y)
+{
+	//Get the node-relative coordinates. If no node, we're obviously not on a port.
+	auto node = HitTestNode(x, y);
+	if(!node)
+		return NULL;
+	auto relx = x - node->m_rect.get_x();
+	auto rely = y - node->m_rect.get_y();
+
+	//Check each port in sequence
+	auto& ports = node->GetOutputPorts();
+	for(auto &port : ports)
+	{
+		if(port.m_rect.HitTest(relx, rely))
+			return &port;
+	}
+
+	return NULL;
+}
+
+/**
+	@brief Find the input port, if any, a position is on
+ */
+FilterGraphEditorPort* FilterGraphEditorWidget::HitTestNodeInput(int x, int y)
+{
+	//Get the node-relative coordinates. If no node, we're obviously not on a port.
+	auto node = HitTestNode(x, y);
+	if(!node)
+		return NULL;
+	auto relx = x - node->m_rect.get_x();
+	auto rely = y - node->m_rect.get_y();
+
+	//Check each port in sequence
+	auto& ports = node->GetInputPorts();
+	for(auto &port : ports)
+	{
+		if(port.m_rect.HitTest(relx, rely))
+			return &port;
 	}
 
 	return NULL;

@@ -152,6 +152,10 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("line_highlight_color", Gdk::Color("#ff8000"))
                 .Label("Highlighted line color")
                 .Description("Color for highlighted lines between nodes"));
+            graph.AddPreference(
+                Preference::Color("disabled_port_color", Gdk::Color("#404040"))
+                .Label("Disabled port color")
+                .Description("Color for ports which cannot be selected in the current mode"));
 
         auto& peaks = appearance.AddCategory("Peaks");
             peaks.AddPreference(

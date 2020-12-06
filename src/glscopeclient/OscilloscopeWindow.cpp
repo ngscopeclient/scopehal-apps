@@ -2655,6 +2655,12 @@ void OscilloscopeWindow::RefreshAllFilters()
 		g->RefreshMeasurements();
 }
 
+void OscilloscopeWindow::RefreshAllViews()
+{
+	for(auto a : m_waveformAreas)
+		a->queue_draw();
+}
+
 void OscilloscopeWindow::UpdateStatusBar()
 {
 	if(m_scopes.empty())

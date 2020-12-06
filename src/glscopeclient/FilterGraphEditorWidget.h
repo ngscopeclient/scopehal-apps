@@ -47,6 +47,7 @@ public:
 	std::string m_label;
 	Glib::RefPtr<Pango::Layout> m_layout;
 	Rect m_rect;
+	size_t m_index;
 };
 
 /**
@@ -68,10 +69,10 @@ public:
 	int m_margin;
 	int m_column;
 
-	const std::vector<FilterGraphEditorPort>& GetInputPorts()
+	std::vector<FilterGraphEditorPort>& GetInputPorts()
 	{ return m_inputPorts; }
 
-	const std::vector<FilterGraphEditorPort>& GetOutputPorts()
+	std::vector<FilterGraphEditorPort>& GetOutputPorts()
 	{ return m_outputPorts; }
 
 protected:
@@ -140,6 +141,22 @@ public:
 
 	void OnNodeDeleted(FilterGraphEditorNode* node);
 
+	//Drag mode
+	enum DragMode
+	{
+		DRAG_NONE,
+		DRAG_NODE,
+		DRAG_NET_SOURCE
+	};
+
+	DragMode GetDragMode()
+	{ return m_dragMode; }
+
+	StreamDescriptor GetSourceStream();
+
+	vec2f GetMousePosition()
+	{ return m_mousePosition; }
+
 protected:
 
 	//Event handlers
@@ -153,6 +170,8 @@ protected:
 
 	//Input helpers
 	FilterGraphEditorNode* HitTestNode(int x, int y);
+	FilterGraphEditorPort* HitTestNodeOutput(int x, int y);
+	FilterGraphEditorPort* HitTestNodeInput(int x, int y);
 	FilterGraphEditorPath* HitTestPath(int x, int y);
 
 	//Refresh logic
@@ -160,6 +179,7 @@ protected:
 	void CreateNodes();
 	void UpdateSizes();
 	void UpdatePositions();
+	void UnplaceMisplacedNodes();
 	void AssignNodesToColumns();
 	void UpdateColumnPositions();
 	void AssignInitialPositions(std::set<FilterGraphEditorNode*>& nodes);
@@ -186,9 +206,18 @@ protected:
 	//Path highlighted by mouseover
 	FilterGraphEditorPath* m_highlightedPath;
 
+	DragMode m_dragMode;
+
 	//Node currently being dragged
 	FilterGraphEditorNode* m_draggedNode;
 	int m_dragDeltaY;
+
+	//Source of the net being drawn
+	FilterGraphEditorNode* m_sourceNode;
+	size_t m_sourcePort;
+
+	//Current mouse position
+	vec2f m_mousePosition;
 };
 
 #endif
