@@ -273,6 +273,9 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 	auto complex_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.complex_port_color");
 	auto digital_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.digital_port_color");
 
+	if(this == m_parent->GetDraggedNode() )
+		outline_color = m_parent->GetPreferences().GetColor("Appearance.Filter Graph.line_highlight_color");
+
 	//This is a bit messy... but there's no other good way to figure out what type of input a port wants!
 	OscilloscopeChannel dummy_analog(NULL, "", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "");
 	OscilloscopeChannel dummy_digital(NULL, "", OscilloscopeChannel::CHANNEL_TYPE_DIGITAL, "");
@@ -421,8 +424,10 @@ FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	, m_channelPropertiesDialog(NULL)
 	, m_filterDialog(NULL)
 	, m_highlightedPath(NULL)
+	, m_draggedNode(NULL)
+	, m_dragDeltaY(0)
 {
-	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
+	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::POINTER_MOTION_MASK);
 }
 
 FilterGraphEditorWidget::~FilterGraphEditorWidget()
@@ -1047,8 +1052,63 @@ bool FilterGraphEditorWidget::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 
 bool FilterGraphEditorWidget::on_button_press_event(GdkEventButton* event)
 {
+	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 1) )
+	{
+		auto node = HitTestNode(event->x, event->y);
+		if(!node)
+			return true;
+
+		//Start dragging
+		m_draggedNode = node;
+		m_dragDeltaY = event->y - node->m_rect.get_y();
+
+		m_highlightedPath = NULL;
+		queue_draw();
+	}
+
 	if(event->type == GDK_2BUTTON_PRESS)
 		OnDoubleClick(event);
+
+	return true;
+}
+
+bool FilterGraphEditorWidget::on_button_release_event(GdkEventButton* event)
+{
+	if(m_draggedNode != NULL)
+	{
+		//TODO: Snap into final place
+
+		m_draggedNode = NULL;
+		queue_draw();
+	}
+
+	return true;
+}
+
+bool FilterGraphEditorWidget::on_motion_notify_event(GdkEventMotion* event)
+{
+	//Dragging a node
+	if(m_draggedNode != NULL)
+	{
+		m_highlightedPath = NULL;
+
+		//Move the node
+		m_draggedNode->m_rect.set_y(event->y - m_dragDeltaY);
+
+		//Reroute everything
+		Refresh();
+	}
+
+	else
+	{
+		//Highlight paths when we mouse over them
+		auto path = HitTestPath(event->x, event->y);
+		if(path != m_highlightedPath)
+		{
+			m_highlightedPath = path;
+			queue_draw();
+		}
+	}
 
 	return true;
 }
@@ -1131,19 +1191,6 @@ void FilterGraphEditorWidget::OnChannelPropertiesDialogResponse(int response)
 
 	delete m_channelPropertiesDialog;
 	m_channelPropertiesDialog = NULL;
-}
-
-bool FilterGraphEditorWidget::on_motion_notify_event(GdkEventMotion* event)
-{
-	//Highlight paths when we mouse over them
-	auto path = HitTestPath(event->x, event->y);
-	if(path != m_highlightedPath)
-	{
-		m_highlightedPath = path;
-		queue_draw();
-	}
-
-	return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

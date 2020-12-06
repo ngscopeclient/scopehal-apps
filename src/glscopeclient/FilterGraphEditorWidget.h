@@ -133,6 +133,9 @@ public:
 
 	void Refresh();
 
+	FilterGraphEditorNode* GetDraggedNode()
+	{ return m_draggedNode; }
+
 	PreferenceManager& GetPreferences();
 
 	void OnNodeDeleted(FilterGraphEditorNode* node);
@@ -142,6 +145,7 @@ protected:
 	//Event handlers
 	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 	virtual bool on_button_press_event(GdkEventButton* event);
+	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	void OnDoubleClick(GdkEventButton* event);
 	void OnFilterPropertiesDialogResponse(int response);
@@ -179,7 +183,12 @@ protected:
 	ChannelPropertiesDialog* m_channelPropertiesDialog;
 	FilterDialog* m_filterDialog;
 
+	//Path highlighted by mouseover
 	FilterGraphEditorPath* m_highlightedPath;
+
+	//Node currently being dragged
+	FilterGraphEditorNode* m_draggedNode;
+	int m_dragDeltaY;
 };
 
 #endif
