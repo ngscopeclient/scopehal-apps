@@ -466,10 +466,16 @@ void WaveformArea::on_realize()
 			profile.c_str());
 		{
 			LogIndenter li;
-			LogDebug("GL_VENDOR = %s\n", glGetString(GL_VENDOR));
-			LogDebug("GL_RENDERER = %s\n", glGetString(GL_RENDERER));
-			LogDebug("GL_VERSION = %s\n", glGetString(GL_VERSION));
+			LogDebug("GL_VENDOR                   = %s\n", glGetString(GL_VENDOR));
+			LogDebug("GL_RENDERER                 = %s\n", glGetString(GL_RENDERER));
+			LogDebug("GL_VERSION                  = %s\n", glGetString(GL_VERSION));
 			LogDebug("GL_SHADING_LANGUAGE_VERSION = %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+			if(GL_ARB_gpu_shader_int64)
+				LogDebug("GL_ARB_gpu_shader_int64:      supported\n");
+			else
+				LogDebug("GL_ARB_gpu_shader_int64:      not supported\n");
+
 			LogDebug("Initial GL error code: %d\n", glGetError());
 		}
 
@@ -521,13 +527,11 @@ void WaveformArea::on_realize()
 			!GL_EXT_framebuffer_object ||
 			!GL_ARB_vertex_array_object ||
 			!GL_ARB_shader_storage_buffer_object ||
-			!GL_ARB_compute_shader ||
-			!GL_ARB_gpu_shader_int64 )
+			!GL_ARB_compute_shader)
 		{
 			string err =
 				"Your graphics card or driver does not appear to support one or more of the following required extensions:\n"
 				"* GL_ARB_compute_shader\n"
-				"* GL_ARB_gpu_shader_int64\n"
 				"* GL_ARB_shader_storage_buffer_object\n"
 				"* GL_ARB_vertex_array_object\n"
 				"* GL_EXT_blend_equation_separate\n"
@@ -616,23 +620,38 @@ void WaveformArea::CleanupGLHandles()
 
 void WaveformArea::InitializeWaveformPass()
 {
+	//Load all of the compute shaders
 	ComputeShader hwc;
-	if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
-		LogFatal("failed to load histogram waveform compute shader, aborting\n");
+	ComputeShader dwc;
+	ComputeShader awc;
+	if(GL_ARB_gpu_shader_int64)
+	{
+		if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
+			LogFatal("failed to load histogram waveform compute shader, aborting\n");
+		if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
+			LogFatal("failed to load digital waveform compute shader, aborting\n");
+		if(!awc.Load("shaders/waveform-compute-analog.glsl"))
+			LogFatal("failed to load analog waveform compute shader, aborting\n");
+	}
+	else
+	{
+		if(!hwc.Load("shaders/waveform-compute-histogram-noint64.glsl"))
+			LogFatal("failed to load histogram waveform compute shader, aborting\n");
+		if(!dwc.Load("shaders/waveform-compute-digital-noint64.glsl"))
+			LogFatal("failed to load digital waveform compute shader, aborting\n");
+		if(!awc.Load("shaders/waveform-compute-analog-noint64.glsl"))
+			LogFatal("failed to load analog waveform compute shader, aborting\n");
+	}
+
+	//Link them
 	m_histogramWaveformComputeProgram.Add(hwc);
 	if(!m_histogramWaveformComputeProgram.Link())
 		LogFatal("failed to link histogram waveform shader program, aborting\n");
 
-	ComputeShader dwc;
-	if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
-		LogFatal("failed to load digital waveform compute shader, aborting\n");
 	m_digitalWaveformComputeProgram.Add(dwc);
 	if(!m_digitalWaveformComputeProgram.Link())
 		LogFatal("failed to link digital waveform shader program, aborting\n");
 
-	ComputeShader awc;
-	if(!awc.Load("shaders/waveform-compute-analog.glsl"))
-		LogFatal("failed to load analog waveform compute shader, aborting\n");
 	m_analogWaveformComputeProgram.Add(awc);
 	if(!m_analogWaveformComputeProgram.Link())
 		LogFatal("failed to link analog waveform shader program, aborting\n");
