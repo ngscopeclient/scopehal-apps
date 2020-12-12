@@ -471,7 +471,7 @@ void WaveformArea::on_realize()
 			LogDebug("GL_VERSION                  = %s\n", glGetString(GL_VERSION));
 			LogDebug("GL_SHADING_LANGUAGE_VERSION = %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-			if(GL_ARB_gpu_shader_int64)
+			if(GLEW_ARB_gpu_shader_int64)
 				LogDebug("GL_ARB_gpu_shader_int64:      supported\n");
 			else
 				LogDebug("GL_ARB_gpu_shader_int64:      not supported\n");
