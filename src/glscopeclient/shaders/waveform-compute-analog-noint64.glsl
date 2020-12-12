@@ -127,7 +127,7 @@ float FetchX(uint i)
 	//Convert back to floating point
 	float f = (float(sum_hi) * 4294967296.0) + float(sum_lo);
 	if(negative)
-		f += 1;
+		f = -f + 1;
 	return f;
 }
 
