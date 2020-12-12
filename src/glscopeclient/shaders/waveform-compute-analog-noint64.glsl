@@ -94,25 +94,12 @@ float FetchX(uint i)
 	uint xpos_hi = xpos[i*2 + 1];
 	uint offset_lo = innerXoff_lo;
 
-	//Chop off the MSB from the low halves and sum them separately
-	//(these might turn into carries)
-	uint msb_pos = (xpos_lo >> 31);
-	uint msb_off = (offset_lo >> 31);
-	xpos_lo &= 0x7fffffff;
-	offset_lo &= 0x7fffffff;
-	uint msb_sum = msb_pos + msb_off;
+	//Sum the low halves
+	uint carry;
+	uint sum_lo = uaddCarry(xpos_lo, offset_lo, carry);
 
-	//Sum the low halves without MSBs (cannot generate a carry)
-	uint sum_lo = xpos_lo + offset_lo;
-
-	//Sum the high halves (no need to worry about carries)
-	uint sum_hi = xpos_hi + innerXoff_hi;
-
-	//Patch up the carries between halves
-	msb_sum += (sum_lo >> 31);
-	sum_lo &= 0x7fffffff;
-	sum_lo |= (msb_sum & 1) << 31;
-	sum_hi += (msb_sum >> 1);
+	//Sum the high halves with carry in
+	uint sum_hi = xpos_hi + innerXoff_hi + carry;
 
 	//If MSB is 1, we're negative.
 	//Calculate the twos complement by flipping all the bits.
