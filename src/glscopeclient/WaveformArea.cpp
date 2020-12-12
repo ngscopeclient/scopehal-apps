@@ -524,10 +524,10 @@ void WaveformArea::on_realize()
 
 		//Make sure we have the required extensions
 		if(	!GLEW_EXT_blend_equation_separate ||
-			!GL_EXT_framebuffer_object ||
-			!GL_ARB_vertex_array_object ||
-			!GL_ARB_shader_storage_buffer_object ||
-			!GL_ARB_compute_shader)
+			!GLEW_EXT_framebuffer_object ||
+			!GLEW_ARB_vertex_array_object ||
+			!GLEW_ARB_shader_storage_buffer_object ||
+			!GLEW_ARB_compute_shader)
 		{
 			string err =
 				"Your graphics card or driver does not appear to support one or more of the following required extensions:\n"
