@@ -624,7 +624,7 @@ void WaveformArea::InitializeWaveformPass()
 	ComputeShader hwc;
 	ComputeShader dwc;
 	ComputeShader awc;
-	if(GL_ARB_gpu_shader_int64)
+	if(GLEW_ARB_gpu_shader_int64)
 	{
 		if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
 			LogFatal("failed to load histogram waveform compute shader, aborting\n");
