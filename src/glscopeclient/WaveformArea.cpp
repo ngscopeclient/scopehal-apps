@@ -470,13 +470,7 @@ void WaveformArea::on_realize()
 			LogDebug("GL_RENDERER                 = %s\n", glGetString(GL_RENDERER));
 			LogDebug("GL_VERSION                  = %s\n", glGetString(GL_VERSION));
 			LogDebug("GL_SHADING_LANGUAGE_VERSION = %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-			if(GLEW_ARB_gpu_shader_int64)
-				LogDebug("GL_ARB_gpu_shader_int64:      supported\n");
-			else
-				LogDebug("GL_ARB_gpu_shader_int64:      not supported\n");
-
-			LogDebug("Initial GL error code: %d\n", glGetError());
+			LogDebug("Initial GL error code       = %d\n", glGetError());
 		}
 
 		//Initialize GLEW
@@ -501,6 +495,11 @@ void WaveformArea::on_realize()
 			dlg.run();
 			exit(1);
 		}
+
+		if(GLEW_ARB_gpu_shader_int64)
+			LogDebug("    GL_ARB_gpu_shader_int64     = supported\n");
+		else
+			LogDebug("    GL_ARB_gpu_shader_int64     = not supported\n");
 
 		//Check for GL 4.2 (required for glBindImageTexture)
 		if(!GLEW_VERSION_4_2)
