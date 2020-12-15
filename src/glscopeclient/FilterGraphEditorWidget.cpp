@@ -1397,11 +1397,7 @@ void FilterGraphEditorWidget::OnFilterPropertiesDialogResponse(int response)
 		if(name != f->GetDisplayName())
 			window->OnChannelRenamed(f);
 
-		window->RefreshAllFilters();
-
-		//TODO: redraw any waveform areas it contains
-		//SetGeometryDirty();
-		//queue_draw();
+		window->OnAllWaveformsUpdated();
 
 		Refresh();
 	}
