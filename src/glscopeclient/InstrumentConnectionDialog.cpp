@@ -121,10 +121,10 @@ bool InstrumentConnectionDialog::ValidateConfig()
 	if(m_pathEntry.get_text() == "")
 		return false;
 
-	//For now, hard code check of null being legal only with siggen
+	//For now, hard code check of null being legal only with siggen/demo
 	if(m_transportBox.get_active_text() != "null")
 		return true;
-	if(m_driverBox.get_active_text() == "siggen")
+	if( (m_driverBox.get_active_text() == "siggen") || (m_driverBox.get_active_text() == "demo") )
 		return true;
 
 	return false;
