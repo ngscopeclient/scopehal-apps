@@ -461,16 +461,9 @@ bool ScopeSyncWizard::OnTimer()
 		m_activeSecondaryPage->m_progressBar.set_fraction(1);
 		m_activeSecondaryPage->m_progressBar.set_text("Done");
 
-		//Sort the list of skews
+		//Calculate median skew
 		sort(m_averageSkews.begin(), m_averageSkews.end());
-
-		//Discard the biggest and smallest two results, and average the remainder.
-		double sum = 0;
-		size_t numToAverage = m_numAverages - 4;
-		for(size_t i=2; i < (m_numAverages - 2); i++)
-			sum += m_averageSkews[i];
-		skew = static_cast<int64_t>(round(sum / numToAverage));
-		LogTrace("Average skew = %ld fs\n", skew);
+		skew = (m_averageSkews[4] + m_averageSkews[5]) / 2;
 
 		//Figure out where we want the secondary to go
 		int64_t targetOffset = scope->GetTriggerOffset() - skew;
