@@ -133,6 +133,7 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 	, m_delta(0)
 	, m_maxSkewSamples(0)
 	, m_numAverages(10)
+	, m_shuttingDown(false)
 	, m_waitingForWaveform(false)
 {
 	set_transient_for(*parent);
@@ -193,6 +194,8 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 
 ScopeSyncWizard::~ScopeSyncWizard()
 {
+	m_shuttingDown = true;
+
 	for(auto d : m_deskewSetupPages)
 		delete d;
 }
@@ -213,6 +216,10 @@ void ScopeSyncWizard::on_apply()
 
 void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 {
+	//Seems to be called during the destructor, avoid spurious events here
+	if(m_shuttingDown)
+		return;
+
 	if(page == &m_primaryProgressPage)
 		ConfigurePrimaryScope(m_parent->GetScope(0));
 
@@ -332,13 +339,10 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_primaryWaveform = pw;
 	m_secondaryWaveform = sw;
 
-	/*
-		Max allowed skew between instruments is 10K points.
-		At 10 Gsps this is a whopping 1000 ns, typical values are in the low tens of ns.
-	*/
+	//Max allowed skew between instruments is 2.5K points for now (arbitrary limit)
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
 
-	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
+	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(2500LL));
 
 	m_delta = - m_maxSkewSamples;
 
@@ -373,7 +377,7 @@ bool ScopeSyncWizard::OnTimer()
 		int64_t deltaFs = m_primaryWaveform->m_timescale * d;
 
 		//Loop over samples in the primary waveform
-		//TODO: AVX
+		//TODO: Can we AVX this?
 		ssize_t samplesProcessed = 0;
 		size_t isecondary = 0;
 		double correlation = 0;
@@ -457,11 +461,15 @@ bool ScopeSyncWizard::OnTimer()
 		m_activeSecondaryPage->m_progressBar.set_fraction(1);
 		m_activeSecondaryPage->m_progressBar.set_text("Done");
 
-		//Average skew
+		//Sort the list of skews
+		sort(m_averageSkews.begin(), m_averageSkews.end());
+
+		//Discard the biggest and smallest two results, and average the remainder.
 		double sum = 0;
-		for(auto f : m_averageSkews)
-			sum += f;
-		skew = static_cast<int64_t>(round(sum / m_numAverages));
+		size_t numToAverage = m_numAverages - 4;
+		for(size_t i=2; i < (m_numAverages - 2); i++)
+			sum += m_averageSkews[i];
+		skew = static_cast<int64_t>(round(sum / numToAverage));
 		LogTrace("Average skew = %ld fs\n", skew);
 
 		//Figure out where we want the secondary to go
@@ -509,5 +517,5 @@ void ScopeSyncWizard::RequestWaveform()
 {
 	m_parent->ArmTrigger(true);
 	m_waitingForWaveform = true;
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 500);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 5000);
 }

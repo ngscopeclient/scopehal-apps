@@ -122,6 +122,7 @@ protected:
 	int64_t m_maxSkewSamples;
 	std::vector<int64_t> m_averageSkews;
 	size_t m_numAverages;
+	bool m_shuttingDown;
 
 	//Trigger checks
 	bool m_waitingForWaveform;

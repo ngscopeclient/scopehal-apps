@@ -125,6 +125,13 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 
+	//Bail if timebase is garbage
+	if(pdat->m_timescale == 0)
+	{
+		wdata->m_geometryOK = false;
+		return;
+	}
+
 	//Make sure capture is the right type
 	auto andat = dynamic_cast<AnalogWaveform*>(pdat);
 	auto digdat = dynamic_cast<DigitalWaveform*>(pdat);

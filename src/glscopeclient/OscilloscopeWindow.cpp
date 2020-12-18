@@ -480,7 +480,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	}
 
 	//Clean up the scope sync wizard if it's completed
-	if(m_syncComplete)
+	if(m_syncComplete && (m_scopeSyncWizard != NULL) )
 	{
 		delete m_scopeSyncWizard;
 		m_scopeSyncWizard = NULL;
@@ -2407,10 +2407,10 @@ bool OscilloscopeWindow::PollScopes()
 			if( (m_tPrimaryTrigger < 0) && m_scopes[0]->HasPendingWaveforms() )
 				m_tPrimaryTrigger = GetTime();
 
-			//All instruments should trigger within 100ms (arbitrary threshold) of the primary.
+			//All instruments should trigger within 1 sec (arbitrary threshold) of the primary.
 			//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
 			double twait = GetTime() - m_tPrimaryTrigger;
-			if( (m_tPrimaryTrigger > 0) && ( twait > 0.1 ) )
+			if( (m_tPrimaryTrigger > 0) && ( twait > 1 ) )
 			{
 				LogWarning("Timed out waiting for one or more secondary instruments to trigger (%.2f ms). Resetting...\n",
 					twait*1000);
@@ -2438,10 +2438,6 @@ bool OscilloscopeWindow::PollScopes()
 		//We have data to download
 		had_waveforms = true;
 
-		//In multi-scope free-run mode, re-arm every instrument's trigger after we've downloaded data from all of them.
-		if(m_multiScopeFreeRun)
-			ArmTrigger(false);
-
 		//Process the waveform data from each instrument
 		//TODO: handle waveforms coming in faster than display framerate can keep up
 		pending = true;
@@ -2455,6 +2451,10 @@ bool OscilloscopeWindow::PollScopes()
 
 		//Update filters etc once every instrument has been updated
 		OnAllWaveformsUpdated();
+
+		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+		if(m_multiScopeFreeRun)
+			ArmTrigger(false);
 
 		//Pull as many waveforms as we can in 50 ms, then handle events
 		double dt = GetTime() - tstart;
@@ -2730,16 +2730,51 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 	else
 		m_multiScopeFreeRun = false;
 
+	//In multi-scope mode, make sure all scopes are stopped with no pending waveforms
+	if(m_scopes.size() > 1)
+	{
+		for(ssize_t i=m_scopes.size()-1; i >= 0; i--)
+		{
+			if(m_scopes[i]->PeekTriggerArmed())
+				m_scopes[i]->Stop();
+
+			if(m_scopes[i]->HasPendingWaveforms())
+			{
+				LogWarning("Scope %s had pending waveforms before arming\n", m_scopes[i]->m_nickname.c_str());
+				m_scopes[i]->ClearPendingWaveforms();
+			}
+		}
+	}
+
 	for(ssize_t i=m_scopes.size()-1; i >= 0; i--)
 	{
-		if(oneshot || m_multiScopeFreeRun)
+		if(oneshot || (m_scopes.size() > 1) )
 			m_scopes[i]->StartSingleTrigger();
 		else
 			m_scopes[i]->Start();
 
-		//If we have multiple scopes, ping the scope to make sure the arm command went through
+		//If we have multiple scopes, ping the secondaries to make sure the arm command went through
 		if(i != 0)
-			m_scopes[i]->IDPing();
+		{
+			double start = GetTime();
+
+			while(!m_scopes[i]->PeekTriggerArmed())
+			{
+				//After 3 sec of no activity, time out
+				//(must be longer than the default 2 sec socket timeout)
+				double now = GetTime();
+				if( (now - start) > 3)
+				{
+					LogWarning("Timeout waiting for scope %s to arm\n",  m_scopes[i]->m_nickname.c_str());
+					m_scopes[i]->Stop();
+					m_scopes[i]->StartSingleTrigger();
+					start = now;
+				}
+			}
+
+			//Scope is armed. Clear any garbage in the pending queue
+			m_scopes[i]->ClearPendingWaveforms();
+		}
 	}
 	m_tArm = GetTime();
 	m_triggerArmed = true;

@@ -347,6 +347,8 @@ void ScopeThread(Oscilloscope* scope)
 	pthread_setname_np(pthread_self(), "ScopeThread");
 	#endif
 
+	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
+
 	//Assume hyperthreading is enabled and only use one thread per physical core
 	omp_set_num_threads(omp_get_num_procs() / 2);
 
@@ -355,10 +357,13 @@ void ScopeThread(Oscilloscope* scope)
 	double dt = 0;
 	while(!g_app->IsTerminating())
 	{
-		size_t npending = scope->GetPendingWaveformCount();
+		//Push any pending commands
+		if(sscope)
+			sscope->GetTransport()->FlushCommandQueue();
 
 		//If the queue is too big, stop grabbing data
-		if(npending > 100)
+		size_t npending = scope->GetPendingWaveformCount();
+		if(npending > 20)
 		{
 			LogTrace("Queue is too big, sleeping\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
