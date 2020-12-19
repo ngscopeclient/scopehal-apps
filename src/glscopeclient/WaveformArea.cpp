@@ -563,7 +563,6 @@ void WaveformArea::on_realize()
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();
 	InitializeColormapPass();
-	InitializePersistencePass();
 	InitializeCairoPass();
 	InitializeEyePass();
 }
@@ -584,19 +583,16 @@ void WaveformArea::CleanupGLHandles()
 	m_digitalWaveformComputeProgram.Destroy();
 	m_analogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
-	m_persistProgram.Destroy();
 	m_eyeProgram.Destroy();
 	m_cairoProgram.Destroy();
 
 	//Clean up old VAOs
 	m_colormapVAO.Destroy();
-	m_persistVAO.Destroy();
 	m_cairoVAO.Destroy();
 	m_eyeVAO.Destroy();
 
 	//Clean up old VBOs
 	m_colormapVBO.Destroy();
-	m_persistVBO.Destroy();
 	m_cairoVBO.Destroy();
 	m_eyeVBO.Destroy();
 
@@ -734,35 +730,6 @@ void WaveformArea::InitializeEyePass()
 		ResetTextureFiltering();
 		m_eyeColorRamp[i].SetData(256, 1, tmp, GL_RGBA);
 	}
-}
-
-void WaveformArea::InitializePersistencePass()
-{
-	//Set up shaders
-	VertexShader cvs;
-	FragmentShader cfs;
-	if(!cvs.Load("shaders/persist-vertex.glsl") || !cfs.Load("shaders/persist-fragment.glsl"))
-		LogFatal("failed to load persist shaders, aborting\n");
-
-	m_persistProgram.Add(cvs);
-	m_persistProgram.Add(cfs);
-	if(!m_persistProgram.Link())
-		LogFatal("failed to link shader program, aborting\n");
-
-	//Create the VAO/VBO for a fullscreen polygon
-	float verts[8] =
-	{
-		-1, -1,
-		 1, -1,
-		 1,  1,
-		-1,  1
-	};
-	m_persistVBO.Bind();
-	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-
-	m_persistVAO.Bind();
-	m_persistProgram.EnableVertexArray("vert");
-	m_persistProgram.SetVertexAttribPointer("vert", 2, 0);
 }
 
 void WaveformArea::InitializeCairoPass()

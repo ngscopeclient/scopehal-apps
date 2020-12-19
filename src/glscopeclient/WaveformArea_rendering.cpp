@@ -86,7 +86,7 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 	}
 
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
-	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*11);
+	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*12);
 	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
 	//A struct is probably the better long term solution...
 	//cppcheck-suppress invalidPointerCast
@@ -108,7 +108,7 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha)
+void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay)
 {
 	//We need analog or digital data to render
 	auto channel = wdata->m_channel.m_channel;
@@ -215,6 +215,12 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
 	wdata->m_mappedFloatConfigBuffer[10] = channel->GetOffset();							//yoff
 
+	//persistScale
+	if(!wdata->m_persistence)
+		wdata->m_mappedFloatConfigBuffer[11] = 0;
+	else
+		wdata->m_mappedFloatConfigBuffer[11] = persistDecay;
+
 	//Done
 	wdata->m_geometryOK = true;
 }
@@ -272,8 +278,11 @@ void WaveformArea::ResetTextureFiltering()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
+void WaveformArea::GetAllRenderData(vector<WaveformRenderData*>& data)
 {
+	bool persist = m_persistence && !m_persistenceClear;
+	m_waveformRenderData->m_persistence = persist;
+
 	if(IsAnalog() || IsDigital())
 		data.push_back(m_waveformRenderData);
 
@@ -292,6 +301,7 @@ void WaveformArea::GetAllRenderData(std::vector<WaveformRenderData*>& data)
 			m_overlayRenderData[overlay] = new WaveformRenderData(overlay, this);
 			m_geometryDirty = true;
 		}
+		m_overlayRenderData[overlay]->m_persistence = persist;
 
 		data.push_back(m_overlayRenderData[overlay]);
 	}
@@ -333,6 +343,15 @@ void WaveformArea::UnmapAllBuffers(bool update_y)
 	}
 }
 
+float WaveformArea::GetPersistenceDecayCoefficient()
+{
+	float f = m_parent->GetPreferences().GetReal("Appearance.Waveforms.persist_decay_rate");
+	f = min(f, 1.0f);
+	f = max(f, 0.0f);
+
+	return f;
+}
+
 bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 {
 	//If a file load is in progress don't waste time on expensive render calls.
@@ -351,6 +370,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
 
 	//Update geometry if needed
+	float persistDecay = GetPersistenceDecayCoefficient();
 	if(m_geometryDirty || m_positionDirty)
 	{
 		double alpha = m_parent->GetTraceAlpha();
@@ -362,7 +382,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		//Do the actual update
 		MapAllBuffers(m_geometryDirty);
 		for(auto d : data)
-			PrepareGeometry(d, m_geometryDirty, alpha);
+			PrepareGeometry(d, m_geometryDirty, alpha, persistDecay);
 		UnmapAllBuffers(m_geometryDirty);
 
 		m_geometryDirty = false;
@@ -380,17 +400,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
 		m_firstFrame = false;
 	}
-
-	//TODO: Do persistence processing
-
-	/*
-	if(!m_persistence || m_persistenceClear)
-	{
-		m_persistenceClear = false;
-	}
-	else
-		RenderPersistenceOverlay();
-	*/
 
 	//Draw the main waveform
 	if(IsAnalog() || IsDigital() )
@@ -449,6 +458,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		if(height != rh)
 			set_size_request(30, height);
 	}
+
+	//Done, not clearing persistence
+	m_persistenceClear = false;
 
 	return true;
 }
@@ -542,24 +554,6 @@ void WaveformArea::RenderWaterfall()
 	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-}
-
-void WaveformArea::RenderPersistenceOverlay()
-{
-	/*
-	m_waveformFramebuffer.Bind(GL_FRAMEBUFFER);
-
-	//Configure blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-	glBlendColor(0, 0, 0, 0.01);
-	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-
-	//Draw a black overlay with a little bit of alpha (to make old traces decay)
-	m_persistProgram.Bind();
-	m_persistVAO.Bind();
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-	*/
 }
 
 void WaveformArea::RenderTrace(WaveformRenderData* data)

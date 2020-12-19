@@ -233,6 +233,11 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Font("y_axis_font", "monospace normal 10")
                 .Label("Y axis font")
                 .Description("Font used for text on the vertical axis of waveforms"));
+            waveforms.AddPreference(
+                Preference::Real("persist_decay_rate", 0.9)
+                .Label("Persistence decay rate (0 = none, 1 = infinite)")
+                .Description("Decay rate for persistence waveforms. ")
+                .Unit(Unit::UNIT_COUNTS));
 
         auto& windows = appearance.AddCategory("Windows");
             windows.AddPreference(

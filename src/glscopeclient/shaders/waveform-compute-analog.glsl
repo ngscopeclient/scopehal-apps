@@ -27,6 +27,7 @@ layout(std430, binding=2) buffer config
 	float ybase;
 	float yscale;
 	float yoff;
+	float persistScale;
 };
 
 //Indexes so we know which samples go to which X pixel range
@@ -74,10 +75,19 @@ void main()
 		return;
 
 	//Clear column to blank in the first thread of the block
+	//(unless doing persistence)
 	if(gl_LocalInvocationID.y == 0)
 	{
 		for(uint y=0; y<windowHeight; y++)
-			g_workingBuffer[gl_LocalInvocationID.x][y] = 0;
+		{
+			if(persistScale == 0)
+				g_workingBuffer[gl_LocalInvocationID.x][y] = 0;
+			else
+			{
+				vec4 rgba = imageLoad(outputTex, ivec2(gl_GlobalInvocationID.x, y));
+				g_workingBuffer[gl_LocalInvocationID.x][y] = rgba.a * persistScale;
+			}
+		}
 	}
 	barrier();
 	memoryBarrierShared();

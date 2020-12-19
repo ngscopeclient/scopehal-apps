@@ -62,6 +62,7 @@ public:
 	, m_mappedConfigBuffer(NULL)
 	, m_mappedConfigBuffer64(NULL)
 	, m_mappedFloatConfigBuffer(NULL)
+	, m_persistence(false)
 	{}
 
 	bool IsDigital()
@@ -98,6 +99,9 @@ public:
 	uint32_t*				m_mappedConfigBuffer;
 	int64_t*				m_mappedConfigBuffer64;
 	float*					m_mappedFloatConfigBuffer;
+
+	//Persistence flags
+	bool					m_persistence;
 
 	//Map all buffers for download
 	void MapBuffers(size_t width, bool update_waveform = true);
@@ -174,7 +178,7 @@ public:
 
 	//Helper to get all geometry that needs to be updated
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
-	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha);
+	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay);
 	void MapAllBuffers(bool update_y);
 	void UnmapAllBuffers(bool update_y);
 	void CalculateOverlayPositions();
@@ -185,6 +189,8 @@ public:
 	{ return m_isGlewInitialized; }
 
 	void SyncFontPreferences();
+
+	float GetPersistenceDecayCoefficient();
 
 protected:
 	void SharedCtorInit();
@@ -315,13 +321,6 @@ protected:
 	VertexArray m_colormapVAO;
 	VertexBuffer m_colormapVBO;
 	Program m_colormapProgram;
-
-	//Persistence
-	void RenderPersistenceOverlay();
-	void InitializePersistencePass();
-	Program m_persistProgram;
-	VertexArray m_persistVAO;
-	VertexBuffer m_persistVBO;
 
 	//Eye pattern rendering
 	void RenderEye();

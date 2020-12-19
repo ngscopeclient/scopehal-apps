@@ -2259,13 +2259,19 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 	{
 		//Make the list of data to update
 		vector<WaveformRenderData*> data;
+		float coeff = -1;
 		for(auto w : areas)
+		{
+			if(coeff < 0)
+				coeff = w->GetPersistenceDecayCoefficient();
+
 			w->GetAllRenderData(data);
+		}
 
 		//Do the updates in parallel
 		#pragma omp parallel for
 		for(size_t i=0; i<data.size(); i++)
-			WaveformArea::PrepareGeometry(data[i], geometry_dirty, alpha);
+			WaveformArea::PrepareGeometry(data[i], geometry_dirty, alpha, coeff);
 
 		//Clean up
 		for(auto w : areas)
@@ -2533,13 +2539,19 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 
 		//Make the list of data to update (waveforms plus overlays)
 		vector<WaveformRenderData*> data;
+		float coeff = -1;
 		for(auto w : m_waveformAreas)
+		{
 			w->GetAllRenderData(data);
+
+			if(coeff < 0)
+				coeff = w->GetPersistenceDecayCoefficient();
+		}
 
 		//Do the updates in parallel
 		#pragma omp parallel for
 		for(size_t i=0; i<data.size(); i++)
-			WaveformArea::PrepareGeometry(data[i], true, alpha);
+			WaveformArea::PrepareGeometry(data[i], true, alpha, coeff);
 
 		//Clean up
 		for(auto w : m_waveformAreas)
