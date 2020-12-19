@@ -231,6 +231,13 @@ int main(int argc, char* argv[])
 
 	g_app = new ScopeApp;
 
+	//Detect and enable OpenCL
+	#ifdef HAVE_OPENCL
+		LogDebug("OpenCL found\n");
+	#else
+		LogDebug("OpenCL not found\n");
+	#endif
+
 	//Initialize object creation tables for predefined libraries
 	TransportStaticInit();
 	DriverStaticInit();
