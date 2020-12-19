@@ -3104,6 +3104,7 @@ void OscilloscopeWindow::OnAboutDialog()
 		"Mike Walters",
 		"noopwafel",
 		"Pepijn De Vos",
+		"pd0wm"
 		"randomplum",
 		"rqou",
 		"smunaut",
