@@ -26,6 +26,8 @@ pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 find_package(OpenCL)
 
+pkg_search_module(CLFFT clFFT>=2.0)
+
 if(BUILD_DOCS)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
 endif()

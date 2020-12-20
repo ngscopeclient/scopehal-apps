@@ -318,7 +318,11 @@ int main(int argc, char* argv[])
 	}
 
 	g_app->run(fileToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
+
+	//Global cleanup
+	ScopehalStaticCleanup();
 	delete g_app;
+
 	return 0;
 }
 
