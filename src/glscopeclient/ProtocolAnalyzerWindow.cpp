@@ -707,6 +707,8 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
  */
 void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 {
+	m_updating = true;
+
 	//This always happens from the start of time, so just remove from the beginning of our list
 	//until we have nothing that matches.
 	auto children = m_internalmodel->children();
@@ -723,6 +725,8 @@ void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 		//Remove it
 		m_internalmodel->erase(it);
 	}
+
+	m_updating = false;
 }
 
 void ProtocolAnalyzerWindow::OnApplyFilter()
