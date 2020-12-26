@@ -49,49 +49,29 @@ Shader::~Shader()
 	glDeleteShader(m_handle);
 }
 
-bool Shader::Load(string path)
+bool Shader::Load(string path, string path2)
 {
-	//Read the file
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
-	{
-		LogWarning("Shader::Load: Could not open file \"%s\"\n", path.c_str());
-		return false;
-	}
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	char* buf = new char[fsize + 1];
-	if(fsize != fread(buf, 1, fsize, fp))
-	{
-		LogWarning("Shader::Load: Could not read file \"%s\"\n", path.c_str());
-		delete[] buf;
-		fclose(fp);
-		return false;
-	}
-	buf[fsize] = 0;
-	fclose(fp);
+	string shaderbuf = ReadFile(path);
+	if(path2 != "")
+		shaderbuf += ReadFile(path2);
 
 	//Compile the shader
-	glShaderSource(m_handle, 1, &buf, NULL);
+	const char* bufs[1] = { shaderbuf.c_str() };
+	glShaderSource(m_handle, 1, bufs, NULL);
 	glCompileShader(m_handle);
 
 	//Check status
 	int status;
 	glGetShaderiv(m_handle, GL_COMPILE_STATUS, &status);
 	if(status == GL_TRUE)
-	{
-		delete[] buf;
 		return true;
-	}
 
 	//Compile failed, return error
 	char log[4096];
 	int len;
 	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
 	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
-	LogNotice("Shader source: %s\n", buf);
+	LogNotice("Shader source: %s\n", shaderbuf.c_str());
 
-	delete[] buf;
 	return false;
 }
