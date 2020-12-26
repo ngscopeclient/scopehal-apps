@@ -54,6 +54,9 @@ using namespace std;
 //for color selection
 int g_numDecodes = 0;
 
+//Feature disable flags for debug
+bool g_noglint64 = false;
+
 ScopeApp* g_app = NULL;
 
 void help();
@@ -61,7 +64,7 @@ void help();
 void help()
 {
 	fprintf(stderr,
-			"glscopeclient [general options] [logger options] [filename|scope]\n"
+			"glscopeclient [general options] [logger options] [dev options] [filename|scope]\n"
 			"\n"
 			"  [general options]:\n"
 			"    --help      : this message...\n"
@@ -85,6 +88,9 @@ void help()
 			"    --logfile|-l <filename>       : output log messages to file\n"
 			"    --logfile-lines|-L <filename> : output log messages to file, with line buffering\n"
 			"    --stdout-only                 : writes errors/warnings to stdout instead of stderr\n"
+			"\n"
+			"  [dev options]:\n"
+			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
 			"\n"
 			"  [filename|scope]:\n"
 			"    filename : path to a .scopesession to load on startup\n"
@@ -140,6 +146,8 @@ int main(int argc, char* argv[])
 			nodigital = true;
 		else if(s == "--nospectrum")
 			nospectrum = true;
+		else if(s == "--noglint64")
+			g_noglint64 = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());

@@ -497,7 +497,11 @@ void WaveformArea::on_realize()
 		}
 
 		if(GLEW_ARB_gpu_shader_int64)
+		{
 			LogDebug("    GL_ARB_gpu_shader_int64     = supported\n");
+			if(g_noglint64)
+				LogDebug("    but not being used because --noglint64 argument was passed\n");
+		}
 		else
 			LogDebug("    GL_ARB_gpu_shader_int64     = not supported\n");
 
@@ -619,7 +623,7 @@ void WaveformArea::InitializeWaveformPass()
 	ComputeShader hwc;
 	ComputeShader dwc;
 	ComputeShader awc;
-	if(GLEW_ARB_gpu_shader_int64)
+	if(GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 	{
 		if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
 			LogFatal("failed to load histogram waveform compute shader, aborting\n");

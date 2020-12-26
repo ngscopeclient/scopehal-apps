@@ -75,5 +75,6 @@
 #include "ScopeApp.h"
 
 double GetTime();
+extern bool g_noglint64;
 
 #endif
