@@ -34,6 +34,7 @@
  */
 #include "glscopeclient.h"
 #include "Shader.h"
+#include <stdarg.h>
 
 using namespace std;
 
@@ -49,11 +50,26 @@ Shader::~Shader()
 	glDeleteShader(m_handle);
 }
 
-bool Shader::Load(string path, string path2)
+/**
+	@brief Loads a shader from disk
+
+	We accept arbitrarily many paths and concatenate their contents
+ */
+bool Shader::Load(const char* path, ...)
 {
 	string shaderbuf = ReadFile(path);
-	if(path2 != "")
-		shaderbuf += ReadFile(path2);
+
+	va_list list;
+	va_start(list, path);
+	while(true)
+	{
+		const char* arg = va_arg(list, const char*);
+		if(arg == NULL)
+			break;
+		else
+			shaderbuf += ReadFile(arg);
+	}
+	va_end(list);
 
 	//Compile the shader
 	const char* bufs[1] = { shaderbuf.c_str() };
@@ -70,7 +86,7 @@ bool Shader::Load(string path, string path2)
 	char log[4096];
 	int len;
 	glGetShaderInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Compile of shader %s failed:\n%s\n", path.c_str(), log);
+	LogError("Compile of shader %s failed:\n%s\n", path, log);
 	LogNotice("Shader source: %s\n", shaderbuf.c_str());
 
 	return false;

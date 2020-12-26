@@ -44,7 +44,7 @@ public:
 	Shader(GLenum type);
 	virtual ~Shader();
 
-	bool Load(std::string path, std::string path2 = "");
+	bool Load(const char* path, ...);
 
 	operator GLuint()
 	{ return m_handle; }

@@ -625,20 +625,44 @@ void WaveformArea::InitializeWaveformPass()
 	ComputeShader awc;
 	if(GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 	{
-		if(!hwc.Load("shaders/waveform-compute-histogram.glsl"))
+		if(!hwc.Load(
+			"shaders/waveform-compute-head.glsl",
+			"shaders/waveform-compute-histogram.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load histogram waveform compute shader, aborting\n");
-		if(!dwc.Load("shaders/waveform-compute-digital.glsl"))
+		if(!dwc.Load(
+			"shaders/waveform-compute-head.glsl",
+			"shaders/waveform-compute-digital.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load digital waveform compute shader, aborting\n");
-		if(!awc.Load("shaders/waveform-compute-analog.glsl"))
+		if(!awc.Load(
+			"shaders/waveform-compute-head.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
 	}
 	else
 	{
-		if(!hwc.Load("shaders/waveform-compute-histogram-noint64.glsl"))
+		if(!hwc.Load(
+			"shaders/waveform-compute-head-noint64.glsl",
+			"shaders/waveform-compute-histogram.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load histogram waveform compute shader, aborting\n");
-		if(!dwc.Load("shaders/waveform-compute-digital-noint64.glsl"))
+		if(!dwc.Load(
+			"shaders/waveform-compute-head-noint64.glsl",
+			"shaders/waveform-compute-digital.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load digital waveform compute shader, aborting\n");
-		if(!awc.Load("shaders/waveform-compute-analog-noint64.glsl"))
+		if(!awc.Load(
+			"shaders/waveform-compute-head-noint64.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
 	}
 
@@ -661,7 +685,7 @@ void WaveformArea::InitializeColormapPass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("shaders/colormap-vertex.glsl") || !cfs.Load("shaders/colormap-fragment.glsl"))
+	if(!cvs.Load("shaders/colormap-vertex.glsl", NULL) || !cfs.Load("shaders/colormap-fragment.glsl", NULL))
 		LogFatal("failed to load colormap shaders, aborting\n");
 
 	m_colormapProgram.Add(cvs);
@@ -690,7 +714,7 @@ void WaveformArea::InitializeEyePass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("shaders/eye-vertex.glsl") || !cfs.Load("shaders/eye-fragment.glsl"))
+	if(!cvs.Load("shaders/eye-vertex.glsl", NULL) || !cfs.Load("shaders/eye-fragment.glsl", NULL))
 		LogFatal("failed to load eye shaders, aborting\n");
 
 	m_eyeProgram.Add(cvs);
@@ -741,7 +765,7 @@ void WaveformArea::InitializeCairoPass()
 	//Set up shaders
 	VertexShader cvs;
 	FragmentShader cfs;
-	if(!cvs.Load("shaders/cairo-vertex.glsl") || !cfs.Load("shaders/cairo-fragment.glsl"))
+	if(!cvs.Load("shaders/cairo-vertex.glsl", NULL) || !cfs.Load("shaders/cairo-fragment.glsl", NULL))
 		LogFatal("failed to load cairo shaders, aborting\n");
 
 	m_cairoProgram.Add(cvs);
