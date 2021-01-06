@@ -1,0 +1,45 @@
+protocol:
+    name:       Kintex-7 4x oversampling RX (1.25 Gbps)
+    reference:  XAPP523, DS182
+displaylimits:
+    ymin:       -650
+    ymax:        650
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+
+    # Need minimum 100 mV differential amplitude per DS182 table 2
+    # XAPP523 calls for 0.625 UI eye opening
+    - points:
+        -   x:   -0.3125
+            y:   -50
+        -   x:   -0.3125
+            y:    50
+        -   x:    0.3125
+            y:    50
+        -   x:    0.3125
+            y:   -50
+
+    # Max differential amplitude 600 mV per DS182 table 12
+    - points:
+        -   x:   -2
+            y: -600
+        -   x:    2
+            y: -600
+        -   x:    2
+            y: -650
+        -   x:   -2
+            y: -650
+
+    - points:
+        -   x:   -2
+            y:  600
+        -   x:    2
+            y:  600
+        -   x:    2
+            y:  650
+        -   x:   -2
+            y:  650
+conditions:
+    hitrate: 5.0e-5
