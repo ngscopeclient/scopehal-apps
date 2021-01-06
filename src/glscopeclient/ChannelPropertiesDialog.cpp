@@ -52,6 +52,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	, m_hasFrequency(false)
 	, m_hasBandwidth(false)
 	, m_hasDeskew(false)
+	, m_hasAttenuation(false)
 	, m_hasInvert(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
