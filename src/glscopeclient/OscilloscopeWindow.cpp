@@ -2675,25 +2675,25 @@ void OscilloscopeWindow::RefreshAllViews()
 
 void OscilloscopeWindow::UpdateStatusBar()
 {
+	char tmp[256];
 	if(m_scopes.empty())
 		return;
 
 	//TODO: redo this for multiple scopes
 	auto scope = m_scopes[0];
 	auto trig = scope->GetTrigger();
-	if(!trig)
-		return;
-
-	char tmp[256];
-	auto chan = trig->GetInput(0).m_channel;
-	if(chan == NULL)
+	if(trig)
 	{
-		LogWarning("Trigger channel is NULL\n");
-		return;
+		auto chan = trig->GetInput(0).m_channel;
+		if(chan == NULL)
+		{
+			LogWarning("Trigger channel is NULL\n");
+			return;
+		}
+		string name = chan->GetHwname();
+		Unit volts(Unit::UNIT_VOLTS);
+		m_triggerConfigLabel.set_label(volts.PrettyPrint(trig->GetLevel()));
 	}
-	string name = chan->GetHwname();
-	Unit volts(Unit::UNIT_VOLTS);
-	m_triggerConfigLabel.set_label(volts.PrettyPrint(trig->GetLevel()));
 
 	//Update WFM/s counter
 	if(m_lastWaveformTimes.size() >= 2)
