@@ -642,10 +642,16 @@ void OscilloscopeWindow::OnFileImport()
 	//TODO: prompt to save changes to the current session
 	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
-	auto filter = Gtk::FileFilter::create();
-	filter->add_pattern("*.csv");
-	filter->set_name("Comma Separated Value (*.csv)");
-	dlg.add_filter(filter);
+	auto csvFilter = Gtk::FileFilter::create();
+	csvFilter->add_pattern("*.csv");
+	csvFilter->set_name("Comma Separated Value (*.csv)");
+
+	auto binFilter = Gtk::FileFilter::create();
+	binFilter->add_pattern("*.bin");
+	binFilter->set_name("Agilent/Keysight/Rigol Binary Capture (*.bin)");
+
+	dlg.add_filter(csvFilter);
+	dlg.add_filter(binFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 	auto response = dlg.run();
@@ -653,7 +659,15 @@ void OscilloscopeWindow::OnFileImport()
 	if(response != Gtk::RESPONSE_OK)
 		return;
 
-	DoImportCSV(dlg.get_filename());
+	auto filterName = dlg.get_filter()->get_name();
+	if(filterName == "Comma Separated Value (*.csv)")
+	{
+		DoImportCSV(dlg.get_filename());
+	}
+	else if(filterName == "Agilent/Keysight/Rigol Binary Capture (*.bin)")
+	{
+		DoImportBIN(dlg.get_filename());
+	}
 }
 
 /**
@@ -691,6 +705,68 @@ void OscilloscopeWindow::DoImportCSV(const string& filename)
 			Gtk::MessageDialog dlg(
 				*this,
 				"CSV import failed",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+		}
+	}
+
+	//Add the top level splitter right before the status bar
+	auto split = new Gtk::VPaned;
+	m_splitters.emplace(split);
+	m_vbox.remove(m_statusbar);
+	m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
+	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+
+	//Add all of the UI stuff
+	CreateDefaultWaveformAreas(split);
+
+	//Done
+	SetTitle();
+	OnLoadComplete();
+
+	//Process the new data
+	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
+	OnAllWaveformsUpdated();
+}
+
+/**
+	@brief Import a Agilent/Keysight BIN file
+ */
+void OscilloscopeWindow::DoImportBIN(const string& filename)
+{
+	LogDebug("Importing BIN file \"%s\"\n", filename.c_str());
+	{
+		LogIndenter li;
+
+		//Setup
+		CloseSession();
+		m_currentFileName = filename;
+		m_loadInProgress = true;
+
+		//Clear performance counters
+		m_totalWaveforms = 0;
+		m_lastWaveformTimes.clear();
+
+		//Create the mock scope
+		auto scope = new MockOscilloscope("Binary Import", "Agilent/Keysight/Rigol", "0");
+		scope->m_nickname = "import";
+		g_app->m_scopes.push_back(scope);
+		m_scopes.push_back(scope);
+
+		//Set up history for it
+		auto hist = new HistoryWindow(this, scope);
+		hist->hide();
+		m_historyWindows[scope] = hist;
+
+		//Load the waveform
+		if(!scope->LoadBIN(filename))
+		{
+			Gtk::MessageDialog dlg(
+				*this,
+				"BIN import failed",
 				false,
 				Gtk::MESSAGE_ERROR,
 				Gtk::BUTTONS_OK,
