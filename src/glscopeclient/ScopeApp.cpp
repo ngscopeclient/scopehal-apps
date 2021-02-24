@@ -53,9 +53,12 @@ void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigge
 	//Handle file loads specified on the command line
 	if(!fileToLoad.empty())
 	{
-		//Guess CSV files by extension
+		//Guess files by extension
 		if(fileToLoad.find(".csv") != string::npos)
 			m_window->DoImportCSV(fileToLoad);
+
+		else if (fileToLoad.find(".bin") != string::npos)
+			m_window->DoImportBIN(fileToLoad);
 
 		//Assume anything else is a scopesession
 		else
