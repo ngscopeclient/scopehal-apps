@@ -91,6 +91,7 @@ void help()
 			"\n"
 			"  [dev options]:\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
+			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
 			"\n"
 			"  [filename|scope]:\n"
 			"    filename : path to a .scopesession to load on startup\n"
@@ -148,6 +149,8 @@ int main(int argc, char* argv[])
 			nospectrum = true;
 		else if(s == "--noglint64")
 			g_noglint64 = true;
+		else if(s == "--noopencl")
+			g_disableOpenCL = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
