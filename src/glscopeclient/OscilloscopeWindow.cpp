@@ -46,6 +46,7 @@
 #include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include "../../lib/scopeprotocols/EyePattern.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1869,6 +1870,40 @@ void OscilloscopeWindow::OnHistory()
 		for(auto it : m_historyWindows)
 			it.second->hide();
 	}
+}
+
+/**
+	@brief Moves a waveform to the "best" group.
+
+	Current heuristics:
+		Eye pattern:
+			Always make a new group below the current one
+		Otherwise:
+			Move to the first group with the same X axis unit.
+			If none found, move below current
+ */
+void OscilloscopeWindow::MoveToBestGroup(WaveformArea* w)
+{
+	auto chan = w->GetChannel().m_channel;
+
+	auto eye = dynamic_cast<EyePattern*>(chan);
+
+	bool hit = false;
+	if(!eye)
+	{
+		for(auto g : m_waveformGroups)
+		{
+			if(chan->GetXAxisUnits() == g->m_timeline.GetXAxisUnits())
+			{
+				hit = true;
+				OnMoveToExistingGroup(w, g);
+				break;
+			}
+		}
+	}
+
+	if(!hit)
+		OnMoveNewBelow(w);
 }
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)

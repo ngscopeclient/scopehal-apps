@@ -39,6 +39,9 @@ public:
 	Timeline(OscilloscopeWindow* parent, WaveformGroup* group);
 	virtual ~Timeline();
 
+	Unit GetXAxisUnits()
+	{ return m_xAxisUnit; }
+
 protected:
 
 	enum DragState

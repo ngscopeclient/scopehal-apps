@@ -75,6 +75,7 @@ public:
 	void OnMoveNewRight(WaveformArea* w);
 	void OnMoveNewBelow(WaveformArea* w);
 	void OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
+	void MoveToBestGroup(WaveformArea* w);
 
 	void OnCopyNew(WaveformArea* w, bool horizontal);
 	void OnCopyNewRight(WaveformArea* w);

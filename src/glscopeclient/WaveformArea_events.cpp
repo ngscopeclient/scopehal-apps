@@ -1062,10 +1062,10 @@ void WaveformArea::OnDecodeSetupComplete()
 		{
 			auto area = m_parent->DoAddChannel(StreamDescriptor(m_pendingDecode, i), m_group, this);
 
-			//If the decode is incompatible with our timebase, make a new group
+			//If the decode is incompatible with our timebase, make a new group if needed
 			//TODO: better way to determine fixed-width stuff like eye patterns
 			if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel.m_channel->GetXAxisUnits()) )
-				m_parent->OnMoveNewBelow(area);
+				m_parent->MoveToBestGroup(area);
 		}
 	}
 
