@@ -12,7 +12,14 @@ set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
 set(CMAKE_CXX_FLAGS "-g -fopenmp ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
+
+# seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
+# (causes clGetPlatformIDs to return -1001)
+if(SANITIZE)
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
+else()
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0")
+endif()
 
 if(WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS")
