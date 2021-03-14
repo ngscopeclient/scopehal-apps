@@ -2666,17 +2666,6 @@ void OscilloscopeWindow::RefreshAllFilters()
 		{
 			auto d = static_cast<Filter*>(w);
 
-			//Cannot concurrently execute two filters using clFFT, for reasons which are not obvious.
-			//All documentation suggests everything is fully thread safe, but we get random errors if we try.
-			//So far only known to fail on RTX 2080 Ti with recent-ish drivers, but let's be safe for now.
-			if(d->UsesCLFFT())
-			{
-				if(currentBlockUsesCLFFT)
-					continue;
-				else
-					currentBlockUsesCLFFT = true;
-			}
-
 			//Check if we have any inputs that are still in the working set.
 			bool ok = true;
 			for(size_t i=0; i<d->GetInputCount(); i++)
@@ -2691,7 +2680,20 @@ void OscilloscopeWindow::RefreshAllFilters()
 
 			//All inputs are in previous blocks, we're good to go for the current block
 			if(ok)
+			{
+				//Cannot concurrently execute two filters using clFFT, for reasons which are not obvious.
+				//All documentation suggests everything is fully thread safe, but we get random errors if we try.
+				//So far only known to fail on RTX 2080 Ti with recent-ish drivers, but let's be safe for now.
+				if(d->UsesCLFFT())
+				{
+					if(currentBlockUsesCLFFT)
+						continue;
+					else
+						currentBlockUsesCLFFT = true;
+				}
+
 				current_block.push_back(d);
+			}
 		}
 
 		//Anything we assigned this iteration shouldn't be in the working set for next time.
