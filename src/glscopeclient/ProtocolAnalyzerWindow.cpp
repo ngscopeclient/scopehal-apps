@@ -482,6 +482,8 @@ ProtocolAnalyzerWindow::~ProtocolAnalyzerWindow()
 void ProtocolAnalyzerWindow::OnWaveformDataReady()
 {
 	auto data = m_decoder->GetData(0);
+	if(data == NULL)
+		return;
 	auto packets = m_decoder->GetPackets();
 	if(packets.empty())
 		return;
