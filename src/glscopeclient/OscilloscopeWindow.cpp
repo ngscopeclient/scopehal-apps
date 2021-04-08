@@ -1005,7 +1005,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				cap->m_triggerPhase = ch["trigphase"].as<float>() * 1000;
 			}
 			else
-				cap->m_triggerPhase = ch["trigphase"].as<long>();
+				cap->m_triggerPhase = ch["trigphase"].as<long long>();
 
 			chan->Detach(stream);
 			chan->SetData(cap, stream);
