@@ -397,7 +397,7 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                timescale:    %ld\n", wave->m_timescale);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                trigphase:    %zu\n", wave->m_triggerPhase);
+			snprintf(tmp, sizeof(tmp), "                trigphase:    %zd\n", wave->m_triggerPhase);
 			config += tmp;
 
 			//Save channel data
