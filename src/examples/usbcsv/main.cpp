@@ -41,6 +41,15 @@ using namespace std;
 
 bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDecoder* pdecode);
 USB2PacketDecoder* CreateFilterGraph(Oscilloscope* scope);
+string SymbolToString(USB2PacketSymbol sym);
+int64_t Round(int64_t number, int64_t step);
+
+enum USBState {
+			   SETUP,
+			   IN,
+			   WAIT,
+};
+
 
 int main(int argc, char* argv[])
 {
@@ -101,8 +110,11 @@ USB2PacketDecoder* CreateFilterGraph(Oscilloscope* scope)
 {
 	//Decode the PMA layer (differential voltages to J/K/SE0/SE1 line states)
 	auto pma = Filter::CreateFilter(USB2PMADecoder::GetProtocolName());
-	pma->SetInput(0, StreamDescriptor(scope->GetChannel(0)));
-	pma->SetInput(1, StreamDescriptor(scope->GetChannel(1)));
+	pma->GetParameter("Speed").SetIntVal(USB2PMADecoder::SPEED_LOW);
+
+	//As you can see the channels are switched. This is an historical mistake.
+	pma->SetInput(0, StreamDescriptor(scope->GetChannel(1)));
+	pma->SetInput(1, StreamDescriptor(scope->GetChannel(0)));
 
 	//Decode the PCS layer (line states to data bytes and sync/end events)
 	auto pcs = Filter::CreateFilter(USB2PCSDecoder::GetProtocolName());
@@ -115,11 +127,26 @@ USB2PacketDecoder* CreateFilterGraph(Oscilloscope* scope)
 	return dynamic_cast<USB2PacketDecoder*>(pack);
 }
 
+//I created this because my LA only samples at a certain rate
+//and femtoseconds is too much precision.
+int64_t Round(int64_t number, int64_t step)
+{
+	int64_t leftover = number % step;
+	int64_t base = number - leftover;
+
+	if (leftover > step / 2)
+	{
+		base += step;
+	}
+	return base;
+}
+
+
 bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDecoder* pdecode)
 {
 	//Import the waveform
-	LogNotice("Loading waveform \"%s\"\n", fname.c_str());
-	LogIndenter li;
+	//LogNotice("Loading waveform \"%s\"\n", fname.c_str());
+	//LogIndenter li;
 
 	if(!scope->LoadCSV(fname))
 	{
@@ -139,157 +166,200 @@ bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDec
 
 	Unit fs(Unit::UNIT_FS);
 
+	//This number is the number of femtoseconds between each sample
+	//in USB captures I have taken.
+	int64_t step = 8e7;
+
 	//Print the protocol analyzer data
-	LogNotice("Printing packets\n");
 	{
-		LogIndenter li2;
-		auto packets = pdecode->GetPackets();
-		size_t len = packets.size();
-		for(size_t i=0; i<len; i++)
-		{
-			auto pack = packets[i];
-
-			LogNotice("[%11s] len=%s type=%6s dev=%1s endp=%1s len=%3s info=%s\n",
-				fs.PrettyPrint(pack->m_offset).c_str(),
-				fs.PrettyPrint(pack->m_len).c_str(),
-				pack->m_headers["Type"].c_str(),
-				pack->m_headers["Device"].c_str(),
-				pack->m_headers["Endpoint"].c_str(),
-				pack->m_headers["Length"].c_str(),
-				pack->m_headers["Details"].c_str()
-				);
-		}
-	}
-
-	//Print the symbol level view of the data
-	LogNotice("Printing symbols\n");
-	{
-		LogIndenter li2;
-
 		size_t len = waveform->m_samples.size();
-		for(size_t i=0; i<len; i++)
+		USBState state = USBState::SETUP;
+		std::vector<size_t> elts;
+		std::vector<size_t> setup;
+		bool collect = false;
+
+		for(size_t i=0; i<len;)
 		{
-			int64_t timestamp = waveform->m_offsets[i] * waveform->m_timescale;
-			int64_t duration = waveform->m_durations[i] * waveform->m_timescale;
-			auto sym = waveform->m_samples[i];
+			// scope->m_channels[0]->m_streamData[0]->m_offsets.size()
 
-			string type;
-			switch(sym.m_type)
+			for (; i<len; i++)
 			{
-				case USB2PacketSymbol::TYPE_PID:
-					type = "PID ";
-					switch(sym.m_data & 0x0f)
-					{
-						case USB2PacketSymbol::PID_RESERVED:
-							type += "(reserved)";
-							break;
-
-						case USB2PacketSymbol::PID_OUT:
-							type += "OUT";
-							break;
-
-						case USB2PacketSymbol::PID_ACK:
-							type += "ACK";
-							break;
-
-						case USB2PacketSymbol::PID_DATA0:
-							type += "DATA0";
-							break;
-
-						case USB2PacketSymbol::PID_PING:
-							type += "PING";
-							break;
-
-						case USB2PacketSymbol::PID_SOF:
-							type += "SOF";
-							break;
-
-						case USB2PacketSymbol::PID_NYET:
-							type += "NYET";
-							break;
-
-						case USB2PacketSymbol::PID_DATA2:
-							type += "DATA2";
-							break;
-
-						case USB2PacketSymbol::PID_SPLIT:
-							type += "SPLIT";
-							break;
-
-						case USB2PacketSymbol::PID_IN:
-							type += "IN";
-							break;
-
-						case USB2PacketSymbol::PID_NAK:
-							type += "NAK";
-							break;
-
-						case USB2PacketSymbol::PID_DATA1:
-							type += "DATA1";
-							break;
-
-						case USB2PacketSymbol::PID_PRE_ERR:
-							type += "PRE_ERR";
-							break;
-
-						case USB2PacketSymbol::PID_SETUP:
-							type += "SETUP";
-							break;
-
-						case USB2PacketSymbol::PID_STALL:
-							type += "STALL";
-							break;
-
-						case USB2PacketSymbol::PID_MDATA:
-							type += "MDATA";
-							break;
-					}
+				string sym = SymbolToString(waveform->m_samples[i]);
+				if (sym == "SETUP")
+				{
+					state = USBState::SETUP;
+					setup.clear();
+				}
+				else if (state == USBState::SETUP && sym == "Data")
+				{
+					setup.push_back(i);
+				}
+				else if (sym == "IN")
+				{
+					state = USBState::IN;
+				}
+				else if (state == USBState::IN && (sym[0] == 'D' || sym == "NAK")) // All the packets are: DATA0, DATA1, Data
+				{
+					elts.push_back(i);
+					collect = true;
+				}
+				else if (collect)
+				{
+					elts.push_back(i);
+					state = USBState::WAIT;
+					collect = false;
 					break;
+				}
 
-				case USB2PacketSymbol::TYPE_ADDR:
-					type = "Addr";
-					break;
-
-				case USB2PacketSymbol::TYPE_ENDP:
-					type = "ENDP";
-					break;
-
-				case USB2PacketSymbol::TYPE_CRC5_GOOD:
-					type = "CRC5 (good)";
-					break;
-
-				case USB2PacketSymbol::TYPE_CRC5_BAD:
-					type = "CRC5 (bad)";
-					break;
-
-				case USB2PacketSymbol::TYPE_CRC16_GOOD:
-					type = "CRC16 (good)";
-					break;
-
-				case USB2PacketSymbol::TYPE_CRC16_BAD:
-					type = "CRC16 (bad)";
-					break;
-
-				case USB2PacketSymbol::TYPE_NFRAME:
-					type = "NFRAME";
-					break;
-
-				case USB2PacketSymbol::TYPE_DATA:
-					type = "Data";
-					break;
-
-				case USB2PacketSymbol::TYPE_ERROR:
-					type = "ERROR";
-					break;
 			}
 
-			LogNotice("[%11s] len=%11s     %-15s %02x\n",
-				fs.PrettyPrint(timestamp).c_str(),
-				fs.PrettyPrint(duration).c_str(),
-				type.c_str(),
-				sym.m_data);
+			if (elts.size() == 0)
+			{
+				LogError("No packets found.\n");
+				return false;
+			}
+
+			auto first = elts[0];
+			auto last = elts[elts.size()-1];
+
+			int64_t left = Round(waveform->m_offsets[first] * waveform->m_timescale, step)/step;
+			int64_t right = Round(waveform->m_offsets[last] * waveform->m_timescale, step)/step;
+			string pid = SymbolToString(waveform->m_samples[first]);
+
+			LogNotice("%lu %lu %s ", left, right, pid.c_str());
+
+			for (auto loc : elts)
+			{
+				auto sym = waveform->m_samples[loc];
+				LogNotice("%02x ", sym.m_data);
+			}
+
+			LogNotice("| ");
+			for (auto loc : setup)
+			{
+				auto sym = waveform->m_samples[loc];
+				LogNotice("%02x ", sym.m_data);
+			}
+
+			LogNotice("\n");
+
+			elts.clear();
 		}
 	}
 
 	return true;
+}
+
+string SymbolToString(USB2PacketSymbol sym)
+{
+	string type = "";
+	switch(sym.m_type)
+		{
+	    case USB2PacketSymbol::TYPE_PID:
+			switch(sym.m_data & 0x0f)
+				{
+			    case USB2PacketSymbol::PID_RESERVED:
+					type += "(reserved)";
+					break;
+
+			    case USB2PacketSymbol::PID_OUT:
+					type += "OUT";
+					break;
+
+				case USB2PacketSymbol::PID_ACK:
+					type += "ACK";
+					break;
+
+				case USB2PacketSymbol::PID_DATA0:
+					type += "DATA0";
+					break;
+
+				case USB2PacketSymbol::PID_PING:
+					type += "PING";
+					break;
+
+				case USB2PacketSymbol::PID_SOF:
+					type += "SOF";
+					break;
+
+				case USB2PacketSymbol::PID_NYET:
+					type += "NYET";
+					break;
+
+				case USB2PacketSymbol::PID_DATA2:
+					type += "DATA2";
+					break;
+
+				case USB2PacketSymbol::PID_SPLIT:
+					type += "SPLIT";
+					break;
+
+				case USB2PacketSymbol::PID_IN:
+					type += "IN";
+					break;
+
+				case USB2PacketSymbol::PID_NAK:
+					type += "NAK";
+					break;
+
+				case USB2PacketSymbol::PID_DATA1:
+					type += "DATA1";
+					break;
+
+				case USB2PacketSymbol::PID_PRE_ERR:
+					type += "PRE_ERR";
+					break;
+
+				case USB2PacketSymbol::PID_SETUP:
+					type += "SETUP";
+					break;
+
+				case USB2PacketSymbol::PID_STALL:
+					type += "STALL";
+					break;
+
+				case USB2PacketSymbol::PID_MDATA:
+					type += "MDATA";
+					break;
+				}
+			break;
+
+		case USB2PacketSymbol::TYPE_ADDR:
+			type = "Addr";
+			break;
+
+		case USB2PacketSymbol::TYPE_ENDP:
+			type = "ENDP";
+			break;
+
+		case USB2PacketSymbol::TYPE_CRC5_GOOD:
+			type = "CRC5(good)";
+			break;
+
+		case USB2PacketSymbol::TYPE_CRC5_BAD:
+			type = "CRC5(bad)";
+			break;
+
+		case USB2PacketSymbol::TYPE_CRC16_GOOD:
+			type = "CRC16(good)";
+			break;
+
+		case USB2PacketSymbol::TYPE_CRC16_BAD:
+			type = "CRC16(bad)";
+			break;
+
+		case USB2PacketSymbol::TYPE_NFRAME:
+			type = "NFRAME";
+			break;
+
+		case USB2PacketSymbol::TYPE_DATA:
+			type = "Data";
+			break;
+
+		case USB2PacketSymbol::TYPE_ERROR:
+			type = "ERROR";
+			break;
+		}
+
+	return type;
 }
