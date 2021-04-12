@@ -118,6 +118,13 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	//Volts from the center line of our graph to the top. May not be the max value in the signal.
 	float volts_per_half_span = PixelToYAxisUnits(halfheight);
 
+	//Sanity check invalid values
+	if( (volts_per_half_span < -FLT_MAX/2) || (volts_per_half_span > FLT_MAX/2) )
+	{
+		LogWarning("WaveformArea: invalid grid span (%f)\n", volts_per_half_span);
+		return;
+	}
+
 	//Decide what voltage step to use. Pick from a list (in volts)
 	float selected_step = PickStepSize(volts_per_half_span);
 
