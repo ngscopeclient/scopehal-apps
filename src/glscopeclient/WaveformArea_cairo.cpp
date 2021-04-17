@@ -979,6 +979,13 @@ void WaveformArea::RenderComplexSignal(
 	//Width within this signal outline
 	float available_width = xend - xstart - 2*xoff;
 
+	//Convert all whitespace in text to spaces
+	for(size_t i=0; i<str.length(); i++)
+	{
+		if(isspace(str[i]))
+			str[i] = ' ';
+	}
+
 	//If the space is tiny, don't even attempt to render it.
 	//Figuring out text size is expensive when we have hundreds or thousands of packets on screen, but in this case
 	//we *know* it won't fit.
@@ -1007,11 +1014,12 @@ void WaveformArea::RenderComplexSignal(
 			xp -= width/2;
 
 			//Off the left end? Push it right
+			float new_width = available_width;
 			int padding = 5;
 			if(xp < (visleft + padding))
 			{
 				xp = visleft + padding;
-				available_width = xend - xp - xoff;
+				new_width = xend - xp - xoff;
 			}
 
 			//Off the right end? Push it left
@@ -1022,10 +1030,13 @@ void WaveformArea::RenderComplexSignal(
 					xp = xstart + xoff;
 
 				if(xend < visright)
-					available_width = xend - xp - xoff;
+					new_width = xend - xp - xoff;
 				else
-					available_width = visright - xp - xoff;
+					new_width = visright - xp - xoff;
 			}
+
+			if(new_width < available_width)
+				available_width = new_width;
 
 			//If we don't fit under the new constraints, give up
 			if(available_width < min_width)
