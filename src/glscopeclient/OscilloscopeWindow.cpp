@@ -557,6 +557,7 @@ void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
 		//Update the UI since we might have changed colors or other display settings
 		SyncFilterColors();
 		PopulateToolbar();
+		SetTitle();
 		for(auto w : m_waveformAreas)
 		{
 			w->SyncFontPreferences();
