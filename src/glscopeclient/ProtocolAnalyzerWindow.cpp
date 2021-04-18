@@ -572,6 +572,8 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 	}
 
 	//Select the last row
+	last_top_row = m_model->children().end();
+	last_top_row --;
 	auto path = m_model->get_path(*last_top_row);
 	m_tree.expand_to_path(path);
 	m_tree.scroll_to_row(path);
