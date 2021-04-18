@@ -104,12 +104,20 @@ void OscilloscopeWindow::SetTitle()
 	{
 		auto scope = m_scopes[i];
 
+		//Redact serial number upon request
+		string serial = scope->GetSerial();
+		if(GetPreferences().GetBool("Privacy.redact_serial_in_title"))
+		{
+			for(int j=serial.length()-3; j >= 0; j--)
+				serial[j] = '*';
+		}
+
 		char tt[256];
 		snprintf(tt, sizeof(tt), "%s (%s %s, serial %s)",
 			scope->m_nickname.c_str(),
 			scope->GetVendor().c_str(),
 			scope->GetName().c_str(),
-			scope->GetSerial().c_str()
+			serial.c_str()
 			);
 
 		if(i > 0)

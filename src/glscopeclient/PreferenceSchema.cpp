@@ -277,4 +277,13 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Real("hidden_setting", 13.37)
                 .Invisible()
                 .Unit(Unit::UNIT_CELSIUS));
+
+    auto& privacy = this->m_treeRoot.AddCategory("Privacy");
+         privacy.AddPreference(
+            Preference::Bool("redact_serial_in_title", false)
+            .Label("Redact serial number in title bar")
+            .Description(
+                "Partially hide instrument serial numbers in the glscopeclient window title bar.\n\n"
+                "This allows you to share screenshots without revealing your serial numbers."
+            ));
 }
