@@ -52,7 +52,8 @@ Glib::RefPtr<ProtocolTreeModel> ProtocolTreeModel::create(const Gtk::TreeModelCo
 
 Gtk::TreeModelFlags ProtocolTreeModel::get_flags_vfunc() const
 {
-	return static_cast<Gtk::TreeModelFlags>(GTK_TREE_MODEL_ITERS_PERSIST);
+	//can't set GTK_TREE_MODEL_ITERS_PERSIST because iterators are invalidated upon deletion of a row
+	return static_cast<Gtk::TreeModelFlags>(0);
 }
 
 int ProtocolTreeModel::get_n_columns_vfunc() const
@@ -390,7 +391,52 @@ Gtk::TreeModel::iterator ProtocolTreeModel::append()
 
 Gtk::TreeModel::iterator ProtocolTreeModel::erase(const iterator& iter)
 {
-	LogError("erase unimplemented\n");
+	auto g = iter.gobj();
+	auto nrow = GPOINTER_TO_INT(g->user_data);
+	auto second = GPOINTER_TO_INT(g->user_data2);
+
+	auto ret = iterator();
+	auto h = ret.gobj();
+
+	//We're deleting a top level row
+	if(second <= 0)
+	{
+		m_rows.erase(m_rows.begin() + nrow);
+
+		//Get iterator to the next row, if there is one
+		if(nrow >= (int)m_rows.size())
+			h->user_data = GINT_TO_POINTER(-1);
+		else
+			h->user_data = GINT_TO_POINTER(nrow);
+		h->user_data2 = GINT_TO_POINTER(-1);
+	}
+
+	//Deleting a child row
+	else
+	{
+		m_rows[nrow].m_children.erase(m_rows[nrow].m_children.begin() + second);
+
+		//Get iterator to the next row, if there is one
+		if(second >= (int)m_rows[nrow].m_children.size())
+		{
+			h->user_data = GINT_TO_POINTER(-1);
+			h->user_data2 = GINT_TO_POINTER(-1);
+		}
+		else
+		{
+			h->user_data = GINT_TO_POINTER(nrow);
+			h->user_data2 = GINT_TO_POINTER(second);
+		}
+	}
+
+	//Tell the view
+	Gtk::TreePath path;
+	path.push_back(nrow);
+	if(second >= 0)
+		path.push_back(second);
+	row_deleted(path);
+
+	return ret;
 }
 
 Gtk::TreeModel::iterator ProtocolTreeModel::append(const Gtk::TreeNodeChildren& node)
