@@ -313,7 +313,7 @@ void ProtocolTreeModel::set_value_impl(const iterator& row, int column, const Gl
 						reinterpret_cast<const Gtk::TreeModelColumn<std::string>::ValueType&>(value).get();
 				}
 				else if(ihead == m_nheaders)
-					LogDebug("set_value_impl for col %d (image) not implemented yet\n", column);
+					p->m_image = reinterpret_cast<const Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>::ValueType&>(value).get();
 				else
 					p->m_data = reinterpret_cast<const Gtk::TreeModelColumn<std::string>::ValueType&>(value).get();
 			}
@@ -365,7 +365,7 @@ void ProtocolTreeModel::get_value_vfunc(const TreeModel::iterator& iter, int col
 				if(ihead < m_nheaders)
 					reinterpret_cast<Gtk::TreeModelColumn<std::string>::ValueType&>(value).set(p->m_headers[ihead]);
 				else if(ihead == m_nheaders)
-					LogDebug("get_value_vfunc for col %d (image) not implemented yet\n", column);
+					reinterpret_cast<Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>::ValueType&>(value).set(p->m_image);
 				else
 					reinterpret_cast<Gtk::TreeModelColumn<std::string>::ValueType&>(value).set(p->m_data);
 			}
