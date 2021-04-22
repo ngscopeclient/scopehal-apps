@@ -58,6 +58,7 @@ add_executable(glscopeclient
 	PreferenceDialog.cpp
 	PreferenceSchema.cpp
 	ProtocolAnalyzerWindow.cpp
+	ProtocolTreeModel.cpp
 	ScopeApp.cpp
 	ScopeSyncWizard.cpp
 	Shader.cpp

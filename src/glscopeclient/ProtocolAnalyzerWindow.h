@@ -41,6 +41,71 @@ class OscilloscopeWindow;
 
 typedef std::pair<time_t, int64_t> TimePoint;
 
+class ProtocolTreeRow
+{
+public:
+	std::string m_timestamp;
+	TimePoint m_capturekey;
+	int64_t m_offset;
+	std::vector<std::string> m_headers;
+	std::string m_data;
+	Glib::RefPtr<Gdk::Pixbuf> m_image;
+	Gdk::Color m_bgcolor;
+	Gdk::Color m_fgcolor;
+	int m_height;
+	bool m_visible;
+
+	std::vector<ProtocolTreeRow> m_children;
+};
+
+typedef std::vector<ProtocolTreeRow> ProtocolTreeChildren;
+
+//We shouldn't have to do this.
+//Buuuuut GtkTreeModel has O(n^2) insertion and is generally derpy...
+//See http://gtk.10911.n7.nabble.com/custom-TreeModel-td95650.html
+class ProtocolTreeModel :
+	public Gtk::TreeModel,
+	public Glib::Object
+{
+private:
+	ProtocolTreeModel(const Gtk::TreeModelColumnRecord& columns);
+
+public:
+	static Glib::RefPtr<ProtocolTreeModel> create(const Gtk::TreeModelColumnRecord& columns);
+
+	virtual Gtk::TreeModelFlags get_flags_vfunc() const;
+	virtual int get_n_columns_vfunc() const;
+	virtual GType get_column_type_vfunc(int index) const;
+	virtual void get_value_vfunc(const TreeModel::iterator& iter, int column, Glib::ValueBase& value) const;
+	virtual void set_value_impl(const iterator& row, int column, const Glib::ValueBase& value);
+
+	virtual bool iter_next_vfunc(const iterator& iter, iterator& iter_next) const;
+
+	virtual bool iter_children_vfunc(const iterator& parent, iterator& iter) const;
+	virtual bool iter_has_child_vfunc(const iterator& iter) const;
+	virtual int iter_n_children_vfunc(const iterator& iter) const;
+	virtual int iter_n_root_children_vfunc() const;
+	virtual bool iter_nth_child_vfunc(const iterator& parent, int n, iterator& iter) const;
+	virtual bool iter_nth_root_child_vfunc(int n, iterator& iter) const;
+	virtual bool iter_parent_vfunc(const iterator& child, iterator& iter) const;
+
+	virtual Gtk::TreePath get_path_vfunc(const iterator& iter) const;
+	virtual bool get_iter_vfunc(const Gtk::TreePath& path, iterator& iter) const;
+
+	iterator append();
+	iterator append(const Gtk::TreeNodeChildren& node);
+	iterator erase(const iterator& iter);
+
+protected:
+	const Gtk::TreeModelColumnRecord& m_columns;
+
+	const ProtocolTreeRow* GetRow(const iterator& iter) const;
+	ProtocolTreeRow* GetRow(const iterator& iter);
+
+	ProtocolTreeChildren m_rows;
+	int m_nheaders;
+};
+
 class ProtocolAnalyzerColumns : public Gtk::TreeModel::ColumnRecord
 {
 public:
@@ -54,7 +119,7 @@ public:
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
 	Gtk::TreeModelColumn<Gdk::Color>					m_bgcolor;
 	Gtk::TreeModelColumn<Gdk::Color>					m_fgcolor;
-	Gtk::TreeModelColumn<int>					m_height;
+	Gtk::TreeModelColumn<int>							m_height;
 	Gtk::TreeModelColumn<bool>							m_visible;
 };
 
@@ -159,7 +224,7 @@ protected:
 
 	Gtk::ScrolledWindow m_scroller;
 		Gtk::TreeView m_tree;
-	Glib::RefPtr<Gtk::TreeStore> m_internalmodel;
+	Glib::RefPtr<ProtocolTreeModel> m_internalmodel;
 	Glib::RefPtr<Gtk::TreeModelFilter> m_model;
 	ProtocolAnalyzerColumns m_columns;
 

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -399,7 +399,7 @@ ProtocolAnalyzerWindow::ProtocolAnalyzerWindow(
 	set_default_size(1024, 600);
 
 	//Set up the tree view
-	m_internalmodel = Gtk::TreeStore::create(m_columns);
+	m_internalmodel = ProtocolTreeModel::create(m_columns);
 	m_model = Gtk::TreeModelFilter::create(m_internalmodel);
 	m_tree.set_model(m_model);
 	m_model->set_visible_column(m_columns.m_visible);
@@ -572,11 +572,14 @@ void ProtocolAnalyzerWindow::OnWaveformDataReady()
 	}
 
 	//Select the last row
-	last_top_row = m_model->children().end();
-	last_top_row --;
-	auto path = m_model->get_path(*last_top_row);
-	m_tree.expand_to_path(path);
-	m_tree.scroll_to_row(path);
+	auto len = m_model->children().size();
+	if(len != 0)
+	{
+		Gtk::TreePath path;
+		path.push_back(len - 1);
+		m_tree.expand_to_path(path);
+		m_tree.scroll_to_row(path);
+	}
 
 	m_updating = false;
 }
