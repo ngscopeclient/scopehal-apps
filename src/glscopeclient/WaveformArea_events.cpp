@@ -1423,7 +1423,7 @@ void WaveformArea::SyncFontPreferences()
 /**
 	@brief Update stuff when a cursor is dragged
  */
-void WaveformArea::OnCursorMoved()
+void WaveformArea::OnCursorMoved(bool notifySiblings)
 {
 	//Single cursor - find the timestamp of the cursor and see if it it hit a packet for a protocol analyzer
 	if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE)
@@ -1435,6 +1435,20 @@ void WaveformArea::OnCursorMoved()
 				continue;
 
 			HighlightPacketAtTime(p, m_group->m_xCursorPos[0]);
+		}
+
+		//Notify all other waveform groups that the cursor moved
+		if(notifySiblings)
+		{
+			for(auto a : m_parent->m_waveformAreas)
+			{
+				if(a == this)
+					continue;
+				if(a->m_group != m_group)
+					continue;
+
+				a->OnCursorMoved(false);
+			}
 		}
 	}
 }

@@ -448,7 +448,7 @@ protected:
 		DRAG_OVERLAY
 	} m_dragState;
 
-	void OnCursorMoved();
+	void OnCursorMoved(bool notifySiblings = true);
 	void HighlightPacketAtTime(PacketDecoder* p, int64_t time);
 
 	//Start voltage of a drag (only used in DRAG_OFFSET mode)
