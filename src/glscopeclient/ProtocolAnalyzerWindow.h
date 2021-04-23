@@ -96,6 +96,9 @@ public:
 	iterator append(const Gtk::TreeNodeChildren& node);
 	iterator erase(const iterator& iter);
 
+	const ProtocolTreeChildren& GetRows()
+	{ return m_rows; }
+
 protected:
 	const Gtk::TreeModelColumnRecord& m_columns;
 

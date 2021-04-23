@@ -851,46 +851,65 @@ void ProtocolAnalyzerWindow::on_hide()
 
 void ProtocolAnalyzerWindow::SelectPacket(TimePoint cap, int64_t offset)
 {
+	auto& rows = m_internalmodel->GetRows();
+	auto len = rows.size();
+
 	//Loop over packets from last to to first, looking for this packet
-	//TODO: can we do this more efficiently?
-
+	//TODO: binary search on capture key, then offset?
+	//But that would be hard if we don't know which rows are visible. For now, stay linear.
+	size_t ivis = 0;
 	auto sel = m_tree.get_selection();
-
-	auto children = m_model->children();
-	for(auto row : children)
+	for(size_t i=0; i<len; i++)
 	{
-		TimePoint rowtime = row[m_columns.m_capturekey];
-
-		//Get the timestamp for this row
-		if(rowtime != cap)
+		auto& row = rows[i];
+		if(!row.m_visible)
 			continue;
 
-		//If row has children, check them
-		auto rowchildren = row->children();
-		if(rowchildren.size())
+		if(cap != row.m_capturekey)
 		{
-			for(auto child : rowchildren)
-			{
-				if(child[m_columns.m_offset] != offset)
-					continue;
+			ivis ++;
+			continue;
+		}
 
+		if(row.m_offset > offset)
+			break;
+
+		Gtk::TreePath path;
+		path.push_back(ivis);
+
+		//Check child nodes
+		if(!row.m_children.empty())
+		{
+			size_t jvis = 0;
+			for(size_t j=0; j<row.m_children.size(); j++)
+			{
+				auto& child = rows[i];
+				if(!child.m_visible)
+					continue;
+				if(offset != child.m_offset)
+				{
+					jvis ++;
+					continue;
+				}
+
+				path.push_back(jvis);
 				m_updating = true;
-				sel->select(child);
-				auto path = m_model->get_path(child);
-				m_tree.expand_to_path(path);
+				sel->select(path);
 				m_tree.scroll_to_row(path);
 				m_updating = false;
 				return;
 			}
 		}
-
-		else if(row[m_columns.m_offset] != offset)
+		else if(offset != row.m_offset)
+		{
+			ivis ++;
 			continue;
+		}
 
-		//We found a hit!
 		m_updating = true;
-		sel->select(row);
-		m_tree.scroll_to_row(m_model->get_path(row));
+		sel->select(path);
+		m_tree.scroll_to_row(path);
 		m_updating = false;
+		break;
 	}
 }
