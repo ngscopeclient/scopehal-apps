@@ -1455,6 +1455,23 @@ void WaveformArea::OnCursorMoved(bool notifySiblings)
 
 void WaveformArea::HighlightPacketAtTime(PacketDecoder* p, int64_t time)
 {
+	//Find the protocol analyzer window
+	ProtocolAnalyzerWindow* a = NULL;
+	for(auto w : m_parent->m_analyzers)
+	{
+		if(w->GetDecoder() == p)
+		{
+			a = w;
+			break;
+		}
+	}
+	if(!a)
+		return;
+
+	//If it's not visible, don't bother
+	if(!a->is_visible())
+		return;
+
 	bool hit = false;
 
 	TimePoint packetTimestamp;
@@ -1482,23 +1499,6 @@ void WaveformArea::HighlightPacketAtTime(PacketDecoder* p, int64_t time)
 	}
 
 	if(!hit)
-		return;
-
-	//Find the protocol analyzer window
-	ProtocolAnalyzerWindow* a = NULL;
-	for(auto w : m_parent->m_analyzers)
-	{
-		if(w->GetDecoder() == p)
-		{
-			a = w;
-			break;
-		}
-	}
-	if(!a)
-		return;
-
-	//If it's not visible, don't bother
-	if(!a->is_visible())
 		return;
 
 	//Hit?
