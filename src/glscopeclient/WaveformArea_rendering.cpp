@@ -204,12 +204,14 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	alpha_scaled = min(1.0f, alpha_scaled) * 2;
 
 	//Config stuff
-	wdata->m_mappedConfigBuffer64[0] = -group->m_xAxisOffset / pdat->m_timescale;			//innerXoff
+	int64_t innerxoff = group->m_xAxisOffset / pdat->m_timescale;
+	int64_t fractional_offset = group->m_xAxisOffset % pdat->m_timescale;
+	wdata->m_mappedConfigBuffer64[0] = -innerxoff;											//innerXoff
 	wdata->m_mappedConfigBuffer[2] = height;												//windowHeight
 	wdata->m_mappedConfigBuffer[3] = wdata->m_area->m_plotRight;							//windowWidth
 	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
 	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
-	wdata->m_mappedFloatConfigBuffer[6] = pdat->m_triggerPhase * group->m_pixelsPerXUnit;	//xoff
+	wdata->m_mappedFloatConfigBuffer[6] = (pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit;	//xoff
 	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * group->m_pixelsPerXUnit;		//xscale
 	wdata->m_mappedFloatConfigBuffer[8] = ybase;											//ybase
 	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
