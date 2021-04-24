@@ -32,8 +32,11 @@
 	@brief Waveform rendering shader for analog waveforms with GL_ARB_gpu_shader_int64 support
  */
 
-#version 450
+#version 420
+#extension GL_ARB_compute_shader : require
 #extension GL_ARB_gpu_shader_int64 : require
+#extension GL_ARB_arrays_of_arrays : require
+#extension GL_ARB_shader_storage_buffer_object : require
 
 layout(std430, binding=1) buffer waveform_x
 {
