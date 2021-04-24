@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -733,7 +733,7 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 	size_t index = BinarySearchForGequal(
 		(int64_t*)&waveform->m_offsets[0],
 		waveform->m_offsets.size(),
-		(int64_t)round(ticks));
+		(int64_t)ceil(ticks));
 
 	//Stop if start of waveform (no lerping possible)
 	if(index == 0)
