@@ -239,7 +239,8 @@ public:
 	void OnFileOpen();
 	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void OnFileImport();
-	void DoImportCSV(const std::string& filename);
+	void ImportCSVToNewSession(const std::string& filename);
+	void ImportCSVToExistingSession(const std::string& filename);
 	void DoImportBIN(const std::string& filename);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);

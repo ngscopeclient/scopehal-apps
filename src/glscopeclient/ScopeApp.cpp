@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,7 +43,13 @@ ScopeApp::~ScopeApp()
 	ShutDownSession();
 }
 
-void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigger, bool nodigital, bool nospectrum)
+void ScopeApp::run(
+	vector<string> filesToLoad,
+	bool reconnect,
+	bool nodata,
+	bool retrigger,
+	bool nodigital,
+	bool nospectrum)
 {
 	register_application();
 
@@ -51,18 +57,41 @@ void ScopeApp::run(string fileToLoad, bool reconnect, bool nodata, bool retrigge
 	add_window(*m_window);
 
 	//Handle file loads specified on the command line
-	if(!fileToLoad.empty())
+	bool first = true;
+	for(auto f : filesToLoad)
 	{
-		//Guess files by extension
-		if(fileToLoad.find(".csv") != string::npos)
-			m_window->DoImportCSV(fileToLoad);
+		//Ignore blank files (should never happen)
+		if(f.empty())
+			continue;
 
-		else if (fileToLoad.find(".bin") != string::npos)
-			m_window->DoImportBIN(fileToLoad);
+		//Can load multiple CSVs
+		if(f.find(".csv") != string::npos)
+		{
+			if(first)
+			{
+				m_window->ImportCSVToNewSession(f);
+				first = false;
+			}
+			else
+				m_window->ImportCSVToExistingSession(f);
+		}
 
-		//Assume anything else is a scopesession
+		//Can only load one bin for now
+		else if (f.find(".bin") != string::npos)
+		{
+			m_window->DoImportBIN(f);
+			break;
+		}
+
+		//Can only load one scopesession
+		else if (f.find(".scopesession") != string::npos)
+		{
+			m_window->DoFileOpen(f, true, !nodata, reconnect);
+			break;
+		}
+
 		else
-			m_window->DoFileOpen(fileToLoad, true, !nodata, reconnect);
+			LogError("Unrecognized file extension, ignoring %s\n", f.c_str());
 	}
 
 	m_window->present();

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -95,6 +95,8 @@ void help()
 			"\n"
 			"  [filename|scope]:\n"
 			"    filename : path to a .scopesession to load on startup\n"
+			"               May also be a CSV or other supported file to be imported.\n"
+			"               Some file formats (like CSV) allow multiple files to be specified, separated by spaces\n"
 			"    scope    : <scope name>:<scope driver>:<transport protocol>[:<transport arguments]\n"
 			"\n"
 			"  Examples:\n"
@@ -112,7 +114,7 @@ int main(int argc, char* argv[])
 
 	//Parse command-line arguments
 	vector<string> scopes;
-	string fileToLoad;
+	vector<string> filesToLoad;
 	bool reconnect = false;
 	bool nodata = false;
 	bool retrigger = false;
@@ -157,7 +159,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		//Not a flag. Either a connection string or a save file name.
+		//Not a flag. Either a connection string or a file name.
 		else
 		{
 			//If there's a colon after the first few characters, it's a connection string
@@ -166,9 +168,9 @@ int main(int argc, char* argv[])
 			if( (colon != string::npos) && (colon > 1) )
 				scopes.push_back(s);
 
-			//Otherwise assume it's a save file
+			//Otherwise assume it's a file
 			else
-				fileToLoad = s;
+				filesToLoad.push_back(s);
 		}
 	}
 
@@ -252,7 +254,7 @@ int main(int argc, char* argv[])
 
 	//If there are no scopes and we're not loading a file, show the dialog to connect.
 	//TODO: support multi-scope connection
-	if(scopes.empty() && fileToLoad.empty())
+	if(scopes.empty() && filesToLoad.empty())
 	{
 		InstrumentConnectionDialog dlg;
 
@@ -328,7 +330,7 @@ int main(int argc, char* argv[])
 		g_app->m_scopes.push_back(scope);
 	}
 
-	g_app->run(fileToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
+	g_app->run(filesToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
 
 	//Global cleanup
 	ScopehalStaticCleanup();

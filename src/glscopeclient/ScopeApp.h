@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -52,7 +52,12 @@ public:
 	std::vector<Oscilloscope*> m_scopes;
 
 	virtual void run(
-		std::string fileToLoad, bool reconnect, bool nodata, bool retrigger, bool nodigital, bool nospectrum);
+		std::vector<std::string> filesToLoad,
+		bool reconnect,
+		bool nodata,
+		bool retrigger,
+		bool nodigital,
+		bool nospectrum);
 
 	void DispatchPendingEvents();
 
