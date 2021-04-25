@@ -61,8 +61,8 @@ public:
 typedef std::vector<ProtocolTreeRow> ProtocolTreeChildren;
 
 //We shouldn't have to do this.
-//Buuuuut GtkTreeModel has O(n^2) insertion and is generally derpy...
-//See http://gtk.10911.n7.nabble.com/custom-TreeModel-td95650.html
+//Buuuuut GtkTreeModel has O(n^2) insertion and is generally derpy (https://gitlab.gnome.org/GNOME/gtk/-/issues/2693)
+//Se also http://gtk.10911.n7.nabble.com/custom-TreeModel-td95650.html
 class ProtocolTreeModel :
 	public Gtk::TreeModel,
 	public Glib::Object
