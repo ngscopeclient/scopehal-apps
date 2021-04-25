@@ -447,7 +447,6 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		{
 			size_t olen = data->m_offsets.size();
 
-			double last_end = textright;
 			for(size_t i=0; i<olen; i++)
 			{
 				double start = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
@@ -461,20 +460,57 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				if(xs > m_plotRight)
 					break;
 
-				//If this sample is basically on top of the last one, don't render it.
-				if( (xe - last_end) < 2)
-					continue;
-
 				auto f = dynamic_cast<Filter*>(o.m_channel);
-				RenderComplexSignal(
-					cr,
-					textright, m_plotRight,
-					xs, xe, 5,
-					ybot, ymid, ytop,
-					f->GetText(i),
-					f->GetColor(i));
 
-				last_end = xe;
+				double cellwidth = xe - xs;
+				auto color = f->GetColor(i);
+				if(cellwidth < 2)
+				{
+					//This sample is really skinny. There's no text to render so don't waste time with that.
+
+					//Average the color of all samples touching this pixel
+					size_t nmerged = 1;
+					float sum_red = color.get_red_p();
+					float sum_green = color.get_green_p();
+					float sum_blue = color.get_blue_p();
+					for(size_t j=i+1; j<olen; j++)
+					{
+						double cellstart = (data->m_offsets[j] * data->m_timescale) + data->m_triggerPhase;
+						double cellxs = XAxisUnitsToXPosition(cellstart);
+
+						if(cellxs > xs+2)
+							break;
+
+						auto c = f->GetColor(j);
+						sum_red += c.get_red_p();
+						sum_green += c.get_green_p();
+						sum_blue += c.get_blue_p();
+						nmerged ++;
+
+						//Skip these samples in the outer loop
+						i = j;
+					}
+
+					//Render a single box for them all
+					color.set_rgb_p(sum_red / nmerged, sum_green / nmerged, sum_blue / nmerged);
+					RenderComplexSignal(
+						cr,
+						textright, m_plotRight,
+						xs, xe, 5,
+						ybot, ymid, ytop,
+						"",
+						color);
+				}
+				else
+				{
+					RenderComplexSignal(
+						cr,
+						textright, m_plotRight,
+						xs, xe, 5,
+						ybot, ymid, ytop,
+						f->GetText(i),
+						color);
+				}
 			}
 		}
 	}
