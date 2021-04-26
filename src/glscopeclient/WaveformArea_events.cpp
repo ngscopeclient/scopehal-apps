@@ -1065,7 +1065,13 @@ void WaveformArea::OnDecodeSetupComplete()
 			//If the decode is incompatible with our timebase, make a new group if needed
 			//TODO: better way to determine fixed-width stuff like eye patterns
 			if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel.m_channel->GetXAxisUnits()) )
+			{
 				m_parent->MoveToBestGroup(area);
+
+				//If the new unit is Hz, use a reasonable default for the timebase (1 MHz/pixel)
+				if(m_pendingDecode->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
+					area->m_group->m_pixelsPerXUnit = 1e-6;
+			}
 		}
 	}
 
