@@ -9,14 +9,7 @@ out vec4 			finalColor;
 void main()
 {
 	if( (texcoord.x < 0) || (texcoord.x > 1) )
-	{
-		//discard;
-		finalColor.r = 1;
-		finalColor.g = 0;
-		finalColor.b = 0;
-		finalColor.a = 1;
-		return;
-	}
+		discard;
 
 	//Look up the intensity value and clamp it
 	vec4 yvec = texture(fbtex, vec2(texcoord));
@@ -24,6 +17,8 @@ void main()
 	if( (texcoord.x < 0) || (texcoord.y > 1) )
 	if(y >= 0.99)
 		y = 0.99;
+	if(y < 0.001)
+		discard;
 
 	//Look up the actual color
 	vec2 pos;

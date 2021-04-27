@@ -533,9 +533,6 @@ void WaveformArea::RenderSpectrogram()
 	if(pcap == NULL)
 		return;
 
-	LogDebug("Rendering spectrogram\n");
-	LogIndenter li;
-
 	//Reuse the texture from the eye pattern rendering path
 	m_eyeTexture.Bind();
 	ResetTextureFiltering();
@@ -552,14 +549,21 @@ void WaveformArea::RenderSpectrogram()
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 
 	//Figure out the X scale and offset factors.
-	float XUnitsPerGLUnit = m_width / m_group->m_pixelsPerXUnit;
-	float xoff = (m_group->m_xAxisOffset + pcap->GetStartTime()) / XUnitsPerGLUnit;
-	float xscale = pcap->GetDuration() / XUnitsPerGLUnit;
+	float xpixscale = m_group->m_pixelsPerXUnit / m_width;
+	float xoff = (m_group->m_xAxisOffset + pcap->GetStartTime()) * xpixscale;
+	float xscale = pcap->GetDuration() * xpixscale;
+
+	//Figure out Y axis scale and offset
+	float range = m_channel.m_channel->GetVoltageRange();
+	float yoff = -m_channel.m_channel->GetOffset() / range - 0.5;
+	float yscale = pcap->GetMaxFrequency() / range;
 
 	m_spectrogramProgram.Bind();
 	m_spectrogramVAO.Bind();
 	m_spectrogramProgram.SetUniform(xscale, "xscale");
 	m_spectrogramProgram.SetUniform(xoff, "xoff");
+	m_spectrogramProgram.SetUniform(yscale, "yscale");
+	m_spectrogramProgram.SetUniform(yoff, "yoff");
 	m_spectrogramProgram.SetUniform(m_eyeTexture, "fbtex", 0);
 	m_spectrogramProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
