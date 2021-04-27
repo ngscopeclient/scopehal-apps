@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -571,6 +571,7 @@ void WaveformArea::on_realize()
 	InitializeColormapPass();
 	InitializeCairoPass();
 	InitializeEyePass();
+	InitializeSpectrogramPass();
 }
 
 void WaveformArea::on_unrealize()
@@ -590,17 +591,20 @@ void WaveformArea::CleanupGLHandles()
 	m_analogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_eyeProgram.Destroy();
+	m_spectrogramProgram.Destroy();
 	m_cairoProgram.Destroy();
 
 	//Clean up old VAOs
 	m_colormapVAO.Destroy();
 	m_cairoVAO.Destroy();
 	m_eyeVAO.Destroy();
+	m_spectrogramVAO.Destroy();
 
 	//Clean up old VBOs
 	m_colormapVBO.Destroy();
 	m_cairoVBO.Destroy();
 	m_eyeVBO.Destroy();
+	m_spectrogramVBO.Destroy();
 
 	//Clean up old textures
 	m_cairoTexture.Destroy();
@@ -762,6 +766,35 @@ void WaveformArea::InitializeEyePass()
 	}
 }
 
+void WaveformArea::InitializeSpectrogramPass()
+{
+	//Set up shaders
+	VertexShader cvs;
+	FragmentShader cfs;
+	if(!cvs.Load("shaders/spectrogram-vertex.glsl", NULL) || !cfs.Load("shaders/spectrogram-fragment.glsl", NULL))
+		LogFatal("failed to load spectrogram shaders, aborting\n");
+
+	m_spectrogramProgram.Add(cvs);
+	m_spectrogramProgram.Add(cfs);
+	if(!m_spectrogramProgram.Link())
+		LogFatal("failed to link shader program, aborting\n");
+
+	//Create the VAO/VBO for a fullscreen polygon
+	float verts[8] =
+	{
+		-1, -1,
+		 1, -1,
+		 1,  1,
+		-1,  1
+	};
+	m_spectrogramVBO.Bind();
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+
+	m_spectrogramVAO.Bind();
+	m_spectrogramProgram.EnableVertexArray("vert");
+	m_spectrogramProgram.SetVertexAttribPointer("vert", 2, 0);
+}
+
 void WaveformArea::InitializeCairoPass()
 {
 	//Set up shaders
@@ -810,6 +843,11 @@ bool WaveformArea::IsAnalog()
 bool WaveformArea::IsEye()
 {
 	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_EYE);
+}
+
+bool WaveformArea::IsSpectrogram()
+{
+	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_SPECTROGRAM);
 }
 
 bool WaveformArea::IsEyeOrBathtub()

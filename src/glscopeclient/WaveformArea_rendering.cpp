@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -40,6 +40,7 @@
 #include <map>
 #include <immintrin.h>
 #include "../../lib/scopeprotocols/EyePattern.h"
+#include "../../lib/scopeprotocols/SpectrogramFilter.h"
 #include "../../lib/scopeprotocols/Waterfall.h"
 
 using namespace std;
@@ -471,7 +472,9 @@ void WaveformArea::RenderMainTrace()
 {
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(0, 0, m_plotRight, m_height);
-	if(IsEye())
+	if(IsSpectrogram())
+		RenderSpectrogram();
+	else if(IsEye())
 		RenderEye();
 	else if(IsWaterfall())
 		RenderWaterfall();
@@ -518,6 +521,47 @@ void WaveformArea::RenderEye()
 	m_eyeVAO.Bind();
 	m_eyeProgram.SetUniform(m_eyeTexture, "fbtex", 0);
 	m_eyeProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+void WaveformArea::RenderSpectrogram()
+{
+	if(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_SPECTROGRAM)
+		return;
+	auto pcap = dynamic_cast<SpectrogramWaveform*>(m_channel.GetData());
+	if(pcap == NULL)
+		return;
+
+	LogDebug("Rendering spectrogram\n");
+	LogIndenter li;
+
+	//Reuse the texture from the eye pattern rendering path
+	m_eyeTexture.Bind();
+	ResetTextureFiltering();
+	m_eyeTexture.SetData(
+		pcap->GetWidth(),
+		pcap->GetHeight(),
+		pcap->GetData(),
+		GL_RED,
+		GL_FLOAT,
+		GL_RGBA32F);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+
+	//Figure out the X scale and offset factors.
+	float XUnitsPerGLUnit = m_width / m_group->m_pixelsPerXUnit;
+	float xoff = (m_group->m_xAxisOffset + pcap->GetStartTime()) / XUnitsPerGLUnit;
+	float xscale = pcap->GetDuration() / XUnitsPerGLUnit;
+
+	m_spectrogramProgram.Bind();
+	m_spectrogramVAO.Bind();
+	m_spectrogramProgram.SetUniform(xscale, "xscale");
+	m_spectrogramProgram.SetUniform(xoff, "xoff");
+	m_spectrogramProgram.SetUniform(m_eyeTexture, "fbtex", 0);
+	m_spectrogramProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }

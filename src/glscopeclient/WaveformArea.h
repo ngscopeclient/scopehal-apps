@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -42,6 +42,7 @@
 
 class WaveformArea;
 class EyeWaveform;
+class SpectrogramWaveform;
 class PacketDecoder;
 
 /**
@@ -153,6 +154,7 @@ public:
 	//Helpers for figuring out what kind of signal our primary trace is
 	bool IsAnalog();
 	bool IsDigital();
+	bool IsSpectrogram();
 	bool IsEye();
 	bool IsEyeOrBathtub();
 	bool IsWaterfall();
@@ -330,6 +332,13 @@ protected:
 	VertexBuffer m_eyeVBO;
 	Texture m_eyeTexture;
 	Texture m_eyeColorRamp[6];
+
+	//Spectrogram rendering
+	void RenderSpectrogram();
+	void InitializeSpectrogramPass();
+	VertexArray m_spectrogramVAO;
+	VertexBuffer m_spectrogramVBO;
+	Program m_spectrogramProgram;
 
 	//Waterfall rendering
 	void RenderWaterfall();
