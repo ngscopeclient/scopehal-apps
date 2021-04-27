@@ -486,6 +486,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 	event->y *= scale;
 
 	int64_t timestamp = XPositionToXAxisUnits(event->x);
+	auto region = HitTest(event->x, event->y);
 
 	switch(m_dragState)
 	{
@@ -535,6 +536,10 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_WAVEFORM_AREA:
 			if(m_dropTarget != NULL)
 			{
+				//If dragging to the same area, don't register the hit
+				if( (m_dropTarget->m_group == m_group) && (region == LOC_CHAN_NAME) )
+					break;
+
 				//Move us to a new group if needed
 				if(m_dropTarget->m_group != m_group)
 					m_parent->OnMoveToExistingGroup(this, m_dropTarget->m_group);
@@ -760,6 +765,14 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		//Move this waveform area to a new place
 		case DRAG_WAVEFORM_AREA:
 			{
+				//If we're still over the infobox, don't register it as a drag
+				if(m_mouseElementPosition == WaveformArea::LOC_CHAN_NAME)
+				{
+					m_insertionBarLocation = INSERT_NONE;
+					queue_draw();
+					break;
+				}
+
 				//Window coordinates of our cursor
 				int window_x;
 				int window_y;
