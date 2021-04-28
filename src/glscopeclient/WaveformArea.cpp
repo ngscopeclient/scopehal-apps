@@ -232,6 +232,22 @@ void WaveformArea::CreateWidgets()
 						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
 						WaveformGroup::CURSOR_X_DUAL,
 						&m_cursorDualVerticalItem));
+			m_cursorMenu.append(m_cursorSingleHorizontalItem);
+				m_cursorSingleHorizontalItem.set_label("Horizontal (single)");
+				m_cursorSingleHorizontalItem.set_group(m_cursorGroup);
+				m_cursorSingleHorizontalItem.signal_activate().connect(
+					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
+						WaveformGroup::CURSOR_Y_SINGLE,
+						&m_cursorSingleHorizontalItem));
+			m_cursorMenu.append(m_cursorDualHorizontalItem);
+				m_cursorDualHorizontalItem.set_label("Horizontal (dual)");
+				m_cursorDualHorizontalItem.set_group(m_cursorGroup);
+				m_cursorDualHorizontalItem.signal_activate().connect(
+					sigc::bind<WaveformGroup::CursorConfig, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCursorConfig),
+						WaveformGroup::CURSOR_Y_DUAL,
+						&m_cursorDualHorizontalItem));
 
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 

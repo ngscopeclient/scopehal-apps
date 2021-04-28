@@ -699,7 +699,11 @@ void WaveformArea::RenderChannelInfoBox(
 	cr->restore();
 }
 
-void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left)
+void WaveformArea::RenderVerticalCursor(
+	Cairo::RefPtr< Cairo::Context > cr,
+	int64_t pos,
+	Gdk::Color color,
+	bool label_to_left)
 {
 	//Draw the actual cursor
 	double x = XAxisUnitsToXPosition(pos);
@@ -755,6 +759,62 @@ void WaveformArea::RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos,
 	cr->restore();
 }
 
+void WaveformArea::RenderHorizontalCursor(
+	Cairo::RefPtr< Cairo::Context > cr,
+	float pos,
+	Gdk::Color color,
+	bool label_to_top)
+{
+	//Draw the actual cursor
+	double y = YAxisUnitsToYPosition(pos);
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->move_to(0, y);
+	cr->line_to(m_width, y);
+	cr->stroke();
+
+	//Draw the value label at the right side
+	string text = m_channel.m_channel->GetYAxisUnits().PrettyPrint(pos);
+
+	//Figure out text size
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+	tlayout->set_font_description(m_cursorLabelFont);
+	tlayout->set_text(text);
+	tlayout->get_pixel_size(twidth, theight);
+
+	//Draw background
+	int labelmargin = 2;
+	int top;
+	int bottom;
+	if(label_to_top)
+	{
+		bottom = y - labelmargin;
+		top = y - (theight + 2*labelmargin);
+	}
+	else
+	{
+		top = y + labelmargin;
+		bottom = y + (theight + 2*labelmargin);
+	}
+	int right = m_width;
+	int left = m_width - (twidth + 2*labelmargin);
+	cr->set_source_rgba(0, 0, 0, 0.75);
+	cr->move_to(left, bottom);
+	cr->line_to(right, bottom);
+	cr->line_to(right, top);
+	cr->line_to(left, top);
+	cr->fill();
+
+	//Draw text
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->save();
+		cr->move_to(labelmargin + left, top + labelmargin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
+}
+
 /**
 	@brief Gets the value of our channel at the specified timestamp (absolute, not waveform ticks)
  */
@@ -786,34 +846,70 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 
 	Gdk::Color cursor1 = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_1_color");
 	Gdk::Color cursor2 = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_2_color");
+	Gdk::Color cursor_fill = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_fill_color");
 
-	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
-		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
+	switch(m_group->m_cursorConfig)
 	{
-		//Draw first vertical cursor
-		double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
-		RenderCursor(cr, m_group->m_xCursorPos[0], cursor1, true);
-
-		//Dual cursors
-		if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
-		{
-			//Draw second vertical cursor
-			double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
-			RenderCursor(cr, m_group->m_xCursorPos[1], cursor2, false);
+		//Draw the second vertical cursor
+		case WaveformGroup::CURSOR_X_DUAL:
 
 			//Draw filled area between them
-			Gdk::Color cursor_fill = m_parent->GetPreferences().GetColor("Appearance.Cursors.cursor_fill_color");
-			cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
-			cr->move_to(x, ytop);
-			cr->line_to(x2, ytop);
-			cr->line_to(x2, ybot);
-			cr->line_to(x, ybot);
-			cr->fill();
+			{
+				double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
+				double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
+				cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
+				cr->move_to(x, ytop);
+				cr->line_to(x2, ytop);
+				cr->line_to(x2, ybot);
+				cr->line_to(x, ybot);
+				cr->fill();
+			}
 
 			//If it's a FFT trace, render in-band power
 			if(m_channel.m_channel->GetXAxisUnits() == Unit::UNIT_HZ)
 				RenderInBandPower(cr);
-		}
+
+			//Render the second cursor
+			RenderVerticalCursor(cr, m_group->m_xCursorPos[1], cursor2, false);
+
+			//fall through
+
+		//Draw first vertical cursor
+		case WaveformGroup::CURSOR_X_SINGLE:
+			RenderVerticalCursor(cr, m_group->m_xCursorPos[0], cursor1, true);
+			break;
+
+		//Draw second horizontal cursor
+		case WaveformGroup::CURSOR_Y_DUAL:
+
+			if(IsDigital())
+				break;
+
+			//Render the second cursor
+			RenderHorizontalCursor(cr, m_group->m_yCursorPos[1], cursor2, false);
+
+			//Draw filled area between them
+			{
+				double y = YAxisUnitsToYPosition(m_group->m_yCursorPos[0]);
+				double y2 = YAxisUnitsToYPosition(m_group->m_yCursorPos[1]);
+				cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
+				cr->move_to(0,			y);
+				cr->line_to(m_width,	y);
+				cr->line_to(m_width,	y2);
+				cr->line_to(0, 			y2);
+				cr->fill();
+			}
+
+			//fall through
+
+		//Draw first horizontal cursor
+		case WaveformGroup::CURSOR_Y_SINGLE:
+			if(!IsDigital())
+				RenderHorizontalCursor(cr, m_group->m_yCursorPos[0], cursor1, true);
+			break;
+
+		default:
+			break;
 	}
 }
 

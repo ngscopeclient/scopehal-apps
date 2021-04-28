@@ -1552,8 +1552,6 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			group->m_xAxisOffset *= 1000;
 			group->m_xCursorPos[0] *= 1000;
 			group->m_xCursorPos[1] *= 1000;
-			group->m_yCursorPos[0] *= 1000;
-			group->m_yCursorPos[1] *= 1000;
 		}
 
 		//TODO: statistics

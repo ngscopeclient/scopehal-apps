@@ -207,7 +207,7 @@ protected:
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 
-	void OnSingleClick(GdkEventButton* event, int64_t timestamp);
+	void OnSingleClick(GdkEventButton* event, int64_t timestamp, float voltage);
 	void OnDoubleClick(GdkEventButton* event, int64_t timestamp);
 
 	void RescaleEye(Filter* f, EyeWaveform* eye);
@@ -223,6 +223,8 @@ protected:
 				Gtk::RadioMenuItem m_cursorNoneItem;
 				Gtk::RadioMenuItem m_cursorSingleVerticalItem;
 				Gtk::RadioMenuItem m_cursorDualVerticalItem;
+				Gtk::RadioMenuItem m_cursorSingleHorizontalItem;
+				Gtk::RadioMenuItem m_cursorDualHorizontalItem;
 		Gtk::MenuItem m_moveItem;
 			Gtk::Menu m_moveMenu;
 				Gtk::MenuItem m_moveNewGroupBelowItem;
@@ -356,7 +358,8 @@ protected:
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr);
-	void RenderCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
+	void RenderVerticalCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
+	void RenderHorizontalCursor(Cairo::RefPtr< Cairo::Context > cr, float pos, Gdk::Color color, bool label_to_top);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);
@@ -437,7 +440,9 @@ protected:
 		LOC_TRIGGER_SECONDARY,	//lower spot for window trigger or similar
 		LOC_CHAN_NAME,
 		LOC_XCURSOR_0,
-		LOC_XCURSOR_1
+		LOC_XCURSOR_1,
+		LOC_YCURSOR_0,
+		LOC_YCURSOR_1
 	} m_clickLocation;
 
 	ClickLocation HitTest(double x, double y);
