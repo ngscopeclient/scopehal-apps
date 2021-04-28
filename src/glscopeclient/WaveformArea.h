@@ -359,7 +359,12 @@ protected:
 	void RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderVerticalCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
-	void RenderHorizontalCursor(Cairo::RefPtr< Cairo::Context > cr, float pos, Gdk::Color color, bool label_to_top);
+	void RenderHorizontalCursor(
+		Cairo::RefPtr< Cairo::Context > cr,
+		float pos,
+		Gdk::Color color,
+		bool label_to_top,
+		bool show_delta);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr);

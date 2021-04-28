@@ -1484,6 +1484,14 @@ void WaveformArea::UpdateContextMenu()
 			m_cursorDualVerticalItem.set_active(true);
 			break;
 
+		case WaveformGroup::CURSOR_Y_SINGLE:
+			m_cursorSingleHorizontalItem.set_active(true);
+			break;
+
+		case WaveformGroup::CURSOR_Y_DUAL:
+			m_cursorDualHorizontalItem.set_active(true);
+			break;
+
 		default:
 			break;
 	}

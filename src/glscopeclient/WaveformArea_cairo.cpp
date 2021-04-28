@@ -762,17 +762,28 @@ void WaveformArea::RenderHorizontalCursor(
 	Cairo::RefPtr< Cairo::Context > cr,
 	float pos,
 	Gdk::Color color,
-	bool label_to_top)
+	bool label_to_top,
+	bool show_delta)
 {
-	//Draw the actual cursor
+	//Don't draw offscreen cursors
 	double y = YAxisUnitsToYPosition(pos);
+	if( (y >= m_height) || (y <= 0) )
+		return;
+
+	//Draw the actual cursor
 	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 	cr->move_to(0, y);
 	cr->line_to(m_width, y);
 	cr->stroke();
 
 	//Draw the value label at the right side
-	string text = m_channel.m_channel->GetYAxisUnits().PrettyPrint(pos);
+	auto unit = m_channel.m_channel->GetYAxisUnits();
+	string text = unit.PrettyPrint(pos);
+	if(show_delta)
+	{
+		text += "\nΔY = ";
+		text += unit.PrettyPrint(m_group->m_yCursorPos[0] - m_group->m_yCursorPos[1]);
+	}
 
 	//Figure out text size
 	int twidth;
@@ -885,18 +896,30 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 				break;
 
 			//Render the second cursor
-			RenderHorizontalCursor(cr, m_group->m_yCursorPos[1], cursor2, false);
+			RenderHorizontalCursor(cr, m_group->m_yCursorPos[1], cursor2, false, true);
 
-			//Draw filled area between them
 			{
+				//Draw filled area between them
 				double y = YAxisUnitsToYPosition(m_group->m_yCursorPos[0]);
 				double y2 = YAxisUnitsToYPosition(m_group->m_yCursorPos[1]);
-				cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
-				cr->move_to(0,			y);
-				cr->line_to(m_width,	y);
-				cr->line_to(m_width,	y2);
-				cr->line_to(0, 			y2);
-				cr->fill();
+
+				//Skip if it's bigger than our entire FOV
+				if( (y <= 0) || (y2 >= m_height) )
+				{
+				}
+
+				else
+				{
+					cr->set_source_rgba(
+						cursor_fill.get_red_p(),
+						cursor_fill.get_green_p(),
+						cursor_fill.get_blue_p(), 0.2);
+					cr->move_to(0,			y);
+					cr->line_to(m_width,	y);
+					cr->line_to(m_width,	y2);
+					cr->line_to(0, 			y2);
+					cr->fill();
+				}
 			}
 
 			//fall through
@@ -904,7 +927,7 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		//Draw first horizontal cursor
 		case WaveformGroup::CURSOR_Y_SINGLE:
 			if(!IsDigital())
-				RenderHorizontalCursor(cr, m_group->m_yCursorPos[0], cursor1, true);
+				RenderHorizontalCursor(cr, m_group->m_yCursorPos[0], cursor1, true, false);
 			break;
 
 		default:
