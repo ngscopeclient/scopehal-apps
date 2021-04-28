@@ -28,7 +28,6 @@ endif()
 find_package(PkgConfig)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
-pkg_search_module(GLM REQUIRED glm>=0.9.8)
 find_package(FFTS)
 find_package(OpenCL)
 

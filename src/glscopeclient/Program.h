@@ -92,9 +92,6 @@ public:
 	void SetVertexAttribPointer(const char* name, int size = 3, size_t offset = 0, size_t stride = 0)
 	{ glVertexAttribPointer(GetAttributeLocation(name), size, GL_FLOAT, GL_FALSE, stride, (void*)offset); }
 
-	void SetUniform(glm::mat4 mat, const char* name)
-	{ glUniformMatrix4fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat)); }
-
 	void SetUniform(double f, const char* name)
 	{ glUniform1f(GetUniformLocation(name), f); }
 

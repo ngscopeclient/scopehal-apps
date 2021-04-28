@@ -39,7 +39,6 @@
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
-using namespace glm;
 
 bool WaveformArea::m_isGlewInitialized = false;
 

@@ -44,7 +44,6 @@
 #include "../../lib/scopehal/TwoLevelTrigger.h"
 
 using namespace std;
-using namespace glm;
 
 extern int g_numDecodes;
 
