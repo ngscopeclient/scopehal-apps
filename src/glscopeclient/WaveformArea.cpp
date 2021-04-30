@@ -275,6 +275,13 @@ void WaveformArea::CreateWidgets()
 						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
 						OscilloscopeChannel::COUPLE_DC_50, &m_dc50CouplingItem));
 				m_couplingMenu.append(m_dc50CouplingItem);
+			m_ac50CouplingItem.set_label("AC 50Ω");
+				m_ac50CouplingItem.set_group(m_couplingGroup);
+				m_ac50CouplingItem.signal_activate().connect(
+					sigc::bind<OscilloscopeChannel::CouplingType, Gtk::RadioMenuItem*>(
+						sigc::mem_fun(*this, &WaveformArea::OnCoupling),
+						OscilloscopeChannel::COUPLE_AC_50, &m_ac50CouplingItem));
+				m_couplingMenu.append(m_ac50CouplingItem);
 			m_gndCouplingItem.set_label("GND");
 				m_gndCouplingItem.set_group(m_couplingGroup);
 				m_gndCouplingItem.signal_activate().connect(

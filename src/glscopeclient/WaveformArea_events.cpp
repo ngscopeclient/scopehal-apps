@@ -1437,37 +1437,87 @@ void WaveformArea::UpdateContextMenu()
 
 	if(m_selectedChannel.m_channel->IsPhysicalChannel())
 	{
-		m_couplingMenu.set_sensitive(true);
-
-		//Update the current coupling setting
-		auto coupling = m_selectedChannel.m_channel->GetCoupling();
-		m_couplingItem.set_sensitive(true);
-		switch(coupling)
+		//See what couplings are available
+		auto couplings = m_selectedChannel.m_channel->GetAvailableCouplings();
+		if(couplings.size() > 1)
 		{
-			case OscilloscopeChannel::COUPLE_DC_1M:
-				m_dc1MCouplingItem.set_active(true);
-				break;
+			m_couplingItem.set_sensitive(true);
 
-			case OscilloscopeChannel::COUPLE_AC_1M:
-				m_ac1MCouplingItem.set_active(true);
-				break;
+			//Show only the legal coupling options
+			m_dc1MCouplingItem.set_visible(false);
+			m_ac1MCouplingItem.set_visible(false);
+			m_dc50CouplingItem.set_visible(false);
+			m_ac50CouplingItem.set_visible(false);
+			m_gndCouplingItem.set_visible(false);
+			for(auto c : couplings)
+			{
+				switch(c)
+				{
+					case OscilloscopeChannel::COUPLE_DC_1M:
+						m_dc1MCouplingItem.set_visible(true);
+						break;
 
-			case OscilloscopeChannel::COUPLE_DC_50:
-				m_dc50CouplingItem.set_active(true);
-				break;
+					case OscilloscopeChannel::COUPLE_AC_1M:
+						m_ac1MCouplingItem.set_visible(true);
+						break;
 
-			case OscilloscopeChannel::COUPLE_GND:
-				m_gndCouplingItem.set_active(true);
-				break;
+					case OscilloscopeChannel::COUPLE_DC_50:
+						m_dc50CouplingItem.set_visible(true);
+						break;
 
-			//coupling not possible, it's not an analog channel
-			default:
-				m_couplingItem.set_sensitive(false);
-				break;
+					case OscilloscopeChannel::COUPLE_AC_50:
+						m_ac50CouplingItem.set_visible(true);
+						break;
+
+					case OscilloscopeChannel::COUPLE_GND:
+						m_gndCouplingItem.set_visible(true);
+						break;
+
+					//synthetic not selectable
+					default:
+						break;
+				}
+			}
+
+			//Update the current coupling setting
+			auto coupling = m_selectedChannel.m_channel->GetCoupling();
+			m_couplingItem.set_sensitive(true);
+			switch(coupling)
+			{
+				case OscilloscopeChannel::COUPLE_DC_1M:
+					m_dc1MCouplingItem.set_active(true);
+					break;
+
+				case OscilloscopeChannel::COUPLE_AC_1M:
+					m_ac1MCouplingItem.set_active(true);
+					break;
+
+				case OscilloscopeChannel::COUPLE_DC_50:
+					m_dc50CouplingItem.set_active(true);
+					break;
+
+				case OscilloscopeChannel::COUPLE_AC_50:
+					m_ac50CouplingItem.set_active(true);
+					break;
+
+				case OscilloscopeChannel::COUPLE_GND:
+					m_gndCouplingItem.set_active(true);
+					break;
+
+				//coupling not possible, it's not an analog channel
+				default:
+					m_couplingItem.set_sensitive(false);
+					break;
+			}
+
 		}
+
+		//Only one coupling option, don't bother showing the menu
+		else
+			m_couplingItem.set_sensitive(false);
 	}
 	else
-		m_couplingMenu.set_sensitive(false);
+		m_couplingItem.set_sensitive(false);
 
 	//Select cursor config
 	switch(m_group->m_cursorConfig)

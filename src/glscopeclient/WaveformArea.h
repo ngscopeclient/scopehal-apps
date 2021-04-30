@@ -262,6 +262,7 @@ protected:
 			Gtk::Menu m_couplingMenu;
 				Gtk::RadioMenuItem::Group m_couplingGroup;
 				Gtk::RadioMenuItem m_dc50CouplingItem;
+				Gtk::RadioMenuItem m_ac50CouplingItem;
 				Gtk::RadioMenuItem m_dc1MCouplingItem;
 				Gtk::RadioMenuItem m_ac1MCouplingItem;
 				Gtk::RadioMenuItem m_gndCouplingItem;
