@@ -227,6 +227,47 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->restore();
 }
 
+void WaveformArea::RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float voltage)
+{
+	float y = YAxisUnitsToYPosition(voltage);
+	Gdk::Color color = m_parent->GetPreferences().GetColor("Appearance.Windows.trigger_bar_color");
+
+
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+	tlayout->set_font_description(m_axisLabelFont);
+	tlayout->set_text(m_channel.m_channel->GetYAxisUnits().PrettyPrint(voltage).c_str());
+	tlayout->get_pixel_size(twidth, theight);
+
+	//Label bckground
+	cr->set_source_rgba(0, 0, 0, 0.5);
+	cr->move_to(m_plotRight,	y);
+	cr->line_to(m_width,		y);
+	cr->line_to(m_width,		y+theight+4);
+	cr->line_to(m_plotRight,	y+theight+4);
+	cr->fill();
+
+	//Label
+	cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+	float scale = GetDPIScale() * get_window()->get_scale_factor();
+	float trisize = 5 * scale;
+	cr->move_to(m_plotRight + trisize*1.1, y + 2);
+	tlayout->update_from_cairo_context(cr);
+	tlayout->show_in_cairo_context(cr);
+
+	//Dotted line
+	cr->save();
+		vector<double> dots;
+		dots.push_back(4 * scale);
+		dots.push_back(4 * scale);
+		cr->set_dash(dots, 0);
+		cr->move_to(0, y);
+		cr->line_to(m_plotRight, y);
+		cr->stroke();
+	cr->restore();
+}
+
 void WaveformArea::RenderTriggerArrow(
 	Cairo::RefPtr< Cairo::Context > cr,
 	float voltage,
@@ -296,6 +337,17 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
+
+	//Render arrow for trigger
+	auto scope = m_channel.m_channel->GetScope();
+	if(m_dragState == DRAG_TRIGGER)
+		RenderTriggerLine(cr, scope->GetTrigger()->GetLevel());
+	else if(m_dragState == DRAG_TRIGGER_SECONDARY)
+	{
+		auto wt = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
+		RenderTriggerLine(cr, wt->GetLowerBound());
+	}
+
 	RenderFFTPeaks(cr);
 	RenderInsertionBar(cr);
 	RenderChannelLabel(cr);

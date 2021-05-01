@@ -248,7 +248,12 @@ void PreferenceManager::InitializeDefaults()
                 Preference::Color("insertion_bar_split_color", Gdk::Color("orange"))
                 .Label("Insertion bar color (split)")
                 .Description("Color for the insertion bar when splitting a waveform group"));
+            windows.AddPreference(
+                Preference::Color("trigger_bar_color", Gdk::Color("white"))
+                .Label("Trigger bar color")
+                .Description("Color for the dotted line shown when dragging a trigger"));
 
+    /*
     auto& instrument = this->m_treeRoot.AddCategory("Instrument");
         auto& trans = instrument.AddCategory("Transports");
             trans.AddPreference(
@@ -272,11 +277,7 @@ void PreferenceManager::InitializeDefaults()
                 .EnumValue("Choice 2", TestEnum::Choice2)
                 .EnumValue("Choice 3", TestEnum::Choice3)
             );
-        auto& decode = instrument.AddCategory("Decoders");
-            decode.AddPreference(
-                Preference::Real("hidden_setting", 13.37)
-                .Invisible()
-                .Unit(Unit::UNIT_CELSIUS));
+    */
 
     auto& privacy = this->m_treeRoot.AddCategory("Privacy");
          privacy.AddPreference(
