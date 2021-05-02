@@ -81,9 +81,9 @@ ProtocolDisplayFilter::~ProtocolDisplayFilter()
 
 bool ProtocolDisplayFilter::Validate(vector<string> headers)
 {
-	//No clauses? error
+	//No clauses? valid all-pass filter
 	if(m_clauses.empty())
-		return false;
+		return true;
 
 	//We should always have one more clause than operator
 	if( (m_operators.size() + 1) != m_clauses.size())
@@ -131,7 +131,10 @@ bool ProtocolDisplayFilter::Match(
 	const Gtk::TreeRow& row,
 	ProtocolAnalyzerColumns& cols)
 {
-	return Evaluate(row, cols) != "0";
+	if(m_clauses.empty())
+		return true;
+	else
+		return Evaluate(row, cols) != "0";
 }
 
 std::string ProtocolDisplayFilter::Evaluate(
@@ -740,7 +743,8 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 {
 	//Parse the filter
 	size_t i = 0;
-	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
+	auto text = m_filterBox.get_text();
+	ProtocolDisplayFilter filter(text, i);
 
 	//If filter is invalid, can't do anything!
 	auto headers = m_decoder->GetHeaders();
@@ -748,8 +752,14 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 		return;
 
 	auto children = m_internalmodel->children();
-	for(auto row : children)
+	size_t len = children.size();
+	size_t j=0;
+	for(auto& row : children)
 	{
+		//FIXME: something is messed up in ProtocolTreeModel causing this to not exit properly
+		if(j >= len)
+			break;
+
 		//No children? Filter this row
 		auto rowchildren = row->children();
 		if(rowchildren.empty())
@@ -768,10 +778,15 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 				}
 			}
 		}
+
+		j++;
 	}
 
 	//Done
-	m_filterBox.set_name("activefilter");
+	if(text == "")
+		m_filterBox.set_name("");
+	else
+		m_filterBox.set_name("activefilter");
 	m_filterApplyButton.set_sensitive(false);
 }
 
@@ -779,11 +794,15 @@ void ProtocolAnalyzerWindow::OnFilterChanged()
 {
 	//Parse the filter
 	size_t i = 0;
-	ProtocolDisplayFilter filter(m_filterBox.get_text(), i);
+	auto text = m_filterBox.get_text();
+	ProtocolDisplayFilter filter(text, i);
 
 	if(filter.Validate(m_decoder->GetHeaders()))
 	{
-		m_filterBox.set_name("validfilter");
+		if(text == "")
+			m_filterBox.set_name("");
+		else
+			m_filterBox.set_name("validfilter");
 		m_filterApplyButton.set_sensitive();
 	}
 	else

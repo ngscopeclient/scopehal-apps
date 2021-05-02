@@ -82,6 +82,7 @@ bool ProtocolTreeModel::iter_next_vfunc(const iterator& iter, iterator& iter_nex
 		{
 			g->user_data = GINT_TO_POINTER(-1);
 			g->user_data2 = GINT_TO_POINTER(-1);
+			g->stamp = 0;
 			return false;
 		}
 	}
@@ -95,14 +96,16 @@ bool ProtocolTreeModel::iter_next_vfunc(const iterator& iter, iterator& iter_nex
 	{
 		g->user_data = GINT_TO_POINTER(-1);
 		g->user_data2 = GINT_TO_POINTER(-1);
+		g->stamp = 0;
 		return false;
 	}
 	else
 	{
 		g->user_data = GINT_TO_POINTER(irow);
 		g->user_data2 = GINT_TO_POINTER(ichild);
+		g->stamp = 1;
+		return true;
 	}
-	return true;
 }
 
 bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& iter) const
@@ -112,7 +115,6 @@ bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& it
 	int irow = GPOINTER_TO_INT(g->user_data);
 	int ichild = GPOINTER_TO_INT(g->user_data2);
 
-	iter = iterator();
 	auto h = iter.gobj();
 
 	//If we're a child node, or have no children, nothing to do
@@ -120,6 +122,7 @@ bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& it
 	{
 		h->user_data = GINT_TO_POINTER(-1);
 		h->user_data2 = GINT_TO_POINTER(-1);
+		h->stamp = 0;
 		return false;
 	}
 
@@ -128,6 +131,7 @@ bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& it
 	{
 		h->user_data = GINT_TO_POINTER(irow);
 		h->user_data2 = GINT_TO_POINTER(0);
+		h->stamp = 1;
 		return true;
 	}
 }
@@ -180,6 +184,7 @@ bool ProtocolTreeModel::iter_nth_child_vfunc(const iterator& parent, int n, iter
 	{
 		h->user_data = GINT_TO_POINTER(-1);
 		h->user_data2 = GINT_TO_POINTER(-1);
+		h->stamp = 0;
 		return false;
 	}
 
@@ -188,24 +193,42 @@ bool ProtocolTreeModel::iter_nth_child_vfunc(const iterator& parent, int n, iter
 	{
 		h->user_data = GINT_TO_POINTER(irow);
 		h->user_data2 = GINT_TO_POINTER(n);
+		h->stamp = 1;
 		return true;
 	}
 }
 
 bool ProtocolTreeModel::iter_nth_root_child_vfunc(int n, iterator& iter) const
 {
-	iter = iterator();
+	bool valid = n <= (int)m_rows.size();
+
 	auto g = iter.gobj();
 	g->user_data = GINT_TO_POINTER(n);
 	g->user_data2 = GINT_TO_POINTER(-1);
+	g->stamp = valid ? 1 : 0;
 
-	return n <= (int)m_rows.size();
+	return valid;
 }
 
-bool ProtocolTreeModel::iter_parent_vfunc(const iterator& /*child*/, iterator& /*iter*/) const
+bool ProtocolTreeModel::iter_parent_vfunc(const iterator& child, iterator& iter) const
 {
-	LogError("ProtocolTreeModel::iter_parent_vfunc unimplemented\n");
-	return false;
+	auto g = child.gobj();
+	auto second = GPOINTER_TO_INT(g->user_data2);
+
+	auto h = iter.gobj();
+	h->user_data2 = GINT_TO_POINTER(-1);
+
+	//Top level node, no parent available
+	if(second != -1)
+	{
+		h->user_data = GINT_TO_POINTER(-1);
+		h->stamp = 0;
+		return false;
+	}
+
+	h->user_data = g->user_data;
+	h->stamp = 1;
+	return true;
 }
 
 Gtk::TreePath ProtocolTreeModel::get_path_vfunc(const iterator& iter) const
@@ -223,10 +246,9 @@ Gtk::TreePath ProtocolTreeModel::get_path_vfunc(const iterator& iter) const
 
 bool ProtocolTreeModel::get_iter_vfunc(const Gtk::TreePath& path, iterator& iter) const
 {
-	iter = iterator();
-
 	//we have children
 	auto g = iter.gobj();
+	g->stamp = 1;
 	if(path.size() > 1)
 	{
 		g->user_data = GINT_TO_POINTER(path[0]);
@@ -436,6 +458,7 @@ Gtk::TreeModel::iterator ProtocolTreeModel::erase(const iterator& iter)
 		path.push_back(second);
 	row_deleted(path);
 
+	h->stamp = 1;
 	return ret;
 }
 
