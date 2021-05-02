@@ -2686,7 +2686,7 @@ void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
 /**
 	@brief Handles updating things after all instruments have downloaded their new waveforms
  */
-void OscilloscopeWindow::OnAllWaveformsUpdated()
+void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring)
 {
 	m_totalWaveforms ++;
 
@@ -2695,8 +2695,13 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 	RefreshAllFilters();
 
 	//Update protocol analyzers
-	for(auto a : m_analyzers)
-		a->OnWaveformDataReady();
+	//TODO: ideal would be to delete all old packets from analyzers then update them with current ones.
+	//This would allow changing settings on a protocol to update correctly.
+	if(!reconfiguring)
+	{
+		for(auto a : m_analyzers)
+			a->OnWaveformDataReady();
+	}
 
 	//Update waveform areas.
 	//Skip this if loading a file from the command line and loading isn't done
@@ -2740,39 +2745,42 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 			w->queue_draw();
 	}
 
-	//Redraw timeline in case trigger config was updated during the waveform download
-	for(auto g : m_waveformGroups)
-		g->m_timeline.queue_draw();
-
-	//Update the trigger sync wizard, if it's active
-	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
-		m_scopeSyncWizard->OnWaveformDataReady();
-
-	//Check if a conditional halt applies
-	int64_t timestamp;
-	if(m_haltConditionsDialog.ShouldHalt(timestamp))
+	if(!reconfiguring)
 	{
-		auto chan = m_haltConditionsDialog.GetHaltChannel();
+		//Redraw timeline in case trigger config was updated during the waveform download
+		for(auto g : m_waveformGroups)
+			g->m_timeline.queue_draw();
 
-		OnStop();
+		//Update the trigger sync wizard, if it's active
+		if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
+			m_scopeSyncWizard->OnWaveformDataReady();
 
-		if(m_haltConditionsDialog.ShouldMoveToHalt())
+		//Check if a conditional halt applies
+		int64_t timestamp;
+		if(m_haltConditionsDialog.ShouldHalt(timestamp))
 		{
-			//Find the waveform area(s) for this channel
-			for(auto a : m_waveformAreas)
-			{
-				if(a->GetChannel() == chan)
-				{
-					a->m_group->m_xAxisOffset = timestamp;
-					a->m_group->m_frame.queue_draw();
-				}
+			auto chan = m_haltConditionsDialog.GetHaltChannel();
 
-				for(size_t i=0; i<a->GetOverlayCount(); i++)
+			OnStop();
+
+			if(m_haltConditionsDialog.ShouldMoveToHalt())
+			{
+				//Find the waveform area(s) for this channel
+				for(auto a : m_waveformAreas)
 				{
-					if(a->GetOverlay(i) == chan)
+					if(a->GetChannel() == chan)
 					{
 						a->m_group->m_xAxisOffset = timestamp;
 						a->m_group->m_frame.queue_draw();
+					}
+
+					for(size_t i=0; i<a->GetOverlayCount(); i++)
+					{
+						if(a->GetOverlay(i) == chan)
+						{
+							a->m_group->m_xAxisOffset = timestamp;
+							a->m_group->m_frame.queue_draw();
+						}
 					}
 				}
 			}

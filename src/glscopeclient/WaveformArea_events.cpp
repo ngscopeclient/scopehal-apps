@@ -1112,7 +1112,8 @@ void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
 		if(name != decode->GetDisplayName())
 			m_parent->OnChannelRenamed(decode);
 
-		m_parent->OnAllWaveformsUpdated();
+		m_parent->OnAllWaveformsUpdated(true);
+
 		m_parent->RefreshFilterGraphEditor();
 	}
 

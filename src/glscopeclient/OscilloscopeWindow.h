@@ -313,7 +313,7 @@ public:
 
 	//Status polling
 	void OnWaveformDataReady(Oscilloscope* scope);
-	void OnAllWaveformsUpdated();
+	void OnAllWaveformsUpdated(bool reconfiguring = false);
 
 	//Performance profiling
 	double m_tArm;
