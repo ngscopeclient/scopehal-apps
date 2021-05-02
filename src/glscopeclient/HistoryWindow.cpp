@@ -513,31 +513,82 @@ void HistoryWindow::DoSaveWaveformDataForStream(
 
 	FILE* fp = fopen(tmp, "wb");
 
-	//Save channel data
 	auto achan = dynamic_cast<AnalogWaveform*>(wave);
 	auto dchan = dynamic_cast<DigitalWaveform*>(wave);
 	size_t len = wave->m_offsets.size();
-	for(size_t i=0; i<len; i++)
-	{
-		int64_t times[2] = { wave->m_offsets[i], wave->m_durations[i] };
-		if(2 != fwrite(times, sizeof(int64_t), 2, fp))
-			LogError("file write error\n");
-		if(achan)
-		{
-			if(1 != fwrite(&achan->m_samples[i], sizeof(float), 1, fp))
-				LogError("file write error\n");
-		}
-		else if(dchan)
-		{
-			bool b = dchan->m_samples[i];
-			if(1 != fwrite(&b, sizeof(bool), 1, fp))
-				LogError("file write error\n");
-		}
 
-		*progress = i * 1.0 / len;
+	//Analog channels
+	const size_t samples_per_block = 10000;
+	if(achan)
+	{
+		#pragma pack(push, 1)
+		class asample_t
+		{
+		public:
+			int64_t off;
+			int64_t dur;
+			float voltage;
+
+			asample_t(int64_t o=0, int64_t d=0, float v=0)
+			: off(o), dur(d), voltage(v)
+			{}
+		};
+		#pragma pack(pop)
+
+		//Copy sample data
+		vector<asample_t,	AlignedAllocator<asample_t, 64 > > samples;
+		samples.reserve(len);
+		for(size_t i=0; i<len; i++)
+			samples.push_back(asample_t(wave->m_offsets[i], wave->m_durations[i], achan->m_samples[i]));
+
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			*progress = i * 1.0 / len;
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(&samples[i], sizeof(asample_t), blocklen, fp))
+				LogError("file write error\n");
+		}
+	}
+	else if(dchan)
+	{
+		#pragma pack(push, 1)
+		class dsample_t
+		{
+		public:
+			int64_t off;
+			int64_t dur;
+			bool voltage;
+
+			dsample_t(int64_t o=0, int64_t d=0, bool v=0)
+			: off(o), dur(d), voltage(v)
+			{}
+		};
+		#pragma pack(pop)
+
+		//Copy sample data
+		vector<dsample_t,	AlignedAllocator<dsample_t, 64 > > samples;
+		samples.reserve(len);
+		for(size_t i=0; i<len; i++)
+			samples.push_back(dsample_t(wave->m_offsets[i], wave->m_durations[i], dchan->m_samples[i]));
+
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			*progress = i * 1.0 / len;
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(&samples[i], sizeof(dsample_t), blocklen, fp))
+				LogError("file write error\n");
+		}
+	}
+	else
+	{
+		//TODO: support other waveform types (buses, eyes, etc)
+		LogError("unrecognized sample type\n");
 	}
 
-	//TODO: support other waveform types (buses, eyes, etc)
 	fclose(fp);
 
 	*done = 1;
