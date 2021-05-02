@@ -752,13 +752,11 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 		return;
 
 	auto children = m_internalmodel->children();
-	size_t len = children.size();
-	size_t j=0;
-	for(auto& row : children)
-	{
-		//FIXME: something is messed up in ProtocolTreeModel causing this to not exit properly
-		if(j >= len)
-			break;
+	for(auto it = children.begin(); (*it); it++)	//foreach loop will crash, can't use it!
+	{												//Something is funky with ProtocolTreeModel.
+													//The invalid iterators it returns don't compare equal to end().
+													//So cast the row to bool to see if it's really the end.
+		auto row = *it;
 
 		//No children? Filter this row
 		auto rowchildren = row->children();
@@ -769,8 +767,11 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 		else
 		{
 			row[m_columns.m_visible] = false;
-			for(auto child : rowchildren)
+
+			for(auto jt = rowchildren.begin(); (*jt); jt++)	//same foreach problem here
 			{
+				auto child = *jt;
+
 				if(filter.Match(child, m_columns))
 				{
 					row[m_columns.m_visible] = true;
@@ -778,8 +779,6 @@ void ProtocolAnalyzerWindow::OnApplyFilter()
 				}
 			}
 		}
-
-		j++;
 	}
 
 	//Done

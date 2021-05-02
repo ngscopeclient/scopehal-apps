@@ -80,8 +80,9 @@ bool ProtocolTreeModel::iter_next_vfunc(const iterator& iter, iterator& iter_nex
 		ichild ++;
 		if(ichild >= (int)m_rows[irow].m_children.size())
 		{
-			g->user_data = GINT_TO_POINTER(-1);
-			g->user_data2 = GINT_TO_POINTER(-1);
+			g->user_data = GINT_TO_POINTER(0);
+			g->user_data2 = GINT_TO_POINTER(0);
+			g->user_data3 = GINT_TO_POINTER(0);
 			g->stamp = 0;
 			return false;
 		}
@@ -94,8 +95,9 @@ bool ProtocolTreeModel::iter_next_vfunc(const iterator& iter, iterator& iter_nex
 	//Save the final iterator
 	if(irow >= (int)m_rows.size())
 	{
-		g->user_data = GINT_TO_POINTER(-1);
-		g->user_data2 = GINT_TO_POINTER(-1);
+		g->user_data = GINT_TO_POINTER(0);
+		g->user_data2 = GINT_TO_POINTER(0);
+		g->user_data3 = GINT_TO_POINTER(0);
 		g->stamp = 0;
 		return false;
 	}
@@ -106,6 +108,7 @@ bool ProtocolTreeModel::iter_next_vfunc(const iterator& iter, iterator& iter_nex
 		g->stamp = 1;
 		return true;
 	}
+	return true;
 }
 
 bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& iter) const
@@ -120,8 +123,9 @@ bool ProtocolTreeModel::iter_children_vfunc(const iterator& parent, iterator& it
 	//If we're a child node, or have no children, nothing to do
 	if( (ichild >= 0) || m_rows[irow].m_children.empty() )
 	{
-		h->user_data = GINT_TO_POINTER(-1);
-		h->user_data2 = GINT_TO_POINTER(-1);
+		h->user_data = GINT_TO_POINTER(0);
+		h->user_data2 = GINT_TO_POINTER(0);
+		h->user_data3 = GINT_TO_POINTER(0);
 		h->stamp = 0;
 		return false;
 	}
@@ -182,8 +186,9 @@ bool ProtocolTreeModel::iter_nth_child_vfunc(const iterator& parent, int n, iter
 	//If we're a child node, or have insufficient children, nothing to do
 	if( (ichild >= 0) || ((int)m_rows[irow].m_children.size() <= n ) )
 	{
-		h->user_data = GINT_TO_POINTER(-1);
-		h->user_data2 = GINT_TO_POINTER(-1);
+		h->user_data = GINT_TO_POINTER(0);
+		h->user_data2 = GINT_TO_POINTER(0);
+		h->user_data3 = GINT_TO_POINTER(0);
 		h->stamp = 0;
 		return false;
 	}
@@ -203,9 +208,19 @@ bool ProtocolTreeModel::iter_nth_root_child_vfunc(int n, iterator& iter) const
 	bool valid = n <= (int)m_rows.size();
 
 	auto g = iter.gobj();
-	g->user_data = GINT_TO_POINTER(n);
-	g->user_data2 = GINT_TO_POINTER(-1);
-	g->stamp = valid ? 1 : 0;
+	if(valid)
+	{
+		g->user_data = GINT_TO_POINTER(n);
+		g->user_data2 = GINT_TO_POINTER(-1);
+		g->stamp = 1;
+	}
+	else
+	{
+		g->user_data = GINT_TO_POINTER(0);
+		g->user_data2 = GINT_TO_POINTER(0);
+		g->user_data3 = GINT_TO_POINTER(0);
+		g->stamp = 0;
+	}
 
 	return valid;
 }
@@ -221,7 +236,9 @@ bool ProtocolTreeModel::iter_parent_vfunc(const iterator& child, iterator& iter)
 	//Top level node, no parent available
 	if(second != -1)
 	{
-		h->user_data = GINT_TO_POINTER(-1);
+		h->user_data = GINT_TO_POINTER(0);
+		h->user_data2 = GINT_TO_POINTER(0);
+		h->user_data3 = GINT_TO_POINTER(0);
 		h->stamp = 0;
 		return false;
 	}
