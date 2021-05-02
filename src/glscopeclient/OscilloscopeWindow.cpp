@@ -2740,6 +2740,10 @@ void OscilloscopeWindow::OnAllWaveformsUpdated()
 			w->queue_draw();
 	}
 
+	//Redraw timeline in case trigger config was updated during the waveform download
+	for(auto g : m_waveformGroups)
+		g->m_timeline.queue_draw();
+
 	//Update the trigger sync wizard, if it's active
 	if(m_scopeSyncWizard && m_scopeSyncWizard->is_visible())
 		m_scopeSyncWizard->OnWaveformDataReady();
