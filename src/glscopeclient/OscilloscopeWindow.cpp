@@ -1945,9 +1945,21 @@ void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 
 	chdir(cwd);
 
+	//Create and show progress dialog
+	FileProgressDialog progress;
+	progress.show();
+	float progress_per_scope = 1.0f / m_scopes.size();
+
 	//Serialize waveforms for each of our instruments
-	for(auto it : m_historyWindows)
-		it.second->SerializeWaveforms(m_currentDataDirName, table);
+	for(size_t i=0; i<m_scopes.size(); i++)
+	{
+		m_historyWindows[m_scopes[i]]->SerializeWaveforms(
+			m_currentDataDirName,
+			table,
+			progress,
+			i*progress_per_scope,
+			progress_per_scope);
+	}
 }
 
 void OscilloscopeWindow::OnAlphaChanged()

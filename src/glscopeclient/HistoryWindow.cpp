@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
 #include "HistoryWindow.h"
+#include "FileProgressDialog.h"
 
 using namespace std;
 
@@ -325,8 +326,15 @@ void HistoryWindow::JumpToHistory(TimePoint timestamp)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Serialization
 
-void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
+void HistoryWindow::SerializeWaveforms(
+	string dir,
+	IDTable& table,
+	FileProgressDialog& progress,
+	float base_progress,
+	float progress_range)
 {
+	progress.Update("Saving waveform metadata", base_progress);
+
 	//Figure out file name, and make the waveform directory
 	char tmp[512];
 	snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dir.c_str(), table[m_scope]);
@@ -345,6 +353,8 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 	string config = "waveforms:\n";
 	auto children = m_model->children();
 	int id = 1;
+	size_t iwave = 0;
+	float waveform_progress = progress_range / children.size();
 	for(auto it : children)
 	{
 		TimePoint key = (*it)[m_columns.m_capturekey];
@@ -370,62 +380,90 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 
 		string wname = tmp;
 
-		//Save waveform data
+		//Kick off a thread to save data for each channel
+		vector<thread*> threads;
 		WaveformHistory history = (*it)[m_columns.m_history];
+		size_t nchans = history.size();
+		volatile float* channel_progress = new float[nchans];
+		volatile int* channel_done = new int[nchans];
+		size_t i=0;
 		for(auto jt : history)
 		{
-			auto chan = jt.first.m_channel;
-			int index = chan->GetIndex();
-			size_t stream = jt.first.m_stream;
-			auto wave = jt.second;
-			if(wave == NULL)		//trigger, disabled, etc
-				continue;
+			channel_progress[i] = 0;
+			channel_done[i] = 0;
 
-			//First stream has no suffix for compat
-			if(stream == 0)
-				snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
-			else
-				snprintf(tmp, sizeof(tmp), "%s/channel_%d_stream%zu.bin", wname.c_str(), index, stream);
-
-			FILE* fp = fopen(tmp, "wb");
+			threads.push_back(new thread(
+				&HistoryWindow::DoSaveWaveformDataForStream,
+				wname,
+				jt.first,
+				jt.second,
+				channel_progress + i,
+				channel_done + i
+				));
+			i++;
 
 			//Save channel metadata
+			auto chan = jt.first.m_channel;
+			int index = chan->GetIndex();
+			auto wave = jt.second;
+			size_t nstream = jt.first.m_stream;
+			if(wave == NULL)
+				continue;
+
 			config += "            :\n";
 			snprintf(tmp, sizeof(tmp), "                index:        %d\n", index);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                stream:       %zu\n", stream);
+			snprintf(tmp, sizeof(tmp), "                stream:       %zu\n", nstream);
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                timescale:    %ld\n", wave->m_timescale);
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                trigphase:    %zd\n", wave->m_triggerPhase);
 			config += tmp;
+		}
 
-			//Save channel data
-			auto achan = dynamic_cast<AnalogWaveform*>(wave);
-			auto dchan = dynamic_cast<DigitalWaveform*>(wave);
-			size_t len = wave->m_offsets.size();
-			for(size_t i=0; i<len; i++)
+		//Process events and update the display with each thread's progress
+		while(true)
+		{
+			//Figure out total progress across each channel. Stop if all threads are done
+			bool done = true;
+			float frac = 0;
+			for(size_t j=0; j<nchans; j++)
 			{
-				int64_t times[2] = { wave->m_offsets[i], wave->m_durations[i] };
-				if(2 != fwrite(times, sizeof(int64_t), 2, fp))
-					LogError("file write error\n");
-				if(achan)
-				{
-					if(1 != fwrite(&achan->m_samples[i], sizeof(float), 1, fp))
-						LogError("file write error\n");
-				}
-				else if(dchan)
-				{
-					bool b = dchan->m_samples[i];
-					if(1 != fwrite(&b, sizeof(bool), 1, fp))
-						LogError("file write error\n");
-				}
+				if(!channel_done[j])
+					done = false;
+				frac += channel_progress[j];
 			}
-			//TODO: support other waveform types (buses, eyes, etc)
-			fclose(fp);
+			if(done)
+				break;
+			frac /= nchans;
+
+			//Update the UI
+			snprintf(
+				tmp,
+				sizeof(tmp),
+				"Saving waveform %zu/%zu for instrument %s: %.0f %% complete",
+				iwave+1,
+				(size_t)children.size(),
+				m_scope->m_nickname.c_str(),
+				frac * 100);
+			progress.Update(tmp, base_progress + (iwave+frac)*waveform_progress);
+			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
+
+			g_app->DispatchPendingEvents();
+		}
+
+		delete[] channel_progress;
+		delete[] channel_done;
+
+		//Wait for threads to complete
+		for(auto t : threads)
+		{
+			t->join();
+			delete t;
 		}
 
 		id ++;
+		iwave ++;
 	}
 
 	//Save waveform metadata
@@ -446,6 +484,64 @@ void HistoryWindow::SerializeWaveforms(string dir, IDTable& table)
 		errdlg.run();
 	}
 	fclose(fp);
+}
+
+void HistoryWindow::DoSaveWaveformDataForStream(
+	std::string wname,
+	StreamDescriptor stream,
+	WaveformBase* wave,
+	volatile float* progress,
+	volatile int* done
+	)
+{
+	auto chan = stream.m_channel;
+	int index = chan->GetIndex();
+	size_t nstream = stream.m_stream;
+	if(wave == NULL)		//trigger, disabled, etc
+	{
+		*done = 1;
+		*progress = 1;
+		return;
+	}
+
+	//First stream has no suffix for compat
+	char tmp[512];
+	if(nstream == 0)
+		snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
+	else
+		snprintf(tmp, sizeof(tmp), "%s/channel_%d_stream%zu.bin", wname.c_str(), index, nstream);
+
+	FILE* fp = fopen(tmp, "wb");
+
+	//Save channel data
+	auto achan = dynamic_cast<AnalogWaveform*>(wave);
+	auto dchan = dynamic_cast<DigitalWaveform*>(wave);
+	size_t len = wave->m_offsets.size();
+	for(size_t i=0; i<len; i++)
+	{
+		int64_t times[2] = { wave->m_offsets[i], wave->m_durations[i] };
+		if(2 != fwrite(times, sizeof(int64_t), 2, fp))
+			LogError("file write error\n");
+		if(achan)
+		{
+			if(1 != fwrite(&achan->m_samples[i], sizeof(float), 1, fp))
+				LogError("file write error\n");
+		}
+		else if(dchan)
+		{
+			bool b = dchan->m_samples[i];
+			if(1 != fwrite(&b, sizeof(bool), 1, fp))
+				LogError("file write error\n");
+		}
+
+		*progress = i * 1.0 / len;
+	}
+
+	//TODO: support other waveform types (buses, eyes, etc)
+	fclose(fp);
+
+	*done = 1;
+	*progress = 1;
 }
 
 void HistoryWindow::ReplayHistory()
