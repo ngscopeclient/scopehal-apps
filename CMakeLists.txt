@@ -16,9 +16,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
 # (causes clGetPlatformIDs to return -1001)
 if(SANITIZE)
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address")
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address -D_DEBUG")
 else()
-	set(CMAKE_CXX_FLAGS_DEBUG "-O0")
+	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -D_DEBUG")
 endif()
 
 if(WIN32)

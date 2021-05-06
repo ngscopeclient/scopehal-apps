@@ -128,6 +128,10 @@ void OscilloscopeWindow::SetTitle()
 			title += "[OFFLINE]";
 	}
 
+	#ifdef _DEBUG
+		title += " [DEBUG BUILD]";
+	#endif
+
 	set_title(title);
 }
 
