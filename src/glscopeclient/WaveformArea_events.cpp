@@ -476,6 +476,10 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 						if(m_selectedChannel.m_channel->GetDisplayName() != oldname)
 							m_parent->OnChannelRenamed(m_selectedChannel.m_channel);
 
+						//TODO: only if ADC bit depth changed?
+						//(if changed we really want to clear persistence for all channels in the group...)
+						ClearPersistence(false);
+
 						m_parent->RefreshChannelsMenu();		//update the menu with the channel's new name
 						m_parent->RefreshFilterGraphEditor();
 						queue_draw();
@@ -1046,6 +1050,9 @@ void WaveformArea::OnHide()
 void WaveformArea::OnTogglePersistence()
 {
 	m_persistence = !m_persistence;
+
+	CalculateOverlayPositions();
+	ClearPersistence(false);
 	queue_draw();
 }
 
