@@ -2512,6 +2512,9 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(StreamDescriptor chan, WaveformGr
 		}
 	}
 
+	//Refresh the channels menu since the newly added channel might create new banking conflicts
+	RefreshChannelsMenu();
+
 	w->show();
 	return w;
 }
