@@ -2931,7 +2931,12 @@ void OscilloscopeWindow::OnStop()
 	m_triggerArmed = false;
 
 	for(auto scope : m_scopes)
+	{
 		scope->Stop();
+
+		//Clear out any pending data (the user doesn't want it, and we don't want stale stuff hanging around)
+		scope->ClearPendingWaveforms();
+	}
 }
 
 void OscilloscopeWindow::ArmTrigger(bool oneshot)
