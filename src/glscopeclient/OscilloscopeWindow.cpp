@@ -1312,7 +1312,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			size_t len = lseek(fd, 0, SEEK_END);
 			buf = (unsigned char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
 
-			//FIXME: 100% progress
+			//For now, report progress complete upon the file being fully read
 			*progress = progress_per_stream*stream;
 		#endif
 
@@ -1347,13 +1347,25 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 
 			else
 				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+
+			//TODO: progress updates
+		}
+
+		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
+		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
+		int64_t nlast = nsamples - 1;
+		if( (cap->m_offsets[0] == 0) &&
+			(cap->m_offsets[nlast] == nlast) &&
+			(cap->m_durations[nlast] == 1) )
+		{
+			cap->m_densePacked = true;
 		}
 
 		#ifdef _WIN32
 			delete[] buf;
 		#else
 			munmap(buf, len);
-			close(fd);
+			::close(fd);
 		#endif
 	}
 
