@@ -51,6 +51,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#else
+#include <sys/mman.h>
 #endif
 
 using namespace std;
@@ -1264,33 +1266,55 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 				channel_index,
 				stream);
 		}
-		FILE* fp = fopen(tmp, "rb");
-		if(!fp)
-		{
-			LogError("couldn't open %s\n", tmp);
-			continue;
-		}
 
-		//Read the whole file into a buffer a megabyte at a time
-		fseek(fp, 0, SEEK_END);
-		long len = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		unsigned char* buf = new unsigned char[len];
-		long len_remaining = len;
-		long blocksize = 1024*1024;
-		long read_offset = 0;
-		while(len_remaining > 0)
-		{
-			if(blocksize > len_remaining)
-				blocksize = len_remaining;
+		//Load samples into memory
+		unsigned char* buf = NULL;
 
-			*progress = progress_per_stream*(stream + (read_offset * 1.0 / len));
+		//Windows: use generic file reads for now
+		#ifdef _WIN32
+			FILE* fp = fopen(tmp, "rb");
+			if(!fp)
+			{
+				LogError("couldn't open %s\n", tmp);
+				continue;
+			}
 
-			fread(buf + read_offset, 1, blocksize, fp);
+			//Read the whole file into a buffer a megabyte at a time
+			fseek(fp, 0, SEEK_END);
+			long len = ftell(fp);
+			fseek(fp, 0, SEEK_SET);
+			buf = new unsigned char[len];
+			long len_remaining = len;
+			long blocksize = 1024*1024;
+			long read_offset = 0;
+			while(len_remaining > 0)
+			{
+				if(blocksize > len_remaining)
+					blocksize = len_remaining;
 
-			len_remaining -= blocksize;
-			read_offset += blocksize;
-		}
+				//Most time is spent on the fread's when using this path
+				*progress = progress_per_stream*(stream + (read_offset * 1.0 / len));
+				fread(buf + read_offset, 1, blocksize, fp);
+
+				len_remaining -= blocksize;
+				read_offset += blocksize;
+			}
+			fclose(fp);
+
+		//On POSIX, just memory map the file
+		#else
+			int fd = open(tmp, O_RDONLY);
+			if(fd < 0)
+			{
+				LogError("couldn't open %s\n", tmp);
+				continue;
+			}
+			size_t len = lseek(fd, 0, SEEK_END);
+			buf = (unsigned char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+
+			//FIXME: 100% progress
+			*progress = progress_per_stream*stream;
+		#endif
 
 		//Figure out how many samples we have
 		size_t samplesize = 2*sizeof(int64_t);
@@ -1325,8 +1349,12 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
 		}
 
-		delete[] buf;
-		fclose(fp);
+		#ifdef _WIN32
+			delete[] buf;
+		#else
+			munmap(buf, len);
+			close(fd);
+		#endif
 	}
 
 	*done = 1;
