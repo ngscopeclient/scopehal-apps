@@ -29,24 +29,28 @@
 
 /**
 	@file
-	@brief Waveform rendering shader for analog waveforms with GL_ARB_gpu_shader_int64 support
+	@brief Waveform rendering shader for dense-packed waveforms without GL_ARB_gpu_shader_int64 support
  */
 
 #version 420
 #extension GL_ARB_compute_shader : require
-#extension GL_ARB_gpu_shader_int64 : require
 #extension GL_ARB_arrays_of_arrays : require
 #extension GL_ARB_shader_storage_buffer_object : require
 
+#define DENSE_PACK
+
 layout(std430, binding=1) buffer waveform_x
 {
-	int64_t xpos[];		//x position, in time ticks
+	uint xpos[];		//x position, in time ticks
+						//actually 64-bit little endian signed ints
 };
 
 //Global configuration for the run
 layout(std430, binding=2) buffer config
 {
-	int64_t innerXoff;
+	uint innerXoff_lo;	//actually a 64-bit little endian signed int
+	uint innerXoff_hi;
+
 	uint windowHeight;
 	uint windowWidth;
 	uint memDepth;
@@ -59,7 +63,33 @@ layout(std430, binding=2) buffer config
 	float persistScale;
 };
 
+//All this just because most Intel integrated GPUs lack GL_ARB_gpu_shader_int64...
 float FetchX(uint i)
 {
-	return float(xpos[i] + innerXoff);
+	//Fetch the input
+	uint xpos_lo = i;
+	uint offset_lo = innerXoff_lo;
+
+	//Sum the low halves
+	uint carry;
+	uint sum_lo = uaddCarry(xpos_lo, offset_lo, carry);
+
+	//Sum the high halves with carry in
+	uint sum_hi = innerXoff_hi + carry;
+
+	//If MSB is 1, we're negative.
+	//Calculate the twos complement by flipping all the bits.
+	//To complete the complement we need to add 1, but that comes later.
+	bool negative = ( (sum_hi & 0x80000000) == 0x80000000 );
+	if(negative)
+	{
+		sum_lo = ~sum_lo;
+		sum_hi = ~sum_hi;
+	}
+
+	//Convert back to floating point
+	float f = (float(sum_hi) * 4294967296.0) + float(sum_lo);
+	if(negative)
+		f = -f + 1;
+	return f;
 }

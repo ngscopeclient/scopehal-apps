@@ -611,6 +611,7 @@ void WaveformArea::CleanupGLHandles()
 	m_histogramWaveformComputeProgram.Destroy();
 	m_digitalWaveformComputeProgram.Destroy();
 	m_analogWaveformComputeProgram.Destroy();
+	m_denseAnalogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_eyeProgram.Destroy();
 	m_spectrogramProgram.Destroy();
@@ -651,6 +652,7 @@ void WaveformArea::InitializeWaveformPass()
 	ComputeShader hwc;
 	ComputeShader dwc;
 	ComputeShader awc;
+	ComputeShader adwc;
 	if(GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 	{
 		if(!hwc.Load(
@@ -671,6 +673,12 @@ void WaveformArea::InitializeWaveformPass()
 			"shaders/waveform-compute-core.glsl",
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
+		if(!adwc.Load(
+			"shaders/waveform-compute-head-dense.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
+			LogFatal("failed to load dense analog waveform compute shader, aborting\n");
 	}
 	else
 	{
@@ -692,6 +700,12 @@ void WaveformArea::InitializeWaveformPass()
 			"shaders/waveform-compute-core.glsl",
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
+		if(!adwc.Load(
+			"shaders/waveform-compute-head-dense-noint64.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
+			LogFatal("failed to load dense analog waveform compute shader, aborting\n");
 	}
 
 	//Link them
@@ -706,6 +720,10 @@ void WaveformArea::InitializeWaveformPass()
 	m_analogWaveformComputeProgram.Add(awc);
 	if(!m_analogWaveformComputeProgram.Link())
 		LogFatal("failed to link analog waveform shader program, aborting\n");
+
+	m_denseAnalogWaveformComputeProgram.Add(adwc);
+	if(!m_denseAnalogWaveformComputeProgram.Link())
+		LogFatal("failed to link dense analog waveform shader program, aborting\n");
 }
 
 void WaveformArea::InitializeColormapPass()

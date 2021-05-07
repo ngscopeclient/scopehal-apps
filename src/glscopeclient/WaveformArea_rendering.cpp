@@ -176,8 +176,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		else
 			memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
 
-		//Copy the X axis timestamps, no conversion needed
-		memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
+		//Copy the X axis timestamps, no conversion needed.
+		//But if dense packed, we can skip this
+		if(!wdata->IsDensePacked())
+			memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 	}
 
 	//Calculate indexes for rendering.
@@ -433,7 +435,12 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	else if(m_waveformRenderData->IsHistogram())
 		m_histogramWaveformComputeProgram.MemoryBarrier();
 	else
-		m_analogWaveformComputeProgram.MemoryBarrier();
+	{
+		if(m_waveformRenderData->IsDensePacked())
+			m_denseAnalogWaveformComputeProgram.MemoryBarrier();
+		else
+			m_analogWaveformComputeProgram.MemoryBarrier();
+	}
 
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -633,8 +640,16 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	}
 	else
 	{
-		m_analogWaveformComputeProgram.Bind();
-		m_analogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+		if(data->IsDensePacked())
+		{
+			m_denseAnalogWaveformComputeProgram.Bind();
+			m_denseAnalogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+		}
+		else
+		{
+			m_analogWaveformComputeProgram.Bind();
+			m_analogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
+		}
 	}
 
 	data->m_waveformXBuffer.BindBase(1);
@@ -647,7 +662,12 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	else if(data->IsHistogram())
 		m_histogramWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
 	else
-		m_analogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+	{
+		if(data->IsDensePacked())
+			m_denseAnalogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+		else
+			m_analogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
+	}
 }
 
 void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)

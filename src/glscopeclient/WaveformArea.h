@@ -72,6 +72,15 @@ public:
 	bool IsHistogram()
 	{ return m_channel.m_channel->GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
 
+	bool IsDensePacked()
+	{
+		auto data = m_channel.m_channel->GetData(0);
+		if(data)
+			return data->m_densePacked;
+		else
+			return false;
+	}
+
 	WaveformArea*			m_area;
 
 	//The channel of interest
@@ -311,6 +320,7 @@ protected:
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
 	Program m_analogWaveformComputeProgram;
+	Program m_denseAnalogWaveformComputeProgram;
 	Program m_digitalWaveformComputeProgram;
 	Program m_histogramWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
