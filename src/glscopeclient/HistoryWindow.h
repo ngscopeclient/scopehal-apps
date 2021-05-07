@@ -78,7 +78,14 @@ protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
 	virtual void OnSelectionChanged();
 
-	static void DoSaveWaveformDataForStream(
+	static void DoSaveWaveformDataForSparseStream(
+		std::string wname,
+		StreamDescriptor stream,
+		WaveformBase* wave,
+		volatile float* progress,
+		volatile int* done
+		);
+	static void DoSaveWaveformDataForDenseStream(
 		std::string wname,
 		StreamDescriptor stream,
 		WaveformBase* wave,

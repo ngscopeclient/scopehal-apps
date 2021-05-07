@@ -260,6 +260,7 @@ public:
 		std::string datadir,
 		int scope_id,
 		int waveform_id,
+		std::string format,
 		volatile float* progress,
 		volatile int* done
 		);

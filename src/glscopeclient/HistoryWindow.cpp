@@ -392,25 +392,44 @@ void HistoryWindow::SerializeWaveforms(
 			channel_progress[i] = 0;
 			channel_done[i] = 0;
 
-			threads.push_back(new thread(
-				&HistoryWindow::DoSaveWaveformDataForStream,
-				wname,
-				jt.first,
-				jt.second,
-				channel_progress + i,
-				channel_done + i
-				));
+			auto chan = jt.first.m_channel;
+			auto wave = jt.second;
+			if((wave == NULL) || wave->m_densePacked)
+			{
+				threads.push_back(new thread(
+					&HistoryWindow::DoSaveWaveformDataForDenseStream,
+					wname,
+					jt.first,
+					jt.second,
+					channel_progress + i,
+					channel_done + i
+					));
+			}
+			else
+			{
+				threads.push_back(new thread(
+					&HistoryWindow::DoSaveWaveformDataForSparseStream,
+					wname,
+					jt.first,
+					jt.second,
+					channel_progress + i,
+					channel_done + i
+					));
+			}
 			i++;
 
 			//Save channel metadata
-			auto chan = jt.first.m_channel;
 			int index = chan->GetIndex();
-			auto wave = jt.second;
 			size_t nstream = jt.first.m_stream;
 			if(wave == NULL)
 				continue;
 
 			config += "            :\n";
+			if(wave->m_densePacked)
+				snprintf(tmp, sizeof(tmp), "                format:       densev1\n");
+			else
+				snprintf(tmp, sizeof(tmp), "                format:       sparsev1\n");
+			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                index:        %d\n", index);
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                stream:       %zu\n", nstream);
@@ -486,7 +505,18 @@ void HistoryWindow::SerializeWaveforms(
 	fclose(fp);
 }
 
-void HistoryWindow::DoSaveWaveformDataForStream(
+/**
+	@brief Saves waveform sample data in the "sparsev1" file format.
+
+	Interleaved (slow):
+		int64 offset
+		int64 len
+		for analog
+			float voltage
+		for digital
+			bool voltage
+ */
+void HistoryWindow::DoSaveWaveformDataForSparseStream(
 	std::string wname,
 	StreamDescriptor stream,
 	WaveformBase* wave,
@@ -580,6 +610,85 @@ void HistoryWindow::DoSaveWaveformDataForStream(
 			size_t blocklen = min(len-i, samples_per_block);
 
 			if(blocklen != fwrite(&samples[i], sizeof(dsample_t), blocklen, fp))
+				LogError("file write error\n");
+		}
+	}
+	else
+	{
+		//TODO: support other waveform types (buses, eyes, etc)
+		LogError("unrecognized sample type\n");
+	}
+
+	fclose(fp);
+
+	*done = 1;
+	*progress = 1;
+}
+
+/**
+	@brief Saves waveform sample data in the "densev1" file format.
+
+	for analog
+		float[] voltage
+	for digital
+		bool[] voltage
+
+	Durations are implied {1....1} and offsets are implied {0...n-1}.
+ */
+void HistoryWindow::DoSaveWaveformDataForDenseStream(
+	std::string wname,
+	StreamDescriptor stream,
+	WaveformBase* wave,
+	volatile float* progress,
+	volatile int* done
+	)
+{
+	auto chan = stream.m_channel;
+	int index = chan->GetIndex();
+	size_t nstream = stream.m_stream;
+	if(wave == NULL)		//trigger, disabled, etc
+	{
+		*done = 1;
+		*progress = 1;
+		return;
+	}
+
+	//First stream has no suffix for compat
+	char tmp[512];
+	if(nstream == 0)
+		snprintf(tmp, sizeof(tmp), "%s/channel_%d.bin", wname.c_str(), index);
+	else
+		snprintf(tmp, sizeof(tmp), "%s/channel_%d_stream%zu.bin", wname.c_str(), index, nstream);
+
+	FILE* fp = fopen(tmp, "wb");
+
+	auto achan = dynamic_cast<AnalogWaveform*>(wave);
+	auto dchan = dynamic_cast<DigitalWaveform*>(wave);
+	size_t len = wave->m_offsets.size();
+
+	//Analog channels
+	const size_t samples_per_block = 10000;
+	if(achan)
+	{
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			*progress = i * 1.0 / len;
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(&achan->m_samples[i], sizeof(float), blocklen, fp))
+				LogError("file write error\n");
+		}
+	}
+	else if(dchan)
+	{
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			*progress = i * 1.0 / len;
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(&dchan->m_samples[i], sizeof(bool), blocklen, fp))
 				LogError("file write error\n");
 		}
 	}

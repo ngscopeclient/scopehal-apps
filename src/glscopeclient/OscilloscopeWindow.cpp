@@ -1112,6 +1112,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
 		vector<int> channels;
+		vector<string> formats;
 		for(auto jt : chans)
 		{
 			auto ch = jt.second;
@@ -1121,6 +1122,13 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				stream = ch["stream"].as<int>();
 			auto chan = scope->GetChannel(channel_index);
 			channels.push_back(channel_index);
+
+			//Waveform format defaults to sparsev1 as that's what was used before
+			//the metadata file contained a format ID at all
+			string format = "sparsev1";
+			if(ch["format"])
+				format = ch["format"].as<string>();
+			formats.push_back(format);
 
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 			WaveformBase* cap = NULL;
@@ -1164,6 +1172,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				datadir,
 				scope_id,
 				waveform_id,
+				formats[i],
 				channel_progress + i,
 				channel_done + i
 				));
@@ -1233,6 +1242,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	string datadir,
 	int scope_id,
 	int waveform_id,
+	string format,
 	volatile float* progress,
 	volatile int* done
 	)
@@ -1316,49 +1326,87 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			*progress = progress_per_stream*stream;
 		#endif
 
-		//Figure out how many samples we have
-		size_t samplesize = 2*sizeof(int64_t);
-		if(acap)
-			samplesize += sizeof(float);
-		else
-			samplesize += sizeof(bool);
-		size_t nsamples = len / samplesize;
-		cap->Resize(nsamples);
-
-		//TODO: AVX this?
-		for(size_t j=0; j<nsamples; j++)
+		//Sparse interleaved
+		if(format == "sparsev1")
 		{
-			size_t offset = j*samplesize;
+			//Figure out how many samples we have
+			size_t samplesize = 2*sizeof(int64_t);
+			if(acap)
+				samplesize += sizeof(float);
+			else
+				samplesize += sizeof(bool);
+			size_t nsamples = len / samplesize;
+			cap->Resize(nsamples);
 
-			//Read start time and duration
-			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
-			offset += 2*sizeof(int64_t);
-			cap->m_offsets[j] = stime[0];
-			cap->m_durations[j] = stime[1];
+			//TODO: AVX this?
+			for(size_t j=0; j<nsamples; j++)
+			{
+				size_t offset = j*samplesize;
+
+				//Read start time and duration
+				int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
+				offset += 2*sizeof(int64_t);
+				cap->m_offsets[j] = stime[0];
+				cap->m_durations[j] = stime[1];
+
+				//Read sample data
+				if(acap)
+				{
+					//The file format assumes "float" is IEEE754 32-bit float.
+					//If your platform doesn't do that, good luck.
+					//cppcheck-suppress invalidPointerCast
+					acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+				}
+
+				else
+					dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+
+				//TODO: progress updates
+			}
+
+			//Quickly check if the waveform is dense packed, even if it was stored as sparse.
+			//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
+			int64_t nlast = nsamples - 1;
+			if( (cap->m_offsets[0] == 0) &&
+				(cap->m_offsets[nlast] == nlast) &&
+				(cap->m_durations[nlast] == 1) )
+			{
+				cap->m_densePacked = true;
+			}
+		}
+
+		//Dense packed
+		else if(format == "densev1")
+		{
+			cap->m_densePacked = true;
+
+			//Figure out length
+			size_t nsamples = 0;
+			if(acap)
+				nsamples = len / sizeof(float);
+			else if(dcap)
+				nsamples = len / sizeof(bool);
+			cap->Resize(nsamples);
 
 			//Read sample data
 			if(acap)
-			{
-				//The file format assumes "float" is IEEE754 32-bit float.
-				//If your platform doesn't do that, good luck.
-				//cppcheck-suppress invalidPointerCast
-				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
-			}
-
+				memcpy(&acap->m_samples[0], buf, nsamples*sizeof(float));
 			else
-				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+				memcpy(&dcap->m_samples[0], buf, nsamples*sizeof(bool));
 
-			//TODO: progress updates
+			//TODO: vectorized initialization of timestamps and durations
+			for(size_t i=0; i<nsamples; i++)
+			{
+				cap->m_offsets[i] = i;
+				cap->m_durations[i] = 1;
+			}
 		}
 
-		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
-		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
-		int64_t nlast = nsamples - 1;
-		if( (cap->m_offsets[0] == 0) &&
-			(cap->m_offsets[nlast] == nlast) &&
-			(cap->m_durations[nlast] == 1) )
+		else
 		{
-			cap->m_densePacked = true;
+			LogError(
+				"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
+				format.c_str());
 		}
 
 		#ifdef _WIN32
