@@ -51,6 +51,7 @@ layout(std430, binding=2) buffer config
 	uint windowHeight;
 	uint windowWidth;
 	uint memDepth;
+	uint offset_samples;
 	float alpha;
 	float xoff;
 	float xscale;

@@ -87,7 +87,7 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 	}
 
 	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
-	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*12);
+	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*13);
 	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
 	//A struct is probably the better long term solution...
 	//cppcheck-suppress invalidPointerCast
@@ -182,20 +182,21 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 			memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 	}
 
-	//Calculate indexes for rendering.
-	//This is necessary since samples may be sparse and have arbitrary spacing between them, so we can't
-	//trivially map sample indexes to X pixel coordinates.
+	//Calculate indexes for rendering of sparse waveforms
 	//TODO: can we parallelize this? move to a compute shader?
 	auto group = wdata->m_area->m_group;
 	int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
 	float xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
-	for(int j=0; j<wdata->m_area->m_width; j++)
+	if(!wdata->IsDensePacked())
 	{
-		int64_t target = floor(j / xscale) + offset_samples;
-		wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
-			(int64_t*)&pdat->m_offsets[0],
-			wdata->m_count,
-			target-2);
+		for(int j=0; j<wdata->m_area->m_width; j++)
+		{
+			int64_t target = floor(j / xscale) + offset_samples;
+			wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
+				(int64_t*)&pdat->m_offsets[0],
+				wdata->m_count,
+				target-2);
+		}
 	}
 
 	//Scale alpha by zoom.
@@ -213,18 +214,19 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	wdata->m_mappedConfigBuffer[2] = height;												//windowHeight
 	wdata->m_mappedConfigBuffer[3] = wdata->m_area->m_plotRight;							//windowWidth
 	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
-	wdata->m_mappedFloatConfigBuffer[5] = alpha_scaled;										//alpha
-	wdata->m_mappedFloatConfigBuffer[6] = (pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit;	//xoff
-	wdata->m_mappedFloatConfigBuffer[7] = pdat->m_timescale * group->m_pixelsPerXUnit;		//xscale
-	wdata->m_mappedFloatConfigBuffer[8] = ybase;											//ybase
-	wdata->m_mappedFloatConfigBuffer[9] = yscale;											//yscale
-	wdata->m_mappedFloatConfigBuffer[10] = channel->GetOffset();							//yoff
+	wdata->m_mappedConfigBuffer[5] = offset_samples - 2;									//offset_samples
+	wdata->m_mappedFloatConfigBuffer[6] = alpha_scaled;										//alpha
+	wdata->m_mappedFloatConfigBuffer[7] = (pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit;	//xoff
+	wdata->m_mappedFloatConfigBuffer[8] = xscale;											//xscale
+	wdata->m_mappedFloatConfigBuffer[9] = ybase;											//ybase
+	wdata->m_mappedFloatConfigBuffer[10] = yscale;											//yscale
+	wdata->m_mappedFloatConfigBuffer[11] = channel->GetOffset();							//yoff
 
 	//persistScale
 	if(!wdata->m_persistence)
-		wdata->m_mappedFloatConfigBuffer[11] = 0;
+		wdata->m_mappedFloatConfigBuffer[12] = 0;
 	else
-		wdata->m_mappedFloatConfigBuffer[11] = persistDecay;
+		wdata->m_mappedFloatConfigBuffer[12] = persistDecay;
 
 	//Done
 	wdata->m_geometryOK = true;

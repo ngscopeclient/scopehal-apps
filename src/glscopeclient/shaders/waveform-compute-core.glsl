@@ -66,7 +66,13 @@ void main()
 		g_done[gl_LocalInvocationID.x] = false;
 		g_updating[gl_LocalInvocationID.x] = false;
 
-		istart = xind[gl_GlobalInvocationID.x];
+		#ifdef DENSE_PACK
+			istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
+		#else
+			istart = xind[gl_GlobalInvocationID.x];
+		#endif
+
+
 		i = istart;
 
 		#ifdef ANALOG_PATH
