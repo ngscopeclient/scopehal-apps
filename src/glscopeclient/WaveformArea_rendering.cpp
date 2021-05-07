@@ -621,7 +621,8 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		return;
 
 	//Round thread block size up to next multiple of the local size (must be power of two)
-	int localSize = 2;
+	//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl
+	int localSize = 1;
 	int numCols = m_plotRight;
 	if(0 != (numCols % localSize) )
 	{

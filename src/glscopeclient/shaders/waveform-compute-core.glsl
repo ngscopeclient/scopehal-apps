@@ -3,8 +3,8 @@
 #define MAX_HEIGHT		2048
 
 //Number of columns of pixels per thread block
-#define COLS_PER_BLOCK	2
-#define ROWS_PER_BLOCK	16
+#define COLS_PER_BLOCK	1
+#define ROWS_PER_BLOCK	32
 
 //The output texture (for now, only alpha channel is used)
 layout(binding=0, rgba32f) uniform image2D outputTex;
