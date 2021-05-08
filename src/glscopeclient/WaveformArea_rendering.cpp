@@ -178,7 +178,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
-		if(!wdata->IsDensePacked())
+		//TODO: skip for dense packed digital path too once the shader supports that
+		if(!wdata->IsDensePacked() || !andat)
 			memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
 	}
 
@@ -187,7 +188,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	auto group = wdata->m_area->m_group;
 	int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
 	float xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
-	if(!wdata->IsDensePacked())
+	if(!wdata->IsDensePacked() || !andat)	//TODO: skip for dense packed digital path too once the shader supports that
 	{
 		for(int j=0; j<wdata->m_area->m_width; j++)
 		{
