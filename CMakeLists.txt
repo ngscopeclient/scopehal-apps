@@ -13,6 +13,10 @@ set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
 set(CMAKE_CXX_FLAGS "-g -fopenmp ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Release")
+endif(NOT CMAKE_BUILD_TYPE)
+
 # seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
 # (causes clGetPlatformIDs to return -1001)
 if(SANITIZE)
