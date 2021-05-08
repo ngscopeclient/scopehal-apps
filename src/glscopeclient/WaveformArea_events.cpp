@@ -182,11 +182,13 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 				{
 					case GDK_SCROLL_UP:
 						m_channel.m_channel->SetVoltageRange(vrange * 0.9);
+						ClearPersistence();
 						SetGeometryDirty();
 						queue_draw();
 						break;
 					case GDK_SCROLL_DOWN:
 						m_channel.m_channel->SetVoltageRange(vrange / 0.9);
+						ClearPersistence();
 						SetGeometryDirty();
 						queue_draw();
 						break;
@@ -808,6 +810,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				double dv = YPositionToYAxisUnits(event->y) - m_dragStartVoltage;
 				double old_offset = m_channel.m_channel->GetOffset();
 				m_channel.m_channel->SetOffset(old_offset + dv);
+				ClearPersistence();
 				SetGeometryDirty();
 				queue_draw();
 			}
@@ -1221,6 +1224,9 @@ void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::Radio
 		return;
 
 	m_selectedChannel.m_channel->SetCoupling(type);
+	ClearPersistence();
+
+	//TODO: we should also clear persistence for any other channels derived from this
 }
 
 void WaveformArea::OnWaveformDataReady()
