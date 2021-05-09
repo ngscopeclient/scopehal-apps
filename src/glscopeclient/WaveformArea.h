@@ -66,6 +66,9 @@ public:
 	, m_persistence(false)
 	{}
 
+	bool IsAnalog()
+	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG; }
+
 	bool IsDigital()
 	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
 

@@ -54,8 +54,7 @@ template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_
 void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
-	if( (m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
-		(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	if(!IsAnalog() && !IsDigital() )
 	{
 		m_count = 1;
 	}
@@ -72,7 +71,12 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 
 	if(update_waveform)
 	{
-		m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t));
+		//Skip mapping X buffer if dense packed analog
+		if(IsDensePacked() && IsAnalog() )
+			m_mappedXBuffer = NULL;
+		else
+			m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t));
+
 		if(IsDigital())
 		{
 			//round up to next multiple of 4 since buffer is actually made of int32's
@@ -86,7 +90,12 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 		}
 	}
 
-	m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
+	//Skip mapping index buffer if dense packed analog
+	if(IsDensePacked() && IsAnalog())
+		m_mappedIndexBuffer = NULL;
+	else
+		m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
+
 	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*13);
 	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
 	//A struct is probably the better long term solution...
@@ -99,10 +108,12 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 {
 	if(update_waveform)
 	{
-		m_waveformXBuffer.Unmap();
+		if(m_mappedXBuffer != NULL)
+			m_waveformXBuffer.Unmap();
 		m_waveformYBuffer.Unmap();
 	}
-	m_waveformIndexBuffer.Unmap();
+	if(m_mappedIndexBuffer != NULL)
+		m_waveformIndexBuffer.Unmap();
 	m_waveformConfigBuffer.Unmap();
 }
 
