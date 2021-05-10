@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.10)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 project(scopehal-cmake)
 
@@ -12,7 +12,7 @@ set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and c
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
 set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
-set(CMAKE_CXX_FLAGS "-g -fopenmp ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
+set(CMAKE_CXX_FLAGS "-g ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
@@ -33,6 +33,13 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
 find_package(OpenCL)
+include(FindOpenMP)
+
+# Configure and enable OpenMP
+if(NOT OpenMP_CXX_FOUND)
+	message(FATAL_ERROR "glscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 pkg_search_module(CLFFT clFFT>=2.0)
 
