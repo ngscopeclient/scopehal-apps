@@ -4,9 +4,11 @@ project(scopehal-cmake)
 
 include(CTest)
 
+# Configuration settings
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 
+# Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
 set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
@@ -25,6 +27,7 @@ if(WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS")
 endif()
 
+# Package detection
 find_package(PkgConfig)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
@@ -33,10 +36,12 @@ find_package(OpenCL)
 
 pkg_search_module(CLFFT clFFT>=2.0)
 
+# Documentation
 if(BUILD_DOCS)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/doc")
 endif()
 
+# Static analysis
 if(ANALYZE)
 	find_program(CPPCHECK_PATH cppcheck DOC "Path to cppcheck when ANALYZE is enabled")
 	if(CPPCHECK_PATH)
@@ -64,6 +69,7 @@ if(ANALYZE)
 	endif()
 endif()
 
+# Main project code
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
@@ -72,12 +78,14 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/diffs2p")
 
+# Unit tests
 if(BUILD_TESTING)
 	find_package(Catch2 REQUIRED)
 	include(Catch)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 endif()
 
+# Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
@@ -87,6 +95,7 @@ if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
 endif()
 
+# Make sure all of our shared libraries are built relocatable
 set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET xptools PROPERTY POSITION_INDEPENDENT_CODE ON)
