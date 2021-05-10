@@ -341,7 +341,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 
 	//Initialize the style sheets
 	m_css = Gtk::CssProvider::create();
-	m_css->load_from_path("styles/glscopeclient.css");
+	m_css->load_from_path(FindDataFile("styles/glscopeclient.css"));
 	get_style_context()->add_provider_for_screen(
 		Gdk::Screen::get_default(), m_css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
@@ -357,7 +357,13 @@ void OscilloscopeWindow::PopulateToolbar()
 		m_toolbar.remove(*c);
 
 	int size = m_preferences.GetEnum<int>("Appearance.Toolbar.icon_size");
-	string base_path = "icons/" + to_string(size) + "x" + to_string(size) + "/";
+
+	//FindDataFile() assumes a file name, not a directory. Need to search for a specific file.
+	//Then assume all other data files are in the same directory.
+	//TODO: might be better to FindDataFile each one separately so we can override?
+	string testfname = "fullscreen-enter.png";
+	string base_path = FindDataFile("icons/" + to_string(size) + "x" + to_string(size)) + "/" + testfname;
+	base_path = base_path.substr(0, base_path.length() - testfname.length());
 
 	m_iconEnterFullscreen = Gtk::Image(base_path + "fullscreen-enter.png");
 	m_iconExitFullscreen = Gtk::Image(base_path + "fullscreen-exit.png");

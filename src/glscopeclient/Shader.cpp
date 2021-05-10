@@ -57,7 +57,7 @@ Shader::~Shader()
  */
 bool Shader::Load(const char* path, ...)
 {
-	string shaderbuf = ReadFile(path);
+	string shaderbuf = ReadDataFile(path);
 
 	va_list list;
 	va_start(list, path);
@@ -67,7 +67,7 @@ bool Shader::Load(const char* path, ...)
 		if(arg == NULL)
 			break;
 		else
-			shaderbuf += ReadFile(arg);
+			shaderbuf += ReadDataFile(arg);
 	}
 	va_end(list);
 

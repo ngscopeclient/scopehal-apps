@@ -177,66 +177,6 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-	//Change to the binary's directory so we can use relative paths for external resources
-	//FIXME: portability warning: this only works on Linux
-#ifdef _WIN32
-	// Retrieve the file name of the current process image
-	TCHAR binPath[MAX_PATH];
-
-	if( GetModuleFileName(NULL, binPath, MAX_PATH) == 0 )
-	{
-		LogError("Error: GetModuleFileName() failed.\n");
-		return 1;
-	}
-
-	// Remove file name from path
-	if( !PathRemoveFileSpec(binPath) )
-	{
-		LogError("Error: PathRemoveFileSpec() failed.\n");
-		return 1;
-	}
-
-	// Set it as current working directory
-	if( SetCurrentDirectory(binPath) == 0 )
-	{
-		LogError("Error: SetCurrentDirectory() failed.\n");
-		return 1;
-	}
-
-#else
-	char binDir[1024];
-	ssize_t readlinkReturn = readlink("/proc/self/exe", binDir, (sizeof(binDir) - 1) );
-	if ( readlinkReturn < 0 )
-	{
-		//FIXME: add errno output
-		LogError("Error: readlink() failed.\n");
-		return 1;
-	}
-	else if ( readlinkReturn == 0 )
-	{
-		LogError("Error: readlink() returned 0.\n");
-		return 1;
-	}
-	else if ( (unsigned) readlinkReturn > (sizeof(binDir) - 1) )
-	{
-		LogError("Error: readlink() returned a path larger than our buffer.\n");
-		return 1;
-	}
-	else
-	{
-		//Null terminate result
-		binDir[readlinkReturn - 1] = 0;
-
-		//Change to our binary's directory
-		if ( chdir(dirname(binDir)) != 0 )
-		{
-			//FIXME: add errno output
-			LogError("Error: chdir() failed.\n");
-			return 1;
-		}
-	}
-#endif
-
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");
 	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )

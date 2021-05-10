@@ -794,7 +794,8 @@ void WaveformArea::InitializeEyePass()
 	fnames[OscilloscopeWindow::EYE_VIRIDIS] = "gradients/eye-gradient-viridis.rgba";
 	for(int i=0; i<OscilloscopeWindow::NUM_EYE_COLORS; i++)
 	{
-		FILE* fp = fopen(fnames[i], "r");
+		string path = FindDataFile(fnames[i]);
+		FILE* fp = fopen(path.c_str(), "r");
 		if(!fp)
 			LogFatal("fail to open eye gradient");
 		fread(tmp, 1, 1024, fp);
