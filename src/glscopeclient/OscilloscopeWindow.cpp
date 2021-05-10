@@ -362,7 +362,7 @@ void OscilloscopeWindow::PopulateToolbar()
 	//Then assume all other data files are in the same directory.
 	//TODO: might be better to FindDataFile each one separately so we can override?
 	string testfname = "fullscreen-enter.png";
-	string base_path = FindDataFile("icons/" + to_string(size) + "x" + to_string(size)) + "/" + testfname;
+	string base_path = FindDataFile("icons/" + to_string(size) + "x" + to_string(size) + "/" + testfname);
 	base_path = base_path.substr(0, base_path.length() - testfname.length());
 
 	m_iconEnterFullscreen = Gtk::Image(base_path + "fullscreen-enter.png");
