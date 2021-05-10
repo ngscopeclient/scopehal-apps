@@ -76,6 +76,17 @@ void ScopeApp::run(
 				m_window->ImportCSVToExistingSession(f);
 		}
 
+		else if(f.find(".wav") != string::npos)
+		{
+			if(first)
+			{
+				m_window->ImportWAVToNewSession(f);
+				first = false;
+			}
+			else
+				m_window->ImportWAVToExistingSession(f);
+		}
+
 		//Can only load one bin for now
 		else if (f.find(".bin") != string::npos)
 		{

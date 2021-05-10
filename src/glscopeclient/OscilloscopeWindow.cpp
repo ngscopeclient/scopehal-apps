@@ -664,16 +664,25 @@ void OscilloscopeWindow::OnFileImport()
 	//TODO: prompt to save changes to the current session
 	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
+	string csvname = "Comma Separated Value (*.csv)";
+	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
+	string wavname = "Microsoft WAV (*.wav)";
+
 	auto csvFilter = Gtk::FileFilter::create();
 	csvFilter->add_pattern("*.csv");
-	csvFilter->set_name("Comma Separated Value (*.csv)");
+	csvFilter->set_name(csvname);
 
 	auto binFilter = Gtk::FileFilter::create();
 	binFilter->add_pattern("*.bin");
-	binFilter->set_name("Agilent/Keysight/Rigol Binary Capture (*.bin)");
+	binFilter->set_name(binname);
+
+	auto wavFilter = Gtk::FileFilter::create();
+	wavFilter->add_pattern("*.wav");
+	wavFilter->set_name(wavname);
 
 	dlg.add_filter(csvFilter);
 	dlg.add_filter(binFilter);
+	dlg.add_filter(wavFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 	auto response = dlg.run();
@@ -682,23 +691,19 @@ void OscilloscopeWindow::OnFileImport()
 		return;
 
 	auto filterName = dlg.get_filter()->get_name();
-	if(filterName == "Comma Separated Value (*.csv)")
-	{
+	if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
-	}
-	else if(filterName == "Agilent/Keysight/Rigol Binary Capture (*.bin)")
-	{
+	else if(filterName == wavname)
+		ImportWAVToNewSession(dlg.get_filename());
+	else if(filterName == binname)
 		DoImportBIN(dlg.get_filename());
-	}
 }
 
 /**
-	@brief Import a CSV file and create a new session around it
+	@brief Create a new session for importing a file into
  */
-void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
+MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& name, const string& filename)
 {
-	LogDebug("Importing CSV file \"%s\" to new session\n", filename.c_str());
-
 	//Setup
 	CloseSession();
 	m_currentFileName = filename;
@@ -709,7 +714,7 @@ void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
 	m_lastWaveformTimes.clear();
 
 	//Create the mock scope
-	auto scope = new MockOscilloscope("CSV Import", "Generic", "12345");
+	auto scope = new MockOscilloscope(name, "Generic", "12345");
 	scope->m_nickname = "import";
 	g_app->m_scopes.push_back(scope);
 	m_scopes.push_back(scope);
@@ -719,19 +724,42 @@ void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
 	hist->hide();
 	m_historyWindows[scope] = hist;
 
-	//Load the waveform
-	if(!scope->LoadCSV(filename))
+	return scope;
+}
+
+/**
+	@brief Sets up an existing session for importing a file into
+ */
+MockOscilloscope* OscilloscopeWindow::SetupExistingSessionForImport()
+{
+	auto scope = dynamic_cast<MockOscilloscope*>(m_scopes[0]);
+	if(scope == NULL)
 	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"CSV import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
+		LogError("not a mock scope, can't import anything into it\n");
+		return NULL;
 	}
 
+	//TODO: proper timestamp?
+	m_lastWaveformTimes.push_back(GetTime());
+	while(m_lastWaveformTimes.size() > 10)
+		m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
+
+	//Detach the old waveform data so we don't destroy it
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto chan = scope->GetChannel(i);
+		for(size_t j=0; j<chan->GetStreamCount(); j++)
+			chan->Detach(j);
+	}
+
+	return scope;
+}
+
+/**
+	@brief Sets up default viewports etc upon completion of an import
+ */
+void OscilloscopeWindow::OnImportComplete()
+{
 	//Add the top level splitter right before the status bar
 	auto split = new Gtk::VPaned;
 	m_splitters.emplace(split);
@@ -752,6 +780,31 @@ void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
 }
 
 /**
+	@brief Import a CSV file and create a new session around it
+ */
+void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
+{
+	LogDebug("Importing CSV file \"%s\" to new session\n", filename.c_str());
+
+	auto scope = SetupNewSessionForImport("CSV Import", filename);
+
+	//Load the waveform
+	if(!scope->LoadCSV(filename))
+	{
+		Gtk::MessageDialog dlg(
+			*this,
+			"CSV import failed",
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+	}
+
+	OnImportComplete();
+}
+
+/**
 	@brief Import a CSV file into the existing session
 
 	The CSV must have the same configuration (number of channels, etc) as the originally loaded one.
@@ -762,30 +815,69 @@ void OscilloscopeWindow::ImportCSVToExistingSession(const string& filename)
 {
 	LogDebug("Importing CSV file \"%s\" to current session\n", filename.c_str());
 
-	auto scope = dynamic_cast<MockOscilloscope*>(m_scopes[0]);
-	if(scope == NULL)
-	{
-		LogError("not a mock scope, can't import a CSV into it\n");
-		return;
-	}
-
-	m_lastWaveformTimes.push_back(GetTime());
-	while(m_lastWaveformTimes.size() > 10)
-		m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
-
-	//Detach the old waveform data so we don't destroy it
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
-	{
-		auto chan = scope->GetChannel(i);
-		for(size_t j=0; j<chan->GetStreamCount(); j++)
-			chan->Detach(j);
-	}
+	auto scope = SetupExistingSessionForImport();
 
 	if(!scope->LoadCSV(filename))
 	{
 		Gtk::MessageDialog dlg(
 			*this,
 			"CSV import failed",
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+		return;
+	}
+
+	//Process the new data
+	m_historyWindows[scope]->OnWaveformDataReady();
+	OnAllWaveformsUpdated();
+}
+
+/**
+	@brief Import a WAV file and create a new session around it
+ */
+void OscilloscopeWindow::ImportWAVToNewSession(const string& filename)
+{
+	LogDebug("Importing WAV file \"%s\" to new session\n", filename.c_str());
+
+	auto scope = SetupNewSessionForImport("WAV Import", filename);
+
+	//Load the waveform
+	if(!scope->LoadWAV(filename))
+	{
+		Gtk::MessageDialog dlg(
+			*this,
+			"WAV import failed",
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+	}
+
+	OnImportComplete();
+}
+
+/**
+	@brief Import a WAV file into the existing session
+
+	The WAV must have the same configuration (number of channels, etc) as the originally loaded one.
+
+	TODO: support adding a WAV to an existing session by creating a new mock scope if we don't have one?
+ */
+void OscilloscopeWindow::ImportWAVToExistingSession(const string& filename)
+{
+	LogDebug("Importing WAV file \"%s\" to current session\n", filename.c_str());
+
+	auto scope = SetupExistingSessionForImport();
+
+	if(!scope->LoadWAV(filename))
+	{
+		Gtk::MessageDialog dlg(
+			*this,
+			"WAV import failed",
 			false,
 			Gtk::MESSAGE_ERROR,
 			Gtk::BUTTONS_OK,
@@ -808,25 +900,7 @@ void OscilloscopeWindow::DoImportBIN(const string& filename)
 	{
 		LogIndenter li;
 
-		//Setup
-		CloseSession();
-		m_currentFileName = filename;
-		m_loadInProgress = true;
-
-		//Clear performance counters
-		m_totalWaveforms = 0;
-		m_lastWaveformTimes.clear();
-
-		//Create the mock scope
-		auto scope = new MockOscilloscope("Binary Import", "Agilent/Keysight/Rigol", "0");
-		scope->m_nickname = "import";
-		g_app->m_scopes.push_back(scope);
-		m_scopes.push_back(scope);
-
-		//Set up history for it
-		auto hist = new HistoryWindow(this, scope);
-		hist->hide();
-		m_historyWindows[scope] = hist;
+		auto scope = SetupNewSessionForImport("Binary Import", filename);
 
 		//Load the waveform
 		if(!scope->LoadBIN(filename))
@@ -842,23 +916,7 @@ void OscilloscopeWindow::DoImportBIN(const string& filename)
 		}
 	}
 
-	//Add the top level splitter right before the status bar
-	auto split = new Gtk::VPaned;
-	m_splitters.emplace(split);
-	m_vbox.remove(m_statusbar);
-	m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
-	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
-
-	//Add all of the UI stuff
-	CreateDefaultWaveformAreas(split);
-
-	//Done
-	SetTitle();
-	OnLoadComplete();
-
-	//Process the new data
-	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
-	OnAllWaveformsUpdated();
+	OnImportComplete();
 }
 
 /**

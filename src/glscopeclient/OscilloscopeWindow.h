@@ -51,6 +51,7 @@
 class FilterGraphEditor;
 class PreferenceDialog;
 class MultimeterDialog;
+class MockOscilloscope;
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -239,9 +240,6 @@ public:
 	void OnFileOpen();
 	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void OnFileImport();
-	void ImportCSVToNewSession(const std::string& filename);
-	void ImportCSVToExistingSession(const std::string& filename);
-	void DoImportBIN(const std::string& filename);
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
@@ -274,6 +272,16 @@ public:
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
 	void OnFilterGraph();
+
+	//Helpers for importing third party file formats
+	void ImportCSVToNewSession(const std::string& filename);
+	void ImportCSVToExistingSession(const std::string& filename);
+	void ImportWAVToNewSession(const std::string& filename);
+	void ImportWAVToExistingSession(const std::string& filename);
+	void DoImportBIN(const std::string& filename);
+	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);
+	MockOscilloscope* SetupExistingSessionForImport();
+	void OnImportComplete();
 
 	//Hotkey event handlers
 	virtual bool on_key_press_event(GdkEventKey* key_event);
