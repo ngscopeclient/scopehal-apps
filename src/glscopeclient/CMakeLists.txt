@@ -91,3 +91,35 @@ target_link_libraries(glscopeclient
 	${GLEW_LIBRARIES}
 	${YAML_LIBRARIES}
 	)
+
+###############################################################################
+#Copy the resources to the build directory
+
+add_custom_target(
+	gradients
+	COMMENT "Copying gradients..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/src/glscopeclient/gradients)
+add_custom_target(
+	kernels
+	COMMENT "Copying kernels..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/src/glscopeclient/kernels)
+add_custom_target(
+	shaders
+	COMMENT "Copying shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
+add_custom_target(
+	styles
+	COMMENT "Copying styles..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/src/glscopeclient/styles)
+add_custom_target(
+	icons
+	COMMENT "Copying icons..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/src/glscopeclient/icons)
+
+add_dependencies(glscopeclient
+	gradients
+	kernels
+	shaders
+	styles
+	icons
+)
