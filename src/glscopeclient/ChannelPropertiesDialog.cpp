@@ -54,6 +54,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 	, m_hasDeskew(false)
 	, m_hasAttenuation(false)
 	, m_hasInvert(false)
+	, m_hasMux(false)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -86,13 +87,13 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelNameEntry.set_halign(Gtk::ALIGN_START);
 
 		m_grid.attach_next_to(m_channelDisplayNameLabel, m_channelNameLabel, Gtk::POS_BOTTOM, 1, 1);
-			m_channelDisplayNameLabel.set_text("Display name");
+			m_channelDisplayNameLabel.set_text("Display Name");
 			m_channelDisplayNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelDisplayNameEntry, m_channelDisplayNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelDisplayNameEntry.set_text(chan->GetDisplayName());
 
 		m_grid.attach_next_to(m_channelColorLabel, m_channelDisplayNameLabel, Gtk::POS_BOTTOM, 1, 1);
-			m_channelColorLabel.set_text("Waveform color");
+			m_channelColorLabel.set_text("Waveform Color");
 			m_channelColorLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(chan->m_displaycolor));
@@ -159,6 +160,26 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 						anchorLabel = &m_invertLabel;
 
 						m_hasInvert = true;
+					}
+
+					//Mux setting
+					if(scope->HasInputMux(index))
+					{
+						auto names = scope->GetInputMuxNames(index);
+
+						//Add input mux box
+						m_grid.attach_next_to(m_muxLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+								m_muxLabel.set_text("Input Mux");
+							m_muxLabel.set_halign(Gtk::ALIGN_START);
+						m_grid.attach_next_to(m_muxBox, m_muxLabel, Gtk::POS_RIGHT, 1, 1);
+
+						//Fill it
+						for(auto n : names)
+							m_muxBox.append(n);
+						m_muxBox.set_active_text(names[scope->GetInputMuxSetting(index)]);
+
+						anchorLabel = &m_muxLabel;
+						m_hasMux = true;
 					}
 
 					//ADC configuration
@@ -341,6 +362,9 @@ void ChannelPropertiesDialog::ConfigureChannel()
 		else
 			m_chan->SetBandwidthLimit(Unit(Unit::UNIT_HZ).ParseString(sbw)/1e6);
 	}
+
+	if(m_hasMux)
+		m_chan->SetInputMux(m_muxBox.get_active_row_number());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

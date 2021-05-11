@@ -68,12 +68,14 @@ protected:
 			Gtk::Entry m_attenuationEntry;
 		Gtk::Label m_invertLabel;
 			Gtk::CheckButton m_invertButton;
-		Gtk::Label m_autoZeroLabel;
-			Gtk::Button m_autoZeroButton;
 
 		//Analog channel configuration
 		Gtk::Label m_bandwidthLabel;
 			Gtk::ComboBoxText m_bandwidthBox;
+
+		//Mux configuration for scopes with multiple inputs
+		Gtk::Label m_muxLabel;
+			Gtk::ComboBoxText m_muxBox;
 
 		//Logic channel configuration
 		Gtk::Label m_thresholdLabel;
@@ -93,6 +95,10 @@ protected:
 		Gtk::Label m_centerLabel;
 			Gtk::Entry m_centerEntry;
 
+		//Auto zero for differential probes
+		Gtk::Label m_autoZeroLabel;
+			Gtk::Button m_autoZeroButton;
+
 	OscilloscopeChannel* m_chan;
 
 	bool m_hasThreshold;
@@ -103,6 +109,7 @@ protected:
 	bool m_hasAttenuation;
 	bool m_hasAdcMode;
 	bool m_hasInvert;
+	bool m_hasMux;
 
 	void OnAutoZero();
 };
