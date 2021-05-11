@@ -72,13 +72,17 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 		m_grid.attach_next_to(m_scopeNameEntry, m_scopeNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_scopeNameEntry.set_halign(Gtk::ALIGN_START);
 			m_scopeNameEntry.set_text(
-				scope->m_nickname + "(" + scope->GetName() + ", serial " + scope->GetSerial() + ")");
+				scope->m_nickname + " (" + scope->GetName() + ", serial " + scope->GetSerial() + ")");
 
 		m_grid.attach_next_to(m_channelNameLabel, m_scopeNameLabel, Gtk::POS_BOTTOM, 1, 1);
 			m_channelNameLabel.set_text("Channel");
 			m_channelNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelNameEntry, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
-			m_channelNameEntry.set_text(chan->GetHwname());
+			string probename = chan->GetProbeName();
+			if(probename.empty())
+				m_channelNameEntry.set_text(chan->GetHwname() + " (passive or no probe connected)");
+			else
+				m_channelNameEntry.set_text(chan->GetHwname() + " (" + probename + ")");
 			m_channelNameEntry.set_halign(Gtk::ALIGN_START);
 
 		m_grid.attach_next_to(m_channelDisplayNameLabel, m_channelNameLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -194,10 +198,19 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 						for(auto mode : modes)
 							m_adcModeBox.append(mode);
 						m_adcModeBox.set_active_text(modes[scope->GetADCMode(index)]);
-
 						anchorLabel = &m_adcModeLabel;
-
 						m_hasAdcMode = true;
+					}
+
+					if(scope->CanAutoZero(index))
+					{
+						m_grid.attach_next_to(m_autoZeroLabel, *anchorLabel, Gtk::POS_BOTTOM, 1, 1);
+						m_grid.attach_next_to(m_autoZeroButton, m_autoZeroLabel, Gtk::POS_RIGHT, 1, 1);
+							m_autoZeroButton.set_label("Auto Zero");
+						anchorLabel = &m_autoZeroLabel;
+
+						m_autoZeroButton.signal_clicked().connect(
+							sigc::mem_fun(*this, &ChannelPropertiesDialog::OnAutoZero));
 					}
 				}
 				break;
@@ -332,3 +345,8 @@ void ChannelPropertiesDialog::ConfigureChannel()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
+
+void ChannelPropertiesDialog::OnAutoZero()
+{
+	m_chan->AutoZero();
+}

@@ -68,6 +68,8 @@ protected:
 			Gtk::Entry m_attenuationEntry;
 		Gtk::Label m_invertLabel;
 			Gtk::CheckButton m_invertButton;
+		Gtk::Label m_autoZeroLabel;
+			Gtk::Button m_autoZeroButton;
 
 		//Analog channel configuration
 		Gtk::Label m_bandwidthLabel;
@@ -101,6 +103,8 @@ protected:
 	bool m_hasAttenuation;
 	bool m_hasAdcMode;
 	bool m_hasInvert;
+
+	void OnAutoZero();
 };
 
 #endif
