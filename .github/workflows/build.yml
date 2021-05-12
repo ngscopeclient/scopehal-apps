@@ -11,6 +11,11 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Make Source Tarball
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: tar -cf source.tar scopehal-apps && gzip -S .gz -9 source.tar
+
     - name: Install Dependencies
       run: sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
 
@@ -37,6 +42,12 @@ jobs:
       shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: cd build && make test
+
+    - name: Upload Source
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-source
+        path: ${{runner.workspace}}/source.tar.gz
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
