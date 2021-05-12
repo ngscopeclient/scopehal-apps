@@ -10,8 +10,15 @@ set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and c
 
 # Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
-set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
+set(WARNINGS "${WARNINGS} -Wshadow -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(WARNINGS "${WARNINGS} -Wunsafe-loop-optimizations")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
+endif()
+
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 

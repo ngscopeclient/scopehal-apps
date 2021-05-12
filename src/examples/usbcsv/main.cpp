@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 	if(!scope->LoadCSV(fname))
 	{
 		LogError("Failed to load CSV %s\n", fname.c_str());
-		return false;
+		return 0;
 	}
 
 	//Set up the decodes
