@@ -78,7 +78,13 @@ vector<string> Glob(const string& pathPattern, bool onlyDirectories)
 	}
 #else
 	glob_t globResult{ };
+
+// GLOB_ONLYDIR is only a performance flag, it doesn't promise only dirs
+#ifdef GLOB_ONLYDIR
 	glob(pathPattern.c_str(), onlyDirectories ? GLOB_ONLYDIR : 0, NULL, &globResult);
+#else
+	glob(pathPattern.c_str(), 0, NULL, &globResult);
+#endif
 
 	if(globResult.gl_pathc > 0)
 	{
