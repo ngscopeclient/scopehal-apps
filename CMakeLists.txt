@@ -22,6 +22,12 @@ endif()
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# clang doesn't properly use the attributes and so requires avx to build
+# should get fixed in #475
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
+endif()
+
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif(NOT CMAKE_BUILD_TYPE)
