@@ -10,10 +10,23 @@ set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and c
 
 # Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
-set(WARNINGS "${WARNINGS} -Wshadow -Wunsafe-loop-optimizations -Wpedantic -Wcast-align -Wwrite-strings")
+set(WARNINGS "${WARNINGS} -Wshadow -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(WARNINGS "${WARNINGS} -Wunsafe-loop-optimizations")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
+endif()
+
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+# clang doesn't properly use the attributes and so requires avx to build
+# should get fixed in #475
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
