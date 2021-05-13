@@ -18,10 +18,10 @@ layout(std430, binding=3) buffer index
 shared float g_workingBuffer[MAX_HEIGHT];
 
 //Min/max for the current sample
-shared int g_blockmin;
-shared int g_blockmax;
+shared int g_blockmin[ROWS_PER_BLOCK];
+shared int g_blockmax[ROWS_PER_BLOCK];
 shared bool g_done;
-shared bool g_updating;
+shared bool g_updating[ROWS_PER_BLOCK];
 
 layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
 
@@ -33,11 +33,6 @@ float InterpolateY(vec2 left, vec2 right, float slope, float x)
 
 void main()
 {
-	uint i;
-	uint istart;
-	vec2 left;
-	vec2 right;
-
 	//Abort if window height is too big, or if we're off the end of the window
 	if(windowHeight > MAX_HEIGHT)
 		return;
@@ -60,28 +55,15 @@ void main()
 
 	//Setup for main loop
 	if(gl_LocalInvocationID.y == 0)
-	{
-		//Clear loop variables
 		g_done = false;
-		g_updating = false;
+	g_updating[gl_LocalInvocationID.y] = false;
 
-		#ifdef DENSE_PACK
-			istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
-		#else
-			istart = xind[gl_GlobalInvocationID.x];
-		#endif
-
-
-		i = istart;
-
-		#ifdef ANALOG_PATH
-			left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
-		#endif
-
-		#ifdef DIGITAL_PATH
-			left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
-		#endif
-	}
+	#ifdef DENSE_PACK
+		uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
+	#else
+		uint istart = xind[gl_GlobalInvocationID.x];
+	#endif
+	uint i = istart;
 
 	barrier();
 	memoryBarrierShared();
@@ -97,17 +79,19 @@ void main()
 				//Fetch coordinates of the current and upcoming sample
 
 				#ifdef ANALOG_PATH
-					right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+					vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 				#endif
 
 				#ifdef DIGITAL_PATH
-					right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+					vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
+					vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 				#endif
 
 				//Only render onscreen pixels
 				if(right.x >= gl_GlobalInvocationID.x)
 				{
-					g_updating = true;
+					g_updating[gl_LocalInvocationID.y] = true;
 
 					//To start, assume we're drawing the entire segment
 					float starty = left.y;
@@ -155,8 +139,8 @@ void main()
 					endy = min(endy, MAX_HEIGHT);
 
 					//Sort Y coordinates from min to max
-					g_blockmin = int(min(starty, endy));
-					g_blockmax = int(max(starty, endy));
+					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
+					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
 
 					//Check if we're at the end of the pixel
 					if(right.x > gl_GlobalInvocationID.x + 1)
@@ -174,11 +158,12 @@ void main()
 		memoryBarrierShared();
 
 		//Only update if we need to
-		if(g_updating)
+		int y = 0;
+		if(g_updating[y])
 		{
 			//Parallel fill
-			int ymin = g_blockmin;
-			int ymax = g_blockmax;
+			int ymin = g_blockmin[y];
+			int ymax = g_blockmax[y];
 			int len = ymax - ymin;
 			for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
 			{
