@@ -32,7 +32,6 @@
 	@brief Waveform rendering shader for without GL_ARB_gpu_shader_int64 support
  */
 
-#version 420
 #extension GL_ARB_compute_shader : require
 #extension GL_ARB_arrays_of_arrays : require
 #extension GL_ARB_shader_storage_buffer_object : require
@@ -65,9 +64,14 @@ layout(std430, binding=2) buffer config
 //All this just because most Intel integrated GPUs lack GL_ARB_gpu_shader_int64...
 float FetchX(uint i)
 {
-	//Fetch the input
-	uint xpos_lo = xpos[i*2];
-	uint xpos_hi = xpos[i*2 + 1];
+	#ifdef DENSE_PACK
+		uint xpos_lo = i;
+		uint xpos_hi = 0;
+	#else
+		//Fetch the input
+		uint xpos_lo = xpos[i*2];
+		uint xpos_hi = xpos[i*2 + 1];
+	#endif
 	uint offset_lo = innerXoff_lo;
 
 	//Sum the low halves

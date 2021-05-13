@@ -53,11 +53,16 @@ Shader::~Shader()
 /**
 	@brief Loads a shader from disk
 
-	We accept arbitrarily many paths and concatenate their contents
+	We accept arbitrarily many paths and concatenate their contents.
+	Each argument can be either a preprocessor directive starting with #, or a file name.
  */
 bool Shader::Load(const char* path, ...)
 {
-	string shaderbuf = ReadDataFile(path);
+	string shaderbuf;
+	if(path[0] == '#')
+		shaderbuf = string(path) + "\n";
+	else
+		shaderbuf = ReadDataFile(path);
 
 	va_list list;
 	va_start(list, path);

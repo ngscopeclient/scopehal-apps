@@ -32,7 +32,6 @@
 	@brief Waveform rendering shader for analog waveforms with GL_ARB_gpu_shader_int64 support
  */
 
-#version 420
 #extension GL_ARB_compute_shader : require
 #extension GL_ARB_gpu_shader_int64 : require
 #extension GL_ARB_arrays_of_arrays : require
@@ -62,5 +61,9 @@ layout(std430, binding=2) buffer config
 
 float FetchX(uint i)
 {
-	return float(xpos[i] + innerXoff);
+	#ifdef DENSE_PACK
+		return float(int64_t(i) + innerXoff);
+	#else
+		return float(xpos[i] + innerXoff);
+	#endif
 }
