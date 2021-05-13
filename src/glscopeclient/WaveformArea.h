@@ -320,6 +320,7 @@ protected:
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
+	Program* GetProgramForWaveform(WaveformRenderData* data);
 	void RenderTrace(WaveformRenderData* wdata);
 	void InitializeWaveformPass();
 	Program m_analogWaveformComputeProgram;

@@ -444,17 +444,10 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	}
 
 	//Make sure all compute shaders are done before we composite
-	if(IsDigital())
-		m_digitalWaveformComputeProgram.MemoryBarrier();
-	else if(m_waveformRenderData->IsHistogram())
-		m_histogramWaveformComputeProgram.MemoryBarrier();
-	else
-	{
-		if(m_waveformRenderData->IsDensePacked())
-			m_denseAnalogWaveformComputeProgram.MemoryBarrier();
-		else
-			m_analogWaveformComputeProgram.MemoryBarrier();
-	}
+	m_digitalWaveformComputeProgram.MemoryBarrier();
+	m_histogramWaveformComputeProgram.MemoryBarrier();
+	m_denseAnalogWaveformComputeProgram.MemoryBarrier();
+	m_analogWaveformComputeProgram.MemoryBarrier();
 
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -627,6 +620,18 @@ void WaveformArea::RenderWaterfall()
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
+Program* WaveformArea::GetProgramForWaveform(WaveformRenderData* data)
+{
+	if(data->IsDigital())
+		return &m_digitalWaveformComputeProgram;
+	else if(data->IsHistogram())
+		return &m_histogramWaveformComputeProgram;
+	else if(data->IsDensePacked())
+		return &m_denseAnalogWaveformComputeProgram;
+	else
+		return &m_analogWaveformComputeProgram;
+}
+
 void WaveformArea::RenderTrace(WaveformRenderData* data)
 {
 	if(!data->m_geometryOK)
@@ -643,46 +648,16 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	}
 	int numGroups = numCols / localSize;
 
-	if(data->IsDigital())
-	{
-		m_digitalWaveformComputeProgram.Bind();
-		m_digitalWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
-	}
-	else if(data->IsHistogram())
-	{
-		m_histogramWaveformComputeProgram.Bind();
-		m_histogramWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
-	}
-	else
-	{
-		if(data->IsDensePacked())
-		{
-			m_denseAnalogWaveformComputeProgram.Bind();
-			m_denseAnalogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
-		}
-		else
-		{
-			m_analogWaveformComputeProgram.Bind();
-			m_analogWaveformComputeProgram.SetImageUniform(data->m_waveformTexture, "outputTex");
-		}
-	}
+	auto prog = GetProgramForWaveform(data);
+	prog->Bind();
+	prog->SetImageUniform(data->m_waveformTexture, "outputTex");
 
 	data->m_waveformXBuffer.BindBase(1);
 	data->m_waveformYBuffer.BindBase(4);
 	data->m_waveformConfigBuffer.BindBase(2);
 	data->m_waveformIndexBuffer.BindBase(3);
 
-	if(data->IsDigital())
-		m_digitalWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
-	else if(data->IsHistogram())
-		m_histogramWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
-	else
-	{
-		if(data->IsDensePacked())
-			m_denseAnalogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
-		else
-			m_analogWaveformComputeProgram.DispatchCompute(numGroups, 1, 1);
-	}
+	prog->DispatchCompute(numGroups, 1, 1);
 }
 
 void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)
