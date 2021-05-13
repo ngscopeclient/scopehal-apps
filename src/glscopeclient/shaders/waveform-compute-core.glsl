@@ -3,7 +3,7 @@
 #define MAX_HEIGHT		2048
 
 //Number of columns of pixels per thread block
-#define ROWS_PER_BLOCK	32
+#define ROWS_PER_BLOCK	64
 
 //The output texture (for now, only alpha channel is used)
 layout(binding=0, rgba32f) uniform image2D outputTex;
@@ -74,22 +74,27 @@ void main()
 		//Main thread
 		if(i < (memDepth-2) )
 		{
-			//Fetch coordinates of the current and upcoming sample
-
+			//Fetch coordinates
 			#ifdef ANALOG_PATH
-				vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
 				vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 			#endif
 
 			#ifdef DIGITAL_PATH
-				vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
 				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 			#endif
 
-			//Only render onscreen pixels
+			//If the sample is left of our left edge, skip it
 			if(right.x >= gl_GlobalInvocationID.x)
 			{
 				g_updating[gl_LocalInvocationID.y] = true;
+
+				#ifdef ANALOG_PATH
+					vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+				#endif
+
+				#ifdef DIGITAL_PATH
+					vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
+				#endif
 
 				//To start, assume we're drawing the entire segment
 				float starty = left.y;
@@ -151,18 +156,17 @@ void main()
 
 		i += ROWS_PER_BLOCK;
 
-		barrier();
-		memoryBarrierShared();
-
 		//Only update if we need to
 		for(int y = 0; y<ROWS_PER_BLOCK; y++)
 		{
+			barrier();
+			memoryBarrierShared();
+
 			if(g_updating[y])
 			{
 				//Parallel fill
 				int ymin = g_blockmin[y];
-				int ymax = g_blockmax[y];
-				int len = ymax - ymin;
+				int len = g_blockmax[y] - ymin;
 				for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
 				{
 					#ifdef HISTOGRAM_PATH
@@ -172,9 +176,6 @@ void main()
 					#endif
 				}
 			}
-
-			barrier();
-			memoryBarrierShared();
 		}
 
 		if(g_done)
