@@ -64,9 +64,6 @@ void main()
 	#endif
 	uint i = istart + gl_GlobalInvocationID.y;
 
-	barrier();
-	memoryBarrierShared();
-
 	//Main loop
 	while(true)
 	{
@@ -84,7 +81,7 @@ void main()
 				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 			#endif
 
-			//If the sample is left of our left edge, skip it
+			//Skip offscreen samples
 			if( (right.x >= gl_GlobalInvocationID.x) && (left.x <= gl_GlobalInvocationID.x + 1) )
 			{
 				g_updating[gl_LocalInvocationID.y] = true;
