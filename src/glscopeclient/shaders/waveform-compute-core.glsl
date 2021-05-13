@@ -108,18 +108,13 @@ void main()
 				#ifdef DIGITAL_PATH
 
 					//If we are very near the right edge, draw vertical line
+					starty = left.y;
 					if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
-					{
-						starty = left.y;
 						endy = right.y;
-					}
 
 					//otherwise draw a single pixel
 					else
-					{
-						starty = left.y;
 						endy = left.y;
-					}
 
 				#endif
 
