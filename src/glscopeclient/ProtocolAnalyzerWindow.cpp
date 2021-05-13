@@ -366,6 +366,7 @@ ProtocolAnalyzerColumns::ProtocolAnalyzerColumns(PacketDecoder* decoder)
 	add(m_timestamp);
 	add(m_capturekey);
 	add(m_offset);
+	add(m_len);
 
 	auto headers = decoder->GetHeaders();
 	for(size_t i=0; i<headers.size(); i++)
@@ -615,6 +616,7 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	row[m_columns.m_offset] = p->m_offset;
+	row[m_columns.m_len] = p->m_len;
 
 	//Just copy headers without any processing
 	for(size_t i=0; i<headers.size(); i++)
@@ -708,7 +710,7 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 	m_parent->JumpToHistory(row[m_columns.m_capturekey]);
 
 	//Set the offset of the decoder's group
-	m_area->CenterTimestamp(row[m_columns.m_offset]);
+	m_area->CenterPacket(row[m_columns.m_offset], row[m_columns.m_len]);
 	m_area->m_group->m_frame.queue_draw();
 }
 

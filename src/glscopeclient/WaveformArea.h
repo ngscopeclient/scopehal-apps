@@ -197,7 +197,7 @@ public:
 	void UnmapAllBuffers(bool update_y);
 	void CalculateOverlayPositions();
 
-	void CenterTimestamp(int64_t time);
+	void CenterPacket(int64_t time, int64_t len);
 
 	static bool IsGLInitComplete()
 	{ return m_isGlewInitialized; }

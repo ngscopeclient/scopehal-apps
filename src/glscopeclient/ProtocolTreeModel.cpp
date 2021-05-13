@@ -42,7 +42,7 @@ ProtocolTreeModel::ProtocolTreeModel(const Gtk::TreeModelColumnRecord& columns)
 	 , Gtk::TreeModel()
 	 , m_columns(columns)
 {
-	m_nheaders = columns.size() - 9;
+	m_nheaders = columns.size() - 10;
 }
 
 Glib::RefPtr<ProtocolTreeModel> ProtocolTreeModel::create(const Gtk::TreeModelColumnRecord& columns)
@@ -341,10 +341,14 @@ void ProtocolTreeModel::set_value_impl(const iterator& row, int column, const Gl
 			p->m_offset = reinterpret_cast<const Gtk::TreeModelColumn<int64_t>::ValueType&>(value).get();
 			break;
 
+		case 7:
+			p->m_len = reinterpret_cast<const Gtk::TreeModelColumn<int64_t>::ValueType&>(value).get();
+			break;
+
 		//header, image, or data
 		default:
 			{
-				int ihead = column - 7;
+				int ihead = column - 8;
 				if(ihead < m_nheaders)
 				{
 					p->m_headers.resize(m_nheaders);
@@ -397,10 +401,14 @@ void ProtocolTreeModel::get_value_vfunc(const TreeModel::iterator& iter, int col
 			reinterpret_cast<Gtk::TreeModelColumn<int64_t>::ValueType&>(value).set(p->m_offset);
 			break;
 
+		case 7:
+			reinterpret_cast<Gtk::TreeModelColumn<int64_t>::ValueType&>(value).set(p->m_len);
+			break;
+
 		//header, image, or data
 		default:
 			{
-				int ihead = column - 7;
+				int ihead = column - 8;
 				if(ihead < m_nheaders)
 					reinterpret_cast<Gtk::TreeModelColumn<std::string>::ValueType&>(value).set(p->m_headers[ihead]);
 				else if(ihead == m_nheaders)

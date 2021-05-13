@@ -1586,11 +1586,20 @@ void WaveformArea::OnStatistics()
 		m_group->ToggleOff(m_selectedChannel.m_channel);
 }
 
-void WaveformArea::CenterTimestamp(int64_t time)
+void WaveformArea::CenterPacket(int64_t time, int64_t len)
 {
-	//Figure out how wide our view is, then offset the point by half that
+	//Figure out the width of the view, in time units
 	int64_t width = PixelsToXAxisUnits(m_width);
-	m_group->m_xAxisOffset = time - width/2;
+
+	//If the packet is too long to fit on screen at the current zoom, have it start 10% of the way across
+	if(len > width)
+		m_group->m_xAxisOffset = time - width*0.1;
+
+	//If the entire packet fits, center it
+	else
+		m_group->m_xAxisOffset = time - width/2 + len/2;
+
+	//Redraw everything
 	m_parent->ClearPersistence(m_group, false, true);
 
 	//If we have a single X cursor, move it to this point too

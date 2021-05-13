@@ -47,6 +47,7 @@ public:
 	std::string m_timestamp;
 	TimePoint m_capturekey;
 	int64_t m_offset;
+	int64_t m_len;
 	std::vector<std::string> m_headers;
 	std::string m_data;
 	Glib::RefPtr<Gdk::Pixbuf> m_image;
@@ -117,6 +118,7 @@ public:
 	Gtk::TreeModelColumn<Glib::ustring>					m_timestamp;
 	Gtk::TreeModelColumn<TimePoint>						m_capturekey;
 	Gtk::TreeModelColumn<int64_t>						m_offset;
+	Gtk::TreeModelColumn<int64_t>						m_len;
 	std::vector< Gtk::TreeModelColumn<Glib::ustring> >	m_headers;
 	Gtk::TreeModelColumn<Glib::ustring>					m_data;
 	Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>>		m_image;
