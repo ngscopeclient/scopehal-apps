@@ -2,7 +2,7 @@
 //This is enough for a nearly fullscreen 4K window so should be plenty.
 #define MAX_HEIGHT		2048
 
-//Number of columns of pixels per thread block
+//Number of threads per column of pixels
 #define ROWS_PER_BLOCK	64
 
 //The output texture (for now, only alpha channel is used)
@@ -56,7 +56,6 @@ void main()
 	//Setup for main loop
 	if(gl_LocalInvocationID.y == 0)
 		g_done = false;
-	g_updating[gl_LocalInvocationID.y] = false;
 
 	#ifdef DENSE_PACK
 		uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
@@ -76,25 +75,19 @@ void main()
 		{
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
+				vec2 left = vec2(FetchX(i) * xscale + xoff, (voltage[i] + yoff)*yscale + ybase);
 				vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 			#endif
 
 			#ifdef DIGITAL_PATH
+				vec2 left = vec2(FetchX(i) * xscale + xoff, GetBoolean(i)*yscale + ybase);
 				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 			#endif
 
 			//If the sample is left of our left edge, skip it
-			if(right.x >= gl_GlobalInvocationID.x)
+			if( (right.x >= gl_GlobalInvocationID.x) && (left.x <= gl_GlobalInvocationID.x + 1) )
 			{
 				g_updating[gl_LocalInvocationID.y] = true;
-
-				#ifdef ANALOG_PATH
-					vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
-				#endif
-
-				#ifdef DIGITAL_PATH
-					vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
-				#endif
 
 				//To start, assume we're drawing the entire segment
 				float starty = left.y;
@@ -110,6 +103,7 @@ void main()
 							starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
 						if(right.x > gl_GlobalInvocationID.x + 1)
 							endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+
 					#endif
 
 				#endif
@@ -149,10 +143,15 @@ void main()
 				if(right.x > gl_GlobalInvocationID.x + 1)
 					g_done = true;
 			}
+			else
+				g_updating[gl_LocalInvocationID.y] = false;
 		}
 
 		else
+		{
 			g_done = true;
+			g_updating[gl_LocalInvocationID.y] = false;
+		}
 
 		i += ROWS_PER_BLOCK;
 
