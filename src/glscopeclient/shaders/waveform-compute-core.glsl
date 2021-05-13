@@ -3,7 +3,6 @@
 #define MAX_HEIGHT		2048
 
 //Number of columns of pixels per thread block
-#define COLS_PER_BLOCK	1
 #define ROWS_PER_BLOCK	32
 
 //The output texture (for now, only alpha channel is used)
@@ -16,15 +15,15 @@ layout(std430, binding=3) buffer index
 };
 
 //Shared buffer for the local working buffer (8 kB)
-shared float g_workingBuffer[COLS_PER_BLOCK][MAX_HEIGHT];
+shared float g_workingBuffer[MAX_HEIGHT];
 
 //Min/max for the current sample
-shared int g_blockmin[COLS_PER_BLOCK];
-shared int g_blockmax[COLS_PER_BLOCK];
-shared bool g_done[COLS_PER_BLOCK];
-shared bool g_updating[COLS_PER_BLOCK];
+shared int g_blockmin;
+shared int g_blockmax;
+shared bool g_done;
+shared bool g_updating;
 
-layout(local_size_x=COLS_PER_BLOCK, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
+layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
 
 //Interpolate a Y coordinate
 float InterpolateY(vec2 left, vec2 right, float slope, float x)
@@ -51,11 +50,11 @@ void main()
 	for(uint y=gl_LocalInvocationID.y; y < windowHeight; y += ROWS_PER_BLOCK)
 	{
 		if(persistScale == 0)
-			g_workingBuffer[gl_LocalInvocationID.x][y] = 0;
+			g_workingBuffer[y] = 0;
 		else
 		{
 			vec4 rgba = imageLoad(outputTex, ivec2(gl_GlobalInvocationID.x, y));
-			g_workingBuffer[gl_LocalInvocationID.x][y] = rgba.a * persistScale;
+			g_workingBuffer[y] = rgba.a * persistScale;
 		}
 	}
 
@@ -63,8 +62,8 @@ void main()
 	if(gl_LocalInvocationID.y == 0)
 	{
 		//Clear loop variables
-		g_done[gl_LocalInvocationID.x] = false;
-		g_updating[gl_LocalInvocationID.x] = false;
+		g_done = false;
+		g_updating = false;
 
 		#ifdef DENSE_PACK
 			istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
@@ -105,13 +104,10 @@ void main()
 					right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 				#endif
 
-				//If the upcoming point is still left of us, we're not there yet
-				if(right.x < gl_GlobalInvocationID.x)
-					left = right;
-
-				else
+				//Only render onscreen pixels
+				if(right.x >= gl_GlobalInvocationID.x)
 				{
-					g_updating[gl_LocalInvocationID.x] = true;
+					g_updating = true;
 
 					//To start, assume we're drawing the entire segment
 					float starty = left.y;
@@ -159,19 +155,17 @@ void main()
 					endy = min(endy, MAX_HEIGHT);
 
 					//Sort Y coordinates from min to max
-					g_blockmin[gl_LocalInvocationID.x] = int(min(starty, endy));
-					g_blockmax[gl_LocalInvocationID.x] = int(max(starty, endy));
+					g_blockmin = int(min(starty, endy));
+					g_blockmax = int(max(starty, endy));
 
-					//Push current point down the pipeline
-					left = right;
-
-					if(left.x > gl_GlobalInvocationID.x + 1)
-						g_done[gl_LocalInvocationID.x] = true;
+					//Check if we're at the end of the pixel
+					if(right.x > gl_GlobalInvocationID.x + 1)
+						g_done = true;
 				}
 			}
 
 			else
-				g_done[gl_LocalInvocationID.x] = true;
+				g_done = true;
 
 			i++;
 		}
@@ -180,23 +174,23 @@ void main()
 		memoryBarrierShared();
 
 		//Only update if we need to
-		if(g_updating[gl_LocalInvocationID.x])
+		if(g_updating)
 		{
 			//Parallel fill
-			int ymin = g_blockmin[gl_LocalInvocationID.x];
-			int ymax = g_blockmax[gl_LocalInvocationID.x];
+			int ymin = g_blockmin;
+			int ymax = g_blockmax;
 			int len = ymax - ymin;
 			for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
 			{
 				#ifdef HISTOGRAM_PATH
-					g_workingBuffer[gl_LocalInvocationID.x][ymin + y] = alpha;
+					g_workingBuffer[ymin + y] = alpha;
 				#else
-					g_workingBuffer[gl_LocalInvocationID.x][ymin + y] += alpha;
+					g_workingBuffer[ymin + y] += alpha;
 				#endif
 			}
 		}
 
-		if(g_done[gl_LocalInvocationID.x])
+		if(g_done)
 			break;
 	}
 
@@ -211,7 +205,7 @@ void main()
 			imageStore(
 				outputTex,
 				ivec2(gl_GlobalInvocationID.x, y),
-				vec4(0, 0, 0, g_workingBuffer[gl_LocalInvocationID.x][y]));
+				vec4(0, 0, 0, g_workingBuffer[y]));
 		}
 	}
 }
