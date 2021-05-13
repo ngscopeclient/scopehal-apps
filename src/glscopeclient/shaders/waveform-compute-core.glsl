@@ -15,7 +15,7 @@ layout(std430, binding=3) buffer index
 	uint xind[];
 };
 
-//Shared buffer for the local working buffer
+//Shared buffer for the local working buffer (8 kB)
 shared float g_workingBuffer[COLS_PER_BLOCK][MAX_HEIGHT];
 
 //Min/max for the current sample
@@ -95,83 +95,78 @@ void main()
 		{
 			if(i < (memDepth-2) )
 			{
-				//If the next point is right of us, stop
-				if(left.x > gl_GlobalInvocationID.x + 1)
-					g_done[gl_LocalInvocationID.x] = true;
+				//Fetch coordinates of the current and upcoming sample
 
-				//Nope, all good
+				#ifdef ANALOG_PATH
+					right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+				#endif
+
+				#ifdef DIGITAL_PATH
+					right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+				#endif
+
+				//If the upcoming point is still left of us, we're not there yet
+				if(right.x < gl_GlobalInvocationID.x)
+					left = right;
+
 				else
 				{
-					//Fetch coordinates of the current and upcoming sample
+					g_updating[gl_LocalInvocationID.x] = true;
+
+					//To start, assume we're drawing the entire segment
+					float starty = left.y;
+					float endy = right.y;
 
 					#ifdef ANALOG_PATH
-						right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+
+						#ifndef NO_INTERPOLATION
+
+							//Interpolate analog signals if either end is outside our column
+							float slope = (right.y - left.y) / (right.x - left.x);
+							if(left.x < gl_GlobalInvocationID.x)
+								starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
+							if(right.x > gl_GlobalInvocationID.x + 1)
+								endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+						#endif
+
 					#endif
 
 					#ifdef DIGITAL_PATH
-						right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+
+						//If we are very near the right edge, draw vertical line
+						if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
+						{
+							starty = left.y;
+							endy = right.y;
+						}
+
+						//otherwise draw a single pixel
+						else
+						{
+							starty = left.y;
+							endy = left.y;
+						}
+
 					#endif
 
-					//If the upcoming point is still left of us, we're not there yet
-					if(right.x < gl_GlobalInvocationID.x)
-						left = right;
+					#ifdef HISTOGRAM_PATH
+						starty = 0;
+						endy = left.y;
+					#endif
 
-					else
-					{
-						g_updating[gl_LocalInvocationID.x] = true;
+					//Clip to window size
+					starty = min(starty, MAX_HEIGHT);
+					endy = min(endy, MAX_HEIGHT);
 
-						//To start, assume we're drawing the entire segment
-						float starty = left.y;
-						float endy = right.y;
+					//Sort Y coordinates from min to max
+					g_blockmin[gl_LocalInvocationID.x] = int(min(starty, endy));
+					g_blockmax[gl_LocalInvocationID.x] = int(max(starty, endy));
 
-						#ifdef ANALOG_PATH
+					//Push current point down the pipeline
+					left = right;
 
-							#ifndef NO_INTERPOLATION
-
-								//Interpolate analog signals if either end is outside our column
-								float slope = (right.y - left.y) / (right.x - left.x);
-								if(left.x < gl_GlobalInvocationID.x)
-									starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
-								if(right.x > gl_GlobalInvocationID.x + 1)
-									endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
-							#endif
-
-						#endif
-
-						#ifdef DIGITAL_PATH
-
-							//If we are very near the right edge, draw vertical line
-							if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
-							{
-								starty = left.y;
-								endy = right.y;
-							}
-
-							//otherwise draw a single pixel
-							else
-							{
-								starty = left.y;
-								endy = left.y;
-							}
-
-						#endif
-
-						#ifdef HISTOGRAM_PATH
-							starty = 0;
-							endy = left.y;
-						#endif
-
-						//Clip to window size
-						starty = min(starty, MAX_HEIGHT);
-						endy = min(endy, MAX_HEIGHT);
-
-						//Sort Y coordinates from min to max
-						g_blockmin[gl_LocalInvocationID.x] = int(min(starty, endy));
-						g_blockmax[gl_LocalInvocationID.x] = int(max(starty, endy));
-
-						//Push current point down the pipeline
-						left = right;
-					}
+					if(left.x > gl_GlobalInvocationID.x + 1)
+						g_done[gl_LocalInvocationID.x] = true;
 				}
 			}
 
@@ -185,23 +180,24 @@ void main()
 		memoryBarrierShared();
 
 		//Only update if we need to
+		if(g_updating[gl_LocalInvocationID.x])
+		{
+			//Parallel fill
+			int ymin = g_blockmin[gl_LocalInvocationID.x];
+			int ymax = g_blockmax[gl_LocalInvocationID.x];
+			int len = ymax - ymin;
+			for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
+			{
+				#ifdef HISTOGRAM_PATH
+					g_workingBuffer[gl_LocalInvocationID.x][ymin + y] = alpha;
+				#else
+					g_workingBuffer[gl_LocalInvocationID.x][ymin + y] += alpha;
+				#endif
+			}
+		}
+
 		if(g_done[gl_LocalInvocationID.x])
 			break;
-		if(!g_updating[gl_LocalInvocationID.x])
-			continue;
-
-		//Parallel fill
-		int ymin = g_blockmin[gl_LocalInvocationID.x];
-		int ymax = g_blockmax[gl_LocalInvocationID.x];
-		int len = ymax - ymin;
-		for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
-		{
-			#ifdef HISTOGRAM_PATH
-				g_workingBuffer[gl_LocalInvocationID.x][ymin + y] = alpha;
-			#else
-				g_workingBuffer[gl_LocalInvocationID.x][ymin + y] += alpha;
-			#endif
-		}
 	}
 
 	barrier();
