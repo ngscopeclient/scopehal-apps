@@ -59,8 +59,17 @@ void main()
 
 	#ifdef DENSE_PACK
 		uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
+		uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
+		if(iend <= 0)
+			g_done = true;
 	#else
 		uint istart = xind[gl_GlobalInvocationID.x];
+		if( (gl_GlobalInvocationID.x + 1) < windowWidth)
+		{
+			uint iend = xind[gl_GlobalInvocationID.x + 1];
+			if(iend <= 0)
+				g_done = true;
+		}
 	#endif
 	uint i = istart + gl_GlobalInvocationID.y;
 
@@ -68,7 +77,7 @@ void main()
 	while(true)
 	{
 		//Main thread
-		if(i < (memDepth-2) )
+		if(i < (memDepth-1) )
 		{
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
