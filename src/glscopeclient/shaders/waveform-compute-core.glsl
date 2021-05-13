@@ -182,14 +182,11 @@ void main()
 	memoryBarrierShared();
 
 	//Copy working buffer to RGB output
-	if(gl_LocalInvocationID.y == 0)
+	for(uint y=gl_LocalInvocationID.y; y<windowHeight; y+= ROWS_PER_BLOCK)
 	{
-		for(uint y=0; y<windowHeight; y++)
-		{
-			imageStore(
-				outputTex,
-				ivec2(gl_GlobalInvocationID.x, y),
-				vec4(0, 0, 0, g_workingBuffer[y]));
-		}
+		imageStore(
+			outputTex,
+			ivec2(gl_GlobalInvocationID.x, y),
+			vec4(0, 0, 0, g_workingBuffer[y]));
 	}
 }
