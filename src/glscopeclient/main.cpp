@@ -180,7 +180,23 @@ int main(int argc, char* argv[])
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");
 	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )
-		LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
+	{
+		#ifdef _WIN32
+			LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
+		#else
+			LogDebug("OMP_WAIT_POLICY not set to PASSIVE. Re-exec'ing with correct environment\n");
+			setenv("OMP_WAIT_POLICY", "PASSIVE", true);
+
+			//make a copy of arguments since argv[] does not have to be null terminated, but execvp requires that
+			vector<char*> args;
+			for(int i=0; i<argc; i++)
+				args.push_back(argv[i]);
+			args.push_back(NULL);
+
+			//Launch ourself with the new environment
+			execvp(argv[0], &args[0]);
+		#endif
+	}
 
 	g_app = new ScopeApp;
 
