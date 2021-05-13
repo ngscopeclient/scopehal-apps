@@ -63,7 +63,7 @@ void main()
 	#else
 		uint istart = xind[gl_GlobalInvocationID.x];
 	#endif
-	uint i = istart;
+	uint i = istart + gl_GlobalInvocationID.y;
 
 	barrier();
 	memoryBarrierShared();
@@ -72,107 +72,109 @@ void main()
 	while(true)
 	{
 		//Main thread
-		if(gl_LocalInvocationID.y == 0)
+		if(i < (memDepth-2) )
 		{
-			if(i < (memDepth-2) )
+			//Fetch coordinates of the current and upcoming sample
+
+			#ifdef ANALOG_PATH
+				vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
+				vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+			#endif
+
+			#ifdef DIGITAL_PATH
+				vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
+				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+			#endif
+
+			//Only render onscreen pixels
+			if(right.x >= gl_GlobalInvocationID.x)
 			{
-				//Fetch coordinates of the current and upcoming sample
+				g_updating[gl_LocalInvocationID.y] = true;
+
+				//To start, assume we're drawing the entire segment
+				float starty = left.y;
+				float endy = right.y;
 
 				#ifdef ANALOG_PATH
-					vec2 left = vec2(FetchX(istart) * xscale + xoff, (voltage[istart] + yoff)*yscale + ybase);
-					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+
+					#ifndef NO_INTERPOLATION
+
+						//Interpolate analog signals if either end is outside our column
+						float slope = (right.y - left.y) / (right.x - left.x);
+						if(left.x < gl_GlobalInvocationID.x)
+							starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
+						if(right.x > gl_GlobalInvocationID.x + 1)
+							endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
+					#endif
+
 				#endif
 
 				#ifdef DIGITAL_PATH
-					vec2 left = vec2(FetchX(istart) * xscale + xoff, GetBoolean(istart)*yscale + ybase);
-					vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+
+					//If we are very near the right edge, draw vertical line
+					if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
+					{
+						starty = left.y;
+						endy = right.y;
+					}
+
+					//otherwise draw a single pixel
+					else
+					{
+						starty = left.y;
+						endy = left.y;
+					}
+
 				#endif
 
-				//Only render onscreen pixels
-				if(right.x >= gl_GlobalInvocationID.x)
-				{
-					g_updating[gl_LocalInvocationID.y] = true;
+				#ifdef HISTOGRAM_PATH
+					starty = 0;
+					endy = left.y;
+				#endif
 
-					//To start, assume we're drawing the entire segment
-					float starty = left.y;
-					float endy = right.y;
+				//Clip to window size
+				starty = min(starty, MAX_HEIGHT);
+				endy = min(endy, MAX_HEIGHT);
 
-					#ifdef ANALOG_PATH
+				//Sort Y coordinates from min to max
+				g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
+				g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
 
-						#ifndef NO_INTERPOLATION
-
-							//Interpolate analog signals if either end is outside our column
-							float slope = (right.y - left.y) / (right.x - left.x);
-							if(left.x < gl_GlobalInvocationID.x)
-								starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
-							if(right.x > gl_GlobalInvocationID.x + 1)
-								endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
-						#endif
-
-					#endif
-
-					#ifdef DIGITAL_PATH
-
-						//If we are very near the right edge, draw vertical line
-						if(abs(right.x - gl_GlobalInvocationID.x) <= 1)
-						{
-							starty = left.y;
-							endy = right.y;
-						}
-
-						//otherwise draw a single pixel
-						else
-						{
-							starty = left.y;
-							endy = left.y;
-						}
-
-					#endif
-
-					#ifdef HISTOGRAM_PATH
-						starty = 0;
-						endy = left.y;
-					#endif
-
-					//Clip to window size
-					starty = min(starty, MAX_HEIGHT);
-					endy = min(endy, MAX_HEIGHT);
-
-					//Sort Y coordinates from min to max
-					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
-					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
-
-					//Check if we're at the end of the pixel
-					if(right.x > gl_GlobalInvocationID.x + 1)
-						g_done = true;
-				}
+				//Check if we're at the end of the pixel
+				if(right.x > gl_GlobalInvocationID.x + 1)
+					g_done = true;
 			}
-
-			else
-				g_done = true;
-
-			i++;
 		}
+
+		else
+			g_done = true;
+
+		i += ROWS_PER_BLOCK;
 
 		barrier();
 		memoryBarrierShared();
 
 		//Only update if we need to
-		int y = 0;
-		if(g_updating[y])
+		for(int y = 0; y<ROWS_PER_BLOCK; y++)
 		{
-			//Parallel fill
-			int ymin = g_blockmin[y];
-			int ymax = g_blockmax[y];
-			int len = ymax - ymin;
-			for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
+			if(g_updating[y])
 			{
-				#ifdef HISTOGRAM_PATH
-					g_workingBuffer[ymin + y] = alpha;
-				#else
-					g_workingBuffer[ymin + y] += alpha;
-				#endif
+				//Parallel fill
+				int ymin = g_blockmin[y];
+				int ymax = g_blockmax[y];
+				int len = ymax - ymin;
+				for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
+				{
+					#ifdef HISTOGRAM_PATH
+						g_workingBuffer[ymin + y] = alpha;
+					#else
+						g_workingBuffer[ymin + y] += alpha;
+					#endif
+				}
 			}
+
+			barrier();
+			memoryBarrierShared();
 		}
 
 		if(g_done)
