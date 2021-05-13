@@ -66,6 +66,8 @@ bool Shader::Load(const char* path, ...)
 		const char* arg = va_arg(list, const char*);
 		if(arg == NULL)
 			break;
+		else if(arg[0] == '#')
+			shaderbuf += string(arg) + "\n";
 		else
 			shaderbuf += ReadDataFile(arg);
 	}

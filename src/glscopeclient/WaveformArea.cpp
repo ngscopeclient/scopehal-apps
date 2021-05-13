@@ -674,7 +674,8 @@ void WaveformArea::InitializeWaveformPass()
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
 		if(!adwc.Load(
-			"shaders/waveform-compute-head-dense.glsl",
+			"shaders/waveform-compute-head.glsl",
+			"#define DENSE_PACK"
 			"shaders/waveform-compute-analog.glsl",
 			"shaders/waveform-compute-core.glsl",
 			NULL))
@@ -701,7 +702,8 @@ void WaveformArea::InitializeWaveformPass()
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
 		if(!adwc.Load(
-			"shaders/waveform-compute-head-dense-noint64.glsl",
+			"shaders/waveform-compute-head-noint64.glsl",
+			"#define DENSE_PACK"
 			"shaders/waveform-compute-analog.glsl",
 			"shaders/waveform-compute-core.glsl",
 			NULL))
