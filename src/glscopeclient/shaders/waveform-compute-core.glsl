@@ -76,7 +76,6 @@ void main()
 	//Main loop
 	while(true)
 	{
-		//Main thread
 		if(i < (memDepth-1) )
 		{
 			//Fetch coordinates
