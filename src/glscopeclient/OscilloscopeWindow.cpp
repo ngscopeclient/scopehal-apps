@@ -2539,6 +2539,46 @@ void OscilloscopeWindow::OnZoomInHorizontal(WaveformGroup* group, int64_t target
  */
 void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t target)
 {
+	//Figure out how wide the widest waveform in the group is, in X axis units
+	float width = 0;
+	auto areas = GetAreasInGroup(group);
+	for(auto a : areas)
+		width = max(width, a->GetWidthXUnits());
+
+	//Find all waveforms visible in any area within the group
+	set<WaveformBase*> wfms;
+	for(auto a : areas)
+	{
+		auto data = a->GetChannel().GetData();
+		if(data != NULL)
+			wfms.emplace(data);
+		for(size_t i=0; i < a->GetOverlayCount(); i++)
+		{
+			auto o = a->GetOverlay(i);
+			data = o.GetData();
+			if(data != NULL)
+				wfms.emplace(data);
+		}
+	}
+
+	//Find how long the longest waveform is.
+	//Horizontal displacement doesn't matter for now, only total length.
+	int64_t duration = 0;
+	for(auto w : wfms)
+	{
+		size_t len = w->m_offsets.size();
+		if(len < 2)
+			continue;
+		size_t end = len - 1;
+
+		int64_t delta = w->m_offsets[end] + w->m_durations[end] - w->m_offsets[0];
+		duration = max(duration, delta * w->m_timescale);
+	}
+
+	//If the view is already wider than the longest waveform, don't allow further zooming
+	if(width > duration)
+		return;
+
 	//Calculate the *current* position of the target within the window
 	float delta = target - group->m_xAxisOffset;
 
@@ -2550,10 +2590,10 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	ClearPersistence(group, false, true);
 }
 
-void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_dirty, bool position_dirty)
+vector<WaveformArea*> OscilloscopeWindow::GetAreasInGroup(WaveformGroup* group)
 {
-	//Make the list of stuff being updated
 	auto children = group->m_vbox.get_children();
+
 	vector<WaveformArea*> areas;
 	for(auto w : children)
 	{
@@ -2564,13 +2604,18 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 			auto bchildren = box->get_children();
 			for(auto a : bchildren)
 			{
-				//Clear persistence on waveform areas
 				auto area = dynamic_cast<WaveformArea*>(a);
 				if(area != NULL && w->get_realized())
 					areas.push_back(area);
 			}
 		}
 	}
+	return areas;
+}
+
+void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_dirty, bool position_dirty)
+{
+	auto areas = GetAreasInGroup(group);
 
 	//Mark each area as dirty and map the buffers needed for update
 	for(auto w : areas)
@@ -2613,6 +2658,7 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 	}
 
 	//Submit update requests for each area (and the timeline)
+	auto children = group->m_vbox.get_children();
 	for(auto w : children)
 		w->queue_draw();
 }

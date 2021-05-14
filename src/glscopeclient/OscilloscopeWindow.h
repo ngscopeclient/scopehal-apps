@@ -143,6 +143,7 @@ protected:
 
 	void SplitGroup(Gtk::Widget* frame, WaveformGroup* group, bool horizontal);
 	void GarbageCollectGroups();
+	std::vector<WaveformArea*> GetAreasInGroup(WaveformGroup* group);
 
 	//Menu/toolbar message handlers
 	void OnStartSingle();

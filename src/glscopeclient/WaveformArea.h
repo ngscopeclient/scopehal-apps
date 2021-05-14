@@ -190,6 +190,9 @@ public:
 		m_overlays.push_back(stream);
 	}
 
+	float GetWidthXUnits()
+	{ return PixelsToXAxisUnits(m_width); }
+
 	//Helper to get all geometry that needs to be updated
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay);
