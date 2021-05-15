@@ -47,7 +47,8 @@ protected:
 	enum DragState
 	{
 		DRAG_NONE,
-		DRAG_TIMELINE
+		DRAG_TIMELINE,
+		DRAG_TRIGGER
 	} m_dragState;
 
 	double m_dragStartX;
@@ -58,6 +59,8 @@ protected:
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
+
+	DragState HitTest(double x, double y, Oscilloscope** pscope = NULL);
 
 	virtual void on_realize();
 
@@ -78,6 +81,8 @@ protected:
 	{ return get_pango_context()->get_resolution() / 96; }
 
 	Unit m_xAxisUnit;
+
+	Oscilloscope* m_dragScope;
 };
 
 #endif

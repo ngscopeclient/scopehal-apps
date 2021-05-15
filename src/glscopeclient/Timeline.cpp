@@ -42,6 +42,7 @@ Timeline::Timeline(OscilloscopeWindow* parent, WaveformGroup* group)
 	: m_group(group)
 	, m_parent(parent)
 	, m_xAxisUnit(Unit::UNIT_FS)
+	, m_dragScope(NULL)
 {
 	m_dragState = DRAG_NONE;
 	m_dragStartX = 0;
@@ -63,6 +64,45 @@ Timeline::~Timeline()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI events
 
+/**
+	@brief Figure out where the cursor is
+ */
+Timeline::DragState Timeline::HitTest(double x, double /*y*/, Oscilloscope** pscope)
+{
+	//Find the trigger arrow
+	double trig_x = 0;
+	bool trig_found = false;
+	auto children = m_group->m_waveformBox.get_children();
+	if(!children.empty())
+	{
+		auto view = dynamic_cast<WaveformArea*>(children[0]);
+		if(view != NULL)
+		{
+			auto scope = view->GetChannel().m_channel->GetScope();
+			if(scope != NULL)
+			{
+				float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
+				auto trig = scope->GetTrigger();
+				if(trig)
+				{
+					trig_x = (scope->GetTriggerOffset() - m_group->m_xAxisOffset) * xscale;
+					trig_found = true;
+					if(pscope)
+						*pscope = scope;
+				}
+			}
+		}
+	}
+
+	//Trigger position
+	if(trig_found && fabs(x - trig_x) < 5 )
+		return DRAG_TRIGGER;
+
+	//The entire timeline is draggable, so default to that if we're not anywhere special
+	else
+		return DRAG_TIMELINE;
+}
+
 bool Timeline::on_button_press_event(GdkEventButton* event)
 {
 	auto scale = get_window()->get_scale_factor();
@@ -74,11 +114,24 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 		//for now, only handle left click
 		if(event->button == 1)
 		{
-			m_dragState = DRAG_TIMELINE;
-			m_dragStartX = event->x;
-			m_originalTimeOffset = m_group->m_xAxisOffset;
+			Oscilloscope* target = NULL;
+			m_dragState = HitTest(event->x, event->y, &target);
 
-			get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
+			switch(m_dragState)
+			{
+				case DRAG_TRIGGER:
+					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
+					m_dragScope = target;
+					break;
+
+				case DRAG_TIMELINE:
+				default:
+					m_originalTimeOffset = m_group->m_xAxisOffset;
+					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
+					break;
+			}
+
+			m_dragStartX = event->x;
 		}
 	}
 
@@ -126,7 +179,36 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 			}
 			break;
 
+		//Dragging the trigger
+		case DRAG_TRIGGER:
+			{
+				//Figure out where the trigger is being dragged to
+				double sx = event->x / m_group->m_pixelsPerXUnit;
+				int64_t t = static_cast<int64_t>(round(sx)) + m_group->m_xAxisOffset;
+
+				m_dragScope->SetTriggerOffset(t);
+				queue_draw();
+			}
+			break;
+
+		//Not dragging anything, update the cursor
+		case DRAG_NONE:
 		default:
+			{
+				auto target = HitTest(event->x, event->y);
+
+				switch(target)
+				{
+					case DRAG_TRIGGER:
+						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
+						break;
+
+					case DRAG_TIMELINE:
+					default:
+						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
+						break;
+				}
+			}
 			break;
 	}
 
