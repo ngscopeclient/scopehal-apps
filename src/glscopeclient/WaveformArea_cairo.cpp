@@ -756,8 +756,12 @@ void WaveformArea::RenderVerticalCursor(
 	Gdk::Color color,
 	bool label_to_left)
 {
-	//Draw the actual cursor
+	//Only draw the cursor if it's on screen
 	double x = XAxisUnitsToXPosition(pos);
+	if( (x < 0) || (x >= m_plotRight) )
+		return;
+
+	//Draw the actual cursor
 	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
 	cr->move_to(x, 0);
 	cr->line_to(x, m_height);
@@ -917,8 +921,9 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 
 			//Draw filled area between them
 			{
-				double x = XAxisUnitsToXPosition(m_group->m_xCursorPos[0]);
-				double x2 = XAxisUnitsToXPosition(m_group->m_xCursorPos[1]);
+				float x = min(XAxisUnitsToXPosition(m_group->m_xCursorPos[0]), m_plotRight);
+				float x2 = min(XAxisUnitsToXPosition(m_group->m_xCursorPos[1]), m_plotRight);
+
 				cr->set_source_rgba(cursor_fill.get_red_p(), cursor_fill.get_green_p(), cursor_fill.get_blue_p(), 0.2);
 				cr->move_to(x, ytop);
 				cr->line_to(x2, ytop);
