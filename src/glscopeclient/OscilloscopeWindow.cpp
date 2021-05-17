@@ -1913,6 +1913,10 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 		}
 	}
 
+	//If we're currently capturing, stop.
+	//This prevents waveforms from changing under our nose as we're serializing.
+	OnStop();
+
 	//Serialize our configuration and save to the file
 	IDTable table;
 	string config = SerializeConfiguration(saveLayout, table);
