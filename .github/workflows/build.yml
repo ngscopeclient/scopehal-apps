@@ -87,7 +87,6 @@ jobs:
         popd
 
     - name: Build
-      working-directory: ${{runner.workspace}}/scopehal-apps
       run: |
         mkdir build
         cd build
@@ -98,7 +97,6 @@ jobs:
         make -j4
 
     - name: Run Tests
-      working-directory: ${{runner.workspace}}/scopehal-apps
       run: |
         cd build
         make test
@@ -168,7 +166,6 @@ jobs:
         mingw32-make install
 
     - name: Build
-      working-directory: ${{runner.workspace}}/scopehal-apps
       run: |
         mkdir build
         cd build
