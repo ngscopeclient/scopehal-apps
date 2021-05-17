@@ -172,8 +172,6 @@ jobs:
         cmake \
           -G"MSYS Makefiles" \
           -DBUILD_TESTING=OFF \
-          -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ \
-          -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a \
           ..
         make -j4
 
