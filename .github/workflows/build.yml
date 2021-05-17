@@ -147,6 +147,7 @@ jobs:
           mingw-w64-x86_64-gtkmm3
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-glew
+          tree
 
     - name: Build and install FFTS Library
       run: |
@@ -158,22 +159,19 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake \
+        MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" cmake \
           -G"MSYS Makefiles" \
+          -DCMAKE_INSTALL_PREFIX=$MINGW_PREFIX \
           -DBUILD_TESTING=OFF \
           ..
         make -j4
+
+        mkdir dist
+        make DESTDIR=dist install
+        tree dist
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows
-        path: |
-          build/src/glscopeclient/glscopeclient.exe
-          build/src/glscopeclient/gradients/*
-          build/src/glscopeclient/shaders/*
-          build/src/glscopeclient/styles/*
-          build/lib/graphwidget/libgraphwidget.dll
-          build/lib/log/liblog.dll
-          build/lib/scopehal/libscopehal.dll
-          build/lib/scopeprotocols/libscopeprotocols.dll
+        path: build/dist
