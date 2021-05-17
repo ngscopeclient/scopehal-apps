@@ -1,53 +1,101 @@
 name: Build
 
-on: [push]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 5'
+  workflow_dispatch:
 
 jobs:
-  linux:
+
+
+  Tarball:
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
 
     - name: Make Source Tarball
-      shell: bash
-      working-directory: ${{runner.workspace}}
-      run: tar -cf source.tar scopehal-apps && gzip -S .gz -9 source.tar
-
-    - name: Install Dependencies
-      run: sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
-
-    - name: Clone FFTS Repository
-      run: git clone https://github.com/anthonix/ffts.git /tmp/ffts
-
-    - name: Build FFTS Library
-      shell: bash
-      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
-
-    - name: Clone Catch2 Repository
-      run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
-
-    - name: Build Catch2 Library
-      shell: bash
-      run: pushd /tmp/catch2 && git checkout v2.13.2 && mkdir build && cd build && cmake .. && make -j 4 && sudo make install && popd
-
-    - name: Build
-      shell: bash
-      working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
-
-    - name: Run Tests
-      shell: bash
-      working-directory: ${{runner.workspace}}/scopehal-apps
-      run: cd build && make test
+      run: |
+        cd ..
+        tar -cf source.tar scopehal-apps
+        gzip -S .gz -9 source.tar
+        mv source.tar.gz scopehal-apps/
 
     - name: Upload Source
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-source
-        path: ${{runner.workspace}}/source.tar.gz
+        path: source.tar.gz
+
+
+  Linux:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get -y install \
+          build-essential \
+          cmake \
+          pkg-config \
+          libglm-dev \
+          libgtkmm-3.0-dev \
+          libsigc++-2.0-dev \
+          libyaml-cpp-dev \
+          liblxi-dev \
+          texlive \
+          texlive-fonts-extra \
+          libglew-dev
+
+    - name: Clone and Build FFTS Library
+      run: |
+        git clone https://github.com/anthonix/ffts.git /tmp/ffts
+        pushd /tmp/ffts
+        mkdir build
+        cd build
+        cmake \
+          -DENABLE_SHARED=ON \
+          ..
+        make -j4
+        sudo make install
+        popd
+
+    - name: Clone and Build Catch2 Library
+      run: |
+        git clone https://github.com/catchorg/Catch2 /tmp/catch2
+        pushd /tmp/catch2
+        git checkout v2.13.2
+        mkdir build
+        cd build
+        cmake ..
+        make -j 4
+        sudo make install
+        popd
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -DCMAKE_BUILD_TYPE=DEBUG \
+          -DBUILD_DOCS=ON \
+          ..
+        make -j4
+
+    - name: Run Tests
+      run: |
+        cd build
+        make test
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
@@ -67,7 +115,9 @@ jobs:
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
-  windows:
+
+
+  Windows:
     runs-on: windows-latest
 
     defaults:
@@ -75,6 +125,7 @@ jobs:
         shell: msys2 {0}
 
     steps:
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
@@ -82,20 +133,41 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
-        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-glm mingw-w64-x86_64-libsigc++ mingw-w64-x86_64-gtkmm3 mingw-w64-x86_64-yaml-cpp mingw-w64-x86_64-glew
+        msystem: MINGW64
+        install: >-
+          git
+          make
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-glm
+          mingw-w64-x86_64-libsigc++
+          mingw-w64-x86_64-gtkmm3
+          mingw-w64-x86_64-yaml-cpp
+          mingw-w64-x86_64-glew
 
-    - name: Clone FFTS Repository
-      shell: bash
-      working-directory: ${{runner.workspace}}
-      run: git clone https://github.com/anthonix/ffts.git
-
-    - name: Build FFTS Library
-      working-directory: ${{runner.workspace}}/ffts
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX -DENABLE_SHARED=ON .. && mingw32-make -j4 && mingw32-make install
+    - name: Clone and Build FFTS Library
+      run: |
+        git clone https://github.com/anthonix/ffts.git ../ffts
+        cd ../ffts
+        mkdir build
+        cd build
+        cmake \
+          -G"MSYS Makefiles" \
+          -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX \
+          -DENABLE_SHARED=ON \
+          ..
+        make -j4
+        make install
 
     - name: Build
-      working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DBUILD_TESTING=OFF -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -G"MSYS Makefiles" \
+          -DBUILD_TESTING=OFF \
+          ..
+        make -j4
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
