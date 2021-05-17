@@ -158,7 +158,7 @@ jobs:
         mkdir build
         cd build
         cmake \
-          -G"MinGW Makefiles" \
+          -G"MSYS Makefiles" \
           -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX \
           -DENABLE_SHARED=ON \
           ..
@@ -170,7 +170,7 @@ jobs:
         mkdir build
         cd build
         cmake \
-          -G"MinGW Makefiles" \
+          -G"MSYS Makefiles" \
           -DBUILD_TESTING=OFF \
           -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ \
           -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a \
