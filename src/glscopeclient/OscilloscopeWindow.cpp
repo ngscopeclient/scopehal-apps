@@ -2135,9 +2135,11 @@ void OscilloscopeWindow::OnTriggerProperties(Oscilloscope* scope)
 		return;
 	dlg.ConfigureTrigger();
 
-	//Redraw the timeline in case we changed the trigger channel etc
+	//Redraw the timeline and all waveform areas in case we changed the trigger channel etc
 	for(auto g : m_waveformGroups)
 		g->m_timeline.queue_draw();
+	for(auto a : m_waveformAreas)
+		a->queue_draw();
 }
 
 void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item)
