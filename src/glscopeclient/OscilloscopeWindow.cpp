@@ -2033,7 +2033,11 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 			{
 				snprintf(tmp, sizeof(tmp), "                :\n");
 				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[area->GetOverlay(i).m_channel]);
+
+				//The ID table uses the FlowGraphNode pointer, not the OscilloscopeChannel pointer
+				auto filter = dynamic_cast<Filter*>(area->GetOverlay(i).m_channel);
+				auto node = static_cast<FlowGraphNode*>(filter);
+				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[node]);
 				config += tmp;
 				snprintf(tmp, sizeof(tmp), "                    stream:  %zu\n", area->GetOverlay(i).m_stream);
 				config += tmp;
