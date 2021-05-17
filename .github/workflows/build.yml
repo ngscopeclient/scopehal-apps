@@ -126,6 +126,9 @@ jobs:
 
     steps:
 
+    - run: git config --global core.autocrlf input
+      shell: bash
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
@@ -145,19 +148,11 @@ jobs:
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-glew
 
-    - name: Clone and Build FFTS Library
+    - name: Build and install FFTS Library
       run: |
-        git clone https://github.com/anthonix/ffts.git ../ffts
-        cd ../ffts
-        mkdir build
-        cd build
-        cmake \
-          -G"MSYS Makefiles" \
-          -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX \
-          -DENABLE_SHARED=ON \
-          ..
-        make -j4
-        make install
+        cd msys2/mingw-w64-ffts
+        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf --nocheck
+        pacman -U --noconfirm *.zst
 
     - name: Build
       run: |

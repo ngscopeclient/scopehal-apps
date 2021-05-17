@@ -1,0 +1,40 @@
+# Maintainer: umarcor <unai.martinezcorral@ehu.eus>
+
+_realname=ffts
+pkgbase=mingw-w64-${_realname}
+pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
+pkgver=master
+pkgrel=1
+pkgdesc="ffts: The Fastest Fourier Transform in the South  (mingw-w64)"
+arch=('any')
+mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64')
+url="https://github.com/anthonix/ffts"
+license=('custom')
+makedepends=(
+  "${MINGW_PACKAGE_PREFIX}-gcc"
+  "${MINGW_PACKAGE_PREFIX}-cmake"
+)
+
+source=("${_realname}::git://github.com/anthonix/ffts.git#commit=master")
+sha256sums=('SKIP')
+
+build() {
+  cd "${srcdir}/${_realname}"
+  mkdir build
+  cd build
+  MSYS2_ARG_CONV_EXCL=- cmake \
+    -G "MSYS Makefiles" \
+    -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+    -DENABLE_SHARED=ON \
+    ../
+  cmake --build .
+}
+
+package() {
+  cd "${srcdir}/${_realname}"/build
+  make DESTDIR="${pkgdir}" install
+
+  _licenses="${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}"
+  mkdir -p "${_licenses}"
+  install -m 644 "${srcdir}/${_realname}"/COPYRIGHT "${_licenses}"
+}
