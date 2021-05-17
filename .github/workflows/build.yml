@@ -57,11 +57,9 @@ jobs:
           texlive-fonts-extra \
           libglew-dev
 
-    - name: Clone FFTS Repository
-      run: git clone https://github.com/anthonix/ffts.git /tmp/ffts
-
-    - name: Build FFTS Library
+    - name: Clone and Build FFTS Library
       run: |
+        git clone https://github.com/anthonix/ffts.git /tmp/ffts
         pushd /tmp/ffts
         mkdir build
         cd build
@@ -72,11 +70,9 @@ jobs:
         sudo make install
         popd
 
-    - name: Clone Catch2 Repository
-      run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
-
-    - name: Build Catch2 Library
+    - name: Clone and Build Catch2 Library
       run: |
+        git clone https://github.com/catchorg/Catch2 /tmp/catch2
         pushd /tmp/catch2
         git checkout v2.13.2
         mkdir build
@@ -139,6 +135,7 @@ jobs:
         update: true
         msystem: MINGW64
         install: >-
+          git
           make
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-cmake
@@ -148,14 +145,10 @@ jobs:
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-glew
 
-    - name: Clone FFTS Repository
-      shell: bash
-      working-directory: ${{runner.workspace}}
-      run: git clone https://github.com/anthonix/ffts.git
-
-    - name: Build FFTS Library
-      working-directory: ${{runner.workspace}}/ffts
+    - name: Clone and Build FFTS Library
       run: |
+        git clone https://github.com/anthonix/ffts.git ../ffts
+        cd ../ffts
         mkdir build
         cd build
         cmake \
