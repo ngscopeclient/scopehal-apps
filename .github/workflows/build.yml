@@ -20,7 +20,6 @@ jobs:
         submodules: recursive
 
     - name: Make Source Tarball
-      shell: bash
       working-directory: ${{runner.workspace}}
       run: tar -cf source.tar scopehal-apps && gzip -S .gz -9 source.tar
 
@@ -31,23 +30,19 @@ jobs:
       run: git clone https://github.com/anthonix/ffts.git /tmp/ffts
 
     - name: Build FFTS Library
-      shell: bash
       run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
 
     - name: Clone Catch2 Repository
       run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
 
     - name: Build Catch2 Library
-      shell: bash
       run: pushd /tmp/catch2 && git checkout v2.13.2 && mkdir build && cd build && cmake .. && make -j 4 && sudo make install && popd
 
     - name: Build
-      shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
 
     - name: Run Tests
-      shell: bash
       working-directory: ${{runner.workspace}}/scopehal-apps
       run: cd build && make test
 
