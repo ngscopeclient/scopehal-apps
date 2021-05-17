@@ -21,30 +21,70 @@ jobs:
 
     - name: Make Source Tarball
       working-directory: ${{runner.workspace}}
-      run: tar -cf source.tar scopehal-apps && gzip -S .gz -9 source.tar
+      run: |
+        tar -cf source.tar scopehal-apps
+        gzip -S .gz -9 source.tar
 
     - name: Install Dependencies
-      run: sudo apt-get -y install build-essential cmake pkg-config libglm-dev libgtkmm-3.0-dev libsigc++-2.0-dev libyaml-cpp-dev liblxi-dev texlive texlive-fonts-extra libglew-dev
+      run: |
+        sudo apt-get -y install \
+          build-essential \
+          cmake \
+          pkg-config \
+          libglm-dev \
+          libgtkmm-3.0-dev \
+          libsigc++-2.0-dev \
+          libyaml-cpp-dev \
+          liblxi-dev \
+          texlive \
+          texlive-fonts-extra \
+          libglew-dev
 
     - name: Clone FFTS Repository
       run: git clone https://github.com/anthonix/ffts.git /tmp/ffts
 
     - name: Build FFTS Library
-      run: pushd /tmp/ffts && mkdir build && cd build && cmake .. -DENABLE_SHARED=ON && make -j4 && sudo make install && popd
+      run: |
+        pushd /tmp/ffts
+        mkdir build
+        cd build
+        cmake \
+          -DENABLE_SHARED=ON \
+          ..
+        make -j4
+        sudo make install
+        popd
 
     - name: Clone Catch2 Repository
       run: git clone https://github.com/catchorg/Catch2 /tmp/catch2
 
     - name: Build Catch2 Library
-      run: pushd /tmp/catch2 && git checkout v2.13.2 && mkdir build && cd build && cmake .. && make -j 4 && sudo make install && popd
+      run: |
+        pushd /tmp/catch2
+        git checkout v2.13.2
+        mkdir build
+        cd build
+        cmake ..
+        make -j 4
+        sudo make install
+        popd
 
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_DOCS=ON ../ && make -j4
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -DCMAKE_BUILD_TYPE=DEBUG \
+          -DBUILD_DOCS=ON \
+          ..
+        make -j4
 
     - name: Run Tests
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: cd build && make test
+      run: |
+        cd build
+        make test
 
     - name: Upload Source
       uses: actions/upload-artifact@v2
@@ -88,7 +128,15 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
-        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-glm mingw-w64-x86_64-libsigc++ mingw-w64-x86_64-gtkmm3 mingw-w64-x86_64-yaml-cpp mingw-w64-x86_64-glew
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-make
+          mingw-w64-x86_64-glm
+          mingw-w64-x86_64-libsigc++
+          mingw-w64-x86_64-gtkmm3
+          mingw-w64-x86_64-yaml-cpp
+          mingw-w64-x86_64-glew
 
     - name: Clone FFTS Repository
       shell: bash
@@ -97,11 +145,29 @@ jobs:
 
     - name: Build FFTS Library
       working-directory: ${{runner.workspace}}/ffts
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX -DENABLE_SHARED=ON .. && mingw32-make -j4 && mingw32-make install
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -G"MinGW Makefiles" \
+          -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX \
+          -DENABLE_SHARED=ON \
+          ..
+        mingw32-make -j4
+        mingw32-make install
 
     - name: Build
       working-directory: ${{runner.workspace}}/scopehal-apps
-      run: mkdir build && cd build && cmake -G"MinGW Makefiles" -DBUILD_TESTING=OFF -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a ./.. && mingw32-make -j4
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -G"MinGW Makefiles" \
+          -DBUILD_TESTING=OFF \
+          -DLIBFFTS_INCLUDE_DIR=/mingw64/include/ffts/ \
+          -DLIBFFTS_LIBRARIES=/mingw64/lib/libffts_static.a \
+          ..
+        mingw32-make -j4
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
