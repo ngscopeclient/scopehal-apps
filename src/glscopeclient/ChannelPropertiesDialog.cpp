@@ -79,11 +79,18 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 			m_channelNameLabel.set_text("Channel");
 			m_channelNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_channelNameEntry, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
-			string probename = chan->GetProbeName();
-			if(probename.empty())
-				m_channelNameEntry.set_text(chan->GetHwname() + " (passive or no probe connected)");
+
+			//TODO: revise this if anything supports multiple active digital probe types
+			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+				m_channelNameEntry.set_text(chan->GetHwname());
 			else
-				m_channelNameEntry.set_text(chan->GetHwname() + " (" + probename + ")");
+			{
+				string probename = chan->GetProbeName();
+				if(probename.empty())
+					m_channelNameEntry.set_text(chan->GetHwname() + " (passive or no probe connected)");
+				else
+					m_channelNameEntry.set_text(chan->GetHwname() + " (" + probename + ")");
+			}
 			m_channelNameEntry.set_halign(Gtk::ALIGN_START);
 
 		m_grid.attach_next_to(m_channelDisplayNameLabel, m_channelNameLabel, Gtk::POS_BOTTOM, 1, 1);
