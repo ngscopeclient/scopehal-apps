@@ -123,3 +123,21 @@ add_dependencies(glscopeclient
 	styles
 	icons
 )
+
+###############################################################################
+# Installation
+
+install(TARGETS glscopeclient RUNTIME)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels
+	DESTINATION share/glscopeclient)
+
+install(FILES ${CMAKE_SOURCE_DIR}/src/glscopeclient/glscopeclient.desktop
+	DESTINATION share/applications)

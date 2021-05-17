@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-project(scopehal-cmake)
+project(glscopeclient)
 
 include(CTest)
 
@@ -51,6 +51,10 @@ pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
 find_package(OpenCL)
 include(FindOpenMP)
+
+if(NOT WIN32)
+	include(GNUInstallDirs)
+endif()
 
 # Configure and enable OpenMP
 if(NOT OpenMP_CXX_FOUND)
