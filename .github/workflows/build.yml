@@ -8,10 +8,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  linux:
+
+
+  Linux:
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
@@ -72,7 +75,9 @@ jobs:
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
-  windows:
+
+
+  Windows:
     runs-on: windows-latest
 
     defaults:
@@ -80,6 +85,7 @@ jobs:
         shell: msys2 {0}
 
     steps:
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
