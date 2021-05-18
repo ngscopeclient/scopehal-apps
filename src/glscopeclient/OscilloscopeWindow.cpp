@@ -2007,9 +2007,10 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		table.emplace(area);
 	for(auto area : m_waveformAreas)
 	{
-		snprintf(tmp, sizeof(tmp), "        : \n");
+		int id = table[area];
+		snprintf(tmp, sizeof(tmp), "        area%d:\n", id);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:          %d\n", table[area]);
+		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "            persistence: %d\n", area->GetPersistenceEnabled());
 		config += tmp;
@@ -2031,13 +2032,14 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 
 			for(size_t i=0; i<area->GetOverlayCount(); i++)
 			{
-				snprintf(tmp, sizeof(tmp), "                :\n");
-				config += tmp;
-
 				//The ID table uses the FlowGraphNode pointer, not the OscilloscopeChannel pointer
 				auto filter = dynamic_cast<Filter*>(area->GetOverlay(i).m_channel);
 				auto node = static_cast<FlowGraphNode*>(filter);
-				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", table[node]);
+				int oid = table[node];
+
+				snprintf(tmp, sizeof(tmp), "                overlay%d:\n", oid);
+				config += tmp;
+				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", oid);
 				config += tmp;
 				snprintf(tmp, sizeof(tmp), "                    stream:  %zu\n", area->GetOverlay(i).m_stream);
 				config += tmp;
@@ -2059,9 +2061,10 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 	for(auto split : m_splitters)
 	{
 		//Splitter config
-		snprintf(tmp, sizeof(tmp), "        : \n");
+		int sid = table[split];
+		snprintf(tmp, sizeof(tmp), "        split%d: \n", sid);
 		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:     %d\n", table[split]);
+		snprintf(tmp, sizeof(tmp), "            id:     %d\n", sid);
 		config += tmp;
 
 		if(split->get_orientation() == Gtk::ORIENTATION_HORIZONTAL)

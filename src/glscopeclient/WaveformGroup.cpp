@@ -252,10 +252,10 @@ void WaveformGroup::RefreshMeasurements()
 string WaveformGroup::SerializeConfiguration(IDTable& table)
 {
 	char tmp[1024];
-
-	snprintf(tmp, sizeof(tmp), "        : \n");
+	int id = table.emplace(&m_frame);
+	snprintf(tmp, sizeof(tmp), "        group%d:\n", id);
 	string config = tmp;
-	snprintf(tmp, sizeof(tmp), "            id:             %d\n", table.emplace(&m_frame));
+	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
 	config += tmp;
 
 	config += "            name:           \"" + m_realframe.get_label() + "\"\n";
@@ -306,8 +306,10 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	auto children = m_waveformBox.get_children();
 	for(size_t i=0; i<children.size(); i++)
 	{
-		config += "                : \n";
-		snprintf(tmp, sizeof(tmp), "                    id: %d\n", table[children[i]]);
+		int aid = table[children[i]];
+		snprintf(tmp, sizeof(tmp), "                area%d:\n", aid);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "                    id: %d\n", aid);
 		config += tmp;
 	}
 
