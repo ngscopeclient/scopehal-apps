@@ -360,7 +360,8 @@ void HistoryWindow::SerializeWaveforms(
 		TimePoint key = (*it)[m_columns.m_capturekey];
 
 		//Save metadata
-		config += "    :\n";
+		snprintf(tmp, sizeof(tmp), "    wfm%d:\n", id);
+		config += tmp;
 		snprintf(tmp, sizeof(tmp), "        timestamp: %ld\n", key.first);
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "        time_fsec: %ld\n", key.second);
@@ -424,7 +425,8 @@ void HistoryWindow::SerializeWaveforms(
 			if(wave == NULL)
 				continue;
 
-			config += "            :\n";
+			snprintf(tmp, sizeof(tmp), "            ch%d:\n", index);
+			config += tmp;
 			if(wave->m_densePacked)
 				snprintf(tmp, sizeof(tmp), "                format:       densev1\n");
 			else
