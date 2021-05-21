@@ -666,6 +666,7 @@ void OscilloscopeWindow::OnFileImport()
 
 	string csvname = "Comma Separated Value (*.csv)";
 	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
+	string vcdname = "Value Change Dump (*.vcd)";
 	string wavname = "Microsoft WAV (*.wav)";
 
 	auto csvFilter = Gtk::FileFilter::create();
@@ -676,12 +677,17 @@ void OscilloscopeWindow::OnFileImport()
 	binFilter->add_pattern("*.bin");
 	binFilter->set_name(binname);
 
+	auto vcdFilter = Gtk::FileFilter::create();
+	vcdFilter->add_pattern("*.vcd");
+	vcdFilter->set_name(vcdname);
+
 	auto wavFilter = Gtk::FileFilter::create();
 	wavFilter->add_pattern("*.wav");
 	wavFilter->set_name(wavname);
 
 	dlg.add_filter(csvFilter);
 	dlg.add_filter(binFilter);
+	dlg.add_filter(vcdFilter);
 	dlg.add_filter(wavFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -697,6 +703,8 @@ void OscilloscopeWindow::OnFileImport()
 		ImportWAVToNewSession(dlg.get_filename());
 	else if(filterName == binname)
 		DoImportBIN(dlg.get_filename());
+	else if(filterName == vcdname)
+		DoImportVCD(dlg.get_filename());
 }
 
 /**
@@ -908,6 +916,34 @@ void OscilloscopeWindow::DoImportBIN(const string& filename)
 			Gtk::MessageDialog dlg(
 				*this,
 				"BIN import failed",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+		}
+	}
+
+	OnImportComplete();
+}
+
+/**
+	@brief Import a VCD file
+ */
+void OscilloscopeWindow::DoImportVCD(const string& filename)
+{
+	LogDebug("Importing VCD file \"%s\"\n", filename.c_str());
+	{
+		LogIndenter li;
+
+		auto scope = SetupNewSessionForImport("VCD Import", filename);
+
+		//Load the waveform
+		if(!scope->LoadVCD(filename))
+		{
+			Gtk::MessageDialog dlg(
+				*this,
+				"VCD import failed",
 				false,
 				Gtk::MESSAGE_ERROR,
 				Gtk::BUTTONS_OK,

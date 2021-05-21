@@ -133,9 +133,7 @@ void HistoryWindow::OnWaveformDataReady()
 	}
 
 	//No channels at all? Nothing to do
-	if(chan == NULL)
-		return;
-	if(data == NULL)
+	if( (chan == NULL) || (data == NULL) )
 		return;
 
 	m_updating = true;
@@ -256,12 +254,15 @@ void HistoryWindow::OnWaveformDataReady()
 				//Add static size of the capture object
 				bytes_used += sizeof(DigitalBusWaveform);
 
-				//Add size of each sample
-				bytes_used +=
-					(bcap->m_samples[0].size() * sizeof(bool) + sizeof(vector<bool>))
-					* bcap->m_samples.capacity();
-				bytes_used += sizeof(int64_t) * bcap->m_offsets.capacity();
-				bytes_used += sizeof(int64_t) * bcap->m_durations.capacity();
+				if(!bcap->m_samples.empty())
+				{
+					//Add size of each sample
+					bytes_used +=
+						(bcap->m_samples[0].size() * sizeof(bool) + sizeof(vector<bool>))
+						* bcap->m_samples.capacity();
+					bytes_used += sizeof(int64_t) * bcap->m_offsets.capacity();
+					bytes_used += sizeof(int64_t) * bcap->m_durations.capacity();
+				}
 			}
 		}
 	}
