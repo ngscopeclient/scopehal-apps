@@ -148,7 +148,7 @@ if(WIN32)
 				${CMAKE_BINARY_DIR}/lib/scopehal/libscopehal.dll
 				${CMAKE_BINARY_DIR}/lib/scopeprotocols/libscopeprotocols.dll
 				${CMAKE_BINARY_DIR}/src/glscopeclient/glscopeclient.exe
-				${CMAKE_BINARY_DIR}/dist/windows_x64				
+				${CMAKE_BINARY_DIR}/dist/windows_x64
 		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/windows_x64\"
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/lib
 		COMMAND bash -c \"cp -R /mingw64/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/dist/windows_x64/lib\"
@@ -157,7 +157,7 @@ if(WIN32)
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0
 		COMMAND bash -c \"cp -R /mingw64/share/glib-2.0/schemas ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0\"
 		COMMAND bash -c \"cd ${CMAKE_BINARY_DIR}/dist/windows_x64 && glib-compile-schemas ./share/glib-2.0/schemas\" 
-		COMMAND bash -c \"ldd ${CMAKE_BINARY_DIR}/dist/windows_x64/glscopeclient.exe | grep '\/mingw64\/bin\/.*dll' -o  | xargs -I{} cp /mingw64/bin/gdbus.exe \\\"{}\\\" ${CMAKE_BINARY_DIR}/dist/windows_x64\")
+		COMMAND bash -c \"ldd ${CMAKE_BINARY_DIR}/dist/windows_x64/glscopeclient.exe | grep '\/mingw64\/bin\/.*dll' -o  | xargs -I{} cp /mingw64/bin/gdbus.exe /mingw64/lib/libffts.dll \\\"{}\\\" ${CMAKE_BINARY_DIR}/dist/windows_x64\")
 
 	add_custom_target(
 		portable_zip_windows_x64 ALL
