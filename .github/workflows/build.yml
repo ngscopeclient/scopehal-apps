@@ -157,3 +157,26 @@ jobs:
       with:
         name: glscopeclient-windows
         path: msys2/*.zst
+
+    - name: Build MSI / portable zip
+      run: |
+        mkdir build
+        cd build
+        cmake \
+          -G"MSYS Makefiles" \
+          -DBUILD_TESTING=OFF \
+          -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin"
+          ..
+        make -j4
+
+    - name: Upload Artifacts (portable zip)
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows-portable
+        path: build/dist/windows_x64
+
+    - name: Upload Artifacts (MSI)
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows.msi
+        path: build/dist/*.msi
