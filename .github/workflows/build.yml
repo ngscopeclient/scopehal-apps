@@ -166,7 +166,7 @@ jobs:
         cmake \
           -G"MSYS Makefiles" \
           -DBUILD_TESTING=OFF \
-          -DWIXPATH="C:/Program Files (x86)/WiX Toolset v3.11/bin"
+          -DWIXPATH="C:/Program Files (x86)/WiX Toolset v3.11/bin" \
           ..
         make -j4
 
