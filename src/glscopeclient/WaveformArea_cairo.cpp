@@ -427,40 +427,47 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				continue;
 
 			auto sample = bus->m_samples[i];
-
-			uint64_t value = 0;
-			for(size_t j=0; j<sample.size(); j++)
-			{
-				if(sample[j])
-					value |= (1LU << j);
-			}
+			size_t nbits = sample.size();
+			string str;
 
 			char tmp[128];
-			if(sample.size() <= 4)
-				snprintf(tmp, sizeof(tmp), "%01lx", value);
-			else if(sample.size() <= 8)
-				snprintf(tmp, sizeof(tmp), "%02lx", value);
-			else if(sample.size() <= 12)
-				snprintf(tmp, sizeof(tmp), "%03lx", value);
-			else if(sample.size() <= 16)
-				snprintf(tmp, sizeof(tmp), "%04lx", value);
-			else if(sample.size() <= 20)
-				snprintf(tmp, sizeof(tmp), "%05lx", value);
-			else if(sample.size() <= 24)
-				snprintf(tmp, sizeof(tmp), "%06lx", value);
-			else if(sample.size() <= 28)
-				snprintf(tmp, sizeof(tmp), "%07lx", value);
-			else if(sample.size() <= 32)
-				snprintf(tmp, sizeof(tmp), "%08lx", value);
-			else
-				snprintf(tmp, sizeof(tmp), "%lx", value);
+			for(size_t base=0; base < nbits; base += 32)
+			{
+				size_t blockbits = min(nbits - base, (size_t)32);
+
+				uint32_t value = 0;
+				for(size_t j=0; j<blockbits; j++)
+				{
+					if(sample[j + base])
+						value |= (1LU << j);
+				}
+
+				if(blockbits <= 4)
+					snprintf(tmp, sizeof(tmp), "%01x", value);
+				else if(blockbits <= 8)
+					snprintf(tmp, sizeof(tmp), "%02x", value);
+				else if(blockbits <= 12)
+					snprintf(tmp, sizeof(tmp), "%03x", value);
+				else if(blockbits <= 16)
+					snprintf(tmp, sizeof(tmp), "%04x", value);
+				else if(blockbits <= 20)
+					snprintf(tmp, sizeof(tmp), "%05x", value);
+				else if(blockbits <= 24)
+					snprintf(tmp, sizeof(tmp), "%06x", value);
+				else if(blockbits <= 28)
+					snprintf(tmp, sizeof(tmp), "%07x", value);
+				else
+					snprintf(tmp, sizeof(tmp), "%08x", value);
+
+				str = string(tmp) + str;
+			}
 
 			RenderComplexSignal(
 				cr,
 				m_infoBoxRect.get_right(), m_plotRight,
 				xs, xe, 5,
 				ybot, ymid, ytop,
-				tmp,
+				str,
 				color);
 		}
 	}

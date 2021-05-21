@@ -87,10 +87,15 @@ void ScopeApp::run(
 				m_window->ImportWAVToExistingSession(f);
 		}
 
-		//Can only load one bin for now
+		//Can only load one bin or VCD
 		else if (f.find(".bin") != string::npos)
 		{
 			m_window->DoImportBIN(f);
+			break;
+		}
+		else if (f.find(".vcd") != string::npos)
+		{
+			m_window->DoImportVCD(f);
 			break;
 		}
 
