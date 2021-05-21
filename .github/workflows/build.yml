@@ -166,6 +166,7 @@ jobs:
         cmake \
           -G"MSYS Makefiles" \
           -DBUILD_TESTING=OFF \
+          -DWIXPATH="C:/Program Files (x86)/WiX Toolset v3.11/bin"
           ..
         make -j4
 
@@ -182,3 +183,15 @@ jobs:
           build/lib/log/liblog.dll
           build/lib/scopehal/libscopehal.dll
           build/lib/scopeprotocols/libscopeprotocols.dll
+
+    - name: Upload Artifacts (portable zip)
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows-portable
+        path: build/dist/windows_x64
+
+    - name: Upload Artifacts (MSI)
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-windows.msi
+        path: build/dist/*.msi
