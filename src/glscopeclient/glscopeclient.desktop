@@ -1,5 +1,6 @@
 [Desktop Entry]
+Encoding=UTF-8
 Name=glscopeclient
 Type=Application
 Exec=glscopeclient
-Categories=Electronics
+Categories=Development;Electronics
