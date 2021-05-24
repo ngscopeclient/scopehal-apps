@@ -118,14 +118,17 @@ bool InstrumentConnectionDialog::ValidateConfig()
 		return false;
 	if(m_transportBox.get_active_text() == "")
 		return false;
-	if(m_pathEntry.get_text() == "")
+	if(m_pathEntry.get_text() == "" && m_transportBox.get_active_text() != "null")
 		return false;
 
 	//For now, hard code check of null being legal only with siggen/demo
 	if(m_transportBox.get_active_text() != "null")
 		return true;
-	if( (m_driverBox.get_active_text() == "siggen") || (m_driverBox.get_active_text() == "demo") )
+	if( (m_driverBox.get_active_text() == "siggen") || (m_driverBox.get_active_text() == "demo") ){
+		if(m_pathEntry.get_text() == "")
+			m_pathEntry.set_text("null");
 		return true;
+	}
 
 	return false;
 }
