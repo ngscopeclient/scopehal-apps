@@ -66,7 +66,8 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	vector<string> drivers;
 	Oscilloscope::EnumDrivers(drivers);
 	for(auto d : drivers)
-		m_driverBox.append(d);
+		if(d != "siggen")
+			m_driverBox.append(d);
 
 	m_grid.attach_next_to(m_transportLabel, m_driverLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_transportLabel.set_text("Transport");
@@ -118,14 +119,17 @@ bool InstrumentConnectionDialog::ValidateConfig()
 		return false;
 	if(m_transportBox.get_active_text() == "")
 		return false;
-	if(m_pathEntry.get_text() == "")
+	if(m_pathEntry.get_text() == "" && m_transportBox.get_active_text() != "null")
 		return false;
 
 	//For now, hard code check of null being legal only with siggen/demo
 	if(m_transportBox.get_active_text() != "null")
 		return true;
-	if( (m_driverBox.get_active_text() == "siggen") || (m_driverBox.get_active_text() == "demo") )
+	if( (m_driverBox.get_active_text() == "siggen") || (m_driverBox.get_active_text() == "demo") ){
+		if(m_pathEntry.get_text() == "")
+			m_pathEntry.set_text("null");
 		return true;
+	}
 
 	return false;
 }
