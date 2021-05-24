@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
 					"\n"
 					"A driver and transport must always be selected.\n"
 					"\n"
-					"The NULL transport is only legal with the \"siggen\" or \"demo\" driver.",
+					"The NULL transport is only legal with the \"demo\" driver.",
 					false,
 					Gtk::MESSAGE_ERROR,
 					Gtk::BUTTONS_OK,

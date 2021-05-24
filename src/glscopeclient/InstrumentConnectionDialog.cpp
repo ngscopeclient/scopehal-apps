@@ -66,7 +66,8 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	vector<string> drivers;
 	Oscilloscope::EnumDrivers(drivers);
 	for(auto d : drivers)
-		m_driverBox.append(d);
+		if(d != "siggen")
+			m_driverBox.append(d);
 
 	m_grid.attach_next_to(m_transportLabel, m_driverLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_transportLabel.set_text("Transport");
