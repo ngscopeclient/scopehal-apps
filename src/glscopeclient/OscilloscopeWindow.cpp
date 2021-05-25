@@ -2068,10 +2068,7 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 
 			for(size_t i=0; i<area->GetOverlayCount(); i++)
 			{
-				//The ID table uses the FlowGraphNode pointer, not the OscilloscopeChannel pointer
-				auto filter = dynamic_cast<Filter*>(area->GetOverlay(i).m_channel);
-				auto node = static_cast<FlowGraphNode*>(filter);
-				int oid = table[node];
+				int oid = table[area->GetOverlay(i).m_channel];
 
 				snprintf(tmp, sizeof(tmp), "                overlay%d:\n", oid);
 				config += tmp;
