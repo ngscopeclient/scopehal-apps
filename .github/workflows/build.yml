@@ -126,6 +126,9 @@ jobs:
 
     steps:
 
+    - run: git config --global core.autocrlf input
+      shell: bash
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
@@ -144,41 +147,31 @@ jobs:
           mingw-w64-x86_64-gtkmm3
           mingw-w64-x86_64-yaml-cpp
           mingw-w64-x86_64-glew
+          tree
 
-    - name: Clone and Build FFTS Library
+    - name: Build and install FFTS Library
       run: |
-        git clone https://github.com/anthonix/ffts.git ../ffts
-        cd ../ffts
-        mkdir build
-        cd build
-        cmake \
-          -G"MSYS Makefiles" \
-          -DCMAKE_INSTALL_PREFIX=$MSYSTEM_PREFIX \
-          -DENABLE_SHARED=ON \
-          ..
-        make -j4
-        make install
+        cd msys2/mingw-w64-ffts
+        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf --nocheck
+        pacman -U --noconfirm *.zst
 
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake \
+        MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" cmake \
           -G"MSYS Makefiles" \
+          -DCMAKE_INSTALL_PREFIX=$MINGW_PREFIX \
           -DBUILD_TESTING=OFF \
           ..
         make -j4
+
+        mkdir dist
+        make DESTDIR=dist install
+        tree dist
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows
-        path: |
-          build/src/glscopeclient/glscopeclient.exe
-          build/src/glscopeclient/gradients/*
-          build/src/glscopeclient/shaders/*
-          build/src/glscopeclient/styles/*
-          build/lib/graphwidget/libgraphwidget.dll
-          build/lib/log/liblog.dll
-          build/lib/scopehal/libscopehal.dll
-          build/lib/scopeprotocols/libscopeprotocols.dll
+        path: build/dist
