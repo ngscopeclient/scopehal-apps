@@ -75,6 +75,7 @@ add_executable(glscopeclient
 	WaveformArea_cairo.cpp
 	WaveformGroup.cpp
 	WaveformGroupPropertiesDialog.cpp
+	WaveformProcessingThread.cpp
 
 	main.cpp
 )

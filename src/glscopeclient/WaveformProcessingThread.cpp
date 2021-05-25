@@ -30,53 +30,43 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief Waveform processing logic
  */
-#ifndef glscopeclient_h
-#define glscopeclient_h
+#include "glscopeclient.h"
 
-#define GL_GLEXT_PROTOTYPES
+using namespace std;
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/Multimeter.h"
-#include "../scopehal/OscilloscopeChannel.h"
-#include "../scopehal/Filter.h"
+mutex g_waveformReadyMutex;
+condition_variable g_waveformReadyCondition;
 
-#include <chrono>
-#include <condition_variable>
-#include <thread>
-#include <vector>
+bool g_waveformReady = false;
 
-#include <giomm.h>
-#include <gtkmm.h>
+void WaveformProcessingThread(OscilloscopeWindow* window)
+{
+	#ifndef _WIN32
+	pthread_setname_np(pthread_self(), "WaveformProcessingThread");
+	#endif
 
-#include <GL/glew.h>
-#include <GL/gl.h>
+	while(!g_app->IsTerminating())
+	{
+		//Wait for data to be available from all scopes
+		if(!window->CheckForPendingWaveforms())
+		{
+			this_thread::sleep_for(chrono::milliseconds(50));
+			continue;
+		}
 
-#ifdef _WIN32
-#include <GL/glcorearb.h>
-#include <GL/glext.h>
-#endif
+		//We've got data
 
-#include "Framebuffer.h"
-#include "Program.h"
-#include "Shader.h"
-#include "ShaderStorageBuffer.h"
-#include "Texture.h"
-#include "VertexArray.h"
-#include "VertexBuffer.h"
+		//Unblock the UI threads
+		{
+			lock_guard<mutex> lock(g_waveformReadyMutex);
+			g_waveformReady = true;
+		}
+		g_waveformReadyCondition.notify_one();
 
-#include "OscilloscopeWindow.h"
-#include "ScopeApp.h"
-
-double GetTime();
-extern bool g_noglint64;
-
-void WaveformProcessingThread(OscilloscopeWindow* window);
-
-extern bool g_waveformReady;
-extern std::mutex g_waveformReadyMutex;
-extern std::condition_variable g_waveformReadyCondition;
-
-#endif
+		//Wait for the UI to say that it's processed the data and we can resume polling
+		unique_lock<mutex> lock(g_waveformReadyMutex);
+		g_waveformReadyCondition.wait(lock);
+	}
+}

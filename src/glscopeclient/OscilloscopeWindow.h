@@ -234,7 +234,6 @@ public:
 
 	//Event handlers
 	bool OnTimer(int timer);
-	bool PollScopes();
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
@@ -378,6 +377,13 @@ public:
 
 	//True if file load is in progress
 	bool m_loadInProgress;
+
+	//Thread object for waveform processing / DSP
+	std::thread m_waveformProcessingThread;
+
+	//Waveform downloading and processing
+	void PollScopes();
+	bool CheckForPendingWaveforms();
 };
 
 #endif

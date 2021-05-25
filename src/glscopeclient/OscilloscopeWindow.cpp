@@ -74,6 +74,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
+	, m_waveformProcessingThread(WaveformProcessingThread, this)
 {
 	SetTitle();
 
@@ -490,7 +491,16 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		return false;
 
 	if(m_triggerArmed)
-		PollScopes();
+	{
+		unique_lock<mutex> lock(g_waveformReadyMutex);
+		if(	g_waveformReady ||
+			(g_waveformReadyCondition.wait_for(lock, chrono::nanoseconds(1)) == cv_status::no_timeout) )
+		{
+			g_waveformReady = false;
+			PollScopes();
+			g_app->DispatchPendingEvents();
+		}
+	}
 
 	//Discard all pending waveform data if the trigger isn't armed.
 	//Failure to do this can lead to a spurious trigger after we wanted to stop.
@@ -2808,96 +2818,72 @@ void OscilloscopeWindow::GarbageCollectAnalyzers()
 	RefreshAnalyzerMenu();
 }
 
-bool OscilloscopeWindow::PollScopes()
+/**
+	@brief See if we have waveforms ready to process
+ */
+bool OscilloscopeWindow::CheckForPendingWaveforms()
 {
-	//Avoid infinite loop if we have no scope to poll
+	//No scopes to poll? Nothing to do
 	if(m_scopes.empty())
 		return false;
 
-	bool had_waveforms = false;
-
-	double tstart = GetTime();
-
-	bool pending = true;
-	while(pending)
+	//Wait for every scope to have triggered
+	for(auto scope : m_scopes)
 	{
-		//Wait for every scope to have triggered
-		bool ready = true;
-		for(auto scope : m_scopes)
+		if(!scope->HasPendingWaveforms())
+			return false;
+	}
+
+	//Keep track of when the primary instrument triggers.
+	if(m_multiScopeFreeRun)
+	{
+		//See when the primary triggered
+		if( (m_tPrimaryTrigger < 0) && m_scopes[0]->HasPendingWaveforms() )
+			m_tPrimaryTrigger = GetTime();
+
+		//All instruments should trigger within 1 sec (arbitrary threshold) of the primary.
+		//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
+		double twait = GetTime() - m_tPrimaryTrigger;
+		if( (m_tPrimaryTrigger > 0) && ( twait > 1 ) )
 		{
-			if(!scope->HasPendingWaveforms())
+			LogWarning("Timed out waiting for one or more secondary instruments to trigger (%.2f ms). Resetting...\n",
+				twait*1000);
+
+			//Cancel any pending triggers
+			OnStop();
+
+			//Discard all pending waveform data
+			for(auto scope : m_scopes)
 			{
-				ready = false;
-				break;
+				scope->IDPing();
+				scope->ClearPendingWaveforms();
 			}
-		}
 
-		//Keep track of when the primary instrument triggers.
-		if(m_multiScopeFreeRun)
-		{
-			//See when the primary triggered
-			if( (m_tPrimaryTrigger < 0) && m_scopes[0]->HasPendingWaveforms() )
-				m_tPrimaryTrigger = GetTime();
-
-			//All instruments should trigger within 1 sec (arbitrary threshold) of the primary.
-			//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
-			double twait = GetTime() - m_tPrimaryTrigger;
-			if( (m_tPrimaryTrigger > 0) && ( twait > 1 ) )
-			{
-				LogWarning("Timed out waiting for one or more secondary instruments to trigger (%.2f ms). Resetting...\n",
-					twait*1000);
-
-				//Cancel any pending triggers
-				OnStop();
-
-				//Discard all pending waveform data
-				for(auto scope : m_scopes)
-				{
-					scope->IDPing();
-					scope->ClearPendingWaveforms();
-				}
-
-				//Re-arm the trigger and get back to polling
-				OnStart();
-				return false;
-			}
-		}
-
-		//If not ready, stop
-		if(!ready)
-			break;
-
-		//We have data to download
-		had_waveforms = true;
-
-		//Process the waveform data from each instrument
-		//TODO: handle waveforms coming in faster than display framerate can keep up
-		pending = true;
-		for(auto scope : m_scopes)
-		{
-			OnWaveformDataReady(scope);
-
-			if(!scope->HasPendingWaveforms())
-				pending = false;
-		}
-
-		//Update filters etc once every instrument has been updated
-		OnAllWaveformsUpdated();
-
-		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
-		if(m_multiScopeFreeRun)
-			ArmTrigger(false);
-
-		//Pull as many waveforms as we can in 50 ms, then handle events
-		double dt = GetTime() - tstart;
-		if(dt > 0.05)
-		{
-			g_app->DispatchPendingEvents();
-			break;
+			//Re-arm the trigger and get back to polling
+			OnStart();
+			return false;
 		}
 	}
 
-	return had_waveforms;
+	//If we get here, we had waveforms on all instruments
+	return true;
+}
+
+void OscilloscopeWindow::PollScopes()
+{
+	//Process the waveform data from each instrument
+	for(auto scope : m_scopes)
+		OnWaveformDataReady(scope);
+
+	//Release the waveform processing thread to start polling for updates
+	g_waveformReadyCondition.notify_one();
+
+	//Update filters etc once every instrument has been updated
+	OnAllWaveformsUpdated();
+
+	//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+	if(m_multiScopeFreeRun)
+		ArmTrigger(false);
 }
 
 /**
