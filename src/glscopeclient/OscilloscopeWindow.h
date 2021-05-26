@@ -381,7 +381,6 @@ public:
 	std::thread m_waveformProcessingThread;
 
 	//Waveform downloading and processing
-	void PollScopes();
 	bool CheckForPendingWaveforms();
 	void DownloadWaveforms();
 

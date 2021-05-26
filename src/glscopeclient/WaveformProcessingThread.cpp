@@ -57,7 +57,7 @@ void WaveformProcessingThread(OscilloscopeWindow* window)
 		}
 
 		//We've got data. Download it.
-		//window->DownloadWaveforms();
+		window->DownloadWaveforms();
 
 		//Unblock the UI threads
 		{

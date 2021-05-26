@@ -503,12 +503,30 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 		{
 			g_waveformReady = false;
 
-			//TODO: handle multiple scopes better
+			//Clear old waveform timestamps for WFM/s display
 			m_lastWaveformTimes.push_back(GetTime());
 			while(m_lastWaveformTimes.size() > 10)
 				m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
 
-			PollScopes();
+			//Crunch the new waveform
+			{
+				lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
+
+				//Update the history windows
+				for(auto scope : m_scopes)
+					m_historyWindows[scope]->OnWaveformDataReady();
+
+				//Update filters etc once every instrument has been updated
+				OnAllWaveformsUpdated();
+			}
+
+			//Release the waveform processing thread
+			g_waveformReadyCondition.notify_one();
+
+			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+			if(m_multiScopeFreeRun)
+				ArmTrigger(false);
+
 			g_app->DispatchPendingEvents();
 		}
 	}
@@ -2929,27 +2947,6 @@ void OscilloscopeWindow::DownloadWaveforms()
 		//Download the data
 		scope->PopPendingWaveform();
 	}
-}
-
-void OscilloscopeWindow::PollScopes()
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	DownloadWaveforms();
-
-	//Update the history windows
-	for(auto scope : m_scopes)
-		m_historyWindows[scope]->OnWaveformDataReady();
-
-	//Update filters etc once every instrument has been updated
-	OnAllWaveformsUpdated();
-
-	//Release the waveform processing thread
-	g_waveformReadyCondition.notify_one();
-
-	//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
-	if(m_multiScopeFreeRun)
-		ArmTrigger(false);
 }
 
 /**
