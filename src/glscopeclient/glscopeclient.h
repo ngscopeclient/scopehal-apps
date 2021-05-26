@@ -43,10 +43,12 @@
 #include "../scopehal/OscilloscopeChannel.h"
 #include "../scopehal/Filter.h"
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <thread>
 #include <vector>
+#include "Event.h"
 
 #include <giomm.h>
 #include <gtkmm.h>
@@ -75,8 +77,7 @@ extern bool g_noglint64;
 
 void WaveformProcessingThread(OscilloscopeWindow* window);
 
-extern bool g_waveformReady;
-extern std::mutex g_waveformReadyMutex;
-extern std::condition_variable g_waveformReadyCondition;
+extern Event g_waveformReadyEvent;
+extern Event g_waveformProcessedEvent;
 
 #endif

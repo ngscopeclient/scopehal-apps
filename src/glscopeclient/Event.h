@@ -26,40 +26,57 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
+#ifndef Event_h
+#define Event_h
 
 /**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Waveform processing logic
+	@brief Synchronization primitive for sending a "something is ready" notification to a thread
+
+	Unlike std::condition_variable, an Event can be signaled before the receiver has started to wait.
  */
-#include "glscopeclient.h"
-
-using namespace std;
-
-Event g_waveformReadyEvent;
-Event g_waveformProcessedEvent;
-
-void WaveformProcessingThread(OscilloscopeWindow* window)
+class Event
 {
-	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "WaveformThread");	//can't use full name because longer than TASK_COMM_LEN
-	#endif
+public:
+	Event()
+	{ m_ready = false; }
 
-	while(!window->m_shuttingDown)
+	/**
+		@brief Sends an event to the receiving thread
+	 */
+	void Signal()
 	{
-		//Wait for data to be available from all scopes
-		if(!window->CheckForPendingWaveforms())
+		m_ready = true;
+		m_cond.notify_one();
+	}
+
+	/**
+		@brief Blocks until the event is signaled
+	 */
+	void Block()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_cond.wait(lock, [&]{ return m_ready.load(); });
+		m_ready = false;
+	}
+
+	/**
+		@brief Checks if the event is signaled, and returns immediately if it's not
+	 */
+	bool Peek()
+	{
+		if(m_ready)
 		{
-			this_thread::sleep_for(chrono::milliseconds(50));
-			continue;
+			m_ready = false;
+			return true;
 		}
 
-		//We've got data. Download it, then run the filter graph
-		window->DownloadWaveforms();
-		window->RefreshAllFilters();
-
-		//Unblock the UI threads, then wait for acknowledgement that it's processed
-		g_waveformReadyEvent.Signal();
-		g_waveformProcessedEvent.Block();
+		return false;
 	}
-}
+
+protected:
+	std::mutex m_mutex;
+	std::condition_variable m_cond;
+	std::atomic_bool m_ready;
+};
+
+#endif

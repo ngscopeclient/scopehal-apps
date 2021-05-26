@@ -144,7 +144,7 @@ void OscilloscopeWindow::SetTitle()
 OscilloscopeWindow::~OscilloscopeWindow()
 {
 	//Terminate the waveform processing thread
-	g_waveformReadyCondition.notify_one();
+	g_waveformProcessedEvent.Signal();
 	m_waveformProcessingThread.join();
 }
 
@@ -499,12 +499,8 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 	if(m_triggerArmed)
 	{
-		unique_lock<mutex> lock(g_waveformReadyMutex);
-		if(	g_waveformReady ||
-			(g_waveformReadyCondition.wait_for(lock, chrono::nanoseconds(1)) == cv_status::no_timeout) )
+		if(g_waveformReadyEvent.Peek())
 		{
-			g_waveformReady = false;
-
 			//Clear old waveform timestamps for WFM/s display
 			m_lastWaveformTimes.push_back(GetTime());
 			while(m_lastWaveformTimes.size() > 10)
@@ -523,7 +519,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			}
 
 			//Release the waveform processing thread
-			g_waveformReadyCondition.notify_one();
+			g_waveformProcessedEvent.Signal();
 
 			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
 			if(m_multiScopeFreeRun)
