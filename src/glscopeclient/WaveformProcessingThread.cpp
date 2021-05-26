@@ -47,7 +47,7 @@ void WaveformProcessingThread(OscilloscopeWindow* window)
 	pthread_setname_np(pthread_self(), "WaveformProcessingThread");
 	#endif
 
-	while(!g_app->IsTerminating())
+	while(!window->m_shuttingDown)
 	{
 		//Wait for data to be available from all scopes
 		if(!window->CheckForPendingWaveforms())
@@ -56,7 +56,8 @@ void WaveformProcessingThread(OscilloscopeWindow* window)
 			continue;
 		}
 
-		//We've got data
+		//We've got data. Download it.
+		//window->DownloadWaveforms();
 
 		//Unblock the UI threads
 		{

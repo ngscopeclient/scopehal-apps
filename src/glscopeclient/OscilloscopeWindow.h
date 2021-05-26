@@ -322,7 +322,6 @@ public:
 	std::vector<Oscilloscope*> m_scopes;
 
 	//Status polling
-	void OnWaveformDataReady(Oscilloscope* scope);
 	void OnAllWaveformsUpdated(bool reconfiguring = false);
 
 	//Performance profiling
@@ -384,6 +383,14 @@ public:
 	//Waveform downloading and processing
 	void PollScopes();
 	bool CheckForPendingWaveforms();
+	void DownloadWaveforms();
+
+	/**
+		@brief Hold this any time we touch waveform data.
+
+		This prevents waveform processing from happening while critical rendering logic is touching waveform data.
+	 */
+	std::recursive_mutex m_waveformDataMutex;
 };
 
 #endif

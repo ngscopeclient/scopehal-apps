@@ -143,6 +143,7 @@ void OscilloscopeWindow::SetTitle()
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	m_waveformProcessingThread.join();
 }
 
 /**
@@ -488,7 +489,11 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
 	if(m_shuttingDown)
+	{
+		for(auto it : m_historyWindows)
+			it.second->close();
 		return false;
+	}
 
 	if(m_triggerArmed)
 	{
@@ -497,6 +502,12 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			(g_waveformReadyCondition.wait_for(lock, chrono::nanoseconds(1)) == cv_status::no_timeout) )
 		{
 			g_waveformReady = false;
+
+			//TODO: handle multiple scopes better
+			m_lastWaveformTimes.push_back(GetTime());
+			while(m_lastWaveformTimes.size() > 10)
+				m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
+
 			PollScopes();
 			g_app->DispatchPendingEvents();
 		}
@@ -610,6 +621,8 @@ bool OscilloscopeWindow::on_delete_event(GdkEventAny* /*any_event*/)
  */
 void OscilloscopeWindow::CloseSession()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
     //Close preferences dialog, if it exists
     if(m_preferenceDialog)
     {
@@ -706,6 +719,8 @@ void OscilloscopeWindow::OnFileImport()
 	if(response != Gtk::RESPONSE_OK)
 		return;
 
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	auto filterName = dlg.get_filter()->get_name();
 	if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
@@ -722,6 +737,8 @@ void OscilloscopeWindow::OnFileImport()
  */
 MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& name, const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	//Setup
 	CloseSession();
 	m_currentFileName = filename;
@@ -750,6 +767,8 @@ MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& nam
  */
 MockOscilloscope* OscilloscopeWindow::SetupExistingSessionForImport()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	auto scope = dynamic_cast<MockOscilloscope*>(m_scopes[0]);
 	if(scope == NULL)
 	{
@@ -802,6 +821,8 @@ void OscilloscopeWindow::OnImportComplete()
  */
 void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing CSV file \"%s\" to new session\n", filename.c_str());
 
 	auto scope = SetupNewSessionForImport("CSV Import", filename);
@@ -831,6 +852,8 @@ void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
  */
 void OscilloscopeWindow::ImportCSVToExistingSession(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing CSV file \"%s\" to current session\n", filename.c_str());
 
 	auto scope = SetupExistingSessionForImport();
@@ -858,6 +881,8 @@ void OscilloscopeWindow::ImportCSVToExistingSession(const string& filename)
  */
 void OscilloscopeWindow::ImportWAVToNewSession(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing WAV file \"%s\" to new session\n", filename.c_str());
 
 	auto scope = SetupNewSessionForImport("WAV Import", filename);
@@ -887,6 +912,8 @@ void OscilloscopeWindow::ImportWAVToNewSession(const string& filename)
  */
 void OscilloscopeWindow::ImportWAVToExistingSession(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing WAV file \"%s\" to current session\n", filename.c_str());
 
 	auto scope = SetupExistingSessionForImport();
@@ -914,6 +941,8 @@ void OscilloscopeWindow::ImportWAVToExistingSession(const string& filename)
  */
 void OscilloscopeWindow::DoImportBIN(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing BIN file \"%s\"\n", filename.c_str());
 	{
 		LogIndenter li;
@@ -942,6 +971,8 @@ void OscilloscopeWindow::DoImportBIN(const string& filename)
  */
 void OscilloscopeWindow::DoImportVCD(const string& filename)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	LogDebug("Importing VCD file \"%s\"\n", filename.c_str());
 	{
 		LogIndenter li;
@@ -1004,6 +1035,8 @@ void OscilloscopeWindow::OnFileOpen()
  */
 void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, bool loadWaveform, bool reconnect)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	m_currentFileName = filename;
 
 	m_loadInProgress = true;
@@ -2144,6 +2177,8 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
  */
 void OscilloscopeWindow::SerializeWaveforms(IDTable& table)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	char cwd[PATH_MAX];
 	getcwd(cwd, PATH_MAX);
 	chdir(m_currentDataDirName.c_str());
@@ -2546,6 +2581,8 @@ void OscilloscopeWindow::OnFullscreen()
 
 void OscilloscopeWindow::OnClearSweeps()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	//TODO: clear regular waveform data and history too?
 
 	//Clear integrated data from all pfilters
@@ -2689,6 +2726,8 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 	float alpha = GetTraceAlpha();
 	if(geometry_dirty || position_dirty)
 	{
+		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 		//Make the list of data to update
 		vector<WaveformRenderData*> data;
 		float coeff = -1;
@@ -2869,17 +2908,44 @@ bool OscilloscopeWindow::CheckForPendingWaveforms()
 	return true;
 }
 
-void OscilloscopeWindow::PollScopes()
+/**
+	@brief Pull the waveform data out of the queue and make i t current
+ */
+void OscilloscopeWindow::DownloadWaveforms()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	//Process the waveform data from each instrument
 	for(auto scope : m_scopes)
-		OnWaveformDataReady(scope);
+	{
+		//Make sure we don't free the old waveform data
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				chan->Detach(j);
+		}
 
-	//Release the waveform processing thread to start polling for updates
-	g_waveformReadyCondition.notify_one();
+		//Download the data
+		scope->PopPendingWaveform();
+	}
+}
+
+void OscilloscopeWindow::PollScopes()
+{
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	DownloadWaveforms();
+
+	//Update the history windows
+	for(auto scope : m_scopes)
+		m_historyWindows[scope]->OnWaveformDataReady();
 
 	//Update filters etc once every instrument has been updated
 	OnAllWaveformsUpdated();
+
+	//Release the waveform processing thread
+	g_waveformReadyCondition.notify_one();
 
 	//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
 	if(m_multiScopeFreeRun)
@@ -2887,44 +2953,12 @@ void OscilloscopeWindow::PollScopes()
 }
 
 /**
-	@brief Handles new data arriving for a specific instrument
- */
-void OscilloscopeWindow::OnWaveformDataReady(Oscilloscope* scope)
-{
-	//TODO: handle multiple scopes better
-	m_lastWaveformTimes.push_back(GetTime());
-	while(m_lastWaveformTimes.size() > 10)
-		m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
-
-	//make sure we close fully
-	if(!is_visible())
-	{
-		for(auto it : m_historyWindows)
-			it.second->close();
-	}
-
-	//Make sure we don't free the old waveform data
-	//LogTrace("Detaching\n");
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
-	{
-		auto chan = scope->GetChannel(i);
-		for(size_t j=0; j<chan->GetStreamCount(); j++)
-			chan->Detach(j);
-	}
-
-	//Download the data
-	//LogTrace("Acquiring\n");
-	scope->PopPendingWaveform();
-
-	//Update the history window
-	m_historyWindows[scope]->OnWaveformDataReady();
-}
-
-/**
 	@brief Handles updating things after all instruments have downloaded their new waveforms
  */
 void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	m_totalWaveforms ++;
 
 	//Update the status
@@ -3027,6 +3061,8 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring)
 
 void OscilloscopeWindow::RefreshAllFilters()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	SyncFilterColors();
 
 	Filter::ClearAnalysisCache();
@@ -3240,6 +3276,8 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
  */
 void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
 	//Stop triggering if we select a saved waveform
 	OnStop();
 
@@ -3514,7 +3552,7 @@ void OscilloscopeWindow::OnAboutDialog()
 
 	aboutDialog.set_logo_default();
 	aboutDialog.set_version(string("Version ") + GLSCOPECLIENT_VERSION);
-	aboutDialog.set_copyright("Copyright © 2012-2020 Andrew D. Zonenberg and contributors");
+	aboutDialog.set_copyright("Copyright © 2012-2021 Andrew D. Zonenberg and contributors");
 	aboutDialog.set_license(
 		"Redistribution and use in source and binary forms, with or without modification, "
 		"are permitted provided that the following conditions are met:\n\n"
@@ -3541,7 +3579,9 @@ void OscilloscopeWindow::OnAboutDialog()
 		"Andrew D. Zonenberg",
 		"antikerneldev",
 		"Benjamin Vernoux",
+		"Dave Marples",
 		"four0four",
+		"Francisco Sedano",
 		"Katharina B",
 		"Kenley Cheung",
 		"Mike Walters",
@@ -3550,6 +3590,8 @@ void OscilloscopeWindow::OnAboutDialog()
 		"pd0wm"
 		"randomplum",
 		"rqou",
+		"RX14",
+		"sam210723",
 		"smunaut",
 		"tarunik",
 		"Tom Verbeuere",

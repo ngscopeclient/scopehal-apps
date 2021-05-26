@@ -380,6 +380,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		return true;
 
 	LogIndenter li;
+	lock_guard<recursive_mutex> lock(m_parent->m_waveformDataMutex);
 
 	//Overlay positions need to be calculated before geometry download,
 	//since scaling data is pushed to the GPU at this time
