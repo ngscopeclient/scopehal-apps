@@ -36,6 +36,6 @@
 #include <random>
 
 extern MockOscilloscope g_scope;
-extern std::mt19937 g_rng;
+extern std::minstd_rand g_rng;
 
 #endif

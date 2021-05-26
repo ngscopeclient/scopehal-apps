@@ -40,7 +40,7 @@
 using namespace std;
 
 MockOscilloscope g_scope("Test Scope", "Antikernel Labs", "12345");
-mt19937 g_rng;
+minstd_rand g_rng;
 
 int main(int argc, char* argv[])
 {
