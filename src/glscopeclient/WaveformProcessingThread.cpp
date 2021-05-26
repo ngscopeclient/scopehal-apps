@@ -44,7 +44,7 @@ bool g_waveformReady = false;
 void WaveformProcessingThread(OscilloscopeWindow* window)
 {
 	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "WaveformProcessingThread");
+	pthread_setname_np(pthread_self(), "WaveformThread");	//can't use full name because longer than TASK_COMM_LEN
 	#endif
 
 	while(!window->m_shuttingDown)
@@ -56,8 +56,9 @@ void WaveformProcessingThread(OscilloscopeWindow* window)
 			continue;
 		}
 
-		//We've got data. Download it.
+		//We've got data. Download it, then run the filter graph
 		window->DownloadWaveforms();
+		window->RefreshAllFilters();
 
 		//Unblock the UI threads
 		{

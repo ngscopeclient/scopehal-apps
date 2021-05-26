@@ -143,6 +143,8 @@ void OscilloscopeWindow::SetTitle()
  */
 OscilloscopeWindow::~OscilloscopeWindow()
 {
+	//Terminate the waveform processing thread
+	g_waveformReadyCondition.notify_one();
 	m_waveformProcessingThread.join();
 }
 
@@ -517,7 +519,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 					m_historyWindows[scope]->OnWaveformDataReady();
 
 				//Update filters etc once every instrument has been updated
-				OnAllWaveformsUpdated();
+				OnAllWaveformsUpdated(false, false);
 			}
 
 			//Release the waveform processing thread
@@ -2952,7 +2954,7 @@ void OscilloscopeWindow::DownloadWaveforms()
 /**
 	@brief Handles updating things after all instruments have downloaded their new waveforms
  */
-void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring)
+void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring, bool updateFilters)
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
@@ -2960,7 +2962,8 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring)
 
 	//Update the status
 	UpdateStatusBar();
-	RefreshAllFilters();
+	if(updateFilters)
+		RefreshAllFilters();
 
 	//Update protocol analyzers
 	//TODO: ideal would be to delete all old packets from analyzers then update them with current ones.

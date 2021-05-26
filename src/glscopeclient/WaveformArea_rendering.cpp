@@ -380,69 +380,75 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		return true;
 
 	LogIndenter li;
-	lock_guard<recursive_mutex> lock(m_parent->m_waveformDataMutex);
+	float persistDecay = GetPersistenceDecayCoefficient();
 
 	//Overlay positions need to be calculated before geometry download,
 	//since scaling data is pushed to the GPU at this time
 	CalculateOverlayPositions();
 
-	//Pull vertical size from the scope early on no matter how we're rendering
-	m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
-
-	//Update geometry if needed
-	float persistDecay = GetPersistenceDecayCoefficient();
-	if(m_geometryDirty || m_positionDirty)
+	//This block cares about waveform data.
 	{
-		double alpha = m_parent->GetTraceAlpha();
+		lock_guard<recursive_mutex> lock(m_parent->m_waveformDataMutex);
 
-		//Need to get render data first, since this creates buffers we might need in MapBuffers
-		vector<WaveformRenderData*> data;
-		GetAllRenderData(data);
+		//Pull vertical size from the scope early on no matter how we're rendering
+		m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
 
-		//Do the actual update
-		MapAllBuffers(m_geometryDirty);
-		for(auto d : data)
-			PrepareGeometry(d, m_geometryDirty, alpha, persistDecay);
-		UnmapAllBuffers(m_geometryDirty);
+		//Update geometry if needed
+		if(m_geometryDirty || m_positionDirty)
+		{
+			double alpha = m_parent->GetTraceAlpha();
 
-		m_geometryDirty = false;
-		m_positionDirty = false;
+			//Need to get render data first, since this creates buffers we might need in MapBuffers
+			vector<WaveformRenderData*> data;
+			GetAllRenderData(data);
+
+			//Do the actual update
+			MapAllBuffers(m_geometryDirty);
+			for(auto d : data)
+				PrepareGeometry(d, m_geometryDirty, alpha, persistDecay);
+			UnmapAllBuffers(m_geometryDirty);
+
+			m_geometryDirty = false;
+			m_positionDirty = false;
+		}
+
+		//Everything we draw is 2D painter's algorithm.
+		//Turn off some stuff we don't need, but leave blending on.
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
+
+		//On the first frame, figure out what the actual screen surface FBO is.
+		if(m_firstFrame)
+		{
+			m_windowFramebuffer.InitializeFromCurrentFramebuffer();
+			m_firstFrame = false;
+		}
+
+		//Draw the main waveform
+		if(IsAnalog() || IsDigital() )
+			RenderTrace(m_waveformRenderData);
+
+		//Launch software rendering passes and push the resulting data to the GPU
+		ComputeAndDownloadCairoOverlays();
+
+		//Do compute shader rendering for digital waveforms
+		for(auto overlay : m_overlays)
+		{
+			if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+				continue;
+
+			//Create the texture
+			auto wdat = m_overlayRenderData[overlay];
+			wdat->m_waveformTexture.Bind();
+			wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
+			ResetTextureFiltering();
+
+			RenderTrace(wdat);
+		}
 	}
 
-	//Everything we draw is 2D painter's algorithm.
-	//Turn off some stuff we don't need, but leave blending on.
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-
-	//On the first frame, figure out what the actual screen surface FBO is.
-	if(m_firstFrame)
-	{
-		m_windowFramebuffer.InitializeFromCurrentFramebuffer();
-		m_firstFrame = false;
-	}
-
-	//Draw the main waveform
-	if(IsAnalog() || IsDigital() )
-		RenderTrace(m_waveformRenderData);
-
-	//Launch software rendering passes and push the resulting data to the GPU
+	//Underlays don't care about the mutex
 	ComputeAndDownloadCairoUnderlays();
-	ComputeAndDownloadCairoOverlays();
-
-	//Do compute shader rendering for digital waveforms
-	for(auto overlay : m_overlays)
-	{
-		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-			continue;
-
-		//Create the texture
-		auto wdat = m_overlayRenderData[overlay];
-		wdat->m_waveformTexture.Bind();
-		wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-		ResetTextureFiltering();
-
-		RenderTrace(wdat);
-	}
 
 	//Make sure all compute shaders are done before we composite
 	m_digitalWaveformComputeProgram.MemoryBarrier();

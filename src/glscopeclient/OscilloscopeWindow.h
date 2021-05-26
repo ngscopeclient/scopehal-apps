@@ -322,7 +322,7 @@ public:
 	std::vector<Oscilloscope*> m_scopes;
 
 	//Status polling
-	void OnAllWaveformsUpdated(bool reconfiguring = false);
+	void OnAllWaveformsUpdated(bool reconfiguring = false, bool updateFilters = true);
 
 	//Performance profiling
 	double m_tArm;
