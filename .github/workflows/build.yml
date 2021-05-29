@@ -140,20 +140,15 @@ jobs:
         install: >-
           git
           make
-          mingw-w64-x86_64-gcc
           mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-glm
-          mingw-w64-x86_64-libsigc++
-          mingw-w64-x86_64-gtkmm3
-          mingw-w64-x86_64-yaml-cpp
+          mingw-w64-x86_64-ffts
+          mingw-w64-x86_64-gcc
           mingw-w64-x86_64-glew
+          mingw-w64-x86_64-glm
+          mingw-w64-x86_64-gtkmm3
+          mingw-w64-x86_64-libsigc++
+          mingw-w64-x86_64-yaml-cpp
           tree
-
-    - name: Build and install FFTS Library
-      run: |
-        cd msys2/mingw-w64-ffts
-        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf --nocheck
-        pacman -U --noconfirm *.zst
 
     - name: Build
       run: |
