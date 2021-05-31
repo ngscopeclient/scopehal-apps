@@ -14,11 +14,6 @@ find_package(Git)
 # Additional libraries on Windows
 if(WIN32)
 	set(WIN_LIBS shlwapi)
-
-	# For some reason, find_package does not manage to find glew32 on Windows. Hardcoding for now.
-	# note by @spookyvision: maybe the addition of GLEW::GLEW below has fixed it and this special case 
-	# can be removed? TODO test
-	set(GLEW_LIBRARIES "glew32")
 endif()
 
 #Set up include paths
@@ -92,7 +87,6 @@ target_link_libraries(glscopeclient
 	${SIGCXX_LIBRARIES}
 	${OPENGL_LIBRARY}
 	${WIN_LIBS}
-	${GLEW_LIBRARIES}
 	GLEW::GLEW
 	${YAML_LIBRARIES}
 	)
