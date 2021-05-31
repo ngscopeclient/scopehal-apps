@@ -471,6 +471,8 @@ protected:
 	} m_clickLocation;
 
 	ClickLocation HitTest(double x, double y);
+	StreamDescriptor GetWaveformAtPoint(int x, int y);
+	int64_t SnapX(int64_t time, int x, int y);
 
 	//Location of what the mouse was over last time it moved
 	ClickLocation m_mouseElementPosition;

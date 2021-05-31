@@ -227,7 +227,7 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	}
 
 	//Look up the time and voltage of our click (if in the plot area)
-	int64_t timestamp = XPositionToXAxisUnits(event->x);
+	int64_t timestamp = SnapX(XPositionToXAxisUnits(event->x), event->x, event->y);
 	float voltage = YPositionToYAxisUnits(event->y);
 
 	if(event->type == GDK_BUTTON_PRESS)
@@ -717,6 +717,9 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 
 		case DRAG_CURSOR_0:
 
+			//Snap to the closest toggle
+			timestamp = SnapX(timestamp, event->x, event->y);
+
 			switch(m_group->m_cursorConfig)
 			{
 				case WaveformGroup::CURSOR_X_DUAL:
@@ -764,6 +767,10 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			break;
 
 		case DRAG_CURSOR_1:
+
+			//Snap to the closest toggle
+			timestamp = SnapX(timestamp, event->x, event->y);
+
 			switch(m_group->m_cursorConfig)
 			{
 				case WaveformGroup::CURSOR_X_DUAL:
@@ -1699,4 +1706,114 @@ void WaveformArea::HighlightPacketAtTime(PacketDecoder* p, int64_t time)
 
 	//Hit?
 	a->SelectPacket(packetTimestamp, packetOffset);
+}
+
+/**
+	@brief Find the waveform that a given point is under
+ */
+StreamDescriptor WaveformArea::GetWaveformAtPoint(int x, int y)
+{
+	//Window coordinates of our cursor
+	int window_x;
+	int window_y;
+	get_window()->get_origin(window_x, window_y);
+	auto alloc = get_allocation();
+	int real_x = x + alloc.get_x() + window_x;
+	int real_y = y + alloc.get_y() + window_y;
+	Gdk::Rectangle rect(real_x, real_y, 1, 1);
+
+	//Check all waveform areas to see which one we hit
+	WaveformArea* target = NULL;
+	int target_y = y;
+	for(auto w : m_parent->m_waveformAreas)
+	{
+		int wx;
+		int wy;
+		w->get_window()->get_origin(wx, wy);
+		auto trect = w->get_allocation();
+		trect.set_x(trect.get_x() + wx);
+		trect.set_y(trect.get_y() + wy);
+
+		if(trect.intersects(rect))
+		{
+			target = w;
+			target_y = real_y - trect.get_y();
+		}
+	}
+	if(!target)
+		return m_channel;
+
+	//Figure out what channel is under the cursor
+	StreamDescriptor targetChan = target->m_channel;
+	int height = 20 * GetDPIScale();
+	for(auto it : target->m_overlayPositions)
+	{
+		int dy = target_y - it.second;
+		if(abs(dy) < height/2)
+		{
+			targetChan = it.first;
+			break;
+		}
+	}
+	return targetChan;
+}
+
+/**
+	@brief Snap a timestamp to the closest edge in the digital waveform or decode (if applicable)
+	under the cursor.
+ */
+int64_t WaveformArea::SnapX(int64_t time, int x, int y)
+{
+	auto stream = GetWaveformAtPoint(x, y);
+	auto data = stream.GetData();
+	if(!data)
+		return time;
+
+	//Only snap to digital/protocol data
+	if( (stream.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
+		(stream.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_COMPLEX) )
+		return time;
+
+	//Convert timestamp to waveform timebase units
+	int64_t wtime = (time - data->m_triggerPhase) / data->m_timescale;
+
+	//Assume the waveform is sparse for now, since digital and protocol waveforms are rarely dense packed.
+	//Binary search to find the closest start point to the target timestamp.
+	size_t ibest = BinarySearchForGequal((int64_t*)&data->m_offsets[0], data->m_offsets.size(), wtime);
+
+	//Start a little bit before there and check both start and end points
+	size_t base = ibest;
+	if(base > 0)
+		base --;
+	int64_t wtime_snapped = wtime;
+	int64_t best_delta = wtime;
+	for(size_t i=0; i<2; i++)
+	{
+		int64_t start = data->m_offsets[i + base];
+		int64_t end = start + data->m_durations[i + base];
+
+		int64_t delta = llabs(start - wtime);
+		if(delta < best_delta)
+		{
+			best_delta = delta;
+			wtime_snapped = start;
+		}
+
+		delta = llabs(end - wtime);
+		if(delta < best_delta)
+		{
+			best_delta = delta;
+			wtime_snapped = end;
+		}
+	}
+
+	//Convert delta (im timebase units) back to pixels and see how close it is
+	int64_t delta_pixels = (best_delta * data->m_timescale) * m_group->m_pixelsPerXUnit;
+	const int snap_threshold = 5 * GetDPIScale();
+	if(llabs(delta_pixels) < snap_threshold)
+		return (wtime_snapped * data->m_timescale) + data->m_triggerPhase;
+
+	//Too far away, don't snap
+	else
+		return time;
 }
