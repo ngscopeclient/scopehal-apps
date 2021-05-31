@@ -35,7 +35,17 @@
 #ifndef glscopeclient_h
 #define glscopeclient_h
 
-#define GL_GLEXT_PROTOTYPES
+#ifndef __APPLE__
+    #define GL_GLEXT_PROTOTYPES
+#endif
+
+#include <GL/glew.h>
+
+#ifdef __APPLE__
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
 
 #include "../scopehal/scopehal.h"
 #include "../scopehal/Instrument.h"
@@ -52,9 +62,6 @@
 
 #include <giomm.h>
 #include <gtkmm.h>
-
-#include <GL/glew.h>
-#include <GL/gl.h>
 
 #ifdef _WIN32
 #include <GL/glcorearb.h>

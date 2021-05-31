@@ -316,9 +316,16 @@ double GetTime()
 
 void ScopeThread(Oscilloscope* scope)
 {
-	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "ScopeThread");
+	#if defined(unix) || defined(__unix__) || defined(__unix)
+		#if __linux__
+		// on Linux, max 16 chars including \0, see man page
+		pthread_setname_np(pthread_self(), "ScopeThread");
+		#else
+		// BSD, including Apple
+		pthread_setname_np("ScopeThread");
+		#endif
 	#endif
+
 
 	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
 

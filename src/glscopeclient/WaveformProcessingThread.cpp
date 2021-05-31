@@ -41,8 +41,14 @@ Event g_waveformProcessedEvent;
 
 void WaveformProcessingThread(OscilloscopeWindow* window)
 {
-	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "WaveformThread");	//can't use full name because longer than TASK_COMM_LEN
+	#if defined(unix) || defined(__unix__) || defined(__unix)
+		#if __linux__
+		// on Linux, max 16 chars including \0, see man page
+		pthread_setname_np(pthread_self(), "WaveformThread");
+		#else
+		// BSD, including Apple
+		pthread_setname_np("WaveformThread");
+		#endif
 	#endif
 
 	while(!window->m_shuttingDown)
