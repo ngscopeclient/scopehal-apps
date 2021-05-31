@@ -31,6 +31,8 @@
 #include <pthread.h>
 #endif
 
+#include "pthread_compat.h"
+
 void pthread_setname_np_compat(const char *name)
 {
 #if defined(unix) || defined(__unix__) || defined(__unix)
