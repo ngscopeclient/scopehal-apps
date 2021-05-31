@@ -33,6 +33,7 @@
 	@brief Waveform processing logic
  */
 #include "glscopeclient.h"
+#include "pthread_compat.h"
 
 using namespace std;
 
@@ -41,10 +42,7 @@ Event g_waveformProcessedEvent;
 
 void WaveformProcessingThread(OscilloscopeWindow* window)
 {
-	#ifndef _WIN32
-	pthread_setname_np(pthread_self(), "WaveformThread");	//can't use full name because longer than TASK_COMM_LEN
-	#endif
-
+	pthread_setname_np_compat("WaveformThread");
 	while(!window->m_shuttingDown)
 	{
 		//Wait for data to be available from all scopes
