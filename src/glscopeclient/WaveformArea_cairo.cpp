@@ -227,11 +227,30 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->restore();
 }
 
-void WaveformArea::RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float voltage)
+void WaveformArea::RenderTriggerTimeLine(Cairo::RefPtr< Cairo::Context > cr, int64_t time)
+{
+	float x = XAxisUnitsToXPosition(time);
+	Gdk::Color color = m_parent->GetPreferences().GetColor("Appearance.Windows.trigger_bar_color");
+
+	float scale = GetDPIScale() * get_window()->get_scale_factor();
+	vector<double> dots;
+	dots.push_back(4 * scale);
+	dots.push_back(4 * scale);
+
+	//Dotted line
+	cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+	cr->save();
+		cr->set_dash(dots, 0);
+		cr->move_to(x, 0);
+		cr->line_to(x, m_height);
+		cr->stroke();
+	cr->restore();
+}
+
+void WaveformArea::RenderTriggerLevelLine(Cairo::RefPtr< Cairo::Context > cr, float voltage)
 {
 	float y = YAxisUnitsToYPosition(voltage);
 	Gdk::Color color = m_parent->GetPreferences().GetColor("Appearance.Windows.trigger_bar_color");
-
 
 	int twidth;
 	int theight;
@@ -240,7 +259,7 @@ void WaveformArea::RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float v
 	tlayout->set_text(m_channel.m_channel->GetYAxisUnits().PrettyPrint(voltage).c_str());
 	tlayout->get_pixel_size(twidth, theight);
 
-	//Label bckground
+	//Label background
 	cr->set_source_rgba(0, 0, 0, 0.5);
 	cr->move_to(m_plotRight,	y);
 	cr->line_to(m_width,		y);
@@ -251,6 +270,9 @@ void WaveformArea::RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float v
 	//Label
 	cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
 	float scale = GetDPIScale() * get_window()->get_scale_factor();
+	vector<double> dots;
+	dots.push_back(4 * scale);
+	dots.push_back(4 * scale);
 	float trisize = 5 * scale;
 	cr->move_to(m_plotRight + trisize*1.1, y + 2);
 	tlayout->update_from_cairo_context(cr);
@@ -258,9 +280,6 @@ void WaveformArea::RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float v
 
 	//Dotted line
 	cr->save();
-		vector<double> dots;
-		dots.push_back(4 * scale);
-		dots.push_back(4 * scale);
 		cr->set_dash(dots, 0);
 		cr->move_to(0, y);
 		cr->line_to(m_plotRight, y);
@@ -338,15 +357,19 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
 
-	//Render arrow for trigger
+	//Render arrow and dotted line for trigger level
 	auto scope = m_channel.m_channel->GetScope();
 	if(m_dragState == DRAG_TRIGGER)
-		RenderTriggerLine(cr, scope->GetTrigger()->GetLevel());
+		RenderTriggerLevelLine(cr, scope->GetTrigger()->GetLevel());
 	else if(m_dragState == DRAG_TRIGGER_SECONDARY)
 	{
 		auto wt = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
-		RenderTriggerLine(cr, wt->GetLowerBound());
+		RenderTriggerLevelLine(cr, wt->GetLowerBound());
 	}
+
+	//Render dotted line for trigger position
+	if(m_group->m_timeline.IsDraggingTrigger())
+		RenderTriggerTimeLine(cr, scope->GetTriggerOffset());
 
 	RenderFFTPeaks(cr);
 	RenderInsertionBar(cr);

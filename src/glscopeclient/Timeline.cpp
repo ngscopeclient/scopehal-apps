@@ -122,6 +122,7 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 				case DRAG_TRIGGER:
 					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
 					m_dragScope = target;
+					m_group->m_waveformBox.queue_draw();
 					break;
 
 				case DRAG_TIMELINE:
@@ -151,8 +152,12 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 {
 	if(event->button == 1)
 	{
+		auto oldState = m_dragState;
 		m_dragState = DRAG_NONE;
 		get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
+
+		if(oldState == DRAG_TRIGGER)
+			m_group->m_waveformBox.queue_draw();
 	}
 	return true;
 }
@@ -188,6 +193,8 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 
 				m_dragScope->SetTriggerOffset(t);
 				queue_draw();
+
+				m_group->m_waveformBox.queue_draw();
 			}
 			break;
 

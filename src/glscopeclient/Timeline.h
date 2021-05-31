@@ -42,6 +42,9 @@ public:
 	Unit GetXAxisUnits()
 	{ return m_xAxisUnit; }
 
+	bool IsDraggingTrigger()
+	{ return (m_dragState == DRAG_TRIGGER); }
+
 protected:
 
 	enum DragState

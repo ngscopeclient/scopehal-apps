@@ -371,7 +371,8 @@ protected:
 	void RenderBackgroundGradient(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderGrid(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderTriggerArrow(Cairo::RefPtr< Cairo::Context > cr, float voltage, bool dragging, Gdk::Color color);
-	void RenderTriggerLine(Cairo::RefPtr< Cairo::Context > cr, float voltage);
+	void RenderTriggerTimeLine(Cairo::RefPtr< Cairo::Context > cr, int64_t time);
+	void RenderTriggerLevelLine(Cairo::RefPtr< Cairo::Context > cr, float voltage);
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
