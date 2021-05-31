@@ -46,9 +46,9 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include "pthread_compat.h"
 
 #include "PreferenceManager.h"
-
 using namespace std;
 
 //for color selection
@@ -316,16 +316,7 @@ double GetTime()
 
 void ScopeThread(Oscilloscope* scope)
 {
-	#if defined(unix) || defined(__unix__) || defined(__unix)
-		#if __linux__
-		// on Linux, max 16 chars including \0, see man page
-		pthread_setname_np(pthread_self(), "ScopeThread");
-		#else
-		// BSD, including Apple
-		pthread_setname_np("ScopeThread");
-		#endif
-	#endif
-
+	pthread_setname_np_compat("ScopeThread");
 
 	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
 

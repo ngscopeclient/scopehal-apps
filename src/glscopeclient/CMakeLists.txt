@@ -41,6 +41,7 @@ configure_file(glscopeclient-version.h.in glscopeclient-version.h)
 ###############################################################################
 #C++ compilation
 add_executable(glscopeclient
+	pthread_compat.cpp
 	ChannelPropertiesDialog.cpp
 	FileProgressDialog.cpp
 	FilterDialog.cpp
