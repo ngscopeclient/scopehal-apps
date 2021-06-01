@@ -126,7 +126,7 @@ WaveformGroup::~WaveformGroup()
 	}
 }
 
-void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
+void WaveformGroup::ToggleOn(OscilloscopeChannel* chan, size_t index)
 {
 	//If the channel is already active, do nothing
 	if(m_columnToIndexMap.find(chan) != m_columnToIndexMap.end())
@@ -140,12 +140,16 @@ void WaveformGroup::ToggleOn(OscilloscopeChannel* chan)
 		AddStatistic(Statistic::CreateStatistic("Minimum"));
 	}
 
-	//Use the first free column
-	size_t ncol=1;
-	for(; ncol<32; ncol ++)
+	//Use the first free column if an index wasn't specified
+	//(normally only during loading)
+	size_t ncol = index;
+	if(ncol == 0)
 	{
-		if(m_indexToColumnMap.find(ncol) == m_indexToColumnMap.end())
-			break;
+		for(ncol=1; ncol<32; ncol ++)
+		{
+			if(m_indexToColumnMap.find(ncol) == m_indexToColumnMap.end())
+				break;
+		}
 	}
 
 	m_columnToIndexMap[chan] = ncol;
@@ -299,10 +303,8 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", m_yCursorPos[1]);
 	config += tmp;
 
-	//TODO: statistics
-
 	//Waveform areas
-	config += "            areas: \n";
+	config += "            areas:\n";
 	auto children = m_waveformBox.get_children();
 	for(size_t i=0; i<children.size(); i++)
 	{
@@ -311,6 +313,21 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "                    id: %d\n", aid);
 		config += tmp;
+	}
+
+	//Statistics
+	if(!m_indexToColumnMap.empty())
+	{
+		config += "            stats:\n";
+		for(auto it : m_indexToColumnMap)
+		{
+			snprintf(tmp, sizeof(tmp), "                stat%d:\n", it.first);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                    index:   %d\n", it.first);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                    channel: %d\n", table[it.second]);
+			config += tmp;
+		}
 	}
 
 	return config;

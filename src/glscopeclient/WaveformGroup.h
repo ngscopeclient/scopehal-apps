@@ -76,7 +76,7 @@ public:
 
 	MeasurementColumns m_treeColumns;
 	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
-	void ToggleOn(OscilloscopeChannel* chan);
+	void ToggleOn(OscilloscopeChannel* chan, size_t index=0);
 	void ToggleOff(OscilloscopeChannel* chan);
 
 	void AddStatistic(Statistic* stat);

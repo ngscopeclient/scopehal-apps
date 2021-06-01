@@ -1805,7 +1805,18 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			group->m_xCursorPos[1] *= 1000;
 		}
 
-		//TODO: statistics
+		auto stats = gn["stats"];
+		if(stats)
+		{
+			for(auto s : stats)
+			{
+				auto statnode = s.second;
+
+				group->ToggleOn(
+					static_cast<OscilloscopeChannel*>(table[statnode["channel"].as<long>()]),
+					statnode["index"].as<long>());
+			}
+		}
 
 		//Waveform areas
 		areas = gn["areas"];
