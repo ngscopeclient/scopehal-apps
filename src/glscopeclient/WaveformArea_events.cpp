@@ -1448,6 +1448,10 @@ void WaveformArea::UpdateContextMenu()
 			if(menu == NULL)
 				continue;
 
+			//Need to synchronize with OscilloscopeWindow::RefreshAllFilters().
+			//Otherwise there's a chance that this filter will be added to the working set and updated
+			//after we've deleted it.
+			lock_guard<mutex> lock(m_parent->m_filterUpdatingMutex);
 			auto filter = Filter::CreateFilter(
 				menu->get_label(),
 				"");

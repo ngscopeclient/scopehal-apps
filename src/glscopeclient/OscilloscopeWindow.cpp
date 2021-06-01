@@ -3074,7 +3074,11 @@ void OscilloscopeWindow::RefreshAllFilters()
 
 	Filter::ClearAnalysisCache();
 
-	auto filters = Filter::GetAllInstances();
+	set<Filter*> filters;
+	{
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		filters = Filter::GetAllInstances();
+	}
 	for(auto f : filters)
 		f->SetDirty();
 

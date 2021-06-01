@@ -310,6 +310,7 @@ public:
 	}
 
 	//Protocol decoding etc
+	std::mutex m_filterUpdatingMutex;
 	void RefreshAllFilters();
 	void RefreshAllViews();
 	void SyncFilterColors();
