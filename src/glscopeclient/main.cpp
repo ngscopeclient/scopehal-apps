@@ -40,7 +40,6 @@
 
 #include "glscopeclient.h"
 #include "../scopeprotocols/scopeprotocols.h"
-#include "InstrumentConnectionDialog.h"
 #include <libgen.h>
 #include <omp.h>
 #include <chrono>
@@ -208,84 +207,8 @@ int main(int argc, char* argv[])
 	//Initialize object creation tables for plugins
 	InitializePlugins();
 
-	//If there are no scopes and we're not loading a file, show the dialog to connect.
-	//TODO: support multi-scope connection
-	if(scopes.empty() && filesToLoad.empty())
-	{
-		InstrumentConnectionDialog dlg;
-
-		while(true)
-		{
-			if(dlg.run() != Gtk::RESPONSE_OK)
-				return 0;
-
-			//If the user requested an illegal configuration, repeat
-
-			if(!dlg.ValidateConfig())
-			{
-				Gtk::MessageDialog mdlg(
-					"Invalid configuration specified.\n"
-					"\n"
-					"A driver and transport must always be selected.\n"
-					"\n"
-					"The NULL transport is only legal with the \"demo\" driver.",
-					false,
-					Gtk::MESSAGE_ERROR,
-					Gtk::BUTTONS_OK,
-					true);
-				mdlg.run();
-			}
-
-			else
-				break;
-		}
-
-		scopes.push_back(dlg.GetConnectionString());
-	}
-
 	//Connect to the scope(s)
-	for(auto s : scopes)
-	{
-		//Scope format: name:driver:transport:args
-		char nick[128];
-		char driver[128];
-		char trans[128];
-		char args[128];
-		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127s", nick, driver, trans, args))
-		{
-			LogError("Invalid scope string %s\n", s.c_str());
-			continue;
-		}
-
-		//Create the transport
-		SCPITransport* transport = SCPITransport::CreateTransport(trans, args);
-		if(transport == NULL)
-			continue;
-
-		//Check if the transport failed to initialize
-		if(!transport->IsConnected())
-		{
-			Gtk::MessageDialog dlg(
-				string("Failed to connect to instrument using connection string ") + s,
-				false,
-				Gtk::MESSAGE_ERROR,
-				Gtk::BUTTONS_OK,
-				true);
-			dlg.run();
-
-			continue;
-		}
-
-		//Create the scope
-		Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
-		if(scope == NULL)
-			continue;
-
-		//All good, hook it up
-		scope->m_nickname = nick;
-		g_app->m_scopes.push_back(scope);
-	}
-
+	g_app->ConnectToScopes(scopes);
 	g_app->run(filesToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
 
 	//Global cleanup

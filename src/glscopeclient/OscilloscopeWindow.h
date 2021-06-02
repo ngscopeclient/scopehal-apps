@@ -237,6 +237,7 @@ public:
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
+	void OnFileConnect();
 	void OnFileOpen();
 	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void OnFileImport();

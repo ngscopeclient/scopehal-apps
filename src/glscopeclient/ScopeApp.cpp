@@ -178,3 +178,51 @@ void ScopeApp::StartScopeThreads()
 		m_threads.push_back(new thread(ScopeThread, scope));
 	}
 }
+
+/**
+	@brief Connect to one or more scopes
+ */
+void ScopeApp::ConnectToScopes(vector<string> scopes)
+{
+	for(auto s : scopes)
+	{
+		//Scope format: name:driver:transport:args
+		char nick[128];
+		char driver[128];
+		char trans[128];
+		char args[128];
+		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127s", nick, driver, trans, args))
+		{
+			LogError("Invalid scope string %s\n", s.c_str());
+			continue;
+		}
+
+		//Create the transport
+		SCPITransport* transport = SCPITransport::CreateTransport(trans, args);
+		if(transport == NULL)
+			continue;
+
+		//Check if the transport failed to initialize
+		if(!transport->IsConnected())
+		{
+			Gtk::MessageDialog dlg(
+				string("Failed to connect to instrument using connection string ") + s,
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			dlg.run();
+
+			continue;
+		}
+
+		//Create the scope
+		Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
+		if(scope == NULL)
+			continue;
+
+		//All good, hook it up
+		scope->m_nickname = nick;
+		m_scopes.push_back(scope);
+	}
+}

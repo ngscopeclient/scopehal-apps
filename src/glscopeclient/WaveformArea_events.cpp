@@ -470,6 +470,7 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 				//See if it's a physical channel
 				if(m_selectedChannel.m_channel->IsPhysicalChannel())
 				{
+					//TODO: make this modeless
 					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel.m_channel);
 					if(dialog.run() == Gtk::RESPONSE_OK)
 					{
@@ -477,6 +478,10 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 						dialog.ConfigureChannel();
 						if(m_selectedChannel.m_channel->GetDisplayName() != oldname)
 							m_parent->OnChannelRenamed(m_selectedChannel.m_channel);
+
+						//Clear any waveforms acquired while the dialog was open
+						for(size_t i=0; i<m_parent->GetScopeCount(); i++)
+							m_parent->GetScope(i)->ClearPendingWaveforms();
 
 						//TODO: only if ADC bit depth changed?
 						//(if changed we really want to clear persistence for all channels in the group...)

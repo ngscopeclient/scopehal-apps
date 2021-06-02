@@ -39,6 +39,7 @@
 #include "../scopehal/MockOscilloscope.h"
 #include "OscilloscopeWindow.h"
 #include "PreferenceDialog.h"
+#include "InstrumentConnectionDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
@@ -162,7 +163,24 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 			m_menu.append(m_fileMenuItem);
 				m_fileMenuItem.set_label("File");
 				m_fileMenuItem.set_submenu(m_fileMenu);
-					Gtk::MenuItem* item = Gtk::manage(new Gtk::MenuItem("Save Layout Only", false));
+
+					Gtk::MenuItem* item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileConnect));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Import...", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileImport));
+					m_fileMenu.append(*item);
+
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+
+					item = Gtk::manage(new Gtk::MenuItem("Save Layout Only", false));
 					item->signal_activate().connect(
 						sigc::bind<bool, bool, bool>(
 							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
@@ -186,18 +204,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
 							false, true, true));
 					m_fileMenu.append(*item);
+
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
-					item->signal_activate().connect(
-						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Import...", false));
-					item->signal_activate().connect(
-						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileImport));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::SeparatorMenuItem);
-					m_fileMenu.append(*item);
+
 					item = Gtk::manage(new Gtk::MenuItem("Quit", false));
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnQuit));
@@ -1010,6 +1020,70 @@ void OscilloscopeWindow::DoImportVCD(const string& filename)
 	}
 
 	OnImportComplete();
+}
+
+/**
+	@brief Connect to an instrument
+ */
+void OscilloscopeWindow::OnFileConnect()
+{
+	//TODO: support multi-scope connection
+	vector<string> scopes;
+
+	InstrumentConnectionDialog dlg;
+	while(true)
+	{
+		if(dlg.run() != Gtk::RESPONSE_OK)
+			return;
+
+		//If the user requested an illegal configuration, retry
+		if(!dlg.ValidateConfig())
+		{
+			Gtk::MessageDialog mdlg(
+				"Invalid configuration specified.\n"
+				"\n"
+				"A driver and transport must always be selected.\n"
+				"\n"
+				"The NULL transport is only legal with the \"demo\" driver.",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			mdlg.run();
+		}
+
+		else
+			break;
+	}
+
+	scopes.push_back(dlg.GetConnectionString());
+
+	//Connect to the new scope
+	CloseSession();
+	m_loadInProgress = true;
+	g_app->ConnectToScopes(scopes);
+	m_scopes = g_app->m_scopes;
+
+	//Clear performance counters
+	m_totalWaveforms = 0;
+	m_lastWaveformTimes.clear();
+
+	//Add the top level splitter right before the status bar
+	auto split = new Gtk::VPaned;
+	m_splitters.emplace(split);
+	m_vbox.remove(m_statusbar);
+	m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
+	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+
+	//Add all of the UI stuff
+	CreateDefaultWaveformAreas(split);
+
+	//Done
+	SetTitle();
+	OnLoadComplete();
+
+	//Arm the trigger
+	OnStart();
 }
 
 /**

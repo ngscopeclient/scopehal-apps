@@ -51,6 +51,8 @@ public:
 
 	std::vector<Oscilloscope*> m_scopes;
 
+	void ConnectToScopes(std::vector<std::string> scopes);
+
 	virtual void run(
 		std::vector<std::string> filesToLoad,
 		bool reconnect,
