@@ -86,6 +86,12 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	//Add widgets
 	CreateWidgets(nodigital, nospectrum);
 
+	//Update recently used instrument list
+	LoadRecentlyUsedList();
+	AddCurrentToRecentlyUsedList();
+	SaveRecentlyUsedList();
+	RefreshInstrumentMenu();
+
 	ArmTrigger(false);
 	m_toggleInProgress = false;
 
@@ -168,6 +174,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileConnect));
 					m_fileMenu.append(*item);
+					m_recentInstrumentsMenuItem.set_label("Recent Instruments");
+					m_recentInstrumentsMenuItem.set_submenu(m_recentInstrumentsMenu);
+					m_fileMenu.append(m_recentInstrumentsMenuItem);
+
 					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
@@ -1028,8 +1038,6 @@ void OscilloscopeWindow::DoImportVCD(const string& filename)
 void OscilloscopeWindow::OnFileConnect()
 {
 	//TODO: support multi-scope connection
-	vector<string> scopes;
-
 	InstrumentConnectionDialog dlg;
 	while(true)
 	{
@@ -1056,7 +1064,13 @@ void OscilloscopeWindow::OnFileConnect()
 			break;
 	}
 
-	scopes.push_back(dlg.GetConnectionString());
+	ConnectToScope(dlg.GetConnectionString());
+}
+
+void OscilloscopeWindow::ConnectToScope(std::string path)
+{
+	vector<string> scopes;
+	scopes.push_back(path);
 
 	//Connect to the new scope
 	CloseSession();
@@ -1227,6 +1241,9 @@ void OscilloscopeWindow::OnLoadComplete()
 	}
 
 	//Reconfigure menus
+	AddCurrentToRecentlyUsedList();
+	SaveRecentlyUsedList();
+	RefreshInstrumentMenu();
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
 	RefreshMultimeterMenu();
@@ -3711,4 +3728,114 @@ void OscilloscopeWindow::OnFilterGraph()
 		m_graphEditor = new FilterGraphEditor(this);
 	m_graphEditor->Refresh();
 	m_graphEditor->show();
+}
+
+void OscilloscopeWindow::LoadRecentlyUsedList()
+{
+	try
+	{
+		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recent.yml");
+		auto node = docs[0];
+
+		for(auto it : node)
+		{
+			auto inst = it.second;
+			m_recentlyUsed[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+		}
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		LogDebug("Unable to open recently used instruments file\n");
+		return;
+	}
+
+}
+
+void OscilloscopeWindow::SaveRecentlyUsedList()
+{
+	auto path = m_preferences.GetConfigDirectory() + "/recent.yml";
+	FILE* fp = fopen(path.c_str(), "w");
+
+	for(auto it : m_recentlyUsed)
+	{
+		auto nick = it.first.substr(0, it.first.find(":"));
+		fprintf(fp, "%s:\n", nick.c_str());
+		fprintf(fp, "    path: \"%s\"\n", it.first.c_str());
+		fprintf(fp, "    timestamp: %ld\n", it.second);
+	}
+
+	fclose(fp);
+}
+
+void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
+{
+	//Add our current entry to the recently-used list
+	auto now = time(NULL);
+	for(auto scope : m_scopes)
+	{
+		//Skip any mock scopes as they're not real things we can connect to
+		if(dynamic_cast<MockOscilloscope*>(scope) != NULL)
+			continue;
+
+		string connectionString =
+			scope->m_nickname + ":" +
+			scope->GetDriverName() + ":" +
+			scope->GetTransportName() + ":" +
+			scope->GetTransportConnectionString();
+
+		m_recentlyUsed[connectionString] = now;
+	}
+
+	//Delete anything old
+	const int maxRecentInstruments = 10;
+	while(m_recentlyUsed.size() > maxRecentInstruments)
+	{
+		string oldestPath = "";
+		time_t oldestTime = now;
+
+		for(auto it : m_recentlyUsed)
+		{
+			if(it.second < oldestTime)
+			{
+				oldestTime = it.second;
+				oldestPath = it.first;
+			}
+		}
+
+		m_recentlyUsed.erase(oldestPath);
+	}
+}
+
+void OscilloscopeWindow::RefreshInstrumentMenu()
+{
+	//Remove the old items
+	auto children = m_recentInstrumentsMenu.get_children();
+	for(auto c : children)
+		m_recentInstrumentsMenu.remove(*c);
+
+	//Make a reverse mapping
+	std::map<time_t, string> reverseMap;
+	for(auto it : m_recentlyUsed)
+		reverseMap[it.second] = it.first;
+
+	//Sort the list by most recent
+	vector<time_t> timestamps;
+	for(auto it : m_recentlyUsed)
+		timestamps.push_back(it.second);
+	std::sort(timestamps.begin(), timestamps.end());
+
+	//Add new ones
+	for(int i=timestamps.size()-1; i>=0; i--)
+	{
+		auto t = timestamps[i];
+		auto path = reverseMap[t];
+		auto nick = path.substr(0, path.find(":"));
+
+		auto item = Gtk::manage(new Gtk::MenuItem(nick, false));
+		item->signal_activate().connect(
+			sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::ConnectToScope), path));
+		m_recentInstrumentsMenu.append(*item);
+	}
+
+	m_recentInstrumentsMenu.show_all();
 }

@@ -63,6 +63,9 @@ public:
     void SavePreferences();
     PreferenceCategory& AllPreferences();
 
+    std::string GetConfigDirectory()
+    { return m_configDir; }
+
     // Value retrieval methods
     const std::string& GetString(const std::string& path) const;
     double GetReal(const std::string& path) const;
@@ -87,6 +90,7 @@ private:
 private:
     PreferenceCategory m_treeRoot;
     std::string m_filePath;
+    std::string m_configDir;
 };
 
 #endif // PreferenceManager_h

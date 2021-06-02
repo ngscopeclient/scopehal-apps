@@ -164,6 +164,8 @@ protected:
 		Gtk::MenuBar m_menu;
 			Gtk::MenuItem m_fileMenuItem;
 				Gtk::Menu m_fileMenu;
+					Gtk::MenuItem m_recentInstrumentsMenuItem;
+						Gtk::Menu m_recentInstrumentsMenu;
 			Gtk::MenuItem m_setupMenuItem;
 				Gtk::Menu m_setupMenu;
 					Gtk::MenuItem m_setupSyncMenuItem;
@@ -238,6 +240,7 @@ public:
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
 	void OnFileConnect();
+	void ConnectToScope(std::string path);
 	void OnFileOpen();
 	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
 	void OnFileImport();
@@ -392,6 +395,16 @@ public:
 		This prevents waveform processing from happening while critical rendering logic is touching waveform data.
 	 */
 	std::recursive_mutex m_waveformDataMutex;
+
+	/**
+		@brief List of recently used instruments
+	 */
+	std::map<std::string, time_t> m_recentlyUsed;
+
+	void AddCurrentToRecentlyUsedList();
+	void LoadRecentlyUsedList();
+	void SaveRecentlyUsedList();
+	void RefreshInstrumentMenu();
 };
 
 #endif

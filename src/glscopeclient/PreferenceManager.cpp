@@ -50,174 +50,176 @@ using namespace std;
 // Expand things like ~ in path
 static std::string ExpandPath(const string& in)
 {
-    wordexp_t result;
-    wordexp(in.c_str(), &result, 0);
-    auto expanded = result.we_wordv[0];
-    string out{ expanded };
-    wordfree(&result);
-    return out;
+	wordexp_t result;
+	wordexp(in.c_str(), &result, 0);
+	auto expanded = result.we_wordv[0];
+	string out{ expanded };
+	wordfree(&result);
+	return out;
 }
 
 static void CreateDirectory(const string& path)
 {
-    const auto expanded = ExpandPath(path);
+	const auto expanded = ExpandPath(path);
 
-    struct stat fst{ };
+	struct stat fst{ };
 
-    // Check if it exists
-    if(stat(expanded.c_str(), &fst) != 0)
-    {
-        // If not, create it
-        if(mkdir(expanded.c_str(), 0755) != 0 && errno != EEXIST)
-        {
-            perror("");
-            throw runtime_error("failed to create preferences directory");
-        }
-    }
-    else if(!S_ISDIR(fst.st_mode))
-    {
-        // Exists, but is not a directory
-        throw runtime_error("preferences directory exists but is not a directory");
-    }
+	// Check if it exists
+	if(stat(expanded.c_str(), &fst) != 0)
+	{
+		// If not, create it
+		if(mkdir(expanded.c_str(), 0755) != 0 && errno != EEXIST)
+		{
+			perror("");
+			throw runtime_error("failed to create preferences directory");
+		}
+	}
+	else if(!S_ISDIR(fst.st_mode))
+	{
+		// Exists, but is not a directory
+		throw runtime_error("preferences directory exists but is not a directory");
+	}
 }
 #endif
 
 PreferenceCategory& PreferenceManager::AllPreferences()
 {
-    return this->m_treeRoot;
+	return this->m_treeRoot;
 }
 
 bool PreferenceManager::HasPreferenceFile() const
 {
 #ifdef _WIN32
-    const auto fattr = GetFileAttributes(m_filePath.c_str());
-    return (fattr != INVALID_FILE_ATTRIBUTES) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
+	const auto fattr = GetFileAttributes(m_filePath.c_str());
+	return (fattr != INVALID_FILE_ATTRIBUTES) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
 #else
-    struct stat fs{ };
-    const auto result = stat(m_filePath.c_str(), &fs);
+	struct stat fs{ };
+	const auto result = stat(m_filePath.c_str(), &fs);
 
-    return (result == 0) && (fs.st_mode & S_IFREG);
+	return (result == 0) && (fs.st_mode & S_IFREG);
 #endif
 }
 
 const Preference& PreferenceManager::GetPreference(const string& path) const
 {
-    return this->m_treeRoot.GetLeaf(path);
+	return this->m_treeRoot.GetLeaf(path);
 }
 
 void PreferenceManager::DeterminePath()
 {
 #ifdef _WIN32
-    wchar_t* stem;
-    if(S_OK != SHGetKnownFolderPath(
-        FOLDERID_RoamingAppData,
-        KF_FLAG_CREATE,
-        NULL,
-        &stem))
-    {
-        throw std::runtime_error("failed to resolve %appdata%");
-    }
+	wchar_t* stem;
+	if(S_OK != SHGetKnownFolderPath(
+		FOLDERID_RoamingAppData,
+		KF_FLAG_CREATE,
+		NULL,
+		&stem))
+	{
+		throw std::runtime_error("failed to resolve %appdata%");
+	}
 
-    wchar_t directory[MAX_PATH];
-    if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
-    {
-        throw runtime_error("failed to build directory path");
-    }
+	wchar_t directory[MAX_PATH];
+	if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
+	{
+		throw runtime_error("failed to build directory path");
+	}
 
-    // Ensure the directory exists
-    const auto result = CreateDirectoryW(directory, NULL);
+	// Ensure the directory exists
+	const auto result = CreateDirectoryW(directory, NULL);
+	m_configDir = directory;
 
-    if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
-    {
-        throw runtime_error("failed to create preferences directory");
-    }
+	if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
+	{
+		throw runtime_error("failed to create preferences directory");
+	}
 
-    // Build final path
-    wchar_t config[MAX_PATH];
-    if(NULL == PathCombineW(config, directory, L"preferences.yml"))
-    {
-        throw runtime_error("failed to build directory path");
-    }
+	// Build final path
+	wchar_t config[MAX_PATH];
+	if(NULL == PathCombineW(config, directory, L"preferences.yml"))
+	{
+		throw runtime_error("failed to build directory path");
+	}
 
-    char configNarrow[MAX_PATH];
-    const auto len = wcstombs(configNarrow, config, MAX_PATH);
+	char configNarrow[MAX_PATH];
+	const auto len = wcstombs(configNarrow, config, MAX_PATH);
 
-    if(len == static_cast<size_t>(-1))
-        throw runtime_error("Failed to convert wide string");
+	if(len == static_cast<size_t>(-1))
+		throw runtime_error("Failed to convert wide string");
 
-    m_filePath = string(configNarrow);
+	m_filePath = string(configNarrow);
 
 
-    CoTaskMemFree(static_cast<void*>(stem));
+	CoTaskMemFree(static_cast<void*>(stem));
 #else
-    // Ensure all directories in path exist
-    CreateDirectory("~/.config");
-    CreateDirectory("~/.config/glscopeclient");
+	// Ensure all directories in path exist
+	CreateDirectory("~/.config");
+	CreateDirectory("~/.config/glscopeclient");
+	m_configDir = ExpandPath("~/.config/glscopeclient");
 
-    m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
+	m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
 #endif
 }
 
 const std::string& PreferenceManager::GetString(const string& path) const
 {
-    return GetPreference(path).GetString();
+	return GetPreference(path).GetString();
 }
 
 double PreferenceManager::GetReal(const string& path) const
 {
-    return GetPreference(path).GetReal();
+	return GetPreference(path).GetReal();
 }
 
 bool PreferenceManager::GetBool(const string& path) const
 {
-    return GetPreference(path).GetBool();
+	return GetPreference(path).GetBool();
 }
 
 Gdk::Color PreferenceManager::GetColor(const std::string& path) const
 {
-    return GetPreference(path).GetColor();
+	return GetPreference(path).GetColor();
 }
 
 Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
 {
-    return GetPreference(path).GetFont();
+	return GetPreference(path).GetFont();
 }
 
 void PreferenceManager::LoadPreferences()
 {
-    if(!HasPreferenceFile())
-        return;
+	if(!HasPreferenceFile())
+		return;
 
-    try
-    {
-        auto doc = YAML::LoadAllFromFile(m_filePath)[0];
-        this->m_treeRoot.FromYAML(doc);
-    }
-    catch(const exception& ex)
-    {
-        LogWarning("Warning: Preference file was present, but couldn't be read. Ignoring. (%s)", ex.what());
-    }
+	try
+	{
+		auto doc = YAML::LoadAllFromFile(m_filePath)[0];
+		this->m_treeRoot.FromYAML(doc);
+	}
+	catch(const exception& ex)
+	{
+		LogWarning("Warning: Preference file was present, but couldn't be read. Ignoring. (%s)", ex.what());
+	}
 }
 
 void PreferenceManager::SavePreferences()
 {
-    YAML::Node node{ };
+	YAML::Node node{ };
 
-    this->m_treeRoot.ToYAML(node);
+	this->m_treeRoot.ToYAML(node);
 
-    ofstream outfs{ m_filePath };
+	ofstream outfs{ m_filePath };
 
-    if(!outfs)
-    {
-        LogError("couldn't open preferences file for writing");
-        return;
-    }
+	if(!outfs)
+	{
+		LogError("couldn't open preferences file for writing");
+		return;
+	}
 
-    outfs << node;
-    outfs.close();
+	outfs << node;
+	outfs.close();
 
-    if(!outfs)
-    {
-        LogError("couldn't write preferences file to disk");
-    }
+	if(!outfs)
+	{
+		LogError("couldn't write preferences file to disk");
+	}
 }
