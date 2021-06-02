@@ -426,7 +426,7 @@ void HistoryWindow::SerializeWaveforms(
 			if(wave == NULL)
 				continue;
 
-			snprintf(tmp, sizeof(tmp), "            ch%d:\n", index);
+			snprintf(tmp, sizeof(tmp), "            ch%ds%zu:\n", index, nstream);
 			config += tmp;
 			if(wave->m_densePacked)
 				snprintf(tmp, sizeof(tmp), "                format:       densev1\n");
