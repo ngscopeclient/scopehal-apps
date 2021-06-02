@@ -278,6 +278,7 @@ public:
 	void OnFilterGraph();
 
 	//Helpers for importing third party file formats
+	void ImportComplexToNewSession(const std::string& filename, int64_t samplerate);
 	void ImportCSVToNewSession(const std::string& filename);
 	void ImportCSVToExistingSession(const std::string& filename);
 	void ImportWAVToNewSession(const std::string& filename);

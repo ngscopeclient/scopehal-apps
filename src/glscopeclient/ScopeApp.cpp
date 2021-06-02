@@ -87,6 +87,16 @@ void ScopeApp::run(
 				m_window->ImportWAVToExistingSession(f);
 		}
 
+		//For now, only allow one complex
+		else if (f.find(".complex") != string::npos)
+		{
+			//hard code 6 Msps for now
+			//TODO: argument
+			const int64_t rate = 6000000;
+			m_window->ImportComplexToNewSession(f, rate);
+			break;
+		}
+
 		//Can only load one bin or VCD
 		else if (f.find(".bin") != string::npos)
 		{

@@ -486,14 +486,18 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 					wg = spectrumGroup;
 				}
 
-				//For now, assume all instrument channels have only one output stream
-				auto w = new WaveformArea(StreamDescriptor(chan, 0), this);
-				w->m_group = wg;
-				m_waveformAreas.emplace(w);
-				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-					wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
-				else
-					wg->m_waveformBox.pack_start(*w);
+				//Create a waveform area for each stream in the output
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+				{
+					//For now, assume all instrument channels have only one output stream
+					auto w = new WaveformArea(StreamDescriptor(chan, j), this);
+					w->m_group = wg;
+					m_waveformAreas.emplace(w);
+					if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+						wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+					else
+						wg->m_waveformBox.pack_start(*w);
+				}
 			}
 		}
 	}
@@ -724,6 +728,7 @@ void OscilloscopeWindow::OnFileImport()
 	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
 	string csvname = "Comma Separated Value (*.csv)";
+	string complexname = "Complex I/Q (*.complex*)";
 	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
 	string vcdname = "Value Change Dump (*.vcd)";
 	string wavname = "Microsoft WAV (*.wav)";
@@ -731,6 +736,10 @@ void OscilloscopeWindow::OnFileImport()
 	auto csvFilter = Gtk::FileFilter::create();
 	csvFilter->add_pattern("*.csv");
 	csvFilter->set_name(csvname);
+
+	auto complexFilter = Gtk::FileFilter::create();
+	complexFilter->add_pattern("*.complex*");
+	complexFilter->set_name(complexname);
 
 	auto binFilter = Gtk::FileFilter::create();
 	binFilter->add_pattern("*.bin");
@@ -745,6 +754,7 @@ void OscilloscopeWindow::OnFileImport()
 	wavFilter->set_name(wavname);
 
 	dlg.add_filter(csvFilter);
+	dlg.add_filter(complexFilter);
 	dlg.add_filter(binFilter);
 	dlg.add_filter(vcdFilter);
 	dlg.add_filter(wavFilter);
@@ -757,8 +767,14 @@ void OscilloscopeWindow::OnFileImport()
 
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
+	//hard code 6 Msps for now
+	//TODO: dialog?
+	const int64_t rate = 6000000;
+
 	auto filterName = dlg.get_filter()->get_name();
-	if(filterName == csvname)
+	if(filterName == complexname)
+		ImportComplexToNewSession(dlg.get_filename(), rate);
+	else if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
 	else if(filterName == wavname)
 		ImportWAVToNewSession(dlg.get_filename());
@@ -850,6 +866,30 @@ void OscilloscopeWindow::OnImportComplete()
 	//Process the new data
 	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
 	OnAllWaveformsUpdated();
+}
+
+void OscilloscopeWindow::ImportComplexToNewSession(const string& filename, int64_t samplerate)
+{
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	LogDebug("Importing complex file \"%s\" to new session\n", filename.c_str());
+
+	auto scope = SetupNewSessionForImport("Complex I/Q Import", filename);
+
+	//Load the waveform
+	if(!scope->LoadComplexInt16(filename, samplerate))
+	{
+		Gtk::MessageDialog dlg(
+			*this,
+			"Complex import failed",
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+	}
+
+	OnImportComplete();
 }
 
 /**
