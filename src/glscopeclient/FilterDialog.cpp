@@ -233,14 +233,18 @@ FilterDialog::FilterDialog(
 				if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
 					continue;
 
-				auto c = StreamDescriptor(cn, 0);
-				if(filter->ValidateChannel(i, c))
+				auto nstreams = cn->GetStreamCount();
+				for(size_t m=0; m<nstreams; m++)
 				{
-					auto name = c.m_channel->GetDisplayName();
-					row->m_chans.append(name);
-					row->m_chanptrs[name] = c;
-					if( (c == chan && i==0) || (c == din) )
-						row->m_chans.set_active_text(name);
+					auto desc = StreamDescriptor(cn, m);
+					if(filter->ValidateChannel(i, desc))
+					{
+						auto name = desc.GetName();
+						row->m_chans.append(name);
+						row->m_chanptrs[name] = desc;
+						if( (desc == chan && i==0) || (desc == din) )
+							row->m_chans.set_active_text(name);
+					}
 				}
 			}
 		}
