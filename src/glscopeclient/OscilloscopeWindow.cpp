@@ -3735,6 +3735,8 @@ void OscilloscopeWindow::LoadRecentlyUsedList()
 	try
 	{
 		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recent.yml");
+		if(docs.empty())
+			return;
 		auto node = docs[0];
 
 		for(auto it : node)
