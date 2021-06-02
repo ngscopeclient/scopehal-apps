@@ -1269,6 +1269,7 @@ void FilterGraphEditorWidget::OnRightClick(GdkEventButton* event)
 {
 	//Update display with the node we clicked on highlighted
 	m_selectedNode = HitTestNode(event->x, event->y);
+	m_dragMode = DRAG_NONE;
 	queue_draw();
 
 	m_contextMenu.popup(event->button, event->time);
