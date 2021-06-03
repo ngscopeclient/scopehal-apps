@@ -1401,7 +1401,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
-		vector<int> channels;
+		vector<pair<int, int>> channels;	//pair<channel, stream>
 		vector<string> formats;
 		for(auto jt : chans)
 		{
@@ -1411,7 +1411,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			if(ch["stream"])
 				stream = ch["stream"].as<int>();
 			auto chan = scope->GetChannel(channel_index);
-			channels.push_back(channel_index);
+			channels.push_back(pair<int, int>(channel_index, stream));
 
 			//Waveform format defaults to sparsev1 as that's what was used before
 			//the metadata file contained a format ID at all
@@ -1457,7 +1457,8 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 
 			threads.push_back(new thread(
 				&OscilloscopeWindow::DoLoadWaveformDataForScope,
-				channels[i],
+				channels[i].first,
+				channels[i].second,
 				scope,
 				datadir,
 				scope_id,
@@ -1528,6 +1529,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 
 void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	int channel_index,
+	int stream,
 	Oscilloscope* scope,
 	string datadir,
 	int scope_id,
@@ -1539,173 +1541,168 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 {
 	auto chan = scope->GetChannel(channel_index);
 
-	float progress_per_stream = 1.0f / chan->GetStreamCount();
+	auto cap = chan->GetData(stream);
+	auto acap = dynamic_cast<AnalogWaveform*>(cap);
+	auto dcap = dynamic_cast<DigitalWaveform*>(cap);
 
-	for(size_t stream=0; stream<chan->GetStreamCount(); stream ++)
+	//Load the actual sample data
+	char tmp[512];
+	if(stream == 0)
 	{
-		auto cap = chan->GetData(stream);
-		auto acap = dynamic_cast<AnalogWaveform*>(cap);
-		auto dcap = dynamic_cast<DigitalWaveform*>(cap);
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+			datadir.c_str(),
+			scope_id,
+			waveform_id,
+			channel_index);
+	}
+	else
+	{
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%d.bin",
+			datadir.c_str(),
+			scope_id,
+			waveform_id,
+			channel_index,
+			stream);
+	}
 
-		//Load the actual sample data
-		char tmp[512];
-		if(stream == 0)
+	//Load samples into memory
+	unsigned char* buf = NULL;
+
+	//Windows: use generic file reads for now
+	#ifdef _WIN32
+		FILE* fp = fopen(tmp, "rb");
+		if(!fp)
 		{
-			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
-				datadir.c_str(),
-				scope_id,
-				waveform_id,
-				channel_index);
+			LogError("couldn't open %s\n", tmp);
+			continue;
 		}
+
+		//Read the whole file into a buffer a megabyte at a time
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		buf = new unsigned char[len];
+		long len_remaining = len;
+		long blocksize = 1024*1024;
+		long read_offset = 0;
+		while(len_remaining > 0)
+		{
+			if(blocksize > len_remaining)
+				blocksize = len_remaining;
+
+			//Most time is spent on the fread's when using this path
+			*progress = read_offset * 1.0 / len;
+			fread(buf + read_offset, 1, blocksize, fp);
+
+			len_remaining -= blocksize;
+			read_offset += blocksize;
+		}
+		fclose(fp);
+
+	//On POSIX, just memory map the file
+	#else
+		int fd = open(tmp, O_RDONLY);
+		if(fd < 0)
+		{
+			LogError("couldn't open %s\n", tmp);
+			return;
+		}
+		size_t len = lseek(fd, 0, SEEK_END);
+		buf = (unsigned char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+
+		//For now, report progress complete upon the file being fully read
+		*progress = 1;
+	#endif
+
+	//Sparse interleaved
+	if(format == "sparsev1")
+	{
+		//Figure out how many samples we have
+		size_t samplesize = 2*sizeof(int64_t);
+		if(acap)
+			samplesize += sizeof(float);
 		else
+			samplesize += sizeof(bool);
+		size_t nsamples = len / samplesize;
+		cap->Resize(nsamples);
+
+		//TODO: AVX this?
+		for(size_t j=0; j<nsamples; j++)
 		{
-			snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%zu.bin",
-				datadir.c_str(),
-				scope_id,
-				waveform_id,
-				channel_index,
-				stream);
-		}
+			size_t offset = j*samplesize;
 
-		//Load samples into memory
-		unsigned char* buf = NULL;
-
-		//Windows: use generic file reads for now
-		#ifdef _WIN32
-			FILE* fp = fopen(tmp, "rb");
-			if(!fp)
-			{
-				LogError("couldn't open %s\n", tmp);
-				continue;
-			}
-
-			//Read the whole file into a buffer a megabyte at a time
-			fseek(fp, 0, SEEK_END);
-			long len = ftell(fp);
-			fseek(fp, 0, SEEK_SET);
-			buf = new unsigned char[len];
-			long len_remaining = len;
-			long blocksize = 1024*1024;
-			long read_offset = 0;
-			while(len_remaining > 0)
-			{
-				if(blocksize > len_remaining)
-					blocksize = len_remaining;
-
-				//Most time is spent on the fread's when using this path
-				*progress = progress_per_stream*(stream + (read_offset * 1.0 / len));
-				fread(buf + read_offset, 1, blocksize, fp);
-
-				len_remaining -= blocksize;
-				read_offset += blocksize;
-			}
-			fclose(fp);
-
-		//On POSIX, just memory map the file
-		#else
-			int fd = open(tmp, O_RDONLY);
-			if(fd < 0)
-			{
-				LogError("couldn't open %s\n", tmp);
-				continue;
-			}
-			size_t len = lseek(fd, 0, SEEK_END);
-			buf = (unsigned char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
-
-			//For now, report progress complete upon the file being fully read
-			*progress = progress_per_stream*stream;
-		#endif
-
-		//Sparse interleaved
-		if(format == "sparsev1")
-		{
-			//Figure out how many samples we have
-			size_t samplesize = 2*sizeof(int64_t);
-			if(acap)
-				samplesize += sizeof(float);
-			else
-				samplesize += sizeof(bool);
-			size_t nsamples = len / samplesize;
-			cap->Resize(nsamples);
-
-			//TODO: AVX this?
-			for(size_t j=0; j<nsamples; j++)
-			{
-				size_t offset = j*samplesize;
-
-				//Read start time and duration
-				int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
-				offset += 2*sizeof(int64_t);
-				cap->m_offsets[j] = stime[0];
-				cap->m_durations[j] = stime[1];
-
-				//Read sample data
-				if(acap)
-				{
-					//The file format assumes "float" is IEEE754 32-bit float.
-					//If your platform doesn't do that, good luck.
-					//cppcheck-suppress invalidPointerCast
-					acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
-				}
-
-				else
-					dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
-
-				//TODO: progress updates
-			}
-
-			//Quickly check if the waveform is dense packed, even if it was stored as sparse.
-			//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
-			int64_t nlast = nsamples - 1;
-			if( (cap->m_offsets[0] == 0) &&
-				(cap->m_offsets[nlast] == nlast) &&
-				(cap->m_durations[nlast] == 1) )
-			{
-				cap->m_densePacked = true;
-			}
-		}
-
-		//Dense packed
-		else if(format == "densev1")
-		{
-			cap->m_densePacked = true;
-
-			//Figure out length
-			size_t nsamples = 0;
-			if(acap)
-				nsamples = len / sizeof(float);
-			else if(dcap)
-				nsamples = len / sizeof(bool);
-			cap->Resize(nsamples);
+			//Read start time and duration
+			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
+			offset += 2*sizeof(int64_t);
+			cap->m_offsets[j] = stime[0];
+			cap->m_durations[j] = stime[1];
 
 			//Read sample data
 			if(acap)
-				memcpy(&acap->m_samples[0], buf, nsamples*sizeof(float));
-			else
-				memcpy(&dcap->m_samples[0], buf, nsamples*sizeof(bool));
-
-			//TODO: vectorized initialization of timestamps and durations
-			for(size_t i=0; i<nsamples; i++)
 			{
-				cap->m_offsets[i] = i;
-				cap->m_durations[i] = 1;
+				//The file format assumes "float" is IEEE754 32-bit float.
+				//If your platform doesn't do that, good luck.
+				//cppcheck-suppress invalidPointerCast
+				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
 			}
+
+			else
+				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+
+			//TODO: progress updates
 		}
 
-		else
+		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
+		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
+		int64_t nlast = nsamples - 1;
+		if( (cap->m_offsets[0] == 0) &&
+			(cap->m_offsets[nlast] == nlast) &&
+			(cap->m_durations[nlast] == 1) )
 		{
-			LogError(
-				"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
-				format.c_str());
+			cap->m_densePacked = true;
 		}
-
-		#ifdef _WIN32
-			delete[] buf;
-		#else
-			munmap(buf, len);
-			::close(fd);
-		#endif
 	}
+
+	//Dense packed
+	else if(format == "densev1")
+	{
+		cap->m_densePacked = true;
+
+		//Figure out length
+		size_t nsamples = 0;
+		if(acap)
+			nsamples = len / sizeof(float);
+		else if(dcap)
+			nsamples = len / sizeof(bool);
+		cap->Resize(nsamples);
+
+		//Read sample data
+		if(acap)
+			memcpy(&acap->m_samples[0], buf, nsamples*sizeof(float));
+		else
+			memcpy(&dcap->m_samples[0], buf, nsamples*sizeof(bool));
+
+		//TODO: vectorized initialization of timestamps and durations
+		for(size_t i=0; i<nsamples; i++)
+		{
+			cap->m_offsets[i] = i;
+			cap->m_durations[i] = 1;
+		}
+	}
+
+	else
+	{
+		LogError(
+			"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
+			format.c_str());
+	}
+
+	#ifdef _WIN32
+		delete[] buf;
+	#else
+		munmap(buf, len);
+		::close(fd);
+	#endif
 
 	*done = 1;
 	*progress = 1;

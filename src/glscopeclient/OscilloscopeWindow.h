@@ -258,6 +258,7 @@ public:
 		float progress_range);
 	static void DoLoadWaveformDataForScope(
 		int channel_index,
+		int stream,
 		Oscilloscope* scope,
 		std::string datadir,
 		int scope_id,
