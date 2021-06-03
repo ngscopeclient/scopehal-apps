@@ -3542,6 +3542,8 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 	for(auto c : children)
 		m_channelsMenu.remove(*c);
 
+	vector<OscilloscopeChannel*> chans;
+
 	//Add new ones
 	for(auto scope : m_scopes)
 	{
@@ -3555,13 +3557,7 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 
 			//Add a menu item - but not for the external trigger(s)
 			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
-			{
-				auto item = Gtk::manage(new Gtk::MenuItem(chan->GetDisplayName(), false));
-				item->signal_activate().connect(
-					sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
-						StreamDescriptor(chan, 0) ));
-				m_channelsMenu.append(*item);
-			}
+				chans.push_back(chan);
 		}
 	}
 
@@ -3573,12 +3569,22 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 		//TODO: we want to be able to add overlays, but how do we decide where to attach them??
 		if(f->IsOverlay())
 			continue;
+		chans.push_back(f);
+	}
 
-		auto item = Gtk::manage(new Gtk::MenuItem(f->GetDisplayName(), false));
-		item->signal_activate().connect(
-			sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel),
-				StreamDescriptor(f, 0) ));
-		m_channelsMenu.append(*item);
+	//Create a menu item for each stream of each channel
+	for(auto chan : chans)
+	{
+		auto nstreams = chan->GetStreamCount();
+		for(size_t i=0; i<nstreams; i++)
+		{
+			StreamDescriptor desc(chan, i);
+
+			auto item = Gtk::manage(new Gtk::MenuItem(desc.GetName(), false));
+			item->signal_activate().connect(
+				sigc::bind<StreamDescriptor>(sigc::mem_fun(*this, &OscilloscopeWindow::OnAddChannel), desc));
+			m_channelsMenu.append(*item);
+		}
 	}
 
 	m_channelsMenu.show_all();
