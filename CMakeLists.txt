@@ -8,6 +8,10 @@ include(CTest)
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++11
+set(CMAKE_CXX_EXTENSIONS OFF) # use c++11 instead of gnu++11
+
 # Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
 set(WARNINGS "${WARNINGS} -Wshadow -Wpedantic -Wcast-align -Wwrite-strings")
@@ -19,7 +23,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
 endif()
 
-set(CMAKE_CXX_FLAGS "-g ${WARNINGS} --std=c++11 -mtune=native -ffast-math")
+set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # clang doesn't properly use the attributes and so requires avx to build
