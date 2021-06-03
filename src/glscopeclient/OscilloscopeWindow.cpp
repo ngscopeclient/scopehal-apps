@@ -108,8 +108,14 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 
 void OscilloscopeWindow::SetTitle()
 {
+	if(m_scopes.empty())
+	{
+		set_title("glscopeclient");
+		return;
+	}
+
 	//Set title
-	string title = "Oscilloscope: ";
+	string title = "glscopeclient: ";
 	for(size_t i=0; i<m_scopes.size(); i++)
 	{
 		auto scope = m_scopes[i];
@@ -178,6 +184,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					m_recentInstrumentsMenuItem.set_submenu(m_recentInstrumentsMenu);
 					m_fileMenu.append(m_recentInstrumentsMenuItem);
 
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+
 					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
 					item->signal_activate().connect(
 						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
@@ -213,6 +222,14 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 						sigc::bind<bool, bool, bool>(
 							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
 							false, true, true));
+					m_fileMenu.append(*item);
+
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+
+					item = Gtk::manage(new Gtk::MenuItem("Close", false));
+					item->signal_activate().connect(
+						sigc::mem_fun(*this, &OscilloscopeWindow::CloseSession));
 					m_fileMenu.append(*item);
 
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
@@ -717,6 +734,8 @@ void OscilloscopeWindow::CloseSession()
 
 	//Close stuff in the application, terminate threads, etc
 	g_app->ShutDownSession();
+
+	SetTitle();
 }
 
 /**
