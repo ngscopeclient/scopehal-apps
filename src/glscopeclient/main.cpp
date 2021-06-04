@@ -58,6 +58,9 @@ bool g_noglint64 = false;
 
 ScopeApp* g_app = NULL;
 
+//Default locale for printing numbers
+char* g_defaultNumLocale;
+
 void help();
 
 void help()

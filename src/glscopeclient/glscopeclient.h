@@ -53,6 +53,8 @@
 #include "../scopehal/OscilloscopeChannel.h"
 #include "../scopehal/Filter.h"
 
+#include <locale.h>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -86,5 +88,7 @@ void WaveformProcessingThread(OscilloscopeWindow* window);
 
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
+
+extern char* g_defaultNumLocale;
 
 #endif

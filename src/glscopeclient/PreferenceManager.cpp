@@ -197,7 +197,7 @@ void PreferenceManager::LoadPreferences()
 	}
 	catch(const exception& ex)
 	{
-		LogWarning("Warning: Preference file was present, but couldn't be read. Ignoring. (%s)", ex.what());
+		LogWarning("Preference file was present, but couldn't be read. Ignoring. (%s)\n", ex.what());
 	}
 }
 
@@ -211,7 +211,7 @@ void PreferenceManager::SavePreferences()
 
 	if(!outfs)
 	{
-		LogError("couldn't open preferences file for writing");
+		LogError("couldn't open preferences file for writing\n");
 		return;
 	}
 
@@ -219,7 +219,5 @@ void PreferenceManager::SavePreferences()
 	outfs.close();
 
 	if(!outfs)
-	{
-		LogError("couldn't write preferences file to disk");
-	}
+		LogError("couldn't write preferences file to disk\n");
 }

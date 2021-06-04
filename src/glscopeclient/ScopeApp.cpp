@@ -53,6 +53,17 @@ void ScopeApp::run(
 {
 	register_application();
 
+	//Get the system configured locale for numbers, then set the default back to "C"
+	//so we get . as decimal point for all interchange.
+	//All numbers printed for display use the Unit class which will use the user's requested locale.
+	Unit::SetLocale(setlocale(LC_NUMERIC, NULL));
+	setlocale(LC_NUMERIC, "C");
+
+	//Initialize locale configuration to per-thread on Windows
+#ifdef _WIN32
+	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
+#endif
+
 	m_window = new OscilloscopeWindow(m_scopes, nodigital, nospectrum);
 	add_window(*m_window);
 
