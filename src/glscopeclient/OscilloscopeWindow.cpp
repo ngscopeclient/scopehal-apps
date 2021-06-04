@@ -786,13 +786,9 @@ void OscilloscopeWindow::OnFileImport()
 
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
-	//hard code 6 Msps for now
-	//TODO: dialog?
-	const int64_t rate = 6000000;
-
 	auto filterName = dlg.get_filter()->get_name();
 	if(filterName == complexname)
-		ImportComplexToNewSession(dlg.get_filename(), rate);
+		ImportComplexToNewSession(dlg.get_filename(), 0);
 	else if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
 	else if(filterName == wavname)
@@ -893,10 +889,40 @@ void OscilloscopeWindow::ImportComplexToNewSession(const string& filename, int64
 
 	LogDebug("Importing complex file \"%s\" to new session\n", filename.c_str());
 
+	if(samplerate == 0)
+	{
+		LogIndenter li;
+		LogDebug("Sample rate not specified, trying to guess from file name\n");
+
+		//Guess the sample rate from the file name if zero.
+		//If unspecified, default to 1 Msps.
+		size_t offset = filename.find("MSps");
+		if(offset != string::npos)
+		{
+			int start = offset;
+			start --;
+			while(start > 0)
+			{
+				if(isdigit(filename[start-1]))
+					start --;
+				else
+					break;
+			}
+			int len = offset - start;
+			samplerate = atof(filename.substr(start, len).c_str()) * 1e6f;
+			LogDebug("Guessed sample rate of %f Msps from file name\n", samplerate * 1e-6f);
+		}
+		else
+		{
+			LogDebug("Couldn't find a sample rate in the file name, defaulting to 1 MSps\n");
+			samplerate = 1000000;
+		}
+	}
+
 	auto scope = SetupNewSessionForImport("Complex I/Q Import", filename);
 
 	//Load the waveform
-	if(!scope->LoadComplexInt16(filename, samplerate))
+	if(!scope->LoadComplexUnknownFormat(filename, samplerate))
 	{
 		Gtk::MessageDialog dlg(
 			*this,
