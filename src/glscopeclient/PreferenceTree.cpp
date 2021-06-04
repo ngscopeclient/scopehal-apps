@@ -205,7 +205,7 @@ namespace internal
             }
             catch(...)
             {
-                LogWarning("Warning: Can't parse preference value %s for preference %s, ignoring",
+                LogWarning("Can't parse preference value %s for preference %s, ignoring\n",
                     n.as<string>().c_str(), this->m_identifier.c_str());
             }
         }
