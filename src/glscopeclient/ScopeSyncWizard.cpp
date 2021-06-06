@@ -508,7 +508,7 @@ bool ScopeSyncWizard::OnWaveformTimeout()
  */
 void ScopeSyncWizard::RequestWaveform()
 {
-	m_parent->ArmTrigger(true);
+	m_parent->ArmTrigger(OscilloscopeWindow::TRIGGER_TYPE_SINGLE);
 	m_waitingForWaveform = true;
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 5000);
 }
