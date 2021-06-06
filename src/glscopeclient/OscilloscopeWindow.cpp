@@ -92,7 +92,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	SaveRecentlyUsedList();
 	RefreshInstrumentMenu();
 
-	ArmTrigger(false);
+	ArmTrigger(TRIGGER_TYPE_NORMAL);
 	m_toggleInProgress = false;
 
 	m_tLastFlush = GetTime();
@@ -419,6 +419,11 @@ void OscilloscopeWindow::PopulateToolbar()
 		m_btnStartSingle.set_tooltip_text("Start (single trigger)");
 		m_btnStartSingle.set_label("Single");
 		m_btnStartSingle.set_icon_widget(*Gtk::manage(new Gtk::Image(base_path + "trigger-single.png")));
+	m_toolbar.append(m_btnStartForce, sigc::mem_fun(*this, &OscilloscopeWindow::OnForceTrigger));
+		m_btnStartForce.set_tooltip_text("Force trigger");
+		m_btnStartForce.set_label("Force");
+		m_btnStartForce.set_icon_widget(*Gtk::manage(new Gtk::Image(base_path + "trigger-single.png")));	//TODO
+																											//draw icon
 	m_toolbar.append(m_btnStop, sigc::mem_fun(*this, &OscilloscopeWindow::OnStop));
 		m_btnStop.set_tooltip_text("Stop trigger");
 		m_btnStop.set_label("Stop");
@@ -564,7 +569,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
 			if(m_multiScopeFreeRun)
-				ArmTrigger(false);
+				ArmTrigger(TRIGGER_TYPE_NORMAL);
 
 			g_app->DispatchPendingEvents();
 		}
@@ -3367,12 +3372,17 @@ void OscilloscopeWindow::UpdateStatusBar()
 
 void OscilloscopeWindow::OnStart()
 {
-	ArmTrigger(false);
+	ArmTrigger(TRIGGER_TYPE_NORMAL);
 }
 
 void OscilloscopeWindow::OnStartSingle()
 {
-	ArmTrigger(true);
+	ArmTrigger(TRIGGER_TYPE_SINGLE);
+}
+
+void OscilloscopeWindow::OnForceTrigger()
+{
+	ArmTrigger(TRIGGER_TYPE_FORCED);
 }
 
 void OscilloscopeWindow::OnStop()
@@ -3389,8 +3399,10 @@ void OscilloscopeWindow::OnStop()
 	}
 }
 
-void OscilloscopeWindow::ArmTrigger(bool oneshot)
+void OscilloscopeWindow::ArmTrigger(TriggerType type)
 {
+	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
+
 	/*
 		If we have multiple scopes, always use single trigger to keep them synced.
 		Multi-trigger can lead to race conditions and dropped triggers if we're still downloading a secondary
@@ -3423,10 +3435,39 @@ void OscilloscopeWindow::ArmTrigger(bool oneshot)
 
 	for(ssize_t i=m_scopes.size()-1; i >= 0; i--)
 	{
-		if(oneshot || (m_scopes.size() > 1) )
+		//If we have >1 scope, all secondaries always use single trigger synced to the primary's trigger output
+		if(i > 0)
 			m_scopes[i]->StartSingleTrigger();
+
 		else
-			m_scopes[i]->Start();
+		{
+			switch(type)
+			{
+				//Normal trigger: all scopes lock-step for multi scope
+				//for single scope, use normal trigger
+				case TRIGGER_TYPE_NORMAL:
+					if(m_scopes.size() > 1)
+						m_scopes[i]->StartSingleTrigger();
+					else
+						m_scopes[i]->Start();
+					break;
+
+				case TRIGGER_TYPE_AUTO:
+					LogError("ArmTrigger(TRIGGER_TYPE_AUTO) not implemented\n");
+					break;
+
+				case TRIGGER_TYPE_SINGLE:
+					m_scopes[i]->StartSingleTrigger();
+					break;
+
+				case TRIGGER_TYPE_FORCED:
+					m_scopes[i]->ForceTrigger();
+					break;
+
+				default:
+					break;
+			}
+		}
 
 		//If we have multiple scopes, ping the secondaries to make sure the arm command went through
 		if(i != 0)

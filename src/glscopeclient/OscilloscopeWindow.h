@@ -121,7 +121,14 @@ public:
 	void OnStart();
 
 	//has to be public so ScopeSyncWizard can call it
-	void ArmTrigger(bool oneshot);
+	enum TriggerType
+	{
+		TRIGGER_TYPE_SINGLE,
+		TRIGGER_TYPE_FORCED,
+		TRIGGER_TYPE_AUTO,
+		TRIGGER_TYPE_NORMAL
+	};
+	void ArmTrigger(TriggerType type);
 	void OnStop();
 
 	//Clean up the sync wizard
@@ -147,6 +154,7 @@ protected:
 
 	//Menu/toolbar message handlers
 	void OnStartSingle();
+	void OnForceTrigger();
 	void OnQuit();
 	void OnHistory();
 	void OnAlphaChanged();
@@ -200,6 +208,7 @@ protected:
 			Gtk::Toolbar m_toolbar;
 				Gtk::ToolButton m_btnStart;
 				Gtk::ToolButton m_btnStartSingle;
+				Gtk::ToolButton m_btnStartForce;
 				Gtk::ToolButton m_btnStop;
 				Gtk::ToggleToolButton m_btnHistory;
 				Gtk::ToolButton m_btnRefresh;
