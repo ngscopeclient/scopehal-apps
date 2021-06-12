@@ -55,8 +55,8 @@ public:
 					Gtk::ComboBoxText	m_sampleRateBox;
 				Gtk::Label			m_memoryDepthLabel;
 					Gtk::ComboBoxText	m_memoryDepthBox;
-				//Gtk::Label			m_sampleModeLabel;
-				//	Gtk::ComboBoxText	m_sampleModeBox;
+				Gtk::Label			m_sampleModeLabel;
+					Gtk::ComboBoxText	m_sampleModeBox;
 				Gtk::Label			m_interleaveLabel;
 					Gtk::Switch			m_interleaveSwitch;
 			Gtk::Grid m_fgrid;
@@ -67,6 +67,7 @@ public:
 
 	void RefreshSampleRates(bool interleaving);
 	void RefreshSampleDepths(bool interleaving);
+	void RefreshSampleModes();
 
 	void AddWidgets();
 
@@ -74,6 +75,7 @@ public:
 	void OnRateChanged();
 	void OnSpanChanged();
 	void OnRBWChanged();
+	void OnModeChanged();
 	bool OnInterleaveSwitchChanged(bool state);
 
 protected:
