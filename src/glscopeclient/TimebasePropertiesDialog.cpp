@@ -68,7 +68,11 @@ void TimebasePropertiesPage::AddWidgets()
 		m_memoryDepthLabel.set_text("Memory Depth");
 	m_tgrid.attach_next_to(m_memoryDepthBox, m_memoryDepthLabel, Gtk::POS_RIGHT, 1, 1);
 
-	m_tgrid.attach_next_to(m_interleaveLabel, m_memoryDepthLabel, Gtk::POS_BOTTOM, 1, 1);
+	m_tgrid.attach_next_to(m_sampleModeLabel, m_memoryDepthLabel, Gtk::POS_BOTTOM, 1, 1);
+		m_sampleModeLabel.set_text("Timebase Mode");
+	m_tgrid.attach_next_to(m_sampleModeBox, m_sampleModeLabel, Gtk::POS_RIGHT, 1, 1);
+
+	m_tgrid.attach_next_to(m_interleaveLabel, m_sampleModeLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_interleaveLabel.set_text("Channel Combining");
 	m_tgrid.attach_next_to(m_interleaveSwitch, m_interleaveLabel, Gtk::POS_RIGHT, 1, 1);
 
@@ -79,7 +83,9 @@ void TimebasePropertiesPage::AddWidgets()
 	m_memoryDepthBox.signal_changed().connect(
 		sigc::mem_fun(*this, &TimebasePropertiesPage::OnDepthChanged), false);
 	m_sampleRateBox.signal_changed().connect(
-			sigc::mem_fun(*this, &TimebasePropertiesPage::OnRateChanged), false);
+		sigc::mem_fun(*this, &TimebasePropertiesPage::OnRateChanged), false);
+	m_sampleModeBox.signal_changed().connect(
+		sigc::mem_fun(*this, &TimebasePropertiesPage::OnModeChanged), false);
 	m_interleaveSwitch.signal_state_set().connect(
 		sigc::mem_fun(*this, &TimebasePropertiesPage::OnInterleaveSwitchChanged), false);
 
@@ -116,6 +122,7 @@ void TimebasePropertiesPage::AddWidgets()
 
 	RefreshSampleRates(interleaving);
 	RefreshSampleDepths(interleaving);
+	RefreshSampleModes();
 }
 
 void TimebasePropertiesPage::OnDepthChanged()
@@ -133,6 +140,9 @@ void TimebasePropertiesPage::OnDepthChanged()
 
 	//Update channels menu in parent scope in case this change alters the set of available channels
 	m_parent->RefreshChannelsMenu();
+
+	//Available sampling modes might change as the memory depth changes
+	RefreshSampleModes();
 }
 
 void TimebasePropertiesPage::OnRateChanged()
@@ -191,6 +201,61 @@ void TimebasePropertiesPage::OnRBWChanged()
 
 	Unit hz(Unit::UNIT_HZ);
 	m_scope->SetResolutionBandwidth(round(hz.ParseString(m_rbwEntry.get_text())));
+}
+
+void TimebasePropertiesPage::OnModeChanged()
+{
+	//ignore spurious changes when populating box
+	if(m_initializing)
+		return;
+
+	if(m_sampleModeBox.get_active_text() == "Equivalent time")
+		m_scope->SetSamplingMode(Oscilloscope::EQUIVALENT_TIME);
+	else
+		m_scope->SetSamplingMode(Oscilloscope::REAL_TIME);
+}
+
+/**
+	@brief Update the list of sample modes
+ */
+void TimebasePropertiesPage::RefreshSampleModes()
+{
+	m_initializing = true;
+
+	m_sampleModeBox.remove_all();
+
+	//Populate the box
+	int nmodes = 0;
+	if(m_scope->IsSamplingModeAvailable(Oscilloscope::REAL_TIME))
+	{
+		m_sampleModeBox.append("Real time");
+		nmodes ++;
+	}
+	if(m_scope->IsSamplingModeAvailable(Oscilloscope::EQUIVALENT_TIME))
+	{
+		m_sampleModeBox.append("Equivalent time");
+		nmodes ++;
+	}
+
+	//Select the current contents
+	switch(m_scope->GetSamplingMode())
+	{
+		case Oscilloscope::REAL_TIME:
+			m_sampleModeBox.set_active_text("Real time");
+			break;
+
+		case Oscilloscope::EQUIVALENT_TIME:
+			m_sampleModeBox.set_active_text("Equivalent time");
+			break;
+	}
+
+	//Disable the box unless there's more than one option
+	if(nmodes > 1)
+		m_sampleModeBox.set_sensitive(true);
+	else
+		m_sampleModeBox.set_sensitive(false);
+
+	m_initializing = false;
 }
 
 /**
