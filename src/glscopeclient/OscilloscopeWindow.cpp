@@ -72,6 +72,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_syncComplete(false)
 	, m_graphEditor(NULL)
 	, m_haltConditionsDialog(this)
+	, m_timebasePropertiesDialog(NULL)
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
@@ -685,13 +686,19 @@ void OscilloscopeWindow::CloseSession()
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
-    //Close preferences dialog, if it exists
+    //Close popup dialogs, if they exist
     if(m_preferenceDialog)
     {
         m_preferenceDialog->hide();
         delete m_preferenceDialog;
         m_preferenceDialog = nullptr;
     }
+    if(m_timebasePropertiesDialog)
+    {
+		m_timebasePropertiesDialog->hide();
+		delete m_timebasePropertiesDialog;
+		m_timebasePropertiesDialog = nullptr;
+	}
 
     //Save preferences
     m_preferences.SavePreferences();
@@ -3538,15 +3545,9 @@ void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)
 
 void OscilloscopeWindow::OnTimebaseSettings()
 {
-	TimebasePropertiesDialog dlg(this, m_scopes);
-	if(dlg.run() == Gtk::RESPONSE_OK)
-	{
-		dlg.ConfigureTimebase();
-
-		//Need to refresh the menu in case we changed interleaving settings.
-		//The set of available channels might have changed.
-		RefreshChannelsMenu();
-	}
+	if(!m_timebasePropertiesDialog)
+		m_timebasePropertiesDialog = new TimebasePropertiesDialog(this, m_scopes);
+	m_timebasePropertiesDialog->show();
 }
 
 /**

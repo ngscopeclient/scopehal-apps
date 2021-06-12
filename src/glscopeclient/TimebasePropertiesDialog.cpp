@@ -43,6 +43,8 @@ using namespace std;
 
 void TimebasePropertiesPage::AddWidgets()
 {
+	m_initializing = true;
+
 	//Stack setup
 	m_box.pack_start(m_sidebar, Gtk::PACK_EXPAND_WIDGET);
 	m_box.pack_start(m_stack, Gtk::PACK_EXPAND_WIDGET);
@@ -74,6 +76,10 @@ void TimebasePropertiesPage::AddWidgets()
 	m_interleaveSwitch.set_state(interleaving);
 	m_interleaveSwitch.set_sensitive(m_scope->CanInterleave());
 
+	m_memoryDepthBox.signal_changed().connect(
+		sigc::mem_fun(*this, &TimebasePropertiesPage::OnDepthChanged), false);
+	m_sampleRateBox.signal_changed().connect(
+			sigc::mem_fun(*this, &TimebasePropertiesPage::OnRateChanged), false);
 	m_interleaveSwitch.signal_state_set().connect(
 		sigc::mem_fun(*this, &TimebasePropertiesPage::OnInterleaveSwitchChanged), false);
 
@@ -98,7 +104,12 @@ void TimebasePropertiesPage::AddWidgets()
 		m_rbwLabel.set_text("RBW");
 		m_fgrid.attach_next_to(m_rbwEntry, m_rbwLabel, Gtk::POS_RIGHT, 1, 1);
 		m_rbwEntry.set_text(Unit(Unit::UNIT_HZ).PrettyPrint(m_scope->GetResolutionBandwidth()));
+
+		m_spanEntry.signal_changed().connect(sigc::mem_fun(*this, &TimebasePropertiesPage::OnSpanChanged), false);
+		m_rbwEntry.signal_changed().connect(sigc::mem_fun(*this, &TimebasePropertiesPage::OnRBWChanged), false);
 	}
+
+	m_initializing = false;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Done, pull stuff from the instrment
@@ -107,11 +118,88 @@ void TimebasePropertiesPage::AddWidgets()
 	RefreshSampleDepths(interleaving);
 }
 
+void TimebasePropertiesPage::OnDepthChanged()
+{
+	//ignore spurious changes when populating box
+	if(m_initializing)
+		return;
+
+	Unit depth(Unit::UNIT_SAMPLEDEPTH);
+
+	//Make the change, preserving trigger offset which might otherwise be affected
+	int64_t offset = m_scope->GetTriggerOffset();
+	m_scope->SetSampleDepth(round(depth.ParseString(m_memoryDepthBox.get_active_text())));
+	m_scope->SetTriggerOffset(offset);
+
+	//Update channels menu in parent scope in case this change alters the set of available channels
+	m_parent->RefreshChannelsMenu();
+}
+
+void TimebasePropertiesPage::OnRateChanged()
+{
+	//ignore spurious changes when populating box
+	if(m_initializing)
+		return;
+
+	Unit rate(Unit::UNIT_SAMPLERATE);
+
+	//Make the change, preserving trigger offset which might otherwise be affected
+	int64_t offset = m_scope->GetTriggerOffset();
+	m_scope->SetSampleRate(round(rate.ParseString(m_sampleRateBox.get_active_text())));
+	m_scope->SetTriggerOffset(offset);
+
+	//Update channels menu in parent scope in case this change alters the set of available channels
+	m_parent->RefreshChannelsMenu();
+}
+
+/**
+	@brief Handle the interleaving switch being hit
+ */
+bool TimebasePropertiesPage::OnInterleaveSwitchChanged(bool state)
+{
+	//Refresh the list of legal timebase/memory configurations
+	RefreshSampleRates(state);
+	RefreshSampleDepths(state);
+
+	//Make the change, preserving trigger offset which might otherwise be affected
+	int64_t offset = m_scope->GetTriggerOffset();
+	m_scope->SetInterleaving(m_interleaveSwitch.get_state());
+	m_scope->SetTriggerOffset(offset);
+
+	//Update channels menu in parent scope in case this change alters the set of available channels
+	m_parent->RefreshChannelsMenu();
+
+	//run default handler
+	return false;
+}
+
+void TimebasePropertiesPage::OnSpanChanged()
+{
+	//ignore spurious changes when populating box
+	if(m_initializing)
+		return;
+
+	Unit hz(Unit::UNIT_HZ);
+	m_scope->SetSpan(round(hz.ParseString(m_spanEntry.get_text())));
+}
+
+void TimebasePropertiesPage::OnRBWChanged()
+{
+	//ignore spurious changes when populating box
+	if(m_initializing)
+		return;
+
+	Unit hz(Unit::UNIT_HZ);
+	m_scope->SetResolutionBandwidth(round(hz.ParseString(m_rbwEntry.get_text())));
+}
+
 /**
 	@brief Update the list of sample rates (these may change when, for example, interleaving is turned on/off)
  */
 void TimebasePropertiesPage::RefreshSampleRates(bool interleaving)
 {
+	m_initializing = true;
+
 	m_sampleRateBox.remove_all();
 
 	vector<uint64_t> rates;
@@ -132,6 +220,8 @@ void TimebasePropertiesPage::RefreshSampleRates(bool interleaving)
 	//If no text was selected, select the highest valid rate
 	if(m_sampleRateBox.get_active_text() == "")
 		m_sampleRateBox.set_active_text(last_rate);
+
+	m_initializing = false;
 }
 
 /**
@@ -139,6 +229,8 @@ void TimebasePropertiesPage::RefreshSampleRates(bool interleaving)
  */
 void TimebasePropertiesPage::RefreshSampleDepths(bool interleaving)
 {
+	m_initializing = true;
+
 	m_memoryDepthBox.remove_all();
 
 	vector<uint64_t> depths;
@@ -160,19 +252,8 @@ void TimebasePropertiesPage::RefreshSampleDepths(bool interleaving)
 	//If no text was selected, select the highest valid depth
 	if(m_memoryDepthBox.get_active_text() == "")
 		m_memoryDepthBox.set_active_text(last_depth);
-}
 
-/**
-	@brief Handle the interleaving switch being hit
- */
-bool TimebasePropertiesPage::OnInterleaveSwitchChanged(bool state)
-{
-	//Refresh the list of legal timebase/memory configurations
-	RefreshSampleRates(state);
-	RefreshSampleDepths(state);
-
-	//run default handler
-	return false;
+	m_initializing = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,17 +262,14 @@ bool TimebasePropertiesPage::OnInterleaveSwitchChanged(bool state)
 TimebasePropertiesDialog::TimebasePropertiesDialog(
 	OscilloscopeWindow* parent,
 	const vector<Oscilloscope*>& scopes)
-	: Gtk::Dialog("Timebase Properties", *parent, Gtk::DIALOG_MODAL)
+	: Gtk::Dialog("Timebase Properties", *parent)
 	, m_scopes(scopes)
 {
-	add_button("OK", Gtk::RESPONSE_OK);
-	add_button("Cancel", Gtk::RESPONSE_CANCEL);
-
 	get_vbox()->pack_start(m_tabs, Gtk::PACK_EXPAND_WIDGET);
 
 	for(auto scope : scopes)
 	{
-		TimebasePropertiesPage* page = new TimebasePropertiesPage(scope);
+		TimebasePropertiesPage* page = new TimebasePropertiesPage(scope, parent);
 		m_tabs.append_page(page->m_box, scope->m_nickname);
 		page->AddWidgets();
 		m_pages[scope] = page;
@@ -205,41 +283,3 @@ TimebasePropertiesDialog::~TimebasePropertiesDialog()
 	for(auto it : m_pages)
 		delete it.second;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Output
-
-void TimebasePropertiesDialog::ConfigureTimebase()
-{
-	Unit hz(Unit::UNIT_HZ);
-	Unit depth(Unit::UNIT_SAMPLEDEPTH);
-	Unit rate(Unit::UNIT_SAMPLERATE);
-
-	for(auto it : m_pages)
-	{
-		auto page = it.second;
-		auto scope = it.first;
-
-		//Configure interleaving
-		scope->SetInterleaving(page->m_interleaveSwitch.get_state());
-
-		//Get the old trigger offset
-		int64_t offset = scope->GetTriggerOffset();
-
-		//Set timebase
-		scope->SetSampleRate(round(rate.ParseString(page->m_sampleRateBox.get_active_text())));
-		scope->SetSampleDepth(round(depth.ParseString(page->m_memoryDepthBox.get_active_text())));
-
-		scope->SetTriggerOffset(offset);
-
-		//Frequency domain options
-		if(scope->HasFrequencyControls())
-		{
-			scope->SetSpan(round(hz.ParseString(page->m_spanEntry.get_text())));
-			scope->SetResolutionBandwidth(round(hz.ParseString(page->m_rbwEntry.get_text())));
-		}
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Event handlers
