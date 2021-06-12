@@ -52,6 +52,7 @@ class FilterGraphEditor;
 class PreferenceDialog;
 class MultimeterDialog;
 class MockOscilloscope;
+class TimebasePropertiesDialog;
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -364,7 +365,6 @@ public:
 
 	//WFM/s performance info
 	std::vector<double> m_lastWaveformTimes;
-	PreferenceDialog* m_preferenceDialog{nullptr};
 
 	//Fullscreen state
 	bool m_fullscreen;
@@ -378,11 +378,11 @@ public:
 	ScopeSyncWizard* m_scopeSyncWizard;
 	bool m_syncComplete;
 
-	//Filter graph editor
+	//Modeless properties dialogs
+	PreferenceDialog* m_preferenceDialog{nullptr};
 	FilterGraphEditor* m_graphEditor;
-
-	//Conditional halting
 	HaltConditionsDialog m_haltConditionsDialog;
+	TimebasePropertiesDialog* m_timebasePropertiesDialog;
 
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;

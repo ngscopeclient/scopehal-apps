@@ -39,8 +39,10 @@
 class TimebasePropertiesPage
 {
 public:
-	TimebasePropertiesPage(Oscilloscope* scope)
+	TimebasePropertiesPage(Oscilloscope* scope, OscilloscopeWindow* parent)
 	: m_scope(scope)
+	, m_parent(parent)
+	, m_initializing(false)
 	{}
 
 	Oscilloscope* m_scope;
@@ -53,6 +55,8 @@ public:
 					Gtk::ComboBoxText	m_sampleRateBox;
 				Gtk::Label			m_memoryDepthLabel;
 					Gtk::ComboBoxText	m_memoryDepthBox;
+				//Gtk::Label			m_sampleModeLabel;
+				//	Gtk::ComboBoxText	m_sampleModeBox;
 				Gtk::Label			m_interleaveLabel;
 					Gtk::Switch			m_interleaveSwitch;
 			Gtk::Grid m_fgrid;
@@ -66,7 +70,15 @@ public:
 
 	void AddWidgets();
 
+	void OnDepthChanged();
+	void OnRateChanged();
+	void OnSpanChanged();
+	void OnRBWChanged();
 	bool OnInterleaveSwitchChanged(bool state);
+
+protected:
+	OscilloscopeWindow* m_parent;
+	bool m_initializing;
 };
 
 /**
@@ -77,8 +89,6 @@ class TimebasePropertiesDialog	: public Gtk::Dialog
 public:
 	TimebasePropertiesDialog(OscilloscopeWindow* parent, const std::vector<Oscilloscope*>& scopes);
 	virtual ~TimebasePropertiesDialog();
-
-	void ConfigureTimebase();
 
 protected:
 	Gtk::Notebook m_tabs;
