@@ -160,6 +160,9 @@ void TimebasePropertiesPage::OnRateChanged()
 
 	//Update channels menu in parent scope in case this change alters the set of available channels
 	m_parent->RefreshChannelsMenu();
+
+	//Available sampling modes might change as the sample rate changes
+	RefreshSampleModes();
 }
 
 /**
@@ -213,6 +216,11 @@ void TimebasePropertiesPage::OnModeChanged()
 		m_scope->SetSamplingMode(Oscilloscope::EQUIVALENT_TIME);
 	else
 		m_scope->SetSamplingMode(Oscilloscope::REAL_TIME);
+
+	//Equivalent and real time sampling normally have very different sets of available sample rate/depth
+	bool interleaving = m_scope->IsInterleaving();
+	RefreshSampleRates(interleaving);
+	RefreshSampleDepths(interleaving);
 }
 
 /**
