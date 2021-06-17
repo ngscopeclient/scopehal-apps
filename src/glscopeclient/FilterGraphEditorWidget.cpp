@@ -675,6 +675,24 @@ void FilterGraphEditorWidget::AssignNodesToColumns()
 	for(auto node : unassignedNodes)
 		unassignedChannels.emplace(node->m_channel);
 
+	//Filters that have *no* inputs go in column 0, since they're probably signal generators of some sort
+	set<FilterGraphEditorNode*> nextNodes;
+	for(auto node : unassignedNodes)
+	{
+		auto d = dynamic_cast<Filter*>(node->m_channel);
+		if(d->GetInputCount() == 0)
+		{
+			node->m_column = 0;
+			m_columns[0]->m_nodes.emplace(node);
+			nextNodes.emplace(node);
+		}
+	}
+	for(auto node : nextNodes)
+	{
+		unassignedNodes.erase(node);
+		unassignedChannels.erase(node->m_channel);
+	}
+
 	int ncol = 1;
 	while(!unassignedNodes.empty())
 	{
@@ -683,7 +701,7 @@ void FilterGraphEditorWidget::AssignNodesToColumns()
 			m_columns.push_back(new FilterGraphRoutingColumn);
 
 		//Find all nodes which live exactly one column to our right.
-		set<FilterGraphEditorNode*> nextNodes;
+		nextNodes.clear();
 		for(auto node : unassignedNodes)
 		{
 			//Check if we have any inputs that are still in the working set.
