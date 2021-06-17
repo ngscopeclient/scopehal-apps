@@ -1461,7 +1461,10 @@ void WaveformArea::UpdateContextMenu()
 			auto filter = Filter::CreateFilter(
 				menu->get_label(),
 				"");
-			menu->set_sensitive(filter->ValidateChannel(0, m_selectedChannel));
+			if(filter->GetInputCount() == 0)
+				menu->set_sensitive();	//filters with no inputs always are legal
+			else
+				menu->set_sensitive(filter->ValidateChannel(0, m_selectedChannel));
 			delete filter;
 		}
 	}
