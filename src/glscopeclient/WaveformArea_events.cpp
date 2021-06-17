@@ -1443,6 +1443,7 @@ void WaveformArea::UpdateContextMenu()
 	childMenus.push_back(&m_decodePowerMenu);
 	childMenus.push_back(&m_decodeRFMenu);
 	childMenus.push_back(&m_decodeSerialMenu);
+	childMenus.push_back(&m_decodeWaveformGenerationMenu);
 
 	for(auto submenu : childMenus)
 	{
