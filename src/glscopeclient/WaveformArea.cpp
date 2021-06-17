@@ -326,6 +326,9 @@ void WaveformArea::CreateWidgets()
 	m_contextMenu.append(m_decodeSignalIntegrityItem);
 		m_decodeSignalIntegrityItem.set_label("Signal Integrity");
 		m_decodeSignalIntegrityItem.set_submenu(m_decodeSignalIntegrityMenu);
+	m_contextMenu.append(m_decodeWaveformGenerationItem);
+		m_decodeWaveformGenerationItem.set_label("Waveform Generation");
+		m_decodeWaveformGenerationItem.set_submenu(m_decodeWaveformGenerationMenu);
 
 
 		vector<string> names;
@@ -397,6 +400,10 @@ void WaveformArea::CreateWidgets()
 
 				case Filter::CAT_SERIAL:
 					m_decodeSerialMenu.append(*item);
+					break;
+
+				case Filter::CAT_GENERATION:
+					m_decodeWaveformGenerationMenu.append(*item);
 					break;
 
 				default:

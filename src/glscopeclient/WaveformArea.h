@@ -272,6 +272,8 @@ protected:
 			Gtk::Menu m_decodeSerialMenu;
 		Gtk::MenuItem m_decodeSignalIntegrityItem;
 			Gtk::Menu m_decodeSignalIntegrityMenu;
+		Gtk::MenuItem m_decodeWaveformGenerationItem;
+			Gtk::Menu m_decodeWaveformGenerationMenu;
 		Gtk::CheckMenuItem m_statisticsItem;
 		Gtk::MenuItem m_couplingItem;
 			Gtk::Menu m_couplingMenu;
