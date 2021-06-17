@@ -642,6 +642,13 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto eye = dynamic_cast<EyeWaveform*>(data);
 	auto ed = dynamic_cast<EyePattern*>(m_channel.m_channel);
 
+	//Add sample rate info to physical analog channels
+	//and filters with no inputs (signal generators)
+	auto f = dynamic_cast<Filter*>(m_channel.m_channel);
+	bool printSampleRate = m_channel.m_channel->IsPhysicalChannel();
+	if(f && f->GetInputCount() == 0)
+		printSampleRate = true;
+
 	//Add RBW to frequency domain channels
 	char tmp[256];
 	auto xunits = m_channel.m_channel->GetXAxisUnits();
@@ -681,9 +688,8 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 		}
 	}
 
-	//Add sample rate info to physical analog channels
-	//TODO: do this to some decodes too?
-	else if(m_channel.m_channel->IsPhysicalChannel() && (data != NULL))
+	//Print sample rate
+	else if(printSampleRate && (data != NULL))
 	{
 		//Do not render sample rate on digital signals unless we have overlays, because this ~doubles the height
 		//of the channel and hurts packing density.
