@@ -44,6 +44,20 @@
 
 using namespace std;
 
+#ifdef _WIN32
+
+static std::string NarrowPath(wchar_t* wide)
+{
+	char narrow[MAX_PATH];
+	const auto len = wcstombs(narrow, wide, MAX_PATH);
+
+	if(len == static_cast<size_t>(-1))
+		throw runtime_error("Failed to convert wide string");
+
+	return std::string(narrow);
+}
+#endif
+
 #ifndef _WIN32
 // POSIX-specific filesystem helpers. These will be moved to xptools in a generalized form later.
 
@@ -126,7 +140,7 @@ void PreferenceManager::DeterminePath()
 
 	// Ensure the directory exists
 	const auto result = CreateDirectoryW(directory, NULL);
-	m_configDir = directory;
+	m_configDir = NarrowPath(directory);
 
 	if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
 	{
@@ -139,15 +153,7 @@ void PreferenceManager::DeterminePath()
 	{
 		throw runtime_error("failed to build directory path");
 	}
-
-	char configNarrow[MAX_PATH];
-	const auto len = wcstombs(configNarrow, config, MAX_PATH);
-
-	if(len == static_cast<size_t>(-1))
-		throw runtime_error("Failed to convert wide string");
-
-	m_filePath = string(configNarrow);
-
+	m_filePath = NarrowPath(config);
 
 	CoTaskMemFree(static_cast<void*>(stem));
 #else
