@@ -211,8 +211,12 @@ void ScopeApp::ConnectToScopes(vector<string> scopes)
 		char args[128];
 		if(4 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127s", nick, driver, trans, args))
 		{
-			LogError("Invalid scope string %s\n", s.c_str());
-			continue;
+			args[0] = '\0';
+			if(3 != sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]", nick, driver, trans))
+			{
+				LogError("Invalid scope string %s\n", s.c_str());
+				continue;
+			}
 		}
 
 		//Create the transport
