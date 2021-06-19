@@ -90,5 +90,6 @@ extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 
 extern char* g_defaultNumLocale;
+extern int g_numDecodes;
 
 #endif

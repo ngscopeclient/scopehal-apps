@@ -85,6 +85,7 @@ public:
 	void OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* ngroup);
 
 	void OnAddChannel(StreamDescriptor w);
+	void OnGenerateFilter(std::string name);
 	WaveformArea* DoAddChannel(StreamDescriptor w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
 
 	size_t GetScopeCount()
@@ -182,8 +183,12 @@ protected:
 						Gtk::Menu m_setupTriggerMenu;
 					Gtk::MenuItem m_setupHaltMenuItem;
 					Gtk::MenuItem m_preferencesMenuItem;
-			Gtk::MenuItem m_channelsMenuItem;
-				Gtk::Menu m_channelsMenu;
+			Gtk::MenuItem m_addMenuItem;
+				Gtk::Menu m_addMenu;
+					Gtk::MenuItem m_channelsMenuItem;
+						Gtk::Menu m_channelsMenu;
+					Gtk::MenuItem m_generateMenuItem;
+						Gtk::Menu m_generateMenu;
 			Gtk::MenuItem m_viewMenuItem;
 				Gtk::Menu m_viewMenu;
 					Gtk::MenuItem m_viewEyeColorMenuItem;
@@ -314,6 +319,7 @@ public:
 	void OnPreferenceDialogResponse(int response);
 
 	//Reconfigure menus
+	void RefreshGenerateMenu();
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
@@ -383,6 +389,9 @@ public:
 	FilterGraphEditor* m_graphEditor;
 	HaltConditionsDialog m_haltConditionsDialog;
 	TimebasePropertiesDialog* m_timebasePropertiesDialog;
+	FilterDialog* m_addFilterDialog;
+	Filter* m_pendingGenerator;
+	void OnGenerateDialogResponse(int response);
 
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;

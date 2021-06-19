@@ -73,6 +73,8 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_graphEditor(NULL)
 	, m_haltConditionsDialog(this)
 	, m_timebasePropertiesDialog(NULL)
+	, m_addFilterDialog(NULL)
+	, m_pendingGenerator(NULL)
 	, m_triggerArmed(false)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
@@ -312,9 +314,16 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
 									OscilloscopeWindow::EYE_VIRIDIS,
 									&m_eyeColorViridisItem));
-			m_menu.append(m_channelsMenuItem);
-				m_channelsMenuItem.set_label("Add");
-				m_channelsMenuItem.set_submenu(m_channelsMenu);
+			m_menu.append(m_addMenuItem);
+				m_addMenuItem.set_label("Add");
+				m_addMenuItem.set_submenu(m_addMenu);
+					m_addMenu.append(m_channelsMenuItem);
+						m_channelsMenuItem.set_label("Channels");
+						m_channelsMenuItem.set_submenu(m_channelsMenu);
+					m_addMenu.append(m_generateMenuItem);
+						m_generateMenuItem.set_label("Generate");
+						m_generateMenuItem.set_submenu(m_generateMenu);
+						RefreshGenerateMenu();
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
@@ -698,6 +707,12 @@ void OscilloscopeWindow::CloseSession()
 		m_timebasePropertiesDialog->hide();
 		delete m_timebasePropertiesDialog;
 		m_timebasePropertiesDialog = nullptr;
+	}
+	if(m_addFilterDialog)
+    {
+		m_addFilterDialog->hide();
+		delete m_addFilterDialog;
+		m_addFilterDialog = nullptr;
 	}
 
     //Save preferences
@@ -3599,6 +3614,74 @@ void OscilloscopeWindow::OnHaltConditions()
 {
 	m_haltConditionsDialog.show();
 	m_haltConditionsDialog.RefreshChannels();
+}
+
+/**
+	@brief Generate a new waveform using a filter
+ */
+void OscilloscopeWindow::OnGenerateFilter(string name)
+{
+	//need to modeless dialog
+	string color = GetDefaultChannelColor(g_numDecodes);
+	m_pendingGenerator = Filter::CreateFilter(name, color);
+
+	if(m_addFilterDialog)
+		delete m_addFilterDialog;
+	m_addFilterDialog = new FilterDialog(this, m_pendingGenerator, NULL);
+	m_addFilterDialog->show();
+	m_addFilterDialog->signal_response().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateDialogResponse));
+}
+
+void OscilloscopeWindow::OnGenerateDialogResponse(int response)
+{
+	if(response != Gtk::RESPONSE_OK)
+	{
+		delete m_pendingGenerator;
+		m_pendingGenerator = NULL;
+	}
+
+	else
+	{
+		m_addFilterDialog->ConfigureDecoder();
+
+		//This bit is similar to WaveformArea::OnDecodeSetupComplete(), but with much less special cases
+		//since we only support signal generation filters here
+		g_numDecodes ++;
+		m_pendingGenerator->Refresh();
+		for(size_t i=0; i<m_pendingGenerator->GetStreamCount(); i++)
+			OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
+	}
+
+	delete m_addFilterDialog;
+	m_addFilterDialog = NULL;
+}
+
+/**
+	@brief Update the "generate waveform" menu
+ */
+void OscilloscopeWindow::RefreshGenerateMenu()
+{
+	//Remove old ones
+	auto children = m_generateMenu.get_children();
+	for(auto c : children)
+		m_generateMenu.remove(*c);
+
+	//Add all filters that have no inputs
+	vector<string> names;
+	Filter::EnumProtocols(names);
+	for(auto p : names)
+	{
+		//Create a test filter
+		auto d = Filter::CreateFilter(p, "");
+		if(d->GetInputCount() == 0)
+		{
+			auto item = Gtk::manage(new Gtk::MenuItem(p, false));
+			m_generateMenu.append(*item);
+			item->signal_activate().connect(
+				sigc::bind<string>(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateFilter), p));
+		}
+		delete d;
+	}
 }
 
 /**
