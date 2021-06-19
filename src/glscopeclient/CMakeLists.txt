@@ -6,7 +6,6 @@ endif()
 # GLEW and OpenGL are required
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(Yaml REQUIRED)
 
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
@@ -14,6 +13,12 @@ find_package(Git)
 # Additional libraries on Windows
 if(WIN32)
 	set(WIN_LIBS shlwapi)
+	# The packaging for yaml-cpp on mingw64 seems to be broken, not providing a
+	# libyaml-cpp.dll.a to be found by find_library inside of find_package(YAML)
+	# when using FindYAML.cmake, just set the library directly
+	set(YAML_LIBRARIES yaml-cpp)
+else()
+	find_package(YAML REQUIRED)
 endif()
 
 #Set up include paths
