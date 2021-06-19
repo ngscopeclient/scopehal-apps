@@ -113,7 +113,7 @@ void OscilloscopeWindow::SetTitle()
 {
 	if(m_scopes.empty())
 	{
-		set_title("glscopeclient");
+		set_title("glscopeclient [OFFLINE]");
 		return;
 	}
 
@@ -3089,9 +3089,9 @@ void OscilloscopeWindow::GarbageCollectAnalyzers()
  */
 bool OscilloscopeWindow::CheckForPendingWaveforms()
 {
-	//No scopes to poll? Nothing to do
+	//No scopes to poll? Re-run the filter graph
 	if(m_scopes.empty())
-		return false;
+		return m_triggerArmed;
 
 	//Wait for every scope to have triggered
 	for(auto scope : m_scopes)
@@ -3408,6 +3408,13 @@ void OscilloscopeWindow::OnStop()
 
 void OscilloscopeWindow::ArmTrigger(TriggerType type)
 {
+	if(m_scopes.empty())
+	{
+		m_tArm = GetTime();
+		m_triggerArmed = true;
+		return;
+	}
+
 	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
 
 	/*
