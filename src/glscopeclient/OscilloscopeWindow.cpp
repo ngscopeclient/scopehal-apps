@@ -1646,7 +1646,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 		if(!fp)
 		{
 			LogError("couldn't open %s\n", tmp);
-			continue;
+			return;
 		}
 
 		//Read the whole file into a buffer a megabyte at a time
