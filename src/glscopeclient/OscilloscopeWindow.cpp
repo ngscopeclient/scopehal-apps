@@ -2998,6 +2998,14 @@ void OscilloscopeWindow::OnQuit()
 
 void OscilloscopeWindow::OnAddChannel(StreamDescriptor chan)
 {
+	//If we have no splitters, make one
+	if(m_splitters.empty())
+	{
+		auto split = new Gtk::VPaned;
+		m_vbox.pack_start(*split);
+		m_splitters.emplace(split);
+	}
+
 	//If all waveform groups were closed, recreate one
 	if(m_waveformGroups.empty())
 	{
