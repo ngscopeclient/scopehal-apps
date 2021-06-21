@@ -3145,7 +3145,7 @@ bool OscilloscopeWindow::CheckForPendingWaveforms()
 }
 
 /**
-	@brief Pull the waveform data out of the queue and make i t current
+	@brief Pull the waveform data out of the queue and make it current
  */
 void OscilloscopeWindow::DownloadWaveforms()
 {
