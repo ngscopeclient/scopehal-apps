@@ -76,6 +76,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_addFilterDialog(NULL)
 	, m_pendingGenerator(NULL)
 	, m_triggerArmed(false)
+	, m_triggerOneShot(false)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
 	, m_waveformProcessingThread(WaveformProcessingThread, this)
@@ -3164,6 +3165,10 @@ void OscilloscopeWindow::DownloadWaveforms()
 		//Download the data
 		scope->PopPendingWaveform();
 	}
+
+	//If we're in offline one-shot mode, disarm the trigger
+	if( (m_scopes.empty()) && m_triggerOneShot)
+		m_triggerArmed = false;
 }
 
 /**
@@ -3416,14 +3421,15 @@ void OscilloscopeWindow::OnStop()
 
 void OscilloscopeWindow::ArmTrigger(TriggerType type)
 {
+	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
+	m_triggerOneShot = oneshot;
+
 	if(m_scopes.empty())
 	{
 		m_tArm = GetTime();
 		m_triggerArmed = true;
 		return;
 	}
-
-	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
 
 	/*
 		If we have multiple scopes, always use single trigger to keep them synced.
