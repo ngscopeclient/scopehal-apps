@@ -559,6 +559,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 
 		//Move the cursor
 		case DRAG_CURSOR_0:
+			timestamp = SnapX(timestamp, event->x, event->y);
 			m_group->m_xCursorPos[0] = timestamp;
 			OnCursorMoved();
 			break;
@@ -566,6 +567,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_CURSOR_1:
 			if(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL)
 			{
+				timestamp = SnapX(timestamp, event->x, event->y);
 				m_group->m_xCursorPos[1] = timestamp;
 				OnCursorMoved();
 			}
