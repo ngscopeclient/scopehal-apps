@@ -158,6 +158,7 @@ if(WIN32)
 		COMMAND bash -c \"cp -R /mingw64/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/dist/windows_x64/lib\"
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons
 		COMMAND bash -c \"cp -R /mingw64/share/icons/hicolor ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons\"
+		COMMAND bash -c \"cp -R /mingw64/share/icons/Adwaita ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons\"
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0
 		COMMAND bash -c \"cp -R /mingw64/share/glib-2.0/schemas ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0\"
 		COMMAND bash -c \"cd ${CMAKE_BINARY_DIR}/dist/windows_x64 && glib-compile-schemas ./share/glib-2.0/schemas\" 
