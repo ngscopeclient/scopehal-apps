@@ -160,8 +160,8 @@ jobs:
 
     - name: Build MSI / portable zip
       run: |
-        mkdir build
-        cd build
+        mkdir build_msi
+        cd build_msi
         cmake \
           -G"MSYS Makefiles" \
           -DBUILD_TESTING=OFF \
@@ -173,10 +173,10 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows-portable
-        path: build/dist/windows_x64
+        path: build_msi/dist/windows_x64
 
     - name: Upload Artifacts (MSI)
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows.msi
-        path: build/dist/*.msi
+        path: build_msi/dist/*.msi
