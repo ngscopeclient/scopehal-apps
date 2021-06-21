@@ -396,6 +396,9 @@ public:
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;
 
+	//If true, trigger is currently armed in single-shot mode
+	bool m_triggerOneShot;
+
 	//True if shutting down (don't process any more updates after this point
 	bool m_shuttingDown;
 
