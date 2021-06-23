@@ -1038,9 +1038,17 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	if(!data)
 		return;
 
-	//Sum up the total power
-	size_t ifirst = round(m_group->m_xCursorPos[0] * 1.0 / data->m_timescale);
-	size_t isecond = round(m_group->m_xCursorPos[1] * 1.0 / data->m_timescale);
+	//Bounds check cursors
+	double vfirst = round((m_group->m_xCursorPos[0] - data->m_triggerPhase)* 1.0 / data->m_timescale);
+	vfirst = max(vfirst, (double)0);
+	vfirst = min(vfirst, (double)data->m_samples.size()-1);
+
+	double vsecond = round((m_group->m_xCursorPos[1] - data->m_triggerPhase)* 1.0 / data->m_timescale);
+	vsecond = max(vsecond, (double)0);
+	vsecond = min(vsecond, (double)data->m_samples.size()-1);
+
+	size_t ifirst = vfirst;
+	size_t isecond = vsecond;
 
 	//This gets a bit more complicated because we can't just sum dB!
 	string text;
