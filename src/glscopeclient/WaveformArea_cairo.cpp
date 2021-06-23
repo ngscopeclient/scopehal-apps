@@ -925,19 +925,22 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
 	if(!waveform)
 		return 0;
-
-	//Find the index of the sample of interest
 	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
+
+	//Stop if start of waveform (no lerping possible)
+	if(ticks <= 0)
+		return waveform->m_samples[0];
+
+	//Stop if end of waveform (no lerping possible)
+	size_t end = waveform->m_offsets.size() - 1;
+	if(ticks >= end)
+		return waveform->m_samples[end];
+
+	//Find the approximate index of the sample of interest and interpolate the cursor position
 	size_t index = BinarySearchForGequal(
 		(int64_t*)&waveform->m_offsets[0],
 		waveform->m_offsets.size(),
 		(int64_t)ceil(ticks));
-
-	//Stop if start of waveform (no lerping possible)
-	if(index == 0)
-		return waveform->m_samples[index];
-
-	//Linear interpolate to find the value better
 	return Filter::InterpolateValue(waveform, index-1, ticks - waveform->m_offsets[index-1]);
 }
 
