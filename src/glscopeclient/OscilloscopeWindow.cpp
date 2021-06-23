@@ -547,6 +547,10 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 
 bool OscilloscopeWindow::OnTimer(int /*timer*/)
 {
+	//Don't process any trigger events, etc during file load
+	if(m_loadInProgress)
+		return true;
+
 	if(m_shuttingDown)
 	{
 		for(auto it : m_historyWindows)
