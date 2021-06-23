@@ -117,7 +117,7 @@ void HistoryWindow::SetMaxWaveforms(int n)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 
-void HistoryWindow::OnWaveformDataReady()
+void HistoryWindow::OnWaveformDataReady(bool loading)
 {
 	//Use the timestamp from the first enabled channel
 	OscilloscopeChannel* chan = NULL;
@@ -194,27 +194,38 @@ void HistoryWindow::OnWaveformDataReady()
 
 	//Remove extra waveforms, if we have any.
 	//Clamp to 1 if the user types zero or something non-numeric
-	string smax = m_maxBox.get_text();
-	size_t nmax = atoi(smax.c_str());
-	if(nmax < 1)
-	{
-		m_maxBox.set_text("1");
-		nmax = 1;
-	}
+	//When loading a file, don't delete any history even if the file has more waveforms than our current limit
 	auto children = m_model->children();
-	while(children.size() > nmax)
+	if(loading)
 	{
-		//Delete any protocol decodes from this waveform
-		auto it = children.begin();
-		key = (*it)[m_columns.m_capturekey];
-		m_parent->RemoveHistory(key);
+		string smax = m_maxBox.get_text();
+		size_t nmax = atoi(smax.c_str());
+		if(nmax < children.size())
+			m_maxBox.set_text(to_string(children.size()));
+	}
+	else
+	{
+		string smax = m_maxBox.get_text();
+		size_t nmax = atoi(smax.c_str());
+		if(nmax < 1)
+		{
+			m_maxBox.set_text("1");
+			nmax = 1;
+		}
+		while(children.size() > nmax)
+		{
+			//Delete any protocol decodes from this waveform
+			auto it = children.begin();
+			key = (*it)[m_columns.m_capturekey];
+			m_parent->RemoveHistory(key);
 
-		//Delete the saved waveform data
-		hist = (*it)[m_columns.m_history];
-		for(auto w : hist)
-			delete w.second;
+			//Delete the saved waveform data
+			hist = (*it)[m_columns.m_history];
+			for(auto w : hist)
+				delete w.second;
 
-		m_model->erase(it);
+			m_model->erase(it);
+		}
 	}
 
 	//Calculate our RAM usage (rough estimate)

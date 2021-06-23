@@ -62,7 +62,7 @@ public:
 
 	void ReplayHistory();
 
-	void OnWaveformDataReady();
+	void OnWaveformDataReady(bool loading = false);
 	void JumpToHistory(TimePoint timestamp);
 
 	void SetMaxWaveforms(int n);

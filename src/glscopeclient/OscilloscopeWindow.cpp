@@ -1585,7 +1585,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		}
 
 		//Add to history
-		window->OnWaveformDataReady();
+		window->OnWaveformDataReady(true);
 
 		//Keep track of the newest waveform (may not be in time order)
 		if( (time.first > newest.first) ||
