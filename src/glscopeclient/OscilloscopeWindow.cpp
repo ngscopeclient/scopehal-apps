@@ -1803,56 +1803,74 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 
 		Oscilloscope* scope = NULL;
 
+		auto transtype = inst["transport"].as<string>();
+
 		if(reconnect)
 		{
-			//Create the scope
-			auto transport = SCPITransport::CreateTransport(inst["transport"].as<string>(), inst["args"].as<string>());
-
-			//Check if the transport failed to initialize
-			if((transport == NULL) || !transport->IsConnected())
+			if(transtype == "null")
 			{
 				Gtk::MessageDialog dlg(
 					*this,
-					string("Failed to connect to instrument using connection string ") + inst["args"].as<string>(),
+					"Cannot reconnect to instrument because the .scopesession file does not contain any connection "
+					"information.\n\n"
+					"Loading file in offline mode.",
 					false,
 					Gtk::MESSAGE_ERROR,
 					Gtk::BUTTONS_OK,
 					true);
 				dlg.run();
 			}
-
-			//All good, try to connect
 			else
 			{
-				scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
+				//Create the scope
+				auto transport = SCPITransport::CreateTransport(transtype, inst["args"].as<string>());
 
-				//Sanity check make/model/serial. If mismatch, stop
-				string message;
-				bool fail = false;
-				if(inst["name"].as<string>() != scope->GetName())
+				//Check if the transport failed to initialize
+				if((transport == NULL) || !transport->IsConnected())
 				{
-					message = string("Unable to connect to oscilloscope: instrument has model name \"") +
-						scope->GetName() + "\", save file has model name \"" + inst["name"].as<string>()  + "\"";
-					fail = true;
-				}
-				else if(inst["vendor"].as<string>() != scope->GetVendor())
-				{
-					message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
-						scope->GetVendor() + "\", save file has vendor \"" + inst["vendor"].as<string>()  + "\"";
-					fail = true;
-				}
-				else if(inst["serial"].as<string>() != scope->GetSerial())
-				{
-					message = string("Unable to connect to oscilloscope: instrument has serial \"") +
-						scope->GetSerial() + "\", save file has serial \"" + inst["serial"].as<string>()  + "\"";
-					fail = true;
-				}
-				if(fail)
-				{
-					Gtk::MessageDialog dlg(*this, message, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+					Gtk::MessageDialog dlg(
+						*this,
+						string("Failed to connect to instrument using connection string ") + inst["args"].as<string>(),
+						false,
+						Gtk::MESSAGE_ERROR,
+						Gtk::BUTTONS_OK,
+						true);
 					dlg.run();
-					delete scope;
-					scope = NULL;
+				}
+
+				//All good, try to connect
+				else
+				{
+					scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
+
+					//Sanity check make/model/serial. If mismatch, stop
+					string message;
+					bool fail = false;
+					if(inst["name"].as<string>() != scope->GetName())
+					{
+						message = string("Unable to connect to oscilloscope: instrument has model name \"") +
+							scope->GetName() + "\", save file has model name \"" + inst["name"].as<string>()  + "\"";
+						fail = true;
+					}
+					else if(inst["vendor"].as<string>() != scope->GetVendor())
+					{
+						message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
+							scope->GetVendor() + "\", save file has vendor \"" + inst["vendor"].as<string>()  + "\"";
+						fail = true;
+					}
+					else if(inst["serial"].as<string>() != scope->GetSerial())
+					{
+						message = string("Unable to connect to oscilloscope: instrument has serial \"") +
+							scope->GetSerial() + "\", save file has serial \"" + inst["serial"].as<string>()  + "\"";
+						fail = true;
+					}
+					if(fail)
+					{
+						Gtk::MessageDialog dlg(*this, message, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+						dlg.run();
+						delete scope;
+						scope = NULL;
+					}
 				}
 			}
 		}
@@ -2009,6 +2027,11 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			group->m_xCursorPos[0] *= 1000;
 			group->m_xCursorPos[1] *= 1000;
 		}
+
+		//Invalid pixels per X unit is sometimes present in older files
+		//If found, scale to a reasonable default (1 pixel = 1e6 fs = 1 ns)
+		if(group->m_pixelsPerXUnit < 1e-9)
+			group->m_pixelsPerXUnit = 1e-6;
 
 		auto stats = gn["stats"];
 		if(stats)
