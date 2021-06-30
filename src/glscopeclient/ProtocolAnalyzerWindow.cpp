@@ -52,7 +52,7 @@ ProtocolDisplayFilter::ProtocolDisplayFilter(string str, size_t& i)
 
 		//Remove spaces before the operator
 		EatSpaces(str, i);
-		if( (i >= str.length()) || (str[i] == ')') )
+		if( (i >= str.length()) || (str[i] == ')') || (str[i] == ']') )
 			break;
 
 		//Read the operator, if any
@@ -79,7 +79,7 @@ ProtocolDisplayFilter::~ProtocolDisplayFilter()
 		delete c;
 }
 
-bool ProtocolDisplayFilter::Validate(vector<string> headers)
+bool ProtocolDisplayFilter::Validate(vector<string> headers, bool nakedLiteralOK)
 {
 	//No clauses? valid all-pass filter
 	if(m_clauses.empty())
@@ -112,10 +112,14 @@ bool ProtocolDisplayFilter::Validate(vector<string> headers)
 	}
 
 	//A single literal is not a legal filter, it has to be compared to something
-	if(m_clauses.size() == 1)
+	//(But for sub-expressions used as indexes etc, it's OK)
+	if(!nakedLiteralOK)
 	{
-		if(m_clauses[0]->m_type != ProtocolDisplayFilterClause::TYPE_EXPRESSION)
-			return false;
+		if(m_clauses.size() == 1)
+		{
+			if(m_clauses[0]->m_type != ProtocolDisplayFilterClause::TYPE_EXPRESSION)
+				return false;
+		}
 	}
 
 	return true;
@@ -254,7 +258,7 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 		m_number = atof(tmp.c_str());
 	}
 
-	//Identifier
+	//Identifier (or data)
 	else
 	{
 		m_type = TYPE_IDENTIFIER;
@@ -263,6 +267,33 @@ ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
 		{
 			m_identifier += str[i];
 			i++;
+		}
+
+		//Opening square bracket
+		if(str[i] == '[')
+		{
+			if(m_identifier == "data")
+			{
+				m_type = TYPE_DATA;
+				i++;
+
+				//Read the index expression
+				m_expression = new ProtocolDisplayFilter(str, i);
+
+				//eat trailing spaces
+				ProtocolDisplayFilter::EatSpaces(str, i);
+
+				//expect closing square bracket
+				if(str[i] != ']')
+					m_type = TYPE_ERROR;
+				i++;
+			}
+
+			else
+			{
+				m_type = TYPE_ERROR;
+				i++;
+			}
 		}
 
 		if(m_identifier == "")
@@ -281,6 +312,22 @@ string ProtocolDisplayFilterClause::Evaluate(
 
 	switch(m_type)
 	{
+		case TYPE_DATA:
+			{
+				string sindex = m_expression->Evaluate(row, cols);
+				int index = atoi(sindex.c_str());
+
+				//Assume that the data is a hex string for now, so just do substring extraction.
+				Glib::ustring data = row[cols.m_data];
+				size_t istart = index*3;
+				if(istart+1 > data.size())
+					return "NaN";		//out of bounds
+				string ret = data.substr(istart, 2);
+
+				return ret;
+			}
+			break;
+
 		case TYPE_IDENTIFIER:
 			return (Glib::ustring)row[cols.m_headers[m_cachedIndex]];
 
@@ -320,6 +367,9 @@ bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
 	{
 		case TYPE_ERROR:
 			return false;
+
+		case TYPE_DATA:
+			return m_expression->Validate(headers, true);
 
 		//If we're an identifier, we must be a valid header field
 		//TODO: support comparisons on data

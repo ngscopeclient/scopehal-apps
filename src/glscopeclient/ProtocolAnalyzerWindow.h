@@ -147,6 +147,7 @@ public:
 
 	enum
 	{
+		TYPE_DATA,
 		TYPE_IDENTIFIER,
 		TYPE_STRING,
 		TYPE_NUMBER,
@@ -173,7 +174,7 @@ public:
 
 	static void EatSpaces(std::string str, size_t& i);
 
-	bool Validate(std::vector<std::string> headers);
+	bool Validate(std::vector<std::string> headers, bool nakedLiteralOK = false);
 
 	bool Match(
 		const Gtk::TreeRow& row,
