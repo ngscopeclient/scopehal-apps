@@ -78,7 +78,7 @@ bool Program::Link()
 	char log[4096];
 	int len;
 	glGetProgramInfoLog(m_handle, sizeof(log), &len, log);
-	LogError("Link of shader progam failed:\n%s\n", log);
+	LogError("Link of shader program failed:\n%s\n", log);
 
 	return false;
 }
