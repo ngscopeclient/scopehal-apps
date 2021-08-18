@@ -91,6 +91,8 @@ public:
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }
 
+	bool HasOnlineScopes();
+
 	Oscilloscope* GetScope(size_t i)
 	{ return m_scopes[i]; }
 

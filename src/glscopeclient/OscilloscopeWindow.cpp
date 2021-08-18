@@ -573,7 +573,10 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 
 				//Update the history windows
 				for(auto scope : m_scopes)
-					m_historyWindows[scope]->OnWaveformDataReady();
+				{
+					if(!scope->IsOffline())
+						m_historyWindows[scope]->OnWaveformDataReady();
+				}
 
 				//Update filters etc once every instrument has been updated
 				OnAllWaveformsUpdated(false, false);
@@ -2980,6 +2983,7 @@ vector<WaveformArea*> OscilloscopeWindow::GetAreasInGroup(WaveformGroup* group)
 {
 	auto children = group->m_vbox.get_children();
 
+
 	vector<WaveformArea*> areas;
 	for(auto w : children)
 	{
@@ -3159,17 +3163,32 @@ void OscilloscopeWindow::GarbageCollectAnalyzers()
 }
 
 /**
+	@brief Returns true if we have at least one scope that isn't offline
+ */
+bool OscilloscopeWindow::HasOnlineScopes()
+{
+	for(auto scope : m_scopes)
+	{
+		if(!scope->IsOffline())
+			return true;
+	}
+	return false;
+}
+
+/**
 	@brief See if we have waveforms ready to process
  */
 bool OscilloscopeWindow::CheckForPendingWaveforms()
 {
-	//No scopes to poll? Re-run the filter graph
-	if(m_scopes.empty())
+	//No online scopes to poll? Re-run the filter graph
+	if(!HasOnlineScopes())
 		return m_triggerArmed;
 
-	//Wait for every scope to have triggered
+	//Wait for every online scope to have triggered
 	for(auto scope : m_scopes)
 	{
+		if(scope->IsOffline())
+			continue;
 		if(!scope->HasPendingWaveforms())
 			return false;
 	}
@@ -3195,6 +3214,10 @@ bool OscilloscopeWindow::CheckForPendingWaveforms()
 			//Discard all pending waveform data
 			for(auto scope : m_scopes)
 			{
+				//Don't touch anything offline
+				if(scope->IsOffline())
+					continue;
+
 				scope->IDPing();
 				scope->ClearPendingWaveforms();
 			}
@@ -3219,6 +3242,10 @@ void OscilloscopeWindow::DownloadWaveforms()
 	//Process the waveform data from each instrument
 	for(auto scope : m_scopes)
 	{
+		//Don't touch anything offline
+		if(scope->IsOffline())
+			continue;
+
 		//Make sure we don't free the old waveform data
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
@@ -3489,7 +3516,7 @@ void OscilloscopeWindow::ArmTrigger(TriggerType type)
 	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
 	m_triggerOneShot = oneshot;
 
-	if(m_scopes.empty())
+	if(!HasOnlineScopes())
 	{
 		m_tArm = GetTime();
 		m_triggerArmed = true;
