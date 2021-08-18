@@ -105,7 +105,12 @@ void ScopeApp::run(
 			break;
 		}
 
-		//Can only load one bin or VCD
+		//Can only load one bin, Touchstone, or VCD
+		else if (f.find(".s") != string::npos && f[f.length()-1] == 'p')
+		{
+			m_window->DoImportTouchstone(f);
+			break;
+		}
 		else if (f.find(".bin") != string::npos)
 		{
 			m_window->DoImportBIN(f);
