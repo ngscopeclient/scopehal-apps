@@ -301,6 +301,7 @@ public:
 	void ImportWAVToExistingSession(const std::string& filename);
 	void DoImportBIN(const std::string& filename);
 	void DoImportVCD(const std::string& filename);
+	void DoImportTouchstone(const std::string& filename);
 	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);
 	MockOscilloscope* SetupExistingSessionForImport();
 	void OnImportComplete();
