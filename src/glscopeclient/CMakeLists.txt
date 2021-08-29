@@ -129,7 +129,7 @@ add_dependencies(glscopeclient
 )
 
 # Windows portable zip/MSI installer build
-if(WIN32)
+if(WIXPATH AND WIN32)
 	add_custom_target(
 		dist_windows_x64
 		COMMENT "Creating dist/windows_x64..."
@@ -171,21 +171,19 @@ if(WIN32)
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist/windows_x64
 		COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64-portable.zip" --format=zip -- .)
 
-    if(WIXPATH)
-		configure_file(wix/glscopeclient.wxs.in ${CMAKE_BINARY_DIR}/glscopeclient.wxs)
-		add_custom_target(
-			msi_windows_x64 ALL
-			COMMENT "Creating Windows x64 MSI..."
-			DEPENDS dist_windows_x64
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-			COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/glscopeclient/wix/LICENSE.rtf ${CMAKE_BINARY_DIR}
-			COMMAND ${WIXPATH}/heat dir dist/windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out glscopeclient-files.wxs
-			COMMAND ${WIXPATH}/candle -nologo glscopeclient-files.wxs -arch x64 -out glscopeclient-files.wixobj 
-			COMMAND ${WIXPATH}/candle -nologo glscopeclient.wxs -arch x64 -out glscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
-			COMMAND ${WIXPATH}/light -nologo glscopeclient-files.wixobj glscopeclient.wixobj -b dist/windows_x64 -out dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
-	else()
-		message("Skipping MSI package build; define WIXPATH to enable")
-	endif()
+	configure_file(wix/glscopeclient.wxs.in ${CMAKE_BINARY_DIR}/glscopeclient.wxs)
+	add_custom_target(
+		msi_windows_x64 ALL
+		COMMENT "Creating Windows x64 MSI..."
+		DEPENDS dist_windows_x64
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/glscopeclient/wix/LICENSE.rtf ${CMAKE_BINARY_DIR}
+		COMMAND ${WIXPATH}/heat dir dist/windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out glscopeclient-files.wxs
+		COMMAND ${WIXPATH}/candle -nologo glscopeclient-files.wxs -arch x64 -out glscopeclient-files.wixobj 
+		COMMAND ${WIXPATH}/candle -nologo glscopeclient.wxs -arch x64 -out glscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
+		COMMAND ${WIXPATH}/light -nologo glscopeclient-files.wixobj glscopeclient.wixobj -b dist/windows_x64 -out dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
+else()
+	message("Skipping MSI package build; define WIXPATH to enable")
 endif()
 
 ###############################################################################
