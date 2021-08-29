@@ -164,11 +164,11 @@ jobs:
         mkdir build_msi
         cd build_msi
         cmake \
-          -G"MSYS Makefiles" \
+          -G"Ninja" \
           -DBUILD_TESTING=OFF \
           -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
-          ..
-        make -j4
+          ../
+        cmake --build ./
 
     - name: Upload Artifacts (portable zip)
       uses: actions/upload-artifact@v2
