@@ -18,9 +18,8 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-ffts"
 )
 makedepends=(
-  "${MINGW_PACKAGE_PREFIX}-gcc"
   "${MINGW_PACKAGE_PREFIX}-cmake"
-  "make"
+  "${MINGW_PACKAGE_PREFIX}-ninja"
 )
 
 pkgver() {
@@ -36,17 +35,21 @@ build() {
 
   mkdir build
   cd build
-  MSYS2_ARG_CONV_EXCL=-DCMAKE_INSTALL_PREFIX= cmake \
-    -G "MSYS Makefiles" \
+
+  CXXFLAGS+=" -Wno-format" \
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+  ${MINGW_PREFIX}/bin/cmake.exe \
+    -G "Ninja" \
     -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
     -DBUILD_TESTING=OFF \
     ../
-  cmake --build .
+
+  ${MINGW_PREFIX}/bin/cmake.exe --build ./
 }
 
 package() {
   cd "${srcdir}"/../../build
-  make DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" ${MINGW_PREFIX}/bin/cmake.exe --build ./ --target install
 
   _licenses="${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}"
   mkdir -p "${_licenses}"
