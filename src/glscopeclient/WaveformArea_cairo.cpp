@@ -359,17 +359,20 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Render arrow and dotted line for trigger level
 	auto scope = m_channel.m_channel->GetScope();
-	if(m_dragState == DRAG_TRIGGER)
-		RenderTriggerLevelLine(cr, scope->GetTrigger()->GetLevel());
-	else if(m_dragState == DRAG_TRIGGER_SECONDARY)
+	if(scope != NULL)
 	{
-		auto wt = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
-		RenderTriggerLevelLine(cr, wt->GetLowerBound());
-	}
+		if(m_dragState == DRAG_TRIGGER)
+			RenderTriggerLevelLine(cr, scope->GetTrigger()->GetLevel());
+		else if(m_dragState == DRAG_TRIGGER_SECONDARY)
+		{
+			auto wt = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
+			RenderTriggerLevelLine(cr, wt->GetLowerBound());
+		}
 
-	//Render dotted line for trigger position
-	if(m_group->m_timeline.IsDraggingTrigger())
-		RenderTriggerTimeLine(cr, scope->GetTriggerOffset());
+		//Render dotted line for trigger position
+		if(m_group->m_timeline.IsDraggingTrigger())
+			RenderTriggerTimeLine(cr, scope->GetTriggerOffset());
+	}
 
 	RenderFFTPeaks(cr);
 	RenderInsertionBar(cr);
