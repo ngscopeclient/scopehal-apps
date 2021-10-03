@@ -92,6 +92,8 @@ void help()
 			"    --stdout-only                 : writes errors/warnings to stdout instead of stderr\n"
 			"\n"
 			"  [dev options]:\n"
+			"    --noavx2                      : Do not use AVX2, even if supported on the current system\n"
+			"    --noavx512f                   : Do not use AVX512F, even if supported on the current system\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
 			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
 			"\n"
@@ -122,6 +124,8 @@ int main(int argc, char* argv[])
 	bool retrigger = false;
 	bool nodigital = false;
 	bool nospectrum = false;
+	bool noavx2 = false;
+	bool noavx512f = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -155,6 +159,10 @@ int main(int argc, char* argv[])
 			g_noglint64 = true;
 		else if(s == "--noopencl")
 			g_disableOpenCL = true;
+		else if(s == "--noavx2")
+			noavx2 = true;
+		else if(s == "--noavx512f")
+			noavx512f = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -206,6 +214,18 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
+
+	//Disable CPU features we don't want to use
+	if(noavx2 && g_hasAvx2)
+	{
+		g_hasAvx2 = false;
+		LogDebug("Disabling AVX2 because --noavx2 argument was passed\n");
+	}
+	if(noavx512f && g_hasAvx512F)
+	{
+		g_hasAvx512F = false;
+		LogDebug("Disabling AVX512F because --noavx512f argument was passed\n");
+	}
 
 	//Initialize object creation tables for plugins
 	InitializePlugins();

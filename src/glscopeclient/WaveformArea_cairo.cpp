@@ -1405,7 +1405,7 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	vector<Rect> rects;
 	for(size_t i=0; i<peaks.size(); i++)
 	{
-		int64_t nx = peaks[i].m_x * timescale;
+		int64_t nx = peaks[i].m_x * timescale + data->m_triggerPhase;
 
 		//Format the text
 		string text = xunit.PrettyPrint(nx) + "\n" + yunit.PrettyPrint(peaks[i].m_y);
