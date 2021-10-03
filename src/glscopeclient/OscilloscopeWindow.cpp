@@ -2069,11 +2069,6 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			group->m_xCursorPos[1] *= 1000;
 		}
 
-		//Invalid pixels per X unit is sometimes present in older files
-		//If found, scale to a reasonable default (1 pixel = 1e6 fs = 1 ns)
-		if(group->m_pixelsPerXUnit < 1e-9)
-			group->m_pixelsPerXUnit = 1e-6;
-
 		auto stats = gn["stats"];
 		if(stats)
 		{
