@@ -353,6 +353,9 @@ string ProtocolDisplayFilterClause::Evaluate(
 		default:
 			return "NaN";
 	}
+
+	//never happens because of the 'default" clause, but prevents -Wreturn-type warning with some gcc versions
+	return "NaN";
 }
 
 ProtocolDisplayFilterClause::~ProtocolDisplayFilterClause()
@@ -774,7 +777,9 @@ void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
 	//This always happens from the start of time, so just remove from the beginning of our list
 	//until we have nothing that matches.
 	auto children = m_internalmodel->children();
-	while(!children.empty())
+	while(children.size() > 0)	//In circumstances I don't fully understand, it's possible for empty() to return false
+								//while size() == 0. This leads to a crash if !empty() is used as the control variable
+								//for this loop.
 	{
 		//Stop if the timestamp is before our first point
 		auto it = children.begin();
