@@ -52,6 +52,13 @@ void WaveformProcessingThread(OscilloscopeWindow* window)
 			continue;
 		}
 
+		//If no waveform areas, nothing to do
+		if(window->m_waveformAreas.empty())
+		{
+			this_thread::sleep_for(chrono::milliseconds(50));
+			continue;
+		}
+
 		//We've got data. Download it, then run the filter graph
 		window->DownloadWaveforms();
 		window->RefreshAllFilters();

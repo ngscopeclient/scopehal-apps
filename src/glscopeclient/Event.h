@@ -73,6 +73,14 @@ public:
 		return false;
 	}
 
+	/**
+		@brief Clears the event state if it's currently signaled
+	 */
+	void Clear()
+	{
+		m_ready = false;
+	}
+
 protected:
 	std::mutex m_mutex;
 	std::condition_variable m_cond;

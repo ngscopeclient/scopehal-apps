@@ -136,8 +136,6 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	if( (chan == NULL) || (data == NULL) )
 		return;
 
-	m_updating = true;
-
 	//Format timestamp
 	char tmp[128];
 	struct tm ltime;
@@ -155,6 +153,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	stime += tmp;
 
 	//Create the row
+	m_updating = true;
 	auto row = *m_model->append();
 	row[m_columns.m_timestamp] = stime;
 	TimePoint key(data->m_startTimestamp, data->m_startFemtoseconds);
@@ -223,7 +222,6 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 			hist = (*it)[m_columns.m_history];
 			for(auto w : hist)
 				delete w.second;
-
 			m_model->erase(it);
 		}
 	}

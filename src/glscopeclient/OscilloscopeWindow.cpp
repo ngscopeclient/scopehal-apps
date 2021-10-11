@@ -703,6 +703,10 @@ void OscilloscopeWindow::CloseSession()
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
+	//Clear our trigger state
+	m_triggerArmed = false;
+	g_waveformReadyEvent.Clear();
+
     //Close popup dialogs, if they exist
     if(m_preferenceDialog)
     {
