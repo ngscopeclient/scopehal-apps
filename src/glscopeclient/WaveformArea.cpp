@@ -36,6 +36,7 @@
 #include "WaveformArea.h"
 #include "OscilloscopeWindow.h"
 #include <random>
+#include <stdlib.h>
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
@@ -504,7 +505,19 @@ void WaveformArea::on_realize()
 
 		//Initialize GLEW
 		GLenum glewResult = glewInit();
-		if (glewResult != GLEW_OK)
+
+		//The glewInit function doesn't allow runtime detection between GLX and
+		//EGL that is used by Wayland. It will default to GLX and return the
+		//_NO_GLX_DISPLAY error when running under Wayland. We can ignore this
+		//error since we don't need the GLX/EGL entry points and the GLX query for
+		//ARB works on EGL as well.
+		//See https://github.com/nigels-com/glew/issues/172
+		//
+		//TODO: Call glewContextInit() instead of glewInit, and remove the
+		//Wayland check once we rely on GLEW 2.2.0 (the first release that
+		//exposes glewContextInit).
+		if(glewResult != GLEW_OK
+			&& !( getenv("WAYLAND_DISPLAY") && glewResult == GLEW_ERROR_NO_GLX_DISPLAY) )
 		{
 			string err =
 				"glscopeclient was unable to initialize GLEW and cannot continue.\n"
