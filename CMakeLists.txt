@@ -18,7 +18,7 @@ set(WARNINGS "${WARNINGS} -Wshadow -Wpedantic -Wcast-align -Wwrite-strings")
 set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(WARNINGS "${WARNINGS} -Wunsafe-loop-optimizations")
+  set(WARNINGS "${WARNINGS} ")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
 endif()
