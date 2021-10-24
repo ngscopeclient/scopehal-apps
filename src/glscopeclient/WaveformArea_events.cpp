@@ -1779,7 +1779,11 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 {
 	auto stream = GetWaveformAtPoint(x, y);
 	auto data = stream.GetData();
+
+	//We need to have non-empty data
 	if(!data)
+		return time;
+	if(data->m_offsets.empty())
 		return time;
 
 	//Only snap to digital/protocol data
