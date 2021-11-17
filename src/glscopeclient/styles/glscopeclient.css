@@ -301,6 +301,10 @@ progressbar.horizontal progress
 {
 	background-color:	@glscopeclient_highlight_color;
 }
+progressbar
+{
+	color:				@glscopeclient_text_color;
+}
 
 /***********************************************************************************************************************
 	Wizards
