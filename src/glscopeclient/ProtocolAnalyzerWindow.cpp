@@ -770,7 +770,7 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 /**
 	@brief Remove history before a certain point
  */
-void ProtocolAnalyzerWindow::RemoveHistory(TimePoint timestamp)
+void ProtocolAnalyzerWindow::RemoveHistoryBefore(TimePoint timestamp)
 {
 	m_updating = true;
 

@@ -213,17 +213,17 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 		}
 		while(children.size() > nmax)
 		{
-			//Delete any protocol decodes from this waveform
 			auto it = children.begin();
-			key = (*it)[m_columns.m_capturekey];
-			m_parent->RemoveHistory(key);
-
-			//Delete the saved waveform data
 			hist = (*it)[m_columns.m_history];
 			for(auto w : hist)
 				delete w.second;
 			m_model->erase(it);
 		}
+
+		//Delete any protocol analyzer state from deleted waveforms
+		auto it = children.begin();
+		key = (*it)[m_columns.m_capturekey];
+		m_parent->RemoveProtocolHistoryBefore(key);
 	}
 
 	//Calculate our RAM usage (rough estimate)

@@ -100,7 +100,7 @@ public:
 	{ m_btnHistory.set_active(0); }
 
 	void OnHistoryUpdated(bool refreshAnalyzers = false);
-	void RemoveHistory(TimePoint timestamp);
+	void RemoveProtocolHistoryBefore(TimePoint timestamp);
 
 	void JumpToHistory(TimePoint timestamp);
 
