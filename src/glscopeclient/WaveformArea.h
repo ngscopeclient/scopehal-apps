@@ -398,6 +398,9 @@ protected:
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
 
+	//Rendering mode selection
+	RenderAcceleration GetRenderingBackend();
+
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(
 		StreamDescriptor chan,

@@ -608,12 +608,71 @@ void WaveformArea::on_realize()
 	//Create waveform render data for our main trace
 	m_waveformRenderData = new WaveformRenderData(m_channel, this);
 
+	//Print out the acceleration backend in use
+	static bool first = true;
+	if(first)
+	{
+		auto requested = m_parent->GetPreferences().GetEnum<RenderAcceleration>("Rendering.Performance.acceleration");
+		switch(requested)
+		{
+			case ACCEL_OPENGL:
+				LogDebug("Requested rendering backend: OpenGL\n");
+				break;
+			case ACCEL_OPENCL:
+				LogDebug("Requested rendering backend: OpenCL\n");
+				break;
+			default:
+				LogDebug("Requested rendering backend: unknown\n");
+				break;
+		}
+
+		auto selected = GetRenderingBackend();
+		switch(selected)
+		{
+			case ACCEL_OPENGL:
+				LogDebug("Using rendering backend: OpenGL\n");
+				break;
+			case ACCEL_OPENCL:
+				LogDebug("Using rendering backend: OpenCL\n");
+				break;
+			default:
+				LogDebug("Using rendering backend: unknown\n");
+				break;
+		}
+
+		first = false;
+	}
+
 	//Set stuff up for each rendering pass
 	InitializeWaveformPass();
 	InitializeColormapPass();
 	InitializeCairoPass();
 	InitializeEyePass();
 	InitializeSpectrogramPass();
+}
+
+/**
+	@brief Figure out what rendering backend we *actually* want to use.
+
+	May not be the one selected in preferences.
+ */
+RenderAcceleration WaveformArea::GetRenderingBackend()
+{
+	//Requested acceleration
+	auto requestedAccel = m_parent->GetPreferences().GetEnum<RenderAcceleration>("Rendering.Performance.acceleration");
+
+	//If the user asked for OpenCL, use it if we have a valid OpenCL context
+	#ifdef HAVE_OPENCL
+		if(g_clContext && (requestedAccel == ACCEL_OPENCL) )
+			return ACCEL_OPENCL;
+	#endif
+
+	//Use OpenGL if they asked for it
+	if(requestedAccel == ACCEL_OPENGL)
+		return ACCEL_OPENGL;
+
+	//Default to the compute shader backend if nothing else works out
+	return ACCEL_OPENGL;
 }
 
 void WaveformArea::on_unrealize()
