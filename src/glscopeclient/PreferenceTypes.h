@@ -29,68 +29,16 @@
 
 /**
 	@file
-	@author Katharina B.
-	@brief  Stores and manages preference values
+	@author Andrew D. Zonenberg
+	@brief Enum definitions for preference settings
  */
+#ifndef PreferenceTypes_h
+#define PreferenceTypes_h
 
-#ifndef PreferenceManager_h
-#define PreferenceManager_h
-
-#include <map>
-#include <string>
-#include "PreferenceTree.h"
-
-class PreferenceManager
+enum RenderAcceleration
 {
-public:
-    PreferenceManager()
-        : m_treeRoot{ "" }
-    {
-        DeterminePath();
-        InitializeDefaults();
-        LoadPreferences();
-    }
-
-public:
-    // Disallow copy
-    PreferenceManager(const PreferenceManager&) = delete;
-    PreferenceManager(PreferenceManager&&) = default;
-
-    PreferenceManager& operator=(const PreferenceManager&) = delete;
-    PreferenceManager& operator=(PreferenceManager&&) = default;
-
-public:
-    void SavePreferences();
-    PreferenceCategory& AllPreferences();
-
-    std::string GetConfigDirectory()
-    { return m_configDir; }
-
-    // Value retrieval methods
-    const std::string& GetString(const std::string& path) const;
-    double GetReal(const std::string& path) const;
-    bool GetBool(const std::string& path) const;
-    Gdk::Color GetColor(const std::string& path) const;
-    Pango::FontDescription GetFont(const std::string& path) const;
-
-    template< typename E >
-    E GetEnum(const std::string& path) const
-    {
-        return this->GetPreference(path).GetEnum<E>();
-    }
-
-private:
-    // Internal helpers
-    void DeterminePath();
-    void InitializeDefaults();
-    void LoadPreferences();
-    bool HasPreferenceFile() const;
-    const Preference& GetPreference(const std::string& path) const;
-
-private:
-    PreferenceCategory m_treeRoot;
-    std::string m_filePath;
-    std::string m_configDir;
+	ACCEL_OPENGL,
+	ACCEL_OPENCL
 };
 
-#endif // PreferenceManager_h
+#endif

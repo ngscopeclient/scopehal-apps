@@ -78,6 +78,8 @@
 #include "VertexArray.h"
 #include "VertexBuffer.h"
 
+#include "PreferenceTypes.h"
+
 #include "OscilloscopeWindow.h"
 #include "ScopeApp.h"
 
