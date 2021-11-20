@@ -113,6 +113,10 @@ public:
 	int64_t*				m_mappedConfigBuffer64;
 	float*					m_mappedFloatConfigBuffer;
 
+	//OpenCL buffers
+	#ifdef HAVE_OPENCL
+	#endif
+
 	//Persistence flags
 	bool					m_persistence;
 
@@ -214,6 +218,7 @@ protected:
 
 	virtual void on_realize();
 	virtual void on_unrealize();
+	void CleanupCLHandles();
 	void CleanupGLHandles();
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
@@ -400,6 +405,12 @@ protected:
 
 	//Rendering mode selection
 	RenderAcceleration GetRenderingBackend();
+
+	//OpenCL kernels for rendering
+	#ifdef HAVE_OPENCL
+	cl::Program* m_renderProgram;
+	cl::Kernel* m_renderAnalogWaveformKernel;
+	#endif
 
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(

@@ -644,27 +644,87 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	if(!data->m_geometryOK)
 		return;
 
-	//Round thread block size up to next multiple of the local size (must be power of two)
-	//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl
-	int localSize = 1;
-	int numCols = m_plotRight;
-	if(0 != (numCols % localSize) )
+	switch(GetRenderingBackend())
 	{
-		numCols |= (localSize-1);
-		numCols ++;
+		#ifdef HAVE_OPENCL
+
+		//OpenCL path
+		case ACCEL_OPENCL:
+			try
+			{
+				cl::CommandQueue queue(*g_clContext, g_contextDevices[0], 0);
+
+				//TODO: input memory
+				//TODO: output memory
+
+				//Number of threads to use for a single column of pixels
+				const int threads_per_column = 64;
+
+				//OpenCL won't let us run a massive work group.
+				//Break us up into 256-pixel blocks rendered consecutively.
+				//TODO: respect CL_DEVICE_MAX_WORK_GROUP_SIZE and use largest sane value
+				const int blocksize = 256;
+				for(int i=0; i<m_width; i += blocksize)
+				{
+					if(IsAnalog())
+					{
+						m_renderAnalogWaveformKernel->setArg(0, (unsigned long)m_width);
+						m_renderAnalogWaveformKernel->setArg(1, (unsigned long)m_height);
+						m_renderAnalogWaveformKernel->setArg(2, (unsigned long)i);
+
+						queue.enqueueNDRangeKernel(
+							*m_renderAnalogWaveformKernel,
+							cl::NullRange,
+							cl::NDRange(blocksize, threads_per_column),
+							cl::NDRange(1, threads_per_column),
+							NULL);
+					}
+					else if(IsDigital())
+					{
+						LogWarning("OpenCL digital rendering unimplemented for now\n");
+					}
+
+				}
+
+				//TODO: read results
+
+			}
+			catch(const cl::Error& e)
+			{
+				LogWarning("OpenCL error: %s (%d)\n", e.what(), e.err() );
+			}
+
+			//For now, fall through to the OpenGL render since the CL path doesn't actually do anything useful
+
+		#endif
+
+		case ACCEL_OPENGL:
+		default:
+			{
+				//Round thread block size up to next multiple of the local size (must be power of two)
+				//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl
+				int localSize = 1;
+				int numCols = m_plotRight;
+				if(0 != (numCols % localSize) )
+				{
+					numCols |= (localSize-1);
+					numCols ++;
+				}
+				int numGroups = numCols / localSize;
+
+				auto prog = GetProgramForWaveform(data);
+				prog->Bind();
+				prog->SetImageUniform(data->m_waveformTexture, "outputTex");
+
+				data->m_waveformXBuffer.BindBase(1);
+				data->m_waveformYBuffer.BindBase(4);
+				data->m_waveformConfigBuffer.BindBase(2);
+				data->m_waveformIndexBuffer.BindBase(3);
+
+				prog->DispatchCompute(numGroups, 1, 1);
+			}
+			break;
 	}
-	int numGroups = numCols / localSize;
-
-	auto prog = GetProgramForWaveform(data);
-	prog->Bind();
-	prog->SetImageUniform(data->m_waveformTexture, "outputTex");
-
-	data->m_waveformXBuffer.BindBase(1);
-	data->m_waveformYBuffer.BindBase(4);
-	data->m_waveformConfigBuffer.BindBase(2);
-	data->m_waveformIndexBuffer.BindBase(3);
-
-	prog->DispatchCompute(numGroups, 1, 1);
 }
 
 void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)

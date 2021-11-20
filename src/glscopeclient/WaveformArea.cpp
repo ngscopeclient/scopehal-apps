@@ -117,6 +117,11 @@ void WaveformArea::SharedCtorInit()
 	m_group = NULL;
 
 	m_channel.m_channel->AddRef();
+
+	#ifdef HAVE_OPENCL
+	m_renderProgram = NULL;
+	m_renderAnalogWaveformKernel = NULL;
+	#endif
 }
 
 WaveformArea::~WaveformArea()
@@ -608,7 +613,15 @@ void WaveformArea::on_realize()
 	//Create waveform render data for our main trace
 	m_waveformRenderData = new WaveformRenderData(m_channel, this);
 
-	//Print out the acceleration backend in use
+	//Set stuff up for each rendering pass
+	InitializeWaveformPass();
+	InitializeColormapPass();
+	InitializeCairoPass();
+	InitializeEyePass();
+	InitializeSpectrogramPass();
+
+	//Print out the acceleration backend in use after we've initialized everything
+	//(if some fail to start we might fall back to a less preferable option)
 	static bool first = true;
 	if(first)
 	{
@@ -642,13 +655,6 @@ void WaveformArea::on_realize()
 
 		first = false;
 	}
-
-	//Set stuff up for each rendering pass
-	InitializeWaveformPass();
-	InitializeColormapPass();
-	InitializeCairoPass();
-	InitializeEyePass();
-	InitializeSpectrogramPass();
 }
 
 /**
@@ -661,10 +667,17 @@ RenderAcceleration WaveformArea::GetRenderingBackend()
 	//Requested acceleration
 	auto requestedAccel = m_parent->GetPreferences().GetEnum<RenderAcceleration>("Rendering.Performance.acceleration");
 
-	//If the user asked for OpenCL, use it if we have a valid OpenCL context
+	//If the user asked for OpenCL, use it if we have a valid OpenCL context and kernel
 	#ifdef HAVE_OPENCL
-		if(g_clContext && (requestedAccel == ACCEL_OPENCL) )
-			return ACCEL_OPENCL;
+		if(requestedAccel == ACCEL_OPENCL)
+		{
+			if(g_clContext &&
+				(m_renderProgram != NULL) &&
+				(m_renderAnalogWaveformKernel != NULL) )
+			{
+				return ACCEL_OPENCL;
+			}
+		}
 	#endif
 
 	//Use OpenGL if they asked for it
@@ -679,9 +692,24 @@ void WaveformArea::on_unrealize()
 {
 	make_current();
 
+	CleanupCLHandles();
 	CleanupGLHandles();
 
 	Gtk::GLArea::on_unrealize();
+}
+
+/**
+	@brief Delete all OpenCL buffers etc
+ */
+void WaveformArea::CleanupCLHandles()
+{
+	#ifdef HAVE_OPENCL
+		delete m_renderAnalogWaveformKernel;
+		delete m_renderProgram;
+
+		m_renderAnalogWaveformKernel = NULL;
+		m_renderProgram = NULL;
+	#endif
 }
 
 void WaveformArea::CleanupGLHandles()
@@ -727,6 +755,47 @@ void WaveformArea::CleanupGLHandles()
 
 void WaveformArea::InitializeWaveformPass()
 {
+	//If we have OpenCL, initialize the rendering kernels even if OpenGL mode is active.
+	//This will let us seamlessly switch from one to the other at run time.
+	#ifdef HAVE_OPENCL
+	try
+	{
+		m_renderProgram = NULL;
+		m_renderAnalogWaveformKernel = NULL;
+
+		if(g_clContext)
+		{
+			//Load window function kernel
+			string kernelSource = ReadDataFile("kernels/WaveformRendering.cl");
+			cl::Program::Sources sources(1, make_pair(&kernelSource[0], kernelSource.length()));
+			m_renderProgram = new cl::Program(*g_clContext, sources);
+			m_renderProgram->build(g_contextDevices);
+			m_renderAnalogWaveformKernel = new cl::Kernel(*m_renderProgram, "RenderAnalogWaveform");
+		}
+	}
+	catch(const cl::Error& e)
+	{
+		LogError("OpenCL error: %s (%d)\n", e.what(), e.err() );
+		if(e.err() == CL_BUILD_PROGRAM_FAILURE)
+		{
+			LogError("Failed to build OpenCL program for waveform rendering\n");
+			string log;
+			if(m_renderProgram)
+			{
+				m_renderProgram->getBuildInfo<string>(g_contextDevices[0], CL_PROGRAM_BUILD_LOG, &log);
+				LogDebug("Render program build log:\n");
+				LogDebug("%s\n", log.c_str());
+			}
+
+			delete m_renderProgram;
+			delete m_renderAnalogWaveformKernel;
+
+			m_renderProgram = NULL;
+			m_renderAnalogWaveformKernel = NULL;
+		}
+	}
+	#endif
+
 	//Load all of the compute shaders
 	ComputeShader hwc;
 	ComputeShader dwc;
