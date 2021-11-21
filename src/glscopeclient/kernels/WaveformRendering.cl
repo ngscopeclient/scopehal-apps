@@ -36,15 +36,24 @@
 					(may be nonzero if the image is more than CL_DEVICE_MAX_WORK_GROUP_SIZE pixels wide)
  */
 __kernel void RenderAnalogWaveform(
-	unsigned long width,
-	unsigned long height,
-	unsigned long firstcol/*,
-	__global float* outputTexture*/
+	unsigned int width,
+	unsigned int height,
+	unsigned long firstcol,
+	__global unsigned long* xpos,
+	//__global unsigned long* index,
+	__global float* ypos,
+	__global float* outbuf
 	)
 {
-	/*
-	unsigned long i = get_global_id(0);
-	if(i >= len)
+	unsigned long x = get_global_id(0) + firstcol;
+	if(x >= width)
 		return;
-	*/
+
+	//TODO: more than one thread at a time
+	unsigned long tid = get_local_id(1);
+	if(tid > 0)
+		return;
+
+	for(unsigned long y=0; y<height; y++)
+		outbuf[y*width + x] = (float)x / width;
 }

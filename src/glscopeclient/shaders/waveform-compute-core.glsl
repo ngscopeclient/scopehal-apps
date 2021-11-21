@@ -49,7 +49,7 @@ void main()
 		else
 		{
 			vec4 rgba = imageLoad(outputTex, ivec2(gl_GlobalInvocationID.x, y));
-			g_workingBuffer[y] = rgba.a * persistScale;
+			g_workingBuffer[y] = rgba.r * persistScale;
 		}
 	}
 
@@ -190,6 +190,6 @@ void main()
 		imageStore(
 			outputTex,
 			ivec2(gl_GlobalInvocationID.x, y),
-			vec4(0, 0, 0, g_workingBuffer[y]));
+			vec4(g_workingBuffer[y], 0, 0, 0));
 	}
 }

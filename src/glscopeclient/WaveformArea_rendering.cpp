@@ -654,8 +654,23 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 			{
 				cl::CommandQueue queue(*g_clContext, g_contextDevices[0], 0);
 
-				//TODO: input memory
-				//TODO: output memory
+				//Output buffer
+				//TODO: GL-CL zero copy interop
+				vector<float> host_outbuf;
+				host_outbuf.resize(m_width * m_height*4);
+				for(size_t i=0; i<host_outbuf.size(); i++)
+					host_outbuf[i] = 0.0;
+				cl::Buffer outbuf(queue, host_outbuf.begin(), host_outbuf.end(), false, true, NULL);
+
+				//Input buffer
+				//For now, copy everything here
+				//TODO: do in PrepareGeometry()
+				auto pdat = data->m_channel.GetData();
+				auto andat = dynamic_cast<AnalogWaveform*>(pdat);
+				auto digdat = dynamic_cast<DigitalWaveform*>(pdat);
+				cl::Buffer xbuf(queue, pdat->m_offsets.begin(), pdat->m_offsets.end(), true, true, NULL);
+
+				//TODO: Figure out indexing
 
 				//Number of threads to use for a single column of pixels
 				const int threads_per_column = 64;
@@ -666,11 +681,18 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				const int blocksize = 256;
 				for(int i=0; i<m_width; i += blocksize)
 				{
-					if(IsAnalog())
+					if(andat)
 					{
-						m_renderAnalogWaveformKernel->setArg(0, (unsigned long)m_width);
-						m_renderAnalogWaveformKernel->setArg(1, (unsigned long)m_height);
+						//Analog Y buffer
+						cl::Buffer ybuf(queue, andat->m_samples.begin(), andat->m_samples.end(), true, true, NULL);
+
+						m_renderAnalogWaveformKernel->setArg(0, (unsigned int)m_width);
+						m_renderAnalogWaveformKernel->setArg(1, (unsigned int)m_height);
 						m_renderAnalogWaveformKernel->setArg(2, (unsigned long)i);
+
+						m_renderAnalogWaveformKernel->setArg(3, xbuf);
+						m_renderAnalogWaveformKernel->setArg(4, ybuf);
+						m_renderAnalogWaveformKernel->setArg(5, outbuf);
 
 						queue.enqueueNDRangeKernel(
 							*m_renderAnalogWaveformKernel,
@@ -679,22 +701,31 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 							cl::NDRange(1, threads_per_column),
 							NULL);
 					}
-					else if(IsDigital())
+					else if(digdat)
 					{
 						LogWarning("OpenCL digital rendering unimplemented for now\n");
 					}
 
 				}
 
-				//TODO: read results
+				//Read results and copy to the output texture
+				void* ptr = queue.enqueueMapBuffer(outbuf, true, CL_MAP_READ, 0, host_outbuf.size() * sizeof(float));
+				queue.enqueueUnmapMemObject(outbuf, ptr);
+				data->m_waveformTexture.Bind();
+				data->m_waveformTexture.SetData(
+					m_width,
+					m_height,
+					&host_outbuf[0],
+					GL_RED,
+					GL_FLOAT,
+					GL_RGBA32F);
 
 			}
 			catch(const cl::Error& e)
 			{
 				LogWarning("OpenCL error: %s (%d)\n", e.what(), e.err() );
 			}
-
-			//For now, fall through to the OpenGL render since the CL path doesn't actually do anything useful
+			break;
 
 		#endif
 

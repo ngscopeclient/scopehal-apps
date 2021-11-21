@@ -14,7 +14,7 @@ void main()
 	vec4 texcolor = texture(fbtex, vec2(texcoord));
 
 	//Logarithmic shading
-	float y = pow(texcolor.a, 1.0 / 4);
+	float y = pow(texcolor.r, 1.0 / 4);
 	y = min(y, 2);
 	y = max(y, 0);
 
