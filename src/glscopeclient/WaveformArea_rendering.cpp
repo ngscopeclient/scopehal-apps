@@ -644,6 +644,8 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	if(!data->m_geometryOK)
 		return;
 
+	bool good = false;
+
 	switch(GetRenderingBackend())
 	{
 		#ifdef HAVE_OPENCL
@@ -668,12 +670,56 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				auto pdat = data->m_channel.GetData();
 				auto andat = dynamic_cast<AnalogWaveform*>(pdat);
 				auto digdat = dynamic_cast<DigitalWaveform*>(pdat);
-				cl::Buffer xbuf(queue, pdat->m_offsets.begin(), pdat->m_offsets.end(), true, true, NULL);
+				//cl::Buffer xbuf(queue, pdat->m_offsets.begin(), pdat->m_offsets.end(), true, true, NULL);
 
 				//TODO: Figure out indexing
 
 				//Number of threads to use for a single column of pixels
 				const int threads_per_column = 64;
+
+				//Grab a few helpful variables
+				auto group = data->m_area->m_group;
+				int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
+				int64_t innerxoff = group->m_xAxisOffset / pdat->m_timescale;
+				int64_t fractional_offset = group->m_xAxisOffset % pdat->m_timescale;
+				float xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
+
+				//Scale alpha by zoom.
+				//As we zoom out more, reduce alpha to get proper intensity grading
+				float alpha = 0.9;
+				float capture_len = pdat->m_offsets[pdat->m_offsets.size() - 1] * pdat->m_timescale;
+				float avg_sample_len = capture_len / pdat->m_offsets.size();
+				float samplesPerPixel = 1.0 / (group->m_pixelsPerXUnit * avg_sample_len);
+				float alpha_scaled = alpha / sqrt(samplesPerPixel);
+				alpha_scaled = min(1.0f, alpha_scaled) * 2;
+
+				//Figure out zero voltage level and scaling
+				auto height = data->m_area->m_height;
+				float ybase = height/2;
+				float yscale = data->m_area->m_pixelsPerVolt;
+				if(digdat)
+				{
+					float digheight;
+
+					//Overlay?
+					auto f = dynamic_cast<Filter*>(data->m_channel.m_channel);
+					if((f != NULL) && f->IsOverlay())
+					{
+						ybase = data->m_area->m_height - (data->m_area->m_overlayPositions[data->m_channel] + 10);
+						digheight = 20;
+					}
+
+					//Main channel
+					else
+					{
+						ybase = 2;
+						digheight = height - 5;
+					}
+
+					yscale = digheight;
+				}
+
+				float persistDecay = 0.95f;
 
 				//OpenCL won't let us run a massive work group.
 				//Break us up into 256-pixel blocks rendered consecutively.
@@ -686,46 +732,70 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 						//Analog Y buffer
 						cl::Buffer ybuf(queue, andat->m_samples.begin(), andat->m_samples.end(), true, true, NULL);
 
-						m_renderAnalogWaveformKernel->setArg(0, (unsigned int)m_width);
-						m_renderAnalogWaveformKernel->setArg(1, (unsigned int)m_height);
-						m_renderAnalogWaveformKernel->setArg(2, (unsigned long)i);
+						//We only support dense packed waveforms for now
+						if(pdat->m_densePacked)
+						{
+							m_renderDenseAnalogWaveformKernel->setArg(0, (unsigned int)data->m_area->m_plotRight);
+							m_renderDenseAnalogWaveformKernel->setArg(1, (unsigned int)data->m_area->m_width);
+							m_renderDenseAnalogWaveformKernel->setArg(2, (unsigned int)data->m_area->m_height);
+							m_renderDenseAnalogWaveformKernel->setArg(3, (unsigned long)i);
+							m_renderDenseAnalogWaveformKernel->setArg(4, pdat->m_offsets.size());
+							m_renderDenseAnalogWaveformKernel->setArg(5, -innerxoff);
+							m_renderDenseAnalogWaveformKernel->setArg(6, offset_samples - 2);
+							m_renderDenseAnalogWaveformKernel->setArg(7, alpha_scaled);
+							m_renderDenseAnalogWaveformKernel->setArg(8,
+								(unsigned long)((pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit));
+							m_renderDenseAnalogWaveformKernel->setArg(9, xscale);
+							m_renderDenseAnalogWaveformKernel->setArg(10, ybase);
+							m_renderDenseAnalogWaveformKernel->setArg(11, yscale);
+							m_renderDenseAnalogWaveformKernel->setArg(12, (float)data->m_channel.m_channel->GetOffset());
+							if(!data->m_persistence)
+								m_renderDenseAnalogWaveformKernel->setArg(13, 0.0f);
+							else
+								m_renderDenseAnalogWaveformKernel->setArg(13, persistDecay);
+							m_renderDenseAnalogWaveformKernel->setArg(14, ybuf);
+							m_renderDenseAnalogWaveformKernel->setArg(15, outbuf);
 
-						m_renderAnalogWaveformKernel->setArg(3, xbuf);
-						m_renderAnalogWaveformKernel->setArg(4, ybuf);
-						m_renderAnalogWaveformKernel->setArg(5, outbuf);
+							queue.enqueueNDRangeKernel(
+								*m_renderDenseAnalogWaveformKernel,
+								cl::NullRange,
+								cl::NDRange(blocksize, threads_per_column),
+								cl::NDRange(1, threads_per_column),
+								NULL);
 
-						queue.enqueueNDRangeKernel(
-							*m_renderAnalogWaveformKernel,
-							cl::NullRange,
-							cl::NDRange(blocksize, threads_per_column),
-							cl::NDRange(1, threads_per_column),
-							NULL);
+							good = true;
+						}
 					}
 					else if(digdat)
 					{
-						LogWarning("OpenCL digital rendering unimplemented for now\n");
+						//LogWarning("OpenCL digital rendering unimplemented for now\n");
 					}
 
 				}
 
 				//Read results and copy to the output texture
-				void* ptr = queue.enqueueMapBuffer(outbuf, true, CL_MAP_READ, 0, host_outbuf.size() * sizeof(float));
-				queue.enqueueUnmapMemObject(outbuf, ptr);
-				data->m_waveformTexture.Bind();
-				data->m_waveformTexture.SetData(
-					m_width,
-					m_height,
-					&host_outbuf[0],
-					GL_RED,
-					GL_FLOAT,
-					GL_RGBA32F);
-
+				if(good)
+				{
+					void* ptr = queue.enqueueMapBuffer(outbuf, true, CL_MAP_READ, 0, host_outbuf.size() * sizeof(float));
+					queue.enqueueUnmapMemObject(outbuf, ptr);
+					data->m_waveformTexture.Bind();
+					data->m_waveformTexture.SetData(
+						m_width,
+						m_height,
+						&host_outbuf[0],
+						GL_RED,
+						GL_FLOAT,
+						GL_RGBA32F);
+				}
 			}
 			catch(const cl::Error& e)
 			{
 				LogWarning("OpenCL error: %s (%d)\n", e.what(), e.err() );
+				good = false;
 			}
-			break;
+			if(good)
+				break;
+			//else fall through
 
 		#endif
 

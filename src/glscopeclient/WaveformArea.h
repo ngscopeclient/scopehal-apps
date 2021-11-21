@@ -409,7 +409,7 @@ protected:
 	//OpenCL kernels for rendering
 	#ifdef HAVE_OPENCL
 	cl::Program* m_renderProgram;
-	cl::Kernel* m_renderAnalogWaveformKernel;
+	cl::Kernel* m_renderDenseAnalogWaveformKernel;
 	#endif
 
 	//Helpers for rendering and such

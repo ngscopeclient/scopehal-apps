@@ -120,7 +120,7 @@ void WaveformArea::SharedCtorInit()
 
 	#ifdef HAVE_OPENCL
 	m_renderProgram = NULL;
-	m_renderAnalogWaveformKernel = NULL;
+	m_renderDenseAnalogWaveformKernel = NULL;
 	#endif
 }
 
@@ -673,7 +673,7 @@ RenderAcceleration WaveformArea::GetRenderingBackend()
 		{
 			if(g_clContext &&
 				(m_renderProgram != NULL) &&
-				(m_renderAnalogWaveformKernel != NULL) )
+				(m_renderDenseAnalogWaveformKernel != NULL) )
 			{
 				return ACCEL_OPENCL;
 			}
@@ -704,10 +704,10 @@ void WaveformArea::on_unrealize()
 void WaveformArea::CleanupCLHandles()
 {
 	#ifdef HAVE_OPENCL
-		delete m_renderAnalogWaveformKernel;
+		delete m_renderDenseAnalogWaveformKernel;
 		delete m_renderProgram;
 
-		m_renderAnalogWaveformKernel = NULL;
+		m_renderDenseAnalogWaveformKernel = NULL;
 		m_renderProgram = NULL;
 	#endif
 }
@@ -761,7 +761,7 @@ void WaveformArea::InitializeWaveformPass()
 	try
 	{
 		m_renderProgram = NULL;
-		m_renderAnalogWaveformKernel = NULL;
+		m_renderDenseAnalogWaveformKernel = NULL;
 
 		if(g_clContext)
 		{
@@ -770,7 +770,7 @@ void WaveformArea::InitializeWaveformPass()
 			cl::Program::Sources sources(1, make_pair(&kernelSource[0], kernelSource.length()));
 			m_renderProgram = new cl::Program(*g_clContext, sources);
 			m_renderProgram->build(g_contextDevices);
-			m_renderAnalogWaveformKernel = new cl::Kernel(*m_renderProgram, "RenderAnalogWaveform");
+			m_renderDenseAnalogWaveformKernel = new cl::Kernel(*m_renderProgram, "RenderAnalogWaveform");
 		}
 	}
 	catch(const cl::Error& e)
@@ -788,10 +788,10 @@ void WaveformArea::InitializeWaveformPass()
 			}
 
 			delete m_renderProgram;
-			delete m_renderAnalogWaveformKernel;
+			delete m_renderDenseAnalogWaveformKernel;
 
 			m_renderProgram = NULL;
-			m_renderAnalogWaveformKernel = NULL;
+			m_renderDenseAnalogWaveformKernel = NULL;
 		}
 	}
 	#endif

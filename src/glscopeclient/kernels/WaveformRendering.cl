@@ -27,24 +27,63 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@brief Render an analog waveform
+//Maximum height of a single waveform, in pixels.
+//This is enough for a nearly fullscreen 4K window so should be plenty.
+#define MAX_HEIGHT		2048
 
-	@param width	Width of the image
-	@param height	Height of the image
-	@param firstcol	Index of the column corresponding to global ID of 0
-					(may be nonzero if the image is more than CL_DEVICE_MAX_WORK_GROUP_SIZE pixels wide)
+//Number of threads per column of pixels
+#define ROWS_PER_BLOCK	64
+
+/**
+	@brief Render a dense-packed analog waveform
+
+	@param plotRight		Right edge of displayed waveform
+	@param width			Width of the image
+	@param height			Height of the image
+	@param firstcol			Index of the column corresponding to global ID of 0
+							(may be nonzero if the image is more than CL_DEVICE_MAX_WORK_GROUP_SIZE pixels wide)
+	@param depth			Number of samples in the waveform
+	@param innerXoff		X offset (in samples)
+	@param offsetSamples	X offset (in samples)
+	@param alpha			Alpha value for intensity grading
+	@param xoff				X offset (in X units)
+	@param xscale			X scale (pixels/X unit)
+	@param ybase			Y position of zero (for overlays etc)
+	@param yscale			Y scale
+	@param yoff				Y offset
+	@param persistScale		Decay factor for persistence
+	@param ypos				Y coordinates of output waveform
+	@param outbuf			Output waveform buffer
  */
 __kernel void RenderAnalogWaveform(
+	unsigned int plotRight,
 	unsigned int width,
 	unsigned int height,
 	unsigned long firstcol,
-	__global unsigned long* xpos,
-	//__global unsigned long* index,
+	unsigned long depth,
+	unsigned long innerXoff,
+	unsigned long offsetSamples,
+	float alpha,
+	unsigned long xoff,
+	float xscale,
+	float ybase,
+	float yscale,
+	float yoff,
+	float persistScale,	//unimplemented for now
 	__global float* ypos,
 	__global float* outbuf
 	)
 {
+	//Shared buffer for the current column of pixels (8 kB)
+	__local float workingBuffer[MAX_HEIGHT];
+
+	//Min/max for the current sample
+	__local int blockmin[ROWS_PER_BLOCK];
+	__local int blockmax[ROWS_PER_BLOCK];
+	__local bool done;
+	__local bool updating[ROWS_PER_BLOCK];
+
+	//Don't do anything if we're off the right end of the buffer
 	unsigned long x = get_global_id(0) + firstcol;
 	if(x >= width)
 		return;
@@ -54,6 +93,15 @@ __kernel void RenderAnalogWaveform(
 	if(tid > 0)
 		return;
 
+	//In buffer, but outside plot? Zero fill
+	if(x >= plotRight)
+	{
+		for(unsigned long y=0; y<height; y++)
+			outbuf[y*width + x] = 0;
+		return;
+	}
+
+	//Demo fill
 	for(unsigned long y=0; y<height; y++)
 		outbuf[y*width + x] = (float)x / width;
 }
