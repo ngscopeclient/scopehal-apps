@@ -132,8 +132,8 @@ void main()
 				#endif
 
 				//Clip to window size
-				starty = min(starty, MAX_HEIGHT);
-				endy = min(endy, MAX_HEIGHT);
+				starty = min(starty, MAX_HEIGHT-1);
+				endy = min(endy, MAX_HEIGHT-1);
 
 				//Sort Y coordinates from min to max
 				g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
@@ -165,6 +165,8 @@ void main()
 			{
 				//Parallel fill
 				int ymin = g_blockmin[y];
+				if(ymin < 0)
+					ymin = 0;
 				int len = g_blockmax[y] - ymin;
 				for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
 				{
