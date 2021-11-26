@@ -770,7 +770,7 @@ void WaveformArea::InitializeWaveformPass()
 			cl::Program::Sources sources(1, make_pair(&kernelSource[0], kernelSource.length()));
 			m_renderProgram = new cl::Program(*g_clContext, sources);
 			m_renderProgram->build(g_contextDevices);
-			m_renderDenseAnalogWaveformKernel = new cl::Kernel(*m_renderProgram, "RenderAnalogWaveform");
+			m_renderDenseAnalogWaveformKernel = new cl::Kernel(*m_renderProgram, "RenderDensePackedAnalogWaveform");
 		}
 	}
 	catch(const cl::Error& e)

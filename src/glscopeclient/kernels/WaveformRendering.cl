@@ -35,6 +35,14 @@
 #define ROWS_PER_BLOCK	64
 
 /**
+	@brief Linearly interpolate Y coordinates
+ */
+float InterpolateY(float leftx, float lefty, float slope, float x)
+{
+	return lefty + ( (x-leftx)*slope );
+}
+
+/**
 	@brief Render a dense-packed analog waveform
 
 	@param plotRight		Right edge of displayed waveform
@@ -55,7 +63,7 @@
 	@param ypos				Y coordinates of output waveform
 	@param outbuf			Output waveform buffer
  */
-__kernel void RenderAnalogWaveform(
+__kernel void RenderDensePackedAnalogWaveform(
 	unsigned int plotRight,
 	unsigned int width,
 	unsigned int height,
@@ -81,7 +89,13 @@ __kernel void RenderAnalogWaveform(
 	__local int blockmin[ROWS_PER_BLOCK];
 	__local int blockmax[ROWS_PER_BLOCK];
 	__local bool done;
-	__local bool updating[ROWS_PER_BLOCK];
+	//__local bool updating[ROWS_PER_BLOCK];
+
+	//Abort if invalid parameters
+	if(height > MAX_HEIGHT)
+		return;
+	if(depth < 2)
+		return;
 
 	//Don't do anything if we're off the right end of the buffer
 	unsigned long x = get_global_id(0) + firstcol;
@@ -101,7 +115,85 @@ __kernel void RenderAnalogWaveform(
 		return;
 	}
 
-	//Demo fill
+	//Clear working buffer
+	//TODO: persistence
+	for(unsigned int y=0; y<height; y++)
+		workingBuffer[y] = 0;
+
+	//Main loop setup
+	done = false;
+	unsigned long istart = floor(x / xscale) + offsetSamples;
+	unsigned long iend = floor((x + 1)/xscale) + offsetSamples;
+	if(iend <= 0)
+		done = true;
+
+	//Main loop
+	unsigned long i = istart;
+	while(!done)
+	{
+		bool updating = false;
+		if(i < (depth - 1))
+		{
+			//Get raw coordinates
+			float leftx = (i + innerXoff) * xscale + xoff;
+			float lefty = (ypos[i] + yoff) * yscale + ybase;
+			float rightx = (i + 1 + innerXoff) * xscale + xoff;
+			float righty = (ypos[i+1] + yoff) * yscale + ybase;
+
+			//Skip offscreen
+			if( (rightx >= x) && (leftx <= x+1) )
+			{
+				float starty = lefty;
+				float endy = righty;
+
+				//Interpolate
+				/*
+				float slope = (righty - lefty) / (rightx - leftx);
+				if(leftx < x)
+					starty = InterpolateY(leftx, lefty, slope, x);
+				else
+					endy = InterpolateY(leftx, lefty, slope, x+1);
+				*/
+
+				//Clip to window size
+				starty = min(starty, (float)(MAX_HEIGHT-1));
+				endy = min(endy, (float)(MAX_HEIGHT-1));
+				starty = max(starty, 0.0f);
+				endy = max(endy, 0.0f);
+
+				//Sort coordinates
+				blockmin[0] = min(starty, endy);
+				blockmax[0] = max(starty, endy);
+
+				//At end of pixel? Stop
+				if(rightx > x+1)
+					done = true;
+
+				updating = true;
+			}
+
+			else
+			{
+				//nothing to do
+			}
+		}
+		else
+			done = true;
+
+		//TODO: multiple rows per block
+		i ++;
+
+		//Update the images
+		if(updating)
+		{
+			int ymin = blockmin[0];
+			int ymax = blockmax[0];
+			for(int y=ymin; y<=ymax; y++)
+				workingBuffer[y] += alpha;
+		}
+	}
+
+	//Copy working buffer to output
 	for(unsigned long y=0; y<height; y++)
-		outbuf[y*width + x] = (float)x / width;
+		outbuf[y*width + x] = workingBuffer[y];
 }
