@@ -32,7 +32,7 @@
 #define MAX_HEIGHT		2048
 
 //Number of threads per column of pixels
-#define ROWS_PER_BLOCK	64
+#define THREADS_PER_BLOCK	64
 
 /**
 	@brief Linearly interpolate Y coordinates
@@ -86,10 +86,9 @@ __kernel void RenderDensePackedAnalogWaveform(
 	__local float workingBuffer[MAX_HEIGHT];
 
 	//Min/max for the current sample
-	__local int blockmin[ROWS_PER_BLOCK];
-	__local int blockmax[ROWS_PER_BLOCK];
-	__local bool done;
-	//__local bool updating[ROWS_PER_BLOCK];
+	__local int blockmin[THREADS_PER_BLOCK];
+	__local int blockmax[THREADS_PER_BLOCK];
+	__local bool updating[THREADS_PER_BLOCK];
 
 	//Abort if invalid parameters
 	if(height > MAX_HEIGHT)
@@ -97,101 +96,106 @@ __kernel void RenderDensePackedAnalogWaveform(
 	if(depth < 2)
 		return;
 
-	//Don't do anything if we're off the right end of the buffer
+	//Figure out coordinate range of interest. Don't do anything if we're off the right end of the buffer
 	unsigned long x = get_global_id(0) + firstcol;
+	unsigned long tid = get_local_id(1);
+	unsigned long istart = floor(x / xscale) + offsetSamples;
+	unsigned long iend = floor((x + 1)/xscale) + offsetSamples;
 	if(x >= width)
 		return;
 
-	//TODO: more than one thread at a time
-	unsigned long tid = get_local_id(1);
-	if(tid > 0)
-		return;
-
-	//In buffer, but outside plot? Zero fill
-	if(x >= plotRight)
-	{
-		for(unsigned long y=0; y<height; y++)
-			outbuf[y*width + x] = 0;
-		return;
-	}
-
 	//Clear working buffer
 	//TODO: persistence
-	for(unsigned int y=0; y<height; y++)
+	for(unsigned int y=tid; y<height; y += THREADS_PER_BLOCK)
 		workingBuffer[y] = 0;
 
-	//Main loop setup
-	done = false;
-	unsigned long istart = floor(x / xscale) + offsetSamples;
-	unsigned long iend = floor((x + 1)/xscale) + offsetSamples;
+	//Not done unless we're already off the plot
+	bool skipmainloop;
 	if(iend <= 0)
-		done = true;
+		skipmainloop = true;
+	else if(x >= plotRight)
+		skipmainloop = true;
+	else
+		skipmainloop = false;
 
 	//Main loop
-	unsigned long i = istart;
-	while(!done)
+	if(!skipmainloop)
 	{
-		bool updating = false;
-		if(i < (depth - 1))
+		unsigned long ibase = istart;
+		while(ibase < (depth-1))
 		{
-			//Get raw coordinates
-			float leftx = (i + innerXoff) * xscale + xoff;
-			float lefty = (ypos[i] + yoff) * yscale + ybase;
-			float rightx = (i + 1 + innerXoff) * xscale + xoff;
-			float righty = (ypos[i+1] + yoff) * yscale + ybase;
+			//First sample of the thread group off the plot? Done
+			float base_leftx = (ibase + innerXoff) * xscale + xoff;
+			if(base_leftx > (x+1) )
+				break;
 
-			//Skip offscreen
-			if( (rightx >= x) && (leftx <= x+1) )
+			unsigned long i = ibase + tid;
+			if(i < (depth - 1))
 			{
-				float starty = lefty;
-				float endy = righty;
+				//Get raw coordinates
+				float leftx = (i + innerXoff) * xscale + xoff;
+				float lefty = (ypos[i] + yoff) * yscale + ybase;
+				float rightx = (i + 1 + innerXoff) * xscale + xoff;
+				float righty = (ypos[i+1] + yoff) * yscale + ybase;
 
-				//Interpolate
-				float slope = (righty - lefty) / (rightx - leftx);
-				if(leftx < x)
-					starty = InterpolateY(leftx, lefty, slope, x);
-				else
-					endy = InterpolateY(leftx, lefty, slope, x+1);
+				//Skip offscreen
+				if( (rightx >= x) && (leftx <= x+1) )
+				{
+					float starty = lefty;
+					float endy = righty;
 
-				//Clip to window size
-				starty = min(starty, (float)(MAX_HEIGHT-1));
-				endy = min(endy, (float)(MAX_HEIGHT-1));
-				starty = max(starty, 0.0f);
-				endy = max(endy, 0.0f);
+					//Interpolate
+					float slope = (righty - lefty) / (rightx - leftx);
+					if(leftx < x)
+						starty = InterpolateY(leftx, lefty, slope, x);
+					else
+						endy = InterpolateY(leftx, lefty, slope, x+1);
 
-				//Sort coordinates
-				blockmin[0] = min(starty, endy);
-				blockmax[0] = max(starty, endy);
+					//Clip to window size
+					starty = min(starty, (float)(MAX_HEIGHT-1));
+					endy = min(endy, (float)(MAX_HEIGHT-1));
+					starty = max(starty, 0.0f);
+					endy = max(endy, 0.0f);
 
-				//At end of pixel? Stop
-				if(rightx > x+1)
-					done = true;
+					//Sort coordinates
+					blockmin[tid] = min(starty, endy);
+					blockmax[tid] = max(starty, endy);
 
-				updating = true;
-			}
+					//At end of pixel? Stop
+					if(rightx > x+1)
+					{}
 
-			else
-			{
+					updating[tid] = true;
+				}
+
 				//nothing to do
+				else
+					updating[tid] = false;
 			}
-		}
-		else
-			done = true;
+			else
+				updating[tid] = false;
 
-		//TODO: multiple rows per block
-		i ++;
+			ibase += THREADS_PER_BLOCK;
 
-		//Update the images
-		if(updating)
-		{
-			int ymin = blockmin[0];
-			int ymax = blockmax[0];
-			for(int y=ymin; y<=ymax; y++)
-				workingBuffer[y] += alpha;
+			//Update the shared buffer
+			for(int thread = 0; thread < THREADS_PER_BLOCK; thread++)
+			{
+				barrier(CLK_LOCAL_MEM_FENCE);
+
+				if(updating[thread])
+				{
+					int ymin = blockmin[thread];
+					int ymax = blockmax[thread];
+					for(int y = ymin + tid; y <= ymax; y+= THREADS_PER_BLOCK)
+						workingBuffer[y] += alpha;
+				}
+			}
 		}
 	}
 
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	//Copy working buffer to output
-	for(unsigned long y=0; y<height; y++)
+	for(unsigned long y=tid; y<height; y += THREADS_PER_BLOCK)
 		outbuf[y*width + x] = workingBuffer[y];
 }

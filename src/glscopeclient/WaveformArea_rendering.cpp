@@ -675,7 +675,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				//TODO: Figure out indexing
 
 				//Number of threads to use for a single column of pixels
-				const int threads_per_column = 1;//64;
+				const int threads_per_column = 64;
 
 				//Grab a few helpful variables
 				auto group = data->m_area->m_group;
