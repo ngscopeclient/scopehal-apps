@@ -147,13 +147,11 @@ __kernel void RenderDensePackedAnalogWaveform(
 				float endy = righty;
 
 				//Interpolate
-				/*
 				float slope = (righty - lefty) / (rightx - leftx);
 				if(leftx < x)
 					starty = InterpolateY(leftx, lefty, slope, x);
 				else
 					endy = InterpolateY(leftx, lefty, slope, x+1);
-				*/
 
 				//Clip to window size
 				starty = min(starty, (float)(MAX_HEIGHT-1));
