@@ -34,13 +34,10 @@
 
 #include "../../../lib/scopehal/scopehal.h"
 #include "../../../lib/scopeprotocols/scopeprotocols.h"
-#include <ffts.h>
 
 using namespace std;
 
-#define FFT_LEN 16777216
-
-void OnWaveform(Oscilloscope* scope, ffts_plan_t* plan);
+void OnWaveform(Oscilloscope* scope);
 void OnDone(int signal);
 
 FILE* g_fpOut = NULL;
@@ -48,6 +45,24 @@ bool g_quitting = false;
 
 float g_lastFreq = 0;
 bool g_shifting = false;
+
+Filter* g_thresholdFilter = NULL;
+Filter* g_refMixerFilter = NULL;
+Filter* g_dutMixerFilter = NULL;
+
+Filter* g_refIfIFilter = NULL;
+Filter* g_refIfQFilter = NULL;
+Filter* g_dutIfIFilter = NULL;
+Filter* g_dutIfQFilter = NULL;
+
+Filter* g_dutMagnitudeFilter = NULL;
+Filter* g_refMagnitudeFilter = NULL;
+
+Filter* g_dutPhaseFilter = NULL;
+Filter* g_refPhaseFilter = NULL;
+Filter* g_phaseDiffFilter = NULL;
+
+void BuildFilterGraph(Oscilloscope* scope);
 
 int main(int argc, char* argv[])
 {
@@ -79,6 +94,9 @@ int main(int argc, char* argv[])
 
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
+
+	//Don't use OpenCL for now
+	g_disableOpenCL = true;
 
 	//Initialize object creation tables for predefined libraries
 	TransportStaticInit();
@@ -114,17 +132,13 @@ int main(int argc, char* argv[])
 		return 1;
 	scope->m_nickname = nick;
 
-	//Initial scope configuration
-	scope->EnableChannel(2);
-	scope->EnableChannel(3);
-	scope->SetSampleRate(40000000000UL);
-	scope->SetSampleDepth(20000000UL);
+	//Initial scope configuration: not interleaved, 20 Gsps, 2M points
+	//Probe on 0, ref on 1
+	scope->EnableChannel(0);
+	scope->EnableChannel(1);
+	scope->SetSampleRate(20000000000UL);
+	scope->SetSampleDepth(2000000UL);
 	scope->Start();
-
-	//Set up the FFT
-	//The scope wants nice round number sample depths (plus a few extra): we get 20000003 points.
-	//FFT needs power of two so only use the first 16777216 samples.
-	ffts_plan_t* plan = ffts_init_1d_real(FFT_LEN, FFTS_FORWARD);
 
 	//Signal handler for shutdown
 	signal(SIGINT, OnDone);
@@ -132,6 +146,9 @@ int main(int argc, char* argv[])
 	//Open the output S-parameter file
 	g_fpOut = fopen("/tmp/test.s2p", "w");
 	fprintf(g_fpOut, "# HZ S MA R 50.0\n");
+
+	//Create the filter graph where all our fun happens
+	BuildFilterGraph(scope);
 
 	//Main loop
 	while(!g_quitting)
@@ -146,11 +163,23 @@ int main(int argc, char* argv[])
 		//Grab the data
 		scope->AcquireData();
 		scope->PopPendingWaveform();
-		OnWaveform(scope, plan);
+		OnWaveform(scope);
 	}
 
-	//Clean up
-	ffts_free(plan);
+	/*
+	g_thresholdFilter->Release();
+	g_refMixerFilter->Release();
+	g_dutMixerFilter->Release();
+	g_refIfIFilter->Release();
+	g_refIfQFilter->Release();
+	g_dutIfIFilter->Release();
+	g_dutIfQFilter->Release();
+	g_refMagnitudeFilter->Release();
+	g_dutMagnitudeFilter->Release();
+	g_refPhaseFilter->Release();
+	g_dutPhaseFilter->Release();
+	g_phaseDiffFilter->Release();
+	*/
 }
 
 void OnDone(int /*ignored*/)
@@ -160,96 +189,182 @@ void OnDone(int /*ignored*/)
 	g_quitting = true;
 }
 
-void OnWaveform(Oscilloscope* scope, ffts_plan_t* plan)
+void BuildFilterGraph(Oscilloscope* scope)
 {
-	auto ref = dynamic_cast<AnalogWaveform*>(scope->GetChannel(2)->GetData(0));
-	auto dut = dynamic_cast<AnalogWaveform*>(scope->GetChannel(3)->GetData(0));
+	auto refchan = scope->GetChannel(1);
+	auto dutchan = scope->GetChannel(0);
 
-	AlignedAllocator< float, 64 > allocator;
+	//Threshold the reference waveform (with 10 mV hysteresis to prevent problems at really low frequencies)
+	g_thresholdFilter = Filter::CreateFilter("Threshold");
+	g_thresholdFilter->SetInput(0, StreamDescriptor(refchan, 0));
+	g_thresholdFilter->GetParameter("Threshold").SetFloatVal(0);
+	g_thresholdFilter->GetParameter("Hysteresis").SetFloatVal(0.01);
 
-	//Window the data
-	float* inref = allocator.allocate(FFT_LEN);
-	float* indut = allocator.allocate(FFT_LEN);
-	FFTFilter::ApplyWindow(
-		reinterpret_cast<float*>(&ref->m_samples[0]), FFT_LEN, inref, FFTFilter::WINDOW_BLACKMAN_HARRIS);
-	FFTFilter::ApplyWindow(
-		reinterpret_cast<float*>(&dut->m_samples[0]), FFT_LEN, indut, FFTFilter::WINDOW_BLACKMAN_HARRIS);
+	//Mix the reference and DUT waveform with coherent LOs
+	g_refMixerFilter = Filter::CreateFilter("Downconvert");
+	g_refMixerFilter->SetInput(0, StreamDescriptor(refchan, 0));
 
-	//Do the forward FFT
-	float sampleGHZ = 40;
-	size_t nouts = FFT_LEN/2 + 1;
-	float binHz = round((0.5f * sampleGHZ * 1e9f) / nouts);
-	float* fref = allocator.allocate(nouts*2);
-	float* fdut = allocator.allocate(nouts*2);
-	ffts_execute(plan, inref, fref);
-	ffts_execute(plan, indut, fdut);
+	g_dutMixerFilter = Filter::CreateFilter("Downconvert");
+	g_dutMixerFilter->SetInput(0, StreamDescriptor(dutchan, 0));
 
-	//Find the highest point in the reference waveform
-	size_t highestBin = 0;
-	float highestMag = 0;
-	for(size_t i=0; i<nouts; i++)
+	//Band-pass filter the mixed I/Q to remove images, harmonics, and other out-of-band stuff
+	g_refIfIFilter = Filter::CreateFilter("FIR Filter");
+	g_refIfIFilter->SetInput(0, StreamDescriptor(g_refMixerFilter, 0));
+	g_refIfIFilter->GetParameter("Filter Type").ParseString("Band pass");
+
+	g_refIfQFilter = Filter::CreateFilter("FIR Filter");
+	g_refIfQFilter->SetInput(0, StreamDescriptor(g_refMixerFilter, 1));
+	g_refIfQFilter->GetParameter("Filter Type").ParseString("Band pass");
+
+	g_dutIfIFilter = Filter::CreateFilter("FIR Filter");
+	g_dutIfIFilter->SetInput(0, StreamDescriptor(g_dutMixerFilter, 0));
+	g_dutIfIFilter->GetParameter("Filter Type").ParseString("Band pass");
+
+	g_dutIfQFilter = Filter::CreateFilter("FIR Filter");
+	g_dutIfQFilter->SetInput(0, StreamDescriptor(g_dutMixerFilter, 1));
+	g_dutIfQFilter->GetParameter("Filter Type").ParseString("Band pass");
+
+	g_refMagnitudeFilter = Filter::CreateFilter("Vector Magnitude");
+	g_refMagnitudeFilter->SetInput(0, StreamDescriptor(g_refIfIFilter, 0));
+	g_refMagnitudeFilter->SetInput(1, StreamDescriptor(g_refIfQFilter, 0));
+
+	g_dutMagnitudeFilter = Filter::CreateFilter("Vector Magnitude");
+	g_dutMagnitudeFilter->SetInput(0, StreamDescriptor(g_dutIfIFilter, 0));
+	g_dutMagnitudeFilter->SetInput(1, StreamDescriptor(g_dutIfQFilter, 0));
+
+	g_refPhaseFilter = Filter::CreateFilter("Vector Phase");
+	g_refPhaseFilter->SetInput(0, StreamDescriptor(g_refIfIFilter, 0));
+	g_refPhaseFilter->SetInput(1, StreamDescriptor(g_refIfQFilter, 0));
+
+	g_dutPhaseFilter = Filter::CreateFilter("Vector Phase");
+	g_dutPhaseFilter->SetInput(0, StreamDescriptor(g_dutIfIFilter, 0));
+	g_dutPhaseFilter->SetInput(1, StreamDescriptor(g_dutIfQFilter, 0));
+
+	g_phaseDiffFilter = Filter::CreateFilter("Subtract");
+	g_phaseDiffFilter->SetInput(0, StreamDescriptor(g_dutPhaseFilter, 0));
+	g_phaseDiffFilter->SetInput(1, StreamDescriptor(g_refPhaseFilter, 0));
+}
+
+void OnWaveform(Oscilloscope* /*scope*/)
+{
+	//LogDebug("Got a waveform\n");
+	//LogIndenter li;
+	Filter::ClearAnalysisCache();
+	Filter::SetAllFiltersDirty();
+
+	//Get the frequency of the reference waveform
+	g_thresholdFilter->Refresh();
+	vector<int64_t> edges;
+	Filter::FindRisingEdges(dynamic_cast<DigitalWaveform*>(g_thresholdFilter->GetData(0)), edges);
+	if(edges.size() < 2)
+		return;
+	int64_t tfirst = edges[0];
+	int64_t tlast = edges[edges.size()-1];
+	int64_t refPeriodFS = (tlast - tfirst) / (edges.size()-1);
+	int64_t refFreqHz = FS_PER_SECOND / refPeriodFS;
+	Unit hz(Unit::UNIT_HZ);
+	//LogDebug("Calculated reference frequency is %s\n", hz.PrettyPrint(refFreqHz).c_str());
+
+	//Record a shift if our center frequency is at least 1 kHz greater than the last waveform
+	bool g_lastWasShift = g_shifting;
+	g_shifting = ( (refFreqHz - g_lastFreq) > 1000);
+	if(g_shifting)
 	{
-		float real = fref[i*2];
-		float imag = fref[i*2 + 1];
-		float mag = sqrt(real*real + imag*imag);
-
-		if(mag > highestMag)
-		{
-			highestBin = i;
-			highestMag = mag;
-		}
+		//LogDebug("Input frequency shift detected\n");
+		g_lastFreq = refFreqHz;
+		return;
 	}
 
-	//Get mag/angle for this bin in both waveforms
-	float real = fref[highestBin*2];
-	float imag = fref[highestBin*2 + 1];
-	float refMag = sqrt(real*real + imag*imag);
-	float refAngle = atan2(imag, real);
+	//If last cycle was a shift, we should be stable now - process stuff.
+	//if *not* a shift, we're a duplicate so ignore it
+	if(!g_lastWasShift)
+		return;
 
-	real = fdut[highestBin*2];
-	imag = fdut[highestBin*2 + 1];
-	float dutMag = sqrt(real*real + imag*imag);
-	float dutAngle = atan2(imag, real);
+	//We want a 50-100 MHz IF to get a reasonable number of cycles in the test waveform.
+	//Configure the LO to up- or downconvert based on the input frequency.
+	//Use a bit of hysteresis to prevent ridiculously low LO frequencies.
+	int64_t downconvertTarget = 60 * 1000 * 1000;
+	int64_t downconvertThreshold = 70 * 1000 * 1000;
+	int64_t upconvertTarget = 80 * 1000 * 1000;
+	int64_t loFreq = 0;
+	int64_t ifFreq = 0;
+	if(refFreqHz > downconvertThreshold)
+	{
+		loFreq = refFreqHz - downconvertTarget;
+		ifFreq = refFreqHz - loFreq;
+		/*
+		LogDebug("Downconverting with %s LO to get %s IF\n",
+			hz.PrettyPrint(loFreq).c_str(),
+			hz.PrettyPrint(ifFreq).c_str());
+		*/
+	}
+	else
+	{
+		loFreq = upconvertTarget - refFreqHz;
+		ifFreq = refFreqHz + loFreq;
+		/*
+		LogDebug("Upconverting with %s LO to get %s IF\n",
+			hz.PrettyPrint(loFreq).c_str(),
+			hz.PrettyPrint(ifFreq).c_str());
+		*/
+	}
 
-	//Calculate relative S21 magnitude and angle
-	float s21_mag = dutMag / refMag;
-	float s21_db = 20*log10(s21_mag);
-	float s21_ang = dutAngle - refAngle;
-	if(s21_ang > M_PI)
-		s21_ang -= 2*M_PI;
-	if(s21_ang < -M_PI)
-		s21_ang += 2*M_PI;
+	//Configure the mixers
+	g_refMixerFilter->GetParameter("LO Frequency").SetFloatVal(loFreq);
+	g_dutMixerFilter->GetParameter("LO Frequency").SetFloatVal(loFreq);
 
-	//TODO: calibration for cable/splitter mismatch
+	//Configure the IF bandpass filters with 10 MHz bandwidth
+	int64_t ifBandLow = ifFreq - (5 * 1000 * 1000);
+	int64_t ifBandHigh = ifFreq + (5 * 1000 * 1000);
+	g_refIfIFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
+	g_refIfIFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
+	g_refIfQFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
+	g_refIfQFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
+	g_dutIfIFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
+	g_dutIfIFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
+	g_dutIfQFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
+	g_dutIfQFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
+
+	//Run the final filters in the graph
+	g_refMagnitudeFilter->RefreshIfDirty();
+	g_dutMagnitudeFilter->RefreshIfDirty();
+	g_phaseDiffFilter->RefreshIfDirty();
+
+	//Calculate average amplitude
+	float avgRef = 0;
+	auto refdata = dynamic_cast<AnalogWaveform*>(g_refMagnitudeFilter->GetData(0));
+	for(auto f : refdata->m_samples)
+		avgRef += f;
+	avgRef /= refdata->m_samples.size();
+
+	float avgDut = 0;
+	auto dutdata = dynamic_cast<AnalogWaveform*>(g_dutMagnitudeFilter->GetData(0));
+	for(auto f : dutdata->m_samples)
+		avgDut += f;
+	avgDut /= dutdata->m_samples.size();
+
+	//S21 magnitude is just the ratio of measured amplitudes
+	float s21_mag = avgDut / avgRef;
+	float s21_mag_db = 20 * log10(s21_mag);
+
+	//Calculate average phase delta
+	float s21_deg = 0;
+	auto phasedata = dynamic_cast<AnalogWaveform*>(g_phaseDiffFilter->GetData(0));
+	for(auto f : phasedata->m_samples)
+		s21_deg += f;
+	s21_deg /= phasedata->m_samples.size();
+	s21_deg *= -1;
 
 	//Print peak info
-	Unit hz(Unit::UNIT_HZ);
 	Unit db(Unit::UNIT_DB);
 	Unit deg(Unit::UNIT_DEGREES);
-	float binFreq = binHz * (highestBin);
-	float s21_deg = s21_ang * 180 / M_PI;
 
 	LogDebug("%s: mag = %s, ang = %s\n",
-		hz.PrettyPrint(binFreq).c_str(),
-		db.PrettyPrint(s21_db).c_str(),
+		hz.PrettyPrint(refFreqHz).c_str(),
+		db.PrettyPrint(s21_mag_db).c_str(),
 		deg.PrettyPrint(s21_deg).c_str());
 
 	//If the last waveform was a shift, we should be stable now.
 	//Update the .s2p file with our new data.
-	if(g_shifting)
-	{
-		fprintf(g_fpOut, "%f 0 0 %f %f 0 0 0 0\n", binFreq, s21_mag, s21_deg);
-		g_lastFreq = binFreq;
-	}
-
-	//Record a shift if our center frequency is at least 1 kHz greater than the last waveform
-	g_shifting = ( (binFreq - g_lastFreq) > 1000);
-	if(g_shifting)
-		LogDebug("Input frequency shift detected\n");
-
-	//Clean up
-	allocator.deallocate(fref);
-	allocator.deallocate(fdut);
-	allocator.deallocate(inref);
-	allocator.deallocate(indut);
+	fprintf(g_fpOut, "%ld 0 0 %f %f 0 0 0 0\n", refFreqHz, s21_mag, s21_deg);
 }
