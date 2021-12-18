@@ -327,7 +327,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                    channel: %d\n", table[it.second.m_channel]);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                    stream: %d\n", it.second.m_stream);
+			snprintf(tmp, sizeof(tmp), "                    stream: %zu\n", it.second.m_stream);
 			config += tmp;
 		}
 	}

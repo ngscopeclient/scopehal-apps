@@ -213,8 +213,21 @@ void FilterGraphEditorNode::UpdateSize()
 			if(bwl != 0)
 				paramText += string("Bandwidth:\t") + hz.PrettyPrint(bwl * 1e6) + "\n";
 
-			paramText += string("Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange()) + "\n";
-			paramText += string("Offset:\t") + v.PrettyPrint(m_channel->GetOffset()) + "\n";
+			int nstreams = m_channel->GetStreamCount();
+			if(nstreams == 1)
+			{
+				paramText += string("Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange(0)) + "\n";
+				paramText += string("Offset:\t") + v.PrettyPrint(m_channel->GetOffset(0)) + "\n";
+			}
+			else
+			{
+				for(int i=0; i<nstreams; i++)
+				{
+					paramText += m_channel->GetStreamName(i) + ":\n";
+					paramText += string("    Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange(i)) + "\n";
+					paramText += string("    Offset:\t") + v.PrettyPrint(m_channel->GetOffset(i)) + "\n";
+				}
+			}
 		}
 	}
 	m_paramLayout->set_text(paramText);

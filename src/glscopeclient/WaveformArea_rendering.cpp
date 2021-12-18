@@ -232,7 +232,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	wdata->m_mappedFloatConfigBuffer[8] = xscale;											//xscale
 	wdata->m_mappedFloatConfigBuffer[9] = ybase;											//ybase
 	wdata->m_mappedFloatConfigBuffer[10] = yscale;											//yscale
-	wdata->m_mappedFloatConfigBuffer[11] = channel->GetOffset();							//yoff
+	wdata->m_mappedFloatConfigBuffer[11] = wdata->m_channel.GetOffset();					//yoff
 
 	//persistScale
 	if(!wdata->m_persistence)
@@ -391,7 +391,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		lock_guard<recursive_mutex> lock(m_parent->m_waveformDataMutex);
 
 		//Pull vertical size from the scope early on no matter how we're rendering
-		m_pixelsPerVolt = m_height / m_channel.m_channel->GetVoltageRange();
+		m_pixelsPerVolt = m_height / m_channel.GetVoltageRange();
 
 		//Update geometry if needed
 		if(m_geometryDirty || m_positionDirty)
@@ -575,8 +575,8 @@ void WaveformArea::RenderSpectrogram()
 	float xscale = pcap->GetDuration() * xpixscale;
 
 	//Figure out Y axis scale and offset
-	float range = m_channel.m_channel->GetVoltageRange();
-	float yoff = -m_channel.m_channel->GetOffset() / range - 0.5;
+	float range = m_channel.GetVoltageRange();
+	float yoff = -m_channel.GetOffset() / range - 0.5;
 	float yscale = pcap->GetMaxFrequency() / range;
 
 	m_spectrogramProgram.Bind();
@@ -748,7 +748,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 							m_renderDenseAnalogWaveformKernel->setArg(9, xscale);
 							m_renderDenseAnalogWaveformKernel->setArg(10, ybase);
 							m_renderDenseAnalogWaveformKernel->setArg(11, yscale);
-							m_renderDenseAnalogWaveformKernel->setArg(12, (float)data->m_channel.m_channel->GetOffset());
+							m_renderDenseAnalogWaveformKernel->setArg(12, (float)data->m_channel.GetOffset());
 							if(!data->m_persistence)
 								m_renderDenseAnalogWaveformKernel->setArg(13, 0.0f);
 							else
@@ -970,12 +970,12 @@ float WaveformArea::YAxisUnitsToPixels(float volt)
 
 float WaveformArea::YAxisUnitsToYPosition(float volt)
 {
-	return m_height/2 - YAxisUnitsToPixels(volt + m_channel.m_channel->GetOffset());
+	return m_height/2 - YAxisUnitsToPixels(volt + m_channel.GetOffset());
 }
 
 float WaveformArea::YPositionToYAxisUnits(float y)
 {
-	return PixelToYAxisUnits(-1 * (y - m_height/2) ) - m_channel.m_channel->GetOffset();
+	return PixelToYAxisUnits(-1 * (y - m_height/2) ) - m_channel.GetOffset();
 }
 
 float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)

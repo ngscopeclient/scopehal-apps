@@ -175,17 +175,17 @@ bool WaveformArea::on_scroll_event (GdkEventScroll* ev)
 		//Adjust volts/div
 		case LOC_VSCALE:
 			{
-				double vrange = m_channel.m_channel->GetVoltageRange();
+				double vrange = m_channel.GetVoltageRange();
 				switch(ev->direction)
 				{
 					case GDK_SCROLL_UP:
-						m_channel.m_channel->SetVoltageRange(vrange * 0.9);
+						m_channel.SetVoltageRange(vrange * 0.9);
 						ClearPersistence();
 						SetGeometryDirty();
 						queue_draw();
 						break;
 					case GDK_SCROLL_DOWN:
-						m_channel.m_channel->SetVoltageRange(vrange / 0.9);
+						m_channel.SetVoltageRange(vrange / 0.9);
 						ClearPersistence();
 						SetGeometryDirty();
 						queue_draw();
@@ -820,8 +820,8 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 		case DRAG_OFFSET:
 			{
 				double dv = YPositionToYAxisUnits(event->y) - m_dragStartVoltage;
-				double old_offset = m_channel.m_channel->GetOffset();
-				m_channel.m_channel->SetOffset(old_offset + dv);
+				double old_offset = m_channel.GetOffset();
+				m_channel.SetOffset(old_offset + dv);
 				ClearPersistence();
 				SetGeometryDirty();
 				queue_draw();
