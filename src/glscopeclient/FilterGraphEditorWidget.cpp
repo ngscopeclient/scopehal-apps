@@ -216,16 +216,18 @@ void FilterGraphEditorNode::UpdateSize()
 			int nstreams = m_channel->GetStreamCount();
 			if(nstreams == 1)
 			{
-				paramText += string("Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange(0)) + "\n";
-				paramText += string("Offset:\t") + v.PrettyPrint(m_channel->GetOffset(0)) + "\n";
+				auto yunits = m_channel->GetYAxisUnits(0);
+				paramText += string("Range:\t") + yunits.PrettyPrint(m_channel->GetVoltageRange(0)) + "\n";
+				paramText += string("Offset:\t") + yunits.PrettyPrint(m_channel->GetOffset(0)) + "\n";
 			}
 			else
 			{
 				for(int i=0; i<nstreams; i++)
 				{
+					auto yunits = m_channel->GetYAxisUnits(i);
 					paramText += m_channel->GetStreamName(i) + ":\n";
-					paramText += string("    Range:\t") + v.PrettyPrint(m_channel->GetVoltageRange(i)) + "\n";
-					paramText += string("    Offset:\t") + v.PrettyPrint(m_channel->GetOffset(i)) + "\n";
+					paramText += string("    Range:\t") + yunits.PrettyPrint(m_channel->GetVoltageRange(i)) + "\n";
+					paramText += string("    Offset:\t") + yunits.PrettyPrint(m_channel->GetOffset(i)) + "\n";
 				}
 			}
 		}
