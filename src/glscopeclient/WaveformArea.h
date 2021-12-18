@@ -73,7 +73,7 @@ public:
 	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
 
 	bool IsHistogram()
-	{ return m_channel.m_channel->GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
+	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
 
 	bool IsDensePacked()
 	{

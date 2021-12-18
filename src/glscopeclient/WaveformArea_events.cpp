@@ -1171,7 +1171,7 @@ void WaveformArea::OnDecodeSetupComplete()
 	//If the pending filter is a scalar output, add a statistic instead.
 	//Also do this if requested from the measurement menu
 	if(m_pendingDecode->IsScalarOutput() || m_showPendingDecodeAsStats)
-		m_group->ToggleOn(m_pendingDecode);
+		m_group->EnableStats(StreamDescriptor(m_pendingDecode, 0));
 
 	//Create a new waveform view for the generated signal
 	else if(!m_pendingDecode->IsOverlay())
@@ -1601,9 +1601,9 @@ void WaveformArea::OnStatistics()
 		return;
 
 	if(m_statisticsItem.get_active())
-		m_group->ToggleOn(m_selectedChannel.m_channel);
+		m_group->EnableStats(m_selectedChannel);
 	else
-		m_group->ToggleOff(m_selectedChannel.m_channel);
+		m_group->DisableStats(m_selectedChannel);
 }
 
 void WaveformArea::CenterPacket(int64_t time, int64_t len)

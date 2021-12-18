@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -115,7 +115,7 @@ WaveformGroup::~WaveformGroup()
 	for(size_t i=1; i<32; i++)
 	{
 		if(m_indexToColumnMap.find(i) != m_indexToColumnMap.end())
-			ToggleOff(m_indexToColumnMap[i]);
+			DisableStats(m_indexToColumnMap[i]);
 	}
 
 	auto children = m_treeModel->children();
@@ -126,10 +126,10 @@ WaveformGroup::~WaveformGroup()
 	}
 }
 
-void WaveformGroup::ToggleOn(OscilloscopeChannel* chan, size_t index)
+void WaveformGroup::EnableStats(StreamDescriptor stream, size_t index)
 {
 	//If the channel is already active, do nothing
-	if(m_columnToIndexMap.find(chan) != m_columnToIndexMap.end())
+	if(m_columnToIndexMap.find(stream) != m_columnToIndexMap.end())
 		return;
 
 	//If we have no rows, add the initial set of stats
@@ -152,25 +152,25 @@ void WaveformGroup::ToggleOn(OscilloscopeChannel* chan, size_t index)
 		}
 	}
 
-	m_columnToIndexMap[chan] = ncol;
-	m_indexToColumnMap[ncol] = chan;
+	m_columnToIndexMap[stream] = ncol;
+	m_indexToColumnMap[ncol] = stream;
 
 	//Set up the column
 	auto col = m_measurementView.get_column(ncol);
-	col->set_title(chan->GetDisplayName());
+	col->set_title(stream.GetName());
 	col->get_first_cell()->property_xalign() = 1.0;
 	col->set_alignment(Gtk::ALIGN_END);
 
 	RefreshMeasurements();
 
-	chan->AddRef();
+	stream.m_channel->AddRef();
 
 	m_measurementView.show_all();
 }
 
-void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
+void WaveformGroup::DisableStats(StreamDescriptor stream)
 {
-	int index = m_columnToIndexMap[chan];
+	int index = m_columnToIndexMap[stream];
 
 	//Delete the current contents of the channel
 	m_measurementView.get_column(index)->set_title("");
@@ -179,18 +179,18 @@ void WaveformGroup::ToggleOff(OscilloscopeChannel* chan)
 		row[m_treeColumns.m_columns[index]] = "";
 
 	//Remove everything from our column records and free the channel
-	m_columnToIndexMap.erase(chan);
+	m_columnToIndexMap.erase(stream);
 	m_indexToColumnMap.erase(index);
-	chan->Release();
+	stream.m_channel->Release();
 
 	//If no channels are visible hide the frame
 	if(m_columnToIndexMap.empty())
 		m_measurementView.hide();
 }
 
-bool WaveformGroup::IsShowingStats(OscilloscopeChannel* chan)
+bool WaveformGroup::IsShowingStats(StreamDescriptor stream)
 {
-	return (m_columnToIndexMap.find(chan) != m_columnToIndexMap.end());
+	return (m_columnToIndexMap.find(stream) != m_columnToIndexMap.end());
 }
 
 void WaveformGroup::AddStatistic(Statistic* stat)
@@ -226,7 +226,7 @@ void WaveformGroup::RefreshMeasurements()
 			if(!stat->Calculate(chan, value))
 				row[m_treeColumns.m_columns[i]] = "(error)";
 			else
-				row[m_treeColumns.m_columns[i]] = stat->GetUnits(chan).PrettyPrint(value);
+				row[m_treeColumns.m_columns[i]] = chan.GetYAxisUnits().PrettyPrint(value);
 		}
 	}
 
@@ -237,7 +237,7 @@ void WaveformGroup::RefreshMeasurements()
 			continue;
 
 		auto col = m_measurementView.get_column(i);
-		auto name = m_indexToColumnMap[i]->GetDisplayName();
+		auto name = m_indexToColumnMap[i].GetName();
 
 		//Truncate names if they are too long
 		if(name.length() > 20)
@@ -325,7 +325,9 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 			config += tmp;
 			snprintf(tmp, sizeof(tmp), "                    index:   %d\n", it.first);
 			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                    channel: %d\n", table[it.second]);
+			snprintf(tmp, sizeof(tmp), "                    channel: %d\n", table[it.second.m_channel]);
+			config += tmp;
+			snprintf(tmp, sizeof(tmp), "                    stream: %d\n", it.second.m_stream);
 			config += tmp;
 		}
 	}
@@ -400,11 +402,11 @@ void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)
 				//See if we have a valid channel at this column
 				if(m_indexToColumnMap.find(i) == m_indexToColumnMap.end())
 					return;
-				m_measurementContextMenuChannel = m_indexToColumnMap[i];
+				m_measurementContextMenuChannel = m_indexToColumnMap[i].m_channel;
 				break;
 			}
 		}
-		if(!m_measurementContextMenuChannel)
+		if(!m_measurementContextMenuChannel.m_channel)
 			return;
 
 		//Show the context menu
@@ -414,12 +416,12 @@ void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)
 
 void WaveformGroup::OnStatisticProperties()
 {
-	auto oldname = m_measurementContextMenuChannel->GetDisplayName();
+	auto oldname = m_measurementContextMenuChannel.GetName();
 
 	//Show the properties
-	if(m_measurementContextMenuChannel->IsPhysicalChannel())
+	if(m_measurementContextMenuChannel.m_channel->IsPhysicalChannel())
 	{
-		ChannelPropertiesDialog dialog(m_parent, m_measurementContextMenuChannel);
+		ChannelPropertiesDialog dialog(m_parent, m_measurementContextMenuChannel.m_channel);
 		if(dialog.run() != Gtk::RESPONSE_OK)
 			return;
 
@@ -428,7 +430,7 @@ void WaveformGroup::OnStatisticProperties()
 
 	else
 	{
-		auto decode = dynamic_cast<Filter*>(m_measurementContextMenuChannel);
+		auto decode = dynamic_cast<Filter*>(m_measurementContextMenuChannel.m_channel);
 		FilterDialog dialog(m_parent, decode, StreamDescriptor(NULL, 0));
 		if(dialog.run() != Gtk::RESPONSE_OK)
 			return;
@@ -436,19 +438,19 @@ void WaveformGroup::OnStatisticProperties()
 		dialog.ConfigureDecoder();
 	}
 
-	if(m_measurementContextMenuChannel->GetDisplayName() != oldname)
-		m_parent->OnChannelRenamed(m_measurementContextMenuChannel);
+	if(m_measurementContextMenuChannel.GetName() != oldname)
+		m_parent->OnChannelRenamed(m_measurementContextMenuChannel.m_channel);
 
 	m_parent->RefreshChannelsMenu();
 }
 
 void WaveformGroup::OnHideStatistic()
 {
-	ToggleOff(m_measurementContextMenuChannel);
+	DisableStats(m_measurementContextMenuChannel);
 }
 
-void WaveformGroup::OnChannelRenamed(OscilloscopeChannel* chan)
+void WaveformGroup::OnChannelRenamed(StreamDescriptor stream)
 {
-	if(IsShowingStats(chan))
-		m_measurementView.get_column(m_columnToIndexMap[chan])->set_title(chan->GetDisplayName());
+	if(IsShowingStats(stream))
+		m_measurementView.get_column(m_columnToIndexMap[stream])->set_title(stream.GetName());
 }

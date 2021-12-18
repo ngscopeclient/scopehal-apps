@@ -72,12 +72,12 @@ public:
 
 	void RefreshMeasurements();
 
-	bool IsShowingStats(OscilloscopeChannel* chan);
+	bool IsShowingStats(StreamDescriptor stream);
 
 	MeasurementColumns m_treeColumns;
 	Glib::RefPtr<Gtk::TreeStore> m_treeModel;
-	void ToggleOn(OscilloscopeChannel* chan, size_t index=0);
-	void ToggleOff(OscilloscopeChannel* chan);
+	void EnableStats(StreamDescriptor stream, size_t index = 0);
+	void DisableStats(StreamDescriptor stream);
 
 	void AddStatistic(Statistic* stat);
 	void ClearStatistics();
@@ -85,11 +85,11 @@ public:
 	int GetIndexOfChild(Gtk::Widget* child);
 	bool IsLastChild(Gtk::Widget* child);
 
-	void OnChannelRenamed(OscilloscopeChannel* chan);
+	void OnChannelRenamed(StreamDescriptor stream);
 
-	//map of scope channels to measurement column indexes
-	std::map<OscilloscopeChannel*, int> m_columnToIndexMap;
-	std::map<int, OscilloscopeChannel*> m_indexToColumnMap;
+	//map of scope streams to measurement column indexes
+	std::map<StreamDescriptor, int> m_columnToIndexMap;
+	std::map<int, StreamDescriptor> m_indexToColumnMap;
 
 	Gtk::EventBox m_frame;
 		Gtk::Frame m_realframe;
@@ -136,7 +136,7 @@ protected:
 	WaveformGroupPropertiesDialog* m_propertiesDialog;
 	void OnPropertiesDialogResponse(int response);
 
-	OscilloscopeChannel* m_measurementContextMenuChannel;
+	StreamDescriptor m_measurementContextMenuChannel;
 };
 
 #endif

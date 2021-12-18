@@ -145,7 +145,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	//Target for matching
 	auto text = m_targetEntry.get_text();
-	double value = chan.m_channel->GetYAxisUnits().ParseString(text);
+	double value = chan.GetYAxisUnits().ParseString(text);
 
 	//Figure out the match filter and check
 	auto sfilter = m_operatorBox.get_active_text();

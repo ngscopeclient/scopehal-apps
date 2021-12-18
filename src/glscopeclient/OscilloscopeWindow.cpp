@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -2079,9 +2079,14 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			for(auto s : stats)
 			{
 				auto statnode = s.second;
+				int stream = 0;
+				if(statnode["stream"])
+					stream = statnode["stream"].as<long>();
 
-				group->ToggleOn(
-					static_cast<OscilloscopeChannel*>(table[statnode["channel"].as<long>()]),
+				group->EnableStats(
+					StreamDescriptor(
+						static_cast<OscilloscopeChannel*>(table[statnode["channel"].as<long>()]),
+						stream),
 					statnode["index"].as<long>());
 			}
 		}
@@ -2698,11 +2703,10 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 		chans.emplace(w->GetOverlay(i));
 	for(auto chan : chans)
 	{
-		//TODO: multi stream stats
-		if(oldgroup->IsShowingStats(chan.m_channel))
+		if(oldgroup->IsShowingStats(chan))
 		{
-			oldgroup->ToggleOff(chan.m_channel);
-			ngroup->ToggleOn(chan.m_channel);
+			oldgroup->DisableStats(chan);
+			ngroup->EnableStats(chan);
 		}
 	}
 
@@ -2742,9 +2746,8 @@ void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* n
 		chans.emplace(w->GetOverlay(i));
 	for(auto chan : chans)
 	{
-		//TODO: multi stream stats
-		if(w->m_group->IsShowingStats(chan.m_channel))
-			ngroup->ToggleOn(chan.m_channel);
+		if(w->m_group->IsShowingStats(chan))
+			ngroup->EnableStats(chan);
 	}
 }
 

@@ -128,7 +128,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	float selected_step = PickStepSize(volts_per_half_span);
 
 	//Special case a few values
-	if(m_channel.m_channel->GetYAxisUnits() == Unit::UNIT_LOG_BER)
+	if(m_channel.GetYAxisUnits() == Unit::UNIT_LOG_BER)
 		selected_step = 2;
 
 	float bottom_edge = (ybot + theight/2);
@@ -193,7 +193,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto it : gridmap)
 	{
 		float v = it.first;
-		tlayout->set_text(m_channel.m_channel->GetYAxisUnits().PrettyPrint(v));
+		tlayout->set_text(m_channel.GetYAxisUnits().PrettyPrint(v));
 		float y = it.second - theight/2;
 		if(y < ybot)
 			continue;
@@ -256,7 +256,7 @@ void WaveformArea::RenderTriggerLevelLine(Cairo::RefPtr< Cairo::Context > cr, fl
 	int theight;
 	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
 	tlayout->set_font_description(m_axisLabelFont);
-	tlayout->set_text(m_channel.m_channel->GetYAxisUnits().PrettyPrint(voltage).c_str());
+	tlayout->set_text(m_channel.GetYAxisUnits().PrettyPrint(voltage).c_str());
 	tlayout->get_pixel_size(twidth, theight);
 
 	//Label background
@@ -811,7 +811,7 @@ void WaveformArea::RenderVerticalCursor(
 		return;
 
 	//Draw the value label at the bottom
-	string text = m_channel.m_channel->GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
+	string text = m_channel.GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
 
 	//Figure out text size
 	int twidth;
@@ -872,7 +872,7 @@ void WaveformArea::RenderHorizontalCursor(
 	cr->stroke();
 
 	//Draw the value label at the right side
-	auto unit = m_channel.m_channel->GetYAxisUnits();
+	auto unit = m_channel.GetYAxisUnits();
 	string text = unit.PrettyPrint(pos);
 	if(show_delta)
 	{
@@ -1055,7 +1055,7 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 
 	//This gets a bit more complicated because we can't just sum dB!
 	string text;
-	auto yunit = m_channel.m_channel->GetYAxisUnits();
+	auto yunit = m_channel.GetYAxisUnits();
 	if(yunit == Unit(Unit::UNIT_DBM))
 	{
 		float total_watts = 0;
@@ -1396,7 +1396,7 @@ void WaveformArea::RenderFFTPeaks(Cairo::RefPtr< Cairo::Context > cr)
 	int margin = 2;
 
 	auto xunit = chan->GetXAxisUnits();
-	auto yunit = chan->GetYAxisUnits();
+	auto yunit = m_channel.GetYAxisUnits();
 
 	//First pass: get nominal locations of each peak label and discard offscreen ones
 	float radius = 4;
