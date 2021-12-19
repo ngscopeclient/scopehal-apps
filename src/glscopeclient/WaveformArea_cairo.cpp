@@ -657,12 +657,12 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto xunits = m_channel.m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
-		double rbw = data->m_timescale;
-		if(scope)
-			rbw = scope->GetResolutionBandwidth();
-
-		snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(rbw).c_str());
-		label += tmp;
+		if(scope && m_channel.m_channel->IsPhysicalChannel())
+		{
+			double rbw = scope->GetResolutionBandwidth();
+			snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(rbw).c_str());
+			label += tmp;
+		}
 	}
 
 	//Add count info to eye channels
