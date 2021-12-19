@@ -324,7 +324,10 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					m_addMenu.append(m_generateMenuItem);
 						m_generateMenuItem.set_label("Generate");
 						m_generateMenuItem.set_submenu(m_generateMenu);
-						RefreshGenerateMenu();
+					m_addMenu.append(m_importMenuItem);
+						m_importMenuItem.set_label("Import");
+						m_importMenuItem.set_submenu(m_importMenu);
+					RefreshGenerateAndImportMenu();
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
@@ -3775,14 +3778,17 @@ void OscilloscopeWindow::OnGenerateDialogResponse(int response)
 }
 
 /**
-	@brief Update the "generate waveform" menu
+	@brief Update the generate / import waveform menus
  */
-void OscilloscopeWindow::RefreshGenerateMenu()
+void OscilloscopeWindow::RefreshGenerateAndImportMenu()
 {
 	//Remove old ones
 	auto children = m_generateMenu.get_children();
 	for(auto c : children)
 		m_generateMenu.remove(*c);
+	children = m_importMenu.get_children();
+	for(auto c : children)
+		m_importMenu.remove(*c);
 
 	//Add all filters that have no inputs
 	vector<string> names;
@@ -3794,7 +3800,18 @@ void OscilloscopeWindow::RefreshGenerateMenu()
 		if(d->GetInputCount() == 0)
 		{
 			auto item = Gtk::manage(new Gtk::MenuItem(p, false));
-			m_generateMenu.append(*item);
+
+			//Add to the generate menu if the filter name doesn't contain "import"
+			if(p.find("Import") == string::npos)
+				m_generateMenu.append(*item);
+
+			//Otherwise, add to the import menu (and trim "import" off the filter name)
+			else
+			{
+				item->set_label(p.substr(0, p.length() - strlen(" Import")));
+				m_importMenu.append(*item);
+			}
+
 			item->signal_activate().connect(
 				sigc::bind<string>(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateFilter), p));
 		}

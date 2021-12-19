@@ -191,6 +191,8 @@ protected:
 						Gtk::Menu m_channelsMenu;
 					Gtk::MenuItem m_generateMenuItem;
 						Gtk::Menu m_generateMenu;
+					Gtk::MenuItem m_importMenuItem;
+						Gtk::Menu m_importMenu;
 			Gtk::MenuItem m_viewMenuItem;
 				Gtk::Menu m_viewMenu;
 					Gtk::MenuItem m_viewEyeColorMenuItem;
@@ -322,7 +324,7 @@ public:
 	void OnPreferenceDialogResponse(int response);
 
 	//Reconfigure menus
-	void RefreshGenerateMenu();
+	void RefreshGenerateAndImportMenu();
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
