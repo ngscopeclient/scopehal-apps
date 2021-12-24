@@ -34,19 +34,12 @@
 
 #include "../../../lib/scopehal/scopehal.h"
 #include "../../../lib/scopeprotocols/scopeprotocols.h"
+#include "../../../lib/scopehal/SiglentVectorSignalGenerator.h"
 
 using namespace std;
 
-void OnWaveform(Oscilloscope* scope);
-void OnDone(int signal);
-
 FILE* g_fpOut = NULL;
-bool g_quitting = false;
 
-float g_lastFreq = 0;
-bool g_shifting = false;
-
-Filter* g_thresholdFilter = NULL;
 Filter* g_refMixerFilter = NULL;
 Filter* g_dutMixerFilter = NULL;
 
@@ -63,6 +56,7 @@ Filter* g_refPhaseFilter = NULL;
 Filter* g_phaseDiffFilter = NULL;
 
 void BuildFilterGraph(Oscilloscope* scope);
+void OnWaveform(float freq);
 
 int main(int argc, char* argv[])
 {
@@ -127,21 +121,25 @@ int main(int argc, char* argv[])
 		LogError("Failed to connect to instrument using connection string %s\n", scopepath.c_str());
 		return 1;
 	}
+
 	Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
 	if(scope == NULL)
 		return 1;
 	scope->m_nickname = nick;
 
-	//Initial scope configuration: not interleaved, 20 Gsps, 2M points
-	//Probe on 0, ref on 1
-	scope->EnableChannel(0);
-	scope->EnableChannel(1);
-	scope->SetSampleRate(20000000000UL);
-	scope->SetSampleDepth(2000000UL);
-	scope->Start();
+	//Initial scope configuration: not interleaved, 40 Gsps, 1M points
+	//Probe on 3, ref on 4
+	scope->EnableChannel(3);
+	scope->EnableChannel(4);
+	scope->SetSampleRate(40000000000UL);
+	scope->SetSampleDepth(1000000UL);
 
-	//Signal handler for shutdown
-	signal(SIGINT, OnDone);
+	//Connect to signal generator, configure for 0 dBm
+	//TODO: dynamic creation etc
+	auto genTransport = SCPITransport::CreateTransport("lan", "ssg.scada.poulsbo.antikernel.net");
+	auto gen = new SiglentVectorSignalGenerator(genTransport);
+	gen->SetChannelOutputPower(0, 0);
+	gen->SetChannelOutputEnable(0, true);
 
 	//Open the output S-parameter file
 	g_fpOut = fopen("/tmp/test.s2p", "w");
@@ -150,55 +148,40 @@ int main(int argc, char* argv[])
 	//Create the filter graph where all our fun happens
 	BuildFilterGraph(scope);
 
-	//Main loop
-	while(!g_quitting)
+	//Main processing loop
+	for(float freq = 0; freq < 6e9; freq += 1e7)
 	{
-		//Wait for trigger
-		if(scope->PollTrigger() != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			continue;
-		}
+		//Clamp lowest frequency to 9 kHz
+		float realfreq = freq;
+		if(freq < 9e3)
+			realfreq = 9e3;
 
-		//Grab the data
+		//Set the frequency
+		gen->SetChannelCenterFrequency(0, realfreq);
+
+		//Wait 10 ms to make sure synthesizer has updated
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+		//Grab a waveform
+		scope->StartSingleTrigger();
+		while(scope->PollTrigger() != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		scope->AcquireData();
 		scope->PopPendingWaveform();
-		OnWaveform(scope);
+
+		//Crunch it
+		OnWaveform(realfreq);
 	}
 
-	/*
-	g_thresholdFilter->Release();
-	g_refMixerFilter->Release();
-	g_dutMixerFilter->Release();
-	g_refIfIFilter->Release();
-	g_refIfQFilter->Release();
-	g_dutIfIFilter->Release();
-	g_dutIfQFilter->Release();
-	g_refMagnitudeFilter->Release();
-	g_dutMagnitudeFilter->Release();
-	g_refPhaseFilter->Release();
-	g_dutPhaseFilter->Release();
-	g_phaseDiffFilter->Release();
-	*/
-}
-
-void OnDone(int /*ignored*/)
-{
-	LogNotice("Cleaning up\n");
+	//Done, clean up
+	gen->SetChannelOutputEnable(0, false);
 	fclose(g_fpOut);
-	g_quitting = true;
 }
 
 void BuildFilterGraph(Oscilloscope* scope)
 {
-	auto refchan = scope->GetChannel(1);
-	auto dutchan = scope->GetChannel(0);
-
-	//Threshold the reference waveform (with 10 mV hysteresis to prevent problems at really low frequencies)
-	g_thresholdFilter = Filter::CreateFilter("Threshold");
-	g_thresholdFilter->SetInput(0, StreamDescriptor(refchan, 0));
-	g_thresholdFilter->GetParameter("Threshold").SetFloatVal(0);
-	g_thresholdFilter->GetParameter("Hysteresis").SetFloatVal(0.01);
+	auto refchan = scope->GetChannel(3);
+	auto dutchan = scope->GetChannel(2);
 
 	//Mix the reference and DUT waveform with coherent LOs
 	g_refMixerFilter = Filter::CreateFilter("Downconvert");
@@ -241,44 +224,16 @@ void BuildFilterGraph(Oscilloscope* scope)
 	g_dutPhaseFilter->SetInput(1, StreamDescriptor(g_dutIfQFilter, 0));
 
 	g_phaseDiffFilter = Filter::CreateFilter("Subtract");
-	g_phaseDiffFilter->SetInput(0, StreamDescriptor(g_dutPhaseFilter, 0));
-	g_phaseDiffFilter->SetInput(1, StreamDescriptor(g_refPhaseFilter, 0));
+	g_phaseDiffFilter->SetInput(0, StreamDescriptor(g_refPhaseFilter, 0));
+	g_phaseDiffFilter->SetInput(1, StreamDescriptor(g_dutPhaseFilter, 0));
 }
 
-void OnWaveform(Oscilloscope* /*scope*/)
+void OnWaveform(float refFreqHz)
 {
 	//LogDebug("Got a waveform\n");
 	//LogIndenter li;
 	Filter::ClearAnalysisCache();
 	Filter::SetAllFiltersDirty();
-
-	//Get the frequency of the reference waveform
-	g_thresholdFilter->Refresh();
-	vector<int64_t> edges;
-	Filter::FindRisingEdges(dynamic_cast<DigitalWaveform*>(g_thresholdFilter->GetData(0)), edges);
-	if(edges.size() < 2)
-		return;
-	int64_t tfirst = edges[0];
-	int64_t tlast = edges[edges.size()-1];
-	int64_t refPeriodFS = (tlast - tfirst) / (edges.size()-1);
-	int64_t refFreqHz = FS_PER_SECOND / refPeriodFS;
-	Unit hz(Unit::UNIT_HZ);
-	//LogDebug("Calculated reference frequency is %s\n", hz.PrettyPrint(refFreqHz).c_str());
-
-	//Record a shift if our center frequency is at least 1 kHz greater than the last waveform
-	bool g_lastWasShift = g_shifting;
-	g_shifting = ( (refFreqHz - g_lastFreq) > 1000);
-	if(g_shifting)
-	{
-		//LogDebug("Input frequency shift detected\n");
-		g_lastFreq = refFreqHz;
-		return;
-	}
-
-	//If last cycle was a shift, we should be stable now - process stuff.
-	//if *not* a shift, we're a duplicate so ignore it
-	if(!g_lastWasShift)
-		return;
 
 	//We want a 50-100 MHz IF to get a reasonable number of cycles in the test waveform.
 	//Configure the LO to up- or downconvert based on the input frequency.
@@ -348,15 +303,20 @@ void OnWaveform(Oscilloscope* /*scope*/)
 	float s21_mag_db = 20 * log10(s21_mag);
 
 	//Calculate average phase delta
-	float s21_deg = 0;
 	auto phasedata = dynamic_cast<AnalogWaveform*>(g_phaseDiffFilter->GetData(0));
+	float s21_ang_i = 0;
+	float s21_ang_q = 0;
 	for(auto f : phasedata->m_samples)
-		s21_deg += f;
-	s21_deg /= phasedata->m_samples.size();
-	s21_deg *= -1;
+	{
+		float rad = f * M_PI / 180;
+		s21_ang_i += sin(rad);
+		s21_ang_q += cos(rad);
+	}
+	float s21_deg = atan2(s21_ang_i, s21_ang_q) * 180 / M_PI;
 
 	//Print peak info
 	Unit db(Unit::UNIT_DB);
+	Unit hz(Unit::UNIT_HZ);
 	Unit deg(Unit::UNIT_DEGREES);
 
 	LogDebug("%s: mag = %s, ang = %s\n",
@@ -364,7 +324,7 @@ void OnWaveform(Oscilloscope* /*scope*/)
 		db.PrettyPrint(s21_mag_db).c_str(),
 		deg.PrettyPrint(s21_deg).c_str());
 
-	//If the last waveform was a shift, we should be stable now.
-	//Update the .s2p file with our new data.
-	fprintf(g_fpOut, "%ld 0 0 %f %f 0 0 0 0\n", refFreqHz, s21_mag, s21_deg);
+	//Done, write output to the touchstone file
+	fprintf(g_fpOut, "%.0f 0 0 %f %f 0 0 0 0\n", refFreqHz, s21_mag, s21_deg);
+	fflush(g_fpOut);
 }
