@@ -55,8 +55,26 @@ Filter* g_dutPhaseFilter = NULL;
 Filter* g_refPhaseFilter = NULL;
 Filter* g_phaseDiffFilter = NULL;
 
+OscilloscopeChannel* g_dutChannel = NULL;
+OscilloscopeChannel* g_refChannel = NULL;
+
 void BuildFilterGraph(Oscilloscope* scope);
-void OnWaveform(float freq);
+void OnWaveform(float freq, int iteration);
+
+float last_phase = 0;
+
+float g_phases[3];
+float g_mags[3];
+
+int CompareFloat(const void* a, const void* b);
+
+int CompareFloat(const void* a, const void* b)
+{
+	float* pa = (float*)a;
+	float* pb = (float*)b;
+
+	return *pa < *pb;
+}
 
 int main(int argc, char* argv[])
 {
@@ -90,7 +108,8 @@ int main(int argc, char* argv[])
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
 	//Don't use OpenCL for now
-	g_disableOpenCL = true;
+	//g_disableOpenCL = true;
+	g_searchPaths.push_back("/ceph/fast/home/azonenberg/code/scopehal-apps/lib/scopeprotocols");
 
 	//Initialize object creation tables for predefined libraries
 	TransportStaticInit();
@@ -148,6 +167,11 @@ int main(int argc, char* argv[])
 	//Create the filter graph where all our fun happens
 	BuildFilterGraph(scope);
 
+	//Load the calibration file, if it exists
+	TouchstoneParser parser;
+	SParameters params;
+	bool has_cal = parser.Load("/tmp/scopevna-cal.s2p", params);
+
 	//Main processing loop
 	for(float freq = 0; freq < 6e9; freq += 1e7)
 	{
@@ -159,18 +183,51 @@ int main(int argc, char* argv[])
 		//Set the frequency
 		gen->SetChannelCenterFrequency(0, realfreq);
 
-		//Wait 10 ms to make sure synthesizer has updated
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		//Wait a while to make sure synthesizer has updated
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-		//Grab a waveform
-		scope->StartSingleTrigger();
-		while(scope->PollTrigger() != Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		scope->AcquireData();
-		scope->PopPendingWaveform();
+		//Grab a couple of waveforms
+		for(int i=0; i<3; i++)
+		{
+			//Grab a waveform
+			scope->StartSingleTrigger();
+			while(scope->PollTrigger() != Oscilloscope::TRIGGER_MODE_TRIGGERED)
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			scope->AcquireData();
+			scope->PopPendingWaveform();
 
-		//Crunch it
-		OnWaveform(realfreq);
+			//Crunch it
+			OnWaveform(realfreq, i);
+		}
+
+		//Caculate median value
+		qsort(g_phases, 3, sizeof(float), CompareFloat);
+		qsort(g_mags, 3, sizeof(float), CompareFloat);
+		float mag = g_mags[1];
+		float ang = g_phases[1];
+
+		//Apply calibration
+		if(has_cal)
+		{
+			//LogDebug("base mag/ang = %f, %f\n", mag, ang);
+
+			auto& cal_s21 = params[SPair(2, 1)];
+			auto cal_mag = cal_s21.InterpolateMagnitude(realfreq);
+			auto cal_ang = cal_s21.InterpolateAngle(realfreq) * 180 / M_PI;
+			//LogDebug("cal mag/ang = %f, %f\n", cal_mag, cal_ang);
+
+			mag /= cal_mag;
+			ang -= cal_ang;
+
+			if(ang <= -180)
+				ang += 360;
+			if(ang >= 180)
+				ang -= 360;
+		}
+
+		//Write to touchstone file
+		fprintf(g_fpOut, "%.0f 0 0 %f %f 0 0 0 0\n", realfreq, mag, ang);
+		fflush(g_fpOut);
 	}
 
 	//Done, clean up
@@ -180,15 +237,15 @@ int main(int argc, char* argv[])
 
 void BuildFilterGraph(Oscilloscope* scope)
 {
-	auto refchan = scope->GetChannel(3);
-	auto dutchan = scope->GetChannel(2);
+	g_refChannel = scope->GetChannel(3);
+	g_dutChannel = scope->GetChannel(2);
 
 	//Mix the reference and DUT waveform with coherent LOs
 	g_refMixerFilter = Filter::CreateFilter("Downconvert");
-	g_refMixerFilter->SetInput(0, StreamDescriptor(refchan, 0));
+	g_refMixerFilter->SetInput(0, StreamDescriptor(g_refChannel, 0));
 
 	g_dutMixerFilter = Filter::CreateFilter("Downconvert");
-	g_dutMixerFilter->SetInput(0, StreamDescriptor(dutchan, 0));
+	g_dutMixerFilter->SetInput(0, StreamDescriptor(g_dutChannel, 0));
 
 	//Band-pass filter the mixed I/Q to remove images, harmonics, and other out-of-band stuff
 	g_refIfIFilter = Filter::CreateFilter("FIR Filter");
@@ -228,7 +285,7 @@ void BuildFilterGraph(Oscilloscope* scope)
 	g_phaseDiffFilter->SetInput(1, StreamDescriptor(g_dutPhaseFilter, 0));
 }
 
-void OnWaveform(float refFreqHz)
+void OnWaveform(float refFreqHz, int iteration)
 {
 	//LogDebug("Got a waveform\n");
 	//LogIndenter li;
@@ -270,6 +327,8 @@ void OnWaveform(float refFreqHz)
 
 	//Configure the IF bandpass filters with 10 MHz bandwidth
 	int64_t ifBandLow = ifFreq - (5 * 1000 * 1000);
+	if(ifFreq < 5e6)
+		ifBandLow = 0;
 	int64_t ifBandHigh = ifFreq + (5 * 1000 * 1000);
 	g_refIfIFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
 	g_refIfIFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
@@ -314,6 +373,9 @@ void OnWaveform(float refFreqHz)
 	}
 	float s21_deg = atan2(s21_ang_i, s21_ang_q) * 180 / M_PI;
 
+	g_phases[iteration] = s21_deg;
+	g_mags[iteration] = s21_mag;
+
 	//Print peak info
 	Unit db(Unit::UNIT_DB);
 	Unit hz(Unit::UNIT_HZ);
@@ -323,8 +385,4 @@ void OnWaveform(float refFreqHz)
 		hz.PrettyPrint(refFreqHz).c_str(),
 		db.PrettyPrint(s21_mag_db).c_str(),
 		deg.PrettyPrint(s21_deg).c_str());
-
-	//Done, write output to the touchstone file
-	fprintf(g_fpOut, "%.0f 0 0 %f %f 0 0 0 0\n", refFreqHz, s21_mag, s21_deg);
-	fflush(g_fpOut);
 }
