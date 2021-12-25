@@ -146,12 +146,10 @@ int main(int argc, char* argv[])
 		return 1;
 	scope->m_nickname = nick;
 
-	//Initial scope configuration: not interleaved, 40 Gsps, 1M points
+	//Initial scope configuration: not interleaved
 	//Probe on 3, ref on 4
 	scope->EnableChannel(3);
 	scope->EnableChannel(4);
-	scope->SetSampleRate(40000000000UL);
-	scope->SetSampleDepth(1000000UL);
 
 	//Connect to signal generator, configure for 0 dBm
 	//TODO: dynamic creation etc
@@ -174,11 +172,20 @@ int main(int argc, char* argv[])
 
 	//Main processing loop
 	for(float freq = 0; freq < 6e9; freq += 1e7)
+	//for(float freq = 0; freq < 1e9; freq += 1e6)
 	{
 		//Clamp lowest frequency to 9 kHz
 		float realfreq = freq;
 		if(freq < 9e3)
 			realfreq = 9e3;
+
+		//For higher freqs: 40 Gsps, 1M points
+		//Below 100 MHz: 1 Gsps
+		if(freq < 1e8)
+			scope->SetSampleRate(1000000000UL);
+		else
+			scope->SetSampleRate(40000000000UL);
+		scope->SetSampleDepth(1000000UL);
 
 		//Set the frequency
 		gen->SetChannelCenterFrequency(0, realfreq);
@@ -292,6 +299,8 @@ void OnWaveform(float refFreqHz, int iteration)
 	Filter::ClearAnalysisCache();
 	Filter::SetAllFiltersDirty();
 
+	//FIX: Seems like we're getting negative frequencies in some spots
+
 	//We want a 50-100 MHz IF to get a reasonable number of cycles in the test waveform.
 	//Configure the LO to up- or downconvert based on the input frequency.
 	//Use a bit of hysteresis to prevent ridiculously low LO frequencies.
@@ -300,10 +309,12 @@ void OnWaveform(float refFreqHz, int iteration)
 	int64_t upconvertTarget = 80 * 1000 * 1000;
 	int64_t loFreq = 0;
 	int64_t ifFreq = 0;
+	bool invertPhase;
 	if(refFreqHz > downconvertThreshold)
 	{
 		loFreq = refFreqHz - downconvertTarget;
 		ifFreq = refFreqHz - loFreq;
+		invertPhase = false;
 		/*
 		LogDebug("Downconverting with %s LO to get %s IF\n",
 			hz.PrettyPrint(loFreq).c_str(),
@@ -314,6 +325,7 @@ void OnWaveform(float refFreqHz, int iteration)
 	{
 		loFreq = upconvertTarget - refFreqHz;
 		ifFreq = refFreqHz + loFreq;
+		invertPhase = true;
 		/*
 		LogDebug("Upconverting with %s LO to get %s IF\n",
 			hz.PrettyPrint(loFreq).c_str(),
@@ -372,6 +384,8 @@ void OnWaveform(float refFreqHz, int iteration)
 		s21_ang_q += cos(rad);
 	}
 	float s21_deg = atan2(s21_ang_i, s21_ang_q) * 180 / M_PI;
+	if(invertPhase)
+		s21_deg = -s21_deg;
 
 	g_phases[iteration] = s21_deg;
 	g_mags[iteration] = s21_mag;
