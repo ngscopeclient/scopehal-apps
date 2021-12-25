@@ -299,8 +299,6 @@ void OnWaveform(float refFreqHz, int iteration)
 	Filter::ClearAnalysisCache();
 	Filter::SetAllFiltersDirty();
 
-	//FIX: Seems like we're getting negative frequencies in some spots
-
 	//We want a 50-100 MHz IF to get a reasonable number of cycles in the test waveform.
 	//Configure the LO to up- or downconvert based on the input frequency.
 	//Use a bit of hysteresis to prevent ridiculously low LO frequencies.
@@ -321,6 +319,9 @@ void OnWaveform(float refFreqHz, int iteration)
 			hz.PrettyPrint(ifFreq).c_str());
 		*/
 	}
+
+	//When upconverting we're using the other sideband
+	//Invert the phase to compensate
 	else
 	{
 		loFreq = upconvertTarget - refFreqHz;
