@@ -50,6 +50,10 @@ using namespace std;
 
 void WaveformArea::on_resize(int width, int height)
 {
+	//vestigial resize
+	if( (m_width == width) && (m_height == height) )
+		return;
+
 	//double start = GetTime();
 
 	m_width = width;
@@ -93,7 +97,6 @@ void WaveformArea::on_resize(int width, int height)
 		auto eye = dynamic_cast<EyePattern*>(m_channel.m_channel);
 		eye->SetWidth(m_width);
 		eye->SetHeight(m_height);
-		eye->ClearSweeps();
 		eye->RecalculateUIWidth();
 		auto wave = dynamic_cast<EyeWaveform*>(eye->GetData(0));
 		RescaleEye(eye, wave);
