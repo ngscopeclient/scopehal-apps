@@ -1415,6 +1415,9 @@ void FilterGraphEditorWidget::OnDoubleClick(GdkEventButton* event)
 			sigc::mem_fun(*this, &FilterGraphEditorWidget::OnChannelPropertiesDialogResponse));
 		m_channelPropertiesDialog->show();
 	}
+
+	//In either case, once we open the properties dialog, we should not be dragging anything
+	m_dragMode = DRAG_NONE;
 }
 
 void FilterGraphEditorWidget::OnFilterPropertiesDialogResponse(int response)
