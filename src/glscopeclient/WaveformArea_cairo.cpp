@@ -193,7 +193,11 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	for(auto it : gridmap)
 	{
 		float v = it.first;
-		tlayout->set_text(m_channel.GetYAxisUnits().PrettyPrint(v));
+
+		float vlo = YPositionToYAxisUnits(it.second - 0.5);
+		float vhi = YPositionToYAxisUnits(it.second + 0.5);
+		tlayout->set_text(m_channel.GetYAxisUnits().PrettyPrintRange(vlo, vhi, vbot, vtop));
+
 		float y = it.second - theight/2;
 		if(y < ybot)
 			continue;
