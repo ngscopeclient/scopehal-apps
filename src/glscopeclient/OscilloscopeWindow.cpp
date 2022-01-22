@@ -471,16 +471,17 @@ void OscilloscopeWindow::PopulateToolbar()
 void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital, bool nospectrum)
 {
 	//Create top level waveform group
-	auto group = new WaveformGroup(this);
-	m_waveformGroups.emplace(group);
-	split->pack1(group->m_frame);
+	auto defaultGroup = new WaveformGroup(this);
+	m_waveformGroups.emplace(defaultGroup);
+	split->pack1(defaultGroup->m_frame);
 
 	//Create history windows
 	for(auto scope : m_scopes)
 		m_historyWindows[scope] = new HistoryWindow(this, scope);
 
 	//Process all of the channels
-	WaveformGroup* spectrumGroup = NULL;
+	WaveformGroup* timeDomainGroup = NULL;
+	WaveformGroup* frequencyDomainGroup = NULL;
 	for(auto scope : m_scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -501,25 +502,41 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 				if(!scope->CanEnableChannel(i))
 					continue;
 
-				//Put in the normal waveform group unless they're frequency domain.
-				//Put those in a new group.
-				//TODO: for pure specan support we should check if we have any time domain channels?
-				auto wg = group;
-				if(chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
+				//Put time and frequency domain channels in different groups
+				bool freqDomain = chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ);
+				WaveformGroup* wg = NULL;
+				if(freqDomain)
 				{
+					wg = frequencyDomainGroup;
+
 					//Skip spectrum channels on request
 					if(nospectrum)
 						continue;
+				}
+				else
+					wg = timeDomainGroup;
 
-					//This is the first frequency domain channel, make a new group
-					if(!spectrumGroup)
+				//If the group doesn't exist yet, create/assign it
+				if(wg == NULL)
+				{
+					//Both groups unassigned. Use default group for our current domain
+					if( (timeDomainGroup == NULL) && (frequencyDomainGroup == NULL) )
+						wg = defaultGroup;
+
+					//Default group assigned, make a secondary one
+					else
 					{
-						spectrumGroup = new WaveformGroup(this);
-						m_waveformGroups.emplace(spectrumGroup);
-						split->pack2(spectrumGroup->m_frame);
+						auto secondaryGroup = new WaveformGroup(this);
+						m_waveformGroups.emplace(secondaryGroup);
+						split->pack2(secondaryGroup->m_frame);
+						wg = secondaryGroup;
 					}
 
-					wg = spectrumGroup;
+					//Either way, our domain now has a group
+					if(freqDomain)
+						frequencyDomainGroup = wg;
+					else
+						timeDomainGroup = wg;
 				}
 
 				//Create a waveform area for each stream in the output
@@ -540,9 +557,10 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 
 	//Done
 	show_all();
-	if(spectrumGroup)
-		spectrumGroup->m_measurementView.hide();
-	group->m_measurementView.hide();
+	if(frequencyDomainGroup)
+		frequencyDomainGroup->m_measurementView.hide();
+	if(timeDomainGroup)
+		timeDomainGroup->m_measurementView.hide();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
