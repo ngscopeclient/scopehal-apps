@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -453,4 +453,16 @@ void WaveformGroup::OnChannelRenamed(StreamDescriptor stream)
 {
 	if(IsShowingStats(stream))
 		m_measurementView.get_column(m_columnToIndexMap[stream])->set_title(stream.GetName());
+}
+
+Unit WaveformGroup::GetXAxisUnits()
+{
+	auto children = m_waveformBox.get_children();
+	if(!children.empty())
+	{
+		auto view = dynamic_cast<WaveformArea*>(children[0]);
+		if(view != NULL)
+			return view->GetChannel().GetXAxisUnits();
+	}
+	return Unit(Unit::UNIT_FS);
 }

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -3110,8 +3110,8 @@ void OscilloscopeWindow::OnAddChannel(StreamDescriptor chan)
 		group->m_measurementView.hide();
 	}
 
-	//Add to a the first group for now
-	DoAddChannel(chan, *m_waveformGroups.begin());
+	auto w = DoAddChannel(chan, *m_waveformGroups.begin());
+	MoveToBestGroup(w);
 }
 
 WaveformArea* OscilloscopeWindow::DoAddChannel(StreamDescriptor chan, WaveformGroup* ngroup, WaveformArea* ref)
