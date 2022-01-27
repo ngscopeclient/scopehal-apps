@@ -2925,9 +2925,7 @@ void OscilloscopeWindow::OnRefreshConfig()
 
 void OscilloscopeWindow::OnAutofitHorizontal()
 {
-	LogDebug("autofit horz\n");
 
-	//
 }
 
 /**
@@ -2955,7 +2953,7 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	float width = 0;
 	auto areas = GetAreasInGroup(group);
 	for(auto a : areas)
-		width = max(width, a->GetWidthXUnits());
+		width = max(width, a->GetPlotWidthXUnits());
 
 	//Find all waveforms visible in any area within the group
 	set<WaveformBase*> wfms;
