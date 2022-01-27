@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -63,7 +63,7 @@ public:
 	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum);
 	~OscilloscopeWindow();
 
-	void OnAutofitHorizontal();
+	void OnAutofitHorizontal(WaveformGroup* group);
 	void OnZoomInHorizontal(WaveformGroup* group, int64_t target);
 	void OnZoomOutHorizontal(WaveformGroup* group, int64_t target);
 	void ClearPersistence(WaveformGroup* group, bool geometry_dirty = true, bool position_dirty = false);

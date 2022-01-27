@@ -350,7 +350,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp, float
 
 					//Middle
 					case 2:
-						m_parent->OnAutofitHorizontal();
+						m_parent->OnAutofitHorizontal(m_group);
 						break;
 
 					//Right
