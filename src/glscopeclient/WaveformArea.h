@@ -197,6 +197,9 @@ public:
 	float GetWidthXUnits()
 	{ return PixelsToXAxisUnits(m_width); }
 
+	float GetPlotWidthXUnits()
+	{ return PixelsToXAxisUnits(m_plotRight); }
+
 	//Helper to get all geometry that needs to be updated
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay);
