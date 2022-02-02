@@ -41,7 +41,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowBase
 
-ParameterRowBase::ParameterRowBase()
+ParameterRowBase::ParameterRowBase(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: m_parent(parent)
+	, m_node(node)
+	, m_param(param)
 {
 }
 
@@ -52,7 +55,8 @@ ParameterRowBase::~ParameterRowBase()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowString
 
-ParameterRowString::ParameterRowString()
+ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: ParameterRowBase(parent, param, node)
 {
 	m_entry.set_size_request(500, 1);
 }
@@ -64,21 +68,29 @@ ParameterRowString::~ParameterRowString()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowEnum
 
-ParameterRowEnum::ParameterRowEnum()
+ParameterRowEnum::ParameterRowEnum(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: ParameterRowBase(parent, param, node)
 {
 	m_box.set_size_request(500, 1);
+	m_box.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::OnChanged));
 }
 
 ParameterRowEnum::~ParameterRowEnum()
 {
 }
 
+void ParameterRowEnum::OnChanged()
+{
+	m_param.ParseString(m_box.get_active_text());
+	if(m_node->OnParameterChanged(m_label.get_label()))
+		m_needRefreshSignal.emit();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilename
 
-ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param)
-	: m_parent(parent)
-	, m_param(param)
+ParameterRowFilename::ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: ParameterRowString(parent, param, node)
 {
 	m_clearButton.set_image_from_icon_name("edit-clear");
 	m_clearButton.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilename::OnClear));
@@ -94,6 +106,9 @@ ParameterRowFilename::~ParameterRowFilename()
 void ParameterRowFilename::OnClear()
 {
 	m_entry.set_text("");
+	m_param.ParseString("");
+	if(m_node->OnParameterChanged(m_label.get_label()))
+		m_needRefreshSignal.emit();
 }
 
 void ParameterRowFilename::OnBrowser()
@@ -117,16 +132,19 @@ void ParameterRowFilename::OnBrowser()
 	if(response != Gtk::RESPONSE_OK)
 		return;
 
-	m_entry.set_text(dlg.get_filename());
+	auto str = dlg.get_filename();
+	m_entry.set_text(str);
+	m_param.ParseString(str);
+	if(m_node->OnParameterChanged(m_label.get_label()))
+		m_needRefreshSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParameterRowFilenames
 
-ParameterRowFilenames::ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param)
-	: m_parent(parent)
+ParameterRowFilenames::ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: ParameterRowBase(parent, param, node)
 	, m_list(1)
-	, m_param(param)
 {
 	m_list.set_size_request(500, 200);
 	m_list.set_column_title(0, "Filename");
@@ -175,6 +193,7 @@ FilterDialog::FilterDialog(
 	StreamDescriptor chan)
 	: Gtk::Dialog(filter->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
 	, m_filter(filter)
+	, m_refreshing(false)
 {
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_channelDisplayNameLabel, 0, 0, 1, 1);
@@ -270,7 +289,12 @@ FilterDialog::FilterDialog(
 
 	//Add parameters
 	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
-		m_prows.push_back(CreateRow(m_grid, it->first, it->second, last_label, this));
+		m_prows.push_back(CreateRow(m_grid, it->first, it->second, last_label, this, filter));
+
+	//Add event handlers
+	for(auto p : m_prows)
+		p->signal_refreshDialog().connect(sigc::mem_fun(this, &FilterDialog::OnRefresh));
+
 	show_all();
 }
 
@@ -297,7 +321,8 @@ ParameterRowBase* FilterDialog::CreateRow(
 	string name,
 	FilterParameter& param,
 	Gtk::Widget*& last_label,
-	Gtk::Dialog* parent)
+	Gtk::Dialog* parent,
+	FlowGraphNode* node)
 {
 	int width = 100;
 
@@ -305,7 +330,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 	{
 		case FilterParameter::TYPE_FILENAME:
 			{
-				auto row = new ParameterRowFilename(parent, param);
+				auto row = new ParameterRowFilename(parent, param, node);
 				if(!last_label)
 					grid.attach(row->m_label, 0, 0, 1, 1);
 				else
@@ -327,7 +352,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 
 		case FilterParameter::TYPE_FILENAMES:
 			{
-				auto row = new ParameterRowFilenames(parent, param);
+				auto row = new ParameterRowFilenames(parent, param, node);
 				if(!last_label)
 					grid.attach(row->m_label, 0, 0, 1, 1);
 				else
@@ -351,7 +376,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 
 		case FilterParameter::TYPE_ENUM:
 			{
-				auto row = new ParameterRowEnum;
+				auto row = new ParameterRowEnum(parent, param, node);
 				if(!last_label)
 					grid.attach(row->m_label, 0, 0, 1, 1);
 				else
@@ -377,7 +402,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 
 		default:
 			{
-				auto row = new ParameterRowString;
+				auto row = new ParameterRowString(parent, param, node);
 				if(!last_label)
 					grid.attach(row->m_label, 0, 0, 1, 1);
 				else
@@ -474,3 +499,38 @@ void FilterDialog::ConfigureParameters(FlowGraphNode* node, vector<ParameterRowB
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
+
+void FilterDialog::OnRefresh()
+{
+	//ignore nested events triggered by refresh
+	if(m_refreshing)
+		return;
+
+	m_refreshing = true;
+
+	//Refresh parameters
+	for(auto p : m_prows)
+	{
+		auto erow = dynamic_cast<ParameterRowEnum*>(p);
+
+		//It's an enum.
+		//Save the current value (string), if any, so we can restore it later if possible
+		if(erow)
+		{
+			auto value = erow->m_param.ToString();
+			erow->m_box.remove_all();
+
+			vector<string> names;
+			erow->m_param.GetEnumValues(names);
+			for(auto ename : names)
+				erow->m_box.append(ename);
+
+			//Set initial value
+			erow->m_box.set_active_text(value);
+		}
+	}
+
+	//TODO: refresh channels
+
+	m_refreshing = false;
+}

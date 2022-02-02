@@ -218,7 +218,7 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 
 	//Add parameters
 	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
-		m_prows.push_back(FilterDialog::CreateRow(m_contentGrid, it->first, it->second, last_label, this));
+		m_prows.push_back(FilterDialog::CreateRow(m_contentGrid, it->first, it->second, last_label, NULL, trig));
 
 	m_contentGrid.show_all();
 }

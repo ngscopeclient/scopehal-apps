@@ -54,16 +54,26 @@ class FilterDialog;
 class ParameterRowBase
 {
 public:
-	ParameterRowBase();
+	ParameterRowBase(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
 	virtual ~ParameterRowBase();
 
 	Gtk::Label			m_label;
+	Gtk::Dialog* 		m_parent;
+	FlowGraphNode*		m_node;
+
+	FilterParameter& 	m_param;
+
+	sigc::signal<void>	signal_refreshDialog()
+	{ return m_needRefreshSignal; }
+
+protected:
+	sigc::signal<void>	m_needRefreshSignal;
 };
 
 class ParameterRowString : public ParameterRowBase
 {
 public:
-	ParameterRowString();
+	ParameterRowString(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
 	virtual ~ParameterRowString();
 
 	Gtk::Entry			m_entry;
@@ -72,34 +82,33 @@ public:
 class ParameterRowEnum : public ParameterRowBase
 {
 public:
-	ParameterRowEnum();
+	ParameterRowEnum(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
 	virtual ~ParameterRowEnum();
 
 	Gtk::ComboBoxText	m_box;
+
+protected:
+	void OnChanged();
 };
 
 class ParameterRowFilename : public ParameterRowString
 {
 public:
-	ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param);
+	ParameterRowFilename(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
 	virtual ~ParameterRowFilename();
 
 	void OnBrowser();
 	void OnClear();
 
-	Gtk::Dialog*		m_parent;
 	Gtk::Button			m_clearButton;
 	Gtk::Button			m_browserButton;
-	FilterParameter& 	m_param;
 };
 
 class ParameterRowFilenames : public ParameterRowBase
 {
 public:
-	ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param);
+	ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
 	virtual ~ParameterRowFilenames();
-
-	Gtk::Dialog*		m_parent;
 
 	Gtk::ListViewText	m_list;
 	Gtk::Button			m_buttonAdd;
@@ -107,8 +116,6 @@ public:
 
 	void OnAdd();
 	void OnRemove();
-
-	FilterParameter& 	m_param;
 };
 
 /**
@@ -130,13 +137,16 @@ public:
 		std::string name,
 		FilterParameter& param,
 		Gtk::Widget*& last_label,
-		Gtk::Dialog* parent);
+		Gtk::Dialog* parent,
+		FlowGraphNode* node);
 
 	static void ConfigureInputs(FlowGraphNode* node, std::vector<ChannelSelectorRow*>& rows);
 	static void ConfigureParameters(FlowGraphNode* node, std::vector<ParameterRowBase*>& rows);
 
 protected:
 	Filter* m_filter;
+
+	void OnRefresh();
 
 	Gtk::Grid m_grid;
 		Gtk::Label m_channelDisplayNameLabel;
@@ -146,6 +156,8 @@ protected:
 
 	std::vector<ChannelSelectorRow*> m_rows;
 	std::vector<ParameterRowBase*> m_prows;
+
+	bool m_refreshing;
 };
 
 #endif
