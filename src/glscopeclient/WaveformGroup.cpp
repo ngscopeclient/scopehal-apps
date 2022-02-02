@@ -432,9 +432,7 @@ void WaveformGroup::OnStatisticProperties()
 	{
 		auto decode = dynamic_cast<Filter*>(m_measurementContextMenuChannel.m_channel);
 		FilterDialog dialog(m_parent, decode, StreamDescriptor(NULL, 0));
-		if(dialog.run() != Gtk::RESPONSE_OK)
-			return;
-
+		dialog.run();
 		dialog.ConfigureDecoder();
 	}
 

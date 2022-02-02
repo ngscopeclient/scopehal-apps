@@ -167,7 +167,7 @@ protected:
 	virtual bool on_button_release_event(GdkEventButton* event);
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	void OnDoubleClick(GdkEventButton* event);
-	void OnFilterPropertiesDialogResponse(int response);
+	bool OnFilterPropertiesDialogClosed(GdkEventAny* ignored);
 	void OnChannelPropertiesDialogResponse(int response);
 
 	//Input helpers

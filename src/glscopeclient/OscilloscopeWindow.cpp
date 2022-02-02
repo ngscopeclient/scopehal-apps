@@ -3807,31 +3807,23 @@ void OscilloscopeWindow::OnGenerateFilter(string name)
 		delete m_addFilterDialog;
 	m_addFilterDialog = new FilterDialog(this, m_pendingGenerator, NULL);
 	m_addFilterDialog->show();
-	m_addFilterDialog->signal_response().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateDialogResponse));
+	m_addFilterDialog->signal_delete_event().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateDialogClosed));
 }
 
-void OscilloscopeWindow::OnGenerateDialogResponse(int response)
+bool OscilloscopeWindow::OnGenerateDialogClosed(GdkEventAny* /*ignored*/)
 {
-	if(response != Gtk::RESPONSE_OK)
-	{
-		delete m_pendingGenerator;
-		m_pendingGenerator = NULL;
-	}
+	m_addFilterDialog->ConfigureDecoder();
 
-	else
-	{
-		m_addFilterDialog->ConfigureDecoder();
-
-		//This bit is similar to WaveformArea::OnDecodeSetupComplete(), but with much less special cases
-		//since we only support signal generation filters here
-		g_numDecodes ++;
-		m_pendingGenerator->Refresh();
-		for(size_t i=0; i<m_pendingGenerator->GetStreamCount(); i++)
-			OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
-	}
+	//This bit is similar to WaveformArea::OnDecodeSetupComplete(), but with much less special cases
+	//since we only support signal generation filters here
+	g_numDecodes ++;
+	m_pendingGenerator->Refresh();
+	for(size_t i=0; i<m_pendingGenerator->GetStreamCount(); i++)
+		OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
 
 	delete m_addFilterDialog;
 	m_addFilterDialog = NULL;
+	return false;
 }
 
 /**

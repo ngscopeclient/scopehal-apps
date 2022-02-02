@@ -1401,8 +1401,8 @@ void FilterGraphEditorWidget::OnDoubleClick(GdkEventButton* event)
 		if(m_filterDialog)
 			delete m_filterDialog;
 		m_filterDialog = new FilterDialog(m_parent->GetParent(), f, StreamDescriptor(NULL, 0));
-		m_filterDialog->signal_response().connect(
-			sigc::mem_fun(*this, &FilterGraphEditorWidget::OnFilterPropertiesDialogResponse));
+		m_filterDialog->signal_delete_event().connect(
+			sigc::mem_fun(*this, &FilterGraphEditorWidget::OnFilterPropertiesDialogClosed));
 		m_filterDialog->show();
 	}
 
@@ -1420,27 +1420,26 @@ void FilterGraphEditorWidget::OnDoubleClick(GdkEventButton* event)
 	m_dragMode = DRAG_NONE;
 }
 
-void FilterGraphEditorWidget::OnFilterPropertiesDialogResponse(int response)
+bool FilterGraphEditorWidget::OnFilterPropertiesDialogClosed(GdkEventAny* /*ignored*/)
 {
 	//Apply the changes
-	if(response == Gtk::RESPONSE_OK)
-	{
-		auto window = m_parent->GetParent();
+	auto window = m_parent->GetParent();
 		auto f = m_filterDialog->GetFilter();
-		auto name = f->GetDisplayName();
+	auto name = f->GetDisplayName();
 
-		m_filterDialog->ConfigureDecoder();
+	m_filterDialog->ConfigureDecoder();
 
-		if(name != f->GetDisplayName())
-			window->OnChannelRenamed(f);
+	if(name != f->GetDisplayName())
+		window->OnChannelRenamed(f);
 
-		window->OnAllWaveformsUpdated();
+	window->OnAllWaveformsUpdated();
 
-		Refresh();
-	}
+	Refresh();
 
 	delete m_filterDialog;
 	m_filterDialog = NULL;
+
+	return false;
 }
 
 void FilterGraphEditorWidget::OnChannelPropertiesDialogResponse(int response)

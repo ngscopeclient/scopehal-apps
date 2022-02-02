@@ -502,8 +502,8 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 					{
 						m_decodeDialog = new FilterDialog(m_parent, decode, StreamDescriptor(NULL, 0));
 						m_decodeDialog->show();
-						m_decodeDialog->signal_response().connect(
-							sigc::mem_fun(*this, &WaveformArea::OnDecodeReconfigureDialogResponse));
+						m_decodeDialog->signal_delete_event().connect(
+							sigc::mem_fun(*this, &WaveformArea::OnDecodeReconfigureDialogClosed));
 					}
 					else
 					{
@@ -1099,52 +1099,41 @@ void WaveformArea::OnProtocolDecode(string name, bool forceStats)
 			delete m_decodeDialog;
 		m_decodeDialog = new FilterDialog(m_parent, m_pendingDecode, m_selectedChannel);
 		m_decodeDialog->show();
-		m_decodeDialog->signal_response().connect(sigc::mem_fun(*this, &WaveformArea::OnDecodeDialogResponse));
+		m_decodeDialog->signal_delete_event().connect(sigc::mem_fun(*this, &WaveformArea::OnDecodeDialogClosed));
 	}
 }
 
-void WaveformArea::OnDecodeDialogResponse(int response)
+bool WaveformArea::OnDecodeDialogClosed(GdkEventAny* /*ignored*/)
 {
-	//Clean up decoder if canceled
-	if(response != Gtk::RESPONSE_OK)
-	{
-		delete m_pendingDecode;
-		m_pendingDecode = NULL;
-	}
-
-	//All good, set it up
-	else
-	{
-		m_decodeDialog->ConfigureDecoder();
-		OnDecodeSetupComplete();
-	}
+	m_decodeDialog->ConfigureDecoder();
+	OnDecodeSetupComplete();
 
 	//Clean up the dialog
 	delete m_decodeDialog;
 	m_decodeDialog = NULL;
+
+	return false;
 }
 
-void WaveformArea::OnDecodeReconfigureDialogResponse(int response)
+bool WaveformArea::OnDecodeReconfigureDialogClosed(GdkEventAny* /*ignored*/)
 {
-	//Apply the changes
-	if(response == Gtk::RESPONSE_OK)
-	{
-		auto decode = m_decodeDialog->GetFilter();
-		auto name = decode->GetDisplayName();
+	auto decode = m_decodeDialog->GetFilter();
+	auto name = decode->GetDisplayName();
 
-		m_decodeDialog->ConfigureDecoder();
+	m_decodeDialog->ConfigureDecoder();
 
-		if(name != decode->GetDisplayName())
-			m_parent->OnChannelRenamed(decode);
+	if(name != decode->GetDisplayName())
+		m_parent->OnChannelRenamed(decode);
 
-		m_parent->OnAllWaveformsUpdated(true);
+	m_parent->OnAllWaveformsUpdated(true);
 
-		m_parent->RefreshFilterGraphEditor();
-	}
+	m_parent->RefreshFilterGraphEditor();
 
 	//Clean up the dialog
 	delete m_decodeDialog;
 	m_decodeDialog = NULL;
+
+	return false;
 }
 
 void WaveformArea::OnDecodeSetupComplete()

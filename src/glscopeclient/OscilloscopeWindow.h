@@ -396,7 +396,7 @@ public:
 	TimebasePropertiesDialog* m_timebasePropertiesDialog;
 	FilterDialog* m_addFilterDialog;
 	Filter* m_pendingGenerator;
-	void OnGenerateDialogResponse(int response);
+	bool OnGenerateDialogClosed(GdkEventAny* ignored);
 
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;

@@ -176,12 +176,6 @@ FilterDialog::FilterDialog(
 	: Gtk::Dialog(filter->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
 	, m_filter(filter)
 {
-	add_button("OK", Gtk::RESPONSE_OK);
-	add_button("Cancel", Gtk::RESPONSE_CANCEL);
-
-	//hide close button to force user to pick OK or cancel
-	set_deletable(false);
-
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_channelDisplayNameLabel, 0, 0, 1, 1);
 			m_channelDisplayNameLabel.set_text("Display name");
