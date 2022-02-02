@@ -63,6 +63,9 @@ public:
 
 	FilterParameter& 	m_param;
 
+	//set true when updating dialog
+	bool				m_ignoreEvents;
+
 	sigc::signal<void>	signal_refreshDialog()
 	{ return m_needRefreshSignal; }
 
@@ -147,6 +150,7 @@ protected:
 	Filter* m_filter;
 
 	void OnRefresh();
+	void OnInputChanged();
 
 	Gtk::Grid m_grid;
 		Gtk::Label m_channelDisplayNameLabel;

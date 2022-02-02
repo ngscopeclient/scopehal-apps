@@ -45,6 +45,7 @@ ParameterRowBase::ParameterRowBase(Gtk::Dialog* parent, FilterParameter& param, 
 	: m_parent(parent)
 	, m_node(node)
 	, m_param(param)
+	, m_ignoreEvents(false)
 {
 }
 
@@ -81,6 +82,9 @@ ParameterRowEnum::~ParameterRowEnum()
 
 void ParameterRowEnum::OnChanged()
 {
+	if(m_ignoreEvents)
+		return;
+
 	m_param.ParseString(m_box.get_active_text());
 	if(m_node->OnParameterChanged(m_label.get_label()))
 		m_needRefreshSignal.emit();
@@ -285,6 +289,8 @@ FilterDialog::FilterDialog(
 				}
 			}
 		}
+
+		row->m_chans.signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnInputChanged));
 	}
 
 	//Add parameters
@@ -517,6 +523,8 @@ void FilterDialog::OnRefresh()
 		//Save the current value (string), if any, so we can restore it later if possible
 		if(erow)
 		{
+			erow->m_ignoreEvents = true;
+
 			auto value = erow->m_param.ToString();
 			erow->m_box.remove_all();
 
@@ -527,10 +535,21 @@ void FilterDialog::OnRefresh()
 
 			//Set initial value
 			erow->m_box.set_active_text(value);
+
+			erow->m_ignoreEvents = false;
 		}
 	}
 
-	//TODO: refresh channels
+	//TODO: refresh set of legal channels?
+
+	//TODO: re-render us, refresh downstream filter graph ,etc
 
 	m_refreshing = false;
+}
+
+void FilterDialog::OnInputChanged()
+{
+	ConfigureInputs(m_filter, m_rows);
+
+	//TODO: re-render us, refresh downstream filter graph ,etc
 }
