@@ -192,8 +192,6 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
 	for(auto it : gridmap)
 	{
-		float v = it.first;
-
 		float vlo = YPositionToYAxisUnits(it.second - 0.5);
 		float vhi = YPositionToYAxisUnits(it.second + 0.5);
 		tlayout->set_text(m_channel.GetYAxisUnits().PrettyPrintRange(vlo, vhi, vbot, vtop));

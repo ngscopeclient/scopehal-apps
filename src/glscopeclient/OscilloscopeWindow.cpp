@@ -2592,26 +2592,26 @@ void OscilloscopeWindow::OnHistory()
  */
 void OscilloscopeWindow::MoveToBestGroup(WaveformArea* w)
 {
-	auto chan = w->GetChannel().m_channel;
+	auto stream = w->GetChannel();
+	auto eye = dynamic_cast<EyePattern*>(stream.m_channel);
 
-	auto eye = dynamic_cast<EyePattern*>(chan);
+	LogDebug("MoveToBestGroup\n");
+	LogIndenter li;
 
-	bool hit = false;
 	if(!eye)
 	{
 		for(auto g : m_waveformGroups)
 		{
-			if(chan->GetXAxisUnits() == g->m_timeline.GetXAxisUnits())
+			g->m_timeline.RefreshUnits();
+			if(stream.GetXAxisUnits() == g->m_timeline.GetXAxisUnits())
 			{
-				hit = true;
 				OnMoveToExistingGroup(w, g);
-				break;
+				return;
 			}
 		}
 	}
 
-	if(!hit)
-		OnMoveNewBelow(w);
+	OnMoveNewBelow(w);
 }
 
 void OscilloscopeWindow::OnMoveNewRight(WaveformArea* w)

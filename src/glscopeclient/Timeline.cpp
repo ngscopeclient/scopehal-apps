@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -256,6 +256,20 @@ bool Timeline::on_scroll_event (GdkEventScroll* ev)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+/**
+	@brief Figure out the current X axis unit
+ */
+void Timeline::RefreshUnits()
+{
+	auto children = m_group->m_waveformBox.get_children();
+	if(!children.empty())
+	{
+		auto view = dynamic_cast<WaveformArea*>(children[0]);
+		if(view != NULL)
+			m_xAxisUnit = view->GetChannel().GetXAxisUnits();
+	}
+}
+
 bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 {
 	cr->save();
@@ -280,17 +294,16 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	cr->line_to(w, ytop);
 	cr->stroke();
 
-	//Figure out the units to use for the axis
+	//Find the first channel and use it for display of the trigger config etc
+	//TODO: use all scopes for this
+	RefreshUnits();
 	auto children = m_group->m_waveformBox.get_children();
 	OscilloscopeChannel* chan = NULL;
 	if(!children.empty())
 	{
 		auto view = dynamic_cast<WaveformArea*>(children[0]);
 		if(view != NULL)
-		{
 			chan = view->GetChannel().m_channel;
-			m_xAxisUnit = chan->GetXAxisUnits();
-		}
 	}
 
 	//And actually draw the rest
