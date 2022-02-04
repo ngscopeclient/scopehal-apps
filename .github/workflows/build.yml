@@ -93,6 +93,15 @@ jobs:
           ..
         make -j4
 
+    - name: Upload Logs
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: pdflatex-logs
+        path: |
+          build/doc/run1.log
+          build/doc/run2.log
+
     - name: Run Tests
       run: |
         cd build
