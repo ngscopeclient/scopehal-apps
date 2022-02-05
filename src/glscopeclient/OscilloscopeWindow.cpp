@@ -2613,9 +2613,6 @@ void OscilloscopeWindow::MoveToBestGroup(WaveformArea* w)
 	auto stream = w->GetChannel();
 	auto eye = dynamic_cast<EyePattern*>(stream.m_channel);
 
-	LogDebug("MoveToBestGroup\n");
-	LogIndenter li;
-
 	if(!eye)
 	{
 		for(auto g : m_waveformGroups)
