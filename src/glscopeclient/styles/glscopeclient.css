@@ -294,6 +294,13 @@ menu menuitem:hover
 	border-color:		transparent;
 }
 
+menu separator,
+.menu separator,
+menuitem separator
+{
+	border-bottom:		solid 1px @glscopeclient_highlight_color;
+}
+
 /***********************************************************************************************************************
 	Progress bar
  **********************************************************************************************************************/

@@ -178,6 +178,8 @@ protected:
 				Gtk::Menu m_fileMenu;
 					Gtk::MenuItem m_recentInstrumentsMenuItem;
 						Gtk::Menu m_recentInstrumentsMenu;
+					Gtk::MenuItem m_exportMenuItem;
+						Gtk::Menu m_exportMenu;
 			Gtk::MenuItem m_setupMenuItem;
 				Gtk::Menu m_setupMenu;
 					Gtk::MenuItem m_setupSyncMenuItem;
@@ -310,6 +312,10 @@ public:
 	MockOscilloscope* SetupExistingSessionForImport();
 	void OnImportComplete();
 
+	//Exporting
+	void OnExport(std::string format);
+	ExportWizard* m_exportWizard;
+
 	//Hotkey event handlers
 	virtual bool on_key_press_event(GdkEventKey* key_event);
 
@@ -329,6 +335,7 @@ public:
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
 	void RefreshTriggerMenu();
+	void RefreshExportMenu();
 
 	void RefreshFilterGraphEditor()
 	{

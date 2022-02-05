@@ -65,7 +65,8 @@ using namespace std;
 	@brief Initializes the main window
  */
 OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum)
-	: m_scopes(scopes)
+	: m_exportWizard(nullptr)
+	, m_scopes(scopes)
 	, m_fullscreen(false)
 	, m_multiScopeFreeRun(false)
 	, m_scopeSyncWizard(NULL)
@@ -101,7 +102,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 
 	m_tLastFlush = GetTime();
 
-	m_eyeColor = EYE_CRT;
+	m_eyeColor = EYE_KRAIN;
 
 	m_totalWaveforms = 0;
 
@@ -227,6 +228,13 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
 							false, true, true));
 					m_fileMenu.append(*item);
+
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_fileMenu.append(*item);
+
+					m_exportMenuItem.set_label("Export");
+					m_exportMenuItem.set_submenu(m_exportMenu);
+					m_fileMenu.append(m_exportMenuItem);
 
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
@@ -383,6 +391,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 	RefreshChannelsMenu();
 	RefreshMultimeterMenu();
 	RefreshTriggerMenu();
+	RefreshExportMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -749,6 +758,12 @@ void OscilloscopeWindow::CloseSession()
 		m_addFilterDialog->hide();
 		delete m_addFilterDialog;
 		m_addFilterDialog = nullptr;
+	}
+	if(m_exportWizard)
+	{
+		m_exportWizard->hide();
+		delete m_exportWizard;
+		m_exportWizard = nullptr;
 	}
 
     //Save preferences
@@ -3949,6 +3964,27 @@ void OscilloscopeWindow::RefreshTriggerMenu()
 }
 
 /**
+	@brief Refresh the export menu (for now, only done at startup)
+ */
+void OscilloscopeWindow::RefreshExportMenu()
+{
+	//Remove the old items
+	auto children = m_exportMenu.get_children();
+	for(auto c : children)
+		m_exportMenu.remove(*c);
+
+	vector<string> names;
+	ExportWizard::EnumExportWizards(names);
+	for(auto name : names)
+	{
+		auto item = Gtk::manage(new Gtk::MenuItem(name, false));
+		item->signal_activate().connect(
+			sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::OnExport), name));
+		m_exportMenu.append(*item);
+	}
+}
+
+/**
 	@brief Update the protocol analyzer menu when we create or destroy an analyzer
  */
 void OscilloscopeWindow::RefreshAnalyzerMenu()
@@ -4033,13 +4069,41 @@ bool OscilloscopeWindow::on_key_press_event(GdkEventKey* key_event)
 	return true;
 }
 
+/**
+	@brief Runs an export wizard
+ */
+void OscilloscopeWindow::OnExport(string format)
+{
+	//Stop triggering
+	OnStop();
+
+	//Make a list of all the channels (both scope channels and filters)
+	vector<OscilloscopeChannel*> channels;
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		channels.push_back(f);
+	for(auto scope : m_scopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+			channels.push_back(scope->GetChannel(i));
+	}
+
+	//If we already have an export wizard, get rid of it
+	if(m_exportWizard)
+		delete m_exportWizard;
+
+	//Run the actual wizard once we have a list of all channels we might want to export
+	m_exportWizard = ExportWizard::CreateExportWizard(format, channels);
+	m_exportWizard->show();
+}
+
 void OscilloscopeWindow::OnAboutDialog()
 {
 	Gtk::AboutDialog aboutDialog;
 
 	aboutDialog.set_logo_default();
 	aboutDialog.set_version(string("Version ") + GLSCOPECLIENT_VERSION);
-	aboutDialog.set_copyright("Copyright © 2012-2021 Andrew D. Zonenberg and contributors");
+	aboutDialog.set_copyright("Copyright © 2012-2022 Andrew D. Zonenberg and contributors");
 	aboutDialog.set_license(
 		"Redistribution and use in source and binary forms, with or without modification, "
 		"are permitted provided that the following conditions are met:\n\n"

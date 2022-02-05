@@ -40,6 +40,7 @@
 
 #include "glscopeclient.h"
 #include "../scopeprotocols/scopeprotocols.h"
+#include "../scopeexports/scopeexports.h"
 #include <libgen.h>
 #include <omp.h>
 #include <chrono>
@@ -214,6 +215,7 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
+	ScopeExportStaticInit();
 
 	//Disable CPU features we don't want to use
 	if(noavx2 && g_hasAvx2)

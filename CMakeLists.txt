@@ -103,6 +103,7 @@ endif()
 
 # Main project code
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeexports")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")

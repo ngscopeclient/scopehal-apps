@@ -88,6 +88,7 @@ add_executable(glscopeclient
 target_link_libraries(glscopeclient
 	scopehal
 	scopeprotocols
+	scopeexports
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	${OPENGL_LIBRARY}
