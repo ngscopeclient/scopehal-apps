@@ -555,12 +555,15 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 		}
 	}
 
-	//Done
+	//Done. Show everything except the measurement views
 	show_all();
 	if(frequencyDomainGroup)
 		frequencyDomainGroup->m_measurementView.hide();
 	if(timeDomainGroup)
 		timeDomainGroup->m_measurementView.hide();
+	defaultGroup->m_measurementView.hide();		//When starting up the application with no scope connected,
+												//the default group is not yet committed to time or frequency domain.
+												//So we have to hide the measurements regardless.
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
