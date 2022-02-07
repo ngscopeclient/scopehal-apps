@@ -3830,6 +3830,45 @@ void OscilloscopeWindow::OnGenerateFilter(string name)
 		OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
 }
 
+/**
+	@brief Handles a filter that was updated in such a way that the stream count changed
+ */
+void OscilloscopeWindow::OnStreamCountChanged(Filter* filter)
+{
+	//Step 1: Remove any views for streams that no longer exist
+	set<WaveformArea*> areasToRemove;
+	for(auto w : m_waveformAreas)
+	{
+		auto c = w->GetChannel();
+		if( (c.m_channel == filter) && (c.m_stream >= filter->GetStreamCount() ) )
+			areasToRemove.emplace(w);
+	}
+	for(auto w : areasToRemove)
+		OnRemoveChannel(w);
+
+	//Step 2: Create views for streams that were newly created
+	for(size_t i=0; i<filter->GetStreamCount(); i++)
+	{
+		StreamDescriptor stream(filter, i);
+
+		//TODO: can we do this faster than O(n^2) with a hash table or something?
+		//Probably a non-issue for now because number of waveform areas isn't going to be too massive given
+		//limitations on available screen real estate
+		bool found = false;
+		for(auto w : m_waveformAreas)
+		{
+			if(w->GetChannel() == stream)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if(!found)
+			OnAddChannel(stream);
+	}
+}
+
 bool OscilloscopeWindow::OnGenerateDialogClosed(GdkEventAny* /*ignored*/)
 {
 	//Commit any remaining pending changes

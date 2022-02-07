@@ -404,6 +404,7 @@ public:
 	FilterDialog* m_addFilterDialog;
 	Filter* m_pendingGenerator;
 	bool OnGenerateDialogClosed(GdkEventAny* ignored);
+	void OnStreamCountChanged(Filter* filter);
 
 	//If false, ignore incoming waveforms (scope thread might have an extra trigger after you press stop)
 	bool m_triggerArmed;

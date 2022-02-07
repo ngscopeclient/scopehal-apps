@@ -171,6 +171,8 @@ protected:
 	std::vector<ParameterRowBase*> m_prows;
 
 	bool m_refreshing;
+
+	int m_cachedStreamCount;
 };
 
 #endif

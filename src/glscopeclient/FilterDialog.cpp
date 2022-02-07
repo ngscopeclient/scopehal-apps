@@ -222,6 +222,8 @@ FilterDialog::FilterDialog(
 	, m_parent(parent)
 	, m_refreshing(false)
 {
+	m_cachedStreamCount = m_filter->GetStreamCount();
+
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 		m_grid.attach(m_channelDisplayNameLabel, 0, 0, 1, 1);
 			m_channelDisplayNameLabel.set_text("Display name");
@@ -568,8 +570,6 @@ void FilterDialog::OnRefresh()
 
 	//TODO: refresh set of legal channels?
 
-	//TODO: re-render us, refresh downstream filter graph ,etc
-
 	m_refreshing = false;
 }
 
@@ -581,5 +581,14 @@ void FilterDialog::OnInputChanged()
 
 void FilterDialog::OnParameterChanged()
 {
+	//Re-run the filter graph
 	m_parent->RefreshAllFilters();
+
+	//Did the number of output streams change since the filter was created?
+	int streamcount = m_filter->GetStreamCount();
+	if(m_cachedStreamCount != streamcount)
+	{
+		m_parent->OnStreamCountChanged(m_filter);
+		m_cachedStreamCount = streamcount;
+	}
 }
