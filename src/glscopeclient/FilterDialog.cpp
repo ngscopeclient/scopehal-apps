@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -60,10 +60,24 @@ ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& par
 	: ParameterRowBase(parent, param, node)
 {
 	m_entry.set_size_request(500, 1);
+
+	m_entry.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnChanged));
 }
 
 ParameterRowString::~ParameterRowString()
 {
+}
+
+void ParameterRowString::OnChanged()
+{
+	if(m_ignoreEvents)
+		return;
+
+	m_param.ParseString(m_entry.get_text());
+	if(m_node->OnParameterChanged(m_label.get_label()))
+		m_needRefreshSignal.emit();
+
+	m_changeSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,6 +102,8 @@ void ParameterRowEnum::OnChanged()
 	m_param.ParseString(m_box.get_active_text());
 	if(m_node->OnParameterChanged(m_label.get_label()))
 		m_needRefreshSignal.emit();
+
+	m_changeSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -113,6 +129,8 @@ void ParameterRowFilename::OnClear()
 	m_param.ParseString("");
 	if(m_node->OnParameterChanged(m_label.get_label()))
 		m_needRefreshSignal.emit();
+
+	m_changeSignal.emit();
 }
 
 void ParameterRowFilename::OnBrowser()
@@ -180,12 +198,16 @@ void ParameterRowFilenames::OnAdd()
 		return;
 
 	m_list.append(dlg.get_filename());
+
+	m_changeSignal.emit();
 }
 
 void ParameterRowFilenames::OnRemove()
 {
 	auto store = Glib::RefPtr<Gtk::ListStore>::cast_dynamic(m_list.get_model());
 	store->erase(m_list.get_selection()->get_selected());
+
+	m_changeSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,6 +219,7 @@ FilterDialog::FilterDialog(
 	StreamDescriptor chan)
 	: Gtk::Dialog(filter->GetProtocolDisplayName(), *parent, Gtk::DIALOG_MODAL)
 	, m_filter(filter)
+	, m_parent(parent)
 	, m_refreshing(false)
 {
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
@@ -299,7 +322,10 @@ FilterDialog::FilterDialog(
 
 	//Add event handlers
 	for(auto p : m_prows)
+	{
 		p->signal_refreshDialog().connect(sigc::mem_fun(this, &FilterDialog::OnRefresh));
+		p->signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnParameterChanged));
+	}
 
 	show_all();
 }
@@ -550,6 +576,10 @@ void FilterDialog::OnRefresh()
 void FilterDialog::OnInputChanged()
 {
 	ConfigureInputs(m_filter, m_rows);
+	m_parent->RefreshAllFilters();
+}
 
-	//TODO: re-render us, refresh downstream filter graph ,etc
+void FilterDialog::OnParameterChanged()
+{
+	m_parent->RefreshAllFilters();
 }

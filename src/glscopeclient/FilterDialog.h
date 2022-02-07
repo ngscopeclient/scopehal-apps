@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -69,8 +69,12 @@ public:
 	sigc::signal<void>	signal_refreshDialog()
 	{ return m_needRefreshSignal; }
 
+	sigc::signal<void>	signal_changed()
+	{ return m_changeSignal; }
+
 protected:
 	sigc::signal<void>	m_needRefreshSignal;
+	sigc::signal<void>	m_changeSignal;
 };
 
 class ParameterRowString : public ParameterRowBase
@@ -80,6 +84,9 @@ public:
 	virtual ~ParameterRowString();
 
 	Gtk::Entry			m_entry;
+
+protected:
+	void OnChanged();
 };
 
 class ParameterRowEnum : public ParameterRowBase
@@ -148,9 +155,11 @@ public:
 
 protected:
 	Filter* m_filter;
+	OscilloscopeWindow* m_parent;
 
 	void OnRefresh();
 	void OnInputChanged();
+	void OnParameterChanged();
 
 	Gtk::Grid m_grid;
 		Gtk::Label m_channelDisplayNameLabel;

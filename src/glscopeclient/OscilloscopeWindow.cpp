@@ -3823,19 +3823,19 @@ void OscilloscopeWindow::OnGenerateFilter(string name)
 	m_addFilterDialog = new FilterDialog(this, m_pendingGenerator, NULL);
 	m_addFilterDialog->show();
 	m_addFilterDialog->signal_delete_event().connect(sigc::mem_fun(*this, &OscilloscopeWindow::OnGenerateDialogClosed));
+
+	//Add initial streams
+	g_numDecodes ++;
+	for(size_t i=0; i<m_pendingGenerator->GetStreamCount(); i++)
+		OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
 }
 
 bool OscilloscopeWindow::OnGenerateDialogClosed(GdkEventAny* /*ignored*/)
 {
+	//Commit any remaining pending changes
 	m_addFilterDialog->ConfigureDecoder();
 
-	//This bit is similar to WaveformArea::OnDecodeSetupComplete(), but with much less special cases
-	//since we only support signal generation filters here
-	g_numDecodes ++;
-	m_pendingGenerator->Refresh();
-	for(size_t i=0; i<m_pendingGenerator->GetStreamCount(); i++)
-		OnAddChannel(StreamDescriptor(m_pendingGenerator, i));
-
+	//Done with the dialog
 	delete m_addFilterDialog;
 	m_addFilterDialog = NULL;
 	return false;
