@@ -73,6 +73,11 @@ void ParameterRowString::OnChanged()
 	if(m_ignoreEvents)
 		return;
 
+	//When typing over a value, the text is momentarily set to the empty string.
+	//We don't want to trigger updates on that.
+	if(m_entry.get_text() == "")
+		return;
+
 	m_param.ParseString(m_entry.get_text());
 	if(m_node->OnParameterChanged(m_label.get_label()))
 		m_needRefreshSignal.emit();
@@ -237,90 +242,27 @@ FilterDialog::FilterDialog(
 		m_grid.attach_next_to(m_channelColorButton, m_channelColorLabel, Gtk::POS_RIGHT, 1, 1);
 			m_channelColorButton.set_color(Gdk::Color(filter->m_displaycolor));
 
-	Gtk::Widget* last_label = &m_channelColorLabel;
+	size_t nrow = 2;
 	for(size_t i=0; i<filter->GetInputCount(); i++)
 	{
 		//Add the row
 		auto row = new ChannelSelectorRow;
-		m_grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-		m_grid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
+		m_grid.attach(row->m_label, 0, nrow, 1, 1);
+			row->m_label.set_label(filter->GetInputName(i));
+		m_grid.attach(row->m_chans, 1, nrow, 1, 1);
+			PopulateInputBox(parent, filter, row, i, chan);
 		m_rows.push_back(row);
-		last_label = &row->m_label;
-
-		//Label is just the channel name
-		row->m_label.set_label(filter->GetInputName(i));
-
-		//Allow NULL for optional inputs
-		auto din = filter->GetInput(i);
-		if(filter->ValidateChannel(i, StreamDescriptor(NULL, 0)))
-		{
-			row->m_chans.append("NULL");
-			row->m_chanptrs["NULL"] = StreamDescriptor(NULL, 0);
-
-			//Handle null inputs
-			if(din.m_channel == NULL)
-				row->m_chans.set_active_text("NULL");
-		}
-
-		//Fill the channel list with all channels that are legal to use here
-		//TODO: multiple streams
-		for(size_t j=0; j<parent->GetScopeCount(); j++)
-		{
-			Oscilloscope* scope = parent->GetScope(j);
-			for(size_t k=0; k<scope->GetChannelCount(); k++)
-			{
-				//If we can't enable the channel, don't show it.
-				//Aux inputs can't be enabled, but show those if they are legal
-				auto cn = scope->GetChannel(k);
-				if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
-					continue;
-
-				auto nstreams = cn->GetStreamCount();
-				for(size_t m=0; m<nstreams; m++)
-				{
-					auto desc = StreamDescriptor(cn, m);
-					if(filter->ValidateChannel(i, desc))
-					{
-						auto name = desc.GetName();
-						row->m_chans.append(name);
-						row->m_chanptrs[name] = desc;
-						if( (desc == chan && i==0) || (desc == din) )
-							row->m_chans.set_active_text(name);
-					}
-				}
-			}
-		}
-
-		//Add filters
-		auto filters = Filter::GetAllInstances();
-		for(auto d : filters)
-		{
-			//Don't allow circular dependencies
-			if(d == filter)
-				continue;
-
-			auto nstreams = d->GetStreamCount();
-			for(size_t j=0; j<nstreams; j++)
-			{
-				auto desc = StreamDescriptor(d, j);
-				if(filter->ValidateChannel(i, desc))
-				{
-					string name = desc.GetName();
-
-					row->m_chans.append(name);
-					row->m_chanptrs[name] = desc;
-					if( (desc == chan && i==0) || (desc == din) )
-						row->m_chans.set_active_text(name);
-				}
-			}
-		}
+		nrow ++;
 
 		row->m_chans.signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnInputChanged));
 	}
 
 	//Add parameters
 	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
-		m_prows.push_back(CreateRow(m_grid, it->first, it->second, last_label, this, filter));
+	{
+		m_prows.push_back(CreateRow(m_grid, it->first, it->second, nrow, this, filter));
+		nrow ++;
+	}
 
 	//Add event handlers
 	for(auto p : m_prows)
@@ -330,6 +272,81 @@ FilterDialog::FilterDialog(
 	}
 
 	show_all();
+}
+
+void FilterDialog::PopulateInputBox(
+	OscilloscopeWindow* parent,
+	Filter* filter,
+	ChannelSelectorRow* row,
+	size_t ninput,
+	StreamDescriptor chan)
+{
+	row->m_chans.remove_all();
+
+	//Allow NULL for optional inputs
+	auto din = filter->GetInput(ninput);
+	if(filter->ValidateChannel(ninput, StreamDescriptor(NULL, 0)))
+	{
+		row->m_chans.append("NULL");
+		row->m_chanptrs["NULL"] = StreamDescriptor(NULL, 0);
+
+		//Handle null inputs
+		if(din.m_channel == NULL)
+			row->m_chans.set_active_text("NULL");
+	}
+
+	//Fill the channel list with all channels that are legal to use here
+	//TODO: multiple streams
+	for(size_t j=0; j<parent->GetScopeCount(); j++)
+	{
+		Oscilloscope* scope = parent->GetScope(j);
+		for(size_t k=0; k<scope->GetChannelCount(); k++)
+		{
+			//If we can't enable the channel, don't show it.
+			//Aux inputs can't be enabled, but show those if they are legal
+			auto cn = scope->GetChannel(k);
+			if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+				continue;
+
+			auto nstreams = cn->GetStreamCount();
+			for(size_t m=0; m<nstreams; m++)
+			{
+				auto desc = StreamDescriptor(cn, m);
+				if(filter->ValidateChannel(ninput, desc))
+				{
+					auto name = desc.GetName();
+					row->m_chans.append(name);
+					row->m_chanptrs[name] = desc;
+					if( ( (desc == chan) && (ninput == 0) ) || (desc == din) )
+						row->m_chans.set_active_text(name);
+				}
+			}
+		}
+	}
+
+	//Add filters
+	auto filters = Filter::GetAllInstances();
+	for(auto d : filters)
+	{
+		//Don't allow circular dependencies
+		if(d == filter)
+			continue;
+
+		auto nstreams = d->GetStreamCount();
+		for(size_t j=0; j<nstreams; j++)
+		{
+			auto desc = StreamDescriptor(d, j);
+			if(filter->ValidateChannel(ninput, desc))
+			{
+				string name = desc.GetName();
+
+				row->m_chans.append(name);
+				row->m_chanptrs[name] = desc;
+				if( ( (desc == chan) &&  (ninput == 0) ) || (desc == din) )
+					row->m_chans.set_active_text(name);
+			}
+		}
+	}
 }
 
 FilterDialog::~FilterDialog()
@@ -354,7 +371,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 	Gtk::Grid& grid,
 	string name,
 	FilterParameter& param,
-	Gtk::Widget*& last_label,
+	size_t y,
 	Gtk::Dialog* parent,
 	FlowGraphNode* node)
 {
@@ -365,18 +382,13 @@ ParameterRowBase* FilterDialog::CreateRow(
 		case FilterParameter::TYPE_FILENAME:
 			{
 				auto row = new ParameterRowFilename(parent, param, node);
-				if(!last_label)
-					grid.attach(row->m_label, 0, 0, 1, 1);
-				else
-					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-				row->m_label.set_size_request(width, 1);
-
-				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-				grid.attach_next_to(row->m_clearButton, row->m_entry, Gtk::POS_RIGHT, 1, 1);
-				grid.attach_next_to(row->m_browserButton, row->m_clearButton, Gtk::POS_RIGHT, 1, 1);
-				last_label = &row->m_label;
-
-				row->m_label.set_label(name);
+				grid.attach(row->m_label, 0, y, 1, 1);
+					row->m_label.set_size_request(width, 1);
+					row->m_label.set_label(name);
+				grid.attach(row->m_contentbox, 1, y, 1, 1);
+					row->m_contentbox.attach(row->m_entry, 0, 0, 1, 1);
+					row->m_contentbox.attach(row->m_clearButton, 1, 0, 1, 1);
+					row->m_contentbox.attach(row->m_browserButton, 2, 0, 1, 1);
 
 				//Set initial value
 				row->m_entry.set_text(param.ToString());
@@ -387,18 +399,13 @@ ParameterRowBase* FilterDialog::CreateRow(
 		case FilterParameter::TYPE_FILENAMES:
 			{
 				auto row = new ParameterRowFilenames(parent, param, node);
-				if(!last_label)
-					grid.attach(row->m_label, 0, 0, 1, 1);
-				else
-					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-				row->m_label.set_size_request(width, 1);
-
-				grid.attach_next_to(row->m_list, row->m_label, Gtk::POS_RIGHT, 1, 2);
-				grid.attach_next_to(row->m_buttonAdd, row->m_list, Gtk::POS_RIGHT, 1, 1);
-				grid.attach_next_to(row->m_buttonRemove, row->m_buttonAdd, Gtk::POS_BOTTOM, 1, 1);
-				last_label = &row->m_label;
-
-				row->m_label.set_label(name);
+				grid.attach(row->m_label, 0, y, 1, 1);
+					row->m_label.set_size_request(width, 1);
+					row->m_label.set_label(name);
+				grid.attach(row->m_contentbox, 1, y, 1, 1);
+					row->m_contentbox.attach(row->m_list, 0, 0, 1, 1);
+					row->m_contentbox.attach(row->m_buttonAdd, 1, 0, 1, 1);
+					row->m_contentbox.attach(row->m_buttonRemove, 2, 0, 1, 1);
 
 				//Set initial value
 				auto files = param.GetFileNames();
@@ -411,16 +418,11 @@ ParameterRowBase* FilterDialog::CreateRow(
 		case FilterParameter::TYPE_ENUM:
 			{
 				auto row = new ParameterRowEnum(parent, param, node);
-				if(!last_label)
-					grid.attach(row->m_label, 0, 0, 1, 1);
-				else
-					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-				row->m_label.set_size_request(width, 1);
-
-				grid.attach_next_to(row->m_box, row->m_label, Gtk::POS_RIGHT, 1, 1);
-				last_label = &row->m_label;
-
-				row->m_label.set_label(name);
+				grid.attach(row->m_label, 0, y, 1, 1);
+					row->m_label.set_size_request(width, 1);
+					row->m_label.set_label(name);
+				grid.attach(row->m_contentbox, 1, y, 1, 1);
+					row->m_contentbox.attach(row->m_box, 0, 0, 1, 1);
 
 				//Populate box
 				vector<string> names;
@@ -437,14 +439,11 @@ ParameterRowBase* FilterDialog::CreateRow(
 		default:
 			{
 				auto row = new ParameterRowString(parent, param, node);
-				if(!last_label)
-					grid.attach(row->m_label, 0, 0, 1, 1);
-				else
-					grid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-				row->m_label.set_size_request(width, 1);
-
-				grid.attach_next_to(row->m_entry, row->m_label, Gtk::POS_RIGHT, 1, 1);
-				last_label = &row->m_label;
+				grid.attach(row->m_label, 0, y, 1, 1);
+					row->m_label.set_size_request(width, 1);
+					row->m_label.set_label(name);
+				grid.attach(row->m_contentbox, 1, y, 1, 1);
+					row->m_contentbox.attach(row->m_entry, 0, 0, 1, 1);
 
 				row->m_label.set_label(name);
 
@@ -542,6 +541,39 @@ void FilterDialog::OnRefresh()
 
 	m_refreshing = true;
 
+	//Remove unused inputs
+	size_t ncount = m_filter->GetInputCount();
+	size_t ocount = m_rows.size();
+	for(size_t i=ncount; i<ocount; i++)
+	{
+		m_grid.remove(m_rows[i]->m_label);
+		m_grid.remove(m_rows[i]->m_chans);
+		delete m_rows[i];
+	}
+
+	//Remove all parameters from the table
+	for(auto p : m_prows)
+	{
+		m_grid.remove(p->m_label);
+		m_grid.remove(p->m_contentbox);
+	}
+
+	//Create new inputs
+	m_rows.resize(ncount);
+	size_t irow = ocount + 2;
+	for(size_t i=ocount; i<ncount; i++)
+	{
+		m_rows[i] = new ChannelSelectorRow;
+		m_rows[i]->m_label.set_label(m_filter->GetInputName(i));
+
+		m_grid.attach(m_rows[i]->m_label, 0, irow, 1, 1);
+		m_grid.attach_next_to(m_rows[i]->m_chans, m_rows[i]->m_label, Gtk::POS_RIGHT, 1, 1);
+		irow ++;
+
+		PopulateInputBox(m_parent, m_filter, m_rows[i], i, StreamDescriptor(NULL, 0));
+		m_rows[i]->m_chans.set_active_text(m_filter->GetInput(i).GetName());
+	}
+
 	//Refresh parameters
 	for(auto p : m_prows)
 	{
@@ -568,7 +600,14 @@ void FilterDialog::OnRefresh()
 		}
 	}
 
-	//TODO: refresh set of legal channels?
+	//Remove and re-add parameters so they show up in the right place
+	for(auto p : m_prows)
+	{
+		m_grid.attach(p->m_label, 0, irow, 1, 1);
+		m_grid.attach(p->m_contentbox, 1, irow, 1, 1);
+		irow ++;
+	}
+	m_grid.show_all();
 
 	m_refreshing = false;
 }

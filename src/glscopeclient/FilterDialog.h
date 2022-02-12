@@ -58,6 +58,7 @@ public:
 	virtual ~ParameterRowBase();
 
 	Gtk::Label			m_label;
+		Gtk::Grid		m_contentbox;
 	Gtk::Dialog* 		m_parent;
 	FlowGraphNode*		m_node;
 
@@ -146,12 +147,20 @@ public:
 		Gtk::Grid& grid,
 		std::string name,
 		FilterParameter& param,
-		Gtk::Widget*& last_label,
+		size_t y,
 		Gtk::Dialog* parent,
 		FlowGraphNode* node);
 
 	static void ConfigureInputs(FlowGraphNode* node, std::vector<ChannelSelectorRow*>& rows);
 	static void ConfigureParameters(FlowGraphNode* node, std::vector<ParameterRowBase*>& rows);
+
+	static void PopulateInputBox(
+		OscilloscopeWindow* parent,
+		Filter* filter,
+		ChannelSelectorRow* row,
+		size_t ninput,
+		StreamDescriptor chan
+		);
 
 protected:
 	Filter* m_filter;

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -170,20 +170,14 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 
 void TriggerPropertiesDialog::AddRows(Trigger* trig)
 {
-	Gtk::Widget* last_label = NULL;
-
 	//Add inputs
 	for(size_t i=0; i<trig->GetInputCount(); i++)
 	{
 		//Add the row
 		auto row = new ChannelSelectorRow;
-		if(last_label)
-			m_contentGrid.attach_next_to(row->m_label, *last_label, Gtk::POS_BOTTOM, 1, 1);
-		else
-			m_contentGrid.attach(row->m_label, 0, 0, 1, 1);
+		m_contentGrid.attach(row->m_label, 0, i, 1, 1);
 		m_contentGrid.attach_next_to(row->m_chans, row->m_label, Gtk::POS_RIGHT, 1, 1);
 		m_rows.push_back(row);
-		last_label = &row->m_label;
 
 		auto cur_in = trig->GetInput(i);
 
@@ -218,7 +212,15 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 
 	//Add parameters
 	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
-		m_prows.push_back(FilterDialog::CreateRow(m_contentGrid, it->first, it->second, last_label, NULL, trig));
+	{
+		m_prows.push_back(FilterDialog::CreateRow(
+			m_contentGrid,
+			it->first,
+			it->second,
+			m_prows.size() + trig->GetInputCount(),
+			NULL,
+			trig));
+	}
 
 	m_contentGrid.show_all();
 }
