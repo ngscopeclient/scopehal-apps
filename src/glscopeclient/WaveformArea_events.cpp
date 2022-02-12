@@ -1097,16 +1097,19 @@ void WaveformArea::OnProtocolDecode(string name, bool forceStats)
 	{
 		if(m_decodeDialog)
 			delete m_decodeDialog;
+
 		m_decodeDialog = new FilterDialog(m_parent, m_pendingDecode, m_selectedChannel);
 		m_decodeDialog->show();
 		m_decodeDialog->signal_delete_event().connect(sigc::mem_fun(*this, &WaveformArea::OnDecodeDialogClosed));
+
+		g_numDecodes ++;
+		OnDecodeSetupComplete();
 	}
 }
 
 bool WaveformArea::OnDecodeDialogClosed(GdkEventAny* /*ignored*/)
 {
 	m_decodeDialog->ConfigureDecoder();
-	OnDecodeSetupComplete();
 
 	//Clean up the dialog
 	delete m_decodeDialog;
@@ -1138,10 +1141,6 @@ bool WaveformArea::OnDecodeReconfigureDialogClosed(GdkEventAny* /*ignored*/)
 
 void WaveformArea::OnDecodeSetupComplete()
 {
-	//Increment the color chooser only after we've decided to add the decode.
-	//If the dialog is canceled, don't do anything.
-	g_numDecodes ++;
-
 	//If it's an eye pattern or waterfall, set the initial size
 	auto eye = dynamic_cast<EyePattern*>(m_pendingDecode);
 	if(eye != NULL)
