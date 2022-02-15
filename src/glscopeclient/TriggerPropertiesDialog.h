@@ -67,7 +67,7 @@ protected:
 	Oscilloscope* m_scope;
 
 	std::vector<ChannelSelectorRow*> m_rows;
-	std::vector<ParameterRowBase*> m_prows;
+	std::map<std::string, ParameterRowBase*> m_prows;
 };
 
 #endif

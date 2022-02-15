@@ -109,8 +109,8 @@ void TriggerPropertiesDialog::Clear()
 
 	for(auto r : m_rows)
 		delete r;
-	for(auto r : m_prows)
-		delete r;
+	for(auto it : m_prows)
+		delete it.second;
 	m_rows.clear();
 	m_prows.clear();
 }
@@ -213,13 +213,13 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 	//Add parameters
 	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
 	{
-		m_prows.push_back(FilterDialog::CreateRow(
+		m_prows[it->first] = FilterDialog::CreateRow(
 			m_contentGrid,
 			it->first,
 			it->second,
 			m_prows.size() + trig->GetInputCount(),
 			NULL,
-			trig));
+			trig);
 	}
 
 	m_contentGrid.show_all();

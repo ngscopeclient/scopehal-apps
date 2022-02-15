@@ -260,15 +260,15 @@ FilterDialog::FilterDialog(
 	//Add parameters
 	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
 	{
-		m_prows.push_back(CreateRow(m_grid, it->first, it->second, nrow, this, filter));
+		m_prows[it->first] = CreateRow(m_grid, it->first, it->second, nrow, this, filter);
 		nrow ++;
 	}
 
 	//Add event handlers
-	for(auto p : m_prows)
+	for(auto it : m_prows)
 	{
-		p->signal_refreshDialog().connect(sigc::mem_fun(this, &FilterDialog::OnRefresh));
-		p->signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnParameterChanged));
+		it.second->signal_refreshDialog().connect(sigc::mem_fun(this, &FilterDialog::OnRefresh));
+		it.second->signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnParameterChanged));
 	}
 
 	show_all();
@@ -355,7 +355,7 @@ FilterDialog::~FilterDialog()
 		delete r;
 	m_rows.clear();
 	for(auto r : m_prows)
-		delete r;
+		delete r.second;
 	m_prows.clear();
 }
 
@@ -502,14 +502,15 @@ void FilterDialog::ConfigureInputs(FlowGraphNode* node, vector<ChannelSelectorRo
 	}
 }
 
-void FilterDialog::ConfigureParameters(FlowGraphNode* node, vector<ParameterRowBase*>& rows)
+void FilterDialog::ConfigureParameters(FlowGraphNode* node, std::map<string, ParameterRowBase*>& rows)
 {
-	for(auto row : rows)
+	for(auto it : rows)
 	{
+		auto row = it.second;
 		auto srow = dynamic_cast<ParameterRowString*>(row);
 		auto erow = dynamic_cast<ParameterRowEnum*>(row);
 		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
-		auto name = row->m_label.get_label();
+		auto name = it.first;
 
 		//Strings are easy
 		if(srow)
@@ -541,6 +542,23 @@ void FilterDialog::OnRefresh()
 
 	m_refreshing = true;
 
+	//Remove all parameters from the table before refreshing inputs, since things are going to move around
+	for(auto it : m_prows)
+	{
+		m_grid.remove(it.second->m_label);
+		m_grid.remove(it.second->m_contentbox);
+	}
+
+	OnRefreshInputs();
+	OnRefreshParameters();
+
+	m_grid.show_all();
+
+	m_refreshing = false;
+}
+
+void FilterDialog::OnRefreshInputs()
+{
 	//Remove unused inputs
 	size_t ncount = m_filter->GetInputCount();
 	size_t ocount = m_rows.size();
@@ -549,13 +567,6 @@ void FilterDialog::OnRefresh()
 		m_grid.remove(m_rows[i]->m_label);
 		m_grid.remove(m_rows[i]->m_chans);
 		delete m_rows[i];
-	}
-
-	//Remove all parameters from the table
-	for(auto p : m_prows)
-	{
-		m_grid.remove(p->m_label);
-		m_grid.remove(p->m_contentbox);
 	}
 
 	//Create new inputs
@@ -573,11 +584,25 @@ void FilterDialog::OnRefresh()
 		PopulateInputBox(m_parent, m_filter, m_rows[i], i, StreamDescriptor(NULL, 0));
 		m_rows[i]->m_chans.set_active_text(m_filter->GetInput(i).GetName());
 	}
+}
 
-	//Refresh parameters
-	for(auto p : m_prows)
+void FilterDialog::OnRefreshParameters()
+{
+	//TODO: Remove unused parameters
+
+	//Re-add existing parameters
+	size_t nrow = 2 + m_filter->GetInputCount();
+	for(auto it : m_prows)
 	{
-		auto erow = dynamic_cast<ParameterRowEnum*>(p);
+		m_grid.attach(it.second->m_label, 0, nrow, 1, 1);
+		m_grid.attach(it.second->m_contentbox, 1, nrow, 1, 1);
+		nrow ++;
+	}
+
+	//Refresh existing parameters
+	for(auto it : m_prows)
+	{
+		auto erow = dynamic_cast<ParameterRowEnum*>(it.second);
 
 		//It's an enum.
 		//Save the current value (string), if any, so we can restore it later if possible
@@ -600,16 +625,18 @@ void FilterDialog::OnRefresh()
 		}
 	}
 
-	//Remove and re-add parameters so they show up in the right place
-	for(auto p : m_prows)
+	//Add new parameters if needed (at the end)
+	for(auto it = m_filter->GetParamBegin(); it != m_filter->GetParamEnd(); it ++)
 	{
-		m_grid.attach(p->m_label, 0, irow, 1, 1);
-		m_grid.attach(p->m_contentbox, 1, irow, 1, 1);
-		irow ++;
-	}
-	m_grid.show_all();
+		//Do we already have an entry for this one?
+		auto name = it->first;
+		if(m_prows.find(name) != m_prows.end())
+			continue;
 
-	m_refreshing = false;
+		m_prows[name] = CreateRow(m_grid, name, it->second, nrow, this, m_filter);
+		nrow ++;
+	}
+
 }
 
 void FilterDialog::OnInputChanged()

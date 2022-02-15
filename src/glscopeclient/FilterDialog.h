@@ -152,7 +152,7 @@ public:
 		FlowGraphNode* node);
 
 	static void ConfigureInputs(FlowGraphNode* node, std::vector<ChannelSelectorRow*>& rows);
-	static void ConfigureParameters(FlowGraphNode* node, std::vector<ParameterRowBase*>& rows);
+	static void ConfigureParameters(FlowGraphNode* node, std::map<std::string, ParameterRowBase*>& rows);
 
 	static void PopulateInputBox(
 		OscilloscopeWindow* parent,
@@ -167,6 +167,8 @@ protected:
 	OscilloscopeWindow* m_parent;
 
 	void OnRefresh();
+	void OnRefreshInputs();
+	void OnRefreshParameters();
 	void OnInputChanged();
 	void OnParameterChanged();
 
@@ -177,7 +179,7 @@ protected:
 			Gtk::ColorButton m_channelColorButton;
 
 	std::vector<ChannelSelectorRow*> m_rows;
-	std::vector<ParameterRowBase*> m_prows;
+	std::map<std::string, ParameterRowBase*> m_prows;
 
 	bool m_refreshing;
 
