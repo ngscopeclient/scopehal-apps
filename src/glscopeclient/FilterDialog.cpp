@@ -588,7 +588,19 @@ void FilterDialog::OnRefreshInputs()
 
 void FilterDialog::OnRefreshParameters()
 {
-	//TODO: Remove unused parameters
+	//Remove any parameters we have rows for that no longer exist
+	vector<string> paramsToRemove;
+	for(auto it : m_prows)
+	{
+		auto name = it.first;
+		if(!m_filter->HasParameter(name))
+			paramsToRemove.push_back(name);
+	}
+	for(auto p : paramsToRemove)
+	{
+		delete m_prows[p];
+		m_prows.erase(p);
+	}
 
 	//Re-add existing parameters
 	size_t nrow = 2 + m_filter->GetInputCount();
