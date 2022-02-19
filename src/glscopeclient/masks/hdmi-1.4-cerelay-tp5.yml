@@ -1,0 +1,47 @@
+protocol:
+    name:       HDMI 1.4 CE Relay (TP5)
+    reference:  HDMI v1.4b figure 4-41
+displaylimits:
+    ymin:       -800
+    ymax:        800
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+
+    - points:
+        -   x:   -1
+            y: -780
+        -   x:    1
+            y: -780
+        -   x:    1
+            y: -825
+        -   x:   -1
+            y: -825
+
+    - points:
+        -   x:   -1
+            y:  780
+        -   x:    1
+            y:  780
+        -   x:    1
+            y:  825
+        -   x:   -1
+            y:  825
+
+    - points:
+        -   x: -0.31
+            y: 0
+        -   x: -0.21
+            y: 130
+        -   x: 0.21
+            y: 130
+        -   x: 0.31
+            y: 0
+        -   x: 0.21
+            y: -130
+        -   x: -0.21
+            y: -130
+
+conditions:
+    hitrate: 0

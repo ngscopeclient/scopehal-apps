@@ -1,0 +1,47 @@
+protocol:
+    name:       HDMI 1.4 sink (TP2)
+    reference:  HDMI v1.4b figure 4-32
+displaylimits:
+    ymin:       -800
+    ymax:        800
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+
+    - points:
+        -   x:   -1
+            y: -780
+        -   x:    1
+            y: -780
+        -   x:    1
+            y: -825
+        -   x:   -1
+            y: -825
+
+    - points:
+        -   x:   -1
+            y:  780
+        -   x:    1
+            y:  780
+        -   x:    1
+            y:  825
+        -   x:   -1
+            y:  825
+
+    - points:
+        -   x: -0.35
+            y: 0
+        -   x: -0.25
+            y: 75
+        -   x: 0.25
+            y: 75
+        -   x: 0.35
+            y: 0
+        -   x: 0.25
+            y: -75
+        -   x: -0.25
+            y: -75
+
+conditions:
+    hitrate: 0
