@@ -115,20 +115,6 @@ public:
 	Gtk::Button			m_browserButton;
 };
 
-class ParameterRowFilenames : public ParameterRowBase
-{
-public:
-	ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
-	virtual ~ParameterRowFilenames();
-
-	Gtk::ListViewText	m_list;
-	Gtk::Button			m_buttonAdd;
-	Gtk::Button			m_buttonRemove;
-
-	void OnAdd();
-	void OnRemove();
-};
-
 /**
 	@brief Main application window class for an oscilloscope
  */

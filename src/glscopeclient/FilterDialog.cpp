@@ -167,55 +167,6 @@ void ParameterRowFilename::OnBrowser()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ParameterRowFilenames
-
-ParameterRowFilenames::ParameterRowFilenames(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
-	: ParameterRowBase(parent, param, node)
-	, m_list(1)
-{
-	m_list.set_size_request(500, 200);
-	m_list.set_column_title(0, "Filename");
-
-	m_buttonAdd.set_label("+");
-	m_buttonRemove.set_label("-");
-
-	m_buttonAdd.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilenames::OnAdd));
-	m_buttonRemove.signal_clicked().connect(sigc::mem_fun(*this, &ParameterRowFilenames::OnRemove));
-}
-
-ParameterRowFilenames::~ParameterRowFilenames()
-{
-}
-
-void ParameterRowFilenames::OnAdd()
-{
-	Gtk::FileChooserDialog dlg(*m_parent, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
-
-	auto filter = Gtk::FileFilter::create();
-	filter->add_pattern(m_param.m_fileFilterMask);
-	filter->set_name(m_param.m_fileFilterName);
-	dlg.add_filter(filter);
-	dlg.add_button("Open", Gtk::RESPONSE_OK);
-	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-	auto response = dlg.run();
-
-	if(response != Gtk::RESPONSE_OK)
-		return;
-
-	m_list.append(dlg.get_filename());
-
-	m_changeSignal.emit();
-}
-
-void ParameterRowFilenames::OnRemove()
-{
-	auto store = Glib::RefPtr<Gtk::ListStore>::cast_dynamic(m_list.get_model());
-	store->erase(m_list.get_selection()->get_selected());
-
-	m_changeSignal.emit();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 FilterDialog::FilterDialog(
@@ -396,25 +347,6 @@ ParameterRowBase* FilterDialog::CreateRow(
 				return row;
 			}
 
-		case FilterParameter::TYPE_FILENAMES:
-			{
-				auto row = new ParameterRowFilenames(parent, param, node);
-				grid.attach(row->m_label, 0, y, 1, 1);
-					row->m_label.set_size_request(width, 1);
-					row->m_label.set_label(name);
-				grid.attach(row->m_contentbox, 1, y, 1, 1);
-					row->m_contentbox.attach(row->m_list, 0, 0, 1, 1);
-					row->m_contentbox.attach(row->m_buttonAdd, 1, 0, 1, 1);
-					row->m_contentbox.attach(row->m_buttonRemove, 2, 0, 1, 1);
-
-				//Set initial value
-				auto files = param.GetFileNames();
-				for(auto f : files)
-					row->m_list.append(f);
-
-				return row;
-			}
-
 		case FilterParameter::TYPE_ENUM:
 			{
 				auto row = new ParameterRowEnum(parent, param, node);
@@ -509,7 +441,6 @@ void FilterDialog::ConfigureParameters(FlowGraphNode* node, std::map<string, Par
 		auto row = it.second;
 		auto srow = dynamic_cast<ParameterRowString*>(row);
 		auto erow = dynamic_cast<ParameterRowEnum*>(row);
-		auto frow = dynamic_cast<ParameterRowFilenames*>(row);
 		auto name = it.first;
 
 		//Strings are easy
@@ -519,15 +450,6 @@ void FilterDialog::ConfigureParameters(FlowGraphNode* node, std::map<string, Par
 		//Enums
 		else if(erow)
 			node->GetParameter(name).ParseString(erow->m_box.get_active_text());
-
-		//List of file names
-		else if(frow)
-		{
-			vector<string> paths;
-			for(size_t j=0; j<frow->m_list.size(); j++)
-				paths.push_back(frow->m_list.get_text(j));
-			node->GetParameter(name).SetFileNames(paths);
-		}
 	}
 }
 
