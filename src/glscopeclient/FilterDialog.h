@@ -64,18 +64,8 @@ public:
 
 	FilterParameter& 	m_param;
 
-	//set true when updating dialog
+	//set true to suppress event generation when updating the dialog
 	bool				m_ignoreEvents;
-
-	sigc::signal<void>	signal_refreshDialog()
-	{ return m_needRefreshSignal; }
-
-	sigc::signal<void>	signal_changed()
-	{ return m_changeSignal; }
-
-protected:
-	sigc::signal<void>	m_needRefreshSignal;
-	sigc::signal<void>	m_changeSignal;
 };
 
 class ParameterRowString : public ParameterRowBase
@@ -98,8 +88,11 @@ public:
 
 	Gtk::ComboBoxText	m_box;
 
+	void Refresh();
+
 protected:
 	void OnChanged();
+	sigc::connection m_connection;
 };
 
 class ParameterRowFilename : public ParameterRowString
@@ -170,6 +163,11 @@ protected:
 	bool m_refreshing;
 
 	int m_cachedStreamCount;
+
+	sigc::connection m_paramConnection;
+	sigc::connection m_inputConnection;
+
+	std::vector<sigc::connection> m_paramConnections;
 };
 
 #endif

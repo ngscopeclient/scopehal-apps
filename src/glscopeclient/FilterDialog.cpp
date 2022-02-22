@@ -79,10 +79,6 @@ void ParameterRowString::OnChanged()
 		return;
 
 	m_param.ParseString(m_entry.get_text());
-	if(m_node->OnParameterChanged(m_label.get_label()))
-		m_needRefreshSignal.emit();
-
-	m_changeSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,10 +89,15 @@ ParameterRowEnum::ParameterRowEnum(Gtk::Dialog* parent, FilterParameter& param, 
 {
 	m_box.set_size_request(500, 1);
 	m_box.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::OnChanged));
+
+	m_connection = m_param.signal_enums_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::Refresh));
 }
 
 ParameterRowEnum::~ParameterRowEnum()
 {
+	//Need to disconnect signal handler since the parameter is very likely to outlive the row
+	//and we don't want to call handlers on deleted rows
+	m_connection.disconnect();
 }
 
 void ParameterRowEnum::OnChanged()
@@ -105,10 +106,23 @@ void ParameterRowEnum::OnChanged()
 		return;
 
 	m_param.ParseString(m_box.get_active_text());
-	if(m_node->OnParameterChanged(m_label.get_label()))
-		m_needRefreshSignal.emit();
+}
 
-	m_changeSignal.emit();
+void ParameterRowEnum::Refresh()
+{
+	m_ignoreEvents = true;
+
+	//Populate box
+	m_box.remove_all();
+	vector<string> names;
+	m_param.GetEnumValues(names);
+	for(auto ename : names)
+		m_box.append(ename);
+
+	//Set initial value
+	m_box.set_active_text(m_param.ToString());
+
+	m_ignoreEvents = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,10 +146,6 @@ void ParameterRowFilename::OnClear()
 {
 	m_entry.set_text("");
 	m_param.ParseString("");
-	if(m_node->OnParameterChanged(m_label.get_label()))
-		m_needRefreshSignal.emit();
-
-	m_changeSignal.emit();
 }
 
 void ParameterRowFilename::OnBrowser()
@@ -162,8 +172,6 @@ void ParameterRowFilename::OnBrowser()
 	auto str = dlg.get_filename();
 	m_entry.set_text(str);
 	m_param.ParseString(str);
-	if(m_node->OnParameterChanged(m_label.get_label()))
-		m_needRefreshSignal.emit();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -213,16 +221,32 @@ FilterDialog::FilterDialog(
 	{
 		m_prows[it->first] = CreateRow(m_grid, it->first, it->second, nrow, this, filter);
 		nrow ++;
+
+		//Make signal connections for parameters changing
+		m_paramConnections.push_back(it->second.signal_changed().connect(
+			sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
 	}
 
 	//Add event handlers
-	for(auto it : m_prows)
-	{
-		it.second->signal_refreshDialog().connect(sigc::mem_fun(this, &FilterDialog::OnRefresh));
-		it.second->signal_changed().connect(sigc::mem_fun(this, &FilterDialog::OnParameterChanged));
-	}
+	m_paramConnection = m_filter->signal_parametersChanged().connect(
+		sigc::mem_fun(this, &FilterDialog::OnRefresh));
+	m_inputConnection = m_filter->signal_inputsChanged().connect(
+		sigc::mem_fun(this, &FilterDialog::OnRefresh));
 
 	show_all();
+}
+
+FilterDialog::~FilterDialog()
+{
+	for(auto r : m_rows)
+		delete r;
+	m_rows.clear();
+	for(auto r : m_prows)
+		delete r.second;
+	m_prows.clear();
+
+	m_paramConnection.disconnect();
+	m_inputConnection.disconnect();
 }
 
 void FilterDialog::PopulateInputBox(
@@ -300,16 +324,6 @@ void FilterDialog::PopulateInputBox(
 	}
 }
 
-FilterDialog::~FilterDialog()
-{
-	for(auto r : m_rows)
-		delete r;
-	m_rows.clear();
-	for(auto r : m_prows)
-		delete r.second;
-	m_prows.clear();
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI glue
 
@@ -342,7 +356,9 @@ ParameterRowBase* FilterDialog::CreateRow(
 					row->m_contentbox.attach(row->m_browserButton, 2, 0, 1, 1);
 
 				//Set initial value
+				row->m_ignoreEvents = true;
 				row->m_entry.set_text(param.ToString());
+				row->m_ignoreEvents = false;
 
 				return row;
 			}
@@ -355,16 +371,7 @@ ParameterRowBase* FilterDialog::CreateRow(
 					row->m_label.set_label(name);
 				grid.attach(row->m_contentbox, 1, y, 1, 1);
 					row->m_contentbox.attach(row->m_box, 0, 0, 1, 1);
-
-				//Populate box
-				vector<string> names;
-				param.GetEnumValues(names);
-				for(auto ename : names)
-					row->m_box.append(ename);
-
-				//Set initial value
-				row->m_box.set_active_text(param.ToString());
-
+				row->Refresh();
 				return row;
 			}
 
@@ -380,7 +387,9 @@ ParameterRowBase* FilterDialog::CreateRow(
 				row->m_label.set_label(name);
 
 				//Set initial value
+				row->m_ignoreEvents = true;
 				row->m_entry.set_text(param.ToString());
+				row->m_ignoreEvents = false;
 
 				return row;
 			}
@@ -394,9 +403,6 @@ void FilterDialog::ConfigureDecoder()
 {
 	//See if we're using the default name
 	string old_name = m_filter->GetDisplayName();
-
-	ConfigureInputs(m_filter, m_rows);
-	ConfigureParameters(m_filter, m_prows);
 
 	m_filter->m_displaycolor = m_channelColorButton.get_color().to_string();
 
@@ -510,6 +516,11 @@ void FilterDialog::OnRefreshInputs()
 
 void FilterDialog::OnRefreshParameters()
 {
+	//Remove old signal connections
+	for(auto c : m_paramConnections)
+		c.disconnect();
+	m_paramConnections.clear();
+
 	//Remove any parameters we have rows for that no longer exist
 	vector<string> paramsToRemove;
 	for(auto it : m_prows)
@@ -533,32 +544,6 @@ void FilterDialog::OnRefreshParameters()
 		nrow ++;
 	}
 
-	//Refresh existing parameters
-	for(auto it : m_prows)
-	{
-		auto erow = dynamic_cast<ParameterRowEnum*>(it.second);
-
-		//It's an enum.
-		//Save the current value (string), if any, so we can restore it later if possible
-		if(erow)
-		{
-			erow->m_ignoreEvents = true;
-
-			auto value = erow->m_param.ToString();
-			erow->m_box.remove_all();
-
-			vector<string> names;
-			erow->m_param.GetEnumValues(names);
-			for(auto ename : names)
-				erow->m_box.append(ename);
-
-			//Set initial value
-			erow->m_box.set_active_text(value);
-
-			erow->m_ignoreEvents = false;
-		}
-	}
-
 	//Add new parameters if needed (at the end)
 	for(auto it = m_filter->GetParamBegin(); it != m_filter->GetParamEnd(); it ++)
 	{
@@ -569,8 +554,11 @@ void FilterDialog::OnRefreshParameters()
 
 		m_prows[name] = CreateRow(m_grid, name, it->second, nrow, this, m_filter);
 		nrow ++;
-	}
 
+		//Make new signal connections for parameters changing
+		m_paramConnections.push_back(it->second.signal_changed().connect(
+			sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
+	}
 }
 
 void FilterDialog::OnInputChanged()
@@ -581,6 +569,8 @@ void FilterDialog::OnInputChanged()
 
 void FilterDialog::OnParameterChanged()
 {
+	//TODO: Update the filter name?
+
 	//Re-run the filter graph
 	m_parent->RefreshAllFilters();
 

@@ -90,11 +90,19 @@ FilterGraphEditorNode::FilterGraphEditorNode(FilterGraphEditorWidget* parent, Os
 	, m_margin(2)
 	, m_column(0)
 {
-
+	auto f = dynamic_cast<Filter*>(chan);
+	if(f)
+	{
+		//start
+		m_outputsChangedConnection = f->signal_outputsChanged().connect(
+			sigc::mem_fun(this, &FilterGraphEditorNode::UpdateSize));
+	}
 }
 
 FilterGraphEditorNode::~FilterGraphEditorNode()
 {
+	m_outputsChangedConnection.disconnect();
+
 	m_parent->OnNodeDeleted(this);
 }
 
