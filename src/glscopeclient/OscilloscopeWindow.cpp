@@ -48,6 +48,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "../../lib/scopeprotocols/EyePattern.h"
+#include "../../lib/scopeprotocols/SpectrogramFilter.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -3032,13 +3033,21 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	int64_t duration = 0;
 	for(auto w : wfms)
 	{
-		size_t len = w->m_offsets.size();
-		if(len < 2)
-			continue;
-		size_t end = len - 1;
+		//Spectrograms need special treatment
+		auto spec = dynamic_cast<SpectrogramWaveform*>(w);
+		if(spec)
+			duration = max(duration, spec->GetDuration());
 
-		int64_t delta = w->m_offsets[end] + w->m_durations[end] - w->m_offsets[0];
-		duration = max(duration, delta * w->m_timescale);
+		else
+		{
+			size_t len = w->m_offsets.size();
+			if(len < 2)
+				continue;
+			size_t end = len - 1;
+
+			int64_t delta = w->m_offsets[end] + w->m_durations[end] - w->m_offsets[0];
+			duration = max(duration, delta * w->m_timescale);
+		}
 	}
 
 	//If the view is already wider than the longest waveform, don't allow further zooming
