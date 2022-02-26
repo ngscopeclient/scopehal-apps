@@ -233,6 +233,9 @@ FilterDialog::FilterDialog(
 	m_inputConnection = m_filter->signal_inputsChanged().connect(
 		sigc::mem_fun(this, &FilterDialog::OnRefresh));
 
+	//Execute initial input changes (connecting the default input to filters)
+	OnInputChanged();
+
 	show_all();
 }
 
