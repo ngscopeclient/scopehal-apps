@@ -123,6 +123,7 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay)
 {
 	//We need analog or digital data to render
+	auto area = wdata->m_area;
 	auto channel = wdata->m_channel.m_channel;
 	if( (channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
 		(channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
@@ -154,18 +155,17 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	}
 
 	//Figure out zero voltage level and scaling
-	auto height = wdata->m_area->m_height;
+	auto height = area->m_height;
 	float ybase = height/2;
-	float yscale = wdata->m_area->m_pixelsPerVolt;
+	float yscale = area->m_pixelsPerVolt;
 	if(digdat)
 	{
 		float digheight;
 
 		//Overlay?
-		auto f = dynamic_cast<Filter*>(wdata->m_channel.m_channel);
-		if((f != NULL) && f->IsOverlay())
+		if(area->m_overlayPositions.find(wdata->m_channel) != area->m_overlayPositions.end())
 		{
-			ybase = wdata->m_area->m_height - (wdata->m_area->m_overlayPositions[wdata->m_channel] + 10);
+			ybase = area->m_height - (area->m_overlayPositions[wdata->m_channel] + 10);
 			digheight = 20;
 		}
 
@@ -678,7 +678,8 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				const int threads_per_column = 64;
 
 				//Grab a few helpful variables
-				auto group = data->m_area->m_group;
+				auto area = data->m_area;
+				auto group = area->m_group;
 				int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
 				int64_t innerxoff = group->m_xAxisOffset / pdat->m_timescale;
 				int64_t fractional_offset = group->m_xAxisOffset % pdat->m_timescale;
@@ -694,18 +695,18 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				alpha_scaled = min(1.0f, alpha_scaled) * 2;
 
 				//Figure out zero voltage level and scaling
-				auto height = data->m_area->m_height;
+				auto height = area->m_height;
 				float ybase = height/2;
-				float yscale = data->m_area->m_pixelsPerVolt;
+				float yscale = area->m_pixelsPerVolt;
 				if(digdat)
 				{
 					float digheight;
 
 					//Overlay?
 					auto f = dynamic_cast<Filter*>(data->m_channel.m_channel);
-					if((f != NULL) && f->IsOverlay())
+					if(area->m_overlayPositions.find(data->m_channel) != area->m_overlayPositions.end())
 					{
-						ybase = data->m_area->m_height - (data->m_area->m_overlayPositions[data->m_channel] + 10);
+						ybase = area->m_height - (area->m_overlayPositions[data->m_channel] + 10);
 						digheight = 20;
 					}
 

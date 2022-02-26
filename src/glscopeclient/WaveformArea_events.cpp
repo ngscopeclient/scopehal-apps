@@ -1164,8 +1164,19 @@ void WaveformArea::OnDecodeSetupComplete()
 	if(m_pendingDecode->IsScalarOutput() || m_showPendingDecodeAsStats)
 		m_group->EnableStats(StreamDescriptor(m_pendingDecode, 0));
 
+	//It's an overlay. Reference it and add to our overlay list
+	else if(	(m_pendingDecode->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) ||
+				(m_pendingDecode->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX) )
+	{
+		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
+		{
+			m_pendingDecode->AddRef();
+			m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
+		}
+	}
+
 	//Create a new waveform view for the generated signal
-	else if(!m_pendingDecode->IsOverlay())
+	else
 	{
 		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
 		{
@@ -1181,16 +1192,6 @@ void WaveformArea::OnDecodeSetupComplete()
 				if(m_pendingDecode->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
 					area->m_group->m_pixelsPerXUnit = 1e-6;
 			}
-		}
-	}
-
-	//It's an overlay. Reference it and add to our overlay list
-	else
-	{
-		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
-		{
-			m_pendingDecode->AddRef();
-			m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
 		}
 	}
 
