@@ -56,14 +56,14 @@ public:
 class FilterGraphEditorNode
 {
 public:
-	FilterGraphEditorNode(FilterGraphEditorWidget* parent, OscilloscopeChannel* chan);
+	FilterGraphEditorNode(FilterGraphEditorWidget* parent, FlowGraphNode* node);
 	virtual ~FilterGraphEditorNode();
 
 	void UpdateSize();
 	void Render(const Cairo::RefPtr<Cairo::Context>& cr);
 
 	FilterGraphEditorWidget* m_parent;
-	OscilloscopeChannel* m_channel;
+	FlowGraphNode* m_node;
 	Rect m_rect;
 	bool m_positionValid;
 	int m_margin;
@@ -201,7 +201,7 @@ protected:
 
 	FilterGraphEditor* m_parent;
 
-	std::map<OscilloscopeChannel*, FilterGraphEditorNode*> m_nodes;
+	std::map<FlowGraphNode*, FilterGraphEditorNode*> m_nodes;
 
 	//Paths are indexed by destination, since an input can have only one connection
 	typedef std::pair<FilterGraphEditorNode*, size_t> NodePort;
