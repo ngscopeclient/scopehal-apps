@@ -54,7 +54,19 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Initial GUI hierarchy, title, etc
 
+	//TODO: preference for waveform area icon size
+	int size = 16;
+	string testfname = "dialog-close.png";
+	string base_path = FindDataFile("icons/" + to_string(size) + "x" + to_string(size) + "/" + testfname);
+	base_path = base_path.substr(0, base_path.length() - testfname.length());
+
 	m_frame.add(m_realframe);
+		m_realframe.set_label_widget(m_framelabelbox);
+			m_framelabelbox.pack_start(m_framelabel, Gtk::PACK_SHRINK);
+			m_framelabelbox.pack_start(m_closebutton, Gtk::PACK_SHRINK);
+				m_closebutton.set_image(*Gtk::manage(new Gtk::Image(base_path + "dialog-close.png")));
+				m_closebutton.set_relief(Gtk::RELIEF_NONE);
+				m_closebutton.signal_clicked().connect(sigc::mem_fun(*this, &WaveformGroup::OnCloseRequest));
 		m_realframe.add(m_vbox);
 			m_vbox.pack_start(m_timeline, Gtk::PACK_SHRINK);
 			m_vbox.pack_start(m_waveformBox, Gtk::PACK_EXPAND_WIDGET);
@@ -62,7 +74,7 @@ WaveformGroup::WaveformGroup(OscilloscopeWindow* parent)
 	char tmp[64];
 	snprintf(tmp, sizeof(tmp), "Waveform Group %d", m_numGroups);
 	m_numGroups ++;
-	m_realframe.set_label(tmp);
+	m_framelabel.set_label(tmp);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Statistics
@@ -124,6 +136,38 @@ WaveformGroup::~WaveformGroup()
 		Statistic* stat = row[m_treeColumns.m_statColumn];
 		delete stat;
 	}
+}
+
+void WaveformGroup::OnCloseRequest()
+{
+	//If we have no children, there's nothing to do - we're a solo, empty group
+	//TODO: maybe hide close button in this scenario?
+	auto children = m_waveformBox.get_children();
+	if(children.empty())
+		return;
+
+	//Confirm
+	auto parent = GetParent();
+	Gtk::MessageDialog dlg(
+		*parent,
+		string("Delete waveform group \"") + m_framelabel.get_label() + "\"?",
+		false,
+		Gtk::MESSAGE_QUESTION,
+		Gtk::BUTTONS_YES_NO,
+		true);
+	if(dlg.run() != Gtk::RESPONSE_YES)
+		return;
+
+	//Close each child waveform in sequence
+	for(size_t i=0; i<children.size(); i++)
+	{
+		auto w = dynamic_cast<WaveformArea*>(children[i]);
+		if(w)
+			parent->OnRemoveChannel(w);
+	}
+
+	//NOTE: We cannot call any methods that access member variables after the last OnRemoveChannel() call
+	//as the final call will result in this group being empty, and possibly deleted
 }
 
 void WaveformGroup::EnableStats(StreamDescriptor stream, size_t index)
@@ -262,7 +306,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
 	config += tmp;
 
-	config += "            name:           \"" + m_realframe.get_label() + "\"\n";
+	config += "            name:           \"" + m_framelabel.get_label() + "\"\n";
 
 	snprintf(tmp, sizeof(tmp), "            timebaseResolution: fs\n");
 	config += tmp;

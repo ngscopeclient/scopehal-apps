@@ -93,6 +93,9 @@ public:
 
 	Gtk::EventBox m_frame;
 		Gtk::Frame m_realframe;
+			Gtk::HBox m_framelabelbox;
+				Gtk::Label m_framelabel;
+				Gtk::Button m_closebutton;
 			Gtk::VBox m_vbox;
 				Timeline m_timeline;
 				Gtk::VBox m_waveformBox;
@@ -121,6 +124,8 @@ public:
 	Unit GetXAxisUnits();
 
 protected:
+	void OnCloseRequest();
+
 	void OnMeasurementButtonPressEvent(GdkEventButton* event);
 	void OnTitleButtonPressEvent(GdkEventButton* event);
 

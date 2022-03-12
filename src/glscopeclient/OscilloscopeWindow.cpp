@@ -2079,7 +2079,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		auto gn = it.second;
 		WaveformGroup* group = new WaveformGroup(this);
 		table.emplace(gn["id"].as<int>(), &group->m_frame);
-		group->m_realframe.set_label(gn["name"].as<string>());
+		group->m_framelabel.set_label(gn["name"].as<string>());
 
 		//Scale if needed
 		bool timestamps_are_ps = true;

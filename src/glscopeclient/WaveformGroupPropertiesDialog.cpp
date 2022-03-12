@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -56,7 +56,7 @@ WaveformGroupPropertiesDialog::WaveformGroupPropertiesDialog(
 			m_groupNameLabel.set_halign(Gtk::ALIGN_START);
 		m_grid.attach_next_to(m_groupNameEntry, m_groupNameLabel, Gtk::POS_RIGHT, 1, 1);
 			m_groupNameEntry.set_halign(Gtk::ALIGN_START);
-			m_groupNameEntry.set_text(group->m_realframe.get_label());
+			m_groupNameEntry.set_text(group->m_framelabel.get_label());
 
 	show_all();
 }
@@ -71,7 +71,7 @@ WaveformGroupPropertiesDialog::~WaveformGroupPropertiesDialog()
 
 void WaveformGroupPropertiesDialog::ConfigureGroup()
 {
-	m_group->m_realframe.set_label(m_groupNameEntry.get_text());
+	m_group->m_framelabel.set_label(m_groupNameEntry.get_text());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
