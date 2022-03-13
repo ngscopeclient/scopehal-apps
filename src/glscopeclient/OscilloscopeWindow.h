@@ -303,11 +303,8 @@ public:
 	void ImportComplexToNewSession(const std::string& filename, int64_t samplerate);
 	void ImportCSVToNewSession(const std::string& filename);
 	void ImportCSVToExistingSession(const std::string& filename);
-	void ImportWAVToNewSession(const std::string& filename);
-	void ImportWAVToExistingSession(const std::string& filename);
 	void DoImportBIN(const std::string& filename);
 	void DoImportVCD(const std::string& filename);
-	void DoImportTouchstone(const std::string& filename);
 	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);
 	MockOscilloscope* SetupExistingSessionForImport();
 	void OnImportComplete();

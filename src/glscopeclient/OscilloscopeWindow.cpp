@@ -833,9 +833,7 @@ void OscilloscopeWindow::OnFileImport()
 	string csvname = "Comma Separated Value (*.csv)";
 	string complexname = "Complex I/Q (*.complex*)";
 	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
-	string tname = "Touchstone S-parameter (*.s*p)";
 	string vcdname = "Value Change Dump (*.vcd)";
-	string wavname = "Microsoft WAV (*.wav)";
 
 	auto csvFilter = Gtk::FileFilter::create();
 	csvFilter->add_pattern("*.csv");
@@ -849,24 +847,14 @@ void OscilloscopeWindow::OnFileImport()
 	binFilter->add_pattern("*.bin");
 	binFilter->set_name(binname);
 
-	auto touchstoneFilter = Gtk::FileFilter::create();
-	touchstoneFilter->add_pattern("*.s*p");
-	touchstoneFilter->set_name(tname);
-
 	auto vcdFilter = Gtk::FileFilter::create();
 	vcdFilter->add_pattern("*.vcd");
 	vcdFilter->set_name(vcdname);
 
-	auto wavFilter = Gtk::FileFilter::create();
-	wavFilter->add_pattern("*.wav");
-	wavFilter->set_name(wavname);
-
 	dlg.add_filter(csvFilter);
 	dlg.add_filter(complexFilter);
 	dlg.add_filter(binFilter);
-	dlg.add_filter(touchstoneFilter);
 	dlg.add_filter(vcdFilter);
-	dlg.add_filter(wavFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 	auto response = dlg.run();
@@ -881,12 +869,8 @@ void OscilloscopeWindow::OnFileImport()
 		ImportComplexToNewSession(dlg.get_filename(), 0);
 	else if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
-	else if(filterName == wavname)
-		ImportWAVToNewSession(dlg.get_filename());
 	else if(filterName == binname)
 		DoImportBIN(dlg.get_filename());
-	else if(filterName == tname)
-		DoImportTouchstone(dlg.get_filename());
 	else if(filterName == vcdname)
 		DoImportVCD(dlg.get_filename());
 }
@@ -1090,66 +1074,6 @@ void OscilloscopeWindow::ImportCSVToExistingSession(const string& filename)
 }
 
 /**
-	@brief Import a WAV file and create a new session around it
- */
-void OscilloscopeWindow::ImportWAVToNewSession(const string& filename)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing WAV file \"%s\" to new session\n", filename.c_str());
-
-	auto scope = SetupNewSessionForImport("WAV Import", filename);
-
-	//Load the waveform
-	if(!scope->LoadWAV(filename))
-	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"WAV import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
-	}
-
-	OnImportComplete();
-}
-
-/**
-	@brief Import a WAV file into the existing session
-
-	The WAV must have the same configuration (number of channels, etc) as the originally loaded one.
-
-	TODO: support adding a WAV to an existing session by creating a new mock scope if we don't have one?
- */
-void OscilloscopeWindow::ImportWAVToExistingSession(const string& filename)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing WAV file \"%s\" to current session\n", filename.c_str());
-
-	auto scope = SetupExistingSessionForImport();
-
-	if(!scope->LoadWAV(filename))
-	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"WAV import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
-		return;
-	}
-
-	//Process the new data
-	m_historyWindows[scope]->OnWaveformDataReady();
-	OnAllWaveformsUpdated();
-}
-
-/**
 	@brief Import a Agilent/Keysight BIN file
  */
 void OscilloscopeWindow::DoImportBIN(const string& filename)
@@ -1168,36 +1092,6 @@ void OscilloscopeWindow::DoImportBIN(const string& filename)
 			Gtk::MessageDialog dlg(
 				*this,
 				"BIN import failed",
-				false,
-				Gtk::MESSAGE_ERROR,
-				Gtk::BUTTONS_OK,
-				true);
-			dlg.run();
-		}
-	}
-
-	OnImportComplete();
-}
-
-/**
-	@brief Import a Touchstone S-parameter file
- */
-void OscilloscopeWindow::DoImportTouchstone(const string& filename)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing Touchstone file \"%s\"\n", filename.c_str());
-	{
-		LogIndenter li;
-
-		auto scope = SetupNewSessionForImport("Touchstone Import", filename);
-
-		//Load the waveform
-		if(!scope->LoadTouchstone(filename))
-		{
-			Gtk::MessageDialog dlg(
-				*this,
-				"Touchstone import failed",
 				false,
 				Gtk::MESSAGE_ERROR,
 				Gtk::BUTTONS_OK,

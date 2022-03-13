@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -87,17 +87,6 @@ void ScopeApp::run(
 				m_window->ImportCSVToExistingSession(f);
 		}
 
-		else if(f.find(".wav") != string::npos)
-		{
-			if(first)
-			{
-				m_window->ImportWAVToNewSession(f);
-				first = false;
-			}
-			else
-				m_window->ImportWAVToExistingSession(f);
-		}
-
 		//For now, only allow one complex
 		else if (f.find(".complex") != string::npos)
 		{
@@ -106,11 +95,6 @@ void ScopeApp::run(
 		}
 
 		//Can only load one bin, Touchstone, or VCD
-		else if (f.find(".s") != string::npos && f[f.length()-1] == 'p')
-		{
-			m_window->DoImportTouchstone(f);
-			break;
-		}
 		else if (f.find(".bin") != string::npos)
 		{
 			m_window->DoImportBIN(f);
