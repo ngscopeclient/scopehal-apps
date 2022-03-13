@@ -831,17 +831,12 @@ void OscilloscopeWindow::OnFileImport()
 	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
 	string csvname = "Comma Separated Value (*.csv)";
-	string complexname = "Complex I/Q (*.complex*)";
 	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
 	string vcdname = "Value Change Dump (*.vcd)";
 
 	auto csvFilter = Gtk::FileFilter::create();
 	csvFilter->add_pattern("*.csv");
 	csvFilter->set_name(csvname);
-
-	auto complexFilter = Gtk::FileFilter::create();
-	complexFilter->add_pattern("*.complex*");
-	complexFilter->set_name(complexname);
 
 	auto binFilter = Gtk::FileFilter::create();
 	binFilter->add_pattern("*.bin");
@@ -852,7 +847,6 @@ void OscilloscopeWindow::OnFileImport()
 	vcdFilter->set_name(vcdname);
 
 	dlg.add_filter(csvFilter);
-	dlg.add_filter(complexFilter);
 	dlg.add_filter(binFilter);
 	dlg.add_filter(vcdFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
@@ -865,9 +859,7 @@ void OscilloscopeWindow::OnFileImport()
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	auto filterName = dlg.get_filter()->get_name();
-	if(filterName == complexname)
-		ImportComplexToNewSession(dlg.get_filename(), 0);
-	else if(filterName == csvname)
+	if(filterName == csvname)
 		ImportCSVToNewSession(dlg.get_filename());
 	else if(filterName == binname)
 		DoImportBIN(dlg.get_filename());
@@ -957,60 +949,6 @@ void OscilloscopeWindow::OnImportComplete()
 	//Process the new data
 	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
 	OnAllWaveformsUpdated();
-}
-
-void OscilloscopeWindow::ImportComplexToNewSession(const string& filename, int64_t samplerate)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing complex file \"%s\" to new session\n", filename.c_str());
-
-	if(samplerate == 0)
-	{
-		LogIndenter li;
-		LogDebug("Sample rate not specified, trying to guess from file name\n");
-
-		//Guess the sample rate from the file name if zero.
-		//If unspecified, default to 1 Msps.
-		size_t offset = filename.find("MSps");
-		if(offset != string::npos)
-		{
-			int start = offset;
-			start --;
-			while(start > 0)
-			{
-				if(isdigit(filename[start-1]))
-					start --;
-				else
-					break;
-			}
-			int len = offset - start;
-			samplerate = atof(filename.substr(start, len).c_str()) * 1e6f;
-			LogDebug("Guessed sample rate of %f Msps from file name\n", samplerate * 1e-6f);
-		}
-		else
-		{
-			LogDebug("Couldn't find a sample rate in the file name, defaulting to 1 MSps\n");
-			samplerate = 1000000;
-		}
-	}
-
-	auto scope = SetupNewSessionForImport("Complex I/Q Import", filename);
-
-	//Load the waveform
-	if(!scope->LoadComplexUnknownFormat(filename, samplerate))
-	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"Complex import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
-	}
-
-	OnImportComplete();
 }
 
 /**

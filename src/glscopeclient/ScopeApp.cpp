@@ -87,13 +87,6 @@ void ScopeApp::run(
 				m_window->ImportCSVToExistingSession(f);
 		}
 
-		//For now, only allow one complex
-		else if (f.find(".complex") != string::npos)
-		{
-			m_window->ImportComplexToNewSession(f, 0);
-			break;
-		}
-
 		//Can only load one bin, Touchstone, or VCD
 		else if (f.find(".bin") != string::npos)
 		{
