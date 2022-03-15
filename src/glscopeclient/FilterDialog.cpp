@@ -568,6 +568,7 @@ void FilterDialog::OnInputChanged()
 {
 	ConfigureInputs(m_filter, m_rows);
 	m_parent->RefreshAllFilters();
+	m_parent->ClearAllPersistence();
 }
 
 void FilterDialog::OnParameterChanged()
@@ -584,4 +585,7 @@ void FilterDialog::OnParameterChanged()
 		m_parent->OnStreamCountChanged(m_filter);
 		m_cachedStreamCount = streamcount;
 	}
+
+	//Redraw everything and clear persistence
+	m_parent->ClearAllPersistence();
 }
