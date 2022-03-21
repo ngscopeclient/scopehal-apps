@@ -739,8 +739,9 @@ void WaveformArea::CleanupGLHandles()
 	//Clean up old textures
 	m_cairoTexture.Destroy();
 	m_cairoTextureOver.Destroy();
-	for(auto& e : m_eyeColorRamp)
-		e.Destroy();
+	for(auto& it : m_eyeColorRamp)
+		it.second.Destroy();
+	m_eyeColorRamp.clear();
 
 	delete m_waveformRenderData;
 	m_waveformRenderData = NULL;
@@ -942,26 +943,20 @@ void WaveformArea::InitializeEyePass()
 	m_eyeProgram.SetVertexAttribPointer("vert", 2, 0);
 
 	//Load the eye color ramp
+	auto names = m_parent->GetEyeColorNames();
 	char tmp[1024];
-	const char* fnames[OscilloscopeWindow::NUM_EYE_COLORS];
-	fnames[OscilloscopeWindow::EYE_CRT] = "gradients/eye-gradient-crt.rgba";
-	fnames[OscilloscopeWindow::EYE_IRONBOW] = "gradients/eye-gradient-ironbow.rgba";
-	fnames[OscilloscopeWindow::EYE_KRAIN] = "gradients/eye-gradient-krain.rgba";
-	fnames[OscilloscopeWindow::EYE_RAINBOW] = "gradients/eye-gradient-rainbow.rgba";
-	fnames[OscilloscopeWindow::EYE_GRAYSCALE] = "gradients/eye-gradient-grayscale.rgba";
-	fnames[OscilloscopeWindow::EYE_VIRIDIS] = "gradients/eye-gradient-viridis.rgba";
-	for(int i=0; i<OscilloscopeWindow::NUM_EYE_COLORS; i++)
+	for(auto name : names)
 	{
-		string path = FindDataFile(fnames[i]);
+		auto path = m_parent->GetEyeColorPath(name);
 		FILE* fp = fopen(path.c_str(), "r");
 		if(!fp)
-			LogFatal("fail to open eye gradient");
+			LogFatal("fail to open eye gradient \"%s\" for name \"%s\"\n", path.c_str(), name.c_str());
 		fread(tmp, 1, 1024, fp);
 		fclose(fp);
 
-		m_eyeColorRamp[i].Bind();
+		m_eyeColorRamp[name].Bind();
 		ResetTextureFiltering();
-		m_eyeColorRamp[i].SetData(256, 1, tmp, GL_RGBA);
+		m_eyeColorRamp[name].SetData(256, 1, tmp, GL_RGBA);
 	}
 }
 

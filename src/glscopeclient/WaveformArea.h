@@ -364,7 +364,7 @@ protected:
 	VertexArray m_eyeVAO;
 	VertexBuffer m_eyeVBO;
 	Texture m_eyeTexture;
-	Texture m_eyeColorRamp[6];
+	std::map<std::string, Texture> m_eyeColorRamp;
 
 	//Spectrogram rendering
 	void RenderSpectrogram();

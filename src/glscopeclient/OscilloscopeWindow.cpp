@@ -103,8 +103,6 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 
 	m_tLastFlush = GetTime();
 
-	m_eyeColor = EYE_KRAIN;
-
 	m_totalWaveforms = 0;
 
 	//Start a timer for polling for scope updates
@@ -174,6 +172,16 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 {
 	//Initialize filter colors from preferences
 	SyncFilterColors();
+
+	//Initialize color ramps
+	m_eyeColor = "KRain";
+	m_eyeFiles["CRT"] = FindDataFile("gradients/eye-gradient-crt.rgba");
+	m_eyeFiles["Ironbow"] = FindDataFile("gradients/eye-gradient-ironbow.rgba");
+	m_eyeFiles["Rainbow"] = FindDataFile("gradients/eye-gradient-rainbow.rgba");
+	m_eyeFiles["Reverse Rainbow"] = FindDataFile("gradients/eye-gradient-reverse-rainbow.rgba");
+	m_eyeFiles["Viridis"] = FindDataFile("gradients/eye-gradient-viridis.rgba");
+	m_eyeFiles["Grayscale"] = FindDataFile("gradients/eye-gradient-grayscale.rgba");
+	m_eyeFiles["KRain"] = FindDataFile("gradients/eye-gradient-krain.rgba");
 
 	//Set up window hierarchy
 	add(m_vbox);
@@ -276,54 +284,17 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					m_viewMenu.append(m_viewEyeColorMenuItem);
 					m_viewEyeColorMenuItem.set_label("Color ramp");
 					m_viewEyeColorMenuItem.set_submenu(m_viewEyeColorMenu);
-						m_viewEyeColorMenu.append(m_eyeColorCrtItem);
-							m_eyeColorCrtItem.set_label("CRT");
-							m_eyeColorCrtItem.set_group(m_eyeColorGroup);
-							m_eyeColorCrtItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_CRT,
-									&m_eyeColorCrtItem));
-						m_viewEyeColorMenu.append(m_eyeColorGrayscaleItem);
-							m_eyeColorGrayscaleItem.set_label("Grayscale");
-							m_eyeColorGrayscaleItem.set_group(m_eyeColorGroup);
-							m_eyeColorGrayscaleItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_GRAYSCALE,
-									&m_eyeColorGrayscaleItem));
-						m_viewEyeColorMenu.append(m_eyeColorIronbowItem);
-							m_eyeColorIronbowItem.set_label("Ironbow");
-							m_eyeColorIronbowItem.set_group(m_eyeColorGroup);
-							m_eyeColorIronbowItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_IRONBOW,
-									&m_eyeColorIronbowItem));
-						m_viewEyeColorMenu.append(m_eyeColorKRainItem);
-							m_eyeColorKRainItem.set_label("KRain");
-							m_eyeColorKRainItem.set_group(m_eyeColorGroup);
-							m_eyeColorKRainItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_KRAIN,
-									&m_eyeColorKRainItem));
-						m_viewEyeColorMenu.append(m_eyeColorRainbowItem);
-							m_eyeColorRainbowItem.set_label("Rainbow");
-							m_eyeColorRainbowItem.set_group(m_eyeColorGroup);
-							m_eyeColorRainbowItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_RAINBOW,
-									&m_eyeColorRainbowItem));
-						m_viewEyeColorMenu.append(m_eyeColorViridisItem);
-							m_eyeColorViridisItem.set_label("Viridis");
-							m_eyeColorViridisItem.set_group(m_eyeColorGroup);
-							m_eyeColorViridisItem.signal_activate().connect(
-								sigc::bind<OscilloscopeWindow::EyeColor, Gtk::RadioMenuItem*>(
-									sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged),
-									OscilloscopeWindow::EYE_VIRIDIS,
-									&m_eyeColorViridisItem));
+						auto names = GetEyeColorNames();
+						for(auto n : names)
+						{
+							auto eitem = Gtk::manage(new Gtk::RadioMenuItem);
+							m_viewEyeColorMenu.append(*eitem);
+							eitem->set_label(n);
+							eitem->set_group(m_eyeColorGroup);
+							eitem->signal_activate().connect(sigc::bind<std::string, Gtk::RadioMenuItem*>(
+								sigc::mem_fun(*this, &OscilloscopeWindow::OnEyeColorChanged), n, eitem));
+						}
+						m_viewEyeColorMenu.show_all();
 			m_menu.append(m_addMenuItem);
 				m_addMenuItem.set_label("Add");
 				m_addMenuItem.set_submenu(m_addMenu);
@@ -2409,7 +2380,7 @@ void OscilloscopeWindow::OnTriggerProperties(Oscilloscope* scope)
 		a->queue_draw();
 }
 
-void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item)
+void OscilloscopeWindow::OnEyeColorChanged(string color, Gtk::RadioMenuItem* item)
 {
 	if(!item->get_active())
 		return;
@@ -2419,9 +2390,16 @@ void OscilloscopeWindow::OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* i
 		v->queue_draw();
 }
 
-OscilloscopeWindow::EyeColor OscilloscopeWindow::GetEyeColor()
+/**
+	@brief Returns a list of named color ramps
+ */
+vector<string> OscilloscopeWindow::GetEyeColorNames()
 {
-	return m_eyeColor;
+	vector<string> ret;
+	for(auto it : m_eyeFiles)
+		ret.push_back(it.first);
+	sort(ret.begin(), ret.end());
+	return ret;
 }
 
 void OscilloscopeWindow::OnHistory()

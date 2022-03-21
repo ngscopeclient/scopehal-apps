@@ -104,19 +104,13 @@ public:
 
 	void JumpToHistory(TimePoint timestamp);
 
-	enum EyeColor
-	{
-		EYE_CRT,
-		EYE_IRONBOW,
-		EYE_KRAIN,
-		EYE_RAINBOW,
-		EYE_GRAYSCALE,
-		EYE_VIRIDIS,
+	std::string GetEyeColor()
+	{ return m_eyeColor; }
 
-		NUM_EYE_COLORS
-	};
+	std::string GetEyeColorPath(const std::string& name)
+	{ return m_eyeFiles[name]; }
 
-	EyeColor GetEyeColor();
+	std::vector<std::string> GetEyeColorNames();
 
 	double GetTraceAlpha()
 	{ return m_alphaslider.get_value(); }
@@ -200,12 +194,6 @@ protected:
 					Gtk::MenuItem m_viewEyeColorMenuItem;
 						Gtk::Menu m_viewEyeColorMenu;
 							Gtk::RadioMenuItem::Group m_eyeColorGroup;
-							Gtk::RadioMenuItem m_eyeColorCrtItem;
-							Gtk::RadioMenuItem m_eyeColorGrayscaleItem;
-							Gtk::RadioMenuItem m_eyeColorIronbowItem;
-							Gtk::RadioMenuItem m_eyeColorKRainItem;
-							Gtk::RadioMenuItem m_eyeColorRainbowItem;
-							Gtk::RadioMenuItem m_eyeColorViridisItem;
 			Gtk::MenuItem m_windowMenuItem;
 				Gtk::Menu m_windowMenu;
 					Gtk::MenuItem m_windowFilterGraphItem;
@@ -288,7 +276,7 @@ public:
 		volatile float* progress,
 		volatile int* done
 		);
-	void OnEyeColorChanged(EyeColor color, Gtk::RadioMenuItem* item);
+	void OnEyeColorChanged(std::string color, Gtk::RadioMenuItem* item);
 	void OnTriggerProperties(Oscilloscope* scope);
 	void OnFullscreen();
 	void OnClearSweeps();
@@ -362,7 +350,8 @@ public:
 	bool m_toggleInProgress;
 
 	//Color ramp selected for eye patterns etc
-	EyeColor m_eyeColor;
+	std::string m_eyeColor;
+	std::map<std::string, std::string> m_eyeFiles;
 
 	//Path of the file we are currently working on (if any)
 	std::string m_currentFileName;
