@@ -4052,9 +4052,18 @@ void OscilloscopeWindow::OnAboutDialog()
 void OscilloscopeWindow::OnFilterGraph()
 {
 	if(!m_graphEditor)
+	{
 		m_graphEditor = new FilterGraphEditor(this);
-	m_graphEditor->Refresh();
-	m_graphEditor->show();
+		m_graphEditor->Refresh();
+		m_graphEditor->show();
+	}
+	else if(m_graphEditor->is_visible())
+		m_graphEditor->hide();
+	else
+	{
+		m_graphEditor->Refresh();
+		m_graphEditor->show();
+	}
 }
 
 void OscilloscopeWindow::LoadRecentlyUsedList()
