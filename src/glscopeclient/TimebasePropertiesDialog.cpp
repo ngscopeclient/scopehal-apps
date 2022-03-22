@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -342,7 +342,7 @@ TimebasePropertiesDialog::TimebasePropertiesDialog(
 
 	for(auto scope : scopes)
 	{
-		TimebasePropertiesPage* page = new TimebasePropertiesPage(scope, parent);
+		auto page = new TimebasePropertiesPage(scope, parent);
 		m_tabs.append_page(page->m_box, scope->m_nickname);
 		page->AddWidgets();
 		m_pages[scope] = page;
@@ -354,5 +354,20 @@ TimebasePropertiesDialog::TimebasePropertiesDialog(
 TimebasePropertiesDialog::~TimebasePropertiesDialog()
 {
 	for(auto it : m_pages)
+	{
+		m_tabs.remove_page(it.second->m_box);
 		delete it.second;
+	}
+}
+
+void TimebasePropertiesDialog::RefreshAll()
+{
+	for(auto it : m_pages)
+	{
+		auto page = it.second;
+		bool interleaving = page->m_scope->IsInterleaving();
+		page->RefreshSampleDepths(interleaving);
+		page->RefreshSampleRates(interleaving);
+		page->RefreshSampleModes();
+	}
 }

@@ -386,6 +386,7 @@ public:
 	FilterGraphEditor* m_graphEditor;
 	HaltConditionsDialog m_haltConditionsDialog;
 	TimebasePropertiesDialog* m_timebasePropertiesDialog;
+	void RefreshTimebasePropertiesDialog();
 	FilterDialog* m_addFilterDialog;
 	Filter* m_pendingGenerator;
 	bool OnGenerateDialogClosed(GdkEventAny* ignored);

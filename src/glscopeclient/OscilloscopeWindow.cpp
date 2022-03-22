@@ -2995,6 +2995,23 @@ void OscilloscopeWindow::OnAddChannel(StreamDescriptor chan)
 
 	auto w = DoAddChannel(chan, *m_waveformGroups.begin());
 	MoveToBestGroup(w);
+
+	RefreshTimebasePropertiesDialog();
+}
+
+void OscilloscopeWindow::RefreshTimebasePropertiesDialog()
+{
+	if(m_timebasePropertiesDialog)
+	{
+		if(m_timebasePropertiesDialog->is_visible())
+			m_timebasePropertiesDialog->RefreshAll();
+
+		else
+		{
+			delete m_timebasePropertiesDialog;
+			m_timebasePropertiesDialog = nullptr;
+		}
+	}
 }
 
 WaveformArea* OscilloscopeWindow::DoAddChannel(StreamDescriptor chan, WaveformGroup* ngroup, WaveformArea* ref)
@@ -3037,6 +3054,8 @@ void OscilloscopeWindow::OnRemoveChannel(WaveformArea* w)
 	//Clean up in case it was the last channel in the group
 	GarbageCollectGroups();
 	RefreshFilterGraphEditor();
+
+	RefreshTimebasePropertiesDialog();
 }
 
 void OscilloscopeWindow::GarbageCollectAnalyzers()
