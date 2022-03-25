@@ -902,14 +902,28 @@ void ProtocolAnalyzerWindow::OnFileExport()
 
 	//Write packet data
 	auto children = m_internalmodel->children();
-	for(auto row : children)
-	{
+	for(auto it = children.begin(); (*it); it++)	//foreach loop will crash, can't use it!
+	{												//Something is funky with ProtocolTreeModel.
+													//The invalid iterators it returns don't compare equal to end().
+													//So cast the row to bool to see if it's really the end.
+		auto row = *it;
+
 		//TODO: output individual sub-rows for child nodes?
 		//For now, just output top level rows
 		fprintf(fp, "%s,", static_cast<Glib::ustring>(row[m_columns.m_timestamp]).c_str());
 
-		for(size_t i=0; i<headers.size(); i++)
-			fprintf(fp, "%s,", static_cast<Glib::ustring>(row[m_columns.m_headers[i]]).c_str());
+		for(size_t i=0; i<headers.size(); i++) {
+			for (char c : static_cast<Glib::ustring>(row[m_columns.m_headers[i]])) {
+				if (c == ',')
+					fprintf(fp, "\\,");
+				else if (c == '\n')
+					fprintf(fp, "\\n");
+				else
+					fprintf(fp, "%c", c);
+			}
+
+			fprintf(fp, ",");
+		}
 
 		fprintf(fp, "%s\n", static_cast<Glib::ustring>(row[m_columns.m_data]).c_str());
 	}
