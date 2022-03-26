@@ -1702,10 +1702,11 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		Oscilloscope* scope = NULL;
 
 		auto transtype = inst["transport"].as<string>();
+		auto driver = inst["driver"].as<string>();
 
 		if(reconnect)
 		{
-			if(transtype == "null")
+			if( (transtype == "null") && (driver != "demo") )
 			{
 				Gtk::MessageDialog dlg(
 					*this,
@@ -1739,7 +1740,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				//All good, try to connect
 				else
 				{
-					scope = Oscilloscope::CreateOscilloscope(inst["driver"].as<string>(), transport);
+					scope = Oscilloscope::CreateOscilloscope(driver, transport);
 
 					//Sanity check make/model/serial. If mismatch, stop
 					string message;
