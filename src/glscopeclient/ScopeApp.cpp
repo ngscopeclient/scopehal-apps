@@ -91,6 +91,13 @@ void ScopeApp::run(
 			filter->GetParameter("WAV File").SetFileName(f);
 		}
 
+		//Complex I/Q: user probably will have to override format later
+		else if(f.find(".complex") != string::npos)
+		{
+			filter = Filter::CreateFilter("Complex Import", color);
+			filter->GetParameter("Complex File").SetFileName(f);
+		}
+
 		/*
 		//Can load multiple CSVs
 		if(f.find(".csv") != string::npos)
