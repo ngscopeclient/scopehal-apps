@@ -68,13 +68,30 @@ void ScopeApp::run(
 	add_window(*m_window);
 
 	//Handle file loads specified on the command line
-	bool first = true;
 	for(auto f : filesToLoad)
 	{
 		//Ignore blank files (should never happen)
 		if(f.empty())
 			continue;
 
+		//Can only load one scopesession
+		else if (f.find(".scopesession") != string::npos)
+		{
+			m_window->DoFileOpen(f, true, !nodata, reconnect);
+			break;
+		}
+
+		//For any other file format, create an import filter
+		Filter* filter = NULL;
+		string color = GetDefaultChannelColor(g_numDecodes ++);
+
+		if(f.find(".wav") != string::npos)
+		{
+			filter = Filter::CreateFilter("WAV Import", color);
+			filter->GetParameter("WAV File").SetFileName(f);
+		}
+
+		/*
 		//Can load multiple CSVs
 		if(f.find(".csv") != string::npos)
 		{
@@ -99,15 +116,30 @@ void ScopeApp::run(
 			break;
 		}
 
-		//Can only load one scopesession
-		else if (f.find(".scopesession") != string::npos)
+		*/
+
+		else if( (f.find(".s") != string::npos) && (f[f.length()-1] == 'p') )
 		{
-			m_window->DoFileOpen(f, true, !nodata, reconnect);
-			break;
+			filter = Filter::CreateFilter("Touchstone Import", color);
+			filter->GetParameter("Touchstone File").SetFileName(f);
 		}
 
 		else
+		{
 			LogError("Unrecognized file extension, ignoring %s\n", f.c_str());
+			continue;
+		}
+
+		//Name the filter
+		string base = BaseName(f);
+		size_t dot = base.find('.');
+		if(dot != string::npos)
+			base = base.substr(0, dot);
+		filter->SetDisplayName(base);
+
+		//Add all of the streams
+		for(size_t i=0; i<filter->GetStreamCount(); i++)
+			m_window->OnAddChannel(StreamDescriptor(filter, i));
 	}
 
 	m_window->present();
