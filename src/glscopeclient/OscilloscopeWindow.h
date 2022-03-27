@@ -288,8 +288,6 @@ public:
 	void OnFilterGraph();
 
 	//Helpers for importing third party file formats
-	void ImportCSVToNewSession(const std::string& filename);
-	void ImportCSVToExistingSession(const std::string& filename);
 	void DoImportBIN(const std::string& filename);
 	void DoImportVCD(const std::string& filename);
 	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);

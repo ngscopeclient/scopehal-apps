@@ -126,7 +126,7 @@ if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/impulse")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
+	#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
 endif()
 
 # Make sure all of our shared libraries are built relocatable

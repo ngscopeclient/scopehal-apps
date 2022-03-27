@@ -98,19 +98,13 @@ void ScopeApp::run(
 			filter->GetParameter("Complex File").SetFileName(f);
 		}
 
-		/*
-		//Can load multiple CSVs
-		if(f.find(".csv") != string::npos)
+		else if(f.find(".csv") != string::npos)
 		{
-			if(first)
-			{
-				m_window->ImportCSVToNewSession(f);
-				first = false;
-			}
-			else
-				m_window->ImportCSVToExistingSession(f);
+			filter = Filter::CreateFilter("CSV Import", color);
+			filter->GetParameter("CSV File").SetFileName(f);
 		}
 
+		/*
 		//Can only load one bin, Touchstone, or VCD
 		else if (f.find(".bin") != string::npos)
 		{

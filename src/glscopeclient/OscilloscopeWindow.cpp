@@ -801,13 +801,8 @@ void OscilloscopeWindow::OnFileImport()
 	//TODO: prompt to save changes to the current session
 	Gtk::FileChooserDialog dlg(*this, "Import", Gtk::FILE_CHOOSER_ACTION_OPEN);
 
-	string csvname = "Comma Separated Value (*.csv)";
 	string binname = "Agilent/Keysight/Rigol Binary Capture (*.bin)";
 	string vcdname = "Value Change Dump (*.vcd)";
-
-	auto csvFilter = Gtk::FileFilter::create();
-	csvFilter->add_pattern("*.csv");
-	csvFilter->set_name(csvname);
 
 	auto binFilter = Gtk::FileFilter::create();
 	binFilter->add_pattern("*.bin");
@@ -817,7 +812,6 @@ void OscilloscopeWindow::OnFileImport()
 	vcdFilter->add_pattern("*.vcd");
 	vcdFilter->set_name(vcdname);
 
-	dlg.add_filter(csvFilter);
 	dlg.add_filter(binFilter);
 	dlg.add_filter(vcdFilter);
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
@@ -830,9 +824,7 @@ void OscilloscopeWindow::OnFileImport()
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	auto filterName = dlg.get_filter()->get_name();
-	if(filterName == csvname)
-		ImportCSVToNewSession(dlg.get_filename());
-	else if(filterName == binname)
+	if(filterName == binname)
 		DoImportBIN(dlg.get_filename());
 	else if(filterName == vcdname)
 		DoImportVCD(dlg.get_filename());
@@ -919,66 +911,6 @@ void OscilloscopeWindow::OnImportComplete()
 
 	//Process the new data
 	m_historyWindows[m_scopes[0]]->OnWaveformDataReady();
-	OnAllWaveformsUpdated();
-}
-
-/**
-	@brief Import a CSV file and create a new session around it
- */
-void OscilloscopeWindow::ImportCSVToNewSession(const string& filename)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing CSV file \"%s\" to new session\n", filename.c_str());
-
-	auto scope = SetupNewSessionForImport("CSV Import", filename);
-
-	//Load the waveform
-	if(!scope->LoadCSV(filename))
-	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"CSV import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
-	}
-
-	OnImportComplete();
-}
-
-/**
-	@brief Import a CSV file into the existing session
-
-	The CSV must have the same configuration (number of channels, etc) as the originally loaded one.
-
-	TODO: support adding a CSV to an existing session by creating a new mock scope if we don't have one?
- */
-void OscilloscopeWindow::ImportCSVToExistingSession(const string& filename)
-{
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
-	LogDebug("Importing CSV file \"%s\" to current session\n", filename.c_str());
-
-	auto scope = SetupExistingSessionForImport();
-
-	if(!scope->LoadCSV(filename))
-	{
-		Gtk::MessageDialog dlg(
-			*this,
-			"CSV import failed",
-			false,
-			Gtk::MESSAGE_ERROR,
-			Gtk::BUTTONS_OK,
-			true);
-		dlg.run();
-		return;
-	}
-
-	//Process the new data
-	m_historyWindows[scope]->OnWaveformDataReady();
 	OnAllWaveformsUpdated();
 }
 
