@@ -289,7 +289,6 @@ public:
 
 	//Helpers for importing third party file formats
 	void DoImportBIN(const std::string& filename);
-	void DoImportVCD(const std::string& filename);
 	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);
 	MockOscilloscope* SetupExistingSessionForImport();
 	void OnImportComplete();

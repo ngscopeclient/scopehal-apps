@@ -103,6 +103,11 @@ void ScopeApp::run(
 			filter = Filter::CreateFilter("CSV Import", color);
 			filter->GetParameter("CSV File").SetFileName(f);
 		}
+		else if(f.find(".vcd") != string::npos)
+		{
+			filter = Filter::CreateFilter("VCD Import", color);
+			filter->GetParameter("VCD File").SetFileName(f);
+		}
 
 		/*
 		//Can only load one bin, Touchstone, or VCD
@@ -111,12 +116,6 @@ void ScopeApp::run(
 			m_window->DoImportBIN(f);
 			break;
 		}
-		else if (f.find(".vcd") != string::npos)
-		{
-			m_window->DoImportVCD(f);
-			break;
-		}
-
 		*/
 
 		else if( (f.find(".s") != string::npos) && (f[f.length()-1] == 'p') )
