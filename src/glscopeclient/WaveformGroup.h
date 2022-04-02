@@ -129,6 +129,8 @@ protected:
 	void OnMeasurementButtonPressEvent(GdkEventButton* event);
 	void OnTitleButtonPressEvent(GdkEventButton* event);
 
+	void HideInactiveColumns();
+
 	static int m_numGroups;
 
 	OscilloscopeWindow* m_parent;

@@ -170,6 +170,21 @@ void WaveformGroup::OnCloseRequest()
 	//as the final call will result in this group being empty, and possibly deleted
 }
 
+void WaveformGroup::HideInactiveColumns()
+{
+	//col 0 is stat name, always shown
+	for(size_t ncol=1; ncol<31; ncol ++)
+	{
+		if(m_indexToColumnMap.find(ncol) == m_indexToColumnMap.end())
+			m_measurementView.get_column(ncol)->set_visible(false);
+		else
+			m_measurementView.get_column(ncol)->set_visible();
+	}
+
+	//col 31 always shown as padding
+	m_measurementView.get_column(31)->set_visible();
+}
+
 void WaveformGroup::EnableStats(StreamDescriptor stream, size_t index)
 {
 	//If the channel is already active, do nothing
@@ -210,6 +225,7 @@ void WaveformGroup::EnableStats(StreamDescriptor stream, size_t index)
 	stream.m_channel->AddRef();
 
 	m_measurementView.show_all();
+	HideInactiveColumns();
 }
 
 void WaveformGroup::DisableStats(StreamDescriptor stream)
@@ -226,6 +242,8 @@ void WaveformGroup::DisableStats(StreamDescriptor stream)
 	m_columnToIndexMap.erase(stream);
 	m_indexToColumnMap.erase(index);
 	stream.m_channel->Release();
+
+	HideInactiveColumns();
 
 	//If no channels are visible hide the frame
 	if(m_columnToIndexMap.empty())
