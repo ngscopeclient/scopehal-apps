@@ -276,7 +276,7 @@ void ScopeThread(Oscilloscope* scope)
 	double dt = 0;
 	while(!g_app->IsTerminating())
 	{
-		//Push any pending commands
+		//Push any pending queued commands
 		if(sscope)
 			sscope->GetTransport()->FlushCommandQueue();
 
