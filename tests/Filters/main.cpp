@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ANTIKERNEL v0.1                                                                                                      *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
 	//Create some fake scope channels
 	g_scope.AddChannel(new OscilloscopeChannel(
-		&g_scope, "CH1", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "#ffffff", 1, 0, true));
+		&g_scope, "CH1", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "#ffffff", 0, true));
 
 	//Run the actual test
 	return Catch::Session().run(argc, argv);
