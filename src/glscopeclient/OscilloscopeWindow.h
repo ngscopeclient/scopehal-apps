@@ -334,8 +334,11 @@ public:
 
 	Glib::RefPtr<Gtk::CssProvider> m_css;
 
-	//Our scope connections
+	//Connections to instruments
 	std::vector<Oscilloscope*> m_scopes;
+	std::vector<FunctionGenerator*> m_funcgens;
+
+	void FindScopeFuncGens();
 
 	//Status polling
 	void OnAllWaveformsUpdated(bool reconfiguring = false, bool updateFilters = true);

@@ -84,6 +84,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	, m_waveformProcessingThread(WaveformProcessingThread, this)
 {
 	SetTitle();
+	FindScopeFuncGens();
 
 	//Initial setup
 	set_reallocate_redraws(true);
@@ -784,11 +785,22 @@ void OscilloscopeWindow::CloseSession()
 	for(auto c : children)
 		m_setupTriggerMenu.remove(*c);
 
-	//Purge our list of scopes (the app will delete them)
-	m_scopes.clear();
-
 	//Close stuff in the application, terminate threads, etc
 	g_app->ShutDownSession();
+
+	//Get rid of function generators
+	//(but only delete them if they're not also a scope)
+	for(auto gen : m_funcgens)
+	{
+		if(0 == (gen->GetInstrumentTypes() & Instrument::INST_OSCILLOSCOPE) )
+			delete gen;
+	}
+	m_funcgens.clear();
+
+	//Get rid of scopes
+	for(auto scope : m_scopes)
+		delete scope;
+	m_scopes.clear();
 
 	SetTitle();
 }
@@ -1120,6 +1132,8 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, boo
  */
 void OscilloscopeWindow::OnLoadComplete()
 {
+	FindScopeFuncGens();
+
 	//TODO: refresh measurements and protocol decodes
 
 	//Create protocol analyzers
@@ -4069,4 +4083,17 @@ void OscilloscopeWindow::RefreshInstrumentMenu()
 	}
 
 	m_recentInstrumentsMenu.show_all();
+}
+
+/**
+	@brief Search our set of oscilloscopes to see which ones have function generator capability
+ */
+void OscilloscopeWindow::FindScopeFuncGens()
+{
+	for(auto scope : m_scopes)
+	{
+		if((scope->GetInstrumentTypes() & Instrument::INST_FUNCTION) != Instrument::INST_FUNCTION)
+			continue;
+		m_funcgens.push_back(dynamic_cast<FunctionGenerator*>(scope));
+	}
 }
