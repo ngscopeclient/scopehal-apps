@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,11 +49,10 @@ public:
 
 	virtual ~ScopeApp();
 
-	std::vector<Oscilloscope*> m_scopes;
-
-	void ConnectToScopes(std::vector<std::string> scopes);
+	std::vector<Oscilloscope*> ConnectToScopes(std::vector<std::string> scopes);
 
 	virtual void run(
+		std::vector<Oscilloscope*> scopes,
 		std::vector<std::string> filesToLoad,
 		bool reconnect,
 		bool nodata,
@@ -68,7 +67,7 @@ public:
 	bool IsTerminating()
 	{ return m_terminating; }
 
-	void StartScopeThreads();
+	void StartScopeThreads(std::vector<Oscilloscope*> scopes);
 
 protected:
 	bool m_terminating;

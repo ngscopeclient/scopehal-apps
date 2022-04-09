@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -233,8 +233,14 @@ int main(int argc, char* argv[])
 	InitializePlugins();
 
 	//Connect to the scope(s)
-	g_app->ConnectToScopes(scopes);
-	g_app->run(filesToLoad, reconnect, nodata, retrigger, nodigital, nospectrum);
+	g_app->run(
+		g_app->ConnectToScopes(scopes),
+		filesToLoad,
+		reconnect,
+		nodata,
+		retrigger,
+		nodigital,
+		nospectrum);
 
 	//Global cleanup
 	ScopehalStaticCleanup();

@@ -841,7 +841,6 @@ MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& nam
 	//Create the mock scope
 	auto scope = new MockOscilloscope(name, "Generic", "12345");
 	scope->m_nickname = "import";
-	g_app->m_scopes.push_back(scope);
 	m_scopes.push_back(scope);
 
 	//Set up history for it
@@ -971,7 +970,7 @@ void OscilloscopeWindow::OnFileConnect()
 	ConnectToScope(dlg.GetConnectionString());
 }
 
-void OscilloscopeWindow::ConnectToScope(std::string path)
+void OscilloscopeWindow::ConnectToScope(string path)
 {
 	vector<string> scopes;
 	scopes.push_back(path);
@@ -979,8 +978,7 @@ void OscilloscopeWindow::ConnectToScope(std::string path)
 	//Connect to the new scope
 	CloseSession();
 	m_loadInProgress = true;
-	g_app->ConnectToScopes(scopes);
-	m_scopes = g_app->m_scopes;
+	m_scopes = g_app->ConnectToScopes(scopes);
 
 	//Clear performance counters
 	m_totalWaveforms = 0;
@@ -1165,11 +1163,12 @@ void OscilloscopeWindow::OnLoadComplete()
 
 	//Filters are refreshed by ReplayHistory(), but if we have no scopes (all waveforms created by filters)
 	//then nothing will happen. In this case, a manual refresh of the filter graph is necessary.
-	if(g_app->m_scopes.empty())
+	if(m_scopes.empty())
 		RefreshAllFilters();
 
 	//Start threads to poll scopes etc
-	g_app->StartScopeThreads();
+	else
+		g_app->StartScopeThreads(m_scopes);
 
 	//Done loading, we can render everything for good now.
 	//Issue 2 render calls since the very first render does some setup stuff
@@ -1678,7 +1677,6 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		}
 
 		//All good. Add to our list of scopes etc
-		g_app->m_scopes.push_back(scope);
 		m_scopes.push_back(scope);
 		table.emplace(inst["id"].as<int>(), scope);
 

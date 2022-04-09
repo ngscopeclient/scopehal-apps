@@ -44,6 +44,7 @@ ScopeApp::~ScopeApp()
 }
 
 void ScopeApp::run(
+	vector<Oscilloscope*> scopes,
 	vector<string> filesToLoad,
 	bool reconnect,
 	bool nodata,
@@ -64,7 +65,7 @@ void ScopeApp::run(
 	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
 #endif
 
-	m_window = new OscilloscopeWindow(m_scopes, nodigital, nospectrum);
+	m_window = new OscilloscopeWindow(scopes, nodigital, nospectrum);
 	add_window(*m_window);
 
 	//Handle file loads specified on the command line
@@ -146,7 +147,7 @@ void ScopeApp::run(
 
 	//If no scope threads are running already (from a file load), start them now
 	if(m_threads.empty())
-		StartScopeThreads();
+		StartScopeThreads(scopes);
 
 	//If retriggering, start the trigger
 	if(retrigger)
@@ -189,19 +190,14 @@ void ScopeApp::ShutDownSession()
 	}
 	m_threads.clear();
 
-	//Clean up scopes
-	for(auto scope : m_scopes)
-		delete scope;
-	m_scopes.clear();
-
 	//Back to normal mode
 	m_terminating = false;
 }
 
-void ScopeApp::StartScopeThreads()
+void ScopeApp::StartScopeThreads(vector<Oscilloscope*> scopes)
 {
 	//Start the scope threads
-	for(auto scope : m_scopes)
+	for(auto scope : scopes)
 	{
 		//Mock scopes can't trigger, so don't waste time polling them
 		if(dynamic_cast<MockOscilloscope*>(scope) != NULL)
@@ -214,8 +210,10 @@ void ScopeApp::StartScopeThreads()
 /**
 	@brief Connect to one or more scopes
  */
-void ScopeApp::ConnectToScopes(vector<string> scopes)
+vector<Oscilloscope*> ScopeApp::ConnectToScopes(vector<string> scopes)
 {
+	vector<Oscilloscope*> ret;
+
 	for(auto s : scopes)
 	{
 		//Scope format: name:driver:transport:args
@@ -259,6 +257,8 @@ void ScopeApp::ConnectToScopes(vector<string> scopes)
 
 		//All good, hook it up
 		scope->m_nickname = nick;
-		m_scopes.push_back(scope);
+		ret.push_back(scope);
 	}
+
+	return ret;
 }
