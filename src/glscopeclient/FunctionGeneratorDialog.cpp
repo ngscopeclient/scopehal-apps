@@ -1,0 +1,340 @@
+/***********************************************************************************************************************
+*                                                                                                                      *
+* glscopeclient                                                                                                        *
+*                                                                                                                      *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* All rights reserved.                                                                                                 *
+*                                                                                                                      *
+* Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
+* following conditions are met:                                                                                        *
+*                                                                                                                      *
+*    * Redistributions of source code must retain the above copyright notice, this list of conditions, and the         *
+*      following disclaimer.                                                                                           *
+*                                                                                                                      *
+*    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the       *
+*      following disclaimer in the documentation and/or other materials provided with the distribution.                *
+*                                                                                                                      *
+*    * Neither the name of the author nor the names of any contributors may be used to endorse or promote products     *
+*      derived from this software without specific prior written permission.                                           *
+*                                                                                                                      *
+* THIS SOFTWARE IS PROVIDED BY THE AUTHORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED   *
+* TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL *
+* THE AUTHORS BE HELD LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES        *
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR       *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT *
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE       *
+* POSSIBILITY OF SUCH DAMAGE.                                                                                          *
+*                                                                                                                      *
+***********************************************************************************************************************/
+
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of FunctionGeneratorDialog
+ */
+#include "glscopeclient.h"
+#include "FunctionGeneratorDialog.h"
+
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FunctionGeneratorChannelPage
+
+FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* gen, size_t channel)
+	: m_gen(gen)
+	, m_channel(channel)
+{
+	m_frame.set_label(gen->GetFunctionChannelName(channel));
+	m_frame.add(m_grid);
+
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit percent(Unit::UNIT_PERCENT);
+
+		//FIXME: need an API for this
+		vector<FunctionGenerator::WaveShape> shapes;
+		shapes.push_back(FunctionGenerator::SHAPE_SINE);
+		shapes.push_back(FunctionGenerator::SHAPE_SQUARE);
+
+		//Waveform type
+		int row = 0;
+		m_grid.attach(m_functionTypeLabel,		0, row, 1, 1);
+			m_functionTypeLabel.set_text("Waveform");
+		m_grid.attach(m_functionTypeBox,		1, row, 2, 1);
+
+		//Populate list of legal functions
+		auto curShape = gen->GetFunctionChannelShape(m_channel);
+		for(auto s : shapes)
+		{
+			string str;
+			switch(s)
+			{
+				case FunctionGenerator::SHAPE_SINE:
+					str = "Sine";
+					break;
+
+				case FunctionGenerator::SHAPE_SQUARE:
+					str = "Square";
+					break;
+
+				case FunctionGenerator::SHAPE_TRIANGLE:
+					str = "Triangle";
+					break;
+
+				case FunctionGenerator::SHAPE_PULSE:
+					str = "Pulse";
+					break;
+
+				case FunctionGenerator::SHAPE_DC:
+					str = "DC";
+					break;
+
+				case FunctionGenerator::SHAPE_NOISE:
+					str = "Noise";
+					break;
+
+				case FunctionGenerator::SHAPE_SAWTOOTH_UP:
+					str = "Sawtooth up";
+					break;
+
+				case FunctionGenerator::SHAPE_SAWTOOTH_DOWN:
+					str = "Sawtooth down";
+					break;
+
+				case FunctionGenerator::SHAPE_SINC:
+					str = "Sinc";
+					break;
+
+				case FunctionGenerator::SHAPE_GAUSSIAN:
+					str = "Gaussian";
+					break;
+
+				case FunctionGenerator::SHAPE_HALF_SINE:
+					str = "Half sine";
+					break;
+
+				default:
+					str = "Unknown";
+					break;
+			}
+
+			m_functionTypeBox.append(str);
+			if(s == curShape)
+				m_functionTypeBox.set_active_text(str);
+
+			m_waveShapes.push_back(s);
+		}
+
+		m_functionTypeBox.signal_changed().connect(
+			sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnWaveformChanged));
+
+		//Amplitude
+		row++;
+		m_grid.attach(m_amplitudeLabel,			0, row, 1, 1);
+			m_amplitudeLabel.set_text("Amplitude");
+		m_grid.attach(m_amplitudeBox,			1, row, 1, 1);
+			m_amplitudeBox.set_text(volts.PrettyPrint(gen->GetFunctionChannelAmplitude(channel)));
+			m_amplitudeBox.signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnAmplitudeChanged));
+		m_grid.attach(m_amplitudeApplyButton,	2, row, 1, 1);
+			m_amplitudeApplyButton.set_label("Apply");
+			m_amplitudeApplyButton.set_sensitive(false);
+			m_amplitudeApplyButton.signal_clicked().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnAmplitudeApply));
+
+		//Offset
+		row++;
+		m_grid.attach(m_offsetLabel,			0, row, 1, 1);
+			m_offsetLabel.set_text("Offset");
+		m_grid.attach(m_offsetBox,			1, row, 1, 1);
+			m_offsetBox.set_text(volts.PrettyPrint(gen->GetFunctionChannelOffset(channel)));
+			m_offsetBox.signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnOffsetChanged));
+		m_grid.attach(m_offsetApplyButton,	2, row, 1, 1);
+			m_offsetApplyButton.set_label("Apply");
+			m_offsetApplyButton.set_sensitive(false);
+			m_offsetApplyButton.signal_clicked().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnOffsetApply));
+
+		//Duty cycle
+		row++;
+		m_grid.attach(m_dutyLabel,			0, row, 1, 1);
+			m_dutyLabel.set_text("Duty Cycle");
+		m_grid.attach(m_dutyBox,			1, row, 2, 1);
+			m_dutyBox.set_text(percent.PrettyPrint(gen->GetFunctionChannelDutyCycle(channel)));
+			m_dutyBox.signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnDutyCycleChanged));
+
+		//On/off switch
+		row++;
+		m_grid.attach(m_oeLabel,			0, row, 1, 1);
+			m_oeLabel.set_text("Output Enable");
+		m_grid.attach(m_oeSwitch,			1, row, 1, 1);
+			m_oeSwitch.set_state(gen->GetFunctionChannelActive(channel));
+			m_oeSwitch.property_active().signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnOutputEnableChanged));
+
+		//TODO: rise/fall time
+
+	m_frame.show_all();
+}
+
+FunctionGeneratorChannelPage::~FunctionGeneratorChannelPage()
+{
+
+}
+
+void FunctionGeneratorChannelPage::OnAmplitudeApply()
+{
+	m_amplitudeApplyButton.set_sensitive(false);
+
+	Unit volts(Unit::UNIT_VOLTS);
+	m_gen->SetFunctionChannelAmplitude(m_channel, volts.ParseString(m_amplitudeBox.get_text()));
+}
+
+void FunctionGeneratorChannelPage::OnAmplitudeChanged()
+{
+	m_amplitudeApplyButton.set_sensitive();
+}
+
+void FunctionGeneratorChannelPage::OnOffsetApply()
+{
+	m_offsetApplyButton.set_sensitive(false);
+
+	Unit volts(Unit::UNIT_VOLTS);
+	m_gen->SetFunctionChannelOffset(m_channel, volts.ParseString(m_offsetBox.get_text()));
+}
+
+void FunctionGeneratorChannelPage::OnOffsetChanged()
+{
+	m_offsetApplyButton.set_sensitive();
+}
+
+void FunctionGeneratorChannelPage::OnDutyCycleChanged()
+{
+	Unit pct(Unit::UNIT_PERCENT);
+	m_gen->SetFunctionChannelDutyCycle(m_channel, pct.ParseString(m_dutyBox.get_text()));
+}
+
+void FunctionGeneratorChannelPage::OnOutputEnableChanged()
+{
+	m_gen->SetFunctionChannelActive(m_channel, m_oeSwitch.get_state());
+}
+
+void FunctionGeneratorChannelPage::OnWaveformChanged()
+{
+	auto wfm = m_waveShapes[m_functionTypeBox.get_active_row_number()];
+	m_gen->SetFunctionChannelShape(m_channel, wfm);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+FunctionGeneratorDialog::FunctionGeneratorDialog(FunctionGenerator* gen)
+	: Gtk::Dialog( string("Function Generator: ") + gen->m_nickname )
+	, m_gen(gen)
+{
+	get_vbox()->add(m_grid);
+
+	//Add each channel page
+	size_t n = gen->GetFunctionChannelCount();
+	for(size_t i=0; i<n; i++)
+	{
+		auto page = new FunctionGeneratorChannelPage(gen, i);
+		m_grid.attach(page->m_frame, 0, i, 1, 1);
+		m_pages.push_back(page);
+	}
+
+	show_all();
+}
+
+FunctionGeneratorDialog::~FunctionGeneratorDialog()
+{
+	for(auto p : m_pages)
+	{
+		m_grid.remove(p->m_frame);
+		delete p;
+	}
+}
+
+/*
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Event handlers
+
+void FunctionGeneratorDialog::AddMode(FunctionGenerator::MeasurementTypes type, const std::string& label)
+{
+	if(m_meter->GetMeasurementTypes() & type)
+	{
+		m_typeBox.append(label);
+		m_modemap[label] = type;
+	}
+}
+*/
+void FunctionGeneratorDialog::on_show()
+{
+	Gtk::Dialog::on_show();
+	show_all();
+
+	//m_meter->StartMeter();
+}
+
+void FunctionGeneratorDialog::on_hide()
+{
+	Gtk::Dialog::on_hide();
+
+	//m_meter->StopMeter();
+}
+
+/*
+void FunctionGeneratorDialog::OnInputChanged()
+{
+	m_minval = FLT_MAX;
+	m_maxval = -FLT_MAX;
+
+	auto nchan = m_inputBox.get_active_row_number();
+	m_meter->SetCurrentMeterChannel(nchan);
+
+	m_graphData.m_name = m_meter->GetMeterChannelName(nchan);
+}
+
+void FunctionGeneratorDialog::OnModeChanged()
+{
+	m_minval = FLT_MAX;
+	m_maxval = -FLT_MAX;
+
+	auto mode = m_modemap[m_typeBox.get_active_text()];
+	m_meter->SetMeterMode(mode);
+}
+
+bool FunctionGeneratorDialog::OnTimer()
+{
+	//Update text display
+	double value = m_meter->GetMeterValue();
+	m_valueBox.set_text(m_meter->GetMeterUnit().PrettyPrint(value, m_meter->GetMeterDigits()));
+
+	//Add new value to the graph and trim to fit
+	auto series = m_graphData.GetSeries("data");
+	series->push_back(GraphPoint(GetTime(), value));
+	const int max_points = 4096;
+	while(series->size() > max_points)
+		series->pop_front();
+
+	//Update graph limits
+	m_minval = min(m_minval, value);
+	m_maxval = max(m_maxval, value);
+
+	m_graph.m_minScale = m_minval;
+	m_graph.m_maxScale = m_maxval;
+	double range = abs(m_maxval - m_minval);
+	if(range > 5)
+		m_graph.m_scaleBump = 2.5;
+	else if(range >= 0.5)
+		m_graph.m_scaleBump = 0.25;
+	else if(range > 0.05)
+		m_graph.m_scaleBump = 0.1;
+	else
+		m_graph.m_scaleBump = 0.025;
+
+
+	return true;
+}
+*/

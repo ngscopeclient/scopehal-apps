@@ -52,6 +52,7 @@ class FilterGraphEditor;
 class PreferenceDialog;
 class MultimeterDialog;
 class MockOscilloscope;
+class FunctionGeneratorDialog;
 class TimebasePropertiesDialog;
 
 /**
@@ -199,6 +200,8 @@ protected:
 					Gtk::MenuItem m_windowFilterGraphItem;
 					Gtk::MenuItem m_windowAnalyzerMenuItem;
 						Gtk::Menu m_windowAnalyzerMenu;
+					Gtk::MenuItem m_windowGeneratorMenuItem;
+						Gtk::Menu m_windowGeneratorMenu;
 					Gtk::MenuItem m_windowMultimeterMenuItem;
 						Gtk::Menu m_windowMultimeterMenu;
 			Gtk::MenuItem m_helpMenuItem;
@@ -243,6 +246,9 @@ public:
 	//All of the multimeter dialogs
 	std::map<Multimeter*, MultimeterDialog*> m_meterDialogs;
 
+	//All of the function generator dialogs
+	std::map<FunctionGenerator*, FunctionGeneratorDialog*> m_functionGeneratorDialogs;
+
 	//Event handlers
 	bool OnTimer(int timer);
 
@@ -285,6 +291,7 @@ public:
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
+	void OnShowFunctionGenerator(FunctionGenerator* gen);
 	void OnFilterGraph();
 
 	//Helpers for importing third party file formats
@@ -317,6 +324,7 @@ public:
 	void RefreshMultimeterMenu();
 	void RefreshTriggerMenu();
 	void RefreshExportMenu();
+	void RefreshGeneratorsMenu();
 
 	void RefreshFilterGraphEditor()
 	{

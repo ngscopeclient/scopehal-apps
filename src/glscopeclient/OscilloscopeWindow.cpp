@@ -44,6 +44,7 @@
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
 #include "MultimeterDialog.h"
+#include "FunctionGeneratorDialog.h"
 #include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -319,6 +320,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					m_windowMenu.append(m_windowAnalyzerMenuItem);
 						m_windowAnalyzerMenuItem.set_label("Analyzer");
 						m_windowAnalyzerMenuItem.set_submenu(m_windowAnalyzerMenu);
+					m_windowMenu.append(m_windowGeneratorMenuItem);
+						m_windowGeneratorMenuItem.set_label("Generator");
+						m_windowGeneratorMenuItem.set_submenu(m_windowGeneratorMenu);
 					m_windowMenu.append(m_windowMultimeterMenuItem);
 						m_windowMultimeterMenuItem.set_label("Multimeter");
 						m_windowMultimeterMenuItem.set_submenu(m_windowMultimeterMenu);
@@ -365,6 +369,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 	RefreshMultimeterMenu();
 	RefreshTriggerMenu();
 	RefreshExportMenu();
+	RefreshGeneratorsMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -764,6 +769,8 @@ void OscilloscopeWindow::CloseSession()
 		delete w;
 	for(auto it : m_meterDialogs)
 		delete it.second;
+	for(auto it : m_functionGeneratorDialogs)
+		delete it.second;
 
 	//Clear our records of them
 	m_historyWindows.clear();
@@ -771,6 +778,7 @@ void OscilloscopeWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
 	m_meterDialogs.clear();
+	m_functionGeneratorDialogs.clear();
 
 	delete m_scopeSyncWizard;
 	m_scopeSyncWizard = NULL;
@@ -1164,6 +1172,7 @@ void OscilloscopeWindow::OnLoadComplete()
 	RefreshAnalyzerMenu();
 	RefreshMultimeterMenu();
 	RefreshTriggerMenu();
+	RefreshGeneratorsMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -4095,5 +4104,40 @@ void OscilloscopeWindow::FindScopeFuncGens()
 		if((scope->GetInstrumentTypes() & Instrument::INST_FUNCTION) != Instrument::INST_FUNCTION)
 			continue;
 		m_funcgens.push_back(dynamic_cast<FunctionGenerator*>(scope));
+	}
+}
+
+/**
+	@brief Refresh the menu of available signal generators
+ */
+void OscilloscopeWindow::RefreshGeneratorsMenu()
+{
+	//Remove the old items
+	auto children = m_windowGeneratorMenu.get_children();
+	for(auto c : children)
+		m_windowGeneratorMenu.remove(*c);
+
+	//Add new stuff
+	for(auto gen : m_funcgens)
+	{
+		auto item = Gtk::manage(new Gtk::MenuItem(gen->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<FunctionGenerator*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowFunctionGenerator), gen));
+		m_windowGeneratorMenu.append(*item);
+	}
+}
+
+void OscilloscopeWindow::OnShowFunctionGenerator(FunctionGenerator* gen)
+{
+	//Did we have a dialog for the meter already?
+	if(m_functionGeneratorDialogs.find(gen) != m_functionGeneratorDialogs.end())
+		m_functionGeneratorDialogs[gen]->show();
+
+	//Need to create it
+	else
+	{
+		auto dlg = new FunctionGeneratorDialog(gen);
+		m_functionGeneratorDialogs[gen] = dlg;
+		dlg->show();
 	}
 }
