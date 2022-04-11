@@ -44,19 +44,30 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 	: m_gen(gen)
 	, m_channel(channel)
 {
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit percent(Unit::UNIT_PERCENT);
+	Unit hz(Unit::UNIT_HZ);
+
 	m_frame.set_label(gen->GetFunctionChannelName(channel));
 	m_frame.add(m_grid);
 
-	Unit volts(Unit::UNIT_VOLTS);
-	Unit percent(Unit::UNIT_PERCENT);
+		auto shapes = gen->GetAvailableWaveformShapes(channel);
 
-		//FIXME: need an API for this
-		vector<FunctionGenerator::WaveShape> shapes;
-		shapes.push_back(FunctionGenerator::SHAPE_SINE);
-		shapes.push_back(FunctionGenerator::SHAPE_SQUARE);
+		int row = 0;
+		m_grid.attach(m_impedanceLabel,		0, row, 1, 1);
+			m_impedanceLabel.set_text("Output Impedance");
+		m_grid.attach(m_impedanceBox,		1, row, 2, 1);
+			m_impedanceBox.append("50Ω");
+			m_impedanceBox.append("High-Z");
+			if(m_gen->GetFunctionChannelOutputImpedance(channel) == FunctionGenerator::IMPEDANCE_HIGH_Z)
+				m_impedanceBox.set_active_text("High-Z");
+			else
+				m_impedanceBox.set_active_text("50Ω");
+			m_impedanceBox.signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnOutputImpedanceChanged));
 
 		//Waveform type
-		int row = 0;
+		row++;
 		m_grid.attach(m_functionTypeLabel,		0, row, 1, 1);
 			m_functionTypeLabel.set_text("Waveform");
 		m_grid.attach(m_functionTypeBox,		1, row, 2, 1);
@@ -112,6 +123,14 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 					str = "Half sine";
 					break;
 
+				case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
+					str = "PRBS (nonstandard polynomial)";
+					break;
+
+				//Arbitrary is not supported yet so don't show it in the list
+				//case FunctionGenerator::SHAPE_ARBITRARY:
+				//	continue;
+
 				default:
 					str = "Unknown";
 					break;
@@ -163,6 +182,15 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 			m_dutyBox.set_text(percent.PrettyPrint(gen->GetFunctionChannelDutyCycle(channel)));
 			m_dutyBox.signal_changed().connect(
 				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnDutyCycleChanged));
+
+		//Frequency
+		row++;
+		m_grid.attach(m_freqLabel,			0, row, 1, 1);
+			m_freqLabel.set_text("Frequency");
+		m_grid.attach(m_freqBox,			1, row, 2, 1);
+			m_freqBox.set_text(hz.PrettyPrint(gen->GetFunctionChannelFrequency(channel)));
+			m_freqBox.signal_changed().connect(
+				sigc::mem_fun(*this, &FunctionGeneratorChannelPage::OnFrequencyChanged));
 
 		//On/off switch
 		row++;
@@ -224,6 +252,33 @@ void FunctionGeneratorChannelPage::OnWaveformChanged()
 {
 	auto wfm = m_waveShapes[m_functionTypeBox.get_active_row_number()];
 	m_gen->SetFunctionChannelShape(m_channel, wfm);
+
+	//Enable or disable duty cycle
+	switch(wfm)
+	{
+		case FunctionGenerator::SHAPE_PULSE:
+		case FunctionGenerator::SHAPE_SQUARE:
+		case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
+			m_dutyBox.set_sensitive();
+			break;
+
+		default:
+			m_dutyBox.set_sensitive(false);
+	}
+}
+
+void FunctionGeneratorChannelPage::OnOutputImpedanceChanged()
+{
+	if(m_impedanceBox.get_active_row_number() == 0)
+		m_gen->SetFunctionChannelOutputImpedance(m_channel, FunctionGenerator::IMPEDANCE_50_OHM);
+	else
+		m_gen->SetFunctionChannelOutputImpedance(m_channel, FunctionGenerator::IMPEDANCE_HIGH_Z);
+}
+
+void FunctionGeneratorChannelPage::OnFrequencyChanged()
+{
+	Unit hz(Unit::UNIT_HZ);
+	m_gen->SetFunctionChannelFrequency(m_channel, hz.ParseString(m_freqBox.get_text()));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

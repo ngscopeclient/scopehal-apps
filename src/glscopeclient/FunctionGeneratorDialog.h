@@ -44,6 +44,8 @@ public:
 
 	Gtk::Frame m_frame;
 		Gtk::Grid m_grid;
+			Gtk::Label m_impedanceLabel;
+				Gtk::ComboBoxText m_impedanceBox;
 			Gtk::Label m_functionTypeLabel;
 				Gtk::ComboBoxText m_functionTypeBox;
 			Gtk::Label m_amplitudeLabel;
@@ -54,6 +56,8 @@ public:
 				Gtk::Button m_offsetApplyButton;
 			Gtk::Label m_dutyLabel;
 				Gtk::Entry m_dutyBox;
+			Gtk::Label m_freqLabel;
+				Gtk::Entry m_freqBox;
 			Gtk::Label m_oeLabel;
 				Gtk::Switch m_oeSwitch;
 
@@ -66,6 +70,8 @@ protected:
 	void OnDutyCycleChanged();
 	void OnOutputEnableChanged();
 	void OnWaveformChanged();
+	void OnOutputImpedanceChanged();
+	void OnFrequencyChanged();
 
 	FunctionGenerator* m_gen;
 	size_t m_channel;
