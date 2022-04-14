@@ -715,6 +715,12 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 
 	//Do the actual drawing
 	RenderChannelInfoBox(m_channel, cr, m_height, label, m_infoBoxRect);
+
+	if (data != NULL)
+	{
+		if (data->m_flags & WaveformBase::WAVEFORM_CLIPPING)
+			RenderChannelInfoIssueBox(m_channel, cr, "CLIPPING", m_infoBoxRect);
+	}
 }
 
 void WaveformArea::MakePathRoundedRect(
@@ -786,6 +792,54 @@ void WaveformArea::RenderChannelInfoBox(
 	cr->save();
 		cr->set_source_rgba(1, 1, 1, 1);
 		cr->move_to(labelmargin + left, bottom - theight - labelmargin);
+		tlayout->update_from_cairo_context(cr);
+		tlayout->show_in_cairo_context(cr);
+	cr->restore();
+}
+
+void WaveformArea::RenderChannelInfoIssueBox(
+		StreamDescriptor chan,
+		Cairo::RefPtr< Cairo::Context > cr,
+		std::string text,
+		Rect& box,
+		int labelmargin)
+{
+	//Set up tab stops for eye labels etc
+	Pango::TabArray tabs(1, true);
+	tabs.set_tab(0, Pango::TAB_LEFT, 300);
+
+	//Figure out text size
+	int twidth;
+	int theight;
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+	tlayout->set_tabs(tabs);
+	tlayout->set_font_description(m_infoBoxFont);
+	tlayout->set_text(text);
+	tlayout->get_pixel_size(twidth, theight);
+
+	int labelheight = theight + labelmargin*2;
+
+	Rect clipbox = box;
+	clipbox -= vec2f(0, labelheight + 1);
+	clipbox.set_height(labelheight);
+	clipbox.set_width(max(clipbox.get_width(), twidth + labelmargin*2));
+
+	cr->save();
+		//Fill background
+		MakePathRoundedRect(cr, clipbox, labelmargin);
+		cr->set_source_rgba(255, 0, 0, 0.50);
+		cr->fill_preserve();
+
+		//Draw the outline
+		cr->set_source_rgba(255, 0, 0, 1);
+		cr->set_line_width(1);
+		cr->stroke();
+	cr->restore();
+
+	//White text
+	cr->save();
+		cr->set_source_rgba(1, 1, 1, 1);
+		cr->move_to(clipbox.get_x() + labelmargin, clipbox.get_y() + labelmargin);
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	cr->restore();

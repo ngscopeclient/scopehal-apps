@@ -163,6 +163,13 @@ public:
 		return *this;
 	}
 
+	Rect& operator-=(const vec2f& rhs)
+	{
+		set_x(get_x() - rhs.x);
+		set_y(get_y() - rhs.y);
+		return *this;
+	}
+
 	vec2f center()
 	{ return vec2f(get_x() + get_width()/2, get_y() + get_height()/2); }
 
