@@ -426,6 +426,12 @@ protected:
 		std::string text,
 		Rect& box,
 		int labelmargin = 3);
+	void RenderChannelInfoIssueBox(
+		StreamDescriptor chan,
+		Cairo::RefPtr< Cairo::Context > cr,
+		std::string text,
+		Rect& box,
+		int labelmargin = 3);
 	void MakePathRoundedRect(
 		Cairo::RefPtr< Cairo::Context > cr,
 		Rect& box,
