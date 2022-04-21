@@ -373,7 +373,7 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 		//Render dotted line for trigger position
 		if(m_group->m_timeline.IsDraggingTrigger())
-			RenderTriggerTimeLine(cr, scope->GetTriggerOffset());
+			RenderTriggerTimeLine(cr, m_group->m_timeline.GetTriggerDragPosition());
 	}
 
 	RenderFFTPeaks(cr);

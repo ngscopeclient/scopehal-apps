@@ -122,6 +122,7 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 				case DRAG_TRIGGER:
 					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
 					m_dragScope = target;
+					m_currentTriggerOffsetDragPosition = m_dragScope->GetTriggerOffset();
 					m_group->m_waveformBox.queue_draw();
 					break;
 
@@ -157,7 +158,10 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 		get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
 
 		if(oldState == DRAG_TRIGGER)
+		{
+			m_dragScope->SetTriggerOffset(m_currentTriggerOffsetDragPosition);
 			m_group->m_waveformBox.queue_draw();
+		}
 	}
 	return true;
 }
@@ -191,7 +195,7 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				double sx = event->x / m_group->m_pixelsPerXUnit;
 				int64_t t = static_cast<int64_t>(round(sx)) + m_group->m_xAxisOffset;
 
-				m_dragScope->SetTriggerOffset(t);
+				m_currentTriggerOffsetDragPosition = t;
 				queue_draw();
 
 				m_group->m_waveformBox.queue_draw();
@@ -471,7 +475,13 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		auto scope = chan->GetScope();
 		if(scope == NULL)
 			return;
-		int64_t timestamp = scope->GetTriggerOffset();
+
+		int64_t timestamp;
+		if (m_dragState == DRAG_TRIGGER)
+			timestamp = m_currentTriggerOffsetDragPosition;
+		else
+			timestamp = scope->GetTriggerOffset();
+
 		double x = (timestamp - m_group->m_xAxisOffset) * xscale;
 
 		auto trig = scope->GetTrigger();

@@ -47,6 +47,9 @@ public:
 	bool IsDraggingTrigger()
 	{ return (m_dragState == DRAG_TRIGGER); }
 
+	int64_t GetTriggerDragPosition()
+	{ return m_currentTriggerOffsetDragPosition; }
+
 protected:
 
 	enum DragState
@@ -58,6 +61,7 @@ protected:
 
 	double m_dragStartX;
 	int64_t m_originalTimeOffset;
+	int64_t m_currentTriggerOffsetDragPosition;
 
 	virtual bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr);
 	virtual bool on_button_press_event(GdkEventButton* event);
