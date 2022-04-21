@@ -196,6 +196,7 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				int64_t t = static_cast<int64_t>(round(sx)) + m_group->m_xAxisOffset;
 
 				m_currentTriggerOffsetDragPosition = t;
+				m_dragScope->SetTriggerOffset(t);
 				queue_draw();
 
 				m_group->m_waveformBox.queue_draw();
