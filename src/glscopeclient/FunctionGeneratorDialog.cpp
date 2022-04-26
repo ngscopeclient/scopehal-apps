@@ -119,12 +119,32 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 					str = "Gaussian";
 					break;
 
+				case FunctionGenerator::SHAPE_LORENTZ:
+					str = "Lorentz";
+					break;
+
 				case FunctionGenerator::SHAPE_HALF_SINE:
 					str = "Half sine";
 					break;
 
 				case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
 					str = "PRBS (nonstandard polynomial)";
+					break;
+
+				case FunctionGenerator::SHAPE_EXPONENTIAL_RISE:
+					str = "Exponential Rise";
+					break;
+
+				case FunctionGenerator::SHAPE_EXPONENTIAL_DECAY:
+					str = "Exponential Decay";
+					break;
+
+				case FunctionGenerator::SHAPE_HAVERSINE:
+					str = "Haversine";
+					break;
+
+				case FunctionGenerator::SHAPE_CARDIAC:
+					str = "Cardiac";
 					break;
 
 				//Arbitrary is not supported yet so don't show it in the list
