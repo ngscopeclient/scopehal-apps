@@ -53,21 +53,18 @@ protected:
 	OscilloscopeWindow* m_oscWindow;
 	Oscilloscope* m_scope;
 
-	HzClock m_updateClock;
-
 	std::deque<std::string> m_consoleText;
 
 	Gtk::Grid m_grid;
-		Gtk::Label				m_scopeNameLabel;
-		Gtk::Box				m_scopePendingBox;
-			Gtk::Label			m_scopePendingLabel;
-			Gtk::Label			m_scopePendingTimeLabel;
+		Gtk::Grid				m_commonValuesGrid;
+			std::map<std::string, Gtk::Label*> m_commonValuesLabels;
 		Gtk::Grid				m_valuesGrid;
 			std::map<std::string, Gtk::Label*> m_valuesLabels;
 		Gtk::ScrolledWindow     m_consoleFrame; 
 			Gtk::TextView       m_console;
 				Glib::RefPtr<Gtk::TextBuffer> m_consoleBuffer;
 
+	void SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, std::string value);
 };
 
 #endif

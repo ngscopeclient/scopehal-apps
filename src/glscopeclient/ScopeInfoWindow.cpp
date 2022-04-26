@@ -53,19 +53,10 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	get_vbox()->add(m_grid);
 	m_grid.set_hexpand(true);
 
-	m_grid.attach(m_scopeNameLabel, 0, 0, 1, 1);
-		m_scopeNameLabel.set_text("Transport: " + scope->GetTransportName() + " (" + scope->GetTransportConnectionString() + ")");
-		m_scopeNameLabel.set_halign(Gtk::ALIGN_START);
+	m_grid.attach(m_commonValuesGrid, 0, 0, 1, 1);
+		m_valuesGrid.set_hexpand(true);
 
-	m_grid.attach_next_to(m_scopePendingBox, m_scopeNameLabel, Gtk::POS_BOTTOM, 1, 1);
-		m_scopePendingBox.set_hexpand(true);
-		// m_scopePendingBox.override_background_color(Gdk::RGBA("#ff0000"));
-		m_scopePendingBox.pack_start(m_scopePendingLabel, true, true);
-			m_scopePendingLabel.set_halign(Gtk::ALIGN_START);
-		m_scopePendingBox.pack_end(m_scopePendingTimeLabel);
-			m_scopePendingTimeLabel.set_halign(Gtk::ALIGN_END);
-
-	m_grid.attach_next_to(m_valuesGrid, m_scopePendingBox, Gtk::POS_BOTTOM, 1, 1);
+	m_grid.attach_next_to(m_valuesGrid, m_commonValuesGrid, Gtk::POS_BOTTOM, 1, 1);
 		m_valuesGrid.set_hexpand(true);
 
 	m_grid.attach_next_to(m_consoleFrame, m_valuesGrid, Gtk::POS_BOTTOM, 1, 1);
@@ -79,8 +70,12 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 			m_console.set_hexpand(true);
 			m_consoleBuffer = Gtk::TextBuffer::create();
 			m_console.set_buffer(m_consoleBuffer);
+		m_consoleFrame.set_margin_top(10);
 			
 		// m_consoleFrame.override_background_color(Gdk::RGBA("#ff0000"));
+
+	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Driver", m_scope->GetDriverName());
+	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Transport", m_scope->GetTransportConnectionString());
 	
 	OnWaveformDataReady();
 
@@ -100,29 +95,15 @@ void ScopeInfoWindow::OnWaveformDataReady()
 	int depth = m_scope->GetPendingWaveformCount();
 	int ms = m_oscWindow->m_framesClock.GetAverageMs() * depth;
 
+	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms", to_string(depth) + " WFMs / " + to_string(ms) + " ms");
+
 	Oscilloscope::DiagnosticValueIterator i = m_scope->GetDiagnosticValuesBegin();
 	while (i != m_scope->GetDiagnosticValuesEnd())
 	{
 		string name = (*i).first;
 		string value = (*i).second.ToString();
 
-		if (m_valuesLabels.find(name) != m_valuesLabels.end())
-		{
-			m_valuesLabels[name]->set_text(value);
-		}
-		else
-		{
-			auto nameLabel = Gtk::make_managed<Gtk::Label>(name + ":");
-			auto valueLabel = Gtk::make_managed<Gtk::Label>(value);
-			nameLabel->set_halign(Gtk::ALIGN_START);
-			nameLabel->set_hexpand(true);
-			valueLabel->set_halign(Gtk::ALIGN_END);
-
-			int row = m_valuesLabels.size();
-			m_valuesGrid.attach(*nameLabel, 0, row, 1, 1);
-			m_valuesGrid.attach(*valueLabel, 1, row, 1, 1);
-			m_valuesLabels[name] = valueLabel;
-		}
+		SetGridEntry(m_valuesLabels, m_valuesGrid, name, value);
 
 		i++;
 	}
@@ -151,8 +132,26 @@ void ScopeInfoWindow::OnWaveformDataReady()
 		adj->set_value(adj->get_upper());
 	}
 
-	m_scopePendingLabel.set_text("Pending Waveforms: " + to_string(depth));
-	m_scopePendingTimeLabel.set_text("(~" + to_string(ms) + "ms)");
-
 	// m_stdDevLabel.set_text("FPS Jitter: " + to_string(stddev) + " (stddev)" + extraInfo);
+}
+
+void ScopeInfoWindow::SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, std::string value)
+{
+	if (map.find(name) != map.end())
+	{
+		map[name]->set_text(value);
+	}
+	else
+	{
+		auto nameLabel = Gtk::make_managed<Gtk::Label>(name + ":");
+		auto valueLabel = Gtk::make_managed<Gtk::Label>(value);
+		nameLabel->set_halign(Gtk::ALIGN_START);
+		nameLabel->set_hexpand(true);
+		valueLabel->set_halign(Gtk::ALIGN_END);
+
+		int row = map.size();
+		container.attach(*nameLabel, 0, row, 1, 1);
+		container.attach(*valueLabel, 1, row, 1, 1);
+		map[name] = valueLabel;
+	}
 }
