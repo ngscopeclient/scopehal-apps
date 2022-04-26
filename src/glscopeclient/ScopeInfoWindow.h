@@ -38,6 +38,8 @@
 
 #include "HzClock.h"
 
+class ScopeInfoWindowGraph;
+
 /**
 	@brief Dialog for interacting with a Oscilloscope
  */
@@ -54,6 +56,8 @@ protected:
 	Oscilloscope* m_scope;
 
 	std::deque<std::string> m_consoleText;
+	FilterParameter m_bufferedWaveformParam;
+	FilterParameter m_bufferedWaveformTimeParam;
 
 	Gtk::Grid m_grid;
 		Gtk::Grid				m_commonValuesGrid;
@@ -64,7 +68,27 @@ protected:
 			Gtk::TextView       m_console;
 				Glib::RefPtr<Gtk::TextBuffer> m_consoleBuffer;
 
-	void SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, std::string value);
+	std::map<std::string, ScopeInfoWindowGraph*> m_graphWindows;
+	std::recursive_mutex m_graphMutex;
+
+	void SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, const FilterParameter& value);
+	void OnClickGridEntry(std::string name);
+};
+
+class ScopeInfoWindowGraph : public Gtk::Dialog
+{
+public:
+	ScopeInfoWindowGraph(std::string param);
+	virtual ~ScopeInfoWindowGraph();
+
+	void OnDataUpdate(const FilterParameter& value);
+
+protected:
+	double m_minval;
+	double m_maxval;
+
+	Graph m_graph;
+		Graphable m_graphData;
 };
 
 #endif
