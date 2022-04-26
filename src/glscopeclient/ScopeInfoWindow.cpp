@@ -162,10 +162,10 @@ void ScopeInfoWindow::SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk:
 
 		if (value.GetType() == FilterParameter::TYPE_FLOAT || value.GetType() == FilterParameter::TYPE_INT)
 		{
-			auto button = Gtk::make_managed<Gtk::Button>("G");
-			button->signal_clicked().connect(
-				sigc::bind<std::string>(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGridEntry), name));
-			container.attach(*button, 2, row, 1, 1);
+			auto graphSwitch = Gtk::make_managed<Gtk::Switch>();
+			graphSwitch->property_active().signal_changed().connect(
+				sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGridEntry), graphSwitch, name));
+			container.attach(*graphSwitch, 2, row, 1, 1);
 		}
 		
 		map[name] = valueLabel;
@@ -179,16 +179,29 @@ void ScopeInfoWindow::SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk:
 	}
 }
 
-void ScopeInfoWindow::OnClickGridEntry(std::string name)
+void ScopeInfoWindow::OnClickGridEntry(Gtk::Switch* graphSwitch, std::string name)
 {
 	lock_guard<recursive_mutex> lock(m_graphMutex);
 
-	if (m_graphWindows.find(name) == m_graphWindows.end())
+	if (graphSwitch->get_state())
 	{
-		m_graphWindows[name] = new ScopeInfoWindowGraph("Scope Info: " + m_scope->m_nickname + ": " + name);
-	}
+		if (m_graphWindows.find(name) == m_graphWindows.end())
+		{
+			m_graphWindows[name] = new ScopeInfoWindowGraph("Scope Info: " + m_scope->m_nickname + ": " + name);
+		}
 
-	m_graphWindows[name]->show();
+		m_graphWindows[name]->show();
+	}
+	else
+	{
+		if (m_graphWindows.find(name) == m_graphWindows.end())
+		{
+			LogError("Trying to hide graph window for diagnostic %s when not shown\n", name.c_str());
+			return;
+		}
+		
+		m_graphWindows[name]->hide();
+	}
 }
 
 
@@ -206,7 +219,6 @@ ScopeInfoWindowGraph::ScopeInfoWindowGraph(std::string param)
 
 	//Graph setup
 	m_graph.set_size_request(600, 100);
-	m_graph.m_units = "V";
 	m_graph.m_series.push_back(&m_graphData);
 	m_graph.m_seriesName = "data";
 	m_graph.m_axisColor = Gdk::Color("#ffffff");
@@ -237,6 +249,8 @@ void ScopeInfoWindowGraph::OnDataUpdate(const FilterParameter& param)
 
 	if (param.GetUnit() == Unit::UNIT_FS)
 		value /= 1000000000000; // Convert to ms so we don't kill the graph lib
+
+	m_graph.m_units = param.GetUnit().ToString();
 
 	auto series = m_graphData.GetSeries("data");
 	series->push_back(GraphPoint(GetTime(), value));

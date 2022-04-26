@@ -72,7 +72,7 @@ protected:
 	std::recursive_mutex m_graphMutex;
 
 	void SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, const FilterParameter& value);
-	void OnClickGridEntry(std::string name);
+	void OnClickGridEntry(Gtk::Switch* graphSwitch, std::string name);
 };
 
 class ScopeInfoWindowGraph : public Gtk::Dialog
