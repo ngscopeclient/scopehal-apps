@@ -3814,6 +3814,10 @@ void OscilloscopeWindow::RefreshMultimeterMenu()
 	//TODO: support pure multimeters
 	for(auto scope : m_scopes)
 	{
+		// May be a Multimeter instance (because the driver supports it) but the instance may not support it
+		if (!(scope->GetInstrumentTypes() & Instrument::INST_DMM))
+			continue;
+
 		auto meter = dynamic_cast<Multimeter*>(scope);
 		if(!meter)
 			continue;
@@ -4101,7 +4105,7 @@ void OscilloscopeWindow::FindScopeFuncGens()
 {
 	for(auto scope : m_scopes)
 	{
-		if((scope->GetInstrumentTypes() & Instrument::INST_FUNCTION) != Instrument::INST_FUNCTION)
+		if(!(scope->GetInstrumentTypes() & Instrument::INST_FUNCTION))
 			continue;
 		m_funcgens.push_back(dynamic_cast<FunctionGenerator*>(scope));
 	}
