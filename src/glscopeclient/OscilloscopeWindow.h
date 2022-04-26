@@ -47,10 +47,12 @@
 #include "FileProgressDialog.h"
 #include "PreferenceManager.h"
 #include "FilterGraphEditor.h"
+#include "HzClock.h"
 
 class FilterGraphEditor;
 class PreferenceDialog;
 class MultimeterDialog;
+class ScopeInfoWindow;
 class MockOscilloscope;
 class FunctionGeneratorDialog;
 class TimebasePropertiesDialog;
@@ -204,6 +206,8 @@ protected:
 						Gtk::Menu m_windowGeneratorMenu;
 					Gtk::MenuItem m_windowMultimeterMenuItem;
 						Gtk::Menu m_windowMultimeterMenu;
+					Gtk::MenuItem m_windowScopeInfoMenuItem;
+						Gtk::Menu m_windowScopeInfoMenu;
 			Gtk::MenuItem m_helpMenuItem;
 				Gtk::Menu m_helpMenu;
 					Gtk::MenuItem m_aboutMenuItem;
@@ -245,6 +249,9 @@ public:
 
 	//All of the multimeter dialogs
 	std::map<Multimeter*, MultimeterDialog*> m_meterDialogs;
+
+	//All of the scope windows
+	std::map<Oscilloscope*, ScopeInfoWindow*> m_scopeInfoWindows;
 
 	//All of the function generator dialogs
 	std::map<FunctionGenerator*, FunctionGeneratorDialog*> m_functionGeneratorDialogs;
@@ -291,6 +298,7 @@ public:
 	void OnHaltConditions();
 	void OnShowAnalyzer(ProtocolAnalyzerWindow* window);
 	void OnShowMultimeter(Multimeter* meter);
+	void OnShowScopeInfo(Oscilloscope* scope);
 	void OnShowFunctionGenerator(FunctionGenerator* gen);
 	void OnFilterGraph();
 
@@ -322,6 +330,7 @@ public:
 	void RefreshChannelsMenu();
 	void RefreshAnalyzerMenu();
 	void RefreshMultimeterMenu();
+	void RefreshScopeInfoMenu();
 	void RefreshTriggerMenu();
 	void RefreshExportMenu();
 	void RefreshGeneratorsMenu();
@@ -374,8 +383,8 @@ public:
 	//Performance counters
 	size_t m_totalWaveforms;
 
-	//WFM/s performance info
-	std::vector<double> m_lastWaveformTimes;
+	//FPS performance info
+	HzClock m_framesClock;
 
 	//Fullscreen state
 	bool m_fullscreen;

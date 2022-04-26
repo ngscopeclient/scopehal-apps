@@ -64,6 +64,7 @@ add_executable(glscopeclient
 	ProtocolAnalyzerWindow.cpp
 	ProtocolTreeModel.cpp
 	ScopeApp.cpp
+	ScopeInfoWindow.cpp
 	ScopeSyncWizard.cpp
 	Shader.cpp
 	ShaderStorageBuffer.cpp
