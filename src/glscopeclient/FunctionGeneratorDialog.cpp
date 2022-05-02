@@ -147,6 +147,114 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 					str = "Cardiac";
 					break;
 
+				case FunctionGenerator::SHAPE_STAIRCASE_UP:
+					str = "Staircase up";
+					break;
+
+				case FunctionGenerator::SHAPE_STAIRCASE_DOWN:
+					str = "Staircase down";
+					break;
+
+				case FunctionGenerator::SHAPE_STAIRCASE_UP_DOWN:
+					str = "Staircase triangular";
+					break;
+
+				case FunctionGenerator::SHAPE_NEGATIVE_PULSE:
+					str = "Negative pulse";
+					break;
+
+				case FunctionGenerator::SHAPE_LOG_RISE:
+					str = "Logarithmic rise";
+					break;
+
+				case FunctionGenerator::SHAPE_LOG_DECAY:
+					str = "Logarithmic decay";
+					break;
+
+				case FunctionGenerator::SHAPE_SQUARE_ROOT:
+					str = "Square root";
+					break;
+
+				case FunctionGenerator::SHAPE_CUBE_ROOT:
+					str = "Cube root";
+					break;
+
+				case FunctionGenerator::SHAPE_QUADRATIC:
+					str = "Quadratic";
+					break;
+
+				case FunctionGenerator::SHAPE_CUBIC:
+					str = "Cubic";
+					break;
+
+				case FunctionGenerator::SHAPE_DLORENTZ:
+					str = "DLorentz";
+					break;
+
+				case FunctionGenerator::SHAPE_GAUSSIAN_PULSE:
+					str = "Gaussian pulse";
+					break;
+
+				case FunctionGenerator::SHAPE_HAMMING:
+					str = "Hamming";
+					break;
+
+				case FunctionGenerator::SHAPE_HANNING:
+					str = "Hanning";
+					break;
+
+				case FunctionGenerator::SHAPE_KAISER:
+					str = "Kaiser";
+					break;
+
+				case FunctionGenerator::SHAPE_BLACKMAN:
+					str = "Blackman";
+					break;
+
+				case FunctionGenerator::SHAPE_GAUSSIAN_WINDOW:
+					str = "Gaussian window";
+					break;
+
+				case FunctionGenerator::SHAPE_HARRIS:
+					str = "Harris";
+					break;
+
+				case FunctionGenerator::SHAPE_BARTLETT:
+					str = "Bartlett";
+					break;
+
+				case FunctionGenerator::SHAPE_TAN:
+					str = "Tan";
+					break;
+
+				case FunctionGenerator::SHAPE_COT:
+					str = "Cot";
+					break;
+
+				case FunctionGenerator::SHAPE_SEC:
+					str = "Sec";
+					break;
+
+				case FunctionGenerator::SHAPE_CSC:
+					str = "Csc";
+					break;
+
+				case FunctionGenerator::SHAPE_ASIN:
+					str = "Asin";
+					break;
+
+				case FunctionGenerator::SHAPE_ACOS:
+					str = "Acos";
+					break;
+
+				case FunctionGenerator::SHAPE_ATAN:
+					str = "Atan";
+					break;
+
+				case FunctionGenerator::SHAPE_ACOT:
+					str = "Acot";
+					break;
+
 				//Arbitrary is not supported yet so don't show it in the list
 				//case FunctionGenerator::SHAPE_ARBITRARY:
 				//	continue;
