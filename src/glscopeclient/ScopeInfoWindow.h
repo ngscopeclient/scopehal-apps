@@ -58,6 +58,7 @@ protected:
 	std::deque<std::string> m_consoleText;
 	FilterParameter m_bufferedWaveformParam;
 	FilterParameter m_bufferedWaveformTimeParam;
+	FilterParameter m_uiDisplayRate;
 
 	Gtk::Grid m_grid;
 		Gtk::Grid				m_commonValuesGrid;

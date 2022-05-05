@@ -46,6 +46,7 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	, m_scope(scope)
 	, m_bufferedWaveformParam(FilterParameter::TYPE_INT, Unit(Unit::UNIT_COUNTS))
 	, m_bufferedWaveformTimeParam(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_FS))
+	, m_uiDisplayRate(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_HZ))
 {
 	set_skip_taskbar_hint();
 	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
@@ -99,7 +100,11 @@ ScopeInfoWindow::~ScopeInfoWindow()
 void ScopeInfoWindow::OnWaveformDataReady()
 {
 	int depth = m_scope->GetPendingWaveformCount();
-	double ms = m_oscWindow->m_framesClock.GetAverageMs() * depth;
+	double fps = m_oscWindow->m_framesClock.GetAverageMs();
+	double ms = fps * depth;
+
+	m_uiDisplayRate.SetFloatVal(fps);
+	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Rendering Rate", m_uiDisplayRate);
 
 	m_bufferedWaveformParam.SetIntVal(depth);
 	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Count)", m_bufferedWaveformParam);
