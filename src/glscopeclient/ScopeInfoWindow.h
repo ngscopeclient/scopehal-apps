@@ -38,7 +38,30 @@
 
 #include "HzClock.h"
 
-class ScopeInfoWindowGraph;
+class ShownGraph
+{
+public:
+	Graph* widget;
+	Graphable data;
+	double minval;
+	double maxval;
+};
+
+class ScopeInfoGraphWindow : public Gtk::Dialog
+{
+public:
+	ScopeInfoGraphWindow(std::string title);
+	virtual ~ScopeInfoGraphWindow();
+
+	void AddGraphedValue(std::string name, FilterParameter* value);
+	void RemoveGraphedValue(std::string name);
+	void OnValueUpdate(ShownGraph* shown, FilterParameter* value);
+
+protected:
+	Gtk::Grid m_grid;
+
+	std::map<std::string, ShownGraph> m_graphs;
+};
 
 /**
 	@brief Dialog for interacting with a Oscilloscope
@@ -56,6 +79,8 @@ protected:
 	Oscilloscope* m_scope;
 
 	std::deque<std::string> m_consoleText;
+	FilterParameter m_driver;
+	FilterParameter m_transport;
 	FilterParameter m_bufferedWaveformParam;
 	FilterParameter m_bufferedWaveformTimeParam;
 	FilterParameter m_uiDisplayRate;
@@ -69,27 +94,12 @@ protected:
 			Gtk::TextView       m_console;
 				Glib::RefPtr<Gtk::TextBuffer> m_consoleBuffer;
 
-	std::map<std::string, ScopeInfoWindowGraph*> m_graphWindows;
-	std::recursive_mutex m_graphMutex;
+	ScopeInfoGraphWindow m_graphWindow;
 
-	void SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, const FilterParameter& value);
-	void OnClickGridEntry(Gtk::Switch* graphSwitch, std::string name);
-};
-
-class ScopeInfoWindowGraph : public Gtk::Dialog
-{
-public:
-	ScopeInfoWindowGraph(std::string param);
-	virtual ~ScopeInfoWindowGraph();
-
-	void OnDataUpdate(const FilterParameter& value);
-
-protected:
-	double m_minval;
-	double m_maxval;
-
-	Graph m_graph;
-		Graphable m_graphData;
+	void BindValue(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, FilterParameter* value);
+	void OnValueUpdate(Gtk::Label* label, FilterParameter* value);
+	void OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string name, FilterParameter* value);
+	void OnGraphWindowClosed();
 };
 
 #endif

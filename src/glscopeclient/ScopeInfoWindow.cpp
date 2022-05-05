@@ -44,9 +44,12 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	: Gtk::Dialog( string("Scope Info: ") + scope->m_nickname )
 	, m_oscWindow(oscWindow)
 	, m_scope(scope)
+	, m_driver(FilterParameter::TYPE_STRING)
+	, m_transport(FilterParameter::TYPE_STRING)
 	, m_bufferedWaveformParam(FilterParameter::TYPE_INT, Unit(Unit::UNIT_COUNTS))
 	, m_bufferedWaveformTimeParam(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_FS))
 	, m_uiDisplayRate(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_HZ))
+	, m_graphWindow( string("Scope Info: ") + scope->m_nickname + string(" (Graphs)"))
 {
 	set_skip_taskbar_hint();
 	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
@@ -77,12 +80,19 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 			
 		// m_consoleFrame.override_background_color(Gdk::RGBA("#ff0000"));
 
-	FilterParameter param(FilterParameter::TYPE_STRING);
-	param.SetStringVal(m_scope->GetDriverName());
-	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Driver", param);
+	m_driver.SetStringVal(m_scope->GetDriverName());
+	m_transport.SetStringVal(m_scope->GetTransportConnectionString());
+	m_uiDisplayRate.SetFloatVal(0);
+	m_bufferedWaveformParam.SetIntVal(0);
+	m_bufferedWaveformTimeParam.SetFloatVal(0);
 
-	param.SetStringVal(m_scope->GetTransportConnectionString());
-	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Transport", param);
+	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Driver", &m_driver);
+	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Transport", &m_transport);
+	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Rendering Rate", &m_uiDisplayRate);
+	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Count)", &m_bufferedWaveformParam);
+	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Time)", &m_bufferedWaveformTimeParam);
+
+	m_graphWindow.hide();
 	
 	OnWaveformDataReady();
 
@@ -100,24 +110,19 @@ ScopeInfoWindow::~ScopeInfoWindow()
 void ScopeInfoWindow::OnWaveformDataReady()
 {
 	int depth = m_scope->GetPendingWaveformCount();
-	double fps = m_oscWindow->m_framesClock.GetAverageMs();
-	double ms = fps * depth;
+	double fps = m_oscWindow->m_framesClock.GetAverageHz();
+	double ms = m_oscWindow->m_framesClock.GetAverageMs() * depth;
 
 	m_uiDisplayRate.SetFloatVal(fps);
-	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Rendering Rate", m_uiDisplayRate);
-
 	m_bufferedWaveformParam.SetIntVal(depth);
-	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Count)", m_bufferedWaveformParam);
-
 	m_bufferedWaveformTimeParam.SetFloatVal(ms * 1000000000000);
-	SetGridEntry(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Time)", m_bufferedWaveformTimeParam);
 
-	Oscilloscope::DiagnosticValueIterator i = m_scope->GetDiagnosticValuesBegin();
-	while (i != m_scope->GetDiagnosticValuesEnd())
+	for (auto i : m_scope->GetDiagnosticsValues())
 	{
-		SetGridEntry(m_valuesLabels, m_valuesGrid, (*i).first, (*i).second);
-
-		i++;
+		if (m_valuesLabels.find(i.first) == m_valuesLabels.end())
+		{
+			BindValue(m_valuesLabels, m_valuesGrid, i.first, i.second);
+		}
 	}
 
 	if (m_scope->HasPendingDiagnosticLogMessages())
@@ -147,141 +152,174 @@ void ScopeInfoWindow::OnWaveformDataReady()
 	// m_stdDevLabel.set_text("FPS Jitter: " + to_string(stddev) + " (stddev)" + extraInfo);
 }
 
-void ScopeInfoWindow::SetGridEntry(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, const FilterParameter& value)
+void ScopeInfoWindow::BindValue(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, FilterParameter* value)
 {
-	if (map.find(name) != map.end())
+	auto nameLabel = Gtk::make_managed<Gtk::Label>(name + ":");
+	auto valueLabel = Gtk::make_managed<Gtk::Label>(value->ToString());
+	nameLabel->set_halign(Gtk::ALIGN_START);
+	nameLabel->set_hexpand(true);
+	valueLabel->set_halign(Gtk::ALIGN_END);
+
+	int row = map.size();
+	container.attach(*nameLabel, 0, row, 1, 1);
+	container.attach(*valueLabel, 1, row, 1, 1);
+
+	if (value->GetType() == FilterParameter::TYPE_FLOAT || value->GetType() == FilterParameter::TYPE_INT)
 	{
-		map[name]->set_text(value.ToString());
+		auto graphSwitch = Gtk::make_managed<Gtk::Switch>();
+		graphSwitch->property_active().signal_changed().connect(
+			sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGraphSwitch), graphSwitch, name, value));
+		container.attach(*graphSwitch, 2, row, 1, 1);
 	}
-	else
-	{
-		auto nameLabel = Gtk::make_managed<Gtk::Label>(name + ":");
-		auto valueLabel = Gtk::make_managed<Gtk::Label>(value.ToString());
-		nameLabel->set_halign(Gtk::ALIGN_START);
-		nameLabel->set_hexpand(true);
-		valueLabel->set_halign(Gtk::ALIGN_END);
+	
+	map[name] = valueLabel;
 
-		int row = map.size();
-		container.attach(*nameLabel, 0, row, 1, 1);
-		container.attach(*valueLabel, 1, row, 1, 1);
-
-		if (value.GetType() == FilterParameter::TYPE_FLOAT || value.GetType() == FilterParameter::TYPE_INT)
-		{
-			auto graphSwitch = Gtk::make_managed<Gtk::Switch>();
-			graphSwitch->property_active().signal_changed().connect(
-				sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGridEntry), graphSwitch, name));
-			container.attach(*graphSwitch, 2, row, 1, 1);
-		}
-		
-		map[name] = valueLabel;
-	}
-
-	if (m_graphWindows.find(name) != m_graphWindows.end())
-	{
-		lock_guard<recursive_mutex> lock(m_graphMutex);
-
-		m_graphWindows[name]->OnDataUpdate(value);
-	}
+	value->signal_changed().connect(
+		sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnValueUpdate), valueLabel, value));
+	OnValueUpdate(valueLabel, value);
 }
 
-void ScopeInfoWindow::OnClickGridEntry(Gtk::Switch* graphSwitch, std::string name)
+class UpdateRequest
 {
-	lock_guard<recursive_mutex> lock(m_graphMutex);
+public:
+	UpdateRequest(Gtk::Label* label, std::string str) : m_label(label), m_str(str) {};
 
+	Gtk::Label* m_label;
+	std::string m_str;
+
+	static int c_update_internal(void* p)
+	{
+		UpdateRequest* u = static_cast<UpdateRequest*>(p);
+		u->m_label->set_text(u->m_str);
+		delete u;
+		return 0;
+	}
+};
+
+void ScopeInfoWindow::OnValueUpdate(Gtk::Label* label, FilterParameter* value)
+{
+	UpdateRequest* u = new UpdateRequest(label, value->ToString());
+	g_main_context_invoke(NULL, (GSourceFunc)&UpdateRequest::c_update_internal, u);
+}
+
+void ScopeInfoWindow::OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string name, FilterParameter* value)
+{
 	if (graphSwitch->get_state())
 	{
-		if (m_graphWindows.find(name) == m_graphWindows.end())
-		{
-			m_graphWindows[name] = new ScopeInfoWindowGraph("Scope Info: " + m_scope->m_nickname + ": " + name);
-		}
-
-		m_graphWindows[name]->show();
+		m_graphWindow.AddGraphedValue(name, value);
 	}
 	else
 	{
-		if (m_graphWindows.find(name) == m_graphWindows.end())
-		{
-			LogError("Trying to hide graph window for diagnostic %s when not shown\n", name.c_str());
-			return;
-		}
-		
-		m_graphWindows[name]->hide();
+		m_graphWindow.RemoveGraphedValue(name);
 	}
 }
 
 
 
 
-ScopeInfoWindowGraph::ScopeInfoWindowGraph(std::string param)
-	: Gtk::Dialog( param )
+ScopeInfoGraphWindow::ScopeInfoGraphWindow(std::string title)
+	: Gtk::Dialog( title )
 {
 	set_skip_taskbar_hint();
 	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
 
 	set_default_size(600, 100);
 
-	get_vbox()->add(m_graph);
+	get_vbox()->add(m_grid);
+}
 
-	//Graph setup
-	m_graph.set_size_request(600, 100);
-	m_graph.m_series.push_back(&m_graphData);
-	m_graph.m_seriesName = "data";
-	m_graph.m_axisColor = Gdk::Color("#ffffff");
-	m_graph.m_backgroundColor = Gdk::Color("#101010");
-	m_graph.m_drawLegend = false;
-	m_graphData.m_color = Gdk::Color("#ff0000");
+ScopeInfoGraphWindow::~ScopeInfoGraphWindow()
+{
+
+}
+
+void ScopeInfoGraphWindow::AddGraphedValue(std::string name, FilterParameter* value)
+{
+	if (m_graphs.find(name) != m_graphs.end())
+	{
+		LogWarning("State desync between info window and info graph window\n");
+		return;
+	}
+
+	auto graph = Gtk::make_managed<Graph>();
+
+	// Relying on operator[] inserting default-constructed values
+	ShownGraph* shown = &m_graphs[name];
+	shown->widget = graph;
+	shown->minval = FLT_MAX;
+	shown->maxval = -FLT_MAX;
+
+	graph->set_size_request(600, 100);
+	graph->m_series.push_back(&shown->data);
+	graph->m_seriesName = "data";
+	graph->m_axisColor = Gdk::Color("#ffffff");
+	graph->m_backgroundColor = Gdk::Color("#101010");
+	graph->m_drawLegend = false;
+	shown->data.m_color = Gdk::Color("#ff0000");
 
 	//Default values
-	m_graph.m_minScale = 0;
-	m_graph.m_maxScale = 1;
-	m_graph.m_scaleBump = 0.1;
-	m_graph.m_sigfigs = 3;
+	graph->m_minScale = 0;
+	graph->m_maxScale = 1;
+	graph->m_scaleBump = 0.1;
+	graph->m_sigfigs = 3;
 
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
+	m_grid.attach_next_to(*graph, Gtk::POS_BOTTOM, 1, 1);
+
+	OnValueUpdate(shown, value);
+	value->signal_changed().connect(
+		sigc::bind(sigc::mem_fun(*this, &ScopeInfoGraphWindow::OnValueUpdate), shown, value));
 
 	show_all();
+	show();
 }
 
-ScopeInfoWindowGraph::~ScopeInfoWindowGraph()
+void ScopeInfoGraphWindow::OnValueUpdate(ShownGraph* shown, FilterParameter* param)
 {
+	double value = param->GetFloatVal();
 
-}
-
-void ScopeInfoWindowGraph::OnDataUpdate(const FilterParameter& param)
-{
-	double value = param.GetFloatVal();
-
-	if (param.GetUnit() == Unit::UNIT_FS)
+	if (param->GetUnit() == Unit::UNIT_FS)
 		value /= 1000000000000; // Convert to ms so we don't kill the graph lib
+	else if (param->GetUnit() == Unit::UNIT_PERCENT)
+		value *= 100; // Display to user as X/100
 
-	m_graph.m_units = param.GetUnit().ToString();
+	shown->widget->m_units = param->GetUnit().ToString();
 
-	auto series = m_graphData.GetSeries("data");
+	auto series = shown->data.GetSeries("data");
 	series->push_back(GraphPoint(GetTime(), value));
 	const int max_points = 4096;
 	while(series->size() > max_points)
 		series->pop_front();
 
 	//Update graph limits
-	m_minval = min(m_minval, value);
-	m_maxval = max(m_maxval, value);
+	shown->minval = min(shown->minval, value);
+	shown->maxval = max(shown->maxval, value);
 
-	m_graph.m_minScale = m_minval;
-	m_graph.m_maxScale = m_maxval;
-	double range = abs(m_maxval - m_minval);
+	shown->widget->m_minScale = shown->minval;
+	shown->widget->m_maxScale = shown->maxval;
+	double range = abs(shown->maxval - shown->minval);
 	if (range > 5000)
-		m_graph.m_scaleBump = 2500;
+		shown->widget->m_scaleBump = 2500;
 	else if (range > 500)
-		m_graph.m_scaleBump = 250;
+		shown->widget->m_scaleBump = 250;
 	else if (range > 50)
-		m_graph.m_scaleBump = 25;
+		shown->widget->m_scaleBump = 25;
 	else if(range > 5)
-		m_graph.m_scaleBump = 2.5;
+		shown->widget->m_scaleBump = 2.5;
 	else if(range >= 0.5)
-		m_graph.m_scaleBump = 0.25;
+		shown->widget->m_scaleBump = 0.25;
 	else if(range > 0.05)
-		m_graph.m_scaleBump = 0.1;
+		shown->widget->m_scaleBump = 0.1;
 	else
-		m_graph.m_scaleBump = 0.025;
+		shown->widget->m_scaleBump = 0.025;
+}
+
+void ScopeInfoGraphWindow::RemoveGraphedValue(std::string name)
+{
+	if (m_graphs.find(name) == m_graphs.end())
+	{
+		LogWarning("State desync between info window and info graph window\n");
+		return;
+	}
+
+	// m_graphs.erase(name);
 }
