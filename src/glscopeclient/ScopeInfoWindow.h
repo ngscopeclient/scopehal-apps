@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2022 Louis A. Goessling                                                                                *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,8 +35,6 @@
 
 #ifndef ScopeInfoWindow_h
 #define ScopeInfoWindow_h
-
-#include "HzClock.h"
 
 class ShownGraph
 {

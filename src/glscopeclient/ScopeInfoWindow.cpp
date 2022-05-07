@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2022 Louis A. Goessling                                                                                *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -101,7 +101,7 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 
 	m_graphWindow.hide();
 	
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeInfoWindow::OnTick), 33 /* 30Hz */);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeInfoWindow::OnTick), 50 /* 20Hz */);
 	OnTick();
 
 	show_all();
@@ -238,8 +238,13 @@ void ScopeInfoGraphWindow::AddGraphedValue(std::string name, FilterParameter* va
 		return;
 	}
 
+	auto unit = value->GetUnit().ToString();
+
+	if (unit == "fs")
+		unit = "ms"; // We adjust below
+
 	auto graph = Gtk::make_managed<Graph>();
-	auto label = Gtk::make_managed<Gtk::Label>(name + " (" + value->GetUnit().ToString() + ")");
+	auto label = Gtk::make_managed<Gtk::Label>(name + " (" + unit + ")");
 
 	// Relying on operator[] inserting default-constructed values
 	ShownGraph* shown = &m_graphs[name];
@@ -262,7 +267,9 @@ void ScopeInfoGraphWindow::AddGraphedValue(std::string name, FilterParameter* va
 	graph->m_maxScale = 1;
 	graph->m_scaleBump = 0.1;
 	graph->m_sigfigs = 3;
-	graph->m_units = value->GetUnit().ToString();
+	graph->m_units = unit;
+	graph->m_minRedline = -FLT_MAX;
+	graph->m_maxRedline = FLT_MAX;
 
 	m_grid.attach_next_to(*label, Gtk::POS_BOTTOM, 1, 1);
 	m_grid.attach_next_to(*graph, Gtk::POS_BOTTOM, 1, 1);
@@ -279,8 +286,8 @@ void ScopeInfoGraphWindow::DoValueUpdate(ShownGraph* shown)
 
 	if (shown->param->GetUnit() == Unit::UNIT_FS)
 		value /= 1000000000000; // Convert to ms so we don't kill the graph lib
-	// else if (shown->param->GetUnit() == Unit::UNIT_PERCENT)
-	// 	value *= 100; // Display to user as X/100
+	else if (shown->param->GetUnit() == Unit::UNIT_PERCENT)
+		value *= 100; // Display to user as X/100
 
 	auto series = shown->data.GetSeries("data");
 	series->push_back(GraphPoint(GetTime(), value));
@@ -292,23 +299,11 @@ void ScopeInfoGraphWindow::DoValueUpdate(ShownGraph* shown)
 	shown->minval = min(shown->minval, value);
 	shown->maxval = max(shown->maxval, value);
 
-	shown->graph->m_minScale = shown->minval;
-	shown->graph->m_maxScale = shown->maxval;
-	double range = abs(shown->maxval - shown->minval);
-	if (range > 5000)
-		shown->graph->m_scaleBump = 2500;
-	else if (range > 500)
-		shown->graph->m_scaleBump = 250;
-	else if (range > 50)
-		shown->graph->m_scaleBump = 25;
-	else if(range > 5)
-		shown->graph->m_scaleBump = 2.5;
-	else if(range >= 0.5)
-		shown->graph->m_scaleBump = 0.25;
-	else if(range > 0.05)
-		shown->graph->m_scaleBump = 0.1;
-	else
-		shown->graph->m_scaleBump = 0.025;
+	double eff_min = shown->minval * 0.90;
+	double eff_max = shown->maxval * 1.10;
+	shown->graph->m_minScale = eff_min;
+	shown->graph->m_maxScale = eff_max;
+	shown->graph->m_scaleBump = abs(eff_max - eff_min) / 4.1;
 }
 
 void ScopeInfoGraphWindow::OnTick()

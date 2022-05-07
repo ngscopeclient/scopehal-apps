@@ -47,7 +47,7 @@
 #include "FileProgressDialog.h"
 #include "PreferenceManager.h"
 #include "FilterGraphEditor.h"
-#include "HzClock.h"
+#include "../xptools/HzClock.h"
 
 class FilterGraphEditor;
 class PreferenceDialog;
