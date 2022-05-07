@@ -49,6 +49,7 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	, m_bufferedWaveformParam(FilterParameter::TYPE_INT, Unit(Unit::UNIT_COUNTS))
 	, m_bufferedWaveformTimeParam(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_FS))
 	, m_uiDisplayRate(FilterParameter::TYPE_FLOAT, Unit(Unit::UNIT_HZ))
+	, m_saveButton("Save Diagnostics")
 	, m_graphWindow( string("Scope Info: ") + scope->m_nickname + string(" (Graphs)"))
 {
 	set_skip_taskbar_hint();
@@ -77,6 +78,10 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 			m_consoleBuffer = Gtk::TextBuffer::create();
 			m_console.set_buffer(m_consoleBuffer);
 		m_consoleFrame.set_margin_top(10);
+
+	m_grid.attach_next_to(m_saveButton, m_consoleFrame, Gtk::POS_BOTTOM, 1, 1);
+		m_saveButton.signal_clicked().connect(
+			sigc::mem_fun(*this, &ScopeInfoWindow::OnSaveClicked));
 			
 		// m_consoleFrame.override_background_color(Gdk::RGBA("#ff0000"));
 
@@ -156,7 +161,7 @@ bool ScopeInfoWindow::OnTick()
 		}
 		while (m_scope->HasPendingDiagnosticLogMessages());
 
-		while (m_consoleText.size() > 50)
+		while (m_consoleText.size() > 500)
 		{
 			m_consoleText.pop_front();
 		}
@@ -209,6 +214,57 @@ void ScopeInfoWindow::OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string n
 	{
 		m_graphWindow.RemoveGraphedValue(name);
 	}
+}
+
+void ScopeInfoWindow::OnSaveClicked()
+{
+	//Prompt for the file
+	Gtk::FileChooserDialog dlg(*this, "Save Diagnostics", Gtk::FILE_CHOOSER_ACTION_SAVE);
+	auto filter = Gtk::FileFilter::create();
+	filter->add_pattern("*.txt");
+	filter->set_name("Text files (*.txt)");
+	dlg.add_filter(filter);
+	dlg.add_button("Save", Gtk::RESPONSE_OK);
+	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+	dlg.set_do_overwrite_confirmation();
+	auto response = dlg.run();
+	if(response != Gtk::RESPONSE_OK)
+		return;
+
+	//Write initial headers
+	auto fname = dlg.get_filename();
+	FILE* fp = fopen(fname.c_str(), "w");
+	if(!fp)
+	{
+		string msg = string("Output file") + fname + " cannot be opened";
+		Gtk::MessageDialog errdlg(msg, false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+		errdlg.set_title("Cannot save diagnostics\n");
+		errdlg.run();
+		return;
+	}
+
+	fprintf(fp, "[Basic Info]\n");
+
+	fprintf(fp, "Scope Driver = %s\n", m_scope->GetDriverName().c_str());
+	fprintf(fp, "Scope Transport String = %s\n", m_scope->GetTransportConnectionString().c_str());
+	fprintf(fp, "Scope Pending Waveforms = %ld\n", m_scope->GetPendingWaveformCount());
+	fprintf(fp, "Main UI Render Rate = %f Hz\n", m_oscWindow->m_framesClock.GetAverageHz());
+
+	fprintf(fp, "\n[Diagnostic Parameters]\n");
+
+	for (auto& i : m_scope->GetDiagnosticsValues())
+	{
+		fprintf(fp, "%s = %s\n", i.first.c_str(), i.second->ToString().c_str());
+	}
+
+	fprintf(fp, "\n[Diagnostic Log]\n");
+
+	for (auto& i : m_consoleText)
+	{
+		fprintf(fp, "%s\n", i.c_str());
+	}
+
+	fclose(fp);
 }
 
 

@@ -94,6 +94,7 @@ protected:
 		Gtk::ScrolledWindow     m_consoleFrame; 
 			Gtk::TextView       m_console;
 				Glib::RefPtr<Gtk::TextBuffer> m_consoleBuffer;
+		Gtk::Button m_saveButton;
 
 	ScopeInfoGraphWindow m_graphWindow;
 
@@ -101,6 +102,7 @@ protected:
 	void OnValueUpdate(Gtk::Label* label, FilterParameter* value);
 	void OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string name, FilterParameter* value);
 	void OnGraphWindowClosed();
+	void OnSaveClicked();
 	bool OnTick();
 };
 
