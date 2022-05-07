@@ -2673,6 +2673,13 @@ void OscilloscopeWindow::OnRefreshConfig()
 {
 	for(auto scope : m_scopes)
 		scope->FlushConfigCache();
+
+	//Redraw the timeline and all waveform areas to reflect anything changed from the scope
+	for(auto g : m_waveformGroups)
+		g->m_timeline.queue_draw();
+	for(auto a : m_waveformAreas)
+		a->queue_draw();
+
 }
 
 void OscilloscopeWindow::OnAutofitHorizontal(WaveformGroup* group)
