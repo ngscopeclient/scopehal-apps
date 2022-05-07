@@ -224,7 +224,9 @@ void ChannelRow::SetGraphLimits()
 		m_voltageGraph->m_scaleBump = 1;
 
 	if(i > 1)
-		m_currentGraph->m_scaleBump = 1;
+		m_currentGraph->m_scaleBump = 0.25;
+	else if(i > 0.5)
+		m_currentGraph->m_scaleBump = 0.2;
 	else if(i > 0.1)
 		m_currentGraph->m_scaleBump = 0.1;
 	else
