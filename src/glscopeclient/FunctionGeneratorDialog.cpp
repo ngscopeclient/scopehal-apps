@@ -146,7 +146,7 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 				case FunctionGenerator::SHAPE_CARDIAC:
 					str = "Cardiac";
 					break;
-
+					
 				case FunctionGenerator::SHAPE_STAIRCASE_UP:
 					str = "Staircase up";
 					break;

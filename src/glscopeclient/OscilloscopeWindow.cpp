@@ -44,6 +44,7 @@
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
 #include "MultimeterDialog.h"
+#include "ScopeInfoWindow.h"
 #include "FunctionGeneratorDialog.h"
 #include "FileSystem.h"
 #include <unistd.h>
@@ -326,6 +327,9 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 					m_windowMenu.append(m_windowMultimeterMenuItem);
 						m_windowMultimeterMenuItem.set_label("Multimeter");
 						m_windowMultimeterMenuItem.set_submenu(m_windowMultimeterMenu);
+					m_windowMenu.append(m_windowScopeInfoMenuItem);
+						m_windowScopeInfoMenuItem.set_label("Scope Info");
+						m_windowScopeInfoMenuItem.set_submenu(m_windowScopeInfoMenu);
 			m_menu.append(m_helpMenuItem);
 				m_helpMenuItem.set_label("Help");
 				m_helpMenuItem.set_submenu(m_helpMenu);
@@ -367,6 +371,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 	//Reconfigure menus
 	RefreshChannelsMenu();
 	RefreshMultimeterMenu();
+	RefreshScopeInfoMenu();
 	RefreshTriggerMenu();
 	RefreshExportMenu();
 	RefreshGeneratorsMenu();
@@ -573,10 +578,7 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 	{
 		if(g_waveformReadyEvent.Peek())
 		{
-			//Clear old waveform timestamps for WFM/s display
-			m_lastWaveformTimes.push_back(GetTime());
-			while(m_lastWaveformTimes.size() > 10)
-				m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
+			m_framesClock.Tick();
 
 			//Crunch the new waveform
 			{
@@ -769,6 +771,8 @@ void OscilloscopeWindow::CloseSession()
 		delete w;
 	for(auto it : m_meterDialogs)
 		delete it.second;
+	for(auto it : m_scopeInfoWindows)
+		delete it.second;
 	for(auto it : m_functionGeneratorDialogs)
 		delete it.second;
 
@@ -778,6 +782,7 @@ void OscilloscopeWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_waveformAreas.clear();
 	m_meterDialogs.clear();
+	m_scopeInfoWindows.clear();
 	m_functionGeneratorDialogs.clear();
 
 	delete m_scopeSyncWizard;
@@ -856,7 +861,7 @@ MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& nam
 
 	//Clear performance counters
 	m_totalWaveforms = 0;
-	m_lastWaveformTimes.clear();
+	m_framesClock.Reset();
 
 	//Create the mock scope
 	auto scope = new MockOscilloscope(name, "Generic", "12345");
@@ -886,9 +891,7 @@ MockOscilloscope* OscilloscopeWindow::SetupExistingSessionForImport()
 	}
 
 	//TODO: proper timestamp?
-	m_lastWaveformTimes.push_back(GetTime());
-	while(m_lastWaveformTimes.size() > 10)
-		m_lastWaveformTimes.erase(m_lastWaveformTimes.begin());
+	m_framesClock.Tick();
 
 	//Detach the old waveform data so we don't destroy it
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -1002,7 +1005,7 @@ void OscilloscopeWindow::ConnectToScope(string path)
 
 	//Clear performance counters
 	m_totalWaveforms = 0;
-	m_lastWaveformTimes.clear();
+	m_framesClock.Reset();
 
 	//Add the top level splitter right before the status bar
 	auto split = new Gtk::VPaned;
@@ -1071,7 +1074,7 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, boo
 
 	//Clear performance counters
 	m_totalWaveforms = 0;
-	m_lastWaveformTimes.clear();
+	m_framesClock.Reset();
 
 	try
 	{
@@ -1171,6 +1174,7 @@ void OscilloscopeWindow::OnLoadComplete()
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
 	RefreshMultimeterMenu();
+	RefreshScopeInfoMenu();
 	RefreshTriggerMenu();
 	RefreshGeneratorsMenu();
 
@@ -2673,6 +2677,13 @@ void OscilloscopeWindow::OnRefreshConfig()
 {
 	for(auto scope : m_scopes)
 		scope->FlushConfigCache();
+
+	//Redraw the timeline and all waveform areas to reflect anything changed from the scope
+	for(auto g : m_waveformGroups)
+		g->m_timeline.queue_draw();
+	for(auto a : m_waveformAreas)
+		a->queue_draw();
+
 }
 
 void OscilloscopeWindow::OnAutofitHorizontal(WaveformGroup* group)
@@ -3125,6 +3136,9 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring, bool updateFi
 	{
 		for(auto a : m_analyzers)
 			a->OnWaveformDataReady();
+
+		for(auto a : m_scopeInfoWindows)
+			a.second->OnWaveformDataReady();
 	}
 
 	//Update waveform areas.
@@ -3311,14 +3325,11 @@ void OscilloscopeWindow::UpdateStatusBar()
 		m_triggerConfigLabel.set_label(volts.PrettyPrint(trig->GetLevel()));
 	}
 
-	//Update WFM/s counter
-	if(m_lastWaveformTimes.size() >= 2)
+	//Update counters
+	if(m_totalWaveforms > 0)
 	{
-		double first = m_lastWaveformTimes[0];
-		double last = m_lastWaveformTimes[m_lastWaveformTimes.size() - 1];
-		double dt = last - first;
-		double wps = m_lastWaveformTimes.size() / dt;
-		snprintf(tmp, sizeof(tmp), "%zu WFMs, %.2f WFM/s", m_totalWaveforms, wps);
+		double fps = m_framesClock.GetAverageHz();
+		snprintf(tmp, sizeof(tmp), "%zu WFMs, %.2f FPS. ", m_totalWaveforms, fps);
 		m_waveformRateLabel.set_label(tmp);
 	}
 }
@@ -3829,6 +3840,26 @@ void OscilloscopeWindow::RefreshMultimeterMenu()
 	}
 }
 
+/**
+	@brief Update the scope info menu when we load a new session
+ */
+void OscilloscopeWindow::RefreshScopeInfoMenu()
+{
+	//Remove the old items
+	auto children = m_windowScopeInfoMenu.get_children();
+	for(auto c : children)
+		m_windowScopeInfoMenu.remove(*c);
+
+	//Add new stuff
+	for(auto scope : m_scopes)
+	{
+		auto item = Gtk::manage(new Gtk::MenuItem(scope->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<Oscilloscope*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowScopeInfo), scope ));
+		m_windowScopeInfoMenu.append(*item);
+	}
+}
+
 void OscilloscopeWindow::OnShowAnalyzer(ProtocolAnalyzerWindow* window)
 {
 	window->show();
@@ -3845,6 +3876,21 @@ void OscilloscopeWindow::OnShowMultimeter(Multimeter* meter)
 	{
 		auto dlg = new MultimeterDialog(meter);
 		m_meterDialogs[meter] = dlg;
+		dlg->show();
+	}
+}
+
+void OscilloscopeWindow::OnShowScopeInfo(Oscilloscope* scope)
+{
+	//Did we have a dialog for the meter already?
+	if(m_scopeInfoWindows.find(scope) != m_scopeInfoWindows.end())
+		m_scopeInfoWindows[scope]->show();
+
+	//Need to create it
+	else
+	{
+		auto dlg = new ScopeInfoWindow(this, scope);
+		m_scopeInfoWindows[scope] = dlg;
 		dlg->show();
 	}
 }
