@@ -41,7 +41,9 @@
 class ShownGraph
 {
 public:
-	Graph* widget;
+	Graph* graph;
+	Gtk::Label* label;
+	FilterParameter* param;
 	Graphable data;
 	double minval;
 	double maxval;
@@ -55,7 +57,8 @@ public:
 
 	void AddGraphedValue(std::string name, FilterParameter* value);
 	void RemoveGraphedValue(std::string name);
-	void OnValueUpdate(ShownGraph* shown, FilterParameter* value);
+	void DoValueUpdate(ShownGraph* shown);
+	void OnTick();
 
 protected:
 	Gtk::Grid m_grid;
@@ -87,7 +90,7 @@ protected:
 
 	Gtk::Grid m_grid;
 		Gtk::Grid				m_commonValuesGrid;
-			std::map<std::string, Gtk::Label*> m_commonValuesLabels;
+			std::map<FilterParameter*, Gtk::Label*> m_commonValuesLabels;
 		Gtk::Grid				m_valuesGrid;
 			std::map<std::string, Gtk::Label*> m_valuesLabels;
 		Gtk::ScrolledWindow     m_consoleFrame; 
@@ -96,10 +99,11 @@ protected:
 
 	ScopeInfoGraphWindow m_graphWindow;
 
-	void BindValue(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, FilterParameter* value);
+	Gtk::Label* BindValue(Gtk::Grid& container, std::string name, FilterParameter* value);
 	void OnValueUpdate(Gtk::Label* label, FilterParameter* value);
 	void OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string name, FilterParameter* value);
 	void OnGraphWindowClosed();
+	bool OnTick();
 };
 
 #endif

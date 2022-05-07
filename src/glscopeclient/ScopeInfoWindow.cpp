@@ -86,15 +86,23 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	m_bufferedWaveformParam.SetIntVal(0);
 	m_bufferedWaveformTimeParam.SetFloatVal(0);
 
-	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Driver", &m_driver);
-	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Transport", &m_transport);
-	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Rendering Rate", &m_uiDisplayRate);
-	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Count)", &m_bufferedWaveformParam);
-	BindValue(m_commonValuesLabels, m_commonValuesGrid, "Buffered Waveforms (Time)", &m_bufferedWaveformTimeParam);
+	std::vector<std::pair<std::string, FilterParameter*>> to_bind = {
+		{"Driver", &m_driver},
+		{"Transport", &m_transport},
+		{"Rendering Rate", &m_uiDisplayRate},
+		{"Buffered Waveforms (Count)", &m_bufferedWaveformParam},
+		{"Buffered Waveforms (Time)", &m_bufferedWaveformTimeParam}
+	};
+
+	for (auto& i : to_bind)
+	{
+		m_commonValuesLabels[i.second] = BindValue(m_commonValuesGrid, i.first, i.second);
+	}
 
 	m_graphWindow.hide();
 	
-	OnWaveformDataReady();
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeInfoWindow::OnTick), 33 /* 30Hz */);
+	OnTick();
 
 	show_all();
 }
@@ -109,6 +117,11 @@ ScopeInfoWindow::~ScopeInfoWindow()
 
 void ScopeInfoWindow::OnWaveformDataReady()
 {
+	// TODO: Show stats about last waveform pulled from this scope
+}
+
+bool ScopeInfoWindow::OnTick()
+{
 	int depth = m_scope->GetPendingWaveformCount();
 	double fps = m_oscWindow->m_framesClock.GetAverageHz();
 	double ms = m_oscWindow->m_framesClock.GetAverageMs() * depth;
@@ -117,12 +130,22 @@ void ScopeInfoWindow::OnWaveformDataReady()
 	m_bufferedWaveformParam.SetIntVal(depth);
 	m_bufferedWaveformTimeParam.SetFloatVal(ms * 1000000000000);
 
-	for (auto i : m_scope->GetDiagnosticsValues())
+	for (auto& i : m_scope->GetDiagnosticsValues())
 	{
-		if (m_valuesLabels.find(i.first) == m_valuesLabels.end())
+		auto found_pair = m_valuesLabels.find(i.first);
+		if (found_pair == m_valuesLabels.end())
 		{
-			BindValue(m_valuesLabels, m_valuesGrid, i.first, i.second);
+			m_valuesLabels[i.first] = BindValue(m_valuesGrid, i.first, i.second);
 		}
+		else
+		{
+			found_pair->second->set_text(i.second->ToString());
+		}
+	}
+
+	for (auto& i : m_commonValuesLabels)
+	{
+		i.second->set_text(i.first->ToString());
 	}
 
 	if (m_scope->HasPendingDiagnosticLogMessages())
@@ -149,10 +172,12 @@ void ScopeInfoWindow::OnWaveformDataReady()
 		adj->set_value(adj->get_upper());
 	}
 
-	// m_stdDevLabel.set_text("FPS Jitter: " + to_string(stddev) + " (stddev)" + extraInfo);
+	m_graphWindow.OnTick();
+
+	return true;
 }
 
-void ScopeInfoWindow::BindValue(std::map<std::string, Gtk::Label*>& map, Gtk::Grid& container, std::string name, FilterParameter* value)
+Gtk::Label* ScopeInfoWindow::BindValue(Gtk::Grid& container, std::string name, FilterParameter* value)
 {
 	auto nameLabel = Gtk::make_managed<Gtk::Label>(name + ":");
 	auto valueLabel = Gtk::make_managed<Gtk::Label>(value->ToString());
@@ -160,46 +185,18 @@ void ScopeInfoWindow::BindValue(std::map<std::string, Gtk::Label*>& map, Gtk::Gr
 	nameLabel->set_hexpand(true);
 	valueLabel->set_halign(Gtk::ALIGN_END);
 
-	int row = map.size();
-	container.attach(*nameLabel, 0, row, 1, 1);
-	container.attach(*valueLabel, 1, row, 1, 1);
+	container.attach_next_to(*nameLabel, Gtk::POS_BOTTOM, 1, 1);
+	container.attach_next_to(*valueLabel, *nameLabel, Gtk::POS_RIGHT, 1, 1);
 
 	if (value->GetType() == FilterParameter::TYPE_FLOAT || value->GetType() == FilterParameter::TYPE_INT)
 	{
 		auto graphSwitch = Gtk::make_managed<Gtk::Switch>();
 		graphSwitch->property_active().signal_changed().connect(
 			sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGraphSwitch), graphSwitch, name, value));
-		container.attach(*graphSwitch, 2, row, 1, 1);
+		container.attach_next_to(*graphSwitch, *valueLabel, Gtk::POS_RIGHT, 1, 1);
 	}
 	
-	map[name] = valueLabel;
-
-	value->signal_changed().connect(
-		sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnValueUpdate), valueLabel, value));
-	OnValueUpdate(valueLabel, value);
-}
-
-class UpdateRequest
-{
-public:
-	UpdateRequest(Gtk::Label* label, std::string str) : m_label(label), m_str(str) {};
-
-	Gtk::Label* m_label;
-	std::string m_str;
-
-	static int c_update_internal(void* p)
-	{
-		UpdateRequest* u = static_cast<UpdateRequest*>(p);
-		u->m_label->set_text(u->m_str);
-		delete u;
-		return 0;
-	}
-};
-
-void ScopeInfoWindow::OnValueUpdate(Gtk::Label* label, FilterParameter* value)
-{
-	UpdateRequest* u = new UpdateRequest(label, value->ToString());
-	g_main_context_invoke(NULL, (GSourceFunc)&UpdateRequest::c_update_internal, u);
+	return valueLabel;
 }
 
 void ScopeInfoWindow::OnClickGraphSwitch(Gtk::Switch* graphSwitch, std::string name, FilterParameter* value)
@@ -242,10 +239,13 @@ void ScopeInfoGraphWindow::AddGraphedValue(std::string name, FilterParameter* va
 	}
 
 	auto graph = Gtk::make_managed<Graph>();
+	auto label = Gtk::make_managed<Gtk::Label>(name + " (" + value->GetUnit().ToString() + ")");
 
 	// Relying on operator[] inserting default-constructed values
 	ShownGraph* shown = &m_graphs[name];
-	shown->widget = graph;
+	shown->graph = graph;
+	shown->label = label;
+	shown->param = value;
 	shown->minval = FLT_MAX;
 	shown->maxval = -FLT_MAX;
 
@@ -262,27 +262,25 @@ void ScopeInfoGraphWindow::AddGraphedValue(std::string name, FilterParameter* va
 	graph->m_maxScale = 1;
 	graph->m_scaleBump = 0.1;
 	graph->m_sigfigs = 3;
+	graph->m_units = value->GetUnit().ToString();
 
+	m_grid.attach_next_to(*label, Gtk::POS_BOTTOM, 1, 1);
 	m_grid.attach_next_to(*graph, Gtk::POS_BOTTOM, 1, 1);
 
-	OnValueUpdate(shown, value);
-	value->signal_changed().connect(
-		sigc::bind(sigc::mem_fun(*this, &ScopeInfoGraphWindow::OnValueUpdate), shown, value));
+	DoValueUpdate(shown);
 
 	show_all();
 	show();
 }
 
-void ScopeInfoGraphWindow::OnValueUpdate(ShownGraph* shown, FilterParameter* param)
+void ScopeInfoGraphWindow::DoValueUpdate(ShownGraph* shown)
 {
-	double value = param->GetFloatVal();
+	double value = shown->param->GetFloatVal();
 
-	if (param->GetUnit() == Unit::UNIT_FS)
+	if (shown->param->GetUnit() == Unit::UNIT_FS)
 		value /= 1000000000000; // Convert to ms so we don't kill the graph lib
-	else if (param->GetUnit() == Unit::UNIT_PERCENT)
-		value *= 100; // Display to user as X/100
-
-	shown->widget->m_units = param->GetUnit().ToString();
+	// else if (shown->param->GetUnit() == Unit::UNIT_PERCENT)
+	// 	value *= 100; // Display to user as X/100
 
 	auto series = shown->data.GetSeries("data");
 	series->push_back(GraphPoint(GetTime(), value));
@@ -294,23 +292,31 @@ void ScopeInfoGraphWindow::OnValueUpdate(ShownGraph* shown, FilterParameter* par
 	shown->minval = min(shown->minval, value);
 	shown->maxval = max(shown->maxval, value);
 
-	shown->widget->m_minScale = shown->minval;
-	shown->widget->m_maxScale = shown->maxval;
+	shown->graph->m_minScale = shown->minval;
+	shown->graph->m_maxScale = shown->maxval;
 	double range = abs(shown->maxval - shown->minval);
 	if (range > 5000)
-		shown->widget->m_scaleBump = 2500;
+		shown->graph->m_scaleBump = 2500;
 	else if (range > 500)
-		shown->widget->m_scaleBump = 250;
+		shown->graph->m_scaleBump = 250;
 	else if (range > 50)
-		shown->widget->m_scaleBump = 25;
+		shown->graph->m_scaleBump = 25;
 	else if(range > 5)
-		shown->widget->m_scaleBump = 2.5;
+		shown->graph->m_scaleBump = 2.5;
 	else if(range >= 0.5)
-		shown->widget->m_scaleBump = 0.25;
+		shown->graph->m_scaleBump = 0.25;
 	else if(range > 0.05)
-		shown->widget->m_scaleBump = 0.1;
+		shown->graph->m_scaleBump = 0.1;
 	else
-		shown->widget->m_scaleBump = 0.025;
+		shown->graph->m_scaleBump = 0.025;
+}
+
+void ScopeInfoGraphWindow::OnTick()
+{
+	for (auto& i : m_graphs)
+	{
+		DoValueUpdate(&i.second);
+	}
 }
 
 void ScopeInfoGraphWindow::RemoveGraphedValue(std::string name)
@@ -321,5 +327,14 @@ void ScopeInfoGraphWindow::RemoveGraphedValue(std::string name)
 		return;
 	}
 
-	// m_graphs.erase(name);
+	m_grid.remove(*m_graphs[name].label);
+	m_grid.remove(*m_graphs[name].graph);
+	m_graphs.erase(name);
+
+	resize(600, 100);
+
+	if (m_graphs.size() == 0)
+	{
+		hide();
+	}
 }
