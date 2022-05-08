@@ -48,6 +48,10 @@
 #include <thread>
 #include "pthread_compat.h"
 
+#ifndef _WIN32
+#include <sys/ioctl.h>
+#endif
+
 #include "PreferenceManager.h"
 using namespace std;
 
@@ -293,6 +297,19 @@ void ScopeThread(Oscilloscope* scope)
 			LogTrace("Queue is too big, sleeping\n");
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			tlast = GetTime();
+
+			/*
+			if(!sscope)
+				continue;
+			auto dtransport = dynamic_cast<SCPITwinLanTransport*>(sscope->GetTransport());
+			if(!dtransport)
+				continue;
+			int hsock = dtransport->GetSecondarySocket();
+			int bytesReady = 0;
+			if(ioctl(hsock, FIONREAD, &bytesReady) >= 0)
+				LogDebug("socket has %d bytes ready\n", bytesReady);
+			*/
+
 			continue;
 		}
 
