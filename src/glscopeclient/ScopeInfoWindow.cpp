@@ -82,7 +82,7 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	m_grid.attach_next_to(m_saveButton, m_consoleFrame, Gtk::POS_BOTTOM, 1, 1);
 		m_saveButton.signal_clicked().connect(
 			sigc::mem_fun(*this, &ScopeInfoWindow::OnSaveClicked));
-			
+
 		// m_consoleFrame.override_background_color(Gdk::RGBA("#ff0000"));
 
 	m_driver.SetStringVal(m_scope->GetDriverName());
@@ -105,7 +105,7 @@ ScopeInfoWindow::ScopeInfoWindow(OscilloscopeWindow* oscWindow, Oscilloscope* sc
 	}
 
 	m_graphWindow.hide();
-	
+
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeInfoWindow::OnTick), 50 /* 20Hz */);
 	OnTick();
 
@@ -200,7 +200,7 @@ Gtk::Label* ScopeInfoWindow::BindValue(Gtk::Grid& container, std::string name, F
 			sigc::bind(sigc::mem_fun(*this, &ScopeInfoWindow::OnClickGraphSwitch), graphSwitch, name, value));
 		container.attach_next_to(*graphSwitch, *valueLabel, Gtk::POS_RIGHT, 1, 1);
 	}
-	
+
 	return valueLabel;
 }
 
@@ -357,6 +357,7 @@ void ScopeInfoGraphWindow::DoValueUpdate(ShownGraph* shown)
 
 	double eff_min = shown->minval * 0.90;
 	double eff_max = shown->maxval * 1.10;
+
 	shown->graph->m_minScale = eff_min;
 	shown->graph->m_maxScale = eff_max;
 	shown->graph->m_scaleBump = abs(eff_max - eff_min) / 4.1;
