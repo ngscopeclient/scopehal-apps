@@ -574,7 +574,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 						nmerged ++;
 
 						//Skip these samples in the outer loop
-						i = j;
+						i = j-1;
 					}
 
 					//Render a single box for them all
