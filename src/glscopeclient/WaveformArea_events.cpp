@@ -1111,6 +1111,10 @@ bool WaveformArea::OnDecodeDialogClosed(GdkEventAny* /*ignored*/)
 {
 	m_decodeDialog->ConfigureDecoder();
 
+	//Refresh the channels menu with the new channel name etc
+	m_parent->RefreshChannelsMenu();
+	m_parent->RefreshFilterGraphEditor();
+
 	//Clean up the dialog
 	delete m_decodeDialog;
 	m_decodeDialog = NULL;
@@ -1215,10 +1219,6 @@ void WaveformArea::OnDecodeSetupComplete()
 
 	SetGeometryDirty();
 	queue_draw();
-
-	//Refresh the channels menu with the new channel name etc
-	m_parent->RefreshChannelsMenu();
-	m_parent->RefreshFilterGraphEditor();
 }
 
 void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::RadioMenuItem* item)
