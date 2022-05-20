@@ -379,6 +379,18 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp, float
 						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grabbing"));
 						break;
 
+					//Middle
+					case 2:
+						{
+							auto f = dynamic_cast<Filter*>(m_channel.m_channel);
+							if(f)
+							{
+								f->AutoscaleVertical(m_channel.m_stream);
+								ClearPersistence();
+							}
+						}
+						break;
+
 					//Right
 					case 3:
 						break;
