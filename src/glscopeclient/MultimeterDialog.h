@@ -36,22 +36,35 @@
 #ifndef MultimeterDialog_h
 #define MultimeterDialog_h
 
+#include "../../lib/scopeprotocols/MultimeterTrendFilter.h"
+
+class OscilloscopeWindow;
+
 /**
 	@brief Dialog for interacting with a Multimeter (which may or may not be part of an Oscilloscope)
  */
 class MultimeterDialog	: public Gtk::Dialog
 {
 public:
-	MultimeterDialog(Multimeter* meter);
+	MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent);
 	virtual ~MultimeterDialog();
 
 protected:
+	enum UpdateRate
+	{
+		UPDATE_1HZ,
+		UPDATE_2HZ,
+		UPDATE_5HZ
+	};
+
 	virtual void on_show();
 	virtual void on_hide();
 
 	void OnInputChanged();
 	void OnModeChanged();
 	void OnSecondaryModeChanged();
+	void OnTimerIntervalChanged()
+	{ m_timerIntervalChanged = true; }
 
 	void RefreshSecondaryModeList();
 
@@ -68,19 +81,17 @@ protected:
 
 	Multimeter* m_meter;
 
-	void SetGraphScale(Graph& graph, double range, double rmax, const std::string& unit);
-
 	Gtk::Grid m_grid;
 		Gtk::Label						m_inputLabel;
 			Gtk::ComboBoxText			m_inputBox;
+		Gtk::Label						m_rateLabel;
+			Gtk::ComboBoxText			m_rateBox;
 		Gtk::Frame						m_primaryFrame;
 			Gtk::Grid					m_primaryGrid;
 				Gtk::Label				m_typeLabel;
 					Gtk::ComboBoxText	m_typeBox;
 				Gtk::Label				m_valueLabel;
 					Gtk::Label			m_valueBox;
-				Graph					m_graph;
-					Graphable			m_graphData;
 
 		Gtk::Frame						m_secondaryFrame;
 			Gtk::Grid					m_secondaryGrid;
@@ -88,17 +99,13 @@ protected:
 					Gtk::ComboBoxText	m_secondaryTypeBox;
 				Gtk::Label				m_secondaryValueLabel;
 					Gtk::Label			m_secondaryValueBox;
-				Graph					m_secondaryGraph;
-					Graphable			m_secondaryGraphData;
-
-
-	double m_minval;
-	double m_maxval;
-
-	double m_secminval;
-	double m_secmaxval;
 
 	bool m_updatingSecondary;
+
+	MultimeterTrendFilter* m_trendFilter;
+	OscilloscopeWindow* m_parent;
+
+	bool m_timerIntervalChanged;
 };
 
 #endif

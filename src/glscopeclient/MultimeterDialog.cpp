@@ -40,10 +40,12 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MultimeterDialog::MultimeterDialog(Multimeter* meter)
+MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent)
 	: Gtk::Dialog( string("Multimeter: ") + meter->m_nickname )
 	, m_meter(meter)
 	, m_updatingSecondary(false)
+	, m_parent(parent)
+	, m_timerIntervalChanged(false)
 {
 	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 
@@ -59,7 +61,14 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 					m_inputBox.append(meter->GetMeterChannelName(i));
 	}
 
-	m_grid.attach(m_primaryFrame, 0, 1, 2, 1);
+	m_grid.attach(m_rateLabel, 0, 1, 1, 1);
+		m_rateLabel.set_text("Update Rate");
+	m_grid.attach(m_rateBox, 1, 1, 1, 1);
+		m_rateBox.append("1 Hz");
+		m_rateBox.append("2 Hz");
+		m_rateBox.append("5 Hz");
+
+	m_grid.attach(m_primaryFrame, 0, 2, 2, 1);
 		m_primaryFrame.set_label("Primary Measurement");
 		m_primaryFrame.add(m_primaryGrid);
 
@@ -72,9 +81,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 		m_primaryGrid.attach(m_valueBox, 1, 1, 1, 1);
 			m_valueBox.override_font(Pango::FontDescription("monospace bold 20"));
 
-		m_primaryGrid.attach(m_graph, 0, 2, 2, 1);
-
-	m_grid.attach(m_secondaryFrame, 0, 2, 2, 1);
+	m_grid.attach(m_secondaryFrame, 0, 3, 2, 1);
 		m_secondaryFrame.set_label("Secondary Measurement");
 		m_secondaryFrame.add(m_secondaryGrid);
 
@@ -87,52 +94,11 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 		m_secondaryGrid.attach(m_secondaryValueBox, 1, 1, 1, 1);
 			m_secondaryValueBox.override_font(Pango::FontDescription("monospace bold 20"));
 
-		m_secondaryGrid.attach(m_secondaryGraph, 0, 2, 2, 1);
-
-	//Allow resizing, and make the graph take up the space
+	//Allow resizing
 	m_primaryFrame.set_hexpand(true);
 	m_primaryFrame.set_vexpand(true);
 	m_secondaryFrame.set_hexpand(true);
 	m_secondaryFrame.set_vexpand(true);
-	m_graph.set_hexpand(true);
-	m_graph.set_vexpand(true);
-	m_secondaryGraph.set_hexpand(true);
-	m_secondaryGraph.set_vexpand(true);
-
-	//Graph setup
-	m_graph.set_size_request(600, 100);
-	m_graph.m_units = "V";
-	m_graph.m_series.push_back(&m_graphData);
-	m_graph.m_seriesName = "data";
-	m_graph.m_axisColor = Gdk::Color("#ffffff");
-	m_graph.m_backgroundColor = Gdk::Color("#101010");
-	m_graph.m_drawLegend = false;
-	m_graph.m_series.push_back(&m_graphData);
-	m_graphData.m_color = Gdk::Color("#ff0000");
-
-	m_secondaryGraph.set_size_request(600, 100);
-	m_secondaryGraph.m_units = "V";
-	m_secondaryGraph.m_series.push_back(&m_secondaryGraphData);
-	m_secondaryGraph.m_seriesName = "data";
-	m_secondaryGraph.m_axisColor = Gdk::Color("#ffffff");
-	m_secondaryGraph.m_backgroundColor = Gdk::Color("#101010");
-	m_secondaryGraph.m_drawLegend = false;
-	m_secondaryGraph.m_series.push_back(&m_secondaryGraphData);
-	m_secondaryGraphData.m_color = Gdk::Color("#ff0000");
-
-	//Default values
-	m_graph.m_minScale = 0;
-	m_graph.m_maxScale = 1;
-	m_graph.m_scaleBump = 0.1;
-	m_graph.m_sigfigs = 3;
-
-	m_secondaryGraph.m_minScale = 0;
-	m_secondaryGraph.m_maxScale = 1;
-	m_secondaryGraph.m_scaleBump = 0.1;
-	m_secondaryGraph.m_sigfigs = 3;
-
-	m_secondaryGraph.m_minRedline = -FLT_MAX;
-	m_secondaryGraph.m_maxRedline = FLT_MAX;
 
 	AddMode(Multimeter::DC_VOLTAGE, "DC Voltage");
 	AddMode(Multimeter::DC_RMS_AMPLITUDE, "RMS Amplitude (DC coupled)");
@@ -147,6 +113,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 	RefreshSecondaryModeList();
 
 	//Event handlers
+	m_rateBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnTimerIntervalChanged));
 	m_inputBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnInputChanged));
 	m_typeBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnModeChanged));
 	m_secondaryTypeBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnSecondaryModeChanged));
@@ -158,16 +125,16 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 	//TODO: make update rate configurable
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &MultimeterDialog::OnTimer), 1000);
 
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
+	m_trendFilter = new MultimeterTrendFilter(GetDefaultChannelColor(g_numDecodes ++));
+	m_trendFilter->SetMeter(m_meter);
+	m_trendFilter->AddRef();
 
-	m_secminval = FLT_MAX;
-	m_secmaxval = -FLT_MAX;
+	m_trendFilter->SetDisplayName(string("Trend(") + m_meter->m_nickname + ")");
 }
 
 MultimeterDialog::~MultimeterDialog()
 {
-
+	m_trendFilter->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,131 +168,69 @@ void MultimeterDialog::on_hide()
 
 void MultimeterDialog::OnInputChanged()
 {
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
-
 	auto nchan = m_inputBox.get_active_row_number();
 	m_meter->SetCurrentMeterChannel(nchan);
-
-	m_graphData.m_name = m_meter->GetMeterChannelName(nchan);
 }
 
 void MultimeterDialog::OnModeChanged()
 {
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
-
-	m_secminval = FLT_MAX;
-	m_secmaxval = -FLT_MAX;
-
 	auto mode = m_modemap[m_typeBox.get_active_text()];
 	m_meter->SetMeterMode(mode);
 
 	RefreshSecondaryModeList();
 }
 
-void MultimeterDialog::SetGraphScale(Graph& graph, double range, double rmax, const string& unit)
-{
-	if(range > 5e6)
-		graph.m_scaleBump = 2.5e6;
-	else if(range > 5e5)
-		graph.m_scaleBump = 2.5e5;
-	else if(range > 5e4)
-		graph.m_scaleBump = 2.5e4;
-	else if(range > 2.5e4)
-		graph.m_scaleBump = 1e4;
-	else if(range > 5e3)
-		graph.m_scaleBump = 2.5e3;
-	else if(range > 2.5e3)
-		graph.m_scaleBump = 1e3;
-	else if(range > 5e2)
-		graph.m_scaleBump = 2.5e2;
-	else if(range > 5e1)
-		graph.m_scaleBump = 2.5e1;
-	else if(range > 5e-0)
-		graph.m_scaleBump = 2.5e-0;
-	else if(range > 5e-1)
-		graph.m_scaleBump = 2.5e-1;
-	else if(range > 5e-2)
-		graph.m_scaleBump = 2.5e-2;
-	else if(range > 5e-3)
-		graph.m_scaleBump = 2.5e-3;
-	else if(range > 5e-4)
-		graph.m_scaleBump = 2.5e-4;
-	else if(range > 5e-5)
-		graph.m_scaleBump = 2.5e-5;
-	else if(range > 5e-6)
-		graph.m_scaleBump = 2.5e-6;
-	else if(range > 5e-7)
-		graph.m_scaleBump = 2.5e-7;
-
-	//super small, for now don't show any divisions
-	else
-		graph.m_scaleBump = 1;
-
-	if(rmax < 1)
-	{
-		graph.m_units = string("m") + unit;
-		graph.m_unitScale = 1000;
-	}
-
-	if(rmax > 1e3)
-	{
-		graph.m_units = string("k") + unit;
-		graph.m_unitScale = 1e-3;
-	}
-}
-
 bool MultimeterDialog::OnTimer()
 {
+	//TODO: pull values in a background thread as fast as we can to avoid bogging down the GUI thread?
+	//How does this play with scope based meters that we don't want to spam?
+
 	//Update text display
 	double value = m_meter->GetMeterValue();
 	m_valueBox.set_text(m_meter->GetMeterUnit().PrettyPrint(value, m_meter->GetMeterDigits()));
 
-	//Add new value to the graph and trim to fit
-	double now = GetTime();
-	auto series = m_graphData.GetSeries("data");
-	series->push_back(GraphPoint(now, value));
-	const int max_points = 4096;
-	while(series->size() > max_points)
-		series->pop_front();
-
-	//Update graph limits
-	m_minval = min(m_minval, value);
-	m_maxval = max(m_maxval, value);
-	m_graph.m_minScale = m_minval;
-	m_graph.m_maxScale = m_maxval;
-	double range = abs(m_maxval - m_minval);
-	SetGraphScale(m_graph, range, m_maxval, m_meter->GetMeterUnit().ToString());
-
 	//No secondary measurement? Nothing to do
+	double secvalue = 0;
 	if(m_meter->GetSecondaryMeterMode() == Multimeter::NONE)
 		m_secondaryValueBox.set_text("");
 
 	//Process secondary measurements
 	else
 	{
-		//Update text display
-		value = m_meter->GetSecondaryMeterValue();
-		m_secondaryValueBox.set_text(m_meter->GetSecondaryMeterUnit().PrettyPrint(value, m_meter->GetMeterDigits()));
-
-		//Add new value to the graph and trim to fit
-		auto secseries = m_secondaryGraphData.GetSeries("data");
-		secseries->push_back(GraphPoint(now, value));
-		while(secseries->size() > max_points)
-			secseries->pop_front();
-
-		//Update graph limits
-		m_secminval = min(m_secminval, value);
-		m_secmaxval = max(m_secmaxval, value);
-
-		m_secondaryGraph.m_minScale = m_secminval;
-		m_secondaryGraph.m_maxScale = m_secmaxval;
-		range = abs(m_secmaxval - m_secminval);
-		SetGraphScale(m_secondaryGraph, range, m_secmaxval, m_meter->GetSecondaryMeterUnit().ToString());
+		secvalue = m_meter->GetSecondaryMeterValue();
+		m_secondaryValueBox.set_text(m_meter->GetSecondaryMeterUnit().PrettyPrint(secvalue, m_meter->GetMeterDigits()));
 	}
 
-	return true;
+	m_trendFilter->OnDataReady(value, secvalue);
+
+	//Reset timer if interval was changed
+	if(m_timerIntervalChanged)
+	{
+		m_timerIntervalChanged = false;
+
+		int interval = 1000;
+		switch(m_rateBox.get_active_row_number())
+		{
+			case UPDATE_1HZ:
+				interval = 1000;
+				break;
+
+			case UPDATE_2HZ:
+				interval = 500;
+				break;
+
+			case UPDATE_5HZ:
+				interval = 200;
+				break;
+
+			default:
+				break;
+		}
+		Glib::signal_timeout().connect(sigc::mem_fun(*this, &MultimeterDialog::OnTimer), interval);
+		return false;
+	}
+	else
+		return true;
 }
 
 void MultimeterDialog::RefreshSecondaryModeList()
@@ -347,8 +252,6 @@ void MultimeterDialog::RefreshSecondaryModeList()
 	auto mode = m_meter->GetSecondaryMeterMode();
 	m_secondaryTypeBox.set_active_text(m_revmodemap[mode]);
 
-	m_secondaryGraph.m_series.clear();
-
 	m_secondaryValueBox.set_text("");
 
 	m_updatingSecondary = false;
@@ -368,9 +271,6 @@ void MultimeterDialog::OnSecondaryModeChanged()
 {
 	if(m_updatingSecondary)
 		return;
-
-	m_secminval = FLT_MAX;
-	m_secmaxval = -FLT_MAX;
 
 	auto mode = m_secmodemap[m_secondaryTypeBox.get_active_text()];
 	m_meter->SetSecondaryMeterMode(mode);
