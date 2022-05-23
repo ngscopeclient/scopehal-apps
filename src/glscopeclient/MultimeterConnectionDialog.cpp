@@ -30,19 +30,19 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of InstrumentConnectionDialog
+	@brief Implementation of MultimeterConnectionDialog
  */
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
-#include "InstrumentConnectionDialog.h"
+#include "MultimeterConnectionDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-InstrumentConnectionDialog::InstrumentConnectionDialog()
-	: Gtk::Dialog("Connect To Instrument", Gtk::DIALOG_MODAL)
+MultimeterConnectionDialog::MultimeterConnectionDialog()
+	: Gtk::Dialog("Connect To Multimeter", Gtk::DIALOG_MODAL)
 {
 	add_button("OK", Gtk::RESPONSE_OK);
 	add_button("Cancel", Gtk::RESPONSE_CANCEL);
@@ -57,14 +57,14 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	m_grid.attach(m_nicknameLabel, 0, 0, 1, 1);
 		m_nicknameLabel.set_text("Nickname");
 	m_grid.attach_next_to(m_nicknameEntry, m_nicknameLabel, Gtk::POS_RIGHT, 1, 1);
-		m_nicknameEntry.set_text("scope");
+		m_nicknameEntry.set_text("meter");
 
 	m_grid.attach_next_to(m_driverLabel, m_nicknameLabel, Gtk::POS_BOTTOM, 1, 1);
 		m_driverLabel.set_text("Driver");
 	m_grid.attach_next_to(m_driverBox, m_driverLabel, Gtk::POS_RIGHT, 1, 1);
 
 	vector<string> drivers;
-	Oscilloscope::EnumDrivers(drivers);
+	SCPIMultimeter::EnumDrivers(drivers);
 	for(auto d : drivers)
 		m_driverBox.append(d);
 
@@ -88,7 +88,7 @@ InstrumentConnectionDialog::InstrumentConnectionDialog()
 	show_all();
 }
 
-InstrumentConnectionDialog::~InstrumentConnectionDialog()
+MultimeterConnectionDialog::~MultimeterConnectionDialog()
 {
 
 }
@@ -96,11 +96,11 @@ InstrumentConnectionDialog::~InstrumentConnectionDialog()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Output
 
-string InstrumentConnectionDialog::GetConnectionString()
+string MultimeterConnectionDialog::GetConnectionString()
 {
 	//If no nickname is specified, assign a default
 	if(m_nicknameEntry.get_text() == "")
-		m_nicknameEntry.set_text("scope");
+		m_nicknameEntry.set_text("meter");
 
 	char tmp[256];
 	snprintf(tmp, sizeof(tmp), "%s:%s:%s:%s",
@@ -111,7 +111,7 @@ string InstrumentConnectionDialog::GetConnectionString()
 	return tmp;
 }
 
-bool InstrumentConnectionDialog::ValidateConfig()
+bool MultimeterConnectionDialog::ValidateConfig()
 {
 	//Must have stuff in each box
 	if(m_driverBox.get_active_text() == "")
@@ -121,15 +121,8 @@ bool InstrumentConnectionDialog::ValidateConfig()
 	if(m_pathEntry.get_text() == "" && m_transportBox.get_active_text() != "null")
 		return false;
 
-	//For now, hard code check of null being legal only with demo
+	//No meter accepts a null transport
 	if(m_transportBox.get_active_text() != "null")
 		return true;
-	if(m_driverBox.get_active_text() == "demo")
-	{
-		if(m_pathEntry.get_text() == "")
-			m_pathEntry.set_text("null");
-		return true;
-	}
-
 	return false;
 }

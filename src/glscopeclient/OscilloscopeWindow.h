@@ -192,6 +192,8 @@ protected:
 						Gtk::Menu m_generateMenu;
 					Gtk::MenuItem m_importMenuItem;
 						Gtk::Menu m_importMenu;
+					Gtk::MenuItem m_addMultimeterMenuItem;
+						Gtk::Menu m_addMultimeterMenu;
 			Gtk::MenuItem m_viewMenuItem;
 				Gtk::Menu m_viewMenu;
 					Gtk::MenuItem m_viewEyeColorMenuItem;
@@ -301,6 +303,9 @@ public:
 	void OnShowScopeInfo(Oscilloscope* scope);
 	void OnShowFunctionGenerator(FunctionGenerator* gen);
 	void OnFilterGraph();
+	void OnAddMultimeter();
+	void ConnectToMultimeter(std::string path);
+	SCPITransport* ConnectToTransport(const std::string& name, const std::string& args);
 
 	//Helpers for importing third party file formats
 	void DoImportBIN(const std::string& filename);
@@ -334,6 +339,7 @@ public:
 	void RefreshTriggerMenu();
 	void RefreshExportMenu();
 	void RefreshGeneratorsMenu();
+	void RefreshAddMultimeterMenu();
 
 	void RefreshFilterGraphEditor()
 	{
@@ -353,6 +359,7 @@ public:
 
 	//Connections to instruments
 	std::vector<Oscilloscope*> m_scopes;
+	std::vector<Multimeter*> m_meters;
 	std::vector<FunctionGenerator*> m_funcgens;
 
 	void FindScopeFuncGens();

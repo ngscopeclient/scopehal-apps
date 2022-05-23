@@ -40,6 +40,7 @@
 #include "OscilloscopeWindow.h"
 #include "PreferenceDialog.h"
 #include "InstrumentConnectionDialog.h"
+#include "MultimeterConnectionDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "FileProgressDialog.h"
@@ -115,21 +116,21 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 
 void OscilloscopeWindow::SetTitle()
 {
-	if(m_scopes.empty())
-	{
-		set_title("glscopeclient [OFFLINE]");
-		return;
-	}
+	//Collect all of the instruments in the current session
+	set<Instrument*> instruments;
+	for(auto s : m_scopes)
+		instruments.emplace(s);
+	for(auto m : m_meters)
+		instruments.emplace(m);
 
-	//Set title
-	string title = "glscopeclient: ";
-	for(size_t i=0; i<m_scopes.size(); i++)
+	//Main string formatting
+	string title;
+	bool redact = GetPreferences().GetBool("Privacy.redact_serial_in_title");
+	for(auto inst : instruments)
 	{
-		auto scope = m_scopes[i];
-
 		//Redact serial number upon request
-		string serial = scope->GetSerial();
-		if(GetPreferences().GetBool("Privacy.redact_serial_in_title"))
+		string serial = inst->GetSerial();
+		if(redact)
 		{
 			for(int j=serial.length()-3; j >= 0; j--)
 				serial[j] = '*';
@@ -137,25 +138,27 @@ void OscilloscopeWindow::SetTitle()
 
 		char tt[256];
 		snprintf(tt, sizeof(tt), "%s (%s %s, serial %s)",
-			scope->m_nickname.c_str(),
-			scope->GetVendor().c_str(),
-			scope->GetName().c_str(),
+			inst->m_nickname.c_str(),
+			inst->GetVendor().c_str(),
+			inst->GetName().c_str(),
 			serial.c_str()
 			);
 
-		if(i > 0)
+		if(title != "")
 			title += ", ";
 		title += tt;
 
-		if(dynamic_cast<MockOscilloscope*>(scope) != NULL)
+		if(dynamic_cast<MockOscilloscope*>(inst) != NULL)
 			title += "[OFFLINE]";
 	}
+	if(title.empty())
+		title += "[OFFLINE]";
 
 	#ifdef _DEBUG
 		title += " [DEBUG BUILD]";
 	#endif
 
-	set_title(title);
+	set_title(string("glscopeclient: ") + title);
 }
 
 /**
@@ -311,6 +314,12 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 						m_importMenuItem.set_label("Import");
 						m_importMenuItem.set_submenu(m_importMenu);
 					RefreshGenerateAndImportMenu();
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_addMenu.append(*item);
+					m_addMenu.append(m_addMultimeterMenuItem);
+						m_addMultimeterMenuItem.set_label("Multimeter");
+						m_addMultimeterMenuItem.set_submenu(m_addMultimeterMenu);
+					RefreshAddMultimeterMenu();
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
@@ -809,6 +818,15 @@ void OscilloscopeWindow::CloseSession()
 			delete gen;
 	}
 	m_funcgens.clear();
+
+	//Get rid of multimeters
+	//(but only delete them if they're not also a scope)
+	for(auto meter : m_meters)
+	{
+		if(0 == (meter->GetInstrumentTypes() & Instrument::INST_DMM) )
+			delete meter;
+	}
+	m_meters.clear();
 
 	//Get rid of scopes
 	for(auto scope : m_scopes)
@@ -3874,7 +3892,7 @@ void OscilloscopeWindow::OnShowMultimeter(Multimeter* meter)
 	//Need to create it
 	else
 	{
-		auto dlg = new MultimeterDialog(meter);
+		auto dlg = new MultimeterDialog(meter, this);
 		m_meterDialogs[meter] = dlg;
 		dlg->show();
 	}
@@ -4190,4 +4208,105 @@ void OscilloscopeWindow::OnShowFunctionGenerator(FunctionGenerator* gen)
 		m_functionGeneratorDialogs[gen] = dlg;
 		dlg->show();
 	}
+}
+
+void OscilloscopeWindow::RefreshAddMultimeterMenu()
+{
+	//Remove the old items
+	auto children = m_addMultimeterMenu.get_children();
+	for(auto c : children)
+		m_addMultimeterMenu.remove(*c);
+
+	//Add new stuff
+	auto item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
+	item->signal_activate().connect(
+		sigc::mem_fun(*this, &OscilloscopeWindow::OnAddMultimeter));
+	m_addMultimeterMenu.append(*item);
+}
+
+void OscilloscopeWindow::OnAddMultimeter()
+{
+	MultimeterConnectionDialog dlg;
+	while(true)
+	{
+		if(dlg.run() != Gtk::RESPONSE_OK)
+			return;
+
+		if(!dlg.ValidateConfig())
+		{
+			Gtk::MessageDialog mdlg(
+				"Invalid configuration specified.\n"
+				"\n"
+				"A driver and transport must always be selected.\n",
+				false,
+				Gtk::MESSAGE_ERROR,
+				Gtk::BUTTONS_OK,
+				true);
+			mdlg.run();
+		}
+
+		else
+			break;
+	}
+
+	ConnectToMultimeter(dlg.GetConnectionString());
+}
+
+SCPITransport* OscilloscopeWindow::ConnectToTransport(const string& name, const string& args)
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(name, args);
+	if(transport == NULL)
+		return NULL;
+
+	//Check if the transport failed to initialize
+	if(!transport->IsConnected())
+	{
+		Gtk::MessageDialog dlg(
+			string("Failed to connect to instrument using transport ") + name + " and arguments " + args,
+			false,
+			Gtk::MESSAGE_ERROR,
+			Gtk::BUTTONS_OK,
+			true);
+		dlg.run();
+
+		delete transport;
+		transport = NULL;
+	}
+
+	return transport;
+}
+
+void OscilloscopeWindow::ConnectToMultimeter(string path)
+{
+	//Format: name:driver:transport:args
+	char nick[128];
+	char driver[128];
+	char trans[128];
+	char args[128];
+	if(4 != sscanf(path.c_str(), "%127[^:]:%127[^:]:%127[^:]:%127s", nick, driver, trans, args))
+	{
+		args[0] = '\0';
+		if(3 != sscanf(path.c_str(), "%127[^:]:%127[^:]:%127[^:]", nick, driver, trans))
+		{
+			LogError("Invalid scope string %s\n", path.c_str());
+			return;
+		}
+	}
+
+	//Create the transport
+	auto transport = ConnectToTransport(trans, args);
+	if(!transport)
+		return;
+
+	//Create the meter
+	auto meter = SCPIMultimeter::CreateMultimeter(driver, transport);
+	meter->m_nickname = nick;
+
+	//Done making the meter, add it everywhere we need it to be
+	m_meters.push_back(meter);
+	OnShowMultimeter(meter);
+	RefreshMultimeterMenu();
+	RefreshChannelsMenu();
+	SetTitle();
 }

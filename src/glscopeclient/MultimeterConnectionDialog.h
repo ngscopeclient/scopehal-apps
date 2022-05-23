@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,106 +30,36 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of InstrumentConnectionDialog
+	@brief Declaration of MultimeterConnectionDialog
  */
-#include "glscopeclient.h"
-#include "OscilloscopeWindow.h"
-#include "InstrumentConnectionDialog.h"
 
-using namespace std;
+#ifndef MultimeterConnectionDialog_h
+#define MultimeterConnectionDialog_h
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-InstrumentConnectionDialog::InstrumentConnectionDialog()
-	: Gtk::Dialog("Connect To Instrument", Gtk::DIALOG_MODAL)
+/**
+	@brief Dialog for connecting to a multimeter
+ */
+class MultimeterConnectionDialog	: public Gtk::Dialog
 {
-	add_button("OK", Gtk::RESPONSE_OK);
-	add_button("Cancel", Gtk::RESPONSE_CANCEL);
-	set_default_response(Gtk::RESPONSE_OK);
+public:
+	MultimeterConnectionDialog();
+	virtual ~MultimeterConnectionDialog();
 
-	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
+	std::string GetConnectionString();
 
-	m_grid.set_margin_left(10);
-	m_grid.set_margin_right(10);
-	m_grid.set_column_spacing(10);
+	bool ValidateConfig();
 
-	m_grid.attach(m_nicknameLabel, 0, 0, 1, 1);
-		m_nicknameLabel.set_text("Nickname");
-	m_grid.attach_next_to(m_nicknameEntry, m_nicknameLabel, Gtk::POS_RIGHT, 1, 1);
-		m_nicknameEntry.set_text("scope");
+protected:
 
-	m_grid.attach_next_to(m_driverLabel, m_nicknameLabel, Gtk::POS_BOTTOM, 1, 1);
-		m_driverLabel.set_text("Driver");
-	m_grid.attach_next_to(m_driverBox, m_driverLabel, Gtk::POS_RIGHT, 1, 1);
+	Gtk::Grid m_grid;
+		Gtk::Label				m_nicknameLabel;
+			Gtk::Entry			m_nicknameEntry;
+		Gtk::Label				m_driverLabel;
+			Gtk::ComboBoxText	m_driverBox;
+		Gtk::Label				m_transportLabel;
+			Gtk::ComboBoxText	m_transportBox;
+		Gtk::Label				m_pathLabel;
+			Gtk::Entry			m_pathEntry;
+};
 
-	vector<string> drivers;
-	Oscilloscope::EnumDrivers(drivers);
-	for(auto d : drivers)
-		m_driverBox.append(d);
-
-	m_grid.attach_next_to(m_transportLabel, m_driverLabel, Gtk::POS_BOTTOM, 1, 1);
-		m_transportLabel.set_text("Transport");
-	m_grid.attach_next_to(m_transportBox, m_transportLabel, Gtk::POS_RIGHT, 1, 1);
-
-	vector<string> transports;
-	SCPITransport::EnumTransports(transports);
-	for(auto t : transports)
-		m_transportBox.append(t);
-
-	m_grid.attach_next_to(m_pathLabel, m_transportLabel, Gtk::POS_BOTTOM, 1, 1);
-		m_pathLabel.set_text("Path");
-	m_grid.attach_next_to(m_pathEntry, m_pathLabel, Gtk::POS_RIGHT, 1, 1);
-
-	m_pathEntry.set_size_request(250, 1);
-
-	m_pathEntry.set_activates_default(true);
-
-	show_all();
-}
-
-InstrumentConnectionDialog::~InstrumentConnectionDialog()
-{
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Output
-
-string InstrumentConnectionDialog::GetConnectionString()
-{
-	//If no nickname is specified, assign a default
-	if(m_nicknameEntry.get_text() == "")
-		m_nicknameEntry.set_text("scope");
-
-	char tmp[256];
-	snprintf(tmp, sizeof(tmp), "%s:%s:%s:%s",
-		m_nicknameEntry.get_text().c_str(),
-		m_driverBox.get_active_text().c_str(),
-		m_transportBox.get_active_text().c_str(),
-		m_pathEntry.get_text().c_str());
-	return tmp;
-}
-
-bool InstrumentConnectionDialog::ValidateConfig()
-{
-	//Must have stuff in each box
-	if(m_driverBox.get_active_text() == "")
-		return false;
-	if(m_transportBox.get_active_text() == "")
-		return false;
-	if(m_pathEntry.get_text() == "" && m_transportBox.get_active_text() != "null")
-		return false;
-
-	//For now, hard code check of null being legal only with demo
-	if(m_transportBox.get_active_text() != "null")
-		return true;
-	if(m_driverBox.get_active_text() == "demo")
-	{
-		if(m_pathEntry.get_text() == "")
-			m_pathEntry.set_text("null");
-		return true;
-	}
-
-	return false;
-}
+#endif

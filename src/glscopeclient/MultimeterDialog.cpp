@@ -67,6 +67,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 		m_rateBox.append("1 Hz");
 		m_rateBox.append("2 Hz");
 		m_rateBox.append("5 Hz");
+		m_rateBox.set_active_text("1 Hz");
 
 	m_grid.attach(m_primaryFrame, 0, 2, 2, 1);
 		m_primaryFrame.set_label("Primary Measurement");
