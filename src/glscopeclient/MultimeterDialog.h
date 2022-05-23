@@ -68,6 +68,8 @@ protected:
 
 	Multimeter* m_meter;
 
+	void SetGraphScale(Graph& graph, double range, double rmax, const std::string& unit);
+
 	Gtk::Grid m_grid;
 		Gtk::Label						m_inputLabel;
 			Gtk::ComboBoxText			m_inputBox;

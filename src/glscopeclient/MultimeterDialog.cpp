@@ -89,6 +89,16 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter)
 
 		m_secondaryGrid.attach(m_secondaryGraph, 0, 2, 2, 1);
 
+	//Allow resizing, and make the graph take up the space
+	m_primaryFrame.set_hexpand(true);
+	m_primaryFrame.set_vexpand(true);
+	m_secondaryFrame.set_hexpand(true);
+	m_secondaryFrame.set_vexpand(true);
+	m_graph.set_hexpand(true);
+	m_graph.set_vexpand(true);
+	m_secondaryGraph.set_hexpand(true);
+	m_secondaryGraph.set_vexpand(true);
+
 	//Graph setup
 	m_graph.set_size_request(600, 100);
 	m_graph.m_units = "V";
@@ -214,6 +224,58 @@ void MultimeterDialog::OnModeChanged()
 	RefreshSecondaryModeList();
 }
 
+void MultimeterDialog::SetGraphScale(Graph& graph, double range, double rmax, const string& unit)
+{
+	if(range > 5e6)
+		graph.m_scaleBump = 2.5e6;
+	else if(range > 5e5)
+		graph.m_scaleBump = 2.5e5;
+	else if(range > 5e4)
+		graph.m_scaleBump = 2.5e4;
+	else if(range > 2.5e4)
+		graph.m_scaleBump = 1e4;
+	else if(range > 5e3)
+		graph.m_scaleBump = 2.5e3;
+	else if(range > 2.5e3)
+		graph.m_scaleBump = 1e3;
+	else if(range > 5e2)
+		graph.m_scaleBump = 2.5e2;
+	else if(range > 5e1)
+		graph.m_scaleBump = 2.5e1;
+	else if(range > 5e-0)
+		graph.m_scaleBump = 2.5e-0;
+	else if(range > 5e-1)
+		graph.m_scaleBump = 2.5e-1;
+	else if(range > 5e-2)
+		graph.m_scaleBump = 2.5e-2;
+	else if(range > 5e-3)
+		graph.m_scaleBump = 2.5e-3;
+	else if(range > 5e-4)
+		graph.m_scaleBump = 2.5e-4;
+	else if(range > 5e-5)
+		graph.m_scaleBump = 2.5e-5;
+	else if(range > 5e-6)
+		graph.m_scaleBump = 2.5e-6;
+	else if(range > 5e-7)
+		graph.m_scaleBump = 2.5e-7;
+
+	//super small, for now don't show any divisions
+	else
+		graph.m_scaleBump = 1;
+
+	if(rmax < 1)
+	{
+		graph.m_units = string("m") + unit;
+		graph.m_unitScale = 1000;
+	}
+
+	if(rmax > 1e3)
+	{
+		graph.m_units = string("k") + unit;
+		graph.m_unitScale = 1e-3;
+	}
+}
+
 bool MultimeterDialog::OnTimer()
 {
 	//Update text display
@@ -231,18 +293,10 @@ bool MultimeterDialog::OnTimer()
 	//Update graph limits
 	m_minval = min(m_minval, value);
 	m_maxval = max(m_maxval, value);
-
 	m_graph.m_minScale = m_minval;
 	m_graph.m_maxScale = m_maxval;
 	double range = abs(m_maxval - m_minval);
-	if(range > 5)
-		m_graph.m_scaleBump = 2.5;
-	else if(range >= 0.5)
-		m_graph.m_scaleBump = 0.25;
-	else if(range > 0.05)
-		m_graph.m_scaleBump = 0.1;
-	else
-		m_graph.m_scaleBump = 0.025;
+	SetGraphScale(m_graph, range, m_maxval, m_meter->GetMeterUnit().ToString());
 
 	//No secondary measurement? Nothing to do
 	if(m_meter->GetSecondaryMeterMode() == Multimeter::NONE)
@@ -268,24 +322,7 @@ bool MultimeterDialog::OnTimer()
 		m_secondaryGraph.m_minScale = m_secminval;
 		m_secondaryGraph.m_maxScale = m_secmaxval;
 		range = abs(m_secmaxval - m_secminval);
-		if(range > 500000)
-			m_secondaryGraph.m_scaleBump = 250000;
-		else if(range > 50000)
-			m_secondaryGraph.m_scaleBump = 25000;
-		else if(range > 5000)
-			m_secondaryGraph.m_scaleBump = 2500;
-		else if(range > 500)
-			m_secondaryGraph.m_scaleBump = 250;
-		else if(range > 50)
-			m_secondaryGraph.m_scaleBump = 25;
-		else if(range > 5)
-			m_secondaryGraph.m_scaleBump = 2.5;
-		else if(range >= 0.5)
-			m_secondaryGraph.m_scaleBump = 0.25;
-		else if(range > 0.05)
-			m_secondaryGraph.m_scaleBump = 0.1;
-		else
-			m_secondaryGraph.m_scaleBump = 0.025;
+		SetGraphScale(m_secondaryGraph, range, m_secmaxval, m_meter->GetSecondaryMeterUnit().ToString());
 	}
 
 	return true;
@@ -306,10 +343,13 @@ void MultimeterDialog::RefreshSecondaryModeList()
 	m_secmodemap["None"] = Multimeter::NONE;
 	m_revsecmodemap[Multimeter::NONE] = "None";
 
-	m_secondaryValueBox.set_text("");
-
 	//Select the active stuff
-	m_secondaryTypeBox.set_active_text(m_revmodemap[m_meter->GetSecondaryMeterMode()]);
+	auto mode = m_meter->GetSecondaryMeterMode();
+	m_secondaryTypeBox.set_active_text(m_revmodemap[mode]);
+
+	m_secondaryGraph.m_series.clear();
+
+	m_secondaryValueBox.set_text("");
 
 	m_updatingSecondary = false;
 }
