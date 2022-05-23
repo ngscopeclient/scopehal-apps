@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Dialog for connecting to a scope
+	@brief Declaration of MultimeterDialog
  */
 
 #ifndef MultimeterDialog_h
@@ -51,28 +51,52 @@ protected:
 
 	void OnInputChanged();
 	void OnModeChanged();
+	void OnSecondaryModeChanged();
+
+	void RefreshSecondaryModeList();
 
 	void AddMode(Multimeter::MeasurementTypes type, const std::string& label);
+	void AddSecondaryMode(Multimeter::MeasurementTypes type, const std::string& label);
+
 	std::map<std::string, Multimeter::MeasurementTypes> m_modemap;
+	std::map<Multimeter::MeasurementTypes, std::string> m_revmodemap;
+
+	std::map<std::string, Multimeter::MeasurementTypes> m_secmodemap;
+	std::map<Multimeter::MeasurementTypes, std::string> m_revsecmodemap;
 
 	bool OnTimer();
 
 	Multimeter* m_meter;
 
-	//TODO: support secondary measurements
-
 	Gtk::Grid m_grid;
-		Gtk::Label			m_inputLabel;
-			Gtk::ComboBoxText	m_inputBox;
-		Gtk::Label			m_typeLabel;
-			Gtk::ComboBoxText	m_typeBox;
-		Gtk::Label			m_valueLabel;
-			Gtk::Label			m_valueBox;
-		Graph m_graph;
-			Graphable m_graphData;
+		Gtk::Label						m_inputLabel;
+			Gtk::ComboBoxText			m_inputBox;
+		Gtk::Frame						m_primaryFrame;
+			Gtk::Grid					m_primaryGrid;
+				Gtk::Label				m_typeLabel;
+					Gtk::ComboBoxText	m_typeBox;
+				Gtk::Label				m_valueLabel;
+					Gtk::Label			m_valueBox;
+				Graph					m_graph;
+					Graphable			m_graphData;
+
+		Gtk::Frame						m_secondaryFrame;
+			Gtk::Grid					m_secondaryGrid;
+				Gtk::Label				m_secondaryTypeLabel;
+					Gtk::ComboBoxText	m_secondaryTypeBox;
+				Gtk::Label				m_secondaryValueLabel;
+					Gtk::Label			m_secondaryValueBox;
+				Graph					m_secondaryGraph;
+					Graphable			m_secondaryGraphData;
+
 
 	double m_minval;
 	double m_maxval;
+
+	double m_secminval;
+	double m_secmaxval;
+
+	bool m_updatingSecondary;
 };
 
 #endif
