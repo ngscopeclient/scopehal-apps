@@ -219,6 +219,9 @@ FilterDialog::FilterDialog(
 	//Add parameters
 	for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
 	{
+		if(it->second.IsHidden())
+			continue;
+
 		m_prows[it->first] = CreateRow(m_grid, it->first, it->second, nrow, this, filter);
 		nrow ++;
 
@@ -375,6 +378,9 @@ ParameterRowBase* FilterDialog::CreateRow(
 				grid.attach(row->m_contentbox, 1, y, 1, 1);
 					row->m_contentbox.attach(row->m_box, 0, 0, 1, 1);
 				row->Refresh();
+
+				if(param.IsReadOnly())
+					row->m_contentbox.set_sensitive(false);
 				return row;
 			}
 
@@ -386,6 +392,9 @@ ParameterRowBase* FilterDialog::CreateRow(
 					row->m_label.set_label(name);
 				grid.attach(row->m_contentbox, 1, y, 1, 1);
 					row->m_contentbox.attach(row->m_entry, 0, 0, 1, 1);
+
+				if(param.IsReadOnly())
+					row->m_contentbox.set_sensitive(false);
 
 				row->m_label.set_label(name);
 
@@ -553,6 +562,10 @@ void FilterDialog::OnRefreshParameters()
 		//Do we already have an entry for this one?
 		auto name = it->first;
 		if(m_prows.find(name) != m_prows.end())
+			continue;
+
+		//Skip hidden ones
+		if(it->second.IsHidden())
 			continue;
 
 		m_prows[name] = CreateRow(m_grid, name, it->second, nrow, this, m_filter);
