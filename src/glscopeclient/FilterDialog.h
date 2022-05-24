@@ -77,7 +77,9 @@ public:
 	Gtk::Entry			m_entry;
 
 protected:
-	void OnChanged();
+	void OnTextChanged();
+	void OnValueChanged();
+	sigc::connection m_connection;
 };
 
 class ParameterRowEnum : public ParameterRowBase

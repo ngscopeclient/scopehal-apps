@@ -61,16 +61,22 @@ ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& par
 {
 	m_entry.set_size_request(500, 1);
 
-	m_entry.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnChanged));
+	if(!param.IsReadOnly())
+		m_connection = m_entry.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnTextChanged));
+	else
+		m_connection = param.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnValueChanged));
 }
 
 ParameterRowString::~ParameterRowString()
 {
+	m_connection.disconnect();
 }
 
-void ParameterRowString::OnChanged()
+void ParameterRowString::OnTextChanged()
 {
 	if(m_ignoreEvents)
+		return;
+	if(m_param.IsReadOnly())
 		return;
 
 	//When typing over a value, the text is momentarily set to the empty string.
@@ -79,6 +85,11 @@ void ParameterRowString::OnChanged()
 		return;
 
 	m_param.ParseString(m_entry.get_text());
+}
+
+void ParameterRowString::OnValueChanged()
+{
+	m_entry.set_text(m_param.ToString());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +101,8 @@ ParameterRowEnum::ParameterRowEnum(Gtk::Dialog* parent, FilterParameter& param, 
 	m_box.set_size_request(500, 1);
 	m_box.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::OnChanged));
 
-	m_connection = m_param.signal_enums_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::Refresh));
+	if(!param.IsReadOnly())
+		m_connection = m_param.signal_enums_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::Refresh));
 }
 
 ParameterRowEnum::~ParameterRowEnum()
@@ -103,6 +115,8 @@ ParameterRowEnum::~ParameterRowEnum()
 void ParameterRowEnum::OnChanged()
 {
 	if(m_ignoreEvents)
+		return;
+	if(m_param.IsReadOnly())
 		return;
 
 	m_param.ParseString(m_box.get_active_text());
@@ -226,8 +240,11 @@ FilterDialog::FilterDialog(
 		nrow ++;
 
 		//Make signal connections for parameters changing
-		m_paramConnections.push_back(it->second.signal_changed().connect(
-			sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
+		if(!it->second.IsReadOnly())
+		{
+			m_paramConnections.push_back(it->second.signal_changed().connect(
+				sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
+		}
 	}
 
 	//Add event handlers
@@ -572,8 +589,11 @@ void FilterDialog::OnRefreshParameters()
 		nrow ++;
 
 		//Make new signal connections for parameters changing
-		m_paramConnections.push_back(it->second.signal_changed().connect(
-			sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
+		if(!it->second.IsReadOnly())
+		{
+			m_paramConnections.push_back(it->second.signal_changed().connect(
+				sigc::mem_fun(*this, &FilterDialog::OnParameterChanged)));
+		}
 	}
 }
 
