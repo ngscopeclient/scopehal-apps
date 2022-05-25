@@ -177,7 +177,7 @@ void ParameterRowFilename::OnBrowser()
 	dlg.add_button("Open", Gtk::RESPONSE_OK);
 	dlg.add_button("Cancel", Gtk::RESPONSE_CANCEL);
 	if(m_param.m_fileIsOutput)
-		dlg.set_do_overwrite_confirmation();;
+		dlg.set_do_overwrite_confirmation();
 	auto response = dlg.run();
 
 	if(response != Gtk::RESPONSE_OK)

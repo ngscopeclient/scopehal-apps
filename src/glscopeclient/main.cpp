@@ -77,8 +77,6 @@ void help()
 			"    --help      : this message...\n"
 			"    --nodata    : when loading a .scopesession from the command line, only load instrument/UI settings\n"
 			"                  (default is to load waveform data too)\n"
-			"    --nodigital : only display analog channels at startup\n"
-			"                  (default is to display digital channels too)\n"
 			"    --reconnect : when loading a .scopesession from the command line, reconnect to the instrument\n"
 			"                  (default is to do offline analysis)\n"
 			"    --retrigger : when loading a .scopesession from the command line, start triggering immediately\n"
@@ -127,8 +125,6 @@ int main(int argc, char* argv[])
 	bool reconnect = false;
 	bool nodata = false;
 	bool retrigger = false;
-	bool nodigital = false;
-	bool nospectrum = false;
 	bool noavx2 = false;
 	bool noavx512f = false;
 	for(int i=1; i<argc; i++)
@@ -156,10 +152,6 @@ int main(int argc, char* argv[])
 			nodata = true;
 		else if(s == "--retrigger")
 			retrigger = true;
-		else if(s == "--nodigital")
-			nodigital = true;
-		else if(s == "--nospectrum")
-			nospectrum = true;
 		else if(s == "--noglint64")
 			g_noglint64 = true;
 		else if(s == "--noopencl")
@@ -242,9 +234,7 @@ int main(int argc, char* argv[])
 		filesToLoad,
 		reconnect,
 		nodata,
-		retrigger,
-		nodigital,
-		nospectrum);
+		retrigger);
 
 	//Global cleanup
 	ScopehalStaticCleanup();

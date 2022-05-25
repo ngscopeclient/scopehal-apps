@@ -56,9 +56,7 @@ public:
 		std::vector<std::string> filesToLoad,
 		bool reconnect,
 		bool nodata,
-		bool retrigger,
-		bool nodigital,
-		bool nospectrum);
+		bool retrigger);
 
 	void DispatchPendingEvents();
 

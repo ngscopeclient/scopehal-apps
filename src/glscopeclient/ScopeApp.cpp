@@ -48,9 +48,7 @@ void ScopeApp::run(
 	vector<string> filesToLoad,
 	bool reconnect,
 	bool nodata,
-	bool retrigger,
-	bool nodigital,
-	bool nospectrum)
+	bool retrigger)
 {
 	register_application();
 
@@ -65,7 +63,7 @@ void ScopeApp::run(
 	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
 #endif
 
-	m_window = new OscilloscopeWindow(scopes, nodigital, nospectrum);
+	m_window = new OscilloscopeWindow(scopes);
 	add_window(*m_window);
 
 	//Handle file loads specified on the command line

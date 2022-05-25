@@ -63,7 +63,7 @@ class TimebasePropertiesDialog;
 class OscilloscopeWindow	: public Gtk::Window
 {
 public:
-	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum);
+	OscilloscopeWindow(const std::vector<Oscilloscope*>& scopes);
 	~OscilloscopeWindow();
 
 	void OnAutofitHorizontal(WaveformGroup* group);
@@ -165,7 +165,7 @@ protected:
 	void UpdateStatusBar();
 
 	//Initialization
-	void CreateWidgets(bool nodigital, bool nospectrum);
+	void CreateWidgets();
 	void PopulateToolbar();
 
 	//Widgets
@@ -323,7 +323,7 @@ public:
 	//Session handling
 	void CloseSession();
 	void OnLoadComplete();
-	void CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital=false, bool nospectrum=false);
+	void CreateDefaultWaveformAreas(Gtk::Paned* split);
 
 	void OnChannelRenamed(OscilloscopeChannel* chan);
 

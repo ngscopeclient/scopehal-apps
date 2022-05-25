@@ -68,7 +68,7 @@ using namespace std;
 /**
 	@brief Initializes the main window
  */
-OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool nodigital, bool nospectrum)
+OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	: m_exportWizard(nullptr)
 	, m_scopes(scopes)
 	, m_fullscreen(false)
@@ -94,7 +94,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes, bool
 	set_default_size(1280, 800);
 
 	//Add widgets
-	CreateWidgets(nodigital, nospectrum);
+	CreateWidgets();
 
 	//Update recently used instrument list
 	LoadRecentlyUsedList();
@@ -174,7 +174,7 @@ OscilloscopeWindow::~OscilloscopeWindow()
 /**
 	@brief Helper function for creating widgets and setting up signal handlers
  */
-void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
+void OscilloscopeWindow::CreateWidgets()
 {
 	//Initialize filter colors from preferences
 	SyncFilterColors();
@@ -390,7 +390,7 @@ void OscilloscopeWindow::CreateWidgets(bool nodigital, bool nospectrum)
 		it.second->hide();
 
 	//Create the waveform areas for all enabled channels
-	CreateDefaultWaveformAreas(split, nodigital, nospectrum);
+	CreateDefaultWaveformAreas(split);
 
 	//Don't show measurements or wizards by default
 	m_haltConditionsDialog.hide();
@@ -469,7 +469,7 @@ void OscilloscopeWindow::PopulateToolbar()
 /**
 	@brief Creates the waveform areas for a new scope.
  */
-void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodigital, bool nospectrum)
+void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 {
 	//Create top level waveform group
 	auto defaultGroup = new WaveformGroup(this);
@@ -495,63 +495,72 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split, bool nodi
 
 			auto type = chan->GetType();
 
-			//Enable all channels to save time when setting up the client
-			if( (type == OscilloscopeChannel::CHANNEL_TYPE_ANALOG) ||
-				( (type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && !nodigital ) )
+			//Ignore any channels that aren't analog or digital for now
+			if( (type != OscilloscopeChannel::CHANNEL_TYPE_ANALOG) &&
+				(type != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
 			{
-				//Skip channels we can't enable
-				if(!scope->CanEnableChannel(i))
+				continue;
+			}
+
+			//Only enable digital channels if they're already on
+			if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			{
+				if(!chan->IsEnabled())
 					continue;
+			}
 
-				//Put time and frequency domain channels in different groups
-				bool freqDomain = chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ);
-				WaveformGroup* wg = NULL;
-				if(freqDomain)
-				{
-					wg = frequencyDomainGroup;
+			//Skip channels we can't enable
+			if(!scope->CanEnableChannel(i))
+				continue;
 
-					//Skip spectrum channels on request
-					if(nospectrum)
-						continue;
-				}
+			//Put time and frequency domain channels in different groups
+			bool freqDomain = chan->GetXAxisUnits() == Unit(Unit::UNIT_HZ);
+			WaveformGroup* wg = NULL;
+			if(freqDomain)
+			{
+				wg = frequencyDomainGroup;
+
+				//Do not show spectrum channels unless they're already on
+				if(!chan->IsEnabled())
+					continue;
+			}
+			else
+				wg = timeDomainGroup;
+
+			//If the group doesn't exist yet, create/assign it
+			if(wg == NULL)
+			{
+				//Both groups unassigned. Use default group for our current domain
+				if( (timeDomainGroup == NULL) && (frequencyDomainGroup == NULL) )
+					wg = defaultGroup;
+
+				//Default group assigned, make a secondary one
 				else
-					wg = timeDomainGroup;
-
-				//If the group doesn't exist yet, create/assign it
-				if(wg == NULL)
 				{
-					//Both groups unassigned. Use default group for our current domain
-					if( (timeDomainGroup == NULL) && (frequencyDomainGroup == NULL) )
-						wg = defaultGroup;
-
-					//Default group assigned, make a secondary one
-					else
-					{
-						auto secondaryGroup = new WaveformGroup(this);
-						m_waveformGroups.emplace(secondaryGroup);
-						split->pack2(secondaryGroup->m_frame);
-						wg = secondaryGroup;
-					}
-
-					//Either way, our domain now has a group
-					if(freqDomain)
-						frequencyDomainGroup = wg;
-					else
-						timeDomainGroup = wg;
+					auto secondaryGroup = new WaveformGroup(this);
+					m_waveformGroups.emplace(secondaryGroup);
+					split->pack2(secondaryGroup->m_frame);
+					wg = secondaryGroup;
 				}
 
-				//Create a waveform area for each stream in the output
-				for(size_t j=0; j<chan->GetStreamCount(); j++)
-				{
-					//For now, assume all instrument channels have only one output stream
-					auto w = new WaveformArea(StreamDescriptor(chan, j), this);
-					w->m_group = wg;
-					m_waveformAreas.emplace(w);
-					if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
-						wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
-					else
-						wg->m_waveformBox.pack_start(*w);
-				}
+				//Either way, our domain now has a group
+				if(freqDomain)
+					frequencyDomainGroup = wg;
+				else
+					timeDomainGroup = wg;
+			}
+
+			//Create a waveform area for each stream in the output
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+			{
+				//For now, assume all instrument channels have only one output stream
+				auto w = new WaveformArea(StreamDescriptor(chan, j), this);
+				w->m_group = wg;
+				m_waveformAreas.emplace(w);
+				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+					wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
+				else
+					wg->m_waveformBox.pack_start(*w);
 			}
 		}
 	}
