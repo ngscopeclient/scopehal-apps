@@ -541,7 +541,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				double xs = XAxisUnitsToXPosition(start);
 				double xe = XAxisUnitsToXPosition(end);
 
-				if(xe < m_infoBoxRect.get_right())
+				if(xe < chanbox.get_right())
 					continue;
 				if(xs > m_plotRight)
 					break;
@@ -798,7 +798,7 @@ void WaveformArea::RenderChannelInfoBox(
 }
 
 void WaveformArea::RenderChannelInfoIssueBox(
-		StreamDescriptor chan,
+		StreamDescriptor /*chan*/,
 		Cairo::RefPtr< Cairo::Context > cr,
 		std::string text,
 		Rect& box,
