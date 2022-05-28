@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "OscilloscopeWindow.h"
 #include "TriggerPropertiesDialog.h"
+#include "../scopehal/CDRTrigger.h"
 
 using namespace std;
 
@@ -210,16 +211,29 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 
 	}
 
+	auto ct = dynamic_cast<CDRTrigger*>(trig);
+
 	//Add parameters
 	for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it ++)
 	{
-		m_prows[it->first] = FilterDialog::CreateRow(
+		auto row = FilterDialog::CreateRow(
 			m_contentGrid,
 			it->first,
 			it->second,
 			m_prows.size() + trig->GetInputCount(),
 			NULL,
 			trig);
+		m_prows[it->first] = row;
+
+		//Special case: add CDR autobaud button
+		if(ct && ct->IsAutomaticBitRateCalculationAvailable() && (it->first == ct->GetBitRateName()))
+		{
+			auto srow = dynamic_cast<ParameterRowString*>(row);
+			auto button = Gtk::manage(new Gtk::Button);
+			button->set_label("Auto");
+			button->signal_clicked().connect(sigc::mem_fun(*ct, &CDRTrigger::CalculateBitRate));
+			srow->m_contentbox.attach_next_to(*button, srow->m_entry, Gtk::POS_RIGHT);
+		}
 	}
 
 	m_contentGrid.show_all();
