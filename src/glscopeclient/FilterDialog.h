@@ -66,6 +66,9 @@ public:
 
 	//set true to suppress event generation when updating the dialog
 	bool				m_ignoreEvents;
+
+	//set true to suppress event generation when changing a parameter value externally
+	bool				m_ignoreUpdates;
 };
 
 class ParameterRowString : public ParameterRowBase
@@ -80,6 +83,9 @@ protected:
 	void OnTextChanged();
 	void OnValueChanged();
 	sigc::connection m_connection;
+
+	bool OnFocusLostTimer();
+	bool m_timerPending;
 };
 
 class ParameterRowEnum : public ParameterRowBase

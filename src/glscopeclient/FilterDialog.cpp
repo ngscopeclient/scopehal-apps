@@ -46,6 +46,7 @@ ParameterRowBase::ParameterRowBase(Gtk::Dialog* parent, FilterParameter& param, 
 	, m_node(node)
 	, m_param(param)
 	, m_ignoreEvents(false)
+	, m_ignoreUpdates(false)
 {
 }
 
@@ -58,13 +59,14 @@ ParameterRowBase::~ParameterRowBase()
 
 ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
 	: ParameterRowBase(parent, param, node)
+	, m_timerPending(false)
 {
 	m_entry.set_size_request(500, 1);
 
 	if(!param.IsReadOnly())
 		m_connection = m_entry.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnTextChanged));
-	else
-		m_connection = param.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnValueChanged));
+
+	m_connection = param.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnValueChanged));
 }
 
 ParameterRowString::~ParameterRowString()
@@ -84,12 +86,42 @@ void ParameterRowString::OnTextChanged()
 	if(m_entry.get_text() == "")
 		return;
 
+	m_ignoreUpdates = true;
 	m_param.ParseString(m_entry.get_text());
+	m_ignoreUpdates = false;
+
+	//This is quite ugly! But there is no GTK signal for "focus lost" on a widget, only on the root window.
+	if(!m_timerPending)
+	{
+		m_timerPending = true;
+		Glib::signal_timeout().connect(sigc::mem_fun(*this, &ParameterRowString::OnFocusLostTimer), 250);
+	}
 }
 
 void ParameterRowString::OnValueChanged()
 {
+	if(m_ignoreUpdates)
+		return;
+
+	m_ignoreEvents = true;
 	m_entry.set_text(m_param.ToString());
+	m_ignoreEvents = false;
+}
+
+bool ParameterRowString::OnFocusLostTimer()
+{
+	bool focus = m_entry.has_focus();
+
+	//If focus was lost, reformat the text
+	if(!focus)
+	{
+		m_timerPending = false;
+
+		m_ignoreEvents = true;
+		m_entry.set_text(m_param.ToString());
+		m_ignoreEvents = false;
+	}
+	return focus;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
