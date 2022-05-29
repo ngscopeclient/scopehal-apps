@@ -811,25 +811,6 @@ void FilterDialog::ConfigureInputs(FlowGraphNode* node, vector<ChannelSelectorRo
 	}
 }
 
-void FilterDialog::ConfigureParameters(FlowGraphNode* node, std::map<string, ParameterRowBase*>& rows)
-{
-	for(auto it : rows)
-	{
-		auto row = it.second;
-		auto srow = dynamic_cast<ParameterRowString*>(row);
-		auto erow = dynamic_cast<ParameterRowEnum*>(row);
-		auto name = it.first;
-
-		//Strings are easy
-		if(srow)
-			node->GetParameter(name).ParseString(srow->m_entry.get_text());
-
-		//Enums
-		else if(erow)
-			node->GetParameter(name).ParseString(erow->m_box.get_active_text());
-	}
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 

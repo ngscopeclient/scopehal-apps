@@ -124,18 +124,18 @@ void TriggerPropertiesDialog::Clear()
 void TriggerPropertiesDialog::ConfigureTrigger()
 {
 	//Create the trigger
-	auto trig = Trigger::CreateTrigger(m_triggerTypeBox.get_active_text(), m_scope);
+	auto trig = m_scope->GetTrigger();
 
 	//Hook up the input(s)
 	FilterDialog::ConfigureInputs(trig, m_rows);
-	FilterDialog::ConfigureParameters(trig, m_prows);
-
-	//and feed it to the scope
-	m_scope->SetTrigger(trig);
 
 	//Also, set the trigger offset
 	Unit fs(Unit::UNIT_FS);
 	m_scope->SetTriggerOffset(fs.ParseString(m_triggerOffsetEntry.get_text()));
+
+	//Push changes to the scope
+	//TODO: do this live?
+	m_scope->PushTrigger();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -160,14 +160,14 @@ void TriggerPropertiesDialog::OnTriggerTypeChanged()
 	//Nope, create a new trigger
 	else
 	{
-		auto temp_trig = Trigger::CreateTrigger(type, m_scope);
+		auto trig = Trigger::CreateTrigger(type, m_scope);
 
 		//Copy level and first input from the current trigger
-		temp_trig->SetLevel(current_trig->GetLevel());
-		temp_trig->SetInput(0, current_trig->GetInput(0));
+		trig->SetLevel(current_trig->GetLevel());
+		trig->SetInput(0, current_trig->GetInput(0));
 
-		AddRows(temp_trig);
-		delete temp_trig;
+		AddRows(trig);
+		m_scope->SetTrigger(trig);
 	}
 }
 

@@ -182,7 +182,6 @@ public:
 		FlowGraphNode* node);
 
 	static void ConfigureInputs(FlowGraphNode* node, std::vector<ChannelSelectorRow*>& rows);
-	static void ConfigureParameters(FlowGraphNode* node, std::map<std::string, ParameterRowBase*>& rows);
 
 	static void PopulateInputBox(
 		OscilloscopeWindow* parent,
