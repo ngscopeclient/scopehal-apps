@@ -48,10 +48,307 @@ ParameterRowBase::ParameterRowBase(Gtk::Dialog* parent, FilterParameter& param, 
 	, m_ignoreEvents(false)
 	, m_ignoreUpdates(false)
 {
+	m_contentbox.set_hexpand(true);
+	m_contentbox.set_vexpand(true);
 }
 
 ParameterRowBase::~ParameterRowBase()
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ParameterBlock8B10BSymbol
+
+ParameterBlock8B10BSymbol::ParameterBlock8B10BSymbol()
+{
+	m_frame.add(m_grid);
+		m_grid.set_margin_left(5);
+		m_grid.set_margin_right(5);
+		m_grid.set_margin_top(5);
+		m_grid.set_margin_bottom(5);
+
+		m_grid.attach(m_typeLabel, 0, 0);
+			m_typeLabel.set_text("Type");
+		m_grid.attach(m_typeBox, 1, 0);
+			m_typeBox.append("K symbol");
+			m_typeBox.append("D symbol (Dx.y format)");
+			m_typeBox.append("D symbol (Hex format)");
+			m_typeBox.append("Don't care");
+		m_grid.attach(m_disparityLabel, 0, 1);
+			m_disparityLabel.set_text("Disparity");
+		m_grid.attach(m_disparityBox, 1, 1);
+			m_disparityBox.append("Positive");
+			m_disparityBox.append("Negative");
+			m_disparityBox.append("Any");
+		m_grid.attach(m_symbolLabel, 0, 2);
+			m_symbolLabel.set_text("Symbol");
+		//m_grid.attach(m_symbolEntry, 1, 2);
+		//m_grid.attach(m_symbolBox, 1, 2);
+
+		m_symbolBox.append("K28.0");
+		m_symbolBox.append("K28.1");
+		m_symbolBox.append("K28.2");
+		m_symbolBox.append("K28.3");
+		m_symbolBox.append("K28.4");
+		m_symbolBox.append("K28.5");
+		m_symbolBox.append("K28.6");
+		m_symbolBox.append("K28.7");
+		m_symbolBox.append("K23.7");
+		m_symbolBox.append("K27.7");
+		m_symbolBox.append("K29.7");
+		m_symbolBox.append("K30.7");
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ParameterRow8B10BPattern
+
+ParameterRow8B10BPattern::ParameterRow8B10BPattern(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
+	: ParameterRowBase(parent, param, node)
+{
+	m_connection = param.signal_changed().connect(sigc::mem_fun(*this, &ParameterRow8B10BPattern::OnPatternChanged));
+}
+
+ParameterRow8B10BPattern::~ParameterRow8B10BPattern()
+{
+	m_connection.disconnect();
+}
+
+void ParameterRow8B10BPattern::OnKValueChanged(size_t i)
+{
+	if(m_ignoreEvents)
+		return;
+
+	int code5;
+	int code3;
+	auto str = m_blocks[i].m_symbolBox.get_active_text();
+	if(2 != sscanf(str.c_str(), "K%d.%d", &code5, &code3))
+		return;
+
+	m_ignoreUpdates = true;
+	auto params = m_param.Get8B10BPattern();
+	params[i].value = (code3 << 5) | code5;
+	m_param.Set8B10BPattern(params);
+	m_ignoreUpdates = false;
+}
+
+void ParameterRow8B10BPattern::OnDValueChanged(size_t i)
+{
+	if(m_ignoreEvents)
+		return;
+
+	auto str = m_blocks[i].m_symbolEntry.get_text();
+
+	auto params = m_param.Get8B10BPattern();
+
+	if(str[0] == 'D')
+	{
+		int code5;
+		int code3;
+		if(2 != sscanf(str.c_str(), "D%d.%d", &code5, &code3))
+			return;
+		params[i].value = (code3 << 5) | code5;
+	}
+
+	else
+	{
+		unsigned int tmp;
+		if(1 != sscanf(str.c_str(), "0x%x", &tmp))
+			return;
+		params[i].value = tmp;
+	}
+
+	m_ignoreUpdates = true;
+	m_param.Set8B10BPattern(params);
+	m_ignoreUpdates = false;
+}
+
+void ParameterRow8B10BPattern::SetupBlock(size_t i, T8B10BSymbol s, bool dotted)
+{
+	auto& b = m_blocks[i];
+
+	b.m_typeConnection.disconnect();
+	b.m_valueConnection.disconnect();
+	b.m_disparityConnection.disconnect();
+
+	//Remove symbol boxes
+	if(b.m_symbolEntry.get_parent() != nullptr)
+		b.m_grid.remove(b.m_symbolEntry);
+	if(b.m_symbolBox.get_parent() != nullptr)
+		b.m_grid.remove(b.m_symbolBox);
+
+	//Format content
+	string sym = string("D") + to_string(s.value & 0x1f) + '.' + to_string(s.value >> 5);
+	if(!dotted)
+		sym = "0x" + to_string_hex(s.value, true, 2);
+	switch(s.ktype)
+	{
+		case T8B10BSymbol::KSYMBOL:
+			b.m_grid.attach(b.m_symbolBox, 1, 2);
+			b.m_disparityBox.set_sensitive(true);
+			sym[0] = 'K';
+			b.m_symbolBox.set_active_text(sym);
+			break;
+
+		case T8B10BSymbol::DSYMBOL:
+			b.m_grid.attach(b.m_symbolEntry, 1, 2);
+			b.m_symbolEntry.set_sensitive(true);
+			b.m_disparityBox.set_sensitive(true);
+			b.m_symbolEntry.set_text(sym);
+			break;
+
+		case T8B10BSymbol::DONTCARE:
+			b.m_grid.attach(b.m_symbolEntry, 1, 2);
+			b.m_symbolEntry.set_sensitive(false);
+			b.m_disparityBox.set_sensitive(false);
+			b.m_symbolEntry.set_text(sym);
+			break;
+	}
+
+	b.m_typeConnection = b.m_typeBox.signal_changed().connect(sigc::bind(
+		sigc::mem_fun(*this, &ParameterRow8B10BPattern::OnTypeChanged), i));
+	b.m_disparityConnection = b.m_disparityBox.signal_changed().connect(sigc::bind(
+		sigc::mem_fun(*this, &ParameterRow8B10BPattern::OnDisparityChanged), i));
+	if(s.ktype == T8B10BSymbol::KSYMBOL)
+	{
+		b.m_valueConnection = b.m_symbolBox.signal_changed().connect(sigc::bind(
+			sigc::mem_fun(*this, &ParameterRow8B10BPattern::OnKValueChanged), i));
+	}
+	else
+	{
+		b.m_valueConnection = b.m_symbolEntry.signal_changed().connect(sigc::bind(
+			sigc::mem_fun(*this, &ParameterRow8B10BPattern::OnDValueChanged), i));
+	}
+
+	b.m_grid.show_all();
+}
+
+void ParameterRow8B10BPattern::Initialize(const vector<T8B10BSymbol>& symbols)
+{
+	m_ignoreEvents = true;
+
+	//Clear content
+	auto children = m_contentbox.get_children();
+	for(auto c : children)
+		m_contentbox.remove(*c);
+
+	//Add box for each element in the pattern
+	auto nsymbols = symbols.size();
+	m_blocks.resize(nsymbols);
+	m_contentbox.set_column_spacing(10);
+	for(size_t i=0; i<nsymbols; i++)
+	{
+		auto& b = m_blocks[i];
+		m_contentbox.attach(b.m_frame, i, 0);
+			b.m_frame.set_label(string("Symbol ") + to_string(i+1));
+
+		switch(symbols[i].ktype)
+		{
+			case T8B10BSymbol::KSYMBOL:
+				b.m_typeBox.set_active_text("K symbol");
+				break;
+
+			case T8B10BSymbol::DSYMBOL:
+				b.m_typeBox.set_active_text("D symbol (Dx.y format)");
+				break;
+
+			case T8B10BSymbol::DONTCARE:
+				b.m_typeBox.set_active_text("Don't care");
+				break;
+		}
+
+		//Format disparity
+		switch(symbols[i].disparity)
+		{
+			case T8B10BSymbol::POSITIVE:
+				b.m_disparityBox.set_active_text("Positive");
+				break;
+
+			case T8B10BSymbol::NEGATIVE:
+				b.m_disparityBox.set_active_text("Negative");
+				break;
+
+			case T8B10BSymbol::ANY:
+				b.m_disparityBox.set_active_text("Any");
+				break;
+		}
+
+		SetupBlock(i, symbols[i], true);
+	}
+
+	m_ignoreEvents = false;
+}
+
+void ParameterRow8B10BPattern::OnDisparityChanged(size_t i)
+{
+	auto params = m_param.Get8B10BPattern();
+
+	switch(m_blocks[i].m_disparityBox.get_active_row_number())
+	{
+		case 0:
+			params[i].disparity = T8B10BSymbol::POSITIVE;
+			break;
+
+		case 1:
+			params[i].disparity = T8B10BSymbol::NEGATIVE;
+			break;
+
+		case 2:
+		default:
+			params[i].disparity = T8B10BSymbol::ANY;
+			break;
+	}
+
+	m_ignoreUpdates = true;
+	m_param.Set8B10BPattern(params);
+	m_ignoreUpdates = false;
+}
+
+void ParameterRow8B10BPattern::OnTypeChanged(size_t i)
+{
+	auto params = m_param.Get8B10BPattern();
+
+	bool dotted = true;
+	switch(m_blocks[i].m_typeBox.get_active_row_number())
+	{
+		//K symbol
+		case 0:
+			params[i].ktype = T8B10BSymbol::KSYMBOL;
+			break;
+
+		//D symbol, dotted format
+		case 1:
+			params[i].ktype = T8B10BSymbol::DSYMBOL;
+			break;
+
+		//D symbol, hex format
+		case 2:
+			params[i].ktype = T8B10BSymbol::DSYMBOL;
+			dotted = false;
+			break;
+
+		//Dontcare
+		case 3:
+		default:
+			params[i].ktype = T8B10BSymbol::DONTCARE;
+			break;
+	}
+
+	m_ignoreUpdates = true;
+	m_param.Set8B10BPattern(params);
+	m_ignoreUpdates = false;
+
+	SetupBlock(i, params[i], dotted);
+}
+
+void ParameterRow8B10BPattern::OnPatternChanged()
+{
+	if(m_ignoreUpdates)
+		return;
+
+	Initialize(m_param.Get8B10BPattern());
+
+	m_contentbox.show_all();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,7 +358,7 @@ ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& par
 	: ParameterRowBase(parent, param, node)
 	, m_timerPending(false)
 {
-	m_entry.set_size_request(500, 1);
+	m_entry.set_hexpand(true);
 
 	if(!param.IsReadOnly())
 		m_connection = m_entry.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowString::OnTextChanged));
@@ -130,8 +427,8 @@ bool ParameterRowString::OnFocusLostTimer()
 ParameterRowEnum::ParameterRowEnum(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node)
 	: ParameterRowBase(parent, param, node)
 {
-	m_box.set_size_request(500, 1);
 	m_box.signal_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::OnChanged));
+	m_box.set_hexpand(true);
 
 	if(!param.IsReadOnly())
 		m_connection = m_param.signal_enums_changed().connect(sigc::mem_fun(*this, &ParameterRowEnum::Refresh));
@@ -399,6 +696,19 @@ ParameterRowBase* FilterDialog::CreateRow(
 
 	switch(param.GetType())
 	{
+		case FilterParameter::TYPE_8B10B_PATTERN:
+			{
+				auto row = new ParameterRow8B10BPattern(parent, param, node);
+				grid.attach(row->m_label, 0, y, 1, 1);
+					row->m_label.set_size_request(width, 1);
+					row->m_label.set_label(name);
+				grid.attach(row->m_contentbox, 1, y, 1, 1);
+
+				row->Initialize(param.Get8B10BPattern());
+
+				return row;
+			}
+
 		case FilterParameter::TYPE_FILENAME:
 			{
 				auto row = new ParameterRowFilename(parent, param, node);
@@ -541,6 +851,8 @@ void FilterDialog::OnRefresh()
 	OnRefreshInputs();
 	OnRefreshParameters();
 
+	m_grid.set_hexpand(true);
+	m_grid.set_vexpand(true);
 	m_grid.show_all();
 
 	m_refreshing = false;

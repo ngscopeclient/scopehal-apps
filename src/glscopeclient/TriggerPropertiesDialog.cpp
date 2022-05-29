@@ -80,6 +80,7 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 				m_triggerTypeBox.set_active_text(trig->GetTriggerDisplayName());
 			m_triggerTypeBox.signal_changed().connect(
 				sigc::mem_fun(*this, &TriggerPropertiesDialog::OnTriggerTypeChanged));
+			m_triggerTypeBox.set_hexpand(true);
 
 	//Trigger horizontal offset
 	Unit fs(Unit::UNIT_FS);
@@ -88,6 +89,7 @@ TriggerPropertiesDialog::TriggerPropertiesDialog(
 		m_grid.attach_next_to(m_triggerOffsetEntry, m_triggerOffsetLabel, Gtk::POS_RIGHT, 1, 1);
 			auto offset = m_scope->GetTriggerOffset();
 			m_triggerOffsetEntry.set_text(fs.PrettyPrint(offset));
+			m_triggerOffsetEntry.set_hexpand(true);
 
 	//Actual content
 	get_vbox()->pack_start(m_contentGrid, Gtk::PACK_SHRINK);

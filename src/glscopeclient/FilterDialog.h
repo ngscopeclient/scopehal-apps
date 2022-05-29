@@ -71,6 +71,49 @@ public:
 	bool				m_ignoreUpdates;
 };
 
+class ParameterBlock8B10BSymbol
+{
+public:
+	ParameterBlock8B10BSymbol();
+
+	Gtk::Frame						m_frame;
+		Gtk::Grid					m_grid;
+			Gtk::Label				m_typeLabel;
+				Gtk::ComboBoxText	m_typeBox;
+			Gtk::Label				m_disparityLabel;
+				Gtk::ComboBoxText	m_disparityBox;
+			Gtk::Label				m_symbolLabel;
+				Gtk::ComboBoxText	m_symbolBox;		//if in K character mode
+				Gtk::Entry			m_symbolEntry;		//if in D character mode
+
+	sigc::connection				m_typeConnection;
+	sigc::connection				m_valueConnection;
+	sigc::connection				m_disparityConnection;
+};
+
+class ParameterRow8B10BPattern : public ParameterRowBase
+{
+public:
+	ParameterRow8B10BPattern(Gtk::Dialog* parent, FilterParameter& param, FlowGraphNode* node);
+	virtual ~ParameterRow8B10BPattern();
+
+	void Initialize(const std::vector<T8B10BSymbol>& symbols);
+
+protected:
+
+	void SetupBlock(size_t i, T8B10BSymbol s, bool dotted);
+
+	void OnPatternChanged();
+	void OnKValueChanged(size_t i);
+	void OnDValueChanged(size_t i);
+	void OnDisparityChanged(size_t i);
+	void OnTypeChanged(size_t i);
+
+	std::vector<ParameterBlock8B10BSymbol> m_blocks;
+
+	sigc::connection m_connection;
+};
+
 class ParameterRowString : public ParameterRowBase
 {
 public:
