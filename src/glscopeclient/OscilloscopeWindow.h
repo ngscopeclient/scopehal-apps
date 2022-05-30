@@ -56,6 +56,7 @@ class ScopeInfoWindow;
 class MockOscilloscope;
 class FunctionGeneratorDialog;
 class TimebasePropertiesDialog;
+class SCPIConsoleDialog;
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -210,6 +211,8 @@ protected:
 						Gtk::Menu m_windowMultimeterMenu;
 					Gtk::MenuItem m_windowScopeInfoMenuItem;
 						Gtk::Menu m_windowScopeInfoMenu;
+					Gtk::MenuItem m_windowScpiConsoleMenuItem;
+						Gtk::Menu m_windowScpiConsoleMenu;
 			Gtk::MenuItem m_helpMenuItem;
 				Gtk::Menu m_helpMenu;
 					Gtk::MenuItem m_aboutMenuItem;
@@ -249,14 +252,11 @@ public:
 	//All of the protocol analyzers
 	std::set<ProtocolAnalyzerWindow*> m_analyzers;
 
-	//All of the multimeter dialogs
+	//Dialogs for controlling various instruments
 	std::map<Multimeter*, MultimeterDialog*> m_meterDialogs;
-
-	//All of the scope windows
 	std::map<Oscilloscope*, ScopeInfoWindow*> m_scopeInfoWindows;
-
-	//All of the function generator dialogs
 	std::map<FunctionGenerator*, FunctionGeneratorDialog*> m_functionGeneratorDialogs;
+	std::map<SCPIDevice*, SCPIConsoleDialog*> m_scpiConsoleDialogs;
 
 	//Event handlers
 	bool OnTimer(int timer);
@@ -302,6 +302,7 @@ public:
 	void OnShowMultimeter(Multimeter* meter);
 	void OnShowScopeInfo(Oscilloscope* scope);
 	void OnShowFunctionGenerator(FunctionGenerator* gen);
+	void OnShowSCPIConsole(SCPIDevice* device);
 	void OnFilterGraph();
 	void OnAddMultimeter();
 	void ConnectToMultimeter(std::string path);
@@ -340,6 +341,7 @@ public:
 	void RefreshExportMenu();
 	void RefreshGeneratorsMenu();
 	void RefreshAddMultimeterMenu();
+	void RefreshScpiConsoleMenu();
 
 	void RefreshFilterGraphEditor()
 	{

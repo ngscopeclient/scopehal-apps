@@ -67,6 +67,7 @@ add_executable(glscopeclient
 	ScopeApp.cpp
 	ScopeInfoWindow.cpp
 	ScopeSyncWizard.cpp
+	SCPIConsoleDialog.cpp
 	Shader.cpp
 	ShaderStorageBuffer.cpp
 	Texture.cpp

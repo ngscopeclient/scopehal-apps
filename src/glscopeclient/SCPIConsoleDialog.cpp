@@ -30,73 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FunctionGeneratorDialog
+	@brief Implementation of SCPIConsoleDialog
  */
+#include "glscopeclient.h"
+#include "SCPIConsoleDialog.h"
 
-#ifndef FunctionGeneratorDialog_h
-#define FunctionGeneratorDialog_h
+using namespace std;
 
-class FunctionGeneratorChannelPage
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+SCPIConsoleDialog::SCPIConsoleDialog(SCPIDevice* device)
+	: Gtk::Dialog("")
+	, m_device(device)
+	, m_results(1)
 {
-public:
-	FunctionGeneratorChannelPage(FunctionGenerator* gen, size_t channel);
-	virtual ~FunctionGeneratorChannelPage();
+	get_vbox()->pack_start(m_grid, Gtk::PACK_EXPAND_WIDGET);
 
-	Gtk::Frame m_frame;
-		Gtk::Grid m_grid;
-			Gtk::Label m_impedanceLabel;
-				Gtk::ComboBoxText m_impedanceBox;
-			Gtk::Label m_functionTypeLabel;
-				Gtk::ComboBoxText m_functionTypeBox;
-			Gtk::Label m_amplitudeLabel;
-				Gtk::Entry m_amplitudeBox;
-				Gtk::Button m_amplitudeApplyButton;
-			Gtk::Label m_offsetLabel;
-				Gtk::Entry m_offsetBox;
-				Gtk::Button m_offsetApplyButton;
-			Gtk::Label m_dutyLabel;
-				Gtk::Entry m_dutyBox;
-			Gtk::Label m_freqLabel;
-				Gtk::Entry m_freqBox;
-			Gtk::Label m_oeLabel;
-				Gtk::Switch m_oeSwitch;
+	auto inst = dynamic_cast<Instrument*>(device);
+	if(inst != nullptr)
+		set_title(string("SCPI Console: ") + inst->m_nickname);
 
-protected:
+	m_grid.attach(m_results, 0, 0, 2, 1);
+	m_grid.attach(m_commandBox, 0, 1, 1, 1);
+		m_grid.attach(m_submitButton, 1, 1, 1, 1);
 
-	void OnAmplitudeApply();
-	void OnAmplitudeChanged();
-	void OnOffsetApply();
-	void OnOffsetChanged();
-	void OnDutyCycleChanged();
-	void OnOutputEnableChanged();
-	void OnWaveformChanged();
-	void OnOutputImpedanceChanged();
-	void OnFrequencyChanged();
+	m_submitButton.set_label("Send");
+	m_submitButton.set_can_default();
+	set_default(m_submitButton);
 
-	FunctionGenerator* m_gen;
-	size_t m_channel;
+	m_grid.set_hexpand(true);
+	m_grid.set_vexpand(true);
+	m_results.set_hexpand(true);
+	m_results.set_vexpand(true);
+	m_results.set_headers_visible(false);
 
-	std::vector<FunctionGenerator::WaveShape> m_waveShapes;
-};
+	//minimum initial size
+	m_results.set_size_request(450, 100);
 
-/**
-	@brief Dialog for interacting with a FunctionGenerator (which may or may not be part of an Oscilloscope)
- */
-class FunctionGeneratorDialog	: public Gtk::Dialog
+	m_commandBox.set_hexpand(true);
+
+	show_all();
+
+	m_submitButton.signal_clicked().connect(sigc::mem_fun(*this, &SCPIConsoleDialog::OnSend));
+	m_commandBox.signal_activate().connect(sigc::mem_fun(*this, &SCPIConsoleDialog::OnSend));
+}
+
+SCPIConsoleDialog::~SCPIConsoleDialog()
 {
-public:
-	FunctionGeneratorDialog(FunctionGenerator* gen);
-	virtual ~FunctionGeneratorDialog();
 
-protected:
-	virtual void on_show();
-	virtual void on_hide();
+}
 
-	FunctionGenerator* m_gen;
+void SCPIConsoleDialog::OnSend()
+{
+	auto command = m_commandBox.get_text();
+	m_commandBox.set_text("");
 
-	//Top level control
-	Gtk::Grid m_grid;
-		std::vector<FunctionGeneratorChannelPage*> m_pages;
-};
+	m_results.append(command);
 
-#endif
+	//Command, not a query - no response
+	auto transport = m_device->GetTransport();
+	if(command.find('?') == string::npos)
+		transport->SendCommandImmediate(command);
+
+	//Query, we have a response
+	else
+		m_results.append(Trim(transport->SendCommandImmediateWithReply(command)));
+}

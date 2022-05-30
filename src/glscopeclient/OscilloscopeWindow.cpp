@@ -47,6 +47,7 @@
 #include "MultimeterDialog.h"
 #include "ScopeInfoWindow.h"
 #include "FunctionGeneratorDialog.h"
+#include "SCPIConsoleDialog.h"
 #include "FileSystem.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -336,9 +337,18 @@ void OscilloscopeWindow::CreateWidgets()
 					m_windowMenu.append(m_windowMultimeterMenuItem);
 						m_windowMultimeterMenuItem.set_label("Multimeter");
 						m_windowMultimeterMenuItem.set_submenu(m_windowMultimeterMenu);
+
+					item = Gtk::manage(new Gtk::SeparatorMenuItem);
+					m_windowMenu.append(*item);
+
 					m_windowMenu.append(m_windowScopeInfoMenuItem);
 						m_windowScopeInfoMenuItem.set_label("Scope Info");
 						m_windowScopeInfoMenuItem.set_submenu(m_windowScopeInfoMenu);
+
+					m_windowMenu.append(m_windowScpiConsoleMenuItem);
+						m_windowScpiConsoleMenuItem.set_label("SCPI Console");
+						m_windowScpiConsoleMenuItem.set_submenu(m_windowScpiConsoleMenu);
+
 			m_menu.append(m_helpMenuItem);
 				m_helpMenuItem.set_label("Help");
 				m_helpMenuItem.set_submenu(m_helpMenu);
@@ -384,6 +394,7 @@ void OscilloscopeWindow::CreateWidgets()
 	RefreshTriggerMenu();
 	RefreshExportMenu();
 	RefreshGeneratorsMenu();
+	RefreshScpiConsoleMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -793,6 +804,8 @@ void OscilloscopeWindow::CloseSession()
 		delete it.second;
 	for(auto it : m_functionGeneratorDialogs)
 		delete it.second;
+	for(auto it : m_scpiConsoleDialogs)
+		delete it.second;
 
 	//Clear our records of them
 	m_historyWindows.clear();
@@ -802,6 +815,7 @@ void OscilloscopeWindow::CloseSession()
 	m_meterDialogs.clear();
 	m_scopeInfoWindows.clear();
 	m_functionGeneratorDialogs.clear();
+	m_scpiConsoleDialogs.clear();
 
 	delete m_scopeSyncWizard;
 	m_scopeSyncWizard = NULL;
@@ -1204,6 +1218,7 @@ void OscilloscopeWindow::OnLoadComplete()
 	RefreshScopeInfoMenu();
 	RefreshTriggerMenu();
 	RefreshGeneratorsMenu();
+	RefreshScpiConsoleMenu();
 
 	//Make sure all resize etc events have been handled before replaying history.
 	//Otherwise eye patterns don't refresh right.
@@ -4316,6 +4331,49 @@ void OscilloscopeWindow::ConnectToMultimeter(string path)
 	m_meters.push_back(meter);
 	OnShowMultimeter(meter);
 	RefreshMultimeterMenu();
+	RefreshScpiConsoleMenu();
 	RefreshChannelsMenu();
 	SetTitle();
+}
+
+void OscilloscopeWindow::RefreshScpiConsoleMenu()
+{
+	//Remove the old items
+	auto children = m_windowScpiConsoleMenu.get_children();
+	for(auto c : children)
+		m_windowScpiConsoleMenu.remove(*c);
+
+	//Make a list of all known instruments
+	set<SCPIDevice*> devices;
+	for(auto g : m_meters)
+		devices.emplace(dynamic_cast<SCPIDevice*>(g));
+	for(auto g : m_scopes)
+		devices.emplace(dynamic_cast<SCPIDevice*>(g));
+	for(auto g : m_funcgens)
+		devices.emplace(dynamic_cast<SCPIDevice*>(g));
+
+	//Add new stuff
+	for(auto d : devices)
+	{
+		auto inst = dynamic_cast<Instrument*>(d);
+		if(inst == nullptr)
+			continue;
+
+		auto item = Gtk::manage(new Gtk::MenuItem(inst->m_nickname, false));
+		item->signal_activate().connect(
+			sigc::bind<SCPIDevice*>(sigc::mem_fun(*this, &OscilloscopeWindow::OnShowSCPIConsole), d));
+		m_windowScpiConsoleMenu.append(*item);
+	}
+
+	m_windowScpiConsoleMenu.show_all();
+}
+
+void OscilloscopeWindow::OnShowSCPIConsole(SCPIDevice* device)
+{
+	auto inst = dynamic_cast<Instrument*>(device);
+
+	if(m_scpiConsoleDialogs[device] == nullptr)
+		m_scpiConsoleDialogs[device] = new SCPIConsoleDialog(device);
+
+	m_scpiConsoleDialogs[device]->show();
 }

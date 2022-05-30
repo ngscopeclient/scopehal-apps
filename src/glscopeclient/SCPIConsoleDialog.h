@@ -30,73 +30,31 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FunctionGeneratorDialog
+	@brief Declaration of SCPIConsoleDialog
  */
 
-#ifndef FunctionGeneratorDialog_h
-#define FunctionGeneratorDialog_h
-
-class FunctionGeneratorChannelPage
-{
-public:
-	FunctionGeneratorChannelPage(FunctionGenerator* gen, size_t channel);
-	virtual ~FunctionGeneratorChannelPage();
-
-	Gtk::Frame m_frame;
-		Gtk::Grid m_grid;
-			Gtk::Label m_impedanceLabel;
-				Gtk::ComboBoxText m_impedanceBox;
-			Gtk::Label m_functionTypeLabel;
-				Gtk::ComboBoxText m_functionTypeBox;
-			Gtk::Label m_amplitudeLabel;
-				Gtk::Entry m_amplitudeBox;
-				Gtk::Button m_amplitudeApplyButton;
-			Gtk::Label m_offsetLabel;
-				Gtk::Entry m_offsetBox;
-				Gtk::Button m_offsetApplyButton;
-			Gtk::Label m_dutyLabel;
-				Gtk::Entry m_dutyBox;
-			Gtk::Label m_freqLabel;
-				Gtk::Entry m_freqBox;
-			Gtk::Label m_oeLabel;
-				Gtk::Switch m_oeSwitch;
-
-protected:
-
-	void OnAmplitudeApply();
-	void OnAmplitudeChanged();
-	void OnOffsetApply();
-	void OnOffsetChanged();
-	void OnDutyCycleChanged();
-	void OnOutputEnableChanged();
-	void OnWaveformChanged();
-	void OnOutputImpedanceChanged();
-	void OnFrequencyChanged();
-
-	FunctionGenerator* m_gen;
-	size_t m_channel;
-
-	std::vector<FunctionGenerator::WaveShape> m_waveShapes;
-};
+#ifndef SCPIConsoleDialog_h
+#define SCPIConsoleDialog_h
 
 /**
-	@brief Dialog for interacting with a FunctionGenerator (which may or may not be part of an Oscilloscope)
+	@brief Dialog for interacting with a SCPI instrument
  */
-class FunctionGeneratorDialog	: public Gtk::Dialog
+class SCPIConsoleDialog	: public Gtk::Dialog
 {
 public:
-	FunctionGeneratorDialog(FunctionGenerator* gen);
-	virtual ~FunctionGeneratorDialog();
+	SCPIConsoleDialog(SCPIDevice* device);
+	virtual ~SCPIConsoleDialog();
 
 protected:
-	virtual void on_show();
-	virtual void on_hide();
-
-	FunctionGenerator* m_gen;
+	SCPIDevice* m_device;
 
 	//Top level control
 	Gtk::Grid m_grid;
-		std::vector<FunctionGeneratorChannelPage*> m_pages;
+		Gtk::ListViewText m_results;
+		Gtk::Entry m_commandBox;
+		Gtk::Button m_submitButton;
+
+	void OnSend();
 };
 
 #endif
