@@ -340,8 +340,8 @@ public:
 	void RefreshTriggerMenu();
 	void RefreshExportMenu();
 	void RefreshGeneratorsMenu();
-	void RefreshAddMultimeterMenu();
 	void RefreshScpiConsoleMenu();
+	void RefreshInstrumentMenus();
 
 	void RefreshFilterGraphEditor()
 	{
@@ -452,7 +452,6 @@ public:
 	void AddCurrentToRecentlyUsedList();
 	void LoadRecentlyUsedList();
 	void SaveRecentlyUsedList();
-	void RefreshInstrumentMenu();
 };
 
 #endif

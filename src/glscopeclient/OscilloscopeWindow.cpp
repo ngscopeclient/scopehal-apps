@@ -101,7 +101,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	LoadRecentlyUsedList();
 	AddCurrentToRecentlyUsedList();
 	SaveRecentlyUsedList();
-	RefreshInstrumentMenu();
+	RefreshInstrumentMenus();
 
 	ArmTrigger(TRIGGER_TYPE_NORMAL);
 	m_toggleInProgress = false;
@@ -320,7 +320,6 @@ void OscilloscopeWindow::CreateWidgets()
 					m_addMenu.append(m_addMultimeterMenuItem);
 						m_addMultimeterMenuItem.set_label("Multimeter");
 						m_addMultimeterMenuItem.set_submenu(m_addMultimeterMenu);
-					RefreshAddMultimeterMenu();
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
@@ -395,6 +394,7 @@ void OscilloscopeWindow::CreateWidgets()
 	RefreshExportMenu();
 	RefreshGeneratorsMenu();
 	RefreshScpiConsoleMenu();
+	RefreshInstrumentMenus();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -1211,7 +1211,7 @@ void OscilloscopeWindow::OnLoadComplete()
 	//Reconfigure menus
 	AddCurrentToRecentlyUsedList();
 	SaveRecentlyUsedList();
-	RefreshInstrumentMenu();
+	RefreshInstrumentMenus();
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
 	RefreshMultimeterMenu();
@@ -4117,23 +4117,31 @@ void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
 {
 	//Add our current entry to the recently-used list
 	auto now = time(NULL);
+
+	set<SCPIInstrument*> devices;
 	for(auto scope : m_scopes)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(scope));
+	for(auto gen : m_funcgens)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(gen));
+	for(auto meter : m_meters)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(meter));
+
+	for(auto inst : devices)
 	{
-		//Skip any mock scopes as they're not real things we can connect to
-		if(dynamic_cast<MockOscilloscope*>(scope) != NULL)
+		if(inst == nullptr)
 			continue;
 
-		string connectionString =
-			scope->m_nickname + ":" +
-			scope->GetDriverName() + ":" +
-			scope->GetTransportName() + ":" +
-			scope->GetTransportConnectionString();
+		auto connectionString =
+			inst->m_nickname + ":" +
+			inst->GetDriverName() + ":" +
+			inst->GetTransportName() + ":" +
+			inst->GetTransportConnectionString();
 
 		m_recentlyUsed[connectionString] = now;
 	}
 
 	//Delete anything old
-	const int maxRecentInstruments = 10;
+	const int maxRecentInstruments = 15;
 	while(m_recentlyUsed.size() > maxRecentInstruments)
 	{
 		string oldestPath = "";
@@ -4152,38 +4160,87 @@ void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
 	}
 }
 
-void OscilloscopeWindow::RefreshInstrumentMenu()
+void OscilloscopeWindow::RefreshInstrumentMenus()
 {
 	//Remove the old items
 	auto children = m_recentInstrumentsMenu.get_children();
 	for(auto c : children)
 		m_recentInstrumentsMenu.remove(*c);
+	children = m_addMultimeterMenu.get_children();
+	for(auto c : children)
+		m_addMultimeterMenu.remove(*c);
 
 	//Make a reverse mapping
-	std::map<time_t, string> reverseMap;
+	std::map<time_t, vector<string> > reverseMap;
 	for(auto it : m_recentlyUsed)
-		reverseMap[it.second] = it.first;
+		reverseMap[it.second].push_back(it.first);
+
+	//Deduplicate timestamps
+	set<time_t> timestampsDeduplicated;
+	for(auto it : m_recentlyUsed)
+		timestampsDeduplicated.emplace(it.second);
 
 	//Sort the list by most recent
 	vector<time_t> timestamps;
-	for(auto it : m_recentlyUsed)
-		timestamps.push_back(it.second);
+	for(auto t : timestampsDeduplicated)
+		timestamps.push_back(t);
 	std::sort(timestamps.begin(), timestamps.end());
+
+	//Find all scope drivers
+	vector<string> scopedrivers;
+	Oscilloscope::EnumDrivers(scopedrivers);
+	set<string> scopedriverset;
+	for(auto s : scopedrivers)
+		scopedriverset.emplace(s);
+
+	//Find all multimeter drivers
+	vector<string> meterdrivers;
+	SCPIMultimeter::EnumDrivers(meterdrivers);
+	set<string> meterdriverset;
+	for(auto s : meterdrivers)
+		meterdriverset.emplace(s);
+
+	//Add new stuff
+	auto item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
+	item->signal_activate().connect(
+		sigc::mem_fun(*this, &OscilloscopeWindow::OnAddMultimeter));
+	m_addMultimeterMenu.append(*item);
+	item = Gtk::manage(new Gtk::SeparatorMenuItem);
+	m_addMultimeterMenu.append(*item);
 
 	//Add new ones
 	for(int i=timestamps.size()-1; i>=0; i--)
 	{
 		auto t = timestamps[i];
-		auto path = reverseMap[t];
-		auto nick = path.substr(0, path.find(":"));
+		auto paths = reverseMap[t];
+		for(auto path : paths)
+		{
+			auto fields = explode(path, ':');
+			auto nick = fields[0];
+			auto drivername = fields[1];
 
-		auto item = Gtk::manage(new Gtk::MenuItem(nick, false));
-		item->signal_activate().connect(
-			sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::ConnectToScope), path));
-		m_recentInstrumentsMenu.append(*item);
+			item = Gtk::manage(new Gtk::MenuItem(nick, false));
+
+			//Add to recent scopes menu iff it's a scope
+			if(scopedriverset.find(drivername) != scopedriverset.end())
+			{
+				item->signal_activate().connect(
+					sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::ConnectToScope), path));
+				m_recentInstrumentsMenu.append(*item);
+			}
+
+			//Add to recent meters menu iff it's a meter
+			if(meterdriverset.find(drivername) != meterdriverset.end())
+			{
+				item->signal_activate().connect(
+					sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::ConnectToMultimeter), path));
+				m_addMultimeterMenu.append(*item);
+			}
+		}
 	}
 
 	m_recentInstrumentsMenu.show_all();
+	m_addMultimeterMenu.show_all();
 }
 
 /**
@@ -4232,20 +4289,6 @@ void OscilloscopeWindow::OnShowFunctionGenerator(FunctionGenerator* gen)
 		m_functionGeneratorDialogs[gen] = dlg;
 		dlg->show();
 	}
-}
-
-void OscilloscopeWindow::RefreshAddMultimeterMenu()
-{
-	//Remove the old items
-	auto children = m_addMultimeterMenu.get_children();
-	for(auto c : children)
-		m_addMultimeterMenu.remove(*c);
-
-	//Add new stuff
-	auto item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
-	item->signal_activate().connect(
-		sigc::mem_fun(*this, &OscilloscopeWindow::OnAddMultimeter));
-	m_addMultimeterMenu.append(*item);
 }
 
 void OscilloscopeWindow::OnAddMultimeter()
@@ -4333,6 +4376,9 @@ void OscilloscopeWindow::ConnectToMultimeter(string path)
 	RefreshMultimeterMenu();
 	RefreshScpiConsoleMenu();
 	RefreshChannelsMenu();
+	AddCurrentToRecentlyUsedList();
+	SaveRecentlyUsedList();
+	RefreshInstrumentMenus();
 	SetTitle();
 }
 
@@ -4370,8 +4416,6 @@ void OscilloscopeWindow::RefreshScpiConsoleMenu()
 
 void OscilloscopeWindow::OnShowSCPIConsole(SCPIDevice* device)
 {
-	auto inst = dynamic_cast<Instrument*>(device);
-
 	if(m_scpiConsoleDialogs[device] == nullptr)
 		m_scpiConsoleDialogs[device] = new SCPIConsoleDialog(device);
 
