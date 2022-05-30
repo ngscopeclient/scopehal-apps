@@ -91,9 +91,12 @@ void SCPIConsoleDialog::OnSend()
 	//Command, not a query - no response
 	auto transport = m_device->GetTransport();
 	if(command.find('?') == string::npos)
-		transport->SendCommandImmediate(command);
+	{
+		transport->SendCommandQueued(command);
+		transport->FlushCommandQueue();
+	}
 
 	//Query, we have a response
 	else
-		m_results.append(Trim(transport->SendCommandImmediateWithReply(command)));
+		m_results.append(Trim(transport->SendCommandQueuedWithReply(command)));
 }
