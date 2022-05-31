@@ -65,6 +65,7 @@ protected:
 	Gtk::Grid m_contentGrid;
 
 	Oscilloscope* m_scope;
+	OscilloscopeWindow* m_parent;
 
 	std::vector<ChannelSelectorRow*> m_rows;
 	std::map<std::string, ParameterRowBase*> m_prows;

@@ -45,12 +45,10 @@ using namespace std;
 TriggerPropertiesDialog::TriggerPropertiesDialog(
 	OscilloscopeWindow* parent,
 	Oscilloscope* scope)
-	: Gtk::Dialog(string("Trigger properties"), *parent, Gtk::DIALOG_MODAL)
+	: Gtk::Dialog(string("Trigger properties"), *parent)
 	, m_scope(scope)
+	, m_parent(parent)
 {
-	add_button("OK", Gtk::RESPONSE_OK);
-	add_button("Cancel", Gtk::RESPONSE_CANCEL);
-
 	char buf[128];
 
 	get_vbox()->pack_start(m_grid, Gtk::PACK_SHRINK);
@@ -123,19 +121,23 @@ void TriggerPropertiesDialog::Clear()
 
 void TriggerPropertiesDialog::ConfigureTrigger()
 {
-	//Create the trigger
+	//Get the existing trigger
 	auto trig = m_scope->GetTrigger();
 
 	//Hook up the input(s)
+	//TODO: is this now done live?
 	FilterDialog::ConfigureInputs(trig, m_rows);
 
 	//Also, set the trigger offset
+	//TODO: do this (and nothing else) in event handler when offset is changed
 	Unit fs(Unit::UNIT_FS);
 	m_scope->SetTriggerOffset(fs.ParseString(m_triggerOffsetEntry.get_text()));
 
 	//Push changes to the scope
-	//TODO: do this live?
 	m_scope->PushTrigger();
+
+	//Redraw everything
+	m_parent->RefreshAllViews();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

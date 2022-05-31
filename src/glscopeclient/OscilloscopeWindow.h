@@ -57,6 +57,7 @@ class MockOscilloscope;
 class FunctionGeneratorDialog;
 class TimebasePropertiesDialog;
 class SCPIConsoleDialog;
+class TriggerPropertiesDialog;
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -257,6 +258,7 @@ public:
 	std::map<Oscilloscope*, ScopeInfoWindow*> m_scopeInfoWindows;
 	std::map<FunctionGenerator*, FunctionGeneratorDialog*> m_functionGeneratorDialogs;
 	std::map<SCPIDevice*, SCPIConsoleDialog*> m_scpiConsoleDialogs;
+	std::map<Oscilloscope*, TriggerPropertiesDialog*> m_triggerPropertiesDialogs;
 
 	//Event handlers
 	bool OnTimer(int timer);

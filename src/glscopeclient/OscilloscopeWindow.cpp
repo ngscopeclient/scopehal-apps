@@ -806,6 +806,8 @@ void OscilloscopeWindow::CloseSession()
 		delete it.second;
 	for(auto it : m_scpiConsoleDialogs)
 		delete it.second;
+	for(auto it : m_triggerPropertiesDialogs)
+		delete it.second;
 
 	//Clear our records of them
 	m_historyWindows.clear();
@@ -2329,17 +2331,17 @@ void OscilloscopeWindow::OnAlphaChanged()
 
 void OscilloscopeWindow::OnTriggerProperties(Oscilloscope* scope)
 {
-	//TODO: make this dialog modeless
-	TriggerPropertiesDialog dlg(this, scope);
-	if(Gtk::RESPONSE_OK != dlg.run())
-		return;
-	dlg.ConfigureTrigger();
+	//Did we have a dialog for the meter already?
+	if(m_triggerPropertiesDialogs.find(scope) != m_triggerPropertiesDialogs.end())
+		m_triggerPropertiesDialogs[scope]->show();
 
-	//Redraw the timeline and all waveform areas in case we changed the trigger channel etc
-	for(auto g : m_waveformGroups)
-		g->m_timeline.queue_draw();
-	for(auto a : m_waveformAreas)
-		a->queue_draw();
+	//Need to create it
+	else
+	{
+		auto dlg = new TriggerPropertiesDialog(this, scope);
+		m_triggerPropertiesDialogs[scope] = dlg;
+		dlg->show();
+	}
 }
 
 void OscilloscopeWindow::OnEyeColorChanged(string color, Gtk::RadioMenuItem* item)
@@ -3341,6 +3343,8 @@ void OscilloscopeWindow::RefreshAllFilters()
 
 void OscilloscopeWindow::RefreshAllViews()
 {
+	for(auto g : m_waveformGroups)
+		g->m_timeline.queue_draw();
 	for(auto a : m_waveformAreas)
 		a->queue_draw();
 }
