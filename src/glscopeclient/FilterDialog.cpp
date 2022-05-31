@@ -369,6 +369,7 @@ ParameterRowString::ParameterRowString(Gtk::Dialog* parent, FilterParameter& par
 ParameterRowString::~ParameterRowString()
 {
 	m_connection.disconnect();
+	m_timerConnection.disconnect();
 }
 
 void ParameterRowString::OnTextChanged()
@@ -391,7 +392,8 @@ void ParameterRowString::OnTextChanged()
 	if(!m_timerPending)
 	{
 		m_timerPending = true;
-		Glib::signal_timeout().connect(sigc::mem_fun(*this, &ParameterRowString::OnFocusLostTimer), 250);
+		m_timerConnection = Glib::signal_timeout().connect(
+			sigc::mem_fun(*this, &ParameterRowString::OnFocusLostTimer), 250);
 	}
 }
 

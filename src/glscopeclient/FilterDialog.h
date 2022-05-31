@@ -127,6 +127,8 @@ protected:
 	void OnValueChanged();
 	sigc::connection m_connection;
 
+	sigc::connection m_timerConnection;
+
 	bool OnFocusLostTimer();
 	bool m_timerPending;
 };
