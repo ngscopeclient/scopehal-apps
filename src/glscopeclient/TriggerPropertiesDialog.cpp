@@ -227,15 +227,20 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 			trig);
 		m_prows[it->first] = row;
 
-		//Special case: add CDR autobaud button
+		//Special case: add CDR autobaud button and lock status
 		if(ct && ct->IsAutomaticBitRateCalculationAvailable() && (it->first == ct->GetBitRateName()))
 		{
+			//Autobaud button
 			auto srow = dynamic_cast<ParameterRowString*>(row);
 			auto button = Gtk::manage(new Gtk::Button);
 			button->set_label("Auto");
 			button->signal_clicked().connect(sigc::mem_fun(*ct, &CDRTrigger::CalculateBitRate));
 			srow->m_contentbox.attach_next_to(*button, srow->m_entry, Gtk::POS_RIGHT);
+
+			//Lock status
 		}
+
+		it->second.signal_changed().connect(sigc::mem_fun(*this, &TriggerPropertiesDialog::ConfigureTrigger));
 	}
 
 	m_contentGrid.show_all();
