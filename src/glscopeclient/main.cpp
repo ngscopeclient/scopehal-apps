@@ -114,6 +114,10 @@ void help()
 	);
 }
 
+#ifndef _WIN32
+void Relaunch(int argc, char* argv[]);
+#endif
+
 int main(int argc, char* argv[])
 {
 	//Global settings
@@ -186,24 +190,54 @@ int main(int argc, char* argv[])
 
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");
+	#ifndef _WIN32
+		bool need_relaunch = false;
+	#endif
 	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )
 	{
 		#ifdef _WIN32
 			LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
 		#else
-			LogDebug("OMP_WAIT_POLICY not set to PASSIVE. Re-exec'ing with correct environment\n");
+			LogDebug("OMP_WAIT_POLICY not set to PASSIVE\n");
 			setenv("OMP_WAIT_POLICY", "PASSIVE", true);
 
-			//make a copy of arguments since argv[] does not have to be null terminated, but execvp requires that
-			vector<char*> args;
-			for(int i=0; i<argc; i++)
-				args.push_back(argv[i]);
-			args.push_back(NULL);
-
-			//Launch ourself with the new environment
-			execvp(argv[0], &args[0]);
+			need_relaunch = true;
 		#endif
 	}
+
+	//Complain if asan options are not set right
+	#ifdef __SANITIZE_ADDRESS__
+		LogDebug("Compiled with AddressSanitizer\n");
+
+		#ifdef HAVE_OPENCL
+			const char* asan_options = getenv("ASAN_OPTIONS");
+			if( (asan_options == nullptr) || (strstr(asan_options, "protect_shadow_gap=0") == nullptr) )
+			{
+				#ifndef _WIN32
+					LogDebug("glscopeclient requires protect_shadow_gap=0 for OpenCL support to work under asan\n");
+
+					if(asan_options == nullptr)
+						setenv("ASAN_OPTIONS", "protect_shadow_gap=0", true);
+
+					else
+					{
+						string tmp = asan_options;
+						tmp += ",protect_shadow_gap=0";
+						setenv("ASAN_OPTIONS", tmp.c_str(), true);
+					}
+					need_relaunch = true;
+				#endif
+			}
+		#endif
+	#endif
+
+	#ifndef _WIN32
+		if(need_relaunch)
+		{
+			LogDebug("Re-exec'ing with correct environment\n");
+			Relaunch(argc, argv);
+		}
+	#endif
 
 	g_app = new ScopeApp;
 
@@ -242,6 +276,20 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
+#ifndef _WIN32
+void Relaunch(int argc, char* argv[])
+{
+	//make a copy of arguments since argv[] does not have to be null terminated, but execvp requires that
+	vector<char*> args;
+	for(int i=0; i<argc; i++)
+		args.push_back(argv[i]);
+	args.push_back(NULL);
+
+	//Launch ourself with the new environment
+	execvp(argv[0], &args[0]);
+}
+#endif
 
 double GetTime()
 {
