@@ -37,6 +37,7 @@
 #define TriggerPropertiesDialog_h
 
 #include "FilterDialog.h"
+class CDRTrigger;
 
 /**
 	@brief Dialog for configuring trigger settings for a scope
@@ -52,6 +53,7 @@ public:
 protected:
 	void OnTriggerTypeChanged();
 	void AddRows(Trigger* trig);
+	bool OnCDRLockTimer(CDRTrigger* trig, Gtk::Label* label);
 
 	void Clear();
 
@@ -69,6 +71,8 @@ protected:
 
 	std::vector<ChannelSelectorRow*> m_rows;
 	std::map<std::string, ParameterRowBase*> m_prows;
+
+	sigc::connection m_pllLockConnection;
 };
 
 #endif

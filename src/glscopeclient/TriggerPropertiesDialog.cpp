@@ -104,6 +104,8 @@ TriggerPropertiesDialog::~TriggerPropertiesDialog()
 
 void TriggerPropertiesDialog::Clear()
 {
+	m_pllLockConnection.disconnect();
+
 	auto children = m_contentGrid.get_children();
 	for(auto c : children)
 		m_contentGrid.remove(*c);
@@ -239,11 +241,29 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 			button->signal_clicked().connect(sigc::mem_fun(*ct, &CDRTrigger::CalculateBitRate));
 			srow->m_contentbox.attach_next_to(*button, srow->m_entry, Gtk::POS_RIGHT);
 
-			//Lock status
+			auto lock = Gtk::manage(new Gtk::Label);
+			srow->m_contentbox.attach_next_to(*lock, *button, Gtk::POS_RIGHT);
+
+			lock->set_margin_left(10);
+			lock->set_margin_right(10);
+
+			m_pllLockConnection.disconnect();
+			m_pllLockConnection = Glib::signal_timeout().connect(
+				sigc::bind(sigc::mem_fun(*this, &TriggerPropertiesDialog::OnCDRLockTimer), ct, lock), 1000);
 		}
 
 		it->second.signal_changed().connect(sigc::mem_fun(*this, &TriggerPropertiesDialog::ConfigureTrigger));
 	}
 
 	m_contentGrid.show_all();
+}
+
+bool TriggerPropertiesDialog::OnCDRLockTimer(CDRTrigger* trig, Gtk::Label* label)
+{
+	if(trig->IsCDRLocked())
+		label->set_label("[Locked]");
+	else
+		label->set_label("[Unlocked]");
+
+	return true;
 }
