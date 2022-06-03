@@ -39,7 +39,7 @@
 
 using namespace std;
 
-MockOscilloscope g_scope("Test Scope", "Antikernel Labs", "12345");
+MockOscilloscope g_scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
 minstd_rand g_rng;
 
 int main(int argc, char* argv[])
