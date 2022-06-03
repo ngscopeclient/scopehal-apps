@@ -907,7 +907,7 @@ MockOscilloscope* OscilloscopeWindow::SetupNewSessionForImport(const string& nam
 	m_framesClock.Reset();
 
 	//Create the mock scope
-	auto scope = new MockOscilloscope(name, "Generic", "12345");
+	auto scope = new MockOscilloscope(name, "Generic", "12345", "null", "mock", "");
 	scope->m_nickname = "import";
 	m_scopes.push_back(scope);
 
@@ -1744,7 +1744,11 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 			scope = new MockOscilloscope(
 				inst["name"].as<string>(),
 				inst["vendor"].as<string>(),
-				inst["serial"].as<string>());
+				inst["serial"].as<string>(),
+				transtype,
+				driver,
+				inst["args"].as<string>()
+				);
 		}
 
 		//All good. Add to our list of scopes etc
