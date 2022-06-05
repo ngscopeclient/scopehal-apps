@@ -3521,7 +3521,7 @@ void OscilloscopeWindow::ArmTrigger(TriggerType type)
 /**
 	@brief Called when the history view selects an old waveform
  */
-void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
+void OscilloscopeWindow::OnHistoryUpdated()
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
@@ -3537,12 +3537,12 @@ void OscilloscopeWindow::OnHistoryUpdated(bool refreshAnalyzers)
 			w->OnWaveformDataReady();
 	}
 	ClearAllPersistence();
+}
 
-	if(refreshAnalyzers)
-	{
-		for(auto a : m_analyzers)
-			a->OnWaveformDataReady();
-	}
+void OscilloscopeWindow::RefreshProtocolAnalyzers()
+{
+	for(auto a : m_analyzers)
+		a->OnWaveformDataReady();
 }
 
 /**

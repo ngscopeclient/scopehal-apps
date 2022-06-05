@@ -727,6 +727,6 @@ void HistoryWindow::ReplayHistory()
 		m_tree.get_selection()->select(it);
 
 		//Update analyzers
-		m_parent->OnHistoryUpdated(true);
+		m_parent->RefreshProtocolAnalyzers();
 	}
 }

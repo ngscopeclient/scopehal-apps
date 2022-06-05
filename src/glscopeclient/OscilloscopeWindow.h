@@ -104,7 +104,8 @@ public:
 	void HideHistory()
 	{ m_btnHistory.set_active(0); }
 
-	void OnHistoryUpdated(bool refreshAnalyzers = false);
+	void OnHistoryUpdated();
+	void RefreshProtocolAnalyzers();
 	void RemoveProtocolHistoryBefore(TimePoint timestamp);
 
 	void JumpToHistory(TimePoint timestamp);
