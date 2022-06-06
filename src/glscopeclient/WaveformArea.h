@@ -194,6 +194,12 @@ public:
 		m_overlays.push_back(stream);
 	}
 
+	int GetWidth()
+	{ return m_width; }
+
+	int GetHeight()
+	{ return m_height; }
+
 	float GetWidthXUnits()
 	{ return PixelsToXAxisUnits(m_width); }
 
@@ -218,6 +224,10 @@ public:
 	void SyncFontPreferences();
 
 	float GetPersistenceDecayCoefficient();
+
+	//public so it can be called from OscilloscopeWindow because we don't get events directly for some reason
+	//This should be fixed in GTK4, but that's a long ways off.
+	virtual bool on_key_press_event(GdkEventKey* event);
 
 protected:
 	void SharedCtorInit();

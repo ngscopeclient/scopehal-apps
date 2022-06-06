@@ -86,6 +86,8 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	, m_shuttingDown(false)
 	, m_loadInProgress(false)
 	, m_waveformProcessingThread(WaveformProcessingThread, this)
+	, m_cursorX(0)
+	, m_cursorY(0)
 {
 	SetTitle();
 	FindScopeFuncGens();
@@ -113,6 +115,8 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	//Start a timer for polling for scope updates
 	//TODO: can we use signals of some sort to avoid busy polling until a trigger event?
 	Glib::signal_timeout().connect(sigc::bind(sigc::mem_fun(*this, &OscilloscopeWindow::OnTimer), 1), 5);
+
+	add_events(Gdk::POINTER_MOTION_MASK);
 }
 
 void OscilloscopeWindow::SetTitle()
@@ -3956,11 +3960,55 @@ bool OscilloscopeWindow::on_key_press_event(GdkEventKey* key_event)
 			OnStartSingle();
 			break;
 
+		case GDK_KEY_F20:
+			OnStart();
+			break;
+
+		case GDK_KEY_F21:
+			OnStartSingle();
+			break;
+
+		case GDK_KEY_F22:
+			OnForceTrigger();
+			break;
+
+		case GDK_KEY_F23:
+			OnStop();
+			break;
+
+		case GDK_KEY_F24:
+			OnTimebaseSettings();
+			break;
+
 		default:
 			break;
 	}
 
-	return true;
+	//Forward events to WaveformArea under the cursor
+	//FIXME: shouldn't be necessary in gtk4
+	int x;
+	int y;
+	for(auto w : m_waveformAreas)
+	{
+		translate_coordinates(*w, m_cursorX, m_cursorY, x, y);
+
+		if( (x < 0) || (y < 0) )
+			continue;
+		if( (x >= w->GetWidth()) || (y >= w->GetHeight() ) )
+			continue;
+
+		w->on_key_press_event(key_event);
+		break;
+	}
+
+	return false;
+}
+
+bool OscilloscopeWindow::on_motion_notify_event(GdkEventMotion* event)
+{
+	m_cursorX = event->x;
+	m_cursorY = event->y;
+	return false;
 }
 
 /**

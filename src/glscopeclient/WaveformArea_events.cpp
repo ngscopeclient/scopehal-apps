@@ -239,6 +239,21 @@ bool WaveformArea::on_button_press_event(GdkEventButton* event)
 	return true;
 }
 
+bool WaveformArea::on_key_press_event(GdkEventKey* event)
+{
+	switch(event->keyval)
+	{
+		case GDK_KEY_F25:
+			//TODO
+			break;
+
+		default:
+			break;
+	}
+
+	return false;
+}
+
 void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp, float voltage)
 {
 	//Scaling for hi-dpi
@@ -1001,7 +1016,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 			break;
 	}
 
-	return true;
+	return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

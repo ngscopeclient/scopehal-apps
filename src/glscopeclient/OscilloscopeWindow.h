@@ -323,6 +323,7 @@ public:
 
 	//Hotkey event handlers
 	virtual bool on_key_press_event(GdkEventKey* key_event);
+	virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 	//Session handling
 	void CloseSession();
@@ -455,6 +456,10 @@ public:
 	void AddCurrentToRecentlyUsedList();
 	void LoadRecentlyUsedList();
 	void SaveRecentlyUsedList();
+
+	//Cursor position
+	int m_cursorX;
+	int m_cursorY;
 };
 
 #endif
