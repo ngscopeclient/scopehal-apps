@@ -990,15 +990,14 @@ void ProtocolAnalyzerWindow::SelectPacket(TimePoint cap, int64_t offset)
 			}
 		}
 		else if(offset != row.m_offset)
-		{
 			ivis ++;
-			continue;
+		else
+		{
+			m_updating = true;
+			sel->select(path);
+			m_tree.scroll_to_row(path);
+			m_updating = false;
+			break;
 		}
-
-		m_updating = true;
-		sel->select(path);
-		m_tree.scroll_to_row(path);
-		m_updating = false;
-		break;
 	}
 }
