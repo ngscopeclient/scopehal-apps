@@ -718,15 +718,25 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 
 void HistoryWindow::ReplayHistory()
 {
-	//TODO: is there a way to binary search a tree view?
-	//Or get *stable* iterators that aren't invalidated by adding/removing items?
+	//Special case if we only have one waveform
+	//(select handler won't fire if we're already active)
 	auto children = m_model->children();
-	for(auto it : children)
+	if(children.size() == 1)
 	{
-		//Select will update all the protocol decoders etc
-		m_tree.get_selection()->select(it);
-
-		//Update analyzers
+		m_parent->OnHistoryUpdated();
 		m_parent->RefreshProtocolAnalyzers();
+	}
+
+	//No, iterate over everything
+	else
+	{
+		for(auto it : children)
+		{
+			//Select will update all the protocol decoders etc
+			m_tree.get_selection()->select(it);
+
+			//Update analyzers
+			m_parent->RefreshProtocolAnalyzers();
+		}
 	}
 }
