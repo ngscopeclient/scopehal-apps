@@ -164,7 +164,8 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 
 	//Create the row
 	m_updating = true;
-	auto row = *m_model->append();
+	auto rowit = m_model->append();
+	auto row = *rowit;
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = key;
 
@@ -198,7 +199,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	adj->set_value(adj->get_upper());
 
 	//Select the newly added row
-	m_tree.get_selection()->select(row);
+	m_tree.set_cursor(m_model->get_path(rowit));
 
 	//Remove extra waveforms, if we have any.
 	//Clamp to 1 if the user types zero or something non-numeric
