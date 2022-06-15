@@ -202,7 +202,7 @@ public:
 	~ProtocolAnalyzerWindow();
 
 	void OnWaveformDataReady();
-	void RemoveHistoryBefore(TimePoint timestamp);
+	void RemoveHistoryFrom(TimePoint timestamp);
 
 	PacketDecoder* GetDecoder()
 	{ return m_decoder; }

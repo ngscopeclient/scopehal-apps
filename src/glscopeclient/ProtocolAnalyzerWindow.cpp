@@ -768,30 +768,34 @@ void ProtocolAnalyzerWindow::OnSelectionChanged()
 }
 
 /**
-	@brief Remove history before a certain point
+	@brief Remove history from a certain waveform
  */
-void ProtocolAnalyzerWindow::RemoveHistoryBefore(TimePoint timestamp)
+void ProtocolAnalyzerWindow::RemoveHistoryFrom(TimePoint timestamp)
 {
 	m_updating = true;
 
-	//This always happens from the start of time, so just remove from the beginning of our list
-	//until we have nothing that matches.
+	vector<Gtk::TreePath> paths;
 	auto children = m_internalmodel->children();
-	while(children.size() > 0)	//In circumstances I don't fully understand, it's possible for empty() to return false
-								//while size() == 0. This leads to a crash if !empty() is used as the control variable
-								//for this loop.
-	{
-		//Stop if the timestamp is before our first point
-		auto it = children.begin();
-		TimePoint reftime = (*it)[m_columns.m_capturekey];
-		if(timestamp.first < reftime.first)
-			break;
-		if( (timestamp.first == reftime.first) && (timestamp.second <= reftime.second) )
-			break;
 
-		//Remove it
-		m_internalmodel->erase(it);
+	//Make a list of all rows that came from this waveform
+	//WARNING! The outer check is NOT redundant. Under some circumstances (seen with gtk 3.24 on Debian Bullseye)
+	//it is possible for children.begin() to not equal children.end(), even if the container is empty.
+	//This results in empty() returning false, and the foreach loop attempting to dereference null iterators.
+	//The only observed reliable means of determining when the end of the container has been reached is by calling
+	//operator bool() on the iterator.
+	if(children.size() != 0)
+	{
+		for(auto it = children.begin(); (bool)it; it++)
+		{
+			TimePoint point = (*it)[m_columns.m_capturekey];
+			if( point == timestamp)
+				paths.push_back(m_internalmodel->get_path(it));
+		}
 	}
+
+	//Delete them last to first, so that paths are not invalidated
+	for(ssize_t i=paths.size()-1; i >= 0; i--)
+		m_internalmodel->erase(m_internalmodel->get_iter(paths[i]));
 
 	m_updating = false;
 }

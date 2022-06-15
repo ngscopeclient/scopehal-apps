@@ -3550,12 +3550,12 @@ void OscilloscopeWindow::RefreshProtocolAnalyzers()
 }
 
 /**
-	@brief Remove protocol analyzer history prior to a given timestamp
+	@brief Remove protocol analyzer history from to a given timestamp
  */
-void OscilloscopeWindow::RemoveProtocolHistoryBefore(TimePoint timestamp)
+void OscilloscopeWindow::RemoveProtocolHistoryFrom(TimePoint timestamp)
 {
 	for(auto a : m_analyzers)
-		a->RemoveHistoryBefore(timestamp);
+		a->RemoveHistoryFrom(timestamp);
 }
 
 void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)

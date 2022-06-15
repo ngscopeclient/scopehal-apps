@@ -106,7 +106,7 @@ public:
 
 	void OnHistoryUpdated();
 	void RefreshProtocolAnalyzers();
-	void RemoveProtocolHistoryBefore(TimePoint timestamp);
+	void RemoveProtocolHistoryFrom(TimePoint timestamp);
 
 	void JumpToHistory(TimePoint timestamp);
 

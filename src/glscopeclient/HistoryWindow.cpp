@@ -235,16 +235,17 @@ void HistoryWindow::ClearOldHistoryItems()
 	while(children.size() > nmax)
 	{
 		auto it = children.begin();
+
+		//Delete any protocol analyzer state from the waveform being deleted
+		auto key = (*it)[m_columns.m_capturekey];
+		m_parent->RemoveProtocolHistoryFrom(key);
+
+		//Delete the history
 		WaveformHistory hist = (*it)[m_columns.m_history];
 		for(auto w : hist)
 			delete w.second;
 		m_model->erase(it);
 	}
-
-	//Delete any protocol analyzer state from deleted waveforms
-	auto it = children.begin();
-	auto key = (*it)[m_columns.m_capturekey];
-	m_parent->RemoveProtocolHistoryBefore(key);
 }
 
 void HistoryWindow::UpdateMemoryUsageEstimate()
