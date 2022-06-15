@@ -63,7 +63,7 @@ public:
 
 	void ReplayHistory();
 
-	void OnWaveformDataReady(bool loading = false);
+	void OnWaveformDataReady(bool loading = false, bool pin = false);
 	void JumpToHistory(TimePoint timestamp);
 
 	void SetMaxWaveforms(int n);
@@ -77,7 +77,10 @@ public:
 
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
+	virtual void OnTreeButtonPressEvent(GdkEventButton* event);
 	virtual void OnSelectionChanged();
+
+	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
 
 	static void DoSaveWaveformDataForSparseStream(
 		std::string wname,

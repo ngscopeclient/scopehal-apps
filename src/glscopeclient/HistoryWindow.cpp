@@ -69,9 +69,10 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	m_tree.set_model(m_model);
 	m_tree.get_selection()->signal_changed().connect(
 		sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
+	m_tree.signal_button_press_event().connect_notify(sigc::mem_fun(*this, &HistoryWindow::OnTreeButtonPressEvent));
 
 	//Add the columns
-	//m_tree.append_column_editable("Pin", m_columns.m_pinned);
+	m_tree.append_column_editable("Pin", m_columns.m_pinned);
 	m_tree.append_column("Time", m_columns.m_timestamp);
 
 	//Set up the widgets
@@ -122,7 +123,7 @@ void HistoryWindow::SetMaxWaveforms(int n)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 
-void HistoryWindow::OnWaveformDataReady(bool loading)
+void HistoryWindow::OnWaveformDataReady(bool loading, bool pin)
 {
 	//Use the timestamp from the first enabled channel
 	OscilloscopeChannel* chan = NULL;
@@ -168,6 +169,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	auto row = *rowit;
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = key;
+	row[m_columns.m_pinned] = pin;
 
 	//Add waveform data
 	WaveformHistory hist;
@@ -234,18 +236,40 @@ void HistoryWindow::ClearOldHistoryItems()
 
 	while(children.size() > nmax)
 	{
-		auto it = children.begin();
+		bool deletedSomething = false;
 
-		//Delete any protocol analyzer state from the waveform being deleted
-		auto key = (*it)[m_columns.m_capturekey];
-		m_parent->RemoveProtocolHistoryFrom(key);
+		//Look for the oldest un-pinned entry
+		for(auto it = children.begin(); (bool)it; it++)
+		{
+			//Skip pinned rows
+			if( (*it)[m_columns.m_pinned] )
+				continue;
 
-		//Delete the history
-		WaveformHistory hist = (*it)[m_columns.m_history];
-		for(auto w : hist)
-			delete w.second;
-		m_model->erase(it);
+			//Not pinned, eligible to delete
+			DeleteHistoryRow(it);
+			deletedSomething = true;
+			break;
+		}
+
+		//everything we could have deleted was pinned, give up
+		if(!deletedSomething)
+			break;
 	}
+}
+
+void HistoryWindow::DeleteHistoryRow(const Gtk::TreeModel::iterator& it)
+{
+	//Delete any protocol analyzer state from the waveform being deleted
+	auto key = (*it)[m_columns.m_capturekey];
+	m_parent->RemoveProtocolHistoryFrom(key);
+
+	//Delete the history data
+	WaveformHistory hist = (*it)[m_columns.m_history];
+	for(auto w : hist)
+		delete w.second;
+
+	//and remove the row from the tree view
+	m_model->erase(it);
 }
 
 void HistoryWindow::UpdateMemoryUsageEstimate()
@@ -404,6 +428,10 @@ void HistoryWindow::SerializeWaveforms(
 		config += tmp;
 		snprintf(tmp, sizeof(tmp), "        id:        %d\n", id);
 		config += tmp;
+		if((*it)[m_columns.m_pinned])
+			config += "        pinned:    1\n";
+		else
+			config += "        pinned:    0\n";
 		config += "        channels:\n";
 
 		//Format directory for this waveform
@@ -765,4 +793,9 @@ void HistoryWindow::ReplayHistory()
 			m_parent->RefreshProtocolAnalyzers();
 		}
 	}
+}
+
+void HistoryWindow::OnTreeButtonPressEvent(GdkEventButton* event)
+{
+	//LogDebug("button %d pressed\n", event->button);
 }
