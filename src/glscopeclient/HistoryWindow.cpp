@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -47,6 +47,7 @@ HistoryColumns::HistoryColumns()
 	add(m_timestamp);
 	add(m_capturekey);
 	add(m_history);
+	add(m_pinned);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +71,7 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 		sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
 
 	//Add the columns
+	m_tree.append_column_editable("Pin", m_columns.m_pinned);
 	m_tree.append_column("Time", m_columns.m_timestamp);
 
 	//Set up the widgets
@@ -204,6 +206,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	}
 	else
 	{
+		LogIndenter li;
 		string smax = m_maxBox.get_text();
 		size_t nmax = atoi(smax.c_str());
 		if(nmax < 1)
