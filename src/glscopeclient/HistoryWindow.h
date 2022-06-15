@@ -104,6 +104,9 @@ protected:
 		Gtk::Label m_memoryLabel;
 	HistoryColumns m_columns;
 
+	void ClearOldHistoryItems();
+	void UpdateMemoryUsageEstimate();
+
 	OscilloscopeWindow* m_parent;
 	Oscilloscope* m_scope;
 	bool m_updating;

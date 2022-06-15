@@ -202,46 +202,60 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	m_tree.set_cursor(m_model->get_path(rowit));
 
 	//Remove extra waveforms, if we have any.
-	//Clamp to 1 if the user types zero or something non-numeric
 	//When loading a file, don't delete any history even if the file has more waveforms than our current limit
-	auto children = m_model->children();
 	if(loading)
 	{
 		string smax = m_maxBox.get_text();
 		size_t nmax = atoi(smax.c_str());
-		if(nmax < children.size())
-			m_maxBox.set_text(to_string(children.size()));
+		auto nchildren = m_model->children().size();
+		if(nmax < nchildren)
+			m_maxBox.set_text(to_string(nchildren));
 	}
 	else
-	{
-		LogIndenter li;
-		string smax = m_maxBox.get_text();
-		size_t nmax = atoi(smax.c_str());
-		if(nmax < 1)
-		{
-			m_maxBox.set_text("1");
-			nmax = 1;
-		}
-		while(children.size() > nmax)
-		{
-			auto it = children.begin();
-			hist = (*it)[m_columns.m_history];
-			for(auto w : hist)
-				delete w.second;
-			m_model->erase(it);
-		}
+		ClearOldHistoryItems();
 
-		//Delete any protocol analyzer state from deleted waveforms
-		auto it = children.begin();
-		key = (*it)[m_columns.m_capturekey];
-		m_parent->RemoveProtocolHistoryBefore(key);
+	UpdateMemoryUsageEstimate();
+
+	m_updating = false;
+}
+
+void HistoryWindow::ClearOldHistoryItems()
+{
+	auto children = m_model->children();
+	string smax = m_maxBox.get_text();
+	size_t nmax = atoi(smax.c_str());
+
+	//Clamp to 1 if the user types zero or something non-numeric
+	if(nmax < 1)
+	{
+		m_maxBox.set_text("1");
+		nmax = 1;
 	}
+
+	while(children.size() > nmax)
+	{
+		auto it = children.begin();
+		WaveformHistory hist = (*it)[m_columns.m_history];
+		for(auto w : hist)
+			delete w.second;
+		m_model->erase(it);
+	}
+
+	//Delete any protocol analyzer state from deleted waveforms
+	auto it = children.begin();
+	auto key = (*it)[m_columns.m_capturekey];
+	m_parent->RemoveProtocolHistoryBefore(key);
+}
+
+void HistoryWindow::UpdateMemoryUsageEstimate()
+{
+	auto children = m_model->children();
 
 	//Calculate our RAM usage (rough estimate)
 	size_t bytes_used = 0;
 	for(auto it : children)
 	{
-		hist = (*it)[m_columns.m_history];
+		WaveformHistory hist = (*it)[m_columns.m_history];
 		for(auto jt : hist)
 		{
 			auto acap = dynamic_cast<AnalogWaveform*>(jt.second);
@@ -288,6 +302,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	}
 
 	//Convert to MB/GB
+	char tmp[128];
 	float mb = bytes_used / (1024.0f * 1024.0f);
 	float gb = mb / 1024;
 	if(gb > 1)
@@ -295,8 +310,6 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	else
 		snprintf(tmp, sizeof(tmp), "%u WFM / %.0f MB", children.size(), mb);
 	m_memoryLabel.set_label(tmp);
-
-	m_updating = false;
 }
 
 bool HistoryWindow::on_delete_event(GdkEventAny* /*ignored*/)
