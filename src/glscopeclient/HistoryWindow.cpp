@@ -71,7 +71,7 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 		sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
 
 	//Add the columns
-	m_tree.append_column_editable("Pin", m_columns.m_pinned);
+	//m_tree.append_column_editable("Pin", m_columns.m_pinned);
 	m_tree.append_column("Time", m_columns.m_timestamp);
 
 	//Set up the widgets
