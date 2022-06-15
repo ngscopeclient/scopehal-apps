@@ -107,6 +107,9 @@ protected:
 	OscilloscopeWindow* m_parent;
 	Oscilloscope* m_scope;
 	bool m_updating;
+
+	//Timestamp of the last historical waveform we restored
+	TimePoint m_lastHistoryKey;
 };
 
 #endif

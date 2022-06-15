@@ -91,6 +91,9 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 
 	//not shown by default
 	hide();
+
+	m_lastHistoryKey.first = 0;
+	m_lastHistoryKey.second = 0;
 }
 
 HistoryWindow::~HistoryWindow()
@@ -138,6 +141,11 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	if( (chan == NULL) || (data == NULL) )
 		return;
 
+	//If we loaded this waveform from history, it shouldn't be put back into history again
+	TimePoint key(data->m_startTimestamp, data->m_startFemtoseconds);
+	if(m_lastHistoryKey == key)
+		return;
+
 	//Format timestamp
 	char tmp[128];
 	struct tm ltime;
@@ -158,7 +166,6 @@ void HistoryWindow::OnWaveformDataReady(bool loading)
 	m_updating = true;
 	auto row = *m_model->append();
 	row[m_columns.m_timestamp] = stime;
-	TimePoint key(data->m_startTimestamp, data->m_startFemtoseconds);
 	row[m_columns.m_capturekey] = key;
 
 	//Add waveform data
@@ -306,6 +313,7 @@ void HistoryWindow::OnSelectionChanged()
 
 	auto row = *m_tree.get_selection()->get_selected();
 	WaveformHistory hist = row[m_columns.m_history];
+	m_lastHistoryKey = row[m_columns.m_capturekey];
 
 	//Reload the scope with the saved waveforms
 	for(auto it : hist)
