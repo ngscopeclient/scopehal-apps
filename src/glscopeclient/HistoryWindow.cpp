@@ -50,6 +50,9 @@ HistoryColumns::HistoryColumns()
 	add(m_history);
 	add(m_pinned);
 	add(m_label);
+	add(m_offset);
+	add(m_marker);
+	add(m_pinvisible);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,6 +81,11 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	m_tree.append_column("Date", m_columns.m_datestamp);
 	m_tree.append_column("Time", m_columns.m_timestamp);
 	m_tree.append_column_editable("Label", m_columns.m_label);
+
+	//Set up visibility controls etc
+	auto pincol = m_tree.get_column(0);
+	auto render = m_tree.get_column_cell_renderer(0);
+	pincol->add_attribute(*render, "visible", 8);
 
 	//Set up the widgets
 	get_vbox()->pack_start(m_hbox, Gtk::PACK_SHRINK);
@@ -132,6 +140,57 @@ void HistoryWindow::SetMaxWaveforms(int n)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 
+string HistoryWindow::FormatTimestamp(time_t base, int64_t offset)
+{
+	//If offset is >1 sec, shift the timestamp
+	if(offset > FS_PER_SECOND)
+	{
+		base += (offset / FS_PER_SECOND);
+		offset = offset % (int64_t)FS_PER_SECOND;
+	}
+
+	//Format timestamp
+	char tmp[128];
+	struct tm ltime;
+
+#ifdef _WIN32
+	localtime_s(&ltime, &base);
+#else
+	localtime_r(&base, &ltime);
+#endif
+
+	//round to nearest 100ps for display
+	strftime(tmp, sizeof(tmp), "%X.", &ltime);
+	string stime = tmp;
+	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(offset / 100000));
+	stime += tmp;
+	return stime;
+}
+
+string HistoryWindow::FormatDate(time_t base, int64_t offset)
+{
+	//If offset is >1 sec, shift the timestamp
+	if(offset > FS_PER_SECOND)
+	{
+		base += (offset / FS_PER_SECOND);
+		offset = offset % (int64_t)FS_PER_SECOND;
+	}
+
+	//Format timestamp
+	char tmp[128];
+	struct tm ltime;
+
+#ifdef _WIN32
+	localtime_s(&ltime, &base);
+#else
+	localtime_r(&base, &ltime);
+#endif
+
+	//round to nearest 100ps for display
+	strftime(tmp, sizeof(tmp), "%Y-%m-%d", &ltime);
+	return tmp;
+}
+
 void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& label)
 {
 	//Use the timestamp from the first enabled channel
@@ -156,35 +215,16 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 	if(m_lastHistoryKey == key)
 		return;
 
-	//Format timestamp
-	char tmp[128];
-	struct tm ltime;
-
-#ifdef _WIN32
-	localtime_s(&ltime, &data->m_startTimestamp);
-#else
-	localtime_r(&data->m_startTimestamp, &ltime);
-#endif
-
-	//round to nearest 100ps for display
-	strftime(tmp, sizeof(tmp), "%X.", &ltime);
-	string stime = tmp;
-	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(data->m_startFemtoseconds / 100000));
-	stime += tmp;
-
-	//format date
-	strftime(tmp, sizeof(tmp), "%Y-%m-%d", &ltime);
-	string sdate = tmp;
-
 	//Create the row
 	m_updating = true;
 	auto rowit = m_model->append();
 	auto row = *rowit;
-	row[m_columns.m_timestamp] = stime;
-	row[m_columns.m_datestamp] = sdate;
+	row[m_columns.m_timestamp] = FormatTimestamp(data->m_startTimestamp, data->m_startFemtoseconds);
+	row[m_columns.m_datestamp] = FormatDate(data->m_startTimestamp, data->m_startFemtoseconds);
 	row[m_columns.m_capturekey] = key;
 	row[m_columns.m_pinned] = pin;
 	row[m_columns.m_label] = label;
+	row[m_columns.m_pinvisible] = true;
 
 	//Add waveform data
 	WaveformHistory hist;
@@ -277,6 +317,7 @@ void HistoryWindow::DeleteHistoryRow(const Gtk::TreeModel::iterator& it)
 	//Delete any protocol analyzer state from the waveform being deleted
 	auto key = (*it)[m_columns.m_capturekey];
 	m_parent->RemoveProtocolHistoryFrom(key);
+	m_parent->RemoveMarkersFrom(key);
 
 	//Delete the history data
 	WaveformHistory hist = (*it)[m_columns.m_history];
@@ -365,7 +406,18 @@ void HistoryWindow::OnSelectionChanged()
 	if(m_updating)
 		return;
 
-	auto row = *m_tree.get_selection()->get_selected();
+	//If we're selecting a marker etc, actually select the parent node
+	auto sel = m_tree.get_selection()->get_selected();
+	auto path = m_model->get_path(sel);
+	if(path.size() > 1)
+	{
+		path.up();
+		sel = m_model->get_iter(path);
+
+		LogDebug("marker row selected, TODO scroll timestamp of some waveform area to center it?\n");
+	}
+
+	auto row = *sel;
 	WaveformHistory hist = row[m_columns.m_history];
 	m_lastHistoryKey = row[m_columns.m_capturekey];
 
@@ -396,6 +448,83 @@ void HistoryWindow::JumpToHistory(TimePoint timestamp)
 			break;
 		}
 	}
+}
+
+
+void HistoryWindow::ReplayHistory()
+{
+	//Special case if we only have one waveform
+	//(select handler won't fire if we're already active)
+	auto children = m_model->children();
+	if(children.size() == 1)
+	{
+		m_parent->OnHistoryUpdated();
+		m_parent->RefreshProtocolAnalyzers();
+	}
+
+	//No, iterate over everything
+	else
+	{
+		for(auto it : children)
+		{
+			//Select will update all the protocol decoders etc
+			m_tree.get_selection()->select(it);
+
+			//Update analyzers
+			m_parent->RefreshProtocolAnalyzers();
+		}
+	}
+}
+
+void HistoryWindow::OnTreeButtonPressEvent(GdkEventButton* event)
+{
+	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 3) )
+		m_contextMenu.popup(event->button, event->time);
+}
+
+void HistoryWindow::OnDelete()
+{
+	auto sel = m_tree.get_selection()->get_selected();
+	auto path = m_model->get_path(sel);
+	if(path.size() > 1)
+	{
+		LogDebug("delete marker not implemented\n");
+	}
+
+	//It's a history row
+	else
+		DeleteHistoryRow(sel);
+}
+
+void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& /*path*/, const Gtk::TreeModel::iterator& it)
+{
+	//Any row with a label must be pinned
+	auto row = *it;
+	if( (row[m_columns.m_label] != "") && (row[m_columns.m_pinned] != true) )
+		row[m_columns.m_pinned] = true;
+}
+
+void HistoryWindow::AddMarker(TimePoint stamp, int64_t offset, string name, Marker* m)
+{
+	//Parent node is now pinned
+	auto sel = m_tree.get_selection()->get_selected();
+	auto parent = *sel;
+	parent[m_columns.m_pinned] = true;
+
+	//Add the child item
+	auto it = m_model->append(parent.children());
+	auto row = *it;
+	int64_t fs = stamp.second + offset;
+	row[m_columns.m_capturekey] = stamp;
+	row[m_columns.m_offset] = offset;
+	row[m_columns.m_label] = name;
+	row[m_columns.m_marker] = m;
+	row[m_columns.m_pinvisible] = false;
+	row[m_columns.m_datestamp] = FormatDate(stamp.first, fs);
+	row[m_columns.m_timestamp] = FormatTimestamp(stamp.first, fs);
+
+	//Make sure the row is visible
+	m_tree.expand_to_path(m_model->get_path(it));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -788,48 +917,4 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 
 	*done = 1;
 	*progress = 1;
-}
-
-void HistoryWindow::ReplayHistory()
-{
-	//Special case if we only have one waveform
-	//(select handler won't fire if we're already active)
-	auto children = m_model->children();
-	if(children.size() == 1)
-	{
-		m_parent->OnHistoryUpdated();
-		m_parent->RefreshProtocolAnalyzers();
-	}
-
-	//No, iterate over everything
-	else
-	{
-		for(auto it : children)
-		{
-			//Select will update all the protocol decoders etc
-			m_tree.get_selection()->select(it);
-
-			//Update analyzers
-			m_parent->RefreshProtocolAnalyzers();
-		}
-	}
-}
-
-void HistoryWindow::OnTreeButtonPressEvent(GdkEventButton* event)
-{
-	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 3) )
-		m_contextMenu.popup(event->button, event->time);
-}
-
-void HistoryWindow::OnDelete()
-{
-	DeleteHistoryRow(m_tree.get_selection()->get_selected());
-}
-
-void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& /*path*/, const Gtk::TreeModel::iterator& it)
-{
-	//Any row with a label must be pinned
-	auto row = *it;
-	if( (row[m_columns.m_label] != "") && (row[m_columns.m_pinned] != true) )
-		row[m_columns.m_pinned] = true;
 }

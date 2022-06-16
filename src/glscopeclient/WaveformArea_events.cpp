@@ -1853,3 +1853,17 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 	else
 		return time;
 }
+
+void WaveformArea::OnMarkerAdd()
+{
+	//Figure out exactly where we clicked
+	auto stream = GetWaveformAtPoint(m_cursorX, m_cursorY);
+	auto data = stream.GetData();
+	if(!data)
+		return;
+	auto tpoint = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
+	int64_t timestamp = XPositionToXAxisUnits(m_cursorX);
+
+	//Add the marker there
+	m_parent->AddMarker(tpoint, timestamp);
+}

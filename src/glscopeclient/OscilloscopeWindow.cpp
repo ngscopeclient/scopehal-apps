@@ -88,6 +88,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	, m_waveformProcessingThread(WaveformProcessingThread, this)
 	, m_cursorX(0)
 	, m_cursorY(0)
+	, m_nextMarker(1)
 {
 	SetTitle();
 	FindScopeFuncGens();
@@ -828,6 +829,15 @@ void OscilloscopeWindow::CloseSession()
 
 	delete m_graphEditor;
 	m_graphEditor = NULL;
+
+	for(auto it : m_markers)
+	{
+		auto& markers = it.second;
+		for(auto m : markers)
+			delete m;
+	}
+	m_markers.clear();
+	m_nextMarker = 1;
 
 	m_multiScopeFreeRun = false;
 
@@ -4482,4 +4492,29 @@ void OscilloscopeWindow::OnShowSCPIConsole(SCPIDevice* device)
 		m_scpiConsoleDialogs[device] = new SCPIConsoleDialog(device);
 
 	m_scpiConsoleDialogs[device]->show();
+}
+
+void OscilloscopeWindow::RemoveMarkersFrom(TimePoint timestamp)
+{
+	auto& markers = m_markers[timestamp];
+	for(auto m : markers)
+		delete m;
+
+	m_markers.erase(timestamp);
+}
+
+void OscilloscopeWindow::AddMarker(TimePoint timestamp, int64_t offset)
+{
+	//Make the marker
+	string mname = string("M") + to_string(m_nextMarker);
+	m_nextMarker ++;
+	auto m = new Marker(timestamp, offset, mname);
+	m_markers[timestamp].push_back(m);
+
+	//Add the point to each history window
+	for(auto w : m_historyWindows)
+		w.second->AddMarker(timestamp, offset, mname, m);
+
+	//Redraw viewports with the new marker
+	RefreshAllViews();
 }

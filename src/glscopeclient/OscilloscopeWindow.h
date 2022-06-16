@@ -60,6 +60,23 @@ class SCPIConsoleDialog;
 class TriggerPropertiesDialog;
 
 /**
+	@brief Data for a marker (associated with a specific TimePoint)
+ */
+class Marker
+{
+public:
+	Marker(TimePoint t, int64_t off, std::string name)
+	: m_point(t)
+	, m_offset(off)
+	, m_name(name)
+	{}
+
+	TimePoint m_point;
+	int64_t m_offset;
+	std::string m_name;
+};
+
+/**
 	@brief Main application window class for an oscilloscope
  */
 class OscilloscopeWindow	: public Gtk::Window
@@ -107,6 +124,9 @@ public:
 	void OnHistoryUpdated();
 	void RefreshProtocolAnalyzers();
 	void RemoveProtocolHistoryFrom(TimePoint timestamp);
+
+	void RemoveMarkersFrom(TimePoint timestamp);
+	void AddMarker(TimePoint timestamp, int64_t offset);
 
 	void JumpToHistory(TimePoint timestamp);
 
@@ -460,6 +480,10 @@ public:
 	//Cursor position
 	int m_cursorX;
 	int m_cursorY;
+
+	//Markers
+	std::map<TimePoint, std::vector<Marker*> > m_markers;
+	int m_nextMarker;
 };
 
 #endif

@@ -254,6 +254,14 @@ void WaveformArea::CreateWidgets()
 						WaveformGroup::CURSOR_Y_DUAL,
 						&m_cursorDualHorizontalItem));
 
+	//Markers
+	m_contextMenu.append(m_markerItem);
+		m_markerItem.set_label("Marker");
+		m_markerItem.set_submenu(m_markerMenu);
+			m_markerMenu.append(m_markerAddItem);
+				m_markerAddItem.set_label("Add");
+				m_markerAddItem.signal_activate().connect(sigc::mem_fun(*this, &WaveformArea::OnMarkerAdd));
+
 	m_contextMenu.append(*Gtk::manage(new Gtk::SeparatorMenuItem));
 
 	//Coupling

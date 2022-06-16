@@ -261,6 +261,9 @@ protected:
 				Gtk::RadioMenuItem m_cursorDualVerticalItem;
 				Gtk::RadioMenuItem m_cursorSingleHorizontalItem;
 				Gtk::RadioMenuItem m_cursorDualHorizontalItem;
+		Gtk::MenuItem m_markerItem;
+			Gtk::Menu m_markerMenu;
+				Gtk::MenuItem m_markerAddItem;
 		Gtk::MenuItem m_moveItem;
 			Gtk::Menu m_moveMenu;
 				Gtk::MenuItem m_moveNewGroupBelowItem;
@@ -318,6 +321,7 @@ protected:
 	void OnCopyToExistingGroup(WaveformGroup* group);
 	void OnCursorConfig(WaveformGroup::CursorConfig config, Gtk::RadioMenuItem* item);
 	void OnStatistics();
+	void OnMarkerAdd();
 
 	void RefreshMeasurements();
 

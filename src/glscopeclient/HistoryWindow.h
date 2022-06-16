@@ -38,6 +38,7 @@
 
 class OscilloscopeWindow;
 class FileProgressDialog;
+class Marker;
 
 typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
 
@@ -49,9 +50,18 @@ public:
 	Gtk::TreeModelColumn<Glib::ustring>		m_timestamp;
 	Gtk::TreeModelColumn<Glib::ustring>		m_datestamp;
 	Gtk::TreeModelColumn<TimePoint>			m_capturekey;
-	Gtk::TreeModelColumn<WaveformHistory>	m_history;
-	Gtk::TreeModelColumn<bool>				m_pinned;
 	Gtk::TreeModelColumn<Glib::ustring>		m_label;
+
+	//visibility controls
+	Gtk::TreeModelColumn<bool>				m_pinvisible;
+
+	//only valid for top level nodes
+	Gtk::TreeModelColumn<bool>				m_pinned;
+	Gtk::TreeModelColumn<WaveformHistory>	m_history;
+
+	//only valid for marker nodes
+	Gtk::TreeModelColumn<int64_t>			m_offset;
+	Gtk::TreeModelColumn<Marker*>			m_marker;
 };
 
 /**
@@ -67,6 +77,7 @@ public:
 
 	void OnWaveformDataReady(bool loading = false, bool pin = false, const std::string& label = "");
 	void JumpToHistory(TimePoint timestamp);
+	void AddMarker(TimePoint stamp, int64_t offset, std::string name, Marker* m);
 
 	void SetMaxWaveforms(int n);
 
@@ -85,6 +96,9 @@ protected:
 	void OnDelete();
 
 	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
+
+	std::string FormatTimestamp(time_t base, int64_t offset);
+	std::string FormatDate(time_t base, int64_t offset);
 
 	static void DoSaveWaveformDataForSparseStream(
 		std::string wname,
