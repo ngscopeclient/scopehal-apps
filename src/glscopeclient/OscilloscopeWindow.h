@@ -48,6 +48,7 @@
 #include "PreferenceManager.h"
 #include "FilterGraphEditor.h"
 #include "../xptools/HzClock.h"
+#include "Marker.h"
 
 class FilterGraphEditor;
 class PreferenceDialog;
@@ -58,23 +59,6 @@ class FunctionGeneratorDialog;
 class TimebasePropertiesDialog;
 class SCPIConsoleDialog;
 class TriggerPropertiesDialog;
-
-/**
-	@brief Data for a marker (associated with a specific TimePoint)
- */
-class Marker
-{
-public:
-	Marker(TimePoint t, int64_t off, std::string name)
-	: m_point(t)
-	, m_offset(off)
-	, m_name(name)
-	{}
-
-	TimePoint m_point;
-	int64_t m_offset;
-	std::string m_name;
-};
 
 /**
 	@brief Main application window class for an oscilloscope
@@ -109,6 +93,8 @@ public:
 	void OnAddChannel(StreamDescriptor w);
 	void OnGenerateFilter(std::string name);
 	WaveformArea* DoAddChannel(StreamDescriptor w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
+
+	void OnMarkerMoved(Marker* m);
 
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }

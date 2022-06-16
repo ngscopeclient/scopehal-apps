@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -58,7 +58,7 @@ WaveformArea::WaveformArea(
 /**
 	@brief Semi-copy constructor, used when copying a waveform to a new group
 
-	Note that we only clone UI settings, the GL context, GTK properties, etc are new!
+	Note that we only clone UI settings; the GL context, GTK properties, etc are new!
  */
 WaveformArea::WaveformArea(const WaveformArea* clone)
 	: m_persistence(clone->m_persistence)
@@ -90,6 +90,7 @@ void WaveformArea::SharedCtorInit()
 	m_positionDirty				= false;
 	m_mouseElementPosition		= LOC_PLOT;
 	m_showPendingDecodeAsStats	= false;
+	m_selectedMarker			= nullptr;
 
 	m_plotRight = 1;
 	m_width		= 1;

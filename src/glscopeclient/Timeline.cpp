@@ -302,17 +302,9 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	//Find the first channel and use it for display of the trigger config etc
 	//TODO: use all scopes for this
 	RefreshUnits();
-	auto children = m_group->m_waveformBox.get_children();
-	OscilloscopeChannel* chan = NULL;
-	if(!children.empty())
-	{
-		auto view = dynamic_cast<WaveformArea*>(children[0]);
-		if(view != NULL)
-			chan = view->GetChannel().m_channel;
-	}
 
 	//And actually draw the rest
-	Render(cr, chan);
+	Render(cr, m_group->GetFirstChannel().m_channel);
 
 	cr->restore();
 	return true;
@@ -430,7 +422,6 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 		tlayout->show_in_cairo_context(cr);
 	}
 
-
 	//Draw cursor positions if requested
 	if( (m_group->m_cursorConfig == WaveformGroup::CURSOR_X_DUAL) ||
 		(m_group->m_cursorConfig == WaveformGroup::CURSOR_X_SINGLE) )
@@ -471,6 +462,7 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 
 	//Draw trigger position for the first scope in the plot
 	//TODO: handle more than one scope
+	//TODO: handle input to filter graph
 	if(chan)
 	{
 		auto scope = chan->GetScope();
@@ -501,8 +493,84 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 			cr->line_to(x+size, h-size);
 			cr->fill();
 		}
-
 	}
+
+	//Draw markers
+	if(chan)
+	{
+		auto data = chan->GetData(0);
+		if(data)
+		{
+			TimePoint key(data->m_startTimestamp, data->m_startFemtoseconds);
+			if(m_parent->m_markers.find(key) != m_parent->m_markers.end())
+			{
+				auto mcolor = m_parent->GetPreferences().GetColor("Appearance.Cursors.marker_color");
+
+				auto& markers = m_parent->m_markers[key];
+				for(auto m : markers)
+					DrawMarker(cr, m->m_offset, m->m_name, mcolor);
+			}
+		}
+	}
+}
+
+void Timeline::DrawMarker(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		int64_t fs,
+		string& name,
+		Gdk::Color color)
+{
+	float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
+
+	int h = get_height();
+
+	Gdk::Color black("black");
+
+	Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+	Pango::FontDescription font = m_parent->GetPreferences().GetFont("Appearance.Cursors.label_font");
+	font.set_weight(Pango::WEIGHT_NORMAL);
+	tlayout->set_font_description(font);
+	int swidth;
+	int sheight;
+
+	//Format label
+	char label[256];
+	snprintf(
+		label,
+		sizeof(label),
+		"%s: %s",
+		name.c_str(),
+		m_xAxisUnit.PrettyPrint(fs).c_str()
+		);
+	tlayout->set_text(label);
+	tlayout->get_pixel_size(swidth, sheight);
+
+	//Decide which side of the line to draw on
+	double x = (fs - m_group->m_xAxisOffset) * xscale;
+	double right = x-5;
+	double left = right - swidth - 5;
+
+	//Draw filled background for label
+	cr->set_source_rgba(black.get_red_p(), black.get_green_p(), black.get_blue_p(), 0.75);
+	double bot = 10;
+	double top = bot + sheight;
+	cr->move_to(left, top);
+	cr->line_to(left, bot);
+	cr->line_to(right, bot);
+	cr->line_to(right, top);
+	cr->fill();
+
+	//Label text
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->move_to(left+5, bot);
+	tlayout->update_from_cairo_context(cr);
+	tlayout->show_in_cairo_context(cr);
+
+	//Cursor line
+	cr->move_to(x, 0);
+	cr->line_to(x, h);
+	cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+	cr->stroke();
 }
 
 void Timeline::DrawCursor(

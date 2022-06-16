@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -54,6 +54,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Font("label_font", "sans normal 10")
 				.Label("Cursor label font")
 				.Description("Font used for voltage measurements displayed next to cursors"));
+			cursors.AddPreference(
+				Preference::Color("marker_color", Gdk::Color("#ff00a0"))
+				.Label("Marker color")
+				.Description("Color for markers"));
 
 		auto& decodes = appearance.AddCategory("Decodes");
 			decodes.AddPreference(

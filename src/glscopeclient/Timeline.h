@@ -83,6 +83,12 @@ protected:
 		bool draw_left,
 		bool show_delta);
 
+	virtual void DrawMarker(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		int64_t fs,
+		std::string& name,
+		Gdk::Color color);
+
 	WaveformGroup* m_group;
 	OscilloscopeWindow* m_parent;
 

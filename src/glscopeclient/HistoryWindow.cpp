@@ -496,12 +496,33 @@ void HistoryWindow::OnDelete()
 		DeleteHistoryRow(sel);
 }
 
-void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& /*path*/, const Gtk::TreeModel::iterator& it)
+void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::TreeModel::iterator& it)
 {
-	//Any row with a label must be pinned
 	auto row = *it;
-	if( (row[m_columns.m_label] != "") && (row[m_columns.m_pinned] != true) )
-		row[m_columns.m_pinned] = true;
+
+	//Is it a marker?
+	if(path.size() > 1)
+	{
+		Marker* m = row[m_columns.m_marker];
+		if(m == nullptr)
+			return;
+
+		//Update name
+		string name = static_cast<Glib::ustring>(row[m_columns.m_label]);
+		if(name != m->m_name)
+		{
+			m->m_name = name;
+			m_parent->RefreshAllViews();
+		}
+	}
+
+	//No, top level row
+	else
+	{
+		//Any row with a label must be pinned
+		if( (row[m_columns.m_label] != "") && (row[m_columns.m_pinned] != true) )
+			row[m_columns.m_pinned] = true;
+	}
 }
 
 void HistoryWindow::AddMarker(TimePoint stamp, int64_t offset, string name, Marker* m)
@@ -525,6 +546,33 @@ void HistoryWindow::AddMarker(TimePoint stamp, int64_t offset, string name, Mark
 
 	//Make sure the row is visible
 	m_tree.expand_to_path(m_model->get_path(it));
+}
+
+void HistoryWindow::OnMarkerMoved(Marker* m)
+{
+	//TODO: faster way to find this?
+
+	auto children = m_model->children();
+	for(auto it : children)
+	{
+		TimePoint key = (*it)[m_columns.m_capturekey];
+		if(key == m->m_point)
+		{
+			auto mchildren = (*it).children();
+			for(auto jt : mchildren)
+			{
+				auto row = (*jt);
+				if(row[m_columns.m_marker] == m)
+				{
+					int64_t fs = m->m_point.second + m->m_offset;
+					row[m_columns.m_datestamp] = FormatDate(m->m_point.first, fs);
+					row[m_columns.m_timestamp] = FormatTimestamp(m->m_point.first, fs);
+					break;
+				}
+			}
+			break;
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

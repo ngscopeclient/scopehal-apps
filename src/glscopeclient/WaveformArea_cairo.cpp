@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -358,6 +358,7 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 
 	RenderDecodeOverlays(cr);
 	RenderCursors(cr);
+	RenderMarkers(cr);
 
 	//Render arrow and dotted line for trigger level
 	auto scope = m_channel.m_channel->GetScope();
@@ -1085,6 +1086,14 @@ void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
 		default:
 			break;
 	}
+}
+
+void WaveformArea::RenderMarkers(Cairo::RefPtr< Cairo::Context > cr)
+{
+	Gdk::Color color = m_parent->GetPreferences().GetColor("Appearance.Cursors.marker_color");
+	auto markers = GetMarkersForActiveWaveform();
+	for(auto m : markers)
+		RenderVerticalCursor(cr, m->m_offset, color, true);
 }
 
 /**

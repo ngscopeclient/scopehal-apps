@@ -123,6 +123,8 @@ public:
 
 	Unit GetXAxisUnits();
 
+	StreamDescriptor GetFirstChannel();
+
 protected:
 	void OnCloseRequest();
 

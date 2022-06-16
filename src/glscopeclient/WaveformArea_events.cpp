@@ -316,6 +316,16 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp, float
 			}
 			break;
 
+		case LOC_MARKER:
+			if(event->button == 1)
+			{
+				m_dragState = DRAG_MARKER;
+				m_selectedMarker->m_offset = timestamp;
+				OnMarkerMoved();
+				m_group->m_vbox.queue_draw();
+			}
+			break;
+
 		//Waveform area
 		case LOC_PLOT:
 			{
@@ -572,6 +582,13 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 			}
 			break;
 
+		//Release a marker
+		case DRAG_MARKER:
+			timestamp = SnapX(timestamp, event->x, event->y);
+			m_selectedMarker->m_offset = timestamp;
+			m_selectedMarker = nullptr;
+			break;
+
 		case DRAG_TRIGGER_SECONDARY:
 			if(event->button == 1)
 			{
@@ -749,6 +766,17 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				queue_draw();
 			}
 			break;
+
+		case DRAG_MARKER:
+
+			//Snap to the closest toggle
+			timestamp = SnapX(timestamp, event->x, event->y);
+
+			m_selectedMarker->m_offset = timestamp;
+			OnMarkerMoved();
+			m_group->m_vbox.queue_draw();
+			break;
+
 
 		case DRAG_CURSOR_0:
 
@@ -980,6 +1008,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 				{
 					case LOC_XCURSOR_0:
 					case LOC_XCURSOR_1:
+					case LOC_MARKER:
 						shape = "ew-resize";
 						break;
 
@@ -1399,7 +1428,37 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 			break;
 	}
 
+	//Check markers if not on a cursor
+	auto markers = GetMarkersForActiveWaveform();
+	for(auto m : markers)
+	{
+		float mpos = XAxisUnitsToXPosition(m->m_offset);
+		if(fabs(mpos - x) < 5)
+		{
+			m_selectedMarker = m;
+			return LOC_MARKER;
+		}
+	}
+
 	return LOC_PLOT;
+}
+
+vector<Marker*> WaveformArea::GetMarkersForActiveWaveform()
+{
+	vector<Marker*> empty;
+
+	//If we're a filter, use markers from the first waveform in the group
+	WaveformBase* w = m_channel.GetData();
+	if((!w) || (dynamic_cast<Filter*>(m_channel.m_channel) != nullptr ) )
+		w = m_group->GetFirstChannel().GetData();
+	if(!w)
+		return empty;
+
+	//Look up the current waveform's timestamp
+	TimePoint t(w->m_startTimestamp, w->m_startFemtoseconds);
+	if(m_parent->m_markers.find(t) == m_parent->m_markers.end())
+		return empty;
+	return m_parent->m_markers[t];
 }
 
 /**
@@ -1685,6 +1744,28 @@ void WaveformArea::OnCursorMoved(bool notifySiblings)
 				a->OnCursorMoved(false);
 			}
 		}
+	}
+}
+
+/**
+	@brief Update stuff when a marker is moved
+ */
+void WaveformArea::OnMarkerMoved(bool notifySiblings)
+{
+	//Notify all other waveform groups that the cursor moved
+	if(notifySiblings)
+	{
+		for(auto a : m_parent->m_waveformAreas)
+		{
+			if(a == this)
+				continue;
+			if(a->m_group != m_group)
+				continue;
+
+			a->OnMarkerMoved(false);
+		}
+
+		m_parent->OnMarkerMoved(m_selectedMarker);
 	}
 }
 

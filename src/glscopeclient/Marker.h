@@ -30,114 +30,26 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief  Declaration of HistoryWindow
+	@brief  Declaration of Marker
  */
-
-#ifndef HistoryWindow_h
-#define HistoryWindow_h
-
-class OscilloscopeWindow;
-class FileProgressDialog;
-class Marker;
-
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
-
-class HistoryColumns : public Gtk::TreeModel::ColumnRecord
-{
-public:
-	HistoryColumns();
-
-	Gtk::TreeModelColumn<Glib::ustring>		m_timestamp;
-	Gtk::TreeModelColumn<Glib::ustring>		m_datestamp;
-	Gtk::TreeModelColumn<TimePoint>			m_capturekey;
-	Gtk::TreeModelColumn<Glib::ustring>		m_label;
-
-	//visibility controls
-	Gtk::TreeModelColumn<bool>				m_pinvisible;
-
-	//only valid for top level nodes
-	Gtk::TreeModelColumn<bool>				m_pinned;
-	Gtk::TreeModelColumn<WaveformHistory>	m_history;
-
-	//only valid for marker nodes
-	Gtk::TreeModelColumn<int64_t>			m_offset;
-	Gtk::TreeModelColumn<Marker*>			m_marker;
-};
+#ifndef Marker_h
+#define Marker_h
 
 /**
-	@brief Window containing a protocol analyzer
+	@brief Data for a marker (associated with a specific TimePoint)
  */
-class HistoryWindow : public Gtk::Dialog
+class Marker
 {
 public:
-	HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope);
-	~HistoryWindow();
+	Marker(TimePoint t, int64_t off, std::string name)
+	: m_point(t)
+	, m_offset(off)
+	, m_name(name)
+	{}
 
-	void ReplayHistory();
-
-	void OnWaveformDataReady(bool loading = false, bool pin = false, const std::string& label = "");
-	void JumpToHistory(TimePoint timestamp);
-	void AddMarker(TimePoint stamp, int64_t offset, std::string name, Marker* m);
-	void OnMarkerMoved(Marker* m);
-
-	void SetMaxWaveforms(int n);
-
-	void SerializeWaveforms(
-		std::string dir,
-		IDTable& table,
-		FileProgressDialog& progress,
-		float base_progress,
-		float progress_range);
-
-protected:
-	virtual bool on_delete_event(GdkEventAny* ignored);
-	void OnTreeButtonPressEvent(GdkEventButton* event);
-	void OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::TreeModel::iterator& it);
-	void OnSelectionChanged();
-	void OnDelete();
-
-	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
-
-	std::string FormatTimestamp(time_t base, int64_t offset);
-	std::string FormatDate(time_t base, int64_t offset);
-
-	static void DoSaveWaveformDataForSparseStream(
-		std::string wname,
-		StreamDescriptor stream,
-		WaveformBase* wave,
-		volatile float* progress,
-		volatile int* done
-		);
-	static void DoSaveWaveformDataForDenseStream(
-		std::string wname,
-		StreamDescriptor stream,
-		WaveformBase* wave,
-		volatile float* progress,
-		volatile int* done
-		);
-
-	Gtk::HBox m_hbox;
-		Gtk::Label m_maxLabel;
-		Gtk::Entry m_maxBox;
-	Gtk::ScrolledWindow m_scroller;
-		Gtk::TreeView m_tree;
-	Glib::RefPtr<Gtk::TreeStore> m_model;
-	Gtk::HBox m_status;
-		Gtk::Label m_memoryLabel;
-	HistoryColumns m_columns;
-
-	Gtk::Menu m_contextMenu;
-		Gtk::MenuItem m_deleteItem;
-
-	void ClearOldHistoryItems();
-	void UpdateMemoryUsageEstimate();
-
-	OscilloscopeWindow* m_parent;
-	Oscilloscope* m_scope;
-	bool m_updating;
-
-	//Timestamp of the last historical waveform we restored
-	TimePoint m_lastHistoryKey;
+	TimePoint m_point;
+	int64_t m_offset;
+	std::string m_name;
 };
 
 #endif

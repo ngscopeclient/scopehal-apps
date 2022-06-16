@@ -44,6 +44,7 @@ class WaveformArea;
 class EyeWaveform;
 class SpectrogramWaveform;
 class PacketDecoder;
+class Marker;
 
 /**
 	@brief GL buffers etc needed to render a single waveform
@@ -403,6 +404,7 @@ protected:
 	void RenderCairoOverlays();
 	void DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderCursors(Cairo::RefPtr< Cairo::Context > cr);
+	void RenderMarkers(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderInsertionBar(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderVerticalCursor(Cairo::RefPtr< Cairo::Context > cr, int64_t pos, Gdk::Color color, bool label_to_left);
@@ -509,7 +511,8 @@ protected:
 		LOC_XCURSOR_0,
 		LOC_XCURSOR_1,
 		LOC_YCURSOR_0,
-		LOC_YCURSOR_1
+		LOC_YCURSOR_1,
+		LOC_MARKER
 	} m_clickLocation;
 
 	ClickLocation HitTest(double x, double y);
@@ -528,10 +531,12 @@ protected:
 		DRAG_CURSOR_1,
 		DRAG_OFFSET,
 		DRAG_WAVEFORM_AREA,
-		DRAG_OVERLAY
+		DRAG_OVERLAY,
+		DRAG_MARKER
 	} m_dragState;
 
 	void OnCursorMoved(bool notifySiblings = true);
+	void OnMarkerMoved(bool notifySiblings = true);
 	void HighlightPacketAtTime(PacketDecoder* p, int64_t time);
 
 	//Start voltage of a drag (only used in DRAG_OFFSET mode)
@@ -551,6 +556,10 @@ protected:
 
 	//Destination of a drag (only used in DRAG_OVERLAY mode)
 	int m_dragOverlayPosition;
+
+	//Marker being dragged (only used in DRAG_MARKER mode)
+	Marker* m_selectedMarker;
+	std::vector<Marker*> GetMarkersForActiveWaveform();
 
 	bool	m_firstFrame;
 	bool	m_geometryDirty;

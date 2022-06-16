@@ -4518,3 +4518,9 @@ void OscilloscopeWindow::AddMarker(TimePoint timestamp, int64_t offset)
 	//Redraw viewports with the new marker
 	RefreshAllViews();
 }
+
+void OscilloscopeWindow::OnMarkerMoved(Marker* m)
+{
+	for(auto it : m_historyWindows)
+		it.second->OnMarkerMoved(m);
+}

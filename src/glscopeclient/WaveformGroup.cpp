@@ -526,3 +526,16 @@ Unit WaveformGroup::GetXAxisUnits()
 	}
 	return Unit(Unit::UNIT_FS);
 }
+
+StreamDescriptor WaveformGroup::GetFirstChannel()
+{
+	auto children = m_waveformBox.get_children();
+	if(!children.empty())
+	{
+		auto view = dynamic_cast<WaveformArea*>(children[0]);
+		if(view != nullptr)
+			return view->GetChannel();
+	}
+
+	return StreamDescriptor(nullptr, 0);
+}
