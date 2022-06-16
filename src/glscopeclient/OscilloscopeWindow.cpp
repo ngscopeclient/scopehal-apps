@@ -1344,6 +1344,9 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		bool pinned = false;
 		if(wfm["pinned"])
 			pinned = wfm["pinned"].as<int>();
+		string label;
+		if(wfm["label"])
+			label = wfm["label"].as<string>();
 
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
@@ -1458,7 +1461,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 		}
 
 		//Add to history
-		window->OnWaveformDataReady(true, pinned);
+		window->OnWaveformDataReady(true, pinned, label);
 
 		//Keep track of the newest waveform (may not be in time order)
 		if( (time.first > newest.first) ||

@@ -45,9 +45,11 @@ using namespace std;
 HistoryColumns::HistoryColumns()
 {
 	add(m_timestamp);
+	add(m_datestamp);
 	add(m_capturekey);
 	add(m_history);
 	add(m_pinned);
+	add(m_label);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,18 +64,20 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 	set_skip_taskbar_hint();
 	set_type_hint(Gdk::WINDOW_TYPE_HINT_DIALOG);
 
-	set_default_size(320, 800);
+	set_default_size(450, 800);
 
 	//Set up the tree view
 	m_model = Gtk::TreeStore::create(m_columns);
 	m_tree.set_model(m_model);
-	m_tree.get_selection()->signal_changed().connect(
-		sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
+	m_tree.get_selection()->signal_changed().connect(sigc::mem_fun(*this, &HistoryWindow::OnSelectionChanged));
 	m_tree.signal_button_press_event().connect_notify(sigc::mem_fun(*this, &HistoryWindow::OnTreeButtonPressEvent));
+	m_model->signal_row_changed().connect(sigc::mem_fun(*this, &HistoryWindow::OnRowChanged));
 
 	//Add the columns
 	m_tree.append_column_editable("Pin", m_columns.m_pinned);
+	m_tree.append_column("Date", m_columns.m_datestamp);
 	m_tree.append_column("Time", m_columns.m_timestamp);
+	m_tree.append_column_editable("Label", m_columns.m_label);
 
 	//Set up the widgets
 	get_vbox()->pack_start(m_hbox, Gtk::PACK_SHRINK);
@@ -123,7 +127,7 @@ void HistoryWindow::SetMaxWaveforms(int n)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Event handlers
 
-void HistoryWindow::OnWaveformDataReady(bool loading, bool pin)
+void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& label)
 {
 	//Use the timestamp from the first enabled channel
 	OscilloscopeChannel* chan = NULL;
@@ -158,18 +162,24 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin)
 #endif
 
 	//round to nearest 100ps for display
-	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
+	strftime(tmp, sizeof(tmp), "%X.", &ltime);
 	string stime = tmp;
 	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(data->m_startFemtoseconds / 100000));
 	stime += tmp;
+
+	//format date
+	strftime(tmp, sizeof(tmp), "%Y-%m-%d", &ltime);
+	string sdate = tmp;
 
 	//Create the row
 	m_updating = true;
 	auto rowit = m_model->append();
 	auto row = *rowit;
 	row[m_columns.m_timestamp] = stime;
+	row[m_columns.m_datestamp] = sdate;
 	row[m_columns.m_capturekey] = key;
 	row[m_columns.m_pinned] = pin;
+	row[m_columns.m_label] = label;
 
 	//Add waveform data
 	WaveformHistory hist;
@@ -417,7 +427,9 @@ void HistoryWindow::SerializeWaveforms(
 	float waveform_progress = progress_range / children.size();
 	for(auto it : children)
 	{
-		TimePoint key = (*it)[m_columns.m_capturekey];
+		auto& row = *it;
+
+		TimePoint key = row[m_columns.m_capturekey];
 
 		//Save metadata
 		snprintf(tmp, sizeof(tmp), "    wfm%d:\n", id);
@@ -432,6 +444,9 @@ void HistoryWindow::SerializeWaveforms(
 			config += "        pinned:    1\n";
 		else
 			config += "        pinned:    0\n";
+		string label = str_replace("\"", "\\\"", static_cast<Glib::ustring>(row[m_columns.m_label]));
+		snprintf(tmp, sizeof(tmp), "        label:     \"%s\"\n", label.c_str());
+		config += tmp;
 		config += "        channels:\n";
 
 		//Format directory for this waveform
@@ -447,7 +462,7 @@ void HistoryWindow::SerializeWaveforms(
 
 		//Kick off a thread to save data for each channel
 		vector<thread*> threads;
-		WaveformHistory history = (*it)[m_columns.m_history];
+		WaveformHistory history = row[m_columns.m_history];
 		size_t nchans = history.size();
 		volatile float* channel_progress = new float[nchans];
 		volatile int* channel_done = new int[nchans];
@@ -798,4 +813,12 @@ void HistoryWindow::ReplayHistory()
 void HistoryWindow::OnTreeButtonPressEvent(GdkEventButton* event)
 {
 	//LogDebug("button %d pressed\n", event->button);
+}
+
+void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& /*path*/, const Gtk::TreeModel::iterator& it)
+{
+	//Any row with a label must be pinned
+	auto row = *it;
+	if( (row[m_columns.m_label] != "") && (row[m_columns.m_pinned] != true) )
+		row[m_columns.m_pinned] = true;
 }

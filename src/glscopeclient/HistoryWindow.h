@@ -47,9 +47,11 @@ public:
 	HistoryColumns();
 
 	Gtk::TreeModelColumn<Glib::ustring>		m_timestamp;
+	Gtk::TreeModelColumn<Glib::ustring>		m_datestamp;
 	Gtk::TreeModelColumn<TimePoint>			m_capturekey;
 	Gtk::TreeModelColumn<WaveformHistory>	m_history;
 	Gtk::TreeModelColumn<bool>				m_pinned;
+	Gtk::TreeModelColumn<Glib::ustring>		m_label;
 };
 
 /**
@@ -63,7 +65,7 @@ public:
 
 	void ReplayHistory();
 
-	void OnWaveformDataReady(bool loading = false, bool pin = false);
+	void OnWaveformDataReady(bool loading = false, bool pin = false, const std::string& label = "");
 	void JumpToHistory(TimePoint timestamp);
 
 	void SetMaxWaveforms(int n);
@@ -77,8 +79,9 @@ public:
 
 protected:
 	virtual bool on_delete_event(GdkEventAny* ignored);
-	virtual void OnTreeButtonPressEvent(GdkEventButton* event);
-	virtual void OnSelectionChanged();
+	void OnTreeButtonPressEvent(GdkEventButton* event);
+	void OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::TreeModel::iterator& it);
+	void OnSelectionChanged();
 
 	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
 
