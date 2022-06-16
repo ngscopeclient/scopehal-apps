@@ -82,6 +82,7 @@ protected:
 	void OnTreeButtonPressEvent(GdkEventButton* event);
 	void OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::TreeModel::iterator& it);
 	void OnSelectionChanged();
+	void OnDelete();
 
 	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
 
@@ -109,6 +110,9 @@ protected:
 	Gtk::HBox m_status;
 		Gtk::Label m_memoryLabel;
 	HistoryColumns m_columns;
+
+	Gtk::Menu m_contextMenu;
+		Gtk::MenuItem m_deleteItem;
 
 	void ClearOldHistoryItems();
 	void UpdateMemoryUsageEstimate();

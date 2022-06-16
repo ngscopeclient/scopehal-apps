@@ -94,6 +94,11 @@ HistoryWindow::HistoryWindow(OscilloscopeWindow* parent, Oscilloscope* scope)
 			m_memoryLabel.set_text("");
 	show_all();
 
+	m_contextMenu.add(m_deleteItem);
+		m_deleteItem.set_label("Delete");
+		m_deleteItem.signal_activate().connect(sigc::mem_fun(*this, &HistoryWindow::OnDelete));
+	m_contextMenu.show_all();
+
 	//not shown by default
 	hide();
 
@@ -812,7 +817,13 @@ void HistoryWindow::ReplayHistory()
 
 void HistoryWindow::OnTreeButtonPressEvent(GdkEventButton* event)
 {
-	//LogDebug("button %d pressed\n", event->button);
+	if( (event->type == GDK_BUTTON_PRESS) && (event->button == 3) )
+		m_contextMenu.popup(event->button, event->time);
+}
+
+void HistoryWindow::OnDelete()
+{
+	DeleteHistoryRow(m_tree.get_selection()->get_selected());
 }
 
 void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& /*path*/, const Gtk::TreeModel::iterator& it)
