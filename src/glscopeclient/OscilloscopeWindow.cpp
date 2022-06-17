@@ -1267,6 +1267,10 @@ void OscilloscopeWindow::OnLoadComplete()
 	else
 		g_app->StartScopeThreads(m_scopes);
 
+	//Mark all waveform geometry as dirty
+	for(auto w : m_waveformAreas)
+		w->SetGeometryDirty();
+
 	//Done loading, we can render everything for good now.
 	//Issue 2 render calls since the very first render does some setup stuff
 	m_loadInProgress = false;
