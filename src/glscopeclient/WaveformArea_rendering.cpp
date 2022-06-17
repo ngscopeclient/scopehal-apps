@@ -703,7 +703,6 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 					float digheight;
 
 					//Overlay?
-					auto f = dynamic_cast<Filter*>(data->m_channel.m_channel);
 					if(area->m_overlayPositions.find(data->m_channel) != area->m_overlayPositions.end())
 					{
 						ybase = area->m_height - (area->m_overlayPositions[data->m_channel] + 10);

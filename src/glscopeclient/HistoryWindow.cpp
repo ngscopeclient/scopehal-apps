@@ -410,11 +410,11 @@ void HistoryWindow::OnSelectionChanged()
 	auto sel = m_tree.get_selection()->get_selected();
 	auto path = m_model->get_path(sel);
 	bool jumpToTime = false;
-	int64_t offset = 0;
+	Marker* m = nullptr;
 	if(path.size() > 1)
 	{
 		jumpToTime = true;
-		offset = (*sel)[m_columns.m_offset];
+		m = (*sel)[m_columns.m_marker];
 
 		path.up();
 		sel = m_model->get_iter(path);
@@ -438,7 +438,7 @@ void HistoryWindow::OnSelectionChanged()
 
 	//Move the view to the correct timestamp
 	if(jumpToTime)
-		m_parent->JumpToMarker(offset);
+		m_parent->JumpToMarker(m);
 }
 
 void HistoryWindow::JumpToHistory(TimePoint timestamp)

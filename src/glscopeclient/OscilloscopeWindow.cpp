@@ -4614,7 +4614,17 @@ void OscilloscopeWindow::DeleteMarker(Marker* m)
 	RefreshAllViews();
 }
 
-void OscilloscopeWindow::JumpToMarker(int64_t offset)
+void OscilloscopeWindow::JumpToMarker(Marker* m)
 {
-	LogDebug("JumpToMarker\n");
+	//Check each group to see if it's showing waveforms from the marker's timestamp
+	for(auto g : m_waveformGroups)
+	{
+		auto data = g->GetFirstChannel().GetData();
+		if(data == nullptr)
+			continue;
+		if(TimePoint(data->m_startTimestamp, data->m_startFemtoseconds) != m->m_point)
+			continue;
+
+		g->GetFirstArea()->CenterMarker(m->m_offset);
+	}
 }

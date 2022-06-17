@@ -40,6 +40,7 @@
 
 class OscilloscopeWindow;
 class WaveformGroupPropertiesDialog;
+class WaveformArea;
 
 class MeasurementColumns : public Gtk::TreeModel::ColumnRecord
 {
@@ -124,6 +125,7 @@ public:
 	Unit GetXAxisUnits();
 
 	StreamDescriptor GetFirstChannel();
+	WaveformArea* GetFirstArea();
 
 protected:
 	void OnCloseRequest();

@@ -527,6 +527,25 @@ Unit WaveformGroup::GetXAxisUnits()
 	return Unit(Unit::UNIT_FS);
 }
 
+/**
+	@brief Returns a pointer to the first WaveformArea in the group
+ */
+WaveformArea* WaveformGroup::GetFirstArea()
+{
+	auto children = m_waveformBox.get_children();
+	if(!children.empty())
+	{
+		auto view = dynamic_cast<WaveformArea*>(children[0]);
+		if(view != nullptr)
+			return view;
+	}
+
+	return nullptr;
+}
+
+/**
+	@brief Returns the stream being displayed by the first channel of the first WaveformArea in the group
+ */
 StreamDescriptor WaveformGroup::GetFirstChannel()
 {
 	auto children = m_waveformBox.get_children();
