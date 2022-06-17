@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -591,7 +591,14 @@ void FilterGraphEditorWidget::RemoveStaleNodes()
 
 	//Whatever is left needs to be deleted
 	for(auto chan : channelsToRemove)
+	{
+		auto node = m_nodes[chan];
+		for(auto c : m_columns)
+			c->m_nodes.erase(node);
+
+		delete chan;
 		m_nodes.erase(chan);
+	}
 }
 
 /**
