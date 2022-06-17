@@ -466,32 +466,32 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 	if(chan)
 	{
 		auto scope = chan->GetScope();
-		if(scope == NULL)
-			return;
-
-		int64_t timestamp;
-		if (m_dragState == DRAG_TRIGGER)
-			timestamp = m_currentTriggerOffsetDragPosition;
-		else
-			timestamp = scope->GetTriggerOffset();
-
-		double x = (timestamp - m_group->m_xAxisOffset) * xscale;
-
-		auto trig = scope->GetTrigger();
-		if(trig)
+		if(scope != NULL)
 		{
-			auto c = trig->GetInput(0).m_channel;
-			if(c)
-			{
-				Gdk::Color color(c->m_displaycolor);
-				cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
-			}
+			int64_t timestamp;
+			if (m_dragState == DRAG_TRIGGER)
+				timestamp = m_currentTriggerOffsetDragPosition;
+			else
+				timestamp = scope->GetTriggerOffset();
 
-			int size = 5 * GetDPIScale();
-			cr->move_to(x-size, h-size);
-			cr->line_to(x,		h);
-			cr->line_to(x+size, h-size);
-			cr->fill();
+			double x = (timestamp - m_group->m_xAxisOffset) * xscale;
+
+			auto trig = scope->GetTrigger();
+			if(trig)
+			{
+				auto c = trig->GetInput(0).m_channel;
+				if(c)
+				{
+					Gdk::Color color(c->m_displaycolor);
+					cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+				}
+
+				int size = 5 * GetDPIScale();
+				cr->move_to(x-size, h-size);
+				cr->line_to(x,		h);
+				cr->line_to(x+size, h-size);
+				cr->fill();
+			}
 		}
 	}
 
