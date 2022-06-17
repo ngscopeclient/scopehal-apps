@@ -112,6 +112,8 @@ public:
 	void RemoveProtocolHistoryFrom(TimePoint timestamp);
 
 	void RemoveMarkersFrom(TimePoint timestamp);
+	void DeleteMarker(Marker* m);
+	void JumpToMarker(int64_t offset);
 	void AddMarker(TimePoint timestamp, int64_t offset);
 	void AddMarker(TimePoint timestamp, int64_t offset, const std::string& name);
 

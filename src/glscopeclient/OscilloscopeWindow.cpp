@@ -4596,3 +4596,25 @@ void OscilloscopeWindow::OnMarkerMoved(Marker* m)
 	for(auto it : m_historyWindows)
 		it.second->OnMarkerMoved(m);
 }
+
+void OscilloscopeWindow::DeleteMarker(Marker* m)
+{
+	auto& markers = m_markers[m->m_point];
+	for(size_t i=0; i<markers.size(); i++)
+	{
+		if(markers[i] == m)
+		{
+			delete m;
+			markers.erase(markers.begin() + i);
+			break;
+		}
+	}
+
+	//Redraw viewports with the new marker
+	RefreshAllViews();
+}
+
+void OscilloscopeWindow::JumpToMarker(int64_t offset)
+{
+	LogDebug("JumpToMarker\n");
+}

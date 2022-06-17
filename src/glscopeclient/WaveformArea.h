@@ -218,6 +218,7 @@ public:
 	void CalculateOverlayPositions();
 
 	void CenterPacket(int64_t time, int64_t len);
+	void CenterMarker(int64_t time);
 
 	static bool IsGLInitComplete()
 	{ return m_isGlewInitialized; }

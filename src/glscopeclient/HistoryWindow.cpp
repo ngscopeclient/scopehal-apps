@@ -409,12 +409,15 @@ void HistoryWindow::OnSelectionChanged()
 	//If we're selecting a marker etc, actually select the parent node
 	auto sel = m_tree.get_selection()->get_selected();
 	auto path = m_model->get_path(sel);
+	bool jumpToTime = false;
+	int64_t offset = 0;
 	if(path.size() > 1)
 	{
+		jumpToTime = true;
+		offset = (*sel)[m_columns.m_offset];
+
 		path.up();
 		sel = m_model->get_iter(path);
-
-		LogDebug("marker row selected, TODO scroll timestamp of some waveform area to center it?\n");
 	}
 
 	auto row = *sel;
@@ -432,6 +435,10 @@ void HistoryWindow::OnSelectionChanged()
 
 	//Tell the window to refresh everything
 	m_parent->OnHistoryUpdated();
+
+	//Move the view to the correct timestamp
+	if(jumpToTime)
+		m_parent->JumpToMarker(offset);
 }
 
 void HistoryWindow::JumpToHistory(TimePoint timestamp)
@@ -486,9 +493,17 @@ void HistoryWindow::OnDelete()
 {
 	auto sel = m_tree.get_selection()->get_selected();
 	auto path = m_model->get_path(sel);
+
+	//It's a marker
 	if(path.size() > 1)
 	{
-		LogDebug("delete marker not implemented\n");
+		//Select the parent node of the marker (the waveform), so we don't jump to a new marker when this one is deleted
+		path.up();
+		m_tree.set_cursor(path);
+
+		//Delete the marker
+		m_parent->DeleteMarker((*sel)[m_columns.m_marker]);
+		m_model->erase(sel);
 	}
 
 	//It's a history row

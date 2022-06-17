@@ -1684,6 +1684,18 @@ void WaveformArea::OnStatistics()
 		m_group->DisableStats(m_selectedChannel);
 }
 
+void WaveformArea::CenterMarker(int64_t time)
+{
+	//Figure out the width of the view, in time units
+	int64_t width = PixelsToXAxisUnits(m_width);
+
+	//Center the view
+	m_group->m_xAxisOffset = time - width/2;
+
+	//Redraw everything
+	m_parent->ClearPersistence(m_group, false, true);
+}
+
 void WaveformArea::CenterPacket(int64_t time, int64_t len)
 {
 	//Figure out the width of the view, in time units
