@@ -425,16 +425,22 @@ void HistoryWindow::OnSelectionChanged()
 	m_lastHistoryKey = row[m_columns.m_capturekey];
 
 	//Reload the scope with the saved waveforms
+	bool actuallyChanged = false;
 	for(auto it : hist)
 	{
 		auto chan = it.first.m_channel;
 		auto stream = it.first.m_stream;
-		chan->Detach(stream);
-		chan->SetData(it.second, stream);
+		if(chan->GetData(stream) != it.second)
+		{
+			actuallyChanged = true;
+			chan->Detach(stream);
+			chan->SetData(it.second, stream);
+		}
 	}
 
 	//Tell the window to refresh everything
-	m_parent->OnHistoryUpdated();
+	if(actuallyChanged)
+		m_parent->OnHistoryUpdated();
 
 	//Move the view to the correct timestamp
 	if(jumpToTime)
