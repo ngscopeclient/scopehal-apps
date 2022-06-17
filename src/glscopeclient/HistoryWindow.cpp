@@ -527,25 +527,35 @@ void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::Tr
 
 void HistoryWindow::AddMarker(TimePoint stamp, int64_t offset, string name, Marker* m)
 {
-	//Parent node is now pinned
-	auto sel = m_tree.get_selection()->get_selected();
-	auto parent = *sel;
-	parent[m_columns.m_pinned] = true;
+	//Find the node to add it under (not necessarily the current selection)
+	auto children = m_model->children();
+	for(auto jt : children)
+	{
+		auto parent = *jt;
+		TimePoint pstamp = parent[m_columns.m_capturekey];
+		if(pstamp != stamp)
+			continue;
 
-	//Add the child item
-	auto it = m_model->append(parent.children());
-	auto row = *it;
-	int64_t fs = stamp.second + offset;
-	row[m_columns.m_capturekey] = stamp;
-	row[m_columns.m_offset] = offset;
-	row[m_columns.m_label] = name;
-	row[m_columns.m_marker] = m;
-	row[m_columns.m_pinvisible] = false;
-	row[m_columns.m_datestamp] = FormatDate(stamp.first, fs);
-	row[m_columns.m_timestamp] = FormatTimestamp(stamp.first, fs);
+		//Parent node is now pinned
+		parent[m_columns.m_pinned] = true;
 
-	//Make sure the row is visible
-	m_tree.expand_to_path(m_model->get_path(it));
+		//Add the child item
+		auto it = m_model->append(parent.children());
+		auto row = *it;
+		int64_t fs = stamp.second + offset;
+		row[m_columns.m_capturekey] = stamp;
+		row[m_columns.m_offset] = offset;
+		row[m_columns.m_label] = name;
+		row[m_columns.m_marker] = m;
+		row[m_columns.m_pinvisible] = false;
+		row[m_columns.m_datestamp] = FormatDate(stamp.first, fs);
+		row[m_columns.m_timestamp] = FormatTimestamp(stamp.first, fs);
+
+		//Make sure the row is visible
+		m_tree.expand_to_path(m_model->get_path(it));
+
+		break;
+	}
 }
 
 void HistoryWindow::OnMarkerMoved(Marker* m)

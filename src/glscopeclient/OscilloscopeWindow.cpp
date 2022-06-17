@@ -1246,6 +1246,18 @@ void OscilloscopeWindow::OnLoadComplete()
 	for(auto it : m_historyWindows)
 		it.second->ReplayHistory();
 
+	//Add our markers point to each history window
+	for(auto it : m_markers)
+	{
+		auto timestamp = it.first;
+		auto markers = it.second;
+		for(auto m : markers)
+		{
+			for(auto w : m_historyWindows)
+				w.second->AddMarker(timestamp, m->m_offset, m->m_name, m);
+		}
+	}
+
 	//Filters are refreshed by ReplayHistory(), but if we have no scopes (all waveforms created by filters)
 	//then nothing will happen. In this case, a manual refresh of the filter graph is necessary.
 	if(m_scopes.empty())
@@ -1947,6 +1959,26 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		}
 	}
 
+	//Markers
+	auto markers = node["markers"];
+	if(markers)
+	{
+		for(auto it : markers)
+		{
+			auto inode = it.second;
+			TimePoint timestamp;
+			timestamp.first = inode["timestamp"].as<int64_t>();
+			timestamp.second = inode["time_fsec"].as<int64_t>();
+			for(auto jt : inode["markers"])
+			{
+				m_markers[timestamp].push_back(new Marker(
+					timestamp,
+					jt.second["offset"].as<int64_t>(),
+					jt.second["name"].as<string>()));
+			}
+		}
+	}
+
 	//Splitters
 	auto splitters = node["splitters"];
 	for(auto it : splitters)
@@ -2167,8 +2199,6 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 {
 	string config = "";
 
-	//TODO: save metadata
-
 	//Save instrument config regardless, since data etc needs it
 	config += SerializeInstrumentConfiguration(table);
 
@@ -2270,6 +2300,43 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		table.emplace(&group->m_frame);
 	for(auto group : m_waveformGroups)
 		config += group->SerializeConfiguration(table);
+
+	//Markers
+	config += "    markers: \n";
+	int nmarker = 0;
+	int nwfm = 0;
+	for(auto it : m_markers)
+	{
+		auto key = it.first;
+		auto& markers = it.second;
+		if(markers.empty())
+			continue;
+
+		snprintf(tmp, sizeof(tmp), "        wfm%d:\n", nwfm);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            timestamp: %ld\n", key.first);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            time_fsec: %ld\n", key.second);
+		config += tmp;
+		snprintf(tmp, sizeof(tmp), "            markers:\n");
+		config += tmp;
+
+		for(auto m : markers)
+		{
+			snprintf(tmp, sizeof(tmp), "                marker%d:\n", nmarker);
+			config += tmp;
+
+			snprintf(tmp, sizeof(tmp), "                    offset: %ld\n", m->m_offset);
+			config += tmp;
+			string name = str_replace("\"", "\\\"", m->m_name);
+			snprintf(tmp, sizeof(tmp), "                    name:   \"%s\"\n", name.c_str());
+			config += tmp;
+
+			nmarker ++;
+		}
+
+		nwfm ++;
+	}
 
 	//Splitters
 	config += "    splitters: \n";
@@ -4505,15 +4572,20 @@ void OscilloscopeWindow::RemoveMarkersFrom(TimePoint timestamp)
 
 void OscilloscopeWindow::AddMarker(TimePoint timestamp, int64_t offset)
 {
-	//Make the marker
 	string mname = string("M") + to_string(m_nextMarker);
 	m_nextMarker ++;
-	auto m = new Marker(timestamp, offset, mname);
+	AddMarker(timestamp, offset, mname);
+}
+
+void OscilloscopeWindow::AddMarker(TimePoint timestamp, int64_t offset, const string& name)
+{
+	//Make the marker
+	auto m = new Marker(timestamp, offset, name);
 	m_markers[timestamp].push_back(m);
 
 	//Add the point to each history window
 	for(auto w : m_historyWindows)
-		w.second->AddMarker(timestamp, offset, mname, m);
+		w.second->AddMarker(timestamp, offset, name, m);
 
 	//Redraw viewports with the new marker
 	RefreshAllViews();

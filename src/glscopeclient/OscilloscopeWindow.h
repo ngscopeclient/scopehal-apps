@@ -113,6 +113,7 @@ public:
 
 	void RemoveMarkersFrom(TimePoint timestamp);
 	void AddMarker(TimePoint timestamp, int64_t offset);
+	void AddMarker(TimePoint timestamp, int64_t offset, const std::string& name);
 
 	void JumpToHistory(TimePoint timestamp);
 
