@@ -56,7 +56,8 @@ int main(int argc, char* argv[])
 	g_rng.seed(0);
 
 	//Create some fake scope channels
-	g_scope.AddChannel(new OscilloscopeChannel(&g_scope, "CH1", "#ffffffff"));
+	g_scope.AddChannel(new OscilloscopeChannel(
+		&g_scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 
 	//Run the actual test
 	return Catch::Session().run(argc, argv);
