@@ -1276,6 +1276,8 @@ void FilterGraphEditorWidget::OnLeftClick(GdkEventButton* event)
 					return;
 				auto f = dynamic_cast<Filter*>(node->m_node);
 				auto dest = HitTestNodeInput(event->x, event->y);
+				if(!dest)
+					return;
 
 				//Configure the input, if it's legal
 				if(node->m_node->ValidateChannel(dest->m_index, source))
