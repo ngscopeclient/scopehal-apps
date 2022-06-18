@@ -96,7 +96,7 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	m_plotRight = m_width - twidth;
 
 	//If we're a digital channel, no grid or anything else makes sense.
-	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(m_channel.GetType() == Stream::STREAM_TYPE_DIGITAL)
 		return;
 
 	if(IsWaterfall())
@@ -509,7 +509,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		double ytop = ymid - height/2;
 		double ybot = ymid + height/2;
 
-		if(o.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(o.GetType() != Stream::STREAM_TYPE_DIGITAL)
 		{
 			//Render the grayed-out background
 			cr->set_source_rgba(0,0,0, 0.6);
@@ -530,7 +530,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 			continue;
 
 		//Handle text
-		if(o.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX)
+		if(o.GetType() == Stream::STREAM_TYPE_PROTOCOL)
 		{
 			size_t olen = data->m_offsets.size();
 
@@ -699,7 +699,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	{
 		//Do not render sample rate on digital signals unless we have overlays, because this ~doubles the height
 		//of the channel and hurts packing density.
-		if( (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) && m_overlays.empty() )
+		if( (m_channel.GetType() == Stream::STREAM_TYPE_DIGITAL) && m_overlays.empty() )
 		{}
 
 		else

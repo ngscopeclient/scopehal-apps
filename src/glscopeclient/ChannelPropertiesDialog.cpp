@@ -81,7 +81,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 		m_grid.attach_next_to(m_channelNameEntry, m_channelNameLabel, Gtk::POS_RIGHT, 1, 1);
 
 			//TODO: revise this if anything supports multiple active digital probe types
-			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			if(chan->GetType(0) == Stream::STREAM_TYPE_DIGITAL)
 				m_channelNameEntry.set_text(chan->GetHwname());
 			else
 			{
@@ -109,9 +109,9 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 
 	if(chan->IsPhysicalChannel())
 	{
-		switch(chan->GetType())
+		switch(chan->GetType(0))
 		{
-			case OscilloscopeChannel::CHANNEL_TYPE_ANALOG:
+			case Stream::STREAM_TYPE_ANALOG:
 				{
 					//Deskew - only on physical analog channels for now
 					m_grid.attach_next_to(m_deskewLabel, m_channelColorLabel, Gtk::POS_BOTTOM, 1, 1);
@@ -244,7 +244,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(
 				break;
 
 			//Logic properties - only on physical digital channels
-			case OscilloscopeChannel::CHANNEL_TYPE_DIGITAL:
+			case Stream::STREAM_TYPE_DIGITAL:
 				{
 					if(scope->IsDigitalThresholdConfigurable())
 					{

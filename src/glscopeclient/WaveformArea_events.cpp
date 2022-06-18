@@ -1224,33 +1224,34 @@ void WaveformArea::OnDecodeSetupComplete()
 	if(m_pendingDecode->IsScalarOutput() || m_showPendingDecodeAsStats)
 		m_group->EnableStats(StreamDescriptor(m_pendingDecode, 0));
 
-	//It's an overlay. Reference it and add to our overlay list
-	else if(	(m_pendingDecode->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) ||
-				(m_pendingDecode->GetType() == OscilloscopeChannel::CHANNEL_TYPE_COMPLEX) )
-	{
-		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
-		{
-			m_pendingDecode->AddRef();
-			m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
-		}
-	}
-
-	//Create a new waveform view for the generated signal
+	//Vector output
 	else
 	{
 		for(size_t i=0; i<m_pendingDecode->GetStreamCount(); i++)
 		{
-			auto area = m_parent->DoAddChannel(StreamDescriptor(m_pendingDecode, i), m_group, this);
-
-			//If the decode is incompatible with our timebase, make a new group if needed
-			//TODO: better way to determine fixed-width stuff like eye patterns
-			if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel.m_channel->GetXAxisUnits()) )
+			//It's an overlay. Reference it and add to our overlay list
+			if(	(m_pendingDecode->GetType(i) == Stream::STREAM_TYPE_DIGITAL) ||
+				(m_pendingDecode->GetType(i) == Stream::STREAM_TYPE_PROTOCOL) )
 			{
-				m_parent->MoveToBestGroup(area);
+				m_pendingDecode->AddRef();
+				m_overlays.push_back(StreamDescriptor(m_pendingDecode, i));
+			}
 
-				//If the new unit is Hz, use a reasonable default for the timebase (1 MHz/pixel)
-				if(m_pendingDecode->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
-					area->m_group->m_pixelsPerXUnit = 1e-6;
+			//Create a new waveform view for the generated analog signal
+			else
+			{
+				auto area = m_parent->DoAddChannel(StreamDescriptor(m_pendingDecode, i), m_group, this);
+
+				//If the decode is incompatible with our timebase, make a new group if needed
+				//TODO: better way to determine fixed-width stuff like eye patterns
+				if(eye || (m_pendingDecode->GetXAxisUnits() != m_channel.m_channel->GetXAxisUnits()) )
+				{
+					m_parent->MoveToBestGroup(area);
+
+					//If the new unit is Hz, use a reasonable default for the timebase (1 MHz/pixel)
+					if(m_pendingDecode->GetXAxisUnits() == Unit(Unit::UNIT_HZ))
+						area->m_group->m_pixelsPerXUnit = 1e-6;
+				}
 			}
 		}
 	}
@@ -1659,7 +1660,7 @@ void WaveformArea::UpdateContextMenu()
 	}
 
 	//Hide stats for non-analog channels
-	if(m_selectedChannel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+	if(m_selectedChannel.GetType() != Stream::STREAM_TYPE_ANALOG)
 	{
 		m_statisticsItem.set_sensitive(false);
 		m_statisticsItem.set_active(false);
@@ -1899,8 +1900,8 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 		return time;
 
 	//Only snap to digital/protocol data
-	if( (stream.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
-		(stream.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_COMPLEX) )
+	if( (stream.GetType() != Stream::STREAM_TYPE_DIGITAL) &&
+		(stream.GetType() != Stream::STREAM_TYPE_PROTOCOL) )
 		return time;
 
 	//Convert timestamp to waveform timebase units

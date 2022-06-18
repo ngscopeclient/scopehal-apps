@@ -77,7 +77,7 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		{
 			//For now, we can only use analog channels to deskew
 			auto chan = primary->GetChannel(i);
-			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 				continue;
 
 			//Add to the box
@@ -93,7 +93,7 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		{
 			//For now, we can only use analog channels to deskew
 			auto chan = secondary->GetChannel(i);
-			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 				continue;
 
 			//Add to the box
@@ -299,7 +299,7 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
 		auto chan = scope->GetChannel(i);
-		if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+		if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 			continue;
 
 		chan->SetDeskew(0);
@@ -482,7 +482,7 @@ bool ScopeSyncWizard::OnTimer()
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
-			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 				continue;
 
 			chan->SetDeskew(remainingSkew);

@@ -200,7 +200,7 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 
 			//Hide channels we can't enable due to interleave conflicts etc
 			//Trigger channel can't be enabled for display, but is always a legal source
-			if( !m_scope->CanEnableChannel(k) && (chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+			if( !m_scope->CanEnableChannel(k) && (chan->GetType(0) != Stream::STREAM_TYPE_TRIGGER) )
 				continue;
 
 			auto c = StreamDescriptor(chan, 0);

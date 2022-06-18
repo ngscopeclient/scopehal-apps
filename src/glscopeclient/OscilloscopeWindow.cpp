@@ -509,17 +509,17 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 			if(m_scopes.size() > 1)
 				chan->SetDisplayName(scope->m_nickname + ":" + chan->GetHwname());
 
-			auto type = chan->GetType();
+			auto type = chan->GetType(0);
 
 			//Ignore any channels that aren't analog or digital for now
-			if( (type != OscilloscopeChannel::CHANNEL_TYPE_ANALOG) &&
-				(type != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) )
+			if( (type != Stream::STREAM_TYPE_ANALOG) &&
+				(type != Stream::STREAM_TYPE_DIGITAL) )
 			{
 				continue;
 			}
 
 			//Only enable digital channels if they're already on
-			if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			if(type == Stream::STREAM_TYPE_DIGITAL)
 			{
 				if(!chan->IsEnabled())
 					continue;
@@ -573,7 +573,7 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 				auto w = new WaveformArea(StreamDescriptor(chan, j), this);
 				w->m_group = wg;
 				m_waveformAreas.emplace(w);
-				if(type == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+				if(type == Stream::STREAM_TYPE_DIGITAL)
 					wg->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 				else
 					wg->m_waveformBox.pack_start(*w);
@@ -1399,7 +1399,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			WaveformBase* cap = NULL;
 			AnalogWaveform* acap = NULL;
 			DigitalWaveform* dcap = NULL;
-			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 				cap = acap = new AnalogWaveform;
 			else
 				cap = dcap = new DigitalWaveform;
@@ -1956,7 +1956,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			if(!area)
 				continue;
 			area->m_group = group;
-			if(area->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			if(area->GetChannel().GetType() == Stream::STREAM_TYPE_DIGITAL)
 				group->m_waveformBox.pack_start(*area, Gtk::PACK_SHRINK);
 			else
 				group->m_waveformBox.pack_start(*area);
@@ -2607,7 +2607,7 @@ void OscilloscopeWindow::OnMoveToExistingGroup(WaveformArea* w, WaveformGroup* n
 	w->m_group = ngroup;
 	w->get_parent()->remove(*w);
 
-	if(w->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(w->GetChannel().GetType() == Stream::STREAM_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*w);
@@ -2649,7 +2649,7 @@ void OscilloscopeWindow::OnCopyToExistingGroup(WaveformArea* w, WaveformGroup* n
 
 	//Then add it like normal
 	nw->m_group = ngroup;
-	if(nw->GetChannel().m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(nw->GetChannel().GetType() == Stream::STREAM_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*nw, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*nw);
@@ -3087,7 +3087,7 @@ WaveformArea* OscilloscopeWindow::DoAddChannel(StreamDescriptor chan, WaveformGr
 	w->m_group = ngroup;
 	m_waveformAreas.emplace(w);
 
-	if(chan.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(chan.GetType() == Stream::STREAM_TYPE_DIGITAL)
 		ngroup->m_waveformBox.pack_start(*w, Gtk::PACK_SHRINK);
 	else
 		ngroup->m_waveformBox.pack_start(*w);
@@ -3862,7 +3862,7 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 				continue;
 
 			//Add a menu item - but not for the external trigger(s)
-			if(chan->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			if(chan->GetType(0) != Stream::STREAM_TYPE_TRIGGER)
 				chans.push_back(chan);
 		}
 	}

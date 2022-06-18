@@ -125,8 +125,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	//We need analog or digital data to render
 	auto area = wdata->m_area;
 	auto channel = wdata->m_channel.m_channel;
-	if( (channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL) &&
-		(channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+	if( (wdata->m_channel.GetType() != Stream::STREAM_TYPE_DIGITAL) &&
+		(wdata->m_channel.GetType() != Stream::STREAM_TYPE_ANALOG))
 	{
 		wdata->m_geometryOK = false;
 		return;
@@ -308,7 +308,7 @@ void WaveformArea::GetAllRenderData(vector<WaveformRenderData*>& data)
 	for(auto overlay : m_overlays)
 	{
 		//Skip anything not digital
-		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
 			continue;
 
 		//Create render data if needed.
@@ -336,7 +336,7 @@ void WaveformArea::MapAllBuffers(bool update_y)
 
 	for(auto overlay : m_overlays)
 	{
-		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
@@ -354,7 +354,7 @@ void WaveformArea::UnmapAllBuffers(bool update_y)
 
 	for(auto overlay : m_overlays)
 	{
-		if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+		if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
@@ -434,7 +434,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		//Do compute shader rendering for digital waveforms
 		for(auto overlay : m_overlays)
 		{
-			if(overlay.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
 				continue;
 
 			//Create the texture
@@ -469,7 +469,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		LogNotice("Render: err = %x\n", err);
 
 	//If our channel is digital, set us to minimal size
-	if(m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+	if(m_channel.GetType() == Stream::STREAM_TYPE_DIGITAL)
 	{
 		//Base height
 		int height = m_infoBoxRect.get_bottom() - m_infoBoxRect.get_top() + 5;
@@ -517,7 +517,7 @@ void WaveformArea::RenderOverlayTraces()
 
 void WaveformArea::RenderEye()
 {
-	if(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_EYE)
+	if(m_channel.GetType() != Stream::STREAM_TYPE_EYE)
 		return;
 	auto pcap = dynamic_cast<EyeWaveform*>(m_channel.GetData());
 	if(pcap == NULL)
@@ -548,7 +548,7 @@ void WaveformArea::RenderEye()
 
 void WaveformArea::RenderSpectrogram()
 {
-	if(m_channel.m_channel->GetType() != OscilloscopeChannel::CHANNEL_TYPE_SPECTROGRAM)
+	if(m_channel.GetType() != Stream::STREAM_TYPE_SPECTROGRAM)
 		return;
 	auto pcap = dynamic_cast<SpectrogramWaveform*>(m_channel.GetData());
 	if(pcap == NULL)

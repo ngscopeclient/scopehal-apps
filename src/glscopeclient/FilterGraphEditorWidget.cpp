@@ -202,7 +202,7 @@ void FilterGraphEditorNode::UpdateSize()
 
 		paramText += string("Channel: \t") + chan->GetHwname() + "\n";
 
-		if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+		if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 		{
 			switch(chan->GetCoupling())
 			{
@@ -332,8 +332,10 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 		outline_color = line_highlight_color;
 
 	//This is a bit messy... but there's no other good way to figure out what type of input a port wants!
-	OscilloscopeChannel dummy_analog(NULL, "", OscilloscopeChannel::CHANNEL_TYPE_ANALOG, "");
-	OscilloscopeChannel dummy_digital(NULL, "", OscilloscopeChannel::CHANNEL_TYPE_DIGITAL, "");
+	OscilloscopeChannel dummy_analog(
+		NULL, "", "", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS), Stream::STREAM_TYPE_ANALOG);
+	OscilloscopeChannel dummy_digital(
+		NULL, "", "", Unit(Unit::UNIT_COUNTS), Unit(Unit::UNIT_VOLTS), Stream::STREAM_TYPE_DIGITAL);
 
 	cr->save();
 		cr->translate(m_rect.get_left(), m_rect.get_top());
@@ -448,12 +450,12 @@ void FilterGraphEditorNode::Render(const Cairo::RefPtr<Cairo::Context>& cr)
 				cr->set_source_rgba(
 					disabled_color.get_red_p(), disabled_color.get_green_p(), disabled_color.get_blue_p(), 1);
 			}
-			else if(chan && chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG)
+			else if(chan && chan->GetType(i) == Stream::STREAM_TYPE_ANALOG)
 			{
 				cr->set_source_rgba(
 					analog_color.get_red_p(), analog_color.get_green_p(), analog_color.get_blue_p(), 1);
 			}
-			else if(chan && chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL)
+			else if(chan && chan->GetType(i) == Stream::STREAM_TYPE_DIGITAL)
 			{
 				cr->set_source_rgba(
 					digital_color.get_red_p(), digital_color.get_green_p(), digital_color.get_blue_p(), 1);
@@ -622,7 +624,7 @@ void FilterGraphEditorWidget::CreateNodes()
 		for(size_t j=0; j<scope->GetChannelCount(); j++)
 		{
 			auto chan = scope->GetChannel(j);
-			if(chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_TRIGGER)
+			if(chan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 				continue;
 
 			//If the channel cannot be enabled, don't show it.
@@ -847,7 +849,7 @@ void FilterGraphEditorWidget::UpdateColumnPositions()
 		for(auto node : col->m_nodes)
 		{
 			auto chan = dynamic_cast<OscilloscopeChannel*>(node->m_node);
-			if(chan && !node->m_positionValid && (chan->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG))
+			if(chan && !node->m_positionValid && (chan->GetType(0) == Stream::STREAM_TYPE_ANALOG))
 				nodes.emplace(node);
 		}
 		AssignInitialPositions(nodes);

@@ -1029,28 +1029,27 @@ void WaveformArea::InitializeCairoPass()
 
 bool WaveformArea::IsWaterfall()
 {
-	auto fall = dynamic_cast<Waterfall*>(m_channel.m_channel);
-	return (fall != NULL);
+	return (m_channel.GetType() == Stream::STREAM_TYPE_WATERFALL);
 }
 
 bool WaveformArea::IsDigital()
 {
-	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL);
+	return (m_channel.GetType() == Stream::STREAM_TYPE_DIGITAL);
 }
 
 bool WaveformArea::IsAnalog()
 {
-	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG);
+	return (m_channel.GetType() == Stream::STREAM_TYPE_ANALOG);
 }
 
 bool WaveformArea::IsEye()
 {
-	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_EYE);
+	return (m_channel.GetType() == Stream::STREAM_TYPE_EYE);
 }
 
 bool WaveformArea::IsSpectrogram()
 {
-	return (m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_SPECTROGRAM);
+	return (m_channel.GetType() == Stream::STREAM_TYPE_SPECTROGRAM);
 }
 
 bool WaveformArea::IsEyeOrBathtub()

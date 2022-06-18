@@ -68,10 +68,10 @@ public:
 	{}
 
 	bool IsAnalog()
-	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_ANALOG; }
+	{ return m_channel.GetType() == Stream::STREAM_TYPE_ANALOG; }
 
 	bool IsDigital()
-	{ return m_channel.m_channel->GetType() == OscilloscopeChannel::CHANNEL_TYPE_DIGITAL; }
+	{ return m_channel.GetType() == Stream::STREAM_TYPE_DIGITAL; }
 
 	bool IsHistogram()
 	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }

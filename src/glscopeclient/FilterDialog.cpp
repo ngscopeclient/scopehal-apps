@@ -634,7 +634,7 @@ void FilterDialog::PopulateInputBox(
 			//If we can't enable the channel, don't show it.
 			//Aux inputs can't be enabled, but show those if they are legal
 			auto cn = scope->GetChannel(k);
-			if( !scope->CanEnableChannel(k) && (cn->GetType() != OscilloscopeChannel::CHANNEL_TYPE_TRIGGER) )
+			if( !scope->CanEnableChannel(k) && (cn->GetType(0) != Stream::STREAM_TYPE_TRIGGER) )
 				continue;
 
 			auto nstreams = cn->GetStreamCount();
