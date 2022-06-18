@@ -198,7 +198,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	//TODO: can we parallelize this? move to a compute shader?
 	auto group = wdata->m_area->m_group;
 	int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
-	float xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
+	double xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
 	if(!wdata->IsDensePacked() || !andat)	//TODO: skip for dense packed digital path too once the shader supports that
 	{
 		for(int j=0; j<wdata->m_area->m_width; j++)
