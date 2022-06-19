@@ -186,7 +186,6 @@ string HistoryWindow::FormatDate(time_t base, int64_t offset)
 	localtime_r(&base, &ltime);
 #endif
 
-	//round to nearest 100ps for display
 	strftime(tmp, sizeof(tmp), "%Y-%m-%d", &ltime);
 	return tmp;
 }

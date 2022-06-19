@@ -396,6 +396,7 @@ public:
 	std::string m_currentFileName;
 	std::string m_currentDataDirName;
 
+	std::string SerializeMetadata();
 	std::string SerializeConfiguration(bool saveLayout, IDTable& table);
 	std::string SerializeInstrumentConfiguration(IDTable& table);
 	std::string SerializeFilterConfiguration(IDTable& table);

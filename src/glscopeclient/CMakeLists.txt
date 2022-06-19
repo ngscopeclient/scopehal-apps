@@ -33,7 +33,7 @@ if(Git_FOUND)
 		OUTPUT_VARIABLE GLSCOPECLIENT_VERSION
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
 else()
-	set(GLSCOPECLIENT_VERSION "v0.1-unknown")
+	set(GLSCOPECLIENT_VERSION "unknown")
 endif()
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 configure_file(glscopeclient-version.h.in glscopeclient-version.h)

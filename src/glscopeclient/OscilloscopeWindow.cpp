@@ -2203,6 +2203,9 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 {
 	string config = "";
 
+	//Save metadata
+	config += SerializeMetadata();
+
 	//Save instrument config regardless, since data etc needs it
 	config += SerializeInstrumentConfiguration(table);
 
@@ -2213,6 +2216,37 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 	//UI config
 	if(saveLayout)
 		config += SerializeUIConfiguration(table);
+
+	return config;
+}
+
+/**
+	@brief Adds a write-only metadata block to a scopesession
+ */
+string OscilloscopeWindow::SerializeMetadata()
+{
+	string config = "metadata:\n";
+	char tmp[256];
+	snprintf(tmp, sizeof(tmp), "    appver:  \"glscopeclient %s\"\n", GLSCOPECLIENT_VERSION);
+	config += tmp;
+	snprintf(tmp, sizeof(tmp), "    appdate: \"%s %s\"\n", __DATE__, __TIME__);
+	config += tmp;
+
+	//Format timestamp
+	time_t now = time(nullptr);
+	struct tm ltime;
+#ifdef _WIN32
+	localtime_s(&ltime, &now);
+#else
+	localtime_r(&now, &ltime);
+#endif
+	char sdate[32];
+	char stime[32];
+	strftime(stime, sizeof(stime), "%X", &ltime);
+	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
+
+	snprintf(tmp, sizeof(tmp), "    created: \"%s %s\"\n", sdate, stime);
+	config += tmp;
 
 	return config;
 }
