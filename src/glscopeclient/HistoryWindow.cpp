@@ -318,13 +318,15 @@ void HistoryWindow::DeleteHistoryRow(const Gtk::TreeModel::iterator& it)
 	m_parent->RemoveProtocolHistoryFrom(key);
 	m_parent->RemoveMarkersFrom(key);
 
-	//Delete the history data
+	//Grab a copy of the history data
 	WaveformHistory hist = (*it)[m_columns.m_history];
+
+	//Remove the row from the tree view
+	m_model->erase(it);
+
+	//then delete the history
 	for(auto w : hist)
 		delete w.second;
-
-	//and remove the row from the tree view
-	m_model->erase(it);
 }
 
 void HistoryWindow::UpdateMemoryUsageEstimate()
