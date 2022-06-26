@@ -76,7 +76,7 @@ void ScopeApp::run(
 		//Can only load one scopesession
 		else if (f.find(".scopesession") != string::npos)
 		{
-			m_window->DoFileOpen(f, true, !nodata, reconnect);
+			m_window->DoFileOpen(f, !nodata, reconnect);
 			break;
 		}
 

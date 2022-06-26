@@ -274,11 +274,11 @@ public:
 	bool OnTimer(int timer);
 
 	//Menu event handlers
-	void OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms);
+	void OnFileSave(bool saveToCurrentFile);
 	void OnFileConnect();
 	void ConnectToScope(std::string path);
-	void OnFileOpen();
-	void DoFileOpen(const std::string& filename, bool loadLayout = true, bool loadWaveform = true, bool reconnect = true);
+	void OnFileOpen(bool reconnect);
+	void DoFileOpen(const std::string& filename, bool loadWaveform = true, bool reconnect = true);
 	void OnFileImport();
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
@@ -397,7 +397,7 @@ public:
 	std::string m_currentDataDirName;
 
 	std::string SerializeMetadata();
-	std::string SerializeConfiguration(bool saveLayout, IDTable& table);
+	std::string SerializeConfiguration(IDTable& table);
 	std::string SerializeInstrumentConfiguration(IDTable& table);
 	std::string SerializeFilterConfiguration(IDTable& table);
 	std::string SerializeUIConfiguration(IDTable& table);

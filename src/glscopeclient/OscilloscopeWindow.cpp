@@ -213,9 +213,13 @@ void OscilloscopeWindow::CreateWidgets()
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
 
-					item = Gtk::manage(new Gtk::MenuItem("Open...", false));
+					item = Gtk::manage(new Gtk::MenuItem("Open Online...", false));
 					item->signal_activate().connect(
-						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen));
+						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen), true));
+					m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Open Offline...", false));
+					item->signal_activate().connect(
+						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen), false));
 					m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::MenuItem("Import...", false));
 					item->signal_activate().connect(
@@ -225,29 +229,14 @@ void OscilloscopeWindow::CreateWidgets()
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
 
-					item = Gtk::manage(new Gtk::MenuItem("Save Layout Only", false));
+						m_fileMenu.append(*item);
+					item = Gtk::manage(new Gtk::MenuItem("Save", false));
 					item->signal_activate().connect(
-						sigc::bind<bool, bool, bool>(
-							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
-							true, true, false));
+						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave), true));
 					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Save Layout Only As...", false));
+					item = Gtk::manage(new Gtk::MenuItem("Save As...", false));
 					item->signal_activate().connect(
-						sigc::bind<bool, bool, bool>(
-							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
-							false, true, false));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms", false));
-					item->signal_activate().connect(
-						sigc::bind<bool, bool, bool>(
-							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
-							true, true, true));
-					m_fileMenu.append(*item);
-					item = Gtk::manage(new Gtk::MenuItem("Save Layout and Waveforms As...", false));
-					item->signal_activate().connect(
-						sigc::bind<bool, bool, bool>(
-							sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave),
-							false, true, true));
+						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave), false));
 					m_fileMenu.append(*item);
 
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
@@ -1085,20 +1074,11 @@ void OscilloscopeWindow::ConnectToScope(string path)
 /**
 	@brief Open a saved configuration
  */
-void OscilloscopeWindow::OnFileOpen()
+void OscilloscopeWindow::OnFileOpen(bool reconnect)
 {
 	//TODO: prompt to save changes to the current session
 
 	Gtk::FileChooserDialog dlg(*this, "Open", Gtk::FILE_CHOOSER_ACTION_OPEN);
-
-	dlg.add_choice("layout", "Load UI Configuration");
-	dlg.add_choice("waveform", "Load Waveform Data");
-	dlg.add_choice("reconnect", "Reconnect to Instrument (reconfigure using saved settings)");
-
-	dlg.set_choice("layout", "true");
-	dlg.set_choice("waveform", "true");
-	dlg.set_choice("reconnect", "true");
-
 	auto filter = Gtk::FileFilter::create();
 	filter->add_pattern("*.scopesession");
 	filter->set_name("glscopeclient sessions (*.scopesession)");
@@ -1110,16 +1090,13 @@ void OscilloscopeWindow::OnFileOpen()
 	if(response != Gtk::RESPONSE_OK)
 		return;
 
-	bool loadLayout = dlg.get_choice("layout") == "true";
-	bool loadWaveform = dlg.get_choice("waveform") == "true";
-	bool reconnect = dlg.get_choice("reconnect") == "true";
-	DoFileOpen(dlg.get_filename(), loadLayout, loadWaveform, reconnect);
+	DoFileOpen(dlg.get_filename(), true, reconnect);
 }
 
 /**
 	@brief Open a saved file
  */
-void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, bool loadWaveform, bool reconnect)
+void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadWaveform, bool reconnect)
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
@@ -1144,11 +1121,8 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadLayout, boo
 		//Load various sections of the file
 		IDTable table;
 		LoadInstruments(node["instruments"], reconnect, table);
-		if(loadLayout)
-		{
-			LoadDecodes(node["decodes"], table);
-			LoadUIConfiguration(node["ui_config"], table);
-		}
+		LoadDecodes(node["decodes"], table);
+		LoadUIConfiguration(node["ui_config"], table);
 
 		//Create history windows for all of our scopes
 		for(auto scope : m_scopes)
@@ -2021,7 +1995,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 /**
 	@brief Common handler for save/save as commands
  */
-void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, bool saveWaveforms)
+void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile)
 {
 	bool creatingNew = false;
 
@@ -2033,17 +2007,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	{
 		creatingNew = true;
 
-		string title = "Save ";
-		if(saveLayout)
-		{
-			title += "Layout";
-			if(saveWaveforms)
-				title += " and ";
-		}
-		if(saveWaveforms)
-			title += "Waveforms";
-
-		Gtk::FileChooserDialog dlg(*this, title, Gtk::FILE_CHOOSER_ACTION_SAVE);
+		Gtk::FileChooserDialog dlg(*this, "Save", Gtk::FILE_CHOOSER_ACTION_SAVE);
 
 		auto filter = Gtk::FileFilter::create();
 		filter->add_pattern("*.scopesession");
@@ -2175,7 +2139,7 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 
 	//Serialize our configuration and save to the file
 	IDTable table;
-	string config = SerializeConfiguration(saveLayout, table);
+	string config = SerializeConfiguration(table);
 	FILE* fp = fopen(m_currentFileName.c_str(), "w");
 	if(!fp)
 	{
@@ -2194,12 +2158,11 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile, bool saveLayout, boo
 	}
 	fclose(fp);
 
-	//Serialize waveform data if needed
-	if(saveWaveforms)
-		SerializeWaveforms(table);
+	//Serialize waveform data
+	SerializeWaveforms(table);
 }
 
-string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& table)
+string OscilloscopeWindow::SerializeConfiguration(IDTable& table)
 {
 	string config = "";
 
@@ -2214,8 +2177,7 @@ string OscilloscopeWindow::SerializeConfiguration(bool saveLayout, IDTable& tabl
 		config += SerializeFilterConfiguration(table);
 
 	//UI config
-	if(saveLayout)
-		config += SerializeUIConfiguration(table);
+	config += SerializeUIConfiguration(table);
 
 	return config;
 }
