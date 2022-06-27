@@ -69,6 +69,8 @@ Timeline::~Timeline()
  */
 Timeline::DragState Timeline::HitTest(double x, double /*y*/, Oscilloscope** pscope)
 {
+	//TODO: check against all scopes, not just one
+
 	//Find the trigger arrow
 	double trig_x = 0;
 	bool trig_found = false;
@@ -460,40 +462,10 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 			false);
 	}
 
-	//Draw trigger position for the first scope in the plot
-	//TODO: handle more than one scope
-	//TODO: handle input to filter graph
-	if(chan)
-	{
-		auto scope = chan->GetScope();
-		if(scope != NULL)
-		{
-			int64_t timestamp;
-			if (m_dragState == DRAG_TRIGGER)
-				timestamp = m_currentTriggerOffsetDragPosition;
-			else
-				timestamp = scope->GetTriggerOffset();
-
-			double x = (timestamp - m_group->m_xAxisOffset) * xscale;
-
-			auto trig = scope->GetTrigger();
-			if(trig)
-			{
-				auto c = trig->GetInput(0).m_channel;
-				if(c)
-				{
-					Gdk::Color color(c->m_displaycolor);
-					cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
-				}
-
-				int size = 5 * GetDPIScale();
-				cr->move_to(x-size, h-size);
-				cr->line_to(x,		h);
-				cr->line_to(x+size, h-size);
-				cr->fill();
-			}
-		}
-	}
+	//Draw trigger position for all enabled scopes
+	size_t nscopes = m_parent->GetScopeCount();
+	for(size_t i=0; i<nscopes; i++)
+		RenderTriggerArrow(cr, m_parent->GetScope(i), xscale, h);
 
 	//Draw markers
 	if(chan)
@@ -511,6 +483,41 @@ void Timeline::Render(const Cairo::RefPtr<Cairo::Context>& cr, OscilloscopeChann
 					DrawMarker(cr, m->m_offset, m->m_name, mcolor);
 			}
 		}
+	}
+}
+
+void Timeline::RenderTriggerArrow(
+	const Cairo::RefPtr<Cairo::Context>& cr,
+	Oscilloscope* scope,
+	float xscale,
+	size_t h)
+{
+
+	//TODO: draw scope name next to the arrow if we have >1 active scope
+
+	int64_t timestamp;
+	if( (m_dragState == DRAG_TRIGGER) && (scope == m_dragScope) )
+		timestamp = m_currentTriggerOffsetDragPosition;
+	else
+		timestamp = scope->GetTriggerOffset();
+
+	double x = (timestamp - m_group->m_xAxisOffset) * xscale;
+
+	auto trig = scope->GetTrigger();
+	if(trig)
+	{
+		auto c = trig->GetInput(0).m_channel;
+		if(c)
+		{
+			Gdk::Color color(c->m_displaycolor);
+			cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
+		}
+
+		int size = 5 * GetDPIScale();
+		cr->move_to(x-size, h-size);
+		cr->line_to(x,		h);
+		cr->line_to(x+size, h-size);
+		cr->fill();
 	}
 }
 

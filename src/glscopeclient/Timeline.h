@@ -69,6 +69,13 @@ protected:
 	virtual bool on_motion_notify_event(GdkEventMotion* event);
 	virtual bool on_scroll_event (GdkEventScroll* ev);
 
+	void RenderTriggerArrow(
+		const Cairo::RefPtr<Cairo::Context>& cr,
+		Oscilloscope* scope,
+		float xscale,
+		size_t h
+		);
+
 	DragState HitTest(double x, double y, Oscilloscope** pscope = NULL);
 
 	virtual void on_realize();
