@@ -79,6 +79,7 @@ public:
 	void JumpToHistory(TimePoint timestamp);
 	void AddMarker(TimePoint stamp, int64_t offset, std::string name, Marker* m);
 	void OnMarkerMoved(Marker* m);
+	void OnMarkerDeleted(Marker* m);
 	void OnMarkerNameChanged(Marker* m);
 
 	void SetMaxWaveforms(int n);

@@ -508,9 +508,9 @@ void HistoryWindow::OnDelete()
 		path.up();
 		m_tree.set_cursor(path);
 
-		//Delete the marker
+		//Notify the OscilloscopeWindow so it can remove the marker
+		//Don't delete it from the tree in OnDelete(), we'll get an OnMarkerDeleted notification shortly.
 		m_parent->DeleteMarker((*sel)[m_columns.m_marker]);
-		m_model->erase(sel);
 	}
 
 	//It's a history row
@@ -625,6 +625,22 @@ void HistoryWindow::OnMarkerNameChanged(Marker* m)
 
 	auto row = (*it);
 	row[m_columns.m_label] = m->m_name;
+}
+
+void HistoryWindow::OnMarkerDeleted(Marker* m)
+{
+	auto it = FindRowForMarker(m);
+	if(it == m_model->children().end())
+		return;
+
+	auto path = m_model->get_path(it);
+
+	//Select the parent node of the marker (the waveform), so we don't jump to a new marker when this one is deleted
+	path.up();
+	m_tree.set_cursor(path);
+
+	//Delete the marker
+	m_model->erase(it);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

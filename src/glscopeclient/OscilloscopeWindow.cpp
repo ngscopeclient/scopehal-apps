@@ -4583,6 +4583,11 @@ void OscilloscopeWindow::OnMarkerMoved(Marker* m)
 
 void OscilloscopeWindow::DeleteMarker(Marker* m)
 {
+	//Remove it from all history windows
+	for(auto it : m_historyWindows)
+		it.second->OnMarkerDeleted(m);
+
+	//Get rid of it
 	auto& markers = m_markers[m->m_point];
 	for(size_t i=0; i<markers.size(); i++)
 	{
