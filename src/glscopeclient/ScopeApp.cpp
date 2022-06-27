@@ -90,6 +90,12 @@ void ScopeApp::run(
 			filter->GetParameter("WAV File").SetFileName(f);
 		}
 
+		else if(f.find(".bin") != string::npos)
+		{
+			filter = Filter::CreateFilter("BIN Import", color);
+			filter->GetParameter("BIN File").SetFileName(f);
+		}
+
 		//Complex I/Q: user probably will have to override format later
 		else if(f.find(".complex") != string::npos)
 		{
@@ -107,15 +113,6 @@ void ScopeApp::run(
 			filter = Filter::CreateFilter("VCD Import", color);
 			filter->GetParameter("VCD File").SetFileName(f);
 		}
-
-		/*
-		//Can only load one bin, Touchstone, or VCD
-		else if (f.find(".bin") != string::npos)
-		{
-			m_window->DoImportBIN(f);
-			break;
-		}
-		*/
 
 		else if( (f.find(".s") != string::npos) && (f[f.length()-1] == 'p') )
 		{

@@ -279,7 +279,6 @@ public:
 	void ConnectToScope(std::string path);
 	void OnFileOpen(bool reconnect);
 	void DoFileOpen(const std::string& filename, bool loadWaveform = true, bool reconnect = true);
-	void OnFileImport();
 	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
 	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
@@ -319,12 +318,6 @@ public:
 	void OnAddMultimeter();
 	void ConnectToMultimeter(std::string path);
 	SCPITransport* ConnectToTransport(const std::string& name, const std::string& args);
-
-	//Helpers for importing third party file formats
-	void DoImportBIN(const std::string& filename);
-	MockOscilloscope* SetupNewSessionForImport(const std::string& name, const std::string& filename);
-	MockOscilloscope* SetupExistingSessionForImport();
-	void OnImportComplete();
 
 	//Exporting
 	void OnExport(std::string format);
