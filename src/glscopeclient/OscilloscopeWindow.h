@@ -185,8 +185,6 @@ protected:
 		Gtk::MenuBar m_menu;
 			Gtk::MenuItem m_fileMenuItem;
 				Gtk::Menu m_fileMenu;
-					Gtk::MenuItem m_recentInstrumentsMenuItem;
-						Gtk::Menu m_recentInstrumentsMenu;
 					Gtk::MenuItem m_exportMenuItem;
 						Gtk::Menu m_exportMenu;
 			Gtk::MenuItem m_setupMenuItem;
@@ -204,6 +202,8 @@ protected:
 						Gtk::Menu m_generateMenu;
 					Gtk::MenuItem m_importMenuItem;
 						Gtk::Menu m_importMenu;
+					Gtk::MenuItem m_addScopeMenuItem;
+						Gtk::Menu m_addScopeMenu;
 					Gtk::MenuItem m_addMultimeterMenuItem;
 						Gtk::Menu m_addMultimeterMenu;
 			Gtk::MenuItem m_viewMenuItem;
@@ -275,7 +275,7 @@ public:
 
 	//Menu event handlers
 	void OnFileSave(bool saveToCurrentFile);
-	void OnFileConnect();
+	void OnAddOscilloscope();
 	void ConnectToScope(std::string path);
 	void OnFileOpen(bool reconnect);
 	void DoFileOpen(const std::string& filename, bool loadWaveform = true, bool reconnect = true);

@@ -202,18 +202,7 @@ void OscilloscopeWindow::CreateWidgets()
 				m_fileMenuItem.set_label("File");
 				m_fileMenuItem.set_submenu(m_fileMenu);
 
-					Gtk::MenuItem* item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
-					item->signal_activate().connect(
-						sigc::mem_fun(*this, &OscilloscopeWindow::OnFileConnect));
-					m_fileMenu.append(*item);
-					m_recentInstrumentsMenuItem.set_label("Recent Instruments");
-					m_recentInstrumentsMenuItem.set_submenu(m_recentInstrumentsMenu);
-					m_fileMenu.append(m_recentInstrumentsMenuItem);
-
-					item = Gtk::manage(new Gtk::SeparatorMenuItem);
-					m_fileMenu.append(*item);
-
-					item = Gtk::manage(new Gtk::MenuItem("Open Online...", false));
+					auto item = Gtk::manage(new Gtk::MenuItem("Open Online...", false));
 					item->signal_activate().connect(
 						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen), true));
 					m_fileMenu.append(*item);
@@ -310,6 +299,9 @@ void OscilloscopeWindow::CreateWidgets()
 					m_addMenu.append(m_addMultimeterMenuItem);
 						m_addMultimeterMenuItem.set_label("Multimeter");
 						m_addMultimeterMenuItem.set_submenu(m_addMultimeterMenu);
+					m_addMenu.append(m_addScopeMenuItem);
+						m_addScopeMenuItem.set_label("Oscilloscope");
+						m_addScopeMenuItem.set_submenu(m_addScopeMenu);
 			m_menu.append(m_windowMenuItem);
 				m_windowMenuItem.set_label("Window");
 				m_windowMenuItem.set_submenu(m_windowMenu);
@@ -861,11 +853,10 @@ void OscilloscopeWindow::CloseSession()
 }
 
 /**
-	@brief Connect to an instrument
+	@brief Browse for and connect to a scope
  */
-void OscilloscopeWindow::OnFileConnect()
+void OscilloscopeWindow::OnAddOscilloscope()
 {
-	//TODO: support multi-scope connection
 	InstrumentConnectionDialog dlg;
 	while(true)
 	{
@@ -4158,9 +4149,9 @@ void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
 void OscilloscopeWindow::RefreshInstrumentMenus()
 {
 	//Remove the old items
-	auto children = m_recentInstrumentsMenu.get_children();
+	auto children = m_addScopeMenu.get_children();
 	for(auto c : children)
-		m_recentInstrumentsMenu.remove(*c);
+		m_addScopeMenu.remove(*c);
 	children = m_addMultimeterMenu.get_children();
 	for(auto c : children)
 		m_addMultimeterMenu.remove(*c);
@@ -4195,13 +4186,20 @@ void OscilloscopeWindow::RefreshInstrumentMenus()
 	for(auto s : meterdrivers)
 		meterdriverset.emplace(s);
 
-	//Add new stuff
+	//Add "connect" menu items stuff
 	auto item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
 	item->signal_activate().connect(
 		sigc::mem_fun(*this, &OscilloscopeWindow::OnAddMultimeter));
 	m_addMultimeterMenu.append(*item);
 	item = Gtk::manage(new Gtk::SeparatorMenuItem);
 	m_addMultimeterMenu.append(*item);
+
+	item = Gtk::manage(new Gtk::MenuItem("Connect...", false));
+	item->signal_activate().connect(
+		sigc::mem_fun(*this, &OscilloscopeWindow::OnAddOscilloscope));
+	m_addScopeMenu.append(*item);
+	item = Gtk::manage(new Gtk::SeparatorMenuItem);
+	m_addScopeMenu.append(*item);
 
 	//Add new ones
 	for(int i=timestamps.size()-1; i>=0; i--)
@@ -4221,7 +4219,7 @@ void OscilloscopeWindow::RefreshInstrumentMenus()
 			{
 				item->signal_activate().connect(
 					sigc::bind<std::string>(sigc::mem_fun(*this, &OscilloscopeWindow::ConnectToScope), path));
-				m_recentInstrumentsMenu.append(*item);
+				m_addScopeMenu.append(*item);
 			}
 
 			//Add to recent meters menu iff it's a meter
@@ -4234,7 +4232,7 @@ void OscilloscopeWindow::RefreshInstrumentMenus()
 		}
 	}
 
-	m_recentInstrumentsMenu.show_all();
+	m_addScopeMenu.show_all();
 	m_addMultimeterMenu.show_all();
 }
 
