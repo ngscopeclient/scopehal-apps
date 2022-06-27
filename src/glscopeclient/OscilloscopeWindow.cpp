@@ -946,9 +946,13 @@ void OscilloscopeWindow::ConnectToScope(string path)
 
 			for(size_t i=0; i<s->GetChannelCount(); i++)
 			{
+				auto chan = s->GetChannel(i);
+
+				//Qualify the channel name by the scope name
+				chan->SetDisplayName(s->m_nickname + ":" + chan->GetHwname());
+
 				if(s->IsChannelEnabled(i))
 				{
-					auto chan = s->GetChannel(i);
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
 						OnAddChannel(StreamDescriptor(chan, j));
