@@ -3166,6 +3166,65 @@ void OscilloscopeWindow::DownloadWaveforms()
 	//If we're in offline one-shot mode, disarm the trigger
 	if( (m_scopes.empty()) && m_triggerOneShot)
 		m_triggerArmed = false;
+
+	//In multi-scope mode, retcon the timestamps of secondary scopes' waveforms so they line up with the primary.
+	if(m_scopes.size() > 1)
+	{
+		LogTrace("Multi scope: patching timestamps\n");
+		LogIndenter li;
+
+		//Get the timestamp of the primary scope's first waveform
+		bool hit = false;
+		time_t timeSec = 0;
+		int64_t timeFs  = 0;
+		auto prim = m_scopes[0];
+		for(size_t i=0; i<prim->GetChannelCount(); i++)
+		{
+			auto chan = prim->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+			{
+				auto data = chan->GetData(j);
+				if(data != nullptr)
+				{
+					timeSec = data->m_startTimestamp;
+					timeFs = data->m_startFemtoseconds;
+					hit = true;
+					break;
+				}
+			}
+			if(hit)
+				break;
+		}
+
+		//Patch all secondary scopes
+		Unit fs(Unit::UNIT_FS);
+		for(size_t i=1; i<m_scopes.size(); i++)
+		{
+			auto sec = m_scopes[i];
+
+			//TODO: get this from calibration stats when we sync the scopes
+			int64_t waveformStartShiftFs = 0;
+			LogTrace("Calculated shift from primary to secondary: %s", fs.PrettyPrint(waveformStartShiftFs).c_str());
+
+			//TODO: patch trigger phase etc to line things up more precisely
+			//(rather than messing with fine deskew etc)
+
+			for(size_t j=0; j<sec->GetChannelCount(); j++)
+			{
+				auto chan = sec->GetChannel(j);
+				for(size_t k=0; k<chan->GetStreamCount(); k++)
+				{
+					auto data = chan->GetData(k);
+					if(data == nullptr)
+						continue;
+
+					//TODO: normalize femtoseconds around second
+					data->m_startTimestamp = timeSec;
+					data->m_startFemtoseconds = timeFs + waveformStartShiftFs;
+				}
+			}
+		}
+	}
 }
 
 /**
