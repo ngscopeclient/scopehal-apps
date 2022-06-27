@@ -888,34 +888,88 @@ void OscilloscopeWindow::OnAddOscilloscope()
 
 void OscilloscopeWindow::ConnectToScope(string path)
 {
-	vector<string> scopes;
-	scopes.push_back(path);
+	//Brand-new session with nothing in it (no filter, no scopes)?
+	//Need to set up the whole UI for a new instrument.
+	if( m_scopes.empty() && Filter::GetAllInstances().empty() )
+	{
+		vector<string> paths;
+		paths.push_back(path);
 
-	//Connect to the new scope
-	CloseSession();
-	m_loadInProgress = true;
-	m_scopes = g_app->ConnectToScopes(scopes);
+		//Connect to the new scope
+		CloseSession();
+		m_loadInProgress = true;
+		m_scopes = g_app->ConnectToScopes(paths);
 
-	//Clear performance counters
-	m_totalWaveforms = 0;
-	m_framesClock.Reset();
+		//Clear performance counters
+		m_totalWaveforms = 0;
+		m_framesClock.Reset();
 
-	//Add the top level splitter right before the status bar
-	auto split = new Gtk::VPaned;
-	m_splitters.emplace(split);
-	m_vbox.remove(m_statusbar);
-	m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
-	m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
+		//Add the top level splitter right before the status bar
+		auto split = new Gtk::VPaned;
+		m_splitters.emplace(split);
+		m_vbox.remove(m_statusbar);
+		m_vbox.pack_start(*split, Gtk::PACK_EXPAND_WIDGET);
+		m_vbox.pack_start(m_statusbar, Gtk::PACK_SHRINK);
 
-	//Add all of the UI stuff
-	CreateDefaultWaveformAreas(split);
+		//Add all of the UI stuff
+		CreateDefaultWaveformAreas(split);
 
-	//Done
-	SetTitle();
-	OnLoadComplete();
+		//Done
+		SetTitle();
+		OnLoadComplete();
 
-	//Arm the trigger
-	OnStart();
+		//Arm the trigger
+		OnStart();
+	}
+
+	//Adding a new instrument to an existing session.
+	else
+	{
+		//Pause any existing triggers
+		OnStop();
+
+		//Connect to the new scope
+		vector<string> paths;
+		paths.push_back(path);
+		auto scopes = g_app->ConnectToScopes(paths);
+		for(auto s : scopes)
+		{
+			m_scopes.push_back(s);
+			m_historyWindows[s] = new HistoryWindow(this, s);
+		}
+
+		//Create waveform areas for all enabled channels.
+		//If no channels enabled, add an area for the first channel
+		for(auto s : scopes)
+		{
+			bool addedSomething = false;
+
+			for(size_t i=0; i<s->GetChannelCount(); i++)
+			{
+				if(s->IsChannelEnabled(i))
+				{
+					auto chan = s->GetChannel(i);
+					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					{
+						OnAddChannel(StreamDescriptor(chan, j));
+						addedSomething = true;
+					}
+				}
+			}
+
+			if(!addedSomething)
+				OnAddChannel(StreamDescriptor(s->GetChannel(0), 0));
+		}
+
+		//Start scope thread for the new instrument
+		g_app->StartScopeThreads(scopes);
+
+		//Update the title
+		SetTitle();
+
+		//Done, refresh the UI and such
+		OnInstrumentAdded();
+	}
 }
 
 /**
@@ -1017,11 +1071,55 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadWaveform, b
 }
 
 /**
+	@brief Refresh everything in the UI when a new instrument has been added
+ */
+void OscilloscopeWindow::OnInstrumentAdded()
+{
+	//Update all of our menus etc
+	FindScopeFuncGens();
+	AddCurrentToRecentlyUsedList();
+	SaveRecentlyUsedList();
+	RefreshInstrumentMenus();
+	RefreshChannelsMenu();
+	RefreshAnalyzerMenu();
+	RefreshMultimeterMenu();
+	RefreshScopeInfoMenu();
+	RefreshTriggerMenu();
+	RefreshGeneratorsMenu();
+	RefreshScpiConsoleMenu();
+
+	//Make sure all resize etc events have been handled.
+	//Otherwise eye patterns don't refresh right.
+	show_all();
+	GarbageCollectGroups();
+	g_app->DispatchPendingEvents();
+
+	RedrawAfterLoad();
+}
+
+/**
+	@brief Redraw everything after loading has completed
+ */
+void OscilloscopeWindow::RedrawAfterLoad()
+{
+	//Mark all waveform geometry as dirty
+	for(auto w : m_waveformAreas)
+		w->SetGeometryDirty();
+
+	//Done loading, we can render everything for good now.
+	//Issue 2 render calls since the very first render does some setup stuff
+	m_loadInProgress = false;
+	ClearAllPersistence();
+	g_app->DispatchPendingEvents();
+	ClearAllPersistence();
+}
+
+/**
 	@brief Refresh everything in the UI when a new file has been loaded
  */
 void OscilloscopeWindow::OnLoadComplete()
 {
-	FindScopeFuncGens();
+	OnInstrumentAdded();
 
 	//TODO: refresh measurements and protocol decodes
 
@@ -1044,24 +1142,6 @@ void OscilloscopeWindow::OnLoadComplete()
 			}
 		}
 	}
-
-	//Reconfigure menus
-	AddCurrentToRecentlyUsedList();
-	SaveRecentlyUsedList();
-	RefreshInstrumentMenus();
-	RefreshChannelsMenu();
-	RefreshAnalyzerMenu();
-	RefreshMultimeterMenu();
-	RefreshScopeInfoMenu();
-	RefreshTriggerMenu();
-	RefreshGeneratorsMenu();
-	RefreshScpiConsoleMenu();
-
-	//Make sure all resize etc events have been handled before replaying history.
-	//Otherwise eye patterns don't refresh right.
-	show_all();
-	GarbageCollectGroups();
-	g_app->DispatchPendingEvents();
 
 	//TODO: make this work properly if we have decodes spanning multiple scopes
 	for(auto it : m_historyWindows)
@@ -1088,16 +1168,7 @@ void OscilloscopeWindow::OnLoadComplete()
 	else
 		g_app->StartScopeThreads(m_scopes);
 
-	//Mark all waveform geometry as dirty
-	for(auto w : m_waveformAreas)
-		w->SetGeometryDirty();
-
-	//Done loading, we can render everything for good now.
-	//Issue 2 render calls since the very first render does some setup stuff
-	m_loadInProgress = false;
-	ClearAllPersistence();
-	g_app->DispatchPendingEvents();
-	ClearAllPersistence();
+	RedrawAfterLoad();
 }
 
 /**

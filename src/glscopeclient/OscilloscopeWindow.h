@@ -329,7 +329,9 @@ public:
 
 	//Session handling
 	void CloseSession();
+	void OnInstrumentAdded();
 	void OnLoadComplete();
+	void RedrawAfterLoad();
 	void CreateDefaultWaveformAreas(Gtk::Paned* split);
 
 	void OnChannelRenamed(OscilloscopeChannel* chan);
