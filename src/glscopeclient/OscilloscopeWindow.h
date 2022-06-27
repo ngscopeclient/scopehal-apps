@@ -94,8 +94,6 @@ public:
 	void OnGenerateFilter(std::string name);
 	WaveformArea* DoAddChannel(StreamDescriptor w, WaveformGroup* ngroup, WaveformArea* ref = NULL);
 
-	void OnMarkerMoved(Marker* m);
-
 	size_t GetScopeCount()
 	{ return m_scopes.size(); }
 
@@ -116,6 +114,8 @@ public:
 	void JumpToMarker(Marker* m);
 	void AddMarker(TimePoint timestamp, int64_t offset);
 	void AddMarker(TimePoint timestamp, int64_t offset, const std::string& name);
+	void OnMarkerMoved(Marker* m);
+	void OnMarkerNameChanged(Marker* m);
 
 	void JumpToHistory(TimePoint timestamp);
 

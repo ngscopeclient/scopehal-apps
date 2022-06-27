@@ -4612,3 +4612,9 @@ void OscilloscopeWindow::JumpToMarker(Marker* m)
 		g->GetFirstArea()->CenterMarker(m->m_offset);
 	}
 }
+
+void OscilloscopeWindow::OnMarkerNameChanged(Marker* m)
+{
+	for(auto it : m_historyWindows)
+		it.second->OnMarkerNameChanged(m);
+}

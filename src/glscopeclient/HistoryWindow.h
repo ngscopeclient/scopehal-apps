@@ -79,6 +79,7 @@ public:
 	void JumpToHistory(TimePoint timestamp);
 	void AddMarker(TimePoint stamp, int64_t offset, std::string name, Marker* m);
 	void OnMarkerMoved(Marker* m);
+	void OnMarkerNameChanged(Marker* m);
 
 	void SetMaxWaveforms(int n);
 
@@ -95,6 +96,8 @@ protected:
 	void OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::TreeModel::iterator& it);
 	void OnSelectionChanged();
 	void OnDelete();
+
+	Gtk::TreeIter FindRowForMarker(Marker* m);
 
 	void DeleteHistoryRow(const Gtk::TreeModel::iterator& it);
 

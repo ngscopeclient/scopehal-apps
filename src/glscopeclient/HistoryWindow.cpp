@@ -534,6 +534,7 @@ void HistoryWindow::OnRowChanged(const Gtk::TreeModel::Path& path, const Gtk::Tr
 		if(name != m->m_name)
 		{
 			m->m_name = name;
+			m_parent->OnMarkerNameChanged(m);
 			m_parent->RefreshAllViews();
 		}
 	}
@@ -580,7 +581,7 @@ void HistoryWindow::AddMarker(TimePoint stamp, int64_t offset, string name, Mark
 	}
 }
 
-void HistoryWindow::OnMarkerMoved(Marker* m)
+Gtk::TreeIter HistoryWindow::FindRowForMarker(Marker* m)
 {
 	//TODO: faster way to find this?
 
@@ -595,16 +596,35 @@ void HistoryWindow::OnMarkerMoved(Marker* m)
 			{
 				auto row = (*jt);
 				if(row[m_columns.m_marker] == m)
-				{
-					int64_t fs = m->m_point.second + m->m_offset;
-					row[m_columns.m_datestamp] = FormatDate(m->m_point.first, fs);
-					row[m_columns.m_timestamp] = FormatTimestamp(m->m_point.first, fs);
-					break;
-				}
+					return jt;
 			}
 			break;
 		}
 	}
+
+	return children.end();
+}
+
+void HistoryWindow::OnMarkerMoved(Marker* m)
+{
+	auto it = FindRowForMarker(m);
+	if(it == m_model->children().end())
+		return;
+
+	auto row = (*it);
+	int64_t fs = m->m_point.second + m->m_offset;
+	row[m_columns.m_datestamp] = FormatDate(m->m_point.first, fs);
+	row[m_columns.m_timestamp] = FormatTimestamp(m->m_point.first, fs);
+}
+
+void HistoryWindow::OnMarkerNameChanged(Marker* m)
+{
+	auto it = FindRowForMarker(m);
+	if(it == m_model->children().end())
+		return;
+
+	auto row = (*it);
+	row[m_columns.m_label] = m->m_name;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
