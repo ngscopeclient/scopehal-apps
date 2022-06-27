@@ -117,7 +117,7 @@ public:
 	void OnMarkerMoved(Marker* m);
 	void OnMarkerNameChanged(Marker* m);
 
-	void JumpToHistory(TimePoint timestamp);
+	void JumpToHistory(TimePoint timestamp, HistoryWindow* src = nullptr);
 
 	std::string GetEyeColor()
 	{ return m_eyeColor; }

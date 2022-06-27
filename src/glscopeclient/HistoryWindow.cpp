@@ -425,6 +425,9 @@ void HistoryWindow::OnSelectionChanged()
 	WaveformHistory hist = row[m_columns.m_history];
 	m_lastHistoryKey = row[m_columns.m_capturekey];
 
+	//Tell the window to sync any other history windows to the same time point
+	m_parent->JumpToHistory(m_lastHistoryKey, this);
+
 	//Reload the scope with the saved waveforms
 	bool actuallyChanged = false;
 	for(auto it : hist)

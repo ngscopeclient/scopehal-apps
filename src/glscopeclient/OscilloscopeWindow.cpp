@@ -3197,17 +3197,11 @@ void OscilloscopeWindow::DownloadWaveforms()
 		}
 
 		//Patch all secondary scopes
-		Unit fs(Unit::UNIT_FS);
 		for(size_t i=1; i<m_scopes.size(); i++)
 		{
 			auto sec = m_scopes[i];
 
-			//TODO: get this from calibration stats when we sync the scopes
-			int64_t waveformStartShiftFs = 0;
-			LogTrace("Calculated shift from primary to secondary: %s", fs.PrettyPrint(waveformStartShiftFs).c_str());
-
-			//TODO: patch trigger phase etc to line things up more precisely
-			//(rather than messing with fine deskew etc)
+			//TODO: patch trigger phase to correct for shifts between primary and secondary
 
 			for(size_t j=0; j<sec->GetChannelCount(); j++)
 			{
@@ -3218,9 +3212,8 @@ void OscilloscopeWindow::DownloadWaveforms()
 					if(data == nullptr)
 						continue;
 
-					//TODO: normalize femtoseconds around second
 					data->m_startTimestamp = timeSec;
-					data->m_startFemtoseconds = timeFs + waveformStartShiftFs;
+					data->m_startFemtoseconds = timeFs;
 				}
 			}
 		}
@@ -3618,11 +3611,13 @@ void OscilloscopeWindow::RemoveProtocolHistoryFrom(TimePoint timestamp)
 		a->RemoveHistoryFrom(timestamp);
 }
 
-void OscilloscopeWindow::JumpToHistory(TimePoint timestamp)
+void OscilloscopeWindow::JumpToHistory(TimePoint timestamp, HistoryWindow* src)
 {
-	//TODO:  this might not work too well if triggers aren't perfectly synced!
 	for(auto it : m_historyWindows)
-		it.second->JumpToHistory(timestamp);
+	{
+		if(it.second != src)
+			it.second->JumpToHistory(timestamp);
+	}
 }
 
 void OscilloscopeWindow::OnTimebaseSettings()
