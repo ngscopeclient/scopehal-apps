@@ -105,7 +105,8 @@ protected:
 	virtual void on_prepare(Gtk::Widget* page);
 
 	void ConfigurePrimaryScope(Oscilloscope* scope);
-	void ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page, Oscilloscope* scope);
+	void ConfigureSecondaryScope(Oscilloscope* scope);
+	void ActivateSecondaryScope(ScopeSyncDeskewProgressPage* page);
 
 	OscilloscopeWindow* m_parent;
 

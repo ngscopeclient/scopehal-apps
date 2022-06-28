@@ -848,6 +848,7 @@ void OscilloscopeWindow::CloseSession()
 	for(auto scope : m_scopes)
 		delete scope;
 	m_scopes.clear();
+	m_scopeDeskewCal.clear();
 
 	SetTitle();
 }
@@ -3205,8 +3206,6 @@ void OscilloscopeWindow::DownloadWaveforms()
 		{
 			auto sec = m_scopes[i];
 
-			//TODO: patch trigger phase to correct for shifts between primary and secondary
-
 			for(size_t j=0; j<sec->GetChannelCount(); j++)
 			{
 				auto chan = sec->GetChannel(j);
@@ -3216,8 +3215,11 @@ void OscilloscopeWindow::DownloadWaveforms()
 					if(data == nullptr)
 						continue;
 
+					auto skew = m_scopeDeskewCal[sec];
+
 					data->m_startTimestamp = timeSec;
 					data->m_startFemtoseconds = timeFs;
+					data->m_triggerPhase -= skew;
 				}
 			}
 		}

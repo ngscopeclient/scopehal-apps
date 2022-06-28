@@ -221,7 +221,11 @@ void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 		return;
 
 	if(page == &m_primaryProgressPage)
+	{
 		ConfigurePrimaryScope(m_parent->GetScope(0));
+		for(auto p : m_deskewProgressPages)
+			ConfigureSecondaryScope(p->GetScope());
+	}
 
 	if(page == &m_donePage)
 		set_page_complete(*page);
@@ -242,7 +246,7 @@ void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 		if(page == &p->m_grid)
 		{
 			m_activeSecondaryPage = p;
-			ConfigureSecondaryScope(p, p->GetScope());
+			ActivateSecondaryScope(p);
 		}
 	}
 }
@@ -274,12 +278,9 @@ void ScopeSyncWizard::ConfigurePrimaryScope(Oscilloscope* scope)
 	set_page_complete(m_primaryProgressPage);
 }
 
-void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page, Oscilloscope* scope)
+void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 {
-	page->m_progressBar.set_fraction(0);
-
 	//Set trigger to external
-	page->m_progressBar.set_text("Configure trigger source");
 	auto trig = new EdgeTrigger(scope);
 	trig->SetInput(0, StreamDescriptor(scope->GetExternalTrigger(), 0));
 	trig->SetType(EdgeTrigger::EDGE_RISING);
@@ -287,23 +288,19 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 	scope->SetTrigger(trig);
 
 	//Set reference clock to external
-	page->m_progressBar.set_text("Configure reference clock");
+	m_primaryProgressBar.set_text("Configure secondary reference clock");
 	scope->SetUseExternalRefclk(true);
 
 	//Set the trigger offset to the same as the primary
-	page->m_progressBar.set_text("Configure trigger offset");
+	m_primaryProgressBar.set_text("Configure secondary trigger offset");
 	scope->SetTriggerOffset(m_parent->GetScope(0)->GetTriggerOffset());
 
-	//Set all channels to zero skew
-	page->m_progressBar.set_text("Configure channel deskew");
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
-	{
-		auto chan = scope->GetChannel(i);
-		if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
-			continue;
+	m_parent->m_scopeDeskewCal[scope] = 0;
+}
 
-		chan->SetDeskew(0);
-	}
+void ScopeSyncWizard::ActivateSecondaryScope(ScopeSyncDeskewProgressPage* page)
+{
+	page->m_progressBar.set_fraction(0);
 
 	//Arm trigger and acquire a waveform
 	RequestWaveform();
@@ -342,10 +339,9 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_primaryWaveform = pw;
 	m_secondaryWaveform = sw;
 
-	//Max allowed skew between instruments is 2.5K points for now (arbitrary limit)
+	//Max allowed skew between instruments is 5K points for now (arbitrary limit)
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
-
-	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(2500LL));
+	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(5000LL));
 
 	m_delta = - m_maxSkewSamples;
 
@@ -387,7 +383,8 @@ bool ScopeSyncWizard::OnTimer()
 		for(size_t i=0; i<(size_t)len; i++)
 		{
 			//Timestamp of this sample, in fs
-			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale;
+			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
+				m_primaryWaveform->m_triggerPhase;
 
 			//Target timestamp in the secondary waveform
 			int64_t target = start + deltaFs;
@@ -398,8 +395,8 @@ bool ScopeSyncWizard::OnTimer()
 
 			//Skip secondary samples if the current secondary sample ends before the primary sample starts
 			bool done = false;
-			while( ((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
-						m_secondaryWaveform->m_timescale) < target)
+			while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
+						m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
 			{
 				isecondary ++;
 
@@ -437,8 +434,9 @@ bool ScopeSyncWizard::OnTimer()
 	//Collect the skew from this round
 	auto scope = m_activeSecondaryPage->GetScope();
 	int64_t skew = m_bestCorrelationOffset * m_primaryWaveform->m_timescale;
-	LogTrace("Best correlation = %f (delta = %ld / %ld fs)\n",
-		m_bestCorrelation, m_bestCorrelationOffset, skew);
+	Unit fs(Unit::UNIT_FS);
+	LogTrace("Best correlation = %f (delta = %ld / %s)\n",
+		m_bestCorrelation, m_bestCorrelationOffset, fs.PrettyPrint(skew).c_str());
 	m_averageSkews.push_back(skew);
 
 	//Do we have additional averages to collect?
@@ -469,28 +467,8 @@ bool ScopeSyncWizard::OnTimer()
 		skew = (m_averageSkews[4] + m_averageSkews[5]) / 2;
 
 		//Figure out where we want the secondary to go
-		int64_t targetOffset = scope->GetTriggerOffset() - skew;
-		Unit fs(Unit::UNIT_FS);
-		LogTrace("Target trigger offset %s\n", fs.PrettyPrint(targetOffset).c_str());
-
-		//Apply the coarse deskew correction
-		scope->SetTriggerOffset(targetOffset);
-
-		//See where we actually ended up
-		int64_t actualOffset = scope->GetTriggerOffset();
-		int64_t remainingSkew = targetOffset - actualOffset;
-		LogTrace("Actual trigger offset %ld, remaining %ld\n", actualOffset, remainingSkew);
-
-		//Apply the remaining delta as per-channel deskew
-		//TODO: how to fine-deskew LA channels?
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
-		{
-			auto chan = scope->GetChannel(i);
-			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
-				continue;
-
-			chan->SetDeskew(remainingSkew);
-		}
+		LogTrace("Median skew: %s\n", fs.PrettyPrint(skew).c_str());
+		m_parent->m_scopeDeskewCal[scope] = skew;
 	}
 
 	return false;

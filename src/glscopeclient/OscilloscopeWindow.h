@@ -372,6 +372,9 @@ public:
 	std::vector<Multimeter*> m_meters;
 	std::vector<FunctionGenerator*> m_funcgens;
 
+	//Deskew correction coefficients for multi-scope
+	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
+
 	void FindScopeFuncGens();
 
 	//Status polling
