@@ -314,6 +314,9 @@ void ScopeSyncWizard::ConfigureSecondaryScope(ScopeSyncDeskewProgressPage* page,
 
 void ScopeSyncWizard::OnWaveformDataReady()
 {
+	//no longer waiting for timeout
+	m_timeoutConnection.disconnect();
+
 	//We must have active pages (sanity check)
 	if(!m_activeSecondaryPage || !m_activeSetupPage)
 		return;
@@ -467,7 +470,8 @@ bool ScopeSyncWizard::OnTimer()
 
 		//Figure out where we want the secondary to go
 		int64_t targetOffset = scope->GetTriggerOffset() - skew;
-		LogTrace("Target trigger offset %ld\n", targetOffset);
+		Unit fs(Unit::UNIT_FS);
+		LogTrace("Target trigger offset %s\n", fs.PrettyPrint(targetOffset).c_str());
 
 		//Apply the coarse deskew correction
 		scope->SetTriggerOffset(targetOffset);
@@ -510,5 +514,5 @@ void ScopeSyncWizard::RequestWaveform()
 {
 	m_parent->ArmTrigger(OscilloscopeWindow::TRIGGER_TYPE_SINGLE);
 	m_waitingForWaveform = true;
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 5000);
+	m_timeoutConnection = Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnWaveformTimeout), 5000);
 }

@@ -129,6 +129,8 @@ protected:
 	bool OnWaveformTimeout();
 
 	void RequestWaveform();
+
+	sigc::connection m_timeoutConnection;
 };
 
 #endif
