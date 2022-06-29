@@ -78,13 +78,24 @@ Timeline::DragState Timeline::HitTest(double x, double /*y*/, Oscilloscope** psc
 		auto trig = scope->GetTrigger();
 		if(trig)
 		{
-			double trig_x = (scope->GetTriggerOffset() - m_group->m_xAxisOffset) * xscale;
+			int64_t target;
+			if(i == 0)
+				target = scope->GetTriggerOffset();
+			else
+				target = -m_parent->m_scopeDeskewCal[scope];
+
+			double trig_x = (target - m_group->m_xAxisOffset) * xscale;
 			if(pscope)
 				*pscope = scope;
 
 			//Trigger position
 			if(fabs(x - trig_x) < 5 )
-				return DRAG_TRIGGER;
+			{
+				if(i == 0)
+					return DRAG_PRIMARY_TRIGGER;
+				else
+					return DRAG_SECONDARY_TRIGGER;
+			}
 		}
 	}
 
@@ -108,10 +119,17 @@ bool Timeline::on_button_press_event(GdkEventButton* event)
 
 			switch(m_dragState)
 			{
-				case DRAG_TRIGGER:
+				case DRAG_PRIMARY_TRIGGER:
 					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
 					m_dragScope = target;
 					m_currentTriggerOffsetDragPosition = m_dragScope->GetTriggerOffset();
+					m_group->m_waveformBox.queue_draw();
+					break;
+
+				case DRAG_SECONDARY_TRIGGER:
+					get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
+					m_dragScope = target;
+					m_currentTriggerOffsetDragPosition = -m_parent->m_scopeDeskewCal[m_dragScope];
 					m_group->m_waveformBox.queue_draw();
 					break;
 
@@ -146,11 +164,25 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 		m_dragState = DRAG_NONE;
 		get_window()->set_cursor(Gdk::Cursor::create(get_display(), "grab"));
 
-		if(oldState == DRAG_TRIGGER)
+		if(oldState == DRAG_PRIMARY_TRIGGER)
 		{
 			//This mess is needed because scopes don't always give us the exact offset we ask for
 			int64_t oldoff = m_dragScope->GetTriggerOffset();
 			m_dragScope->SetTriggerOffset(m_currentTriggerOffsetDragPosition);
+			int64_t newoff = m_dragScope->GetTriggerOffset();
+			m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
+
+			m_group->m_waveformBox.queue_draw();
+		}
+
+		if(oldState == DRAG_SECONDARY_TRIGGER)
+		{
+			//Calculate target trigger calibration delay, then back-convert that to get the trigger offset we need
+			//This mess is needed because scopes don't always give us the exact offset we ask for
+			int64_t delta = m_currentTriggerOffsetDragPosition + m_parent->m_scopeDeskewCal[m_dragScope];
+
+			int64_t oldoff = m_dragScope->GetTriggerOffset();
+			m_dragScope->SetTriggerOffset(oldoff - delta);
 			int64_t newoff = m_dragScope->GetTriggerOffset();
 			m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
 
@@ -166,24 +198,26 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 	event->x *= scale;
 	event->y *= scale;
 
+	Unit fs(Unit::UNIT_FS);
+
 	switch(m_dragState)
 	{
 		//Dragging the horizontal offset
 		case DRAG_TIMELINE:
 			{
 				double dx = event->x - m_dragStartX;
-				double fs = dx / m_group->m_pixelsPerXUnit;
+				double dfs = dx / m_group->m_pixelsPerXUnit;
 
 				//Update offset
-				m_group->m_xAxisOffset = m_originalTimeOffset - fs;
+				m_group->m_xAxisOffset = m_originalTimeOffset - dfs;
 
 				//Clear persistence and redraw the group (fixes #46)
 				m_group->GetParent()->ClearPersistence(m_group, false, true);
 			}
 			break;
 
-		//Dragging the trigger
-		case DRAG_TRIGGER:
+		//Dragging the primary scope's trigger
+		case DRAG_PRIMARY_TRIGGER:
 			{
 				//Figure out where the trigger is being dragged to
 				double sx = event->x / m_group->m_pixelsPerXUnit;
@@ -197,7 +231,28 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
 
 				queue_draw();
+				m_group->m_waveformBox.queue_draw();
+			}
+			break;
 
+		//Dragging a secondary scope's trigger
+		case DRAG_SECONDARY_TRIGGER:
+			{
+				//Figure out where the trigger is being dragged to
+				double sx = event->x / m_group->m_pixelsPerXUnit;
+				int64_t t = static_cast<int64_t>(round(sx)) + m_group->m_xAxisOffset;
+				m_currentTriggerOffsetDragPosition = t;
+
+				//Calculate target trigger calibration delay, then back-convert that to get the trigger offset we need
+				//This mess is needed because scopes don't always give us the exact offset we ask for
+				int64_t delta = t + m_parent->m_scopeDeskewCal[m_dragScope];
+
+				int64_t oldoff = m_dragScope->GetTriggerOffset();
+				m_dragScope->SetTriggerOffset(oldoff - delta);
+				int64_t newoff = m_dragScope->GetTriggerOffset();
+				m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
+
+				queue_draw();
 				m_group->m_waveformBox.queue_draw();
 			}
 			break;
@@ -210,7 +265,8 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 
 				switch(target)
 				{
-					case DRAG_TRIGGER:
+					case DRAG_PRIMARY_TRIGGER:
+					case DRAG_SECONDARY_TRIGGER:
 						get_window()->set_cursor(Gdk::Cursor::create(get_display(), "ew-resize"));
 						break;
 
@@ -298,8 +354,6 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	cr->line_to(w, ytop);
 	cr->stroke();
 
-	//Find the first channel and use it for display of the trigger config etc
-	//TODO: use all scopes for this
 	RefreshUnits();
 
 	//And actually draw the rest
@@ -490,10 +544,15 @@ void Timeline::RenderTriggerArrow(
 	size_t h)
 {
 	int64_t timestamp;
-	if( (m_dragState == DRAG_TRIGGER) && (scope == m_dragScope) )
+	if( (m_dragState == DRAG_PRIMARY_TRIGGER) && (scope == m_dragScope) )
 		timestamp = m_currentTriggerOffsetDragPosition;
 	else
 		timestamp = scope->GetTriggerOffset();
+
+	//If this is a secondary, show trigger arrow at the calibration delay offset (nominal waveform start)
+	//rather than the actual trigger position w/ cable delay etc
+	if(scope != m_parent->GetScope(0))
+		timestamp = -m_parent->m_scopeDeskewCal[scope];
 
 	double x = (timestamp - m_group->m_xAxisOffset) * xscale;
 

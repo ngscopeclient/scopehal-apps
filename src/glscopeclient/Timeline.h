@@ -45,7 +45,7 @@ public:
 	{ return m_xAxisUnit; }
 
 	bool IsDraggingTrigger()
-	{ return (m_dragState == DRAG_TRIGGER); }
+	{ return (m_dragState == DRAG_PRIMARY_TRIGGER) || (m_dragState == DRAG_SECONDARY_TRIGGER); }
 
 	int64_t GetTriggerDragPosition()
 	{ return m_currentTriggerOffsetDragPosition; }
@@ -56,7 +56,8 @@ protected:
 	{
 		DRAG_NONE,
 		DRAG_TIMELINE,
-		DRAG_TRIGGER
+		DRAG_PRIMARY_TRIGGER,
+		DRAG_SECONDARY_TRIGGER,
 	} m_dragState;
 
 	double m_dragStartX;
