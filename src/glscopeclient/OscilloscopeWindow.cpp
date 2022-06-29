@@ -1690,6 +1690,10 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 
 		//Configure the scope
 		scope->LoadConfiguration(inst, table);
+
+		//Load trigger deskew
+		if(inst["triggerdeskew"])
+			m_scopeDeskewCal[scope] = inst["triggerdeskew"].as<int64_t>();
 	}
 }
 
@@ -2144,7 +2148,11 @@ string OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
 	string config = "instruments:\n";
 
 	for(auto scope : m_scopes)
+	{
 		config += scope->SerializeConfiguration(table);
+		if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
+			config += string("        triggerdeskew: ") + to_string(m_scopeDeskewCal[scope]) + "\n";
+	}
 
 	return config;
 }
