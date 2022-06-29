@@ -69,40 +69,27 @@ Timeline::~Timeline()
  */
 Timeline::DragState Timeline::HitTest(double x, double /*y*/, Oscilloscope** pscope)
 {
-	//TODO: check against all scopes, not just one
-
 	//Find the trigger arrow
-	double trig_x = 0;
-	bool trig_found = false;
-	auto children = m_group->m_waveformBox.get_children();
-	if(!children.empty())
+	size_t nscopes = m_parent->GetScopeCount();
+	for(size_t i=0; i<nscopes; i++)
 	{
-		auto view = dynamic_cast<WaveformArea*>(children[0]);
-		if(view != NULL)
+		auto scope = m_parent->GetScope(i);
+		float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
+		auto trig = scope->GetTrigger();
+		if(trig)
 		{
-			auto scope = view->GetChannel().m_channel->GetScope();
-			if(scope != NULL)
-			{
-				float xscale = m_group->m_pixelsPerXUnit / get_window()->get_scale_factor();
-				auto trig = scope->GetTrigger();
-				if(trig)
-				{
-					trig_x = (scope->GetTriggerOffset() - m_group->m_xAxisOffset) * xscale;
-					trig_found = true;
-					if(pscope)
-						*pscope = scope;
-				}
-			}
+			double trig_x = (scope->GetTriggerOffset() - m_group->m_xAxisOffset) * xscale;
+			if(pscope)
+				*pscope = scope;
+
+			//Trigger position
+			if(fabs(x - trig_x) < 5 )
+				return DRAG_TRIGGER;
 		}
 	}
 
-	//Trigger position
-	if(trig_found && fabs(x - trig_x) < 5 )
-		return DRAG_TRIGGER;
-
 	//The entire timeline is draggable, so default to that if we're not anywhere special
-	else
-		return DRAG_TIMELINE;
+	return DRAG_TIMELINE;
 }
 
 bool Timeline::on_button_press_event(GdkEventButton* event)
@@ -492,9 +479,6 @@ void Timeline::RenderTriggerArrow(
 	float xscale,
 	size_t h)
 {
-
-	//TODO: draw scope name next to the arrow if we have >1 active scope
-
 	int64_t timestamp;
 	if( (m_dragState == DRAG_TRIGGER) && (scope == m_dragScope) )
 		timestamp = m_currentTriggerOffsetDragPosition;
@@ -507,17 +491,64 @@ void Timeline::RenderTriggerArrow(
 	if(trig)
 	{
 		auto c = trig->GetInput(0).m_channel;
+		Gdk::Color color;
 		if(c)
 		{
-			Gdk::Color color(c->m_displaycolor);
+			//External trigger usually doesn't have a color set.
+			//TODO: this should be changeable in the UI
+			//For now, assign light gray in this case
+			if(c->m_displaycolor.empty())
+				color = Gdk::Color("#a0a0a0");
+			else
+				color = Gdk::Color(c->m_displaycolor);
+
 			cr->set_source_rgba(color.get_red_p(), color.get_green_p(), color.get_blue_p(), 1.0);
 		}
+		else
+			color = Gdk::Color("#a0a0a0");
 
 		int size = 5 * GetDPIScale();
 		cr->move_to(x-size, h-size);
 		cr->line_to(x,		h);
 		cr->line_to(x+size, h-size);
 		cr->fill();
+
+		//Draw scope name next to the arrow if we have >1 active scope
+		if(m_parent->GetScopeCount() > 1)
+		{
+			Gdk::Color black("black");
+
+			Glib::RefPtr<Pango::Layout> tlayout = Pango::Layout::create(get_pango_context());
+			Pango::FontDescription font = m_parent->GetPreferences().GetFont("Appearance.Cursors.label_font");
+			font.set_weight(Pango::WEIGHT_NORMAL);
+			tlayout->set_font_description(font);
+			int swidth;
+			int sheight;
+
+			//Format label
+			tlayout->set_text(scope->m_nickname);
+			tlayout->get_pixel_size(swidth, sheight);
+
+			//Draw left of cursior
+			double right = x-5;
+			double left = right - swidth - 5;
+
+			//Draw filled background for label
+			cr->set_source_rgba(black.get_red_p(), black.get_green_p(), black.get_blue_p(), 0.75);
+			double bot = 10;
+			double top = bot + sheight;
+			cr->move_to(left, top);
+			cr->line_to(left, bot);
+			cr->line_to(right, bot);
+			cr->line_to(right, top);
+			cr->fill();
+
+			//Label text
+			cr->set_source_rgb(color.get_red_p(), color.get_green_p(), color.get_blue_p());
+			cr->move_to(left+5, bot);
+			tlayout->update_from_cairo_context(cr);
+			tlayout->show_in_cairo_context(cr);
+		}
 	}
 }
 
