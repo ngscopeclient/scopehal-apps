@@ -4653,8 +4653,7 @@ void OscilloscopeWindow::OnTriggerOffsetChanged(Oscilloscope* scope, int64_t old
 			m_scopeDeskewCal[m_scopes[i]] -= delta;
 	}
 
-	//TODO: cal secondaries
+	//If this is a secondary, shift our waveform
 	else
-	{
-	}
+		m_scopeDeskewCal[scope] += delta;
 }
