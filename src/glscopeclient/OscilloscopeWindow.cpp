@@ -4632,3 +4632,29 @@ void OscilloscopeWindow::OnMarkerNameChanged(Marker* m)
 	for(auto it : m_historyWindows)
 		it.second->OnMarkerNameChanged(m);
 }
+
+void OscilloscopeWindow::OnTriggerOffsetChanged(Oscilloscope* scope, int64_t oldpos, int64_t newpos)
+{
+	//Skip if unchanged
+	if(oldpos == newpos)
+		return;
+
+	//Nothing to do unless we're in a multiscope setup
+	size_t nscopes = m_scopes.size();
+	if(nscopes <= 1)
+		return;
+
+	int64_t delta = newpos - oldpos;
+
+	//If this is the primary, shift all secondaries to compensate
+	if(scope == m_scopes[0])
+	{
+		for(size_t i=1; i<nscopes; i++)
+			m_scopeDeskewCal[m_scopes[i]] -= delta;
+	}
+
+	//TODO: cal secondaries
+	else
+	{
+	}
+}

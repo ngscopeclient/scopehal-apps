@@ -148,7 +148,12 @@ bool Timeline::on_button_release_event(GdkEventButton* event)
 
 		if(oldState == DRAG_TRIGGER)
 		{
+			//This mess is needed because scopes don't always give us the exact offset we ask for
+			int64_t oldoff = m_dragScope->GetTriggerOffset();
 			m_dragScope->SetTriggerOffset(m_currentTriggerOffsetDragPosition);
+			int64_t newoff = m_dragScope->GetTriggerOffset();
+			m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
+
 			m_group->m_waveformBox.queue_draw();
 		}
 	}
@@ -183,9 +188,14 @@ bool Timeline::on_motion_notify_event(GdkEventMotion* event)
 				//Figure out where the trigger is being dragged to
 				double sx = event->x / m_group->m_pixelsPerXUnit;
 				int64_t t = static_cast<int64_t>(round(sx)) + m_group->m_xAxisOffset;
-
 				m_currentTriggerOffsetDragPosition = t;
-				m_dragScope->SetTriggerOffset(t);
+
+				//This mess is needed because scopes don't always give us the exact offset we ask for
+				int64_t oldoff = m_dragScope->GetTriggerOffset();
+				m_dragScope->SetTriggerOffset(m_currentTriggerOffsetDragPosition);
+				int64_t newoff = m_dragScope->GetTriggerOffset();
+				m_parent->OnTriggerOffsetChanged(m_dragScope, oldoff, newoff);
+
 				queue_draw();
 
 				m_group->m_waveformBox.queue_draw();

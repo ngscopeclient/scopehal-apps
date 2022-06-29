@@ -374,6 +374,7 @@ public:
 
 	//Deskew correction coefficients for multi-scope
 	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
+	void OnTriggerOffsetChanged(Oscilloscope* scope, int64_t oldpos, int64_t newpos);
 
 	void FindScopeFuncGens();
 

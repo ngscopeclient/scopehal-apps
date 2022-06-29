@@ -133,7 +133,10 @@ void TriggerPropertiesDialog::ConfigureTrigger()
 	//Also, set the trigger offset
 	//TODO: do this (and nothing else) in event handler when offset is changed
 	Unit fs(Unit::UNIT_FS);
+	int64_t oldoff = m_scope->GetTriggerOffset();
 	m_scope->SetTriggerOffset(fs.ParseString(m_triggerOffsetEntry.get_text()));
+	int64_t newoff = m_scope->GetTriggerOffset();
+	m_parent->OnTriggerOffsetChanged(m_scope, oldoff, newoff);
 
 	//Push changes to the scope
 	m_scope->PushTrigger();

@@ -291,10 +291,6 @@ void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 	m_primaryProgressBar.set_text("Configure secondary reference clock");
 	scope->SetUseExternalRefclk(true);
 
-	//Set the trigger offset to the same as the primary
-	m_primaryProgressBar.set_text("Configure secondary trigger offset");
-	scope->SetTriggerOffset(m_parent->GetScope(0)->GetTriggerOffset());
-
 	m_parent->m_scopeDeskewCal[scope] = 0;
 }
 
