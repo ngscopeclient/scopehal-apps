@@ -39,6 +39,49 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ScopeSyncDeskewWelcomePage
+
+ScopeSyncDeskewWelcomePage::ScopeSyncDeskewWelcomePage(OscilloscopeWindow* parent)
+	: m_parent(parent)
+{
+	m_grid.attach(m_welcomeLabel, 0, 0, 1, 1);
+		m_welcomeLabel.set_markup(
+			string("Before instrument synchronization can begin, the hardware must be properly connected.\n") +
+			string("\n") +
+			string("1) The instrument \"") + parent->GetScope(0)->m_nickname + "\" is selected as primary.\n" +
+			string("2) Connect a common reference clock to all instruments\n") +
+			string("3) Connect the trigger output on the primary instrument to an input of each secondary.\n")
+			);
+
+	//Select trigger input for each scope
+	m_grid.attach(m_triggerFrame, 0, 1, 1, 1);
+	m_triggerFrame.set_label("Secondary trigger channel");
+	m_triggerFrame.set_margin_top(20);
+	m_triggerFrame.add(m_triggerGrid);
+	size_t nscopes = parent->GetScopeCount();
+	for(size_t i=1; i<nscopes; i++)
+	{
+		auto scope = parent->GetScope(i);
+
+		//Trigger name
+		auto label = Gtk::manage(new Gtk::Label(scope->m_nickname));
+		label->set_margin_right(10);
+		m_triggerGrid.attach(*label, 0, i-i, 1, 1);
+
+		//List of channels
+		auto chanbox = Gtk::manage(new Gtk::ComboBoxText);
+		m_triggerGrid.attach(*chanbox, 1, i-1, 1, 1);
+		m_scopeNameBoxes[scope] = chanbox;
+
+		//Populate channel list
+		for(size_t j=0; j<scope->GetChannelCount(); j++)
+			chanbox->append(scope->GetChannel(j)->GetDisplayName());
+	}
+
+	m_grid.show_all();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ScopeSyncDeskewSetupPage
 
 ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, size_t nscope)
@@ -123,7 +166,8 @@ Oscilloscope* ScopeSyncDeskewProgressPage::GetScope()
 // Construction / destruction
 
 ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
-	: m_parent(parent)
+	: m_welcomePage(parent)
+	, m_parent(parent)
 	, m_activeSetupPage(NULL)
 	, m_activeSecondaryPage(NULL)
 	, m_bestCorrelationOffset(0)
@@ -139,17 +183,9 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 	set_transient_for(*parent);
 
 	//Welcome / hardware setup
-	append_page(m_welcomePage);
-		set_page_type(m_welcomePage, Gtk::ASSISTANT_PAGE_INTRO);
-		set_page_title(m_welcomePage, "Hardware Setup");
-		m_welcomePage.attach(m_welcomeLabel, 0, 0, 1, 1);
-			m_welcomeLabel.set_markup(
-				string("Before instrument synchronization can begin, the hardware must be properly connected.\n") +
-				string("\n") +
-				string("1) The instrument \"") + parent->GetScope(0)->m_nickname + "\" is selected as primary.\n" +
-				string("2) Connect a common reference clock to all instruments\n") +
-				string("3) Connect the trigger output on the primary instrument to the external trigger on each secondary.\n")
-				);
+	append_page(m_welcomePage.m_grid);
+		set_page_type(m_welcomePage.m_grid, Gtk::ASSISTANT_PAGE_INTRO);
+		set_page_title(m_welcomePage.m_grid, "Hardware Setup");
 
 	//Configure primary instrument
 	append_page(m_primaryProgressPage);
@@ -187,7 +223,7 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 				);
 
 	//Mark the first page as complete, so we can move on
-	set_page_complete(m_welcomePage);
+	set_page_complete(m_welcomePage.m_grid);
 
 	show_all();
 }
@@ -282,7 +318,8 @@ void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 {
 	//Set trigger to external
 	auto trig = new EdgeTrigger(scope);
-	trig->SetInput(0, StreamDescriptor(scope->GetExternalTrigger(), 0));
+	auto nscope = m_welcomePage.m_scopeNameBoxes[scope]->get_active_row_number();
+	trig->SetInput(0, StreamDescriptor(scope->GetChannel(nscope), 0));
 	trig->SetType(EdgeTrigger::EDGE_RISING);
 	trig->SetLevel(0.25);	//hard coded 250 mV threshold for now
 	scope->SetTrigger(trig);

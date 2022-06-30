@@ -38,6 +38,21 @@
 
 class OscilloscopeWindow;
 
+class ScopeSyncDeskewWelcomePage
+{
+public:
+	ScopeSyncDeskewWelcomePage(OscilloscopeWindow* parent);
+
+	Gtk::Grid m_grid;
+		Gtk::Label m_welcomeLabel;
+		Gtk::Frame m_triggerFrame;
+			Gtk::Grid m_triggerGrid;
+				std::map<Oscilloscope*, Gtk::ComboBoxText*> m_scopeNameBoxes;
+
+protected:
+	OscilloscopeWindow* m_parent;
+};
+
 class ScopeSyncDeskewSetupPage
 {
 public:
@@ -91,8 +106,7 @@ public:
 	void OnWaveformDataReady();
 
 protected:
-	Gtk::Grid m_welcomePage;
-		Gtk::Label m_welcomeLabel;
+	ScopeSyncDeskewWelcomePage m_welcomePage;
 	Gtk::Grid m_primaryProgressPage;
 		Gtk::ProgressBar m_primaryProgressBar;
 	std::vector<ScopeSyncDeskewSetupPage*> m_deskewSetupPages;
