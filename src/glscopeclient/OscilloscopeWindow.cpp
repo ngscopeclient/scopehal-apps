@@ -4373,6 +4373,9 @@ void OscilloscopeWindow::RefreshInstrumentMenus()
 
 	m_addScopeMenu.show_all();
 	m_addMultimeterMenu.show_all();
+
+	//Enable or disable the sync wizard menu item depending on how many instruments we have
+	m_setupSyncMenuItem.set_sensitive(m_scopes.size() > 1);
 }
 
 /**
