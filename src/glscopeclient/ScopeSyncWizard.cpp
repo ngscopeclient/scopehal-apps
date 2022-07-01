@@ -66,12 +66,20 @@ ScopeSyncDeskewWelcomePage::ScopeSyncDeskewWelcomePage(OscilloscopeWindow* paren
 		//Trigger name
 		auto label = Gtk::manage(new Gtk::Label(scope->m_nickname));
 		label->set_margin_right(10);
-		m_triggerGrid.attach(*label, 0, i-i, 1, 1);
+		label->set_margin_left(10);
+		m_triggerGrid.attach(*label, 0, i, 1, 1);
 
 		//List of channels
 		auto chanbox = Gtk::manage(new Gtk::ComboBoxText);
-		m_triggerGrid.attach(*chanbox, 1, i-1, 1, 1);
+		m_triggerGrid.attach(*chanbox, 1, i, 1, 1);
 		m_scopeNameBoxes[scope] = chanbox;
+
+		//Skip sync box
+		auto skip = Gtk::manage(new Gtk::CheckButton);
+		skip->set_label("Skip sync");
+		skip->set_margin_left(20);
+		m_triggerGrid.attach(*skip, 2, i, 1, 1);
+		m_skipBoxes[scope] = skip;
 
 		//Populate channel list
 		for(size_t j=0; j<scope->GetChannelCount(); j++)
@@ -143,6 +151,11 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 			m_secondaryChannelBox.append(chan->GetDisplayName());
 			m_secondaryChannels[chan->GetDisplayName()] = chan;
 		}
+}
+
+Oscilloscope* ScopeSyncDeskewSetupPage::GetScope()
+{
+	return m_parent->GetScope(m_nscope);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,6 +286,13 @@ void ScopeSyncWizard::on_prepare(Gtk::Widget* page)
 		{
 			m_activeSetupPage = p;
 			set_page_complete(*page);
+
+			//If we're skipping this page, move past it
+			if(m_welcomePage.m_skipBoxes[p->GetScope()]->get_active())
+			{
+				next_page();
+				return;
+			}
 		}
 	}
 
@@ -312,10 +332,15 @@ void ScopeSyncWizard::ConfigurePrimaryScope(Oscilloscope* scope)
 	m_primaryProgressBar.set_fraction(1);
 	queue_draw();
 	set_page_complete(m_primaryProgressPage);
+	next_page();
 }
 
 void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 {
+	//Bypass if we're skipping sync
+	if(m_welcomePage.m_skipBoxes[scope]->get_active())
+		return;
+
 	//Set trigger to external
 	auto trig = new EdgeTrigger(scope);
 	auto nscope = m_welcomePage.m_scopeNameBoxes[scope]->get_active_row_number();
@@ -333,6 +358,14 @@ void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 
 void ScopeSyncWizard::ActivateSecondaryScope(ScopeSyncDeskewProgressPage* page)
 {
+	//Bypass if we're skipping sync on this scope
+	if(m_welcomePage.m_skipBoxes[page->GetScope()]->get_active())
+	{
+		set_page_complete(page->m_grid);
+		next_page();
+		return;
+	}
+
 	page->m_progressBar.set_fraction(0);
 
 	//Arm trigger and acquire a waveform
@@ -372,9 +405,9 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_primaryWaveform = pw;
 	m_secondaryWaveform = sw;
 
-	//Max allowed skew between instruments is 5K points for now (arbitrary limit)
+	//Max allowed skew between instruments is 10K points for now (arbitrary limit)
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
-	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(5000LL));
+	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
 
 	m_delta = - m_maxSkewSamples;
 
@@ -502,6 +535,8 @@ bool ScopeSyncWizard::OnTimer()
 		//Figure out where we want the secondary to go
 		LogTrace("Median skew: %s\n", fs.PrettyPrint(skew).c_str());
 		m_parent->m_scopeDeskewCal[scope] = skew;
+
+		next_page();
 	}
 
 	return false;

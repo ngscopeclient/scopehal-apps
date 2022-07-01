@@ -48,6 +48,7 @@ public:
 		Gtk::Frame m_triggerFrame;
 			Gtk::Grid m_triggerGrid;
 				std::map<Oscilloscope*, Gtk::ComboBoxText*> m_scopeNameBoxes;
+				std::map<Oscilloscope*, Gtk::CheckButton*> m_skipBoxes;
 
 protected:
 	OscilloscopeWindow* m_parent;
@@ -64,6 +65,8 @@ public:
 			Gtk::ComboBoxText m_primaryChannelBox;
 		Gtk::Label m_secondaryChannelLabel;
 			Gtk::ComboBoxText m_secondaryChannelBox;
+
+	Oscilloscope* GetScope();
 
 	OscilloscopeChannel* GetPrimaryChannel()
 	{ return m_primaryChannels[m_primaryChannelBox.get_active_text()]; }
