@@ -413,7 +413,7 @@ protected:
 		Cairo::RefPtr< Cairo::Context > cr,
 		float pos,
 		Gdk::Color color,
-		bool label_to_top,
+		bool upper,
 		bool show_delta);
 	void RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr);
 	void RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr);

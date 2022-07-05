@@ -910,11 +910,20 @@ void WaveformArea::RenderVerticalCursor(
 	cr->restore();
 }
 
+/**
+	@brief Draws a single horizontal cursor
+
+	@param cr			Cairo context
+	@param pos			Position of the cursor, in Y axis units
+	@param color		Color to use
+	@param upper		True if this is the topmost cursor of two, or a single cursor
+	@param show_delta	True if we should show the delta between the two cursors, not just its position
+ */
 void WaveformArea::RenderHorizontalCursor(
 	Cairo::RefPtr< Cairo::Context > cr,
 	float pos,
 	Gdk::Color color,
-	bool label_to_top,
+	bool upper,
 	bool show_delta)
 {
 	//Don't draw offscreen cursors
@@ -944,6 +953,16 @@ void WaveformArea::RenderHorizontalCursor(
 	tlayout->set_font_description(m_cursorLabelFont);
 	tlayout->set_text(text);
 	tlayout->get_pixel_size(twidth, theight);
+
+	//Figure out which side to draw labels on
+	//By default, label for top cursor is above and bottom is below
+	bool label_to_top = upper;
+
+	//but switch if we'd otherwise go off screen
+	if(label_to_top && ( (y - theight) < 0) )
+		label_to_top = false;
+	else if(!label_to_top && ( (y + theight) >= m_height) )
+		label_to_top = true;
 
 	//Draw background
 	int labelmargin = 2;
