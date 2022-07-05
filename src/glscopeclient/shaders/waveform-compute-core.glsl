@@ -92,8 +92,6 @@ void main()
 			//Skip offscreen samples
 			if( (right.x >= gl_GlobalInvocationID.x) && (left.x <= gl_GlobalInvocationID.x + 1) )
 			{
-				g_updating[gl_LocalInvocationID.y] = true;
-
 				//To start, assume we're drawing the entire segment
 				float starty = left.y;
 				float endy = right.y;
@@ -131,15 +129,27 @@ void main()
 					endy = left.y;
 				#endif
 
-				//Clip to window size
-				starty = min(starty, MAX_HEIGHT - 1);
-				endy = min(endy, MAX_HEIGHT - 1);
-				starty = max(starty, 0);
-				endy = max(endy, 0);
+				//If start and end are both off screen, nothing to draw
+				if( ( (starty < 0) && (endy < 0) ) ||
+					( (starty >= MAX_HEIGHT) && (endy >= MAX_HEIGHT) ) )
+				{
+					g_updating[gl_LocalInvocationID.y] = false;
+				}
 
-				//Sort Y coordinates from min to max
-				g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
-				g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
+				//Something is visible. Clip to window size in case anything is partially offscreen
+				else
+				{
+					g_updating[gl_LocalInvocationID.y] = true;
+
+					starty = min(starty, MAX_HEIGHT - 1);
+					endy = min(endy, MAX_HEIGHT - 1);
+					starty = max(starty, 0);
+					endy = max(endy, 0);
+
+					//Sort Y coordinates from min to max
+					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
+					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
+				}
 
 				//Check if we're at the end of the pixel
 				if(right.x > gl_GlobalInvocationID.x + 1)
