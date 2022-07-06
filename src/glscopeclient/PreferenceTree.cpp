@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -171,6 +171,10 @@ namespace internal
 
                     case PreferenceType::Real:
                         this->m_pref.SetReal(n.as<double>());
+                        break;
+
+                    case PreferenceType::Int:
+                        this->m_pref.SetInt(n.as<std::int64_t>());
                         break;
 
                     case PreferenceType::String:

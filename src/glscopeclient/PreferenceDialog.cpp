@@ -80,17 +80,17 @@ namespace impl
 		return this->m_check;
 	}
 
-	Gtk::Widget& StringRealRow::GetValueWidget()
+	Gtk::Widget& StringRealIntRow::GetValueWidget()
 	{
 		return this->m_value;
 	}
 
-	Gtk::Entry& StringRealRow::GetEntry()
+	Gtk::Entry& StringRealIntRow::GetEntry()
 	{
 		return this->m_value;
 	}
 
-	StringRealRow::StringRealRow(Preference& preference)
+	StringRealIntRow::StringRealIntRow(Preference& preference)
 		: PreferenceRowBase(preference)
 	{
 		 std::string text;
@@ -105,6 +105,18 @@ namespace impl
 			else
 			{
 				text = to_string(preference.GetReal());
+			}
+		}
+		else if(preference.GetType() == PreferenceType::Int)
+		{
+			if(preference.HasUnit())
+			{
+				auto unit = preference.GetUnit();
+				text = unit.PrettyPrint(preference.GetInt());
+			}
+			else
+			{
+				text = to_string(preference.GetInt());
 			}
 		}
 		else
@@ -225,9 +237,10 @@ namespace impl
 				}
 
 				case PreferenceType::Real:
+				case PreferenceType::Int:
 				case PreferenceType::String:
 				{
-					row = unique_ptr<PreferenceRowBase>{ new StringRealRow(preference) };
+					row = unique_ptr<PreferenceRowBase>{ new StringRealIntRow(preference) };
 					break;
 				}
 
@@ -238,6 +251,7 @@ namespace impl
 				}
 
 				default:
+					LogError("Invalid preference type\n");
 					break;
 			}
 
@@ -309,8 +323,9 @@ namespace impl
 
 				case PreferenceType::Real:
 				case PreferenceType::String:
+				case PreferenceType::Int:
 				{
-					StringRealRow* row = dynamic_cast<StringRealRow*>(rowBase);
+					StringRealIntRow* row = dynamic_cast<StringRealIntRow*>(rowBase);
 
 					const auto text = row->GetEntry().get_text();
 
@@ -342,6 +357,7 @@ namespace impl
 				}
 
 				default:
+					LogError("Invalid preference type\n");
 					break;
 			}
 		}

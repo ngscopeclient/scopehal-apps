@@ -160,6 +160,14 @@ bool Preference::GetBool() const
     return GetValueRaw<bool>();
 }
 
+int64_t Preference::GetInt() const
+{
+    if(m_type != PreferenceType::Int)
+        throw runtime_error("Preference type mismatch");
+
+    return GetValueRaw<int64_t>();
+}
+
 std::int64_t Preference::GetEnumRaw() const
 {
     if(m_type != PreferenceType::Enum)
@@ -233,6 +241,8 @@ string Preference::ToString() const
             return GetBool() ? "true" : "false";
         case PreferenceType::Real:
             return to_string(GetReal());
+        case PreferenceType::Int:
+            return to_string(GetInt());
         case PreferenceType::Color:
             return "Color";
         case PreferenceType::Enum:
@@ -279,6 +289,7 @@ void Preference::MoveFrom(Preference& other)
                 break;
 
             case PreferenceType::Enum:
+            case PreferenceType::Int:
                 Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
                 break;
 
@@ -335,6 +346,12 @@ void Preference::SetReal(double value)
     Construct<double>(value);
 }
 
+void Preference::SetInt(std::int64_t value)
+{
+    CleanUp();
+    Construct<std::int64_t>(value);
+}
+
 void Preference::SetEnumRaw(std::int64_t value)
 {
     CleanUp();
@@ -368,6 +385,14 @@ const EnumMapping& Preference::GetMapping() const
 void Preference::SetMapping(EnumMapping mapping)
 {
     this->m_mapping = std::move(mapping);
+}
+
+impl::PreferenceBuilder Preference::Int(std::string identifier, int64_t defaultValue)
+{
+    Preference pref(PreferenceType::Int, std::move(identifier));
+    pref.Construct<int64_t>(defaultValue);
+
+    return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::Real(std::string identifier, double defaultValue)

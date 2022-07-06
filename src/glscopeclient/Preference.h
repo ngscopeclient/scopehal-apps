@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,6 +61,7 @@ enum class PreferenceType
     Color,
     Enum,
     Font,
+    Int,
     None // Only for moved-from values
 };
 
@@ -168,6 +169,7 @@ public:
     PreferenceType GetType() const;
     bool GetBool() const;
     double GetReal() const;
+    std::int64_t GetInt() const;
     const std::string& GetString() const;
     std::string ToString() const;
     bool GetIsVisible() const;
@@ -175,6 +177,7 @@ public:
     const impl::Color& GetColorRaw() const;
     void SetBool(bool value);
     void SetReal(double value);
+    void SetInt(std::int64_t value);
     void SetString(std::string value);
     void SetColor(const Gdk::Color& value);
     void SetColorRaw(const impl::Color& value);
@@ -197,6 +200,7 @@ public:
     }
 
 public:
+    static impl::PreferenceBuilder Int(std::string identifier, int64_t defaultValue);
     static impl::PreferenceBuilder Real(std::string identifier, double defaultValue);
     static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
     static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);

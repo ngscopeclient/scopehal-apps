@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -164,6 +164,11 @@ void PreferenceManager::DeterminePath()
 
 	m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
 #endif
+}
+
+int64_t PreferenceManager::GetInt(const string& path) const
+{
+	return GetPreference(path).GetInt();
 }
 
 const std::string& PreferenceManager::GetString(const string& path) const

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -67,6 +67,7 @@ public:
     { return m_configDir; }
 
     // Value retrieval methods
+    int64_t GetInt(const std::string& path) const;
     const std::string& GetString(const std::string& path) const;
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;

@@ -81,11 +81,11 @@ namespace impl
 			Gtk::CheckButton m_check;
 	};
 
-	class StringRealRow
+	class StringRealIntRow
 		: public PreferenceRowBase
 	{
 		public:
-			StringRealRow(Preference& preference);
+			StringRealIntRow(Preference& preference);
 
 		public:
 			virtual Gtk::Widget& GetValueWidget();
