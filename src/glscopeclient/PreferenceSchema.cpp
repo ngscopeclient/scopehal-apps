@@ -269,6 +269,13 @@ void PreferenceManager::InitializeDefaults()
 				.Description("Third test value"));
 	*/
 
+	auto& files = this->m_treeRoot.AddCategory("Files");
+		files.AddPreference(
+			Preference::Int("max_recent_files", 10)
+			.Label("Max recent files")
+			.Description("Maximum number of recent .scopesession file paths to save in history")
+			.Unit(Unit::UNIT_COUNTS));
+
 	auto& rendering = this->m_treeRoot.AddCategory("Rendering");
 		auto& backend = rendering.AddCategory("Performance");
 			backend.AddPreference(

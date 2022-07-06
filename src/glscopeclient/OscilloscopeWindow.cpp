@@ -97,13 +97,16 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	set_reallocate_redraws(true);
 	set_default_size(1280, 800);
 
+	//Load list of recently opened stuff
+	LoadRecentFileList();
+	LoadRecentInstrumentList();
+
 	//Add widgets
 	CreateWidgets();
 
 	//Update recently used instrument list
-	LoadRecentlyUsedList();
-	AddCurrentToRecentlyUsedList();
-	SaveRecentlyUsedList();
+	AddCurrentToRecentInstrumentList();
+	SaveRecentInstrumentList();
 	RefreshInstrumentMenus();
 
 	ArmTrigger(TRIGGER_TYPE_NORMAL);
@@ -211,10 +214,13 @@ void OscilloscopeWindow::CreateWidgets()
 						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileOpen), false));
 					m_fileMenu.append(*item);
 
+					m_fileMenu.append(m_fileRecentMenuItem);
+						m_fileRecentMenuItem.set_label("Recent Files");
+						m_fileRecentMenuItem.set_submenu(m_fileRecentMenu);
+
 					item = Gtk::manage(new Gtk::SeparatorMenuItem);
 					m_fileMenu.append(*item);
 
-						m_fileMenu.append(*item);
 					item = Gtk::manage(new Gtk::MenuItem("Save", false));
 					item->signal_activate().connect(
 						sigc::bind<bool>(sigc::mem_fun(*this, &OscilloscopeWindow::OnFileSave), true));
@@ -377,6 +383,7 @@ void OscilloscopeWindow::CreateWidgets()
 	RefreshGeneratorsMenu();
 	RefreshScpiConsoleMenu();
 	RefreshInstrumentMenus();
+	RefreshRecentFileMenu();
 
 	//History isn't shown by default
 	for(auto it : m_historyWindows)
@@ -1007,6 +1014,7 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadWaveform, b
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	m_currentFileName = filename;
+	m_recentFiles[filename] = time(nullptr);
 
 	m_loadInProgress = true;
 
@@ -1082,8 +1090,8 @@ void OscilloscopeWindow::OnInstrumentAdded()
 {
 	//Update all of our menus etc
 	FindScopeFuncGens();
-	AddCurrentToRecentlyUsedList();
-	SaveRecentlyUsedList();
+	AddCurrentToRecentInstrumentList();
+	SaveRecentInstrumentList();
 	RefreshInstrumentMenus();
 	RefreshChannelsMenu();
 	RefreshAnalyzerMenu();
@@ -1174,6 +1182,7 @@ void OscilloscopeWindow::OnLoadComplete()
 		g_app->StartScopeThreads(m_scopes);
 
 	RedrawAfterLoad();
+	RefreshRecentFileMenu();
 }
 
 /**
@@ -2028,7 +2037,6 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile)
 
 #endif
 
-
 	//If we are trying to create a new file, warn if the directory exists but the file does not
 	//If the file exists GTK will warn, and we don't want to prompt the user twice if both exist!
 	if(creatingNew && (dir_exists && !file_exists))
@@ -2087,6 +2095,10 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile)
 
 	//Serialize waveform data
 	SerializeWaveforms(table);
+
+	//Add to recent list
+	m_recentFiles[m_currentFileName] = time(nullptr);
+	RefreshRecentFileMenu();
 }
 
 string OscilloscopeWindow::SerializeConfiguration(IDTable& table)
@@ -4199,7 +4211,7 @@ void OscilloscopeWindow::OnFilterGraph()
 	}
 }
 
-void OscilloscopeWindow::LoadRecentlyUsedList()
+void OscilloscopeWindow::LoadRecentInstrumentList()
 {
 	try
 	{
@@ -4211,7 +4223,7 @@ void OscilloscopeWindow::LoadRecentlyUsedList()
 		for(auto it : node)
 		{
 			auto inst = it.second;
-			m_recentlyUsed[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+			m_recentInstruments[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
 		}
 	}
 	catch(const YAML::BadFile& ex)
@@ -4222,12 +4234,12 @@ void OscilloscopeWindow::LoadRecentlyUsedList()
 
 }
 
-void OscilloscopeWindow::SaveRecentlyUsedList()
+void OscilloscopeWindow::SaveRecentInstrumentList()
 {
 	auto path = m_preferences.GetConfigDirectory() + "/recent.yml";
 	FILE* fp = fopen(path.c_str(), "w");
 
-	for(auto it : m_recentlyUsed)
+	for(auto it : m_recentInstruments)
 	{
 		auto nick = it.first.substr(0, it.first.find(":"));
 		fprintf(fp, "%s:\n", nick.c_str());
@@ -4238,7 +4250,7 @@ void OscilloscopeWindow::SaveRecentlyUsedList()
 	fclose(fp);
 }
 
-void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
+void OscilloscopeWindow::AddCurrentToRecentInstrumentList()
 {
 	//Add our current entry to the recently-used list
 	auto now = time(NULL);
@@ -4262,17 +4274,17 @@ void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
 			inst->GetTransportName() + ":" +
 			inst->GetTransportConnectionString();
 
-		m_recentlyUsed[connectionString] = now;
+		m_recentInstruments[connectionString] = now;
 	}
 
 	//Delete anything old
 	const int maxRecentInstruments = 15;
-	while(m_recentlyUsed.size() > maxRecentInstruments)
+	while(m_recentInstruments.size() > maxRecentInstruments)
 	{
 		string oldestPath = "";
 		time_t oldestTime = now;
 
-		for(auto it : m_recentlyUsed)
+		for(auto it : m_recentInstruments)
 		{
 			if(it.second < oldestTime)
 			{
@@ -4281,7 +4293,7 @@ void OscilloscopeWindow::AddCurrentToRecentlyUsedList()
 			}
 		}
 
-		m_recentlyUsed.erase(oldestPath);
+		m_recentInstruments.erase(oldestPath);
 	}
 }
 
@@ -4297,12 +4309,12 @@ void OscilloscopeWindow::RefreshInstrumentMenus()
 
 	//Make a reverse mapping
 	std::map<time_t, vector<string> > reverseMap;
-	for(auto it : m_recentlyUsed)
+	for(auto it : m_recentInstruments)
 		reverseMap[it.second].push_back(it.first);
 
 	//Deduplicate timestamps
 	set<time_t> timestampsDeduplicated;
-	for(auto it : m_recentlyUsed)
+	for(auto it : m_recentInstruments)
 		timestampsDeduplicated.emplace(it.second);
 
 	//Sort the list by most recent
@@ -4511,8 +4523,8 @@ void OscilloscopeWindow::ConnectToMultimeter(string path)
 	RefreshMultimeterMenu();
 	RefreshScpiConsoleMenu();
 	RefreshChannelsMenu();
-	AddCurrentToRecentlyUsedList();
-	SaveRecentlyUsedList();
+	AddCurrentToRecentInstrumentList();
+	SaveRecentInstrumentList();
 	RefreshInstrumentMenus();
 	SetTitle();
 }
@@ -4659,4 +4671,129 @@ void OscilloscopeWindow::OnTriggerOffsetChanged(Oscilloscope* scope, int64_t old
 	//If this is a secondary, shift our waveform
 	else
 		m_scopeDeskewCal[scope] += delta;
+}
+
+void OscilloscopeWindow::RefreshRecentFileMenu()
+{
+	SaveRecentFileList();
+
+	//Remove the old items
+	auto children =  m_fileRecentMenu.get_children();
+	for(auto c : children)
+		m_fileRecentMenu.remove(*c);
+
+	//Make a reverse mapping
+	std::map<time_t, vector<string> > reverseMap;
+	for(auto it : m_recentFiles)
+		reverseMap[it.second].push_back(it.first);
+
+	//Deduplicate timestamps
+	set<time_t> timestampsDeduplicated;
+	for(auto it : m_recentFiles)
+		timestampsDeduplicated.emplace(it.second);
+
+	//Sort the list by most recent
+	vector<time_t> timestamps;
+	for(auto t : timestampsDeduplicated)
+		timestamps.push_back(t);
+	std::sort(timestamps.begin(), timestamps.end());
+
+	//Add new ones
+	int nmax = min((int64_t)timestamps.size(), m_preferences.GetInt("Files.max_recent_files"));
+	nmax --;
+	for(int i=nmax; i>=0; i--)
+	{
+		auto t = timestamps[i];
+		auto paths = reverseMap[t];
+		for(auto path : paths)
+		{
+			auto item = Gtk::manage(new Gtk::MenuItem(path, false));
+			m_fileRecentMenu.append(*item);
+
+			auto menu = Gtk::manage(new Gtk::Menu);
+			item->set_submenu(*menu);
+
+			item = Gtk::manage(new Gtk::MenuItem("Open Online", false));
+			item->signal_activate().connect(
+				sigc::bind<std::string, bool, bool>(sigc::mem_fun(*this, &OscilloscopeWindow::DoFileOpen), path, true, true));
+			menu->append(*item);
+
+			item = Gtk::manage(new Gtk::MenuItem("Open Offline", false));
+			item->signal_activate().connect(
+				sigc::bind<std::string, bool, bool>(sigc::mem_fun(*this, &OscilloscopeWindow::DoFileOpen), path, true, false));
+			menu->append(*item);
+		}
+	}
+
+	m_fileRecentMenu.show_all();
+}
+
+void OscilloscopeWindow::SaveRecentFileList()
+{
+	auto path = m_preferences.GetConfigDirectory() + "/recentfiles.yml";
+	FILE* fp = fopen(path.c_str(), "w");
+
+	int j = 0;
+
+	//Remove the old items
+	auto children =  m_fileRecentMenu.get_children();
+	for(auto c : children)
+		m_fileRecentMenu.remove(*c);
+
+	//Make a reverse mapping
+	std::map<time_t, vector<string> > reverseMap;
+	for(auto it : m_recentFiles)
+		reverseMap[it.second].push_back(it.first);
+
+	//Deduplicate timestamps
+	set<time_t> timestampsDeduplicated;
+	for(auto it : m_recentFiles)
+		timestampsDeduplicated.emplace(it.second);
+
+	//Sort the list by most recent
+	vector<time_t> timestamps;
+	for(auto t : timestampsDeduplicated)
+		timestamps.push_back(t);
+	std::sort(timestamps.begin(), timestamps.end());
+
+	//Add new ones
+	int nmax = min((int64_t)timestamps.size(), m_preferences.GetInt("Files.max_recent_files"));
+	nmax --;
+	for(int i=nmax; i>=0; i--)
+	{
+		auto t = timestamps[i];
+		auto paths = reverseMap[t];
+		for(auto fpath : paths)
+		{
+			fprintf(fp, "file%d:\n", j);
+			fprintf(fp, "    path: \"%s\"\n", fpath.c_str());
+			fprintf(fp, "    timestamp: %ld\n", t);
+			j++;
+		}
+	}
+
+	fclose(fp);
+}
+
+void OscilloscopeWindow::LoadRecentFileList()
+{
+	try
+	{
+		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recentfiles.yml");
+		if(docs.empty())
+			return;
+		auto node = docs[0];
+
+		for(auto it : node)
+		{
+			auto inst = it.second;
+			m_recentFiles[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+		}
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		LogDebug("Unable to open recently used files list\n");
+		return;
+	}
+
 }

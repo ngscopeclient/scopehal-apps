@@ -185,6 +185,8 @@ protected:
 		Gtk::MenuBar m_menu;
 			Gtk::MenuItem m_fileMenuItem;
 				Gtk::Menu m_fileMenu;
+					Gtk::MenuItem m_fileRecentMenuItem;
+						Gtk::Menu m_fileRecentMenu;
 					Gtk::MenuItem m_exportMenuItem;
 						Gtk::Menu m_exportMenu;
 			Gtk::MenuItem m_setupMenuItem;
@@ -350,6 +352,7 @@ public:
 	void RefreshGeneratorsMenu();
 	void RefreshScpiConsoleMenu();
 	void RefreshInstrumentMenus();
+	void RefreshRecentFileMenu();
 
 	void RefreshFilterGraphEditor()
 	{
@@ -460,11 +463,17 @@ public:
 	/**
 		@brief List of recently used instruments
 	 */
-	std::map<std::string, time_t> m_recentlyUsed;
+	std::map<std::string, time_t> m_recentInstruments;
 
-	void AddCurrentToRecentlyUsedList();
-	void LoadRecentlyUsedList();
-	void SaveRecentlyUsedList();
+	void AddCurrentToRecentInstrumentList();
+	void LoadRecentInstrumentList();
+	void SaveRecentInstrumentList();
+
+	///@brief List of recently used files
+	std::map<std::string, time_t> m_recentFiles;
+
+	void SaveRecentFileList();
+	void LoadRecentFileList();
 
 	//Cursor position
 	int m_cursorX;
