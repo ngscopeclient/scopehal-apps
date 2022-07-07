@@ -428,6 +428,15 @@ bool ScopeSyncWizard::OnTimer()
 				DoProcessWaveformDensePackedEqualRateGeneric();
 		}
 
+		//Also special-case 2:1 sample rate ratio (primary 2x speed of secondary)
+		else if((m_primaryWaveform->m_timescale * 2) == m_secondaryWaveform->m_timescale)
+		{
+			if(g_hasAvx512F)
+				DoProcessWaveformDensePackedDoubleRateAVX512F();
+			else
+				DoProcessWaveformDensePackedDoubleRateGeneric();
+		}
+
 		//Unequal sample rates, more math needed
 		else
 			DoProcessWaveformDensePackedUnequalRate();
@@ -548,6 +557,58 @@ void ScopeSyncWizard::DoProcessWaveformSparse()
 	}
 }
 
+void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
+{
+	size_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	std::mutex cmutex;
+
+	int64_t phaseshift = (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase)
+		/ m_primaryWaveform->m_timescale;
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Convert delta from samples of the primary waveform to femtoseconds
+		int64_t delta = d + phaseshift;
+
+		size_t end = slen - delta/2;
+		end = min(end, len);
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		double correlation = 0;
+		for(size_t i=0; i<end; i++)
+		{
+			//If off the start of the waveform, skip it
+			if(((int64_t)i + delta) < 0)
+				continue;
+
+			uint64_t utarget = ((i  + delta) / 2);
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
+}
+
+void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
+{
+	DoProcessWaveformDensePackedDoubleRateGeneric();
+}
+
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 {
 	int64_t len = m_primaryWaveform->m_offsets.size();
@@ -664,7 +725,6 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 		}
 	}
 }
-
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedUnequalRate()
 {

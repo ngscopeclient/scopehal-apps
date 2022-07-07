@@ -131,6 +131,8 @@ protected:
 
 	void DoProcessWaveformDensePackedEqualRateGeneric();
 	void DoProcessWaveformDensePackedEqualRateAVX512F();
+	void DoProcessWaveformDensePackedDoubleRateGeneric();
+	void DoProcessWaveformDensePackedDoubleRateAVX512F();
 	void DoProcessWaveformDensePackedUnequalRate();
 	void DoProcessWaveformSparse();
 
