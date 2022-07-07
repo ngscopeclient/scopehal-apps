@@ -570,7 +570,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
 	{
-		//Convert delta from samples of the primary waveform to femtoseconds
+		//Shift by relative trigger phase
 		int64_t delta = d + phaseshift;
 
 		size_t end = slen - delta/2;
@@ -604,9 +604,88 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 	}
 }
 
+__attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 {
-	DoProcessWaveformDensePackedDoubleRateGeneric();
+	size_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	//Number of samples actually being processed
+	//(in this application it's OK to truncate w/o a scalar implementation at the end)
+	size_t len_rounded = len - (len % 16);
+	size_t slen_rounded = slen - (slen % 16);
+
+	std::mutex cmutex;
+
+	int64_t phaseshift = (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase)
+		/ m_primaryWaveform->m_timescale;
+
+	float* ppri = reinterpret_cast<float*>(&m_primaryWaveform->m_samples[0]);
+	float* psec = reinterpret_cast<float*>(&m_secondaryWaveform->m_samples[0]);
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Shift by relative trigger phase
+		int64_t delta = d + phaseshift;
+
+		size_t end = slen_rounded - delta/2;
+		end = min(end, len_rounded);
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		__m512i permsel = _mm512_set_epi32(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
+		for(size_t i=0; i<end; i++)
+		{
+			//If off the start of the waveform, skip it
+			if(((int64_t)i + delta) < 0)
+				continue;
+
+			//Primary waveform is easy
+			__m512 pri = _mm512_loadu_ps(ppri + i);
+
+			//Secondary waveform requires more work since we have to grab half the samples
+			//First, grab both blocks
+			uint64_t utarget = ((i  + delta) / 2);
+			__m512 sec1 = _mm512_loadu_ps(psec + utarget);
+			__m512 sec2 = _mm512_loadu_ps(psec + utarget + 16);
+
+			//Original state of each block is interleaved xyxyxyxyxyxyxyxy xyxyxyxyxyxyxyxy
+			//where x is the values we want and y is the intermediate samples
+
+			//Permute each block to get the samples where we want
+			//Step 1: Permute 32-bit values to get xxxxxxxxyyyyyyyy xxxxxxxxyyyyyyyy
+			sec1 = _mm512_permutexvar_ps(permsel, sec1);
+			sec2 = _mm512_permutexvar_ps(permsel, sec2);
+
+			//Step 2: Shuffle the two values together to get xxxxxxxxxxxxxxxx
+			__m512 sec = _mm512_shuffle_f32x4(sec1, sec2, 0x44);
+
+			//Do the actual cross-correlation
+			vcorrelation = _mm512_fmadd_ps(pri, sec, vcorrelation);
+
+			samplesProcessed += 16;
+		}
+
+		//Horizontal add the output
+		//(outside the inner loop, no need to bother vectorizing this)
+		float vec[16];
+		_mm512_storeu_ps(vec, vcorrelation);
+		float correlation = 0;
+		for(int i=0; i<16; i++)
+			correlation += vec[i];
+
+		float normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
 }
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
