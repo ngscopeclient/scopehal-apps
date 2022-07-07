@@ -80,7 +80,7 @@ void ScopeApp::run(
 			break;
 		}
 
-		//For any other file format, create an import filter
+		//For any external file format, create an import filter
 		Filter* filter = NULL;
 		string color = GetDefaultChannelColor(g_numDecodes ++);
 
@@ -96,7 +96,7 @@ void ScopeApp::run(
 			filter->GetParameter("BIN File").SetFileName(f);
 		}
 
-		//Complex I/Q: user probably will have to override format later
+		//Complex I/Q: user probably will have to override format specifics later
 		else if(f.find(".complex") != string::npos)
 		{
 			filter = Filter::CreateFilter("Complex Import", color);
@@ -108,10 +108,17 @@ void ScopeApp::run(
 			filter = Filter::CreateFilter("CSV Import", color);
 			filter->GetParameter("CSV File").SetFileName(f);
 		}
+
 		else if(f.find(".vcd") != string::npos)
 		{
 			filter = Filter::CreateFilter("VCD Import", color);
 			filter->GetParameter("VCD File").SetFileName(f);
+		}
+
+		else if(f.find(".wfm") != string::npos)
+		{
+			filter = Filter::CreateFilter("WFM Import", color);
+			filter->GetParameter("WFM File").SetFileName(f);
 		}
 
 		else if( (f.find(".s") != string::npos) && (f[f.length()-1] == 'p') )
