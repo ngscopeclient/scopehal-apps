@@ -573,7 +573,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 		//Shift by relative trigger phase
 		int64_t delta = d + phaseshift;
 
-		size_t end = slen - delta/2;
+		size_t end = 2*(slen - delta);
 		end = min(end, len);
 
 		//Loop over samples in the primary waveform
@@ -612,8 +612,8 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 
 	//Number of samples actually being processed
 	//(in this application it's OK to truncate w/o a scalar implementation at the end)
-	size_t len_rounded = len - (len % 16);
-	size_t slen_rounded = slen - (slen % 16);
+	size_t len_rounded = len - (len % 32);
+	size_t slen_rounded = slen - (slen % 32);
 
 	std::mutex cmutex;
 
@@ -629,43 +629,36 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 		//Shift by relative trigger phase
 		int64_t delta = d + phaseshift;
 
-		size_t end = slen_rounded - delta/2;
+		size_t end = 2*(slen_rounded - delta);
 		end = min(end, len_rounded);
 
 		//Loop over samples in the primary waveform
 		ssize_t samplesProcessed = 0;
 		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		__m512i permsel = _mm512_set_epi32(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
-		for(size_t i=0; i<end; i++)
+		__m512i perm0 = _mm512_set_epi32(7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0);
+		__m512i perm1 = _mm512_set_epi32(15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8);
+		for(size_t i=0; i<end; i+= 32)
 		{
 			//If off the start of the waveform, skip it
 			if(((int64_t)i + delta) < 0)
 				continue;
 
 			//Primary waveform is easy
-			__m512 pri = _mm512_loadu_ps(ppri + i);
+			__m512 pri1 = _mm512_loadu_ps(ppri + i);
+			__m512 pri2 = _mm512_loadu_ps(ppri + i + 16);
 
-			//Secondary waveform requires more work since we have to grab half the samples
-			//First, grab both blocks
 			uint64_t utarget = ((i  + delta) / 2);
-			__m512 sec1 = _mm512_loadu_ps(psec + utarget);
-			__m512 sec2 = _mm512_loadu_ps(psec + utarget + 16);
 
-			//Original state of each block is interleaved xyxyxyxyxyxyxyxy xyxyxyxyxyxyxyxy
-			//where x is the values we want and y is the intermediate samples
-
-			//Permute each block to get the samples where we want
-			//Step 1: Permute 32-bit values to get xxxxxxxxyyyyyyyy xxxxxxxxyyyyyyyy
-			sec1 = _mm512_permutexvar_ps(permsel, sec1);
-			sec2 = _mm512_permutexvar_ps(permsel, sec2);
-
-			//Step 2: Shuffle the two values together to get xxxxxxxxxxxxxxxx
-			__m512 sec = _mm512_shuffle_f32x4(sec1, sec2, 0x44);
+			//Secondary waveform is more work since we have to shuffle the samples
+			__m512 sec = _mm512_loadu_ps(psec + utarget);
+			__m512 sec1 = _mm512_permutexvar_ps(perm0, sec);
+			__m512 sec2 = _mm512_permutexvar_ps(perm1, sec);
 
 			//Do the actual cross-correlation
-			vcorrelation = _mm512_fmadd_ps(pri, sec, vcorrelation);
+			vcorrelation = _mm512_fmadd_ps(pri1, sec1, vcorrelation);
+			vcorrelation = _mm512_fmadd_ps(pri2, sec2, vcorrelation);
 
-			samplesProcessed += 16;
+			samplesProcessed += 32;
 		}
 
 		//Horizontal add the output
