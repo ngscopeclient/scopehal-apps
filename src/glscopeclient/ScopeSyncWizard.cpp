@@ -435,60 +435,124 @@ bool ScopeSyncWizard::OnTimer()
 	m_activeSecondaryPage->m_progressBar.set_fraction(progress);
 
 	std::mutex cmutex;
-	#pragma omp parallel for
-	for(int64_t d = m_delta; d < blockEnd; d ++)
+
+	//Optimized path (if both waveforms are dense packed)
+	if(m_primaryWaveform->m_densePacked && m_secondaryWaveform->m_densePacked)
 	{
-		//Convert delta from samples of the primary waveform to femtoseconds
-		int64_t deltaFs = m_primaryWaveform->m_timescale * d;
-
-		//Loop over samples in the primary waveform
-		//TODO: Can we AVX this?
-		ssize_t samplesProcessed = 0;
-		size_t isecondary = 0;
-		double correlation = 0;
-		for(size_t i=0; i<(size_t)len; i++)
+		#pragma omp parallel for
+		for(int64_t d = m_delta; d < blockEnd; d ++)
 		{
-			//Timestamp of this sample, in fs
-			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
-				m_primaryWaveform->m_triggerPhase;
+			//Convert delta from samples of the primary waveform to femtoseconds
+			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
 
-			//Target timestamp in the secondary waveform
-			int64_t target = start + deltaFs;
-
-			//If off the start of the waveform, skip it
-			if(target < 0)
-				continue;
-
-			//Skip secondary samples if the current secondary sample ends before the primary sample starts
-			bool done = false;
-			while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
-						m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
+			//Loop over samples in the primary waveform
+			//TODO: Can we AVX this?
+			ssize_t samplesProcessed = 0;
+			size_t isecondary = 0;
+			double correlation = 0;
+			for(size_t i=0; i<(size_t)len; i++)
 			{
-				isecondary ++;
+				//Timestamp of this sample, in fs
+				int64_t start = i * m_primaryWaveform->m_timescale + m_primaryWaveform->m_triggerPhase;
 
-				//If off the end of the waveform, stop
-				if(isecondary >= slen)
+				//Target timestamp in the secondary waveform
+				uint64_t target = start + deltaFs - m_secondaryWaveform->m_triggerPhase;
+
+				//If off the start of the waveform, skip it
+				if(target < 0)
+					continue;
+
+				//Skip secondary samples if the current secondary sample ends before the primary sample starts
+				bool done = false;
+				while( ((isecondary + 1) *	m_secondaryWaveform->m_timescale) < target)
 				{
-					done = true;
-					break;
+					isecondary ++;
+
+					//If off the end of the waveform, stop
+					if(isecondary >= slen)
+					{
+						done = true;
+						break;
+					}
 				}
+				if(done)
+					break;
+
+				//Do the actual cross-correlation
+				correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+				samplesProcessed ++;
 			}
-			if(done)
-				break;
 
-			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
-			samplesProcessed ++;
+			double normalizedCorrelation = correlation / samplesProcessed;
+
+			//Update correlation
+			lock_guard<mutex> lock(cmutex);
+			if(normalizedCorrelation > m_bestCorrelation)
+			{
+				m_bestCorrelation = normalizedCorrelation;
+				m_bestCorrelationOffset = d;
+			}
 		}
+	}
 
-		double normalizedCorrelation = correlation / samplesProcessed;
-
-		//Update correlation
-		lock_guard<mutex> lock(cmutex);
-		if(normalizedCorrelation > m_bestCorrelation)
+	//Fallback path (if at least one waveform is not dense packed)
+	else
+	{
+		#pragma omp parallel for
+		for(int64_t d = m_delta; d < blockEnd; d ++)
 		{
-			m_bestCorrelation = normalizedCorrelation;
-			m_bestCorrelationOffset = d;
+			//Convert delta from samples of the primary waveform to femtoseconds
+			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
+
+			//Loop over samples in the primary waveform
+			//TODO: Can we AVX this?
+			ssize_t samplesProcessed = 0;
+			size_t isecondary = 0;
+			double correlation = 0;
+			for(size_t i=0; i<(size_t)len; i++)
+			{
+				//Timestamp of this sample, in fs
+				int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
+					m_primaryWaveform->m_triggerPhase;
+
+				//Target timestamp in the secondary waveform
+				int64_t target = start + deltaFs;
+
+				//If off the start of the waveform, skip it
+				if(target < 0)
+					continue;
+
+				//Skip secondary samples if the current secondary sample ends before the primary sample starts
+				bool done = false;
+				while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
+							m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
+				{
+					isecondary ++;
+
+					//If off the end of the waveform, stop
+					if(isecondary >= slen)
+					{
+						done = true;
+						break;
+					}
+				}
+				if(done)
+					break;
+
+				//Do the actual cross-correlation
+				correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+				samplesProcessed ++;
+			}
+
+			double normalizedCorrelation = correlation / samplesProcessed;
+
+			//Update correlation
+			lock_guard<mutex> lock(cmutex);
+			if(normalizedCorrelation > m_bestCorrelation)
+			{
+				m_bestCorrelation = normalizedCorrelation;
+				m_bestCorrelationOffset = d;
+			}
 		}
 	}
 	m_delta = blockEnd;
