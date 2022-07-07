@@ -129,6 +129,11 @@ protected:
 
 	bool OnTimer();
 
+	void DoProcessWaveformDensePackedEqualRateGeneric();
+	void DoProcessWaveformDensePackedEqualRateAVX512F();
+	void DoProcessWaveformDensePackedUnequalRate();
+	void DoProcessWaveformSparse();
+
 	//Cross-correlation
 	ScopeSyncDeskewSetupPage* m_activeSetupPage;
 	ScopeSyncDeskewProgressPage* m_activeSecondaryPage;

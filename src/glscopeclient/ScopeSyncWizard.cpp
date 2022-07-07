@@ -409,188 +409,31 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
 
 	//Set the timer
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnTimer), 10);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnTimer), 1);
 }
 
 bool ScopeSyncWizard::OnTimer()
 {
-	//Calculate cross-correlation between the primary and secondary waveforms at up to +/- half the waveform length
-	int64_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
-
-	std::mutex cmutex;
-
 	//Optimized path (if both waveforms are dense packed)
 	if(m_primaryWaveform->m_densePacked && m_secondaryWaveform->m_densePacked)
 	{
 		//If sample rates are equal we can simplify things a lot
 		if(m_primaryWaveform->m_timescale == m_secondaryWaveform->m_timescale)
 		{
-			int64_t phaseshift =
-				(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
-				m_primaryWaveform->m_timescale;
-
-			#pragma omp parallel for
-			for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
-			{
-				//Shift by relative trigger phase
-				int64_t delta = d + phaseshift;
-
-				//Loop over samples in the primary waveform
-				ssize_t samplesProcessed = 0;
-				double correlation = 0;
-				for(size_t i=0; i<(size_t)len; i++)
-				{
-					//Target timestamp in the secondary waveform
-					int64_t target = i + delta;
-
-					//If off the start of the waveform, skip it
-					if(target < 0)
-						continue;
-
-					//If off the end of the waveform, stop
-					uint64_t utarget = target;
-					if(utarget >= slen)
-						break;
-
-					//Do the actual cross-correlation
-					correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
-					samplesProcessed ++;
-				}
-
-				double normalizedCorrelation = correlation / samplesProcessed;
-
-				//Update correlation
-				lock_guard<mutex> lock(cmutex);
-				if(normalizedCorrelation > m_bestCorrelation)
-				{
-					m_bestCorrelation = normalizedCorrelation;
-					m_bestCorrelationOffset = d;
-				}
-			}
+			if(g_hasAvx512F)
+				DoProcessWaveformDensePackedEqualRateAVX512F();
+			else
+				DoProcessWaveformDensePackedEqualRateGeneric();
 		}
 
 		//Unequal sample rates, more math needed
 		else
-		{
-			#pragma omp parallel for
-			for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
-			{
-				//Convert delta from samples of the primary waveform to femtoseconds
-				int64_t deltaFs = m_primaryWaveform->m_timescale * d;
-
-				//Shift by relative trigger phase
-				deltaFs += (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase);
-
-				//Loop over samples in the primary waveform
-				ssize_t samplesProcessed = 0;
-				size_t isecondary = 0;
-				double correlation = 0;
-				for(size_t i=0; i<(size_t)len; i++)
-				{
-					//Target timestamp in the secondary waveform
-					int64_t target = i * m_primaryWaveform->m_timescale + deltaFs;
-
-					//If off the start of the waveform, skip it
-					if(target < 0)
-						continue;
-
-					uint64_t utarget = target;
-
-					//Skip secondary samples if the current secondary sample ends before the primary sample starts
-					bool done = false;
-					while( ((isecondary + 1) *	m_secondaryWaveform->m_timescale) < utarget)
-					{
-						isecondary ++;
-
-						//If off the end of the waveform, stop
-						if(isecondary >= slen)
-						{
-							done = true;
-							break;
-						}
-					}
-					if(done)
-						break;
-
-					//Do the actual cross-correlation
-					correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
-					samplesProcessed ++;
-				}
-
-				double normalizedCorrelation = correlation / samplesProcessed;
-
-				//Update correlation
-				lock_guard<mutex> lock(cmutex);
-				if(normalizedCorrelation > m_bestCorrelation)
-				{
-					m_bestCorrelation = normalizedCorrelation;
-					m_bestCorrelationOffset = d;
-				}
-			}
-		}
+			DoProcessWaveformDensePackedUnequalRate();
 	}
 
 	//Fallback path (if at least one waveform is not dense packed)
 	else
-	{
-		#pragma omp parallel for
-		for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
-		{
-			//Convert delta from samples of the primary waveform to femtoseconds
-			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
-
-			//Loop over samples in the primary waveform
-			//TODO: Can we AVX this?
-			ssize_t samplesProcessed = 0;
-			size_t isecondary = 0;
-			double correlation = 0;
-			for(size_t i=0; i<(size_t)len; i++)
-			{
-				//Timestamp of this sample, in fs
-				int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
-					m_primaryWaveform->m_triggerPhase;
-
-				//Target timestamp in the secondary waveform
-				int64_t target = start + deltaFs;
-
-				//If off the start of the waveform, skip it
-				if(target < 0)
-					continue;
-
-				//Skip secondary samples if the current secondary sample ends before the primary sample starts
-				bool done = false;
-				while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
-							m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
-				{
-					isecondary ++;
-
-					//If off the end of the waveform, stop
-					if(isecondary >= slen)
-					{
-						done = true;
-						break;
-					}
-				}
-				if(done)
-					break;
-
-				//Do the actual cross-correlation
-				correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
-				samplesProcessed ++;
-			}
-
-			double normalizedCorrelation = correlation / samplesProcessed;
-
-			//Update correlation
-			lock_guard<mutex> lock(cmutex);
-			if(normalizedCorrelation > m_bestCorrelation)
-			{
-				m_bestCorrelation = normalizedCorrelation;
-				m_bestCorrelationOffset = d;
-			}
-		}
-	}
+		DoProcessWaveformSparse();
 
 	//Collect the skew from this round
 	auto scope = m_activeSecondaryPage->GetScope();
@@ -635,6 +478,240 @@ bool ScopeSyncWizard::OnTimer()
 	}
 
 	return false;
+}
+
+void ScopeSyncWizard::DoProcessWaveformSparse()
+{
+	//Calculate cross-correlation between the primary and secondary waveforms at up to +/- half the waveform length
+	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	std::mutex cmutex;
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Convert delta from samples of the primary waveform to femtoseconds
+		int64_t deltaFs = m_primaryWaveform->m_timescale * d;
+
+		//Loop over samples in the primary waveform
+		//TODO: Can we AVX this?
+		ssize_t samplesProcessed = 0;
+		size_t isecondary = 0;
+		double correlation = 0;
+		for(size_t i=0; i<(size_t)len; i++)
+		{
+			//Timestamp of this sample, in fs
+			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
+				m_primaryWaveform->m_triggerPhase;
+
+			//Target timestamp in the secondary waveform
+			int64_t target = start + deltaFs;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			//Skip secondary samples if the current secondary sample ends before the primary sample starts
+			bool done = false;
+			while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
+						m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
+			{
+				isecondary ++;
+
+				//If off the end of the waveform, stop
+				if(isecondary >= slen)
+				{
+					done = true;
+					break;
+				}
+			}
+			if(done)
+				break;
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
+}
+
+void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
+{
+	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	std::mutex cmutex;
+
+	int64_t phaseshift =
+		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
+		m_primaryWaveform->m_timescale;
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Shift by relative trigger phase
+		int64_t delta = d + phaseshift;
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		double correlation = 0;
+		for(size_t i=0; i<(size_t)len; i++)
+		{
+			//Target timestamp in the secondary waveform
+			int64_t target = i + delta;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			//If off the end of the waveform, stop
+			uint64_t utarget = target;
+			if(utarget >= slen)
+				break;
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
+}
+
+__attribute__((target("avx512f")))
+void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
+{
+	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	std::mutex cmutex;
+
+	int64_t phaseshift =
+		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
+		m_primaryWaveform->m_timescale;
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Shift by relative trigger phase
+		int64_t delta = d + phaseshift;
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		double correlation = 0;
+		for(size_t i=0; i<(size_t)len; i++)
+		{
+			//Target timestamp in the secondary waveform
+			int64_t target = i + delta;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			//If off the end of the waveform, stop
+			uint64_t utarget = target;
+			if(utarget >= slen)
+				break;
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
+}
+
+
+void ScopeSyncWizard::DoProcessWaveformDensePackedUnequalRate()
+{
+	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	std::mutex cmutex;
+
+	#pragma omp parallel for
+	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
+	{
+		//Convert delta from samples of the primary waveform to femtoseconds
+		int64_t deltaFs = m_primaryWaveform->m_timescale * d;
+
+		//Shift by relative trigger phase
+		deltaFs += (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase);
+
+		//Loop over samples in the primary waveform
+		ssize_t samplesProcessed = 0;
+		size_t isecondary = 0;
+		double correlation = 0;
+		for(size_t i=0; i<(size_t)len; i++)
+		{
+			//Target timestamp in the secondary waveform
+			int64_t target = i * m_primaryWaveform->m_timescale + deltaFs;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			uint64_t utarget = target;
+
+			//Skip secondary samples if the current secondary sample ends before the primary sample starts
+			bool done = false;
+			while( ((isecondary + 1) *	m_secondaryWaveform->m_timescale) < utarget)
+			{
+				isecondary ++;
+
+				//If off the end of the waveform, stop
+				if(isecondary >= slen)
+				{
+					done = true;
+					break;
+				}
+			}
+			if(done)
+				break;
+
+			//Do the actual cross-correlation
+			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+			samplesProcessed ++;
+		}
+
+		double normalizedCorrelation = correlation / samplesProcessed;
+
+		//Update correlation
+		lock_guard<mutex> lock(cmutex);
+		if(normalizedCorrelation > m_bestCorrelation)
+		{
+			m_bestCorrelation = normalizedCorrelation;
+			m_bestCorrelationOffset = d;
+		}
+	}
 }
 
 bool ScopeSyncWizard::OnWaveformTimeout()
