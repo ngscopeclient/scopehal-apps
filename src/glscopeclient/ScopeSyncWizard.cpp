@@ -438,7 +438,6 @@ bool ScopeSyncWizard::OnTimer()
 
 				//Loop over samples in the primary waveform
 				ssize_t samplesProcessed = 0;
-				size_t isecondary = 0;
 				double correlation = 0;
 				for(size_t i=0; i<(size_t)len; i++)
 				{
@@ -449,26 +448,13 @@ bool ScopeSyncWizard::OnTimer()
 					if(target < 0)
 						continue;
 
+					//If off the end of the waveform, stop
 					uint64_t utarget = target;
-
-					//Skip secondary samples if the current secondary sample ends before the primary sample starts
-					bool done = false;
-					while( ((isecondary + 1) ) < utarget)
-					{
-						isecondary ++;
-
-						//If off the end of the waveform, stop
-						if(isecondary >= slen)
-						{
-							done = true;
-							break;
-						}
-					}
-					if(done)
+					if(utarget >= slen)
 						break;
 
 					//Do the actual cross-correlation
-					correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+					correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
 					samplesProcessed ++;
 				}
 
