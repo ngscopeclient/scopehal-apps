@@ -456,15 +456,17 @@ bool ScopeSyncWizard::OnTimer()
 				int64_t start = i * m_primaryWaveform->m_timescale + m_primaryWaveform->m_triggerPhase;
 
 				//Target timestamp in the secondary waveform
-				uint64_t target = start + deltaFs - m_secondaryWaveform->m_triggerPhase;
+				int64_t target = start + deltaFs - m_secondaryWaveform->m_triggerPhase;
 
 				//If off the start of the waveform, skip it
 				if(target < 0)
 					continue;
 
+				uint64_t utarget = target;
+
 				//Skip secondary samples if the current secondary sample ends before the primary sample starts
 				bool done = false;
-				while( ((isecondary + 1) *	m_secondaryWaveform->m_timescale) < target)
+				while( ((isecondary + 1) *	m_secondaryWaveform->m_timescale) < utarget)
 				{
 					isecondary ++;
 
