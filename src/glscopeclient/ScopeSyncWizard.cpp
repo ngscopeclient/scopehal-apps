@@ -108,14 +108,15 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		string("\n") +
 		string("Examples of good reference signals: \n") +
 		string("* A single fast edge\n") +
-		string("* Pseudorandom bit sequences\n") +
-		string("* RAM DQ pins\n") +
+		string("* Long pseudorandom bit sequences (PRBS-31)\n") +
+		string("* RAM DQ pins while performing heavy memory accesses\n") +
 		string("* 64/66b coded serial links\n") +
 		string("\n") +
 		string("Examples of bad reference signals: \n") +
 		string("* Power rails\n") +
 		string("* Clocks\n") +
 		string("* 8B/10B coded serial links\n") +
+		string("* Short repeating patterns (PRBS-7)\n") +
 		string("\n") +
 		string("Touch a probe from ") + primary->m_nickname + " and another probe from " +
 			secondary->m_nickname + " to the reference point.\n"
