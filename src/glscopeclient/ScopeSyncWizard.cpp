@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -187,7 +187,6 @@ ScopeSyncWizard::ScopeSyncWizard(OscilloscopeWindow* parent)
 	, m_bestCorrelation(0)
 	, m_primaryWaveform(0)
 	, m_secondaryWaveform(0)
-	, m_delta(0)
 	, m_maxSkewSamples(0)
 	, m_numAverages(10)
 	, m_shuttingDown(false)
@@ -409,8 +408,6 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
 	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
 
-	m_delta = - m_maxSkewSamples;
-
 	//Set the timer
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ScopeSyncWizard::OnTimer), 10);
 }
@@ -421,26 +418,16 @@ bool ScopeSyncWizard::OnTimer()
 	int64_t len = m_primaryWaveform->m_offsets.size();
 	size_t slen = m_secondaryWaveform->m_offsets.size();
 
-	int64_t samplesPerBlock = 5000;
-	int64_t blockEnd = min(m_delta + samplesPerBlock, len/2);
-	blockEnd = min(blockEnd, m_maxSkewSamples);
-
-	//Update the progress bar
-	float blockfrac = m_averageSkews.size() * 1.0f / m_numAverages;
-	int64_t blockpos = m_delta + m_maxSkewSamples;
-	float infrac = blockpos * 1.0f / (2*m_maxSkewSamples);
-	float frac = blockfrac + infrac/m_numAverages;
-	float progress = (frac * 0.9) + 0.1;
-	m_activeSecondaryPage->m_progressBar.set_text("Cross-correlate skew reference waveform");
-	m_activeSecondaryPage->m_progressBar.set_fraction(progress);
-
 	std::mutex cmutex;
 
 	//Optimized path (if both waveforms are dense packed)
 	if(m_primaryWaveform->m_densePacked && m_secondaryWaveform->m_densePacked)
 	{
+		//TODO: Loop over samples first, then offsets inside that
+		//for better cache locality
+
 		#pragma omp parallel for
-		for(int64_t d = m_delta; d < blockEnd; d ++)
+		for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
 		{
 			//Convert delta from samples of the primary waveform to femtoseconds
 			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
@@ -501,7 +488,7 @@ bool ScopeSyncWizard::OnTimer()
 	else
 	{
 		#pragma omp parallel for
-		for(int64_t d = m_delta; d < blockEnd; d ++)
+		for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
 		{
 			//Convert delta from samples of the primary waveform to femtoseconds
 			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
@@ -557,11 +544,6 @@ bool ScopeSyncWizard::OnTimer()
 			}
 		}
 	}
-	m_delta = blockEnd;
-
-	//Need more data to go on
-	if(m_delta < m_maxSkewSamples)
-		return true;
 
 	//Collect the skew from this round
 	auto scope = m_activeSecondaryPage->GetScope();

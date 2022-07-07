@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -136,7 +136,6 @@ protected:
 	double m_bestCorrelation;
 	AnalogWaveform* m_primaryWaveform;
 	AnalogWaveform* m_secondaryWaveform;
-	int64_t m_delta;
 	int64_t m_maxSkewSamples;
 	std::vector<int64_t> m_averageSkews;
 	size_t m_numAverages;
