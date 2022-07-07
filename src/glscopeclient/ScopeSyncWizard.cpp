@@ -35,6 +35,7 @@
 #include "glscopeclient.h"
 #include "ScopeSyncWizard.h"
 #include "OscilloscopeWindow.h"
+#include <immintrin.h>
 
 using namespace std;
 
@@ -600,14 +601,22 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 __attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 {
-	int64_t len = m_primaryWaveform->m_offsets.size();
+	size_t len = m_primaryWaveform->m_offsets.size();
 	size_t slen = m_secondaryWaveform->m_offsets.size();
+
+	//Number of samples actually being processed
+	//(in this application it's OK to truncate w/o a scalar implementation at the end)
+	size_t len_rounded = len - (len % 16);
+	size_t slen_rounded = slen - (slen % 16);
 
 	std::mutex cmutex;
 
 	int64_t phaseshift =
 		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
 		m_primaryWaveform->m_timescale;
+
+	float* ppri = reinterpret_cast<float*>(&m_primaryWaveform->m_samples[0]);
+	float* psec = reinterpret_cast<float*>(&m_secondaryWaveform->m_samples[0]);
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -617,27 +626,34 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 
 		//Loop over samples in the primary waveform
 		ssize_t samplesProcessed = 0;
-		double correlation = 0;
-		for(size_t i=0; i<(size_t)len; i++)
+		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		for(size_t i=0; i<len_rounded; i += 16)
 		{
-			//Target timestamp in the secondary waveform
-			int64_t target = i + delta;
-
 			//If off the start of the waveform, skip it
-			if(target < 0)
+			if((int64_t)i + delta < 0)
 				continue;
 
 			//If off the end of the waveform, stop
-			uint64_t utarget = target;
-			if(utarget >= slen)
+			if((i+delta) >= slen_rounded)
 				break;
 
+			samplesProcessed += 16;
+
 			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
-			samplesProcessed ++;
+			__m512 pri = _mm512_loadu_ps(ppri + i);
+			__m512 sec = _mm512_loadu_ps(psec + i + delta);
+			vcorrelation = _mm512_fmadd_ps(pri, sec, vcorrelation);
 		}
 
-		double normalizedCorrelation = correlation / samplesProcessed;
+		//Horizontal add the output
+		//(outside the inner loop, no need to bother vectorizing this)
+		float vec[16];
+		_mm512_storeu_ps(vec, vcorrelation);
+		float correlation = 0;
+		for(int i=0; i<16; i++)
+			correlation += vec[i];
+
+		float normalizedCorrelation = correlation / samplesProcessed;
 
 		//Update correlation
 		lock_guard<mutex> lock(cmutex);
