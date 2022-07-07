@@ -423,27 +423,23 @@ bool ScopeSyncWizard::OnTimer()
 	//Optimized path (if both waveforms are dense packed)
 	if(m_primaryWaveform->m_densePacked && m_secondaryWaveform->m_densePacked)
 	{
-		//TODO: Loop over samples first, then offsets inside that
-		//for better cache locality
-
 		#pragma omp parallel for
 		for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
 		{
 			//Convert delta from samples of the primary waveform to femtoseconds
 			int64_t deltaFs = m_primaryWaveform->m_timescale * d;
 
+			//Shift by relative trigger phase
+			deltaFs += (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase);
+
 			//Loop over samples in the primary waveform
-			//TODO: Can we AVX this?
 			ssize_t samplesProcessed = 0;
 			size_t isecondary = 0;
 			double correlation = 0;
 			for(size_t i=0; i<(size_t)len; i++)
 			{
-				//Timestamp of this sample, in fs
-				int64_t start = i * m_primaryWaveform->m_timescale + m_primaryWaveform->m_triggerPhase;
-
 				//Target timestamp in the secondary waveform
-				int64_t target = start + deltaFs - m_secondaryWaveform->m_triggerPhase;
+				int64_t target = i * m_primaryWaveform->m_timescale + deltaFs;
 
 				//If off the start of the waveform, skip it
 				if(target < 0)
