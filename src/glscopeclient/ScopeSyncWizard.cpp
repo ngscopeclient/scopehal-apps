@@ -624,18 +624,17 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 		//Shift by relative trigger phase
 		int64_t delta = d + phaseshift;
 
+		size_t end = slen_rounded - delta;
+		end = min(end, len_rounded);
+
 		//Loop over samples in the primary waveform
 		ssize_t samplesProcessed = 0;
 		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		for(size_t i=0; i<len_rounded; i += 16)
+		for(size_t i=0; i<end; i += 16)
 		{
 			//If off the start of the waveform, skip it
 			if((int64_t)i + delta < 0)
 				continue;
-
-			//If off the end of the waveform, stop
-			if((i+delta) >= slen_rounded)
-				break;
 
 			samplesProcessed += 16;
 
