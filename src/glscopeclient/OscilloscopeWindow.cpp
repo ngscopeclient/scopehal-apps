@@ -4765,8 +4765,9 @@ void OscilloscopeWindow::SaveRecentFileList()
 		auto paths = reverseMap[t];
 		for(auto fpath : paths)
 		{
+			string escpath = str_replace("\\", "\\\\", fpath);
 			fprintf(fp, "file%d:\n", j);
-			fprintf(fp, "    path: \"%s\"\n", fpath.c_str());
+			fprintf(fp, "    path: \"%s\"\n", escpath.c_str());
 			fprintf(fp, "    timestamp: %ld\n", t);
 			j++;
 		}
@@ -4796,7 +4797,12 @@ void OscilloscopeWindow::LoadRecentFileList()
 	}
 	catch(const YAML::BadFile& ex)
 	{
-		LogDebug("Unable to open recently used files list\n");
+		LogDebug("Unable to open recently used files list (bad file)\n");
+		return;
+	}
+	catch(const YAML::ParserException& ex)
+	{
+		LogDebug("Unable to open recently used files list (parser exception)\n");
 		return;
 	}
 
