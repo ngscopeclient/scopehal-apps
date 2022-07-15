@@ -4696,14 +4696,12 @@ void OscilloscopeWindow::RefreshRecentFileMenu()
 	vector<time_t> timestamps;
 	for(auto t : timestampsDeduplicated)
 		timestamps.push_back(t);
-	std::sort(timestamps.begin(), timestamps.end());
+	std::sort(timestamps.rbegin(), timestamps.rend());
 
 	//Add new ones
-	int nmax = min((int64_t)timestamps.size(), m_preferences.GetInt("Files.max_recent_files"));
-	nmax --;
-	for(int i=nmax; i>=0; i--)
+	int nleft = m_preferences.GetInt("Files.max_recent_files");
+	for(auto t : timestamps)
 	{
-		auto t = timestamps[i];
 		auto paths = reverseMap[t];
 		for(auto path : paths)
 		{
@@ -4723,6 +4721,10 @@ void OscilloscopeWindow::RefreshRecentFileMenu()
 				sigc::bind<std::string, bool, bool>(sigc::mem_fun(*this, &OscilloscopeWindow::DoFileOpen), path, true, false));
 			menu->append(*item);
 		}
+
+		nleft --;
+		if(nleft == 0)
+			break;
 	}
 
 	m_fileRecentMenu.show_all();
@@ -4754,14 +4756,12 @@ void OscilloscopeWindow::SaveRecentFileList()
 	vector<time_t> timestamps;
 	for(auto t : timestampsDeduplicated)
 		timestamps.push_back(t);
-	std::sort(timestamps.begin(), timestamps.end());
+	std::sort(timestamps.rbegin(), timestamps.rend());
 
 	//Add new ones
-	int nmax = min((int64_t)timestamps.size(), m_preferences.GetInt("Files.max_recent_files"));
-	nmax --;
-	for(int i=nmax; i>=0; i--)
+	int nleft = m_preferences.GetInt("Files.max_recent_files");
+	for(auto t : timestamps)
 	{
-		auto t = timestamps[i];
 		auto paths = reverseMap[t];
 		for(auto fpath : paths)
 		{
@@ -4770,6 +4770,10 @@ void OscilloscopeWindow::SaveRecentFileList()
 			fprintf(fp, "    timestamp: %ld\n", t);
 			j++;
 		}
+
+		nleft --;
+		if(nleft == 0)
+			break;
 	}
 
 	fclose(fp);
