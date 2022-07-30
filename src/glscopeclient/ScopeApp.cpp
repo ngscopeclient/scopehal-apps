@@ -109,6 +109,12 @@ void ScopeApp::run(
 			filter->GetParameter("CSV File").SetFileName(f);
 		}
 
+		else if(f.find(".trc") != string::npos)
+		{
+			filter = Filter::CreateFilter("TRC Import", color);
+			filter->GetParameter("TRC File").SetFileName(f);
+		}
+
 		else if(f.find(".vcd") != string::npos)
 		{
 			filter = Filter::CreateFilter("VCD Import", color);
