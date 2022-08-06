@@ -204,7 +204,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(filter->GetText(i) == text)
+				if(filter->GetText(i, 0) == text)	//TODO: support multiple streams
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -266,7 +266,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(filter->GetText(i) != text)
+				if(filter->GetText(i, 0) != text)	//TODO: support multiple streams
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -283,7 +283,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(filter->GetText(i).find(text) == 0)
+			if(filter->GetText(i, 0).find(text) == 0)	//TODO: support multiple streams
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
@@ -299,7 +299,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(filter->GetText(i).find(text) != string::npos)
+			if(filter->GetText(i, 0).find(text) != string::npos) 	//TODO: support multiple streams
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;

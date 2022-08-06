@@ -550,7 +550,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 				auto f = dynamic_cast<Filter*>(o.m_channel);
 
 				double cellwidth = xe - xs;
-				auto color = f->GetColor(i);
+				auto color = f->GetColor(i, o.m_stream);
 				if(cellwidth < 2)
 				{
 					//This sample is really skinny. There's no text to render so don't waste time with that.
@@ -568,7 +568,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 						if(cellxs > xs+2)
 							break;
 
-						auto c = f->GetColor(j);
+						auto c = f->GetColor(j, o.m_stream);
 						sum_red += c.get_red_p();
 						sum_green += c.get_green_p();
 						sum_blue += c.get_blue_p();
@@ -595,7 +595,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 						textright, m_plotRight,
 						xs, xe, 5,
 						ybot, ymid, ytop,
-						f->GetText(i),
+						f->GetText(i, o.m_stream),
 						color);
 				}
 			}
