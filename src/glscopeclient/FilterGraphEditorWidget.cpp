@@ -52,7 +52,8 @@ int FilterGraphRoutingColumn::GetVerticalChannel(StreamDescriptor stream)
 		return it->second;
 	else
 	{
-		//If no channels to use, abort (TODO: increase column spacing and re-layout)
+		//If no channels to use, abort.
+		//We need to increase column spacing and re-layout
 		if(m_freeVerticalChannels.empty())
 			return -1;
 
@@ -511,6 +512,7 @@ FilterGraphEditorWidget::FilterGraphEditorWidget(FilterGraphEditor* parent)
 	, m_selectedNode(NULL)
 	, m_dragDeltaY(0)
 	, m_sourcePort(0)
+	, m_routingColumnWidth(100)
 {
 	add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK | Gdk::POINTER_MOTION_MASK);
 
@@ -550,16 +552,27 @@ PreferenceManager& FilterGraphEditorWidget::GetPreferences()
 
 void FilterGraphEditorWidget::Refresh()
 {
-	//Place
-	RemoveStaleNodes();
-	CreateNodes();
-	UpdateSizes();
-	UpdatePositions();
+	while(true)
+	{
+		//Place
+		RemoveStaleNodes();
+		CreateNodes();
+		UpdateSizes();
+		UpdatePositions();
 
-	//Route
-	RemoveStalePaths();
-	CreatePaths();
-	ResolvePathConflicts();
+		//Route
+		RemoveStalePaths();
+		if(!CreatePaths())
+		{
+			//We ran out of vertical routing space, add more
+			m_routingColumnWidth += 20;
+			continue;
+		}
+		ResolvePathConflicts();
+
+		//If we get here, all good
+		break;
+	}
 
 	queue_draw();
 }
@@ -805,7 +818,7 @@ void FilterGraphEditorWidget::AssignNodesToColumns()
 void FilterGraphEditorWidget::UpdateColumnPositions()
 {
 	const int left_margin			= 5;
-	const int routing_column_width	= 100;
+	const int routing_column_width	= m_routingColumnWidth;
 	const int routing_margin		= 10;
 	const int col_route_spacing		= 10;
 
@@ -971,7 +984,7 @@ void FilterGraphEditorWidget::RemoveStalePaths()
 		it.second->m_polyline.clear();
 }
 
-void FilterGraphEditorWidget::CreatePaths()
+bool FilterGraphEditorWidget::CreatePaths()
 {
 	//Loop over all nodes and figure out what the inputs go to.
 	for(auto it : m_nodes)
@@ -988,15 +1001,18 @@ void FilterGraphEditorWidget::CreatePaths()
 			//We have an input. Add a path for it.
 			auto path = new FilterGraphEditorPath(m_nodes[input.m_channel], input.m_stream, node, i);
 			m_paths[NodePort(node, i)] = path;
-			RoutePath(path);
+			if(!RoutePath(path))
+				return false;
 		}
 	}
+
+	return true;
 }
 
 /**
 	@brief Simple greedy pathfinding algorithm, one column at a time
  */
-void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
+bool FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 {
 	const int clearance = 5;
 
@@ -1027,6 +1043,9 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 		//Horizontal segment into the column
 		int x = fromcol->GetVerticalChannel(stream);
 		path->m_polyline.push_back(vec2f(x, y));
+
+		if(x < 0)
+			return false;
 
 		//If we have more hops to do, find a horizontal routing channel
 		if(col+1 < path->m_toNode->m_column)
@@ -1064,6 +1083,8 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 
 			//Horizontal segment to the next column
 			x = tocol->GetVerticalChannel(stream);
+			if(x < 0)
+				return false;
 			path->m_polyline.push_back(vec2f(x, ychan));
 
 			y = ychan;
@@ -1076,6 +1097,8 @@ void FilterGraphEditorWidget::RoutePath(FilterGraphEditorPath* path)
 
 	//Route the path
 	path->m_polyline.push_back(end);
+
+	return true;
 }
 
 /**

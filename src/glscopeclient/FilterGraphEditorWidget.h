@@ -189,9 +189,9 @@ protected:
 	void AssignInitialPositions(std::set<FilterGraphEditorNode*>& nodes);
 
 	void RemoveStalePaths();
-	void CreatePaths();
+	bool CreatePaths();
 	void ResolvePathConflicts();
-	void RoutePath(FilterGraphEditorPath* path);
+	bool RoutePath(FilterGraphEditorPath* path);
 
 	//Context menu handlers
 	void OnDelete();
@@ -222,6 +222,9 @@ protected:
 
 	//Current mouse position
 	vec2f m_mousePosition;
+
+	//Column spacing
+	int m_routingColumnWidth;
 };
 
 #endif
