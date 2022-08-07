@@ -608,7 +608,7 @@ void WaveformArea::CalculateOverlayPositions()
 	int midline = m_overlaySpacing / 2;
 
 	//Find which overlay slots are in use
-	const int max_overlays = 10;
+	const int max_overlays = 20;
 	bool overlayPositionsUsed[max_overlays] = {0};
 	for(auto o : m_overlays)
 	{

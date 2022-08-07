@@ -1175,7 +1175,10 @@ void OscilloscopeWindow::OnLoadComplete()
 	//Filters are refreshed by ReplayHistory(), but if we have no scopes (all waveforms created by filters)
 	//then nothing will happen. In this case, a manual refresh of the filter graph is necessary.
 	if(m_scopes.empty())
+	{
 		RefreshAllFilters();
+		RefreshProtocolAnalyzers();
+	}
 
 	//Start threads to poll scopes etc
 	else
