@@ -201,6 +201,14 @@ protected:
 	void OnRefreshInputs();
 	void OnRefreshParameters();
 	void OnInputChanged();
+
+	//Helpers for ganged inputs
+	bool ApplyAutomaticInputs();
+	StreamDescriptor FindCorrespondingSParameter(
+		const std::string& param,
+		const std::string& suffix,
+		StreamDescriptor ref);
+
 	void OnParameterChanged();
 
 	Gtk::Grid m_grid;
@@ -213,6 +221,7 @@ protected:
 	std::map<std::string, ParameterRowBase*> m_prows;
 
 	bool m_refreshing;
+	bool m_inputChanging;
 
 	int m_cachedStreamCount;
 
