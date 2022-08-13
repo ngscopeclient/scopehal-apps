@@ -123,7 +123,7 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 void WaveformArea::UpdateCachedScales()
 {
 	//Pull vertical size from the scope early on no matter how we're rendering
-	m_pixelsPerVolt = m_height / m_channel.GetVoltageRange();
+	m_pixelsPerYAxisUnit = m_height / m_channel.GetVoltageRange();
 }
 
 void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay)
@@ -163,7 +163,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	//Figure out zero voltage level and scaling
 	auto height = area->m_height;
 	float ybase = height/2;
-	float yscale = area->m_pixelsPerVolt;
+	float yscale = area->m_pixelsPerYAxisUnit;
 	if(digdat)
 	{
 		float digheight;
@@ -702,7 +702,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 				//Figure out zero voltage level and scaling
 				auto height = area->m_height;
 				float ybase = height/2;
-				float yscale = area->m_pixelsPerVolt;
+				float yscale = area->m_pixelsPerYAxisUnit;
 				if(digdat)
 				{
 					float digheight;
@@ -965,12 +965,12 @@ float WaveformArea::XAxisUnitsToXPosition(int64_t t)
 
 float WaveformArea::PixelToYAxisUnits(float pix)
 {
-	return pix / m_pixelsPerVolt;
+	return pix / m_pixelsPerYAxisUnit;
 }
 
 float WaveformArea::YAxisUnitsToPixels(float volt)
 {
-	return volt * m_pixelsPerVolt;
+	return volt * m_pixelsPerYAxisUnit;
 }
 
 float WaveformArea::YAxisUnitsToYPosition(float volt)

@@ -50,7 +50,7 @@ WaveformArea::WaveformArea(
 	: m_persistence(false)
 	, m_channel(channel)
 	, m_parent(parent)
-	, m_pixelsPerVolt(1)
+	, m_pixelsPerYAxisUnit(1)
 {
 	SharedCtorInit();
 }
@@ -64,7 +64,7 @@ WaveformArea::WaveformArea(const WaveformArea* clone)
 	: m_persistence(clone->m_persistence)
 	, m_channel(clone->m_channel)
 	, m_parent(clone->m_parent)
-	, m_pixelsPerVolt(clone->m_pixelsPerVolt)
+	, m_pixelsPerYAxisUnit(clone->m_pixelsPerYAxisUnit)
 	, m_axisLabelFont(clone->m_axisLabelFont)
 	, m_infoBoxFont(clone->m_infoBoxFont)
 	, m_cursorLabelFont(clone->m_cursorLabelFont)

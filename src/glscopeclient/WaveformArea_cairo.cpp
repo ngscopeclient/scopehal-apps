@@ -411,7 +411,7 @@ void WaveformArea::RenderEyeMask(Cairo::RefPtr< Cairo::Context > cr)
 		waveform,
 		m_group->m_pixelsPerXUnit,
 		m_group->m_xAxisOffset,
-		m_pixelsPerVolt,
+		m_pixelsPerYAxisUnit,
 		m_channel.GetOffset(),
 		m_height);
 
