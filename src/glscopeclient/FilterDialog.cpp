@@ -964,53 +964,97 @@ bool FilterDialog::ApplyAutomaticInputs()
 		//Input is null! See if it's a S-parameter input
 		//(by simple string matching for now)
 		auto name = m_filter->GetInputName(i);
-		if( (name[0] != 'S') || (
-				(name.rfind("_mag") + 4 != name.length()) &&
-				(name.rfind("_ang") + 4 != name.length())
+		if( (name[0] == 'S') && (
+				(name.rfind("_mag") + 4 == name.length()) &&
+				(name.rfind("_ang") + 4 == name.length())
 			))
 		{
-			continue;
+			//We have a null S-parameter input.
+			//See if any of our *other* inputs (for the same S-parameter set) are non-null.
+			//Assume for the moment that we're dealing with <10 port S-params.
+			//So parameter name is going to be S[digit][digit][optional suffix][_mag | _angle],
+			//for example S21A_mag or S11_ang.
+			string paramName = name.substr(3);
+			paramName.resize(paramName.length() - 4);
+
+			//Find the base S-parameter name for us
+			string suffix = name.substr(name.length() - 3);
+			string param = name.substr(0, 3);
+
+			//Search all of our inputs to see if any match the same S-parameter and are non-null
+			for(size_t j=0; j<nin; j++)
+			{
+				//If the input is not connected, skip it
+				auto sstream = m_filter->GetInput(j);
+				if(!sstream)
+					continue;
+
+				//Get the name and see if it's the same S-parameter
+				auto sname = m_filter->GetInputName(j);
+				if(sname[0] != 'S')
+					continue;
+				if(paramName != "")
+				{
+					if(sname.find(paramName, 3) != 3)
+						continue;
+				}
+
+				//Look at where the input came from and find our corresponding channel
+				auto match = FindCorrespondingSParameter(param, suffix, sstream);
+				if(!match)
+					continue;
+
+				//Connect it
+				m_rows[i]->m_chans.set_active_text(match.GetName());
+				madeChanges = true;
+				break;
+			}
 		}
 
-		//We have a null S-parameter input.
-		//See if any of our *other* inputs (for the same S-parameter set) are non-null.
-		//Assume for the moment that we're dealing with <10 port S-params.
-		//So parameter name is going to be S[digit][digit][optional suffix][_mag | _angle],
-		//for example S21A_mag or S11_ang.
-		string paramName = name.substr(3);
-		paramName.resize(paramName.length() - 4);
-
-		//Find the base S-parameter name for us
-		string suffix = name.substr(name.length() - 3);
-		string param = name.substr(0, 3);
-
-		//Search all of our inputs to see if any match the same S-parameter and are non-null
-		for(size_t j=0; j<nin; j++)
+		//Some filters, like channel emulation, take simple mag/angle
+		else if( (name == "mag") || (name == "angle") )
 		{
-			//If the input is not connected, skip it
-			auto sstream = m_filter->GetInput(j);
-			if(!sstream)
-				continue;
-
-			//Get the name and see if it's the same S-parameter
-			auto sname = m_filter->GetInputName(j);
-			if(sname[0] != 'S')
-				continue;
-			if(paramName != "")
+			//See if we have an input with the opposite name
+			string counterpart;
+			string suffix;
+			if(name == "mag")
 			{
-				if(sname.find(paramName, 3) != 3)
-					continue;
+				counterpart = "angle";
+				suffix = "mag";
+			}
+			else
+			{
+				counterpart = "mag";
+				suffix = "ang";
 			}
 
-			//Look at where the input came from and find our corresponding channel
-			auto match = FindCorrespondingSParameter(param, suffix, sstream);
-			if(!match)
-				continue;
+			for(size_t j=0; j<nin; j++)
+			{
+				//If the input is not connected, skip it
+				auto sstream = m_filter->GetInput(j);
+				if(!sstream)
+					continue;
 
-			//Connect it
-			m_rows[i]->m_chans.set_active_text(match.GetName());
-			madeChanges = true;
-			break;
+				//Get the name and see if it's the same S-parameter
+				auto sname = m_filter->GetInputName(j);
+				if(sname != counterpart)
+					continue;
+
+				//We found it!
+				//See what it's connected to
+				auto src = sstream.m_channel->GetStreamName(sstream.m_stream);
+				string param = src.substr(0, 3);
+
+				//Look at where the input came from and find our corresponding channel
+				auto match = FindCorrespondingSParameter(param, suffix, sstream);
+				if(!match)
+					continue;
+
+				//Connect it
+				m_rows[i]->m_chans.set_active_text(match.GetName());
+				madeChanges = true;
+				break;
+			}
 		}
 	}
 
