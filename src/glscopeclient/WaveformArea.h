@@ -211,6 +211,7 @@ public:
 	{ return m_plotRight; }
 
 	//Helper to get all geometry that needs to be updated
+	void UpdateCachedScales();
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay);
 	void MapAllBuffers(bool update_y);

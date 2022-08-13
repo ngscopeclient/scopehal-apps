@@ -2947,6 +2947,7 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 			if(coeff < 0)
 				coeff = w->GetPersistenceDecayCoefficient();
 
+			w->UpdateCachedScales();
 			w->GetAllRenderData(data);
 		}
 
@@ -3295,6 +3296,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring, bool updateFi
 		for(auto w : m_waveformAreas)
 		{
 			w->GetAllRenderData(data);
+			w->UpdateCachedScales();
 
 			if(coeff < 0)
 				coeff = w->GetPersistenceDecayCoefficient();

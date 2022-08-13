@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -119,6 +119,12 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
+
+void WaveformArea::UpdateCachedScales()
+{
+	//Pull vertical size from the scope early on no matter how we're rendering
+	m_pixelsPerVolt = m_height / m_channel.GetVoltageRange();
+}
 
 void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay)
 {
@@ -390,8 +396,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 	{
 		lock_guard<recursive_mutex> lock(m_parent->m_waveformDataMutex);
 
-		//Pull vertical size from the scope early on no matter how we're rendering
-		m_pixelsPerVolt = m_height / m_channel.GetVoltageRange();
+		UpdateCachedScales();
 
 		//Update geometry if needed
 		if(m_geometryDirty || m_positionDirty)
