@@ -192,7 +192,59 @@ void FilterGraphEditorNode::UpdateSize()
 		tabs.set_tab(0, Pango::TAB_LEFT, 150);
 
 		for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
-			paramText += it->first + ": \t" + it->second.ToString() + "\n";
+		{
+			//If value is too long, break it up
+			auto rvalue = it->second.ToString();
+			auto value = rvalue;
+			size_t maxwidth = 24;
+			if(value.length() > maxwidth)
+			{
+				//Value is excessively long. Look at breaking it up.
+				//For now, try splitting at path separators
+				//TODO: split at other delimiters etc
+				#ifdef _WIN32
+					char separator = '\\';
+				#else
+					char separator = '/';
+				#endif
+
+				auto fields = explode(rvalue, separator);
+
+				string working;
+				value = "";
+
+				for(size_t i=0; i<fields.size(); i++)
+				{
+					if(!working.empty())
+						working += separator;
+					working += fields[i];
+
+					if(working.length() > maxwidth)
+					{
+						//Add path delimiter and newline to continue an existing path
+						if(!value.empty())
+							value += string(1, separator) + "\n\t";
+
+						//Add initial delimiter to absolute paths
+						if(value.empty() && (rvalue[0] == separator) )
+							value += separator;
+
+						//Add new path segment
+						value += working;
+						working = "";
+					}
+				}
+
+				if(!working.empty())
+				{
+					if(!value.empty())
+						value += string(1, separator) + "\n\t";
+					value += working;
+				}
+			}
+
+			paramText += it->first + ": \t" + value + "\n";
+		}
 	}
 	else if(chan && chan->IsPhysicalChannel())
 	{
