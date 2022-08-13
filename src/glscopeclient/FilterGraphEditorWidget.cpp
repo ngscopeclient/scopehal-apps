@@ -186,11 +186,10 @@ void FilterGraphEditorNode::UpdateSize()
 	m_paramLayout = Pango::Layout::create(m_parent->get_pango_context());
 	m_paramLayout->set_font_description(paramfont);
 	string paramText;
+	string leftText;				//left column text only, so we can figure out where to put the tab stops
 	Pango::TabArray tabs(1, true);
 	if(filter != NULL)
 	{
-		tabs.set_tab(0, Pango::TAB_LEFT, 150);
-
 		for(auto it = filter->GetParamBegin(); it != filter->GetParamEnd(); it ++)
 		{
 			//If value is too long, break it up
@@ -244,19 +243,25 @@ void FilterGraphEditorNode::UpdateSize()
 			}
 
 			paramText += it->first + ": \t" + value + "\n";
+
+			leftText += it->first + ": \n";
 		}
 	}
 	else if(chan && chan->IsPhysicalChannel())
 	{
-		tabs.set_tab(0, Pango::TAB_LEFT, 100);
-
 		Unit v(Unit::UNIT_VOLTS);
 		Unit hz(Unit::UNIT_HZ);
 
 		paramText += string("Channel: \t") + chan->GetHwname() + "\n";
 
+		leftText += string("Channel: \n");
+
 		if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 		{
+			leftText += string("Coupling: \n");
+			leftText += string("Attenuation: \n");
+			leftText += string("Bandwidth: \n");
+
 			switch(chan->GetCoupling())
 			{
 				case OscilloscopeChannel::COUPLE_DC_1M:
@@ -284,6 +289,9 @@ void FilterGraphEditorNode::UpdateSize()
 				auto yunits = chan->GetYAxisUnits(0);
 				paramText += string("Range:\t") + yunits.PrettyPrint(chan->GetVoltageRange(0)) + "\n";
 				paramText += string("Offset:\t") + yunits.PrettyPrint(chan->GetOffset(0)) + "\n";
+
+				leftText += string("Range:\n");
+				leftText += string("Offset:\n");
 			}
 			else
 			{
@@ -294,9 +302,19 @@ void FilterGraphEditorNode::UpdateSize()
 					paramText += string("    Range:\t") + yunits.PrettyPrint(chan->GetVoltageRange(i)) + "\n";
 					paramText += string("    Offset:\t") + yunits.PrettyPrint(chan->GetOffset(i)) + "\n";
 				}
+
+				leftText += string("    Range:\n");
+				leftText += string("    Offset:\n");
 			}
 		}
 	}
+
+	//Figure out how wide the left side text (parameter names) is
+	m_paramLayout->set_text(leftText);
+	m_paramLayout->get_pixel_size(twidth, theight);
+	tabs.set_tab(0, Pango::TAB_LEFT, twidth + 20);
+
+	//Set up for the actual full parameter text
 	m_paramLayout->set_text(paramText);
 	m_paramLayout->set_tabs(tabs);
 	m_paramLayout->get_pixel_size(twidth, theight);
