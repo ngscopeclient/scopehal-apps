@@ -6,7 +6,7 @@ pkgrel=1
 pkgdesc="scopehal-apps: applications for libscopehal (mingw-w64)"
 arch=('any')
 mingw_arch=('mingw64' 'ucrt64' 'clang64')
-url="https://github.com/azonenberg/scopehal-apps"
+url="https://github.com/glscopeclient/scopehal-apps"
 license=('BSD-3-Clause')
 groups=("${MINGW_PACKAGE_PREFIX}-eda")
 depends=(
@@ -16,6 +16,7 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-yaml-cpp"
   "${MINGW_PACKAGE_PREFIX}-glew"
   "${MINGW_PACKAGE_PREFIX}-ffts"
+  "${MINGW_PACKAGE_PREFIX}-vulkan-devel"
 )
 makedepends=(
   "${MINGW_PACKAGE_PREFIX}-cmake"
@@ -30,7 +31,7 @@ pkgver() {
 build() {
   cd "${srcdir}"/../..
 
-  git remote set-url origin git://github.com/azonenberg/scopehal-apps
+  git remote set-url origin git://github.com/glscopeclient/scopehal-apps
   git submodule update --init --recursive
 
   mkdir build

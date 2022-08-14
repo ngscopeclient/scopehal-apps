@@ -50,6 +50,7 @@ jobs:
           cmake \
           pkg-config \
           libglm-dev \
+          libvulkan-dev \
           libgtkmm-3.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
