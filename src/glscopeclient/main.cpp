@@ -242,6 +242,8 @@ int main(int argc, char* argv[])
 	g_app = new ScopeApp;
 
 	//Initialize object creation tables for predefined libraries
+	if(!VulkanInit())
+		return 1;
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();

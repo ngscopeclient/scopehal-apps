@@ -8,9 +8,9 @@ include(CTest)
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++11
-set(CMAKE_CXX_EXTENSIONS OFF) # use c++11 instead of gnu++11
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++14
+set(CMAKE_CXX_EXTENSIONS OFF) # use c++14 instead of gnu++14
 
 # Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
