@@ -55,6 +55,14 @@ pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
 find_package(OpenCL)
 include(FindOpenMP)
+include(FindVulkan)
+
+if(NOT Vulkan_FOUND)
+	message(FATAL_ERROR "No Vulkan SDK found.")
+endif()
+
+# TODO: Look for glslc compiler using Vulkan_glslc_FOUND (requires cmake 3.24)
+# TODO: Do we want to mandate 3.24?
 
 if(NOT WIN32)
 	include(GNUInstallDirs)
