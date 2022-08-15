@@ -27,32 +27,12 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Main code for Primitives test case
- */
+#ifndef Acceleration_h
+#define Acceleration_h
 
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Primitives.h"
+#include "../../lib/scopehal/scopehal.h"
+#include <random>
 
-using namespace std;
+extern std::mt19937 g_rng;
 
-mt19937 g_rng;
-
-int main(int argc, char* argv[])
-{
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	//Run the actual test
-	return Catch::Session().run(argc, argv);
-}
+#endif

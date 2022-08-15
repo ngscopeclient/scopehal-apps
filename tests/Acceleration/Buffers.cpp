@@ -30,29 +30,62 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Primitives test case
+	@brief Unit test for SampleOn* primitives
  */
-
-#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
-#include "Primitives.h"
+
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
+#include "Acceleration.h"
 
 using namespace std;
 
-mt19937 g_rng;
+void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len);
 
-int main(int argc, char* argv[])
+TEST_CASE("Buffers_CpuAccess")
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+	//Basic test with CPU usage hint set to likely
+	SECTION("FrequentCPU")
+	{
+		//Set up the buffer and prepare our expected access patterns
+		LogVerbose("Creating a buffer\n");
+		AcceleratorBuffer<int32_t> buf;
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
+		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
 
-	//Global scopehal initialization
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
+		//Run the test
+		FillAndVerifyBuffer(buf, 5);
+	}
 
-	//Initialize the RNG
-	g_rng.seed(0);
+	//Basic test with CPU usage hint set to unlikely
+	SECTION("InfrequentCPU")
+	{
+		//Set up the buffer and prepare our expected access patterns
+		LogVerbose("Creating a buffer\n");
+		AcceleratorBuffer<int32_t> buf;
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
+		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
+		buf.PrepareForCpuAccess();
 
-	//Run the actual test
-	return Catch::Session().run(argc, argv);
+		//Run the test
+		FillAndVerifyBuffer(buf, 5);
+	}
+}
+
+void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
+{
+	buf.PrepareForCpuAccess();
+
+	//Add some elements to it
+	LogVerbose("Filling it\n");
+	for(size_t i=0; i<len; i++)
+		buf.push_back(i);
+
+	//Verify they're there
+	LogVerbose("Verifying initial contents (capacity is now %zu)\n", buf.capacity());
+	REQUIRE(buf.size() == len);
+	REQUIRE(buf.capacity() >= len);
+	for(size_t i=0; i<len; i++)
+		REQUIRE(buf[i] == i);
 }

@@ -30,12 +30,12 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Primitives test case
+	@brief Main code for Acceleration test case
  */
 
 #define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
-#include "Primitives.h"
+#include "Acceleration.h"
 
 using namespace std;
 
@@ -46,6 +46,8 @@ int main(int argc, char* argv[])
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 	//Global scopehal initialization
+	if(!VulkanInit())
+		return 1;
 	TransportStaticInit();
 	DriverStaticInit();
 	InitializePlugins();
@@ -54,5 +56,9 @@ int main(int argc, char* argv[])
 	g_rng.seed(0);
 
 	//Run the actual test
-	return Catch::Session().run(argc, argv);
+	int ret = Catch::Session().run(argc, argv);
+
+	//Clean up and return test results
+	ScopehalStaticCleanup();
+	return ret;
 }
