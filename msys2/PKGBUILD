@@ -17,9 +17,11 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-glew"
   "${MINGW_PACKAGE_PREFIX}-ffts"
   "${MINGW_PACKAGE_PREFIX}-vulkan-loader"
-  "${MINGW_PACKAGE_PREFIX}-vulkan-header"
+  "${MINGW_PACKAGE_PREFIX}-vulkan-headers"
   "${MINGW_PACKAGE_PREFIX}-spirv-tools"
   "${MINGW_PACKAGE_PREFIX}-spirv-headers"
+  "${MINGW_PACKAGE_PREFIX}-opencl-headers"
+  "${MINGW_PACKAGE_PREFIX}-opencl-icd"
 )
 makedepends=(
   "${MINGW_PACKAGE_PREFIX}-cmake"
