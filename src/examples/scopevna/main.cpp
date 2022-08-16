@@ -171,20 +171,20 @@ int main(int argc, char* argv[])
 	bool has_cal = parser.Load("/tmp/scopevna-cal.s2p", params);
 
 	//Main processing loop
-	for(float freq = 0; freq < 6e9; freq += 1e7)
-	//for(float freq = 0; freq < 1e9; freq += 1e6)
+	//for(float freq = 0; freq < 6e9; freq += 1e7)
+	for(float freq = 0; freq < 6e8; freq += 1e6)
 	{
 		//Clamp lowest frequency to 9 kHz
 		float realfreq = freq;
 		if(freq < 9e3)
 			realfreq = 9e3;
 
-		//For higher freqs: 40 Gsps, 1M points
+		//For higher freqs: 5 Gsps, 1M points
 		//Below 100 MHz: 1 Gsps
 		if(freq < 1e8)
 			scope->SetSampleRate(1000000000UL);
 		else
-			scope->SetSampleRate(40000000000UL);
+			scope->SetSampleRate(5000000000UL);
 		scope->SetSampleDepth(1000000UL);
 
 		//Set the frequency
@@ -360,12 +360,22 @@ void OnWaveform(float refFreqHz, int iteration)
 	//Calculate average amplitude
 	float avgRef = 0;
 	auto refdata = dynamic_cast<AnalogWaveform*>(g_refMagnitudeFilter->GetData(0));
+	if(refdata == nullptr)
+	{
+		LogWarning("null waveform\n");
+		return;
+	}
 	for(auto f : refdata->m_samples)
 		avgRef += f;
 	avgRef /= refdata->m_samples.size();
 
 	float avgDut = 0;
 	auto dutdata = dynamic_cast<AnalogWaveform*>(g_dutMagnitudeFilter->GetData(0));
+	if(dutdata == nullptr)
+	{
+		LogWarning("null waveform\n");
+		return;
+	}
 	for(auto f : dutdata->m_samples)
 		avgDut += f;
 	avgDut /= dutdata->m_samples.size();

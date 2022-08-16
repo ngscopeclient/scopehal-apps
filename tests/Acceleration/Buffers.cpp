@@ -45,11 +45,11 @@ void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len);
 
 TEST_CASE("Buffers_CpuAccess")
 {
-	//Basic test with CPU usage hint set to likely
+	//CPU-only buffer
 	SECTION("FrequentCPU")
 	{
 		//Set up the buffer and prepare our expected access patterns
-		LogVerbose("Creating a buffer\n");
+		LogVerbose("Creating a buffer with CPU HINT_LIKELY, GPU HINT_NEVER\n");
 		AcceleratorBuffer<int32_t> buf;
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
 		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
@@ -58,14 +58,28 @@ TEST_CASE("Buffers_CpuAccess")
 		FillAndVerifyBuffer(buf, 5);
 	}
 
-	//Basic test with CPU usage hint set to unlikely
+	//CPU-only buffer in file backed memory
 	SECTION("InfrequentCPU")
 	{
 		//Set up the buffer and prepare our expected access patterns
-		LogVerbose("Creating a buffer\n");
+		LogVerbose("Creating a buffer with CPU HINT_UNLIKELY, GPU HINT_NEVER\n");
 		AcceleratorBuffer<int32_t> buf;
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
 		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
+		buf.PrepareForCpuAccess();
+
+		//Run the test
+		FillAndVerifyBuffer(buf, 5);
+	}
+
+	//Pinned memory which can be shared with GPU (but only ever actually used from CPU for this test)
+	SECTION("PinnedCPU")
+	{
+		//Set up the buffer and prepare our expected access patterns
+		LogVerbose("Creating a buffer with CPU HINT_LIKELY, GPU HINT_UNLIKELY\n");
+		AcceleratorBuffer<int32_t> buf;
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
+		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
 		buf.PrepareForCpuAccess();
 
 		//Run the test
