@@ -42,64 +42,186 @@
 using namespace std;
 
 void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len);
+void FillBuffer(AcceleratorBuffer<int32_t>& buf, size_t len);
+void VerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len);
 
-TEST_CASE("Buffers_CpuAccess")
+TEST_CASE("Buffers_CpuOnly")
 {
+	AcceleratorBuffer<int32_t> buf;
+
 	//CPU-only buffer
 	SECTION("FrequentCPU")
 	{
-		//Set up the buffer and prepare our expected access patterns
-		LogVerbose("Creating a buffer with CPU HINT_LIKELY, GPU HINT_NEVER\n");
-		AcceleratorBuffer<int32_t> buf;
+		LogVerbose("AcceleratorBuffer: CPU HINT_LIKELY, GPU HINT_NEVER (host memory)\n");
+		LogIndenter li;
+
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
 		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
 
-		//Run the test
 		FillAndVerifyBuffer(buf, 5);
+
+		REQUIRE(buf.HasCpuBuffer());
+		REQUIRE(!buf.HasGpuBuffer());
 	}
 
 	//CPU-only buffer in file backed memory
 	SECTION("InfrequentCPU")
 	{
-		//Set up the buffer and prepare our expected access patterns
-		LogVerbose("Creating a buffer with CPU HINT_UNLIKELY, GPU HINT_NEVER\n");
-		AcceleratorBuffer<int32_t> buf;
+		LogVerbose("AcceleratorBuffer: CPU HINT_UNLIKELY, GPU HINT_NEVER (file backed)\n");
+		LogIndenter li;
+
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
 		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
 		buf.PrepareForCpuAccess();
 
-		//Run the test
 		FillAndVerifyBuffer(buf, 5);
+
+		REQUIRE(buf.HasCpuBuffer());
+		REQUIRE(!buf.HasGpuBuffer());
 	}
 
 	//Pinned memory which can be shared with GPU (but only ever actually used from CPU for this test)
 	SECTION("PinnedCPU")
 	{
-		//Set up the buffer and prepare our expected access patterns
-		LogVerbose("Creating a buffer with CPU HINT_LIKELY, GPU HINT_UNLIKELY\n");
-		AcceleratorBuffer<int32_t> buf;
+		LogVerbose("AcceleratorBuffer: CPU HINT_LIKELY, GPU HINT_UNLIKELY (pinned memory)\n");
+		LogIndenter li;
+
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
 		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
 		buf.PrepareForCpuAccess();
 
 		//Run the test
 		FillAndVerifyBuffer(buf, 5);
+
+		REQUIRE(buf.HasCpuBuffer());
+		REQUIRE(!buf.HasGpuBuffer());
+	}
+
+	//Allocate a single buffer, then move it around between different types of memory
+	SECTION("MovingCPUBuffer")
+	{
+		LogVerbose("AcceleratorBuffer: moving around\n");
+		LogIndenter li;
+
+		{
+			LogVerbose("CPU HINT_LIKELY, GPU HINT_NEVER (host memory)\n");
+			LogIndenter li2;
+
+			buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
+			buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
+			FillAndVerifyBuffer(buf, 5);
+
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(!buf.HasGpuBuffer());
+		}
+
+		{
+			LogVerbose("CPU HINT_UNLIKELY, GPU HINT_NEVER (file backed)\n");
+			LogIndenter li2;
+
+			buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
+			buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER);
+			VerifyBuffer(buf, 5);
+
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(!buf.HasGpuBuffer());
+		}
+
+		{
+			LogVerbose("CPU HINT_UNLIKELY, GPU HINT_UNLIKELY (pinned memory)\n");
+			LogIndenter li2;
+
+			buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
+			buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_UNLIKELY);
+			VerifyBuffer(buf, 5);
+
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(!buf.HasGpuBuffer());
+		}
 	}
 }
 
-void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
+TEST_CASE("Buffers_CpuGpu")
+{
+	AcceleratorBuffer<int32_t> buf;
+
+	//CPU-side pinned memory plus GPU-side dedicated buffer,
+	//but only ever used from the CPU
+	SECTION("MirrorCopy")
+	{
+		LogVerbose("AcceleratorBuffer: CPU HINT_LIKELY, GPU HINT_LIKELY (host memory with GPU mirror), but only using from CPU\n");
+		LogIndenter li;
+
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
+		buf.SetGpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY);
+
+		FillAndVerifyBuffer(buf, 5);
+
+		//At this point, the buffer is on the CPU, and there is a stale buffer on the GPU with no content
+		//We modified by calling push_back so the GPU buffer should already be marked stale.
+		REQUIRE(!buf.IsCpuBufferStale());
+		REQUIRE(buf.IsGpuBufferStale());
+		REQUIRE(!buf.IsSingleSharedBuffer());
+		REQUIRE(buf.HasCpuBuffer());
+		REQUIRE(buf.HasGpuBuffer());
+
+		//Prepare for GPU-side access by copying the buffer to the GPU.
+		//At this point we should be fully up to date
+		buf.PrepareForGpuAccess();
+
+		REQUIRE(buf.HasCpuBuffer());
+		REQUIRE(buf.HasGpuBuffer());
+		REQUIRE(!buf.IsCpuBufferStale());
+		REQUIRE(!buf.IsGpuBufferStale());
+
+		//Now, mark the CPU side buffer as never being used so we can free it and have a GPU-only buffer
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER, true);
+
+		REQUIRE(!buf.HasCpuBuffer());
+		REQUIRE(buf.HasGpuBuffer());
+		REQUIRE(!buf.IsGpuBufferStale());
+
+		//Mark the CPU-side buffer as being frequently used again, but don't copy data over to it.
+		//We should now have a CPU-side buffer, but it should be stale (while the GPU-side buffer is current)
+		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY, true);
+
+		REQUIRE(buf.HasGpuBuffer());
+		REQUIRE(buf.IsCpuBufferStale());
+		REQUIRE(!buf.IsGpuBufferStale());
+
+		//Verify the CPU-side buffer
+		VerifyBuffer(buf, 5);
+	}
+}
+
+void FillBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
 {
 	buf.PrepareForCpuAccess();
 
 	//Add some elements to it
-	LogVerbose("Filling it\n");
 	for(size_t i=0; i<len; i++)
 		buf.push_back(i);
+}
+
+void VerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
+{
+	//We need a buffer to read!
+	REQUIRE(buf.HasCpuBuffer());
+
+	buf.PrepareForCpuAccess();
+
+	//Should never be stale by this point
+	REQUIRE(!buf.IsCpuBufferStale());
 
 	//Verify they're there
-	LogVerbose("Verifying initial contents (capacity is now %zu)\n", buf.capacity());
 	REQUIRE(buf.size() == len);
 	REQUIRE(buf.capacity() >= len);
 	for(size_t i=0; i<len; i++)
 		REQUIRE(buf[i] == i);
+}
+
+void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
+{
+	FillBuffer(buf, len);
+	VerifyBuffer(buf, len);
 }
