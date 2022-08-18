@@ -135,7 +135,6 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	//Get the channel we're looking at
 	auto chan = GetHaltChannel();
-	auto filter = dynamic_cast<Filter*>(chan.m_channel);
 
 	//Don't check if no data to look at
 	auto data = chan.m_channel->GetData(chan.m_stream);
@@ -200,11 +199,11 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		//TODO: match digital data
 
 		//Match filters
-		else if(filter != NULL)
+		else
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(filter->GetText(i, 0) == text)	//TODO: support multiple streams
+				if(data->GetText(i) == text)	//TODO: support multiple streams
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -262,11 +261,11 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		//TODO: match digital data
 
 		//Match filters
-		else if(filter != NULL)
+		else
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(filter->GetText(i, 0) != text)	//TODO: support multiple streams
+				if(data->GetText(i) != text)	//TODO: support multiple streams
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -277,13 +276,9 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	else if(sfilter == "starts with")
 	{
-		//Expect filter data
-		if(filter == NULL)
-			return false;
-
 		for(size_t i=0; i<len; i++)
 		{
-			if(filter->GetText(i, 0).find(text) == 0)	//TODO: support multiple streams
+			if(data->GetText(i).find(text) == 0)	//TODO: support multiple streams
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
@@ -293,13 +288,9 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	else if(sfilter == "contains")
 	{
-		//Expect filter data
-		if(filter == NULL)
-			return false;
-
 		for(size_t i=0; i<len; i++)
 		{
-			if(filter->GetText(i, 0).find(text) != string::npos) 	//TODO: support multiple streams
+			if(data->GetText(i).find(text) != string::npos) 	//TODO: support multiple streams
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;

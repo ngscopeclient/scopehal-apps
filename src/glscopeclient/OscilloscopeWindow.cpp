@@ -658,21 +658,21 @@ void OscilloscopeWindow::OnPreferences()
 void OscilloscopeWindow::SyncFilterColors()
 {
 	//Filter colors
-	Filter::m_standardColors[Filter::COLOR_DATA] =
+	StandardColors::colors[StandardColors::COLOR_DATA] =
 		m_preferences.GetColor("Appearance.Decodes.data_color");
-	Filter::m_standardColors[Filter::COLOR_CONTROL] =
+	StandardColors::colors[StandardColors::COLOR_CONTROL] =
 		m_preferences.GetColor("Appearance.Decodes.control_color");
-	Filter::m_standardColors[Filter::COLOR_ADDRESS] =
+	StandardColors::colors[StandardColors::COLOR_ADDRESS] =
 		m_preferences.GetColor("Appearance.Decodes.address_color");
-	Filter::m_standardColors[Filter::COLOR_PREAMBLE] =
+	StandardColors::colors[StandardColors::COLOR_PREAMBLE] =
 		m_preferences.GetColor("Appearance.Decodes.preamble_color");
-	Filter::m_standardColors[Filter::COLOR_CHECKSUM_OK] =
+	StandardColors::colors[StandardColors::COLOR_CHECKSUM_OK] =
 		m_preferences.GetColor("Appearance.Decodes.checksum_ok_color");
-	Filter::m_standardColors[Filter::COLOR_CHECKSUM_BAD] =
+	StandardColors::colors[StandardColors::COLOR_CHECKSUM_BAD] =
 		m_preferences.GetColor("Appearance.Decodes.checksum_bad_color");
-	Filter::m_standardColors[Filter::COLOR_ERROR] =
+	StandardColors::colors[StandardColors::COLOR_ERROR] =
 		m_preferences.GetColor("Appearance.Decodes.error_color");
-	Filter::m_standardColors[Filter::COLOR_IDLE] =
+	StandardColors::colors[StandardColors::COLOR_IDLE] =
 		m_preferences.GetColor("Appearance.Decodes.idle_color");
 
 	//Protocol analyzer colors
