@@ -131,6 +131,12 @@ jobs:
     - run: git config --global core.autocrlf input
       shell: bash
 
+    - name: Install Vulkan SDK
+      shell: bash
+      run: |
+        wget https://sdk.lunarg.com/sdk/download/1.3.216.0/windows/VulkanSDK-1.3.216.0-Installer.exe
+        VulkanSDK-1.3.216.0-Installer.exe --accept-licenses --default-answer --confirm-command install
+
     - uses: actions/checkout@v2
       with:
         submodules: recursive
