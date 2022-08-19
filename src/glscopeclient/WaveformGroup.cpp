@@ -37,6 +37,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "WaveformGroupPropertiesDialog.h"
 #include "FilterDialog.h"
+#include <cinttypes>
 
 using namespace std;
 
@@ -330,7 +331,7 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %e\n", m_pixelsPerXUnit);
 	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %ld\n", m_xAxisOffset);
+	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %" PRIi64 "\n", m_xAxisOffset);
 	config += tmp;
 
 	switch(m_cursorConfig)
@@ -356,9 +357,9 @@ string WaveformGroup::SerializeConfiguration(IDTable& table)
 			break;
 	}
 
-	snprintf(tmp, sizeof(tmp), "            xcursor0:       %ld\n", m_xCursorPos[0]);
+	snprintf(tmp, sizeof(tmp), "            xcursor0:       %" PRIi64 "\n", m_xCursorPos[0]);
 	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            xcursor1:       %ld\n", m_xCursorPos[1]);
+	snprintf(tmp, sizeof(tmp), "            xcursor1:       %" PRIi64 "\n", m_xCursorPos[1]);
 	config += tmp;
 	snprintf(tmp, sizeof(tmp), "            ycursor0:       %f\n", m_yCursorPos[0]);
 	config += tmp;

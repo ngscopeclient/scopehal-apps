@@ -1815,7 +1815,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 		}
 
 		group->m_pixelsPerXUnit = gn["pixelsPerXUnit"].as<float>();
-		group->m_xAxisOffset = gn["xAxisOffset"].as<long>();
+		group->m_xAxisOffset = gn["xAxisOffset"].as<long long>();
 		m_waveformGroups.emplace(group);
 
 		//Cursor config
@@ -1830,8 +1830,8 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			group->m_cursorConfig = WaveformGroup::CURSOR_Y_SINGLE;
 		else if(cursor == "y_dual")
 			group->m_cursorConfig = WaveformGroup::CURSOR_Y_DUAL;
-		group->m_xCursorPos[0] = gn["xcursor0"].as<long>();
-		group->m_xCursorPos[1] = gn["xcursor1"].as<long>();
+		group->m_xCursorPos[0] = gn["xcursor0"].as<long long>();
+		group->m_xCursorPos[1] = gn["xcursor1"].as<long long>();
 		group->m_yCursorPos[0] = gn["ycursor0"].as<float>();
 		group->m_yCursorPos[1] = gn["ycursor1"].as<float>();
 
