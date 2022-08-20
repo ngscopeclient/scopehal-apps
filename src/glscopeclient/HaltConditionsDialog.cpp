@@ -137,7 +137,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	auto chan = GetHaltChannel();
 
 	//Don't check if no data to look at
-	auto data = chan.m_channel->GetData(chan.m_stream);
+	auto data = chan.GetData();
 	auto adata = dynamic_cast<AnalogWaveform*>(data);
 	if(data->m_offsets.empty())
 		return false;
@@ -203,7 +203,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(data->GetText(i) == text)	//TODO: support multiple streams
+				if(data->GetText(i) == text)
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -265,7 +265,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(data->GetText(i) != text)	//TODO: support multiple streams
+				if(data->GetText(i) != text)
 				{
 					timestamp = data->m_offsets[i] * data->m_timescale;
 					return true;
@@ -278,7 +278,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	{
 		for(size_t i=0; i<len; i++)
 		{
-			if(data->GetText(i).find(text) == 0)	//TODO: support multiple streams
+			if(data->GetText(i).find(text) == 0)
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
@@ -290,7 +290,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	{
 		for(size_t i=0; i<len; i++)
 		{
-			if(data->GetText(i).find(text) != string::npos) 	//TODO: support multiple streams
+			if(data->GetText(i).find(text) != string::npos)
 			{
 				timestamp = data->m_offsets[i] * data->m_timescale;
 				return true;
