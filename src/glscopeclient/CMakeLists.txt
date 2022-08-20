@@ -18,7 +18,7 @@ if(WIN32)
 	# when using FindYAML.cmake, just set the library directly
 	set(YAML_LIBRARIES yaml-cpp)
 else()
-	find_package(Yaml REQUIRED)
+	find_package(YAML REQUIRED)
 endif()
 
 #Set up include paths
