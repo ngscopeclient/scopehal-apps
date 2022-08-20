@@ -99,6 +99,8 @@ void help()
 			"    --noavx512f                   : Do not use AVX512F, even if supported on the current system\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
 			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
+			"    --quit-after-loading          : Exit immediately after loading the specified file.\n"
+			"                                    Typically used for profiling/benchmarking file load or filter graph operations.\n"
 			"\n"
 			"  [filename|scope]:\n"
 			"    filename : path to a .scopesession to load on startup\n"
@@ -131,6 +133,7 @@ int main(int argc, char* argv[])
 	bool retrigger = false;
 	bool noavx2 = false;
 	bool noavx512f = false;
+	bool quitAfterLoading = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -164,6 +167,8 @@ int main(int argc, char* argv[])
 			noavx2 = true;
 		else if(s == "--noavx512f")
 			noavx512f = true;
+		else if(s == "--quit-after-loading")
+			quitAfterLoading = true;
 		else if(s[0] == '-')
 		{
 			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
@@ -270,7 +275,8 @@ int main(int argc, char* argv[])
 		filesToLoad,
 		reconnect,
 		nodata,
-		retrigger);
+		retrigger,
+		quitAfterLoading);
 
 	//Global cleanup
 	ScopehalStaticCleanup();

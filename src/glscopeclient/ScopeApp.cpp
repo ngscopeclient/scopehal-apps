@@ -48,7 +48,8 @@ void ScopeApp::run(
 	vector<string> filesToLoad,
 	bool reconnect,
 	bool nodata,
-	bool retrigger)
+	bool retrigger,
+	bool quitAfterLoading)
 {
 	register_application();
 
@@ -161,6 +162,10 @@ void ScopeApp::run(
 	if(retrigger)
 		m_window->OnStart();
 
+	//Close the main window if requesting a load-and-exit test
+	if(quitAfterLoading)
+		m_window->close();
+
 	while(true)
 	{
 		Gtk::Main::iteration();
@@ -173,7 +178,7 @@ void ScopeApp::run(
 	m_terminating = true;
 
 	delete m_window;
-	m_window = NULL;
+	m_window = nullptr;
 }
 
 void ScopeApp::DispatchPendingEvents()

@@ -56,7 +56,8 @@ public:
 		std::vector<std::string> filesToLoad,
 		bool reconnect,
 		bool nodata,
-		bool retrigger);
+		bool retrigger,
+		bool quitAfterLoading);
 
 	void DispatchPendingEvents();
 
