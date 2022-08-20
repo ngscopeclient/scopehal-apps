@@ -155,8 +155,9 @@ bool ProcessWaveform(MockOscilloscope* scope, const string& fname, USB2PacketDec
 	}
 
 	//Run the filter graph
-	Filter::SetAllFiltersDirty();
-	pdecode->RefreshIfDirty();
+	FilterGraphExecutor ex;
+	ex.RunBlocking(Filter::GetAllInstances());
+
 	auto waveform = dynamic_cast<USB2PacketWaveform*>(pdecode->GetData(0));
 	if(!waveform)
 	{

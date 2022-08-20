@@ -482,6 +482,9 @@ public:
 	//Markers
 	std::map<TimePoint, std::vector<Marker*> > m_markers;
 	int m_nextMarker;
+
+	//Filter graph evaluation
+	FilterGraphExecutor m_graphExecutor;
 };
 
 #endif

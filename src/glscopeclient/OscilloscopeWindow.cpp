@@ -3368,65 +3368,12 @@ void OscilloscopeWindow::RefreshAllFilters()
 
 	SyncFilterColors();
 
-	Filter::ClearAnalysisCache();
-
 	set<Filter*> filters;
 	{
 		lock_guard<mutex> lock2(m_filterUpdatingMutex);
 		filters = Filter::GetAllInstances();
 	}
-	for(auto f : filters)
-		f->SetDirty();
-
-	//Prepare to topologically sort filter nodes into blocks capable of parallel evaluation.
-	//Block 0 may only depend on physical scope channels.
-	//Block 1 may depend on decodes in block 0 or physical channels.
-	//Block 2 may depend on 1/0/physical, etc.
-	typedef vector<Filter*> FilterBlock;
-	vector<FilterBlock> blocks;
-
-	//Working set starts out as all decoders
-	auto working = filters;
-
-	//Each iteration, put all decodes that only depend on previous blocks into this block.
-	for(int block=0; !working.empty(); block++)
-	{
-		FilterBlock current_block;
-		for(auto w : working)
-		{
-			auto d = static_cast<Filter*>(w);
-
-			//Check if we have any inputs that are still in the working set.
-			bool ok = true;
-			for(size_t i=0; i<d->GetInputCount(); i++)
-			{
-				auto in = d->GetInput(i).m_channel;
-				if(working.find((Filter*)in) != working.end())
-				{
-					ok = false;
-					break;
-				}
-			}
-
-			//All inputs are in previous blocks, we're good to go for the current block
-			if(ok)
-				current_block.push_back(d);
-		}
-
-		//Anything we assigned this iteration shouldn't be in the working set for next time.
-		//It does, however, have to get saved in the output block.
-		for(auto d : current_block)
-			working.erase(d);
-		blocks.push_back(current_block);
-	}
-
-	//Evaluate the blocks, taking advantage of parallelism between them
-	for(auto& block : blocks)
-	{
-		#pragma omp parallel for
-		for(size_t i=0; i<block.size(); i++)
-			block[i]->RefreshIfDirty();
-	}
+	m_graphExecutor.RunBlocking(filters);
 
 	//Update statistic displays after the filter graph update is complete
 	for(auto g : m_waveformGroups)

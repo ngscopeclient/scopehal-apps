@@ -297,7 +297,6 @@ void OnWaveform(float refFreqHz, int iteration)
 	//LogDebug("Got a waveform\n");
 	//LogIndenter li;
 	Filter::ClearAnalysisCache();
-	Filter::SetAllFiltersDirty();
 
 	//We want a 50-100 MHz IF to get a reasonable number of cycles in the test waveform.
 	//Configure the LO to up- or downconvert based on the input frequency.
@@ -352,10 +351,9 @@ void OnWaveform(float refFreqHz, int iteration)
 	g_dutIfQFilter->GetParameter("Frequency Low").SetFloatVal(ifBandLow);
 	g_dutIfQFilter->GetParameter("Frequency High").SetFloatVal(ifBandHigh);
 
-	//Run the final filters in the graph
-	g_refMagnitudeFilter->RefreshIfDirty();
-	g_dutMagnitudeFilter->RefreshIfDirty();
-	g_phaseDiffFilter->RefreshIfDirty();
+	//Run the filter graph
+	FilterGraphExecutor ex;
+	ex.RunBlocking(Filter::GetAllInstances());
 
 	//Calculate average amplitude
 	float avgRef = 0;
