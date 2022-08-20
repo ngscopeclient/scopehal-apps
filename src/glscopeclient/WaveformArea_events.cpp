@@ -412,6 +412,7 @@ void WaveformArea::OnSingleClick(GdkEventButton* event, int64_t timestamp, float
 							{
 								f->AutoscaleVertical(m_channel.m_stream);
 								ClearPersistence();
+								queue_draw();
 							}
 						}
 						break;
