@@ -138,6 +138,18 @@ TEST_CASE("Buffers_CpuOnly")
 			REQUIRE(buf.HasCpuBuffer());
 			REQUIRE(!buf.HasGpuBuffer());
 		}
+
+		{
+			LogVerbose("Making a copy of the buffer\n");
+
+			//Make a copy of it
+			AcceleratorBuffer<int32_t> buf2;
+			buf2.CopyFrom(buf);
+
+			REQUIRE(buf2.HasCpuBuffer());
+			REQUIRE(!buf2.HasGpuBuffer());
+			VerifyBuffer(buf2, 5);
+		}
 	}
 }
 
@@ -181,6 +193,17 @@ TEST_CASE("Buffers_CpuGpu")
 		REQUIRE(buf.HasGpuBuffer());
 		REQUIRE(!buf.IsGpuBufferStale());
 
+		//Make a copy of the GPU-only buffer
+		AcceleratorBuffer<int32_t> buf2;
+		buf2.CopyFrom(buf);
+		REQUIRE(!buf2.HasCpuBuffer());
+		REQUIRE(buf2.HasGpuBuffer());
+		REQUIRE(!buf2.IsGpuBufferStale());
+
+		//Give it a CPU-capable hint so we can see it, then verify
+		buf2.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY, true);
+		VerifyBuffer(buf2, 5);
+
 		//Mark the CPU-side buffer as being frequently used again, but don't copy data over to it.
 		//We should now have a CPU-side buffer, but it should be stale (while the GPU-side buffer is current)
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY, true);
@@ -191,6 +214,23 @@ TEST_CASE("Buffers_CpuGpu")
 
 		//Verify the CPU-side buffer
 		VerifyBuffer(buf, 5);
+
+		//Remove one item from it
+		buf.pop_back();
+		VerifyBuffer(buf, 4);
+
+		//Remove the first item
+		buf.pop_front();
+
+		//Verify the pop_front worked
+		REQUIRE(buf.size() == 3);
+		for(size_t i=0; i<3; i++)
+			REQUIRE(buf[i] == i+1);
+
+		//Empty the buffer
+		buf.clear();
+		REQUIRE(buf.size() == 0);
+		REQUIRE(buf.empty());
 	}
 }
 
@@ -218,6 +258,14 @@ void VerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
 	REQUIRE(buf.capacity() >= len);
 	for(size_t i=0; i<len; i++)
 		REQUIRE(buf[i] == i);
+
+	//Verify again, but looping using iterators rather than array indexing
+	size_t iexpected = 0;
+	for(auto n : buf)
+	{
+		REQUIRE(n == iexpected);
+		iexpected ++;
+	}
 }
 
 void FillAndVerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
