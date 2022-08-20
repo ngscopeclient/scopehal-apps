@@ -1002,6 +1002,10 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
 	if(!waveform)
 		return 0;
+
+	//Make sure we have a current copy of the data
+	waveform->PrepareForCpuAccess();
+
 	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
 
 	//Find the approximate index of the sample of interest and interpolate the cursor position

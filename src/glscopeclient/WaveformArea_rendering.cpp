@@ -160,6 +160,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 
+	//FIXME: Until we implement a Vulkan based rendering shader, need to have the data on the CPU
+	pdat->PrepareForCpuAccess();
+
 	//Figure out zero voltage level and scaling
 	auto height = area->m_height;
 	float ybase = height/2;
