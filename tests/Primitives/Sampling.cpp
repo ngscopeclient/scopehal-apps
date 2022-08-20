@@ -131,11 +131,13 @@ TEST_CASE("Primitive_SampleOnRisingEdges")
 		//Check each of the bits
 		for(size_t i=0; i<nsamples; i++)
 		{
-			REQUIRE(samples.m_offsets[i].m_value == samples_expected.m_offsets[i].m_value);
-			REQUIRE(samples.m_durations[i].m_value == samples_expected.m_durations[i].m_value);
-			REQUIRE(samples.m_samples[i].m_value == samples_expected.m_samples[i].m_value);
+			REQUIRE(samples.m_offsets[i] == samples_expected.m_offsets[i]);
+			REQUIRE(samples.m_durations[i] == samples_expected.m_durations[i]);
+			REQUIRE(samples.m_samples[i] == samples_expected.m_samples[i]);
 		}
 	}
 
 	//TODO: add test for DigitalBusWaveform version
+
+	//TODO: Add test for AnalogWaveform version
 }
