@@ -129,10 +129,19 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/src/glscopeclient/icons)
 
+add_custom_target(
+	protoshaders
+	COMMENT "Copying SPIR-V shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders
+	)
+add_dependencies(protoshaders
+	scopeprotocols)
+
 add_dependencies(glscopeclient
 	gradients
 	filterkernels
 	renderkernels
+	protoshaders
 	shaders
 	styles
 	icons
