@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
 	g_searchPaths.push_back("/ceph/fast/home/azonenberg/code/scopehal-apps/lib/scopeprotocols");
 
 	//Initialize object creation tables for predefined libraries
+	VulkanInit();
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
