@@ -423,9 +423,11 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	int height = 20 * GetDPIScale();
 
 	//Render digital bus waveforms in the main channel here (TODO: GL stuff)
-	auto bus = dynamic_cast<DigitalBusWaveform*>(m_channel.GetData());
+	auto bus = dynamic_cast<SparseDigitalBusWaveform*>(m_channel.GetData());
 	if(bus != NULL)
 	{
+		bus->PrepareForCpuAccess();
+
 		int ymid = m_height - 15;
 		int ytop = ymid - 8;
 		int ybot = ymid + 8;
@@ -532,12 +534,15 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 		//Handle text
 		if(o.GetType() == Stream::STREAM_TYPE_PROTOCOL)
 		{
-			size_t olen = data->m_offsets.size();
+			//Assume protocol streams are always sparse
+			data->PrepareForCpuAccess();
+			size_t olen = data->size();
+			auto sdata = dynamic_cast<SparseWaveformBase*>(data);
 
 			for(size_t i=0; i<olen; i++)
 			{
-				double start = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
-				double end = start + (data->m_durations[i] * data->m_timescale);
+				double start = (sdata->m_offsets[i] * sdata->m_timescale) + sdata->m_triggerPhase;
+				double end = start + (sdata->m_durations[i] * sdata->m_timescale);
 
 				double xs = XAxisUnitsToXPosition(start);
 				double xe = XAxisUnitsToXPosition(end);
@@ -560,7 +565,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					float sum_blue = color.get_blue_p();
 					for(size_t j=i+1; j<olen; j++)
 					{
-						double cellstart = (data->m_offsets[j] * data->m_timescale) + data->m_triggerPhase;
+						double cellstart = (sdata->m_offsets[j] * sdata->m_timescale) + sdata->m_triggerPhase;
 						double cellxs = XAxisUnitsToXPosition(cellstart);
 
 						if(cellxs > xs+2)
@@ -707,7 +712,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 			Unit rate(Unit::UNIT_SAMPLERATE);
 			label +=
 				" : " +
-				depth.PrettyPrint(data->m_offsets.size()) + "\n" +
+				depth.PrettyPrint(data->size()) + "\n" +
 				rate.PrettyPrint(FS_PER_SECOND / data->m_timescale);
 		}
 	}
@@ -1012,16 +1017,29 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 
 	//Find the approximate index of the sample of interest and interpolate the cursor position
 	size_t end = waveform->size() - 1;
-	size_t index = BinarySearchForGequal(
-		(int64_t*)&waveform->m_offsets[0],
-		waveform->m_offsets.size(),
-		(int64_t)ceil(ticks));
-	if(index <= 0)
-		return waveform->m_samples[0];
-	if(index >= end)
-		return waveform->m_samples[end];
+	size_t index;
+	int64_t target = ceil(ticks);
+	if(swaveform)
+	{
+		index = BinarySearchForGequal(
+			swaveform->m_offsets.GetCpuPointer(),
+			waveform->size(),
+			target);
+	}
+	else
+		index = target;
 
-	return Filter::InterpolateValue(waveform, index-1, ticks - waveform->m_offsets[index-1]);
+	//Clamp to bounds
+	if(index <= 0)
+		return GetValue(swaveform, uwaveform, 0);
+	if(index >= end)
+		return GetValue(swaveform, uwaveform, end);
+
+	//In bounds, interpolate
+	if(swaveform)
+		return Filter::InterpolateValue(swaveform, index-1, ticks - swaveform->m_offsets[index-1]);
+	else
+		return Filter::InterpolateValue(uwaveform, index-1, ticks - (index-1) );
 }
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)
@@ -1134,11 +1152,11 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	//Bounds check cursors
 	double vfirst = round((m_group->m_xCursorPos[0] - data->m_triggerPhase)* 1.0 / data->m_timescale);
 	vfirst = max(vfirst, (double)0);
-	vfirst = min(vfirst, (double)data->m_samples.size()-1);
+	vfirst = min(vfirst, (double)data->size()-1);
 
 	double vsecond = round((m_group->m_xCursorPos[1] - data->m_triggerPhase)* 1.0 / data->m_timescale);
 	vsecond = max(vsecond, (double)0);
-	vsecond = min(vsecond, (double)data->m_samples.size()-1);
+	vsecond = min(vsecond, (double)data->size()-1);
 
 	size_t ifirst = vfirst;
 	size_t isecond = vsecond;
@@ -1150,7 +1168,7 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	{
 		float total_watts = 0;
 		for(size_t i=ifirst; i<=isecond; i++)
-			total_watts += pow(10, (data->m_samples[i] - 30) / 10);
+			total_watts += pow(10, (GetValue(sdata, udata, i) - 30) / 10);
 		float total_dbm = 10 * log10(total_watts) + 30;
 		text = string("Band: ") + yunit.PrettyPrint(total_dbm);
 	}
@@ -1160,7 +1178,7 @@ void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 	{
 		float total = 0;
 		for(size_t i=ifirst; i<=isecond; i++)
-			total += data->m_samples[i];
+			total += GetValue(sdata, udata, i);
 		text = string("Band: ") + yunit.PrettyPrint(total);
 	}
 
