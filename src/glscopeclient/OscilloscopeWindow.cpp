@@ -1304,14 +1304,28 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 				format = ch["format"].as<string>();
 			formats.push_back(format);
 
+			bool dense = (format == "densev1");
+
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 			WaveformBase* cap = NULL;
-			AnalogWaveform* acap = NULL;
-			DigitalWaveform* dcap = NULL;
+			SparseAnalogWaveform* sacap = NULL;
+			UniformAnalogWaveform* uacap = NULL;
+			SparseDigitalWaveform* sdcap = NULL;
+			UniformDigitalWaveform* udcap = NULL;
 			if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
-				cap = acap = new AnalogWaveform;
+			{
+				if(dense)
+					cap = uacap = new UniformAnalogWaveform;
+				else
+					cap = sacap = new SparseAnalogWaveform;
+			}
 			else
-				cap = dcap = new DigitalWaveform;
+			{
+				if(dense)
+					cap = udcap = new UniformDigitalWaveform;
+				else
+					cap = sdcap = new SparseDigitalWaveform;
+			}
 
 			//Channel waveform metadata
 			cap->m_timescale = ch["timescale"].as<long>();
@@ -1426,8 +1440,12 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	auto chan = scope->GetChannel(channel_index);
 
 	auto cap = chan->GetData(stream);
-	auto acap = dynamic_cast<AnalogWaveform*>(cap);
-	auto dcap = dynamic_cast<DigitalWaveform*>(cap);
+	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
+	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);
+	auto sdcap = dynamic_cast<SparseDigitalWaveform*>(cap);
+	auto udcap = dynamic_cast<UniformDigitalWaveform*>(cap);
+
+	cap->PrepareForCpuAccess();
 
 	//Load the actual sample data
 	char tmp[512];
@@ -1503,7 +1521,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	{
 		//Figure out how many samples we have
 		size_t samplesize = 2*sizeof(int64_t);
-		if(acap)
+		if(sacap)
 			samplesize += sizeof(float);
 		else
 			samplesize += sizeof(bool);
@@ -1518,20 +1536,25 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			//Read start time and duration
 			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
 			offset += 2*sizeof(int64_t);
-			cap->m_offsets[j] = stime[0];
-			cap->m_durations[j] = stime[1];
 
 			//Read sample data
-			if(acap)
+			if(sacap)
 			{
 				//The file format assumes "float" is IEEE754 32-bit float.
 				//If your platform doesn't do that, good luck.
 				//cppcheck-suppress invalidPointerCast
-				acap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+				sacap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+
+				sacap->m_offsets[j] = stime[0];
+				sacap->m_durations[j] = stime[1];
 			}
 
 			else
-				dcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+			{
+				sdcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+				sdcap->m_offsets[j] = stime[0];
+				sdcap->m_durations[j] = stime[1];
+			}
 
 			//TODO: progress updates
 		}
@@ -1539,39 +1562,34 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
 		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
 		int64_t nlast = nsamples - 1;
-		if( (cap->m_offsets[0] == 0) &&
-			(cap->m_offsets[nlast] == nlast) &&
-			(cap->m_durations[nlast] == 1) )
+		if(sacap)
 		{
-			cap->m_densePacked = true;
+			if( (sacap->m_offsets[0] == 0) &&
+				(sacap->m_offsets[nlast] == nlast) &&
+				(sacap->m_durations[nlast] == 1) )
+			{
+				//cap->m_densePacked = true;
+				LogWarning("sparsev1 waveform is actually uniform\n");
+			}
 		}
 	}
 
 	//Dense packed
 	else if(format == "densev1")
 	{
-		cap->m_densePacked = true;
-
 		//Figure out length
 		size_t nsamples = 0;
-		if(acap)
+		if(uacap)
 			nsamples = len / sizeof(float);
-		else if(dcap)
+		else if(udcap)
 			nsamples = len / sizeof(bool);
 		cap->Resize(nsamples);
 
 		//Read sample data
-		if(acap)
-			memcpy(&acap->m_samples[0], buf, nsamples*sizeof(float));
+		if(uacap)
+			memcpy(uacap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(float));
 		else
-			memcpy(&dcap->m_samples[0], buf, nsamples*sizeof(bool));
-
-		//TODO: vectorized initialization of timestamps and durations
-		for(size_t i=0; i<nsamples; i++)
-		{
-			cap->m_offsets[i] = i;
-			cap->m_durations[i] = 1;
-		}
+			memcpy(udcap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(bool));
 	}
 
 	else
@@ -1580,6 +1598,8 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
 			format.c_str());
 	}
+
+	cap->MarkSamplesModifiedFromCpu();
 
 	#ifdef _WIN32
 		delete[] buf;
@@ -2797,7 +2817,7 @@ int64_t OscilloscopeWindow::GetLongestWaveformDuration(WaveformGroup* group)
 	{
 		auto spec = dynamic_cast<SpectrogramWaveform*>(w);
 		auto u = dynamic_cast<UniformWaveformBase*>(w);
-		auto s = dynamic_cast<UniformWaveformBase*>(w);
+		auto s = dynamic_cast<SparseWaveformBase*>(w);
 
 		//Spectrograms need special treatment
 		if(spec)

@@ -138,8 +138,11 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	//Don't check if no data to look at
 	auto data = chan.GetData();
-	auto adata = dynamic_cast<AnalogWaveform*>(data);
-	if(data->m_offsets.empty())
+	auto uadata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sadata = dynamic_cast<SparseAnalogWaveform*>(data);
+	auto udata = dynamic_cast<UniformWaveformBase*>(data);
+	auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+	if(data->empty())
 		return false;
 
 	//Target for matching
@@ -148,18 +151,18 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 
 	//Figure out the match filter and check
 	auto sfilter = m_operatorBox.get_active_text();
-	size_t len = data->m_offsets.size();
+	size_t len = data->size();
 	if(sfilter == "<")
 	{
 		//Expect analog data
-		if(adata == NULL)
+		if(!uadata && !sadata)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(adata->m_samples[i] < value)
+			if(GetValue(sadata, uadata, i) < value)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}
@@ -168,14 +171,14 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	else if(sfilter == "<=")
 	{
 		//Expect analog data
-		if(adata == NULL)
+		if(!uadata && !sadata)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(adata->m_samples[i] <= value)
+			if(GetValue(sadata, uadata, i) <= value)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}
@@ -184,13 +187,13 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	else if(sfilter == "==")
 	{
 		//Match analog data
-		if(adata != NULL)
+		if(uadata || sadata)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(adata->m_samples[i] == value)
+				if(GetValue(sadata, uadata, i) == value)
 				{
-					timestamp = data->m_offsets[i] * data->m_timescale;
+					timestamp = GetOffsetScaled(sdata, udata, i);
 					return true;
 				}
 			}
@@ -205,7 +208,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 			{
 				if(data->GetText(i) == text)
 				{
-					timestamp = data->m_offsets[i] * data->m_timescale;
+					timestamp = GetOffsetScaled(sdata, udata, i);
 					return true;
 				}
 			}
@@ -214,14 +217,14 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	else if(sfilter == ">=")
 	{
 		//Expect analog data
-		if(adata == NULL)
+		if(!uadata && !sadata)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(adata->m_samples[i] >= value)
+			if(GetValue(sadata, uadata, i) >= value)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}
@@ -230,14 +233,14 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	else if(sfilter == ">")
 	{
 		//Expect analog data
-		if(adata == NULL)
+		if(!uadata && !sadata)
 			return false;
 
 		for(size_t i=0; i<len; i++)
 		{
-			if(adata->m_samples[i] > value)
+			if(GetValue(sadata, uadata, i) > value)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}
@@ -246,13 +249,13 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 	else if(sfilter == "!=")
 	{
 		//Match analog data
-		if(adata != NULL)
+		if(uadata || sadata)
 		{
 			for(size_t i=0; i<len; i++)
 			{
-				if(adata->m_samples[i] != value)
+				if(GetValue(sadata, uadata, i) != value)
 				{
-					timestamp = data->m_offsets[i] * data->m_timescale;
+					timestamp = GetOffsetScaled(sdata, udata, i);
 					return true;
 				}
 			}
@@ -267,7 +270,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 			{
 				if(data->GetText(i) != text)
 				{
-					timestamp = data->m_offsets[i] * data->m_timescale;
+					timestamp = GetOffsetScaled(sdata, udata, i);
 					return true;
 				}
 			}
@@ -280,7 +283,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			if(data->GetText(i).find(text) == 0)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}
@@ -292,7 +295,7 @@ bool HaltConditionsDialog::ShouldHalt(int64_t& timestamp)
 		{
 			if(data->GetText(i).find(text) != string::npos)
 			{
-				timestamp = data->m_offsets[i] * data->m_timescale;
+				timestamp = GetOffsetScaled(sdata, udata, i);
 				return true;
 			}
 		}

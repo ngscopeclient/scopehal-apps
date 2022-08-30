@@ -340,44 +340,62 @@ void HistoryWindow::UpdateMemoryUsageEstimate()
 		WaveformHistory hist = (*it)[m_columns.m_history];
 		for(auto jt : hist)
 		{
-			auto acap = dynamic_cast<AnalogWaveform*>(jt.second);
-			if(acap != NULL)
+			auto sacap = dynamic_cast<SparseAnalogWaveform*>(jt.second);
+			if(sacap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(AnalogWaveform);
+				bytes_used += sizeof(SparseAnalogWaveform);
 
 				//Add size of each sample
-				bytes_used += sizeof(float) * acap->m_samples.capacity();
-				bytes_used += sizeof(int64_t) * acap->m_offsets.capacity();
-				bytes_used += sizeof(int64_t) * acap->m_durations.capacity();
+				bytes_used += sizeof(float) * sacap->m_samples.capacity();
+				bytes_used += sizeof(int64_t) * sacap->m_offsets.capacity();
+				bytes_used += sizeof(int64_t) * sacap->m_durations.capacity();
 			}
-
-			auto dcap = dynamic_cast<DigitalWaveform*>(jt.second);
-			if(dcap != NULL)
+			auto uacap = dynamic_cast<UniformAnalogWaveform*>(jt.second);
+			if(uacap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(DigitalWaveform);
+				bytes_used += sizeof(UniformAnalogWaveform);
 
 				//Add size of each sample
-				bytes_used += sizeof(bool) * dcap->m_samples.capacity();
-				bytes_used += sizeof(int64_t) * dcap->m_offsets.capacity();
-				bytes_used += sizeof(int64_t) * dcap->m_durations.capacity();
+				bytes_used += sizeof(float) * uacap->m_samples.capacity();
 			}
 
-			auto bcap = dynamic_cast<DigitalBusWaveform*>(jt.second);
-			if(bcap != NULL)
+			auto sdcap = dynamic_cast<SparseDigitalWaveform*>(jt.second);
+			if(sdcap != NULL)
 			{
 				//Add static size of the capture object
-				bytes_used += sizeof(DigitalBusWaveform);
+				bytes_used += sizeof(SparseDigitalWaveform);
 
-				if(!bcap->m_samples.empty())
+				//Add size of each sample
+				bytes_used += sizeof(bool) * sdcap->m_samples.capacity();
+				bytes_used += sizeof(int64_t) * sdcap->m_offsets.capacity();
+				bytes_used += sizeof(int64_t) * sdcap->m_durations.capacity();
+			}
+			auto udcap = dynamic_cast<UniformDigitalWaveform*>(jt.second);
+			if(udcap != NULL)
+			{
+				//Add static size of the capture object
+				bytes_used += sizeof(UniformDigitalWaveform);
+
+				//Add size of each sample
+				bytes_used += sizeof(bool) * udcap->m_samples.capacity();
+			}
+
+			auto sbcap = dynamic_cast<SparseDigitalBusWaveform*>(jt.second);
+			if(sbcap != NULL)
+			{
+				//Add static size of the capture object
+				bytes_used += sizeof(SparseDigitalBusWaveform);
+
+				if(!sbcap->m_samples.empty())
 				{
 					//Add size of each sample
 					bytes_used +=
-						(bcap->m_samples[0].size() * sizeof(bool) + sizeof(vector<bool>))
-						* bcap->m_samples.capacity();
-					bytes_used += sizeof(int64_t) * bcap->m_offsets.capacity();
-					bytes_used += sizeof(int64_t) * bcap->m_durations.capacity();
+						(sbcap->m_samples[0].size() * sizeof(bool) + sizeof(vector<bool>))
+						* sbcap->m_samples.capacity();
+					bytes_used += sizeof(int64_t) * sbcap->m_offsets.capacity();
+					bytes_used += sizeof(int64_t) * sbcap->m_durations.capacity();
 				}
 			}
 		}
@@ -727,7 +745,20 @@ void HistoryWindow::SerializeWaveforms(
 
 			auto chan = jt.first.m_channel;
 			auto wave = jt.second;
-			if((wave == NULL) || wave->m_densePacked)
+			bool uniform = true;
+			if(dynamic_cast<SparseWaveformBase*>(wave) != nullptr)
+			{
+				threads.push_back(new thread(
+					&HistoryWindow::DoSaveWaveformDataForSparseStream,
+					wname,
+					jt.first,
+					jt.second,
+					channel_progress + i,
+					channel_done + i
+					));
+				uniform = false;
+			}
+			else
 			{
 				threads.push_back(new thread(
 					&HistoryWindow::DoSaveWaveformDataForDenseStream,
@@ -738,17 +769,7 @@ void HistoryWindow::SerializeWaveforms(
 					channel_done + i
 					));
 			}
-			else
-			{
-				threads.push_back(new thread(
-					&HistoryWindow::DoSaveWaveformDataForSparseStream,
-					wname,
-					jt.first,
-					jt.second,
-					channel_progress + i,
-					channel_done + i
-					));
-			}
+
 			i++;
 
 			//Save channel metadata
@@ -759,7 +780,7 @@ void HistoryWindow::SerializeWaveforms(
 
 			snprintf(tmp, sizeof(tmp), "            ch%ds%zu:\n", index, nstream);
 			config += tmp;
-			if(wave->m_densePacked)
+			if(uniform)
 				snprintf(tmp, sizeof(tmp), "                format:       densev1\n");
 			else
 				snprintf(tmp, sizeof(tmp), "                format:       sparsev1\n");
@@ -877,9 +898,10 @@ void HistoryWindow::DoSaveWaveformDataForSparseStream(
 
 	FILE* fp = fopen(tmp, "wb");
 
-	auto achan = dynamic_cast<AnalogWaveform*>(wave);
-	auto dchan = dynamic_cast<DigitalWaveform*>(wave);
-	size_t len = wave->m_offsets.size();
+	wave->PrepareForCpuAccess();
+	auto achan = dynamic_cast<SparseAnalogWaveform*>(wave);
+	auto dchan = dynamic_cast<SparseDigitalWaveform*>(wave);
+	size_t len = wave->size();
 
 	//Analog channels
 	const size_t samples_per_block = 10000;
@@ -903,7 +925,7 @@ void HistoryWindow::DoSaveWaveformDataForSparseStream(
 		vector<asample_t,	AlignedAllocator<asample_t, 64 > > samples;
 		samples.reserve(len);
 		for(size_t i=0; i<len; i++)
-			samples.push_back(asample_t(wave->m_offsets[i], wave->m_durations[i], achan->m_samples[i]));
+			samples.push_back(asample_t(achan->m_offsets[i], achan->m_durations[i], achan->m_samples[i]));
 
 		//Write it
 		for(size_t i=0; i<len; i+= samples_per_block)
@@ -935,7 +957,7 @@ void HistoryWindow::DoSaveWaveformDataForSparseStream(
 		vector<dsample_t,	AlignedAllocator<dsample_t, 64 > > samples;
 		samples.reserve(len);
 		for(size_t i=0; i<len; i++)
-			samples.push_back(dsample_t(wave->m_offsets[i], wave->m_durations[i], dchan->m_samples[i]));
+			samples.push_back(dsample_t(dchan->m_offsets[i], dchan->m_durations[i], dchan->m_samples[i]));
 
 		//Write it
 		for(size_t i=0; i<len; i+= samples_per_block)
@@ -980,7 +1002,7 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 	auto chan = stream.m_channel;
 	int index = chan->GetIndex();
 	size_t nstream = stream.m_stream;
-	if(wave == NULL)		//trigger, disabled, etc
+	if(wave == nullptr)		//trigger, disabled, etc
 	{
 		*done = 1;
 		*progress = 1;
@@ -996,9 +1018,10 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 
 	FILE* fp = fopen(tmp, "wb");
 
-	auto achan = dynamic_cast<AnalogWaveform*>(wave);
-	auto dchan = dynamic_cast<DigitalWaveform*>(wave);
-	size_t len = wave->m_offsets.size();
+	wave->PrepareForCpuAccess();
+	auto achan = dynamic_cast<UniformAnalogWaveform*>(wave);
+	auto dchan = dynamic_cast<UniformDigitalWaveform*>(wave);
+	size_t len = wave->size();
 
 	//Analog channels
 	const size_t samples_per_block = 10000;
@@ -1010,7 +1033,7 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 			*progress = i * 1.0 / len;
 			size_t blocklen = min(len-i, samples_per_block);
 
-			if(blocklen != fwrite(&achan->m_samples[i], sizeof(float), blocklen, fp))
+			if(blocklen != fwrite(achan->m_samples.GetCpuPointer(), sizeof(float), blocklen, fp))
 				LogError("file write error\n");
 		}
 	}
@@ -1022,7 +1045,7 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 			*progress = i * 1.0 / len;
 			size_t blocklen = min(len-i, samples_per_block);
 
-			if(blocklen != fwrite(&dchan->m_samples[i], sizeof(bool), blocklen, fp))
+			if(blocklen != fwrite(dchan->m_samples.GetCpuPointer(), sizeof(bool), blocklen, fp))
 				LogError("file write error\n");
 		}
 	}

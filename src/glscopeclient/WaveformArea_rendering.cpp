@@ -64,7 +64,7 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 		m_count = 1;
 		if(pdat != NULL)
 		{
-			m_count = pdat->m_offsets.size();
+			m_count = pdat->size();
 			m_count = max((size_t)1, m_count);
 		}
 	}
@@ -156,7 +156,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	auto uandat = dynamic_cast<UniformAnalogWaveform*>(pdat);
 	auto sdigdat = dynamic_cast<SparseDigitalWaveform*>(pdat);
 	auto udigdat = dynamic_cast<UniformDigitalWaveform*>(pdat);
-	if(!andat && !digdat)
+	if(!sandat && !uandat && !sdigdat && !udigdat)
 	{
 		wdata->m_geometryOK = false;
 		return;
@@ -169,7 +169,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	auto height = area->m_height;
 	float ybase = height/2;
 	float yscale = area->m_pixelsPerYAxisUnit;
-	if(digdat)
+	if(sdigdat || udigdat)
 	{
 		float digheight;
 

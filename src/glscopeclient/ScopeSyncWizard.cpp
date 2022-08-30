@@ -528,8 +528,7 @@ void ScopeSyncWizard::DoProcessWaveformSparse()
 		for(size_t i=0; i<(size_t)len; i++)
 		{
 			//Timestamp of this sample, in fs
-			int64_t start = m_primaryWaveform->m_offsets[i] * m_primaryWaveform->m_timescale +
-				m_primaryWaveform->m_triggerPhase;
+			int64_t start = ppri->m_offsets[i] * m_primaryWaveform->m_timescale + m_primaryWaveform->m_triggerPhase;
 
 			//Target timestamp in the secondary waveform
 			int64_t target = start + deltaFs;
@@ -606,7 +605,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 			uint64_t utarget = ((i  + delta) / 2);
 
 			//Do the actual cross-correlation
-			correlation += ppri->m_samples[i] * psec->m_samples[utarget];
+			correlation += ppri[i] * psec[utarget];
 			samplesProcessed ++;
 		}
 

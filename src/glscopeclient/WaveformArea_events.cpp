@@ -1897,7 +1897,7 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 	//We need to have non-empty data
 	if(!data)
 		return time;
-	if(data->m_offsets.empty())
+	if(data->empty())
 		return time;
 
 	//Only snap to digital/protocol data
@@ -1905,12 +1905,19 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 		(stream.GetType() != Stream::STREAM_TYPE_PROTOCOL) )
 		return time;
 
+	auto swfm = dynamic_cast<SparseWaveformBase*>(data);
+	auto uwfm = dynamic_cast<UniformWaveformBase*>(data);
+	data->PrepareForCpuAccess();
+
 	//Convert timestamp to waveform timebase units
 	int64_t wtime = (time - data->m_triggerPhase) / data->m_timescale;
 
-	//Assume the waveform is sparse for now, since digital and protocol waveforms are rarely dense packed.
 	//Binary search to find the closest start point to the target timestamp.
-	size_t ibest = BinarySearchForGequal((int64_t*)&data->m_offsets[0], data->m_offsets.size(), wtime);
+	size_t ibest;
+	if(swfm)
+		ibest = BinarySearchForGequal(swfm->m_offsets.GetCpuPointer(), data->size(), wtime);
+	else
+		ibest = wtime;
 
 	//Start a little bit before there and check both start and end points
 	size_t base = ibest;
@@ -1920,8 +1927,8 @@ int64_t WaveformArea::SnapX(int64_t time, int x, int y)
 	int64_t best_delta = wtime;
 	for(size_t i=0; i<2; i++)
 	{
-		int64_t start = data->m_offsets[i + base];
-		int64_t end = start + data->m_durations[i + base];
+		int64_t start = GetOffset(swfm, uwfm, i+base);
+		int64_t end = start + GetDuration(swfm, uwfm, i+base);
 
 		int64_t delta = llabs(start - wtime);
 		if(delta < best_delta)
