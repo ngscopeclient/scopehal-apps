@@ -141,8 +141,8 @@ protected:
 	ScopeSyncDeskewProgressPage* m_activeSecondaryPage;
 	int64_t m_bestCorrelationOffset;
 	double m_bestCorrelation;
-	AnalogWaveform* m_primaryWaveform;
-	AnalogWaveform* m_secondaryWaveform;
+	WaveformBase* m_primaryWaveform;
+	WaveformBase* m_secondaryWaveform;
 	int64_t m_maxSkewSamples;
 	std::vector<int64_t> m_averageSkews;
 	size_t m_numAverages;

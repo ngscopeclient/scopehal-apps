@@ -113,10 +113,6 @@ add_custom_target(
 	COMMENT "Copying filter kernels..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/src/glscopeclient/kernels)
 add_custom_target(
-	renderkernels
-	COMMENT "Copying rendering kernels..."
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/kernels ${CMAKE_BINARY_DIR}/src/glscopeclient/kernels)
-add_custom_target(
 	shaders
 	COMMENT "Copying shaders..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
@@ -140,7 +136,6 @@ add_dependencies(protoshaders
 add_dependencies(glscopeclient
 	gradients
 	filterkernels
-	renderkernels
 	protoshaders
 	shaders
 	styles

@@ -79,8 +79,8 @@ public:
 	bool IsDensePacked()
 	{
 		auto data = m_channel.m_channel->GetData(0);
-		if(data)
-			return data->m_densePacked;
+		if(dynamic_cast<UniformWaveformBase*>(data) != nullptr)
+			return true;
 		else
 			return false;
 	}
@@ -113,10 +113,6 @@ public:
 	uint32_t*				m_mappedConfigBuffer;
 	int64_t*				m_mappedConfigBuffer64;
 	float*					m_mappedFloatConfigBuffer;
-
-	//OpenCL buffers
-	#ifdef HAVE_OPENCL
-	#endif
 
 	//Persistence flags
 	bool					m_persistence;
@@ -237,7 +233,6 @@ protected:
 
 	virtual void on_realize();
 	virtual void on_unrealize();
-	void CleanupCLHandles();
 	void CleanupGLHandles();
 	virtual void on_resize (int width, int height);
 	virtual bool on_render(const Glib::RefPtr<Gdk::GLContext>& context);
@@ -426,15 +421,6 @@ protected:
 	VertexArray m_cairoVAO;
 	VertexBuffer m_cairoVBO;
 	Program m_cairoProgram;
-
-	//Rendering mode selection
-	RenderAcceleration GetRenderingBackend();
-
-	//OpenCL kernels for rendering
-	#ifdef HAVE_OPENCL
-	cl::Program* m_renderProgram;
-	cl::Kernel* m_renderDenseAnalogWaveformKernel;
-	#endif
 
 	//Helpers for rendering and such
 	void RenderChannelInfoBox(

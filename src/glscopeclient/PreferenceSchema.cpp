@@ -276,17 +276,6 @@ void PreferenceManager::InitializeDefaults()
 			.Description("Maximum number of recent .scopesession file paths to save in history")
 			.Unit(Unit::UNIT_COUNTS));
 
-	auto& rendering = this->m_treeRoot.AddCategory("Rendering");
-		auto& backend = rendering.AddCategory("Performance");
-			backend.AddPreference(
-				Preference::Enum("acceleration", ACCEL_OPENGL)
-					.Label("Acceleration")
-					.Description(
-						"Select the acceleration method used for waveform rendering.\n")
-					.EnumValue("OpenGL (compute shader)", ACCEL_OPENGL)
-					.EnumValue("OpenCL", ACCEL_OPENCL)
-				);
-
 	auto& privacy = this->m_treeRoot.AddCategory("Privacy");
 		 privacy.AddPreference(
 			Preference::Bool("redact_serial_in_title", false)
