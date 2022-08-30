@@ -56,14 +56,19 @@ int main(int argc, char* argv[])
 	//Initialize the RNG
 	g_rng.seed(0);
 
-	//Create some fake scope channels
-	MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-	scope.AddChannel(new OscilloscopeChannel(
-		&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-	g_scope = &scope;
+	int ret;
+	{
+		//Create some fake scope channels
+		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
+		scope.AddChannel(new OscilloscopeChannel(
+			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		g_scope = &scope;
 
-	//Run the actual test, then clean up and return
-	int ret = Catch::Session().run(argc, argv);
+		//Run the actual test
+		ret = Catch::Session().run(argc, argv);
+	}
+
+	//Clean up and return after the scope goes out of scope (pun not intended)
 	ScopehalStaticCleanup();
 	return ret;
 }
