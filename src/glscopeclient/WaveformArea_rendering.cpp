@@ -130,7 +130,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 {
 	//We need analog or digital data to render
 	auto area = wdata->m_area;
-	auto channel = wdata->m_channel.m_channel;
 	if( (wdata->m_channel.GetType() != Stream::STREAM_TYPE_DIGITAL) &&
 		(wdata->m_channel.GetType() != Stream::STREAM_TYPE_ANALOG))
 	{
