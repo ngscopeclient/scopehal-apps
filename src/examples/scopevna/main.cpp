@@ -358,7 +358,7 @@ void OnWaveform(float refFreqHz, int iteration)
 
 	//Calculate average amplitude
 	float avgRef = 0;
-	auto refdata = dynamic_cast<AnalogWaveform*>(g_refMagnitudeFilter->GetData(0));
+	auto refdata = dynamic_cast<UniformAnalogWaveform*>(g_refMagnitudeFilter->GetData(0));
 	if(refdata == nullptr)
 	{
 		LogWarning("null waveform\n");
@@ -369,7 +369,7 @@ void OnWaveform(float refFreqHz, int iteration)
 	avgRef /= refdata->m_samples.size();
 
 	float avgDut = 0;
-	auto dutdata = dynamic_cast<AnalogWaveform*>(g_dutMagnitudeFilter->GetData(0));
+	auto dutdata = dynamic_cast<UniformAnalogWaveform*>(g_dutMagnitudeFilter->GetData(0));
 	if(dutdata == nullptr)
 	{
 		LogWarning("null waveform\n");
@@ -384,7 +384,7 @@ void OnWaveform(float refFreqHz, int iteration)
 	float s21_mag_db = 20 * log10(s21_mag);
 
 	//Calculate average phase delta
-	auto phasedata = dynamic_cast<AnalogWaveform*>(g_phaseDiffFilter->GetData(0));
+	auto phasedata = dynamic_cast<UniformAnalogWaveform*>(g_phaseDiffFilter->GetData(0));
 	float s21_ang_i = 0;
 	float s21_ang_q = 0;
 	for(auto f : phasedata->m_samples)

@@ -2767,14 +2767,12 @@ void OscilloscopeWindow::OnRefreshConfig()
 
 }
 
-void OscilloscopeWindow::OnAutofitHorizontal(WaveformGroup* group)
+/**
+	@brief Returns the duration of the longest waveform in the group
+ */
+int64_t OscilloscopeWindow::GetLongestWaveformDuration(WaveformGroup* group)
 {
 	auto areas = GetAreasInGroup(group);
-
-	//Figure out how wide the widest waveform in the group is, in pixels
-	float width = 0;
-	for(auto a : areas)
-		width = max(width, a->GetPlotWidthPixels());
 
 	//Find all waveforms visible in any area within the group
 	set<WaveformBase*> wfms;
@@ -2797,14 +2795,39 @@ void OscilloscopeWindow::OnAutofitHorizontal(WaveformGroup* group)
 	int64_t duration = 0;
 	for(auto w : wfms)
 	{
-		size_t len = w->m_offsets.size();
-		if(len < 2)
-			continue;
-		size_t end = len - 1;
+		auto spec = dynamic_cast<SpectrogramWaveform*>(w);
+		auto u = dynamic_cast<UniformWaveformBase*>(w);
+		auto s = dynamic_cast<UniformWaveformBase*>(w);
 
-		int64_t delta = w->m_offsets[end] + w->m_durations[end] - w->m_offsets[0];
-		duration = max(duration, delta * w->m_timescale);
+		//Spectrograms need special treatment
+		if(spec)
+			duration = max(duration, spec->GetDuration());
+
+		else
+		{
+			size_t len = w->size();
+			if(len < 2)
+				continue;
+			size_t end = len - 1;
+
+			int64_t delta = GetOffsetScaled(s, u, end) - GetOffsetScaled(s, u, 0);
+			duration = max(duration, delta);
+		}
 	}
+
+	return duration;
+}
+
+void OscilloscopeWindow::OnAutofitHorizontal(WaveformGroup* group)
+{
+	auto areas = GetAreasInGroup(group);
+
+	//Figure out how wide the widest waveform in the group is, in pixels
+	float width = 0;
+	for(auto a : areas)
+		width = max(width, a->GetPlotWidthPixels());
+
+	auto duration = GetLongestWaveformDuration(group);
 
 	//Change the zoom
 	group->m_pixelsPerXUnit = width / duration;
@@ -2840,43 +2863,7 @@ void OscilloscopeWindow::OnZoomOutHorizontal(WaveformGroup* group, int64_t targe
 	for(auto a : areas)
 		width = max(width, a->GetPlotWidthXUnits());
 
-	//Find all waveforms visible in any area within the group
-	set<WaveformBase*> wfms;
-	for(auto a : areas)
-	{
-		auto data = a->GetChannel().GetData();
-		if(data != NULL)
-			wfms.emplace(data);
-		for(size_t i=0; i < a->GetOverlayCount(); i++)
-		{
-			auto o = a->GetOverlay(i);
-			data = o.GetData();
-			if(data != NULL)
-				wfms.emplace(data);
-		}
-	}
-
-	//Find how long the longest waveform is.
-	//Horizontal displacement doesn't matter for now, only total length.
-	int64_t duration = 0;
-	for(auto w : wfms)
-	{
-		//Spectrograms need special treatment
-		auto spec = dynamic_cast<SpectrogramWaveform*>(w);
-		if(spec)
-			duration = max(duration, spec->GetDuration());
-
-		else
-		{
-			size_t len = w->m_offsets.size();
-			if(len < 2)
-				continue;
-			size_t end = len - 1;
-
-			int64_t delta = w->m_offsets[end] + w->m_durations[end] - w->m_offsets[0];
-			duration = max(duration, delta * w->m_timescale);
-		}
-	}
+	auto duration = GetLongestWaveformDuration(group);
 
 	//If the view is already wider than the longest waveform, don't allow further zooming
 	if(width > duration)

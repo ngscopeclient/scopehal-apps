@@ -392,8 +392,8 @@ void ScopeSyncWizard::OnWaveformDataReady()
 		return;
 
 	//Verify we have data to work with
-	auto pw = dynamic_cast<AnalogWaveform*>(pri->GetData(0));
-	auto sw = dynamic_cast<AnalogWaveform*>(sec->GetData(0));
+	auto pw = pri->GetData(0);
+	auto sw = sec->GetData(0);
 	if(!pw || !sw)
 		return;
 
@@ -407,7 +407,7 @@ void ScopeSyncWizard::OnWaveformDataReady()
 	m_secondaryWaveform = sw;
 
 	//Max allowed skew between instruments is 10K points for now (arbitrary limit)
-	m_maxSkewSamples = static_cast<int64_t>(pw->m_offsets.size() / 2);
+	m_maxSkewSamples = static_cast<int64_t>(pw->size() / 2);
 	m_maxSkewSamples = min(m_maxSkewSamples, static_cast<int64_t>(10000LL));
 
 	//Set the timer
@@ -416,8 +416,14 @@ void ScopeSyncWizard::OnWaveformDataReady()
 
 bool ScopeSyncWizard::OnTimer()
 {
+	auto upri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform);
+	auto usec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform);
+
+	auto spri = dynamic_cast<SparseAnalogWaveform*>(m_primaryWaveform);
+	auto ssec = dynamic_cast<SparseAnalogWaveform*>(m_secondaryWaveform);
+
 	//Optimized path (if both waveforms are dense packed)
-	if(m_primaryWaveform->m_densePacked && m_secondaryWaveform->m_densePacked)
+	if(upri && usec)
 	{
 		//If sample rates are equal we can simplify things a lot
 		if(m_primaryWaveform->m_timescale == m_secondaryWaveform->m_timescale)
@@ -443,8 +449,14 @@ bool ScopeSyncWizard::OnTimer()
 	}
 
 	//Fallback path (if at least one waveform is not dense packed)
-	else
+	else if(spri && ssec)
 		DoProcessWaveformSparse();
+
+	else
+	{
+		LogError("Mixed sparse and uniform waveforms not implemented\n");
+		return false;
+	}
 
 	//Collect the skew from this round
 	auto scope = m_activeSecondaryPage->GetScope();
@@ -494,10 +506,13 @@ bool ScopeSyncWizard::OnTimer()
 void ScopeSyncWizard::DoProcessWaveformSparse()
 {
 	//Calculate cross-correlation between the primary and secondary waveforms at up to +/- half the waveform length
-	int64_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	int64_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
 
 	std::mutex cmutex;
+
+	auto ppri = dynamic_cast<SparseAnalogWaveform*>(m_primaryWaveform);
+	auto psec = dynamic_cast<SparseAnalogWaveform*>(m_secondaryWaveform);
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -525,8 +540,8 @@ void ScopeSyncWizard::DoProcessWaveformSparse()
 
 			//Skip secondary samples if the current secondary sample ends before the primary sample starts
 			bool done = false;
-			while( (((m_secondaryWaveform->m_offsets[isecondary] + m_secondaryWaveform->m_durations[isecondary]) *
-						m_secondaryWaveform->m_timescale) + m_secondaryWaveform->m_triggerPhase) < target)
+			while( (((psec->m_offsets[isecondary] + psec->m_durations[isecondary]) *
+						psec->m_timescale) + psec->m_triggerPhase) < target)
 			{
 				isecondary ++;
 
@@ -541,7 +556,7 @@ void ScopeSyncWizard::DoProcessWaveformSparse()
 				break;
 
 			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+			correlation += ppri->m_samples[i] * psec->m_samples[isecondary];
 			samplesProcessed ++;
 		}
 
@@ -559,13 +574,16 @@ void ScopeSyncWizard::DoProcessWaveformSparse()
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 {
-	size_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	size_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
 
 	std::mutex cmutex;
 
 	int64_t phaseshift = (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase)
 		/ m_primaryWaveform->m_timescale;
+
+	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
+	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -588,7 +606,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 			uint64_t utarget = ((i  + delta) / 2);
 
 			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
+			correlation += ppri->m_samples[i] * psec->m_samples[utarget];
 			samplesProcessed ++;
 		}
 
@@ -607,8 +625,8 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 __attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 {
-	size_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	size_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
 
 	//Number of samples actually being processed
 	//(in this application it's OK to truncate w/o a scalar implementation at the end)
@@ -620,8 +638,10 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 	int64_t phaseshift = (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase)
 		/ m_primaryWaveform->m_timescale;
 
-	float* ppri = reinterpret_cast<float*>(&m_primaryWaveform->m_samples[0]);
-	float* psec = reinterpret_cast<float*>(&m_secondaryWaveform->m_samples[0]);
+	m_primaryWaveform->PrepareForCpuAccess();
+	m_secondaryWaveform->PrepareForCpuAccess();
+	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
+	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -683,14 +703,17 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 {
-	int64_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	int64_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
 
 	std::mutex cmutex;
 
 	int64_t phaseshift =
 		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
 		m_primaryWaveform->m_timescale;
+
+	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
+	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -716,7 +739,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 				break;
 
 			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[utarget];
+			correlation += ppri[i] * psec[utarget];
 			samplesProcessed ++;
 		}
 
@@ -735,8 +758,8 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 __attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 {
-	size_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	size_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
 
 	//Number of samples actually being processed
 	//(in this application it's OK to truncate w/o a scalar implementation at the end)
@@ -749,8 +772,10 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
 		m_primaryWaveform->m_timescale;
 
-	float* ppri = reinterpret_cast<float*>(&m_primaryWaveform->m_samples[0]);
-	float* psec = reinterpret_cast<float*>(&m_secondaryWaveform->m_samples[0]);
+	m_primaryWaveform->PrepareForCpuAccess();
+	m_secondaryWaveform->PrepareForCpuAccess();
+	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
+	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
 
 	#pragma omp parallel for
 	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
@@ -800,8 +825,11 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedUnequalRate()
 {
-	int64_t len = m_primaryWaveform->m_offsets.size();
-	size_t slen = m_secondaryWaveform->m_offsets.size();
+	int64_t len = m_primaryWaveform->size();
+	size_t slen = m_secondaryWaveform->size();
+
+	auto ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform);
+	auto psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform);
 
 	std::mutex cmutex;
 
@@ -846,7 +874,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedUnequalRate()
 				break;
 
 			//Do the actual cross-correlation
-			correlation += m_primaryWaveform->m_samples[i] * m_secondaryWaveform->m_samples[isecondary];
+			correlation += ppri->m_samples[i] * psec->m_samples[isecondary];
 			samplesProcessed ++;
 		}
 

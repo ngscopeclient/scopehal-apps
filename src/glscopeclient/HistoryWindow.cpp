@@ -243,9 +243,9 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 			hist[StreamDescriptor(c, j)] = dat;
 
 			//Clear excess space out of the waveform buffer
-			auto adat = dynamic_cast<AnalogWaveform*>(data);
-			if(adat)
-				adat->m_samples.shrink_to_fit();
+			auto uadat = dynamic_cast<UniformAnalogWaveform*>(data);
+			if(uadat)
+				uadat->m_samples.shrink_to_fit();
 		}
 	}
 	row[m_columns.m_history] = hist;

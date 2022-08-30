@@ -118,11 +118,6 @@ void WaveformArea::SharedCtorInit()
 	m_group = NULL;
 
 	m_channel.m_channel->AddRef();
-
-	#ifdef HAVE_OPENCL
-	m_renderProgram = NULL;
-	m_renderDenseAnalogWaveformKernel = NULL;
-	#endif
 }
 
 WaveformArea::~WaveformArea()

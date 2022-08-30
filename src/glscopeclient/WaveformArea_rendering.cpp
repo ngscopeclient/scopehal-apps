@@ -193,16 +193,29 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	//Download actual waveform timestamps and voltages
 	if(update_waveform)
 	{
-		if(digdat)
-			memcpy(wdata->m_mappedDigitalYBuffer, &digdat->m_samples[0], wdata->m_count*sizeof(bool));
-		else
-			memcpy(wdata->m_mappedYBuffer, &andat->m_samples[0], wdata->m_count*sizeof(float));
+		if(sandat)
+			memcpy(wdata->m_mappedYBuffer, sandat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(float));
+		else if(uandat)
+			memcpy(wdata->m_mappedYBuffer, uandat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(float));
+		else if(sdigdat)
+			memcpy(wdata->m_mappedDigitalYBuffer, sdigdat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(bool));
+		else if(udigdat)
+			memcpy(wdata->m_mappedDigitalYBuffer, udigdat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(bool));
 
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
+		if(sandat)
+			memcpy(wdata->m_mappedXBuffer, sandat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+		else if(sdigdat)
+			memcpy(wdata->m_mappedXBuffer, sdigdat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+
 		//TODO: skip for dense packed digital path too once the shader supports that
-		if(!wdata->IsDensePacked() || !andat)
-			memcpy(wdata->m_mappedXBuffer, &pdat->m_offsets[0], wdata->m_count*sizeof(int64_t));
+		//For now, fill it beacuse apparently the shader still needs it?
+		else if(udigdat)
+		{
+			for(size_t i=0; i<wdata->m_count; i++)
+				wdata->m_mappedXBuffer[i] = i;
+		}
 	}
 
 	//Calculate indexes for rendering of sparse waveforms
@@ -210,13 +223,21 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	auto group = wdata->m_area->m_group;
 	int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
 	double xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
-	if(!wdata->IsDensePacked() || !andat)	//TODO: skip for dense packed digital path too once the shader supports that
+	if(sandat || sdigdat || udigdat)
 	{
+		int64_t* offsets;
+		if(sandat)
+			offsets = sandat->m_offsets.GetCpuPointer();
+		else if(sdigdat)
+			offsets = sdigdat->m_offsets.GetCpuPointer();
+		else
+			offsets = wdata->m_mappedXBuffer;
+
 		for(int j=0; j<wdata->m_area->m_width; j++)
 		{
 			int64_t target = floor(j / xscale) + offset_samples;
 			wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
-				(int64_t*)&pdat->m_offsets[0],
+				offsets,
 				wdata->m_count,
 				target-2);
 		}
@@ -224,7 +245,13 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float capture_len = pdat->m_offsets[pdat->size() - 1] * pdat->m_timescale;
+	int64_t lastOff;
+	auto end = pdat->size() - 1;
+	if(sandat || uandat)
+		lastOff = GetOffsetScaled(sandat, uandat, end);
+	else
+		lastOff = GetOffsetScaled(sdigdat, udigdat, end);
+	float capture_len = lastOff;
 	float avg_sample_len = capture_len / pdat->size();
 	float samplesPerPixel = 1.0 / (group->m_pixelsPerXUnit * avg_sample_len);
 	float alpha_scaled = alpha / sqrt(samplesPerPixel);
@@ -653,8 +680,6 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 {
 	if(!data->m_geometryOK)
 		return;
-
-	bool good = false;
 
 	//Round thread block size up to next multiple of the local size (must be power of two)
 	//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl

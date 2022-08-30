@@ -75,6 +75,8 @@ public:
 	void ClearPersistence(WaveformGroup* group, bool geometry_dirty = true, bool position_dirty = false);
 	void ClearAllPersistence();
 
+	int64_t GetLongestWaveformDuration(WaveformGroup* group);
+
 	void OnRemoveChannel(WaveformArea* w);
 	void GarbageCollectAnalyzers();
 
