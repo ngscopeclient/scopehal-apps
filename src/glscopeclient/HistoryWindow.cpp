@@ -324,9 +324,16 @@ void HistoryWindow::DeleteHistoryRow(const Gtk::TreeModel::iterator& it)
 	//Remove the row from the tree view
 	m_model->erase(it);
 
-	//then delete the history
+	//then delete the history (or add to the pool for reuse)
 	for(auto w : hist)
-		delete w.second;
+	{
+		if(dynamic_cast<UniformAnalogWaveform*>(w.second) != nullptr)
+			m_scope->AddWaveformToAnalogPool(w.second);
+		else if(dynamic_cast<SparseDigitalWaveform*>(w.second) != nullptr)
+			m_scope->AddWaveformToDigitalPool(w.second);
+		else
+			delete w.second;
+	}
 }
 
 void HistoryWindow::UpdateMemoryUsageEstimate()
