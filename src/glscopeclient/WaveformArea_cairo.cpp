@@ -999,8 +999,10 @@ void WaveformArea::RenderHorizontalCursor(
  */
 float WaveformArea::GetValueAtTime(int64_t time_fs)
 {
-	AnalogWaveform* waveform = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
-	if(!waveform)
+	auto waveform = m_channel.GetData();
+	auto uwaveform = dynamic_cast<UniformAnalogWaveform*>(waveform);
+	auto swaveform = dynamic_cast<SparseAnalogWaveform*>(waveform);
+	if(!swaveform && !uwaveform)
 		return 0;
 
 	//Make sure we have a current copy of the data
@@ -1009,7 +1011,7 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
 
 	//Find the approximate index of the sample of interest and interpolate the cursor position
-	size_t end = waveform->m_offsets.size() - 1;
+	size_t end = waveform->size() - 1;
 	size_t index = BinarySearchForGequal(
 		(int64_t*)&waveform->m_offsets[0],
 		waveform->m_offsets.size(),
@@ -1123,8 +1125,10 @@ void WaveformArea::RenderMarkers(Cairo::RefPtr< Cairo::Context > cr)
 void WaveformArea::RenderInBandPower(Cairo::RefPtr< Cairo::Context > cr)
 {
 	//If no data, we obviously can't do anything
-	auto data = dynamic_cast<AnalogWaveform*>(m_channel.GetData());
-	if(!data)
+	auto data = m_channel.GetData();
+	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
+	if(!udata && !sdata)
 		return;
 
 	//Bounds check cursors

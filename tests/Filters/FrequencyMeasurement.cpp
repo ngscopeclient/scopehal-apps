@@ -80,12 +80,13 @@ TEST_CASE("Filter_FrequencyMeasurement")
 			filter->Refresh();
 
 			//Get the output data
-			auto data = dynamic_cast<AnalogWaveform*>(filter->GetData(0));
+			auto data = dynamic_cast<SparseAnalogWaveform*>(filter->GetData(0));
 			REQUIRE(data != NULL);
 
 			//Counts for each array must be consistent
-			REQUIRE(data->m_offsets.size() == data->m_durations.size());
-			REQUIRE(data->m_offsets.size() == data->m_samples.size());
+			REQUIRE(data->size() == data->m_durations.size());
+			REQUIRE(data->size() == data->m_offsets.size());
+			REQUIRE(data->size() == data->m_samples.size());
 
 			//Process the individual frequency measurements and sanity check them
 			//TODO: check timestamps and durations of samples too
@@ -98,7 +99,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 				fmax = max(fmax, (float)f);
 				avg += f;
 			}
-			avg /= data->m_samples.size();
+			avg /= data->size();
 			LogVerbose("Results:\n");
 			LogIndenter li2;
 			float davg = gen_freq - avg;

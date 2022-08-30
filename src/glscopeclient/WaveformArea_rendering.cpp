@@ -138,7 +138,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 	auto pdat = wdata->m_channel.GetData();
-	if( (pdat == NULL) || pdat->m_offsets.empty() || (wdata->m_count == 0) )
+	if( (pdat == NULL) || pdat->empty() || (wdata->m_count == 0) )
 	{
 		wdata->m_geometryOK = false;
 		return;
@@ -152,8 +152,10 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	}
 
 	//Make sure capture is the right type
-	auto andat = dynamic_cast<AnalogWaveform*>(pdat);
-	auto digdat = dynamic_cast<DigitalWaveform*>(pdat);
+	auto sandat = dynamic_cast<SparseAnalogWaveform*>(pdat);
+	auto uandat = dynamic_cast<UniformAnalogWaveform*>(pdat);
+	auto sdigdat = dynamic_cast<SparseDigitalWaveform*>(pdat);
+	auto udigdat = dynamic_cast<UniformDigitalWaveform*>(pdat);
 	if(!andat && !digdat)
 	{
 		wdata->m_geometryOK = false;
@@ -222,8 +224,8 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float capture_len = pdat->m_offsets[pdat->m_offsets.size() - 1] * pdat->m_timescale;
-	float avg_sample_len = capture_len / pdat->m_offsets.size();
+	float capture_len = pdat->m_offsets[pdat->size() - 1] * pdat->m_timescale;
+	float avg_sample_len = capture_len / pdat->size();
 	float samplesPerPixel = 1.0 / (group->m_pixelsPerXUnit * avg_sample_len);
 	float alpha_scaled = alpha / sqrt(samplesPerPixel);
 	alpha_scaled = min(1.0f, alpha_scaled) * 2;

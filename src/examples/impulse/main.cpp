@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Calculate the 10-90 and 20-80% thresholds for the S21 curve
-	AnalogWaveform wfm;
+	SparseAnalogWaveform wfm;
 	for(size_t i=groupdelay_samples; i<npoints; i++)
 	{
 		wfm.m_offsets.push_back(i);

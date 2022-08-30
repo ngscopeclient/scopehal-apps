@@ -47,6 +47,7 @@ int main(int argc, char* argv[])
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 	//Global scopehal initialization
+	VulkanInit();
 	TransportStaticInit();
 	DriverStaticInit();
 	InitializePlugins();
@@ -59,6 +60,8 @@ int main(int argc, char* argv[])
 	g_scope.AddChannel(new OscilloscopeChannel(
 		&g_scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 
-	//Run the actual test
-	return Catch::Session().run(argc, argv);
+	//Run the actual test, then clean up and return
+	int ret = Catch::Session().run(argc, argv);
+	ScopehalStaticCleanup();
+	return ret;
 }

@@ -46,13 +46,17 @@ int main(int argc, char* argv[])
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 	//Global scopehal initialization
+	VulkanInit();
 	TransportStaticInit();
 	DriverStaticInit();
 	InitializePlugins();
+	ScopeProtocolStaticInit();
 
 	//Initialize the RNG
 	g_rng.seed(0);
 
-	//Run the actual test
-	return Catch::Session().run(argc, argv);
+	//Run the actual test, then clean up and return
+	int ret = Catch::Session().run(argc, argv);
+	ScopehalStaticCleanup();
+	return ret;
 }
