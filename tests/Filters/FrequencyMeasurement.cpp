@@ -66,7 +66,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 
 			//Generate the input signal.
 			//50 Gsps, 1M points, no added noise
-			g_scope.GetChannel(0)->SetData(
+			g_scope->GetChannel(0)->SetData(
 				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20000, 1000000, 0),
 				0);
 
@@ -76,7 +76,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 			LogVerbose("Amplitude: %s\n", Unit(Unit::UNIT_VOLTS).PrettyPrint(gen_amp).c_str());
 
 			//Run the filter
-			filter->SetInput("din", StreamDescriptor(g_scope.GetChannel(0), 0));
+			filter->SetInput("din", StreamDescriptor(g_scope->GetChannel(0), 0));
 			filter->Refresh();
 
 			//Get the output data

@@ -45,14 +45,14 @@ TEST_CASE("Primitive_SampleOnRisingEdges")
 {
 	const size_t wavelen = 1000000;
 
-	SECTION("DigitalWaveform")
+	SECTION("SparseDigitalWaveform")
 	{
 		//Generate a random data/clock waveform
-		DigitalWaveform data;
-		DigitalWaveform clock;
+		SparseDigitalWaveform data;
+		SparseDigitalWaveform clock;
 		data.m_timescale = 5;
 		clock.m_timescale = 5;
-		DigitalWaveform samples_expected;
+		SparseDigitalWaveform samples_expected;
 		uniform_int_distribution<int> edgeprob(0, 3);
 		uniform_int_distribution<int> dataprob(0, 1);
 		size_t nsamples = 0;
@@ -119,7 +119,7 @@ TEST_CASE("Primitive_SampleOnRisingEdges")
 		}
 
 		//Sample it
-		DigitalWaveform samples;
+		SparseDigitalWaveform samples;
 		Filter::SampleOnRisingEdges(&data, &clock, samples);
 
 		//Initial sanity check: we should have the same number of data bits as we generated,

@@ -39,8 +39,8 @@
 
 using namespace std;
 
-MockOscilloscope g_scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
 minstd_rand g_rng;
+MockOscilloscope* g_scope;
 
 int main(int argc, char* argv[])
 {
@@ -57,8 +57,10 @@ int main(int argc, char* argv[])
 	g_rng.seed(0);
 
 	//Create some fake scope channels
-	g_scope.AddChannel(new OscilloscopeChannel(
-		&g_scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+	MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
+	scope.AddChannel(new OscilloscopeChannel(
+		&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+	g_scope = &scope;
 
 	//Run the actual test, then clean up and return
 	int ret = Catch::Session().run(argc, argv);

@@ -35,7 +35,7 @@
 #include "MockOscilloscope.h"
 #include <random>
 
-extern MockOscilloscope g_scope;
+extern MockOscilloscope* g_scope;
 extern std::minstd_rand g_rng;
 
 #endif

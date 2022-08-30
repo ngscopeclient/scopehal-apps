@@ -50,7 +50,6 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	InitializePlugins();
-	ScopeProtocolStaticInit();
 
 	//Initialize the RNG
 	g_rng.seed(0);
