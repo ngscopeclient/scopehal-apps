@@ -173,6 +173,9 @@ jobs:
       run: |
         mkdir build_msi
         cd build_msi
+        export VK_SDK_PATH=/c/VulkanSDK/1.3.224.1
+        export VULKAN_SDK=/c/VulkanSDK/1.3.224.1
+        export PATH=/c/VulkanSDK/1.3.224.1/Bin:$PATH
         cmake \
           -G"Ninja" \
           -DBUILD_TESTING=OFF \
