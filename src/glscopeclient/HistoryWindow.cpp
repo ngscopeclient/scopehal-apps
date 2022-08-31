@@ -1040,7 +1040,7 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 			*progress = i * 1.0 / len;
 			size_t blocklen = min(len-i, samples_per_block);
 
-			if(blocklen != fwrite(achan->m_samples.GetCpuPointer(), sizeof(float), blocklen, fp))
+			if(blocklen != fwrite(achan->m_samples.GetCpuPointer() + i, sizeof(float), blocklen, fp))
 				LogError("file write error\n");
 		}
 	}
@@ -1052,7 +1052,7 @@ void HistoryWindow::DoSaveWaveformDataForDenseStream(
 			*progress = i * 1.0 / len;
 			size_t blocklen = min(len-i, samples_per_block);
 
-			if(blocklen != fwrite(dchan->m_samples.GetCpuPointer(), sizeof(bool), blocklen, fp))
+			if(blocklen != fwrite(dchan->m_samples.GetCpuPointer() + i, sizeof(bool), blocklen, fp))
 				LogError("file write error\n");
 		}
 	}
