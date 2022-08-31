@@ -251,6 +251,24 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Trigger bar color")
 				.Description("Color for the dotted line shown when dragging a trigger"));
 
+	auto& drivers = this->m_treeRoot.AddCategory("Drivers");
+		auto& lecroy = drivers.AddCategory("Teledyne LeCroy");
+			lecroy.AddPreference(
+				Preference::Bool("force_16bit", true)
+				.Label("Force 16 bit mode")
+				.Description(
+					"Force use of 16-bit integer format when downloading sample data from the instrument.\n\n"
+					"Even if the instrument only has an 8-bit ADC, due to internal flatness correction and calibration "
+					"steps, the internal data representation on the scope has additional significant bits.\n\n"
+					"When this setting is disabled, instruments with 8-bit ADCs will use 8-bit integer format for downloading "
+					"samples. This slightly improves waveforms-per-second performance but increases quantization noise and "
+					"can lead to horizontal \"streak\" artifacts in eye patterns.\n\n"
+					"This setting has no effect on instruments with >8 bit ADCs (HDO, WaveSurfer HD, WaveRunner HD, "
+					"WavePro HD) which use 16-bit transfer format at all times.\n\n"
+					"Changes to this setting take effect the next time a connection to the instrument is opened; "
+					"the transfer format for active sessions is not updated."
+				));
+
 	/*
 	auto& instrument = this->m_treeRoot.AddCategory("Instrument");
 		auto& trans = instrument.AddCategory("Transports");

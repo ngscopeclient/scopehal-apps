@@ -35,6 +35,7 @@
 
 #include "glscopeclient.h"
 #include "../scopehal/MockOscilloscope.h"
+#include "../scopehal/LeCroyOscilloscope.h"
 
 using namespace std;
 
@@ -267,6 +268,16 @@ vector<Oscilloscope*> ScopeApp::ConnectToScopes(vector<string> scopes)
 		Oscilloscope* scope = Oscilloscope::CreateOscilloscope(driver, transport);
 		if(scope == NULL)
 			continue;
+
+		//Apply driver-specific preference settings
+		auto lecroy = dynamic_cast<LeCroyOscilloscope*>(scope);
+		if(lecroy)
+		{
+			if(m_window->GetPreferences().GetBool("Drivers.Teledyne LeCroy.force_16bit"))
+				lecroy->ForceHDMode(true);
+
+			//else auto resolution depending on instrument type
+		}
 
 		//All good, hook it up
 		scope->m_nickname = nick;
