@@ -1311,7 +1311,6 @@ void WaveformArea::RescaleEye(Filter* f, EyeWaveform* /*eye*/)
 	if(!d)
 		return;
 
-	f->Refresh();
 	m_group->m_pixelsPerXUnit = d->GetXScale();
 	m_group->m_xAxisOffset = d->GetXOffset();
 
