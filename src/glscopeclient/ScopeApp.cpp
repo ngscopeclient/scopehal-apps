@@ -35,7 +35,6 @@
 
 #include "glscopeclient.h"
 #include "../scopehal/MockOscilloscope.h"
-#include "../scopehal/LeCroyOscilloscope.h"
 
 using namespace std;
 

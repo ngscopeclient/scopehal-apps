@@ -53,6 +53,7 @@
 #include <fcntl.h>
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/SpectrogramFilter.h"
+#include "../scopehal/LeCroyOscilloscope.h"
 
 #ifdef _WIN32
 #include <windows.h>
