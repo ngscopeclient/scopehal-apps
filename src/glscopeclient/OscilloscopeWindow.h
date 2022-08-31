@@ -487,6 +487,8 @@ public:
 
 	//Filter graph evaluation
 	FilterGraphExecutor m_graphExecutor;
+
+	void ApplyPreferences(Oscilloscope* scope);
 };
 
 #endif

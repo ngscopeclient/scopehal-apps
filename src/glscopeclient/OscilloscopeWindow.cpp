@@ -1613,6 +1613,22 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 }
 
 /**
+	@brief Apply driver preferences to an instrument
+ */
+void OscilloscopeWindow::ApplyPreferences(Oscilloscope* scope)
+{
+	//Apply driver-specific preference settings
+	auto lecroy = dynamic_cast<LeCroyOscilloscope*>(scope);
+	if(lecroy)
+	{
+		if(GetPreferences().GetBool("Drivers.Teledyne LeCroy.force_16bit"))
+			lecroy->ForceHDMode(true);
+
+		//else auto resolution depending on instrument type
+	}
+}
+
+/**
 	@brief Reconnect to existing instruments and reconfigure them
  */
 void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table)
@@ -1715,6 +1731,9 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 				inst["args"].as<string>()
 				);
 		}
+
+		//Make any config settings to the instrument from our preference settings
+		ApplyPreferences(scope);
 
 		//All good. Add to our list of scopes etc
 		m_scopes.push_back(scope);
