@@ -285,7 +285,10 @@ void WaveformGroup::RefreshMeasurements()
 			auto chan = m_indexToColumnMap[i];
 
 			//Make sure the inputs of the block are on the CPU
-			chan.GetData()->PrepareForCpuAccess();
+			auto data = chan.GetData();
+			if(data == nullptr)
+				continue;
+			data->PrepareForCpuAccess();
 
 			//Evaluate the statistic
 			double value;
