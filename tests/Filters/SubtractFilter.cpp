@@ -30,68 +30,123 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Unit test for Subtract filter
  */
-
-#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
+
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
 using namespace std;
 
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
+void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub);
 
-int main(int argc, char* argv[])
+TEST_CASE("Filter_Subtract")
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+	auto filter = dynamic_cast<SubtractFilter*>(Filter::CreateFilter("Subtract", "#ffffff"));
+	REQUIRE(filter != NULL);
+	filter->AddRef();
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
+	//Create a queue and command buffer
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_computeQueueType );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
-	//Initialize the RNG
-	g_rng.seed(0);
+	//Create two empty input waveforms
+	const size_t depth = 10000000;
+	UniformAnalogWaveform ua;
+	UniformAnalogWaveform ub;
 
-	int ret;
+	//Set up filter configuration
+	g_scope->GetChannel(0)->SetData(&ua, 0);
+	g_scope->GetChannel(1)->SetData(&ub, 0);
+	filter->SetInput("IN+", g_scope->GetChannel(0));
+	filter->SetInput("IN-", g_scope->GetChannel(1));
+
+	bool reallyHasAvx2 = g_hasAvx2;
+
+	const size_t niter = 5;
+	for(size_t i=0; i<niter; i++)
 	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		g_scope = &scope;
+		SECTION(string("Iteration ") + to_string(i))
+		{
+			LogVerbose("Iteration %zu\n", i);
+			LogIndenter li;
 
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
+			//Create two random input waveforms
+			FillRandomWaveform(&ua, depth);
+			FillRandomWaveform(&ub, depth);
+
+			//Set up the filter (don't count this towards execution time)
+			ua.PrepareForGpuAccess();
+			ub.PrepareForGpuAccess();
+
+			g_gpuFilterEnabled = false;
+			g_hasAvx2 = false;
+
+			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
+			filter->Refresh(cmdbuf, queue);
+
+			//Baseline on the CPU with no AVX
+			double start = GetTime();
+			filter->Refresh(cmdbuf, queue);
+			double tbase = GetTime() - start;
+			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
+
+			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+
+			//Try again with AVX
+			if(reallyHasAvx2)
+			{
+				g_hasAvx2 = true;
+				start = GetTime();
+				filter->Refresh(cmdbuf, queue);
+				double dt = GetTime() - start;
+				LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+				VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+			}
+
+			//Try again on the GPU
+			g_gpuFilterEnabled = true;
+			start = GetTime();
+			filter->Refresh(cmdbuf, queue);
+			double dt = GetTime() - start;
+			LogVerbose("GPU:          %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+		}
 	}
 
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
+	g_hasAvx2 = reallyHasAvx2;
+
+	g_scope->GetChannel(0)->Detach(0);
+	g_scope->GetChannel(1)->Detach(0);
+
+	filter->Release();
 }
 
-/**
-	@brief Fills a waveform with random content, uniformly distributed from -1 to +1
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
+void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub)
 {
-	auto rdist = uniform_real_distribution<float>(-1, 1);
+	REQUIRE(psub != nullptr);
+	REQUIRE(psub->size() == min(pa->size(), pb->size()) );
 
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
+	pa->PrepareForCpuAccess();
+	pb->PrepareForCpuAccess();
+	psub->PrepareForCpuAccess();
 
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
+	size_t len = psub->size();
 
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
+	for(size_t i=0; i<len; i++)
+	{
+		float expected = pa->m_samples[i] - pb->m_samples[i];
+		REQUIRE(fabs(psub->m_samples[i] - expected) < 1e-6);
+	}
 }
