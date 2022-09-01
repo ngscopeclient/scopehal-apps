@@ -53,6 +53,9 @@ int main(int argc, char* argv[])
 	InitializePlugins();
 	ScopeProtocolStaticInit();
 
+	//Add search path
+	g_searchPaths.push_back("src/glscopeclient/");
+
 	//Initialize the RNG
 	g_rng.seed(0);
 
@@ -62,6 +65,8 @@ int main(int argc, char* argv[])
 		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
 		scope.AddChannel(new OscilloscopeChannel(
 			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		scope.AddChannel(new OscilloscopeChannel(
+			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 		g_scope = &scope;
 
 		//Run the actual test
@@ -71,4 +76,22 @@ int main(int argc, char* argv[])
 	//Clean up and return after the scope goes out of scope (pun not intended)
 	ScopehalStaticCleanup();
 	return ret;
+}
+
+/**
+	@brief Fills a waveform with random content, uniformly distributed from -1 to +1
+ */
+void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
+{
+	auto rdist = uniform_real_distribution<float>(-1, 1);
+
+	wfm->PrepareForCpuAccess();
+	wfm->Resize(size);
+
+	for(size_t i=0; i<size; i++)
+		wfm->m_samples[i] = rdist(g_rng);
+
+	wfm->MarkModifiedFromCpu();
+
+	wfm->m_revision ++;
 }
