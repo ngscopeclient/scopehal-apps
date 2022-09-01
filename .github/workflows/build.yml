@@ -50,7 +50,6 @@ jobs:
           cmake \
           pkg-config \
           libglm-dev \
-          libvulkan-dev \
           libgtkmm-3.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
@@ -84,11 +83,34 @@ jobs:
         sudo make install
         popd
 
+    - name: Install Vulkan SDK
+      run: |
+        cd ~
+        mkdir vulkan
+        cd vulkan
+        wget https://sdk.lunarg.com/sdk/download/1.3.224.1/linux/vulkansdk-linux-x86_64-1.3.224.1.tar.gz
+        tar xf vulkansdk-linux-x86_64-1.3.224.1.tar.gz
+        sudo cp -r $VULKAN_SDK/include/vulkan/ /usr/local/include/
+        sudo cp -P $VULKAN_SDK/lib/libvulkan.so* /usr/local/lib/
+        sudo cp $VULKAN_SDK/lib/libVkLayer_*.so /usr/local/lib/
+        sudo mkdir -p /usr/local/share/vulkan/explicit_layer.d
+        sudo cp $VULKAN_SDK/etc/vulkan/explicit_layer.d/VkLayer_*.json /usr/local/share/vulkan/explicit_layer.d
+        sudo ldconfig
+  
+    - name: Setup Paths and Env for all steps
+      run: |
+        rm -f ~/.bash_profile
+        echo "export PATH=$VULKAN_SDK/bin:\$PATH" >> ~/.bash_profile
+        echo "export VULKAN_SDK=~/vulkan/1.3.224.1/x86_64" >> ~/.bash_profile
+        echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d"
+
     - name: Build
       run: |
         mkdir build
         cd build
         cmake \
+          -DVulkan_GLSLC_EXECUTABLE=glslc
           -DCMAKE_BUILD_TYPE=DEBUG \
           -DBUILD_DOCS=ON \
           ..
