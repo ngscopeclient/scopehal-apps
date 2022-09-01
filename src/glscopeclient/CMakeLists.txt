@@ -208,8 +208,6 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients
 	DESTINATION share/glscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders
 	DESTINATION share/glscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/kernels
-	DESTINATION share/glscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles
 	DESTINATION share/glscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons

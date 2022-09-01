@@ -1,4 +1,4 @@
-name: Build
+name: Build-ubuntu
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
 
   Tarball:
     runs-on: ubuntu-latest
@@ -32,7 +31,6 @@ jobs:
         name: glscopeclient-source
         path: source.tar.gz
 
-
   Linux:
     runs-on: ubuntu-latest
 
@@ -50,7 +48,6 @@ jobs:
           cmake \
           pkg-config \
           libglm-dev \
-          libvulkan-dev \
           libgtkmm-3.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
@@ -84,8 +81,29 @@ jobs:
         sudo make install
         popd
 
+    - name: Install Vulkan SDK
+      run: |
+        pushd ~
+        mkdir vulkan
+        cd vulkan
+        wget https://sdk.lunarg.com/sdk/download/1.3.224.1/linux/vulkansdk-linux-x86_64-1.3.224.1.tar.gz
+        tar xf vulkansdk-linux-x86_64-1.3.224.1.tar.gz
+        export VULKAN_SDK=~/vulkan/1.3.224.1/x86_64
+        sudo cp -r $VULKAN_SDK/include/vulkan/ /usr/local/include/
+        sudo cp -P $VULKAN_SDK/lib/libvulkan.so* /usr/local/lib/
+        sudo cp $VULKAN_SDK/lib/libVkLayer_*.so /usr/local/lib/
+        sudo mkdir -p /usr/local/share/vulkan/explicit_layer.d
+        sudo cp $VULKAN_SDK/etc/vulkan/explicit_layer.d/VkLayer_*.json /usr/local/share/vulkan/explicit_layer.d
+        sudo ldconfig
+        popd
+
     - name: Build
       run: |
+        export VULKAN_SDK=~/vulkan/1.3.224.1/x86_64
+        export PATH=$VULKAN_SDK/bin:$PATH
+        export VULKAN_SDK=$VULKAN_SDK
+        export LD_LIBRARY_PATH=$VULKAN_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+        export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
         mkdir build
         cd build
         cmake \
@@ -117,74 +135,3 @@ jobs:
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
-
-
-  Windows:
-    runs-on: windows-latest
-
-    defaults:
-      run:
-        shell: msys2 {0}
-
-    steps:
-
-    - run: git config --global core.autocrlf input
-      shell: bash
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-        fetch-depth: 0
-
-    - uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        msystem: MINGW64
-        install: |
-          git
-          wget
-          mingw-w64-x86_64-toolchain
-
-    - name: Install Vulkan SDK
-      run: |
-        wget https://sdk.lunarg.com/sdk/download/1.3.216.0/windows/VulkanSDK-1.3.216.0-Installer.exe
-        ./VulkanSDK-1.3.216.0-Installer.exe --accept-licenses --default-answer --confirm-command install
-
-    - name: Build
-      run: |
-        cd msys2
-        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
-
-    - name: Test
-      run: |
-        pacman -U --noconfirm msys2/*.zst
-        glscopeclient --help
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows
-        path: msys2/*.zst
-
-    - name: Build MSI / portable zip
-      run: |
-        mkdir build_msi
-        cd build_msi
-        cmake \
-          -G"Ninja" \
-          -DBUILD_TESTING=OFF \
-          -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
-          ../
-        cmake --build ./
-
-    - name: Upload Artifacts (portable zip)
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows-portable
-        path: build_msi/dist/windows_x64
-
-    - name: Upload Artifacts (MSI)
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows.msi
-        path: build_msi/dist/*.msi
