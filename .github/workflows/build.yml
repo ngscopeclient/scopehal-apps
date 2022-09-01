@@ -112,7 +112,7 @@ jobs:
         mkdir build
         cd build
         cmake \
-          -DVulkan_GLSLC_EXECUTABLE=glslc
+          -DVulkan_GLSLC_EXECUTABLE=glslc \
           -DCMAKE_BUILD_TYPE=DEBUG \
           -DBUILD_DOCS=ON \
           ..
