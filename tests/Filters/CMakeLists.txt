@@ -3,6 +3,7 @@ add_executable(Filters
 
 	FrequencyMeasurement.cpp
 	SubtractFilter.cpp
+	UpsampleFilter.cpp
 )
 
 catch_discover_tests(Filters)
