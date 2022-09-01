@@ -102,10 +102,11 @@ jobs:
     - name: Setup Paths and Env for all steps
       run: |
         rm -f ~/.bash_profile
+        export VULKAN_SDK=~/vulkan/1.3.224.1/x86_64
         echo "export PATH=$VULKAN_SDK/bin:\$PATH" >> ~/.bash_profile
-        echo "export VULKAN_SDK=~/vulkan/1.3.224.1/x86_64" >> ~/.bash_profile
-        echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-        echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d"
+        echo "export VULKAN_SDK=$VULKAN_SDK" >> ~/.bash_profile
+        echo "export LD_LIBRARY_PATH=$VULKAN_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> ~/.bash_profile
+        echo "export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d" >> ~/.bash_profile
 
     - name: Build
       run: |
