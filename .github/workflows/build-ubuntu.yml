@@ -1,4 +1,4 @@
-name: Build
+name: Build-ubuntu
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
 
   Tarball:
     runs-on: ubuntu-latest
@@ -31,7 +30,6 @@ jobs:
       with:
         name: glscopeclient-source
         path: source.tar.gz
-
 
   Linux:
     runs-on: ubuntu-latest
@@ -142,82 +140,3 @@ jobs:
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
-
-
-  Windows:
-    runs-on: windows-latest
-
-    defaults:
-      run:
-        shell: msys2 {0}
-
-    steps:
-
-    - run: git config --global core.autocrlf input
-      shell: bash
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-        fetch-depth: 0
-
-    - uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        msystem: MINGW64
-        install: |
-          git
-          wget
-          mingw-w64-x86_64-toolchain
-
-    - name: Install Vulkan SDK
-      run: |
-        wget https://sdk.lunarg.com/sdk/download/1.3.224.1/windows/VulkanSDK-1.3.224.1-Installer.exe
-        ./VulkanSDK-1.3.224.1-Installer.exe --accept-licenses --default-answer --confirm-command install
-        echo "/c/VulkanSDK/1.3.224.1/Bin" >> $GITHUB_PATH
-  
-    - name: Setup Paths and Env for all steps
-      run: |
-        rm -f ~/.bash_profile
-        echo "PATH=/c/VulkanSDK/1.3.224.1/Bin:\$PATH" >> ~/.bash_profile
-        echo "export VK_SDK_PATH=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
-        echo "export VULKAN_SDK=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
-
-    - name: Build
-      run: |
-        cd msys2
-        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
-
-    - name: Test
-      run: |
-        pacman -U --noconfirm msys2/*.zst
-        glscopeclient --help
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows
-        path: msys2/*.zst
-
-    - name: Build MSI / portable zip
-      run: |
-        mkdir build_msi
-        cd build_msi
-        cmake \
-          -G"Ninja" \
-          -DBUILD_TESTING=OFF \
-          -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
-          ../
-        cmake --build ./
-
-    - name: Upload Artifacts (portable zip)
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows-portable
-        path: build_msi/dist/windows_x64
-
-    - name: Upload Artifacts (MSI)
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-windows.msi
-        path: build_msi/dist/*.msi
