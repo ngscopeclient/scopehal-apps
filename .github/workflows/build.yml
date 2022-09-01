@@ -85,7 +85,7 @@ jobs:
 
     - name: Install Vulkan SDK
       run: |
-        cd ~
+        pushd ~
         mkdir vulkan
         cd vulkan
         wget https://sdk.lunarg.com/sdk/download/1.3.224.1/linux/vulkansdk-linux-x86_64-1.3.224.1.tar.gz
@@ -97,7 +97,8 @@ jobs:
         sudo mkdir -p /usr/local/share/vulkan/explicit_layer.d
         sudo cp $VULKAN_SDK/etc/vulkan/explicit_layer.d/VkLayer_*.json /usr/local/share/vulkan/explicit_layer.d
         sudo ldconfig
-  
+        popd
+
     - name: Setup Paths and Env for all steps
       run: |
         rm -f ~/.bash_profile
