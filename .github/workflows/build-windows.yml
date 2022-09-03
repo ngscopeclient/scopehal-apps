@@ -76,7 +76,7 @@ jobs:
         MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
 
     - name: Test
-      if: ${{ false }} # Temporary disable Run Tests
+      shell: msys2 {0}
       run: |
         pacman -U --noconfirm msys2/*.zst
         glscopeclient --help
@@ -88,6 +88,7 @@ jobs:
         path: msys2/*.zst
 
     - name: Build MSI / portable zip
+      shell: msys2 {0}
       run: |
         mkdir build_msi
         cd build_msi
