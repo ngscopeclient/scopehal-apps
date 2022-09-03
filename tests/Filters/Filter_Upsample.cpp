@@ -41,8 +41,6 @@
 
 using namespace std;
 
-void VerifyUpsampleResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed);
-
 TEST_CASE("Filter_Upsample")
 {
 	auto filter = dynamic_cast<UpsampleFilter*>(Filter::CreateFilter("Upsample", "#ffffff"));
@@ -107,23 +105,11 @@ TEST_CASE("Filter_Upsample")
 			double dt = GetTime() - start;
 			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-			VerifyUpsampleResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+			VerifyMatchingResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
 		}
 	}
 
 	g_scope->GetChannel(0)->Detach(0);
 
 	filter->Release();
-}
-
-void VerifyUpsampleResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	for(size_t i=0; i<len; i++)
-		REQUIRE(fabs(golden[i] - observed[i]) < 1e-6);
 }

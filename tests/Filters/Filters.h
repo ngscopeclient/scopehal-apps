@@ -39,5 +39,6 @@ extern MockOscilloscope* g_scope;
 extern std::minstd_rand g_rng;
 
 void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size);
+void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance = 1e-6f);
 
 #endif

@@ -95,3 +95,26 @@ void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
 
 	wfm->m_revision ++;
 }
+
+void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
+{
+	REQUIRE(golden.size() == observed.size());
+
+	golden.PrepareForCpuAccess();
+	observed.PrepareForCpuAccess();
+	size_t len = golden.size();
+
+	bool firstFail = true;
+	for(size_t i=0; i<len; i++)
+	{
+		float delta = fabs(golden[i] - observed[i]);
+
+		if( (delta >= tolerance) && firstFail)
+		{
+			LogError("first fail at i=%zu\n", i);
+			firstFail = false;
+		}
+
+		REQUIRE(delta < tolerance);
+	}
+}
