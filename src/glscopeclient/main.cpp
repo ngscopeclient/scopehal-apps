@@ -99,6 +99,7 @@ void help()
 			"    --noavx512f                   : Do not use AVX512F, even if supported on the current system\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
 			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
+			"    --nogpufilter                 : Do not use Vulkan accelerated versions of filter blocks, use CPU reference implementation\n"
 			"    --quit-after-loading          : Exit immediately after loading the specified file.\n"
 			"                                    Typically used for profiling/benchmarking file load or filter graph operations.\n"
 			"\n"
@@ -134,6 +135,7 @@ int main(int argc, char* argv[])
 	bool noavx2 = false;
 	bool noavx512f = false;
 	bool quitAfterLoading = false;
+	bool nogpufilter = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -167,6 +169,8 @@ int main(int argc, char* argv[])
 			noavx2 = true;
 		else if(s == "--noavx512f")
 			noavx512f = true;
+		else if(s == "--nogpufilter")
+			nogpufilter = true;
 		else if(s == "--quit-after-loading")
 			quitAfterLoading = true;
 		else if(s[0] == '-')
@@ -264,6 +268,11 @@ int main(int argc, char* argv[])
 	{
 		g_hasAvx512F = false;
 		LogDebug("Disabling AVX512F because --noavx512f argument was passed\n");
+	}
+	if(nogpufilter)
+	{
+		g_gpuFilterEnabled = false;
+		LogDebug("Disabling GPU filters because --nogpufilter argument was passed\n");
 	}
 
 	//Initialize object creation tables for plugins
