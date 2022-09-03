@@ -1,6 +1,7 @@
 add_executable(Primitives
 	main.cpp
 
+	BlackmanHarrisWindow.cpp
 	Sampling.cpp
 )
 
