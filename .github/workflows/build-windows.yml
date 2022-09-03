@@ -55,7 +55,7 @@ jobs:
         install: |
           git
           wget
-          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-toolchain mingw-w64-glslang
 
     - name: Install Vulkan SDK
       run: |
