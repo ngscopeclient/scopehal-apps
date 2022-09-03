@@ -41,8 +41,6 @@
 
 using namespace std;
 
-//void VerifyUpsampleResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed);
-
 TEST_CASE("Filter_FFT")
 {
 	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
@@ -60,22 +58,29 @@ TEST_CASE("Filter_FFT")
 	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	//Create an empty input waveform
-	const size_t depth = 10000000;
+	const size_t depth = 1000000;
 	UniformAnalogWaveform ua;
 
 	//Set up filter configuration
 	g_scope->GetChannel(0)->SetData(&ua, 0);
 	filter->SetInput("din", g_scope->GetChannel(0));
 
-	const size_t niter = 5;
+	bool reallyHasAvx2 = g_hasAvx2;
+
+	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
 	{
 		SECTION(string("Iteration ") + to_string(i))
 		{
 			LogVerbose("Iteration %zu\n", i);
 			LogIndenter li;
+
 			//Create a random input waveform
 			FillRandomWaveform(&ua, depth);
+
+			//Set window function for the filter
+			//(there are 4 supported window functions so this will test all of them)
+			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
 
 			//Make sure data is in the right spot (don't count this towards execution time)
 			ua.PrepareForGpuAccess();
@@ -88,27 +93,46 @@ TEST_CASE("Filter_FFT")
 			g_gpuFilterEnabled = true;
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU
+			//Baseline on the CPU with no AVX
+			g_hasAvx2 = false;
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
+			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
 
-			/*
 			//Copy the result
 			AcceleratorBuffer<float> golden;
 			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+
+			//Try again with AVX
+			if(reallyHasAvx2)
+			{
+				g_hasAvx2 = true;
+				start = GetTime();
+				filter->Refresh(cmdbuf, queue);
+				float dt = GetTime() - start;
+				LogVerbose("CPU (AVX2)  : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+				VerifyMatchingResult(
+					golden,
+					dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
+					2e-3f
+					);
+			}
 
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU         : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-			VerifyUpsampleResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
-			*/
+			VerifyMatchingResult(
+				golden,
+				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
+				2e-3f
+				);
 		}
 	}
 
@@ -116,17 +140,3 @@ TEST_CASE("Filter_FFT")
 
 	filter->Release();
 }
-
-/*
-void VerifyUpsampleResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	for(size_t i=0; i<len; i++)
-		REQUIRE(fabs(golden[i] - observed[i]) < 1e-6);
-}
-*/
