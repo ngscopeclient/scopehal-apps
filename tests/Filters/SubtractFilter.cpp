@@ -70,7 +70,9 @@ TEST_CASE("Filter_Subtract")
 	filter->SetInput("IN+", g_scope->GetChannel(0));
 	filter->SetInput("IN-", g_scope->GetChannel(1));
 
+	#ifdef __x86_64__
 	bool reallyHasAvx2 = g_hasAvx2;
+	#endif
 
 	const size_t niter = 5;
 	for(size_t i=0; i<niter; i++)
@@ -89,7 +91,9 @@ TEST_CASE("Filter_Subtract")
 			ub.PrepareForGpuAccess();
 
 			g_gpuFilterEnabled = false;
+			#ifdef __x86_64__
 			g_hasAvx2 = false;
+			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			filter->Refresh(cmdbuf, queue);
@@ -102,6 +106,7 @@ TEST_CASE("Filter_Subtract")
 
 			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
 
+			#ifdef __x86_64__
 			//Try again with AVX
 			if(reallyHasAvx2)
 			{
@@ -113,6 +118,7 @@ TEST_CASE("Filter_Subtract")
 
 				VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
 			}
+			#endif /* __x86_64__ */
 
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
@@ -125,7 +131,9 @@ TEST_CASE("Filter_Subtract")
 		}
 	}
 
+	#ifdef __x86_64__
 	g_hasAvx2 = reallyHasAvx2;
+	#endif
 
 	g_scope->GetChannel(0)->Detach(0);
 	g_scope->GetChannel(1)->Detach(0);

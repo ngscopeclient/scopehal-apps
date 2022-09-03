@@ -35,7 +35,9 @@
 #include "glscopeclient.h"
 #include "ScopeSyncWizard.h"
 #include "OscilloscopeWindow.h"
+#ifdef __x86_64__
 #include <immintrin.h>
+#endif
 
 using namespace std;
 
@@ -428,18 +430,22 @@ bool ScopeSyncWizard::OnTimer()
 		//If sample rates are equal we can simplify things a lot
 		if(m_primaryWaveform->m_timescale == m_secondaryWaveform->m_timescale)
 		{
+			#ifdef __x86_64__
 			if(g_hasAvx512F)
 				DoProcessWaveformDensePackedEqualRateAVX512F();
 			else
+			#endif
 				DoProcessWaveformDensePackedEqualRateGeneric();
 		}
 
 		//Also special-case 2:1 sample rate ratio (primary 2x speed of secondary)
 		else if((m_primaryWaveform->m_timescale * 2) == m_secondaryWaveform->m_timescale)
 		{
+			#ifdef __x86_64__
 			if(g_hasAvx512F)
 				DoProcessWaveformDensePackedDoubleRateAVX512F();
 			else
+			#endif
 				DoProcessWaveformDensePackedDoubleRateGeneric();
 		}
 
@@ -621,6 +627,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 	}
 }
 
+#ifdef __x86_64__
 __attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 {
@@ -699,6 +706,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
 		}
 	}
 }
+#endif /* __x86_64__ */
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 {
@@ -754,6 +762,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 	}
 }
 
+#ifdef __x86_64__
 __attribute__((target("avx512f")))
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 {
@@ -821,6 +830,7 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
 		}
 	}
 }
+#endif /* __x86_64__ */
 
 void ScopeSyncWizard::DoProcessWaveformDensePackedUnequalRate()
 {
