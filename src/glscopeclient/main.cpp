@@ -132,8 +132,10 @@ int main(int argc, char* argv[])
 	bool reconnect = false;
 	bool nodata = false;
 	bool retrigger = false;
+	#ifdef __x86_64__
 	bool noavx2 = false;
 	bool noavx512f = false;
+	#endif
 	bool quitAfterLoading = false;
 	bool nogpufilter = false;
 	for(int i=1; i<argc; i++)
@@ -165,10 +167,12 @@ int main(int argc, char* argv[])
 			g_noglint64 = true;
 		else if(s == "--noopencl")
 			g_disableOpenCL = true;
+		#ifdef __x86_64__
 		else if(s == "--noavx2")
 			noavx2 = true;
 		else if(s == "--noavx512f")
 			noavx512f = true;
+		#endif
 		else if(s == "--nogpufilter")
 			nogpufilter = true;
 		else if(s == "--quit-after-loading")
@@ -258,6 +262,7 @@ int main(int argc, char* argv[])
 	ScopeProtocolStaticInit();
 	ScopeExportStaticInit();
 
+	#ifdef __x86_64__
 	//Disable CPU features we don't want to use
 	if(noavx2 && g_hasAvx2)
 	{
@@ -269,6 +274,7 @@ int main(int argc, char* argv[])
 		g_hasAvx512F = false;
 		LogDebug("Disabling AVX512F because --noavx512f argument was passed\n");
 	}
+	#endif /* __x86_64__ */
 	if(nogpufilter)
 	{
 		g_gpuFilterEnabled = false;

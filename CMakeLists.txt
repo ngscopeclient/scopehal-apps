@@ -23,7 +23,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
   set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
 endif()
 
-set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math")
+set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math -fsigned-char")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # clang doesn't properly use the attributes and so requires avx to build

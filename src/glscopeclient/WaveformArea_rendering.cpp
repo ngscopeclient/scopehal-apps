@@ -38,7 +38,6 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include <map>
-#include <immintrin.h>
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/SpectrogramFilter.h"
 #include "../../lib/scopeprotocols/Waterfall.h"
