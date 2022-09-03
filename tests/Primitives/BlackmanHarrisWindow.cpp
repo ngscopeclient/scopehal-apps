@@ -45,8 +45,7 @@ using namespace std;
 
 TEST_CASE("Primitive_BlackmanHarrisWindow")
 {
-	//const size_t wavelen = 1000000;
-	const size_t wavelen = 64;
+	const size_t wavelen = 1000000;
 
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
@@ -61,7 +60,7 @@ TEST_CASE("Primitive_BlackmanHarrisWindow")
 			vector<float> din;
 			din.resize(wavelen);
 			for(size_t j=0; j<wavelen; j++)
-				din[j] = 1;//rdist(g_rng);
+				din[j] = rdist(g_rng);
 
 			//Run the normal version
 			vector<float> dout_normal;
