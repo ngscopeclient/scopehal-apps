@@ -71,7 +71,7 @@ TEST_CASE("Filter_Subtract")
 	filter->SetInput("IN-", g_scope->GetChannel(1));
 
 	#ifdef __x86_64__
-	bool reallyHasAvx2 = g_hasAvx2;
+		bool reallyHasAvx2 = g_hasAvx2;
 	#endif
 
 	const size_t niter = 5;
@@ -92,7 +92,7 @@ TEST_CASE("Filter_Subtract")
 
 			g_gpuFilterEnabled = false;
 			#ifdef __x86_64__
-			g_hasAvx2 = false;
+				g_hasAvx2 = false;
 			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
@@ -107,17 +107,17 @@ TEST_CASE("Filter_Subtract")
 			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
 
 			#ifdef __x86_64__
-			//Try again with AVX
-			if(reallyHasAvx2)
-			{
-				g_hasAvx2 = true;
-				start = GetTime();
-				filter->Refresh(cmdbuf, queue);
-				double dt = GetTime() - start;
-				LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				//Try again with AVX
+				if(reallyHasAvx2)
+				{
+					g_hasAvx2 = true;
+					start = GetTime();
+					filter->Refresh(cmdbuf, queue);
+					double dt = GetTime() - start;
+					LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-				VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
-			}
+					VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+				}
 			#endif /* __x86_64__ */
 
 			//Try again on the GPU
@@ -132,7 +132,7 @@ TEST_CASE("Filter_Subtract")
 	}
 
 	#ifdef __x86_64__
-	g_hasAvx2 = reallyHasAvx2;
+		g_hasAvx2 = reallyHasAvx2;
 	#endif
 
 	g_scope->GetChannel(0)->Detach(0);

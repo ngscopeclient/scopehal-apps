@@ -41,10 +41,10 @@
 
 using namespace std;
 
-TEST_CASE("Filter_FFT")
+TEST_CASE("Filter_FIR")
 {
-	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
-	REQUIRE(filter != NULL);
+	auto filter = dynamic_cast<FIRFilter*>(Filter::CreateFilter("FIR Filter", "#ffffff"));
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	//Create a queue and command buffer
@@ -58,18 +58,21 @@ TEST_CASE("Filter_FFT")
 	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	//Create an empty input waveform
-	const size_t depth = 1000000;
+	const size_t depth = 10000000;
 	UniformAnalogWaveform ua;
-	ua.m_timescale = 10000;		//100 Gsps
+	ua.m_timescale = 100000;		//10 Gsps
 	ua.m_triggerPhase = 0;
 
 	//Set up filter configuration
 	g_scope->GetChannel(0)->SetData(&ua, 0);
-	filter->SetInput("din", g_scope->GetChannel(0));
+	filter->SetInput("in", g_scope->GetChannel(0));
 
-	#ifdef __x86_64__
-		bool reallyHasAvx2 = g_hasAvx2;
-	#endif
+	auto rdist = uniform_real_distribution<float>(10e6, 1e9);
+
+#ifdef __x86_64__
+	bool reallyHasAvx2 = g_hasAvx2;
+	bool reallyHasAvx512F = g_hasAvx512F;
+#endif
 
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
@@ -82,9 +85,19 @@ TEST_CASE("Filter_FFT")
 			//Create a random input waveform
 			FillRandomWaveform(&ua, depth);
 
-			//Set window function for the filter
-			//(there are 4 supported window functions so this will test all of them)
-			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
+			//Configure the filter
+			filter->SetFilterType(static_cast<FIRFilter::FilterType>(i % 4));
+			float freqLow = rdist(g_rng);
+			float freqHigh = rdist(g_rng);
+			float tmp;
+			if(freqLow > freqHigh)
+			{
+				tmp = freqLow;
+				freqLow = freqHigh;
+				freqHigh = tmp;
+			}
+			filter->SetFreqLow(freqLow);
+			filter->SetFreqLow(freqHigh);
 
 			//Make sure data is in the right spot (don't count this towards execution time)
 			ua.PrepareForGpuAccess();
@@ -97,12 +110,13 @@ TEST_CASE("Filter_FFT")
 			//Baseline on the CPU with no AVX
 			#ifdef __x86_64__
 				g_hasAvx2 = false;
+				g_hasAvx512F = false;
 			#endif
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
+			LogVerbose("CPU (no AVX)  : %5.2f ms\n", tbase * 1000);
 
 			//Copy the result
 			AcceleratorBuffer<float> golden;
@@ -116,7 +130,21 @@ TEST_CASE("Filter_FFT")
 					start = GetTime();
 					filter->Refresh(cmdbuf, queue);
 					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+					LogVerbose("CPU (AVX2)    : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+					VerifyMatchingResult(
+						golden,
+						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
+						3e-3f
+						);
+				}
+				if(reallyHasAvx512F)
+				{
+					g_hasAvx512F = true;
+					start = GetTime();
+					filter->Refresh(cmdbuf, queue);
+					float dt = GetTime() - start;
+					LogVerbose("CPU (AVX512F) : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 					VerifyMatchingResult(
 						golden,
@@ -134,7 +162,7 @@ TEST_CASE("Filter_FFT")
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU           : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifyMatchingResult(
 				golden,
@@ -145,6 +173,7 @@ TEST_CASE("Filter_FFT")
 	}
 
 	#ifdef __x86_64__
+		g_hasAvx512F = reallyHasAvx512F;
 		g_hasAvx2 = reallyHasAvx2;
 	#endif
 

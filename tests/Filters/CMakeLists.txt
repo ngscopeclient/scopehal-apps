@@ -1,6 +1,7 @@
 add_executable(Filters
 	main.cpp
 
+	Filter_FIR.cpp
 	Filter_FFT.cpp
 	Filter_Subtract.cpp
 	Filter_Upsample.cpp
