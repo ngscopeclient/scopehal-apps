@@ -1,9 +1,11 @@
 add_executable(Filters
 	main.cpp
 
+	Filter_FFT.cpp
+	Filter_Subtract.cpp
+	Filter_Upsample.cpp
+
 	FrequencyMeasurement.cpp
-	SubtractFilter.cpp
-	UpsampleFilter.cpp
 )
 
 catch_discover_tests(Filters)

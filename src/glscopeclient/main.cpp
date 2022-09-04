@@ -99,6 +99,7 @@ void help()
 			"    --noavx512f                   : Do not use AVX512F, even if supported on the current system\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
 			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
+			"    --nogpufilter                 : Do not use Vulkan accelerated versions of filter blocks, use CPU reference implementation\n"
 			"    --quit-after-loading          : Exit immediately after loading the specified file.\n"
 			"                                    Typically used for profiling/benchmarking file load or filter graph operations.\n"
 			"\n"
@@ -131,9 +132,12 @@ int main(int argc, char* argv[])
 	bool reconnect = false;
 	bool nodata = false;
 	bool retrigger = false;
+	#ifdef __x86_64__
 	bool noavx2 = false;
 	bool noavx512f = false;
+	#endif
 	bool quitAfterLoading = false;
+	bool nogpufilter = false;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -163,10 +167,14 @@ int main(int argc, char* argv[])
 			g_noglint64 = true;
 		else if(s == "--noopencl")
 			g_disableOpenCL = true;
+		#ifdef __x86_64__
 		else if(s == "--noavx2")
 			noavx2 = true;
 		else if(s == "--noavx512f")
 			noavx512f = true;
+		#endif
+		else if(s == "--nogpufilter")
+			nogpufilter = true;
 		else if(s == "--quit-after-loading")
 			quitAfterLoading = true;
 		else if(s[0] == '-')
@@ -254,6 +262,7 @@ int main(int argc, char* argv[])
 	ScopeProtocolStaticInit();
 	ScopeExportStaticInit();
 
+	#ifdef __x86_64__
 	//Disable CPU features we don't want to use
 	if(noavx2 && g_hasAvx2)
 	{
@@ -264,6 +273,12 @@ int main(int argc, char* argv[])
 	{
 		g_hasAvx512F = false;
 		LogDebug("Disabling AVX512F because --noavx512f argument was passed\n");
+	}
+	#endif /* __x86_64__ */
+	if(nogpufilter)
+	{
+		g_gpuFilterEnabled = false;
+		LogDebug("Disabling GPU filters because --nogpufilter argument was passed\n");
 	}
 
 	//Initialize object creation tables for plugins
@@ -338,10 +353,10 @@ void ScopeThread(Oscilloscope* scope)
 
 		//If the queue is too big, stop grabbing data
 		size_t npending = scope->GetPendingWaveformCount();
-		if(npending > 20)
+		if(npending > 5)
 		{
 			LogTrace("Queue is too big, sleeping\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			tlast = GetTime();
 
 			/*
@@ -359,12 +374,12 @@ void ScopeThread(Oscilloscope* scope)
 			continue;
 		}
 
-		//If the queue is more than 5 sec long, wait for a while before polling any more.
+		//If the queue is more than 1 sec long, wait for a while before polling any more.
 		//We've gotten ahead of the UI!
-		if(npending > 1 && npending*dt > 5)
+		if(npending > 1 && npending*dt > 1)
 		{
-			LogTrace("Capture thread got 5 sec ahead of UI, sleeping\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			LogTrace("Capture thread got 1000 ms ahead of UI, sleeping\n");
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			tlast = GetTime();
 			continue;
 		}

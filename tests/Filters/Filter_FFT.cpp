@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for Subtract filter
+	@brief Unit test for Upsample filter
  */
 #include <catch2/catch.hpp>
 
@@ -41,11 +41,9 @@
 
 using namespace std;
 
-void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub);
-
-TEST_CASE("Filter_Subtract")
+TEST_CASE("Filter_FFT")
 {
-	auto filter = dynamic_cast<SubtractFilter*>(Filter::CreateFilter("Subtract", "#ffffff"));
+	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
 	REQUIRE(filter != NULL);
 	filter->AddRef();
 
@@ -59,20 +57,17 @@ TEST_CASE("Filter_Subtract")
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
-	//Create two empty input waveforms
-	const size_t depth = 10000000;
+	//Create an empty input waveform
+	const size_t depth = 1000000;
 	UniformAnalogWaveform ua;
-	UniformAnalogWaveform ub;
 
 	//Set up filter configuration
 	g_scope->GetChannel(0)->SetData(&ua, 0);
-	g_scope->GetChannel(1)->SetData(&ub, 0);
-	filter->SetInput("IN+", g_scope->GetChannel(0));
-	filter->SetInput("IN-", g_scope->GetChannel(1));
+	filter->SetInput("din", g_scope->GetChannel(0));
 
 	bool reallyHasAvx2 = g_hasAvx2;
 
-	const size_t niter = 5;
+	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
 	{
 		SECTION(string("Iteration ") + to_string(i))
@@ -80,27 +75,32 @@ TEST_CASE("Filter_Subtract")
 			LogVerbose("Iteration %zu\n", i);
 			LogIndenter li;
 
-			//Create two random input waveforms
+			//Create a random input waveform
 			FillRandomWaveform(&ua, depth);
-			FillRandomWaveform(&ub, depth);
 
-			//Set up the filter (don't count this towards execution time)
+			//Set window function for the filter
+			//(there are 4 supported window functions so this will test all of them)
+			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
+
+			//Make sure data is in the right spot (don't count this towards execution time)
 			ua.PrepareForGpuAccess();
-			ub.PrepareForGpuAccess();
-
-			g_gpuFilterEnabled = false;
-			g_hasAvx2 = false;
+			ua.PrepareForCpuAccess();
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
+			g_gpuFilterEnabled = false;
 			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU with no AVX
+			g_hasAvx2 = false;
+			g_gpuFilterEnabled = false;
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
+			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
 
-			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+			//Copy the result
+			AcceleratorBuffer<float> golden;
+			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
 
 			//Try again with AVX
 			if(reallyHasAvx2)
@@ -108,45 +108,35 @@ TEST_CASE("Filter_Subtract")
 				g_hasAvx2 = true;
 				start = GetTime();
 				filter->Refresh(cmdbuf, queue);
-				double dt = GetTime() - start;
-				LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				float dt = GetTime() - start;
+				LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-				VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+				VerifyMatchingResult(
+					golden,
+					dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
+					3e-3f
+					);
 			}
 
-			//Try again on the GPU
+			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
+			filter->Refresh(cmdbuf, queue);
+
+			//Try again on the GPU, this time for score
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU:          %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+			VerifyMatchingResult(
+				golden,
+				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
+				3e-3f
+				);
 		}
 	}
 
-	g_hasAvx2 = reallyHasAvx2;
-
 	g_scope->GetChannel(0)->Detach(0);
-	g_scope->GetChannel(1)->Detach(0);
 
 	filter->Release();
-}
-
-void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub)
-{
-	REQUIRE(psub != nullptr);
-	REQUIRE(psub->size() == min(pa->size(), pb->size()) );
-
-	pa->PrepareForCpuAccess();
-	pb->PrepareForCpuAccess();
-	psub->PrepareForCpuAccess();
-
-	size_t len = psub->size();
-
-	for(size_t i=0; i<len; i++)
-	{
-		float expected = pa->m_samples[i] - pb->m_samples[i];
-		REQUIRE(fabs(psub->m_samples[i] - expected) < 1e-6);
-	}
 }

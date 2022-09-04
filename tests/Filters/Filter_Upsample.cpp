@@ -30,91 +30,86 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Unit test for Upsample filter
  */
-
-#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
+
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
 using namespace std;
 
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
+TEST_CASE("Filter_Upsample")
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+	auto filter = dynamic_cast<UpsampleFilter*>(Filter::CreateFilter("Upsample", "#ffffff"));
+	REQUIRE(filter != NULL);
+	filter->AddRef();
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
+	//Create a queue and command buffer
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_computeQueueType );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
-	//Initialize the RNG
-	g_rng.seed(0);
+	//Create an empty input waveform
+	const size_t depth = 10000000;
+	UniformAnalogWaveform ua;
 
-	int ret;
+	//Set up filter configuration
+	g_scope->GetChannel(0)->SetData(&ua, 0);
+	filter->SetInput("din", g_scope->GetChannel(0));
+
+	const size_t niter = 5;
+	for(size_t i=0; i<niter; i++)
 	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
-
-/**
-	@brief Fills a waveform with random content, uniformly distributed from -1 to +1
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
-{
-	auto rdist = uniform_real_distribution<float>(-1, 1);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
-}
-
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
+		SECTION(string("Iteration ") + to_string(i))
 		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
+			LogVerbose("Iteration %zu\n", i);
+			LogIndenter li;
 
-		REQUIRE(delta < tolerance);
+			//Create a random input waveform
+			FillRandomWaveform(&ua, depth);
+
+			//Make sure data is in the right spot (don't count this towards execution time)
+			ua.PrepareForGpuAccess();
+			ua.PrepareForCpuAccess();
+
+			//Run the filter once on CPU and GPU each
+			//without looking at results, to make sure caches are hot and buffers are allocated etc
+			g_gpuFilterEnabled = false;
+			filter->Refresh(cmdbuf, queue);
+			g_gpuFilterEnabled = true;
+			filter->Refresh(cmdbuf, queue);
+
+			//Baseline on the CPU
+			g_gpuFilterEnabled = false;
+			double start = GetTime();
+			filter->Refresh(cmdbuf, queue);
+			double tbase = GetTime() - start;
+			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
+
+			//Copy the result
+			AcceleratorBuffer<float> golden;
+			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+
+			//Try again on the GPU
+			g_gpuFilterEnabled = true;
+			start = GetTime();
+			filter->Refresh(cmdbuf, queue);
+			double dt = GetTime() - start;
+			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+			VerifyMatchingResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+		}
 	}
+
+	g_scope->GetChannel(0)->Detach(0);
+
+	filter->Release();
 }

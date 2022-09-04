@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* libscopehal v0.1                                                                                                     *
 *                                                                                                                      *
 * Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
@@ -30,91 +30,63 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Unit test for Blackman-Harris window
  */
-
-#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
-#include "Filters.h"
+
+#include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/TestWaveformSource.h"
+#include "../../lib/scopeprotocols/scopeprotocols.h"
+#include "Primitives.h"
 
 using namespace std;
 
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
+#ifdef __x86_64__
 
-int main(int argc, char* argv[])
+TEST_CASE("Primitive_BlackmanHarrisWindow")
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+	const size_t wavelen = 1000000;
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	int ret;
+	const size_t niter = 8;
+	for(size_t i=0; i<niter; i++)
 	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
-
-/**
-	@brief Fills a waveform with random content, uniformly distributed from -1 to +1
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
-{
-	auto rdist = uniform_real_distribution<float>(-1, 1);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
-}
-
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
+		SECTION(string("Iteration ") + to_string(i))
 		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
+			LogVerbose("Iteration %zu\n", i);
+			LogIndenter li;
 
-		REQUIRE(delta < tolerance);
+			//Generate random input waveform
+			auto rdist = uniform_real_distribution<float>(-1, 1);
+			vector<float> din;
+			din.resize(wavelen);
+			for(size_t j=0; j<wavelen; j++)
+				din[j] = rdist(g_rng);
+
+			//Run the normal version
+			vector<float> dout_normal;
+			dout_normal.resize(wavelen);
+			double start = GetTime();
+			FFTFilter::BlackmanHarrisWindow(&din[0], wavelen, &dout_normal[0]);
+			double tbase = GetTime() - start;
+			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
+
+			//Run the AVX version and compare results
+			if(g_hasAvx2)
+			{
+				vector<float> dout_avx2;
+				dout_avx2.resize(wavelen);
+
+				start = GetTime();
+				FFTFilter::BlackmanHarrisWindowAVX2(&din[0], wavelen, &dout_avx2[0]);
+				double dt = GetTime() - start;
+				LogVerbose("CPU (AVX2)  : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+
+				for(size_t j=0; j<wavelen; j++)
+					REQUIRE(fabs(dout_normal[j] - dout_avx2[j]) < 1e-5f);
+			}
+
+		}
 	}
 }
+
+#endif
