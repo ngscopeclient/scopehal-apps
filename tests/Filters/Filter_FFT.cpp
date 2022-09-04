@@ -86,11 +86,8 @@ TEST_CASE("Filter_FFT")
 			ua.PrepareForGpuAccess();
 			ua.PrepareForCpuAccess();
 
-			//Run the filter once on CPU and GPU each
-			//without looking at results, to make sure caches are hot and buffers are allocated etc
+			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
-			filter->Refresh(cmdbuf, queue);
-			g_gpuFilterEnabled = true;
 			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU with no AVX
@@ -99,7 +96,7 @@ TEST_CASE("Filter_FFT")
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
+			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
 
 			//Copy the result
 			AcceleratorBuffer<float> golden;
@@ -112,26 +109,29 @@ TEST_CASE("Filter_FFT")
 				start = GetTime();
 				filter->Refresh(cmdbuf, queue);
 				float dt = GetTime() - start;
-				LogVerbose("CPU (AVX2)  : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 				VerifyMatchingResult(
 					golden,
 					dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-					2e-3f
+					3e-3f
 					);
 			}
 
-			//Try again on the GPU
+			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
+			filter->Refresh(cmdbuf, queue);
+
+			//Try again on the GPU, this time for score
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU         : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				2e-3f
+				3e-3f
 				);
 		}
 	}
