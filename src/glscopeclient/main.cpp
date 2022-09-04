@@ -353,10 +353,10 @@ void ScopeThread(Oscilloscope* scope)
 
 		//If the queue is too big, stop grabbing data
 		size_t npending = scope->GetPendingWaveformCount();
-		if(npending > 20)
+		if(npending > 5)
 		{
 			LogTrace("Queue is too big, sleeping\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			tlast = GetTime();
 
 			/*
@@ -374,12 +374,12 @@ void ScopeThread(Oscilloscope* scope)
 			continue;
 		}
 
-		//If the queue is more than 5 sec long, wait for a while before polling any more.
+		//If the queue is more than 1 sec long, wait for a while before polling any more.
 		//We've gotten ahead of the UI!
-		if(npending > 1 && npending*dt > 5)
+		if(npending > 1 && npending*dt > 1)
 		{
-			LogTrace("Capture thread got 5 sec ahead of UI, sleeping\n");
-			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			LogTrace("Capture thread got 1000 ms ahead of UI, sleeping\n");
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			tlast = GetTime();
 			continue;
 		}
