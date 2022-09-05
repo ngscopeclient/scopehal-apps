@@ -36,8 +36,6 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
-# (causes clGetPlatformIDs to return -1001)
 if(SANITIZE)
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address -D_DEBUG")
 else()
@@ -53,7 +51,6 @@ find_package(PkgConfig)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
-find_package(OpenCL)
 include(FindOpenMP)
 
 # Use the local FindVulkan script until we can rely on all users having CMake 3.24 available, at which point we can remove it
