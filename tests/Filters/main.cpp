@@ -67,6 +67,11 @@ int main(int argc, char* argv[])
 			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 		scope.AddChannel(new OscilloscopeChannel(
 			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+
+		scope.AddChannel(new OscilloscopeChannel(
+			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
+		scope.AddChannel(new OscilloscopeChannel(
+			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
 		g_scope = &scope;
 
 		//Run the actual test
@@ -79,11 +84,11 @@ int main(int argc, char* argv[])
 }
 
 /**
-	@brief Fills a waveform with random content, uniformly distributed from -1 to +1
+	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
  */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size)
+void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
 {
-	auto rdist = uniform_real_distribution<float>(-1, 1);
+	auto rdist = uniform_real_distribution<float>(fmin, fmax);
 
 	wfm->PrepareForCpuAccess();
 	wfm->Resize(size);
