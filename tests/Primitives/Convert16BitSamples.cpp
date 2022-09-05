@@ -70,7 +70,7 @@ TEST_CASE("Primitive_Convert16BitSamples")
 	data_out_golden.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	const size_t wavelen = 50000000;
+	const size_t wavelen = 1000000;
 	data_in.resize(wavelen);
 	data_out.resize(wavelen);
 	data_out_golden.resize(wavelen);
