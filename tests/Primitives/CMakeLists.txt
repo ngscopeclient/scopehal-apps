@@ -3,6 +3,7 @@ add_executable(Primitives
 
 	BlackmanHarrisWindow.cpp
 	Convert8BitSamples.cpp
+	Convert16BitSamples.cpp
 	Sampling.cpp
 )
 
