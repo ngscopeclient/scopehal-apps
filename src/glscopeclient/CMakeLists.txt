@@ -109,10 +109,6 @@ add_custom_target(
 	COMMENT "Copying gradients..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/src/glscopeclient/gradients)
 add_custom_target(
-	filterkernels
-	COMMENT "Copying filter kernels..."
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/src/glscopeclient/kernels)
-add_custom_target(
 	shaders
 	COMMENT "Copying shaders..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
@@ -135,7 +131,6 @@ add_dependencies(protoshaders
 
 add_dependencies(glscopeclient
 	gradients
-	filterkernels
 	protoshaders
 	shaders
 	styles
@@ -151,8 +146,6 @@ if(WIXPATH AND WIN32)
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/dist/windows_x64/gradients
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/dist/windows_x64/kernels
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/windows_x64/shaders
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
