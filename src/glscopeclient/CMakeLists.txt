@@ -47,7 +47,6 @@ add_executable(glscopeclient
 	FilterDialog.cpp
 	FilterGraphEditor.cpp
 	FilterGraphEditorWidget.cpp
-	FileSystem.cpp
 	Framebuffer.cpp
 	FunctionGeneratorDialog.cpp
 	HaltConditionsDialog.cpp
