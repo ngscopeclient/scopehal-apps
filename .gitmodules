@@ -4,3 +4,6 @@
 [submodule "doc"]
 	path = doc
 	url = ../scopehal-docs.git
+[submodule "src/imgui"]
+	path = src/imgui
+	url = https://github.com/ocornut/imgui
