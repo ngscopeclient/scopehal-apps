@@ -30,106 +30,51 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Program entry point
+	@brief Implementation of VulkanWindow
  */
 #include "ngscopeclient.h"
-#include "MainWindow.h"
-#include "../scopeprotocols/scopeprotocols.h"
-#include "../scopeexports/scopeexports.h"
+#include "VulkanWindow.h"
 
 using namespace std;
 
-unique_ptr<MainWindow> g_mainWindow;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-#ifndef _WIN32
-void Relaunch(int argc, char* argv[]);
-#endif
-
-int main(int argc, char* argv[])
+/**
+	@brief Creates a new top level window with the specified title
+ */
+VulkanWindow::VulkanWindow(const string& title)
 {
-	//Global settings
-	Severity console_verbosity = Severity::NOTICE;
+	//Don't configure Vulkan or center the mouse
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
 
-	for(int i=1; i<argc; i++)
+	//Create the window
+	m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
+	if(!m_window)
 	{
-		string s(argv[i]);
-
-		//Let the logger eat its args first
-		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
-			continue;
-
-		//TODO: other arguments
-
+		LogError("Window creation failed\n");
+		abort();
 	}
 
-	//Set up logging
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-
-	//Complain if the OpenMP wait policy isn't set right
-	const char* policy = getenv("OMP_WAIT_POLICY");
-	#ifndef _WIN32
-		bool need_relaunch = false;
-	#endif
-	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )
+	//Create a Vulkan surface for drawing onto
+	VkSurfaceKHR surface;
+	if(VK_SUCCESS != glfwCreateWindowSurface(**g_vkInstance, m_window, nullptr, &surface))
 	{
-		#ifdef _WIN32
-			LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
-		#else
-			LogDebug("OMP_WAIT_POLICY not set to PASSIVE\n");
-			setenv("OMP_WAIT_POLICY", "PASSIVE", true);
-
-			need_relaunch = true;
-		#endif
+		LogError("Vulkan surface creation failed\n");
+		abort();
 	}
 
-	//Note if asan is active
-	LogDebug("Compiled with AddressSanitizer\n");
-
-	#ifndef _WIN32
-		if(need_relaunch)
-		{
-			LogDebug("Re-exec'ing with correct environment\n");
-			Relaunch(argc, argv);
-		}
-	#endif
-
-	//Initialize object creation tables for predefined libraries
-	if(!VulkanInit())
-		return 1;
-	TransportStaticInit();
-	DriverStaticInit();
-	ScopeProtocolStaticInit();
-	ScopeExportStaticInit();
-	InitializePlugins();
-
-	g_mainWindow = make_unique<MainWindow>();
-
-	//Main event loop
-	while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
-	{
-		//poll and return immediately
-		//glfwPollEvents();
-
-		//block until we have something to do, then process events
-		glfwWaitEvents();
-	}
-
-	//Done, clean up
-	g_mainWindow = nullptr;
-	ScopehalStaticCleanup();
-	return 0;
+	//Encapsulate the generated surface in a C++ object for easier access
+	m_surface = make_shared<vk::raii::SurfaceKHR>(*g_vkInstance, surface);
 }
 
-#ifndef _WIN32
-void Relaunch(int argc, char* argv[])
+/**
+	@brief Destroys a VulkanWindow
+ */
+VulkanWindow::~VulkanWindow()
 {
-	//make a copy of arguments since argv[] does not have to be null terminated, but execvp requires that
-	vector<char*> args;
-	for(int i=0; i<argc; i++)
-		args.push_back(argv[i]);
-	args.push_back(NULL);
+	m_surface = nullptr;
 
-	//Launch ourself with the new environment
-	execvp(argv[0], &args[0]);
+	glfwDestroyWindow(m_window);
 }
-#endif

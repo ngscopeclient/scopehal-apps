@@ -5,6 +5,9 @@ link_directories(${SIGCXX_LIBRARY_DIRS})
 ###############################################################################
 #C++ compilation
 add_executable(ngscopeclient
+	MainWindow.cpp
+	VulkanWindow.cpp
+
 	main.cpp
 )
 

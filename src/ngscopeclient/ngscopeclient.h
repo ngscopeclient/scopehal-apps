@@ -30,5 +30,6 @@
 #define ngscopeclient_h
 
 #include "../scopehal/scopehal.h"
+#include <GLFW/glfw3.h>
 
 #endif
