@@ -216,7 +216,9 @@ int main(int argc, char* argv[])
 	}
 
 	//Note if asan is active
+	#ifdef __SANITIZE_ADDRESS__
 	LogDebug("Compiled with AddressSanitizer\n");
+	#endif
 
 	#ifndef _WIN32
 		if(need_relaunch)
