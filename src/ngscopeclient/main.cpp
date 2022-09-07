@@ -39,10 +39,11 @@
 
 using namespace std;
 
+GLFWwindow* g_mainWindow = nullptr;
+
 #ifndef _WIN32
 void Relaunch(int argc, char* argv[]);
 #endif
-
 
 int main(int argc, char* argv[])
 {
@@ -101,7 +102,24 @@ int main(int argc, char* argv[])
 	ScopeExportStaticInit();
 	InitializePlugins();
 
-	//Run the app
+	//Create the top level window
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	g_mainWindow = glfwCreateWindow(1280, 720, "ngscopeclient", nullptr, nullptr);
+	if(!g_mainWindow)
+	{
+		LogError("main window creation failed\n");
+		return 1;
+	}
+
+	//Main event loop
+	while(!glfwWindowShouldClose(g_mainWindow))
+	{
+		//poll and return immediately
+		//glfwPollEvents();
+
+		//block until we have something to do, then process events
+		glfwWaitEvents();
+	}
 
 	//Done, clean up
 	ScopehalStaticCleanup();
