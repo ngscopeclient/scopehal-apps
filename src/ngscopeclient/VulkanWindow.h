@@ -48,6 +48,7 @@ public:
 	{ return m_window; }
 
 protected:
+	void UpdateFramebuffer();
 
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;

@@ -34,6 +34,7 @@
  */
 #include "ngscopeclient.h"
 #include "VulkanWindow.h"
+#include "VulkanFFTPlan.h"
 
 using namespace std;
 
@@ -67,6 +68,23 @@ VulkanWindow::VulkanWindow(const string& title)
 
 	//Encapsulate the generated surface in a C++ object for easier access
 	m_surface = make_shared<vk::raii::SurfaceKHR>(*g_vkInstance, surface);
+
+	//Initialize ImGui
+	ImGui_ImplGlfw_InitForVulkan(m_window, true);
+	ImGui_ImplVulkan_InitInfo info = {};
+	info.Instance = **g_vkInstance;
+	info.PhysicalDevice = **g_vkfftPhysicalDevice;
+	info.Device = **g_vkComputeDevice;
+	info.QueueFamily = g_renderQueueType;
+	//TODO: queue, pipeline cache, descriptor pool
+	info.Subpass = 0;
+	//info.MinImageCount = x;
+	//info.ImageCount = x;
+	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	//info.Allocator = x;
+	//ImGui_ImplVulkanInit(&info, FixmeRenderPass);
+
+	UpdateFramebuffer();
 }
 
 /**
@@ -77,4 +95,16 @@ VulkanWindow::~VulkanWindow()
 	m_surface = nullptr;
 
 	glfwDestroyWindow(m_window);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
+void VulkanWindow::UpdateFramebuffer()
+{
+	//Figure out how big our framebuffer is
+	int width;
+	int height;
+	glfwGetFramebufferSize(m_window, &width, &height);
+	LogDebug("Framebuffer size: %d x %d\n", width, height);
 }

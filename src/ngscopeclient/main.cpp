@@ -102,6 +102,16 @@ int main(int argc, char* argv[])
 	ScopeExportStaticInit();
 	InitializePlugins();
 
+	//Initialize ImGui
+	IMGUI_CHECKVERSION();
+	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
+	auto ctx = ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	ImGui::StyleColorsDark();
+
 	g_mainWindow = make_unique<MainWindow>();
 
 	//Main event loop
@@ -115,6 +125,7 @@ int main(int argc, char* argv[])
 	}
 
 	//Done, clean up
+	ImGui::DestroyContext(ctx);
 	g_mainWindow = nullptr;
 	ScopehalStaticCleanup();
 	return 0;
