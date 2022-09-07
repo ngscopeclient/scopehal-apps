@@ -92,8 +92,8 @@ TEST_CASE("Filter_DeEmbed")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
-			FillRandomWaveform(&umag, depth, -50, 0);
+			FillRandomWaveform(&ua, depth, -1, 1);
+			FillRandomWaveform(&umag, depth, -15, 0);
 			FillRandomWaveform(&uang, depth, -180, 180);
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
@@ -129,7 +129,7 @@ TEST_CASE("Filter_DeEmbed")
 					VerifyMatchingResult(
 						golden,
 						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						1e-3f
+						1e-2f
 						);
 				}
 			#endif
@@ -147,7 +147,7 @@ TEST_CASE("Filter_DeEmbed")
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				1e-3f
+				1e-2f
 				);
 		}
 	}
