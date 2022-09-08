@@ -73,7 +73,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 
 	//Encapsulate the generated surface in a C++ object for easier access
 	m_surface = make_shared<vk::raii::SurfaceKHR>(*g_vkInstance, surface);
-	m_wdata.Surface = **m_surface;
 
 	//Make a descriptor pool for ImGui
 	//TODO: tune sizes?
@@ -140,7 +139,6 @@ VulkanWindow::~VulkanWindow()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
 	}
 	IM_FREE(m_wdata.Frames);
@@ -178,7 +176,7 @@ void VulkanWindow::UpdateFramebuffer()
 	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	m_wdata.SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(
 		**g_vkfftPhysicalDevice,
-		m_wdata.Surface,
+		**m_surface,
 		requestSurfaceImageFormat,
 		(size_t)IM_ARRAYSIZE(requestSurfaceImageFormat),
 		requestSurfaceColorSpace);
@@ -205,7 +203,7 @@ void VulkanWindow::UpdateFramebuffer()
 	{
 		VkSwapchainCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		info.surface = m_wdata.Surface;
+		info.surface = **m_surface;
 		info.minImageCount = IMAGE_COUNT;
 		info.imageFormat = m_wdata.SurfaceFormat.format;
 		info.imageColorSpace = m_wdata.SurfaceFormat.colorSpace;
@@ -218,7 +216,7 @@ void VulkanWindow::UpdateFramebuffer()
 		info.clipped = VK_TRUE;
 		info.oldSwapchain = old_swapchain;
 		VkSurfaceCapabilitiesKHR cap;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(**g_vkfftPhysicalDevice, m_wdata.Surface, &cap);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(**g_vkfftPhysicalDevice, **m_surface, &cap);
 		if (info.minImageCount < cap.minImageCount)
 			info.minImageCount = cap.minImageCount;
 		else if (cap.maxImageCount != 0 && info.minImageCount > cap.maxImageCount)
