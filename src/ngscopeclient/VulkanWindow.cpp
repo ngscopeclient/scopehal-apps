@@ -40,9 +40,6 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
-//internal helper methods we need to stop using long term
-void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -141,7 +138,6 @@ VulkanWindow::~VulkanWindow()
 	vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
 	vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
 	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
-	m_wdata = ImGui_ImplVulkanH_Window();
 
 	m_surface = nullptr;
 	glfwDestroyWindow(m_window);
@@ -174,14 +170,154 @@ void VulkanWindow::UpdateFramebuffer()
 		requestSurfaceColorSpace);
 	m_wdata.PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 
-	ImGui_ImplVulkanH_CreateWindowSwapChain(
-		**g_vkfftPhysicalDevice,
-		**g_vkComputeDevice,
-		&m_wdata,
-		nullptr,
-		width,
-		height,
-		IMAGE_COUNT);
+	VkSwapchainKHR old_swapchain = m_wdata.Swapchain;
+	m_wdata.Swapchain = VK_NULL_HANDLE;
+	vkDeviceWaitIdle(**g_vkComputeDevice);
+
+	// We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
+	// Destroy old Framebuffer
+	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+	{
+		auto fd = &m_wdata.Frames[i];
+		vkDestroyFence(**g_vkComputeDevice, fd->Fence, VK_NULL_HANDLE);
+		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
+		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
+		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
+		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
+	}
+	IM_FREE(m_wdata.Frames);
+	m_wdata.Frames = nullptr;
+	m_wdata.ImageCount = 0;
+	if (m_wdata.RenderPass)
+		vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
+	if (m_wdata.Pipeline)
+		vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
+
+	// Create Swapchain
+	{
+		VkSwapchainCreateInfoKHR info = {};
+		info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		info.surface = m_wdata.Surface;
+		info.minImageCount = IMAGE_COUNT;
+		info.imageFormat = m_wdata.SurfaceFormat.format;
+		info.imageColorSpace = m_wdata.SurfaceFormat.colorSpace;
+		info.imageArrayLayers = 1;
+		info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
+		info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+		info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		info.presentMode = m_wdata.PresentMode;
+		info.clipped = VK_TRUE;
+		info.oldSwapchain = old_swapchain;
+		VkSurfaceCapabilitiesKHR cap;
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(**g_vkfftPhysicalDevice, m_wdata.Surface, &cap);
+		if (info.minImageCount < cap.minImageCount)
+			info.minImageCount = cap.minImageCount;
+		else if (cap.maxImageCount != 0 && info.minImageCount > cap.maxImageCount)
+			info.minImageCount = cap.maxImageCount;
+
+		if (cap.currentExtent.width == 0xffffffff)
+		{
+			info.imageExtent.width = m_wdata.Width = width;
+			info.imageExtent.height = m_wdata.Height = height;
+		}
+		else
+		{
+			info.imageExtent.width = m_wdata.Width = cap.currentExtent.width;
+			info.imageExtent.height = m_wdata.Height = cap.currentExtent.height;
+		}
+		vkCreateSwapchainKHR(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.Swapchain);
+		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_wdata.ImageCount, NULL);
+		VkImage backbuffers[16] = {};
+		IM_ASSERT(m_wdata.ImageCount >= IMAGE_COUNT);
+		IM_ASSERT(m_wdata.ImageCount < IM_ARRAYSIZE(backbuffers));
+		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_wdata.ImageCount, backbuffers);
+
+		IM_ASSERT(m_wdata.Frames == NULL);
+		m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_wdata.ImageCount);
+		m_wdata.FrameSemaphores = (ImGui_ImplVulkanH_FrameSemaphores*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_FrameSemaphores) * m_wdata.ImageCount);
+		memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_wdata.ImageCount);
+		memset(m_wdata.FrameSemaphores, 0, sizeof(m_wdata.FrameSemaphores[0]) * m_wdata.ImageCount);
+		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+			m_wdata.Frames[i].Backbuffer = backbuffers[i];
+	}
+	if (old_swapchain)
+		vkDestroySwapchainKHR(**g_vkComputeDevice, old_swapchain, VK_NULL_HANDLE);
+
+	// Create the Render Pass
+	{
+		VkAttachmentDescription attachment = {};
+		attachment.format = m_wdata.SurfaceFormat.format;
+		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachment.loadOp = m_wdata.ClearEnable ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		VkAttachmentReference color_attachment = {};
+		color_attachment.attachment = 0;
+		color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &color_attachment;
+		VkSubpassDependency dependency = {};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		VkRenderPassCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		info.attachmentCount = 1;
+		info.pAttachments = &attachment;
+		info.subpassCount = 1;
+		info.pSubpasses = &subpass;
+		info.dependencyCount = 1;
+		info.pDependencies = &dependency;
+		vkCreateRenderPass(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.RenderPass);
+	}
+
+	// Create The Image Views
+	{
+		VkImageViewCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		info.format = m_wdata.SurfaceFormat.format;
+		info.components.r = VK_COMPONENT_SWIZZLE_R;
+		info.components.g = VK_COMPONENT_SWIZZLE_G;
+		info.components.b = VK_COMPONENT_SWIZZLE_B;
+		info.components.a = VK_COMPONENT_SWIZZLE_A;
+		VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		info.subresourceRange = image_range;
+		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+		{
+			ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[i];
+			info.image = fd->Backbuffer;
+			vkCreateImageView(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->BackbufferView);
+		}
+	}
+
+	// Create Framebuffer
+	{
+		VkImageView attachment[1];
+		VkFramebufferCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		info.renderPass = m_wdata.RenderPass;
+		info.attachmentCount = 1;
+		info.pAttachments = attachment;
+		info.width = m_wdata.Width;
+		info.height = m_wdata.Height;
+		info.layers = 1;
+		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+		{
+			ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[i];
+			attachment[0] = fd->BackbufferView;
+			vkCreateFramebuffer(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->Framebuffer);
+		}
+	}
 
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
@@ -208,7 +344,7 @@ void VulkanWindow::UpdateFramebuffer()
 			vkCreateFence(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->Fence);
 		}
 	}
-	m_wdata.FrameSemaphores = NULL;
+	m_wdata.FrameSemaphores = nullptr;
 
 	m_resizeEventPending = false;
 }
