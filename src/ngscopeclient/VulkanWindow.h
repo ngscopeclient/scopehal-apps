@@ -103,6 +103,9 @@ protected:
 	///@brief Render pass for drawing everything
 	std::unique_ptr<vk::raii::RenderPass> m_renderPass;
 
+	///@brief Swapchain for presenting to the screen
+	std::unique_ptr<vk::raii::SwapchainKHR> m_swapchain;
+
 	///@brief Current window width
 	int m_width;
 

@@ -143,8 +143,7 @@ VulkanWindow::~VulkanWindow()
 	m_wdata.Frames = nullptr;
 
 	m_renderPass = nullptr;
-	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
-
+	m_swapchain = nullptr;
 	m_surface = nullptr;
 	glfwDestroyWindow(m_window);
 	m_imguiDescriptorPool = nullptr;
@@ -177,61 +176,46 @@ void VulkanWindow::UpdateFramebuffer()
 		requestSurfaceColorSpace);
 	vk::Format surfaceFormat = static_cast<vk::Format>(format.format);
 
-	VkSwapchainKHR old_swapchain = m_wdata.Swapchain;
-	m_wdata.Swapchain = VK_NULL_HANDLE;
+	//Save old swapchain
+	unique_ptr<vk::raii::SwapchainKHR> oldSwapchain = move(m_swapchain);
 
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 	m_imageCount = 0;
 
-	// Create Swapchain
-	{
-		VkSwapchainCreateInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		info.surface = **m_surface;
-		info.minImageCount = IMAGE_COUNT;
-		info.imageFormat = format.format;
-		info.imageColorSpace = format.colorSpace;
-		info.imageArrayLayers = 1;
-		info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
-		info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-		info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-		info.clipped = VK_TRUE;
-		info.oldSwapchain = old_swapchain;
-		VkSurfaceCapabilitiesKHR cap;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(**g_vkfftPhysicalDevice, **m_surface, &cap);
-		if (info.minImageCount < cap.minImageCount)
-			info.minImageCount = cap.minImageCount;
-		else if (cap.maxImageCount != 0 && info.minImageCount > cap.maxImageCount)
-			info.minImageCount = cap.maxImageCount;
+	//Makw the swapchain
+	vk::SwapchainKHR oldSwapchainIfValid = {};
+	if(oldSwapchain != nullptr)
+		oldSwapchainIfValid = **oldSwapchain;
+	vk::SwapchainCreateInfoKHR chainInfo(
+		{},
+		**m_surface,
+		IMAGE_COUNT,
+		surfaceFormat,
+		static_cast<vk::ColorSpaceKHR>(format.colorSpace),
+		vk::Extent2D(m_width, m_height),
+		1,
+		vk::ImageUsageFlagBits::eColorAttachment,
+		vk::SharingMode::eExclusive,
+		{},
+		vk::SurfaceTransformFlagBitsKHR::eIdentity,
+		vk::CompositeAlphaFlagBitsKHR::eOpaque,
+		vk::PresentModeKHR::eFifo,
+		true,
+		oldSwapchainIfValid);
+	m_swapchain = make_unique<vk::raii::SwapchainKHR>(*g_vkComputeDevice, chainInfo);
 
-		if (cap.currentExtent.width == 0xffffffff)
-		{
-			info.imageExtent.width = m_width;
-			info.imageExtent.height = m_height;
-		}
-		else
-		{
-			info.imageExtent.width = m_width = cap.currentExtent.width;
-			info.imageExtent.height = m_height = cap.currentExtent.height;
-		}
-		vkCreateSwapchainKHR(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.Swapchain);
-		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_imageCount, NULL);
-		VkImage backbuffers[16] = {};
-		IM_ASSERT(m_imageCount >= IMAGE_COUNT);
-		IM_ASSERT(m_imageCount < IM_ARRAYSIZE(backbuffers));
-		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_imageCount, backbuffers);
+	//Back buffers
+	vkGetSwapchainImagesKHR(**g_vkComputeDevice, **m_swapchain, &m_imageCount, NULL);
+	VkImage backbuffers[16] = {};
+	vkGetSwapchainImagesKHR(**g_vkComputeDevice, **m_swapchain, &m_imageCount, backbuffers);
 
-		IM_ASSERT(m_wdata.Frames == NULL);
-		m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_imageCount);
-		memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_imageCount);
-		for (uint32_t i = 0; i < m_imageCount; i++)
-			m_wdata.Frames[i].Backbuffer = backbuffers[i];
-	}
-	if (old_swapchain)
-		vkDestroySwapchainKHR(**g_vkComputeDevice, old_swapchain, VK_NULL_HANDLE);
+	m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_imageCount);
+	memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_imageCount);
+	for (uint32_t i = 0; i < m_imageCount; i++)
+		m_wdata.Frames[i].Backbuffer = backbuffers[i];
+
+	oldSwapchain = nullptr;
 
 	//Make render pass
 	vk::AttachmentDescription attachment(
@@ -284,6 +268,7 @@ void VulkanWindow::UpdateFramebuffer()
 
 void VulkanWindow::Render()
 {
+	//If we're re-rendering after the window size changed, fix up the framebuffer before we worry about anything else
 	if(m_resizeEventPending)
 		UpdateFramebuffer();
 
@@ -304,15 +289,9 @@ void VulkanWindow::Render()
 	if(!main_is_minimized)
 	{
 		//Get the next frame to draw onto
-		VkResult err;
-		err = vkAcquireNextImageKHR(
-			**g_vkComputeDevice,
-			m_wdata.Swapchain,
-			UINT64_MAX,
-			**m_imageAcquiredSemaphores[m_semaphoreIndex],
-			VK_NULL_HANDLE,
-			&m_frameIndex);
-		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+		auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
+		m_frameIndex = result.second;
+		if (result.first == vk::Result::eErrorOutOfDateKHR || result.first == vk::Result::eSuboptimalKHR)
 		{
 			m_resizeEventPending = true;
 			Render();
@@ -356,18 +335,14 @@ void VulkanWindow::Render()
 		m_renderQueue.submit(info, **m_fences[m_frameIndex]);
 	}
 
-	// Update and Render additional Platform Windows
+	//Handle any additional popup windows created by imgui
 	ImGui::UpdatePlatformWindows();
 	ImGui::RenderPlatformWindowsDefault();
 
-	// Present Main Platform Window
-	if (!main_is_minimized)
+	//Present the main window
+	if(!main_is_minimized)
 	{
-		vk::SwapchainKHR tempChain(m_wdata.Swapchain);
-		vk::PresentInfoKHR presentInfo(
-			**m_renderCompleteSemaphores[m_semaphoreIndex],
-			tempChain,
-			m_frameIndex);
+		vk::PresentInfoKHR presentInfo(**m_renderCompleteSemaphores[m_semaphoreIndex], **m_swapchain, m_frameIndex);
 		auto err = m_renderQueue.presentKHR(presentInfo);
 		if (err == vk::Result::eErrorOutOfDateKHR || err == vk::Result::eSuboptimalKHR)
 		{
@@ -375,7 +350,7 @@ void VulkanWindow::Render()
 			Render();
 			return;
 		}
-		m_semaphoreIndex = (m_semaphoreIndex+ 1) % IMAGE_COUNT;
+		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_imageCount;
 	}
 
 	//Handle resize events
