@@ -191,7 +191,6 @@ void VulkanWindow::UpdateFramebuffer()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
 		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
 	}
