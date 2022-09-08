@@ -104,17 +104,22 @@ int main(int argc, char* argv[])
 	ScopeExportStaticInit();
 	InitializePlugins();
 
-	{
-		//Initialize ImGui
-		IMGUI_CHECKVERSION();
-		LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
-		auto ctx = ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-		ImGui::StyleColorsDark();
+	//Initialize ImGui
+	IMGUI_CHECKVERSION();
+	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
+	auto ctx = ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+	//Set up appearance settings
+	ImGui::StyleColorsDark();
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 0.0f;
+	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+
+	{
 		//Make buffers etc for rendering
 		vk::CommandPoolCreateInfo poolInfo(
 			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -138,10 +143,10 @@ int main(int argc, char* argv[])
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 		{
 			//poll and return immediately
-			//glfwPollEvents();
+			glfwPollEvents();
 
 			//block until we have something to do, then process events
-			glfwWaitEvents();
+			//glfwWaitEvents();
 
 			//Draw the main window
 			g_mainWindow->Render();

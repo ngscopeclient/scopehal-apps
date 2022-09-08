@@ -90,6 +90,9 @@ protected:
 
 	///@brief Frame fences
 	std::vector<std::unique_ptr<vk::raii::Fence> > m_fences;
+
+	///@brief Back buffer view
+	std::vector<std::unique_ptr<vk::raii::ImageView> > m_backBufferViews;
 };
 
 #endif
