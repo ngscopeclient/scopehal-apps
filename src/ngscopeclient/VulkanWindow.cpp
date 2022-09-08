@@ -340,11 +340,10 @@ void VulkanWindow::Render()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	//TEMP
-	bool show = true;
-	ImGui::ShowDemoWindow(&show);
+	//Draw all of our application UI objects
+	RenderUI();
 
-	//Start up imgui
+	//Internal GUI rendering
 	ImGui::Render();
 
 	//Render the main window
@@ -352,6 +351,7 @@ void VulkanWindow::Render()
 	const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
 	if(!main_is_minimized)
 	{
+		//Get the next frame to draw onto
 		VkResult err;
 		err = vkAcquireNextImageKHR(
 			**g_vkComputeDevice,
@@ -367,7 +367,45 @@ void VulkanWindow::Render()
 			return;
 		}
 
-		DoRender(*m_cmdBuffers[m_wdata.FrameIndex]);
+		//Make sure the old frame has completed
+		g_vkComputeDevice->waitForFences({**m_fences[m_wdata.FrameIndex]}, VK_TRUE, UINT64_MAX);
+		g_vkComputeDevice->resetFences({**m_fences[m_wdata.FrameIndex]});
+
+		auto& cmdBuf = *m_cmdBuffers[m_wdata.FrameIndex];
+
+		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[m_wdata.FrameIndex];
+
+		cmdBuf.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+		{
+			VkRenderPassBeginInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			info.renderPass = m_wdata.RenderPass;
+			info.framebuffer = fd->Framebuffer;
+			info.renderArea.extent.width = m_wdata.Width;
+			info.renderArea.extent.height = m_wdata.Height;
+			info.clearValueCount = 1;
+			info.pClearValues = &m_wdata.ClearValue;
+			vkCmdBeginRenderPass(*cmdBuf, &info, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
+		// Record dear imgui primitives into command buffer
+		ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
+
+		//Draw anything else we might want to draw
+		DoRender(cmdBuf);
+
+		// Submit command buffer
+		vkCmdEndRenderPass(*cmdBuf);
+		cmdBuf.end();
+
+		vk::PipelineStageFlags flags(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		vk::SubmitInfo info(
+			**m_imageAcquiredSemaphores[m_semaphoreIndex],
+			flags,
+			*cmdBuf,
+			**m_renderCompleteSemaphores[m_semaphoreIndex]);
+		m_renderQueue.submit(info, **m_fences[m_wdata.FrameIndex]);
 	}
 
 	// Update and Render additional Platform Windows
@@ -398,6 +436,10 @@ void VulkanWindow::Render()
 	//Handle resize events
 	if(m_resizeEventPending)
 		Render();
+}
+
+void VulkanWindow::RenderUI()
+{
 }
 
 void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)

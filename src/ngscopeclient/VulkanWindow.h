@@ -51,7 +51,9 @@ public:
 
 protected:
 	void UpdateFramebuffer();
+
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+	virtual void RenderUI();
 
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;

@@ -41,52 +41,29 @@
 MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 {
+	//Set background color (premultiplied alpha)
+	ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
+	m_wdata.ClearValue.color.float32[0] = clear_color.x * clear_color.w;
+	m_wdata.ClearValue.color.float32[1] = clear_color.y * clear_color.w;
+	m_wdata.ClearValue.color.float32[2] = clear_color.z * clear_color.w;
+	m_wdata.ClearValue.color.float32[3] = clear_color.w;
 }
 
 MainWindow::~MainWindow()
 {
 }
 
-void MainWindow::DoRender(vk::raii::CommandBuffer& cmdBuf)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
+void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
-	ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
-	m_wdata.ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-	m_wdata.ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-	m_wdata.ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-	m_wdata.ClearValue.color.float32[3] = clear_color.w;
 
-	g_vkComputeDevice->waitForFences({**m_fences[m_wdata.FrameIndex]}, VK_TRUE, UINT64_MAX);
-	g_vkComputeDevice->resetFences({**m_fences[m_wdata.FrameIndex]});
+}
 
-	ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[m_wdata.FrameIndex];
-
-	cmdBuf.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-
-	{
-		VkRenderPassBeginInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		info.renderPass = m_wdata.RenderPass;
-		info.framebuffer = fd->Framebuffer;
-		info.renderArea.extent.width = m_wdata.Width;
-		info.renderArea.extent.height = m_wdata.Height;
-		info.clearValueCount = 1;
-		info.pClearValues = &m_wdata.ClearValue;
-		vkCmdBeginRenderPass(*cmdBuf, &info, VK_SUBPASS_CONTENTS_INLINE);
-	}
-
-	// Record dear imgui primitives into command buffer
-	ImDrawData* main_draw_data = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
-
-	// Submit command buffer
-	vkCmdEndRenderPass(*cmdBuf);
-	cmdBuf.end();
-
-	vk::PipelineStageFlags flags(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-	vk::SubmitInfo info(
-		**m_imageAcquiredSemaphores[m_semaphoreIndex],
-		flags,
-		*cmdBuf,
-		**m_renderCompleteSemaphores[m_semaphoreIndex]);
-	m_renderQueue.submit(info, **m_fences[m_wdata.FrameIndex]);
+void MainWindow::RenderUI()
+{
+	//TEMP: draw the demo window
+	bool show = true;
+	ImGui::ShowDemoWindow(&show);
 }

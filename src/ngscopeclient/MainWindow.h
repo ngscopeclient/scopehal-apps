@@ -48,6 +48,7 @@ public:
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+	virtual void RenderUI();
 };
 
 #endif
