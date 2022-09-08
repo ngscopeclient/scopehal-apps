@@ -94,6 +94,13 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 
 	UpdateFramebuffer();
 
+	vk::SemaphoreCreateInfo sinfo;
+	for(size_t i=0; i<m_wdata.ImageCount; i++)
+	{
+		m_imageAcquiredSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
+		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
+	}
+
 	//Initialize ImGui
 	ImGui_ImplGlfw_InitForVulkan(m_window, true);
 	ImGui_ImplVulkan_InitInfo info = {};
@@ -121,18 +128,13 @@ void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkDevice device, ImGui_ImplVulkanH
 VulkanWindow::~VulkanWindow()
 {
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-    {
-        ImGui_ImplVulkanH_DestroyFrame(**g_vkComputeDevice, &m_wdata.Frames[i], nullptr);
-        ImGui_ImplVulkanH_DestroyFrameSemaphores(**g_vkComputeDevice, &m_wdata.FrameSemaphores[i], nullptr);
-    }
-    IM_FREE(m_wdata.Frames);
-    IM_FREE(m_wdata.FrameSemaphores);
-    m_wdata.Frames = NULL;
-    m_wdata.FrameSemaphores = NULL;
-    vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
-    vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
-    vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
-    m_wdata = ImGui_ImplVulkanH_Window();
+		ImGui_ImplVulkanH_DestroyFrame(**g_vkComputeDevice, &m_wdata.Frames[i], nullptr);
+	IM_FREE(m_wdata.Frames);
+	m_wdata.Frames = NULL;
+	vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
+	vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
+	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
+	m_wdata = ImGui_ImplVulkanH_Window();
 
 	m_surface = nullptr;
 	glfwDestroyWindow(m_window);
@@ -177,6 +179,12 @@ void VulkanWindow::UpdateFramebuffer()
 		height,
 		IMAGE_COUNT);
 
+	//TEMP: Immediately destroy the semaphores since we don't use them
+	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+		ImGui_ImplVulkanH_DestroyFrameSemaphores(**g_vkComputeDevice, &m_wdata.FrameSemaphores[i], nullptr);
+	IM_FREE(m_wdata.FrameSemaphores);
+	m_wdata.FrameSemaphores = NULL;
+
 	m_resizeEventPending = false;
 }
 
@@ -205,7 +213,7 @@ void VulkanWindow::Render()
 	const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
 	if (!main_is_minimized)
 	{
-		VkSemaphore render_complete_semaphore = m_wdata.FrameSemaphores[m_wdata.SemaphoreIndex].RenderCompleteSemaphore;
+		VkSemaphore render_complete_semaphore = **m_renderCompleteSemaphores[m_wdata.SemaphoreIndex];
 		VkPresentInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		info.waitSemaphoreCount = 1;

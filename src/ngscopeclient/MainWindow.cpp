@@ -62,10 +62,13 @@ void MainWindow::DoRender()
 	if (!main_is_minimized)
 	{
 		VkResult err;
-
-		VkSemaphore image_acquired_semaphore  = m_wdata.FrameSemaphores[m_wdata.SemaphoreIndex].ImageAcquiredSemaphore;
-		VkSemaphore render_complete_semaphore = m_wdata.FrameSemaphores[m_wdata.SemaphoreIndex].RenderCompleteSemaphore;
-		err = vkAcquireNextImageKHR(**g_vkComputeDevice, m_wdata.Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &m_wdata.FrameIndex);
+		err = vkAcquireNextImageKHR(
+			**g_vkComputeDevice,
+			m_wdata.Swapchain,
+			UINT64_MAX,
+			**m_imageAcquiredSemaphores[m_wdata.SemaphoreIndex],
+			VK_NULL_HANDLE,
+			&m_wdata.FrameIndex);
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
 		{
 			m_resizeEventPending = true;
@@ -108,16 +111,19 @@ void MainWindow::DoRender()
 		// Submit command buffer
 		vkCmdEndRenderPass(fd->CommandBuffer);
 		{
+			VkSemaphore sem = **m_renderCompleteSemaphores[m_wdata.SemaphoreIndex];
+			VkSemaphore asem = **m_imageAcquiredSemaphores[m_wdata.SemaphoreIndex];
+
 			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			VkSubmitInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			info.waitSemaphoreCount = 1;
-			info.pWaitSemaphores = &image_acquired_semaphore;
+			info.pWaitSemaphores = &asem;
 			info.pWaitDstStageMask = &wait_stage;
 			info.commandBufferCount = 1;
 			info.pCommandBuffers = &fd->CommandBuffer;
 			info.signalSemaphoreCount = 1;
-			info.pSignalSemaphores = &render_complete_semaphore;
+			info.pSignalSemaphores = &sem;
 
 			err = vkEndCommandBuffer(fd->CommandBuffer);
 			//check_vk_result(err);

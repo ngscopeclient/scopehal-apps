@@ -70,6 +70,12 @@ protected:
 
 	///@brief Set true if we have to handle a resize event
 	bool m_resizeEventPending;
+
+	///@brief Semaphore indicating framebuffer is ready
+	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_imageAcquiredSemaphores;
+
+	///@brief Semaphore indicating frame is complete
+	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_renderCompleteSemaphores;
 };
 
 #endif
