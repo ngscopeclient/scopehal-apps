@@ -40,6 +40,10 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
+//internal helper methods we need to stop using long term
+void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -167,17 +171,20 @@ void VulkanWindow::UpdateFramebuffer()
 		requestSurfaceColorSpace);
 	m_wdata.PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 
-	// Create SwapChain, RenderPass, Framebuffer, etc.
-	ImGui_ImplVulkanH_CreateOrResizeWindow(
-		**g_vkInstance,
+	ImGui_ImplVulkanH_CreateWindowSwapChain(
 		**g_vkfftPhysicalDevice,
 		**g_vkComputeDevice,
 		&m_wdata,
-		g_renderQueueType,
 		nullptr,
 		width,
 		height,
 		IMAGE_COUNT);
+    ImGui_ImplVulkanH_CreateWindowCommandBuffers(
+		**g_vkfftPhysicalDevice,
+		**g_vkComputeDevice,
+		&m_wdata,
+		g_renderQueueType,
+		nullptr);
 
 	//TEMP: Immediately destroy the semaphores since we don't use them
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
