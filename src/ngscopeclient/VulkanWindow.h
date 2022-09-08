@@ -47,11 +47,11 @@ public:
 	GLFWwindow* GetWindow()
 	{ return m_window; }
 
-	virtual void Render();
+	virtual void Render(vk::raii::CommandBuffer& cmdbuf);
 
 protected:
 	void UpdateFramebuffer();
-	virtual void DoRender();
+	virtual void DoRender(vk::raii::CommandBuffer& cmdbuf);
 
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;

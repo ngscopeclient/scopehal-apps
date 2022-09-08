@@ -47,7 +47,7 @@ MainWindow::~MainWindow()
 {
 }
 
-void MainWindow::DoRender()
+void MainWindow::DoRender(vk::raii::CommandBuffer& cmdbuf)
 {
 	ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
 
@@ -74,25 +74,17 @@ void MainWindow::DoRender()
 			m_resizeEventPending = true;
 			return;
 		}
-		//check_vk_result(err);
+
+		g_vkComputeDevice->waitForFences({**m_fences[m_wdata.FrameIndex]}, VK_TRUE, UINT64_MAX);
+		g_vkComputeDevice->resetFences({**m_fences[m_wdata.FrameIndex]});
 
 		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[m_wdata.FrameIndex];
 		{
-			VkFence fence = **m_fences[m_wdata.FrameIndex];
-			err = vkWaitForFences(**g_vkComputeDevice, 1, &fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
-			//check_vk_result(err);
-
-			err = vkResetFences(**g_vkComputeDevice, 1, &fence);
-			//check_vk_result(err);
-		}
-		{
-			err = vkResetCommandPool(**g_vkComputeDevice, fd->CommandPool, 0);
-			//check_vk_result(err);
+			vkResetCommandPool(**g_vkComputeDevice, fd->CommandPool, 0);
 			VkCommandBufferBeginInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
-			//check_vk_result(err);
+			vkBeginCommandBuffer(fd->CommandBuffer, &info);
 		}
 		{
 			VkRenderPassBeginInfo info = {};
@@ -126,10 +118,8 @@ void MainWindow::DoRender()
 			info.signalSemaphoreCount = 1;
 			info.pSignalSemaphores = &sem;
 
-			err = vkEndCommandBuffer(fd->CommandBuffer);
-			//check_vk_result(err);
-			err = vkQueueSubmit(*m_renderQueue, 1, &info, **m_fences[m_wdata.FrameIndex]);
-			//check_vk_result(err);
+			vkEndCommandBuffer(fd->CommandBuffer);
+			vkQueueSubmit(*m_renderQueue, 1, &info, **m_fences[m_wdata.FrameIndex]);
 		}
 	}
 }

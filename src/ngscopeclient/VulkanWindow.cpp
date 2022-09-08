@@ -342,7 +342,7 @@ void VulkanWindow::UpdateFramebuffer()
 	m_resizeEventPending = false;
 }
 
-void VulkanWindow::Render()
+void VulkanWindow::Render(vk::raii::CommandBuffer& cmdbuf)
 {
 	if(m_resizeEventPending)
 		UpdateFramebuffer();
@@ -356,7 +356,7 @@ void VulkanWindow::Render()
 	bool show = true;
 	ImGui::ShowDemoWindow(&show);
 
-	DoRender();
+	DoRender(cmdbuf);
 
 	// Update and Render additional Platform Windows
 	ImGui::UpdatePlatformWindows();
@@ -379,7 +379,7 @@ void VulkanWindow::Render()
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
 		{
 			m_resizeEventPending = true;
-			Render();
+			Render(cmdbuf);
 			return;
 		}
 		m_semaphoreIndex = (m_semaphoreIndex+ 1) % IMAGE_COUNT;
@@ -387,9 +387,9 @@ void VulkanWindow::Render()
 
 	//Handle resize events
 	if(m_resizeEventPending)
-		Render();
+		Render(cmdbuf);
 }
 
-void VulkanWindow::DoRender()
+void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdbuf*/)
 {
 }

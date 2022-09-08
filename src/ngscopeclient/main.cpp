@@ -144,7 +144,7 @@ int main(int argc, char* argv[])
 			glfwWaitEvents();
 
 			//Draw the main window
-			g_mainWindow->Render();
+			g_mainWindow->Render(cmdBuf);
 		}
 
 		g_vkComputeDevice->waitIdle();
