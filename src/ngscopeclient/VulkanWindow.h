@@ -102,6 +102,12 @@ protected:
 
 	///@brief Render pass for drawing everything
 	std::unique_ptr<vk::raii::RenderPass> m_renderPass;
+
+	///@brief Current window width
+	int m_width;
+
+	///@brief Current window height
+	int m_height;
 };
 
 #endif

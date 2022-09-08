@@ -51,6 +51,8 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
 	, m_frameIndex(0)
+	, m_width(0)
+	, m_height(0)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -154,9 +156,7 @@ VulkanWindow::~VulkanWindow()
 void VulkanWindow::UpdateFramebuffer()
 {
 	//Figure out how big our framebuffer is
-	int width;
-	int height;
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(m_window, &m_width, &m_height);
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();
@@ -209,13 +209,13 @@ void VulkanWindow::UpdateFramebuffer()
 
 		if (cap.currentExtent.width == 0xffffffff)
 		{
-			info.imageExtent.width = m_wdata.Width = width;
-			info.imageExtent.height = m_wdata.Height = height;
+			info.imageExtent.width = m_width;
+			info.imageExtent.height = m_height;
 		}
 		else
 		{
-			info.imageExtent.width = m_wdata.Width = cap.currentExtent.width;
-			info.imageExtent.height = m_wdata.Height = cap.currentExtent.height;
+			info.imageExtent.width = m_width = cap.currentExtent.width;
+			info.imageExtent.height = m_height = cap.currentExtent.height;
 		}
 		vkCreateSwapchainKHR(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.Swapchain);
 		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_wdata.ImageCount, NULL);
@@ -275,7 +275,7 @@ void VulkanWindow::UpdateFramebuffer()
 			subrange);
 		m_backBufferViews[i] = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-		vk::FramebufferCreateInfo fbinfo({}, **m_renderPass, **m_backBufferViews[i], width, height, 1);
+		vk::FramebufferCreateInfo fbinfo({}, **m_renderPass, **m_backBufferViews[i], m_width, m_height, 1);
 		m_framebuffers[i] = make_unique<vk::raii::Framebuffer>(*g_vkComputeDevice,fbinfo);
 	}
 
@@ -333,7 +333,7 @@ void VulkanWindow::Render()
 		vk::RenderPassBeginInfo passInfo(
 			**m_renderPass,
 			**m_framebuffers[m_frameIndex],
-			vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_wdata.Width, m_wdata.Height)),
+			vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_width, m_height)),
 			clearValue);
 		cmdBuf.beginRenderPass(passInfo, vk::SubpassContents::eInline);
 
@@ -363,16 +363,13 @@ void VulkanWindow::Render()
 	// Present Main Platform Window
 	if (!main_is_minimized)
 	{
-		VkSemaphore render_complete_semaphore = **m_renderCompleteSemaphores[m_semaphoreIndex];
-		VkPresentInfoKHR info = {};
-		info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		info.waitSemaphoreCount = 1;
-		info.pWaitSemaphores = &render_complete_semaphore;
-		info.swapchainCount = 1;
-		info.pSwapchains = &m_wdata.Swapchain;
-		info.pImageIndices = &m_frameIndex;
-		VkResult err = vkQueuePresentKHR(*m_renderQueue, &info);
-		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+		vk::SwapchainKHR tempChain(m_wdata.Swapchain);
+		vk::PresentInfoKHR presentInfo(
+			**m_renderCompleteSemaphores[m_semaphoreIndex],
+			tempChain,
+			m_frameIndex);
+		auto err = m_renderQueue.presentKHR(presentInfo);
+		if (err == vk::Result::eErrorOutOfDateKHR || err == vk::Result::eSuboptimalKHR)
 		{
 			m_resizeEventPending = true;
 			Render();
