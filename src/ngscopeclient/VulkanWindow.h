@@ -51,6 +51,7 @@ public:
 
 protected:
 	void UpdateFramebuffer();
+	virtual void DoRender();
 
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;
@@ -66,6 +67,9 @@ protected:
 
 	///@brief ImGui window data
 	ImGui_ImplVulkanH_Window m_wdata;
+
+	///@brief Set true if we have to handle a resize event
+	bool m_resizeEventPending;
 };
 
 #endif

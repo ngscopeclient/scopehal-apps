@@ -134,8 +134,6 @@ int main(int argc, char* argv[])
 		SubmitAndBlock(cmdBuf, queue);
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
-		bool show = true;
-
 		//Main event loop
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 		{
@@ -145,11 +143,11 @@ int main(int argc, char* argv[])
 			//block until we have something to do, then process events
 			glfwWaitEvents();
 
-			//TODO: handle window resize
-
+			//Draw the main window
 			g_mainWindow->Render();
 		}
 
+		g_vkComputeDevice->waitIdle();
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext(ctx);

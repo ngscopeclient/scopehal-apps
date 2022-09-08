@@ -47,6 +47,7 @@ public:
 	virtual ~MainWindow();
 
 protected:
+	virtual void DoRender();
 };
 
 #endif
