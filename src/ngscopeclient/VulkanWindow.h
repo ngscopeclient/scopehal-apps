@@ -96,6 +96,9 @@ protected:
 
 	///@brief Framebuffer
 	std::vector<std::unique_ptr<vk::raii::Framebuffer> > m_framebuffers;
+
+	///@brief Render pass for drawing everything
+	std::unique_ptr<vk::raii::RenderPass> m_renderPass;
 };
 
 #endif

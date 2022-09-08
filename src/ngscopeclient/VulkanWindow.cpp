@@ -128,7 +128,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.ImageCount = m_wdata.ImageCount;
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
-	ImGui_ImplVulkan_Init(&info, m_wdata.RenderPass);
+	ImGui_ImplVulkan_Init(&info, **m_renderPass);
 }
 
 /**
@@ -139,7 +139,7 @@ VulkanWindow::~VulkanWindow()
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 
-	vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
+	m_renderPass = nullptr;
 	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
 
 	m_surface = nullptr;
@@ -178,13 +178,9 @@ void VulkanWindow::UpdateFramebuffer()
 	VkSwapchainKHR old_swapchain = m_wdata.Swapchain;
 	m_wdata.Swapchain = VK_NULL_HANDLE;
 
-	// We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
-	// Destroy old Framebuffer
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 	m_wdata.ImageCount = 0;
-	if (m_wdata.RenderPass)
-		vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
 
 	// Create Swapchain
 	{
@@ -235,47 +231,36 @@ void VulkanWindow::UpdateFramebuffer()
 	if (old_swapchain)
 		vkDestroySwapchainKHR(**g_vkComputeDevice, old_swapchain, VK_NULL_HANDLE);
 
-	// Create the Render Pass
-	{
-		VkAttachmentDescription attachment = {};
-		attachment.format = m_wdata.SurfaceFormat.format;
-		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		attachment.loadOp = m_wdata.ClearEnable ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		VkAttachmentReference color_attachment = {};
-		color_attachment.attachment = 0;
-		color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		VkSubpassDescription subpass = {};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &color_attachment;
-		VkSubpassDependency dependency = {};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		VkRenderPassCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		info.attachmentCount = 1;
-		info.pAttachments = &attachment;
-		info.subpassCount = 1;
-		info.pSubpasses = &subpass;
-		info.dependencyCount = 1;
-		info.pDependencies = &dependency;
-		vkCreateRenderPass(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.RenderPass);
-	}
+	//Make render pass
+	vk::AttachmentDescription attachment(
+		{},
+		static_cast<vk::Format>(m_wdata.SurfaceFormat.format),
+		vk::SampleCountFlagBits::e1,
+		vk::AttachmentLoadOp::eClear,	//?
+		vk::AttachmentStoreOp::eStore,
+		vk::AttachmentLoadOp::eDontCare,
+		vk::AttachmentStoreOp::eDontCare,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::ePresentSrcKHR);
 
+	vk::AttachmentReference colorAttachment({}, vk::ImageLayout::eColorAttachmentOptimal);
+	vk::SubpassDescription subpass({}, vk::PipelineBindPoint::eGraphics, {}, colorAttachment);
+	vk::SubpassDependency subpassDep(
+		VK_SUBPASS_EXTERNAL,
+		0,
+		vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		{},
+		vk::AccessFlagBits::eColorAttachmentWrite,
+		{});
+	vk::RenderPassCreateInfo passInfo({}, attachment, subpass, subpassDep);
+	m_renderPass = make_unique<vk::raii::RenderPass>(*g_vkComputeDevice, passInfo);
+
+	//Make per-frame buffer views and framebuffers
 	m_backBufferViews.resize(m_wdata.ImageCount);
 	m_framebuffers.resize(m_wdata.ImageCount);
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
-		//Create back buffer view
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
 		vk::ImageSubresourceRange subrange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
@@ -289,10 +274,9 @@ void VulkanWindow::UpdateFramebuffer()
 			subrange);
 		m_backBufferViews[i] = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-		// Create Framebuffer
 		vk::FramebufferCreateInfo fbinfo(
 			{},
-			static_cast<vk::RenderPass>(m_wdata.RenderPass),
+			**m_renderPass,
 			**m_backBufferViews[i],
 			width,
 			height,
@@ -351,7 +335,7 @@ void VulkanWindow::Render()
 		{
 			VkRenderPassBeginInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			info.renderPass = m_wdata.RenderPass;
+			info.renderPass = **m_renderPass;
 			info.framebuffer = **m_framebuffers[m_wdata.FrameIndex];
 			info.renderArea.extent.width = m_wdata.Width;
 			info.renderArea.extent.height = m_wdata.Height;
