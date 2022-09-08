@@ -95,6 +95,15 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 
 	UpdateFramebuffer();
 
+	//Set up command pool
+	vk::CommandPoolCreateInfo cmdPoolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_renderQueueType );
+	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
+	auto count = m_wdata.ImageCount;
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, count);
+
+	//Allocate frame state
 	vk::SemaphoreCreateInfo sinfo;
 	vk::FenceCreateInfo finfo(vk::FenceCreateFlagBits::eSignaled);
 	for(size_t i=0; i<m_wdata.ImageCount; i++)
@@ -102,6 +111,8 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 		m_imageAcquiredSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_fences.push_back(make_unique<vk::raii::Fence>(*g_vkComputeDevice, finfo));
+		m_cmdBuffers.push_back(make_unique<vk::raii::CommandBuffer>(
+			move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front())));
 	}
 
 	//Initialize ImGui
@@ -129,7 +140,6 @@ VulkanWindow::~VulkanWindow()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
 		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
 		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
@@ -181,7 +191,6 @@ void VulkanWindow::UpdateFramebuffer()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
 		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
 		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
@@ -318,31 +327,10 @@ void VulkanWindow::UpdateFramebuffer()
 		}
 	}
 
-	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-	{
-		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[i];
-		{
-			VkCommandPoolCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-			info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			info.queueFamilyIndex = g_renderQueueType;
-			vkCreateCommandPool(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->CommandPool);
-		}
-		{
-			VkCommandBufferAllocateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			info.commandPool = fd->CommandPool;
-			info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			info.commandBufferCount = 1;
-			vkAllocateCommandBuffers(**g_vkComputeDevice, &info, &fd->CommandBuffer);
-		}
-	}
-	m_wdata.FrameSemaphores = nullptr;
-
 	m_resizeEventPending = false;
 }
 
-void VulkanWindow::Render(vk::raii::CommandBuffer& cmdbuf)
+void VulkanWindow::Render()
 {
 	if(m_resizeEventPending)
 		UpdateFramebuffer();
@@ -356,15 +344,37 @@ void VulkanWindow::Render(vk::raii::CommandBuffer& cmdbuf)
 	bool show = true;
 	ImGui::ShowDemoWindow(&show);
 
-	DoRender(cmdbuf);
+	//Start up imgui
+	ImGui::Render();
+
+	//Render the main window
+	ImDrawData* main_draw_data = ImGui::GetDrawData();
+	const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
+	if(!main_is_minimized)
+	{
+		VkResult err;
+		err = vkAcquireNextImageKHR(
+			**g_vkComputeDevice,
+			m_wdata.Swapchain,
+			UINT64_MAX,
+			**m_imageAcquiredSemaphores[m_semaphoreIndex],
+			VK_NULL_HANDLE,
+			&m_wdata.FrameIndex);
+		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+		{
+			m_resizeEventPending = true;
+			Render();
+			return;
+		}
+
+		DoRender(*m_cmdBuffers[m_wdata.FrameIndex]);
+	}
 
 	// Update and Render additional Platform Windows
 	ImGui::UpdatePlatformWindows();
 	ImGui::RenderPlatformWindowsDefault();
 
 	// Present Main Platform Window
-	ImDrawData* main_draw_data = ImGui::GetDrawData();
-	const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
 	if (!main_is_minimized)
 	{
 		VkSemaphore render_complete_semaphore = **m_renderCompleteSemaphores[m_semaphoreIndex];
@@ -379,7 +389,7 @@ void VulkanWindow::Render(vk::raii::CommandBuffer& cmdbuf)
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
 		{
 			m_resizeEventPending = true;
-			Render(cmdbuf);
+			Render();
 			return;
 		}
 		m_semaphoreIndex = (m_semaphoreIndex+ 1) % IMAGE_COUNT;
@@ -387,9 +397,9 @@ void VulkanWindow::Render(vk::raii::CommandBuffer& cmdbuf)
 
 	//Handle resize events
 	if(m_resizeEventPending)
-		Render(cmdbuf);
+		Render();
 }
 
-void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdbuf*/)
+void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
 }

@@ -47,7 +47,7 @@ public:
 	virtual ~MainWindow();
 
 protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdbuf);
+	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 };
 
 #endif

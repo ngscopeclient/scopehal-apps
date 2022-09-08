@@ -47,11 +47,11 @@ public:
 	GLFWwindow* GetWindow()
 	{ return m_window; }
 
-	virtual void Render(vk::raii::CommandBuffer& cmdbuf);
+	virtual void Render();
 
 protected:
 	void UpdateFramebuffer();
-	virtual void DoRender(vk::raii::CommandBuffer& cmdbuf);
+	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;
@@ -70,6 +70,12 @@ protected:
 
 	///@brief Set true if we have to handle a resize event
 	bool m_resizeEventPending;
+
+	///@brief Frame command pool
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Frame command buffers
+	std::vector<std::unique_ptr<vk::raii::CommandBuffer> > m_cmdBuffers;
 
 	///@brief Semaphore indicating framebuffer is ready
 	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_imageAcquiredSemaphores;
