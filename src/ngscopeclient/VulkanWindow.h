@@ -88,6 +88,9 @@ protected:
 	///@brief Frame semaphore number for double buffering
 	uint32_t m_semaphoreIndex;
 
+	///@brief Frame number for double buffering
+	uint32_t m_frameIndex;
+
 	///@brief Frame fences
 	std::vector<std::unique_ptr<vk::raii::Fence> > m_fences;
 

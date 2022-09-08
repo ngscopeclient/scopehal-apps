@@ -50,6 +50,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
+	, m_frameIndex(0)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -168,12 +169,13 @@ void VulkanWindow::UpdateFramebuffer()
 		VK_FORMAT_R8G8B8_UNORM
 	};
 	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-	m_wdata.SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(
+	auto format = ImGui_ImplVulkanH_SelectSurfaceFormat(
 		**g_vkfftPhysicalDevice,
 		**m_surface,
 		requestSurfaceImageFormat,
 		(size_t)IM_ARRAYSIZE(requestSurfaceImageFormat),
 		requestSurfaceColorSpace);
+	vk::Format surfaceFormat = static_cast<vk::Format>(format.format);
 
 	VkSwapchainKHR old_swapchain = m_wdata.Swapchain;
 	m_wdata.Swapchain = VK_NULL_HANDLE;
@@ -188,8 +190,8 @@ void VulkanWindow::UpdateFramebuffer()
 		info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		info.surface = **m_surface;
 		info.minImageCount = IMAGE_COUNT;
-		info.imageFormat = m_wdata.SurfaceFormat.format;
-		info.imageColorSpace = m_wdata.SurfaceFormat.colorSpace;
+		info.imageFormat = format.format;
+		info.imageColorSpace = format.colorSpace;
 		info.imageArrayLayers = 1;
 		info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;           // Assume that graphics family == present family
@@ -234,9 +236,9 @@ void VulkanWindow::UpdateFramebuffer()
 	//Make render pass
 	vk::AttachmentDescription attachment(
 		{},
-		static_cast<vk::Format>(m_wdata.SurfaceFormat.format),
+		surfaceFormat,
 		vk::SampleCountFlagBits::e1,
-		vk::AttachmentLoadOp::eClear,	//?
+		vk::AttachmentLoadOp::eClear,
 		vk::AttachmentStoreOp::eStore,
 		vk::AttachmentLoadOp::eDontCare,
 		vk::AttachmentStoreOp::eDontCare,
@@ -264,7 +266,6 @@ void VulkanWindow::UpdateFramebuffer()
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
 		vk::ImageSubresourceRange subrange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-		vk::Format surfaceFormat = static_cast<vk::Format>(m_wdata.SurfaceFormat.format);
 		vk::ImageViewCreateInfo vinfo(
 			{},
 			m_wdata.Frames[i].Backbuffer,
@@ -274,13 +275,7 @@ void VulkanWindow::UpdateFramebuffer()
 			subrange);
 		m_backBufferViews[i] = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-		vk::FramebufferCreateInfo fbinfo(
-			{},
-			**m_renderPass,
-			**m_backBufferViews[i],
-			width,
-			height,
-			1);
+		vk::FramebufferCreateInfo fbinfo({}, **m_renderPass, **m_backBufferViews[i], width, height, 1);
 		m_framebuffers[i] = make_unique<vk::raii::Framebuffer>(*g_vkComputeDevice,fbinfo);
 	}
 
@@ -316,7 +311,7 @@ void VulkanWindow::Render()
 			UINT64_MAX,
 			**m_imageAcquiredSemaphores[m_semaphoreIndex],
 			VK_NULL_HANDLE,
-			&m_wdata.FrameIndex);
+			&m_frameIndex);
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
 		{
 			m_resizeEventPending = true;
@@ -325,33 +320,31 @@ void VulkanWindow::Render()
 		}
 
 		//Make sure the old frame has completed
-		g_vkComputeDevice->waitForFences({**m_fences[m_wdata.FrameIndex]}, VK_TRUE, UINT64_MAX);
-		g_vkComputeDevice->resetFences({**m_fences[m_wdata.FrameIndex]});
+		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
 
-		auto& cmdBuf = *m_cmdBuffers[m_wdata.FrameIndex];
-
+		//Start render pass
+		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
 		cmdBuf.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+		vk::ClearValue clearValue;
+		vk::ClearColorValue clearColor;
+		clearColor.setFloat32({0.1f, 0.1f, 0.1f, 1.0f});
+		clearValue.setColor(clearColor);
+		vk::RenderPassBeginInfo passInfo(
+			**m_renderPass,
+			**m_framebuffers[m_frameIndex],
+			vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_wdata.Width, m_wdata.Height)),
+			clearValue);
+		cmdBuf.beginRenderPass(passInfo, vk::SubpassContents::eInline);
 
-		{
-			VkRenderPassBeginInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			info.renderPass = **m_renderPass;
-			info.framebuffer = **m_framebuffers[m_wdata.FrameIndex];
-			info.renderArea.extent.width = m_wdata.Width;
-			info.renderArea.extent.height = m_wdata.Height;
-			info.clearValueCount = 1;
-			info.pClearValues = &m_wdata.ClearValue;
-			vkCmdBeginRenderPass(*cmdBuf, &info, VK_SUBPASS_CONTENTS_INLINE);
-		}
-
-		// Record dear imgui primitives into command buffer
+		//Draw GUI
 		ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
 
-		//Draw anything else we might want to draw
+		//Draw waveform data etc
 		DoRender(cmdBuf);
 
-		// Submit command buffer
-		vkCmdEndRenderPass(*cmdBuf);
+		//Finish up and submit
+		cmdBuf.endRenderPass();
 		cmdBuf.end();
 
 		vk::PipelineStageFlags flags(vk::PipelineStageFlagBits::eColorAttachmentOutput);
@@ -360,7 +353,7 @@ void VulkanWindow::Render()
 			flags,
 			*cmdBuf,
 			**m_renderCompleteSemaphores[m_semaphoreIndex]);
-		m_renderQueue.submit(info, **m_fences[m_wdata.FrameIndex]);
+		m_renderQueue.submit(info, **m_fences[m_frameIndex]);
 	}
 
 	// Update and Render additional Platform Windows
@@ -377,7 +370,7 @@ void VulkanWindow::Render()
 		info.pWaitSemaphores = &render_complete_semaphore;
 		info.swapchainCount = 1;
 		info.pSwapchains = &m_wdata.Swapchain;
-		info.pImageIndices = &m_wdata.FrameIndex;
+		info.pImageIndices = &m_frameIndex;
 		VkResult err = vkQueuePresentKHR(*m_renderQueue, &info);
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
 		{

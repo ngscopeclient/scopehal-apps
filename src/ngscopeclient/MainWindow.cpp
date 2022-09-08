@@ -41,12 +41,6 @@
 MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 {
-	//Set background color (premultiplied alpha)
-	ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.00f);
-	m_wdata.ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-	m_wdata.ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-	m_wdata.ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-	m_wdata.ClearValue.color.float32[3] = clear_color.w;
 }
 
 MainWindow::~MainWindow()
