@@ -53,6 +53,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	, m_frameIndex(0)
 	, m_width(0)
 	, m_height(0)
+	, m_imageCount(IMAGE_COUNT)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -102,13 +103,12 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		g_renderQueueType );
 	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
-	auto count = m_wdata.ImageCount;
-	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, count);
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_imageCount);
 
 	//Allocate frame state
 	vk::SemaphoreCreateInfo sinfo;
 	vk::FenceCreateInfo finfo(vk::FenceCreateFlagBits::eSignaled);
-	for(size_t i=0; i<m_wdata.ImageCount; i++)
+	for(size_t i=0; i<m_imageCount; i++)
 	{
 		m_imageAcquiredSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
@@ -128,7 +128,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.Subpass = 0;
 	info.MinImageCount = IMAGE_COUNT;
-	info.ImageCount = m_wdata.ImageCount;
+	info.ImageCount = m_imageCount;
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
@@ -182,7 +182,7 @@ void VulkanWindow::UpdateFramebuffer()
 
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
-	m_wdata.ImageCount = 0;
+	m_imageCount = 0;
 
 	// Create Swapchain
 	{
@@ -218,16 +218,16 @@ void VulkanWindow::UpdateFramebuffer()
 			info.imageExtent.height = m_height = cap.currentExtent.height;
 		}
 		vkCreateSwapchainKHR(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.Swapchain);
-		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_wdata.ImageCount, NULL);
+		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_imageCount, NULL);
 		VkImage backbuffers[16] = {};
-		IM_ASSERT(m_wdata.ImageCount >= IMAGE_COUNT);
-		IM_ASSERT(m_wdata.ImageCount < IM_ARRAYSIZE(backbuffers));
-		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_wdata.ImageCount, backbuffers);
+		IM_ASSERT(m_imageCount >= IMAGE_COUNT);
+		IM_ASSERT(m_imageCount < IM_ARRAYSIZE(backbuffers));
+		vkGetSwapchainImagesKHR(**g_vkComputeDevice, m_wdata.Swapchain, &m_imageCount, backbuffers);
 
 		IM_ASSERT(m_wdata.Frames == NULL);
-		m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_wdata.ImageCount);
-		memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_wdata.ImageCount);
-		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+		m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_imageCount);
+		memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_imageCount);
+		for (uint32_t i = 0; i < m_imageCount; i++)
 			m_wdata.Frames[i].Backbuffer = backbuffers[i];
 	}
 	if (old_swapchain)
@@ -259,9 +259,9 @@ void VulkanWindow::UpdateFramebuffer()
 	m_renderPass = make_unique<vk::raii::RenderPass>(*g_vkComputeDevice, passInfo);
 
 	//Make per-frame buffer views and framebuffers
-	m_backBufferViews.resize(m_wdata.ImageCount);
-	m_framebuffers.resize(m_wdata.ImageCount);
-	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
+	m_backBufferViews.resize(m_imageCount);
+	m_framebuffers.resize(m_imageCount);
+	for (uint32_t i = 0; i < m_imageCount; i++)
 	{
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);

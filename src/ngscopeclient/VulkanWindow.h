@@ -108,6 +108,9 @@ protected:
 
 	///@brief Current window height
 	int m_height;
+
+	///@brief Number of images in the multibuffer chain
+	uint32_t m_imageCount;
 };
 
 #endif
