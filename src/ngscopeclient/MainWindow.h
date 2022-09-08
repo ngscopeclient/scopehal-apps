@@ -43,7 +43,7 @@
 class MainWindow : public VulkanWindow
 {
 public:
-	MainWindow();
+	MainWindow(vk::raii::Queue& queue);
 	virtual ~MainWindow();
 
 protected:

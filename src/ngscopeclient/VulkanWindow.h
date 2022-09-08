@@ -41,7 +41,7 @@
 class VulkanWindow
 {
 public:
-	VulkanWindow(const std::string& title);
+	VulkanWindow(const std::string& title, vk::raii::Queue& queue);
 	virtual ~VulkanWindow();
 
 	GLFWwindow* GetWindow()
@@ -55,6 +55,15 @@ protected:
 
 	///@brief Surface for drawing onto
 	std::shared_ptr<vk::raii::SurfaceKHR> m_surface;
+
+	///@brief Descriptor pool for ImGui
+	std::unique_ptr<vk::raii::DescriptorPool> m_imguiDescriptorPool;
+
+	///@brief Queue for rendering to
+	vk::raii::Queue& m_renderQueue;
+
+	///@brief ImGui window data
+	ImGui_ImplVulkanH_Window m_wdata;
 };
 
 #endif

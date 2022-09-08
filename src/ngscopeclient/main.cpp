@@ -104,33 +104,55 @@ int main(int argc, char* argv[])
 	ScopeExportStaticInit();
 	InitializePlugins();
 
-	//Initialize ImGui
-	IMGUI_CHECKVERSION();
-	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
-	auto ctx = ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	ImGui::StyleColorsDark();
-
-	g_mainWindow = make_unique<MainWindow>();
-
-	//test
-	//ImGui::ShowDemoWindow();
-
-	//Main event loop
-	while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 	{
-		//poll and return immediately
-		//glfwPollEvents();
+		//Initialize ImGui
+		IMGUI_CHECKVERSION();
+		LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
+		auto ctx = ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		ImGui::StyleColorsDark();
 
-		//block until we have something to do, then process events
-		glfwWaitEvents();
+		//Make buffers etc for rendering
+		vk::CommandPoolCreateInfo poolInfo(
+			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+			g_renderQueueType );
+		vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
+		vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+		vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+		vk::raii::Queue queue(*g_vkComputeDevice, g_renderQueueType, AllocateVulkanRenderQueue());
+
+		//Make the top level window
+		g_mainWindow = make_unique<MainWindow>(queue);
+
+		//Download Vulkan fonts
+		cmdBuf.begin({});
+		ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
+		cmdBuf.end();
+		SubmitAndBlock(cmdBuf, queue);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+		//test
+		//ImGui::ShowDemoWindow();
+
+		//Main event loop
+		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
+		{
+			//poll and return immediately
+			//glfwPollEvents();
+
+			//block until we have something to do, then process events
+			glfwWaitEvents();
+		}
+
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext(ctx);
 	}
 
 	//Done, clean up
-	ImGui::DestroyContext(ctx);
 	g_mainWindow = nullptr;
 	ScopehalStaticCleanup();
 	return 0;

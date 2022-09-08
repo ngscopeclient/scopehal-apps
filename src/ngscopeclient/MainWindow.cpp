@@ -38,8 +38,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow()
-	: VulkanWindow("ngscopeclient")
+MainWindow::MainWindow(vk::raii::Queue& queue)
+	: VulkanWindow("ngscopeclient", queue)
 {
 }
 
