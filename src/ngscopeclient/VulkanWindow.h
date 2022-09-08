@@ -93,6 +93,9 @@ protected:
 
 	///@brief Back buffer view
 	std::vector<std::unique_ptr<vk::raii::ImageView> > m_backBufferViews;
+
+	///@brief Framebuffer
+	std::vector<std::unique_ptr<vk::raii::Framebuffer> > m_framebuffers;
 };
 
 #endif

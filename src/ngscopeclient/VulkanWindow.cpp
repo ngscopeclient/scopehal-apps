@@ -136,11 +136,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
  */
 VulkanWindow::~VulkanWindow()
 {
-	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-	{
-		auto fd = &m_wdata.Frames[i];
-		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
-	}
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 
@@ -186,11 +181,6 @@ void VulkanWindow::UpdateFramebuffer()
 
 	// We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
 	// Destroy old Framebuffer
-	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-	{
-		auto fd = &m_wdata.Frames[i];
-		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
-	}
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 	m_wdata.ImageCount = 0;
@@ -284,43 +274,33 @@ void VulkanWindow::UpdateFramebuffer()
 		vkCreateRenderPass(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &m_wdata.RenderPass);
 	}
 
-	//Make back buffer views
-	vk::ComponentMapping components(
-		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
-	vk::ImageSubresourceRange subrange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-	vk::Format surfaceFormat = static_cast<vk::Format>(m_wdata.SurfaceFormat.format);
-	vk::ImageViewCreateInfo vinfo(
-		{},
-		{},
-		vk::ImageViewType::e2D,
-		surfaceFormat,
-		components,
-		subrange
-	);
 	m_backBufferViews.resize(m_wdata.ImageCount);
+	m_framebuffers.resize(m_wdata.ImageCount);
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
-		vinfo.image = m_wdata.Frames[i].Backbuffer;
-		m_backBufferViews[i] = std::make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
-	}
+		//Create back buffer view
+		vk::ComponentMapping components(
+		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
+		vk::ImageSubresourceRange subrange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+		vk::Format surfaceFormat = static_cast<vk::Format>(m_wdata.SurfaceFormat.format);
+		vk::ImageViewCreateInfo vinfo(
+			{},
+			m_wdata.Frames[i].Backbuffer,
+			vk::ImageViewType::e2D,
+			surfaceFormat,
+			components,
+			subrange);
+		m_backBufferViews[i] = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-	// Create Framebuffer
-	{
-		VkImageView attachment[1];
-		VkFramebufferCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		info.renderPass = m_wdata.RenderPass;
-		info.attachmentCount = 1;
-		info.pAttachments = attachment;
-		info.width = m_wdata.Width;
-		info.height = m_wdata.Height;
-		info.layers = 1;
-		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-		{
-			ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[i];
-			attachment[0] = **m_backBufferViews[i];
-			vkCreateFramebuffer(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->Framebuffer);
-		}
+		// Create Framebuffer
+		vk::FramebufferCreateInfo fbinfo(
+			{},
+			static_cast<vk::RenderPass>(m_wdata.RenderPass),
+			**m_backBufferViews[i],
+			width,
+			height,
+			1);
+		m_framebuffers[i] = make_unique<vk::raii::Framebuffer>(*g_vkComputeDevice,fbinfo);
 	}
 
 	m_resizeEventPending = false;
@@ -369,15 +349,13 @@ void VulkanWindow::Render()
 
 		auto& cmdBuf = *m_cmdBuffers[m_wdata.FrameIndex];
 
-		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[m_wdata.FrameIndex];
-
 		cmdBuf.begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
 		{
 			VkRenderPassBeginInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			info.renderPass = m_wdata.RenderPass;
-			info.framebuffer = fd->Framebuffer;
+			info.framebuffer = **m_framebuffers[m_wdata.FrameIndex];
 			info.renderArea.extent.width = m_wdata.Width;
 			info.renderArea.extent.height = m_wdata.Height;
 			info.clearValueCount = 1;
