@@ -53,7 +53,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	, m_frameIndex(0)
 	, m_width(0)
 	, m_height(0)
-	, m_imageCount(IMAGE_COUNT)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -103,12 +102,12 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		g_renderQueueType );
 	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
-	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_imageCount);
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_backBuffers.size());
 
 	//Allocate frame state
 	vk::SemaphoreCreateInfo sinfo;
 	vk::FenceCreateInfo finfo(vk::FenceCreateFlagBits::eSignaled);
-	for(size_t i=0; i<m_imageCount; i++)
+	for(size_t i=0; i<m_backBuffers.size(); i++)
 	{
 		m_imageAcquiredSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
@@ -128,7 +127,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.Subpass = 0;
 	info.MinImageCount = IMAGE_COUNT;
-	info.ImageCount = m_imageCount;
+	info.ImageCount = m_backBuffers.size();
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
@@ -139,9 +138,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
  */
 VulkanWindow::~VulkanWindow()
 {
-	IM_FREE(m_wdata.Frames);
-	m_wdata.Frames = nullptr;
-
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
 	m_surface = nullptr;
@@ -179,10 +175,6 @@ void VulkanWindow::UpdateFramebuffer()
 	//Save old swapchain
 	unique_ptr<vk::raii::SwapchainKHR> oldSwapchain = move(m_swapchain);
 
-	IM_FREE(m_wdata.Frames);
-	m_wdata.Frames = nullptr;
-	m_imageCount = 0;
-
 	//Makw the swapchain
 	vk::SwapchainKHR oldSwapchainIfValid = {};
 	if(oldSwapchain != nullptr)
@@ -204,17 +196,6 @@ void VulkanWindow::UpdateFramebuffer()
 		true,
 		oldSwapchainIfValid);
 	m_swapchain = make_unique<vk::raii::SwapchainKHR>(*g_vkComputeDevice, chainInfo);
-
-	//Back buffers
-	vkGetSwapchainImagesKHR(**g_vkComputeDevice, **m_swapchain, &m_imageCount, NULL);
-	VkImage backbuffers[16] = {};
-	vkGetSwapchainImagesKHR(**g_vkComputeDevice, **m_swapchain, &m_imageCount, backbuffers);
-
-	m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_imageCount);
-	memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_imageCount);
-	for (uint32_t i = 0; i < m_imageCount; i++)
-		m_wdata.Frames[i].Backbuffer = backbuffers[i];
-
 	oldSwapchain = nullptr;
 
 	//Make render pass
@@ -228,7 +209,6 @@ void VulkanWindow::UpdateFramebuffer()
 		vk::AttachmentStoreOp::eDontCare,
 		vk::ImageLayout::eUndefined,
 		vk::ImageLayout::ePresentSrcKHR);
-
 	vk::AttachmentReference colorAttachment({}, vk::ImageLayout::eColorAttachmentOptimal);
 	vk::SubpassDescription subpass({}, vk::PipelineBindPoint::eGraphics, {}, colorAttachment);
 	vk::SubpassDependency subpassDep(
@@ -243,16 +223,17 @@ void VulkanWindow::UpdateFramebuffer()
 	m_renderPass = make_unique<vk::raii::RenderPass>(*g_vkComputeDevice, passInfo);
 
 	//Make per-frame buffer views and framebuffers
-	m_backBufferViews.resize(m_imageCount);
-	m_framebuffers.resize(m_imageCount);
-	for (uint32_t i = 0; i < m_imageCount; i++)
+	m_backBuffers = m_swapchain->getImages();
+	m_backBufferViews.resize(m_backBuffers.size());
+	m_framebuffers.resize(m_backBuffers.size());
+	for (uint32_t i = 0; i < m_backBuffers.size(); i++)
 	{
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
 		vk::ImageSubresourceRange subrange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 		vk::ImageViewCreateInfo vinfo(
 			{},
-			m_wdata.Frames[i].Backbuffer,
+			m_backBuffers[i],
 			vk::ImageViewType::e2D,
 			surfaceFormat,
 			components,
@@ -350,7 +331,7 @@ void VulkanWindow::Render()
 			Render();
 			return;
 		}
-		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_imageCount;
+		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_backBuffers.size();
 	}
 
 	//Handle resize events

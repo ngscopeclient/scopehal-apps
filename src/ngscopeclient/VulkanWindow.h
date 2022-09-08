@@ -67,9 +67,6 @@ protected:
 	///@brief Queue for rendering to
 	vk::raii::Queue& m_renderQueue;
 
-	///@brief ImGui window data
-	ImGui_ImplVulkanH_Window m_wdata;
-
 	///@brief Set true if we have to handle a resize event
 	bool m_resizeEventPending;
 
@@ -106,14 +103,14 @@ protected:
 	///@brief Swapchain for presenting to the screen
 	std::unique_ptr<vk::raii::SwapchainKHR> m_swapchain;
 
+	///@brief Back buffer images
+	std::vector<VkImage> m_backBuffers;
+
 	///@brief Current window width
 	int m_width;
 
 	///@brief Current window height
 	int m_height;
-
-	///@brief Number of images in the multibuffer chain
-	uint32_t m_imageCount;
 };
 
 #endif
