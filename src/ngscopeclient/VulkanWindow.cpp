@@ -42,7 +42,6 @@ using namespace std;
 
 //internal helper methods we need to stop using long term
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
-void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -179,17 +178,32 @@ void VulkanWindow::UpdateFramebuffer()
 		width,
 		height,
 		IMAGE_COUNT);
-	ImGui_ImplVulkanH_CreateWindowCommandBuffers(
-		**g_vkfftPhysicalDevice,
-		**g_vkComputeDevice,
-		&m_wdata,
-		g_renderQueueType,
-		nullptr);
 
-	//TEMP: Immediately destroy the semaphores since we don't use them
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-		ImGui_ImplVulkanH_DestroyFrameSemaphores(**g_vkComputeDevice, &m_wdata.FrameSemaphores[i], nullptr);
-	IM_FREE(m_wdata.FrameSemaphores);
+	{
+		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[i];
+		{
+			VkCommandPoolCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			info.queueFamilyIndex = g_renderQueueType;
+			vkCreateCommandPool(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->CommandPool);
+		}
+		{
+			VkCommandBufferAllocateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			info.commandPool = fd->CommandPool;
+			info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			info.commandBufferCount = 1;
+			vkAllocateCommandBuffers(**g_vkComputeDevice, &info, &fd->CommandBuffer);
+		}
+		{
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+			vkCreateFence(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->Fence);
+		}
+	}
 	m_wdata.FrameSemaphores = NULL;
 
 	m_resizeEventPending = false;
