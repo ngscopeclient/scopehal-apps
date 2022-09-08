@@ -139,7 +139,6 @@ VulkanWindow::~VulkanWindow()
 	IM_FREE(m_wdata.Frames);
 	m_wdata.Frames = nullptr;
 
-	vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
 	vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
 	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
 
@@ -186,8 +185,6 @@ void VulkanWindow::UpdateFramebuffer()
 	m_wdata.ImageCount = 0;
 	if (m_wdata.RenderPass)
 		vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
-	if (m_wdata.Pipeline)
-		vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
 
 	// Create Swapchain
 	{
