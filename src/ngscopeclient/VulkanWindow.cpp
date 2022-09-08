@@ -96,10 +96,12 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	UpdateFramebuffer();
 
 	vk::SemaphoreCreateInfo sinfo;
+	vk::FenceCreateInfo finfo(vk::FenceCreateFlagBits::eSignaled);
 	for(size_t i=0; i<m_wdata.ImageCount; i++)
 	{
 		m_imageAcquiredSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
+		m_fences.push_back(make_unique<vk::raii::Fence>(*g_vkComputeDevice, finfo));
 	}
 
 	//Initialize ImGui
@@ -127,7 +129,6 @@ VulkanWindow::~VulkanWindow()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkDestroyFence(**g_vkComputeDevice, fd->Fence, VK_NULL_HANDLE);
 		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
 		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
@@ -180,7 +181,6 @@ void VulkanWindow::UpdateFramebuffer()
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 	{
 		auto fd = &m_wdata.Frames[i];
-		vkDestroyFence(**g_vkComputeDevice, fd->Fence, VK_NULL_HANDLE);
 		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
 		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
 		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
@@ -335,12 +335,6 @@ void VulkanWindow::UpdateFramebuffer()
 			info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			info.commandBufferCount = 1;
 			vkAllocateCommandBuffers(**g_vkComputeDevice, &info, &fd->CommandBuffer);
-		}
-		{
-			VkFenceCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			vkCreateFence(**g_vkComputeDevice, &info, VK_NULL_HANDLE, &fd->Fence);
 		}
 	}
 	m_wdata.FrameSemaphores = nullptr;

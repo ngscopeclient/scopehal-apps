@@ -78,10 +78,11 @@ void MainWindow::DoRender()
 
 		ImGui_ImplVulkanH_Frame* fd = &m_wdata.Frames[m_wdata.FrameIndex];
 		{
-			err = vkWaitForFences(**g_vkComputeDevice, 1, &fd->Fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
+			VkFence fence = **m_fences[m_wdata.FrameIndex];
+			err = vkWaitForFences(**g_vkComputeDevice, 1, &fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
 			//check_vk_result(err);
 
-			err = vkResetFences(**g_vkComputeDevice, 1, &fd->Fence);
+			err = vkResetFences(**g_vkComputeDevice, 1, &fence);
 			//check_vk_result(err);
 		}
 		{
@@ -127,7 +128,7 @@ void MainWindow::DoRender()
 
 			err = vkEndCommandBuffer(fd->CommandBuffer);
 			//check_vk_result(err);
-			err = vkQueueSubmit(*m_renderQueue, 1, &info, fd->Fence);
+			err = vkQueueSubmit(*m_renderQueue, 1, &info, **m_fences[m_wdata.FrameIndex]);
 			//check_vk_result(err);
 		}
 	}
