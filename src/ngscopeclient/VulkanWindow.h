@@ -47,6 +47,8 @@ public:
 	GLFWwindow* GetWindow()
 	{ return m_window; }
 
+	virtual void Render();
+
 protected:
 	void UpdateFramebuffer();
 
