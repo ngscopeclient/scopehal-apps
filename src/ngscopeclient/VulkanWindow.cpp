@@ -121,19 +121,23 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	ImGui_ImplVulkan_Init(&info, m_wdata.RenderPass);
 }
 
-//temporary prototype for internal function we should probably not use long term
-void ImGui_ImplVulkanH_DestroyFrame(VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
-void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator);
-
 /**
 	@brief Destroys a VulkanWindow
  */
 VulkanWindow::~VulkanWindow()
 {
 	for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
-		ImGui_ImplVulkanH_DestroyFrame(**g_vkComputeDevice, &m_wdata.Frames[i], nullptr);
+	{
+		auto fd = &m_wdata.Frames[i];
+		vkDestroyFence(**g_vkComputeDevice, fd->Fence, VK_NULL_HANDLE);
+		vkFreeCommandBuffers(**g_vkComputeDevice, fd->CommandPool, 1, &fd->CommandBuffer);
+		vkDestroyCommandPool(**g_vkComputeDevice, fd->CommandPool, VK_NULL_HANDLE);
+		vkDestroyImageView(**g_vkComputeDevice, fd->BackbufferView, VK_NULL_HANDLE);
+		vkDestroyFramebuffer(**g_vkComputeDevice, fd->Framebuffer, VK_NULL_HANDLE);
+	}
 	IM_FREE(m_wdata.Frames);
-	m_wdata.Frames = NULL;
+	m_wdata.Frames = nullptr;
+
 	vkDestroyPipeline(**g_vkComputeDevice, m_wdata.Pipeline, VK_NULL_HANDLE);
 	vkDestroyRenderPass(**g_vkComputeDevice, m_wdata.RenderPass, VK_NULL_HANDLE);
 	vkDestroySwapchainKHR(**g_vkComputeDevice, m_wdata.Swapchain, VK_NULL_HANDLE);
