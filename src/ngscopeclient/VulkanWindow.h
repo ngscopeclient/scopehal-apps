@@ -76,6 +76,9 @@ protected:
 
 	///@brief Semaphore indicating frame is complete
 	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_renderCompleteSemaphores;
+
+	///@brief Frame semaphore number for double buffering
+	uint32_t m_semaphoreIndex;
 };
 
 #endif

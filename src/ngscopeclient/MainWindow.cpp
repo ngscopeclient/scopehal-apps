@@ -66,7 +66,7 @@ void MainWindow::DoRender()
 			**g_vkComputeDevice,
 			m_wdata.Swapchain,
 			UINT64_MAX,
-			**m_imageAcquiredSemaphores[m_wdata.SemaphoreIndex],
+			**m_imageAcquiredSemaphores[m_semaphoreIndex],
 			VK_NULL_HANDLE,
 			&m_wdata.FrameIndex);
 		if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
@@ -111,8 +111,8 @@ void MainWindow::DoRender()
 		// Submit command buffer
 		vkCmdEndRenderPass(fd->CommandBuffer);
 		{
-			VkSemaphore sem = **m_renderCompleteSemaphores[m_wdata.SemaphoreIndex];
-			VkSemaphore asem = **m_imageAcquiredSemaphores[m_wdata.SemaphoreIndex];
+			VkSemaphore sem = **m_renderCompleteSemaphores[m_semaphoreIndex];
+			VkSemaphore asem = **m_imageAcquiredSemaphores[m_semaphoreIndex];
 
 			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			VkSubmitInfo info = {};

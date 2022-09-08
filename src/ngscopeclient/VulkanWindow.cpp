@@ -49,6 +49,7 @@ using namespace std;
 VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
+	, m_semaphoreIndex(0)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -235,9 +236,7 @@ void VulkanWindow::UpdateFramebuffer()
 
 		IM_ASSERT(m_wdata.Frames == NULL);
 		m_wdata.Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * m_wdata.ImageCount);
-		m_wdata.FrameSemaphores = (ImGui_ImplVulkanH_FrameSemaphores*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_FrameSemaphores) * m_wdata.ImageCount);
 		memset(m_wdata.Frames, 0, sizeof(m_wdata.Frames[0]) * m_wdata.ImageCount);
-		memset(m_wdata.FrameSemaphores, 0, sizeof(m_wdata.FrameSemaphores[0]) * m_wdata.ImageCount);
 		for (uint32_t i = 0; i < m_wdata.ImageCount; i++)
 			m_wdata.Frames[i].Backbuffer = backbuffers[i];
 	}
@@ -374,7 +373,7 @@ void VulkanWindow::Render()
 	const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
 	if (!main_is_minimized)
 	{
-		VkSemaphore render_complete_semaphore = **m_renderCompleteSemaphores[m_wdata.SemaphoreIndex];
+		VkSemaphore render_complete_semaphore = **m_renderCompleteSemaphores[m_semaphoreIndex];
 		VkPresentInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		info.waitSemaphoreCount = 1;
@@ -389,7 +388,7 @@ void VulkanWindow::Render()
 			Render();
 			return;
 		}
-		m_wdata.SemaphoreIndex = (m_wdata.SemaphoreIndex + 1) % m_wdata.ImageCount; // Now we can use the next set of semaphores
+		m_semaphoreIndex = (m_semaphoreIndex+ 1) % IMAGE_COUNT;
 	}
 
 	//Handle resize events
