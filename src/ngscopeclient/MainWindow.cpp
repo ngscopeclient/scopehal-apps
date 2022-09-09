@@ -35,6 +35,9 @@
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 
+//Dock builder API is not yet public, so might change...
+#include "imgui_internal.h"
+
 #include "AddScopeDialog.h"
 
 using namespace std;
@@ -65,12 +68,66 @@ void MainWindow::RenderUI()
 	//Menu for main window
 	MainMenu();
 
+	//Provide a space we can dock windows into
+	auto viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->WorkPos);
+	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGuiWindowFlags host_window_flags = 0;
+	host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+	host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+	char label[32];
+	ImFormatString(label, IM_ARRAYSIZE(label), "DockSpaceViewport_%08X", viewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin(label, NULL, host_window_flags);
+	ImGui::PopStyleVar(3);
+
+	auto dockspace_id = ImGui::GetID("DockSpace");
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
+	ImGui::End();
+
+	static bool first = true;
+	if(first)
+	{
+		ImGui::DockBuilderRemoveNode(dockspace_id);
+		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+		ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
+
+		ImGuiID idLeft;
+		ImGuiID idRight;
+		/*auto idParent =*/ ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
+		ImGui::DockBuilderDockWindow("Waveform Group 1", idLeft);
+		ImGui::DockBuilderDockWindow("Waveform Group 2", idRight);
+		ImGui::DockBuilderFinish(dockspace_id);
+
+		first = false;
+	}
+
+	//Waveform groups
+	WaveformGroups();
+
+	//Dialog boxes
+	set< shared_ptr<Dialog> > dlgsToClose;
+	for(auto& dlg : m_dialogs)
+	{
+		if(!dlg->Render())
+			dlgsToClose.emplace(dlg);
+	}
+	for(auto& dlg : dlgsToClose)
+		m_dialogs.erase(dlg);
+
 	//DEBUG: draw the demo window
 	ImGui::ShowDemoWindow(&m_showDemo);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GUI handlers
+// Top level menu
 
 /**
 	@brief Run the top level menu bar
@@ -85,21 +142,6 @@ void MainWindow::MainMenu()
 		HelpMenu();
 		ImGui::EndMainMenuBar();
 	}
-
-	//Provide a space we can dock windows into
-	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-
-	//Waveform areas
-
-	//Dialog boxes
-	set< shared_ptr<Dialog> > dlgsToClose;
-	for(auto& dlg : m_dialogs)
-	{
-		if(!dlg->Render())
-			dlgsToClose.emplace(dlg);
-	}
-	for(auto& dlg : dlgsToClose)
-		m_dialogs.erase(dlg);
 }
 
 /**
@@ -168,6 +210,23 @@ void MainWindow::HelpMenu()
 	{
 		ImGui::EndMenu();
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Waveform views etc
+
+void MainWindow::WaveformGroups()
+{
+	bool open = true;
+	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
+	if(!ImGui::Begin("Waveform Group 1", &open))
+		ImGui::End();
+	ImGui::End();
+
+	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
+	if(!ImGui::Begin("Waveform Group 2", &open))
+		ImGui::End();
+	ImGui::End();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
