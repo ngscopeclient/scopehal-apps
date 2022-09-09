@@ -51,6 +51,9 @@ int main(int argc, char* argv[])
 	DriverStaticInit();
 	InitializePlugins();
 
+	//Add search path
+	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+
 	//Initialize the RNG
 	g_rng.seed(0);
 

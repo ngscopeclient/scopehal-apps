@@ -107,8 +107,6 @@ int main(int argc, char* argv[])
 	//Set up logging
 	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
 
-	//Don't use OpenCL for now
-	//g_disableOpenCL = true;
 	g_searchPaths.push_back("/ceph/fast/home/azonenberg/code/scopehal-apps/lib/scopeprotocols");
 
 	//Initialize object creation tables for predefined libraries

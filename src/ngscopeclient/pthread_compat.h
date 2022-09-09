@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,67 +27,7 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Program entry point
- */
-
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/FunctionGenerator.h"
-#include "../scopehal/LeCroyOscilloscope.h"
-
-using namespace std;
-
-int main(int argc, char* argv[])
-{
-	Severity console_verbosity = Severity::NOTICE;
-
-	//Parse command-line arguments
-	string hostname;
-	for(int i=1; i<argc; i++)
-	{
-		string s(argv[i]);
-
-		//Let the logger eat its args first
-		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
-			continue;
-
-		if(s == "--help")
-		{
-			//not implemented
-			return 0;
-		}
-		else if(s == "--host")
-			hostname = argv[++i];
-		else
-		{
-			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
-			return 1;
-		}
-	}
-
-	//Set up logging
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-
-	LeCroyOscilloscope scope(new SCPISocketTransport(hostname));
-	if(0 == (scope.GetInstrumentTypes() & Instrument::INST_FUNCTION))
-	{
-		LogError("not a function generator\n");
-		return 1;
-	}
-
-	scope.SetFunctionChannelActive(0, true);
-	for(int i=0; i<50; i++)
-	{
-		for(float mhz=0.5; mhz<5; mhz += 0.01)
-		{
-			scope.SetFunctionChannelFrequency(0, mhz * 1.0e6f);
-			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
-		}
-	}
-
-
-	return 0;
-}
+#ifndef pthread_compat_h
+#define pthread_compat_h
+void pthread_setname_np_compat(const char *name);
+#endif

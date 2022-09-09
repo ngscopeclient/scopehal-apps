@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,124 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Implementation of Dialog
  */
-
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
+#include "ngscopeclient.h"
+#include "Dialog.h"
 
 using namespace std;
 
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-int main(int argc, char* argv[])
+Dialog::Dialog(const string& title, ImVec2 defaultSize)
+	: m_open(true)
+	, m_title(title)
+	, m_defaultSize(defaultSize)
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+}
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
+Dialog::~Dialog()
+{
+}
 
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	//Initialize the RNG
-	g_rng.seed(0);
+/**
+	@brief Renders the dialog and handles UI events
 
-	int ret;
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool Dialog::Render()
+{
+	if(!m_open)
+		return false;
+
+	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
+	if(!ImGui::Begin(m_title.c_str(), &m_open))
 	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
+		ImGui::End();
+		return false;
 	}
 
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
+	if(!DoRender())
+	{
+		ImGui::End();
+		return false;
+	}
+
+	ImGui::End();
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Widget helpers for STL-ifying imgui objects
+
+/**
+	@brief Displays a combo box from a vector<string>
+ */
+void Dialog::Combo(const string& label, const vector<string>& items, int& selection)
+{
+	string preview;
+	ImGuiComboFlags flags = 0;
+
+	//Hide arrow button if no items
+	if(items.empty())
+		flags = ImGuiComboFlags_NoArrowButton;
+
+	//Set preview to currently selected item
+	else
+		preview = items[selection];
+
+	//Render the box
+	if(ImGui::BeginCombo(label.c_str(), preview.c_str(), flags))
+	{
+		for(int i=0; i<(int)items.size(); i++)
+		{
+			bool selected = (i == selection);
+			if(ImGui::Selectable(items[i].c_str(), selected))
+				selection = i;
+			if(selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
 }
 
 /**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
+	@brief Helper based on imgui demo for displaying a help icon and tooltip text
  */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
+void Dialog::HelpMarker(const string& str)
 {
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(str.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
 }
 
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
+/**
+	@brief Helper based on imgui demo for displaying a help icon and tooltip text consisting of a header and bulleted text
+ */
+void Dialog::HelpMarker(const string& header, const vector<string>& bullets)
 {
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
-		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
-
-		REQUIRE(delta < tolerance);
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(header.c_str());
+		for(auto s : bullets)
+			ImGui::BulletText(s.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
 	}
 }

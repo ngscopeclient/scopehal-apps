@@ -98,8 +98,7 @@ void help()
 			"    --noavx2                      : Do not use AVX2, even if supported on the current system\n"
 			"    --noavx512f                   : Do not use AVX512F, even if supported on the current system\n"
 			"    --noglint64                   : Act as if GL_ARB_gpu_shader_int64 is not present, even if it is\n"
-			"    --noopencl                    : Do not use OpenCL, even if supported on the current system\n"
-			"    --nogpufilter                 : Do not use Vulkan accelerated versions of filter blocks, use CPU reference implementation\n"
+			"    --nogpufilter                 : Do not use Vulkan accelerated versions of filter blocks, use CPU reference implementation only\n"
 			"    --quit-after-loading          : Exit immediately after loading the specified file.\n"
 			"                                    Typically used for profiling/benchmarking file load or filter graph operations.\n"
 			"\n"
@@ -165,8 +164,6 @@ int main(int argc, char* argv[])
 			retrigger = true;
 		else if(s == "--noglint64")
 			g_noglint64 = true;
-		else if(s == "--noopencl")
-			g_disableOpenCL = true;
 		#ifdef __x86_64__
 		else if(s == "--noavx2")
 			noavx2 = true;
@@ -218,30 +215,9 @@ int main(int argc, char* argv[])
 		#endif
 	}
 
-	//Complain if asan options are not set right
+	//Note if asan is active
 	#ifdef __SANITIZE_ADDRESS__
-		LogDebug("Compiled with AddressSanitizer\n");
-
-		#ifdef HAVE_OPENCL
-			const char* asan_options = getenv("ASAN_OPTIONS");
-			if( (asan_options == nullptr) || (strstr(asan_options, "protect_shadow_gap=0") == nullptr) )
-			{
-				#ifndef _WIN32
-					LogDebug("glscopeclient requires protect_shadow_gap=0 for OpenCL support to work under asan\n");
-
-					if(asan_options == nullptr)
-						setenv("ASAN_OPTIONS", "protect_shadow_gap=0", true);
-
-					else
-					{
-						string tmp = asan_options;
-						tmp += ",protect_shadow_gap=0";
-						setenv("ASAN_OPTIONS", tmp.c_str(), true);
-					}
-					need_relaunch = true;
-				#endif
-			}
-		#endif
+	LogDebug("Compiled with AddressSanitizer\n");
 	#endif
 
 	#ifndef _WIN32

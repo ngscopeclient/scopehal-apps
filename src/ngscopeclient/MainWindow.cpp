@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -29,20 +29,146 @@
 
 /**
 	@file
-	@author Katharina B
-	@brief Common file system utilities
+	@author Andrew D. Zonenberg
+	@brief Implementation of MainWindow
  */
+#include "ngscopeclient.h"
+#include "MainWindow.h"
 
-#ifndef FileSystem_h
-#define FileSystem_h
+#include "AddScopeDialog.h"
 
-#include <string>
-#include <vector>
+using namespace std;
 
-// Find all files/directories matching given pattern
-std::vector<std::string> Glob(const std::string& pathPattern, bool onlyDirectories);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-// Remove given directory and all its contents
-void RemoveDirectory(const std::string& basePath);
+MainWindow::MainWindow(vk::raii::Queue& queue)
+	: VulkanWindow("ngscopeclient", queue)
+	, m_showDemo(true)
+{
+}
 
-#endif // FileSystem_h
+MainWindow::~MainWindow()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
+void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
+{
+
+}
+
+void MainWindow::RenderUI()
+{
+	//Menu for main window
+	MainMenu();
+
+	//DEBUG: draw the demo window
+	ImGui::ShowDemoWindow(&m_showDemo);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GUI handlers
+
+/**
+	@brief Run the top level menu bar
+ */
+void MainWindow::MainMenu()
+{
+	if(ImGui::BeginMainMenuBar())
+	{
+		FileMenu();
+		ViewMenu();
+		AddMenu();
+		HelpMenu();
+		ImGui::EndMainMenuBar();
+	}
+
+	//Provide a space we can dock windows into
+	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+	//Waveform areas
+
+	//Dialog boxes
+	set< shared_ptr<Dialog> > dlgsToClose;
+	for(auto& dlg : m_dialogs)
+	{
+		if(!dlg->Render())
+			dlgsToClose.emplace(dlg);
+	}
+	for(auto& dlg : dlgsToClose)
+		m_dialogs.erase(dlg);
+}
+
+/**
+	@brief Run the File menu
+ */
+void MainWindow::FileMenu()
+{
+	if(ImGui::BeginMenu("File"))
+	{
+		if(ImGui::MenuItem("Exit"))
+			glfwSetWindowShouldClose(m_window, 1);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the View menu
+ */
+void MainWindow::ViewMenu()
+{
+	if(ImGui::BeginMenu("View"))
+	{
+		if(ImGui::MenuItem("Fullscreen"))
+			SetFullscreen(!m_fullscreen);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add menu
+ */
+void MainWindow::AddMenu()
+{
+	if(ImGui::BeginMenu("Add"))
+	{
+		AddOscilloscopeMenu();
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Oscilloscope menu
+ */
+void MainWindow::AddOscilloscopeMenu()
+{
+	if(ImGui::BeginMenu("Oscilloscope"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
+		ImGui::Separator();
+
+		//TODO: recent instruments
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Help menu
+ */
+void MainWindow::HelpMenu()
+{
+	if(ImGui::BeginMenu("Help"))
+	{
+		ImGui::EndMenu();
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Other GUI handlers

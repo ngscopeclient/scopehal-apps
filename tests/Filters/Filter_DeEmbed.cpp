@@ -41,10 +41,10 @@
 
 using namespace std;
 
-TEST_CASE("Filter_FFT")
+TEST_CASE("Filter_DeEmbed")
 {
-	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
-	REQUIRE(filter != NULL);
+	auto filter = dynamic_cast<DeEmbedFilter*>(Filter::CreateFilter("De-Embed", "#ffffff"));
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	//Create a queue and command buffer
@@ -60,16 +60,28 @@ TEST_CASE("Filter_FFT")
 	//Create an empty input waveform
 	const size_t depth = 1000000;
 	UniformAnalogWaveform ua;
-	ua.m_timescale = 10000;		//100 Gsps
+	ua.m_timescale = 100000;		//10 Gsps
 	ua.m_triggerPhase = 0;
+
+	//Create an empty magnitude and angle trace
+	UniformAnalogWaveform umag;
+	umag.m_timescale = 1e6;			//1 MHz per point
+	umag.m_triggerPhase = 0;
+	UniformAnalogWaveform uang;
+	uang.m_timescale = 1e6;			//1 MHz per point
+	uang.m_triggerPhase = 0;
 
 	//Set up filter configuration
 	g_scope->GetChannel(0)->SetData(&ua, 0);
-	filter->SetInput("din", g_scope->GetChannel(0));
+	g_scope->GetChannel(2)->SetData(&umag, 0);
+	g_scope->GetChannel(3)->SetData(&uang, 0);
+	filter->SetInput("signal", g_scope->GetChannel(0));
+	filter->SetInput("mag", g_scope->GetChannel(2));
+	filter->SetInput("angle", g_scope->GetChannel(3));
 
-	#ifdef __x86_64__
-		bool reallyHasAvx2 = g_hasAvx2;
-	#endif
+#ifdef __x86_64__
+	bool reallyHasAvx2 = g_hasAvx2;
+#endif
 
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
@@ -80,15 +92,9 @@ TEST_CASE("Filter_FFT")
 			LogIndenter li;
 
 			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
-
-			//Set window function for the filter
-			//(there are 4 supported window functions so this will test all of them)
-			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
-
-			//Make sure data is in the right spot (don't count this towards execution time)
-			ua.PrepareForGpuAccess();
-			ua.PrepareForCpuAccess();
+			FillRandomWaveform(&ua, depth, -1, 1);
+			FillRandomWaveform(&umag, depth, -15, 0);
+			FillRandomWaveform(&uang, depth, -180, 180);
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
@@ -102,7 +108,9 @@ TEST_CASE("Filter_FFT")
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
+			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
+
+			REQUIRE(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)) != nullptr);
 
 			//Copy the result
 			AcceleratorBuffer<float> golden;
@@ -116,12 +124,12 @@ TEST_CASE("Filter_FFT")
 					start = GetTime();
 					filter->Refresh(cmdbuf, queue);
 					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+					LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 					VerifyMatchingResult(
 						golden,
 						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3e-3f
+						1e-2f
 						);
 				}
 			#endif
@@ -134,12 +142,12 @@ TEST_CASE("Filter_FFT")
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				3e-3f
+				1e-2f
 				);
 		}
 	}
@@ -149,6 +157,8 @@ TEST_CASE("Filter_FFT")
 	#endif
 
 	g_scope->GetChannel(0)->Detach(0);
+	g_scope->GetChannel(2)->Detach(0);
+	g_scope->GetChannel(3)->Detach(0);
 
 	filter->Release();
 }

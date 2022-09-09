@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,103 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Declaration of VulkanWindow
  */
-
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
-
-using namespace std;
-
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
-{
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	int ret;
-	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
+#ifndef VulkanWindow_h
+#define VulkanWindow_h
 
 /**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
+	@brief A GLFW window containing a Vulkan surface
  */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
+class VulkanWindow
 {
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
+public:
+	VulkanWindow(const std::string& title, vk::raii::Queue& queue);
+	virtual ~VulkanWindow();
 
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
+	GLFWwindow* GetWindow()
+	{ return m_window; }
 
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
+	virtual void Render();
 
-	wfm->MarkModifiedFromCpu();
+protected:
+	void UpdateFramebuffer();
+	void SetFullscreen(bool fullscreen);
 
-	wfm->m_revision ++;
-}
+	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+	virtual void RenderUI();
 
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
+	///@brief The underlying GLFW window object
+	GLFWwindow* m_window;
 
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
+	///@brief Surface for drawing onto
+	std::shared_ptr<vk::raii::SurfaceKHR> m_surface;
 
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
+	///@brief Descriptor pool for ImGui
+	std::unique_ptr<vk::raii::DescriptorPool> m_imguiDescriptorPool;
 
-		if( (delta >= tolerance) && firstFail)
-		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
+	///@brief Queue for rendering to
+	vk::raii::Queue& m_renderQueue;
 
-		REQUIRE(delta < tolerance);
-	}
-}
+	///@brief Set true if we have to handle a resize event
+	bool m_resizeEventPending;
+
+	///@brief Frame command pool
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Frame command buffers
+	std::vector<std::unique_ptr<vk::raii::CommandBuffer> > m_cmdBuffers;
+
+	///@brief Semaphore indicating framebuffer is ready
+	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_imageAcquiredSemaphores;
+
+	///@brief Semaphore indicating frame is complete
+	std::vector<std::unique_ptr<vk::raii::Semaphore> > m_renderCompleteSemaphores;
+
+	///@brief Frame semaphore number for double buffering
+	uint32_t m_semaphoreIndex;
+
+	///@brief Frame number for double buffering
+	uint32_t m_frameIndex;
+
+	///@brief Frame fences
+	std::vector<std::unique_ptr<vk::raii::Fence> > m_fences;
+
+	///@brief Back buffer view
+	std::vector<std::unique_ptr<vk::raii::ImageView> > m_backBufferViews;
+
+	///@brief Framebuffer
+	std::vector<std::unique_ptr<vk::raii::Framebuffer> > m_framebuffers;
+
+	///@brief Render pass for drawing everything
+	std::unique_ptr<vk::raii::RenderPass> m_renderPass;
+
+	///@brief Swapchain for presenting to the screen
+	std::unique_ptr<vk::raii::SwapchainKHR> m_swapchain;
+
+	///@brief Back buffer images
+	std::vector<VkImage> m_backBuffers;
+
+	///@brief Current window width
+	int m_width;
+
+	///@brief Current window height
+	int m_height;
+
+	///@brief Fullscreen flag
+	bool m_fullscreen;
+
+	///@brief Saved position before we went fullscreen
+	int m_windowedX;
+
+	///@brief Saved position before we went fullscreen
+	int m_windowedY;
+
+	///@brief Saved size before we went fullscreen
+	int m_windowedWidth;
+
+	///@brief Saved size before we went fullscreen
+	int m_windowedHeight;
+};
+
+#endif

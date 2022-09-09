@@ -36,8 +36,6 @@ if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif(NOT CMAKE_BUILD_TYPE)
 
-# seems like asan doesn't play well with OpenCL so don't enable by default in debug modes
-# (causes clGetPlatformIDs to return -1001)
 if(SANITIZE)
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fsanitize=address -D_DEBUG")
 else()
@@ -53,7 +51,6 @@ find_package(PkgConfig)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
-find_package(OpenCL)
 include(FindOpenMP)
 
 # Use the local FindVulkan script until we can rely on all users having CMake 3.24 available, at which point we can remove it
@@ -76,8 +73,6 @@ if(NOT OpenMP_CXX_FOUND)
 	message(FATAL_ERROR "glscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-
-pkg_search_module(CLFFT clFFT>=2.0)
 
 # Documentation
 if(BUILD_DOCS)
@@ -120,6 +115,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 
 # Unit tests
 if(BUILD_TESTING)
@@ -133,7 +129,6 @@ if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/fgtest")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/impulse")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
 	#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")

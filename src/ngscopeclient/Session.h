@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,38 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Declaration of Session
  */
-
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
-
-using namespace std;
-
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
-{
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	int ret;
-	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
+#ifndef Session_h
+#define Session_h
 
 /**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
+	@brief A Session stores all of the instrument configuration and other state the user has open.
+
+	Generally only accessed from the GUI thread.
+	TODO: interlocking if needed?
  */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
+class Session
 {
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
+public:
+	Session();
+	virtual ~Session();
 
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
+	void AddOscilloscope(Oscilloscope* scope);
 
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
+protected:
 
-	wfm->MarkModifiedFromCpu();
+	///@brief Flag for shutting down all scope threads when we exit
+	std::atomic<bool> m_shuttingDown;
 
-	wfm->m_revision ++;
-}
+	///@brief True if the session has been modified since last time it was saved
+	bool m_modifiedSinceLastSave;
 
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
+	///@brief Oscilloscopes we are currently connected to
+	std::vector<Oscilloscope*> m_oscilloscopes;
 
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
+	///@brief Processing threads for polling and processing scope waveforms
+	std::vector< std::unique_ptr<std::thread> > m_threads;
+};
 
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
-		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
-
-		REQUIRE(delta < tolerance);
-	}
-}
+#endif

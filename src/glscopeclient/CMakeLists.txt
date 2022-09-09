@@ -47,7 +47,6 @@ add_executable(glscopeclient
 	FilterDialog.cpp
 	FilterGraphEditor.cpp
 	FilterGraphEditorWidget.cpp
-	FileSystem.cpp
 	Framebuffer.cpp
 	FunctionGeneratorDialog.cpp
 	HaltConditionsDialog.cpp
@@ -109,10 +108,6 @@ add_custom_target(
 	COMMENT "Copying gradients..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/src/glscopeclient/gradients)
 add_custom_target(
-	filterkernels
-	COMMENT "Copying filter kernels..."
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/src/glscopeclient/kernels)
-add_custom_target(
 	shaders
 	COMMENT "Copying shaders..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders)
@@ -125,17 +120,22 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/src/glscopeclient/icons)
 
+file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*")
 add_custom_target(
 	protoshaders
 	COMMENT "Copying SPIR-V shaders..."
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPIRV_SHADERS} ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders
 	)
+
+# can't copy protocol shaders until they've been compiled
+# also rely on shaders target to make sure the dest dir exists
 add_dependencies(protoshaders
-	scopeprotocols)
+	scopeprotocols
+	shaders
+	)
 
 add_dependencies(glscopeclient
 	gradients
-	filterkernels
 	protoshaders
 	shaders
 	styles
@@ -151,8 +151,6 @@ if(WIXPATH AND WIN32)
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/dist/windows_x64/gradients
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels ${CMAKE_BINARY_DIR}/dist/windows_x64/kernels
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/windows_x64/shaders
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -211,8 +209,6 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles
 	DESTINATION share/glscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons
-	DESTINATION share/glscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/lib/scopeprotocols/kernels
 	DESTINATION share/glscopeclient)
 
 install(FILES ${CMAKE_SOURCE_DIR}/src/glscopeclient/glscopeclient.desktop

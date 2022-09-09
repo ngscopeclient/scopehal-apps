@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,38 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Declaration of AddScopeDialog
  */
+#ifndef AddScopeDialog_h
+#define AddScopeDialog_h
 
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
+#include "Dialog.h"
+#include "Session.h"
 
-using namespace std;
-
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
+class AddScopeDialog : public Dialog
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+public:
+	AddScopeDialog(Session& session);
+	virtual ~AddScopeDialog();
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
+	virtual bool DoRender();
 
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+protected:
+	bool DoConnect();
+	void RenderErrorPopup();
+	void ShowErrorPopup(const std::string& msg);
 
-	//Initialize the RNG
-	g_rng.seed(0);
+	Session& m_session;
 
-	int ret;
-	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+	//GUI widget values
+	std::string m_nickname;
+	int m_selectedDriver;
+	std::vector<std::string> m_drivers;
+	int m_selectedTransport;
+	std::vector<std::string> m_transports;
+	std::string m_path;
 
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
+	std::string m_errorPopupMessage;
+};
 
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
-
-/**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
-{
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
-}
-
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
-		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
-
-		REQUIRE(delta < tolerance);
-	}
-}
+#endif

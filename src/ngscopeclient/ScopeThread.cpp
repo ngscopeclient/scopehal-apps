@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,44 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Implementation of ScopeThread
  */
-
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
+#include "ngscopeclient.h"
+#include "pthread_compat.h"
 
 using namespace std;
 
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
+void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+	pthread_setname_np_compat("ScopeThread");
+	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	int ret;
+	while(!*shuttingDown)
 	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		//Push any pending queued commands
+		if(sscope)
+			sscope->GetTransport()->FlushCommandQueue();
 
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
-
-/**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
- */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
-{
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
-
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
-
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
-
-	wfm->MarkModifiedFromCpu();
-
-	wfm->m_revision ++;
-}
-
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
-
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
+		//If the queue is too big, stop grabbing data
+		size_t npending = scope->GetPendingWaveformCount();
+		if(npending > 5)
 		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
+			LogTrace("Queue is too big, sleeping\n");
+			this_thread::sleep_for(chrono::milliseconds(5));
+			continue;
 		}
 
-		REQUIRE(delta < tolerance);
+		//If trigger isn't armed, don't even bother polling for a while.
+		if(!scope->IsTriggerArmed())
+		{
+			LogTrace("Scope isn't armed, sleeping\n");
+			this_thread::sleep_for(chrono::milliseconds(5));
+			continue;
+		}
+
+		//Grab data if it's ready
+		auto stat = scope->PollTrigger();
+		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			scope->AcquireData();
 	}
 }

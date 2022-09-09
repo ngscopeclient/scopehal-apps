@@ -620,8 +620,6 @@ bool OscilloscopeWindow::OnTimer(int /*timer*/)
 			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
 			if(m_multiScopeFreeRun)
 				ArmTrigger(TRIGGER_TYPE_NORMAL);
-
-			g_app->DispatchPendingEvents();
 		}
 	}
 

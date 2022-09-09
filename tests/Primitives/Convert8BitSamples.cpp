@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* libscopehal v0.1                                                                                                     *
 *                                                                                                                      *
 * Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
@@ -30,22 +30,22 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for Upsample filter
+	@brief Unit test for Convert8BitSamples primitive
  */
 #include <catch2/catch.hpp>
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
-#include "Filters.h"
+#include "Primitives.h"
 
 using namespace std;
 
-TEST_CASE("Filter_FFT")
+TEST_CASE("Primitive_Convert8BitSamples")
 {
-	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
-	REQUIRE(filter != NULL);
-	filter->AddRef();
+	#ifdef __x86_64__
+	bool reallyHasAvx2 = g_hasAvx2;
+	#endif
 
 	//Create a queue and command buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -57,19 +57,32 @@ TEST_CASE("Filter_FFT")
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
-	//Create an empty input waveform
-	const size_t depth = 1000000;
-	UniformAnalogWaveform ua;
-	ua.m_timescale = 10000;		//100 Gsps
-	ua.m_triggerPhase = 0;
+	AcceleratorBuffer<int8_t> data_in;
+	AcceleratorBuffer<float> data_out;
+	AcceleratorBuffer<float> data_out_golden;
 
-	//Set up filter configuration
-	g_scope->GetChannel(0)->SetData(&ua, 0);
-	filter->SetInput("din", g_scope->GetChannel(0));
+	data_in.SetCpuAccessHint(AcceleratorBuffer<int8_t>::HINT_LIKELY);
+	data_in.SetGpuAccessHint(AcceleratorBuffer<int8_t>::HINT_LIKELY);
+	data_out.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	data_out.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	data_out_golden.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	data_out_golden.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	#ifdef __x86_64__
-		bool reallyHasAvx2 = g_hasAvx2;
-	#endif
+	const size_t wavelen = 1000000;
+	data_in.resize(wavelen);
+	data_out.resize(wavelen);
+	data_out_golden.resize(wavelen);
+
+	uniform_real_distribution<float> gaindesc(0, 1);
+	uniform_int_distribution<int8_t> indesc(-128, 127);
+	uniform_real_distribution<float> offdesc(-10, 10);
+
+	unique_ptr<ComputePipeline> pipe;
+	if(g_hasShaderInt8)
+	{
+		pipe = make_unique<ComputePipeline>(
+			"shaders/Convert8BitSamples.spv", 2, sizeof(ConvertRawSamplesShaderArgs) );
+	}
 
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
@@ -79,76 +92,76 @@ TEST_CASE("Filter_FFT")
 			LogVerbose("Iteration %zu\n", i);
 			LogIndenter li;
 
-			//Create a random input waveform
-			FillRandomWaveform(&ua, depth);
+			//Generate a random sequence of input
+			float gain = gaindesc(g_rng);
+			float off = offdesc(g_rng);
+			data_in.PrepareForCpuAccess();
+			for(size_t j=0; j<wavelen; j++)
+				data_in[j] = indesc(g_rng);
+			data_in.MarkModifiedFromCpu();
+			data_in.PrepareForGpuAccess();
 
-			//Set window function for the filter
-			//(there are 4 supported window functions so this will test all of them)
-			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
-
-			//Make sure data is in the right spot (don't count this towards execution time)
-			ua.PrepareForGpuAccess();
-			ua.PrepareForCpuAccess();
-
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = false;
-			filter->Refresh(cmdbuf, queue);
-
-			//Baseline on the CPU with no AVX
+			//Baseline with CPU reference implementation
 			#ifdef __x86_64__
 				g_hasAvx2 = false;
 			#endif
-			g_gpuFilterEnabled = false;
+			data_out_golden.PrepareForCpuAccess();
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			Oscilloscope::Convert8BitSamplesGeneric(&data_out_golden[0], &data_in[0], gain, off, wavelen);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
 
-			//Copy the result
-			AcceleratorBuffer<float> golden;
-			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+			data_out_golden.MarkModifiedFromCpu();
+			data_out_golden.PrepareForCpuAccess();
+
+			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
 
 			#ifdef __x86_64__
-				//Try again with AVX
-				if(reallyHasAvx2)
-				{
-					g_hasAvx2 = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			if(reallyHasAvx2)
+			{
+				g_hasAvx2 = true;
 
-					VerifyMatchingResult(
-						golden,
-						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3e-3f
-						);
-				}
+				data_out.PrepareForCpuAccess();
+				start = GetTime();
+				Oscilloscope::Convert8BitSamplesAVX2(&data_out[0], &data_in[0], gain, off, wavelen);
+				float dt = GetTime() - start;
+
+				data_out.MarkModifiedFromCpu();
+				data_out.PrepareForCpuAccess();
+				LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				for(size_t j=0; j<wavelen; j++)
+					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
+			}
 			#endif
 
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
+			//Vulkan implementation
+			if(pipe)
+			{
+				data_out.PrepareForGpuAccess();
+				data_in.PrepareForGpuAccess();
 
-			//Try again on the GPU, this time for score
-			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
-			double dt = GetTime() - start;
-			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				start = GetTime();
+				cmdbuf.begin({});
+				pipe->BindBufferNonblocking(0, data_out, cmdbuf, true);
+				pipe->BindBufferNonblocking(1, data_in, cmdbuf);
+				ConvertRawSamplesShaderArgs args;
+				args.size = wavelen;
+				args.gain = gain;
+				args.offset = off;
+				pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64));
+				cmdbuf.end();
+				SubmitAndBlock(cmdbuf, queue);
+				float dt = GetTime() - start;
+				data_out.MarkModifiedFromGpu();
 
-			VerifyMatchingResult(
-				golden,
-				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				3e-3f
-				);
+				data_out.PrepareForCpuAccess();
+				LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+				for(size_t j=0; j<wavelen; j++)
+					REQUIRE(fabs(data_out_golden[j] - data_out[j]) < 1e-5f);
+			}
 		}
 	}
 
 	#ifdef __x86_64__
 		g_hasAvx2 = reallyHasAvx2;
 	#endif
-
-	g_scope->GetChannel(0)->Detach(0);
-
-	filter->Release();
 }

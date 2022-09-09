@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,96 +30,44 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main code for Filters test case
+	@brief Declaration of MainWindow
  */
+#ifndef MainWindow_h
+#define MainWindow_h
 
-#define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
-#include "Filters.h"
-
-using namespace std;
-
-minstd_rand g_rng;
-MockOscilloscope* g_scope;
-
-int main(int argc, char* argv[])
-{
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
-	int ret;
-	{
-		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
-
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
-	}
-
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
-}
+#include "VulkanWindow.h"
+#include "Dialog.h"
+#include "Session.h"
 
 /**
-	@brief Fills a waveform with random content, uniformly distributed from fmin to fmax
+	@brief Top level application window
  */
-void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, float fmax)
+class MainWindow : public VulkanWindow
 {
-	auto rdist = uniform_real_distribution<float>(fmin, fmax);
+public:
+	MainWindow(vk::raii::Queue& queue);
+	virtual ~MainWindow();
 
-	wfm->PrepareForCpuAccess();
-	wfm->Resize(size);
+protected:
+	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
-	for(size_t i=0; i<size; i++)
-		wfm->m_samples[i] = rdist(g_rng);
+	//GUI handlers
+	virtual void RenderUI();
+	void MainMenu();
+	void FileMenu();
+	void ViewMenu();
+	void AddMenu();
+	void AddOscilloscopeMenu();
+	void HelpMenu();
 
-	wfm->MarkModifiedFromCpu();
+	//Enable flags for various GUI elements
+	bool m_showDemo;
 
-	wfm->m_revision ++;
-}
+	//Popup UI elements
+	std::set< std::shared_ptr<Dialog> > m_dialogs;
 
-void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
-{
-	REQUIRE(golden.size() == observed.size());
+	//Our session object
+	Session m_session;
+};
 
-	golden.PrepareForCpuAccess();
-	observed.PrepareForCpuAccess();
-	size_t len = golden.size();
-
-	bool firstFail = true;
-	for(size_t i=0; i<len; i++)
-	{
-		float delta = fabs(golden[i] - observed[i]);
-
-		if( (delta >= tolerance) && firstFail)
-		{
-			LogError("first fail at i=%zu\n", i);
-			firstFail = false;
-		}
-
-		REQUIRE(delta < tolerance);
-	}
-}
+#endif
