@@ -36,25 +36,32 @@
 #define AddScopeDialog_h
 
 #include "Dialog.h"
+#include "Session.h"
 
 class AddScopeDialog : public Dialog
 {
 public:
-	AddScopeDialog();
+	AddScopeDialog(Session& session);
 	virtual ~AddScopeDialog();
 
 	virtual bool DoRender();
 
 protected:
-	std::string m_nickname;
+	bool DoConnect();
+	void RenderErrorPopup();
+	void ShowErrorPopup(const std::string& msg);
 
+	Session& m_session;
+
+	//GUI widget values
+	std::string m_nickname;
 	int m_selectedDriver;
 	std::vector<std::string> m_drivers;
-
 	int m_selectedTransport;
 	std::vector<std::string> m_transports;
-
 	std::string m_path;
+
+	std::string m_errorPopupMessage;
 };
 
 #endif

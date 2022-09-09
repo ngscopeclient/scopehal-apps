@@ -36,11 +36,14 @@
 #include "ngscopeclient.h"
 #include "AddScopeDialog.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddScopeDialog::AddScopeDialog()
+AddScopeDialog::AddScopeDialog(Session& session)
 	: Dialog("Add Oscilloscope", ImVec2(400, 150))
+	, m_session(session)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
 {
@@ -107,5 +110,81 @@ bool AddScopeDialog::DoRender()
 			}
 		);
 
+	if(ImGui::Button("Add"))
+	{
+		if(DoConnect())
+			return false;
+	}
+
+	RenderErrorPopup();
+
 	return true;
+}
+
+/**
+	@brief Popup message when we fail to connect
+ */
+void AddScopeDialog::RenderErrorPopup()
+{
+	if(ImGui::BeginPopupModal("Connection error", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text(m_errorPopupMessage.c_str());
+		ImGui::Separator();
+		if(ImGui::Button("OK"))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
+
+/**
+	@brief Connects to a scope
+
+	@return True if successful
+ */
+bool AddScopeDialog::DoConnect()
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup("Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
+
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
+
+	//Create the scope
+	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
+	if(scope == nullptr)
+	{
+		ShowErrorPopup("Failed to instantiate oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
+
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+
+	scope->m_nickname = m_nickname;
+	m_session.AddOscilloscope(scope);
+
+	return true;
+}
+
+/**
+	@brief Opens the error popup
+ */
+void AddScopeDialog::ShowErrorPopup(const string& msg)
+{
+	ImGui::OpenPopup("Connection error");
+	m_errorPopupMessage = msg;
 }

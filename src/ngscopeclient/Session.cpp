@@ -26,18 +26,49 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of Session
+ */
+#include "ngscopeclient.h"
+#include "Session.h"
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+using namespace std;
 
-#include <atomic>
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
+Session::Session()
+	: m_shuttingDown(false)
+	, m_modifiedSinceLastSave(false)
+{
+}
 
-#endif
+Session::~Session()
+{
+	//Signal our threads to exit
+	m_shuttingDown = true;
+
+	//Block until our processing threads exit
+	for(auto& t : m_threads)
+		t->join();
+	m_threads.clear();
+
+	//Delete scopes once we've terminated the threads
+	for(auto scope : m_oscilloscopes)
+		delete scope;
+	m_oscilloscopes.clear();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Instrument management
+
+void Session::AddOscilloscope(Oscilloscope* scope)
+{
+	m_modifiedSinceLastSave = true;
+	m_oscilloscopes.push_back(scope);
+
+	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
+}

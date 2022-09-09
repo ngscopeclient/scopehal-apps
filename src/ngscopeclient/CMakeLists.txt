@@ -22,11 +22,14 @@ add_executable(ngscopeclient
 
 	Dialog.cpp
 	VulkanWindow.cpp
+	pthread_compat.cpp
 
 	AddScopeDialog.cpp
+	MainWindow.cpp
+	Session.cpp
+	ScopeThread.cpp
 
 	main.cpp
-	MainWindow.cpp
 )
 
 ###############################################################################

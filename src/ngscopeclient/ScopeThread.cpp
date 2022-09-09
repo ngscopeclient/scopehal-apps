@@ -26,18 +26,48 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of ScopeThread
+ */
+#include "ngscopeclient.h"
+#include "pthread_compat.h"
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+using namespace std;
 
-#include <atomic>
+void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
+{
+	pthread_setname_np_compat("ScopeThread");
+	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
+	while(!*shuttingDown)
+	{
+		//Push any pending queued commands
+		if(sscope)
+			sscope->GetTransport()->FlushCommandQueue();
 
-#endif
+		//If the queue is too big, stop grabbing data
+		size_t npending = scope->GetPendingWaveformCount();
+		if(npending > 5)
+		{
+			LogTrace("Queue is too big, sleeping\n");
+			this_thread::sleep_for(chrono::milliseconds(5));
+			continue;
+		}
+
+		//If trigger isn't armed, don't even bother polling for a while.
+		if(!scope->IsTriggerArmed())
+		{
+			LogTrace("Scope isn't armed, sleeping\n");
+			this_thread::sleep_for(chrono::milliseconds(5));
+			continue;
+		}
+
+		//Grab data if it's ready
+		auto stat = scope->PollTrigger();
+		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+			scope->AcquireData();
+	}
+}

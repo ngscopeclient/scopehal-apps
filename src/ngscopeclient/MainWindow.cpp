@@ -72,6 +72,9 @@ void MainWindow::RenderUI()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // GUI handlers
 
+/**
+	@brief Run the top level menu bar
+ */
 void MainWindow::MainMenu()
 {
 	if(ImGui::BeginMainMenuBar())
@@ -93,6 +96,9 @@ void MainWindow::MainMenu()
 		m_dialogs.erase(dlg);
 }
 
+/**
+	@brief Run the File menu
+ */
 void MainWindow::FileMenu()
 {
 	if(ImGui::BeginMenu("File"))
@@ -101,22 +107,38 @@ void MainWindow::FileMenu()
 	}
 }
 
+/**
+	@brief Run the Add menu
+ */
 void MainWindow::AddMenu()
 {
 	if(ImGui::BeginMenu("Add"))
 	{
-		if(ImGui::BeginMenu("Oscilloscope"))
-		{
-			if(ImGui::MenuItem("Connect..."))
-				m_dialogs.emplace(make_shared<AddScopeDialog>());
+		AddOscilloscopeMenu();
+		ImGui::EndMenu();
+	}
+}
 
-			ImGui::EndMenu();
-		}
+/**
+	@brief Run the Add | Oscilloscope menu
+ */
+void MainWindow::AddOscilloscopeMenu()
+{
+	if(ImGui::BeginMenu("Oscilloscope"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
+		ImGui::Separator();
+
+		//TODO: recent instrument
 
 		ImGui::EndMenu();
 	}
 }
 
+/**
+	@brief Run the Help menu
+ */
 void MainWindow::HelpMenu()
 {
 	if(ImGui::BeginMenu("Help"))
@@ -124,3 +146,6 @@ void MainWindow::HelpMenu()
 		ImGui::EndMenu();
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Other GUI handlers

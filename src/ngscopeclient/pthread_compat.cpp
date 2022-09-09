@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -26,18 +26,22 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
-
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
-#include <atomic>
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-
+#if defined(unix) || defined(__unix__) || defined(__unix)
+#include <pthread.h>
 #endif
+
+#include "pthread_compat.h"
+
+void pthread_setname_np_compat(const char *name)
+{
+#if defined(unix) || defined(__unix__) || defined(__unix)
+	#if __linux__
+		// on Linux, max 16 chars including \0, see man page
+		pthread_setname_np(pthread_self(), name);
+	#else
+		// BSD, including Apple
+		pthread_setname_np(name);
+	#endif
+#endif
+}

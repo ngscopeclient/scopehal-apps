@@ -37,6 +37,7 @@
 
 #include "VulkanWindow.h"
 #include "Dialog.h"
+#include "Session.h"
 
 /**
 	@brief Top level application window
@@ -55,6 +56,7 @@ protected:
 	void MainMenu();
 	void FileMenu();
 	void AddMenu();
+	void AddOscilloscopeMenu();
 	void HelpMenu();
 
 	//Enable flags for various GUI elements
@@ -62,6 +64,9 @@ protected:
 
 	//Popup UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;
+
+	//Our session object
+	Session m_session;
 };
 
 #endif

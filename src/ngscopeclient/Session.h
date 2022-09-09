@@ -26,18 +26,42 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Declaration of Session
+ */
+#ifndef Session_h
+#define Session_h
 
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+/**
+	@brief A Session stores all of the instrument configuration and other state the user has open.
 
-#include <atomic>
+	Generally only accessed from the GUI thread.
+	TODO: interlocking if needed?
+ */
+class Session
+{
+public:
+	Session();
+	virtual ~Session();
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
+	void AddOscilloscope(Oscilloscope* scope);
+
+protected:
+
+	///@brief Flag for shutting down all scope threads when we exit
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief True if the session has been modified since last time it was saved
+	bool m_modifiedSinceLastSave;
+
+	///@brief Oscilloscopes we are currently connected to
+	std::vector<Oscilloscope*> m_oscilloscopes;
+
+	///@brief Processing threads for polling and processing scope waveforms
+	std::vector< std::unique_ptr<std::thread> > m_threads;
+};
 
 #endif
