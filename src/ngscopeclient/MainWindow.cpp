@@ -68,46 +68,8 @@ void MainWindow::RenderUI()
 	//Menu for main window
 	MainMenu();
 
-	//Provide a space we can dock windows into
-	auto viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);
-	ImGui::SetNextWindowViewport(viewport->ID);
-
-	ImGuiWindowFlags host_window_flags = 0;
-	host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
-	host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-	char label[32];
-	ImFormatString(label, IM_ARRAYSIZE(label), "DockSpaceViewport_%08X", viewport->ID);
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin(label, NULL, host_window_flags);
-	ImGui::PopStyleVar(3);
-
-	auto dockspace_id = ImGui::GetID("DockSpace");
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
-	ImGui::End();
-
-	static bool first = true;
-	if(first)
-	{
-		ImGui::DockBuilderRemoveNode(dockspace_id);
-		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-		ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
-
-		ImGuiID idLeft;
-		ImGuiID idRight;
-		/*auto idParent =*/ ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
-		ImGui::DockBuilderDockWindow("Waveform Group 1", idLeft);
-		ImGui::DockBuilderDockWindow("Waveform Group 2", idRight);
-		ImGui::DockBuilderFinish(dockspace_id);
-
-		first = false;
-	}
+	//Docking area to put all of the groups in
+	DockingArea();
 
 	//Waveform groups
 	WaveformGroups();
@@ -215,18 +177,89 @@ void MainWindow::HelpMenu()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Waveform views etc
 
+void MainWindow::DockingArea()
+{
+	//Provide a space we can dock windows into
+	auto viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->WorkPos);
+	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGuiWindowFlags host_window_flags = 0;
+	host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
+	host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+	char label[32];
+	ImFormatString(label, IM_ARRAYSIZE(label), "DockSpaceViewport_%08X", viewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin(label, NULL, host_window_flags);
+	ImGui::PopStyleVar(3);
+
+	auto dockspace_id = ImGui::GetID("DockSpace");
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
+	ImGui::End();
+
+	static bool first = true;
+	if(first)
+	{
+		ImGui::DockBuilderRemoveNode(dockspace_id);
+		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+		ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
+
+		ImGuiID idLeft;
+		ImGuiID idRight;
+		/*auto idParent =*/ ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
+		ImGui::DockBuilderDockWindow("Waveform Group 1", idLeft);
+		ImGui::DockBuilderDockWindow("Waveform Group 2", idRight);
+		ImGui::DockBuilderFinish(dockspace_id);
+
+		first = false;
+	}
+}
+
 void MainWindow::WaveformGroups()
 {
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin("Waveform Group 1", &open))
 		ImGui::End();
+	WaveformArea(2, "a");
+	WaveformArea(2, "b");
 	ImGui::End();
 
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin("Waveform Group 2", &open))
 		ImGui::End();
+	WaveformArea(1, "c");
 	ImGui::End();
+}
+
+void MainWindow::WaveformArea(int numAreas, const char* id)
+{
+	auto size = ImGui::GetContentRegionMax();
+
+	if(ImGui::BeginChild(id, ImVec2(size.x, size.y / numAreas)))
+	{
+		auto csize = ImGui::GetWindowSize();
+
+		//Draw background texture
+		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
+		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+		ImGui::SetItemAllowOverlap();
+
+		//Draw control widgets
+		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
+		ImGui::BeginGroup();
+			ImGui::Button("hai");
+			ImGui::Button("asdf");
+		ImGui::EndGroup();
+		ImGui::SetItemAllowOverlap();
+	}
+	ImGui::EndChild();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

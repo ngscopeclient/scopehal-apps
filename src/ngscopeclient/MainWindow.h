@@ -59,7 +59,9 @@ protected:
 			void AddMenu();
 			void AddOscilloscopeMenu();
 			void HelpMenu();
+		void DockingArea();
 		void WaveformGroups();
+			void WaveformArea(int numAreas, const char* id);
 
 	//Enable flags for various GUI elements
 	bool m_showDemo;
