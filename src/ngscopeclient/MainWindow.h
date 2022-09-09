@@ -61,7 +61,7 @@ protected:
 			void HelpMenu();
 		void DockingArea();
 		void WaveformGroups();
-			void WaveformArea(int numAreas, const char* id);
+			void WaveformArea(int numAreas, const char* id, ImVec2 clientArea);
 
 	//Enable flags for various GUI elements
 	bool m_showDemo;

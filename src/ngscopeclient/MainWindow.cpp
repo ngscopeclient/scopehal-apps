@@ -227,28 +227,30 @@ void MainWindow::WaveformGroups()
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin("Waveform Group 1", &open))
 		ImGui::End();
-	WaveformArea(2, "a");
-	WaveformArea(2, "b");
+	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	WaveformArea(2, "a", clientArea);
+	WaveformArea(2, "b", clientArea);
 	ImGui::End();
 
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
+	clientArea = ImGui::GetContentRegionAvail();
 	if(!ImGui::Begin("Waveform Group 2", &open))
 		ImGui::End();
-	WaveformArea(1, "c");
+	WaveformArea(1, "c", clientArea);
 	ImGui::End();
 }
 
-void MainWindow::WaveformArea(int numAreas, const char* id)
+void MainWindow::WaveformArea(int numAreas, const char* id, ImVec2 clientArea)
 {
-	auto size = ImGui::GetContentRegionMax();
-
-	if(ImGui::BeginChild(id, ImVec2(size.x, size.y / numAreas)))
+	auto height = (clientArea.y / numAreas) - ImGui::GetFrameHeightWithSpacing();
+	if(ImGui::BeginChild(id, ImVec2(clientArea.x, height)))
 	{
-		auto csize = ImGui::GetWindowSize();
+		auto csize = ImGui::GetContentRegionAvail();
 
 		//Draw background texture
 		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
-		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
+			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 
 		//Draw control widgets
