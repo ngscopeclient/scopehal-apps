@@ -113,6 +113,10 @@ int main(int argc, char* argv[])
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+	//Don't serialize UI config for now
+	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
+	io.IniFilename = nullptr;
+
 	//Set up appearance settings
 	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();

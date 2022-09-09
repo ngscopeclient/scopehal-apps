@@ -324,8 +324,16 @@ void VulkanWindow::Render()
 	if(!main_is_minimized)
 	{
 		vk::PresentInfoKHR presentInfo(**m_renderCompleteSemaphores[m_semaphoreIndex], **m_swapchain, m_frameIndex);
-		auto err = m_renderQueue.presentKHR(presentInfo);
-		if (err == vk::Result::eErrorOutOfDateKHR || err == vk::Result::eSuboptimalKHR)
+		try
+		{
+			if(vk::Result::eSuboptimalKHR == m_renderQueue.presentKHR(presentInfo))
+			{
+				m_resizeEventPending = true;
+				Render();
+				return;
+			}
+		}
+		catch(const vk::OutOfDateKHRError& err)
 		{
 			m_resizeEventPending = true;
 			Render();

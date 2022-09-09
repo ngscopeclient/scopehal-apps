@@ -30,97 +30,31 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of MainWindow
+	@brief Declaration of AddScopeDialog
  */
-#include "ngscopeclient.h"
-#include "MainWindow.h"
+#ifndef AddScopeDialog_h
+#define AddScopeDialog_h
 
-#include "AddScopeDialog.h"
+#include "Dialog.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-MainWindow::MainWindow(vk::raii::Queue& queue)
-	: VulkanWindow("ngscopeclient", queue)
-	, m_showDemo(true)
+class AddScopeDialog : public Dialog
 {
-}
+public:
+	AddScopeDialog();
+	virtual ~AddScopeDialog();
 
-MainWindow::~MainWindow()
-{
-}
+	virtual bool DoRender();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+protected:
+	std::string m_nickname;
 
-void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
-{
+	int m_selectedDriver;
+	std::vector<std::string> m_drivers;
 
-}
+	int m_selectedTransport;
+	std::vector<std::string> m_transports;
 
-void MainWindow::RenderUI()
-{
-	//Menu for main window
-	MainMenu();
+	std::string m_path;
+};
 
-	//DEBUG: draw the demo window
-	ImGui::ShowDemoWindow(&m_showDemo);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GUI handlers
-
-void MainWindow::MainMenu()
-{
-	if(ImGui::BeginMainMenuBar())
-	{
-		FileMenu();
-		AddMenu();
-		HelpMenu();
-		ImGui::EndMainMenuBar();
-	}
-
-	//Dialog boxes
-	set< shared_ptr<Dialog> > dlgsToClose;
-	for(auto& dlg : m_dialogs)
-	{
-		if(!dlg->Render())
-			dlgsToClose.emplace(dlg);
-	}
-	for(auto& dlg : dlgsToClose)
-		m_dialogs.erase(dlg);
-}
-
-void MainWindow::FileMenu()
-{
-	if(ImGui::BeginMenu("File"))
-	{
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::AddMenu()
-{
-	if(ImGui::BeginMenu("Add"))
-	{
-		if(ImGui::BeginMenu("Oscilloscope"))
-		{
-			if(ImGui::MenuItem("Connect..."))
-				m_dialogs.emplace(make_shared<AddScopeDialog>());
-
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::HelpMenu()
-{
-	if(ImGui::BeginMenu("Help"))
-	{
-		ImGui::EndMenu();
-	}
-}
+#endif

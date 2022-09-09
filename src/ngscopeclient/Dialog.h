@@ -30,97 +30,33 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of MainWindow
+	@brief Declaration of Dialog
  */
-#include "ngscopeclient.h"
-#include "MainWindow.h"
+#ifndef Dialog_h
+#define Dialog_h
 
-#include "AddScopeDialog.h"
+#include "imgui_stdlib.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-MainWindow::MainWindow(vk::raii::Queue& queue)
-	: VulkanWindow("ngscopeclient", queue)
-	, m_showDemo(true)
+/**
+	@brief Generic dialog box or other popup window
+ */
+class Dialog
 {
-}
+public:
+	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
+	virtual ~Dialog();
 
-MainWindow::~MainWindow()
-{
-}
+	bool Render();
+	virtual bool DoRender() =0;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+protected:
+	void Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	void HelpMarker(const std::string& str);
+	void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
 
-void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
-{
+	bool m_open;
+	std::string m_title;
+	ImVec2 m_defaultSize;
+};
 
-}
-
-void MainWindow::RenderUI()
-{
-	//Menu for main window
-	MainMenu();
-
-	//DEBUG: draw the demo window
-	ImGui::ShowDemoWindow(&m_showDemo);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GUI handlers
-
-void MainWindow::MainMenu()
-{
-	if(ImGui::BeginMainMenuBar())
-	{
-		FileMenu();
-		AddMenu();
-		HelpMenu();
-		ImGui::EndMainMenuBar();
-	}
-
-	//Dialog boxes
-	set< shared_ptr<Dialog> > dlgsToClose;
-	for(auto& dlg : m_dialogs)
-	{
-		if(!dlg->Render())
-			dlgsToClose.emplace(dlg);
-	}
-	for(auto& dlg : dlgsToClose)
-		m_dialogs.erase(dlg);
-}
-
-void MainWindow::FileMenu()
-{
-	if(ImGui::BeginMenu("File"))
-	{
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::AddMenu()
-{
-	if(ImGui::BeginMenu("Add"))
-	{
-		if(ImGui::BeginMenu("Oscilloscope"))
-		{
-			if(ImGui::MenuItem("Connect..."))
-				m_dialogs.emplace(make_shared<AddScopeDialog>());
-
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::HelpMenu()
-{
-	if(ImGui::BeginMenu("Help"))
-	{
-		ImGui::EndMenu();
-	}
-}
+#endif

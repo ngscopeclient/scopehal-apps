@@ -30,97 +30,82 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of MainWindow
+	@brief Implementation of AddScopeDialog
  */
+
 #include "ngscopeclient.h"
-#include "MainWindow.h"
-
 #include "AddScopeDialog.h"
-
-using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(vk::raii::Queue& queue)
-	: VulkanWindow("ngscopeclient", queue)
-	, m_showDemo(true)
+AddScopeDialog::AddScopeDialog()
+	: Dialog("Add Oscilloscope", ImVec2(400, 150))
+	, m_selectedDriver(0)
+	, m_selectedTransport(0)
 {
+	Oscilloscope::EnumDrivers(m_drivers);
+	SCPITransport::EnumTransports(m_transports);
 }
 
-MainWindow::~MainWindow()
+AddScopeDialog::~AddScopeDialog()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
+/**
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool AddScopeDialog::DoRender()
 {
+	ImGui::InputText("Nickname", &m_nickname);
+	HelpMarker(
+		"Text nickname for this instrument so you can distinguish between multiple similar devices.\n"
+		"\n"
+		"This is shown on the list of recent instruments, to disambiguate channel names in multi-instrument setups, etc.");
 
-}
+	Combo("Driver", m_drivers, m_selectedDriver);
+	HelpMarker(
+		"Select the instrument driver to use.\n"
+		"\n"
+		"Most commonly there is one driver supporting all hardware of a given type from a given vendor (e.g. Siglent oscilloscopes),"
+		"however there may be multiple drivers to choose from if a given vendor has several product lines with very different "
+		"software stacks.\n"
+		"\n"
+		"Check the user manual for details of what driver to use with a given instrument.");
 
-void MainWindow::RenderUI()
-{
-	//Menu for main window
-	MainMenu();
+	Combo("Transport", m_transports, m_selectedTransport);
+	HelpMarker(
+		"Select the SCPI transport for the connection between your computer and the instrument.\n"
+		"\n"
+		"This controls how remote control commands and waveform data get to/from the instrument (USB, Ethernet, GPIB, etc).\n"
+		"\n"
+		"Note that there are four different transports which run over TCP/IP, since instruments vary greatly:\n",
+			{
+				"lan: raw SCPI over TCP socket with no framing",
+				"lxi: LXI VXI-11",
+				"twinlan: separate sockets for SCPI text control commands and raw binary waveforms.\n"
+				"Commonly used with bridge servers for interfacing to USB instruments (Digilent, DreamSourceLabs, Pico).",
+				"vicp: Teledyne LeCroy Virtual Instrument Control Protocol"
+			}
+		);
 
-	//DEBUG: draw the demo window
-	ImGui::ShowDemoWindow(&m_showDemo);
-}
+	ImGui::InputText("Path", &m_path);
+	HelpMarker(
+		"Transport-specific description of how to connect to the instrument.\n",
+			{
+				"GPIB: board index and primary address (0:7)",
+				"TCP/IP transports: IP or hostname : port (localhost:5025).\n"
+				"Note that for twinlan, two port numbers are required (localhost:5025:5026) for SCPI and data ports respectively.",
+				"UART: device path and baud rate (/dev/ttyUSB0:9600, COM1). Default id 115200 if not specified. ",
+				"USBTMC: Linux device path (/dev/usbtmcX)"
+			}
+		);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GUI handlers
-
-void MainWindow::MainMenu()
-{
-	if(ImGui::BeginMainMenuBar())
-	{
-		FileMenu();
-		AddMenu();
-		HelpMenu();
-		ImGui::EndMainMenuBar();
-	}
-
-	//Dialog boxes
-	set< shared_ptr<Dialog> > dlgsToClose;
-	for(auto& dlg : m_dialogs)
-	{
-		if(!dlg->Render())
-			dlgsToClose.emplace(dlg);
-	}
-	for(auto& dlg : dlgsToClose)
-		m_dialogs.erase(dlg);
-}
-
-void MainWindow::FileMenu()
-{
-	if(ImGui::BeginMenu("File"))
-	{
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::AddMenu()
-{
-	if(ImGui::BeginMenu("Add"))
-	{
-		if(ImGui::BeginMenu("Oscilloscope"))
-		{
-			if(ImGui::MenuItem("Connect..."))
-				m_dialogs.emplace(make_shared<AddScopeDialog>());
-
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMenu();
-	}
-}
-
-void MainWindow::HelpMenu()
-{
-	if(ImGui::BeginMenu("Help"))
-	{
-		ImGui::EndMenu();
-	}
+	return true;
 }

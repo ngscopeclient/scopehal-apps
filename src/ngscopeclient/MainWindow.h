@@ -36,6 +36,7 @@
 #define MainWindow_h
 
 #include "VulkanWindow.h"
+#include "Dialog.h"
 
 /**
 	@brief Top level application window
@@ -48,7 +49,19 @@ public:
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+
+	//GUI handlers
 	virtual void RenderUI();
+	void MainMenu();
+	void FileMenu();
+	void AddMenu();
+	void HelpMenu();
+
+	//Enable flags for various GUI elements
+	bool m_showDemo;
+
+	//Popup UI elements
+	std::set< std::shared_ptr<Dialog> > m_dialogs;
 };
 
 #endif

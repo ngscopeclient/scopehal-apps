@@ -4,6 +4,7 @@ include_directories(
 	${SIGCXX_INCLUDE_DIRS}
 	${GTKMM_INCLUDE_DIRS}
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
 	)
 link_directories(${SIGCXX_LIBRARY_DIRS})
 
@@ -17,11 +18,15 @@ add_executable(ngscopeclient
 	../imgui/imgui_widgets.cpp
 	../imgui/backends/imgui_impl_glfw.cpp
 	../imgui/backends/imgui_impl_vulkan.cpp
+	../imgui/misc/cpp/imgui_stdlib.cpp
 
-	MainWindow.cpp
+	Dialog.cpp
 	VulkanWindow.cpp
 
+	AddScopeDialog.cpp
+
 	main.cpp
+	MainWindow.cpp
 )
 
 ###############################################################################

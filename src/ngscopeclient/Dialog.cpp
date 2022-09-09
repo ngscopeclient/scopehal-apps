@@ -30,97 +30,124 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of MainWindow
+	@brief Implementation of Dialog
  */
 #include "ngscopeclient.h"
-#include "MainWindow.h"
-
-#include "AddScopeDialog.h"
+#include "Dialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(vk::raii::Queue& queue)
-	: VulkanWindow("ngscopeclient", queue)
-	, m_showDemo(true)
+Dialog::Dialog(const string& title, ImVec2 defaultSize)
+	: m_open(true)
+	, m_title(title)
+	, m_defaultSize(defaultSize)
 {
 }
 
-MainWindow::~MainWindow()
+Dialog::~Dialog()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
+/**
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool Dialog::Render()
 {
+	if(!m_open)
+		return false;
 
-}
+	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
+	if(!ImGui::Begin(m_title.c_str(), &m_open))
+	{
+		ImGui::End();
+		return false;
+	}
 
-void MainWindow::RenderUI()
-{
-	//Menu for main window
-	MainMenu();
+	if(!DoRender())
+	{
+		ImGui::End();
+		return false;
+	}
 
-	//DEBUG: draw the demo window
-	ImGui::ShowDemoWindow(&m_showDemo);
+	ImGui::End();
+	return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// GUI handlers
+// Widget helpers for STL-ifying imgui objects
 
-void MainWindow::MainMenu()
+/**
+	@brief Displays a combo box from a vector<string>
+ */
+void Dialog::Combo(const string& label, const vector<string>& items, int& selection)
 {
-	if(ImGui::BeginMainMenuBar())
-	{
-		FileMenu();
-		AddMenu();
-		HelpMenu();
-		ImGui::EndMainMenuBar();
-	}
+	string preview;
+	ImGuiComboFlags flags = 0;
 
-	//Dialog boxes
-	set< shared_ptr<Dialog> > dlgsToClose;
-	for(auto& dlg : m_dialogs)
-	{
-		if(!dlg->Render())
-			dlgsToClose.emplace(dlg);
-	}
-	for(auto& dlg : dlgsToClose)
-		m_dialogs.erase(dlg);
-}
+	//Hide arrow button if no items
+	if(items.empty())
+		flags = ImGuiComboFlags_NoArrowButton;
 
-void MainWindow::FileMenu()
-{
-	if(ImGui::BeginMenu("File"))
-	{
-		ImGui::EndMenu();
-	}
-}
+	//Set preview to currently selected item
+	else
+		preview = items[selection];
 
-void MainWindow::AddMenu()
-{
-	if(ImGui::BeginMenu("Add"))
+	//Render the box
+	if(ImGui::BeginCombo(label.c_str(), preview.c_str(), flags))
 	{
-		if(ImGui::BeginMenu("Oscilloscope"))
+		for(int i=0; i<(int)items.size(); i++)
 		{
-			if(ImGui::MenuItem("Connect..."))
-				m_dialogs.emplace(make_shared<AddScopeDialog>());
-
-			ImGui::EndMenu();
+			bool selected = (i == selection);
+			if(ImGui::Selectable(items[i].c_str(), selected))
+				selection = i;
+			if(selected)
+				ImGui::SetItemDefaultFocus();
 		}
-
-		ImGui::EndMenu();
+		ImGui::EndCombo();
 	}
 }
 
-void MainWindow::HelpMenu()
+/**
+	@brief Helper based on imgui demo for displaying a help icon and tooltip text
+ */
+void Dialog::HelpMarker(const string& str)
 {
-	if(ImGui::BeginMenu("Help"))
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
-		ImGui::EndMenu();
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(str.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+}
+
+/**
+	@brief Helper based on imgui demo for displaying a help icon and tooltip text consisting of a header and bulleted text
+ */
+void Dialog::HelpMarker(const string& header, const vector<string>& bullets)
+{
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(header.c_str());
+		for(auto s : bullets)
+			ImGui::BulletText(s.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
 	}
 }
