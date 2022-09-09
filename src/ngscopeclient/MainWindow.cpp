@@ -80,10 +80,16 @@ void MainWindow::MainMenu()
 	if(ImGui::BeginMainMenuBar())
 	{
 		FileMenu();
+		ViewMenu();
 		AddMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
 	}
+
+	//Provide a space we can dock windows into
+	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+
+	//Waveform areas
 
 	//Dialog boxes
 	set< shared_ptr<Dialog> > dlgsToClose;
@@ -103,6 +109,23 @@ void MainWindow::FileMenu()
 {
 	if(ImGui::BeginMenu("File"))
 	{
+		if(ImGui::MenuItem("Exit"))
+			glfwSetWindowShouldClose(m_window, 1);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the View menu
+ */
+void MainWindow::ViewMenu()
+{
+	if(ImGui::BeginMenu("View"))
+	{
+		if(ImGui::MenuItem("Fullscreen"))
+			SetFullscreen(!m_fullscreen);
+
 		ImGui::EndMenu();
 	}
 }
@@ -130,7 +153,7 @@ void MainWindow::AddOscilloscopeMenu()
 			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
 		ImGui::Separator();
 
-		//TODO: recent instrument
+		//TODO: recent instruments
 
 		ImGui::EndMenu();
 	}

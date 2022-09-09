@@ -55,6 +55,7 @@ protected:
 	virtual void RenderUI();
 	void MainMenu();
 	void FileMenu();
+	void ViewMenu();
 	void AddMenu();
 	void AddOscilloscopeMenu();
 	void HelpMenu();

@@ -51,6 +51,7 @@ public:
 
 protected:
 	void UpdateFramebuffer();
+	void SetFullscreen(bool fullscreen);
 
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 	virtual void RenderUI();
@@ -111,6 +112,21 @@ protected:
 
 	///@brief Current window height
 	int m_height;
+
+	///@brief Fullscreen flag
+	bool m_fullscreen;
+
+	///@brief Saved position before we went fullscreen
+	int m_windowedX;
+
+	///@brief Saved position before we went fullscreen
+	int m_windowedY;
+
+	///@brief Saved size before we went fullscreen
+	int m_windowedWidth;
+
+	///@brief Saved size before we went fullscreen
+	int m_windowedHeight;
 };
 
 #endif

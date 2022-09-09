@@ -53,6 +53,11 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	, m_frameIndex(0)
 	, m_width(0)
 	, m_height(0)
+	, m_fullscreen(false)
+	, m_windowedX(0)
+	, m_windowedY(0)
+	, m_windowedWidth(0)
+	, m_windowedHeight(0)
 {
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -353,4 +358,38 @@ void VulkanWindow::RenderUI()
 
 void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Window management
+
+void VulkanWindow::SetFullscreen(bool fullscreen)
+{
+	m_fullscreen = fullscreen;
+
+	if(m_fullscreen)
+	{
+		LogTrace("Entering fullscreen mode\n");
+
+		m_windowedWidth = m_width;
+		m_windowedHeight = m_height;
+		glfwGetWindowPos(m_window, &m_windowedX, &m_windowedY);
+
+		//TODO: figure out which monitor we are currently on and fullscreen to it
+		//(may not be the primary)
+		glfwSetWindowMonitor(m_window, glfwGetPrimaryMonitor(), 0, 0, 3840, 2160, GLFW_DONT_CARE);
+	}
+
+	else
+	{
+		LogTrace("Leaving fullscreen mode\n");
+		glfwSetWindowMonitor(
+			m_window,
+			nullptr,
+			m_windowedX,
+			m_windowedY,
+			m_windowedWidth,
+			m_windowedHeight,
+			GLFW_DONT_CARE);
+	}
 }
