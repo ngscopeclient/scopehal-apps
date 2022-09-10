@@ -49,6 +49,9 @@ public:
 	void Render(int numAreas, ImVec2 clientArea);
 
 protected:
+	void DraggableButton(const std::string& title);
+
+	void DropArea(const std::string& name, ImVec2 start, ImVec2 size);
 };
 
 #endif

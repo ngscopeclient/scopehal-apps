@@ -35,6 +35,8 @@
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -56,20 +58,70 @@ void WaveformArea::Render(int numAreas, ImVec2 clientArea)
 	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, height)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
+		auto start = ImGui::GetWindowContentRegionMin();
 
-		//Draw background texture
+		//Draw texture for the actual waveform
+		//(todo: repeat for each channel)
 		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
 		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
 			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 
+		//Drag/drop areas for splitting
+		DropArea("top", ImVec2(start.x + csize.x*0.125, start.y), ImVec2(csize.x*0.75, csize.y*0.125));
+		DropArea("left", ImVec2(start.x, start.y + csize.y*0.125), ImVec2(csize.x*0.125, csize.y*0.75));
+		DropArea("right", ImVec2(start.x + csize.x*0.875, start.y + csize.y*0.125), ImVec2(csize.x*0.125, csize.y*0.75));
+		DropArea("top", ImVec2(start.x + csize.x*0.125, start.y + csize.y*0.875), ImVec2(csize.x*0.75, csize.y*0.125));
+		DropArea("middle", ImVec2(start.x + csize.x*0.125, start.y + csize.y*0.125), ImVec2(csize.x*0.75, csize.y*0.75));
+
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
-			ImGui::Button("hai");
-			ImGui::Button("asdf");
+
+			DraggableButton("hai");
+			DraggableButton("asdf");
+
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
 	}
 	ImGui::EndChild();
+}
+
+void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
+{
+	ImGui::SetCursorPos(start);
+	ImGui::BeginGroup();
+		ImGui::InvisibleButton(name.c_str(), size);
+	ImGui::EndGroup();
+	ImGui::SetItemAllowOverlap();
+
+	//Add drop target
+	if(ImGui::BeginDragDropTarget())
+	{
+		auto payload = ImGui::AcceptDragDropPayload("Waveform");
+		if( (payload != nullptr) && (payload->DataSize == sizeof(int)) )
+		{
+			//TODO: process payload
+			LogDebug("Waveform dropped in %s\n", name.c_str());
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+}
+
+void WaveformArea::DraggableButton(const std::string& title)
+{
+	ImGui::Button(title.c_str());
+
+	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+	{
+		//TODO: pass actual pointer or something here
+		int id = 42;
+		ImGui::SetDragDropPayload("Waveform", &id, sizeof(id));
+
+		//Preview of what we're dragging
+		ImGui::Text("Drag %s", title.c_str());
+
+		ImGui::EndDragDropSource();
+	}
 }
