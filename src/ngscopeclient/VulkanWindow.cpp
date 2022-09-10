@@ -197,7 +197,7 @@ void VulkanWindow::UpdateFramebuffer()
 		{},
 		vk::SurfaceTransformFlagBitsKHR::eIdentity,
 		vk::CompositeAlphaFlagBitsKHR::eOpaque,
-		vk::PresentModeKHR::eFifo,
+		vk::PresentModeKHR::eFifo /*vk::PresentModeKHR::eImmediate*/ , //switch to eImmediate for benchmarking FPS
 		true,
 		oldSwapchainIfValid);
 	m_swapchain = make_unique<vk::raii::SwapchainKHR>(*g_vkComputeDevice, chainInfo);
