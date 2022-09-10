@@ -53,12 +53,15 @@ protected:
 
 	//GUI handlers
 	virtual void RenderUI();
-	void MainMenu();
-	void FileMenu();
-	void ViewMenu();
-	void AddMenu();
-	void AddOscilloscopeMenu();
-	void HelpMenu();
+		void MainMenu();
+			void FileMenu();
+			void ViewMenu();
+			void AddMenu();
+			void AddOscilloscopeMenu();
+			void HelpMenu();
+		void DockingArea();
+		void WaveformGroups();
+			void WaveformArea(int numAreas, const char* id, ImVec2 clientArea);
 
 	//Enable flags for various GUI elements
 	bool m_showDemo;
