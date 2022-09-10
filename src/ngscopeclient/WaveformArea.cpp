@@ -30,49 +30,46 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Implementation of WaveformArea
  */
-#ifndef MainWindow_h
-#define MainWindow_h
+#include "ngscopeclient.h"
+#include "WaveformArea.h"
 
-#include "VulkanWindow.h"
-#include "Dialog.h"
-#include "Session.h"
-#include "WaveformGroup.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
+WaveformArea::WaveformArea()
 {
-public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	//Default name
+}
 
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+WaveformArea::~WaveformArea()
+{
+}
 
-	//GUI handlers
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-			void AddOscilloscopeMenu();
-			void HelpMenu();
-		void DockingArea();
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	///@brief Enable flags for demo window
-	bool m_showDemo;
+void WaveformArea::Render(int numAreas, ImVec2 clientArea)
+{
+	auto height = (clientArea.y / numAreas) - ImGui::GetFrameHeightWithSpacing();
+	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, height)))
+	{
+		auto csize = ImGui::GetContentRegionAvail();
 
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
+		//Draw background texture
+		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
+		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
+			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+		ImGui::SetItemAllowOverlap();
 
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	//Our session object
-	Session m_session;
-};
-
-#endif
+		//Draw control widgets
+		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
+		ImGui::BeginGroup();
+			ImGui::Button("hai");
+			ImGui::Button("asdf");
+		ImGui::EndGroup();
+		ImGui::SetItemAllowOverlap();
+	}
+	ImGui::EndChild();
+}

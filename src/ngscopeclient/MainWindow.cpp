@@ -49,6 +49,8 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 	, m_showDemo(true)
 {
+	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
+	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
 }
 
 MainWindow::~MainWindow()
@@ -72,7 +74,8 @@ void MainWindow::RenderUI()
 	DockingArea();
 
 	//Waveform groups
-	WaveformGroups();
+	for(auto g : m_waveformGroups)
+		g->Render();
 
 	//Dialog boxes
 	set< shared_ptr<Dialog> > dlgsToClose;
@@ -203,9 +206,11 @@ void MainWindow::DockingArea()
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
 	ImGui::End();
 
+	//DEBUG: do initial split of our waveform groups into the dock space
 	static bool first = true;
 	if(first)
 	{
+		//Clear out existing docks
 		ImGui::DockBuilderRemoveNode(dockspace_id);
 		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
 		ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
@@ -213,55 +218,14 @@ void MainWindow::DockingArea()
 		ImGuiID idLeft;
 		ImGuiID idRight;
 		/*auto idParent =*/ ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
-		ImGui::DockBuilderDockWindow("Waveform Group 1", idLeft);
-		ImGui::DockBuilderDockWindow("Waveform Group 2", idRight);
+
+		ImGui::DockBuilderDockWindow(m_waveformGroups[0]->GetTitle().c_str(), idLeft);
+		ImGui::DockBuilderDockWindow(m_waveformGroups[1]->GetTitle().c_str(), idRight);
+
 		ImGui::DockBuilderFinish(dockspace_id);
 
 		first = false;
 	}
-}
-
-void MainWindow::WaveformGroups()
-{
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin("Waveform Group 1", &open))
-		ImGui::End();
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
-	WaveformArea(2, "a", clientArea);
-	WaveformArea(2, "b", clientArea);
-	ImGui::End();
-
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	clientArea = ImGui::GetContentRegionAvail();
-	if(!ImGui::Begin("Waveform Group 2", &open))
-		ImGui::End();
-	WaveformArea(1, "c", clientArea);
-	ImGui::End();
-}
-
-void MainWindow::WaveformArea(int numAreas, const char* id, ImVec2 clientArea)
-{
-	auto height = (clientArea.y / numAreas) - ImGui::GetFrameHeightWithSpacing();
-	if(ImGui::BeginChild(id, ImVec2(clientArea.x, height)))
-	{
-		auto csize = ImGui::GetContentRegionAvail();
-
-		//Draw background texture
-		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
-		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
-			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
-		ImGui::SetItemAllowOverlap();
-
-		//Draw control widgets
-		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
-		ImGui::BeginGroup();
-			ImGui::Button("hai");
-			ImGui::Button("asdf");
-		ImGui::EndGroup();
-		ImGui::SetItemAllowOverlap();
-	}
-	ImGui::EndChild();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

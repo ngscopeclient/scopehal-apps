@@ -30,49 +30,41 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Implementation of WaveformGroup
  */
-#ifndef MainWindow_h
-#define MainWindow_h
-
-#include "VulkanWindow.h"
-#include "Dialog.h"
-#include "Session.h"
+#include "ngscopeclient.h"
 #include "WaveformGroup.h"
 
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+WaveformGroup::WaveformGroup(const string& title, size_t numAreas)
+	: m_title(title)
 {
-public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	for(size_t i=0; i<numAreas; i++)
+		m_areas.push_back(make_shared<WaveformArea>());
+}
 
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+WaveformGroup::~WaveformGroup()
+{
+}
 
-	//GUI handlers
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-			void AddOscilloscopeMenu();
-			void HelpMenu();
-		void DockingArea();
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	///@brief Enable flags for demo window
-	bool m_showDemo;
+void WaveformGroup::Render()
+{
+	bool open = true;
+	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
+	if(!ImGui::Begin(m_title.c_str(), &open))
+		ImGui::End();
 
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
+	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
+	for(auto a : m_areas)
+		a->Render(m_areas.size(), clientArea);
 
-	//Our session object
-	Session m_session;
-};
-
-#endif
+	ImGui::End();
+}
