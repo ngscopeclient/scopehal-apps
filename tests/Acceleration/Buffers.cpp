@@ -224,7 +224,7 @@ TEST_CASE("Buffers_CpuGpu")
 
 		//Verify the pop_front worked
 		REQUIRE(buf.size() == 3);
-		for(size_t i=0; i<3; i++)
+		for(int32_t i=0; i<3; i++)
 			REQUIRE(buf[i] == i+1);
 
 		//Empty the buffer
@@ -257,10 +257,10 @@ void VerifyBuffer(AcceleratorBuffer<int32_t>& buf, size_t len)
 	REQUIRE(buf.size() == len);
 	REQUIRE(buf.capacity() >= len);
 	for(size_t i=0; i<len; i++)
-		REQUIRE(buf[i] == i);
+		REQUIRE(buf[i] == (int32_t)i);
 
 	//Verify again, but looping using iterators rather than array indexing
-	size_t iexpected = 0;
+	int32_t iexpected = 0;
 	for(auto n : buf)
 	{
 		REQUIRE(n == iexpected);
