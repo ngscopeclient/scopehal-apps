@@ -63,8 +63,8 @@ void WaveformGroup::Render()
 
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 
-	for(auto a : m_areas)
-		a->Render(m_areas.size(), clientArea);
+	for(size_t i=0; i<m_areas.size(); i++)
+		m_areas[i]->Render(i, m_areas.size(), clientArea);
 
 	ImGui::End();
 }
