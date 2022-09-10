@@ -30,49 +30,35 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Declaration of WaveformGroup
  */
-#ifndef MainWindow_h
-#define MainWindow_h
+#ifndef WaveformGroup_h
+#define WaveformGroup_h
 
-#include "VulkanWindow.h"
-#include "Dialog.h"
-#include "Session.h"
-#include "WaveformGroup.h"
+#include "WaveformArea.h"
 
 /**
-	@brief Top level application window
+	@brief A WaveformGroup is a container for one or more WaveformArea's.
  */
-class MainWindow : public VulkanWindow
+class WaveformGroup
 {
 public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	WaveformGroup(const std::string& title, size_t numAreas);
+	virtual ~WaveformGroup();
+
+	void Render();
+
+	const std::string& GetTitle()
+	{ return m_title; }
 
 protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
-	//GUI handlers
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-			void AddOscilloscopeMenu();
-			void HelpMenu();
-		void DockingArea();
+	///@brief Display title of the group
+	std::string m_title;
 
-	///@brief Enable flags for demo window
-	bool m_showDemo;
-
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	//Our session object
-	Session m_session;
+	///@brief The set of waveform areas within this group
+	std::vector< std::shared_ptr<WaveformArea> > m_areas;
 };
 
 #endif
+

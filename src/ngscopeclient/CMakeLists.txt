@@ -28,6 +28,8 @@ add_executable(ngscopeclient
 	MainWindow.cpp
 	Session.cpp
 	ScopeThread.cpp
+	WaveformArea.cpp
+	WaveformGroup.cpp
 
 	main.cpp
 )

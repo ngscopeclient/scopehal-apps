@@ -30,49 +30,27 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Declaration of WaveformArea
  */
-#ifndef MainWindow_h
-#define MainWindow_h
-
-#include "VulkanWindow.h"
-#include "Dialog.h"
-#include "Session.h"
-#include "WaveformGroup.h"
+#ifndef WaveformArea_h
+#define WaveformArea_h
 
 /**
-	@brief Top level application window
+	@brief A WaveformArea is a plot that displays one or more OscilloscopeChannel's worth of data
+
+	WaveformArea's auto resize, and will collectively fill the entire client area of their parent window.
  */
-class MainWindow : public VulkanWindow
+class WaveformArea
 {
 public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	WaveformArea();
+	virtual ~WaveformArea();
+
+	void Render(int numAreas, ImVec2 clientArea);
 
 protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
-
-	//GUI handlers
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-			void AddOscilloscopeMenu();
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flags for demo window
-	bool m_showDemo;
-
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	//Our session object
-	Session m_session;
 };
 
 #endif
+
+
