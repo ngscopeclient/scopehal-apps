@@ -55,7 +55,7 @@ jobs:
         install: |
           git
           wget
-          mingw-w64-x86_64-toolchain mingw-w64-glslang
+          mingw-w64-x86_64-toolchain
 
     - name: Install Vulkan SDK
       run: |
@@ -69,7 +69,7 @@ jobs:
         echo "PATH=/c/VulkanSDK/1.3.224.1/Bin:\$PATH" >> ~/.bash_profile
         echo "export VK_SDK_PATH=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
         echo "export VULKAN_SDK=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
-
+        echo "export GLSLANG_BUILD_PATH=/mingw64" >> ~/.bash_profile
     - name: Build
       run: |
         cd msys2
