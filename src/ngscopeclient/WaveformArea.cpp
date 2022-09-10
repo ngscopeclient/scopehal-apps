@@ -35,12 +35,15 @@
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 WaveformArea::WaveformArea()
 {
-	//Default name
+	m_displayedChannels.push_back(make_shared<DisplayedChannel>("ohai"));
+	m_displayedChannels.push_back(make_shared<DisplayedChannel>("asdf"));
 }
 
 WaveformArea::~WaveformArea()
@@ -50,26 +53,89 @@ WaveformArea::~WaveformArea()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformArea::Render(int numAreas, ImVec2 clientArea)
+void WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
-	auto height = (clientArea.y / numAreas) - ImGui::GetFrameHeightWithSpacing();
+	auto height = (clientArea.y - ImGui::GetFrameHeightWithSpacing()) / numAreas;
 	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, height)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
+		auto start = ImGui::GetWindowContentRegionMin();
 
-		//Draw background texture
+		//Draw texture for the actual waveform
+		//(todo: repeat for each channel)
 		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
 		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
 			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 
+		//Drag/drop areas for splitting
+		float widthOfVerticalEdge = csize.x*0.25;
+		float leftOfMiddle = start.x + widthOfVerticalEdge;
+		float rightOfMiddle = start.x + csize.x*0.75;
+		float topOfMiddle = start.y;
+		float bottomOfMiddle = start.y + csize.y;
+		float widthOfMiddle = rightOfMiddle - leftOfMiddle;
+		if(iArea == 0)
+		{
+			DropArea("top", ImVec2(leftOfMiddle, start.y), ImVec2(widthOfMiddle, csize.y*0.125));
+			topOfMiddle += csize.y * 0.125;
+		}
+		if(iArea == (numAreas-1))
+		{
+			bottomOfMiddle -= csize.y * 0.125;
+			DropArea("bottom", ImVec2(leftOfMiddle, bottomOfMiddle), ImVec2(widthOfMiddle, csize.y*0.125));
+		}
+		float heightOfMiddle = bottomOfMiddle - topOfMiddle;
+		DropArea("middle", ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
+		DropArea("left", ImVec2(start.x, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
+		DropArea("right", ImVec2(rightOfMiddle, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
+
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
-			ImGui::Button("hai");
-			ImGui::Button("asdf");
+
+			for(auto c : m_displayedChannels)
+				DraggableButton(c);
+
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
 	}
 	ImGui::EndChild();
+}
+
+void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
+{
+	ImGui::SetCursorPos(start);
+	ImGui::InvisibleButton(name.c_str(), size);
+	ImGui::SetItemAllowOverlap();
+
+	//Add drop target
+	if(ImGui::BeginDragDropTarget())
+	{
+		auto payload = ImGui::AcceptDragDropPayload("Waveform");
+		if( (payload != nullptr) && (payload->DataSize == sizeof(DisplayedChannel*)) )
+		{
+			auto value = reinterpret_cast<DisplayedChannel*>(payload->Data);
+
+			//TODO: process payload
+			LogDebug("Waveform %s dropped in %s\n", value->GetName().c_str(), name.c_str());
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+}
+
+void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan)
+{
+	ImGui::Button(chan->GetName().c_str());
+
+	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+	{
+		ImGui::SetDragDropPayload("Waveform", chan.get(), sizeof(DisplayedChannel*));
+
+		//Preview of what we're dragging
+		ImGui::Text("Drag %s", chan->GetName().c_str());
+
+		ImGui::EndDragDropSource();
+	}
 }

@@ -36,6 +36,23 @@
 #define WaveformArea_h
 
 /**
+	@brief Placeholder for a single channel being displayed within a WaveformArea
+ */
+class DisplayedChannel
+{
+public:
+	DisplayedChannel(const std::string& name)
+		: m_name(name)
+	{}
+
+	const std::string& GetName()
+	{ return m_name; }
+
+protected:
+	std::string m_name;
+};
+
+/**
 	@brief A WaveformArea is a plot that displays one or more OscilloscopeChannel's worth of data
 
 	WaveformArea's auto resize, and will collectively fill the entire client area of their parent window.
@@ -46,9 +63,19 @@ public:
 	WaveformArea();
 	virtual ~WaveformArea();
 
-	void Render(int numAreas, ImVec2 clientArea);
+	void Render(int iArea, int numAreas, ImVec2 clientArea);
 
 protected:
+	void DraggableButton(std::shared_ptr<DisplayedChannel> chan);
+
+	void DropArea(const std::string& name, ImVec2 start, ImVec2 size);
+
+	/**
+		@brief The channels currently living within this WaveformArea
+
+		TODO: make this a FlowGraphNode and just hook up inputs
+	 */
+	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
 };
 
 #endif
