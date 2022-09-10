@@ -55,7 +55,8 @@ jobs:
           texlive \
           texlive-fonts-extra \
           libglew-dev \
-          glslang-dev
+          glslang-dev \
+          libglfw3-dev
 
     - name: Clone and Build FFTS Library
       run: |
