@@ -687,6 +687,7 @@ void WaveformArea::InitializeWaveformPass()
 	{
 		if(!hwc.Load(
 			"#version 420",
+			"#define DENSE_PACK",
 			"shaders/waveform-compute-head.glsl",
 			"shaders/waveform-compute-histogram.glsl",
 			"shaders/waveform-compute-core.glsl",
@@ -719,6 +720,7 @@ void WaveformArea::InitializeWaveformPass()
 	{
 		if(!hwc.Load(
 			"#version 420",
+			"#define DENSE_PACK",
 			"shaders/waveform-compute-head-noint64.glsl",
 			"shaders/waveform-compute-histogram.glsl",
 			"shaders/waveform-compute-core.glsl",
