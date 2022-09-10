@@ -22,6 +22,8 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-spirv-headers"
   "${MINGW_PACKAGE_PREFIX}-opencl-headers"
   "${MINGW_PACKAGE_PREFIX}-opencl-icd"
+  "${MINGW_PACKAGE_PREFIX}-glslang"
+  "${MINGW_PACKAGE_PREFIX}-glfw"
 )
 makedepends=(
   "${MINGW_PACKAGE_PREFIX}-cmake"

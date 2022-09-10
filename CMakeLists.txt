@@ -52,6 +52,7 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 find_package(FFTS)
 include(FindOpenMP)
+find_package(glfw3 3.2 REQUIRED)
 
 # Use the local FindVulkan script until we can rely on all users having CMake 3.24 available, at which point we can remove it
 include(FindVulkan)
@@ -62,6 +63,31 @@ endif()
 
 if(NOT Vulkan_glslc_FOUND)
 	message(FATAL_ERROR "No Vulkan glslc found. This is needed to compile shaders.")
+endif()
+
+# Add specific VulkanSDK Lib & Include for glslang (tested on Linux Ubuntu 22.04 LTS)
+if(NOT WIN32)
+	include_directories($ENV{VULKAN_SDK}/include/glslang/Include)
+	link_directories($ENV{VULKAN_SDK}/Lib)
+endif()
+
+# Includes are incomplete in VulkanSDK 1.3.224.1 so we use the include path from MINGW64 mingw-w64-x86_64-glslang
+if(WIN32)
+	find_path(Glslang_BUILD_INCLUDE_DIR
+	  NAMES include/glslang/Include/glslang_c_interface.h
+	  HINTS
+		$ENV{GLSLANG_BUILD_PATH}
+	  )
+	mark_as_advanced(Glslang_BUILD_INCLUDE_DIR)
+
+	if(Glslang_BUILD_INCLUDE_DIR)
+		include_directories($ENV{GLSLANG_BUILD_PATH}/include/glslang/Include)
+	else()
+		message(FATAL_ERROR "Glslang_BUILD_INCLUDE_DIR Not found")
+	endif()
+
+	link_directories($ENV{GLSLANG_BUILD_PATH}/lib)
+	link_directories($ENV{GLSLANG_BUILD_PATH}/lib/glslang)
 endif()
 
 if(NOT WIN32)
