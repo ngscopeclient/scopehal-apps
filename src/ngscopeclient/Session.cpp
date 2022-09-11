@@ -34,14 +34,17 @@
  */
 #include "ngscopeclient.h"
 #include "Session.h"
+#include "MainWindow.h"
+#include "PowerSupplyDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Session::Session()
-	: m_shuttingDown(false)
+Session::Session(MainWindow* wnd)
+	: m_mainWindow(wnd)
+	, m_shuttingDown(false)
 	, m_modifiedSinceLastSave(false)
 {
 }
@@ -60,6 +63,7 @@ Session::~Session()
 	for(auto scope : m_oscilloscopes)
 		delete scope;
 	m_oscilloscopes.clear();
+	m_psus.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,4 +75,49 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_oscilloscopes.push_back(scope);
 
 	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
+
+	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
+}
+
+/**
+	@brief Adds a power supply to the session
+ */
+void Session::AddPowerSupply(SCPIPowerSupply* psu)
+{
+	m_modifiedSinceLastSave = true;
+
+	//Create shared PSU state
+	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
+	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
+
+	//Add the dialog to view/control it
+	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+
+	m_mainWindow->AddToRecentInstrumentList(psu);
+}
+
+/**
+	@brief Removes a power supply from the session
+ */
+void Session::RemovePowerSupply(SCPIPowerSupply* psu)
+{
+	m_modifiedSinceLastSave = true;
+	m_psus.erase(psu);
+}
+
+/**
+	@brief Adds a multimeter to the session
+ */
+void Session::AddMultimeter(SCPIMultimeter* meter)
+{
+	m_modifiedSinceLastSave = true;
+}
+
+/**
+	@brief Removes a multimeter from the session
+ */
+void Session::RemoveMultimeter(SCPIMultimeter* meter)
+{
+	m_modifiedSinceLastSave = true;
+	//m_psus.erase(psu);
 }

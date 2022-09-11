@@ -136,6 +136,8 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
+
+	m_plotContext = ImPlot::CreateContext();
 }
 
 /**
@@ -143,6 +145,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
  */
 VulkanWindow::~VulkanWindow()
 {
+	ImPlot::DestroyContext(m_plotContext);
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
 	m_surface = nullptr;
@@ -155,8 +158,10 @@ VulkanWindow::~VulkanWindow()
 
 void VulkanWindow::UpdateFramebuffer()
 {
-	//Figure out how big our framebuffer is
-	glfwGetFramebufferSize(m_window, &m_width, &m_height);
+	//Get current size of the surface
+	auto caps = g_vkfftPhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
+	m_width = caps.maxImageExtent.width;
+	m_height = caps.maxImageExtent.height;
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();

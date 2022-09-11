@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,91 +30,106 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Top-level window for the application
+	@brief Declaration of PowerSupplyDialog
  */
+#ifndef PowerSupplyDialog_h
+#define PowerSupplyDialog_h
 
-#ifndef MainWindow_h
-#define MainWindow_h
+#include "Dialog.h"
+#include "Session.h"
 
-#include "../scopehal/PowerSupply.h"
-
-class ChannelRow
+/**
+	@brief Realtime plot helper (based on implot_demo)
+ */
+struct RollingBuffer
 {
-public:
-	ChannelRow(PowerSupply* psu, int chan);
+	float Span;
+	ImVector<ImVec2> Data;
+	RollingBuffer()
+	{
+		Span = 10.0f;
+		Data.reserve(2000);
+	}
+	void AddPoint(float x, float y)
+	{
+		Data.push_back(ImVec2(x, y));
 
-	Gtk::Frame* GetFrame()
-	{ return m_frame; }
-
-	void OnTimer();
-
-protected:
-	Gtk::Frame* m_frame;
-	Gtk::Label* m_actualVoltageLabel;
-	Gtk::Label* m_actualCurrentLabel;
-
-	Gtk::Entry* m_setVoltageEntry;
-	Gtk::Entry* m_setCurrentEntry;
-
-	Gtk::Switch* m_powerSwitch;
-
-	Gtk::ComboBoxText* m_overcurrentModeBox;
-	Gtk::CheckButton* m_softStartModeButton;
-
-	Graph* m_currentGraph;
-	Graph* m_voltageGraph;
-	Graphable m_channelData;
-
-	PowerSupply* m_psu;
-	int m_chan;
-
-	void FormatVoltage(char* str, size_t len, double v);
-	void FormatCurrent(char* str, size_t len, double i);
-
-	void SetGraphLimits();
-
-	void OnPowerSwitch();
+		while(!Data.empty())
+		{
+			float tfirst = Data.begin()->x;
+			if(tfirst < (x - Span))
+				Data.erase(Data.begin());
+			else
+				break;
+		}
+	}
 };
 
 /**
-	@brief Main application window class for a power supply
+	@brief UI state for a single power supply channel
+
+	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
  */
-class MainWindow	: public Gtk::Window
+class PowerSupplyChannelUIState
 {
 public:
-	MainWindow(std::vector<PowerSupply*> psus);
-	~MainWindow();
 
-	size_t GetPSUCount()
-	{ return m_psus.size(); }
+	bool m_outputEnabled;
+	bool m_overcurrentShutdownEnabled;
+	bool m_softStartEnabled;
 
-	PowerSupply* GetPSU(size_t i)
-	{ return m_psus[i]; }
+	float m_setVoltage;
+	float m_setCurrent;
+
+	float m_lastAppliedSetVoltage;
+	float m_lastAppliedSetCurrent;
+
+	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
+		: m_outputEnabled(psu->GetPowerChannelActive(chan))
+		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
+		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
+		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
+		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
+		, m_lastAppliedSetVoltage(m_setVoltage)
+		, m_lastAppliedSetCurrent(m_setCurrent)
+	{}
+
+	RollingBuffer m_voltageHistory;
+	RollingBuffer m_currentHistory;
+};
+
+class PowerSupplyDialog : public Dialog
+{
+public:
+	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
+	virtual ~PowerSupplyDialog();
+
+	virtual bool DoRender();
 
 protected:
-	void OnQuit();
+	void CombinedTrendPlot(float etime);
+	void ChannelSettings(int i, float v, float a, float etime);
 
-	//Initialization
-	void CreateWidgets();
+	///@brief Session handle so we can remove the PSU when closed
+	Session* m_session;
 
-	//Widgets
-	Gtk::VBox m_vbox;
-		Gtk::MenuBar m_menu;
-			Gtk::MenuItem m_fileMenuItem;
-				Gtk::Menu m_fileMenu;
-		/*
-		Gtk::HBox m_toolbox;
-			Gtk::Toolbar m_toolbar;
-		*/
+	//@brief Global power enable (if we have one)
+	bool m_masterEnable;
 
-	bool OnTimer(int timer);
+	///@brief Timestamp of when we opened the dialog
+	float m_tstart;
 
-protected:
+	///@brief Depth for historical sample data
+	float m_historyDepth;
 
-	//Our PSU connections
-	std::vector<PowerSupply*> m_psus;
+	///@brief The PSU we're controlling
+	SCPIPowerSupply* m_psu;
 
-	std::vector<ChannelRow*> m_rows;
+	///@brief Current channel stats, live updated
+	std::shared_ptr<PowerSupplyState> m_state;
+
+	///@brief Channel state for the UI
+	std::vector<PowerSupplyChannelUIState> m_channelUIState;
 };
 
 #endif

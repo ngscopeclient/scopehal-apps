@@ -127,6 +127,9 @@ protected:
 
 	///@brief Saved size before we went fullscreen
 	int m_windowedHeight;
+
+	///@brief implot context
+	ImPlotContext* m_plotContext;
 };
 
 #endif

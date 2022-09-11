@@ -27,74 +27,156 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
- */
+#include <fstream>
+#include <stdexcept>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#include <shlobj.h>
+#else
+#include <sys/stat.h>
+#include <wordexp.h>
+#endif
 
 #include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "PreferenceManager.h"
 
 using namespace std;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+PreferenceCategory& PreferenceManager::AllPreferences()
 {
-	Oscilloscope::EnumDrivers(m_drivers);
+	return this->m_treeRoot;
 }
 
-AddScopeDialog::~AddScopeDialog()
+bool PreferenceManager::HasPreferenceFile() const
 {
+#ifdef _WIN32
+	const auto fattr = GetFileAttributes(m_filePath.c_str());
+	return (fattr != INVALID_FILE_ATTRIBUTES) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
+#else
+	struct stat fs{ };
+	const auto result = stat(m_filePath.c_str(), &fs);
+
+	return (result == 0) && (fs.st_mode & S_IFREG);
+#endif
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
+const Preference& PreferenceManager::GetPreference(const string& path) const
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+	return this->m_treeRoot.GetLeaf(path);
+}
+
+void PreferenceManager::DeterminePath()
+{
+#ifdef _WIN32
+	wchar_t* stem;
+	if(S_OK != SHGetKnownFolderPath(
+		FOLDERID_RoamingAppData,
+		KF_FLAG_CREATE,
+		NULL,
+		&stem))
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		throw std::runtime_error("failed to resolve %appdata%");
 	}
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
+	wchar_t directory[MAX_PATH];
+	if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
 	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
+		throw runtime_error("failed to build directory path");
 	}
 
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
+	// Ensure the directory exists
+	const auto result = CreateDirectoryW(directory, NULL);
+	m_configDir = NarrowPath(directory);
+
+	if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
 	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
+		throw runtime_error("failed to create preferences directory");
 	}
 
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+	// Build final path
+	wchar_t config[MAX_PATH];
+	if(NULL == PathCombineW(config, directory, L"preferences.yml"))
+	{
+		throw runtime_error("failed to build directory path");
+	}
+	m_filePath = NarrowPath(config);
 
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
+	CoTaskMemFree(static_cast<void*>(stem));
+#else
+	// Ensure all directories in path exist
+	CreateDirectory("~/.config");
+	CreateDirectory("~/.config/glscopeclient");
+	m_configDir = ExpandPath("~/.config/glscopeclient");
 
-	return true;
+	m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
+#endif
+}
+
+int64_t PreferenceManager::GetInt(const string& path) const
+{
+	return GetPreference(path).GetInt();
+}
+
+const std::string& PreferenceManager::GetString(const string& path) const
+{
+	return GetPreference(path).GetString();
+}
+
+double PreferenceManager::GetReal(const string& path) const
+{
+	return GetPreference(path).GetReal();
+}
+
+bool PreferenceManager::GetBool(const string& path) const
+{
+	return GetPreference(path).GetBool();
+}
+
+Gdk::Color PreferenceManager::GetColor(const std::string& path) const
+{
+	return GetPreference(path).GetColor();
+}
+
+Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
+{
+	return GetPreference(path).GetFont();
+}
+
+void PreferenceManager::LoadPreferences()
+{
+	if(!HasPreferenceFile())
+		return;
+
+	try
+	{
+		auto doc = YAML::LoadAllFromFile(m_filePath)[0];
+		this->m_treeRoot.FromYAML(doc);
+	}
+	catch(const exception& ex)
+	{
+		LogWarning("Preference file was present, but couldn't be read. Ignoring. (%s)\n", ex.what());
+	}
+}
+
+void PreferenceManager::SavePreferences()
+{
+	YAML::Node node{ };
+
+	this->m_treeRoot.ToYAML(node);
+
+	ofstream outfs{ m_filePath };
+
+	if(!outfs)
+	{
+		LogError("couldn't open preferences file for writing\n");
+		return;
+	}
+
+	outfs << node;
+	outfs.close();
+
+	if(!outfs)
+		LogError("couldn't write preferences file to disk\n");
 }

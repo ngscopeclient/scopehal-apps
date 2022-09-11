@@ -35,9 +35,10 @@
 #ifndef MainWindow_h
 #define MainWindow_h
 
-#include "VulkanWindow.h"
 #include "Dialog.h"
+#include "PreferenceManager.h"
 #include "Session.h"
+#include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
 /**
@@ -49,30 +50,88 @@ public:
 	MainWindow(vk::raii::Queue& queue);
 	virtual ~MainWindow();
 
+	void AddDialog(std::shared_ptr<Dialog> dlg)
+	{ m_dialogs.emplace(dlg); }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
-	//GUI handlers
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// GUI handlers
+
 	virtual void RenderUI();
 		void MainMenu();
 			void FileMenu();
 			void ViewMenu();
 			void AddMenu();
-			void AddOscilloscopeMenu();
+				void AddMultimeterMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddOscilloscopeMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddPowerSupplyMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 			void HelpMenu();
 		void DockingArea();
 
-	///@brief Enable flags for demo window
+	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
 
-	///@brief Popup UI elements
+	///@brief Enable flag for implot demo window
+	bool m_showPlot;
+
+	///@brief All dialogs and other pop-up UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
 
-	//Our session object
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Session state
+
+	///@brief Our session object
 	Session m_session;
+
+	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// End user preferences (persistent across sessions)
+
+	//Preferences state
+	PreferenceManager m_preferences;
+
+public:
+	PreferenceManager& GetPreferences()
+	{ return m_preferences; }
+
+protected:
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Recent item lists
+
+	/**
+		@brief List of recently used instruments
+	 */
+	std::map<std::string, time_t> m_recentInstruments;
+
+	void LoadRecentInstrumentList();
+	void SaveRecentInstrumentList();
+
+public:
+	void AddToRecentInstrumentList(SCPIInstrument* inst);
+
+protected:
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Error handling
+
+	std::string m_errorPopupTitle;
+	std::string m_errorPopupMessage;
+
+	void RenderErrorPopup();
+	void ShowErrorPopup(const std::string& title, const std::string& msg);
 };
 
 #endif

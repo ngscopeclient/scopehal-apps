@@ -35,6 +35,42 @@
 #ifndef Session_h
 #define Session_h
 
+class MainWindow;
+
+/**
+	@brief Internal state for a connection to a PSU
+ */
+class PowerSupplyConnectionState
+{
+public:
+	PowerSupplyConnectionState(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state)
+		: m_psu(psu)
+		, m_shuttingDown(false)
+	{
+		PowerSupplyThreadArgs args(psu, &m_shuttingDown, state);
+		m_thread = std::make_unique<std::thread>(PowerSupplyThread, args);
+	}
+
+	~PowerSupplyConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+
+		//Disconnect once the thread has terminated
+		delete m_psu;
+	}
+
+	///@brief The power supply
+	SCPIPowerSupply* m_psu;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the PSU
+	std::unique_ptr<std::thread> m_thread;
+};
+
 /**
 	@brief A Session stores all of the instrument configuration and other state the user has open.
 
@@ -44,12 +80,19 @@
 class Session
 {
 public:
-	Session();
+	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	void AddMultimeter(SCPIMultimeter* meter);
+	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope);
+	void AddPowerSupply(SCPIPowerSupply* psu);
+	void RemovePowerSupply(SCPIPowerSupply* psu);
 
 protected:
+
+	///@brief Top level UI window
+	MainWindow* m_mainWindow;
 
 	///@brief Flag for shutting down all scope threads when we exit
 	std::atomic<bool> m_shuttingDown;
@@ -59,6 +102,9 @@ protected:
 
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<Oscilloscope*> m_oscilloscopes;
+
+	///@brief Power supplies we are currently connected to
+	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

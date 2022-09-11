@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,18 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Main project include file
+	@brief Implementation of AddPowerSupplyDialog
  */
-#ifndef psuclient_h
-#define psuclient_h
 
-#include "../scopehal/scopehal.h"
-#include "../scopehal/Instrument.h"
-#include "../scopehal/PowerSupply.h"
+#include "ngscopeclient.h"
+#include "AddPowerSupplyDialog.h"
 
-#include <giomm.h>
-#include <gtkmm.h>
+using namespace std;
 
-double GetTime();
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-#endif
+AddPowerSupplyDialog::AddPowerSupplyDialog(Session& session)
+	: AddInstrumentDialog("Add Power Supply", session)
+{
+	SCPIPowerSupply::EnumDrivers(m_drivers);
+}
+
+AddPowerSupplyDialog::~AddPowerSupplyDialog()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
+
+/**
+	@brief Connects to a scope
+
+	@return True if successful
+ */
+bool AddPowerSupplyDialog::DoConnect()
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
+
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
+
+	//Create the scope
+	auto psu = SCPIPowerSupply::CreatePowerSupply(m_drivers[m_selectedDriver], transport);
+	if(psu == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create PSU driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
+
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created PSU\n");
+
+	psu->m_nickname = m_nickname;
+	m_session.AddPowerSupply(psu);
+	return true;
+}

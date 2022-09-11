@@ -29,72 +29,69 @@
 
 /**
 	@file
-	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@author Katharina B.
+	@brief  Stores and manages preference values
  */
 
-#include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#ifndef PreferenceManager_h
+#define PreferenceManager_h
 
-using namespace std;
+#include <map>
+#include <string>
+#include "PreferenceTree.h"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+class PreferenceManager
 {
-	Oscilloscope::EnumDrivers(m_drivers);
-}
+public:
+    PreferenceManager()
+        : m_treeRoot{ "" }
+    {
+        DeterminePath();
+        InitializeDefaults();
+        LoadPreferences();
+    }
 
-AddScopeDialog::~AddScopeDialog()
-{
-}
+public:
+    // Disallow copy
+    PreferenceManager(const PreferenceManager&) = delete;
+    PreferenceManager(PreferenceManager&&) = default;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+    PreferenceManager& operator=(const PreferenceManager&) = delete;
+    PreferenceManager& operator=(PreferenceManager&&) = default;
 
-/**
-	@brief Connects to a scope
+public:
+    void SavePreferences();
+    PreferenceCategory& AllPreferences();
 
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
+    std::string GetConfigDirectory()
+    { return m_configDir; }
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
+    // Value retrieval methods
+    int64_t GetInt(const std::string& path) const;
+    const std::string& GetString(const std::string& path) const;
+    double GetReal(const std::string& path) const;
+    bool GetBool(const std::string& path) const;
+    Gdk::Color GetColor(const std::string& path) const;
+    Pango::FontDescription GetFont(const std::string& path) const;
 
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
+    template< typename E >
+    E GetEnum(const std::string& path) const
+    {
+        return this->GetPreference(path).GetEnum<E>();
+    }
 
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+private:
+    // Internal helpers
+    void DeterminePath();
+    void InitializeDefaults();
+    void LoadPreferences();
+    bool HasPreferenceFile() const;
+    const Preference& GetPreference(const std::string& path) const;
 
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
+private:
+    PreferenceCategory m_treeRoot;
+    std::string m_filePath;
+    std::string m_configDir;
+};
 
-	return true;
-}
+#endif // PreferenceManager_h

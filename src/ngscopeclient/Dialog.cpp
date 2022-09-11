@@ -66,7 +66,7 @@ bool Dialog::Render()
 		return false;
 
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &m_open))
+	if(!ImGui::Begin(m_title.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
 	{
 		ImGui::End();
 		return false;
@@ -78,8 +78,38 @@ bool Dialog::Render()
 		return false;
 	}
 
+	RenderErrorPopup();
+
 	ImGui::End();
 	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Error messages
+
+/**
+	@brief Opens the error popup
+ */
+void Dialog::ShowErrorPopup(const string& title, const string& msg)
+{
+	ImGui::OpenPopup(title.c_str());
+	m_errorPopupTitle = title;
+	m_errorPopupMessage = msg;
+}
+
+/**
+	@brief Popup message when we fail to connect
+ */
+void Dialog::RenderErrorPopup()
+{
+	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text(m_errorPopupMessage.c_str());
+		ImGui::Separator();
+		if(ImGui::Button("OK"))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,6 +153,14 @@ void Dialog::HelpMarker(const string& str)
 {
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");
+	Tooltip(str);
+}
+
+/**
+	@brief Helper based on imgui demo for displaying tooltip text over the previously rendered widget
+ */
+void Dialog::Tooltip(const string& str)
+{
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
 		ImGui::BeginTooltip();

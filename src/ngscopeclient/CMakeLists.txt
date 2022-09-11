@@ -5,6 +5,7 @@ include_directories(
 	${GTKMM_INCLUDE_DIRS}
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
 	)
 link_directories(${SIGCXX_LIBRARY_DIRS})
 
@@ -19,20 +20,49 @@ add_executable(ngscopeclient
 	../imgui/backends/imgui_impl_glfw.cpp
 	../imgui/backends/imgui_impl_vulkan.cpp
 	../imgui/misc/cpp/imgui_stdlib.cpp
+	../implot/implot.cpp
+	../implot/implot_demo.cpp
+	../implot/implot_items.cpp
 
+	pthread_compat.cpp
 	Dialog.cpp
 	VulkanWindow.cpp
-	pthread_compat.cpp
 
+	AddInstrumentDialog.cpp
+	AddMultimeterDialog.cpp
+	AddPowerSupplyDialog.cpp
 	AddScopeDialog.cpp
+	PowerSupplyDialog.cpp
+
 	MainWindow.cpp
-	Session.cpp
+	PowerSupplyThread.cpp
+	Preference.cpp
+	PreferenceManager.cpp
+	PreferenceSchema.cpp
+	PreferenceTree.cpp
 	ScopeThread.cpp
+	Session.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp
 
 	main.cpp
 )
+
+# implot has a bunch of warnings, turn them off to avoid cluttering the build
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_source_files_properties(
+	../implot/implot.cpp
+	../implot/implot_demo.cpp
+	../implot/implot_items.cpp
+	PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  set_source_files_properties(
+	../implot/implot.cpp
+	../implot/implot_demo.cpp
+	../implot/implot_items.cpp
+	PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
+endif()
+
 
 ###############################################################################
 #Linker settings
