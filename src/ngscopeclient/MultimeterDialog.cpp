@@ -49,7 +49,10 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 	, m_meter(meter)
 	, m_state(state)
 	, m_selectedChannel(m_meter->GetCurrentMeterChannel())
+	, m_autorange(m_meter->GetMeterAutoRange())
 {
+	m_meter->StartMeter();
+
 	//Inputs
 	for(int i=0; i<m_meter->GetMeterChannelCount(); i++)
 		m_channelNames.push_back(m_meter->GetMeterChannelName(i));
@@ -76,6 +79,7 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 
 MultimeterDialog::~MultimeterDialog()
 {
+	m_meter->StopMeter();
 	m_session->RemoveMultimeter(m_meter);
 }
 
@@ -129,6 +133,9 @@ bool MultimeterDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		if(ImGui::Checkbox("Autorange", &m_autorange))
+			m_meter->SetMeterAutoRange(m_autorange);
+
 		//Channel selector (hide if we have only one channel)
 		if(m_meter->GetMeterChannelCount() > 1)
 		{

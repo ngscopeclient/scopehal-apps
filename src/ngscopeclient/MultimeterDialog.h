@@ -95,6 +95,9 @@ protected:
 
 	///@brief Index of secondary mode
 	int m_secondaryModeSelector;
+
+	///@brief Autorange enable flag
+	bool m_autorange;
 };
 
 
