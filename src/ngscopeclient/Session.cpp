@@ -75,6 +75,8 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_oscilloscopes.push_back(scope);
 
 	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
+
+	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
 }
 
 /**
@@ -84,12 +86,14 @@ void Session::AddPowerSupply(SCPIPowerSupply* psu)
 {
 	m_modifiedSinceLastSave = true;
 
-	//Record the PSU state
+	//Create shared PSU state
 	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
 	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
 
 	//Add the dialog to view/control it
 	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+
+	m_mainWindow->AddToRecentInstrumentList(psu);
 }
 
 /**

@@ -152,8 +152,23 @@ void MainWindow::AddMenu()
 {
 	if(ImGui::BeginMenu("Add"))
 	{
-		AddOscilloscopeMenu();
-		AddPowerSupplyMenu();
+		//Make a reverse mapping: timestamp -> instruments last used at that time
+		map<time_t, vector<string> > reverseMap;
+		for(auto it : m_recentInstruments)
+			reverseMap[it.second].push_back(it.first);
+
+		//Get a sorted list of timestamps, most recent first, with no duplicates
+		set<time_t> timestampsDeduplicated;
+		for(auto it : m_recentInstruments)
+			timestampsDeduplicated.emplace(it.second);
+		vector<time_t> timestamps;
+		for(auto t : timestampsDeduplicated)
+			timestamps.push_back(t);
+		std::sort(timestamps.begin(), timestamps.end());
+
+		AddOscilloscopeMenu(timestamps, reverseMap);
+		AddPowerSupplyMenu(timestamps, reverseMap);
+
 		ImGui::EndMenu();
 	}
 }
@@ -161,7 +176,7 @@ void MainWindow::AddMenu()
 /**
 	@brief Run the Add | Oscilloscope menu
  */
-void MainWindow::AddOscilloscopeMenu()
+void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
 {
 	if(ImGui::BeginMenu("Oscilloscope"))
 	{
@@ -169,7 +184,60 @@ void MainWindow::AddOscilloscopeMenu()
 			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
 		ImGui::Separator();
 
-		//TODO: recent instruments
+		//Find all known scope drivers.
+		//Any recent instrument using one of these drivers is assumed to be a scope.
+		vector<string> drivers;
+		Oscilloscope::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the scope
+							auto scope = Oscilloscope::CreateOscilloscope(drivername, transport);
+							if(scope == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create oscilloscope driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+
+								scope->m_nickname = nick;
+								m_session.AddOscilloscope(scope);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		ImGui::EndMenu();
 	}
@@ -178,7 +246,7 @@ void MainWindow::AddOscilloscopeMenu()
 /**
 	@brief Run the Add | Power Supply menu
  */
-void MainWindow::AddPowerSupplyMenu()
+void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
 {
 	if(ImGui::BeginMenu("Power Supply"))
 	{
@@ -187,7 +255,60 @@ void MainWindow::AddPowerSupplyMenu()
 
 		ImGui::Separator();
 
-		//TODO: recent instruments
+		//Find all known PSU drivers.
+		//Any recent instrument using one of these drivers is assumed to be a PSU.
+		vector<string> drivers;
+		SCPIPowerSupply::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the PSU
+							auto psu = SCPIPowerSupply::CreatePowerSupply(drivername, transport);
+							if(psu == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create PSU driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created PSU\n");
+
+								psu->m_nickname = nick;
+								m_session.AddPowerSupply(psu);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		ImGui::EndMenu();
 	}
@@ -300,36 +421,23 @@ void MainWindow::SaveRecentInstrumentList()
 	fclose(fp);
 }
 
-void MainWindow::AddCurrentToRecentInstrumentList()
+void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
 {
-	/*
-	//Add our current entry to the recently-used list
+	if(inst == nullptr)
+		return;
+
 	auto now = time(NULL);
 
-	set<SCPIInstrument*> devices;
-	for(auto scope : m_scopes)
-		devices.emplace(dynamic_cast<SCPIInstrument*>(scope));
-	for(auto gen : m_funcgens)
-		devices.emplace(dynamic_cast<SCPIInstrument*>(gen));
-	for(auto meter : m_meters)
-		devices.emplace(dynamic_cast<SCPIInstrument*>(meter));
-
-	for(auto inst : devices)
-	{
-		if(inst == nullptr)
-			continue;
-
-		auto connectionString =
-			inst->m_nickname + ":" +
-			inst->GetDriverName() + ":" +
-			inst->GetTransportName() + ":" +
-			inst->GetTransportConnectionString();
-
-		m_recentInstruments[connectionString] = now;
-	}
+	auto connectionString =
+		inst->m_nickname + ":" +
+		inst->GetDriverName() + ":" +
+		inst->GetTransportName() + ":" +
+		inst->GetTransportConnectionString();
+	m_recentInstruments[connectionString] = now;
 
 	//Delete anything old
-	const int maxRecentInstruments = 15;
+	//TODO: have a preference for this
+	const int maxRecentInstruments = 20;
 	while(m_recentInstruments.size() > maxRecentInstruments)
 	{
 		string oldestPath = "";
@@ -346,5 +454,58 @@ void MainWindow::AddCurrentToRecentInstrumentList()
 
 		m_recentInstruments.erase(oldestPath);
 	}
-	*/
+}
+
+/**
+	@brief Helper function for creating a transport and printing an error if the connection is unsuccessful
+ */
+SCPITransport* MainWindow::MakeTransport(const string& trans, const string& args)
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(trans, args);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + trans + "\"");
+		return nullptr;
+	}
+
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + args + "\"");
+		return nullptr;
+	}
+
+	return transport;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Error messages
+
+/**
+	@brief Opens the error popup
+ */
+void MainWindow::ShowErrorPopup(const string& title, const string& msg)
+{
+	ImGui::OpenPopup(title.c_str());
+	m_errorPopupTitle = title;
+	m_errorPopupMessage = msg;
+}
+
+/**
+	@brief Popup message when we fail to connect
+ */
+void MainWindow::RenderErrorPopup()
+{
+	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text(m_errorPopupMessage.c_str());
+		ImGui::Separator();
+		if(ImGui::Button("OK"))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
 }

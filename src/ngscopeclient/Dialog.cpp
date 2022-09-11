@@ -102,7 +102,6 @@ void Dialog::ShowErrorPopup(const string& title, const string& msg)
  */
 void Dialog::RenderErrorPopup()
 {
-	//"Connection error"
 	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::Text(m_errorPopupMessage.c_str());

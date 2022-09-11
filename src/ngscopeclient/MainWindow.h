@@ -64,8 +64,12 @@ protected:
 			void FileMenu();
 			void ViewMenu();
 			void AddMenu();
-				void AddOscilloscopeMenu();
-				void AddPowerSupplyMenu();
+				void AddOscilloscopeMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddPowerSupplyMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 			void HelpMenu();
 		void DockingArea();
 
@@ -75,7 +79,7 @@ protected:
 	///@brief Enable flag for implot demo window
 	bool m_showPlot;
 
-	///@brief Popup UI elements
+	///@brief All dialogs and other pop-up UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;
 
 	///@brief Waveform groups
@@ -86,6 +90,8 @@ protected:
 
 	///@brief Our session object
 	Session m_session;
+
+	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// End user preferences (persistent across sessions)
@@ -107,9 +113,22 @@ protected:
 	 */
 	std::map<std::string, time_t> m_recentInstruments;
 
-	void AddCurrentToRecentInstrumentList();
 	void LoadRecentInstrumentList();
 	void SaveRecentInstrumentList();
+
+public:
+	void AddToRecentInstrumentList(SCPIInstrument* inst);
+
+protected:
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Error handling
+
+	std::string m_errorPopupTitle;
+	std::string m_errorPopupMessage;
+
+	void RenderErrorPopup();
+	void ShowErrorPopup(const std::string& title, const std::string& msg);
 };
 
 #endif
