@@ -59,6 +59,7 @@ void PowerSupplyThread(PowerSupplyThreadArgs args)
 			state->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
 			state->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
 		}
+		state->m_firstUpdateDone = true;
 
 		//Cap update rate to 20 Hz
 		this_thread::sleep_for(chrono::milliseconds(50));

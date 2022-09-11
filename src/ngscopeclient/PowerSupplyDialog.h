@@ -39,6 +39,33 @@
 #include "Session.h"
 
 /**
+	@brief Realtime plot helper (based on implot_demo)
+ */
+struct RollingBuffer
+{
+	float Span;
+	ImVector<ImVec2> Data;
+	RollingBuffer()
+	{
+		Span = 10.0f;
+		Data.reserve(2000);
+	}
+	void AddPoint(float x, float y)
+	{
+		Data.push_back(ImVec2(x, y));
+
+		while(!Data.empty())
+		{
+			float tfirst = Data.begin()->x;
+			if(tfirst < (x - Span))
+				Data.erase(Data.begin());
+			else
+				break;
+		}
+	}
+};
+
+/**
 	@brief UI state for a single power supply channel
 
 	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
@@ -54,48 +81,17 @@ public:
 	float m_setVoltage;
 	float m_setCurrent;
 
-	float m_historyInterval;
-
-	size_t m_historyCap;
-
-	///@brief timestamp of the last history
-	float m_lastHistorySample;
-
-	///@brief Historical voltage values
-	std::vector<float> m_voltageHistory;
-
-	///@brief Historical current values
-	std::vector<float> m_currentHistory;
-
 	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
 		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
 		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
 		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_historyInterval(1)
-		, m_historyCap(120)
-		, m_lastHistorySample(GetTime())
 	{}
 
-	void AddHistory(float v, float i)
-	{
-		float t = GetTime();
 
-		//Skip update if it hasn't been long enough
-		if( (t - m_lastHistorySample) < m_historyInterval)
-			return;
-
-		//Add new values
-		m_voltageHistory.push_back(v);
-		m_currentHistory.push_back(i);
-
-		//Flush old history
-		while(m_voltageHistory.size() > m_historyCap)
-			m_voltageHistory.erase(m_voltageHistory.begin());
-		while(m_currentHistory.size() > m_historyCap)
-			m_currentHistory.erase(m_currentHistory.begin());
-	}
+	RollingBuffer m_voltageHistory;
+	RollingBuffer m_currentHistory;
 };
 
 class PowerSupplyDialog : public Dialog
@@ -107,7 +103,19 @@ public:
 	virtual bool DoRender();
 
 protected:
+	void CombinedTrendPlot(float etime);
+	void ChannelSettings(int i, float v, float a, float etime);
 
+	//@brief Global power enable (if we have one)
+	bool m_masterEnable;
+
+	///@brief Timestamp of when we opened the dialog
+	float m_tstart;
+
+	///@brief Depth for historical sample data
+	float m_historyDepth;
+
+	///@brief The PSU we're controlling
 	SCPIPowerSupply* m_psu;
 
 	///@brief Current channel stats, live updated

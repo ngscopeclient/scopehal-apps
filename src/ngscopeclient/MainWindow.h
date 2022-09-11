@@ -66,8 +66,11 @@ protected:
 			void HelpMenu();
 		void DockingArea();
 
-	///@brief Enable flags for demo window
+	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
+
+	///@brief Enable flag for implot demo window
+	bool m_showPlot;
 
 	///@brief Popup UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;

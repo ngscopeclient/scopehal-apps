@@ -43,6 +43,9 @@ using namespace std;
 
 PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSupplyState> state)
 	: Dialog(string("Power Supply: ") + psu->m_nickname, ImVec2(500, 400))
+	, m_masterEnable(psu->GetMasterPowerEnable())
+	, m_tstart(GetTime() - 60)
+	, m_historyDepth(60)
 	, m_psu(psu)
 	, m_state(state)
 {
@@ -63,101 +66,198 @@ bool PowerSupplyDialog::DoRender()
 	//Top level settings
 	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		bool on = true;
-		ImGui::Checkbox("Output Enable", &on);
+		if(ImGui::Checkbox("Output Enable", &m_masterEnable))
+			m_psu->SetMasterPowerEnable(m_masterEnable);
 	}
+
+	auto t = GetTime() - m_tstart;
+	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
 
 	//Per channel settings
-	float valueWidth = 200;
 	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
 	{
-		//Add new historical sample data
-		m_channelUIState[i].AddHistory(m_state->m_channelVoltage[i].load(), m_state->m_channelCurrent[i].load() );
+		float v = m_state->m_channelVoltage[i].load();
+		float a = m_state->m_channelCurrent[i].load();
 
-		if(ImGui::CollapsingHeader(m_psu->GetPowerChannelName(i).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		//Update history
+		if(firstUpdateDone)
 		{
-			ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled);
-
-			//Advanced features (not available with all PSUs)
-			if(ImGui::TreeNode("Advanced"))
-			{
-				ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled);
-
-				ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled);
-
-				ImGui::TreePop();
-			}
-
-			//Set points for channels
-			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-			if(ImGui::TreeNode("Set Points"))
-			{
-				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("V", &m_channelUIState[i].m_setVoltage);
-				ImGui::SameLine();
-				if(ImGui::Button("Apply"))
-				{
-
-				}
-
-				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("A", &m_channelUIState[i].m_setCurrent);
-				ImGui::SameLine();
-				if(ImGui::Button("Apply"))
-				{
-
-				}
-
-				ImGui::TreePop();
-			}
-
-			//Actual values of channels
-			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-			if(ImGui::TreeNode("Measured"))
-			{
-				ImGui::BeginDisabled();
-					float f = m_state->m_channelVoltage[i].load();
-					ImGui::SetNextItemWidth(valueWidth);
-					ImGui::InputFloat("V", &f);
-
-					f = m_state->m_channelCurrent[i].load();
-					ImGui::SetNextItemWidth(valueWidth);
-					ImGui::InputFloat("A", &f);
-				ImGui::EndDisabled();
-
-				ImGui::TreePop();
-			}
-
-			//Historical voltage/current graph
-			if(ImGui::TreeNode("Trends"))
-			{
-				/*
-				ImGui::PlotLines(
-					"Voltage",
-					&m_channelUIState[i].m_voltageHistory[0],
-					m_channelUIState[i].m_voltageHistory.size(),
-					0,
-					nullptr,
-					FLT_MAX,
-					FLT_MAX,
-					ImVec2(300, 100)
-					);
-
-				ImGui::PlotLines(
-					"Current",
-					&m_channelUIState[i].m_currentHistory[0],
-					m_channelUIState[i].m_currentHistory.size(),
-					0,
-					nullptr,
-					FLT_MAX,
-					FLT_MAX,
-					ImVec2(300, 100)
-					);
-				*/
-				ImGui::TreePop();
-			}
+			m_channelUIState[i].m_voltageHistory.AddPoint(t, v);
+			m_channelUIState[i].m_currentHistory.AddPoint(t, a);
 		}
+		m_channelUIState[i].m_voltageHistory.Span = m_historyDepth;
+		m_channelUIState[i].m_currentHistory.Span = m_historyDepth;
+
+		ChannelSettings(i, v, a, t);
+
+		ImGui::PopID();
 	}
 
+	//Combined trend plot for all channels
+	if(ImGui::CollapsingHeader("Trends"))
+		CombinedTrendPlot(t);
+
 	return true;
+}
+
+/**
+	@brief A single channel's settings
+
+	@param i		Channel index
+	@param v		Most recently observed voltage
+	@param a		Most recently observed current
+	@param etime	Elapsed time for plotting
+ */
+void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
+{
+	float valueWidth = 200;
+
+	auto chname = m_psu->GetPowerChannelName(i);
+
+	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::PushID(chname.c_str());
+
+		if(ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled))
+			m_psu->SetPowerChannelActive(i, m_channelUIState[i].m_outputEnabled);
+
+		//Advanced features (not available with all PSUs)
+		if(ImGui::TreeNode("Advanced"))
+		{
+			if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
+				m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
+
+			if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
+				m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
+
+			ImGui::TreePop();
+		}
+
+		//Set points for channels
+		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+		if(ImGui::TreeNode("Set Points"))
+		{
+			ImGui::SetNextItemWidth(valueWidth);
+			ImGui::InputFloat("V", &m_channelUIState[i].m_setVoltage);
+			ImGui::SameLine();
+			if(ImGui::Button("Apply"))
+				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setVoltage);
+
+			ImGui::SetNextItemWidth(valueWidth);
+			ImGui::InputFloat("A", &m_channelUIState[i].m_setCurrent);
+			ImGui::SameLine();
+			if(ImGui::Button("Apply"))
+				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_setCurrent);
+
+			ImGui::TreePop();
+		}
+
+		//Actual values of channels
+		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+		if(ImGui::TreeNode("Measured"))
+		{
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputFloat("V", &v);
+
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputFloat("A", &a);
+			ImGui::EndDisabled();
+
+			ImGui::TreePop();
+		}
+
+		//Historical voltage/current graph
+		if(ImGui::TreeNode("Trends"))
+		{
+			auto csize = ImGui::GetContentRegionAvail();
+
+			if(ImPlot::BeginPlot("Voltage History", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
+			{
+				ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+				auto& hist = m_channelUIState[i].m_voltageHistory;
+				ImPlot::PlotLine(
+					chname.c_str(),
+					&hist.Data[0].x,
+					&hist.Data[0].y,
+					hist.Data.size(),
+					0,
+					0,
+					2*sizeof(float));
+
+				ImPlot::EndPlot();
+			}
+
+			if(ImPlot::BeginPlot("Current History", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
+			{
+				ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+				auto& hist = m_channelUIState[i].m_currentHistory;
+
+				ImPlot::PlotLine(
+					chname.c_str(),
+					&hist.Data[0].x,
+					&hist.Data[0].y,
+					hist.Data.size(),
+					0,
+					0,
+					2*sizeof(float));
+
+				ImPlot::EndPlot();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+}
+
+/**
+	@brief Combined trend plots for all channels
+ */
+void PowerSupplyDialog::CombinedTrendPlot(float etime)
+{
+	auto csize = ImGui::GetContentRegionAvail();
+
+	if(ImPlot::BeginPlot("Voltage History", ImVec2(csize.x, 200)) )
+	{
+		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+		for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+		{
+			auto chname = m_psu->GetPowerChannelName(i);
+			auto& hist = m_channelUIState[i].m_voltageHistory;
+			ImPlot::PlotLine(
+				chname.c_str(),
+				&hist.Data[0].x,
+				&hist.Data[0].y,
+				hist.Data.size(),
+				0,
+				0,
+				2*sizeof(float));
+		}
+
+		ImPlot::EndPlot();
+	}
+
+	if(ImPlot::BeginPlot("Current History", ImVec2(csize.x, 200)) )
+	{
+		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+		for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+		{
+			auto chname = m_psu->GetPowerChannelName(i);
+			auto& hist = m_channelUIState[i].m_currentHistory;
+			ImPlot::PlotLine(
+				chname.c_str(),
+				&hist.Data[0].x,
+				&hist.Data[0].y,
+				hist.Data.size(),
+				0,
+				0,
+				2*sizeof(float));
+		}
+
+		ImPlot::EndPlot();
+	}
 }

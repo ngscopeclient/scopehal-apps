@@ -50,6 +50,7 @@ using namespace std;
 MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 	, m_showDemo(true)
+	, m_showPlot(false)
 	, m_session(this)
 {
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
@@ -90,8 +91,9 @@ void MainWindow::RenderUI()
 	for(auto& dlg : dlgsToClose)
 		m_dialogs.erase(dlg);
 
-	//DEBUG: draw the demo window
+	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
+	ImPlot::ShowDemoWindow(&m_showPlot);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

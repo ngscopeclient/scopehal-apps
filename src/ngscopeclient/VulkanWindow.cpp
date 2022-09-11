@@ -136,6 +136,8 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
+
+	m_plotContext = ImPlot::CreateContext();
 }
 
 /**
@@ -143,6 +145,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
  */
 VulkanWindow::~VulkanWindow()
 {
+	ImPlot::DestroyContext(m_plotContext);
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
 	m_surface = nullptr;

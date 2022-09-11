@@ -56,12 +56,16 @@ public:
 			m_channelConstantCurrent[i] = false;
 			m_channelFuseTripped[i] = false;
 		}
+
+		m_firstUpdateDone = false;
 	}
 
 	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
 	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
+
+	std::atomic<bool> m_firstUpdateDone;
 };
 
 #endif
