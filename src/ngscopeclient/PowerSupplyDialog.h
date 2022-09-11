@@ -89,7 +89,6 @@ public:
 		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
 	{}
 
-
 	RollingBuffer m_voltageHistory;
 	RollingBuffer m_currentHistory;
 };

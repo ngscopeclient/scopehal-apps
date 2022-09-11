@@ -118,8 +118,21 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 	{
 		ImGui::PushID(chname.c_str());
 
+		bool shdn = m_state->m_channelFuseTripped[i].load();
+		bool cc = m_state->m_channelConstantCurrent[i].load();
+
 		if(ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled))
 			m_psu->SetPowerChannelActive(i, m_channelUIState[i].m_outputEnabled);
+		if(shdn)
+		{
+			//TODO: preference for configuring this?
+			float alpha = fabs(sin(etime*M_PI))*0.5 + 0.5;
+
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1*alpha, 0, 0, 1*alpha));
+			ImGui::Text("Overload shutdown");
+			ImGui::PopStyleColor();
+		}
 
 		//Advanced features (not available with all PSUs)
 		if(ImGui::TreeNode("Advanced"))
@@ -138,15 +151,15 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		if(ImGui::TreeNode("Set Points"))
 		{
 			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputFloat("V", &m_channelUIState[i].m_setVoltage);
+			ImGui::InputFloat("V###VSet", &m_channelUIState[i].m_setVoltage);
 			ImGui::SameLine();
-			if(ImGui::Button("Apply"))
+			if(ImGui::Button("Apply###Voltage"))
 				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setVoltage);
 
 			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputFloat("A", &m_channelUIState[i].m_setCurrent);
+			ImGui::InputFloat("A###ASet", &m_channelUIState[i].m_setCurrent);
 			ImGui::SameLine();
-			if(ImGui::Button("Apply"))
+			if(ImGui::Button("Apply###Current"))
 				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_setCurrent);
 
 			ImGui::TreePop();
@@ -158,11 +171,29 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		{
 			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("V", &v);
-
-				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("A", &a);
+				ImGui::InputFloat("V###VMeasured", &v);
 			ImGui::EndDisabled();
+
+			if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+				ImGui::Text("CV");
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputFloat("A###AMeasured", &a);
+			ImGui::EndDisabled();
+
+			if(cc && m_channelUIState[i].m_outputEnabled && !shdn)
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+				ImGui::Text("CC");
+				ImGui::PopStyleColor();
+			}
 
 			ImGui::TreePop();
 		}

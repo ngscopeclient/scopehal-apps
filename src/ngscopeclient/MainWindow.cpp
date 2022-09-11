@@ -93,7 +93,7 @@ void MainWindow::RenderUI()
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
-	ImPlot::ShowDemoWindow(&m_showPlot);
+	//ImPlot::ShowDemoWindow(&m_showPlot);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
