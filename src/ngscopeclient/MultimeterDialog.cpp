@@ -48,7 +48,30 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 	, m_historyDepth(60)
 	, m_meter(meter)
 	, m_state(state)
+	, m_selectedChannel(m_meter->GetCurrentMeterChannel())
 {
+	//Inputs
+	for(int i=0; i<m_meter->GetMeterChannelCount(); i++)
+		m_channelNames.push_back(m_meter->GetMeterChannelName(i));
+
+	//Primary operating modes
+	auto modemask = m_meter->GetMeasurementTypes();
+	auto primode = m_meter->GetMeterMode();
+	m_primaryModeSelector = 0;
+	for(unsigned int i=0; i<32; i++)
+	{
+		auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
+		if(modemask & mode)
+		{
+			m_primaryModes.push_back(mode);
+			m_primaryModeNames.push_back(m_meter->ModeToText(mode));
+			if(primode == mode)
+				m_primaryModeSelector = m_primaryModes.size() - 1;
+		}
+	}
+
+	//Secondary operating modes
+	RefreshSecondaryModeList();
 }
 
 MultimeterDialog::~MultimeterDialog()
@@ -106,7 +129,24 @@ bool MultimeterDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		//TODO: selector for multi channel instruments
+		//Channel selector (hide if we have only one channel)
+		if(m_meter->GetMeterChannelCount() > 1)
+		{
+			if(Combo("Channel", m_channelNames, m_selectedChannel))
+				m_meter->SetCurrentMeterChannel(m_selectedChannel);
+		}
+
+		//Primary operating mode selector
+		if(Combo("Mode", m_primaryModeNames, m_primaryModeSelector))
+			OnPrimaryModeChanged();
+
+		//Secondary operating mode selector
+		if(m_secondaryModeNames.empty())
+			ImGui::BeginDisabled();
+		if(Combo("Secondary Mode", m_secondaryModeNames, m_secondaryModeSelector))
+			m_meter->SetSecondaryMeterMode(m_secondaryModes[m_secondaryModeSelector]);
+		if(m_secondaryModeNames.empty())
+			ImGui::EndDisabled();
 	}
 
 	if(ImGui::CollapsingHeader("Measurements", ImGuiTreeNodeFlags_DefaultOpen))
@@ -183,4 +223,38 @@ bool MultimeterDialog::DoRender()
 		ImGui::EndDisabled();
 
 	return true;
+}
+
+void MultimeterDialog::OnPrimaryModeChanged()
+{
+	//Push the new mode to the meter
+	m_meter->SetMeterMode(m_primaryModes[m_primaryModeSelector]);
+
+	//Clear historical data since we're not measuring the same thing anymore
+	m_primaryHistory.Clear();
+	m_secondaryHistory.Clear();
+
+	//Redo the list of available secondary meter modes
+	RefreshSecondaryModeList();
+}
+
+void MultimeterDialog::RefreshSecondaryModeList()
+{
+	m_secondaryModes.clear();
+	m_secondaryModeNames.clear();
+	m_secondaryModeSelector = -1;
+
+	auto modemask = m_meter->GetSecondaryMeasurementTypes();
+	auto secmode = m_meter->GetSecondaryMeterMode();
+	for(unsigned int i=0; i<32; i++)
+	{
+		auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
+		if(modemask & mode)
+		{
+			m_secondaryModes.push_back(mode);
+			m_secondaryModeNames.push_back(m_meter->ModeToText(mode));
+			if(secmode == mode)
+				m_secondaryModeSelector = m_secondaryModes.size() - 1;
+		}
+	}
 }

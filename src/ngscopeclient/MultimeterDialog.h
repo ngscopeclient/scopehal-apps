@@ -48,6 +48,8 @@ public:
 	virtual bool DoRender();
 
 protected:
+	void OnPrimaryModeChanged();
+	void RefreshSecondaryModeList();
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;
@@ -64,8 +66,35 @@ protected:
 	///@brief Current channel stats, live updated
 	std::shared_ptr<MultimeterState> m_state;
 
+	///@brief History of primary measurement
 	RollingBuffer m_primaryHistory;
+
+	///@brief History of secondary measurement
 	RollingBuffer m_secondaryHistory;
+
+	///@brief Set of channel names
+	std::vector<std::string> m_channelNames;
+
+	///@brief The currently selected input channel
+	int m_selectedChannel;
+
+	///@brief Names of primary channel operating modes
+	std::vector<std::string> m_primaryModeNames;
+
+	///@brief List of primary channel operating modes
+	std::vector<Multimeter::MeasurementTypes> m_primaryModes;
+
+	///@brief Index of primary mode
+	int m_primaryModeSelector;
+
+	///@brief Names of secondary channel operating modes
+	std::vector<std::string> m_secondaryModeNames;
+
+	///@brief List of secondary channel operating modes
+	std::vector<Multimeter::MeasurementTypes> m_secondaryModes;
+
+	///@brief Index of secondary mode
+	int m_secondaryModeSelector;
 };
 
 
