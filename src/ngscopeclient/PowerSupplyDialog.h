@@ -96,7 +96,7 @@ public:
 class PowerSupplyDialog : public Dialog
 {
 public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state);
+	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
 	virtual ~PowerSupplyDialog();
 
 	virtual bool DoRender();
@@ -104,6 +104,9 @@ public:
 protected:
 	void CombinedTrendPlot(float etime);
 	void ChannelSettings(int i, float v, float a, float etime);
+
+	///@brief Session handle so we can remove the PSU when closed
+	Session* m_session;
 
 	//@brief Global power enable (if we have one)
 	bool m_masterEnable;

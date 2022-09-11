@@ -62,8 +62,6 @@ Session::~Session()
 	//Delete scopes once we've terminated the threads
 	for(auto scope : m_oscilloscopes)
 		delete scope;
-	for(auto psu : m_psus)
-		delete psu;
 	m_oscilloscopes.clear();
 	m_psus.clear();
 }
@@ -85,13 +83,20 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 void Session::AddPowerSupply(SCPIPowerSupply* psu)
 {
 	m_modifiedSinceLastSave = true;
-	m_psus.emplace(psu);
 
-	//Start the background thread to poll it
+	//Record the PSU state
 	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
-	PowerSupplyThreadArgs args(psu, &m_shuttingDown, state);
-	m_threads.push_back(make_unique<thread>(PowerSupplyThread, args));
+	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
 
 	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state));
+	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+}
+
+/**
+	@brief Removes a power supply from the session
+ */
+void Session::RemovePowerSupply(SCPIPowerSupply* psu)
+{
+	m_modifiedSinceLastSave = true;
+	m_psus.erase(psu);
 }

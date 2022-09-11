@@ -41,8 +41,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSupplyState> state)
+PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSupplyState> state, Session* session)
 	: Dialog(string("Power Supply: ") + psu->m_nickname, ImVec2(500, 400))
+	, m_session(session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
 	, m_tstart(GetTime() - 60)
 	, m_historyDepth(60)
@@ -55,7 +56,7 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 
 PowerSupplyDialog::~PowerSupplyDialog()
 {
-	LogWarning("Power supply dialog closed, need to disconnect from PSU and remove from session\n");
+	m_session->RemovePowerSupply(m_psu);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

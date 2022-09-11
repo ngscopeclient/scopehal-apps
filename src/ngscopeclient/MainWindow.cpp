@@ -181,6 +181,7 @@ void MainWindow::AddPowerSupplyMenu()
 	{
 		if(ImGui::MenuItem("Connect..."))
 			m_dialogs.emplace(make_shared<AddPowerSupplyDialog>(m_session));
+
 		ImGui::Separator();
 
 		//TODO: recent instruments
