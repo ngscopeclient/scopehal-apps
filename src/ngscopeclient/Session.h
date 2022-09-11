@@ -35,6 +35,8 @@
 #ifndef Session_h
 #define Session_h
 
+class MainWindow;
+
 /**
 	@brief A Session stores all of the instrument configuration and other state the user has open.
 
@@ -44,12 +46,16 @@
 class Session
 {
 public:
-	Session();
+	Session(MainWindow* wnd);
 	virtual ~Session();
 
 	void AddOscilloscope(Oscilloscope* scope);
+	void AddPowerSupply(SCPIPowerSupply* psu);
 
 protected:
+
+	///@brief Top level UI window
+	MainWindow* m_mainWindow;
 
 	///@brief Flag for shutting down all scope threads when we exit
 	std::atomic<bool> m_shuttingDown;
@@ -59,6 +65,9 @@ protected:
 
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<Oscilloscope*> m_oscilloscopes;
+
+	///@brief Power supplies we are currently connected to
+	std::set<PowerSupply*> m_psus;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

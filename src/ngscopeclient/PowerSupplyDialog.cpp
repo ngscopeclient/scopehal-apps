@@ -30,71 +30,134 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Implementation of PowerSupplyDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "PowerSupplyDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSupplyState> state)
+	: Dialog(string("Power Supply: ") + psu->m_nickname, ImVec2(500, 400))
+	, m_psu(psu)
+	, m_state(state)
 {
-	Oscilloscope::EnumDrivers(m_drivers);
+	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+		m_channelUIState.push_back(PowerSupplyChannelUIState(m_psu, i));
 }
 
-AddScopeDialog::~AddScopeDialog()
+PowerSupplyDialog::~PowerSupplyDialog()
 {
+	LogWarning("Power supply dialog closed, need to disconnect from PSU and remove from session\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+// Rendering
 
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
+bool PowerSupplyDialog::DoRender()
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+	//Top level settings
+	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		bool on = true;
+		ImGui::Checkbox("Output Enable", &on);
 	}
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
+	//Per channel settings
+	float valueWidth = 200;
+	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
 	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
+		//Add new historical sample data
+		m_channelUIState[i].AddHistory(m_state->m_channelVoltage[i].load(), m_state->m_channelCurrent[i].load() );
+
+		if(ImGui::CollapsingHeader(m_psu->GetPowerChannelName(i).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled);
+
+			//Advanced features (not available with all PSUs)
+			if(ImGui::TreeNode("Advanced"))
+			{
+				ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled);
+
+				ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled);
+
+				ImGui::TreePop();
+			}
+
+			//Set points for channels
+			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+			if(ImGui::TreeNode("Set Points"))
+			{
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputFloat("V", &m_channelUIState[i].m_setVoltage);
+				ImGui::SameLine();
+				if(ImGui::Button("Apply"))
+				{
+
+				}
+
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputFloat("A", &m_channelUIState[i].m_setCurrent);
+				ImGui::SameLine();
+				if(ImGui::Button("Apply"))
+				{
+
+				}
+
+				ImGui::TreePop();
+			}
+
+			//Actual values of channels
+			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+			if(ImGui::TreeNode("Measured"))
+			{
+				ImGui::BeginDisabled();
+					float f = m_state->m_channelVoltage[i].load();
+					ImGui::SetNextItemWidth(valueWidth);
+					ImGui::InputFloat("V", &f);
+
+					f = m_state->m_channelCurrent[i].load();
+					ImGui::SetNextItemWidth(valueWidth);
+					ImGui::InputFloat("A", &f);
+				ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
+
+			//Historical voltage/current graph
+			if(ImGui::TreeNode("Trends"))
+			{
+				/*
+				ImGui::PlotLines(
+					"Voltage",
+					&m_channelUIState[i].m_voltageHistory[0],
+					m_channelUIState[i].m_voltageHistory.size(),
+					0,
+					nullptr,
+					FLT_MAX,
+					FLT_MAX,
+					ImVec2(300, 100)
+					);
+
+				ImGui::PlotLines(
+					"Current",
+					&m_channelUIState[i].m_currentHistory[0],
+					m_channelUIState[i].m_currentHistory.size(),
+					0,
+					nullptr,
+					FLT_MAX,
+					FLT_MAX,
+					ImVec2(300, 100)
+					);
+				*/
+				ImGui::TreePop();
+			}
+		}
 	}
-
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
 
 	return true;
 }

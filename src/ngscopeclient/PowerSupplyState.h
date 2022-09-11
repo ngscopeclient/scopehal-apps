@@ -30,71 +30,38 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Declaration of PowerSupplyState
  */
-
-#include "ngscopeclient.h"
-#include "AddScopeDialog.h"
-
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
-{
-	Oscilloscope::EnumDrivers(m_drivers);
-}
-
-AddScopeDialog::~AddScopeDialog()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+#ifndef PowerSupplyState_h
+#define PowerSupplyState_h
 
 /**
-	@brief Connects to a scope
-
-	@return True if successful
+	@brief Current status of a power supply
  */
-bool AddScopeDialog::DoConnect()
+class PowerSupplyState
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+public:
+
+	PowerSupplyState(size_t n = 0)
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
+		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
+		m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
+		m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
+
+		for(size_t i=0; i<n; i++)
+		{
+			m_channelVoltage[i] = 0;
+			m_channelCurrent[i] = 0;
+			m_channelConstantCurrent[i] = false;
+			m_channelFuseTripped[i] = false;
+		}
 	}
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
+	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
+	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
+	std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
+	std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
+};
 
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
-
-	return true;
-}
+#endif

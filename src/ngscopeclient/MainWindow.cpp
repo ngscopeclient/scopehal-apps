@@ -38,7 +38,9 @@
 //Dock builder API is not yet public, so might change...
 #include "imgui_internal.h"
 
+//Dialogs
 #include "AddScopeDialog.h"
+#include "AddPowerSupplyDialog.h"
 
 using namespace std;
 
@@ -48,6 +50,7 @@ using namespace std;
 MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 	, m_showDemo(true)
+	, m_session(this)
 {
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
@@ -145,6 +148,7 @@ void MainWindow::AddMenu()
 	if(ImGui::BeginMenu("Add"))
 	{
 		AddOscilloscopeMenu();
+		AddPowerSupplyMenu();
 		ImGui::EndMenu();
 	}
 }
@@ -158,6 +162,23 @@ void MainWindow::AddOscilloscopeMenu()
 	{
 		if(ImGui::MenuItem("Connect..."))
 			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
+		ImGui::Separator();
+
+		//TODO: recent instruments
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Power Supply menu
+ */
+void MainWindow::AddPowerSupplyMenu()
+{
+	if(ImGui::BeginMenu("Power Supply"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddPowerSupplyDialog>(m_session));
 		ImGui::Separator();
 
 		//TODO: recent instruments

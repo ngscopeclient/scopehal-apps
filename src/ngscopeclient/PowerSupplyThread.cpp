@@ -30,71 +30,37 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Implementation of PowerSupplyThread
  */
-
 #include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "pthread_compat.h"
 
 using namespace std;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+void PowerSupplyThread(PowerSupplyThreadArgs args)
 {
-	Oscilloscope::EnumDrivers(m_drivers);
-}
+	pthread_setname_np_compat("PSUThread");
 
-AddScopeDialog::~AddScopeDialog()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+	auto psu = args.psu;
+	auto state = args.state;
+	auto nchans = psu->GetPowerChannelCount();
+	while(!*args.shuttingDown)
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		//Flush any pending commands
+		psu->GetTransport()->FlushCommandQueue();
+
+		//TODO: skip polling if the channel in question is off
+
+		//Poll status
+		for(int i=0; i<nchans; i++)
+		{
+			state->m_channelVoltage[i] = psu->GetPowerVoltageActual(i);
+			state->m_channelCurrent[i] = psu->GetPowerCurrentActual(i);
+			state->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
+			state->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
+		}
+
+		//Cap update rate to 20 Hz
+		this_thread::sleep_for(chrono::milliseconds(50));
 	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
-
-	return true;
 }

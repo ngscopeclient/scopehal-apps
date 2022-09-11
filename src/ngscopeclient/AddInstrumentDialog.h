@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* glInstrumentclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -30,71 +30,34 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Declaration of AddInstrumentDialog
  */
+#ifndef AddInstrumentDialog_h
+#define AddInstrumentDialog_h
 
-#include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "Dialog.h"
+#include "Session.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+class AddInstrumentDialog : public Dialog
 {
-	Oscilloscope::EnumDrivers(m_drivers);
-}
+public:
+	AddInstrumentDialog(const std::string& title, Session& session);
+	virtual ~AddInstrumentDialog();
 
-AddScopeDialog::~AddScopeDialog()
-{
-}
+	virtual bool DoRender();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+protected:
+	virtual bool DoConnect()=0;
 
-/**
-	@brief Connects to a scope
+	Session& m_session;
 
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
+	//GUI widget values
+	std::string m_nickname;
+	int m_selectedDriver;
+	std::vector<std::string> m_drivers;
+	int m_selectedTransport;
+	std::vector<std::string> m_transports;
+	std::string m_path;
+};
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
-
-	return true;
-}
+#endif

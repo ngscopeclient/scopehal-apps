@@ -30,71 +30,21 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Declaration of AddPowerSupplyDialog
  */
+#ifndef AddPowerSupplyDialog_h
+#define AddPowerSupplyDialog_h
 
-#include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "AddInstrumentDialog.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+class AddPowerSupplyDialog : public AddInstrumentDialog
 {
-	Oscilloscope::EnumDrivers(m_drivers);
-}
+public:
+	AddPowerSupplyDialog(Session& session);
+	virtual ~AddPowerSupplyDialog();
 
-AddScopeDialog::~AddScopeDialog()
-{
-}
+protected:
+	virtual bool DoConnect();
+};
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddScopeDialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
-
-	return true;
-}
+#endif

@@ -30,24 +30,24 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Implementation of AddPowerSupplyDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "AddPowerSupplyDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+AddPowerSupplyDialog::AddPowerSupplyDialog(Session& session)
+	: AddInstrumentDialog("Add Power Supply", session)
 {
-	Oscilloscope::EnumDrivers(m_drivers);
+	SCPIPowerSupply::EnumDrivers(m_drivers);
 }
 
-AddScopeDialog::~AddScopeDialog()
+AddPowerSupplyDialog::~AddPowerSupplyDialog()
 {
 }
 
@@ -59,7 +59,7 @@ AddScopeDialog::~AddScopeDialog()
 
 	@return True if successful
  */
-bool AddScopeDialog::DoConnect()
+bool AddPowerSupplyDialog::DoConnect()
 {
 	//Create the transport
 	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
@@ -80,21 +80,20 @@ bool AddScopeDialog::DoConnect()
 	}
 
 	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
+	auto psu = SCPIPowerSupply::CreatePowerSupply(m_drivers[m_selectedDriver], transport);
+	if(psu == nullptr)
 	{
 		ShowErrorPopup(
 			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+			"Failed to create PSU driver of type \"" + m_drivers[m_selectedDriver] + "\"");
 		delete transport;
 		return false;
 	}
 
 	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+	LogDebug("FIXME: apply PreferenceManager settings to newly created PSU\n");
 
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
-
+	psu->m_nickname = m_nickname;
+	m_session.AddPowerSupply(psu);
 	return true;
 }

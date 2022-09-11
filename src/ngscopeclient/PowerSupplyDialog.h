@@ -30,71 +30,91 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Declaration of PowerSupplyDialog
  */
+#ifndef PowerSupplyDialog_h
+#define PowerSupplyDialog_h
 
-#include "ngscopeclient.h"
-#include "AddScopeDialog.h"
-
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
-{
-	Oscilloscope::EnumDrivers(m_drivers);
-}
-
-AddScopeDialog::~AddScopeDialog()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+#include "Dialog.h"
+#include "Session.h"
 
 /**
-	@brief Connects to a scope
+	@brief UI state for a single power supply channel
 
-	@return True if successful
+	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
  */
-bool AddScopeDialog::DoConnect()
+class PowerSupplyChannelUIState
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+public:
+
+	bool m_outputEnabled;
+	bool m_overcurrentShutdownEnabled;
+	bool m_softStartEnabled;
+
+	float m_setVoltage;
+	float m_setCurrent;
+
+	float m_historyInterval;
+
+	size_t m_historyCap;
+
+	///@brief timestamp of the last history
+	float m_lastHistorySample;
+
+	///@brief Historical voltage values
+	std::vector<float> m_voltageHistory;
+
+	///@brief Historical current values
+	std::vector<float> m_currentHistory;
+
+	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
+		: m_outputEnabled(psu->GetPowerChannelActive(chan))
+		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
+		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
+		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
+		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
+		, m_historyInterval(1)
+		, m_historyCap(120)
+		, m_lastHistorySample(GetTime())
+	{}
+
+	void AddHistory(float v, float i)
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		float t = GetTime();
+
+		//Skip update if it hasn't been long enough
+		if( (t - m_lastHistorySample) < m_historyInterval)
+			return;
+
+		//Add new values
+		m_voltageHistory.push_back(v);
+		m_currentHistory.push_back(i);
+
+		//Flush old history
+		while(m_voltageHistory.size() > m_historyCap)
+			m_voltageHistory.erase(m_voltageHistory.begin());
+		while(m_currentHistory.size() > m_historyCap)
+			m_currentHistory.erase(m_currentHistory.begin());
 	}
+};
 
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
+class PowerSupplyDialog : public Dialog
+{
+public:
+	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state);
+	virtual ~PowerSupplyDialog();
 
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
+	virtual bool DoRender();
 
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+protected:
 
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
+	SCPIPowerSupply* m_psu;
 
-	return true;
-}
+	///@brief Current channel stats, live updated
+	std::shared_ptr<PowerSupplyState> m_state;
+
+	///@brief Channel state for the UI
+	std::vector<PowerSupplyChannelUIState> m_channelUIState;
+};
+
+#endif

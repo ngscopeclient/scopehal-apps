@@ -49,6 +49,9 @@ public:
 	MainWindow(vk::raii::Queue& queue);
 	virtual ~MainWindow();
 
+	void AddDialog(std::shared_ptr<Dialog> dlg)
+	{ m_dialogs.emplace(dlg); }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -58,7 +61,8 @@ protected:
 			void FileMenu();
 			void ViewMenu();
 			void AddMenu();
-			void AddOscilloscopeMenu();
+				void AddOscilloscopeMenu();
+				void AddPowerSupplyMenu();
 			void HelpMenu();
 		void DockingArea();
 

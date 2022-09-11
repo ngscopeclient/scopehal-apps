@@ -30,71 +30,93 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddScopeDialog
+	@brief Implementation of AddInstrumentDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddScopeDialog.h"
+#include "AddInstrumentDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+AddInstrumentDialog::AddInstrumentDialog(const string& title, Session& session)
+	: Dialog(title, ImVec2(600, 150))
+	, m_session(session)
+	, m_selectedDriver(0)
+	, m_selectedTransport(0)
 {
-	Oscilloscope::EnumDrivers(m_drivers);
+	SCPITransport::EnumTransports(m_transports);
 }
 
-AddScopeDialog::~AddScopeDialog()
+AddInstrumentDialog::~AddInstrumentDialog()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+// Rendering
 
 /**
-	@brief Connects to a scope
+	@brief Renders the dialog and handles UI events
 
-	@return True if successful
+	@return		True if we should continue showing the dialog
+				False if it's been closed
  */
-bool AddScopeDialog::DoConnect()
+bool AddInstrumentDialog::DoRender()
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
+	ImGui::InputText("Nickname", &m_nickname);
+	HelpMarker(
+		"Text nickname for this instrument so you can distinguish between multiple similar devices.\n"
+		"\n"
+		"This is shown on the list of recent instruments, to disambiguate channel names in multi-instrument setups, etc.");
+
+	Combo("Driver", m_drivers, m_selectedDriver);
+	HelpMarker(
+		"Select the instrument driver to use.\n"
+		"\n"
+		"Most commonly there is one driver supporting all hardware of a given type from a given vendor (e.g. Siglent oscilloscopes),"
+		"however there may be multiple drivers to choose from if a given vendor has several product lines with very different "
+		"software stacks.\n"
+		"\n"
+		"Check the user manual for details of what driver to use with a given instrument.");
+
+	Combo("Transport", m_transports, m_selectedTransport);
+	HelpMarker(
+		"Select the SCPI transport for the connection between your computer and the instrument.\n"
+		"\n"
+		"This controls how remote control commands and waveform data get to/from the instrument (USB, Ethernet, GPIB, etc).\n"
+		"\n"
+		"Note that there are four different transports which run over TCP/IP, since instruments vary greatly:\n",
+			{
+				"lan: raw SCPI over TCP socket with no framing",
+				"lxi: LXI VXI-11",
+				"twinlan: separate sockets for SCPI text control commands and raw binary waveforms.\n"
+				"Commonly used with bridge servers for interfacing to USB instruments (Digilent, DreamSourceLabs, Pico).",
+				"vicp: Teledyne LeCroy Virtual Instrument Control Protocol"
+			}
+		);
+
+	ImGui::InputText("Path", &m_path);
+	HelpMarker(
+		"Transport-specific description of how to connect to the instrument.\n",
+			{
+				"GPIB: board index and primary address (0:7)",
+				"TCP/IP transports: IP or hostname : port (localhost:5025).\n"
+				"Note that for twinlan, two port numbers are required (localhost:5025:5026) for SCPI and data ports respectively.",
+				"UART: device path and baud rate (/dev/ttyUSB0:9600, COM1). Default id 115200 if not specified. ",
+				"USBTMC: Linux device path (/dev/usbtmcX)"
+			}
+		);
+
+	if(ImGui::Button("Add"))
 	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
+		if(DoConnect())
+			return false;
 	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the scope
-	auto scope = Oscilloscope::CreateOscilloscope(m_drivers[m_selectedDriver], transport);
-	if(scope == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create oscilloscope driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
-	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
 
 	return true;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers

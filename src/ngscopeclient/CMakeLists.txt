@@ -24,8 +24,13 @@ add_executable(ngscopeclient
 	VulkanWindow.cpp
 	pthread_compat.cpp
 
+	AddInstrumentDialog.cpp
+	AddPowerSupplyDialog.cpp
 	AddScopeDialog.cpp
+	PowerSupplyDialog.cpp
+
 	MainWindow.cpp
+	PowerSupplyThread.cpp
 	Session.cpp
 	ScopeThread.cpp
 	WaveformArea.cpp

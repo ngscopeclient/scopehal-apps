@@ -38,6 +38,23 @@
 
 #include <atomic>
 
+#include "PowerSupplyState.h"
+
+class PowerSupplyThreadArgs
+{
+public:
+	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
+	: psu(p)
+	, shuttingDown(s)
+	, state(st)
+	{}
+
+	SCPIPowerSupply* psu;
+	std::atomic<bool>* shuttingDown;
+	std::shared_ptr<PowerSupplyState> state;
+};
+
 void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
+void PowerSupplyThread(PowerSupplyThreadArgs args);
 
 #endif
