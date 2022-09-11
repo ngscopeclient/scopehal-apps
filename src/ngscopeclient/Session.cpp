@@ -104,3 +104,20 @@ void Session::RemovePowerSupply(SCPIPowerSupply* psu)
 	m_modifiedSinceLastSave = true;
 	m_psus.erase(psu);
 }
+
+/**
+	@brief Adds a multimeter to the session
+ */
+void Session::AddMultimeter(SCPIMultimeter* meter)
+{
+	m_modifiedSinceLastSave = true;
+}
+
+/**
+	@brief Removes a multimeter from the session
+ */
+void Session::RemoveMultimeter(SCPIMultimeter* meter)
+{
+	m_modifiedSinceLastSave = true;
+	//m_psus.erase(psu);
+}

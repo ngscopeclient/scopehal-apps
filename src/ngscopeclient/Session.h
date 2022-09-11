@@ -83,8 +83,9 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	void AddMultimeter(SCPIMultimeter* meter);
+	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope);
-
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 

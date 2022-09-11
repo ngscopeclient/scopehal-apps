@@ -30,108 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Implementation of AddMultimeterDialog
  */
-#ifndef MainWindow_h
-#define MainWindow_h
 
-#include "Dialog.h"
-#include "PreferenceManager.h"
-#include "Session.h"
-#include "VulkanWindow.h"
-#include "WaveformGroup.h"
+#include "ngscopeclient.h"
+#include "AddMultimeterDialog.h"
+
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+AddMultimeterDialog::AddMultimeterDialog(Session& session)
+	: AddInstrumentDialog("Add Multimeter", session)
+{
+	SCPIMultimeter::EnumDrivers(m_drivers);
+}
+
+AddMultimeterDialog::~AddMultimeterDialog()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
 
 /**
-	@brief Top level application window
+	@brief Connects to a scope
+
+	@return True if successful
  */
-class MainWindow : public VulkanWindow
+bool AddMultimeterDialog::DoConnect()
 {
-public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
 
-	void AddDialog(std::shared_ptr<Dialog> dlg)
-	{ m_dialogs.emplace(dlg); }
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
 
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+	//Create the scope
+	auto meter = SCPIMultimeter::CreateMultimeter(m_drivers[m_selectedDriver], transport);
+	if(meter == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create multimeter driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// GUI handlers
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created mneter\n");
 
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-				void AddMultimeterMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddOscilloscopeMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddPowerSupplyMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flag for main imgui demo window
-	bool m_showDemo;
-
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
-	///@brief All dialogs and other pop-up UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Session state
-
-	///@brief Our session object
-	Session m_session;
-
-	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Recent item lists
-
-	/**
-		@brief List of recently used instruments
-	 */
-	std::map<std::string, time_t> m_recentInstruments;
-
-	void LoadRecentInstrumentList();
-	void SaveRecentInstrumentList();
-
-public:
-	void AddToRecentInstrumentList(SCPIInstrument* inst);
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Error handling
-
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
-
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
-};
-
-#endif
+	meter->m_nickname = m_nickname;
+	m_session.AddMultimeter(meter);
+	return true;
+}

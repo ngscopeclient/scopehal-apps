@@ -39,8 +39,9 @@
 #include "imgui_internal.h"
 
 //Dialogs
-#include "AddScopeDialog.h"
+#include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
+#include "AddScopeDialog.h"
 
 using namespace std;
 
@@ -166,8 +167,79 @@ void MainWindow::AddMenu()
 			timestamps.push_back(t);
 		std::sort(timestamps.begin(), timestamps.end());
 
+		AddMultimeterMenu(timestamps, reverseMap);
 		AddOscilloscopeMenu(timestamps, reverseMap);
 		AddPowerSupplyMenu(timestamps, reverseMap);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Multimeter menu
+ */
+void MainWindow::AddMultimeterMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("Multimeter"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddMultimeterDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known scope drivers.
+		//Any recent instrument using one of these drivers is assumed to be a scope.
+		vector<string> drivers;
+		SCPIMultimeter::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the scope
+							auto meter = SCPIMultimeter::CreateMultimeter(drivername, transport);
+							if(meter == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create multimeter driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created meter\n");
+
+								meter->m_nickname = nick;
+								m_session.AddMultimeter(meter);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		ImGui::EndMenu();
 	}

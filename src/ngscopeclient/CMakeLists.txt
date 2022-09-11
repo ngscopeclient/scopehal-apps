@@ -29,6 +29,7 @@ add_executable(ngscopeclient
 	VulkanWindow.cpp
 
 	AddInstrumentDialog.cpp
+	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp
 	AddScopeDialog.cpp
 	PowerSupplyDialog.cpp
