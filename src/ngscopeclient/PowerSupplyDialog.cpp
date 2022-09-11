@@ -64,6 +64,29 @@ PowerSupplyDialog::~PowerSupplyDialog()
 
 bool PowerSupplyDialog::DoRender()
 {
+	//Device information
+	if(ImGui::CollapsingHeader("Info"))
+	{
+		ImGui::BeginDisabled();
+
+			auto name = m_psu->GetName();
+			auto vendor = m_psu->GetVendor();
+			auto serial = m_psu->GetSerial();
+			auto driver = m_psu->GetDriverName();
+			auto transport = m_psu->GetTransport();
+			auto tname = transport->GetName();
+			auto tstring = transport->GetConnectionString();
+
+			ImGui::InputText("Make", &vendor[0], vendor.size());
+			ImGui::InputText("Model", &name[0], name.size());
+			ImGui::InputText("Serial", &serial[0], serial.size());
+			ImGui::InputText("Driver", &driver[0], driver.size());
+			ImGui::InputText("Transport", &tname[0], tname.size());
+			ImGui::InputText("Path", &tstring[0], tstring.size());
+
+		ImGui::EndDisabled();
+	}
+
 	//Top level settings
 	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -90,8 +113,6 @@ bool PowerSupplyDialog::DoRender()
 		m_channelUIState[i].m_currentHistory.Span = m_historyDepth;
 
 		ChannelSettings(i, v, a, t);
-
-		ImGui::PopID();
 	}
 
 	//Combined trend plot for all channels
@@ -241,6 +262,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 			ImGui::TreePop();
 		}
+
+		ImGui::PopID();
 	}
 }
 
