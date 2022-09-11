@@ -20,7 +20,7 @@ set(WARNINGS "${WARNINGS} -Wmissing-declarations -Wvla")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(WARNINGS "${WARNINGS} ")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments")
+  set(WARNINGS "${WARNINGS} -Wno-gnu-zero-variadic-macro-arguments -Wno-unknown-warning-option")
 endif()
 
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math -fsigned-char")
@@ -28,7 +28,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # clang doesn't properly use the attributes and so requires avx to build
 # should get fixed in #475
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+if((NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
 endif()
 
