@@ -158,8 +158,10 @@ VulkanWindow::~VulkanWindow()
 
 void VulkanWindow::UpdateFramebuffer()
 {
-	//Figure out how big our framebuffer is
-	glfwGetFramebufferSize(m_window, &m_width, &m_height);
+	//Get current size of the surface
+	auto caps = g_vkfftPhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
+	m_width = caps.maxImageExtent.width;
+	m_height = caps.maxImageExtent.height;
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();
