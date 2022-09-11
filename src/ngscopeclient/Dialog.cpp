@@ -153,6 +153,14 @@ void Dialog::HelpMarker(const string& str)
 {
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");
+	Tooltip(str);
+}
+
+/**
+	@brief Helper based on imgui demo for displaying tooltip text over the previously rendered widget
+ */
+void Dialog::Tooltip(const string& str)
+{
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
 		ImGui::BeginTooltip();

@@ -51,6 +51,7 @@ public:
 
 protected:
 	void Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	void Tooltip(const std::string& str);
 	void HelpMarker(const std::string& str);
 	void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
 
