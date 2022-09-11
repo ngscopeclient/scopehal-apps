@@ -55,10 +55,13 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 {
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
+
+	LoadRecentInstrumentList();
 }
 
 MainWindow::~MainWindow()
 {
+	SaveRecentInstrumentList();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -254,3 +257,94 @@ void MainWindow::DockingArea()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Recent instruments
+
+void MainWindow::LoadRecentInstrumentList()
+{
+	try
+	{
+		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recent.yml");
+		if(docs.empty())
+			return;
+		auto node = docs[0];
+
+		for(auto it : node)
+		{
+			auto inst = it.second;
+			m_recentInstruments[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+		}
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		LogDebug("Unable to open recently used instruments file\n");
+		return;
+	}
+
+}
+
+void MainWindow::SaveRecentInstrumentList()
+{
+	auto path = m_preferences.GetConfigDirectory() + "/recent.yml";
+	FILE* fp = fopen(path.c_str(), "w");
+
+	for(auto it : m_recentInstruments)
+	{
+		auto nick = it.first.substr(0, it.first.find(":"));
+		fprintf(fp, "%s:\n", nick.c_str());
+		fprintf(fp, "    path: \"%s\"\n", it.first.c_str());
+		fprintf(fp, "    timestamp: %ld\n", it.second);
+	}
+
+	fclose(fp);
+}
+
+void MainWindow::AddCurrentToRecentInstrumentList()
+{
+	/*
+	//Add our current entry to the recently-used list
+	auto now = time(NULL);
+
+	set<SCPIInstrument*> devices;
+	for(auto scope : m_scopes)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(scope));
+	for(auto gen : m_funcgens)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(gen));
+	for(auto meter : m_meters)
+		devices.emplace(dynamic_cast<SCPIInstrument*>(meter));
+
+	for(auto inst : devices)
+	{
+		if(inst == nullptr)
+			continue;
+
+		auto connectionString =
+			inst->m_nickname + ":" +
+			inst->GetDriverName() + ":" +
+			inst->GetTransportName() + ":" +
+			inst->GetTransportConnectionString();
+
+		m_recentInstruments[connectionString] = now;
+	}
+
+	//Delete anything old
+	const int maxRecentInstruments = 15;
+	while(m_recentInstruments.size() > maxRecentInstruments)
+	{
+		string oldestPath = "";
+		time_t oldestTime = now;
+
+		for(auto it : m_recentInstruments)
+		{
+			if(it.second < oldestTime)
+			{
+				oldestTime = it.second;
+				oldestPath = it.first;
+			}
+		}
+
+		m_recentInstruments.erase(oldestPath);
+	}
+	*/
+}

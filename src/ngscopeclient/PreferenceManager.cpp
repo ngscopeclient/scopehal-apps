@@ -27,89 +27,156 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
- */
-#ifndef MainWindow_h
-#define MainWindow_h
+#include <fstream>
+#include <stdexcept>
 
-#include "Dialog.h"
-#include "PreferenceManager.h"
-#include "Session.h"
-#include "VulkanWindow.h"
-#include "WaveformGroup.h"
-
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
-{
-public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
-
-	void AddDialog(std::shared_ptr<Dialog> dlg)
-	{ m_dialogs.emplace(dlg); }
-
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// GUI handlers
-
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-				void AddOscilloscopeMenu();
-				void AddPowerSupplyMenu();
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flag for main imgui demo window
-	bool m_showDemo;
-
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Session state
-
-	///@brief Our session object
-	Session m_session;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Recent item lists
-
-	/**
-		@brief List of recently used instruments
-	 */
-	std::map<std::string, time_t> m_recentInstruments;
-
-	void AddCurrentToRecentInstrumentList();
-	void LoadRecentInstrumentList();
-	void SaveRecentInstrumentList();
-};
-
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#include <shlobj.h>
+#else
+#include <sys/stat.h>
+#include <wordexp.h>
 #endif
+
+#include "ngscopeclient.h"
+#include "PreferenceManager.h"
+
+using namespace std;
+
+PreferenceCategory& PreferenceManager::AllPreferences()
+{
+	return this->m_treeRoot;
+}
+
+bool PreferenceManager::HasPreferenceFile() const
+{
+#ifdef _WIN32
+	const auto fattr = GetFileAttributes(m_filePath.c_str());
+	return (fattr != INVALID_FILE_ATTRIBUTES) && !(fattr & FILE_ATTRIBUTE_DIRECTORY);
+#else
+	struct stat fs{ };
+	const auto result = stat(m_filePath.c_str(), &fs);
+
+	return (result == 0) && (fs.st_mode & S_IFREG);
+#endif
+}
+
+const Preference& PreferenceManager::GetPreference(const string& path) const
+{
+	return this->m_treeRoot.GetLeaf(path);
+}
+
+void PreferenceManager::DeterminePath()
+{
+#ifdef _WIN32
+	wchar_t* stem;
+	if(S_OK != SHGetKnownFolderPath(
+		FOLDERID_RoamingAppData,
+		KF_FLAG_CREATE,
+		NULL,
+		&stem))
+	{
+		throw std::runtime_error("failed to resolve %appdata%");
+	}
+
+	wchar_t directory[MAX_PATH];
+	if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
+	{
+		throw runtime_error("failed to build directory path");
+	}
+
+	// Ensure the directory exists
+	const auto result = CreateDirectoryW(directory, NULL);
+	m_configDir = NarrowPath(directory);
+
+	if(!result && GetLastError() != ERROR_ALREADY_EXISTS)
+	{
+		throw runtime_error("failed to create preferences directory");
+	}
+
+	// Build final path
+	wchar_t config[MAX_PATH];
+	if(NULL == PathCombineW(config, directory, L"preferences.yml"))
+	{
+		throw runtime_error("failed to build directory path");
+	}
+	m_filePath = NarrowPath(config);
+
+	CoTaskMemFree(static_cast<void*>(stem));
+#else
+	// Ensure all directories in path exist
+	CreateDirectory("~/.config");
+	CreateDirectory("~/.config/glscopeclient");
+	m_configDir = ExpandPath("~/.config/glscopeclient");
+
+	m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
+#endif
+}
+
+int64_t PreferenceManager::GetInt(const string& path) const
+{
+	return GetPreference(path).GetInt();
+}
+
+const std::string& PreferenceManager::GetString(const string& path) const
+{
+	return GetPreference(path).GetString();
+}
+
+double PreferenceManager::GetReal(const string& path) const
+{
+	return GetPreference(path).GetReal();
+}
+
+bool PreferenceManager::GetBool(const string& path) const
+{
+	return GetPreference(path).GetBool();
+}
+
+Gdk::Color PreferenceManager::GetColor(const std::string& path) const
+{
+	return GetPreference(path).GetColor();
+}
+
+Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
+{
+	return GetPreference(path).GetFont();
+}
+
+void PreferenceManager::LoadPreferences()
+{
+	if(!HasPreferenceFile())
+		return;
+
+	try
+	{
+		auto doc = YAML::LoadAllFromFile(m_filePath)[0];
+		this->m_treeRoot.FromYAML(doc);
+	}
+	catch(const exception& ex)
+	{
+		LogWarning("Preference file was present, but couldn't be read. Ignoring. (%s)\n", ex.what());
+	}
+}
+
+void PreferenceManager::SavePreferences()
+{
+	YAML::Node node{ };
+
+	this->m_treeRoot.ToYAML(node);
+
+	ofstream outfs{ m_filePath };
+
+	if(!outfs)
+	{
+		LogError("couldn't open preferences file for writing\n");
+		return;
+	}
+
+	outfs << node;
+	outfs.close();
+
+	if(!outfs)
+		LogError("couldn't write preferences file to disk\n");
+}

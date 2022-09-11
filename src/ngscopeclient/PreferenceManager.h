@@ -29,87 +29,69 @@
 
 /**
 	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@author Katharina B.
+	@brief  Stores and manages preference values
  */
-#ifndef MainWindow_h
-#define MainWindow_h
 
-#include "Dialog.h"
-#include "PreferenceManager.h"
-#include "Session.h"
-#include "VulkanWindow.h"
-#include "WaveformGroup.h"
+#ifndef PreferenceManager_h
+#define PreferenceManager_h
 
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
+#include <map>
+#include <string>
+#include "PreferenceTree.h"
+
+class PreferenceManager
 {
 public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
-
-	void AddDialog(std::shared_ptr<Dialog> dlg)
-	{ m_dialogs.emplace(dlg); }
-
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// GUI handlers
-
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-				void AddOscilloscopeMenu();
-				void AddPowerSupplyMenu();
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flag for main imgui demo window
-	bool m_showDemo;
-
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Session state
-
-	///@brief Our session object
-	Session m_session;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
+    PreferenceManager()
+        : m_treeRoot{ "" }
+    {
+        DeterminePath();
+        InitializeDefaults();
+        LoadPreferences();
+    }
 
 public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
+    // Disallow copy
+    PreferenceManager(const PreferenceManager&) = delete;
+    PreferenceManager(PreferenceManager&&) = default;
 
-protected:
+    PreferenceManager& operator=(const PreferenceManager&) = delete;
+    PreferenceManager& operator=(PreferenceManager&&) = default;
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Recent item lists
+public:
+    void SavePreferences();
+    PreferenceCategory& AllPreferences();
 
-	/**
-		@brief List of recently used instruments
-	 */
-	std::map<std::string, time_t> m_recentInstruments;
+    std::string GetConfigDirectory()
+    { return m_configDir; }
 
-	void AddCurrentToRecentInstrumentList();
-	void LoadRecentInstrumentList();
-	void SaveRecentInstrumentList();
+    // Value retrieval methods
+    int64_t GetInt(const std::string& path) const;
+    const std::string& GetString(const std::string& path) const;
+    double GetReal(const std::string& path) const;
+    bool GetBool(const std::string& path) const;
+    Gdk::Color GetColor(const std::string& path) const;
+    Pango::FontDescription GetFont(const std::string& path) const;
+
+    template< typename E >
+    E GetEnum(const std::string& path) const
+    {
+        return this->GetPreference(path).GetEnum<E>();
+    }
+
+private:
+    // Internal helpers
+    void DeterminePath();
+    void InitializeDefaults();
+    void LoadPreferences();
+    bool HasPreferenceFile() const;
+    const Preference& GetPreference(const std::string& path) const;
+
+private:
+    PreferenceCategory m_treeRoot;
+    std::string m_filePath;
+    std::string m_configDir;
 };
 
-#endif
+#endif // PreferenceManager_h

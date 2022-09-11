@@ -30,86 +30,9 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Enum definitions for preference settings
  */
-#ifndef MainWindow_h
-#define MainWindow_h
-
-#include "Dialog.h"
-#include "PreferenceManager.h"
-#include "Session.h"
-#include "VulkanWindow.h"
-#include "WaveformGroup.h"
-
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
-{
-public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
-
-	void AddDialog(std::shared_ptr<Dialog> dlg)
-	{ m_dialogs.emplace(dlg); }
-
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// GUI handlers
-
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-				void AddOscilloscopeMenu();
-				void AddPowerSupplyMenu();
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flag for main imgui demo window
-	bool m_showDemo;
-
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
-	///@brief Popup UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Session state
-
-	///@brief Our session object
-	Session m_session;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Recent item lists
-
-	/**
-		@brief List of recently used instruments
-	 */
-	std::map<std::string, time_t> m_recentInstruments;
-
-	void AddCurrentToRecentInstrumentList();
-	void LoadRecentInstrumentList();
-	void SaveRecentInstrumentList();
-};
+#ifndef PreferenceTypes_h
+#define PreferenceTypes_h
 
 #endif
