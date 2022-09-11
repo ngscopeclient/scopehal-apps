@@ -135,17 +135,21 @@ bool MultimeterDialog::DoRender()
 	{
 		if(ImGui::Checkbox("Autorange", &m_autorange))
 			m_meter->SetMeterAutoRange(m_autorange);
+		HelpMarker("Enables automatic selection of meter scale ranges.");
 
 		//Channel selector (hide if we have only one channel)
 		if(m_meter->GetMeterChannelCount() > 1)
 		{
 			if(Combo("Channel", m_channelNames, m_selectedChannel))
 				m_meter->SetCurrentMeterChannel(m_selectedChannel);
+
+			HelpMarker("Select which input channel is being monitored.");
 		}
 
 		//Primary operating mode selector
 		if(Combo("Mode", m_primaryModeNames, m_primaryModeSelector))
 			OnPrimaryModeChanged();
+		HelpMarker("Select the type of measurement to make.");
 
 		//Secondary operating mode selector
 		if(m_secondaryModeNames.empty())
@@ -154,6 +158,10 @@ bool MultimeterDialog::DoRender()
 			m_meter->SetSecondaryMeterMode(m_secondaryModes[m_secondaryModeSelector]);
 		if(m_secondaryModeNames.empty())
 			ImGui::EndDisabled();
+
+		HelpMarker(
+			"Select auxiliary measurement mode, if supported.\n\n"
+			"The set of available auxiliary measurements depends on the current primary measurement mode.");
 	}
 
 	if(ImGui::CollapsingHeader("Measurements", ImGuiTreeNodeFlags_DefaultOpen))
@@ -172,13 +180,17 @@ bool MultimeterDialog::DoRender()
 		ImGui::BeginDisabled();
 			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText(primaryMode.c_str(), &spri[0], spri.size());
+		ImGui::EndDisabled();
+		HelpMarker("Most recent value for the primary measurement");
 
-			if(hasSecondary)
-			{
+		if(hasSecondary)
+		{
+			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
 				ImGui::InputText(secondaryMode.c_str(), &ssec[0], ssec.size());
-			}
-		ImGui::EndDisabled();
+			ImGui::EndDisabled();
+			HelpMarker("Most recent value for the secondary measurement");
+		}
 	}
 
 	auto csize = ImGui::GetContentRegionAvail();
