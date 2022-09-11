@@ -30,79 +30,41 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Declaration of RollingBuffer
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
-
-#include "Dialog.h"
-#include "RollingBuffer.h"
-#include "Session.h"
+#ifndef RollingBuffer_h
+#define RollingBuffer_h
 
 /**
-	@brief UI state for a single power supply channel
-
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
+	@brief Realtime plot helper (based on implot_demo)
  */
-class PowerSupplyChannelUIState
+struct RollingBuffer
 {
-public:
-	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
+	float Span;
+	ImVector<ImVec2> Data;
 
-	float m_setVoltage;
-	float m_setCurrent;
+	RollingBuffer()
+	{
+		Span = 10.0f;
+		Data.reserve(2000);
+	}
 
-	float m_lastAppliedSetVoltage;
-	float m_lastAppliedSetCurrent;
+	void Clear()
+	{ Data.clear(); }
 
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_lastAppliedSetVoltage(m_setVoltage)
-		, m_lastAppliedSetCurrent(m_setCurrent)
-	{}
+	void AddPoint(float x, float y)
+	{
+		Data.push_back(ImVec2(x, y));
 
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
-};
-
-class PowerSupplyDialog : public Dialog
-{
-public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
-
-	virtual bool DoRender();
-
-protected:
-	void CombinedTrendPlot(float etime);
-	void ChannelSettings(int i, float v, float a, float etime);
-
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
+		while(!Data.empty())
+		{
+			float tfirst = Data.begin()->x;
+			if(tfirst < (x - Span))
+				Data.erase(Data.begin());
+			else
+				break;
+		}
+	}
 };
 
 #endif

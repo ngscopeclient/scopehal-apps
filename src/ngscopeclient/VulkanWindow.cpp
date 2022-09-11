@@ -163,6 +163,11 @@ void VulkanWindow::UpdateFramebuffer()
 	m_width = caps.maxImageExtent.width;
 	m_height = caps.maxImageExtent.height;
 
+	float xscale;
+	float yscale;
+	glfwGetWindowContentScale(m_window, &xscale, &yscale);
+	LogTrace("Scale: %.2f, %.2f\n", xscale, yscale);
+
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();
 

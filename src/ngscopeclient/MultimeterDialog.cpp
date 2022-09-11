@@ -30,104 +30,157 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of Session
+	@brief Implementation of MultimeterDialog
  */
+
 #include "ngscopeclient.h"
-#include "Session.h"
-#include "MainWindow.h"
 #include "MultimeterDialog.h"
-#include "PowerSupplyDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Session::Session(MainWindow* wnd)
-	: m_mainWindow(wnd)
-	, m_shuttingDown(false)
-	, m_modifiedSinceLastSave(false)
+MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterState> state, Session* session)
+	: Dialog(string("Multimeter: ") + meter->m_nickname, ImVec2(500, 400))
+	, m_session(session)
+	, m_tstart(GetTime())
+	, m_historyDepth(60)
+	, m_meter(meter)
+	, m_state(state)
 {
 }
 
-Session::~Session()
+MultimeterDialog::~MultimeterDialog()
 {
-	//Signal our threads to exit
-	m_shuttingDown = true;
-
-	//Block until our processing threads exit
-	for(auto& t : m_threads)
-		t->join();
-	m_threads.clear();
-
-	//Delete scopes once we've terminated the threads
-	for(auto scope : m_oscilloscopes)
-		delete scope;
-	m_oscilloscopes.clear();
-	m_psus.clear();
+	m_session->RemoveMultimeter(m_meter);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Instrument management
+// Rendering
 
-void Session::AddOscilloscope(Oscilloscope* scope)
+bool MultimeterDialog::DoRender()
 {
-	m_modifiedSinceLastSave = true;
-	m_oscilloscopes.push_back(scope);
+	//Device information
+	if(ImGui::CollapsingHeader("Info"))
+	{
+		ImGui::BeginDisabled();
 
-	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
+			auto name = m_meter->GetName();
+			auto vendor = m_meter->GetVendor();
+			auto serial = m_meter->GetSerial();
+			auto driver = m_meter->GetDriverName();
+			auto transport = m_meter->GetTransport();
+			auto tname = transport->GetName();
+			auto tstring = transport->GetConnectionString();
 
-	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
-}
+			ImGui::InputText("Make", &vendor[0], vendor.size());
+			ImGui::InputText("Model", &name[0], name.size());
+			ImGui::InputText("Serial", &serial[0], serial.size());
+			ImGui::InputText("Driver", &driver[0], driver.size());
+			ImGui::InputText("Transport", &tname[0], tname.size());
+			ImGui::InputText("Path", &tstring[0], tstring.size());
 
-/**
-	@brief Adds a power supply to the session
- */
-void Session::AddPowerSupply(SCPIPowerSupply* psu)
-{
-	m_modifiedSinceLastSave = true;
+		ImGui::EndDisabled();
+	}
 
-	//Create shared PSU state
-	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
-	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
+	//Save history
+	auto etime = GetTime() - m_tstart;
+	auto pri = m_state->m_primaryMeasurement.load();
+	auto sec = m_state->m_secondaryMeasurement.load();
+	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
+	bool hasSecondary = m_meter->GetSecondaryMeterMode() != Multimeter::NONE;
+	if(firstUpdateDone)
+	{
+		m_primaryHistory.AddPoint(etime, pri);
+		if(hasSecondary)
+			m_secondaryHistory.AddPoint(etime, sec);
 
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+		m_primaryHistory.Span = m_historyDepth;
+		m_secondaryHistory.Span = m_historyDepth;
+	}
 
-	m_mainWindow->AddToRecentInstrumentList(psu);
-}
+	float valueWidth = 100;
+	auto primaryMode = m_meter->ModeToText(m_meter->GetMeterMode());
+	auto secondaryMode = m_meter->ModeToText(m_meter->GetSecondaryMeterMode());
 
-/**
-	@brief Removes a power supply from the session
- */
-void Session::RemovePowerSupply(SCPIPowerSupply* psu)
-{
-	m_modifiedSinceLastSave = true;
-	m_psus.erase(psu);
-}
+	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		//TODO: selector for multi channel instruments
+	}
 
-/**
-	@brief Adds a multimeter to the session
- */
-void Session::AddMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
+	if(ImGui::CollapsingHeader("Measurements", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		string spri;
+		string ssec;
 
-	//Create shared PSU state
-	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
+		//Hide values until we get first readings back from the meter
+		if(firstUpdateDone)
+		{
+			spri = m_meter->GetMeterUnit().PrettyPrint(pri, m_meter->GetMeterDigits());
+			if(hasSecondary)
+				ssec = m_meter->GetSecondaryMeterUnit().PrettyPrint(sec, m_meter->GetMeterDigits());
+		}
 
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(valueWidth);
+			ImGui::InputText(primaryMode.c_str(), &spri[0], spri.size());
 
-	m_mainWindow->AddToRecentInstrumentList(meter);
-}
+			if(hasSecondary)
+			{
+				ImGui::SetNextItemWidth(valueWidth);
+				ImGui::InputText(secondaryMode.c_str(), &ssec[0], ssec.size());
+			}
+		ImGui::EndDisabled();
+	}
 
-/**
-	@brief Removes a multimeter from the session
- */
-void Session::RemoveMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
-	m_meters.erase(meter);
+	auto csize = ImGui::GetContentRegionAvail();
+	if(ImGui::CollapsingHeader("Primary Trend"))
+	{
+		if(ImPlot::BeginPlot("Primary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
+		{
+			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+			auto& hist = m_primaryHistory;
+			ImPlot::PlotLine(
+				primaryMode.c_str(),
+				&hist.Data[0].x,
+				&hist.Data[0].y,
+				hist.Data.size(),
+				0,
+				0,
+				2*sizeof(float));
+
+			ImPlot::EndPlot();
+		}
+	}
+
+	if(!hasSecondary)
+		ImGui::BeginDisabled();
+
+	if(ImGui::CollapsingHeader("Secondary Trend"))
+	{
+		if(ImPlot::BeginPlot("Secondary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
+		{
+			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
+
+			auto& hist = m_secondaryHistory;
+
+			ImPlot::PlotLine(
+				secondaryMode.c_str(),
+				&hist.Data[0].x,
+				&hist.Data[0].y,
+				hist.Data.size(),
+				0,
+				0,
+				2*sizeof(float));
+
+			ImPlot::EndPlot();
+		}
+	}
+
+	if(!hasSecondary)
+		ImGui::EndDisabled();
+
+	return true;
 }

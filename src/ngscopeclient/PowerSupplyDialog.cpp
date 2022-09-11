@@ -45,7 +45,7 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 	: Dialog(string("Power Supply: ") + psu->m_nickname, ImVec2(500, 400))
 	, m_session(session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
-	, m_tstart(GetTime() - 60)
+	, m_tstart(GetTime())
 	, m_historyDepth(60)
 	, m_psu(psu)
 	, m_state(state)

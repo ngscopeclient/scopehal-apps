@@ -30,79 +30,28 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Declaration of MultimeterState
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
-
-#include "Dialog.h"
-#include "RollingBuffer.h"
-#include "Session.h"
+#ifndef MultimeterState_h
+#define MultimeterState_h
 
 /**
-	@brief UI state for a single power supply channel
-
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
+	@brief Current status of a multimeter
  */
-class PowerSupplyChannelUIState
+class MultimeterState
 {
 public:
-	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
 
-	float m_setVoltage;
-	float m_setCurrent;
+	MultimeterState()
+	{
+		m_primaryMeasurement = 0;
+		m_secondaryMeasurement = 0;
+		m_firstUpdateDone = false;
+	}
 
-	float m_lastAppliedSetVoltage;
-	float m_lastAppliedSetCurrent;
-
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_lastAppliedSetVoltage(m_setVoltage)
-		, m_lastAppliedSetCurrent(m_setCurrent)
-	{}
-
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
-};
-
-class PowerSupplyDialog : public Dialog
-{
-public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
-
-	virtual bool DoRender();
-
-protected:
-	void CombinedTrendPlot(float etime);
-	void ChannelSettings(int i, float v, float a, float etime);
-
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
+	std::atomic<float> m_primaryMeasurement;
+	std::atomic<float> m_secondaryMeasurement;
+	std::atomic<bool> m_firstUpdateDone;
 };
 
 #endif
