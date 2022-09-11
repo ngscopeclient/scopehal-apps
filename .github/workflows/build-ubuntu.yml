@@ -55,6 +55,7 @@ jobs:
           texlive \
           texlive-fonts-extra \
           libglew-dev \
+          libvulkan-dev \
           glslang-dev \
           libglfw3-dev
 
