@@ -137,7 +137,7 @@ bool PowerSupplyDialog::DoRender()
  */
 void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 {
-	float valueWidth = 200;
+	float valueWidth = 100;
 
 	auto chname = m_psu->GetPowerChannelName(i);
 
