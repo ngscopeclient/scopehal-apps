@@ -81,12 +81,17 @@ public:
 	float m_setVoltage;
 	float m_setCurrent;
 
+	float m_lastAppliedSetVoltage;
+	float m_lastAppliedSetCurrent;
+
 	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
 		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
 		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
 		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
+		, m_lastAppliedSetVoltage(m_setVoltage)
+		, m_lastAppliedSetCurrent(m_setCurrent)
 	{}
 
 	RollingBuffer m_voltageHistory;
