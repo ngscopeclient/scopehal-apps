@@ -30,79 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Implementation of MultimeterThread
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
+#include "ngscopeclient.h"
+#include "pthread_compat.h"
 
-#include "Dialog.h"
-#include "RollingBuffer.h"
-#include "Session.h"
+using namespace std;
 
-/**
-	@brief UI state for a single power supply channel
-
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
- */
-class PowerSupplyChannelUIState
+void MultimeterThread(MultimeterThreadArgs args)
 {
-public:
-	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
+	pthread_setname_np_compat("MeterThread");
 
-	float m_setVoltage;
-	float m_setCurrent;
+	auto meter = args.meter;
+	auto state = args.state;
+	while(!*args.shuttingDown)
+	{
+		//Flush any pending commands
+		meter->GetTransport()->FlushCommandQueue();
 
-	float m_lastAppliedSetVoltage;
-	float m_lastAppliedSetCurrent;
+		//Poll status
+		state->m_primaryMeasurement = meter->GetMeterValue();
+		state->m_secondaryMeasurement = meter->GetSecondaryMeterValue();
+		state->m_firstUpdateDone = true;
 
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_lastAppliedSetVoltage(m_setVoltage)
-		, m_lastAppliedSetCurrent(m_setCurrent)
-	{}
-
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
-};
-
-class PowerSupplyDialog : public Dialog
-{
-public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
-
-	virtual bool DoRender();
-
-protected:
-	void CombinedTrendPlot(float etime);
-	void ChannelSettings(int i, float v, float a, float etime);
-
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
-};
-
-#endif
+		//Cap update rate to 20 Hz
+		this_thread::sleep_for(chrono::milliseconds(50));
+	}
+}

@@ -44,6 +44,7 @@
 #include <atomic>
 
 #include "PowerSupplyState.h"
+#include "MultimeterState.h"
 
 class PowerSupplyThreadArgs
 {
@@ -59,7 +60,22 @@ public:
 	std::shared_ptr<PowerSupplyState> state;
 };
 
+class MultimeterThreadArgs
+{
+public:
+	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
+	: meter(m)
+	, shuttingDown(s)
+	, state(st)
+	{}
+
+	SCPIMultimeter* meter;
+	std::atomic<bool>* shuttingDown;
+	std::shared_ptr<MultimeterState> state;
+};
+
 void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
+void MultimeterThread(MultimeterThreadArgs args);
 
 #endif

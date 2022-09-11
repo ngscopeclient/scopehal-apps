@@ -59,7 +59,10 @@ void WaveformGroup::Render()
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin(m_title.c_str(), &open))
+	{
 		ImGui::End();
+		return;
+	}
 
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 

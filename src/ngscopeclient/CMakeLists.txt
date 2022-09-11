@@ -25,16 +25,16 @@ add_executable(ngscopeclient
 	../implot/implot_items.cpp
 
 	pthread_compat.cpp
-	Dialog.cpp
-	VulkanWindow.cpp
 
 	AddInstrumentDialog.cpp
 	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp
 	AddScopeDialog.cpp
-	PowerSupplyDialog.cpp
-
+	Dialog.cpp
 	MainWindow.cpp
+	MultimeterDialog.cpp
+	MultimeterThread.cpp
+	PowerSupplyDialog.cpp
 	PowerSupplyThread.cpp
 	Preference.cpp
 	PreferenceManager.cpp
@@ -42,6 +42,7 @@ add_executable(ngscopeclient
 	PreferenceTree.cpp
 	ScopeThread.cpp
 	Session.cpp
+	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp
 

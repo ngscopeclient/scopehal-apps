@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "Session.h"
 #include "MainWindow.h"
+#include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 
 using namespace std;
@@ -111,6 +112,15 @@ void Session::RemovePowerSupply(SCPIPowerSupply* psu)
 void Session::AddMultimeter(SCPIMultimeter* meter)
 {
 	m_modifiedSinceLastSave = true;
+
+	//Create shared PSU state
+	auto state = make_shared<MultimeterState>();
+	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
+
+	//Add the dialog to view/control it
+	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
+
+	m_mainWindow->AddToRecentInstrumentList(meter);
 }
 
 /**
@@ -119,5 +129,5 @@ void Session::AddMultimeter(SCPIMultimeter* meter)
 void Session::RemoveMultimeter(SCPIMultimeter* meter)
 {
 	m_modifiedSinceLastSave = true;
-	//m_psus.erase(psu);
+	m_meters.erase(meter);
 }

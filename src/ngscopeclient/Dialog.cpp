@@ -118,7 +118,7 @@ void Dialog::RenderErrorPopup()
 /**
 	@brief Displays a combo box from a vector<string>
  */
-void Dialog::Combo(const string& label, const vector<string>& items, int& selection)
+bool Dialog::Combo(const string& label, const vector<string>& items, int& selection)
 {
 	string preview;
 	ImGuiComboFlags flags = 0;
@@ -128,8 +128,10 @@ void Dialog::Combo(const string& label, const vector<string>& items, int& select
 		flags = ImGuiComboFlags_NoArrowButton;
 
 	//Set preview to currently selected item
-	else
+	else if( (selection >= 0) && (selection < (int)items.size() ) )
 		preview = items[selection];
+
+	bool changed = false;
 
 	//Render the box
 	if(ImGui::BeginCombo(label.c_str(), preview.c_str(), flags))
@@ -138,12 +140,16 @@ void Dialog::Combo(const string& label, const vector<string>& items, int& select
 		{
 			bool selected = (i == selection);
 			if(ImGui::Selectable(items[i].c_str(), selected))
+			{
+				changed = true;
 				selection = i;
+			}
 			if(selected)
 				ImGui::SetItemDefaultFocus();
 		}
 		ImGui::EndCombo();
 	}
+	return changed;
 }
 
 /**

@@ -72,6 +72,40 @@ public:
 };
 
 /**
+	@brief Internal state for a connection to a multimeter
+ */
+class MultimeterConnectionState
+{
+public:
+	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state)
+		: m_meter(meter)
+		, m_shuttingDown(false)
+	{
+		MultimeterThreadArgs args(meter, &m_shuttingDown, state);
+		m_thread = std::make_unique<std::thread>(MultimeterThread, args);
+	}
+
+	~MultimeterConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+
+		//Disconnect once the thread has terminated
+		delete m_meter;
+	}
+
+	///@brief The meter
+	SCPIMultimeter* m_meter;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the meter
+	std::unique_ptr<std::thread> m_thread;
+};
+
+/**
 	@brief A Session stores all of the instrument configuration and other state the user has open.
 
 	Generally only accessed from the GUI thread.
@@ -105,6 +139,9 @@ protected:
 
 	///@brief Power supplies we are currently connected to
 	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
+
+	///@brief Multimeters we are currently connected to
+	std::map<Multimeter*, std::unique_ptr<MultimeterConnectionState> > m_meters;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;
