@@ -68,7 +68,7 @@ endif()
 # Add specific VulkanSDK Lib & Include for glslang (tested on Linux Ubuntu 22.04 LTS)
 if(NOT WIN32)
 	include_directories($ENV{VULKAN_SDK}/include/glslang/Include)
-	link_directories($ENV{VULKAN_SDK}/Lib)
+	link_directories($ENV{VULKAN_SDK}/lib)
 endif()
 
 # Includes are incomplete in VulkanSDK 1.3.224.1 so we use the include path from MINGW64 mingw-w64-x86_64-glslang
