@@ -126,8 +126,7 @@ endif()
 
 # Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/psuclient")
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
+		add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/impulse")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
