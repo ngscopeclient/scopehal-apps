@@ -297,6 +297,8 @@ void VulkanWindow::Render()
 		if (result.first == vk::Result::eErrorOutOfDateKHR || result.first == vk::Result::eSuboptimalKHR)
 		{
 			m_resizeEventPending = true;
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
 			Render();
 			return;
 		}
