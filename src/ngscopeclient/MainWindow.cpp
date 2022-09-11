@@ -63,6 +63,10 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 MainWindow::~MainWindow()
 {
 	SaveRecentInstrumentList();
+
+	//Clear any open dialogs before destroying the session.
+	//This ensures that we have a nice well defined shutdown order.
+	m_dialogs.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
