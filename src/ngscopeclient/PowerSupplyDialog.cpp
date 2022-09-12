@@ -141,6 +141,9 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 	auto chname = m_psu->GetPowerChannelName(i);
 
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit amps(Unit::UNIT_AMPS);
+
 	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::PushID(chname.c_str());
@@ -192,13 +195,19 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		if(ImGui::TreeNode("Set Points"))
 		{
 			ImGui::SetNextItemWidth(valueWidth);
-			if(FloatInputWithApplyButton("V", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_lastAppliedSetVoltage))
-				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setVoltage);
+			if(UnitInputWithExplicitApply(
+				"Voltage", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_committedSetVoltage, volts))
+			{
+				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetVoltage);
+			}
 			HelpMarker("Target voltage to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
 			ImGui::SetNextItemWidth(valueWidth);
-			if(FloatInputWithApplyButton("A", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_lastAppliedSetCurrent))
-				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setCurrent);
+			if(UnitInputWithExplicitApply(
+				"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
+			{
+				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetCurrent);
+			}
 			HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
 			ImGui::TreePop();
@@ -210,7 +219,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		{
 			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("V###VMeasured", &v);
+				auto svolts = volts.PrettyPrint(v);
+				ImGui::InputText("Voltage###VMeasured", &svolts);
 			ImGui::EndDisabled();
 
 			if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
@@ -225,7 +235,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputFloat("A###AMeasured", &a);
+				auto scurr = amps.PrettyPrint(a);
+				ImGui::InputText("Current###IMeasured", &scurr);
 			ImGui::EndDisabled();
 
 			if(cc && m_channelUIState[i].m_outputEnabled && !shdn)

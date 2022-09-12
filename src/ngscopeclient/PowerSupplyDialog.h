@@ -51,21 +51,24 @@ public:
 	bool m_overcurrentShutdownEnabled;
 	bool m_softStartEnabled;
 
-	float m_setVoltage;
-	float m_setCurrent;
+	std::string m_setVoltage;
+	std::string m_setCurrent;
 
-	float m_lastAppliedSetVoltage;
-	float m_lastAppliedSetCurrent;
+	float m_committedSetVoltage;
+	float m_committedSetCurrent;
 
 	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
 		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_setVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_setCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_lastAppliedSetVoltage(m_setVoltage)
-		, m_lastAppliedSetCurrent(m_setCurrent)
-	{}
+		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
+		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
+	{
+		Unit volts(Unit::UNIT_VOLTS);
+		Unit amps(Unit::UNIT_AMPS);
+		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
+		m_setCurrent = volts.PrettyPrint(m_committedSetCurrent);
+	}
 
 	RollingBuffer m_voltageHistory;
 	RollingBuffer m_currentHistory;
