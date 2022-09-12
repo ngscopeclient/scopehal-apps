@@ -164,12 +164,12 @@ void VulkanWindow::UpdateFramebuffer()
 	if (caps.maxImageExtent.width < (unsigned int)m_width)
 	{
 		LogError("Surface not capable of framebuffer width\n");
-		abort();
+		return;
 	}
 	if (caps.maxImageExtent.height < (unsigned int)m_height)
 	{
 		LogError("Surface not capable of framebuffer height\n");
-		abort();
+		return;
 	}
 
 	float xscale;
