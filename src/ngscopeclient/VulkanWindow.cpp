@@ -161,11 +161,13 @@ void VulkanWindow::UpdateFramebuffer()
 	//Get current size of the surface
 	auto caps = g_vkfftPhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
-	if (caps.maxImageExtent.width < m_width) {
+	if (caps.maxImageExtent.width < m_width)
+	{
 		LogError("Surface not capable of framebuffer width\n");
 		abort();
 	}
-	if (caps.maxImageExtent.height < m_height) {
+	if (caps.maxImageExtent.height < m_height)
+	{
 		LogError("Surface not capable of framebuffer height\n");
 		abort();
 	}
