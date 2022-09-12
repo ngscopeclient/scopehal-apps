@@ -42,6 +42,8 @@
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
 #include "AddScopeDialog.h"
+#include "FunctionGeneratorDialog.h"
+#include "MultimeterDialog.h"
 
 using namespace std;
 
@@ -115,6 +117,11 @@ void MainWindow::RenderUI()
 		if(meterDlg)
 			m_meterDialogs.erase(meterDlg->GetMeter());
 
+		//Function generator dialogs are stored in a separate list as well
+		auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
+		if(genDlg)
+			m_generatorDialogs.erase(genDlg->GetGenerator());
+
 		m_dialogs.erase(dlg);
 	}
 
@@ -126,15 +133,17 @@ void MainWindow::RenderUI()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Top level menu
 
-void MainWindow::AddDialog(std::shared_ptr<Dialog> dlg)
+void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 {
 	m_dialogs.emplace(dlg);
 
-	if(dynamic_pointer_cast<MultimeterDialog>(dlg) != nullptr)
-		m_meterDialogs.emplace(dlg);
+	auto mdlg = dynamic_cast<MultimeterDialog*>(dlg.get());
+	if(mdlg != nullptr)
+		m_meterDialogs[mdlg->GetMeter()] = dlg;
 
-	if(dynamic_pointer_cast<FunctionGeneratorDialog>(dlg) != nullptr)
-		m_generatorDialogs.emplace(dlg);
+	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
+	if(fdlg != nullptr)
+		m_generatorDialogs[fdlg->GetGenerator()] = dlg;
 }
 
 /**
@@ -447,18 +456,20 @@ void MainWindow::WindowGeneratorMenu()
 		for(auto scope : scopes)
 		{
 			//Is the scope also a function generator? If not, skip it
-			if( (scope.GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
+			if( (scope->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
-			auto generator = dynamic_cast<SCPIFunctionGenerator*>(generator);
+			auto generator = dynamic_cast<SCPIFunctionGenerator*>(scope);
 			if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
 				continue;
 
 			//Add it to the menu
-			if(ImGui::MenuItem(generator->m_nickname.c_str())
+			if(ImGui::MenuItem(generator->m_nickname.c_str()))
 				m_session.AddFunctionGenerator(generator);
 		}
+
+		ImGui::EndMenu();
 	}
 }
 
@@ -473,7 +484,7 @@ void MainWindow::WindowMultimeterMenu()
 		for(auto scope : scopes)
 		{
 			//Is the scope also a multimeter? If not, skip it
-			if( (scope.GetInstrumentTypes() & Instrument::INST_DMM) == 0)
+			if( (scope->GetInstrumentTypes() & Instrument::INST_DMM) == 0)
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
@@ -482,9 +493,11 @@ void MainWindow::WindowMultimeterMenu()
 				continue;
 
 			//Add it to the menu
-			if(ImGui::MenuItem(scope->m_nickname.c_str())
+			if(ImGui::MenuItem(scope->m_nickname.c_str()))
 				m_session.AddMultimeter(meter);
 		}
+
+		ImGui::EndMenu();
 	}
 }
 

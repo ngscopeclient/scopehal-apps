@@ -140,7 +140,7 @@ void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
 {
 	m_modifiedSinceLastSave = true;
 
-	m_meters.push_back(generator);
+	m_generators.push_back(generator);
 	m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
 
 	m_mainWindow->AddToRecentInstrumentList(generator);
@@ -152,5 +152,17 @@ void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
 void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 {
 	m_modifiedSinceLastSave = true;
-	m_generators.erase(generator);
+
+	for(size_t i=0; i<m_generators.size(); i++)
+	{
+		if(m_generators[i] == generator)
+		{
+			m_generators.erase(m_generators.begin() + i);
+			break;
+		}
+	}
+
+	//Free it iff it's not part of an oscilloscope
+	if(dynamic_cast<Oscilloscope*>(generator) == nullptr)
+		delete generator;
 }

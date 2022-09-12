@@ -44,8 +44,6 @@ using namespace std;
 FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generator, Session* session)
 	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(500, 400))
 	, m_session(session)
-	, m_tstart(GetTime())
-	, m_historyDepth(60)
 	, m_generator(generator)
 {
 	/*
