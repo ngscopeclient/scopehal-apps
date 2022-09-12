@@ -159,18 +159,14 @@ VulkanWindow::~VulkanWindow()
 void VulkanWindow::UpdateFramebuffer()
 {
 	//Get current size of the surface
+	//If size doesn't match up, early out. We're probably in the middle of a resize.
+	//(This will be corrected next frame, so no worries)
 	auto caps = g_vkfftPhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
 	if (caps.maxImageExtent.width < (unsigned int)m_width)
-	{
-		LogError("Surface not capable of framebuffer width\n");
 		return;
-	}
 	if (caps.maxImageExtent.height < (unsigned int)m_height)
-	{
-		LogError("Surface not capable of framebuffer height\n");
 		return;
-	}
 
 	float xscale;
 	float yscale;
@@ -294,9 +290,20 @@ void VulkanWindow::Render()
 	if(!main_is_minimized)
 	{
 		//Get the next frame to draw onto
-		auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
-		m_frameIndex = result.second;
-		if (result.first == vk::Result::eErrorOutOfDateKHR || result.first == vk::Result::eSuboptimalKHR)
+		try
+		{
+			auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
+			m_frameIndex = result.second;
+			if(result.first == vk::Result::eSuboptimalKHR)
+			{
+				m_resizeEventPending = true;
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+				Render();
+				return;
+			}
+		}
+		catch(const vk::OutOfDateKHRError& err)
 		{
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
