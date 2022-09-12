@@ -67,6 +67,9 @@ protected:
 			void FileMenu();
 			void ViewMenu();
 			void AddMenu();
+				void AddGeneratorMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddMultimeterMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);

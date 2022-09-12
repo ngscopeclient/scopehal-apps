@@ -39,6 +39,7 @@
 #include "imgui_internal.h"
 
 //Dialogs
+#include "AddGeneratorDialog.h"
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
 #include "AddScopeDialog.h"
@@ -211,9 +212,80 @@ void MainWindow::AddMenu()
 			timestamps.push_back(t);
 		std::sort(timestamps.begin(), timestamps.end());
 
+		AddGeneratorMenu(timestamps, reverseMap);
 		AddMultimeterMenu(timestamps, reverseMap);
 		AddOscilloscopeMenu(timestamps, reverseMap);
 		AddPowerSupplyMenu(timestamps, reverseMap);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Generator menu
+ */
+void MainWindow::AddGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("Generator"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddGeneratorDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known function generator drivers.
+		//Any recent instrument using one of these drivers is assumed to be a generator.
+		vector<string> drivers;
+		SCPIFunctionGenerator::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the scope
+							auto gen = SCPIFunctionGenerator::CreateFunctionGenerator(drivername, transport);
+							if(gen == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create function generator driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created generator\n");
+
+								gen->m_nickname = nick;
+								m_session.AddFunctionGenerator(gen);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		ImGui::EndMenu();
 	}
@@ -230,8 +302,8 @@ void MainWindow::AddMultimeterMenu(vector<time_t>& timestamps, map<time_t, vecto
 			m_dialogs.emplace(make_shared<AddMultimeterDialog>(m_session));
 		ImGui::Separator();
 
-		//Find all known scope drivers.
-		//Any recent instrument using one of these drivers is assumed to be a scope.
+		//Find all known multimeter drivers.
+		//Any recent instrument using one of these drivers is assumed to be a multimeter.
 		vector<string> drivers;
 		SCPIMultimeter::EnumDrivers(drivers);
 		set<string> driverset;

@@ -30,70 +30,21 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddMultimeterDialog
+	@brief Declaration of AddGeneratorDialog
  */
+#ifndef AddGeneratorDialog_h
+#define AddGeneratorDialog_h
 
-#include "ngscopeclient.h"
-#include "AddMultimeterDialog.h"
+#include "AddInstrumentDialog.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddMultimeterDialog::AddMultimeterDialog(Session& session)
-	: AddInstrumentDialog("Add Multimeter", session)
+class AddGeneratorDialog : public AddInstrumentDialog
 {
-	SCPIMultimeter::EnumDrivers(m_drivers);
-}
+public:
+	AddGeneratorDialog(Session& session);
+	virtual ~AddGeneratorDialog();
 
-AddMultimeterDialog::~AddMultimeterDialog()
-{
-}
+protected:
+	virtual bool DoConnect();
+};
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddMultimeterDialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the meter
-	auto meter = SCPIMultimeter::CreateMultimeter(m_drivers[m_selectedDriver], transport);
-	if(meter == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create multimeter driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created meter\n");
-
-	meter->m_nickname = m_nickname;
-	m_session.AddMultimeter(meter);
-	return true;
-}
+#endif

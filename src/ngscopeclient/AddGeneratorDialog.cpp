@@ -30,24 +30,24 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddMultimeterDialog
+	@brief Implementation of AddGeneratorDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddMultimeterDialog.h"
+#include "AddGeneratorDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddMultimeterDialog::AddMultimeterDialog(Session& session)
-	: AddInstrumentDialog("Add Multimeter", session)
+AddGeneratorDialog::AddGeneratorDialog(Session& session)
+	: AddInstrumentDialog("Add Function Generator", session)
 {
-	SCPIMultimeter::EnumDrivers(m_drivers);
+	SCPIFunctionGenerator::EnumDrivers(m_drivers);
 }
 
-AddMultimeterDialog::~AddMultimeterDialog()
+AddGeneratorDialog::~AddGeneratorDialog()
 {
 }
 
@@ -59,7 +59,7 @@ AddMultimeterDialog::~AddMultimeterDialog()
 
 	@return True if successful
  */
-bool AddMultimeterDialog::DoConnect()
+bool AddGeneratorDialog::DoConnect()
 {
 	//Create the transport
 	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
@@ -79,21 +79,21 @@ bool AddMultimeterDialog::DoConnect()
 		return false;
 	}
 
-	//Create the meter
-	auto meter = SCPIMultimeter::CreateMultimeter(m_drivers[m_selectedDriver], transport);
-	if(meter == nullptr)
+	//Create the generator
+	auto gen = SCPIFunctionGenerator::CreateFunctionGenerator(m_drivers[m_selectedDriver], transport);
+	if(gen == nullptr)
 	{
 		ShowErrorPopup(
 			"Driver error",
-			"Failed to create multimeter driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+			"Failed to create function generator driver of type \"" + m_drivers[m_selectedDriver] + "\"");
 		delete transport;
 		return false;
 	}
 
 	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created meter\n");
+	LogDebug("FIXME: apply PreferenceManager settings to newly created generator\n");
 
-	meter->m_nickname = m_nickname;
-	m_session.AddMultimeter(meter);
+	gen->m_nickname = m_nickname;
+	m_session.AddFunctionGenerator(gen);
 	return true;
 }
