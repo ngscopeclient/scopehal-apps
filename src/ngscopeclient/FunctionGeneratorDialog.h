@@ -44,16 +44,29 @@ class FunctionGeneratorChannelUIState
 public:
 	bool m_outputEnabled;
 
-	float m_amplitude;
+	std::string m_amplitude;
 	float m_committedAmplitude;
 
-	float m_offset;
+	std::string m_offset;
 	float m_committedOffset;
 
-	float m_dutyCycle;
+	std::string m_dutyCycle;
+	float m_committedDutyCycle;
 
 	std::string m_frequency;
-	std::string m_committedFrequency;
+	float m_committedFrequency;
+
+	std::string m_riseTime;
+	float m_committedRiseTime;
+
+	std::string m_fallTime;
+	float m_committedFallTime;
+
+	int m_impedanceIndex;
+
+	int m_shapeIndex;
+	std::vector<FunctionGenerator::WaveShape> m_waveShapes;
+	std::vector<std::string> m_waveShapeNames;
 };
 
 class FunctionGeneratorDialog : public Dialog
@@ -78,6 +91,13 @@ protected:
 
 	///@brief UI state for each channel
 	std::vector<FunctionGeneratorChannelUIState> m_uiState;
+
+	///@brief Output impedances
+	std::vector<FunctionGenerator::OutputImpedance> m_impedances;
+
+	///@brief Human readable description of each element in m_impedances
+	std::vector<std::string> m_impedanceNames;
+
 };
 
 

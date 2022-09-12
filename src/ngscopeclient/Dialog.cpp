@@ -244,3 +244,86 @@ bool Dialog::TextInputWithApplyButton(const string& label, string& currentValue,
 	ImGui::EndGroup();
 	return changed;
 }
+
+bool Dialog::TextInputWithImplicitApply(const string& label, string& currentValue, string& committedValue)
+{
+	bool dirty = currentValue != committedValue;
+	ImGui::InputText(label.c_str(), &currentValue);
+
+	if(!ImGui::IsItemActive() && dirty )
+	{
+		committedValue = currentValue;
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Input box for a floating point value with an associated unit
+
+	@param label			Text label
+	@param currentValue		Current text box content
+	@param committedValue	Most recently applied value
+	@param unit				The unit for the input
+
+	@return	True when focus is lost or user presses enter
+ */
+bool Dialog::UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		float& committedValue,
+		Unit unit)
+{
+	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
+
+	ImGui::InputText(label.c_str(), &currentValue);
+
+	if(!ImGui::IsItemActive() && dirty )
+	{
+		committedValue = unit.ParseString(currentValue);
+		currentValue = unit.PrettyPrint(committedValue);
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Input box for a floating point value with an associated unit and an "apply" button
+
+	@param label			Text label
+	@param currentValue		Current text box content
+	@param committedValue	Most recently applied value
+	@param unit				The unit for the input
+
+	@return	True the "apply" button is pressed
+ */
+bool Dialog::UnitInputWithExplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		float& committedValue,
+		Unit unit)
+{
+	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
+
+	ImGui::BeginGroup();
+
+	ImGui::InputText(label.c_str(), &currentValue);
+	ImGui::SameLine();
+	if(!dirty)
+		ImGui::BeginDisabled();
+	auto applyLabel = string("Apply###Apply") + label;
+	bool changed = false;
+	if(ImGui::Button(applyLabel.c_str()))
+	{
+		changed = true;
+		committedValue = unit.ParseString(currentValue);
+		currentValue = unit.PrettyPrint(committedValue);
+	}
+	if(!dirty)
+		ImGui::EndDisabled();
+
+	ImGui::EndGroup();
+	return changed;
+}

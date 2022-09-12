@@ -42,30 +42,56 @@ using namespace std;
 // Construction / destruction
 
 FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generator, Session* session)
-	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(500, 400))
+	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(300, 400))
 	, m_session(session)
 	, m_generator(generator)
 {
 	Unit hz(Unit::UNIT_HZ);
+	Unit percent(Unit::UNIT_PERCENT);
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit fs(Unit::UNIT_FS);
 
 	for(int i=0; i<m_generator->GetFunctionChannelCount(); i++)
 	{
 		FunctionGeneratorChannelUIState state;
 		state.m_outputEnabled = m_generator->GetFunctionChannelActive(i);
 
-		state.m_amplitude = m_generator->GetFunctionChannelAmplitude(i);
-		state.m_committedAmplitude = state.m_amplitude;
+		state.m_committedAmplitude = m_generator->GetFunctionChannelAmplitude(i);
+		state.m_amplitude = volts.PrettyPrint(state.m_committedAmplitude);
 
-		state.m_offset = m_generator->GetFunctionChannelOffset(i);
-		state.m_committedOffset = state.m_offset;
+		state.m_committedOffset = m_generator->GetFunctionChannelOffset(i);
+		state.m_offset = volts.PrettyPrint(state.m_committedOffset);
 
-		state.m_dutyCycle = m_generator->GetFunctionChannelDutyCycle(i);
+		state.m_committedDutyCycle = m_generator->GetFunctionChannelDutyCycle(i);
+		state.m_dutyCycle = percent.PrettyPrint(state.m_committedDutyCycle);
 
-		state.m_frequency = hz.PrettyPrint(m_generator->GetFunctionChannelFrequency(i));
-		state.m_committedFrequency = state.m_frequency;
+		state.m_committedFrequency = m_generator->GetFunctionChannelFrequency(i);
+		state.m_frequency = hz.PrettyPrint(state.m_committedFrequency);
+
+		state.m_committedRiseTime = m_generator->GetFunctionChannelRiseTime(i);
+		state.m_riseTime = fs.PrettyPrint(state.m_committedRiseTime);
+
+		state.m_committedFallTime = m_generator->GetFunctionChannelFallTime(i);
+		state.m_fallTime = fs.PrettyPrint(state.m_committedFallTime);
+
+		//Convert waveform shape to list box index
+		state.m_waveShapes = m_generator->GetAvailableWaveformShapes(i);
+		state.m_shapeIndex = 0;
+		auto shape = m_generator->GetFunctionChannelShape(i);
+		for(size_t j=0; j<state.m_waveShapes.size(); j++)
+		{
+			if(shape == state.m_waveShapes[j])
+				state.m_shapeIndex = j;
+			state.m_waveShapeNames.push_back(m_generator->GetNameOfShape(state.m_waveShapes[j]));
+		}
 
 		m_uiState.push_back(state);
 	}
+
+	m_impedances.push_back(FunctionGenerator::IMPEDANCE_HIGH_Z);
+	m_impedances.push_back(FunctionGenerator::IMPEDANCE_50_OHM);
+	m_impedanceNames.push_back("High-Z");
+	m_impedanceNames.push_back("50Ω");
 }
 
 FunctionGeneratorDialog::~FunctionGeneratorDialog()
@@ -114,7 +140,12 @@ void FunctionGeneratorDialog::DoChannel(int i)
 {
 	auto chname = m_generator->GetFunctionChannelName(i);
 
-	float valueWidth = 100;
+	float valueWidth = 200;
+
+	Unit pct(Unit::UNIT_PERCENT);
+	Unit hz(Unit::UNIT_HZ);
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit fs(Unit::UNIT_FS);
 
 	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -123,30 +154,40 @@ void FunctionGeneratorDialog::DoChannel(int i)
 		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))
 			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
 
+		ImGui::SetNextItemWidth(valueWidth);
+		if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
+			m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
+
 		//Amplitude and offset are potentially damaging operations
-		//Require the user to commit changes before they take effect
+		//Require the user to explicitly commit changes before they take effect
 		ImGui::SetNextItemWidth(valueWidth);
-		if(FloatInputWithApplyButton("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude))
-			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_amplitude);
+		if(UnitInputWithExplicitApply("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude, volts))
+			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_committedAmplitude);
 
 		ImGui::SetNextItemWidth(valueWidth);
-		if(FloatInputWithApplyButton("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset))
-			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_offset);
+		if(UnitInputWithExplicitApply("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset, volts))
+			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_committedOffset);
+
+		//All other settings apply when user presses enter or focus is lost
+		ImGui::SetNextItemWidth(valueWidth);
+		if(Combo("Waveform", m_uiState[i].m_waveShapeNames, m_uiState[i].m_shapeIndex))
+			m_generator->SetFunctionChannelShape(i, m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex]);
 
 		ImGui::SetNextItemWidth(valueWidth);
-		if(ImGui::InputFloat("Duty Cycle", &m_uiState[i].m_dutyCycle))
-			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_dutyCycle);
+		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
+			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
 
-		//Frequency needs some extra logic for unit conversion
 		ImGui::SetNextItemWidth(valueWidth);
-		if(TextInputWithApplyButton("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency))
-		{
-			Unit hz(Unit::UNIT_HZ);
-			float f = hz.ParseString(m_uiState[i].m_frequency);
-			m_generator->SetFunctionChannelFrequency(i, f);
-			m_uiState[i].m_frequency = hz.PrettyPrint(f);
-			m_uiState[i].m_committedFrequency = m_uiState[i].m_frequency;
-		}
+		if(UnitInputWithImplicitApply("Duty Cycle", m_uiState[i].m_dutyCycle, m_uiState[i].m_committedDutyCycle, pct))
+			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_committedDutyCycle);
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(UnitInputWithImplicitApply("Rise Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedRiseTime, fs))
+			m_generator->SetFunctionChannelRiseTime(i, m_uiState[i].m_committedRiseTime);
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedFallTime, fs))
+			m_generator->SetFunctionChannelFallTime(i, m_uiState[i].m_committedFallTime);
 
 		ImGui::PopID();
 	}
