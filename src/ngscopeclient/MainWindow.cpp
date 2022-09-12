@@ -61,6 +61,26 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
 
 	LoadRecentInstrumentList();
+
+	//Set up a better font.
+	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
+	ImGuiIO& io = ImGui::GetIO();
+	ImFontGlyphRangesBuilder builder;
+	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+	builder.AddChar(L'°');
+	for(wchar_t i=0x370; i<=0x3ff; i++)	//Greek and Coptic
+		builder.AddChar(i);
+
+	ImVector<ImWchar> ranges;
+	builder.BuildRanges(&ranges);
+
+	auto font = io.Fonts->AddFontFromFileTTF(
+		FindDataFile("fonts/DejaVuSans.ttf").c_str(),
+		13,
+		nullptr,
+		ranges.Data);
+	io.Fonts->Build();
+	io.FontDefault = font;
 }
 
 MainWindow::~MainWindow()

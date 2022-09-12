@@ -52,6 +52,15 @@ add_executable(ngscopeclient
 	main.cpp
 )
 
+add_custom_target(
+	ngfonts
+	COMMENT "Copying fonts..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts ${CMAKE_BINARY_DIR}/src/ngscopeclient/fonts)
+
+add_dependencies(ngscopeclient
+	ngfonts
+	)
+
 # implot has a bunch of warnings, turn them off to avoid cluttering the build
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set_source_files_properties(

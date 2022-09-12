@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generator, Session* session)
-	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(300, 400))
+	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(400, 350))
 	, m_session(session)
 	, m_generator(generator)
 {
