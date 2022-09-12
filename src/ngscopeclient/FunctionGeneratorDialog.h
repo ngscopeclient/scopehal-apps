@@ -39,6 +39,23 @@
 #include "RollingBuffer.h"
 #include "Session.h"
 
+class FunctionGeneratorChannelUIState
+{
+public:
+	bool m_outputEnabled;
+
+	float m_amplitude;
+	float m_committedAmplitude;
+
+	float m_offset;
+	float m_committedOffset;
+
+	float m_dutyCycle;
+
+	std::string m_frequency;
+	std::string m_committedFrequency;
+};
+
 class FunctionGeneratorDialog : public Dialog
 {
 public:
@@ -51,12 +68,16 @@ public:
 	{ return m_generator; }
 
 protected:
+	void DoChannel(int i);
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;
 
 	///@brief The generator we're controlling
 	SCPIFunctionGenerator* m_generator;
+
+	///@brief UI state for each channel
+	std::vector<FunctionGeneratorChannelUIState> m_uiState;
 };
 
 

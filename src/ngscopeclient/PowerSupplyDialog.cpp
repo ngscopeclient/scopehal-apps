@@ -191,37 +191,14 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
 		if(ImGui::TreeNode("Set Points"))
 		{
-			bool voltageDirty = (m_channelUIState[i].m_setVoltage != m_channelUIState[i].m_lastAppliedSetVoltage);
-			bool currentDirty = (m_channelUIState[i].m_setCurrent != m_channelUIState[i].m_lastAppliedSetCurrent);
-
 			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputFloat("V###VSet", &m_channelUIState[i].m_setVoltage);
-			ImGui::SameLine();
-			if(!voltageDirty)
-				ImGui::BeginDisabled();
-			if(ImGui::Button("Apply###Voltage"))
-			{
+			if(FloatInputWithApplyButton("V", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_lastAppliedSetVoltage))
 				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setVoltage);
-				m_channelUIState[i].m_lastAppliedSetVoltage = m_channelUIState[i].m_setVoltage;
-			}
-			if(!voltageDirty)
-				ImGui::EndDisabled();
-
 			HelpMarker("Target voltage to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
 			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputFloat("A###ASet", &m_channelUIState[i].m_setCurrent);
-			ImGui::SameLine();
-			if(!currentDirty)
-				ImGui::BeginDisabled();
-			if(ImGui::Button("Apply###Current"))
-			{
-				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_setCurrent);
-				m_channelUIState[i].m_lastAppliedSetCurrent = m_channelUIState[i].m_setCurrent;
-			}
-			if(!currentDirty)
-				ImGui::EndDisabled();
-
+			if(FloatInputWithApplyButton("A", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_lastAppliedSetCurrent))
+				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_setCurrent);
 			HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
 			ImGui::TreePop();

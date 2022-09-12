@@ -46,30 +46,26 @@ FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generato
 	, m_session(session)
 	, m_generator(generator)
 {
-	/*
-	//Inputs
-	for(int i=0; i<m_generator->GetMeterChannelCount(); i++)
-		m_channelNames.push_back(m_generator->GetMeterChannelName(i));
+	Unit hz(Unit::UNIT_HZ);
 
-	//Primary operating modes
-	auto modemask = m_generator->GetMeasurementTypes();
-	auto primode = m_generator->GetMeterMode();
-	m_primaryModeSelector = 0;
-	for(unsigned int i=0; i<32; i++)
+	for(int i=0; i<m_generator->GetFunctionChannelCount(); i++)
 	{
-		auto mode = static_cast<FunctionGenerator::MeasurementTypes>(1 << i);
-		if(modemask & mode)
-		{
-			m_primaryModes.push_back(mode);
-			m_primaryModeNames.push_back(m_generator->ModeToText(mode));
-			if(primode == mode)
-				m_primaryModeSelector = m_primaryModes.size() - 1;
-		}
-	}
+		FunctionGeneratorChannelUIState state;
+		state.m_outputEnabled = m_generator->GetFunctionChannelActive(i);
 
-	//Secondary operating modes
-	RefreshSecondaryModeList();
-	*/
+		state.m_amplitude = m_generator->GetFunctionChannelAmplitude(i);
+		state.m_committedAmplitude = state.m_amplitude;
+
+		state.m_offset = m_generator->GetFunctionChannelOffset(i);
+		state.m_committedOffset = state.m_offset;
+
+		state.m_dutyCycle = m_generator->GetFunctionChannelDutyCycle(i);
+
+		state.m_frequency = hz.PrettyPrint(m_generator->GetFunctionChannelFrequency(i));
+		state.m_committedFrequency = state.m_frequency;
+
+		m_uiState.push_back(state);
+	}
 }
 
 FunctionGeneratorDialog::~FunctionGeneratorDialog()
@@ -105,137 +101,57 @@ bool FunctionGeneratorDialog::DoRender()
 		ImGui::EndDisabled();
 	}
 
-	/*
-	//Save history
-	auto etime = GetTime() - m_tstart;
-	auto pri = m_state->m_primaryMeasurement.load();
-	auto sec = m_state->m_secondaryMeasurement.load();
-	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
-	bool hasSecondary = m_generator->GetSecondaryMeterMode() != FunctionGenerator::NONE;
-	if(firstUpdateDone)
-	{
-		m_primaryHistory.AddPoint(etime, pri);
-		if(hasSecondary)
-			m_secondaryHistory.AddPoint(etime, sec);
-
-		m_primaryHistory.Span = m_historyDepth;
-		m_secondaryHistory.Span = m_historyDepth;
-	}
-
-	float valueWidth = 100;
-	auto primaryMode = m_generator->ModeToText(m_generator->GetMeterMode());
-	auto secondaryMode = m_generator->ModeToText(m_generator->GetSecondaryMeterMode());
-
-	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		if(ImGui::Checkbox("Autorange", &m_autorange))
-			m_generator->SetMeterAutoRange(m_autorange);
-		HelpMarker("Enables automatic selection of meter scale ranges.");
-
-		//Channel selector (hide if we have only one channel)
-		if(m_generator->GetMeterChannelCount() > 1)
-		{
-			if(Combo("Channel", m_channelNames, m_selectedChannel))
-				m_generator->SetCurrentMeterChannel(m_selectedChannel);
-
-			HelpMarker("Select which input channel is being monitored.");
-		}
-
-		//Primary operating mode selector
-		if(Combo("Mode", m_primaryModeNames, m_primaryModeSelector))
-			OnPrimaryModeChanged();
-		HelpMarker("Select the type of measurement to make.");
-
-		//Secondary operating mode selector
-		if(m_secondaryModeNames.empty())
-			ImGui::BeginDisabled();
-		if(Combo("Secondary Mode", m_secondaryModeNames, m_secondaryModeSelector))
-			m_generator->SetSecondaryMeterMode(m_secondaryModes[m_secondaryModeSelector]);
-		if(m_secondaryModeNames.empty())
-			ImGui::EndDisabled();
-
-		HelpMarker(
-			"Select auxiliary measurement mode, if supported.\n\n"
-			"The set of available auxiliary measurements depends on the current primary measurement mode.");
-	}
-
-	if(ImGui::CollapsingHeader("Measurements", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		string spri;
-		string ssec;
-
-		//Hide values until we get first readings back from the meter
-		if(firstUpdateDone)
-		{
-			spri = m_generator->GetMeterUnit().PrettyPrint(pri, m_generator->GetMeterDigits());
-			if(hasSecondary)
-				ssec = m_generator->GetSecondaryMeterUnit().PrettyPrint(sec, m_generator->GetMeterDigits());
-		}
-
-		ImGui::BeginDisabled();
-			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputText(primaryMode.c_str(), &spri[0], spri.size());
-		ImGui::EndDisabled();
-		HelpMarker("Most recent value for the primary measurement");
-
-		if(hasSecondary)
-		{
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputText(secondaryMode.c_str(), &ssec[0], ssec.size());
-			ImGui::EndDisabled();
-			HelpMarker("Most recent value for the secondary measurement");
-		}
-	}
-
-	auto csize = ImGui::GetContentRegionAvail();
-	if(ImGui::CollapsingHeader("Primary Trend"))
-	{
-		if(ImPlot::BeginPlot("Primary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-		{
-			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-			auto& hist = m_primaryHistory;
-			ImPlot::PlotLine(
-				primaryMode.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-
-			ImPlot::EndPlot();
-		}
-	}
-
-	if(!hasSecondary)
-		ImGui::BeginDisabled();
-
-	if(ImGui::CollapsingHeader("Secondary Trend"))
-	{
-		if(ImPlot::BeginPlot("Secondary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-		{
-			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-			auto& hist = m_secondaryHistory;
-
-			ImPlot::PlotLine(
-				secondaryMode.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-
-			ImPlot::EndPlot();
-		}
-	}
-
-	if(!hasSecondary)
-		ImGui::EndDisabled();
-	*/
+	for(int i=0; i<m_generator->GetFunctionChannelCount(); i++)
+		DoChannel(i);
 
 	return true;
+}
+
+/**
+	@brief Run the UI for a single channel
+ */
+void FunctionGeneratorDialog::DoChannel(int i)
+{
+	auto chname = m_generator->GetFunctionChannelName(i);
+
+	float valueWidth = 100;
+
+	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::PushID(chname.c_str());
+
+		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))
+			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
+
+		//Amplitude and offset are potentially damaging operations
+		//Require the user to commit changes before they take effect
+		ImGui::SetNextItemWidth(valueWidth);
+		if(FloatInputWithApplyButton("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude))
+			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_amplitude);
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(FloatInputWithApplyButton("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset))
+			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_offset);
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(ImGui::InputFloat("Duty Cycle", &m_uiState[i].m_dutyCycle))
+			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_dutyCycle);
+
+		//Frequency needs some extra logic for unit conversion
+		ImGui::SetNextItemWidth(valueWidth);
+		if(TextInputWithApplyButton("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency))
+		{
+			Unit hz(Unit::UNIT_HZ);
+			float f = hz.ParseString(m_uiState[i].m_frequency);
+			m_generator->SetFunctionChannelFrequency(i, f);
+			m_uiState[i].m_frequency = hz.PrettyPrint(f);
+			m_uiState[i].m_committedFrequency = m_uiState[i].m_frequency;
+		}
+
+		ImGui::PopID();
+	}
+
+	//Push config for dedicated generators
+	if(dynamic_cast<Oscilloscope*>(m_generator) == nullptr)
+		m_generator->GetTransport()->FlushCommandQueue();
 }
