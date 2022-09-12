@@ -16,8 +16,6 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-yaml-cpp"
   "${MINGW_PACKAGE_PREFIX}-glew"
   "${MINGW_PACKAGE_PREFIX}-ffts"
-  "${MINGW_PACKAGE_PREFIX}-opencl-headers"
-  "${MINGW_PACKAGE_PREFIX}-opencl-icd"
   "${MINGW_PACKAGE_PREFIX}-glfw"
 )
 makedepends=(
