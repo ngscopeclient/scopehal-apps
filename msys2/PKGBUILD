@@ -16,10 +16,6 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-yaml-cpp"
   "${MINGW_PACKAGE_PREFIX}-glew"
   "${MINGW_PACKAGE_PREFIX}-ffts"
-  "${MINGW_PACKAGE_PREFIX}-vulkan-loader"
-  "${MINGW_PACKAGE_PREFIX}-vulkan-headers"
-  "${MINGW_PACKAGE_PREFIX}-spirv-tools"
-  "${MINGW_PACKAGE_PREFIX}-spirv-headers"
   "${MINGW_PACKAGE_PREFIX}-opencl-headers"
   "${MINGW_PACKAGE_PREFIX}-opencl-icd"
   "${MINGW_PACKAGE_PREFIX}-glfw"
@@ -37,16 +33,16 @@ pkgver() {
 build() {
   cd "${srcdir}"/../..
 
-  git remote set-url origin git://github.com/glscopeclient/scopehal-apps
-  git submodule update --init --recursive
+  git pull --recurse-submodules
 
-  mkdir build
+  mkdir -p build
   cd build
 
   CXXFLAGS+=" -Wno-format" \
   MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
   ${MINGW_PREFIX}/bin/cmake.exe \
     -G "Ninja" \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
     -DBUILD_TESTING=OFF \
     ../
