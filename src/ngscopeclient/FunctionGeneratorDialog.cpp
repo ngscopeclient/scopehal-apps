@@ -153,41 +153,71 @@ void FunctionGeneratorDialog::DoChannel(int i)
 
 		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))
 			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
+		HelpMarker("Turns the output signal from this channel on or off");
 
 		ImGui::SetNextItemWidth(valueWidth);
 		if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
 			m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
+		HelpMarker(
+			"Select the expected load impedance.\n\n"
+			"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
 
 		//Amplitude and offset are potentially damaging operations
 		//Require the user to explicitly commit changes before they take effect
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithExplicitApply("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude, volts))
 			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_committedAmplitude);
+		HelpMarker("Peak-to-peak amplitude of the generated waveform");
 
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithExplicitApply("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset, volts))
 			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_committedOffset);
+		HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
 		//All other settings apply when user presses enter or focus is lost
 		ImGui::SetNextItemWidth(valueWidth);
 		if(Combo("Waveform", m_uiState[i].m_waveShapeNames, m_uiState[i].m_shapeIndex))
 			m_generator->SetFunctionChannelShape(i, m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex]);
+		HelpMarker("Select the type of waveform to generate");
 
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
 			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
 
+		auto waveformType = m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex];
+		bool hasDutyCycle = false;
+		switch(waveformType)
+		{
+			case FunctionGenerator::SHAPE_PULSE:
+			case FunctionGenerator::SHAPE_SQUARE:
+			case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
+				hasDutyCycle = true;
+				break;
+
+			default:
+				hasDutyCycle = false;
+		}
 		ImGui::SetNextItemWidth(valueWidth);
+		if(!hasDutyCycle)
+			ImGui::BeginDisabled();
 		if(UnitInputWithImplicitApply("Duty Cycle", m_uiState[i].m_dutyCycle, m_uiState[i].m_committedDutyCycle, pct))
 			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_committedDutyCycle);
+		if(!hasDutyCycle)
+			ImGui::EndDisabled();
+		HelpMarker("Duty cycle of the waveform, in percent. Not applicable to all waveform types.");
 
-		ImGui::SetNextItemWidth(valueWidth);
-		if(UnitInputWithImplicitApply("Rise Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedRiseTime, fs))
-			m_generator->SetFunctionChannelRiseTime(i, m_uiState[i].m_committedRiseTime);
+		//Rise and fall time controls are not present in all generators
+		//TODO: not all waveforms make sense to have rise/fall times etiher
+		if(m_generator->HasFunctionRiseFallTimeControls(i))
+		{
+			ImGui::SetNextItemWidth(valueWidth);
+			if(UnitInputWithImplicitApply("Rise Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedRiseTime, fs))
+				m_generator->SetFunctionChannelRiseTime(i, m_uiState[i].m_committedRiseTime);
 
-		ImGui::SetNextItemWidth(valueWidth);
-		if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedFallTime, fs))
-			m_generator->SetFunctionChannelFallTime(i, m_uiState[i].m_committedFallTime);
+			ImGui::SetNextItemWidth(valueWidth);
+			if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedFallTime, fs))
+				m_generator->SetFunctionChannelFallTime(i, m_uiState[i].m_committedFallTime);
+		}
 
 		ImGui::PopID();
 	}
