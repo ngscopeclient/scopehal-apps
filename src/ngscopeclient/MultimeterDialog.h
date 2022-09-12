@@ -47,6 +47,9 @@ public:
 
 	virtual bool DoRender();
 
+	SCPIMultimeter* GetMeter()
+	{ return m_meter; }
+
 protected:
 	void OnPrimaryModeChanged();
 	void RefreshSecondaryModeList();

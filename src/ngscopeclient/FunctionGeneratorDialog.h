@@ -30,127 +30,35 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of Session
+	@brief Declaration of FunctionGeneratorDialog
  */
-#include "ngscopeclient.h"
+#ifndef FunctionGeneratorDialog_h
+#define FunctionGeneratorDialog_h
+
+#include "Dialog.h"
+#include "RollingBuffer.h"
 #include "Session.h"
-#include "MainWindow.h"
-#include "FunctionGeneratorDialog.h"
-#include "MultimeterDialog.h"
-#include "PowerSupplyDialog.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-Session::Session(MainWindow* wnd)
-	: m_mainWindow(wnd)
-	, m_shuttingDown(false)
-	, m_modifiedSinceLastSave(false)
+class FunctionGeneratorDialog : public Dialog
 {
-}
+public:
+	FunctionGeneratorDialog(SCPIFunctionGenerator* meter, Session* session);
+	virtual ~FunctionGeneratorDialog();
 
-Session::~Session()
-{
-	//Signal our threads to exit
-	m_shuttingDown = true;
+	virtual bool DoRender();
 
-	//Block until our processing threads exit
-	for(auto& t : m_threads)
-		t->join();
-	m_threads.clear();
+	SCPIFunctionGenerator* GetGenerator()
+	{ return m_generator; }
 
-	//Delete scopes once we've terminated the threads
-	for(auto scope : m_oscilloscopes)
-		delete scope;
-	m_oscilloscopes.clear();
-	m_psus.clear();
-}
+protected:
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Instrument management
+	///@brief Session handle so we can remove the PSU when closed
+	Session* m_session;
 
-void Session::AddOscilloscope(Oscilloscope* scope)
-{
-	m_modifiedSinceLastSave = true;
-	m_oscilloscopes.push_back(scope);
+	///@brief The generator we're controlling
+	SCPIFunctionGenerator* m_generator;
+};
 
-	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
 
-	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
-}
 
-/**
-	@brief Adds a power supply to the session
- */
-void Session::AddPowerSupply(SCPIPowerSupply* psu)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Create shared PSU state
-	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
-	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
-
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(psu);
-}
-
-/**
-	@brief Removes a power supply from the session
- */
-void Session::RemovePowerSupply(SCPIPowerSupply* psu)
-{
-	m_modifiedSinceLastSave = true;
-	m_psus.erase(psu);
-}
-
-/**
-	@brief Adds a multimeter to the session
- */
-void Session::AddMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Create shared PSU state
-	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
-
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(meter);
-}
-
-/**
-	@brief Removes a multimeter from the session
- */
-void Session::RemoveMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
-	m_meters.erase(meter);
-}
-
-/**
-	@brief Adds a function generator to the session
- */
-void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_meters.push_back(generator);
-	m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
-
-	m_mainWindow->AddToRecentInstrumentList(generator);
-}
-
-/**
-	@brief Removes a function generator from the session
- */
-void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-	m_generators.erase(generator);
-}
+#endif

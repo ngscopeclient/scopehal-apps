@@ -62,10 +62,22 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 MainWindow::~MainWindow()
 {
+	CloseSession();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Session termination
+
+void MainWindow::CloseSession()
+{
+	//TODO: clear the actual session object
+
 	SaveRecentInstrumentList();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
+	m_meterDialogs.clear();
+	m_generatorDialogs.clear();
 	m_dialogs.clear();
 }
 
@@ -97,7 +109,14 @@ void MainWindow::RenderUI()
 			dlgsToClose.emplace(dlg);
 	}
 	for(auto& dlg : dlgsToClose)
+	{
+		//Multimeter dialogs are stored in a separate list as well
+		auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
+		if(meterDlg)
+			m_meterDialogs.erase(meterDlg->GetMeter());
+
 		m_dialogs.erase(dlg);
+	}
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
@@ -106,6 +125,17 @@ void MainWindow::RenderUI()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Top level menu
+
+void MainWindow::AddDialog(std::shared_ptr<Dialog> dlg)
+{
+	m_dialogs.emplace(dlg);
+
+	if(dynamic_pointer_cast<MultimeterDialog>(dlg) != nullptr)
+		m_meterDialogs.emplace(dlg);
+
+	if(dynamic_pointer_cast<FunctionGeneratorDialog>(dlg) != nullptr)
+		m_generatorDialogs.emplace(dlg);
+}
 
 /**
 	@brief Run the top level menu bar
@@ -117,6 +147,7 @@ void MainWindow::MainMenu()
 		FileMenu();
 		ViewMenu();
 		AddMenu();
+		WindowMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
 	}
@@ -387,6 +418,73 @@ void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vect
 		}
 
 		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Window menu
+ */
+void MainWindow::WindowMenu()
+{
+	if(ImGui::BeginMenu("Window"))
+	{
+		WindowGeneratorMenu();
+		WindowMultimeterMenu();
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Window | Generator menu
+
+	This menu is used for connecting to a function generator that is part of an oscilloscope.
+ */
+void MainWindow::WindowGeneratorMenu()
+{
+	if(ImGui::BeginMenu("Generator"))
+	{
+		auto scopes = m_session.GetScopes();
+		for(auto scope : scopes)
+		{
+			//Is the scope also a function generator? If not, skip it
+			if( (scope.GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
+				continue;
+
+			//Do we already have a dialog open for it? If so, don't make another
+			auto generator = dynamic_cast<SCPIFunctionGenerator*>(generator);
+			if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
+				continue;
+
+			//Add it to the menu
+			if(ImGui::MenuItem(generator->m_nickname.c_str())
+				m_session.AddFunctionGenerator(generator);
+		}
+	}
+}
+
+/**
+	@brief Run the Window | Multimeter menu
+ */
+void MainWindow::WindowMultimeterMenu()
+{
+	if(ImGui::BeginMenu("Multimeter"))
+	{
+		auto scopes = m_session.GetScopes();
+		for(auto scope : scopes)
+		{
+			//Is the scope also a multimeter? If not, skip it
+			if( (scope.GetInstrumentTypes() & Instrument::INST_DMM) == 0)
+				continue;
+
+			//Do we already have a dialog open for it? If so, don't make another
+			auto meter = dynamic_cast<SCPIMultimeter*>(scope);
+			if(m_meterDialogs.find(meter) != m_meterDialogs.end())
+				continue;
+
+			//Add it to the menu
+			if(ImGui::MenuItem(scope->m_nickname.c_str())
+				m_session.AddMultimeter(meter);
+		}
 	}
 }
 

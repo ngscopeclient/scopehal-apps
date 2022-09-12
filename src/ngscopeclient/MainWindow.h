@@ -41,6 +41,8 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+class MultimeterDialog;
+
 /**
 	@brief Top level application window
  */
@@ -50,11 +52,12 @@ public:
 	MainWindow(vk::raii::Queue& queue);
 	virtual ~MainWindow();
 
-	void AddDialog(std::shared_ptr<Dialog> dlg)
-	{ m_dialogs.emplace(dlg); }
+	void AddDialog(std::shared_ptr<Dialog> dlg);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+
+	void CloseSession();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// GUI handlers
@@ -73,6 +76,9 @@ protected:
 				void AddPowerSupplyMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
+			void WindowMenu();
+				void WindowGeneratorMenu();
+				void WindowMultimeterMenu();
 			void HelpMenu();
 		void DockingArea();
 
@@ -84,6 +90,12 @@ protected:
 
 	///@brief All dialogs and other pop-up UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;
+
+	///@brief Map of multimeters to meter control dialogs
+	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
+
+	///@brief Map of generators to generator control dialogs
+	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;

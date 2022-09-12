@@ -91,8 +91,9 @@ public:
 		m_shuttingDown = true;
 		m_thread->join();
 
-		//Disconnect once the thread has terminated
-		delete m_meter;
+		//Delete the meter once the thread has terminated unless it's also an oscilloscope
+		if(dynamic_cast<Oscilloscope*>(m_meter) == nullptr)
+			delete m_meter;
 	}
 
 	///@brief The meter
@@ -117,11 +118,19 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
+	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddMultimeter(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope);
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
+
+	/**
+		@brief Get the set of scopes we're currently connected to
+	 */
+	const std::vector<Oscilloscope*>& GetScopes()
+	{ return m_oscilloscopes; }
 
 protected:
 
@@ -142,6 +151,9 @@ protected:
 
 	///@brief Multimeters we are currently connected to
 	std::map<Multimeter*, std::unique_ptr<MultimeterConnectionState> > m_meters;
+
+	///@brief Function generators we are currently connected to
+	std::vector<SCPIFunctionGenerator*> m_generators;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;
