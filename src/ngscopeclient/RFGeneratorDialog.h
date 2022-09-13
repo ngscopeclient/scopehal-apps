@@ -30,129 +30,55 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MainWindow
+	@brief Declaration of RFGeneratorDialog
  */
-#ifndef MainWindow_h
-#define MainWindow_h
+#ifndef RFGeneratorDialog_h
+#define RFGeneratorDialog_h
 
 #include "Dialog.h"
-#include "PreferenceManager.h"
+#include "RollingBuffer.h"
 #include "Session.h"
-#include "VulkanWindow.h"
-#include "WaveformGroup.h"
 
-class MultimeterDialog;
-
-/**
-	@brief Top level application window
- */
-class MainWindow : public VulkanWindow
+class RFGeneratorChannelUIState
 {
 public:
-	MainWindow(vk::raii::Queue& queue);
-	virtual ~MainWindow();
+	bool m_outputEnabled;
 
-	void AddDialog(std::shared_ptr<Dialog> dlg);
+	std::string m_amplitude;
+	float m_committedAmplitude;
 
-protected:
-	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
+	std::string m_offset;
+	float m_committedOffset;
 
-	void CloseSession();
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// GUI handlers
-
-	virtual void RenderUI();
-		void MainMenu();
-			void FileMenu();
-			void ViewMenu();
-			void AddMenu();
-				void AddGeneratorMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddMultimeterMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddOscilloscopeMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddPowerSupplyMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddRFGeneratorMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-			void WindowMenu();
-				void WindowGeneratorMenu();
-				void WindowMultimeterMenu();
-			void HelpMenu();
-		void DockingArea();
-
-	///@brief Enable flag for main imgui demo window
-	bool m_showDemo;
-
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
-	///@brief All dialogs and other pop-up UI elements
-	std::set< std::shared_ptr<Dialog> > m_dialogs;
-
-	///@brief Map of multimeters to meter control dialogs
-	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
-
-	///@brief Map of generators to generator control dialogs
-	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
-
-	///@brief Map of RF generators to generator control dialogs
-	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
-
-	///@brief Waveform groups
-	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Session state
-
-	///@brief Our session object
-	Session m_session;
-
-	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Recent item lists
-
-	/**
-		@brief List of recently used instruments
-	 */
-	std::map<std::string, time_t> m_recentInstruments;
-
-	void LoadRecentInstrumentList();
-	void SaveRecentInstrumentList();
-
-public:
-	void AddToRecentInstrumentList(SCPIInstrument* inst);
-
-protected:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Error handling
-
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
-
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+	std::string m_frequency;
+	float m_committedFrequency;
 };
+
+class RFGeneratorDialog : public Dialog
+{
+public:
+	RFGeneratorDialog(SCPIRFSignalGenerator* meter, Session* session);
+	virtual ~RFGeneratorDialog();
+
+	virtual bool DoRender();
+
+	SCPIRFSignalGenerator* GetGenerator()
+	{ return m_generator; }
+
+protected:
+	void DoChannel(int i);
+
+	///@brief Session handle so we can remove the PSU when closed
+	Session* m_session;
+
+	///@brief The generator we're controlling
+	SCPIRFSignalGenerator* m_generator;
+
+	///@brief UI state for each channel
+	std::vector<RFGeneratorChannelUIState> m_uiState;
+
+};
+
+
 
 #endif

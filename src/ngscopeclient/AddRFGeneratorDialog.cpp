@@ -30,170 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of Session
+	@brief Implementation of AddRFGeneratorDialog
  */
+
 #include "ngscopeclient.h"
-#include "Session.h"
-#include "MainWindow.h"
-#include "FunctionGeneratorDialog.h"
-#include "MultimeterDialog.h"
-#include "PowerSupplyDialog.h"
-#include "RFGeneratorDialog.h"
+#include "AddRFGeneratorDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Session::Session(MainWindow* wnd)
-	: m_mainWindow(wnd)
-	, m_shuttingDown(false)
-	, m_modifiedSinceLastSave(false)
+AddRFGeneratorDialog::AddRFGeneratorDialog(Session& session)
+	: AddInstrumentDialog("Add RF Generator", session)
 {
+	SCPIRFSignalGenerator::EnumDrivers(m_drivers);
 }
 
-Session::~Session()
+AddRFGeneratorDialog::~AddRFGeneratorDialog()
 {
-	//Signal our threads to exit
-	m_shuttingDown = true;
-
-	//Block until our processing threads exit
-	for(auto& t : m_threads)
-		t->join();
-	m_threads.clear();
-
-	//Delete scopes once we've terminated the threads
-	for(auto scope : m_oscilloscopes)
-		delete scope;
-	m_oscilloscopes.clear();
-	m_psus.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Instrument management
-
-void Session::AddOscilloscope(Oscilloscope* scope)
-{
-	m_modifiedSinceLastSave = true;
-	m_oscilloscopes.push_back(scope);
-
-	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
-
-	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
-}
+// UI event handlers
 
 /**
-	@brief Adds a power supply to the session
+	@brief Connects to a scope
+
+	@return True if successful
  */
-void Session::AddPowerSupply(SCPIPowerSupply* psu)
+bool AddRFGeneratorDialog::DoConnect()
 {
-	m_modifiedSinceLastSave = true;
-
-	//Create shared PSU state
-	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
-	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
-
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(psu);
-}
-
-/**
-	@brief Removes a power supply from the session
- */
-void Session::RemovePowerSupply(SCPIPowerSupply* psu)
-{
-	m_modifiedSinceLastSave = true;
-	m_psus.erase(psu);
-}
-
-/**
-	@brief Adds a multimeter to the session
- */
-void Session::AddMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Create shared PSU state
-	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
-
-	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(meter);
-}
-
-/**
-	@brief Removes a multimeter from the session
- */
-void Session::RemoveMultimeter(SCPIMultimeter* meter)
-{
-	m_modifiedSinceLastSave = true;
-	m_meters.erase(meter);
-}
-
-/**
-	@brief Adds a function generator to the session
- */
-void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_generators.push_back(generator);
-	m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
-
-	m_mainWindow->AddToRecentInstrumentList(generator);
-}
-
-/**
-	@brief Removes a function generator from the session
- */
-void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	for(size_t i=0; i<m_generators.size(); i++)
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
 	{
-		if(m_generators[i] == generator)
-		{
-			m_generators.erase(m_generators.begin() + i);
-			break;
-		}
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
 	}
 
-	//Free it iff it's not part of an oscilloscope or RF signal generator
-	if( (dynamic_cast<Oscilloscope*>(generator) == nullptr) && (dynamic_cast<RFSignalGenerator*>(generator) == nullptr) )
-		delete generator;
-}
-
-/**
-	@brief Adds an RF signal generator to the session
- */
-void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_rfgenerators.push_back(generator);
-	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
-
-	m_mainWindow->AddToRecentInstrumentList(generator);
-}
-
-/**
-	@brief Removes an RF signal from the session
- */
-void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	for(size_t i=0; i<m_rfgenerators.size(); i++)
+	//Make sure we connected OK
+	if(!transport->IsConnected())
 	{
-		if(m_rfgenerators[i] == generator)
-		{
-			m_rfgenerators.erase(m_rfgenerators.begin() + i);
-			break;
-		}
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
 	}
+
+	//Create the RF Generator
+	auto gen = SCPIRFSignalGenerator::CreateRFSignalGenerator(m_drivers[m_selectedDriver], transport);
+	if(gen == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create RF cenerator driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
+
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created RF generator\n");
+
+	gen->m_nickname = m_nickname;
+	m_session.AddRFGenerator(gen);
+	return true;
 }

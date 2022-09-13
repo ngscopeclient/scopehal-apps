@@ -42,9 +42,11 @@
 #include "AddGeneratorDialog.h"
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
+#include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "MultimeterDialog.h"
+#include "RFGeneratorDialog.h"
 
 using namespace std;
 
@@ -133,15 +135,20 @@ void MainWindow::RenderUI()
 	}
 	for(auto& dlg : dlgsToClose)
 	{
-		//Multimeter dialogs are stored in a separate list as well
+		//Multimeter dialogs are stored in a separate list
 		auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
 		if(meterDlg)
 			m_meterDialogs.erase(meterDlg->GetMeter());
 
-		//Function generator dialogs are stored in a separate list as well
+		//Function generator dialogs are stored in a separate list
 		auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
 		if(genDlg)
 			m_generatorDialogs.erase(genDlg->GetGenerator());
+
+		//RF generator dialogs are stored in a separate list
+		auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
+		if(rgenDlg)
+			m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
 
 		m_dialogs.erase(dlg);
 	}
@@ -165,6 +172,10 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
 	if(fdlg != nullptr)
 		m_generatorDialogs[fdlg->GetGenerator()] = dlg;
+
+	auto rdlg = dynamic_cast<RFGeneratorDialog*>(dlg.get());
+	if(rdlg != nullptr)
+		m_rfgeneratorDialogs[rdlg->GetGenerator()] = dlg;
 }
 
 /**
@@ -236,6 +247,7 @@ void MainWindow::AddMenu()
 		AddMultimeterMenu(timestamps, reverseMap);
 		AddOscilloscopeMenu(timestamps, reverseMap);
 		AddPowerSupplyMenu(timestamps, reverseMap);
+		AddRFGeneratorMenu(timestamps, reverseMap);
 
 		ImGui::EndMenu();
 	}
@@ -511,6 +523,76 @@ void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vect
 
 								psu->m_nickname = nick;
 								m_session.AddPowerSupply(psu);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | RF Generator menu
+ */
+void MainWindow::AddRFGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("RF Generator"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddRFGeneratorDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known function generator drivers.
+		//Any recent instrument using one of these drivers is assumed to be a generator.
+		vector<string> drivers;
+		SCPIRFSignalGenerator::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the scope
+							auto gen = SCPIRFSignalGenerator::CreateRFSignalGenerator(drivername, transport);
+							if(gen == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create RF generator driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created RF generator\n");
+
+								gen->m_nickname = nick;
+								m_session.AddRFGenerator(gen);
 							}
 						}
 					}
