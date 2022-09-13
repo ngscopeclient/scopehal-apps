@@ -37,6 +37,7 @@
 #include "PowerSupplyDialog.h"
 
 using namespace std;
+using namespace std::chrono_literals;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -50,8 +51,12 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 	, m_psu(psu)
 	, m_state(state)
 {
+	//Set up initial empty state
+	m_channelUIState.resize(m_psu->GetPowerChannelCount());
+
+	//Asynchronously load rest of the state
 	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
-		m_channelUIState.push_back(PowerSupplyChannelUIState(m_psu, i));
+		m_futureUIState.push_back(async(launch::async, [psu, i]{ return PowerSupplyChannelUIState(psu, i); }));
 }
 
 PowerSupplyDialog::~PowerSupplyDialog()
@@ -97,6 +102,31 @@ bool PowerSupplyDialog::DoRender()
 			"Top level output enable, gating all outputs from the PSU.\n"
 			"\n"
 			"This acts as a second switch in series with the per-channel output enables.");
+	}
+
+	//Grab asynchronously loaded channel state if it's ready
+	if(m_futureUIState.size())
+	{
+		bool allDone = true;
+		for(size_t i=0; i<m_futureUIState.size(); i++)
+		{
+			//Already loaded? No action needed
+			if(m_channelUIState[i].m_setVoltage != "")
+				continue;
+
+			//Not ready? Keep waiting
+			if(m_futureUIState[i].wait_for(0s) != future_status::ready)
+			{
+				allDone = false;
+				continue;
+			}
+
+			//Ready, process it
+			m_channelUIState[i] = m_futureUIState[i].get();
+		}
+
+		if(allDone)
+			m_futureUIState.clear();
 	}
 
 	auto t = GetTime() - m_tstart;

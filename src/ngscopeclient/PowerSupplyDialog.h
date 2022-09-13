@@ -39,6 +39,8 @@
 #include "RollingBuffer.h"
 #include "Session.h"
 
+#include <future>
+
 /**
 	@brief UI state for a single power supply channel
 
@@ -56,6 +58,15 @@ public:
 
 	float m_committedSetVoltage;
 	float m_committedSetCurrent;
+
+	PowerSupplyChannelUIState()
+		: m_outputEnabled(false)
+		, m_overcurrentShutdownEnabled(false)
+		, m_setVoltage("")
+		, m_setCurrent("")
+		, m_committedSetVoltage(0)
+		, m_committedSetCurrent(0)
+	{}
 
 	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
@@ -103,6 +114,9 @@ protected:
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<PowerSupplyState> m_state;
+
+	//Future channel state during loading
+	std::vector<std::future<PowerSupplyChannelUIState> > m_futureUIState;
 
 	///@brief Channel state for the UI
 	std::vector<PowerSupplyChannelUIState> m_channelUIState;
