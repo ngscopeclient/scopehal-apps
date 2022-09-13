@@ -42,22 +42,63 @@
 class RFGeneratorChannelUIState
 {
 public:
+
 	bool m_outputEnabled;
 
-	std::string m_amplitude;
-	float m_committedAmplitude;
+	std::string m_level;
+	float m_committedLevel;
 
 	std::string m_offset;
 	float m_committedOffset;
 
 	std::string m_frequency;
 	float m_committedFrequency;
+
+	std::string m_sweepStart;
+	float m_committedSweepStart;
+
+	std::string m_sweepStop;
+	float m_committedSweepStop;
+
+	std::string m_sweepStartLevel;
+	float m_committedSweepStartLevel;
+
+	std::string m_sweepStopLevel;
+	float m_committedSweepStopLevel;
+
+	std::string m_sweepDwellTime;
+	float m_committedSweepDwellTime;
+
+	RFGeneratorChannelUIState();
+
+	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel)
+	: m_outputEnabled(generator->GetChannelOutputEnable(channel))
+	, m_committedLevel(generator->GetChannelOutputPower(channel))
+	, m_committedFrequency(generator->GetChannelCenterFrequency(channel))
+	, m_committedSweepStart(generator->GetSweepStartFrequency(channel))
+	, m_committedSweepStop(generator->GetSweepStopFrequency(channel))
+	, m_committedSweepStartLevel(generator->GetSweepStartLevel(channel))
+	, m_committedSweepStopLevel(generator->GetSweepStopLevel(channel))
+	, m_committedSweepDwellTime(generator->GetSweepDwellTime(channel))
+	{
+		Unit dbm(Unit::UNIT_DBM);
+		Unit hz(Unit::UNIT_HZ);
+		Unit fs(Unit::UNIT_FS);
+
+		m_level = dbm.PrettyPrint(m_committedLevel);
+		m_frequency = hz.PrettyPrint(m_committedFrequency);
+		m_sweepStart = hz.PrettyPrint(m_committedSweepStart);
+		m_sweepStop = hz.PrettyPrint(m_committedSweepStop);
+		m_sweepStartLevel = dbm.PrettyPrint(m_committedSweepStartLevel);
+		m_sweepStopLevel = dbm.PrettyPrint(m_committedSweepStopLevel);
+		m_sweepDwellTime = fs.PrettyPrint(m_committedSweepDwellTime);
+	}
 };
 
 class RFGeneratorDialog : public Dialog
 {
 public:
-	RFGeneratorDialog(SCPIRFSignalGenerator* meter, Session* session);
+	RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session);
 	virtual ~RFGeneratorDialog();
 
 	virtual bool DoRender();

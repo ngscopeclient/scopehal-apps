@@ -53,6 +53,7 @@ public:
 	virtual ~MainWindow();
 
 	void AddDialog(std::shared_ptr<Dialog> dlg);
+	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);

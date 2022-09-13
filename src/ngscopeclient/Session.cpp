@@ -196,4 +196,15 @@ void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
 			break;
 		}
 	}
+
+	//If the generator is also a function generator, delete that too
+	//FIXME: This is not the best UX. Would be best to ref count and delete when both are closed
+	auto func = dynamic_cast<SCPIFunctionGenerator*>(generator);
+	if(func != nullptr)
+	{
+		RemoveFunctionGenerator(func);
+		m_mainWindow->RemoveFunctionGenerator(func);
+	}
+
+	delete generator;
 }

@@ -844,7 +844,7 @@ SCPITransport* MainWindow::MakeTransport(const string& trans, const string& args
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Error messages
+// Dialog helpers
 
 /**
 	@brief Opens the error popup
@@ -868,5 +868,18 @@ void MainWindow::RenderErrorPopup()
 		if(ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
+	}
+}
+
+/**
+	@brief Closes the function generator dialog, if we have one
+ */
+void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
+{
+	auto it = m_generatorDialogs.find(gen);
+	if(it != m_generatorDialogs.end())
+	{
+		m_generatorDialogs.erase(gen);
+		m_dialogs.erase(it->second);
 	}
 }

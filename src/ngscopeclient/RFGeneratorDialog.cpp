@@ -42,50 +42,19 @@ using namespace std;
 // Construction / destruction
 
 RFGeneratorDialog::RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session)
-	: Dialog(string("Function Generator: ") + generator->m_nickname, ImVec2(400, 350))
+	: Dialog(string("RF Generator: ") + generator->m_nickname, ImVec2(400, 350))
 	, m_session(session)
 	, m_generator(generator)
 {
 	Unit hz(Unit::UNIT_HZ);
 	Unit dbm(Unit::UNIT_DBM);
 
+	double start = GetTime();
+
 	for(int i=0; i<m_generator->GetChannelCount(); i++)
-	{
-		RFGeneratorChannelUIState state;
-		/*
-		state.m_outputEnabled = m_generator->GetFunctionChannelActive(i);
+		m_uiState.push_back(RFGeneratorChannelUIState(m_generator, i));
 
-		state.m_committedAmplitude = m_generator->GetFunctionChannelAmplitude(i);
-		state.m_amplitude = volts.PrettyPrint(state.m_committedAmplitude);
-
-		state.m_committedOffset = m_generator->GetFunctionChannelOffset(i);
-		state.m_offset = volts.PrettyPrint(state.m_committedOffset);
-
-		state.m_committedDutyCycle = m_generator->GetFunctionChannelDutyCycle(i);
-		state.m_dutyCycle = percent.PrettyPrint(state.m_committedDutyCycle);
-
-		state.m_committedFrequency = m_generator->GetFunctionChannelFrequency(i);
-		state.m_frequency = hz.PrettyPrint(state.m_committedFrequency);
-
-		state.m_committedRiseTime = m_generator->GetFunctionChannelRiseTime(i);
-		state.m_riseTime = fs.PrettyPrint(state.m_committedRiseTime);
-
-		state.m_committedFallTime = m_generator->GetFunctionChannelFallTime(i);
-		state.m_fallTime = fs.PrettyPrint(state.m_committedFallTime);
-
-		//Convert waveform shape to list box index
-		state.m_waveShapes = m_generator->GetAvailableWaveformShapes(i);
-		state.m_shapeIndex = 0;
-		auto shape = m_generator->GetFunctionChannelShape(i);
-		for(size_t j=0; j<state.m_waveShapes.size(); j++)
-		{
-			if(shape == state.m_waveShapes[j])
-				state.m_shapeIndex = j;
-			state.m_waveShapeNames.push_back(m_generator->GetNameOfShape(state.m_waveShapes[j]));
-		}
-		*/
-		m_uiState.push_back(state);
-	}
+	LogDebug("Intial UI state loaded in %.2f ms\n", (GetTime() - start) * 1000);
 }
 
 RFGeneratorDialog::~RFGeneratorDialog()
@@ -132,93 +101,86 @@ bool RFGeneratorDialog::DoRender()
  */
 void RFGeneratorDialog::DoChannel(int i)
 {
-	/*
-	auto chname = m_generator->GetFunctionChannelName(i);
+	auto chname = m_generator->GetChannelName(i);
 
-	float valueWidth = 200;
-
-	Unit pct(Unit::UNIT_PERCENT);
-	Unit hz(Unit::UNIT_HZ);
-	Unit volts(Unit::UNIT_VOLTS);
 	Unit fs(Unit::UNIT_FS);
+	Unit hz(Unit::UNIT_HZ);
+	Unit dbm(Unit::UNIT_DBM);
 
 	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::PushID(chname.c_str());
 
 		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))
-			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
-		HelpMarker("Turns the output signal from this channel on or off");
+			m_generator->SetChannelOutputEnable(i, m_uiState[i].m_outputEnabled);
+		HelpMarker("Turns the RF signal from this channel on or off");
 
-		ImGui::SetNextItemWidth(valueWidth);
-		if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
-			m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
-		HelpMarker(
-			"Select the expected load impedance.\n\n"
-			"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
+		//Power level is a potentially damaging operation
+		//Require the user to explicitly commit changes before it takes effect
+		if(UnitInputWithExplicitApply("Level", m_uiState[i].m_level, m_uiState[i].m_committedLevel, dbm))
+			m_generator->SetChannelOutputPower(i, m_uiState[i].m_committedLevel);
+		HelpMarker("Power level of the generated waveform");
 
-		//Amplitude and offset are potentially damaging operations
-		//Require the user to explicitly commit changes before they take effect
-		ImGui::SetNextItemWidth(valueWidth);
-		if(UnitInputWithExplicitApply("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude, volts))
-			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_committedAmplitude);
-		HelpMarker("Peak-to-peak amplitude of the generated waveform");
-
-		ImGui::SetNextItemWidth(valueWidth);
-		if(UnitInputWithExplicitApply("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset, volts))
-			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_committedOffset);
-		HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
-
-		//All other settings apply when user presses enter or focus is lost
-		ImGui::SetNextItemWidth(valueWidth);
-		if(Combo("Waveform", m_uiState[i].m_waveShapeNames, m_uiState[i].m_shapeIndex))
-			m_generator->SetFunctionChannelShape(i, m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex]);
-		HelpMarker("Select the type of waveform to generate");
-
-		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
-			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
+			m_generator->SetChannelCenterFrequency(i, m_uiState[i].m_committedFrequency);
 
-		auto waveformType = m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex];
-		bool hasDutyCycle = false;
-		switch(waveformType)
+		if(m_generator->IsSweepAvailable(i))
 		{
-			case RFGenerator::SHAPE_PULSE:
-			case RFGenerator::SHAPE_SQUARE:
-			case RFGenerator::SHAPE_PRBS_NONSTANDARD:
-				hasDutyCycle = true;
-				break;
+			if(ImGui::TreeNode("Sweep"))
+			{
+				ImGui::PushID("Sweep");
 
-			default:
-				hasDutyCycle = false;
+				if(UnitInputWithImplicitApply("Dwell Time",
+					m_uiState[i].m_sweepDwellTime, m_uiState[i].m_committedSweepDwellTime, fs))
+				{
+					m_generator->SetSweepDwellTime(i, m_uiState[i].m_committedSweepDwellTime);
+				}
+
+				if(UnitInputWithImplicitApply("Start Frequency",
+					m_uiState[i].m_sweepStart, m_uiState[i].m_committedSweepStart, hz))
+				{
+					m_generator->SetSweepStartFrequency(i, m_uiState[i].m_committedSweepStart);
+				}
+
+				if(UnitInputWithExplicitApply("Start Level",
+					m_uiState[i].m_sweepStartLevel, m_uiState[i].m_committedSweepStartLevel, dbm))
+				{
+					m_generator->SetSweepStartLevel(i, m_uiState[i].m_committedSweepStartLevel);
+				}
+
+				if(UnitInputWithImplicitApply("Stop Frequency",
+					m_uiState[i].m_sweepStop, m_uiState[i].m_committedSweepStop, hz))
+				{
+					m_generator->SetSweepStopFrequency(i, m_uiState[i].m_committedSweepStop);
+				}
+
+				if(UnitInputWithExplicitApply("Stop Level",
+					m_uiState[i].m_sweepStopLevel, m_uiState[i].m_committedSweepStopLevel, hz))
+				{
+					m_generator->SetSweepStopLevel(i, m_uiState[i].m_committedSweepStopLevel);
+				}
+
+				ImGui::PopID();
+				ImGui::TreePop();
+			}
 		}
-		ImGui::SetNextItemWidth(valueWidth);
-		if(!hasDutyCycle)
-			ImGui::BeginDisabled();
-		if(UnitInputWithImplicitApply("Duty Cycle", m_uiState[i].m_dutyCycle, m_uiState[i].m_committedDutyCycle, pct))
-			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_committedDutyCycle);
-		if(!hasDutyCycle)
-			ImGui::EndDisabled();
-		HelpMarker("Duty cycle of the waveform, in percent. Not applicable to all waveform types.");
 
-		//Rise and fall time controls are not present in all generators
-		//TODO: not all waveforms make sense to have rise/fall times etiher
-		if(m_generator->HasFunctionRiseFallTimeControls(i))
+		if(ImGui::TreeNode("Analog Modulation"))
 		{
-			ImGui::SetNextItemWidth(valueWidth);
-			if(UnitInputWithImplicitApply("Rise Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedRiseTime, fs))
-				m_generator->SetFunctionChannelRiseTime(i, m_uiState[i].m_committedRiseTime);
+			ImGui::TreePop();
+		}
 
-			ImGui::SetNextItemWidth(valueWidth);
-			if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedFallTime, fs))
-				m_generator->SetFunctionChannelFallTime(i, m_uiState[i].m_committedFallTime);
+		if(m_generator->IsVectorModulationAvailable(i))
+		{
+			if(ImGui::TreeNode("Vector Modulation"))
+			{
+				ImGui::TreePop();
+			}
 		}
 
 		ImGui::PopID();
 	}
 
-	//Push config for dedicated generators
-	if(dynamic_cast<Oscilloscope*>(m_generator) == nullptr)
-		m_generator->GetTransport()->FlushCommandQueue();
-	*/
+	//Push any pending traffic to hardware
+	m_generator->GetTransport()->FlushCommandQueue();
 }
