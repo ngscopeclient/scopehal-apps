@@ -67,7 +67,7 @@ public:
 		Unit volts(Unit::UNIT_VOLTS);
 		Unit amps(Unit::UNIT_AMPS);
 		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = volts.PrettyPrint(m_committedSetCurrent);
+		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
 	}
 
 	RollingBuffer m_voltageHistory;
