@@ -53,6 +53,7 @@ public:
 	virtual ~MainWindow();
 
 	void AddDialog(std::shared_ptr<Dialog> dlg);
+	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -79,6 +80,9 @@ protected:
 				void AddPowerSupplyMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddRFGeneratorMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
@@ -99,6 +103,9 @@ protected:
 
 	///@brief Map of generators to generator control dialogs
 	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
+
+	///@brief Map of RF generators to generator control dialogs
+	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;

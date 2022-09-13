@@ -125,6 +125,8 @@ public:
 	void AddOscilloscope(Oscilloscope* scope);
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
+	void AddRFGenerator(SCPIRFSignalGenerator* generator);
+	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 
 	/**
 		@brief Get the set of scopes we're currently connected to
@@ -154,6 +156,9 @@ protected:
 
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;
+
+	///@brief RF generators we are currently connected to
+	std::vector<SCPIRFSignalGenerator*> m_rfgenerators;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

@@ -30,96 +30,96 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Declaration of RFGeneratorDialog
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
+#ifndef RFGeneratorDialog_h
+#define RFGeneratorDialog_h
 
 #include "Dialog.h"
 #include "RollingBuffer.h"
 #include "Session.h"
 
-#include <future>
-
-/**
-	@brief UI state for a single power supply channel
-
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
- */
-class PowerSupplyChannelUIState
+class RFGeneratorChannelUIState
 {
 public:
+
 	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
 
-	std::string m_setVoltage;
-	std::string m_setCurrent;
+	std::string m_level;
+	float m_committedLevel;
 
-	float m_committedSetVoltage;
-	float m_committedSetCurrent;
+	std::string m_offset;
+	float m_committedOffset;
 
-	PowerSupplyChannelUIState()
-		: m_outputEnabled(false)
-		, m_overcurrentShutdownEnabled(false)
-		, m_setVoltage("")
-		, m_setCurrent("")
-		, m_committedSetVoltage(0)
-		, m_committedSetCurrent(0)
-	{}
+	std::string m_frequency;
+	float m_committedFrequency;
 
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
+	std::string m_sweepStart;
+	float m_committedSweepStart;
+
+	std::string m_sweepStop;
+	float m_committedSweepStop;
+
+	std::string m_sweepStartLevel;
+	float m_committedSweepStartLevel;
+
+	std::string m_sweepStopLevel;
+	float m_committedSweepStopLevel;
+
+	std::string m_sweepDwellTime;
+	float m_committedSweepDwellTime;
+
+	RFGeneratorChannelUIState();
+
+	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel)
+	: m_outputEnabled(generator->GetChannelOutputEnable(channel))
+	, m_committedLevel(generator->GetChannelOutputPower(channel))
+	, m_committedFrequency(generator->GetChannelCenterFrequency(channel))
+	, m_committedSweepStart(generator->GetSweepStartFrequency(channel))
+	, m_committedSweepStop(generator->GetSweepStopFrequency(channel))
+	, m_committedSweepStartLevel(generator->GetSweepStartLevel(channel))
+	, m_committedSweepStopLevel(generator->GetSweepStopLevel(channel))
+	, m_committedSweepDwellTime(generator->GetSweepDwellTime(channel))
 	{
-		Unit volts(Unit::UNIT_VOLTS);
-		Unit amps(Unit::UNIT_AMPS);
-		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
-	}
+		Unit dbm(Unit::UNIT_DBM);
+		Unit hz(Unit::UNIT_HZ);
+		Unit fs(Unit::UNIT_FS);
 
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
+		m_level = dbm.PrettyPrint(m_committedLevel);
+		m_frequency = hz.PrettyPrint(m_committedFrequency);
+		m_sweepStart = hz.PrettyPrint(m_committedSweepStart);
+		m_sweepStop = hz.PrettyPrint(m_committedSweepStop);
+		m_sweepStartLevel = dbm.PrettyPrint(m_committedSweepStartLevel);
+		m_sweepStopLevel = dbm.PrettyPrint(m_committedSweepStopLevel);
+		m_sweepDwellTime = fs.PrettyPrint(m_committedSweepDwellTime);
+	}
 };
 
-class PowerSupplyDialog : public Dialog
+class RFGeneratorDialog : public Dialog
 {
 public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
+	RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session);
+	virtual ~RFGeneratorDialog();
 
 	virtual bool DoRender();
 
+	SCPIRFSignalGenerator* GetGenerator()
+	{ return m_generator; }
+
 protected:
-	void CombinedTrendPlot(float etime);
-	void ChannelSettings(int i, float v, float a, float etime);
+	void DoChannel(int i);
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;
 
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
+	///@brief The generator we're controlling
+	SCPIRFSignalGenerator* m_generator;
 
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
+	///@brief UI state for each channel
+	std::vector<RFGeneratorChannelUIState> m_uiState;
 
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	//Future channel state during loading
-	std::vector<std::future<PowerSupplyChannelUIState> > m_futureUIState;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
 };
+
+
 
 #endif

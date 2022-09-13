@@ -30,96 +30,21 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Declaration of AddRFGeneratorDialog
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
+#ifndef AddRFGeneratorDialog_h
+#define AddRFGeneratorDialog_h
 
-#include "Dialog.h"
-#include "RollingBuffer.h"
-#include "Session.h"
+#include "AddInstrumentDialog.h"
 
-#include <future>
-
-/**
-	@brief UI state for a single power supply channel
-
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
- */
-class PowerSupplyChannelUIState
+class AddRFGeneratorDialog : public AddInstrumentDialog
 {
 public:
-	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
-
-	std::string m_setVoltage;
-	std::string m_setCurrent;
-
-	float m_committedSetVoltage;
-	float m_committedSetCurrent;
-
-	PowerSupplyChannelUIState()
-		: m_outputEnabled(false)
-		, m_overcurrentShutdownEnabled(false)
-		, m_setVoltage("")
-		, m_setCurrent("")
-		, m_committedSetVoltage(0)
-		, m_committedSetCurrent(0)
-	{}
-
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
-	{
-		Unit volts(Unit::UNIT_VOLTS);
-		Unit amps(Unit::UNIT_AMPS);
-		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
-	}
-
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
-};
-
-class PowerSupplyDialog : public Dialog
-{
-public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
-
-	virtual bool DoRender();
+	AddRFGeneratorDialog(Session& session);
+	virtual ~AddRFGeneratorDialog();
 
 protected:
-	void CombinedTrendPlot(float etime);
-	void ChannelSettings(int i, float v, float a, float etime);
-
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	//Future channel state during loading
-	std::vector<std::future<PowerSupplyChannelUIState> > m_futureUIState;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
+	virtual bool DoConnect();
 };
 
 #endif

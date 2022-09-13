@@ -38,6 +38,7 @@
 #include "FunctionGeneratorDialog.h"
 #include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
+#include "RFGeneratorDialog.h"
 
 using namespace std;
 
@@ -162,7 +163,48 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 		}
 	}
 
-	//Free it iff it's not part of an oscilloscope
-	if(dynamic_cast<Oscilloscope*>(generator) == nullptr)
+	//Free it iff it's not part of an oscilloscope or RF signal generator
+	if( (dynamic_cast<Oscilloscope*>(generator) == nullptr) && (dynamic_cast<RFSignalGenerator*>(generator) == nullptr) )
 		delete generator;
+}
+
+/**
+	@brief Adds an RF signal generator to the session
+ */
+void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
+{
+	m_modifiedSinceLastSave = true;
+
+	m_rfgenerators.push_back(generator);
+	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
+
+	m_mainWindow->AddToRecentInstrumentList(generator);
+}
+
+/**
+	@brief Removes an RF signal from the session
+ */
+void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
+{
+	m_modifiedSinceLastSave = true;
+
+	for(size_t i=0; i<m_rfgenerators.size(); i++)
+	{
+		if(m_rfgenerators[i] == generator)
+		{
+			m_rfgenerators.erase(m_rfgenerators.begin() + i);
+			break;
+		}
+	}
+
+	//If the generator is also a function generator, delete that too
+	//FIXME: This is not the best UX. Would be best to ref count and delete when both are closed
+	auto func = dynamic_cast<SCPIFunctionGenerator*>(generator);
+	if(func != nullptr)
+	{
+		RemoveFunctionGenerator(func);
+		m_mainWindow->RemoveFunctionGenerator(func);
+	}
+
+	delete generator;
 }

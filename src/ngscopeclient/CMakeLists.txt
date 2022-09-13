@@ -31,6 +31,7 @@ add_executable(ngscopeclient
 	AddInstrumentDialog.cpp
 	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp
+	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
 	Dialog.cpp
 	FunctionGeneratorDialog.cpp
@@ -43,6 +44,7 @@ add_executable(ngscopeclient
 	PreferenceManager.cpp
 	PreferenceSchema.cpp
 	PreferenceTree.cpp
+	RFGeneratorDialog.cpp
 	ScopeThread.cpp
 	Session.cpp
 	VulkanWindow.cpp
