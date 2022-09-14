@@ -38,6 +38,40 @@
 class MainWindow;
 
 /**
+	@brief Internal state for a connection to an RF signal generator
+ */
+class RFSignalGeneratorConnectionState
+{
+public:
+	RFSignalGeneratorConnectionState(SCPIRFSignalGenerator* gen, std::shared_ptr<RFSignalGeneratorState> state)
+		: m_gen(gen)
+		, m_shuttingDown(false)
+	{
+		RFSignalGeneratorThreadArgs args(gen, &m_shuttingDown, state);
+		m_thread = std::make_unique<std::thread>(RFSignalGeneratorThread, args);
+	}
+
+	~RFSignalGeneratorConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+
+		//Disconnect once the thread has terminated
+		delete m_gen;
+	}
+
+	///@brief The signal generator
+	SCPIRFSignalGenerator* m_gen;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the generator
+	std::unique_ptr<std::thread> m_thread;
+};
+
+/**
 	@brief Internal state for a connection to a PSU
  */
 class PowerSupplyConnectionState
@@ -154,11 +188,11 @@ protected:
 	///@brief Multimeters we are currently connected to
 	std::map<Multimeter*, std::unique_ptr<MultimeterConnectionState> > m_meters;
 
+	///@brief RF generators we are currently connected to
+	std::map<SCPIRFSignalGenerator*, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
+
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;
-
-	///@brief RF generators we are currently connected to
-	std::vector<SCPIRFSignalGenerator*> m_rfgenerators;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

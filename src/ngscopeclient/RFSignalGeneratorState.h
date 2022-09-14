@@ -26,74 +26,40 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Declaration of RFSignalGeneratorState
+ */
+#ifndef RFSignalGeneratorState_h
+#define RFSignalGeneratorState_h
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
-
-#include <atomic>
-
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-
-class RFSignalGeneratorThreadArgs
+/**
+	@brief Current status of a power supply
+ */
+class RFSignalGeneratorState
 {
 public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
+	RFSignalGeneratorState(size_t n = 0)
+	{
+		m_channelLevel = std::make_unique<std::atomic<float>[] >(n);
+		m_channelFrequency = std::make_unique<std::atomic<float>[] >(n);
+
+		for(size_t i=0; i<n; i++)
+		{
+			m_channelLevel[i] = 0;
+			m_channelFrequency[i] = 0;
+		}
+
+		m_firstUpdateDone = false;
+	}
+
+	std::unique_ptr<std::atomic<float>[]> m_channelLevel;
+	std::unique_ptr<std::atomic<float>[]> m_channelFrequency;
+
+	std::atomic<bool> m_firstUpdateDone;
 };
-
-class PowerSupplyThreadArgs
-{
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
-
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-};
-
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	{}
-
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-};
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 
 #endif
