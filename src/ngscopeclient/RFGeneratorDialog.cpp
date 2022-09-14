@@ -215,7 +215,10 @@ void RFGeneratorDialog::DoChannel(int i)
 			p = dbm.PrettyPrint(m_state->m_channelLevel[i]);
 		}
 
-		if(m_uiState[i].m_sweepType >= 2)
+		bool sweepingPower = m_uiState[i].m_sweepType >= 2;
+		bool sweepingFrequency = (m_uiState[i].m_sweepType == 1) || (m_uiState[i].m_sweepType == 3);
+
+		if(sweepingPower)
 		{
 			ImGui::BeginDisabled();
 			ImGui::InputText("Level", &p);
@@ -234,7 +237,7 @@ void RFGeneratorDialog::DoChannel(int i)
 			HelpMarker("Power level of the generated waveform");
 		}
 
-		if( (m_uiState[i].m_sweepType == 1) || (m_uiState[i].m_sweepType == 3) )
+		if(sweepingFrequency)
 		{
 			ImGui::BeginDisabled();
 			ImGui::InputText("Frequency", &f);
@@ -260,48 +263,58 @@ void RFGeneratorDialog::DoChannel(int i)
 
 				if(Combo("Mode", m_uiState[i].m_sweepTypeNames, m_uiState[i].m_sweepType))
 					m_generator->SetSweepType(i, m_uiState[i].m_sweepTypes[m_uiState[i].m_sweepType]);
+				HelpMarker("Choose whether to sweep frequency, power, both, or neither.");
 
 				if(UnitInputWithImplicitApply("Dwell Time",
 					m_uiState[i].m_sweepDwellTime, m_uiState[i].m_committedSweepDwellTime, fs))
 				{
 					m_generator->SetSweepDwellTime(i, m_uiState[i].m_committedSweepDwellTime);
 				}
+				HelpMarker("Time to stay at each frequency before moving to the next.");
 
 				if(IntInputWithImplicitApply("Points", m_uiState[i].m_sweepPoints, m_uiState[i].m_committedSweepPoints))
 					m_generator->SetSweepPoints(i, m_uiState[i].m_committedSweepPoints);
+				HelpMarker("Number of steps in the sweep.");
 
 				if(Combo("Shape", m_uiState[i].m_sweepShapeNames, m_uiState[i].m_sweepShape))
 					m_generator->SetSweepShape(i, m_uiState[i].m_sweepShapes[m_uiState[i].m_sweepShape]);
+				HelpMarker("Select the shape of the sweep waveform (triangle or sawtooth).");
 
 				if(Combo("Spacing", m_uiState[i].m_sweepSpaceNames, m_uiState[i].m_sweepSpacing))
 					m_generator->SetSweepSpacing(i, m_uiState[i].m_sweepSpaceTypes[m_uiState[i].m_sweepSpacing]);
+				HelpMarker("Specify how to divide the sweep range into points (linear or logarithmic spacing).");
 
 				if(Combo("Direction", m_uiState[i].m_sweepDirectionNames, m_uiState[i].m_sweepDirection))
 					m_generator->SetSweepDirection(i, m_uiState[i].m_sweepDirections[m_uiState[i].m_sweepDirection]);
+				HelpMarker("Allows the direction of the sweep to be reversed.");
 
 				if(UnitInputWithImplicitApply("Start Frequency",
 					m_uiState[i].m_sweepStart, m_uiState[i].m_committedSweepStart, hz))
 				{
 					m_generator->SetSweepStartFrequency(i, m_uiState[i].m_committedSweepStart);
 				}
+				HelpMarker("Initial value for frequency sweeps. Ignored if not sweeping frequency.");
 
 				if(UnitInputWithExplicitApply("Start Level",
 					m_uiState[i].m_sweepStartLevel, m_uiState[i].m_committedSweepStartLevel, dbm))
 				{
 					m_generator->SetSweepStartLevel(i, m_uiState[i].m_committedSweepStartLevel);
 				}
+				HelpMarker("Initial value for power sweeps. Ignored if not sweeping power.");
 
 				if(UnitInputWithImplicitApply("Stop Frequency",
 					m_uiState[i].m_sweepStop, m_uiState[i].m_committedSweepStop, hz))
 				{
 					m_generator->SetSweepStopFrequency(i, m_uiState[i].m_committedSweepStop);
 				}
+				HelpMarker("Ending value for frequency sweeps. Ignored if not sweeping frequency.");
 
 				if(UnitInputWithExplicitApply("Stop Level",
 					m_uiState[i].m_sweepStopLevel, m_uiState[i].m_committedSweepStopLevel, dbm))
 				{
 					m_generator->SetSweepStopLevel(i, m_uiState[i].m_committedSweepStopLevel);
 				}
+				HelpMarker("Ending value for power sweeps. Ignored if not sweeping power.");
 
 				ImGui::PopID();
 				ImGui::TreePop();
