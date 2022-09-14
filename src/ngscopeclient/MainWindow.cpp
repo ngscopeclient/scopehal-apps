@@ -103,6 +103,7 @@ void MainWindow::CloseSession()
 	//This ensures that we have a nice well defined shutdown order.
 	m_meterDialogs.clear();
 	m_generatorDialogs.clear();
+	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
 }
 
