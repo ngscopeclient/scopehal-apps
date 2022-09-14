@@ -67,6 +67,8 @@ Session::~Session()
 		delete scope;
 	m_oscilloscopes.clear();
 	m_psus.clear();
+	m_rfgenerators.clear();
+	m_meters.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,7 +117,7 @@ void Session::AddMultimeter(SCPIMultimeter* meter)
 {
 	m_modifiedSinceLastSave = true;
 
-	//Create shared PSU state
+	//Create shared meter state
 	auto state = make_shared<MultimeterState>();
 	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
 
@@ -175,8 +177,11 @@ void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
 {
 	m_modifiedSinceLastSave = true;
 
-	m_rfgenerators.push_back(generator);
-	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
+	//Create shared meter state
+	auto state = make_shared<RFSignalGeneratorState>(generator->GetChannelCount());
+	m_rfgenerators[generator] = make_unique<RFSignalGeneratorConnectionState>(generator, state);
+
+	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(generator);
 }
@@ -188,15 +193,6 @@ void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
 {
 	m_modifiedSinceLastSave = true;
 
-	for(size_t i=0; i<m_rfgenerators.size(); i++)
-	{
-		if(m_rfgenerators[i] == generator)
-		{
-			m_rfgenerators.erase(m_rfgenerators.begin() + i);
-			break;
-		}
-	}
-
 	//If the generator is also a function generator, delete that too
 	//FIXME: This is not the best UX. Would be best to ref count and delete when both are closed
 	auto func = dynamic_cast<SCPIFunctionGenerator*>(generator);
@@ -206,5 +202,5 @@ void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
 		m_mainWindow->RemoveFunctionGenerator(func);
 	}
 
-	delete generator;
+	m_rfgenerators.erase(generator);
 }

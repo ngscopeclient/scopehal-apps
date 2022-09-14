@@ -39,11 +39,103 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// RFGeneratorChannelUIState
+
+RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel)
+	: m_outputEnabled(generator->GetChannelOutputEnable(channel))
+	, m_committedLevel(generator->GetChannelOutputPower(channel))
+	, m_committedFrequency(generator->GetChannelCenterFrequency(channel))
+	, m_committedSweepStart(generator->GetSweepStartFrequency(channel))
+	, m_committedSweepStop(generator->GetSweepStopFrequency(channel))
+	, m_committedSweepStartLevel(generator->GetSweepStartLevel(channel))
+	, m_committedSweepStopLevel(generator->GetSweepStopLevel(channel))
+	, m_committedSweepDwellTime(generator->GetSweepDwellTime(channel))
+	, m_committedSweepPoints(generator->GetSweepPoints(channel))
+	{
+		Unit dbm(Unit::UNIT_DBM);
+		Unit hz(Unit::UNIT_HZ);
+		Unit fs(Unit::UNIT_FS);
+
+		m_level = dbm.PrettyPrint(m_committedLevel);
+		m_frequency = hz.PrettyPrint(m_committedFrequency);
+		m_sweepStart = hz.PrettyPrint(m_committedSweepStart);
+		m_sweepStop = hz.PrettyPrint(m_committedSweepStop);
+		m_sweepStartLevel = dbm.PrettyPrint(m_committedSweepStartLevel);
+		m_sweepStopLevel = dbm.PrettyPrint(m_committedSweepStopLevel);
+		m_sweepDwellTime = fs.PrettyPrint(m_committedSweepDwellTime);
+
+		m_sweepPoints = m_committedSweepPoints;
+
+		//TODO: enumeration API?
+		m_sweepShapeNames.push_back("Sawtooth");
+		m_sweepShapeNames.push_back("Triangle");
+		m_sweepShapes.push_back(RFSignalGenerator::SWEEP_SHAPE_SAWTOOTH);
+		m_sweepShapes.push_back(RFSignalGenerator::SWEEP_SHAPE_TRIANGLE);
+		if(generator->GetSweepShape(channel) == RFSignalGenerator::SWEEP_SHAPE_TRIANGLE)
+			m_sweepShape = 1;
+		else
+			m_sweepShape = 0;
+
+		//TODO: enumeration API?
+		m_sweepSpaceNames.push_back("Linear");
+		m_sweepSpaceNames.push_back("Logarithmic");
+		m_sweepSpaceTypes.push_back(RFSignalGenerator::SWEEP_SPACING_LINEAR);
+		m_sweepSpaceTypes.push_back(RFSignalGenerator::SWEEP_SPACING_LOG);
+		if(generator->GetSweepSpacing(channel) == RFSignalGenerator::SWEEP_SPACING_LOG)
+			m_sweepSpacing = 1;
+		else
+			m_sweepSpacing = 0;
+
+		//TODO: enumeration API?
+		m_sweepTypeNames.push_back("None");
+		m_sweepTypeNames.push_back("Frequency");
+		m_sweepTypeNames.push_back("Level");
+		m_sweepTypeNames.push_back("Frequency + Level");
+		m_sweepTypes.push_back(RFSignalGenerator::SWEEP_TYPE_NONE);
+		m_sweepTypes.push_back(RFSignalGenerator::SWEEP_TYPE_FREQ);
+		m_sweepTypes.push_back(RFSignalGenerator::SWEEP_TYPE_LEVEL);
+		m_sweepTypes.push_back(RFSignalGenerator::SWEEP_TYPE_FREQ_LEVEL);
+		auto type = generator->GetSweepType(channel);
+		switch(type)
+		{
+			case RFSignalGenerator::SWEEP_TYPE_NONE:
+				m_sweepType = 0;
+				break;
+
+			case RFSignalGenerator::SWEEP_TYPE_FREQ:
+				m_sweepType = 1;
+				break;
+
+			case RFSignalGenerator::SWEEP_TYPE_LEVEL:
+				m_sweepType = 2;
+				break;
+
+			case RFSignalGenerator::SWEEP_TYPE_FREQ_LEVEL:
+				m_sweepType = 3;
+				break;
+		}
+
+		//TODO: enumeration API?
+		m_sweepDirectionNames.push_back("Forward");
+		m_sweepDirectionNames.push_back("Reverse");
+		m_sweepDirections.push_back(RFSignalGenerator::SWEEP_DIR_FWD);
+		m_sweepDirections.push_back(RFSignalGenerator::SWEEP_DIR_REV);
+		if(generator->GetSweepDirection(channel) == RFSignalGenerator::SWEEP_DIR_REV)
+			m_sweepDirection = 1;
+		else
+			m_sweepDirection = 0;
+	}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-RFGeneratorDialog::RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session)
+RFGeneratorDialog::RFGeneratorDialog(
+	SCPIRFSignalGenerator* generator,
+	shared_ptr<RFSignalGeneratorState> state,
+	Session* session)
 	: Dialog(string("RF Generator: ") + generator->m_nickname, ImVec2(400, 350))
 	, m_session(session)
+	, m_state(state)
 	, m_generator(generator)
 {
 	Unit hz(Unit::UNIT_HZ);
@@ -115,14 +207,53 @@ void RFGeneratorDialog::DoChannel(int i)
 			m_generator->SetChannelOutputEnable(i, m_uiState[i].m_outputEnabled);
 		HelpMarker("Turns the RF signal from this channel on or off");
 
-		//Power level is a potentially damaging operation
-		//Require the user to explicitly commit changes before it takes effect
-		if(UnitInputWithExplicitApply("Level", m_uiState[i].m_level, m_uiState[i].m_committedLevel, dbm))
-			m_generator->SetChannelOutputPower(i, m_uiState[i].m_committedLevel);
-		HelpMarker("Power level of the generated waveform");
+		string f;
+		string p;
+		if(m_state->m_firstUpdateDone)
+		{
+			f = hz.PrettyPrint(m_state->m_channelFrequency[i]);
+			p = dbm.PrettyPrint(m_state->m_channelLevel[i]);
+		}
 
-		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
-			m_generator->SetChannelCenterFrequency(i, m_uiState[i].m_committedFrequency);
+		bool sweepingPower = m_uiState[i].m_sweepType >= 2;
+		bool sweepingFrequency = (m_uiState[i].m_sweepType == 1) || (m_uiState[i].m_sweepType == 3);
+
+		if(sweepingPower)
+		{
+			ImGui::BeginDisabled();
+			ImGui::InputText("Level", &p);
+			ImGui::EndDisabled();
+
+			HelpMarker(
+				"Power level of the generated waveform.\n\n"
+				"This value cannot be changed when doing a power sweep. Change levels under sweep settings.");
+		}
+		else
+		{
+			//Power level is a potentially damaging operation
+			//Require the user to explicitly commit changes before it takes effect
+			if(UnitInputWithExplicitApply("Level", m_uiState[i].m_level, m_uiState[i].m_committedLevel, dbm))
+				m_generator->SetChannelOutputPower(i, m_uiState[i].m_committedLevel);
+			HelpMarker("Power level of the generated waveform");
+		}
+
+		if(sweepingFrequency)
+		{
+			ImGui::BeginDisabled();
+			ImGui::InputText("Frequency", &f);
+			ImGui::EndDisabled();
+
+			HelpMarker(
+				"Carrier frequency of the generated waveform.\n\n"
+				"This value cannot be changed when doing a frequency sweep. Change frequency under sweep settings.");
+		}
+		else
+		{
+			if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
+				m_generator->SetChannelCenterFrequency(i, m_uiState[i].m_committedFrequency);
+
+			HelpMarker("Carrier frequency of the generated waveform.");
+		}
 
 		if(m_generator->IsSweepAvailable(i))
 		{
@@ -130,35 +261,60 @@ void RFGeneratorDialog::DoChannel(int i)
 			{
 				ImGui::PushID("Sweep");
 
+				if(Combo("Mode", m_uiState[i].m_sweepTypeNames, m_uiState[i].m_sweepType))
+					m_generator->SetSweepType(i, m_uiState[i].m_sweepTypes[m_uiState[i].m_sweepType]);
+				HelpMarker("Choose whether to sweep frequency, power, both, or neither.");
+
 				if(UnitInputWithImplicitApply("Dwell Time",
 					m_uiState[i].m_sweepDwellTime, m_uiState[i].m_committedSweepDwellTime, fs))
 				{
 					m_generator->SetSweepDwellTime(i, m_uiState[i].m_committedSweepDwellTime);
 				}
+				HelpMarker("Time to stay at each frequency before moving to the next.");
+
+				if(IntInputWithImplicitApply("Points", m_uiState[i].m_sweepPoints, m_uiState[i].m_committedSweepPoints))
+					m_generator->SetSweepPoints(i, m_uiState[i].m_committedSweepPoints);
+				HelpMarker("Number of steps in the sweep.");
+
+				if(Combo("Shape", m_uiState[i].m_sweepShapeNames, m_uiState[i].m_sweepShape))
+					m_generator->SetSweepShape(i, m_uiState[i].m_sweepShapes[m_uiState[i].m_sweepShape]);
+				HelpMarker("Select the shape of the sweep waveform (triangle or sawtooth).");
+
+				if(Combo("Spacing", m_uiState[i].m_sweepSpaceNames, m_uiState[i].m_sweepSpacing))
+					m_generator->SetSweepSpacing(i, m_uiState[i].m_sweepSpaceTypes[m_uiState[i].m_sweepSpacing]);
+				HelpMarker("Specify how to divide the sweep range into points (linear or logarithmic spacing).");
+
+				if(Combo("Direction", m_uiState[i].m_sweepDirectionNames, m_uiState[i].m_sweepDirection))
+					m_generator->SetSweepDirection(i, m_uiState[i].m_sweepDirections[m_uiState[i].m_sweepDirection]);
+				HelpMarker("Allows the direction of the sweep to be reversed.");
 
 				if(UnitInputWithImplicitApply("Start Frequency",
 					m_uiState[i].m_sweepStart, m_uiState[i].m_committedSweepStart, hz))
 				{
 					m_generator->SetSweepStartFrequency(i, m_uiState[i].m_committedSweepStart);
 				}
+				HelpMarker("Initial value for frequency sweeps. Ignored if not sweeping frequency.");
 
 				if(UnitInputWithExplicitApply("Start Level",
 					m_uiState[i].m_sweepStartLevel, m_uiState[i].m_committedSweepStartLevel, dbm))
 				{
 					m_generator->SetSweepStartLevel(i, m_uiState[i].m_committedSweepStartLevel);
 				}
+				HelpMarker("Initial value for power sweeps. Ignored if not sweeping power.");
 
 				if(UnitInputWithImplicitApply("Stop Frequency",
 					m_uiState[i].m_sweepStop, m_uiState[i].m_committedSweepStop, hz))
 				{
 					m_generator->SetSweepStopFrequency(i, m_uiState[i].m_committedSweepStop);
 				}
+				HelpMarker("Ending value for frequency sweeps. Ignored if not sweeping frequency.");
 
 				if(UnitInputWithExplicitApply("Stop Level",
-					m_uiState[i].m_sweepStopLevel, m_uiState[i].m_committedSweepStopLevel, hz))
+					m_uiState[i].m_sweepStopLevel, m_uiState[i].m_committedSweepStopLevel, dbm))
 				{
 					m_generator->SetSweepStopLevel(i, m_uiState[i].m_committedSweepStopLevel);
 				}
+				HelpMarker("Ending value for power sweeps. Ignored if not sweeping power.");
 
 				ImGui::PopID();
 				ImGui::TreePop();
@@ -180,7 +336,4 @@ void RFGeneratorDialog::DoChannel(int i)
 
 		ImGui::PopID();
 	}
-
-	//Push any pending traffic to hardware
-	m_generator->GetTransport()->FlushCommandQueue();
 }

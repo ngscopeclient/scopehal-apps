@@ -26,74 +26,37 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of RFSignalGeneratorThread
+ */
+#include "ngscopeclient.h"
+#include "pthread_compat.h"
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+using namespace std;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
-
-#include <atomic>
-
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-
-class RFSignalGeneratorThreadArgs
+void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args)
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+	pthread_setname_np_compat("RFGenThread");
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
-};
+	auto gen = args.gen;
+	auto state = args.state;
+	while(!*args.shuttingDown)
+	{
+		//Flush any pending commands
+		gen->GetTransport()->FlushCommandQueue();
 
-class PowerSupplyThreadArgs
-{
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+		//Poll status
+		for(int i=0; i<gen->GetChannelCount(); i++)
+		{
+			state->m_channelLevel[i] = gen->GetChannelOutputPower(i);
+			state->m_channelFrequency[i] = gen->GetChannelCenterFrequency(i);
+		}
+		state->m_firstUpdateDone = true;
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-};
-
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	{}
-
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-};
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-
-#endif
+		//Cap update rate to 20 Hz
+		this_thread::sleep_for(chrono::milliseconds(50));
+	}
+}

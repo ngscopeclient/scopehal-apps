@@ -45,6 +45,7 @@ add_executable(ngscopeclient
 	PreferenceSchema.cpp
 	PreferenceTree.cpp
 	RFGeneratorDialog.cpp
+	RFSignalGeneratorThread.cpp
 	ScopeThread.cpp
 	Session.cpp
 	VulkanWindow.cpp

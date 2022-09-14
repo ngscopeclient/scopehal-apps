@@ -259,6 +259,20 @@ bool Dialog::TextInputWithImplicitApply(const string& label, string& currentValu
 	return false;
 }
 
+bool Dialog::IntInputWithImplicitApply(const string& label, int& currentValue, int& committedValue)
+{
+	bool dirty = currentValue != committedValue;
+	ImGui::InputInt(label.c_str(), &currentValue);
+
+	if(!ImGui::IsItemActive() && dirty )
+	{
+		committedValue = currentValue;
+		return true;
+	}
+
+	return false;
+}
+
 /**
 	@brief Input box for a floating point value with an associated unit
 

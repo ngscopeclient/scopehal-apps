@@ -69,36 +69,34 @@ public:
 	std::string m_sweepDwellTime;
 	float m_committedSweepDwellTime;
 
+	int m_sweepPoints;
+	int m_committedSweepPoints;
+
+	int m_sweepShape;
+	std::vector<RFSignalGenerator::SweepShape> m_sweepShapes;
+	std::vector<std::string> m_sweepShapeNames;
+
+	int m_sweepSpacing;
+	std::vector<RFSignalGenerator::SweepSpacing> m_sweepSpaceTypes;
+	std::vector<std::string> m_sweepSpaceNames;
+
+	int m_sweepType;
+	std::vector<RFSignalGenerator::SweepType> m_sweepTypes;
+	std::vector<std::string> m_sweepTypeNames;
+
+	int m_sweepDirection;
+	std::vector<RFSignalGenerator::SweepDirection> m_sweepDirections;
+	std::vector<std::string> m_sweepDirectionNames;
+
 	RFGeneratorChannelUIState();
 
-	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel)
-	: m_outputEnabled(generator->GetChannelOutputEnable(channel))
-	, m_committedLevel(generator->GetChannelOutputPower(channel))
-	, m_committedFrequency(generator->GetChannelCenterFrequency(channel))
-	, m_committedSweepStart(generator->GetSweepStartFrequency(channel))
-	, m_committedSweepStop(generator->GetSweepStopFrequency(channel))
-	, m_committedSweepStartLevel(generator->GetSweepStartLevel(channel))
-	, m_committedSweepStopLevel(generator->GetSweepStopLevel(channel))
-	, m_committedSweepDwellTime(generator->GetSweepDwellTime(channel))
-	{
-		Unit dbm(Unit::UNIT_DBM);
-		Unit hz(Unit::UNIT_HZ);
-		Unit fs(Unit::UNIT_FS);
-
-		m_level = dbm.PrettyPrint(m_committedLevel);
-		m_frequency = hz.PrettyPrint(m_committedFrequency);
-		m_sweepStart = hz.PrettyPrint(m_committedSweepStart);
-		m_sweepStop = hz.PrettyPrint(m_committedSweepStop);
-		m_sweepStartLevel = dbm.PrettyPrint(m_committedSweepStartLevel);
-		m_sweepStopLevel = dbm.PrettyPrint(m_committedSweepStopLevel);
-		m_sweepDwellTime = fs.PrettyPrint(m_committedSweepDwellTime);
-	}
+	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel);
 };
 
 class RFGeneratorDialog : public Dialog
 {
 public:
-	RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session);
+	RFGeneratorDialog(SCPIRFSignalGenerator* generator, std::shared_ptr<RFSignalGeneratorState> state, Session* session);
 	virtual ~RFGeneratorDialog();
 
 	virtual bool DoRender();
@@ -111,6 +109,9 @@ protected:
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;
+
+	///@brief Live updating frequency values from our sweep
+	std::shared_ptr<RFSignalGeneratorState> m_state;
 
 	///@brief The generator we're controlling
 	SCPIRFSignalGenerator* m_generator;
