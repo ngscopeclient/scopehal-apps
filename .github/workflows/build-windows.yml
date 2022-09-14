@@ -100,7 +100,6 @@ jobs:
         MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
 
     - name: Test 
-      if: ${{ false }} # Temporary Disable test as GitHub Windows CI Build fail to run the exe
       shell: msys2 {0}
       run: |
         pacman -U --noconfirm msys2/*.zst
