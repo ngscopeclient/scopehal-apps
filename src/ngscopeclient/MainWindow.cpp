@@ -45,6 +45,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
 
@@ -64,7 +65,6 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 	LoadRecentInstrumentList();
 
-	//Set up a better font.
 	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
 	ImGuiIO& io = ImGui::GetIO();
 	ImFontGlyphRangesBuilder builder;
@@ -73,16 +73,17 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	for(wchar_t i=0x370; i<=0x3ff; i++)	//Greek and Coptic
 		builder.AddChar(i);
 
+	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
 	builder.BuildRanges(&ranges);
 
-	auto font = io.Fonts->AddFontFromFileTTF(
-		FindDataFile("fonts/DejaVuSans.ttf").c_str(),
-		13,
-		nullptr,
-		ranges.Data);
+	//Load our fonts
+	m_defaultFont = LoadFont("fonts/DejaVuSans.ttf", 13, ranges);
+	m_monospaceFont = LoadFont("fonts/DejaVuSansMono.ttf", 13, ranges);
+
+	//Done loading fonts, build the atals
 	io.Fonts->Build();
-	io.FontDefault = font;
+	io.FontDefault = m_defaultFont;
 }
 
 MainWindow::~MainWindow()
@@ -150,6 +151,9 @@ void MainWindow::RenderUI()
 		auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 		if(rgenDlg)
 			m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+		if(m_logViewerDialog == dlg)
+			m_logViewerDialog = nullptr;
 
 		m_dialogs.erase(dlg);
 	}
@@ -614,6 +618,21 @@ void MainWindow::WindowMenu()
 	{
 		WindowGeneratorMenu();
 		WindowMultimeterMenu();
+		WindowSCPIConsoleMenu();
+
+		bool hasLogViewer = m_logViewerDialog != nullptr;
+		if(hasLogViewer)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Log Viewer"))
+		{
+			m_logViewerDialog = make_shared<LogViewerDialog>(this);
+			AddDialog(m_logViewerDialog);
+		}
+
+		if(hasLogViewer)
+			ImGui::EndDisabled();
+
 		ImGui::EndMenu();
 	}
 }
@@ -670,6 +689,30 @@ void MainWindow::WindowMultimeterMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(scope->m_nickname.c_str()))
 				m_session.AddMultimeter(meter);
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Runs the Window | SCPI Console menu
+ */
+void MainWindow::WindowSCPIConsoleMenu()
+{
+	if(ImGui::BeginMenu("SCPI Console"))
+	{
+		auto insts = m_session.GetSCPIInstruments();
+		for(auto inst : insts)
+		{
+			//If we already have a dialog, don't show the menu
+			if(m_scpiConsoleDialogs.find(inst) != m_scpiConsoleDialogs.end())
+				continue;
+
+			if(ImGui::MenuItem(inst->m_nickname.c_str()))
+			{
+				//FIXME
+			}
 		}
 
 		ImGui::EndMenu();

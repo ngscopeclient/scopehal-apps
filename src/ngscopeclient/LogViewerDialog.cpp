@@ -26,75 +26,53 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of LogViewerDialog
+ */
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+#include "ngscopeclient.h"
+#include "MainWindow.h"
+#include "LogViewerDialog.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
+using namespace std;
 
-#include <atomic>
+extern GuiLogSink* g_guiLog;
 
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "GuiLogSink.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-class RFSignalGeneratorThreadArgs
+LogViewerDialog::LogViewerDialog(MainWindow* parent)
+	: Dialog("Log Viewer", ImVec2(500, 300))
+	, m_parent(parent)
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
-};
-
-class PowerSupplyThreadArgs
+LogViewerDialog::~LogViewerDialog()
 {
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+}
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-class MultimeterThreadArgs
+bool LogViewerDialog::DoRender()
 {
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	{}
+	//TODO: filters etc?
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-};
+	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
+	ImGui::PushFont(m_parent->GetMonospaceFont());
+	auto& lines = g_guiLog->GetLines();
+	for(auto& line : lines)
+		ImGui::TextUnformatted(line.c_str());
+	ImGui::PopFont();
 
-#endif
+	if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+		ImGui::SetScrollHereY(1.0f);
+
+	ImGui::EndChild();
+
+	return true;
+}

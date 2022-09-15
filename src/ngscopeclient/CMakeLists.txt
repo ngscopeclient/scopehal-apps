@@ -35,6 +35,8 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	Dialog.cpp
 	FunctionGeneratorDialog.cpp
+	GuiLogSink.cpp
+	LogViewerDialog.cpp
 	MainWindow.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp

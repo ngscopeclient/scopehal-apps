@@ -86,6 +86,7 @@ protected:
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
+				void WindowSCPIConsoleMenu();
 			void HelpMenu();
 		void DockingArea();
 
@@ -107,8 +108,14 @@ protected:
 	///@brief Map of RF generators to generator control dialogs
 	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
 
+	///@brief Map of instruments to SCPI console dialogs
+	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
+
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
+
+	///@brief Logfile viewer
+	std::shared_ptr<Dialog> m_logViewerDialog;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
@@ -154,6 +161,20 @@ protected:
 
 	void RenderErrorPopup();
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Fonts
+
+	//TODO: use preference manager for all this
+	ImFont* LoadFont(const std::string& path, int size, ImVector<ImWchar>& ranges)
+	{ return ImGui::GetIO().Fonts->AddFontFromFileTTF(FindDataFile(path).c_str(), size, nullptr, ranges.Data); }
+
+	ImFont* m_defaultFont;
+	ImFont* m_monospaceFont;
+
+public:
+	ImFont* GetMonospaceFont()
+	{ return m_monospaceFont; }
 };
 
 #endif

@@ -26,75 +26,68 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
-
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
-
-#include <atomic>
-
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of GuiLogSink
+ */
+#include "ngscopeclient.h"
 #include "GuiLogSink.h"
 
-class RFSignalGeneratorThreadArgs
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+GuiLogSink::GuiLogSink(Severity min_severity)
+	: LogSink(min_severity)
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
-};
+}
 
-class PowerSupplyThreadArgs
+GuiLogSink::~GuiLogSink()
 {
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+}
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Logging
 
-class MultimeterThreadArgs
+void GuiLogSink::Clear()
 {
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	{}
+	m_lines.clear();
+}
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-};
+void GuiLogSink::Log(Severity severity, const string &msg)
+{
+	if(severity > m_min_severity)
+		return;
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
+	//Blank lines get special handling
+	if(msg == "\n")
+	{
+		m_lines.push_back("");
+		return;
+	}
 
-#endif
+	auto vec = explode(msg, '\n');
+	auto len = vec.size();
+	auto indent = GetIndentString();
+	for(size_t i=0; i<len; i++)
+	{
+		//Don't append blank line at end of buffer
+		if( (i+1 == len) && vec[i].empty())
+			break;
+
+		//Otherwise append it
+		m_lines.push_back(indent + vec[i]);
+	}
+}
+
+void GuiLogSink::Log(Severity severity, const char *format, va_list va)
+{
+	if(severity > m_min_severity)
+		return;
+
+	Log(severity, vstrprintf(format, va));
+}

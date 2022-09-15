@@ -168,6 +168,11 @@ public:
 	const std::vector<Oscilloscope*>& GetScopes()
 	{ return m_oscilloscopes; }
 
+	/**
+		@brief Gets the set of all SCPI instruments we're connect to (regardless of type)
+	 */
+	std::set<SCPIInstrument*> GetSCPIInstruments();
+
 protected:
 
 	///@brief Top level UI window
