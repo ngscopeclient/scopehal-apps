@@ -49,6 +49,7 @@ add_executable(ngscopeclient
 	RFGeneratorDialog.cpp
 	RFSignalGeneratorThread.cpp
 	ScopeThread.cpp
+	SCPIConsoleDialog.cpp
 	Session.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp

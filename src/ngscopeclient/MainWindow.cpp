@@ -48,6 +48,7 @@
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
+#include "SCPIConsoleDialog.h"
 
 using namespace std;
 
@@ -711,7 +712,9 @@ void MainWindow::WindowSCPIConsoleMenu()
 
 			if(ImGui::MenuItem(inst->m_nickname.c_str()))
 			{
-				//FIXME
+				auto dlg = make_shared<SCPIConsoleDialog>(this, inst);
+				m_scpiConsoleDialogs[inst] = dlg;
+				AddDialog(dlg);
 			}
 		}
 
