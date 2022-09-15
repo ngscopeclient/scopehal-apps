@@ -137,31 +137,38 @@ void MainWindow::RenderUI()
 			dlgsToClose.emplace(dlg);
 	}
 	for(auto& dlg : dlgsToClose)
-	{
-		//Multimeter dialogs are stored in a separate list
-		auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
-		if(meterDlg)
-			m_meterDialogs.erase(meterDlg->GetMeter());
-
-		//Function generator dialogs are stored in a separate list
-		auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
-		if(genDlg)
-			m_generatorDialogs.erase(genDlg->GetGenerator());
-
-		//RF generator dialogs are stored in a separate list
-		auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
-		if(rgenDlg)
-			m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
-
-		if(m_logViewerDialog == dlg)
-			m_logViewerDialog = nullptr;
-
-		m_dialogs.erase(dlg);
-	}
+		OnDialogClosed(dlg);
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
 	//ImPlot::ShowDemoWindow(&m_showPlot);
+}
+
+void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
+{
+	//Multimeter dialogs are stored in a separate list
+	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
+	if(meterDlg)
+		m_meterDialogs.erase(meterDlg->GetMeter());
+
+	//Function generator dialogs are stored in a separate list
+	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
+	if(genDlg)
+		m_generatorDialogs.erase(genDlg->GetGenerator());
+
+	//RF generator dialogs are stored in a separate list
+	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
+	if(rgenDlg)
+		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	if(m_logViewerDialog == dlg)
+		m_logViewerDialog = nullptr;
+
+	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
+	if(conDlg)
+		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
+
+	m_dialogs.erase(dlg);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

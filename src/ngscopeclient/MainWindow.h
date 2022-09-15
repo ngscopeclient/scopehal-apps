@@ -117,6 +117,8 @@ protected:
 	///@brief Logfile viewer
 	std::shared_ptr<Dialog> m_logViewerDialog;
 
+	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
 

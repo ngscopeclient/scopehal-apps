@@ -36,9 +36,13 @@
 #define SCPIConsoleDialog_h
 
 #include "Dialog.h"
+#include <future>
 
 class MainWindow;
 
+/**
+	@brief SCPI console for debugging drivers
+ */
 class SCPIConsoleDialog : public Dialog
 {
 public:
@@ -47,6 +51,9 @@ public:
 
 	virtual bool DoRender();
 
+	SCPIInstrument* GetInstrument()
+	{ return m_inst; }
+
 protected:
 	MainWindow* m_parent;
 	SCPIInstrument* m_inst;
@@ -54,6 +61,9 @@ protected:
 	std::vector<std::string> m_output;
 
 	std::string m_command;
+
+	bool m_commandPending;
+	std::future<std::string> m_commandReturnValue;
 };
 
 #endif

@@ -38,6 +38,7 @@
 #include "SCPIConsoleDialog.h"
 
 using namespace std;
+using namespace std::chrono_literals;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -46,6 +47,7 @@ SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst)
 	: Dialog(("SCPI Console: ") + inst->m_nickname, ImVec2(500, 300))
 	, m_parent(parent)
 	, m_inst(inst)
+	, m_commandPending(false)
 {
 }
 
@@ -59,6 +61,20 @@ SCPIConsoleDialog::~SCPIConsoleDialog()
 bool SCPIConsoleDialog::DoRender()
 {
 	auto csize = ImGui::GetContentRegionAvail();
+
+	//Check for results of pending commands
+	if(m_commandPending)
+	{
+		if(m_commandReturnValue.wait_for(0s) == future_status::ready)
+		{
+			auto str = m_commandReturnValue.get();
+			if(Trim(str).empty())
+				m_output.push_back("Request timed out.");
+			else
+				m_output.push_back(str);
+			m_commandPending = false;
+		}
+	}
 
 	//Scroll area for console output is full window minus command box
 	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
@@ -74,20 +90,25 @@ bool SCPIConsoleDialog::DoRender()
 
 	//Command input box
 	ImGui::SetNextItemWidth(csize.x);
+	bool pending = m_commandPending;
+	if(pending)
+		ImGui::BeginDisabled();
 	if(ImGui::InputText("Command", &m_command, ImGuiInputTextFlags_EnterReturnsTrue))
 	{
-		LogDebug("Run command: %s\n", m_command.c_str());
-
+		//Show command immediately
 		m_output.push_back(string("> ") + m_command);
 
-		//Initial naive blocking implementation
+		//Push command to the instrument immediately
 		auto trans = m_inst->GetTransport();
 		if(m_command.find('?') == string::npos)
 			trans->SendCommandQueued(m_command);
+
+		//Commands are sent immediately, but reply is deferred to avoid blocking the UI
 		else
 		{
-			auto reply = trans->SendCommandQueuedWithReply(m_command);
-			m_output.push_back(reply);
+			m_commandPending = true;
+			string cmd = m_command;
+			m_commandReturnValue = async(launch::async, [cmd, trans]{ return trans->SendCommandQueuedWithReply(cmd); });
 		}
 
 		m_command = "";
@@ -96,6 +117,8 @@ bool SCPIConsoleDialog::DoRender()
 		//because imgui defaults to unfocusing once it's closed
 		ImGui::SetKeyboardFocusHere(-1);
 	}
+	if(pending)
+		ImGui::EndDisabled();
 
 	return true;
 }
