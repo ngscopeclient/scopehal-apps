@@ -54,6 +54,7 @@ public:
 	void AddArea(std::shared_ptr<WaveformArea>& area);
 
 protected:
+	void RenderTimeline(float width, float height);
 
 	///@brief Display title of the group
 	std::string m_title;

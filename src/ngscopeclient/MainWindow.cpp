@@ -833,9 +833,16 @@ void MainWindow::DockingArea()
 		{
 			//Get the window for the group
 			auto window = ImGui::FindWindowByName(request.m_group->GetTitle().c_str());
-			if(!window || !window->DockNode)
+			if(!window)
 			{
-				LogWarning("Window or dock node is null (TODO handle this)\n");
+				//Not sure if this is possible? Haven't seen it yet
+				LogWarning("Window is null (TODO handle this)\n");
+				continue;
+			}
+			if(!window->DockNode)
+			{
+				//If we get here, we dragged into a floating window without a dock space in it
+				LogWarning("Dock node is null (TODO handle this)\n");
 				continue;
 			}
 
