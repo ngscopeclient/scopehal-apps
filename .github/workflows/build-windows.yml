@@ -118,7 +118,7 @@ jobs:
         cd build_msi
         cmake \
           -G"Ninja" \
-          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
           -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
           ../
