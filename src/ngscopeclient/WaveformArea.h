@@ -36,6 +36,8 @@
 #define WaveformArea_h
 
 class WaveformArea;
+class WaveformGroup;
+class MainWindow;
 
 /**
 	@brief Drag context for a waveform being dragged
@@ -80,7 +82,7 @@ protected:
 class WaveformArea
 {
 public:
-	WaveformArea(StreamDescriptor stream);
+	WaveformArea(StreamDescriptor stream, std::shared_ptr<WaveformGroup> group, MainWindow* parent);
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
@@ -95,8 +97,8 @@ public:
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 
-	void DropArea(const std::string& name, ImVec2 start, ImVec2 size);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
+	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
 	/**
 		@brief The channels currently living within this WaveformArea
@@ -107,6 +109,12 @@ protected:
 
 	///@brief Drag context for waveform we're dragging
 	WaveformDragContext m_dragContext;
+
+	///@brief Waveform group containing us
+	std::shared_ptr<WaveformGroup> m_group;
+
+	///@brief Top level window object containing us
+	MainWindow* m_parent;
 };
 
 #endif

@@ -34,14 +34,17 @@
  */
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformArea::WaveformArea(StreamDescriptor stream)
+WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> group, MainWindow* parent)
 	: m_dragContext(this)
+	, m_group(group)
+	, m_parent(parent)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -104,18 +107,21 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		float widthOfMiddle = rightOfMiddle - leftOfMiddle;
 		if(iArea == 0)
 		{
-			DropArea("top", ImVec2(leftOfMiddle, start.y), ImVec2(widthOfMiddle, csize.y*0.125));
+			EdgeDropArea("top", ImVec2(leftOfMiddle, start.y), ImVec2(widthOfMiddle, csize.y*0.125), ImGuiDir_Up);
 			topOfMiddle += csize.y * 0.125;
 		}
 		if(iArea == (numAreas-1))
 		{
 			bottomOfMiddle -= csize.y * 0.125;
-			DropArea("bottom", ImVec2(leftOfMiddle, bottomOfMiddle), ImVec2(widthOfMiddle, csize.y*0.125));
+			ImVec2 pos(leftOfMiddle, bottomOfMiddle);
+			ImVec2 size(widthOfMiddle, csize.y*0.125);
+			EdgeDropArea("bottom", pos, size, ImGuiDir_Down);
 		}
 		float heightOfMiddle = bottomOfMiddle - topOfMiddle;
 		CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
-		DropArea("left", ImVec2(start.x, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
-		DropArea("right", ImVec2(rightOfMiddle, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
+		ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
+		EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
+		EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
 
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
@@ -134,7 +140,12 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	return true;
 }
 
-void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
+/**
+	@brief Drop area for edge of the plot
+
+	Dropping a waveform in here splits and forms a new group
+ */
+void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
 {
 	ImGui::SetCursorPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
@@ -149,9 +160,11 @@ void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
 			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
 			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
 
-			//TODO: process payload
-			LogDebug("Waveform %s (channel %zu of area %p) dropped in %s\n",
-				stream.GetName().c_str(), context->m_streamIndex, (void*)context->m_sourceArea, name.c_str());
+			//Add request to split our current group
+			m_parent->QueueSplitGroup(m_group, splitDir, stream);
+
+			//Remove the stream from the originating waveform area
+			context->m_sourceArea->RemoveStream(context->m_streamIndex);
 		}
 
 		ImGui::EndDragDropTarget();
