@@ -40,10 +40,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformArea::WaveformArea()
+WaveformArea::WaveformArea(StreamDescriptor stream)
+	: m_dragContext(this)
 {
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>("ohai"));
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>("asdf"));
+	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
 
 WaveformArea::~WaveformArea()
@@ -51,12 +51,40 @@ WaveformArea::~WaveformArea()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+// Stream management
 
-void WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
+/**
+	@brief Adds a new stream to this plot
+ */
+void WaveformArea::AddStream(StreamDescriptor desc)
 {
-	auto height = (clientArea.y - ImGui::GetFrameHeightWithSpacing()) / numAreas;
-	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, height)))
+	m_displayedChannels.push_back(make_shared<DisplayedChannel>(desc));
+}
+
+/**
+	@brief Removes the stream at a specified index
+ */
+void WaveformArea::RemoveStream(size_t i)
+{
+	m_displayedChannels.erase(m_displayedChannels.begin() + i);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GUI widget rendering
+
+/**
+	@brief Renders a waveform area
+
+	Returns false if the area should be closed (no more waveforms visible in it)
+ */
+bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
+{
+	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
+	float spacing = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
+	float heightPerArea = totalHeightAvailable / numAreas;
+	float unspacedHeightPerArea = heightPerArea - spacing;
+
+	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, unspacedHeightPerArea)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto start = ImGui::GetWindowContentRegionMin();
@@ -64,8 +92,7 @@ void WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Draw texture for the actual waveform
 		//(todo: repeat for each channel)
 		ImTextureID my_tex_id = ImGui::GetIO().Fonts->TexID;
-		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y),
-			ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 
 		//Drag/drop areas for splitting
@@ -86,7 +113,7 @@ void WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 			DropArea("bottom", ImVec2(leftOfMiddle, bottomOfMiddle), ImVec2(widthOfMiddle, csize.y*0.125));
 		}
 		float heightOfMiddle = bottomOfMiddle - topOfMiddle;
-		DropArea("middle", ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
+		CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
 		DropArea("left", ImVec2(start.x, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
 		DropArea("right", ImVec2(rightOfMiddle, topOfMiddle), ImVec2(widthOfVerticalEdge, heightOfMiddle));
 
@@ -94,13 +121,17 @@ void WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
 
-			for(auto c : m_displayedChannels)
-				DraggableButton(c);
+			for(size_t i=0; i<m_displayedChannels.size(); i++)
+				DraggableButton(m_displayedChannels[i], i);
 
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
 	}
 	ImGui::EndChild();
+
+	if(m_displayedChannels.empty())
+		return false;
+	return true;
 }
 
 void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
@@ -113,25 +144,61 @@ void WaveformArea::DropArea(const string& name, ImVec2 start, ImVec2 size)
 	if(ImGui::BeginDragDropTarget())
 	{
 		auto payload = ImGui::AcceptDragDropPayload("Waveform");
-		if( (payload != nullptr) && (payload->DataSize == sizeof(DisplayedChannel*)) )
+		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
 		{
-			auto value = reinterpret_cast<DisplayedChannel*>(payload->Data);
+			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
+			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
 
 			//TODO: process payload
-			LogDebug("Waveform %s dropped in %s\n", value->GetName().c_str(), name.c_str());
+			LogDebug("Waveform %s (channel %zu of area %p) dropped in %s\n",
+				stream.GetName().c_str(), context->m_streamIndex, (void*)context->m_sourceArea, name.c_str());
 		}
 
 		ImGui::EndDragDropTarget();
 	}
 }
 
-void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan)
+/**
+	@brief Drop area for the middle of the plot
+
+	Dropping a waveform in here adds it to the plot
+ */
+void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
+{
+	ImGui::SetCursorPos(start);
+	ImGui::InvisibleButton("center", size);
+	ImGui::SetItemAllowOverlap();
+
+	//Add drop target
+	if(ImGui::BeginDragDropTarget())
+	{
+		auto payload = ImGui::AcceptDragDropPayload("Waveform");
+		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
+		{
+			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
+			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
+
+			//Add the new stream to us
+			//TODO: copy view settings from the DisplayedChannel over?
+			AddStream(stream);
+
+			//Remove the stream from the originating waveform area
+			context->m_sourceArea->RemoveStream(context->m_streamIndex);
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+}
+
+
+void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
 	ImGui::Button(chan->GetName().c_str());
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
-		ImGui::SetDragDropPayload("Waveform", chan.get(), sizeof(DisplayedChannel*));
+		m_dragContext.m_streamIndex = index;
+		ImGui::SetDragDropPayload("Waveform", &m_dragContext, sizeof(WaveformDragContext*));
 
 		//Preview of what we're dragging
 		ImGui::Text("Drag %s", chan->GetName().c_str());

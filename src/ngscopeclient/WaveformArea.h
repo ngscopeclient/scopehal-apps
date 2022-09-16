@@ -35,21 +35,41 @@
 #ifndef WaveformArea_h
 #define WaveformArea_h
 
+class WaveformArea;
+
+/**
+	@brief Drag context for a waveform being dragged
+ */
+class WaveformDragContext
+{
+public:
+	WaveformDragContext(WaveformArea* src)
+	: m_sourceArea(src)
+	, m_streamIndex(0)
+	{}
+
+	WaveformArea* m_sourceArea;
+	size_t m_streamIndex;
+};
+
 /**
 	@brief Placeholder for a single channel being displayed within a WaveformArea
  */
 class DisplayedChannel
 {
 public:
-	DisplayedChannel(const std::string& name)
-		: m_name(name)
+	DisplayedChannel(StreamDescriptor stream)
+		: m_stream(stream)
 	{}
 
-	const std::string& GetName()
-	{ return m_name; }
+	std::string GetName()
+	{ return m_stream.GetName(); }
+
+	StreamDescriptor GetStream()
+	{ return m_stream; }
 
 protected:
-	std::string m_name;
+	StreamDescriptor m_stream;
 };
 
 /**
@@ -60,15 +80,23 @@ protected:
 class WaveformArea
 {
 public:
-	WaveformArea();
+	WaveformArea(StreamDescriptor stream);
 	virtual ~WaveformArea();
 
-	void Render(int iArea, int numAreas, ImVec2 clientArea);
+	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+
+	StreamDescriptor GetStream(size_t i)
+	{ return m_displayedChannels[i]->GetStream(); }
+
+	void AddStream(StreamDescriptor desc);
+
+	void RemoveStream(size_t i);
 
 protected:
-	void DraggableButton(std::shared_ptr<DisplayedChannel> chan);
+	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 
 	void DropArea(const std::string& name, ImVec2 start, ImVec2 size);
+	void CenterDropArea(ImVec2 start, ImVec2 size);
 
 	/**
 		@brief The channels currently living within this WaveformArea
@@ -76,6 +104,9 @@ protected:
 		TODO: make this a FlowGraphNode and just hook up inputs
 	 */
 	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
+
+	///@brief Drag context for waveform we're dragging
+	WaveformDragContext m_dragContext;
 };
 
 #endif

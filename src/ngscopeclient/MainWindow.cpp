@@ -155,7 +155,7 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 		LogWarning("no streams found\n");
 	for(auto s : streams)
 	{
-		auto area = make_shared<WaveformArea>();
+		auto area = make_shared<WaveformArea>(s);
 		group->AddArea(area);
 	}
 }
