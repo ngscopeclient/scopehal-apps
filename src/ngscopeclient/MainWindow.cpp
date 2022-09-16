@@ -823,28 +823,48 @@ void MainWindow::DockingArea()
 	ImGui::PopStyleVar(3);
 
 	auto dockspace_id = ImGui::GetID("DockSpace");
+
+	if(!m_newWaveformGroups.empty())
+	{
+		LogTrace("Processing newly added waveform group\n");
+
+		//Find the top/leftmost leaf node in the docking tree
+		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
+		if(topNode == nullptr)
+		{
+			LogError("Top dock node is null when adding new waveform group\n");
+			return;
+		}
+
+		//Traverse down the top/left of the tree as long as such a node exists
+		auto node = topNode;
+		while(node->ChildNodes[0])
+			node = node->ChildNodes[0];
+
+		//See if the node has children in it
+		if(!node->Windows.empty())
+		{
+			LogTrace("Windows already in node, splitting it\n");
+			ImGuiID idLeft;
+			ImGuiID idRight;
+
+			ImGui::DockBuilderSplitNode(node->ID, ImGuiDir_Up, 0.5, &idLeft, &idRight);
+			node = ImGui::DockBuilderGetNode(idLeft);
+		}
+
+		//Dock new waveform groups by default
+		for(auto& g : m_newWaveformGroups)
+			ImGui::DockBuilderDockWindow(g->GetTitle().c_str(), node->ID);
+
+		//Finish up
+		ImGui::DockBuilderFinish(dockspace_id);
+
+		//Everything pending has been docked, no need to do anything with them in the future
+		m_newWaveformGroups.clear();
+	}
+
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
 	ImGui::End();
-
-	//Dock new waveform groups by default
-	for(auto& g : m_newWaveformGroups)
-	{
-		//Clear out existing docks
-		//auto viewport = ImGui::GetMainViewport();
-		//ImGui::DockBuilderRemoveNode(dockspace_id);
-		//ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-		//ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
-
-		//ImGuiID idLeft;
-		//ImGuiID idRight;
-		//auto idParent = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
-
-		//Dock the group at the top level by default
-		auto name = g->GetTitle();
-		ImGui::DockBuilderDockWindow(name.c_str(), dockspace_id);
-		ImGui::DockBuilderFinish(dockspace_id);
-	}
-	m_newWaveformGroups.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
