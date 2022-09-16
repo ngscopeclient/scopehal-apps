@@ -48,6 +48,7 @@
 #include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"
 #include "MultimeterState.h"
+#include "GuiLogSink.h"
 
 class RFSignalGeneratorThreadArgs
 {

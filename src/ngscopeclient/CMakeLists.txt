@@ -35,6 +35,8 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	Dialog.cpp
 	FunctionGeneratorDialog.cpp
+	GuiLogSink.cpp
+	LogViewerDialog.cpp
 	MainWindow.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
@@ -47,6 +49,7 @@ add_executable(ngscopeclient
 	RFGeneratorDialog.cpp
 	RFSignalGeneratorThread.cpp
 	ScopeThread.cpp
+	SCPIConsoleDialog.cpp
 	Session.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp

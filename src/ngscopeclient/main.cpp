@@ -41,6 +41,8 @@ using namespace std;
 
 unique_ptr<MainWindow> g_mainWindow;
 
+GuiLogSink* g_guiLog;
+
 #ifndef _WIN32
 void Relaunch(int argc, char* argv[]);
 #endif
@@ -63,7 +65,9 @@ int main(int argc, char* argv[])
 	}
 
 	//Set up logging
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
+	g_guiLog = new GuiLogSink(console_verbosity);
+	g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(console_verbosity));
+	g_log_sinks.push_back(unique_ptr<GuiLogSink>(g_guiLog));
 
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");

@@ -43,13 +43,15 @@
 class WaveformGroup
 {
 public:
-	WaveformGroup(const std::string& title, size_t numAreas);
+	WaveformGroup(const std::string& title);
 	virtual ~WaveformGroup();
 
-	void Render();
+	bool Render();
 
 	const std::string& GetTitle()
 	{ return m_title; }
+
+	void AddArea(std::shared_ptr<WaveformArea>& area);
 
 protected:
 

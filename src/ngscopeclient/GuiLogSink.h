@@ -30,51 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformGroup
+	@brief Declaration of GuiLogSink
  */
-#include "ngscopeclient.h"
-#include "WaveformGroup.h"
+#ifndef GuiLogSink_h
+#define GuiLogSink_h
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+/**
+	@brief Log sink for displaying logs in the GUI
+ */
+class GuiLogSink : public LogSink
 {
-}
+public:
+	GuiLogSink(Severity min_severity = Severity::DEBUG);
+	virtual ~GuiLogSink() override;
 
-WaveformGroup::~WaveformGroup()
-{
-}
+	void Clear();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Area management
+	void Log(Severity severity, const std::string &msg) override;
+	void Log(Severity severity, const char *format, va_list va) override;
 
-void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
-{
-	m_areas.push_back(area);
-}
+	const std::vector<std::string>& GetLines()
+	{ return m_lines; }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+protected:
+	std::vector<std::string> m_lines;
+};
 
-bool WaveformGroup::Render()
-{
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
-	{
-		ImGui::End();
-		return false;
-	}
-
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
-
-	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
-
-	ImGui::End();
-	return open;
-}
+#endif

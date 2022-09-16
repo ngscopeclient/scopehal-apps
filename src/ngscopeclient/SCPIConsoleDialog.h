@@ -30,51 +30,40 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformGroup
+	@brief Declaration of SCPIConsoleDialog
  */
-#include "ngscopeclient.h"
-#include "WaveformGroup.h"
+#ifndef SCPIConsoleDialog_h
+#define SCPIConsoleDialog_h
 
-using namespace std;
+#include "Dialog.h"
+#include <future>
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
+class MainWindow;
 
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+/**
+	@brief SCPI console for debugging drivers
+ */
+class SCPIConsoleDialog : public Dialog
 {
-}
+public:
+	SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst);
+	virtual ~SCPIConsoleDialog();
 
-WaveformGroup::~WaveformGroup()
-{
-}
+	virtual bool DoRender();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Area management
+	SCPIInstrument* GetInstrument()
+	{ return m_inst; }
 
-void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
-{
-	m_areas.push_back(area);
-}
+protected:
+	MainWindow* m_parent;
+	SCPIInstrument* m_inst;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+	std::vector<std::string> m_output;
 
-bool WaveformGroup::Render()
-{
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
-	{
-		ImGui::End();
-		return false;
-	}
+	std::string m_command;
 
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	bool m_commandPending;
+	std::future<std::string> m_commandReturnValue;
+};
 
-	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
-
-	ImGui::End();
-	return open;
-}
+#endif

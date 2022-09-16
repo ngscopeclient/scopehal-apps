@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glInstrumentclient                                                                                                        *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *

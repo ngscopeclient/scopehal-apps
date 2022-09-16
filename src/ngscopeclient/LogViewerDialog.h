@@ -30,51 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformGroup
+	@brief Declaration of LogViewerDialog
  */
-#include "ngscopeclient.h"
-#include "WaveformGroup.h"
+#ifndef LogViewerDialog_h
+#define LogViewerDialog_h
 
-using namespace std;
+#include "Dialog.h"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
+class MainWindow;
 
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+class LogViewerDialog : public Dialog
 {
-}
+public:
+	LogViewerDialog(MainWindow* parent);
+	virtual ~LogViewerDialog();
 
-WaveformGroup::~WaveformGroup()
-{
-}
+	virtual bool DoRender();
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Area management
+protected:
+	MainWindow* m_parent;
+};
 
-void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
-{
-	m_areas.push_back(area);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
-
-bool WaveformGroup::Render()
-{
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
-	{
-		ImGui::End();
-		return false;
-	}
-
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
-
-	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
-
-	ImGui::End();
-	return open;
-}
+#endif

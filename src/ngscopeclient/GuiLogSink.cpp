@@ -30,51 +30,64 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformGroup
+	@brief Implementation of GuiLogSink
  */
 #include "ngscopeclient.h"
-#include "WaveformGroup.h"
+#include "GuiLogSink.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+GuiLogSink::GuiLogSink(Severity min_severity)
+	: LogSink(min_severity)
 {
+
 }
 
-WaveformGroup::~WaveformGroup()
+GuiLogSink::~GuiLogSink()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Area management
-
-void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
-{
-	m_areas.push_back(area);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+// Logging
 
-bool WaveformGroup::Render()
+void GuiLogSink::Clear()
 {
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
+	m_lines.clear();
+}
+
+void GuiLogSink::Log(Severity severity, const string &msg)
+{
+	if(severity > m_min_severity)
+		return;
+
+	//Blank lines get special handling
+	if(msg == "\n")
 	{
-		ImGui::End();
-		return false;
+		m_lines.push_back("");
+		return;
 	}
 
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	auto vec = explode(msg, '\n');
+	auto len = vec.size();
+	auto indent = GetIndentString();
+	for(size_t i=0; i<len; i++)
+	{
+		//Don't append blank line at end of buffer
+		if( (i+1 == len) && vec[i].empty())
+			break;
 
-	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
+		//Otherwise append it
+		m_lines.push_back(indent + vec[i]);
+	}
+}
 
-	ImGui::End();
-	return open;
+void GuiLogSink::Log(Severity severity, const char *format, va_list va)
+{
+	if(severity > m_min_severity)
+		return;
+
+	Log(severity, vstrprintf(format, va));
 }

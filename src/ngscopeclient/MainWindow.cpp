@@ -45,8 +45,10 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
+#include "SCPIConsoleDialog.h"
 
 using namespace std;
 
@@ -57,14 +59,14 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	: VulkanWindow("ngscopeclient", queue)
 	, m_showDemo(true)
 	, m_showPlot(false)
+	, m_nextWaveformGroup(1)
 	, m_session(this)
 {
-	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
-	m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
+	//m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
+	//m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
 
 	LoadRecentInstrumentList();
 
-	//Set up a better font.
 	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
 	ImGuiIO& io = ImGui::GetIO();
 	ImFontGlyphRangesBuilder builder;
@@ -73,16 +75,17 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	for(wchar_t i=0x370; i<=0x3ff; i++)	//Greek and Coptic
 		builder.AddChar(i);
 
+	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
 	builder.BuildRanges(&ranges);
 
-	auto font = io.Fonts->AddFontFromFileTTF(
-		FindDataFile("fonts/DejaVuSans.ttf").c_str(),
-		13,
-		nullptr,
-		ranges.Data);
+	//Load our fonts
+	m_defaultFont = LoadFont("fonts/DejaVuSans.ttf", 13, ranges);
+	m_monospaceFont = LoadFont("fonts/DejaVuSansMono.ttf", 13, ranges);
+
+	//Done loading fonts, build the atals
 	io.Fonts->Build();
-	io.FontDefault = font;
+	io.FontDefault = m_defaultFont;
 }
 
 MainWindow::~MainWindow()
@@ -108,6 +111,56 @@ void MainWindow::CloseSession()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Add views for new instruments
+
+string MainWindow::NameNewWaveformGroup()
+{
+	//TODO: avoid colliding, check if name is in use and skip if so
+	int id = (m_nextWaveformGroup ++);
+	return string("Waveform Group ") + to_string(id);
+}
+
+void MainWindow::OnScopeAdded(Oscilloscope* scope)
+{
+	//If we have no waveform groups, make one
+	//TODO: reject existing group if units are incompatible
+	if(m_waveformGroups.empty())
+	{
+		//Make the group
+		auto name = NameNewWaveformGroup();
+		auto group = make_shared<WaveformGroup>(name);
+		m_waveformGroups.push_back(group);
+
+		//Group is newly created and not yet docked
+		m_newWaveformGroups.push_back(group);
+	}
+
+	//Get the first compatible waveform group (may or may not be what we just created)
+	//TODO: reject existing group if units are incompatible
+	auto group = *m_waveformGroups.begin();
+
+	//Add areas to it
+	//For now, one area per enabled channel
+	vector<StreamDescriptor> streams;
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto chan = scope->GetChannel(i);
+		if(!chan->IsEnabled())
+			continue;
+
+		for(size_t j=0; j<chan->GetStreamCount(); j++)
+			streams.push_back(StreamDescriptor(chan, j));
+	}
+	if(streams.empty())
+		LogWarning("no streams found\n");
+	for(auto s : streams)
+	{
+		auto area = make_shared<WaveformArea>();
+		group->AddArea(area);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
 void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
@@ -124,8 +177,14 @@ void MainWindow::RenderUI()
 	DockingArea();
 
 	//Waveform groups
-	for(auto g : m_waveformGroups)
-		g->Render();
+	vector<size_t> groupsToClose;
+	for(size_t i=0; i<m_waveformGroups.size(); i++)
+	{
+		if(!m_waveformGroups[i]->Render())
+			groupsToClose.push_back(i);
+	}
+	for(ssize_t i = static_cast<ssize_t>(groupsToClose.size())-1; i >= 0; i--)
+		m_waveformGroups.erase(m_waveformGroups.begin() + i);
 
 	//Dialog boxes
 	set< shared_ptr<Dialog> > dlgsToClose;
@@ -135,28 +194,38 @@ void MainWindow::RenderUI()
 			dlgsToClose.emplace(dlg);
 	}
 	for(auto& dlg : dlgsToClose)
-	{
-		//Multimeter dialogs are stored in a separate list
-		auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
-		if(meterDlg)
-			m_meterDialogs.erase(meterDlg->GetMeter());
-
-		//Function generator dialogs are stored in a separate list
-		auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
-		if(genDlg)
-			m_generatorDialogs.erase(genDlg->GetGenerator());
-
-		//RF generator dialogs are stored in a separate list
-		auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
-		if(rgenDlg)
-			m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
-
-		m_dialogs.erase(dlg);
-	}
+		OnDialogClosed(dlg);
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
 	//ImPlot::ShowDemoWindow(&m_showPlot);
+}
+
+void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
+{
+	//Multimeter dialogs are stored in a separate list
+	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
+	if(meterDlg)
+		m_meterDialogs.erase(meterDlg->GetMeter());
+
+	//Function generator dialogs are stored in a separate list
+	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
+	if(genDlg)
+		m_generatorDialogs.erase(genDlg->GetGenerator());
+
+	//RF generator dialogs are stored in a separate list
+	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
+	if(rgenDlg)
+		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	if(m_logViewerDialog == dlg)
+		m_logViewerDialog = nullptr;
+
+	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
+	if(conDlg)
+		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
+
+	m_dialogs.erase(dlg);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -614,6 +683,21 @@ void MainWindow::WindowMenu()
 	{
 		WindowGeneratorMenu();
 		WindowMultimeterMenu();
+		WindowSCPIConsoleMenu();
+
+		bool hasLogViewer = m_logViewerDialog != nullptr;
+		if(hasLogViewer)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Log Viewer"))
+		{
+			m_logViewerDialog = make_shared<LogViewerDialog>(this);
+			AddDialog(m_logViewerDialog);
+		}
+
+		if(hasLogViewer)
+			ImGui::EndDisabled();
+
 		ImGui::EndMenu();
 	}
 }
@@ -621,21 +705,21 @@ void MainWindow::WindowMenu()
 /**
 	@brief Run the Window | Generator menu
 
-	This menu is used for connecting to a function generator that is part of an oscilloscope.
+	This menu is used for connecting to a function generator that is part of an oscilloscope or other instrument.
  */
 void MainWindow::WindowGeneratorMenu()
 {
 	if(ImGui::BeginMenu("Generator"))
 	{
-		auto scopes = m_session.GetScopes();
-		for(auto scope : scopes)
+		auto insts = m_session.GetSCPIInstruments();
+		for(auto inst : insts)
 		{
-			//Is the scope also a function generator? If not, skip it
-			if( (scope->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
+			//Skip anything that's not a function generator
+			if( (inst->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
-			auto generator = dynamic_cast<SCPIFunctionGenerator*>(scope);
+			auto generator = dynamic_cast<SCPIFunctionGenerator*>(inst);
 			if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
 				continue;
 
@@ -670,6 +754,32 @@ void MainWindow::WindowMultimeterMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(scope->m_nickname.c_str()))
 				m_session.AddMultimeter(meter);
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Runs the Window | SCPI Console menu
+ */
+void MainWindow::WindowSCPIConsoleMenu()
+{
+	if(ImGui::BeginMenu("SCPI Console"))
+	{
+		auto insts = m_session.GetSCPIInstruments();
+		for(auto inst : insts)
+		{
+			//If we already have a dialog, don't show the menu
+			if(m_scpiConsoleDialogs.find(inst) != m_scpiConsoleDialogs.end())
+				continue;
+
+			if(ImGui::MenuItem(inst->m_nickname.c_str()))
+			{
+				auto dlg = make_shared<SCPIConsoleDialog>(this, inst);
+				m_scpiConsoleDialogs[inst] = dlg;
+				AddDialog(dlg);
+			}
 		}
 
 		ImGui::EndMenu();
@@ -716,26 +826,25 @@ void MainWindow::DockingArea()
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
 	ImGui::End();
 
-	//DEBUG: do initial split of our waveform groups into the dock space
-	static bool first = true;
-	if(first)
+	//Dock new waveform groups by default
+	for(auto& g : m_newWaveformGroups)
 	{
 		//Clear out existing docks
-		ImGui::DockBuilderRemoveNode(dockspace_id);
-		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-		ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
+		//auto viewport = ImGui::GetMainViewport();
+		//ImGui::DockBuilderRemoveNode(dockspace_id);
+		//ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+		//ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->WorkSize);
 
-		ImGuiID idLeft;
-		ImGuiID idRight;
-		/*auto idParent =*/ ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
+		//ImGuiID idLeft;
+		//ImGuiID idRight;
+		//auto idParent = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.5, &idLeft, &idRight);
 
-		ImGui::DockBuilderDockWindow(m_waveformGroups[0]->GetTitle().c_str(), idLeft);
-		ImGui::DockBuilderDockWindow(m_waveformGroups[1]->GetTitle().c_str(), idRight);
-
+		//Dock the group at the top level by default
+		auto name = g->GetTitle();
+		ImGui::DockBuilderDockWindow(name.c_str(), dockspace_id);
 		ImGui::DockBuilderFinish(dockspace_id);
-
-		first = false;
 	}
+	m_newWaveformGroups.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

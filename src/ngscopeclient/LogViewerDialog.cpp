@@ -30,51 +30,49 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformGroup
+	@brief Implementation of LogViewerDialog
  */
+
 #include "ngscopeclient.h"
-#include "WaveformGroup.h"
+#include "MainWindow.h"
+#include "LogViewerDialog.h"
 
 using namespace std;
+
+extern GuiLogSink* g_guiLog;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+LogViewerDialog::LogViewerDialog(MainWindow* parent)
+	: Dialog("Log Viewer", ImVec2(500, 300))
+	, m_parent(parent)
 {
 }
 
-WaveformGroup::~WaveformGroup()
+LogViewerDialog::~LogViewerDialog()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Area management
-
-void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
-{
-	m_areas.push_back(area);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-bool WaveformGroup::Render()
+bool LogViewerDialog::DoRender()
 {
-	bool open = true;
-	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
-	{
-		ImGui::End();
-		return false;
-	}
+	//TODO: filters etc?
 
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
+	ImGui::PushFont(m_parent->GetMonospaceFont());
+	auto& lines = g_guiLog->GetLines();
+	for(auto& line : lines)
+		ImGui::TextUnformatted(line.c_str());
+	ImGui::PopFont();
 
-	ImGui::End();
-	return open;
+	if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+		ImGui::SetScrollHereY(1.0f);
+
+	ImGui::EndChild();
+
+	return true;
 }

@@ -85,6 +85,11 @@ FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generato
 			state.m_waveShapeNames.push_back(m_generator->GetNameOfShape(state.m_waveShapes[j]));
 		}
 
+		if(m_generator->GetFunctionChannelOutputImpedance(i) == FunctionGenerator::IMPEDANCE_50_OHM)
+			state.m_impedanceIndex = 1;
+		else
+			state.m_impedanceIndex = 0;
+
 		m_uiState.push_back(state);
 	}
 
@@ -155,12 +160,15 @@ void FunctionGeneratorDialog::DoChannel(int i)
 			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
 		HelpMarker("Turns the output signal from this channel on or off");
 
-		ImGui::SetNextItemWidth(valueWidth);
-		if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
-			m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
-		HelpMarker(
-			"Select the expected load impedance.\n\n"
-			"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
+		if(m_generator->HasFunctionImpedanceControls(i))
+		{
+			ImGui::SetNextItemWidth(valueWidth);
+			if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
+				m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
+			HelpMarker(
+				"Select the expected load impedance.\n\n"
+				"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
+		}
 
 		//Amplitude and offset are potentially damaging operations
 		//Require the user to explicitly commit changes before they take effect
@@ -184,27 +192,31 @@ void FunctionGeneratorDialog::DoChannel(int i)
 		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
 			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
 
-		auto waveformType = m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex];
-		bool hasDutyCycle = false;
-		switch(waveformType)
+		//Duty cycle controls are not available in all generators
+		if(m_generator->HasFunctionDutyCycleControls(i))
 		{
-			case FunctionGenerator::SHAPE_PULSE:
-			case FunctionGenerator::SHAPE_SQUARE:
-			case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
-				hasDutyCycle = true;
-				break;
+			auto waveformType = m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex];
+			bool hasDutyCycle = false;
+			switch(waveformType)
+			{
+				case FunctionGenerator::SHAPE_PULSE:
+				case FunctionGenerator::SHAPE_SQUARE:
+				case FunctionGenerator::SHAPE_PRBS_NONSTANDARD:
+					hasDutyCycle = true;
+					break;
 
-			default:
-				hasDutyCycle = false;
+				default:
+					hasDutyCycle = false;
+			}
+			ImGui::SetNextItemWidth(valueWidth);
+			if(!hasDutyCycle)
+				ImGui::BeginDisabled();
+			if(UnitInputWithImplicitApply("Duty Cycle", m_uiState[i].m_dutyCycle, m_uiState[i].m_committedDutyCycle, pct))
+				m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_committedDutyCycle);
+			if(!hasDutyCycle)
+				ImGui::EndDisabled();
+			HelpMarker("Duty cycle of the waveform, in percent. Not applicable to all waveform types.");
 		}
-		ImGui::SetNextItemWidth(valueWidth);
-		if(!hasDutyCycle)
-			ImGui::BeginDisabled();
-		if(UnitInputWithImplicitApply("Duty Cycle", m_uiState[i].m_dutyCycle, m_uiState[i].m_committedDutyCycle, pct))
-			m_generator->SetFunctionChannelDutyCycle(i, m_uiState[i].m_committedDutyCycle);
-		if(!hasDutyCycle)
-			ImGui::EndDisabled();
-		HelpMarker("Duty cycle of the waveform, in percent. Not applicable to all waveform types.");
 
 		//Rise and fall time controls are not present in all generators
 		//TODO: not all waveforms make sense to have rise/fall times etiher
