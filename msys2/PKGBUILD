@@ -26,7 +26,7 @@ makedepends=(
 
 pkgver() {
   cd "${srcdir}"/../..
-  echo '0.0.0.r'"$(git rev-list --count HEAD)"'.g'"$(git describe --all --long | sed 's/^.*-g\(.*\)/\1/')"
+  echo '0.1.0.r'"$(git rev-list --count HEAD)"'.g'"$(git describe --all --long | sed 's/^.*-g\(.*\)/\1/')"
 }
 
 build() {
