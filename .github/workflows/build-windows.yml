@@ -99,7 +99,7 @@ jobs:
         cd msys2
         MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
 
-    - name: Test
+    - name: Test 
       shell: msys2 {0}
       run: |
         pacman -U --noconfirm msys2/*.zst
