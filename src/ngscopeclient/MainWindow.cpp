@@ -155,7 +155,7 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 		LogWarning("no streams found\n");
 	for(auto s : streams)
 	{
-		auto area = make_shared<WaveformArea>();
+		auto area = make_shared<WaveformArea>(s, group, this);
 		group->AddArea(area);
 	}
 }
@@ -824,7 +824,48 @@ void MainWindow::DockingArea()
 
 	auto dockspace_id = ImGui::GetID("DockSpace");
 
-	if(!m_newWaveformGroups.empty())
+	//Handle splitting of existing waveform groups
+	if(!m_splitRequests.empty())
+	{
+		LogTrace("Processing split request\n");
+
+		for(auto request : m_splitRequests)
+		{
+			//Get the window for the group
+			auto window = ImGui::FindWindowByName(request.m_group->GetTitle().c_str());
+			if(!window || !window->DockNode)
+			{
+				LogWarning("Window or dock node is null (TODO handle this)\n");
+				continue;
+			}
+
+			auto dockid = window->DockId;
+
+			//Split the existing node
+			ImGuiID idA;
+			ImGuiID idB;
+			ImGui::DockBuilderSplitNode(dockid, request.m_direction, 0.5, &idA, &idB);
+			auto node = ImGui::DockBuilderGetNode(idA);
+
+			//Create a new waveform group and dock it into the new space
+			auto group = make_shared<WaveformGroup>(NameNewWaveformGroup());
+			m_waveformGroups.push_back(group);
+			ImGui::DockBuilderDockWindow(group->GetTitle().c_str(), node->ID);
+
+			//Add a new waveform area for our stream to the new group
+			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
+			group->AddArea(area);
+		}
+
+		//Finish up
+		ImGui::DockBuilderFinish(dockspace_id);
+
+		m_splitRequests.clear();
+	}
+
+	//Handle newly created waveform groups
+	//Do not do this the same frame as split requests
+	else if(!m_newWaveformGroups.empty())
 	{
 		LogTrace("Processing newly added waveform group\n");
 

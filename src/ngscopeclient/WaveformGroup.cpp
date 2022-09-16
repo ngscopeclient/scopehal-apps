@@ -72,8 +72,21 @@ bool WaveformGroup::Render()
 
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 
+	//Render our waveform areas
+	vector<size_t> areasToClose;
 	for(size_t i=0; i<m_areas.size(); i++)
-		m_areas[i]->Render(i, m_areas.size(), clientArea);
+	{
+		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
+			areasToClose.push_back(i);
+	}
+
+	//Close any areas that are now empty
+	for(ssize_t i=static_cast<ssize_t>(areasToClose.size()) - 1; i >= 0; i--)
+		m_areas.erase(m_areas.begin() + areasToClose[i]);
+
+	//If we no longer have any areas in the group, close the group
+	if(m_areas.empty())
+		open = false;
 
 	ImGui::End();
 	return open;

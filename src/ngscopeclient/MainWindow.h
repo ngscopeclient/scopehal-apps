@@ -43,6 +43,20 @@
 
 class MultimeterDialog;
 
+class SplitGroupRequest
+{
+public:
+	SplitGroupRequest(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
+	: m_group(group)
+	, m_direction(direction)
+	, m_stream(stream)
+	{}
+
+	std::shared_ptr<WaveformGroup> m_group;
+	ImGuiDir m_direction;
+	StreamDescriptor m_stream;
+};
+
 /**
 	@brief Top level application window
  */
@@ -56,6 +70,9 @@ public:
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
 
 	void OnScopeAdded(Oscilloscope* scope);
+
+	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
+	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -128,6 +145,9 @@ protected:
 	std::shared_ptr<Dialog> m_logViewerDialog;
 
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
+
+	///@brief Pending requests to split waveform groups
+	std::vector<SplitGroupRequest> m_splitRequests;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
