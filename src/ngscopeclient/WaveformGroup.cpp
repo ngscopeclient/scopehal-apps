@@ -40,11 +40,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformGroup::WaveformGroup(const string& title, size_t numAreas)
+WaveformGroup::WaveformGroup(const string& title)
 	: m_title(title)
 {
-	for(size_t i=0; i<numAreas; i++)
-		m_areas.push_back(make_shared<WaveformArea>());
 }
 
 WaveformGroup::~WaveformGroup()
@@ -52,16 +50,24 @@ WaveformGroup::~WaveformGroup()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Area management
+
+void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
+{
+	m_areas.push_back(area);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void WaveformGroup::Render()
+bool WaveformGroup::Render()
 {
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin(m_title.c_str(), &open))
 	{
 		ImGui::End();
-		return;
+		return false;
 	}
 
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
@@ -70,4 +76,5 @@ void WaveformGroup::Render()
 		m_areas[i]->Render(i, m_areas.size(), clientArea);
 
 	ImGui::End();
+	return open;
 }

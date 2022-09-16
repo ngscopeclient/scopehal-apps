@@ -82,6 +82,7 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
 
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
+	m_mainWindow->OnScopeAdded(scope);
 }
 
 /**
