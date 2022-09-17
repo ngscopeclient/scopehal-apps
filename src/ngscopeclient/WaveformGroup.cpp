@@ -34,14 +34,19 @@
  */
 #include "ngscopeclient.h"
 #include "WaveformGroup.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-WaveformGroup::WaveformGroup(const string& title)
-	: m_title(title)
+WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
+	: m_parent(parent)
+	, m_pixelsPerXUnit(0.00005)
+	, m_xAxisOffset(0)
+	, m_title(title)
+	, m_xAxisUnit(Unit::UNIT_FS)
 {
 }
 
@@ -93,21 +98,149 @@ bool WaveformGroup::Render()
 	if(m_areas.empty())
 		open = false;
 
+	//Render cursors over everything else
+
 	ImGui::End();
 	return open;
 }
 
 void WaveformGroup::RenderTimeline(float width, float height)
 {
-	//Draw some stuff
 	auto list = ImGui::GetWindowDrawList();
 
-	ImVec2 p0 = ImGui::GetCursorScreenPos();
-	ImVec2 p1 = ImVec2(p0.x + width, p0.y + height);
-	ImU32 col_a = ImGui::GetColorU32(IM_COL32(0, 0, 0, 255));
-	ImU32 col_b = ImGui::GetColorU32(IM_COL32(255, 255, 255, 255));
-	list->AddRectFilledMultiColor(p0, p1, col_a, col_b, col_b, col_a);
+	//Style settings
+	//TODO: get some/all of this from preferences
+	ImU32 color = ImGui::GetColorU32(ImVec4(1, 1, 1, 1));
+	auto font = m_parent->GetDefaultFont();
 
-	//Dummy area
+	//Reserve an empty area for the timeline
+	auto pos = ImGui::GetCursorScreenPos();
 	ImGui::Dummy(ImVec2(width, height));
+
+	//Dimensions for various things
+	float dpiScale = ImGui::GetWindowDpiScale();
+	float fineTickLength = 10 * dpiScale;
+	float coarseTickLength = height;
+	const double min_label_grad_width = 75 * dpiScale;	//Minimum distance between text labels
+	float thickLineWidth = 2;
+	float thinLineWidth = 1;
+	float fontSize = ImGui::GetFontSize();
+	float ymid = pos.y + height/2;
+
+	//Top line
+	list->PathLineTo(pos);
+	list->PathLineTo(ImVec2(pos.x + width, pos.y));
+	list->PathStroke(color, 0, thickLineWidth);
+
+	//Figure out rounding granularity, based on our time scales
+	float xscale = m_pixelsPerXUnit / dpiScale;
+	int64_t width_xunits = width / xscale;
+	auto round_divisor = GetRoundingDivisor(width_xunits);
+
+	//Figure out about how much time per graduation to use
+	double grad_xunits_nominal = min_label_grad_width / xscale;
+
+	//Round so the division sizes are sane
+	double units_per_grad = grad_xunits_nominal * 1.0 / round_divisor;
+	double base = 5;
+	double log_units = log(units_per_grad) / log(base);
+	double log_units_rounded = ceil(log_units);
+	double units_rounded = pow(base, log_units_rounded);
+	float textMargin = 2;
+	int64_t grad_xunits_rounded = round(units_rounded * round_divisor);
+
+	//avoid divide-by-zero in weird cases with no waveform etc
+	if(grad_xunits_rounded == 0)
+		return;
+
+	//Calculate number of ticks within a division
+	double nsubticks = 5;
+	double subtick = grad_xunits_rounded / nsubticks;
+
+	//Find the start time (rounded as needed)
+	double tstart = round(m_xAxisOffset / grad_xunits_rounded) * grad_xunits_rounded;
+
+	//Print tick marks and labels
+	for(double t = tstart; t < (tstart + width_xunits + grad_xunits_rounded); t += grad_xunits_rounded)
+	{
+		double x = (t - m_xAxisOffset) * xscale;
+
+		//Draw fine ticks first (even if the labeled graduation doesn't fit)
+		for(int tick=1; tick < nsubticks; tick++)
+		{
+			double subx = (t - m_xAxisOffset + tick*subtick) * xscale;
+
+			if(subx < 0)
+				continue;
+			if(subx > width)
+				break;
+			subx += pos.x;
+
+			list->PathLineTo(ImVec2(subx, pos.y));
+			list->PathLineTo(ImVec2(subx, pos.y + fineTickLength));
+			list->PathStroke(color, 0, thinLineWidth);
+		}
+
+		if(x < 0)
+			continue;
+		if(x > width)
+			break;
+
+		//Coarse ticks
+		x += pos.x;
+		list->PathLineTo(ImVec2(x, pos.y));
+		list->PathLineTo(ImVec2(x, pos.y + coarseTickLength));
+		list->PathStroke(color, 0, thickLineWidth);
+
+		//Render label
+		//TODO: is using the default font faster? by enough to matter?
+		list->AddText(
+			font,
+			fontSize,
+			ImVec2(x + textMargin, ymid),
+			color,
+			m_xAxisUnit.PrettyPrint(t).c_str());
+	}
+}
+
+/**
+	@brief Decide on reasonable rounding intervals for X axis scale ticks
+ */
+int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
+{
+	int64_t round_divisor = 1;
+
+	if(width_xunits < 1E7)
+	{
+		//fs, leave default
+		if(width_xunits < 1e2)
+			round_divisor = 1e1;
+		else if(width_xunits < 1e5)
+			round_divisor = 1e4;
+		else if(width_xunits < 5e5)
+			round_divisor = 5e4;
+		else if(width_xunits < 1e6)
+			round_divisor = 1e5;
+		else if(width_xunits < 2.5e6)
+			round_divisor = 2.5e5;
+		else if(width_xunits < 5e6)
+			round_divisor = 5e5;
+		else
+			round_divisor = 1e6;
+	}
+	else if(width_xunits < 1e9)
+		round_divisor = 1e6;
+	else if(width_xunits < 1e12)
+	{
+		if(width_xunits < 1e11)
+			round_divisor = 1e8;
+		else
+			round_divisor = 1e9;
+	}
+	else if(width_xunits < 1E14)
+		round_divisor = 1E12;
+	else
+		round_divisor = 1E15;
+
+	return round_divisor;
 }

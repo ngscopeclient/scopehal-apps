@@ -168,7 +168,7 @@ shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /
 	{
 		//Make the group
 		auto name = NameNewWaveformGroup();
-		auto group = make_shared<WaveformGroup>(name);
+		auto group = make_shared<WaveformGroup>(this, name);
 		m_waveformGroups.push_back(group);
 
 		//Group is newly created and not yet docked
@@ -463,7 +463,7 @@ void MainWindow::DockingArea()
 			auto node = ImGui::DockBuilderGetNode(idA);
 
 			//Create a new waveform group and dock it into the new space
-			auto group = make_shared<WaveformGroup>(NameNewWaveformGroup());
+			auto group = make_shared<WaveformGroup>(this, NameNewWaveformGroup());
 			m_waveformGroups.push_back(group);
 			ImGui::DockBuilderDockWindow(group->GetTitle().c_str(), node->ID);
 

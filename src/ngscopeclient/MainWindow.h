@@ -222,6 +222,9 @@ public:
 	ImFont* GetMonospaceFont()
 	{ return m_monospaceFont; }
 
+	ImFont* GetDefaultFont()
+	{ return m_defaultFont; }
+
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }
 };

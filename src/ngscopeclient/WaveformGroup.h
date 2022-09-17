@@ -43,7 +43,7 @@
 class WaveformGroup
 {
 public:
-	WaveformGroup(const std::string& title);
+	WaveformGroup(MainWindow* parent, const std::string& title);
 	virtual ~WaveformGroup();
 
 	bool Render();
@@ -55,9 +55,22 @@ public:
 
 protected:
 	void RenderTimeline(float width, float height);
+	int64_t GetRoundingDivisor(int64_t width_xunits);
+
+	///@brief Top level window we're attached to
+	MainWindow* m_parent;
+
+	///@brief Display scale factor
+	float m_pixelsPerXUnit;
+
+	///@brief X axis position of the left edge of our view
+	int64_t m_xAxisOffset;
 
 	///@brief Display title of the group
 	std::string m_title;
+
+	///@brief X axis unit
+	Unit m_xAxisUnit;
 
 	///@brief The set of waveform areas within this group
 	std::vector< std::shared_ptr<WaveformArea> > m_areas;
