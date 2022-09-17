@@ -70,17 +70,36 @@ void GuiLogSink::Log(Severity severity, const string &msg)
 		return;
 	}
 
+	auto indent = GetIndentString();
+
+	//No newline? Append to existing buffer
+	if(msg.find('\n') == string::npos)
+	{
+		if(m_unbufferedLine.empty())
+			m_unbufferedLine += indent;
+		m_unbufferedLine += msg;
+		return;
+	}
+
+	//One or more newlines? Split and process it
 	auto vec = explode(msg, '\n');
 	auto len = vec.size();
-	auto indent = GetIndentString();
 	for(size_t i=0; i<len; i++)
 	{
-		//Don't append blank line at end of buffer
+		//Blank line at end of buffer? Special handling
 		if( (i+1 == len) && vec[i].empty())
 			break;
 
+		//If unbuffered line is present, append to it
+		if(!m_unbufferedLine.empty())
+		{
+			m_lines.push_back(m_unbufferedLine + vec[i]);
+			m_unbufferedLine = "";
+		}
+
 		//Otherwise append it
-		m_lines.push_back(indent + vec[i]);
+		else
+			m_lines.push_back(indent + vec[i]);
 	}
 }
 

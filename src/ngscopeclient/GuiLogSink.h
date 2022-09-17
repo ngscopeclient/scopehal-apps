@@ -54,6 +54,8 @@ public:
 
 protected:
 	std::vector<std::string> m_lines;
+
+	std::string m_unbufferedLine;
 };
 
 #endif
