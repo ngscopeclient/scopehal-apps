@@ -46,7 +46,8 @@ Texture::Texture(
 	const vk::ImageCreateInfo& imageInfo,
 	const vk::raii::Buffer& srcBuf,
 	int width,
-	int height
+	int height,
+	TextureManager* mgr
 	)
 	: m_image(device, imageInfo)
 {
@@ -90,6 +91,30 @@ Texture::Texture(
 		while(vk::Result::eTimeout == g_vkComputeDevice->waitForFences({*fence}, VK_TRUE, 1000 * 1000))
 		{}
 	}
+
+	//Make a view for the image
+	vk::ImageViewCreateInfo vinfo(
+		{},
+		*m_image,
+		vk::ImageViewType::e2D,
+		vk::Format::eR8G8B8A8Srgb,
+		{},
+		vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
+
+	//Allocate a descriptor set from the texture manager, and bind our sampler etc to it
+	m_descriptorSet = mgr->AllocateTextureDescriptor();
+	vk::DescriptorImageInfo binfo(**mgr->GetSampler(), **m_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+	vector<vk::WriteDescriptorSet> writes;
+	vk::WriteDescriptorSet wset(
+		**m_descriptorSet,
+		0,
+		0,
+		vk::DescriptorType::eCombinedImageSampler,
+		binfo);
+	writes.push_back(wset);
+	g_vkComputeDevice->updateDescriptorSets(wset, nullptr);
 }
 
 void Texture::LayoutTransition(
@@ -136,7 +161,63 @@ void Texture::LayoutTransition(
 
 TextureManager::TextureManager()
 {
-	LogDebug("loading texture\n");
+	//Allocate descriptor pool
+	vk::DescriptorPoolSize size(vk::DescriptorType::eSampler, 1000);
+	vk::DescriptorPoolCreateInfo poolInfo(
+		vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind,
+		1,
+		size);
+	m_descriptorPool = make_unique<vk::raii::DescriptorPool>(*g_vkComputeDevice, poolInfo);
+
+	//Make a sampler using configuration that matches imgui
+	vk::SamplerCreateInfo sinfo(
+		{},
+		vk::Filter::eLinear,
+		vk::Filter::eLinear,
+		vk::SamplerMipmapMode::eLinear,
+		vk::SamplerAddressMode::eRepeat,
+		vk::SamplerAddressMode::eRepeat,
+		vk::SamplerAddressMode::eRepeat,
+		{},
+		{},
+		1.0,
+		{},
+		vk::CompareOp::eNever,
+		-1000,
+		1000
+	);
+	m_sampler = make_unique<vk::raii::Sampler>(*g_vkComputeDevice, sinfo);
+
+	//Set up descriptor set layout
+	vector<vk::DescriptorSetLayoutBinding> bindings;
+	bindings.push_back(vk::DescriptorSetLayoutBinding(
+		0,
+		vk::DescriptorType::eCombinedImageSampler,
+		vk::ShaderStageFlagBits::eFragment,
+		**m_sampler));
+	vk::DescriptorSetLayoutCreateInfo linfo({}, bindings);
+	m_descriptorLayout = make_unique<vk::raii::DescriptorSetLayout>(*g_vkComputeDevice, linfo);
+}
+
+TextureManager::~TextureManager()
+{
+	//Textures must be destroyed before we destroy the descriptor set they're allocated from
+	m_textures.clear();
+	m_descriptorLayout = nullptr;
+	m_descriptorPool = nullptr;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// File loading
+
+/**
+	@brief Loads a texture from a file into a named resource
+
+	If an existing texture by the same name already exists, it is overwritten.
+ */
+void TextureManager::LoadTexture(const string& name, const string& path)
+{
+	LogTrace("Loading texture \"%s\" from file \"%s\"\n", name.c_str(), path.c_str());
 
 	//Load a texture
 	int width = 256;
@@ -190,16 +271,19 @@ TextureManager::TextureManager()
 		queueFamilies,
 		vk::ImageLayout::eUndefined
 		);
-	m_textures["foo"] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height);
+	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this);
 }
 
-TextureManager::~TextureManager()
+/**
+	@brief Allocates a new texture descriptor
+ */
+unique_ptr<vk::raii::DescriptorSet> TextureManager::AllocateTextureDescriptor()
 {
+	vk::DescriptorSetAllocateInfo dsinfo(**m_descriptorPool, **m_descriptorLayout);
+	return make_unique<vk::raii::DescriptorSet>(move(vk::raii::DescriptorSets(*g_vkComputeDevice, dsinfo).front()));
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// File loading
-
-ImTextureID TextureManager::GetTexture(const std::string& name)
+ImTextureID TextureManager::GetTexture(const string& name)
 {
+	return m_textures[name]->GetTexture();
 }

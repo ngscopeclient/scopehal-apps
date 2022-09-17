@@ -94,7 +94,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 		//Draw texture for the actual waveform
 		//(todo: repeat for each channel)
-		ImTextureID my_tex_id = /*m_parent->GetTexture("foo");*/ImGui::GetIO().Fonts->TexID;
+		ImTextureID my_tex_id = m_parent->GetTexture("foo");//ImGui::GetIO().Fonts->TexID;
 		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 

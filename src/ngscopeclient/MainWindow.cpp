@@ -86,6 +86,24 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	io.Fonts->Flags = ImFontAtlasFlags_NoMouseCursors;
 	io.Fonts->Build();
 	io.FontDefault = m_defaultFont;
+
+	//Temporary command pool for initialization
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_renderQueueType );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	//Download Vulkan fonts
+	cmdBuf.begin({});
+	ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
+	cmdBuf.end();
+	SubmitAndBlock(cmdBuf, queue);
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+	//Load some textures
+	m_texmgr.LoadTexture("foo", "");
 }
 
 MainWindow::~MainWindow()

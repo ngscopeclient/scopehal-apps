@@ -128,24 +128,9 @@ int main(int argc, char* argv[])
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
 	{
-		//Make buffers etc for rendering
-		vk::CommandPoolCreateInfo poolInfo(
-			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-			g_renderQueueType );
-		vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
-		vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-		vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-		vk::raii::Queue queue(*g_vkComputeDevice, g_renderQueueType, AllocateVulkanRenderQueue());
-
 		//Make the top level window
+		vk::raii::Queue queue(*g_vkComputeDevice, g_renderQueueType, AllocateVulkanRenderQueue());
 		g_mainWindow = make_unique<MainWindow>(queue);
-
-		//Download Vulkan fonts
-		cmdBuf.begin({});
-		ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
-		cmdBuf.end();
-		SubmitAndBlock(cmdBuf, queue);
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 		//Main event loop
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))

@@ -35,8 +35,12 @@
 #ifndef TextureManager_h
 #define TextureManager_h
 
+class TextureManager;
+
 /**
 	@brief Encapsulates the various Vulkan objects we need to represent texture image memory
+
+	We don't do multitexturing at the moment, so each texture has its own single-binding descriptor set
  */
 class Texture
 {
@@ -46,16 +50,27 @@ public:
 		const vk::ImageCreateInfo& imageInfo,
 		const vk::raii::Buffer& srcBuf,
 		int width,
-		int height
+		int height,
+		TextureManager* mgr
 		);
+
+	ImTextureID GetTexture()
+	{ return static_cast<ImTextureID>(**m_descriptorSet); }
+
+protected:
 
 	///@brief Image object for our texture
 	vk::raii::Image m_image;
 
+	///@brief View of the image
+	std::unique_ptr<vk::raii::ImageView> m_view;
+
+	///@brief Descriptor set
+	std::unique_ptr<vk::raii::DescriptorSet> m_descriptorSet;
+
 	///@brief Device memory backing the image
 	std::unique_ptr<vk::raii::DeviceMemory> m_deviceMemory;
 
-protected:
 	void LayoutTransition(
 		vk::AccessFlags src,
 		vk::AccessFlags dst,
@@ -72,10 +87,26 @@ public:
 	TextureManager();
 	virtual ~TextureManager();
 
+	void LoadTexture(const std::string& name, const std::string& path);
+
 	ImTextureID GetTexture(const std::string& name);
+
+	std::unique_ptr<vk::raii::DescriptorSet> AllocateTextureDescriptor();
+
+	std::unique_ptr<vk::raii::Sampler>& GetSampler()
+	{ return m_sampler; }
 
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
+
+	///@brief Descriptor pool for texture handles
+	std::unique_ptr<vk::raii::DescriptorPool> m_descriptorPool;
+
+	//@brief Sampler for textures
+	std::unique_ptr<vk::raii::Sampler> m_sampler;
+
+	///@brief Descriptor set layout for a single texture
+	std::unique_ptr<vk::raii::DescriptorSetLayout> m_descriptorLayout;
 };
 
 #endif
