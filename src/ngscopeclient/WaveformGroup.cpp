@@ -72,6 +72,11 @@ bool WaveformGroup::Render()
 
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 
+	//Render the timeline
+	auto timelineHeight = 2.5 * ImGui::GetFontSize();
+	clientArea.y -= timelineHeight;
+	RenderTimeline(clientArea.x, timelineHeight);
+
 	//Render our waveform areas
 	vector<size_t> areasToClose;
 	for(size_t i=0; i<m_areas.size(); i++)
@@ -90,4 +95,19 @@ bool WaveformGroup::Render()
 
 	ImGui::End();
 	return open;
+}
+
+void WaveformGroup::RenderTimeline(float width, float height)
+{
+	//Draw some stuff
+	auto list = ImGui::GetWindowDrawList();
+
+	ImVec2 p0 = ImGui::GetCursorScreenPos();
+	ImVec2 p1 = ImVec2(p0.x + width, p0.y + height);
+	ImU32 col_a = ImGui::GetColorU32(IM_COL32(0, 0, 0, 255));
+	ImU32 col_b = ImGui::GetColorU32(IM_COL32(255, 255, 255, 255));
+	list->AddRectFilledMultiColor(p0, p1, col_a, col_b, col_b, col_a);
+
+	//Dummy area
+	ImGui::Dummy(ImVec2(width, height));
 }

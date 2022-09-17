@@ -102,6 +102,7 @@ protected:
 				void AddRFGeneratorMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddChannelsMenu();
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
@@ -148,6 +149,8 @@ protected:
 
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
+
+	std::shared_ptr<WaveformGroup> GetBestGroupForWaveform(StreamDescriptor stream);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
