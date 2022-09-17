@@ -26,6 +26,9 @@ endif()
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math -fsigned-char")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# For Release build strip exe/dll
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
+
 # clang doesn't properly use the attributes and so requires avx to build
 # should get fixed in #475
 if((NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
