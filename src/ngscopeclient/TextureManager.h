@@ -55,7 +55,7 @@ public:
 		);
 
 	ImTextureID GetTexture()
-	{ return static_cast<ImTextureID>(**m_descriptorSet); }
+	{ return m_texture; }
 
 protected:
 
@@ -65,8 +65,7 @@ protected:
 	///@brief View of the image
 	std::unique_ptr<vk::raii::ImageView> m_view;
 
-	///@brief Descriptor set
-	std::unique_ptr<vk::raii::DescriptorSet> m_descriptorSet;
+	ImTextureID m_texture;
 
 	///@brief Device memory backing the image
 	std::unique_ptr<vk::raii::DeviceMemory> m_deviceMemory;
@@ -91,22 +90,14 @@ public:
 
 	ImTextureID GetTexture(const std::string& name);
 
-	std::unique_ptr<vk::raii::DescriptorSet> AllocateTextureDescriptor();
-
 	std::unique_ptr<vk::raii::Sampler>& GetSampler()
 	{ return m_sampler; }
 
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
-	///@brief Descriptor pool for texture handles
-	std::unique_ptr<vk::raii::DescriptorPool> m_descriptorPool;
-
 	//@brief Sampler for textures
 	std::unique_ptr<vk::raii::Sampler> m_sampler;
-
-	///@brief Descriptor set layout for a single texture
-	std::unique_ptr<vk::raii::DescriptorSetLayout> m_descriptorLayout;
 };
 
 #endif
