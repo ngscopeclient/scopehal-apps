@@ -73,7 +73,7 @@ bool WaveformGroup::Render()
 	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 
 	//Render the timeline
-	auto timelineHeight = 3 * ImGui::GetFontSize();
+	auto timelineHeight = 2.5 * ImGui::GetFontSize();
 	clientArea.y -= timelineHeight;
 	RenderTimeline(clientArea.x, timelineHeight);
 

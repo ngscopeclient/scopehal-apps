@@ -35,6 +35,8 @@
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 
+#include "RemoteBridgeOscilloscope.h"
+
 //Dock builder API is not yet public, so might change...
 #include "imgui_internal.h"
 
@@ -62,9 +64,6 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
 {
-	//m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 1", 2));
-	//m_waveformGroups.push_back(make_shared<WaveformGroup>("Waveform Group 2", 3));
-
 	LoadRecentInstrumentList();
 
 	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
@@ -122,6 +121,9 @@ string MainWindow::NameNewWaveformGroup()
 
 void MainWindow::OnScopeAdded(Oscilloscope* scope)
 {
+	LogTrace("Oscilloscope \"%s\" added\n", scope->m_nickname.c_str());
+	LogIndenter li;
+
 	//If we have no waveform groups, make one
 	//TODO: reject existing group if units are incompatible
 	if(m_waveformGroups.empty())
@@ -142,17 +144,61 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 	//Add areas to it
 	//For now, one area per enabled channel
 	vector<StreamDescriptor> streams;
-	for(size_t i=0; i<scope->GetChannelCount(); i++)
-	{
-		auto chan = scope->GetChannel(i);
-		if(!chan->IsEnabled())
-			continue;
 
-		for(size_t j=0; j<chan->GetStreamCount(); j++)
-			streams.push_back(StreamDescriptor(chan, j));
+	//Headless scope? Pick every channel.
+	if(dynamic_cast<RemoteBridgeOscilloscope*>(scope))
+	{
+		LogTrace("Headless scope, enabling every analog channel\n");
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+			{
+				if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
+					streams.push_back(StreamDescriptor(chan, j));
+			}
+		}
+
+		//Handle pure logic analyzers
+		if(streams.empty())
+		{
+			LogTrace("No analog channels found. Must be a logic analyzer. Enabling every digital channel\n");
+
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetChannel(i);
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+				{
+					if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
+						streams.push_back(StreamDescriptor(chan, j));
+				}
+			}
+		}
 	}
-	if(streams.empty())
-		LogWarning("no streams found\n");
+
+	//Use whatever was enabled when we connected
+	else
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			if(!chan->IsEnabled())
+				continue;
+
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				streams.push_back(StreamDescriptor(chan, j));
+		}
+		LogTrace("%zu streams were active when we connected\n", streams.size());
+
+		//No streams? Grab the first one.
+		if(streams.empty())
+		{
+			LogTrace("Enabling first channel\n");
+			streams.push_back(StreamDescriptor(scope->GetChannel(0), 0));
+		}
+	}
+
+	//Add waveform areas for the streams
 	for(auto s : streams)
 	{
 		auto area = make_shared<WaveformArea>(s, group, this);
