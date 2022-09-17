@@ -109,6 +109,8 @@ protected:
 				void WindowMultimeterMenu();
 				void WindowSCPIConsoleMenu();
 			void HelpMenu();
+		void Toolbar();
+			void ToolbarButtons();
 		void DockingArea();
 
 	///@brief Enable flag for main imgui demo window
@@ -116,6 +118,12 @@ protected:
 
 	///@brief Enable flag for implot demo window
 	bool m_showPlot;
+
+	///@brief Start position of the viewport minus the menu and toolbar
+	ImVec2 m_workPos;
+
+	///@brief Size position of the viewport minus the menu and toolbar
+	ImVec2 m_workSize;
 
 	///@brief All dialogs and other pop-up UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;

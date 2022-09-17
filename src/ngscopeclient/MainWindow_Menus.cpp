@@ -97,6 +97,11 @@ void MainWindow::FileMenu()
 {
 	if(ImGui::BeginMenu("File"))
 	{
+		if(ImGui::MenuItem("Close"))
+			CloseSession();
+
+		ImGui::Separator();
+
 		if(ImGui::MenuItem("Exit"))
 			glfwSetWindowShouldClose(m_window, 1);
 

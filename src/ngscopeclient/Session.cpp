@@ -54,6 +54,11 @@ Session::Session(MainWindow* wnd)
 
 Session::~Session()
 {
+	Clear();
+}
+
+void Session::Clear()
+{
 	//Signal our threads to exit
 	m_shuttingDown = true;
 
@@ -69,6 +74,9 @@ Session::~Session()
 	m_psus.clear();
 	m_rfgenerators.clear();
 	m_meters.clear();
+
+	//Clear shutdown flag in case we're reusing the session object
+	m_shuttingDown = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

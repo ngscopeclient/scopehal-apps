@@ -103,7 +103,17 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
+	//TODO: use preference to decide what size to make the icons
 	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"));
+	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"));
+	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"));
+	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"));
+	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"));
+	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"));
+	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"));
+	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"));	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"));
+	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"));
 }
 
 MainWindow::~MainWindow()
@@ -116,12 +126,21 @@ MainWindow::~MainWindow()
 
 void MainWindow::CloseSession()
 {
-	//TODO: clear the actual session object
+	LogTrace("Closing session\n");
+
+	//Clear the actual session object
+	m_session.Clear();
 
 	SaveRecentInstrumentList();
 
+	//Destroy waveform views
+	m_waveformGroups.clear();
+	m_newWaveformGroups.clear();
+	m_splitRequests.clear();
+
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
+	m_logViewerDialog = nullptr;
 	m_meterDialogs.clear();
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
@@ -244,6 +263,7 @@ void MainWindow::RenderUI()
 {
 	//Menu for main window
 	MainMenu();
+	Toolbar();
 
 	//Docking area to put all of the groups in
 	DockingArea();
@@ -271,6 +291,91 @@ void MainWindow::RenderUI()
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
 	//ImPlot::ShowDemoWindow(&m_showPlot);
+}
+
+void MainWindow::Toolbar()
+{
+	//Toolbar should be at the top of the main window.
+	//Update work area size so docking area doesn't include the toolbar rectangle
+	auto viewport = ImGui::GetMainViewport();
+	auto toolbarHeight = ImGui::GetFontSize() * 2.5;
+	m_workPos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y + toolbarHeight);
+	m_workSize = ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - toolbarHeight);
+	ImGui::SetNextWindowPos(viewport->WorkPos);
+	ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x, toolbarHeight));
+
+	//Make the toolbar window
+	auto wflags =
+		ImGuiWindowFlags_NoDocking |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoCollapse;
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	bool open = true;
+	ImGui::Begin("toolbar", &open, wflags);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+
+	//Do the actual toolbar buttons
+	ToolbarButtons();
+
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar(2);
+
+	ImGui::End();
+}
+
+void MainWindow::ToolbarButtons()
+{
+	auto sz = 24;//ImGui::GetFontSize() * 2;
+	ImVec2 buttonsize(sz, sz);
+
+	//Trigger button group
+	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
+		LogDebug("start trigger\n");
+
+	ImGui::SameLine(0.0, 0.0);
+	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
+		LogDebug("single trigger\n");
+
+	ImGui::SameLine(0.0, 0.0);
+	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
+		LogDebug("force trigger\n");
+
+	ImGui::SameLine(0.0, 0.0);
+	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
+		LogDebug("stop trigger\n");
+
+	//History selector
+	ImGui::SameLine();
+	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
+		LogDebug("history\n");
+
+	//Refresh scope settings
+	ImGui::SameLine();
+	if(ImGui::ImageButton("refresh-settings", GetTexture("refresh-settings"), buttonsize))
+		LogDebug("refresh settings\n");
+
+	//View settings
+	ImGui::SameLine();
+	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
+		LogDebug("clear-sweeps\n");
+
+	//Fullscreen toggle
+	ImGui::SameLine(0.0, 0.0);
+	if(m_fullscreen)
+	{
+		if(ImGui::ImageButton("fullscreen-exit", GetTexture("fullscreen-exit"), buttonsize))
+			SetFullscreen(false);
+	}
+	else
+	{
+		if(ImGui::ImageButton("fullscreen-enter", GetTexture("fullscreen-enter"), buttonsize))
+			SetFullscreen(true);
+	}
 }
 
 void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
@@ -307,8 +412,8 @@ void MainWindow::DockingArea()
 {
 	//Provide a space we can dock windows into
 	auto viewport = ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport->WorkPos);
-	ImGui::SetNextWindowSize(viewport->WorkSize);
+	ImGui::SetNextWindowPos(m_workPos);
+	ImGui::SetNextWindowSize(m_workSize);
 	ImGui::SetNextWindowViewport(viewport->ID);
 
 	ImGuiWindowFlags host_window_flags = 0;

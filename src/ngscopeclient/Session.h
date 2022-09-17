@@ -152,6 +152,8 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	void Clear();
+
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddMultimeter(SCPIMultimeter* meter);
