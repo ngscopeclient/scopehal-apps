@@ -157,6 +157,8 @@ if(WIXPATH AND WIN32)
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/dist/windows_x64/styles
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/dist/windows_x64/icons
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/masks ${CMAKE_BINARY_DIR}/dist/windows_x64/masks
 		COMMAND ${CMAKE_COMMAND} -E copy
 				${CMAKE_SOURCE_DIR}/src/LICENSE
 				${CMAKE_BINARY_DIR}/lib/graphwidget/libgraphwidget.dll
@@ -165,6 +167,7 @@ if(WIXPATH AND WIN32)
 				${CMAKE_BINARY_DIR}/lib/scopeprotocols/libscopeprotocols.dll
 				${CMAKE_BINARY_DIR}/src/glscopeclient/glscopeclient.exe
 				${CMAKE_BINARY_DIR}/dist/windows_x64
+		COMMAND bash -c \"cp -R ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/windows_x64\"
 		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/windows_x64\"
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/lib
 		COMMAND bash -c \"cp -R /mingw64/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/dist/windows_x64/lib\"
