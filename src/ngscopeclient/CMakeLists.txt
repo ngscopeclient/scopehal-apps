@@ -98,6 +98,7 @@ target_link_libraries(ngscopeclient
 	scopeprotocols
 	scopeexports
 	glfw
+	png
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	)

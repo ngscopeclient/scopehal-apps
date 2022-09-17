@@ -35,6 +35,7 @@
 
 #include "ngscopeclient.h"
 #include "TextureManager.h"
+#include <png.h>
 
 using namespace std;
 
@@ -186,10 +187,76 @@ TextureManager::~TextureManager()
 void TextureManager::LoadTexture(const string& name, const string& path)
 {
 	LogTrace("Loading texture \"%s\" from file \"%s\"\n", name.c_str(), path.c_str());
+	LogIndenter li;
 
-	//Load a texture
-	int width = 256;
-	int height = 256;
+	//Initialize libpng
+	auto png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+	if(!png)
+	{
+		LogError("Failed to create PNG read struct\n");
+		return;
+	}
+	auto info = png_create_info_struct(png);
+	if(!info)
+	{
+		png_destroy_read_struct(&png, nullptr, nullptr);
+		LogError("Failed to create PNG info struct\n");
+		return;
+	}
+	auto end = png_create_info_struct(png);
+	if(!end)
+	{
+		png_destroy_read_struct(&png, &info, nullptr);
+		LogError("Failed to create PNG end info struct\n");
+		return;
+	}
+
+	//Prepare to load the file (assume it's a PNG for now)
+	FILE* fp = fopen(path.c_str(), "rb");
+	if(!fp)
+	{
+		LogError("Failed to open texture file \"%s\"\n", path.c_str());
+		return;
+	}
+	uint8_t sig[8];
+	if(sizeof(sig) != fread(sig, 1, sizeof(sig), fp))
+	{
+		LogError("Failed to read signature of PNG file \"%s\"\n", path.c_str());
+		fclose(fp);
+		return;
+	}
+	if(0 != png_sig_cmp(sig, 0, sizeof(sig)))
+	{
+		LogError("Bad magic number in PNG file \"%s\"\n", path.c_str());
+		fclose(fp);
+		return;
+	}
+	png_init_io(png, fp);
+	png_set_sig_bytes(png, sizeof(sig));
+
+	//Read it
+	png_read_png(png, info, PNG_TRANSFORM_IDENTITY, nullptr);
+	auto rowPtrs = png_get_rows(png, info);
+
+	//Figure out the file dimensions
+	int width = png_get_image_width(png, info);
+	int height = png_get_image_height(png, info);
+	int depth = png_get_bit_depth(png, info);
+	if(png_get_color_type(png, info) != PNG_COLOR_TYPE_RGBA)
+	{
+		LogError("Image \"%s\" is not RGBA color type, don't know how to load it\n", path.c_str());
+		png_destroy_read_struct(&png, &info, &end);
+		fclose(fp);
+		return;
+	}
+	if(depth != 8)
+	{
+		LogError("Image \"%s\" is not 8 bits per channel, don't know how to load it\n", path.c_str());
+		png_destroy_read_struct(&png, &info, &end);
+		fclose(fp);
+		return;
+	}
+	LogTrace("Image is %d x %d pixels, RGBA8888\n", width, height);
 	VkDeviceSize size = width * height * 4;
 
 	//Allocate temporary staging buffer
@@ -198,22 +265,17 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 
 	//Figure out actual memory requirements of the buffer and allocate physical memory for it
 	auto req = stagingBuf.getMemoryRequirements();
-	vk::MemoryAllocateInfo info(req.size, g_vkPinnedMemoryType);
-	vk::raii::DeviceMemory physMem(*g_vkComputeDevice, info);
+	vk::MemoryAllocateInfo minfo(req.size, g_vkPinnedMemoryType);
+	vk::raii::DeviceMemory physMem(*g_vkComputeDevice, minfo);
 
 	//Map it and bind to the buffer
 	auto mappedPtr = reinterpret_cast<uint8_t*>(physMem.mapMemory(0, req.size));
 	stagingBuf.bindMemory(*physMem, 0);
 
-	//Fill the mapped buffer with image data
-	for(int ipix=0; ipix<(width*height); ipix ++)
-	{
-		//full alpha magenta
-		mappedPtr[ipix*4] = 0xff;
-		mappedPtr[ipix*4 + 1] = 0x0;
-		mappedPtr[ipix*4 + 2] = 0xff;
-		mappedPtr[ipix*4 + 3] = 0xff;
-	}
+	//Fill the mapped buffer with image data from the PNG
+	size_t rowSize = width * 4;
+	for(int y=0; y<height; y++)
+		memcpy(mappedPtr + (y*rowSize), rowPtrs[y], rowSize);
 	physMem.unmapMemory();
 
 	//Make the texture object
@@ -240,6 +302,10 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 		vk::ImageLayout::eUndefined
 		);
 	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this);
+
+	//Clean up
+	png_destroy_read_struct(&png, &info, &end);
+	fclose(fp);
 }
 
 ImTextureID TextureManager::GetTexture(const string& name)

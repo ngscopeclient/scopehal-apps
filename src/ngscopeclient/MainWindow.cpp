@@ -95,7 +95,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
-	//Download Vulkan fonts
+	//Download imgui fonts
 	cmdBuf.begin({});
 	ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
 	cmdBuf.end();
@@ -103,7 +103,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
-	m_texmgr.LoadTexture("foo", "");
+	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"));
 }
 
 MainWindow::~MainWindow()
