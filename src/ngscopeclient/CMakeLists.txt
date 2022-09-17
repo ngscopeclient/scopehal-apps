@@ -52,6 +52,7 @@ add_executable(ngscopeclient
 	ScopeThread.cpp
 	SCPIConsoleDialog.cpp
 	Session.cpp
+	TextureManager.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp
@@ -64,8 +65,14 @@ add_custom_target(
 	COMMENT "Copying fonts..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts ${CMAKE_BINARY_DIR}/src/ngscopeclient/fonts)
 
+add_custom_target(
+	ngicons
+	COMMENT "Copying icons..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
+
 add_dependencies(ngscopeclient
 	ngfonts
+	ngicons
 	)
 
 # implot has a bunch of warnings, turn them off to avoid cluttering the build

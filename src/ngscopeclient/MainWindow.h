@@ -38,6 +38,7 @@
 #include "Dialog.h"
 #include "PreferenceManager.h"
 #include "Session.h"
+#include "TextureManager.h"
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
@@ -198,7 +199,7 @@ protected:
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Fonts
+	// Graphics items
 
 	//TODO: use preference manager for all this
 	ImFont* LoadFont(const std::string& path, int size, ImVector<ImWchar>& ranges)
@@ -207,9 +208,14 @@ protected:
 	ImFont* m_defaultFont;
 	ImFont* m_monospaceFont;
 
+	TextureManager m_texmgr;
+
 public:
 	ImFont* GetMonospaceFont()
 	{ return m_monospaceFont; }
+
+	ImTextureID GetTexture(const std::string& name)
+	{ return m_texmgr.GetTexture(name); }
 };
 
 #endif
