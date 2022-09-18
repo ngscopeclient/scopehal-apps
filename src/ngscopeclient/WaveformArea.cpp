@@ -84,12 +84,18 @@ void WaveformArea::RemoveStream(size_t i)
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
+	ImGui::PushID(to_string(iArea).c_str());
+
 	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
 	float spacing = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
 	float heightPerArea = totalHeightAvailable / numAreas;
 	float unspacedHeightPerArea = heightPerArea - spacing;
 
-	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x, unspacedHeightPerArea)))
+	//TODO: dpi scaling??
+	float timelineWidth = 10 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale();
+	float timelineWidthSpaced = timelineWidth + spacing;
+
+	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - timelineWidthSpaced, unspacedHeightPerArea)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto start = ImGui::GetWindowContentRegionMin();
@@ -146,9 +152,37 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	}
 	ImGui::EndChild();
 
+	//Draw the vertical scale
+	RenderYAxis(ImVec2(timelineWidth, unspacedHeightPerArea));
+
+	ImGui::PopID();
+
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
+}
+
+/**
+	@brief Renders the Y axis scale
+ */
+void WaveformArea::RenderYAxis(ImVec2 size)
+{
+	ImGui::SameLine(0, 0);
+	ImGui::BeginChild("yaxis", size);
+
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	//Draw it
+	ImVec2 p0 = ImGui::GetWindowPos();
+	ImVec2 p1 = ImVec2(p0.x + size.x, p0.y + size.y);
+	ImU32 col_a = ImGui::GetColorU32(IM_COL32(0, 0, 0, 255));
+	ImU32 col_b = ImGui::GetColorU32(IM_COL32(255, 255, 255, 255));
+	draw_list->AddRectFilledMultiColor(p0, p1, col_a, col_b, col_b, col_a);
+
+	//Reserve an empty area for the Y axis
+	ImGui::Dummy(size);
+
+	ImGui::EndChild();
 }
 
 /**

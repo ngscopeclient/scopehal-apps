@@ -96,6 +96,7 @@ public:
 
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
+	void RenderYAxis(ImVec2 size);
 
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
