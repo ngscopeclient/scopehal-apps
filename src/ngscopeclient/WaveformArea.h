@@ -96,10 +96,34 @@ public:
 
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
+	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
+	void RenderGridAndYAxis(ImVec2 start, ImVec2 size);
 	void RenderYAxis(ImVec2 size);
 
+	void DragDropOverlays(int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
+
+	float PixelToYAxisUnits(float pix);
+	float YAxisUnitsToPixels(float volt);
+	float YAxisUnitsToYPosition(float volt);
+	float YPositionToYAxisUnits(float y);
+	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
+
+	StreamDescriptor GetFirstAnalogStream();
+	StreamDescriptor GetFirstAnalogOrEyeStream();
+
+	///@brief Cached plot height
+	float m_height;
+
+	///@brief Cached Y axis offset
+	float m_yAxisOffset;
+
+	///@brief Cached midpoint of the plot
+	float m_ymid;
+
+	///@brief Cached Y axis scale
+	float m_pixelsPerYAxisUnit;
 
 	void OnMouseDelta(float delta);
 

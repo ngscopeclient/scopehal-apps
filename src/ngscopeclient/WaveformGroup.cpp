@@ -84,6 +84,8 @@ bool WaveformGroup::Render()
 	RenderTimeline(clientArea.x, timelineHeight);
 
 	//Render our waveform areas
+	//TODO: waveform areas full of protocol or digital decodes should be fixed size
+	//while analog will fill the gap?
 	vector<size_t> areasToClose;
 	for(size_t i=0; i<m_areas.size(); i++)
 	{
