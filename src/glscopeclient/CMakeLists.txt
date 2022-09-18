@@ -138,7 +138,7 @@ add_dependencies(protoshaders
 	)
 
 # Compile the waveform render shader in all its variations
-# This function also implicitly adds the HAS_INT64 variant
+# This function also implicitly adds the HAS_INT64 and DENSE_PACK variants for each input
 function(add_render_shader_variant outname)
 	cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "OPTIONS")
 	set(source waveform-compute.glsl)
@@ -147,9 +147,12 @@ function(add_render_shader_variant outname)
 	add_custom_command(
 		OUTPUT ${outfile}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
-		COMMENT "Compile compute shader ${base} with ${arg_OPTIONS}"
+		COMMENT "Compile compute shader ${base}.${outname} with ${arg_OPTIONS}"
 		COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${arg_OPTIONS} -o ${outfile})
 	install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
+	if(NOT outname MATCHES "dense")
+		add_render_shader_variant(${outname}.dense OPTIONS ${arg_OPTIONS} -DDENSE_PACK)
+	endif()
 	if(NOT outname MATCHES "\.int64$")
 		add_render_shader_variant(${outname}.int64 OPTIONS ${arg_OPTIONS} -DHAS_INT64)
 	endif()
@@ -169,6 +172,12 @@ add_custom_target(
 		waveform-compute.analog.int64.spv
 		waveform-compute.digital.int64.spv
 		waveform-compute.histogram.int64.spv
+		waveform-compute.analog.dense.spv
+		waveform-compute.digital.dense.spv
+		waveform-compute.histogram.dense.spv
+		waveform-compute.analog.dense.int64.spv
+		waveform-compute.digital.dense.int64.spv
+		waveform-compute.histogram.dense.int64.spv
 	)
 
 add_dependencies(glscopeclient
