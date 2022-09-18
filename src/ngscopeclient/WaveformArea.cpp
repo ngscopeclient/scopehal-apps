@@ -36,6 +36,8 @@
 #include "WaveformArea.h"
 #include "MainWindow.h"
 
+#include "imgui_internal.h"	//for SetItemUsingMouseWheel
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -98,6 +100,15 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
 		ImGui::SetItemAllowOverlap();
 
+		//Catch mouse wheel events
+		ImGui::SetItemUsingMouseWheel();
+		if(ImGui::IsItemHovered())
+		{
+			auto wheel = ImGui::GetIO().MouseWheel;
+			if(wheel != 0)
+				OnMouseDelta(wheel);
+		}
+
 		//Drag/drop areas for splitting
 		float widthOfVerticalEdge = csize.x*0.25;
 		float leftOfMiddle = start.x + widthOfVerticalEdge;
@@ -138,6 +149,26 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
+}
+
+/**
+	@brief Handles a mouse wheel scroll step
+ */
+void WaveformArea::OnMouseDelta(float delta)
+{
+	auto pos = ImGui::GetWindowPos();
+	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
+	relativeMouseX *= ImGui::GetWindowDpiScale();
+
+	//TODO: if shift is held, scroll horizontally
+
+	int64_t target = m_group->XPositionToXAxisUnits(relativeMouseX);
+
+	//Zoom in
+	if(delta > 0)
+		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
+	else
+		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
 }
 
 /**

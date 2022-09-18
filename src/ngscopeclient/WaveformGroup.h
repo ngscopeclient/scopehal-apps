@@ -53,6 +53,29 @@ public:
 
 	void AddArea(std::shared_ptr<WaveformArea>& area);
 
+	void OnZoomInHorizontal(int64_t target, float step);
+	void OnZoomOutHorizontal(int64_t target, float step);
+
+	/**
+		@brief Converts a position in X axis units (relative to time zero) to pixels (relative to left side of plot)
+	 */
+	int64_t XPositionToXAxisUnits(float pix)
+	{ return m_xAxisOffset + PixelsToXAxisUnits(pix); }
+
+	/**
+		@brief Converts a distance measurement in pixels to X axis units
+	 */
+	int64_t PixelsToXAxisUnits(float pix)
+	{ return pix / m_pixelsPerXUnit; }
+
+	/**
+		@brief Converts a distance measurement in X axis units to pixels
+	 */
+	float XAxisUnitsToPixels(int64_t t)
+	{ return t * m_pixelsPerXUnit; }
+
+	void ClearPersistence();
+
 protected:
 	void RenderTimeline(float width, float height);
 	int64_t GetRoundingDivisor(int64_t width_xunits);

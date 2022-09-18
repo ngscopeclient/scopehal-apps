@@ -100,6 +100,8 @@ protected:
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
+	void OnMouseDelta(float delta);
+
 	/**
 		@brief The channels currently living within this WaveformArea
 

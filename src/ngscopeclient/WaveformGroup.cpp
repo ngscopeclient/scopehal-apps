@@ -106,6 +106,8 @@ bool WaveformGroup::Render()
 
 void WaveformGroup::RenderTimeline(float width, float height)
 {
+	ImGui::BeginChild("timeline", ImVec2(width, height));
+
 	auto list = ImGui::GetWindowDrawList();
 
 	//Style settings
@@ -114,7 +116,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto font = m_parent->GetDefaultFont();
 
 	//Reserve an empty area for the timeline
-	auto pos = ImGui::GetCursorScreenPos();
+	auto pos = ImGui::GetWindowPos();
 	ImGui::Dummy(ImVec2(width, height));
 
 	//Dimensions for various things
@@ -201,6 +203,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			color,
 			m_xAxisUnit.PrettyPrint(t).c_str());
 	}
+
+	ImGui::EndChild();
 }
 
 /**
@@ -243,4 +247,45 @@ int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
 		round_divisor = 1E15;
 
 	return round_divisor;
+}
+
+/**
+	@brief Clear saved persistence waveforms
+ */
+void WaveformGroup::ClearPersistence()
+{
+	LogTrace("Not implemented\n");
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Zooming
+
+/**
+	@brief Zoom in, keeping timestamp "target" at the same pixel position
+ */
+void WaveformGroup::OnZoomInHorizontal(int64_t target, float step)
+{
+	//Calculate the *current* position of the target within the window
+	float delta = target - m_xAxisOffset;
+
+	//Change the zoom
+	m_pixelsPerXUnit *= step;
+	m_xAxisOffset = target - (delta/step);
+
+	ClearPersistence();
+}
+
+void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
+{
+	//TODO: Clamp to bounds of all waveforms in the group
+	//(not width of single widest waveform, as they may have different offsets)
+
+	//Calculate the *current* position of the target within the window
+	float delta = target - m_xAxisOffset;
+
+	//Change the zoom
+	m_pixelsPerXUnit /= step;
+	m_xAxisOffset = target - (delta*step);
+
+	ClearPersistence();
 }
