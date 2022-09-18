@@ -245,7 +245,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			if(UnitInputWithExplicitApply(
 				"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
 			{
-				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetCurrent);
+				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_committedSetCurrent);
 			}
 			HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
