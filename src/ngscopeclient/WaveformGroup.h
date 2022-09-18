@@ -97,6 +97,9 @@ protected:
 
 	///@brief The set of waveform areas within this group
 	std::vector< std::shared_ptr<WaveformArea> > m_areas;
+
+	///@brief True if dragging timeline
+	bool m_draggingTimeline;
 };
 
 #endif

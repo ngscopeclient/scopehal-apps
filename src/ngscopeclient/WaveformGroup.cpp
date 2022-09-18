@@ -47,6 +47,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_xAxisOffset(0)
 	, m_title(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
+	, m_draggingTimeline(false)
 {
 }
 
@@ -108,6 +109,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 {
 	ImGui::BeginChild("timeline", ImVec2(width, height));
 
+	//TODO: handle mouse wheel on the timeline
+
 	auto list = ImGui::GetWindowDrawList();
 
 	//Style settings
@@ -118,6 +121,26 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
 	ImGui::Dummy(ImVec2(width, height));
+
+	//Handle dragging
+	//(Mouse is allowed to leave the window, as long as original click was within us)
+	if(ImGui::IsItemHovered())
+	{
+		if(ImGui::IsMouseClicked(0))
+			m_draggingTimeline = true;
+		if(ImGui::IsMouseReleased(0))
+			m_draggingTimeline = false;
+	}
+	if(m_draggingTimeline)
+	{
+		//Use relative delta, not drag delta, since we update the offset every frame
+		float dx = ImGui::GetIO().MouseDelta.x * ImGui::GetWindowDpiScale();
+		if(dx != 0)
+		{
+			m_xAxisOffset -= PixelsToXAxisUnits(dx);
+			ClearPersistence();
+		}
+	}
 
 	//Dimensions for various things
 	float dpiScale = ImGui::GetWindowDpiScale();
