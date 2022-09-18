@@ -156,25 +156,34 @@ VulkanWindow::~VulkanWindow()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-void VulkanWindow::UpdateFramebuffer()
+/**
+	@brief Updates the framebuffer
+ */
+bool VulkanWindow::UpdateFramebuffer()
 {
+	LogTrace("Recreating framebuffer due to window resize\n");
+
+	//Wait until any previous rendering has finished
+	g_vkComputeDevice->waitIdle();
+
 	//Get current size of the surface
 	//If size doesn't match up, early out. We're probably in the middle of a resize.
 	//(This will be corrected next frame, so no worries)
 	auto caps = g_vkComputePhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
-	if (caps.maxImageExtent.width < (unsigned int)m_width)
-		return;
-	if (caps.maxImageExtent.height < (unsigned int)m_height)
-		return;
+	if( (caps.maxImageExtent.width < (unsigned int)m_width) ||
+		(caps.maxImageExtent.height < (unsigned int)m_height) ||
+		(caps.minImageExtent.width > (unsigned int)m_width) ||
+		(caps.minImageExtent.height > (unsigned int)m_height) )
+	{
+		LogTrace("Size mismatch, retry after everything has caught up\n");
+		return false;
+	}
 
 	float xscale;
 	float yscale;
 	glfwGetWindowContentScale(m_window, &xscale, &yscale);
 	LogTrace("Scale: %.2f, %.2f\n", xscale, yscale);
-
-	//Wait until any previous rendering has finished
-	g_vkComputeDevice->waitIdle();
 
 	const VkFormat requestSurfaceImageFormat[] =
 	{
@@ -265,13 +274,18 @@ void VulkanWindow::UpdateFramebuffer()
 	}
 
 	m_resizeEventPending = false;
+	return true;
 }
 
 void VulkanWindow::Render()
 {
 	//If we're re-rendering after the window size changed, fix up the framebuffer before we worry about anything else
 	if(m_resizeEventPending)
-		UpdateFramebuffer();
+	{
+		//If resize fails, wait a frame and try again. Don't redraw onto the incomplete framebuffer.
+		if(!UpdateFramebuffer())
+			return;
+	}
 
 	//Start frame
 	ImGui_ImplVulkan_NewFrame();
@@ -296,6 +310,7 @@ void VulkanWindow::Render()
 			m_frameIndex = result.second;
 			if(result.first == vk::Result::eSuboptimalKHR)
 			{
+				LogTrace("eSuboptimalKHR\n");
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
@@ -305,6 +320,7 @@ void VulkanWindow::Render()
 		}
 		catch(const vk::OutOfDateKHRError& err)
 		{
+			LogTrace("OutOfDateKHR\n");
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
@@ -357,27 +373,23 @@ void VulkanWindow::Render()
 	if(!main_is_minimized)
 	{
 		vk::PresentInfoKHR presentInfo(**m_renderCompleteSemaphores[m_semaphoreIndex], **m_swapchain, m_frameIndex);
+		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_backBuffers.size();
 		try
 		{
 			if(vk::Result::eSuboptimalKHR == m_renderQueue.presentKHR(presentInfo))
 			{
+				LogTrace("eSuboptimal at present\n");
 				m_resizeEventPending = true;
-				Render();
 				return;
 			}
 		}
 		catch(const vk::OutOfDateKHRError& err)
 		{
+			LogTrace("OutOfDateKHRError at present\n");
 			m_resizeEventPending = true;
-			Render();
 			return;
 		}
-		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_backBuffers.size();
 	}
-
-	//Handle resize events
-	if(m_resizeEventPending)
-		Render();
 }
 
 void VulkanWindow::RenderUI()

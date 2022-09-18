@@ -50,7 +50,7 @@ public:
 	virtual void Render();
 
 protected:
-	void UpdateFramebuffer();
+	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);
 
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
