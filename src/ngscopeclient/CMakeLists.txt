@@ -9,6 +9,7 @@ include_directories(
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
+find_package(PNG REQUIRED)
 
 ###############################################################################
 #C++ compilation
@@ -98,7 +99,7 @@ target_link_libraries(ngscopeclient
 	scopeprotocols
 	scopeexports
 	glfw
-	png
+	PNG::PNG
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	)
