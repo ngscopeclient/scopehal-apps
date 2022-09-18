@@ -263,12 +263,29 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 	vk::BufferCreateInfo bufinfo({}, size, vk::BufferUsageFlagBits::eTransferSrc);
 	vk::raii::Buffer stagingBuf(*g_vkComputeDevice, bufinfo);
 
-	//Figure out actual memory requirements of the buffer and allocate physical memory for it
+	//Figure out memory requirements of the buffer and decide what physical memory type to use
+	//For now, default to using the first type in the mask that is host visible
 	auto req = stagingBuf.getMemoryRequirements();
-	vk::MemoryAllocateInfo minfo(req.size, g_vkPinnedMemoryType);
-	vk::raii::DeviceMemory physMem(*g_vkComputeDevice, minfo);
+	auto memProperties = g_vkComputePhysicalDevice->getMemoryProperties();
+	uint32_t memType = 0;
+	for(uint32_t i=0; i<32; i++)
+	{
+		//Skip anything not host visible since we have to be able to write to it
+		if(!(memProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible))
+			continue;
 
-	//Map it and bind to the buffer
+		//Stop if buffer is compatible
+		if(req.memoryTypeBits & i)
+		{
+			memType = i;
+			break;
+		}
+	}
+	LogTrace("Using memory type %u for staging buffer\n", memType);
+
+	//Allocate the memory and bind to the buffer
+	vk::MemoryAllocateInfo minfo(req.size, memType);
+	vk::raii::DeviceMemory physMem(*g_vkComputeDevice, minfo);
 	auto mappedPtr = reinterpret_cast<uint8_t*>(physMem.mapMemory(0, req.size));
 	stagingBuf.bindMemory(*physMem, 0);
 

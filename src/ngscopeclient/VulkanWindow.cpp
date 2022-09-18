@@ -125,7 +125,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	ImGui_ImplGlfw_InitForVulkan(m_window, true);
 	ImGui_ImplVulkan_InitInfo info = {};
 	info.Instance = **g_vkInstance;
-	info.PhysicalDevice = **g_vkfftPhysicalDevice;
+	info.PhysicalDevice = **g_vkComputePhysicalDevice;
 	info.Device = **g_vkComputeDevice;
 	info.QueueFamily = g_renderQueueType;
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
@@ -161,7 +161,7 @@ void VulkanWindow::UpdateFramebuffer()
 	//Get current size of the surface
 	//If size doesn't match up, early out. We're probably in the middle of a resize.
 	//(This will be corrected next frame, so no worries)
-	auto caps = g_vkfftPhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
+	auto caps = g_vkComputePhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
 	if (caps.maxImageExtent.width < (unsigned int)m_width)
 		return;
@@ -185,7 +185,7 @@ void VulkanWindow::UpdateFramebuffer()
 	};
 	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	auto format = ImGui_ImplVulkanH_SelectSurfaceFormat(
-		**g_vkfftPhysicalDevice,
+		**g_vkComputePhysicalDevice,
 		**m_surface,
 		requestSurfaceImageFormat,
 		(size_t)IM_ARRAYSIZE(requestSurfaceImageFormat),
