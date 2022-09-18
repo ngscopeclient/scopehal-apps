@@ -7,6 +7,9 @@ endif()
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# Vulkan is required for compute shaders used in rendering
+find_package(Vulkan REQUIRED)
+
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
 
@@ -134,10 +137,45 @@ add_dependencies(protoshaders
 	shaders
 	)
 
+# Compile the waveform render shader in all its variations
+# This function also implicitly adds the HAS_INT64 variant
+function(add_render_shader_variant outname)
+	cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "OPTIONS")
+	set(source waveform-compute.glsl)
+	get_filename_component(base ${source} NAME_WE)
+	set(outfile ${CMAKE_CURRENT_BINARY_DIR}/${base}.${outname}.spv)
+	add_custom_command(
+		OUTPUT ${outfile}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+		COMMENT "Compile compute shader ${base} with ${arg_OPTIONS}"
+		COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${arg_OPTIONS} -o ${outfile})
+	install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
+	if(NOT outname MATCHES "\.int64$")
+		add_render_shader_variant(${outname}.int64 OPTIONS ${arg_OPTIONS} -DHAS_INT64)
+	endif()
+endfunction()
+
+add_render_shader_variant(analog    OPTIONS -DANALOG_PATH)
+add_render_shader_variant(digital   OPTIONS -DDIGITAL_PATH)
+add_render_shader_variant(histogram OPTIONS -DANALOG_PATH -DNO_INTERPOLATION -DHISTOGRAM_PATH)
+
+add_custom_target(
+	rendershaders
+	COMMAND ${CMAKE_COMMAND} -E true
+	SOURCES
+		waveform-compute.analog.spv
+		waveform-compute.digital.spv
+		waveform-compute.histogram.spv
+		waveform-compute.analog.int64.spv
+		waveform-compute.digital.int64.spv
+		waveform-compute.histogram.int64.spv
+	)
+
 add_dependencies(glscopeclient
 	gradients
 	protoshaders
 	shaders
+	rendershaders
 	styles
 	icons
 )
