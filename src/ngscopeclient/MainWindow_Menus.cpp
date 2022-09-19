@@ -185,6 +185,9 @@ void MainWindow::AddGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
 				auto nick = fields[0];
 				auto drivername = fields[1];
 				auto transname = fields[2];
