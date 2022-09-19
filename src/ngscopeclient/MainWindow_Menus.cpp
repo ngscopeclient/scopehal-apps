@@ -258,6 +258,9 @@ void MainWindow::AddMultimeterMenu(vector<time_t>& timestamps, map<time_t, vecto
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
 				auto nick = fields[0];
 				auto drivername = fields[1];
 				auto transname = fields[2];
@@ -328,6 +331,9 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
 				auto nick = fields[0];
 				auto drivername = fields[1];
 				auto transname = fields[2];
@@ -399,6 +405,9 @@ void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vect
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
 				auto nick = fields[0];
 				auto drivername = fields[1];
 				auto transname = fields[2];
@@ -469,6 +478,9 @@ void MainWindow::AddRFGeneratorMenu(vector<time_t>& timestamps, map<time_t, vect
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
 				auto nick = fields[0];
 				auto drivername = fields[1];
 				auto transname = fields[2];
