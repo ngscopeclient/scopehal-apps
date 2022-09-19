@@ -117,7 +117,7 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Y axis helpers
 
-float WaveformArea::PixelToYAxisUnits(float pix)
+float WaveformArea::PixelsToYAxisUnits(float pix)
 {
 	return pix / m_pixelsPerYAxisUnit;
 }
@@ -134,7 +134,7 @@ float WaveformArea::YAxisUnitsToYPosition(float volt)
 
 float WaveformArea::YPositionToYAxisUnits(float y)
 {
-	return PixelToYAxisUnits(-1 * (y - m_ymid) ) - m_yAxisOffset;
+	return PixelsToYAxisUnits(-1 * (y - m_ymid) ) - m_yAxisOffset;
 }
 
 float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int max_steps)
@@ -170,6 +170,11 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
+	if(ImGui::IsMouseReleased(0))
+		OnMouseUp();
+	if(m_dragState != DRAG_STATE_NONE)
+		OnDragUpdate();
+
 	ImGui::PushID(to_string(iArea).c_str());
 
 	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
@@ -182,7 +187,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	auto first = GetFirstAnalogOrEyeStream();
 	if(first)
 	{
-		m_yAxisOffset = first.GetOffset();
+		//Don't touch scale if we're dragging, since the dragged value is newer than the hardware value
+		if(m_dragState != DRAG_STATE_Y_AXIS)
+			m_yAxisOffset = first.GetOffset();
+
 		m_pixelsPerYAxisUnit = totalHeightAvailable / first.GetVoltageRange();
 		m_yAxisUnit = first.GetYAxisUnits();
 	}
@@ -223,7 +231,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		{
 			auto wheel = ImGui::GetIO().MouseWheel;
 			if(wheel != 0)
-				OnMouseDelta(wheel);
+				OnMouseWheel(wheel);
 		}
 
 		//Overlays for drag-and-drop
@@ -288,7 +296,7 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	float halfheight = m_height / 2;
 
 	//Volts from the center line of our graph to the top. May not be the max value in the signal.
-	float volts_per_half_span = PixelToYAxisUnits(halfheight);
+	float volts_per_half_span = PixelsToYAxisUnits(halfheight);
 
 	//Sanity check invalid values
 	if( (volts_per_half_span < -FLT_MAX/2) || (volts_per_half_span > FLT_MAX/2) )
@@ -308,10 +316,15 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	float bottom_edge = (ybot - theight/2);
 	float top_edge = (ytop + theight/2);
 
-	//Calculate grid positions
+	//Offset things so that the grid lines are at sensible locations
 	vbot = YPositionToYAxisUnits(ybot);
 	vtop = YPositionToYAxisUnits(ytop);
 	float vmid = (vbot + vtop)/2;
+	float yzero = YAxisUnitsToYPosition(0);
+	float zero_offset = fmodf(vmid, selected_step);
+	vmid -= zero_offset;
+
+	//Calculate grid positions
 	for(float dv=0; ; dv += selected_step)
 	{
 		float vp = vmid + dv;
@@ -349,17 +362,19 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	auto list = ImGui::GetWindowDrawList();
 	float left = start.x;
 	float right = start.x + size.x;
-	float yzero = YAxisUnitsToYPosition(0);
 	for(auto it : gridmap)
 	{
 		list->PathLineTo(ImVec2(left, it.second));
 		list->PathLineTo(ImVec2(right, it.second));
+		list->PathStroke(gridColor, gridWidth);
+	}
 
-		//draw y=0 line brighter
-		if(fabs(it.second - yzero) < 5)
-			list->PathStroke(axisColor, axisWidth);
-		else
-			list->PathStroke(gridColor, gridWidth);
+	//draw Y=0 line
+	if( (yzero > ytop) && (yzero < ybot) )
+	{
+		list->PathLineTo(ImVec2(left, yzero));
+		list->PathLineTo(ImVec2(right, yzero));
+		list->PathStroke(axisColor, axisWidth);
 	}
 }
 
@@ -408,26 +423,16 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//TODO: trigger level arrow(s)
 
 	ImGui::EndChild();
-}
 
-/**
-	@brief Handles a mouse wheel scroll step
- */
-void WaveformArea::OnMouseDelta(float delta)
-{
-	auto pos = ImGui::GetWindowPos();
-	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
-	relativeMouseX *= ImGui::GetWindowDpiScale();
-
-	//TODO: if shift is held, scroll horizontally
-
-	int64_t target = m_group->XPositionToXAxisUnits(relativeMouseX);
-
-	//Zoom in
-	if(delta > 0)
-		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
-	else
-		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
+	//Start dragging
+	if(ImGui::IsItemHovered())
+	{
+		if(ImGui::IsMouseClicked(0))
+		{
+			LogTrace("Start dragging Y axis\n");
+			m_dragState = DRAG_STATE_Y_AXIS;
+		}
+	}
 }
 
 /**
@@ -542,4 +547,62 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 		ImGui::EndDragDropSource();
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Input handling
+
+void WaveformArea::OnMouseUp()
+{
+	switch(m_dragState)
+	{
+		case DRAG_STATE_Y_AXIS:
+			LogTrace("End dragging Y axis\n");
+			for(auto c : m_displayedChannels)
+				c->GetStream().SetOffset(m_yAxisOffset);
+			break;
+
+		default:
+			break;
+	}
+
+	m_dragState = DRAG_STATE_NONE;
+}
+
+void WaveformArea::OnDragUpdate()
+{
+	switch(m_dragState)
+	{
+		case DRAG_STATE_Y_AXIS:
+			{
+				float dy = ImGui::GetIO().MouseDelta.y * ImGui::GetWindowDpiScale();
+				m_yAxisOffset -= PixelsToYAxisUnits(dy);
+
+				//TODO: push to hardware at a controlled rate (after each trigger?)
+			}
+			break;
+
+		default:
+			break;
+	}
+}
+
+/**
+	@brief Handles a mouse wheel scroll step
+ */
+void WaveformArea::OnMouseWheel(float delta)
+{
+	auto pos = ImGui::GetWindowPos();
+	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
+	relativeMouseX *= ImGui::GetWindowDpiScale();
+
+	//TODO: if shift is held, scroll horizontally
+
+	int64_t target = m_group->XPositionToXAxisUnits(relativeMouseX);
+
+	//Zoom in
+	if(delta > 0)
+		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
+	else
+		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
 }

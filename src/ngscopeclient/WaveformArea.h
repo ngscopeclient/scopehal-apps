@@ -104,7 +104,7 @@ protected:
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
-	float PixelToYAxisUnits(float pix);
+	float PixelsToYAxisUnits(float pix);
 	float YAxisUnitsToPixels(float volt);
 	float YAxisUnitsToYPosition(float volt);
 	float YPositionToYAxisUnits(float y);
@@ -128,7 +128,16 @@ protected:
 	///@brief Cached Y axis unit
 	Unit m_yAxisUnit;
 
-	void OnMouseDelta(float delta);
+	///@brief Drag and drop of UI elements
+	enum
+	{
+		DRAG_STATE_NONE,
+		DRAG_STATE_Y_AXIS
+	} m_dragState;
+
+	void OnMouseWheel(float delta);
+	void OnMouseUp();
+	void OnDragUpdate();
 
 	/**
 		@brief The channels currently living within this WaveformArea

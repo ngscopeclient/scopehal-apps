@@ -130,8 +130,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	{
 		if(ImGui::IsMouseClicked(0))
 			m_draggingTimeline = true;
-		if(ImGui::IsMouseReleased(0))
-			m_draggingTimeline = false;
 	}
 	if(m_draggingTimeline)
 	{
@@ -142,6 +140,9 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			m_xAxisOffset -= PixelsToXAxisUnits(dx);
 			ClearPersistence();
 		}
+
+		if(ImGui::IsMouseReleased(0))
+			m_draggingTimeline = false;
 	}
 
 	//Dimensions for various things
