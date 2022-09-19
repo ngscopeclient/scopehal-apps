@@ -52,9 +52,28 @@ Texture::Texture(
 	)
 	: m_image(device, imageInfo)
 {
-	//Once the image is created, allocate device memory to back it
 	auto req = m_image.getMemoryRequirements();
-	vk::MemoryAllocateInfo info(req.size, g_vkLocalMemoryType);
+
+	//Figure out memory requirements of the buffer and decide what physical memory type to use
+	uint32_t memType = 0;
+	auto memProperties = g_vkComputePhysicalDevice->getMemoryProperties();
+	for(uint32_t i=0; i<32; i++)
+	{
+		//Skip anything not device local, since we're optimizing this buffer for performance
+		if(!(memProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal))
+			continue;
+
+		//Stop if buffer is compatible
+		if(req.memoryTypeBits & (1 << i) )
+		{
+			memType = i;
+			break;
+		}
+	}
+	LogTrace("Using memory type %u for texture buffer\n", memType);
+
+	//Once the image is created, allocate device memory to back it
+	vk::MemoryAllocateInfo info(req.size, memType);
 	m_deviceMemory = make_unique<vk::raii::DeviceMemory>(*g_vkComputeDevice, info);
 	m_image.bindMemory(**m_deviceMemory, 0);
 
@@ -275,7 +294,7 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 			continue;
 
 		//Stop if buffer is compatible
-		if(req.memoryTypeBits & i)
+		if(req.memoryTypeBits & (1 << i) )
 		{
 			memType = i;
 			break;
