@@ -97,8 +97,8 @@ public:
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
-	void RenderGridAndYAxis(ImVec2 start, ImVec2 size);
-	void RenderYAxis(ImVec2 size);
+	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
+	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
 
 	void DragDropOverlays(int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
@@ -124,6 +124,9 @@ protected:
 
 	///@brief Cached Y axis scale
 	float m_pixelsPerYAxisUnit;
+
+	///@brief Cached Y axis unit
+	Unit m_yAxisUnit;
 
 	void OnMouseDelta(float delta);
 

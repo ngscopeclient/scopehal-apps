@@ -47,6 +47,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	: m_height(1)
 	, m_yAxisOffset(0)
 	, m_pixelsPerYAxisUnit(1)
+	, m_yAxisUnit(stream.GetYAxisUnits())
 	, m_dragContext(this)
 	, m_group(group)
 	, m_parent(parent)
@@ -183,23 +184,29 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	{
 		m_yAxisOffset = first.GetOffset();
 		m_pixelsPerYAxisUnit = totalHeightAvailable / first.GetVoltageRange();
+		m_yAxisUnit = first.GetYAxisUnits();
 	}
 
-	//TODO: dpi scaling??
-	float timelineWidth = 10 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale();
-	float timelineWidthSpaced = timelineWidth + spacing;
+	//Size of the Y axis view at the right of the plot
+	float yAxisWidth = 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale();
+	float yAxisWidthSpaced = yAxisWidth + spacing;
 
-	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - timelineWidthSpaced, unspacedHeightPerArea)))
+	//Settings calculated by RenderGrid() then reused in RenderYAxis()
+	map<float, float> gridmap;
+	float vbot;
+	float vtop;
+
+	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - yAxisWidthSpaced, unspacedHeightPerArea)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
 
-		//Calculate midpoint of our plot
-		m_ymid = pos.y + unspacedHeightPerArea / 2;
-
 		//Draw the background
 		RenderBackgroundGradient(pos, csize);
-		RenderGridAndYAxis(pos, csize);
+		RenderGrid(pos, csize, gridmap, vbot, vtop);
+
+		//Calculate midpoint of our plot
+		m_ymid = pos.y + unspacedHeightPerArea / 2;
 
 		//Blank out space for the actual waveform
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
@@ -222,6 +229,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Overlays for drag-and-drop
 		DragDropOverlays(iArea, numAreas);
 
+		//TODO: cursors, protocol decodes, etc
+
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
@@ -234,8 +243,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	}
 	ImGui::EndChild();
 
-	//Draw the vertical scale
-	RenderYAxis(ImVec2(timelineWidth, unspacedHeightPerArea));
+	//Draw the vertical scale on the right side of the plot
+	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 
 	ImGui::PopID();
 
@@ -265,9 +274,9 @@ void WaveformArea::RenderBackgroundGradient(ImVec2 start, ImVec2 size)
 }
 
 /**
-	@brief Renders grid lines and Y axis (linked, since both use the same levels
+	@brief Renders grid lines
  */
-void WaveformArea::RenderGridAndYAxis(ImVec2 start, ImVec2 size)
+void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& gridmap, float& vbot, float& vtop)
 {
 	//Early out if we're not displaying any analog waveforms
 	auto stream = GetFirstAnalogOrEyeStream();
@@ -275,11 +284,8 @@ void WaveformArea::RenderGridAndYAxis(ImVec2 start, ImVec2 size)
 		return;
 
 	float ytop = start.y;
-	float plotheight = size.y;
 	float ybot = start.y + size.y;
 	float halfheight = m_height / 2;
-
-	map<float, float> gridmap;
 
 	//Volts from the center line of our graph to the top. May not be the max value in the signal.
 	float volts_per_half_span = PixelToYAxisUnits(halfheight);
@@ -303,12 +309,11 @@ void WaveformArea::RenderGridAndYAxis(ImVec2 start, ImVec2 size)
 	float top_edge = (ytop + theight/2);
 
 	//Calculate grid positions
-	float vbot = YPositionToYAxisUnits(ybot);
-	float vtop = YPositionToYAxisUnits(ytop);
+	vbot = YPositionToYAxisUnits(ybot);
+	vtop = YPositionToYAxisUnits(ytop);
 	float vmid = (vbot + vtop)/2;
 	for(float dv=0; ; dv += selected_step)
 	{
-		LogIndenter li;
 		float vp = vmid + dv;
 		float vn = vmid - dv;
 
@@ -338,36 +343,30 @@ void WaveformArea::RenderGridAndYAxis(ImVec2 start, ImVec2 size)
 	//TODO: get some/all of this from preferences
 	ImU32 gridColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.75, 0.75, 0.75, 0.25));
 	ImU32 axisColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.75, 0.75, 0.75, 1));
-	auto font = m_parent->GetDefaultFont();
 	float axisWidth = 2;
 	float gridWidth = 2;
 
 	auto list = ImGui::GetWindowDrawList();
-
-	//Center line is solid
 	float left = start.x;
 	float right = start.x + size.x;
 	float yzero = YAxisUnitsToYPosition(0);
-	list->PathLineTo(ImVec2(left, yzero));
-	list->PathLineTo(ImVec2(right, yzero));
-	list->PathStroke(axisColor, axisWidth);
-
-	//Dimmed lines above and below
 	for(auto it : gridmap)
 	{
-		if(it.first == 0)	//don't overwrite the center line
-			continue;
-
 		list->PathLineTo(ImVec2(left, it.second));
 		list->PathLineTo(ImVec2(right, it.second));
-		list->PathStroke(gridColor, gridWidth);
+
+		//draw y=0 line brighter
+		if(fabs(it.second - yzero) < 5)
+			list->PathStroke(axisColor, axisWidth);
+		else
+			list->PathStroke(gridColor, gridWidth);
 	}
 }
 
 /**
 	@brief Renders the Y axis scale
  */
-void WaveformArea::RenderYAxis(ImVec2 size)
+void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vbot, float vtop)
 {
 	ImGui::SameLine(0, 0);
 	ImGui::BeginChild("yaxis", size);
@@ -375,17 +374,38 @@ void WaveformArea::RenderYAxis(ImVec2 size)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
 	auto origin = ImGui::GetWindowPos();
+	float ytop = origin.y;
+	float ybot = origin.y + size.y;
 
-	//Draw it
-	/*ImVec2 p0 = ImGui::GetWindowPos();
-	ImVec2 p1 = ImVec2(p0.x + size.x, p0.y + size.y);
-	ImU32 col_a = ImGui::GetColorU32(IM_COL32(0, 0, 0, 255));
-	ImU32 col_b = ImGui::GetColorU32(IM_COL32(255, 255, 255, 255));
-	draw_list->AddRectFilledMultiColor(p0, p1, col_a, col_b, col_b, col_a);
-	*/
+	//Style settings
+	//TODO: get some/all of this from preferences
+	auto font = m_parent->GetDefaultFont();
+	float theight = ImGui::GetFontSize();
+	ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
 
-	//Reserve an empty area for the Y axis
+	//Reserve an empty area we're going to draw into
 	ImGui::Dummy(size);
+
+	//Draw text for the Y axis labels
+	float xmargin = 5;
+	for(auto it : gridmap)
+	{
+		float vlo = YPositionToYAxisUnits(it.second - 0.5);
+		float vhi = YPositionToYAxisUnits(it.second + 0.5);
+		auto label = m_yAxisUnit.PrettyPrintRange(vlo, vhi, vbot, vtop);
+
+		float y = it.second - theight/2;
+		if(y > ybot)
+			continue;
+		if(y < ytop)
+			continue;
+
+		auto tsize = font->CalcTextSizeA(theight, FLT_MAX, 0, label.c_str());
+
+		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), color, label.c_str());
+	}
+
+	//TODO: trigger level arrow(s)
 
 	ImGui::EndChild();
 }
