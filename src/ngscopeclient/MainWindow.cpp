@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 
+#include "DemoOscilloscope.h"
 #include "RemoteBridgeOscilloscope.h"
 
 //Dock builder API is not yet public, so might change...
@@ -46,6 +47,7 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "ChannelPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
@@ -142,6 +144,7 @@ void MainWindow::CloseSession()
 	//This ensures that we have a nice well defined shutdown order.
 	m_logViewerDialog = nullptr;
 	m_meterDialogs.clear();
+	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
@@ -190,7 +193,7 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 	vector<StreamDescriptor> streams;
 
 	//Headless scope? Pick every channel.
-	if(dynamic_cast<RemoteBridgeOscilloscope*>(scope))
+	if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
 	{
 		LogTrace("Headless scope, enabling every analog channel\n");
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -402,6 +405,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(conDlg)
 		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
 
+	auto chanDlg = dynamic_pointer_cast<ChannelPropertiesDialog>(dlg);
+	if(chanDlg)
+		m_channelPropertiesDialogs.erase(chanDlg->GetChannel());
+
 	m_dialogs.erase(dlg);
 }
 
@@ -525,6 +532,23 @@ void MainWindow::DockingArea()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
+
+void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
+{
+	LogTrace("Show properties for %s\n", channel->GetHwname().c_str());
+	LogIndenter li;
+
+	if(m_channelPropertiesDialogs.find(channel) != m_channelPropertiesDialogs.end())
+	{
+		LogTrace("Properties dialog is already open, no action required\n");
+		return;
+	}
+
+	//Dialog wasn't already open, create it
+	auto dlg = make_shared<ChannelPropertiesDialog>(channel);
+	m_channelPropertiesDialogs[channel] = dlg;
+	AddDialog(dlg);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Recent instruments

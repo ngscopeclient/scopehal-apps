@@ -51,6 +51,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_dragContext(this)
 	, m_group(group)
 	, m_parent(parent)
+	, m_tLastMouseMove(GetTime())
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -170,10 +171,16 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
-	if(ImGui::IsMouseReleased(0))
+	if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		OnMouseUp();
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
+
+	//Detect mouse movement
+	double tnow = GetTime();
+	auto mouseDelta = ImGui::GetIO().MouseDelta;
+	if( (mouseDelta.x != 0) || (mouseDelta.y != 0) )
+		m_tLastMouseMove = tnow;
 
 	ImGui::PushID(to_string(iArea).c_str());
 
@@ -231,7 +238,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		{
 			auto wheel = ImGui::GetIO().MouseWheel;
 			if(wheel != 0)
-				OnMouseWheel(wheel);
+				OnMouseWheelPlotArea(wheel);
 		}
 
 		//Overlays for drag-and-drop
@@ -401,6 +408,28 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Reserve an empty area we're going to draw into
 	ImGui::Dummy(size);
 
+	//Catch mouse wheel events
+	ImGui::SetItemUsingMouseWheel();
+	if(ImGui::IsItemHovered())
+	{
+		auto wheel = ImGui::GetIO().MouseWheel;
+		if(wheel != 0)
+			OnMouseWheelYAxis(wheel);
+	}
+
+	//Help tooltip
+	//Only show if mouse has been still for 1 sec
+	//(shorter delays interfere with dragging)
+	double tnow = GetTime();
+	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) && (tnow - m_tLastMouseMove > 1) )
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted("Click and drag to adjust offset.\nUse mouse wheel to adjust scale.");
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
 	//Draw text for the Y axis labels
 	float xmargin = 5;
 	for(auto it : gridmap)
@@ -427,7 +456,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Start dragging
 	if(ImGui::IsItemHovered())
 	{
-		if(ImGui::IsMouseClicked(0))
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 		{
 			LogTrace("Start dragging Y axis\n");
 			m_dragState = DRAG_STATE_Y_AXIS;
@@ -547,6 +576,32 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 		ImGui::EndDragDropSource();
 	}
+
+	auto rchan = chan->GetStream().m_channel;
+
+	if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		m_parent->ShowChannelProperties(rchan);
+
+	//Display channel information and help text in tooltip
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+	{
+		string tooltip;
+		tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + rchan->GetScope()->m_nickname + "\n\n";
+
+		tooltip +=
+			"Drag to move this waveform to another plot.\n"
+			"Double click to view/edit channel properties.";
+
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(tooltip.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+}
+
+void WaveformArea::ClearPersistence()
+{
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -588,9 +643,9 @@ void WaveformArea::OnDragUpdate()
 }
 
 /**
-	@brief Handles a mouse wheel scroll step
+	@brief Handles a mouse wheel scroll step on the plot area
  */
-void WaveformArea::OnMouseWheel(float delta)
+void WaveformArea::OnMouseWheelPlotArea(float delta)
 {
 	auto pos = ImGui::GetWindowPos();
 	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
@@ -605,4 +660,31 @@ void WaveformArea::OnMouseWheel(float delta)
 		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
 	else
 		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
+}
+
+/**
+	@brief Handles a mouse wheel scroll step on the Y axis
+ */
+void WaveformArea::OnMouseWheelYAxis(float delta)
+{
+	auto pos = ImGui::GetWindowPos();
+
+	if(delta > 0)
+	{
+		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();
+		range *= pow(0.9, delta);
+
+		for(size_t i=0; i<m_displayedChannels.size(); i++)
+			m_displayedChannels[i]->GetStream().SetVoltageRange(range);
+	}
+	else
+	{
+		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();
+		range /= pow(0.9, -delta);
+
+		for(size_t i=0; i<m_displayedChannels.size(); i++)
+			m_displayedChannels[i]->GetStream().SetVoltageRange(range);
+	}
+
+	ClearPersistence();
 }

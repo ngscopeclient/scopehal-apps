@@ -75,6 +75,8 @@ public:
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
+	void ShowChannelProperties(OscilloscopeChannel* channel);
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -139,6 +141,9 @@ protected:
 
 	///@brief Map of instruments to SCPI console dialogs
 	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
+
+	///@brief Map of channels to properties dialogs
+	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;

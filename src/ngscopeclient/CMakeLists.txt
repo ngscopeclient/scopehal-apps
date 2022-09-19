@@ -33,6 +33,7 @@ add_executable(ngscopeclient
 	AddPowerSupplyDialog.cpp
 	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
+	ChannelPropertiesDialog.cpp
 	Dialog.cpp
 	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp

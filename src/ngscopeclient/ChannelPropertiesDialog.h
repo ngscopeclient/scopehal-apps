@@ -30,138 +30,42 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of WaveformArea
+	@brief Declaration of ChannelPropertiesDialog
  */
-#ifndef WaveformArea_h
-#define WaveformArea_h
+#ifndef ChannelPropertiesDialog_h
+#define ChannelPropertiesDialog_h
 
-class WaveformArea;
-class WaveformGroup;
-class MainWindow;
+#include "Dialog.h"
 
-/**
-	@brief Drag context for a waveform being dragged
- */
-class WaveformDragContext
+class ChannelPropertiesDialog : public Dialog
 {
 public:
-	WaveformDragContext(WaveformArea* src)
-	: m_sourceArea(src)
-	, m_streamIndex(0)
-	{}
+	ChannelPropertiesDialog(OscilloscopeChannel* chan);
+	virtual ~ChannelPropertiesDialog();
 
-	WaveformArea* m_sourceArea;
-	size_t m_streamIndex;
-};
+	virtual bool DoRender();
 
-/**
-	@brief Placeholder for a single channel being displayed within a WaveformArea
- */
-class DisplayedChannel
-{
-public:
-	DisplayedChannel(StreamDescriptor stream)
-		: m_stream(stream)
-	{}
-
-	std::string GetName()
-	{ return m_stream.GetName(); }
-
-	StreamDescriptor GetStream()
-	{ return m_stream; }
+	OscilloscopeChannel* GetChannel()
+	{ return m_channel; }
 
 protected:
-	StreamDescriptor m_stream;
-};
+	OscilloscopeChannel* m_channel;
 
-/**
-	@brief A WaveformArea is a plot that displays one or more OscilloscopeChannel's worth of data
+	std::string m_displayName;
+	std::string m_committedDisplayName;
 
-	WaveformArea's auto resize, and will collectively fill the entire client area of their parent window.
- */
-class WaveformArea
-{
-public:
-	WaveformArea(StreamDescriptor stream, std::shared_ptr<WaveformGroup> group, MainWindow* parent);
-	virtual ~WaveformArea();
+	std::vector<std::string> m_offset;
+	std::vector<float> m_committedOffset;
 
-	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+	std::vector<std::string> m_range;
+	std::vector<float> m_committedRange;
 
-	StreamDescriptor GetStream(size_t i)
-	{ return m_displayedChannels[i]->GetStream(); }
+	std::string m_attenuation;
+	float m_committedAttenuation;
 
-	void AddStream(StreamDescriptor desc);
-
-	void RemoveStream(size_t i);
-
-	void ClearPersistence();
-
-protected:
-	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
-	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
-	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
-	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
-
-	void DragDropOverlays(int iArea, int numAreas);
-	void CenterDropArea(ImVec2 start, ImVec2 size);
-	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
-
-	float PixelsToYAxisUnits(float pix);
-	float YAxisUnitsToPixels(float volt);
-	float YAxisUnitsToYPosition(float volt);
-	float YPositionToYAxisUnits(float y);
-	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
-
-	StreamDescriptor GetFirstAnalogStream();
-	StreamDescriptor GetFirstAnalogOrEyeStream();
-
-	///@brief Cached plot height
-	float m_height;
-
-	///@brief Cached Y axis offset
-	float m_yAxisOffset;
-
-	///@brief Cached midpoint of the plot
-	float m_ymid;
-
-	///@brief Cached Y axis scale
-	float m_pixelsPerYAxisUnit;
-
-	///@brief Cached Y axis unit
-	Unit m_yAxisUnit;
-
-	///@brief Drag and drop of UI elements
-	enum
-	{
-		DRAG_STATE_NONE,
-		DRAG_STATE_Y_AXIS
-	} m_dragState;
-
-	void OnMouseWheelPlotArea(float delta);
-	void OnMouseWheelYAxis(float delta);
-	void OnMouseUp();
-	void OnDragUpdate();
-
-	/**
-		@brief The channels currently living within this WaveformArea
-
-		TODO: make this a FlowGraphNode and just hook up inputs
-	 */
-	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
-
-	///@brief Drag context for waveform we're dragging
-	WaveformDragContext m_dragContext;
-
-	///@brief Waveform group containing us
-	std::shared_ptr<WaveformGroup> m_group;
-
-	///@brief Top level window object containing us
-	MainWindow* m_parent;
-
-	///@brief Time of last mouse movement
-	double m_tLastMouseMove;
+	std::vector<std::string> m_couplingNames;
+	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
+	int m_coupling;
 };
 
 #endif
-
-

@@ -79,6 +79,7 @@ public:
 protected:
 	void RenderTimeline(float width, float height);
 	int64_t GetRoundingDivisor(int64_t width_xunits);
+	void OnMouseWheel(float delta);
 
 	///@brief Top level window we're attached to
 	MainWindow* m_parent;
@@ -100,6 +101,9 @@ protected:
 
 	///@brief True if dragging timeline
 	bool m_draggingTimeline;
+
+	///@brief Time of last mouse movement
+	double m_tLastMouseMove;
 };
 
 #endif

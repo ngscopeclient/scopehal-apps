@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "WaveformGroup.h"
 #include "MainWindow.h"
+#include "imgui_internal.h"
 
 using namespace std;
 
@@ -48,6 +49,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_title(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
 	, m_draggingTimeline(false)
+	, m_tLastMouseMove(GetTime())
 {
 }
 
@@ -124,6 +126,32 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto pos = ImGui::GetWindowPos();
 	ImGui::Dummy(ImVec2(width, height));
 
+	//Detect mouse movement
+	double tnow = GetTime();
+	auto mouseDelta = ImGui::GetIO().MouseDelta;
+	if( (mouseDelta.x != 0) || (mouseDelta.y != 0) )
+		m_tLastMouseMove = tnow;
+
+	//Help tooltip
+	//Only show if mouse has been still for 250ms
+	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) && (tnow - m_tLastMouseMove > 0.25) )
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted("Click and drag to scroll the timeline.\nUse mouse wheel to zoom.");
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
+	//Catch mouse wheel events
+	ImGui::SetItemUsingMouseWheel();
+	if(ImGui::IsItemHovered())
+	{
+		auto wheel = ImGui::GetIO().MouseWheel;
+		if(wheel != 0)
+			OnMouseWheel(wheel);
+	}
+
 	//Handle dragging
 	//(Mouse is allowed to leave the window, as long as original click was within us)
 	if(ImGui::IsItemHovered())
@@ -134,7 +162,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	if(m_draggingTimeline)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame
-		float dx = ImGui::GetIO().MouseDelta.x * ImGui::GetWindowDpiScale();
+		float dx = mouseDelta.x * ImGui::GetWindowDpiScale();
 		if(dx != 0)
 		{
 			m_xAxisOffset -= PixelsToXAxisUnits(dx);
@@ -231,6 +259,26 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	}
 
 	ImGui::EndChild();
+}
+
+/**
+	@brief Handles a mouse wheel scroll step
+ */
+void WaveformGroup::OnMouseWheel(float delta)
+{
+	auto pos = ImGui::GetWindowPos();
+	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
+	relativeMouseX *= ImGui::GetWindowDpiScale();
+
+	//TODO: if shift is held, scroll horizontally
+
+	int64_t target = XPositionToXAxisUnits(relativeMouseX);
+
+	//Zoom in
+	if(delta > 0)
+		OnZoomInHorizontal(target, pow(1.5, delta));
+	else
+		OnZoomOutHorizontal(target, pow(1.5, -delta));
 }
 
 /**
