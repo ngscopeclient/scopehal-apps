@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -26,50 +26,65 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
+#ifndef Event_h
+#define Event_h
 
 /**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Implementation of ScopeThread
+	@brief Synchronization primitive for sending a "something is ready" notification to a thread
+
+	Unlike std::condition_variable, an Event can be signaled before the receiver has started to wait.
  */
-#include "ngscopeclient.h"
-#include "pthread_compat.h"
-
-using namespace std;
-
-void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
+class Event
 {
-	pthread_setname_np_compat("ScopeThread");
-	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
+public:
+	Event()
+	{ m_ready = false; }
 
-	LogTrace("Initializing %s\n", scope->m_nickname.c_str());
-
-	while(!*shuttingDown)
+	/**
+		@brief Sends an event to the receiving thread
+	 */
+	void Signal()
 	{
-		//Push any pending queued commands
-		if(sscope)
-			sscope->GetTransport()->FlushCommandQueue();
-
-		//If the queue is too big, stop grabbing data
-		size_t npending = scope->GetPendingWaveformCount();
-		if(npending > 5)
-		{
-			LogTrace("Queue is too big, sleeping\n");
-			this_thread::sleep_for(chrono::milliseconds(5));
-			continue;
-		}
-
-		//If trigger isn't armed, don't even bother polling for a while.
-		if(!scope->IsTriggerArmed())
-		{
-			//LogTrace("Scope isn't armed, sleeping\n");
-			this_thread::sleep_for(chrono::milliseconds(5));
-			continue;
-		}
-
-		//Grab data if it's ready
-		auto stat = scope->PollTrigger();
-		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			scope->AcquireData();
+		m_ready = true;
+		m_cond.notify_one();
 	}
-}
+
+	/**
+		@brief Blocks until the event is signaled
+	 */
+	void Block()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_cond.wait(lock, [&]{ return m_ready.load(); });
+		m_ready = false;
+	}
+
+	/**
+		@brief Checks if the event is signaled, and returns immediately if it's not
+	 */
+	bool Peek()
+	{
+		if(m_ready)
+		{
+			m_ready = false;
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+		@brief Clears the event state if it's currently signaled
+	 */
+	void Clear()
+	{
+		m_ready = false;
+	}
+
+protected:
+	std::mutex m_mutex;
+	std::condition_variable m_cond;
+	std::atomic_bool m_ready;
+};
+
+#endif

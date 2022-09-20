@@ -667,8 +667,6 @@ void WaveformArea::OnMouseWheelPlotArea(float delta)
  */
 void WaveformArea::OnMouseWheelYAxis(float delta)
 {
-	auto pos = ImGui::GetWindowPos();
-
 	if(delta > 0)
 	{
 		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();

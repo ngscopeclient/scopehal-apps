@@ -264,6 +264,9 @@ void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 
 void MainWindow::RenderUI()
 {
+	//See if we have new waveform data to look at
+	m_session.CheckForWaveforms();
+
 	//Menu for main window
 	MainMenu();
 	Toolbar();
@@ -338,19 +341,19 @@ void MainWindow::ToolbarButtons()
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
-		LogDebug("start trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_NORMAL);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
-		LogDebug("single trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_SINGLE);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
-		LogDebug("force trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_FORCED);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
-		LogDebug("stop trigger\n");
+		m_session.StopTrigger();
 
 	//History selector
 	ImGui::SameLine();

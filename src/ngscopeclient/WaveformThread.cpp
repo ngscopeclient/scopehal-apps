@@ -30,46 +30,42 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of ScopeThread
+	@brief Implementation of WaveformThread
  */
 #include "ngscopeclient.h"
 #include "pthread_compat.h"
+#include "Session.h"
 
 using namespace std;
 
-void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
-{
-	pthread_setname_np_compat("ScopeThread");
-	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
+Event g_waveformReadyEvent;
+Event g_waveformProcessedEvent;
 
-	LogTrace("Initializing %s\n", scope->m_nickname.c_str());
+void WaveformThread(Session* session, atomic<bool>* shuttingDown)
+{
+	pthread_setname_np_compat("WaveformThread");
+
+	LogTrace("Starting\n");
 
 	while(!*shuttingDown)
 	{
-		//Push any pending queued commands
-		if(sscope)
-			sscope->GetTransport()->FlushCommandQueue();
-
-		//If the queue is too big, stop grabbing data
-		size_t npending = scope->GetPendingWaveformCount();
-		if(npending > 5)
+		//Wait for data to be available from all scopes
+		if(!session->CheckForPendingWaveforms())
 		{
-			LogTrace("Queue is too big, sleeping\n");
-			this_thread::sleep_for(chrono::milliseconds(5));
+			this_thread::sleep_for(chrono::milliseconds(1));
 			continue;
 		}
 
-		//If trigger isn't armed, don't even bother polling for a while.
-		if(!scope->IsTriggerArmed())
-		{
-			//LogTrace("Scope isn't armed, sleeping\n");
-			this_thread::sleep_for(chrono::milliseconds(5));
-			continue;
-		}
+		LogTrace("Got a waveform\n");
 
-		//Grab data if it's ready
-		auto stat = scope->PollTrigger();
-		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			scope->AcquireData();
+		//We've got data. Download it, then run the filter graph
+		session->DownloadWaveforms();
+		//window->RefreshAllFilters();
+
+		//Unblock the UI threads, then wait for acknowledgement that it's processed
+		g_waveformReadyEvent.Signal();
+		g_waveformProcessedEvent.Block();
 	}
+
+	LogTrace("Shutting down\n");
 }

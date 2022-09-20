@@ -57,6 +57,7 @@ add_executable(ngscopeclient
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp
+	WaveformThread.cpp
 
 	main.cpp
 )

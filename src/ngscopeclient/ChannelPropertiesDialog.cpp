@@ -133,7 +133,7 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
  */
 bool ChannelPropertiesDialog::DoRender()
 {
-	//TODO: handle stream count changing
+	//TODO: handle stream count changing dynamically on some filters
 
 	auto scope = m_channel->GetScope();
 	if(ImGui::CollapsingHeader("Info"))
@@ -144,9 +144,9 @@ bool ChannelPropertiesDialog::DoRender()
 			if(scope)
 			{
 				auto nickname = scope->m_nickname;
-				auto index = to_string(m_channel->GetIndex());
+				auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 				ImGui::InputText("Instrument", &nickname);
-				ImGui::InputText("Channel", &index);
+				ImGui::InputText("Hardware Channel", &index);
 			}
 
 			//TODO: filter info

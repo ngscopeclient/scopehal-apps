@@ -152,6 +152,20 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	enum TriggerType
+	{
+		TRIGGER_TYPE_SINGLE,
+		TRIGGER_TYPE_FORCED,
+		TRIGGER_TYPE_AUTO,
+		TRIGGER_TYPE_NORMAL
+	};
+	void ArmTrigger(TriggerType type);
+	void StopTrigger();
+	bool HasOnlineScopes();
+	void DownloadWaveforms();
+	void CheckForWaveforms();
+	void RefreshAllFilters();
+
 	void Clear();
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
@@ -175,7 +189,21 @@ public:
 	 */
 	std::set<SCPIInstrument*> GetSCPIInstruments();
 
+	/**
+		@brief Check if we have data available from all of our scopes
+	 */
+	bool CheckForPendingWaveforms();
+
 protected:
+
+	///@brief Mutex for controlling access to scope vectors
+	std::mutex m_scopeMutex;
+
+	///@brief Mutex for controlling access to waveform data
+	std::recursive_mutex m_waveformDataMutex;
+
+	///@brief Mutex for controlling access to filter graph
+	std::mutex m_filterUpdatingMutex;
 
 	///@brief Top level UI window
 	MainWindow* m_mainWindow;
@@ -188,6 +216,9 @@ protected:
 
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<Oscilloscope*> m_oscilloscopes;
+
+	///@brief Deskew correction coefficients for multi-scope
+	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
 
 	///@brief Power supplies we are currently connected to
 	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
@@ -203,6 +234,27 @@ protected:
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;
+
+	///@brief Processing thread for waveform data
+	std::unique_ptr<std::thread> m_waveformThread;
+
+	///@brief Time we last armed the global trigger
+	double m_tArm;
+
+	///@brief Time that the primary scope triggered (in multi-scope setups)
+	double m_tPrimaryTrigger;
+
+	///@brief Indicates trigger is armed (incoming waveforms are ignored if not armed)
+	bool m_triggerArmed;
+
+	///@brief If true, trigger is currently armed in single-shot mode
+	bool m_triggerOneShot;
+
+	///@brief True if we have multiple scopes and are in normal trigger mode
+	bool m_multiScopeFreeRun;
+
+	///@brief Context for filter graph evaluation
+	FilterGraphExecutor m_graphExecutor;
 };
 
 #endif
