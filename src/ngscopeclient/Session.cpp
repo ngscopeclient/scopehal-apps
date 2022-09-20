@@ -67,6 +67,17 @@ Session::~Session()
 
 void Session::Clear()
 {
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	//Stop the trigger so there's no pending waveforms
+	StopTrigger();
+
+	//Clear our trigger state
+	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
+	m_triggerArmed = false;
+	g_waveformReadyEvent.Clear();
+	g_waveformProcessedEvent.Signal();
+
 	//Signal our threads to exit
 	m_shuttingDown = true;
 
@@ -78,7 +89,7 @@ void Session::Clear()
 	m_waveformThread = nullptr;
 	m_threads.clear();
 
-	lock_guard<mutex> lock(m_scopeMutex);
+	lock_guard<mutex> lock2(m_scopeMutex);
 
 	//Delete scopes once we've terminated the threads
 	for(auto scope : m_oscilloscopes)
@@ -93,7 +104,6 @@ void Session::Clear()
 	m_shuttingDown = false;
 
 	//Reset state
-	m_triggerArmed = false;
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
 }

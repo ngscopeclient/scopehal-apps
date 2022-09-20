@@ -62,6 +62,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		session->DownloadWaveforms();
 		//window->RefreshAllFilters();
 
+		//TODO: rerun the heavyweight rendering thread
+
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
 		g_waveformProcessedEvent.Block();
