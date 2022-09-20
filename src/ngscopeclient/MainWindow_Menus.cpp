@@ -662,14 +662,11 @@ void MainWindow::WindowSCPIConsoleMenu()
 			if(m_scpiConsoleDialogs.find(inst) != m_scpiConsoleDialogs.end())
 				continue;
 
-			if(!inst->m_nickname.empty())
+			if(ImGui::MenuItem(inst->m_nickname.c_str()))
 			{
-				if(ImGui::MenuItem(inst->m_nickname.c_str()))
-				{
-					auto dlg = make_shared<SCPIConsoleDialog>(this, inst);
-					m_scpiConsoleDialogs[inst] = dlg;
-					AddDialog(dlg);
-				}
+				auto dlg = make_shared<SCPIConsoleDialog>(this, inst);
+				m_scpiConsoleDialogs[inst] = dlg;
+				AddDialog(dlg);
 			}
 		}
 

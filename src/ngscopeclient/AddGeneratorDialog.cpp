@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddGeneratorDialog::AddGeneratorDialog(Session& session)
-	: AddInstrumentDialog("Add Function Generator", session)
+	: AddInstrumentDialog("Add Function Generator", "funcgen", session)
 {
 	SCPIFunctionGenerator::EnumDrivers(m_drivers);
 }
