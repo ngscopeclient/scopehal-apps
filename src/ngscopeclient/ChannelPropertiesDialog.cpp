@@ -135,13 +135,14 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 	m_bwlValues = scope->GetChannelBandwidthLimiters(nchan);
 	m_bwl = 0;
 	auto curBwl = scope->GetChannelBandwidthLimit(nchan);
+	Unit hz(Unit::UNIT_HZ);
 	for(size_t i=0; i<m_bwlValues.size(); i++)
 	{
 		auto b = m_bwlValues[i];
 		if(b == 0)
 			m_bwlNames.push_back("Full");
 		else
-			m_bwlNames.push_back(to_string(b));
+			m_bwlNames.push_back(hz.PrettyPrint(b*1e6));
 
 		if(b == curBwl)
 			m_bwl = i;
