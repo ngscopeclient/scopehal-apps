@@ -676,7 +676,25 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 
 void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
-	ImGui::Button(chan->GetName().c_str());
+	auto rchan = chan->GetStream().m_channel;
+
+	//Foreground color is used to determine background color and hovered/active colors
+	float bgmul = 0.2;
+	float hmul = 0.4;
+	float amul = 0.6;
+	auto color = ColorFromString(rchan->m_displaycolor);
+	auto fcolor = ImGui::ColorConvertU32ToFloat4(color);
+	auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*bgmul, fcolor.y*bgmul, fcolor.z*bgmul, fcolor.w) );
+	auto hcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*hmul, fcolor.y*hmul, fcolor.z*hmul, fcolor.w) );
+	auto acolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*amul, fcolor.y*amul, fcolor.z*amul, fcolor.w) );
+
+	//The actual button
+	ImGui::PushStyleColor(ImGuiCol_Text, color);
+	ImGui::PushStyleColor(ImGuiCol_Button, bcolor);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hcolor);
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, acolor);
+		ImGui::Button(chan->GetName().c_str());
+	ImGui::PopStyleColor(4);
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
@@ -688,8 +706,6 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 		ImGui::EndDragDropSource();
 	}
-
-	auto rchan = chan->GetStream().m_channel;
 
 	if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		m_parent->ShowChannelProperties(rchan);
