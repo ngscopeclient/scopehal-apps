@@ -101,4 +101,6 @@ void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
+ImU32 ColorFromString(const std::string& str);
+
 #endif

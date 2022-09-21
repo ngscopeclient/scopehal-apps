@@ -53,6 +53,9 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_group(group)
 	, m_parent(parent)
 	, m_tLastMouseMove(GetTime())
+	, m_mouseOverTriggerArrow(false)
+	, m_triggerLevelDuringDrag(0)
+	, m_triggerDuringDrag(nullptr)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -228,10 +231,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
 
-		//Draw texture for the actual waveform
-		//(todo: repeat for each channel)
-		//ImTextureID my_tex_id = m_parent->GetTexture("foo");
-		//ImGui::Image(my_tex_id, ImVec2(csize.x, csize.y), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+		//TODO: Draw texture for the actual waveform
 
 		//Catch mouse wheel events
 		ImGui::SetItemUsingMouseWheel();
@@ -245,7 +245,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Overlays for drag-and-drop
 		DragDropOverlays(iArea, numAreas);
 
-		//TODO: cursors, protocol decodes, etc
+		//Cursors, protocol decodes, etc have to be drawn over the waveform
+		RenderCursors(pos, csize);
 
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
@@ -418,15 +419,25 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 			OnMouseWheelYAxis(wheel);
 	}
 
+	//Trigger level arrow(s)
+	RenderTriggerLevelArrows(origin, size);
+
 	//Help tooltip
 	//Only show if mouse has been still for 1 sec
 	//(shorter delays interfere with dragging)
 	double tnow = GetTime();
-	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) && (tnow - m_tLastMouseMove > 1) )
+	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) &&
+		(tnow - m_tLastMouseMove > 1) &&
+		(m_dragState == DRAG_STATE_NONE) )
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-		ImGui::TextUnformatted("Click and drag to adjust offset.\nUse mouse wheel to adjust scale.");
+
+		if(m_mouseOverTriggerArrow)
+			ImGui::TextUnformatted("Drag arrow to adjust trigger level.");
+		else
+			ImGui::TextUnformatted("Click and drag to adjust offset.\nUse mouse wheel to adjust scale.");
+
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
@@ -450,19 +461,35 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), color, label.c_str());
 	}
 
-	//Trigger level arrow(s)
-	RenderTriggerLevelArrows(origin, size);
-
 	ImGui::EndChild();
 
 	//Start dragging
-	if(ImGui::IsItemHovered())
+	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow)
 	{
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 		{
 			LogTrace("Start dragging Y axis\n");
 			m_dragState = DRAG_STATE_Y_AXIS;
 		}
+	}
+}
+
+/**
+	@brief Cursors and related stuff
+ */
+void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	//Draw dashed line at trigger level
+	if(m_dragState == DRAG_STATE_TRIGGER_LEVEL)
+	{
+		ImU32 triggerColor = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
+		float dashSize = ImGui::GetFontSize() * 0.5;
+
+		float y = YAxisUnitsToYPosition(m_triggerLevelDuringDrag);
+		for(float dx = 0; (dx + dashSize) < size.x; dx += 2*dashSize)
+			draw_list->AddLine(ImVec2(start.x + dx, y), ImVec2(start.x + dx + dashSize, y), triggerColor);
 	}
 }
 
@@ -474,6 +501,7 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
 	float arrowsize = ImGui::GetFontSize() * 0.6;
+	float caparrowsize = ImGui::GetFontSize() * 1;
 
 	//Make a list of scope channels we're displaying and what scopes they came from
 	//(ignore any filter based channels)
@@ -491,6 +519,10 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 	}
 
 	//For each scope, see if we are displaying the trigger input in this area
+	float arrowright = start.x + arrowsize;
+	float caparrowright = start.x + caparrowsize;
+	m_mouseOverTriggerArrow = false;
+	auto mouse = ImGui::GetMousePos();
 	for(auto s : scopes)
 	{
 		//No trigger? Nothing to display
@@ -503,22 +535,44 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 		if(channels.find(stream) == channels.end())
 			continue;
 
-		//TODO: use channel color
-		ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
+		auto color = ColorFromString(stream.m_channel->m_displaycolor);
 
-		//Draw it
+		//Draw the arrow
+		//If currently dragging, show at mouse position rather than actual hardware trigger level
 		float level = trig->GetLevel();
 		float y = YAxisUnitsToYPosition(level);
+		if( (m_dragState == DRAG_STATE_TRIGGER_LEVEL) && (trig == m_triggerDuringDrag) )
+			y = mouse.y;
+		float arrowtop = y - arrowsize/2;
+		float arrowbot = y + arrowsize/2;
 		draw_list->AddTriangleFilled(
-			ImVec2(start.x, y),
-			ImVec2(start.x + arrowsize, y - arrowsize/2),
-			ImVec2(start.x + arrowsize, y + arrowsize/2),
-			color);
+			ImVec2(start.x, y), ImVec2(arrowright, arrowtop), ImVec2(arrowright, arrowbot), color);
+
+		//Check mouse position
+		//Use slightly expanded hitbox to make it easier to capture
+		float caparrowtop = y - caparrowsize/2;
+		float caparrowbot = y + caparrowsize/2;
+		if( (mouse.x >= start.x) && (mouse.x <= caparrowright) && (mouse.y >= caparrowtop) && (mouse.y <= caparrowbot) )
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+			m_mouseOverTriggerArrow = true;
+
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				LogTrace("Start dragging trigger level\n");
+				m_dragState = DRAG_STATE_TRIGGER_LEVEL;
+				m_triggerDuringDrag = trig;
+			}
+		}
 
 		//TODO: second level
 		auto sl = dynamic_cast<TwoLevelTrigger*>(trig);
 		if(sl)
 			LogWarning("Two-level triggers not implemented\n");
+
+		//Handle dragging
+		if(m_dragState == DRAG_STATE_TRIGGER_LEVEL)
+			m_triggerLevelDuringDrag = YPositionToYAxisUnits(mouse.y);
 	}
 }
 
@@ -697,6 +751,15 @@ void WaveformArea::OnMouseUp()
 				c->GetStream().SetOffset(m_yAxisOffset);
 			break;
 
+		case DRAG_STATE_TRIGGER_LEVEL:
+			{
+				Unit volts(Unit::UNIT_VOLTS);
+				LogTrace("End dragging trigger level (at %s)\n", volts.PrettyPrint(m_triggerLevelDuringDrag).c_str());
+
+				m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
+			}
+			break;
+
 		default:
 			break;
 	}
@@ -715,6 +778,10 @@ void WaveformArea::OnDragUpdate()
 
 				//TODO: push to hardware at a controlled rate (after each trigger?)
 			}
+			break;
+
+		case DRAG_STATE_TRIGGER_LEVEL:
+			//TODO: push to hardware at a controlled rate (after each trigger?)
 			break;
 
 		default:

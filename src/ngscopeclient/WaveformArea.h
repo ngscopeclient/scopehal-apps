@@ -102,6 +102,7 @@ protected:
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
+	void RenderCursors(ImVec2 start, ImVec2 size);
 
 	void DragDropOverlays(int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
@@ -135,7 +136,8 @@ protected:
 	enum
 	{
 		DRAG_STATE_NONE,
-		DRAG_STATE_Y_AXIS
+		DRAG_STATE_Y_AXIS,
+		DRAG_STATE_TRIGGER_LEVEL
 	} m_dragState;
 
 	void OnMouseWheelPlotArea(float delta);
@@ -161,6 +163,15 @@ protected:
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
+
+	///@brief True if mouse is over a trigger level arrow
+	bool m_mouseOverTriggerArrow;
+
+	///@brief Current trigger level, if dragging
+	float m_triggerLevelDuringDrag;
+
+	///@brief The trigger we're configuring
+	Trigger* m_triggerDuringDrag;
 };
 
 #endif
