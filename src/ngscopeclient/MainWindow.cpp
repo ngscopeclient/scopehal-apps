@@ -143,6 +143,7 @@ void MainWindow::CloseSession()
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
 	m_logViewerDialog = nullptr;
+	m_metricsDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();

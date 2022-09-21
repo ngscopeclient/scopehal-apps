@@ -48,6 +48,7 @@
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "LogViewerDialog.h"
+#include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
@@ -584,6 +585,19 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasLogViewer)
+			ImGui::EndDisabled();
+
+		bool hasMetrics = m_metricsDialog != nullptr;
+		if(hasMetrics)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Performance Metrics"))
+		{
+			m_metricsDialog = make_shared<MetricsDialog>(&m_session);
+			AddDialog(m_metricsDialog);
+		}
+
+		if(hasMetrics)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
