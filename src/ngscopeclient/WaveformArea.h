@@ -101,6 +101,7 @@ protected:
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
+	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 
 	void DragDropOverlays(int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);

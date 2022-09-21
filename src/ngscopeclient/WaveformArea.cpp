@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
 #include "MainWindow.h"
+#include "../../scopehal/TwoLevelTrigger.h"
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
 
@@ -449,7 +450,8 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), color, label.c_str());
 	}
 
-	//TODO: trigger level arrow(s)
+	//Trigger level arrow(s)
+	RenderTriggerLevelArrows(origin, size);
 
 	ImGui::EndChild();
 
@@ -461,6 +463,62 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 			LogTrace("Start dragging Y axis\n");
 			m_dragState = DRAG_STATE_Y_AXIS;
 		}
+	}
+}
+
+/**
+	@brief Arrows pointing to trigger levels
+ */
+void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	float arrowsize = ImGui::GetFontSize() * 0.6;
+
+	//Make a list of scope channels we're displaying and what scopes they came from
+	//(ignore any filter based channels)
+	set<Oscilloscope*> scopes;
+	set<StreamDescriptor> channels;
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		auto scope = stream.m_channel->GetScope();
+		if(scope == nullptr)
+			continue;
+
+		channels.emplace(stream);
+		scopes.emplace(scope);
+	}
+
+	//For each scope, see if we are displaying the trigger input in this area
+	for(auto s : scopes)
+	{
+		//No trigger? Nothing to display
+		auto trig = s->GetTrigger();
+		if(trig == nullptr)
+			continue;
+
+		//Input not visible in this plot? Nothing to do
+		auto stream = trig->GetInput(0);
+		if(channels.find(stream) == channels.end())
+			continue;
+
+		//TODO: use channel color
+		ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
+
+		//Draw it
+		float level = trig->GetLevel();
+		float y = YAxisUnitsToYPosition(level);
+		draw_list->AddTriangleFilled(
+			ImVec2(start.x, y),
+			ImVec2(start.x + arrowsize, y - arrowsize/2),
+			ImVec2(start.x + arrowsize, y + arrowsize/2),
+			color);
+
+		//TODO: second level
+		auto sl = dynamic_cast<TwoLevelTrigger*>(trig);
+		if(sl)
+			LogWarning("Two-level triggers not implemented\n");
 	}
 }
 
@@ -593,10 +651,20 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 		if(data)
 		{
 			Unit samples(Unit::UNIT_SAMPLEDEPTH);
-			Unit rate(Unit::UNIT_SAMPLERATE);
 			tooltip += samples.PrettyPrint(data->size()) + "\n";
-			if(data->m_timescale > 1)
-				tooltip += rate.PrettyPrint(FS_PER_SECOND / data->m_timescale) + "\n";
+
+			if(dynamic_cast<UniformWaveformBase*>(data))
+			{
+				Unit rate(Unit::UNIT_SAMPLERATE);
+				if(data->m_timescale > 1)
+					tooltip += string("Uniformly sampled, ") + rate.PrettyPrint(FS_PER_SECOND / data->m_timescale) + "\n";
+			}
+			else
+			{
+				Unit fs(Unit::UNIT_FS);
+				if(data->m_timescale > 1)
+					tooltip += string("Sparsely sampled, ") + fs.PrettyPrint(data->m_timescale) + " resolution\n";
+			}
 			tooltip += "\n";
 		}
 
