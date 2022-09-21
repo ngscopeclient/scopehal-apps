@@ -47,6 +47,7 @@ using namespace std;
 WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> group, MainWindow* parent)
 	: m_height(1)
 	, m_yAxisOffset(0)
+	, m_ymid(0)
 	, m_pixelsPerYAxisUnit(1)
 	, m_yAxisUnit(stream.GetYAxisUnits())
 	, m_dragContext(this)
@@ -220,12 +221,12 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
 
+		//Calculate midpoint of our plot
+		m_ymid = pos.y + unspacedHeightPerArea / 2;
+
 		//Draw the background
 		RenderBackgroundGradient(pos, csize);
 		RenderGrid(pos, csize, gridmap, vbot, vtop);
-
-		//Calculate midpoint of our plot
-		m_ymid = pos.y + unspacedHeightPerArea / 2;
 
 		//Blank out space for the actual waveform
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
