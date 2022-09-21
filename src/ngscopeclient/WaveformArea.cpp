@@ -588,6 +588,18 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 		string tooltip;
 		tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + rchan->GetScope()->m_nickname + "\n\n";
 
+		//See if we have data
+		auto data = chan->GetStream().GetData();
+		if(data)
+		{
+			Unit samples(Unit::UNIT_SAMPLEDEPTH);
+			Unit rate(Unit::UNIT_SAMPLERATE);
+			tooltip += samples.PrettyPrint(data->size()) + "\n";
+			if(data->m_timescale > 1)
+				tooltip += rate.PrettyPrint(FS_PER_SECOND / data->m_timescale) + "\n";
+			tooltip += "\n";
+		}
+
 		tooltip +=
 			"Drag to move this waveform to another plot.\n"
 			"Double click to view/edit channel properties.";
