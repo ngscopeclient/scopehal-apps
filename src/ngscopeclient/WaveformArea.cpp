@@ -597,8 +597,6 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
  */
 void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
-	ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
 	//TODO: set ImGuiCol_DragDropTarget to invisible (zero alpha)
 	//and/or set ImGuiDragDropFlags_AcceptNoDrawDefaultRect
 
@@ -617,6 +615,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 			ImVec2(leftOfMiddle, start.y),
 			ImVec2(widthOfMiddle, heightOfVerticalRegion),
 			ImGuiDir_Up);
+
 		topOfMiddle += heightOfVerticalRegion;
 	}
 
@@ -631,10 +630,16 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	}
 
 	float heightOfMiddle = bottomOfMiddle - topOfMiddle;
-	CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
+
+	//Center drop area should only be displayed if we are not the source area of the drag
+	if(m_dragState == DRAG_STATE_NONE)
+		CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
+
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
 	EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
+
+	//Draw the icons for landing spots
 }
 
 /**
@@ -652,7 +657,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	//Add drop target
 	if(ImGui::BeginDragDropTarget())
 	{
-		auto payload = ImGui::AcceptDragDropPayload("Waveform");
+		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
 		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
 		{
 			LogTrace("splitting\n");
@@ -668,6 +673,77 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 		}
 
 		ImGui::EndDragDropTarget();
+	}
+
+	//Draw overlay target
+	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
+	const ImU32 bgBase = ImGui::GetColorU32(ImGuiCol_DockingPreview, 0.70f);
+	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float fillSizeX = 48;
+	float lineSizeX = 44;
+	float fillSizeY = 48;
+	float lineSizeY = 44;
+
+	//L-R split: make target half size in X axis
+	if( (splitDir == ImGuiDir_Left) || (splitDir == ImGuiDir_Right) )
+	{
+		fillSizeX /= 2;
+		lineSizeX /= 2;
+	}
+
+	//T/B split: make target half size in Y axis
+	else
+	{
+		fillSizeY /= 2;
+		lineSizeY /= 2;
+	}
+
+	//Shift center by appropriate direction to be close to the edge
+	switch(splitDir)
+	{
+		case ImGuiDir_Left:
+			center.x = start.x + fillSizeX;
+			break;
+		case ImGuiDir_Right:
+			center.x = start.x + size.x - fillSizeX;
+			break;
+		case ImGuiDir_Up:
+			center.y = start.y + fillSizeY;
+			break;
+		case ImGuiDir_Down:
+			center.y = start.y + size.y - fillSizeY;
+			break;
+	}
+
+	//Draw background and outline
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	draw_list->AddRectFilled(
+		ImVec2(center.x - fillSizeX/2 - 0.5, center.y - fillSizeY/2 - 0.5),
+		ImVec2(center.x + fillSizeX/2 + 0.5, center.y + fillSizeY/2 + 0.5),
+		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		rounding);
+	draw_list->AddRect(
+		ImVec2(center.x - lineSizeX/2 - 0.5, center.y - lineSizeY/2 - 0.5),
+		ImVec2(center.x + lineSizeX/2 + 0.5, center.y + lineSizeY/2 + 0.5),
+		lineColor,
+		rounding);
+
+	//Draw line to show split
+	if( (splitDir == ImGuiDir_Left) || (splitDir == ImGuiDir_Right) )
+	{
+		draw_list->AddLine(
+			ImVec2(center.x - 0.5, center.y - lineSizeY/2 - 0.5),
+			ImVec2(center.x - 0.5, center.y + lineSizeY/2 + 0.5),
+			lineColor);
+	}
+	else
+	{
+		draw_list->AddLine(
+			ImVec2(center.x - lineSizeX/2 - 0.5, center.y - 0.5),
+			ImVec2(center.x + lineSizeX/2 + 0.5, center.y - 0.5),
+			lineColor);
 	}
 }
 
@@ -686,7 +762,7 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 	//Add drop target
 	if(ImGui::BeginDragDropTarget())
 	{
-		auto payload = ImGui::AcceptDragDropPayload("Waveform");
+		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
 		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
 		{
 			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
@@ -702,8 +778,28 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 
 		ImGui::EndDragDropTarget();
 	}
-}
 
+	//Draw overlay target
+	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
+	const ImU32 bgBase = ImGui::GetColorU32(ImGuiCol_DockingPreview, 0.70f);
+	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float fillSize = 48;
+	float lineSize = 44;
+
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	draw_list->AddRectFilled(
+		ImVec2(center.x - fillSize/2 - 0.5, center.y - fillSize/2 - 0.5),
+		ImVec2(center.x + fillSize/2 + 0.5, center.y + fillSize/2 + 0.5),
+		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		rounding);
+	draw_list->AddRect(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y - lineSize/2 - 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
+		lineColor,
+		rounding);
+}
 
 void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
