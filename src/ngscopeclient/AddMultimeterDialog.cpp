@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddMultimeterDialog::AddMultimeterDialog(Session& session)
-	: AddInstrumentDialog("Add Multimeter", session)
+	: AddInstrumentDialog("Add Multimeter", "multimeter", session)
 {
 	SCPIMultimeter::EnumDrivers(m_drivers);
 }

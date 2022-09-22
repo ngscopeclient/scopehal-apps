@@ -41,8 +41,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddInstrumentDialog::AddInstrumentDialog(const string& title, Session& session)
+AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
 	: Dialog(title, ImVec2(600, 150))
+	, m_nickname(nickname)
 	, m_session(session)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
@@ -111,8 +112,17 @@ bool AddInstrumentDialog::DoRender()
 
 	if(ImGui::Button("Add"))
 	{
-		if(DoConnect())
-			return false;
+		if(m_nickname.empty())
+		{
+			ShowErrorPopup(
+			"Nickname error",
+			"Nickname shall be not empty");
+		}
+		else
+		{
+			if(DoConnect())
+				return false;
+		}
 	}
 
 	return true;

@@ -41,7 +41,7 @@
 class AddInstrumentDialog : public Dialog
 {
 public:
-	AddInstrumentDialog(const std::string& title, Session& session);
+	AddInstrumentDialog(const std::string& title, const std::string& nickname, Session& session);
 	virtual ~AddInstrumentDialog();
 
 	virtual bool DoRender();
