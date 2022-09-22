@@ -159,6 +159,9 @@ protected:
 	///@brief Logfile viewer
 	std::shared_ptr<Dialog> m_logViewerDialog;
 
+	///@brief Performance metrics
+	std::shared_ptr<Dialog> m_metricsDialog;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups

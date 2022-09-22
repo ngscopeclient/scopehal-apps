@@ -30,45 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of WaveformThread
+	@brief Declaration of ChannelPropertiesDialog
  */
-#include "ngscopeclient.h"
-#include "pthread_compat.h"
-#include "Session.h"
+#ifndef ChannelPropertiesDialog_h
+#define ChannelPropertiesDialog_h
 
-using namespace std;
+#include "Dialog.h"
 
-Event g_waveformReadyEvent;
-Event g_waveformProcessedEvent;
-
-void WaveformThread(Session* session, atomic<bool>* shuttingDown)
+class MetricsDialog : public Dialog
 {
-	pthread_setname_np_compat("WaveformThread");
+public:
+	MetricsDialog(Session* session);
+	virtual ~MetricsDialog();
 
-	LogTrace("Starting\n");
+	virtual bool DoRender();
 
-	while(!*shuttingDown)
-	{
-		//Wait for data to be available from all scopes
-		if(!session->CheckForPendingWaveforms())
-		{
-			this_thread::sleep_for(chrono::milliseconds(1));
-			continue;
-		}
+protected:
+	Session* m_session;
 
-		LogTrace("Got a waveform\n");
+	int m_displayRefreshRate;
+};
 
-		//We've got data. Download it, then run the filter graph
-		session->DownloadWaveforms();
-		session->RefreshAllFilters();
-
-		//Rerun the heavyweight rendering shaders
-		session->RenderWaveformTextures();
-
-		//Unblock the UI threads, then wait for acknowledgement that it's processed
-		g_waveformReadyEvent.Signal();
-		g_waveformProcessedEvent.Block();
-	}
-
-	LogTrace("Shutting down\n");
-}
+#endif

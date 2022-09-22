@@ -37,6 +37,8 @@
 
 class MainWindow;
 
+#include "../xptools/HzClock.h"
+
 /**
 	@brief Internal state for a connection to an RF signal generator
  */
@@ -165,6 +167,7 @@ public:
 	void DownloadWaveforms();
 	void CheckForWaveforms();
 	void RefreshAllFilters();
+	void RenderWaveformTextures();
 
 	void Clear();
 
@@ -178,11 +181,37 @@ public:
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 
+	size_t GetFilterCount();
+
+	/**
+		@brief Gets the last execution time of the filter graph
+	 */
+	int64_t GetFilterGraphExecTime()
+	{ return m_lastFilterGraphExecTime.load(); }
+
+	/**
+		@brief Gets the last run time of the waveform rendering shaders
+	 */
+	int64_t GetLastWaveformRenderTime()
+	{ return m_lastWaveformRenderTime.load(); }
+
+	/**
+		@brief Gets the average rate at which we are pulling waveforms off the scope, in Hz
+	 */
+	double GetWaveformDownloadRate()
+	{
+		std::lock_guard<std::mutex> lock(m_perfClockMutex);
+		return m_waveformDownloadRate.GetAverageHz();
+	}
+
 	/**
 		@brief Get the set of scopes we're currently connected to
 	 */
-	const std::vector<Oscilloscope*>& GetScopes()
-	{ return m_oscilloscopes; }
+	const std::vector<Oscilloscope*> GetScopes()
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_oscilloscopes;
+	}
 
 	/**
 		@brief Gets the set of all SCPI instruments we're connect to (regardless of type)
@@ -255,6 +284,18 @@ protected:
 
 	///@brief Context for filter graph evaluation
 	FilterGraphExecutor m_graphExecutor;
+
+	///@brief Time spent on the last filter graph execution
+	std::atomic<int64_t> m_lastFilterGraphExecTime;
+
+	///@brief Time spent on the last cycle of waveform rendering shaders
+	std::atomic<int64_t> m_lastWaveformRenderTime;
+
+	///@brief Mutex for controlling access to performance counters
+	std::mutex m_perfClockMutex;
+
+	///@brief Frequency at which we are pulling waveforms off of scopes
+	HzClock m_waveformDownloadRate;
 };
 
 #endif

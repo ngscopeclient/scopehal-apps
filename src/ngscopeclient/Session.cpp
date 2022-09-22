@@ -57,6 +57,8 @@ Session::Session(MainWindow* wnd)
 	, m_triggerArmed(false)
 	, m_triggerOneShot(false)
 	, m_multiScopeFreeRun(false)
+	, m_lastFilterGraphExecTime(0)
+	, m_lastWaveformRenderTime(0)
 {
 }
 
@@ -488,6 +490,11 @@ bool Session::CheckForPendingWaveforms()
  */
 void Session::DownloadWaveforms()
 {
+	{
+		lock_guard<mutex> lock(m_perfClockMutex);
+		m_waveformDownloadRate.Tick();
+	}
+
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 	lock_guard<mutex> lock2(m_scopeMutex);
 
@@ -499,12 +506,15 @@ void Session::DownloadWaveforms()
 			continue;
 
 		//Make sure we don't free the old waveform data
+		//TODO: only do this once we have history
+		LogTrace("TODO: release waveform once we have history\n");
+		/*
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
-		}
+		}*/
 
 		//Download the data
 		scope->PopPendingWaveform();
@@ -614,8 +624,20 @@ void Session::CheckForWaveforms()
 	}
 }
 
+size_t Session::GetFilterCount()
+{
+	set<Filter*> filters;
+	{
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		filters = Filter::GetAllInstances();
+	}
+	return filters.size();
+}
+
 void Session::RefreshAllFilters()
 {
+	double tstart = GetTime();
+
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	//SyncFilterColors();
@@ -630,4 +652,17 @@ void Session::RefreshAllFilters()
 	//Update statistic displays after the filter graph update is complete
 	//for(auto g : m_waveformGroups)
 	//	g->RefreshMeasurements();
+	LogTrace("TODO: refresh statistics\n");
+
+	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+}
+
+/**
+	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
+ */
+void Session::RenderWaveformTextures()
+{
+	double tstart = GetTime();
+
+	m_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }
