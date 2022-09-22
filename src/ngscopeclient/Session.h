@@ -183,6 +183,8 @@ public:
 
 	size_t GetFilterCount();
 
+	bool IsChannelBeingDragged();
+
 	/**
 		@brief Gets the last execution time of the filter graph
 	 */

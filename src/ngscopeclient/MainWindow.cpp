@@ -537,6 +537,16 @@ void MainWindow::DockingArea()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
 
+bool MainWindow::IsChannelBeingDragged()
+{
+	for(auto group : m_waveformGroups)
+	{
+		if(group->IsChannelBeingDragged())
+			return true;
+	}
+	return false;
+}
+
 void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 {
 	LogTrace("Show properties for %s\n", channel->GetHwname().c_str());

@@ -65,6 +65,16 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_areas.push_back(area);
 }
 
+bool WaveformGroup::IsChannelBeingDragged()
+{
+	for(auto a : m_areas)
+	{
+		if(a->IsChannelBeingDragged())
+			return true;
+	}
+	return false;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 

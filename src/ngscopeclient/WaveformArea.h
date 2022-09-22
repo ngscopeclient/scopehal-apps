@@ -96,6 +96,8 @@ public:
 
 	void ClearPersistence();
 
+	bool IsChannelBeingDragged();
+
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
@@ -104,7 +106,7 @@ protected:
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
 
-	void DragDropOverlays(int iArea, int numAreas);
+	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
@@ -133,12 +135,15 @@ protected:
 	Unit m_yAxisUnit;
 
 	///@brief Drag and drop of UI elements
-	enum
+	enum DragState
 	{
 		DRAG_STATE_NONE,
+		DRAG_STATE_CHANNEL,
 		DRAG_STATE_Y_AXIS,
 		DRAG_STATE_TRIGGER_LEVEL
 	} m_dragState;
+
+	DragState m_lastDragState;
 
 	void OnMouseWheelPlotArea(float delta);
 	void OnMouseWheelYAxis(float delta);

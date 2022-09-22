@@ -76,6 +76,8 @@ public:
 
 	void ClearPersistence();
 
+	bool IsChannelBeingDragged();
+
 protected:
 	void RenderTimeline(float width, float height);
 	int64_t GetRoundingDivisor(int64_t width_xunits);

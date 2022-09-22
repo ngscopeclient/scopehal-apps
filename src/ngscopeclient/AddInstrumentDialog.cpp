@@ -43,8 +43,8 @@ using namespace std;
 
 AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
 	: Dialog(title, ImVec2(600, 150))
-	, m_nickname(nickname)
 	, m_session(session)
+	, m_nickname(nickname)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
 {

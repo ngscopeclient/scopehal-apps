@@ -624,6 +624,9 @@ void Session::CheckForWaveforms()
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filter processing
+
 size_t Session::GetFilterCount()
 {
 	set<Filter*> filters;
@@ -656,6 +659,9 @@ void Session::RefreshAllFilters()
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
 /**
 	@brief Runs the heavy rendering pass (sample data -> fp32 density map)

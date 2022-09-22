@@ -50,6 +50,8 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_ymid(0)
 	, m_pixelsPerYAxisUnit(1)
 	, m_yAxisUnit(stream.GetYAxisUnits())
+	, m_dragState(DRAG_STATE_NONE)
+	, m_lastDragState(DRAG_STATE_NONE)
 	, m_dragContext(this)
 	, m_group(group)
 	, m_parent(parent)
@@ -170,12 +172,23 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
 // GUI widget rendering
 
 /**
+	@brief Returns true if a channel was being dragged at the start of this frame
+
+	(including if the mouse button was released this frame)
+ */
+bool WaveformArea::IsChannelBeingDragged()
+{
+	return (m_dragState == DRAG_STATE_CHANNEL) || (m_lastDragState == DRAG_STATE_CHANNEL);
+}
+
+/**
 	@brief Renders a waveform area
 
 	Returns false if the area should be closed (no more waveforms visible in it)
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
+	m_lastDragState = m_dragState;
 	if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		OnMouseUp();
 	if(m_dragState != DRAG_STATE_NONE)
@@ -232,21 +245,23 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
 
-		//TODO: Draw texture for the actual waveform
+		//TODO: Draw texture for the actual waveform(s)
 
-		//Catch mouse wheel events
+		//TODO: draw decode overlays
+
 		ImGui::SetItemUsingMouseWheel();
 		if(ImGui::IsItemHovered())
 		{
 			auto wheel = ImGui::GetIO().MouseWheel;
 			if(wheel != 0)
 				OnMouseWheelPlotArea(wheel);
+
+			//Overlays / targets for drag-and-drop
+			if(m_parent->IsChannelBeingDragged())
+				DragDropOverlays(pos, csize, iArea, numAreas);
 		}
 
-		//Overlays for drag-and-drop
-		DragDropOverlays(iArea, numAreas);
-
-		//Cursors, protocol decodes, etc have to be drawn over the waveform
+		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);
 
 		//Draw control widgets
@@ -580,30 +595,41 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 /**
 	@brief Drag-and-drop overlay areas
  */
-void WaveformArea::DragDropOverlays(int iArea, int numAreas)
+void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
-	auto csize = ImGui::GetContentRegionAvail();
-	auto start = ImGui::GetWindowContentRegionMin();
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	//TODO: set ImGuiCol_DragDropTarget to invisible (zero alpha)
+	//and/or set ImGuiDragDropFlags_AcceptNoDrawDefaultRect
 
 	//Drag/drop areas for splitting
-	float widthOfVerticalEdge = csize.x*0.25;
+	float heightOfVerticalRegion = size.y * 0.25;
+	float widthOfVerticalEdge = size.x*0.25;
 	float leftOfMiddle = start.x + widthOfVerticalEdge;
-	float rightOfMiddle = start.x + csize.x*0.75;
+	float rightOfMiddle = start.x + size.x*0.75;
 	float topOfMiddle = start.y;
-	float bottomOfMiddle = start.y + csize.y;
+	float bottomOfMiddle = start.y + size.y;
 	float widthOfMiddle = rightOfMiddle - leftOfMiddle;
 	if(iArea == 0)
 	{
-		EdgeDropArea("top", ImVec2(leftOfMiddle, start.y), ImVec2(widthOfMiddle, csize.y*0.125), ImGuiDir_Up);
-		topOfMiddle += csize.y * 0.125;
+		EdgeDropArea(
+			"top",
+			ImVec2(leftOfMiddle, start.y),
+			ImVec2(widthOfMiddle, heightOfVerticalRegion),
+			ImGuiDir_Up);
+		topOfMiddle += heightOfVerticalRegion;
 	}
+
 	if(iArea == (numAreas-1))
 	{
-		bottomOfMiddle -= csize.y * 0.125;
-		ImVec2 pos(leftOfMiddle, bottomOfMiddle);
-		ImVec2 size(widthOfMiddle, csize.y*0.125);
-		EdgeDropArea("bottom", pos, size, ImGuiDir_Down);
+		bottomOfMiddle -= heightOfVerticalRegion;
+		EdgeDropArea(
+			"bottom",
+			ImVec2(leftOfMiddle, bottomOfMiddle),
+			ImVec2(widthOfMiddle, heightOfVerticalRegion),
+			ImGuiDir_Down);
 	}
+
 	float heightOfMiddle = bottomOfMiddle - topOfMiddle;
 	CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
@@ -618,8 +644,9 @@ void WaveformArea::DragDropOverlays(int iArea, int numAreas)
  */
 void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
 {
-	ImGui::SetCursorPos(start);
+	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
+	//ImGui::Button(name.c_str(), size);
 	ImGui::SetItemAllowOverlap();
 
 	//Add drop target
@@ -628,6 +655,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 		auto payload = ImGui::AcceptDragDropPayload("Waveform");
 		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
 		{
+			LogTrace("splitting\n");
+
 			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
 			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
 
@@ -649,8 +678,9 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
-	ImGui::SetCursorPos(start);
+	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
+	//ImGui::Button("center", size);
 	ImGui::SetItemAllowOverlap();
 
 	//Add drop target
@@ -699,6 +729,8 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
+		m_dragState = DRAG_STATE_CHANNEL;
+
 		m_dragContext.m_streamIndex = index;
 		ImGui::SetDragDropPayload("Waveform", &m_dragContext, sizeof(WaveformDragContext*));
 

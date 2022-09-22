@@ -77,6 +77,8 @@ public:
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 
+	bool IsChannelBeingDragged();
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
