@@ -53,6 +53,7 @@
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
+#include "TimebasePropertiesDialog.h"
 
 using namespace std;
 
@@ -144,6 +145,7 @@ void MainWindow::CloseSession()
 	//This ensures that we have a nice well defined shutdown order.
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
+	m_timebaseDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -405,6 +407,9 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
 
+	if(m_timebaseDialog == dlg)
+		m_timebaseDialog = nullptr;
+
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
 		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
@@ -545,6 +550,15 @@ bool MainWindow::IsChannelBeingDragged()
 			return true;
 	}
 	return false;
+}
+
+void MainWindow::ShowTimebaseProperties()
+{
+	if(m_timebaseDialog != nullptr)
+		return;
+
+	m_timebaseDialog = make_shared<TimebasePropertiesDialog>(&m_session);
+	AddDialog(m_timebaseDialog);
 }
 
 void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)

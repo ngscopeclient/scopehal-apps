@@ -55,6 +55,7 @@ add_executable(ngscopeclient
 	SCPIConsoleDialog.cpp
 	Session.cpp
 	TextureManager.cpp
+	TimebasePropertiesDialog.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp

@@ -85,6 +85,7 @@ void MainWindow::MainMenu()
 		FileMenu();
 		ViewMenu();
 		AddMenu();
+		SetupMenu();
 		WindowMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
@@ -558,6 +559,25 @@ void MainWindow::AddChannelsMenu()
 				ImGui::EndMenu();
 			}
 		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Setup menu
+ */
+void MainWindow::SetupMenu()
+{
+	if(ImGui::BeginMenu("Setup"))
+	{
+		bool timebaseVisible = (m_timebaseDialog != nullptr);
+		if(timebaseVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Timebase"))
+			ShowTimebaseProperties();
+		if(timebaseVisible)
+			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
 	}

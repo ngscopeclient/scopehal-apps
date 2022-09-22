@@ -148,27 +148,33 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-		ImGui::TextUnformatted("Click and drag to scroll the timeline.\nUse mouse wheel to zoom.");
+		ImGui::TextUnformatted(
+			"Click and drag to scroll the timeline.\n"
+			"Use mouse wheel to zoom.\n"
+			"Double-click to open timebase properties.");
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
 
-	//Catch mouse wheel events
 	ImGui::SetItemUsingMouseWheel();
 	if(ImGui::IsItemHovered())
 	{
+		//Catch mouse wheel events
 		auto wheel = ImGui::GetIO().MouseWheel;
 		if(wheel != 0)
 			OnMouseWheel(wheel);
+
+		//Double click to open the timebase properties
+		if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			m_parent->ShowTimebaseProperties();
+
+		//Start dragging
+		if(ImGui::IsMouseClicked(0))
+			m_draggingTimeline = true;
 	}
 
 	//Handle dragging
 	//(Mouse is allowed to leave the window, as long as original click was within us)
-	if(ImGui::IsItemHovered())
-	{
-		if(ImGui::IsMouseClicked(0))
-			m_draggingTimeline = true;
-	}
 	if(m_draggingTimeline)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame

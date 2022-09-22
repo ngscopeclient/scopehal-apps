@@ -76,6 +76,7 @@ public:
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
+	void ShowTimebaseProperties();
 
 	bool IsChannelBeingDragged();
 
@@ -108,6 +109,7 @@ protected:
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddChannelsMenu();
+			void SetupMenu();
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
@@ -163,6 +165,9 @@ protected:
 
 	///@brief Performance metrics
 	std::shared_ptr<Dialog> m_metricsDialog;
+
+	///@brief Timebase properties
+	std::shared_ptr<Dialog> m_timebaseDialog;
 
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
