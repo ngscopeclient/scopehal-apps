@@ -52,7 +52,6 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_yAxisUnit(stream.GetYAxisUnits())
 	, m_dragState(DRAG_STATE_NONE)
 	, m_lastDragState(DRAG_STATE_NONE)
-	, m_dragContext(this)
 	, m_group(group)
 	, m_parent(parent)
 	, m_tLastMouseMove(GetTime())
@@ -705,18 +704,18 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	if(ImGui::BeginDragDropTarget())
 	{
 		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
+		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
 		{
 			LogTrace("splitting\n");
 
-			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
-			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
+			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
+			auto stream = desc->first->GetStream(desc->second);
 
 			//Add request to split our current group
 			m_parent->QueueSplitGroup(m_group, splitDir, stream);
 
 			//Remove the stream from the originating waveform area
-			context->m_sourceArea->RemoveStream(context->m_streamIndex);
+			desc->first->RemoveStream(desc->second);
 		}
 
 		ImGui::EndDragDropTarget();
@@ -728,10 +727,10 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSizeX = 48;
-	float lineSizeX = 44;
-	float fillSizeY = 48;
-	float lineSizeY = 44;
+	float fillSizeX = 34;
+	float lineSizeX = 32;
+	float fillSizeY = 34;
+	float lineSizeY = 32;
 
 	//L-R split: make target half size in X axis
 	if( (splitDir == ImGuiDir_Left) || (splitDir == ImGuiDir_Right) )
@@ -810,17 +809,17 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 	if(ImGui::BeginDragDropTarget())
 	{
 		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-		if( (payload != nullptr) && (payload->DataSize == sizeof(WaveformDragContext*)) )
+		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
 		{
-			auto context = reinterpret_cast<WaveformDragContext*>(payload->Data);
-			auto stream = context->m_sourceArea->GetStream(context->m_streamIndex);
+			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
+			auto stream = desc->first->GetStream(desc->second);
 
 			//Add the new stream to us
 			//TODO: copy view settings from the DisplayedChannel over?
 			AddStream(stream);
 
 			//Remove the stream from the originating waveform area
-			context->m_sourceArea->RemoveStream(context->m_streamIndex);
+			desc->first->RemoveStream(desc->second);
 		}
 
 		ImGui::EndDragDropTarget();
@@ -832,8 +831,8 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSize = 48;
-	float lineSize = 44;
+	float fillSize = 34;
+	float lineSize = 32;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	draw_list->AddRectFilled(
@@ -874,8 +873,8 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 	{
 		m_dragState = DRAG_STATE_CHANNEL;
 
-		m_dragContext.m_streamIndex = index;
-		ImGui::SetDragDropPayload("Waveform", &m_dragContext, sizeof(WaveformDragContext*));
+		DragDescriptor desc(this, index);
+		ImGui::SetDragDropPayload("Waveform", &desc, sizeof(desc));
 
 		//Preview of what we're dragging
 		ImGui::Text("Drag %s", chan->GetName().c_str());

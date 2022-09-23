@@ -94,6 +94,13 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
  */
 void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t nchan)
 {
+	m_couplings.clear();
+	m_couplingNames.clear();
+	m_bwlValues.clear();
+	m_bwlNames.clear();
+	m_imuxNames.clear();
+	m_modeNames.clear();
+
 	//Attenuation
 	m_committedAttenuation = scope->GetChannelAttenuation(nchan);
 	m_attenuation = to_string(m_committedAttenuation);
@@ -220,7 +227,7 @@ bool ChannelPropertiesDialog::DoRender()
 	}
 
 	//Al channels have display settings
-	if(ImGui::CollapsingHeader("Display"))
+	if(ImGui::CollapsingHeader("Display", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::SetNextItemWidth(width);
 		if(TextInputWithImplicitApply("Nickname", m_displayName, m_committedDisplayName))
@@ -245,7 +252,7 @@ bool ChannelPropertiesDialog::DoRender()
 	auto nstreams = m_channel->GetStreamCount();
 	if(scope)
 	{
-		if(ImGui::CollapsingHeader("Input"))
+		if(ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			//Type of probe connected
 			auto index = m_channel->GetIndex();

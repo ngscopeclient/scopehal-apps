@@ -40,21 +40,6 @@ class WaveformGroup;
 class MainWindow;
 
 /**
-	@brief Drag context for a waveform being dragged
- */
-class WaveformDragContext
-{
-public:
-	WaveformDragContext(WaveformArea* src)
-	: m_sourceArea(src)
-	, m_streamIndex(0)
-	{}
-
-	WaveformArea* m_sourceArea;
-	size_t m_streamIndex;
-};
-
-/**
 	@brief Context data for a single channel being displayed within a WaveformArea
  */
 class DisplayedChannel
@@ -166,9 +151,6 @@ protected:
 	 */
 	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
 
-	///@brief Drag context for waveform we're dragging
-	WaveformDragContext m_dragContext;
-
 	///@brief Waveform group containing us
 	std::shared_ptr<WaveformGroup> m_group;
 
@@ -187,6 +169,8 @@ protected:
 	///@brief The trigger we're configuring
 	Trigger* m_triggerDuringDrag;
 };
+
+typedef std::pair<WaveformArea*, size_t> DragDescriptor;
 
 #endif
 

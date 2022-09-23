@@ -127,8 +127,10 @@ bool TimebasePropertiesDialog::DoRender()
 	for(auto& p : m_pages)
 	{
 		auto scope = p->m_scope;
+
 		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			ImGui::PushID(scope->m_nickname.c_str());
 
 			//Time domain configuration
 			if(scope->HasTimebaseControls())
@@ -177,6 +179,7 @@ bool TimebasePropertiesDialog::DoRender()
 				//TODO
 			}
 
+			ImGui::PopID();
 		}
 	}
 
