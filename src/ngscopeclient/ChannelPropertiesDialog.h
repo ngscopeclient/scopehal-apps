@@ -82,6 +82,9 @@ protected:
 	float m_color[3];
 
 	bool m_inverted;
+
+	std::string m_probe;
+	bool m_canAutoZero;
 };
 
 #endif

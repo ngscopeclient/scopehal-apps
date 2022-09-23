@@ -168,6 +168,10 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 		m_mode = scope->GetADCMode(nchan);
 		m_modeNames = scope->GetADCModeNames(nchan);
 	}
+
+	//Probe type
+	m_probe = scope->GetProbeName(nchan);
+	m_canAutoZero = scope->CanAutoZero(nchan);
 }
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
@@ -245,8 +249,7 @@ bool ChannelPropertiesDialog::DoRender()
 		{
 			//Type of probe connected
 			auto index = m_channel->GetIndex();
-			auto pname = scope->GetProbeName(index);
-			string ptype = pname;
+			string ptype = m_probe;
 			if(ptype == "")
 				ptype = "(not detected)";
 			ImGui::BeginDisabled();
@@ -258,7 +261,7 @@ bool ChannelPropertiesDialog::DoRender()
 			//Attenuation
 			Unit counts(Unit::UNIT_COUNTS);
 			ImGui::SetNextItemWidth(width);
-			if(pname != "")	//cannot change attenuation on active probes
+			if(m_probe != "")	//cannot change attenuation on active probes
 				ImGui::BeginDisabled();
 			if(UnitInputWithImplicitApply("Attenuation", m_attenuation, m_committedAttenuation, counts))
 			{
@@ -276,12 +279,12 @@ bool ChannelPropertiesDialog::DoRender()
 					m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 				}
 			}
-			if(pname != "")
+			if(m_probe != "")
 				ImGui::EndDisabled();
 			HelpMarker("Attenuation setting for the probe (for example, 10 for a 10:1 probe)");
 
 			//Only show coupling box if the instrument has configurable coupling
-			if( (m_couplings.size() > 1) && (pname == "") )
+			if( (m_couplings.size() > 1) && (m_probe == "") )
 			{
 				ImGui::SetNextItemWidth(width);
 				if(Combo("Coupling", m_couplingNames, m_coupling))
@@ -351,7 +354,7 @@ bool ChannelPropertiesDialog::DoRender()
 			}
 
 			//If the probe supports auto zeroing, show a button for it
-			if(scope->CanAutoZero(index))
+			if(m_canAutoZero)
 			{
 				if(ImGui::Button("Auto Zero"))
 					m_channel->AutoZero();

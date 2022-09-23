@@ -284,10 +284,13 @@ void MainWindow::RenderUI()
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
 			if(!m_waveformGroups[i]->Render())
+			{
+				LogTrace("Closing waveform group %s (i=%zu)\n", m_waveformGroups[i]->GetTitle().c_str(), i);
 				groupsToClose.push_back(i);
+			}
 		}
 		for(ssize_t i = static_cast<ssize_t>(groupsToClose.size())-1; i >= 0; i--)
-			m_waveformGroups.erase(m_waveformGroups.begin() + i);
+			m_waveformGroups.erase(m_waveformGroups.begin() + groupsToClose[i]);
 	}
 
 	//Dialog boxes
