@@ -63,6 +63,8 @@ WaveformGroup::~WaveformGroup()
 void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 {
 	m_areas.push_back(area);
+
+	m_parent->RefreshTimebasePropertiesDialog();
 }
 
 bool WaveformGroup::IsChannelBeingDragged()
@@ -108,6 +110,8 @@ bool WaveformGroup::Render()
 	//Close any areas that are now empty
 	for(ssize_t i=static_cast<ssize_t>(areasToClose.size()) - 1; i >= 0; i--)
 		m_areas.erase(m_areas.begin() + areasToClose[i]);
+	if(!areasToClose.empty())
+		m_parent->RefreshTimebasePropertiesDialog();
 
 	//If we no longer have any areas in the group, close the group
 	if(m_areas.empty())

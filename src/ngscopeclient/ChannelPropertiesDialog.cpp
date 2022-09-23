@@ -48,6 +48,12 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
 
+	//Color
+	auto color = ColorFromString(m_channel->m_displaycolor);
+	m_color[0] = ((color >> IM_COL32_R_SHIFT) & 0xff) / 255.0f;
+	m_color[1] = ((color >> IM_COL32_G_SHIFT) & 0xff) / 255.0f;
+	m_color[2] = ((color >> IM_COL32_B_SHIFT) & 0xff) / 255.0f;
+
 	//Vertical settings are per stream
 	size_t nstreams = m_channel->GetStreamCount();
 	m_committedOffset.resize(nstreams);
@@ -89,7 +95,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
 void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t nchan)
 {
 	//Attenuation
-		m_committedAttenuation = scope->GetChannelAttenuation(nchan);
+	m_committedAttenuation = scope->GetChannelAttenuation(nchan);
 	m_attenuation = to_string(m_committedAttenuation);
 
 	//Coupling
@@ -152,7 +158,16 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 	m_imuxNames = scope->GetInputMuxNames(nchan);
 	m_imux = scope->GetInputMuxSetting(nchan);
 
+	//Inversion
 	m_inverted = scope->IsInverted(nchan);
+
+	//ADC modes
+	m_mode = 0;
+	if(scope->IsADCModeConfigurable())
+	{
+		m_mode = scope->GetADCMode(nchan);
+		m_modeNames = scope->GetADCModeNames(nchan);
+	}
 }
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
@@ -200,6 +215,7 @@ bool ChannelPropertiesDialog::DoRender()
 		//TODO: filter info
 	}
 
+	//Al channels have display settings
 	if(ImGui::CollapsingHeader("Display"))
 	{
 		ImGui::SetNextItemWidth(width);
@@ -207,7 +223,18 @@ bool ChannelPropertiesDialog::DoRender()
 			m_channel->SetDisplayName(m_committedDisplayName);
 		HelpMarker("Display name for the channel");
 
-		//TODO: color
+		if(ImGui::ColorEdit3(
+			"Color",
+			m_color,
+			ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_Uint8))
+		{
+			char tmp[32];
+			snprintf(tmp, sizeof(tmp), "#%02x%02x%02x",
+				static_cast<int>(round(m_color[0] * 255)),
+				static_cast<int>(round(m_color[1] * 255)),
+				static_cast<int>(round(m_color[2] * 255)));
+			m_channel->m_displaycolor = tmp;
+		}
 	}
 
 	//Input settings only make sense if we have an attached scope
@@ -285,6 +312,30 @@ bool ChannelPropertiesDialog::DoRender()
 				}
 
 				HelpMarker("Hardware input multiplexer setting");
+			}
+
+			//If the scope has configurable ADC modes, show dropdown for that
+			if(scope->IsADCModeConfigurable())
+			{
+				bool nomodes = m_modeNames.size() <= 1;
+				if(nomodes)
+					ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				if(Combo("ADC mode", m_modeNames, m_mode))
+				{
+					scope->SetADCMode(index, m_mode);
+
+					RefreshInputSettings(scope, index);
+				}
+				if(nomodes)
+					ImGui::EndDisabled();
+
+				HelpMarker(
+					"Operating mode for the analog-to-digital converter.\n\n"
+					"Some instruments allow the ADC to operate in several modes, typically trading bit depth "
+					"against sample rate. Available modes may vary depending on the current sample rate and "
+					"which channels are in use."
+					);
 			}
 
 			//If the probe supports inversion, show a checkbox for it

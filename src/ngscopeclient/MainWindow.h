@@ -42,6 +42,8 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+#include "TimebasePropertiesDialog.h"
+
 class MultimeterDialog;
 
 class SplitGroupRequest
@@ -79,6 +81,15 @@ public:
 	void ShowTimebaseProperties();
 
 	bool IsChannelBeingDragged();
+
+	/**
+		@brief Update the timebase properties dialog
+	 */
+	void RefreshTimebasePropertiesDialog()
+	{
+		if(m_timebaseDialog)
+			m_timebaseDialog->Refresh();
+	}
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -167,7 +178,7 @@ protected:
 	std::shared_ptr<Dialog> m_metricsDialog;
 
 	///@brief Timebase properties
-	std::shared_ptr<Dialog> m_timebaseDialog;
+	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
 
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 

@@ -55,14 +55,21 @@ public:
 };
 
 /**
-	@brief Placeholder for a single channel being displayed within a WaveformArea
+	@brief Context data for a single channel being displayed within a WaveformArea
  */
 class DisplayedChannel
 {
 public:
 	DisplayedChannel(StreamDescriptor stream)
 		: m_stream(stream)
-	{}
+	{
+		stream.m_channel->AddRef();
+	}
+
+	~DisplayedChannel()
+	{
+		m_stream.m_channel->Release();
+	}
 
 	std::string GetName()
 	{ return m_stream.GetName(); }

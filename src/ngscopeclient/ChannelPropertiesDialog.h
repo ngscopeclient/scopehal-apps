@@ -76,6 +76,11 @@ protected:
 	std::vector<std::string> m_imuxNames;
 	int m_imux;
 
+	std::vector<std::string> m_modeNames;
+	int m_mode;
+
+	float m_color[3];
+
 	bool m_inverted;
 };
 

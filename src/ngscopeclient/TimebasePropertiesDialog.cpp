@@ -140,7 +140,7 @@ bool TimebasePropertiesDialog::DoRender()
 					scope->SetSampleRate(p->m_rates[p->m_rate]);
 				HelpMarker(
 					"Time domain sample rate.\n\n"
-					"For some instruments, the set of available sample rates may depend on the set of enabled channels."
+					"For some instruments, available sample rates may vary depending on which channels are active."
 					);
 
 				//Memory depth
@@ -149,20 +149,23 @@ bool TimebasePropertiesDialog::DoRender()
 					scope->SetSampleDepth(p->m_depths[p->m_depth]);
 				HelpMarker(
 					"Acquisition record length, in samples.\n\n"
-					"For some instruments, the set of available memory depths may depend on the set of enabled channels."
+					"For some instruments, available memory depths may vary depending on which channels are active."
 					);
 
 				//Interleaving
 				if(scope->CanInterleave())
 				{
 					if(ImGui::Checkbox("Interleaving", &p->m_interleaving))
+					{
 						scope->SetInterleaving(p->m_interleaving);
+						Refresh();
+					}
 
 					HelpMarker(
 						"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
 						"\n"
-						"Some instruments do not have an explicit interleaving switch, but the set of available "
-						"sample rates may depend on the number of enabled channels."
+						"Some instruments do not have an explicit interleaving switch, but available sample rates "
+						"may vary depending on which channels are active."
 						);
 				}
 
