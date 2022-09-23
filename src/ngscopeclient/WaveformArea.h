@@ -112,6 +112,8 @@ protected:
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
+	void RenderWaveforms(ImVec2 start, ImVec2 size);
+	void RenderAnalogWaveform(StreamDescriptor stream, ImVec2 start, ImVec2 size);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);

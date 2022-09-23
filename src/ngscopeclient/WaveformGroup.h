@@ -74,6 +74,12 @@ public:
 	float XAxisUnitsToPixels(int64_t t)
 	{ return t * m_pixelsPerXUnit; }
 
+	/**
+		@brief Converts a position in X axis units to pixels (in window coordinates)
+	 */
+	float XAxisUnitsToXPosition(int64_t t)
+	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + ImGui::GetWindowPos().x; }
+
 	void ClearPersistence();
 
 	bool IsChannelBeingDragged();

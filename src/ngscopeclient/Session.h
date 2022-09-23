@@ -225,6 +225,12 @@ public:
 	 */
 	bool CheckForPendingWaveforms();
 
+	/**
+		@brief Get the mutex controlling access to waveform data
+	 */
+	std::recursive_mutex& GetWaveformDataMutex()
+	{ return m_waveformDataMutex; }
+
 protected:
 
 	///@brief Mutex for controlling access to scope vectors

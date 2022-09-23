@@ -216,7 +216,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		if(m_dragState != DRAG_STATE_Y_AXIS)
 			m_yAxisOffset = first.GetOffset();
 
-		m_pixelsPerYAxisUnit = totalHeightAvailable / first.GetVoltageRange();
+		m_pixelsPerYAxisUnit = unspacedHeightPerArea / first.GetVoltageRange();
 		m_yAxisUnit = first.GetYAxisUnits();
 	}
 
@@ -245,9 +245,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
 
-		//TODO: Draw texture for the actual waveform(s)
-
-		//TODO: draw decode overlays
+		//Draw actual waveforms (and protocol decode overlays)
+		RenderWaveforms(pos, csize);
 
 		ImGui::SetItemUsingMouseWheel();
 		if(ImGui::IsItemHovered())
@@ -284,6 +283,54 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
+}
+
+/**
+	@brief Renders our waveforms
+ */
+void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
+{
+	for(auto& chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		switch(stream.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG:
+				RenderAnalogWaveform(stream, start, size);
+				break;
+
+			default:
+				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
+				break;
+		}
+	}
+}
+
+/**
+	@brief Renders a single analog waveform
+ */
+void WaveformArea::RenderAnalogWaveform(StreamDescriptor stream, ImVec2 /*start*/, ImVec2 /*size*/)
+{
+	auto chan = stream.m_channel;
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//DEBUG: simple quick-and-dirty renderer for testing
+	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
+	if(u)
+	{
+		auto n = data->size();
+		for(size_t i=0; i<n; i++)
+		{
+			list->PathLineTo(ImVec2(
+				m_group->XAxisUnitsToXPosition((i * data->m_timescale) + data->m_triggerPhase),
+				YAxisUnitsToYPosition(u->m_samples[i])));
+		}
+		list->PathStroke(ColorFromString(chan->m_displaycolor), 0, 2);
+	}
 }
 
 /**
