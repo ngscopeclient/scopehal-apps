@@ -37,16 +37,40 @@
 
 #include "Dialog.h"
 
+class TimebasePropertiesPage
+{
+public:
+	TimebasePropertiesPage(Oscilloscope* scope);
+
+	Oscilloscope* m_scope;
+
+	//Sample rate
+	std::vector<uint64_t> m_rates;
+	std::vector<std::string> m_rateNames;
+	int m_rate;
+
+	//Memory depth
+	std::vector<uint64_t> m_depths;
+	std::vector<std::string> m_depthNames;
+	int m_depth;
+
+	bool m_interleaving;
+};
+
 class TimebasePropertiesDialog : public Dialog
 {
 public:
 	TimebasePropertiesDialog(Session* session);
 	virtual ~TimebasePropertiesDialog();
 
+	void Refresh();
+
 	virtual bool DoRender();
 
 protected:
 	Session* m_session;
+
+	std::vector<std::unique_ptr<TimebasePropertiesPage>> m_pages;
 };
 
 #endif

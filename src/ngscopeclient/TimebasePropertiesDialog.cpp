@@ -35,8 +35,51 @@
 
 #include "ngscopeclient.h"
 #include "TimebasePropertiesDialog.h"
+#include "Session.h"
 
 using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TimebasePropertiesPage
+
+TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
+	: m_scope(scope)
+{
+	//Interleaving flag
+	m_interleaving = scope->IsInterleaving();
+
+	//Sample rate
+	Unit srate(Unit::UNIT_SAMPLERATE);
+	auto rate = scope->GetSampleRate();
+	if(m_interleaving)
+		m_rates = scope->GetSampleRatesInterleaved();
+	else
+		m_rates = scope->GetSampleRatesNonInterleaved();
+
+	m_rate = 0;
+	for(size_t i=0; i<m_rates.size(); i++)
+	{
+		m_rateNames.push_back(srate.PrettyPrint(m_rates[i]));
+		if(m_rates[i] == rate)
+			m_rate = i;
+	}
+
+	//Sample depth
+	Unit sdepth(Unit::UNIT_SAMPLEDEPTH);
+	auto depth = scope->GetSampleDepth();
+	if(m_interleaving)
+		m_depths = scope->GetSampleDepthsInterleaved();
+	else
+		m_depths = scope->GetSampleDepthsNonInterleaved();
+
+	m_depth = 0;
+	for(size_t i=0; i<m_depths.size(); i++)
+	{
+		m_depthNames.push_back(sdepth.PrettyPrint(m_depths[i]));
+		if(m_depths[i] == depth)
+			m_depth = i;
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -45,45 +88,27 @@ TimebasePropertiesDialog::TimebasePropertiesDialog(Session* session)
 	: Dialog("Timebase properties", ImVec2(300, 400))
 	, m_session(session)
 {
-	/*
-	m_committedDisplayName = m_channel->GetDisplayName();
-	m_displayName = m_committedDisplayName;
-
-	//Vertical settings are per stream
-	size_t nstreams = m_channel->GetStreamCount();
-	m_committedOffset.resize(nstreams);
-	m_offset.resize(nstreams);
-	m_committedRange.resize(nstreams);
-	m_range.resize(nstreams);
-	for(size_t i = 0; i<nstreams; i++)
-	{
-		auto unit = m_channel->GetYAxisUnits(i);
-
-		m_committedOffset[i] = chan->GetOffset(i);
-		m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
-
-		m_committedRange[i] = chan->GetVoltageRange(i);
-		m_range[i] = unit.PrettyPrint(m_committedRange[i]);
-	}
-
-	//Hardware acquisition settings if this is a scope channel
-	auto scope = m_channel->GetScope();
-	if(scope)
-	{
-		auto nchan = m_channel->GetIndex();
-
-		RefreshInputSettings(scope, nchan);
-	}
-	else
-	{
-		m_committedAttenuation = 1;
-		m_attenuation = "";
-	}
-	*/
+	Refresh();
 }
 
 TimebasePropertiesDialog::~TimebasePropertiesDialog()
 {
+}
+
+/**
+	@brief Refreshes the dialog whenever the set of valid configurations changes
+
+	Examples of events that will need to trigger a refresh:
+	* Enabling or disabling a channel
+	* Changing ADC mode
+ */
+void TimebasePropertiesDialog::Refresh()
+{
+	m_pages.clear();
+
+	auto scopes = m_session->GetScopes();
+	for(auto s : scopes)
+		m_pages.push_back(make_unique<TimebasePropertiesPage>(s));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,37 +122,60 @@ TimebasePropertiesDialog::~TimebasePropertiesDialog()
  */
 bool TimebasePropertiesDialog::DoRender()
 {
-	//TODO: handle stream count changing dynamically on some filters
-
-	/*
 	float width = 10 * ImGui::GetFontSize();
 
-	auto scope = m_channel->GetScope();
-	if(ImGui::CollapsingHeader("Info"))
+	for(auto& p : m_pages)
 	{
-		//Scope info
-		if(scope)
+		auto scope = p->m_scope;
+		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			auto nickname = scope->m_nickname;
-			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
-			ImGui::BeginDisabled();
+			//Time domain configuration
+			if(scope->HasTimebaseControls())
+			{
+
+				//Sample rate
 				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Instrument", &nickname);
-			ImGui::EndDisabled();
-			HelpMarker("The instrument this channel was measured by");
+				if(Combo("Sample rate", p->m_rateNames, p->m_rate))
+					scope->SetSampleRate(p->m_rates[p->m_rate]);
+				HelpMarker(
+					"Time domain sample rate.\n\n"
+					"For some instruments, the set of available sample rates may depend on the set of enabled channels."
+					);
 
-			ImGui::BeginDisabled();
+				//Memory depth
 				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Timebase", &index);
-			ImGui::EndDisabled();
+				if(Combo("Sample depth", p->m_depthNames, p->m_depth))
+					scope->SetSampleDepth(p->m_depths[p->m_depth]);
+				HelpMarker(
+					"Acquisition record length, in samples.\n\n"
+					"For some instruments, the set of available memory depths may depend on the set of enabled channels."
+					);
 
-			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
+				//Interleaving
+				if(scope->CanInterleave())
+				{
+					if(ImGui::Checkbox("Interleaving", &p->m_interleaving))
+						scope->SetInterleaving(p->m_interleaving);
+
+					HelpMarker(
+						"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
+						"\n"
+						"Some instruments do not have an explicit interleaving switch, but the set of available "
+						"sample rates may depend on the number of enabled channels."
+						);
+				}
+
+			}
+
+			//Frequency domain configuration
+			if(scope->HasFrequencyControls())
+			{
+				//TODO
+			}
+
 		}
-
-		//TODO: filter info
 	}
-	*/
 
 	return true;
 }

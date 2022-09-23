@@ -546,6 +546,10 @@ void MainWindow::AddChannelsMenu()
 						if(chan->GetType(j) == Stream::STREAM_TYPE_TRIGGER)
 							continue;
 
+						//Skip channels we can't enable
+						if(!scope->CanEnableChannel(i))
+							continue;
+
 						StreamDescriptor stream(chan, j);
 						if(ImGui::MenuItem(stream.GetName().c_str()))
 						{
