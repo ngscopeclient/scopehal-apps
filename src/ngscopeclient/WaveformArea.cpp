@@ -322,13 +322,19 @@ void WaveformArea::RenderAnalogWaveform(StreamDescriptor stream, ImVec2 /*start*
 	if(u)
 	{
 		auto n = data->size();
-		for(size_t i=0; i<n; i++)
+		auto color = ColorFromString(chan->m_displaycolor);
+		for(size_t i=1; i<n; i++)
 		{
-			list->PathLineTo(ImVec2(
+			ImVec2 start(
+				m_group->XAxisUnitsToXPosition(((i-1) * data->m_timescale) + data->m_triggerPhase),
+				YAxisUnitsToYPosition(u->m_samples[i-1]));
+
+			ImVec2 end(
 				m_group->XAxisUnitsToXPosition((i * data->m_timescale) + data->m_triggerPhase),
-				YAxisUnitsToYPosition(u->m_samples[i])));
+				YAxisUnitsToYPosition(u->m_samples[i]));
+
+			list->AddLine(start, end, color);
 		}
-		list->PathStroke(ColorFromString(chan->m_displaycolor), 0, 2);
 	}
 }
 
