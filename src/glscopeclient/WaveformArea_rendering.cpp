@@ -139,39 +139,25 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	}
 
 	//Ensure GPU has actual waveform timestamps and voltages
+	//FIXME: This can be optimized by batching all calls to a cmdbuf, but can't
+	// use wdata->m_vkCmdBuf for this because RenderTrace uses that.
 	if(update_waveform)
 	{
-		//wdata->m_vkCmdBuf.begin({});
-
 		if(sandat)
-			//sandat->m_samples.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			sandat->m_samples.PrepareForGpuAccess(false);
 		else if(uandat)
-			//uandat->m_samples.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			uandat->m_samples.PrepareForGpuAccess(false);
 		else if(sdigdat)
-			//sdigdat->m_samples.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			sdigdat->m_samples.PrepareForGpuAccess(false);
 		else if(udigdat)
-			//udigdat->m_samples.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			udigdat->m_samples.PrepareForGpuAccess(false);
 
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
 		if(sandat)
-			//sandat->m_offsets.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			sandat->m_offsets.PrepareForGpuAccess(false);
 		else if(sdigdat)
-			//sdigdat->m_offsets.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			sdigdat->m_offsets.PrepareForGpuAccess(false);
-
-		//wdata->m_vkCmdBuf.end();
-
-		//vk::raii::Fence fence(*g_vkComputeDevice, vk::FenceCreateInfo());
-		//vk::SubmitInfo info({}, {}, *wdata->m_vkCmdBuf);
-		//area->m_parent->m_vkQueue.submit(info, *fence);
-		//while(vk::Result::eTimeout == g_vkComputeDevice->waitForFences({*fence}, VK_TRUE, 1000 * 1000))
-		//{}
 	}
 
 	//Calculate indexes for rendering of sparse waveforms
