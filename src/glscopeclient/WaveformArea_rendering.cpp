@@ -401,8 +401,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 			auto wdat = m_overlayRenderData[overlay];
 			wdat->m_renderedWaveform.resize(m_plotRight * m_height);
-			//TODO: Still necessary?
-			ResetTextureFiltering();
 
 			RenderTrace(wdat);
 		}

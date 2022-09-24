@@ -77,7 +77,6 @@ void WaveformArea::on_resize(int width, int height)
 	m_waveformRenderData->m_renderedWaveform.PrepareForCpuAccess();
 	memset(m_waveformRenderData->m_renderedWaveform.GetCpuPointer(), 0, m_plotRight * height * sizeof(float));
 	m_waveformRenderData->m_renderedWaveform.MarkModifiedFromCpu();
-	ResetTextureFiltering(); //<- TODO: Necessary?
 
 	//Reallocate textures for overlays
 	for(auto it : m_overlayRenderData)
@@ -87,7 +86,6 @@ void WaveformArea::on_resize(int width, int height)
 		it.second->m_renderedWaveform.PrepareForCpuAccess();
 		memset(it.second->m_renderedWaveform.GetCpuPointer(), 0, m_plotRight * height * sizeof(float));
 		it.second->m_renderedWaveform.MarkModifiedFromCpu();
-		ResetTextureFiltering(); //<- TODO: Necessary?
 	}
 
 	err = glGetError();
