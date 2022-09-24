@@ -597,11 +597,10 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	int numGroups = numCols / localSize;
 
 	std::shared_ptr<ComputePipeline> comp;
-	if(data->IsDensePacked()) {
+	if(data->IsDensePacked())
 		comp = data->m_shaderDense;
-	} else {
+	else
 		comp = data->m_shaderSparse;
-	}
 	data->m_vkCmdBuf.begin({});
 	//Bind the output buffer
 	//TODO: Can we use outputOnly=true if no persistence?
@@ -611,17 +610,24 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	auto uandat = dynamic_cast<UniformAnalogWaveform*>(pdat);
 	auto sdigdat = dynamic_cast<SparseDigitalWaveform*>(pdat);
 	auto udigdat = dynamic_cast<UniformDigitalWaveform*>(pdat);
-	if(sandat) {
+	if(sandat)
+	{
 		comp->BindBufferNonblocking(1, sandat->m_samples, data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(2, sandat->m_offsets, data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(3, data->m_indexBuffer, data->m_vkCmdBuf);
-	} else if(uandat) {
+	}
+	else if(uandat)
+	{
 		comp->BindBufferNonblocking(1, uandat->m_samples, data->m_vkCmdBuf);
-	} else if(sdigdat) {
+	}
+	else if(sdigdat)
+	{
 		comp->BindBufferNonblocking(1, sdigdat->m_samples, data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(2, sdigdat->m_offsets, data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(3, data->m_indexBuffer, data->m_vkCmdBuf);
-	} else if(udigdat) {
+	}
+	else if(udigdat)
+	{
 		comp->BindBufferNonblocking(1, udigdat->m_samples, data->m_vkCmdBuf);
 	}
 	comp->Dispatch(data->m_vkCmdBuf, data->m_config, numGroups, 1, 1);
