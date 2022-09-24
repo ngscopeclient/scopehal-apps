@@ -48,10 +48,6 @@
 //Number of threads per column of pixels
 #define ROWS_PER_BLOCK	64
 
-//TODO: Change this to be a float* SSBO
-//The output texture (for now, only alpha channel is used)
-layout(binding=0, rgba32f) uniform image2D outputTex;
-
 //Shared buffer for the local working buffer (8 kB)
 shared float g_workingBuffer[MAX_HEIGHT];
 
@@ -63,8 +59,6 @@ shared bool g_updating[ROWS_PER_BLOCK];
 
 layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
 
-//TODO: Add struct for these push constants in WaveformRenderData
-//TODO: Populate push constant struct in PrepareGeometry(), push to GPU at invocation
 //Global configuration for the run
 layout(std430, push_constant) uniform constants
 {
@@ -87,31 +81,21 @@ layout(std430, push_constant) uniform constants
 	float persistScale;
 };
 
-layout(std430, binding=1) buffer waveform_x
+//The output texture data
+layout(std430, binding=0) buffer outputTex
 {
-#ifdef HAS_INT64
-	int64_t xpos[];  //x position, in time ticks
-#else
-	uint xpos[];		//x position, in time ticks
-						//actually 64-bit little endian signed ints
-#endif
-};
-
-//Indexes so we know which samples go to which X pixel range
-layout(std430, binding=2) buffer index
-{
-	uint xind[];
+	float outval[];
 };
 
 #ifdef ANALOG_PATH
-    layout(std430, binding=3) buffer waveform_y
+    layout(std430, binding=1) buffer waveform_y
     {
         float voltage[];  //y value of the sample, in volts
     };
 #endif /* ANALOG_PATH */
 
 #ifdef DIGITAL_PATH
-    layout(std430, binding=3) buffer waveform_y
+    layout(std430, binding=1) buffer waveform_y
     {
         int voltage[]; //y value of the sample, boolean 0/1 for 4 samples per int
     };
@@ -123,6 +107,24 @@ layout(std430, binding=2) buffer index
         return (block >> (8*nbyte) ) & 0xff;
     }
 #endif /* DIGITAL_PATH */
+
+#ifndef DENSE_PACK
+layout(std430, binding=2) buffer waveform_x
+{
+#ifdef HAS_INT64
+	int64_t xpos[];  //x position, in time ticks
+#else
+	uint xpos[];		//x position, in time ticks
+						//actually 64-bit little endian signed ints
+#endif
+};
+
+//Indexes so we know which samples go to which X pixel range
+layout(std430, binding=3) buffer index
+{
+	uint xind[];
+};
+#endif
 
 float FetchX(uint i)
 {
@@ -184,7 +186,7 @@ void main()
         return;
     if(memDepth < 2)
         return;
-    
+	
 	//Clear (or persistence load) working buffer
 	for(uint y=gl_LocalInvocationID.y; y < windowHeight; y += ROWS_PER_BLOCK)
 	{
@@ -192,8 +194,8 @@ void main()
 			g_workingBuffer[y] = 0;
 		else
 		{
-			vec4 rgba = imageLoad(outputTex, ivec2(gl_GlobalInvocationID.x, y));
-			g_workingBuffer[y] = rgba.r * persistScale;
+			g_workingBuffer[y] =
+				outval[(windowWidth * y) + gl_GlobalInvocationID.x] * persistScale;
 		}
 	}
 
@@ -340,12 +342,9 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	//Copy working buffer to RGB output
+	//Copy working buffer to float[] output
 	for(uint y=gl_LocalInvocationID.y; y<windowHeight; y+= ROWS_PER_BLOCK)
 	{
-		imageStore(
-			outputTex,
-			ivec2(gl_GlobalInvocationID.x, y),
-			vec4(g_workingBuffer[y], 0, 0, 0));
+		outval[(windowWidth * y) + gl_GlobalInvocationID.x] = g_workingBuffer[y];
 	}
 }

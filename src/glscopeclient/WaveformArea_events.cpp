@@ -72,16 +72,22 @@ void WaveformArea::on_resize(int width, int height)
 		LogNotice("resize 2, err = %x\n", err);
 
 	//Reallocate waveform texture
-	m_waveformRenderData->m_waveformTexture.Bind();
-	m_waveformRenderData->m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-	ResetTextureFiltering();
+	m_waveformRenderData->m_renderedWaveform.resize(width * height);
+	//TODO: Only zero m_renderedWaveform if persistence is enabled?
+	m_waveformRenderData->m_renderedWaveform.PrepareForCpuAccess();
+	memset(m_waveformRenderData->m_renderedWaveform.GetCpuPointer(), 0, width * height * sizeof(float));
+	m_waveformRenderData->m_renderedWaveform.MarkModifiedFromCpu();
+	ResetTextureFiltering(); //<- TODO: Necessary?
 
 	//Reallocate textures for overlays
 	for(auto it : m_overlayRenderData)
 	{
-		it.second->m_waveformTexture.Bind();
-		it.second->m_waveformTexture.SetData(width, height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-		ResetTextureFiltering();
+		it.second->m_renderedWaveform.resize(width * height);
+		//TODO: Only zero m_renderedWaveform if persistence is enabled?
+		it.second->m_renderedWaveform.PrepareForCpuAccess();
+		memset(it.second->m_renderedWaveform.GetCpuPointer(), 0, width * height * sizeof(float));
+		it.second->m_renderedWaveform.MarkModifiedFromCpu();
+		ResetTextureFiltering(); //<- TODO: Necessary?
 	}
 
 	err = glGetError();
