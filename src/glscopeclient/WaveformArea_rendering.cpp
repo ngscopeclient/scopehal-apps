@@ -188,7 +188,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 				wdata->m_count,
 				target-2);
 		}
-		data->m_indexBuffer.MarkModifiedFromCpu();
+		wdata->m_indexBuffer.MarkModifiedFromCpu();
 	}
 
 	//Scale alpha by zoom.
