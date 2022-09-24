@@ -141,7 +141,7 @@ add_dependencies(protoshaders
 # This function also implicitly adds the HAS_INT64 and DENSE_PACK variants for each input
 function(add_render_shader_variant outname)
 	cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "OPTIONS")
-	set(source waveform-compute.glsl)
+	set(source shaders/waveform-compute.glsl)
 	get_filename_component(base ${source} NAME_WE)
 	set(outfile ${CMAKE_CURRENT_BINARY_DIR}/${base}.${outname}.spv)
 	add_custom_command(
