@@ -59,8 +59,8 @@ public:
 	: m_area(area)
 	, m_shaderDense()
 	, m_shaderSparse()
-	, m_vkCmdPool(nullptr)
-	, m_vkCmdBuf(nullptr)
+	, m_vkCmdPool()
+	, m_vkCmdBuf()
 	, m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
@@ -88,11 +88,17 @@ public:
 			vk::CommandPoolCreateInfo poolInfo(
 				vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 				g_computeQueueType );
-			m_vkCmdPool = std::move(vk::raii::CommandPool(*g_vkComputeDevice, poolInfo));
+			m_vkCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
 
-			vk::CommandBufferAllocateInfo bufinfo(*m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
-			m_vkCmdBuf = std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front());
+			vk::CommandBufferAllocateInfo bufinfo(**m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
+			m_vkCmdBuf = std::make_unique<vk::raii::CommandBuffer>(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 		}
+	}
+
+	~WaveformRenderData()
+	{
+		m_vkCmdBuf = nullptr;
+		m_vkCmdPool = nullptr;
 	}
 
 	bool IsAnalog()
@@ -118,8 +124,8 @@ public:
 	std::shared_ptr<ComputePipeline> m_shaderDense;
 	std::shared_ptr<ComputePipeline> m_shaderSparse;
 	//Command pool and buffer for compute shaders
-	vk::raii::CommandPool m_vkCmdPool;
-	vk::raii::CommandBuffer m_vkCmdBuf;
+	std::unique_ptr<vk::raii::CommandPool> m_vkCmdPool;
+	std::unique_ptr<vk::raii::CommandBuffer> m_vkCmdBuf;
 
 	//The channel of interest
 	StreamDescriptor		m_channel;

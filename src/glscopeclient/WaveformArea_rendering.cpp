@@ -601,10 +601,10 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		comp = data->m_shaderDense;
 	else
 		comp = data->m_shaderSparse;
-	data->m_vkCmdBuf.begin({});
+	data->m_vkCmdBuf->begin({});
 	//Bind the output buffer
 	//TODO: Can we use outputOnly=true if no persistence?
-	comp->BindBufferNonblocking(0, data->m_renderedWaveform, data->m_vkCmdBuf);
+	comp->BindBufferNonblocking(0, data->m_renderedWaveform, *data->m_vkCmdBuf);
 	auto pdat = data->m_channel.GetData();
 	auto sandat = dynamic_cast<SparseAnalogWaveform*>(pdat);
 	auto uandat = dynamic_cast<UniformAnalogWaveform*>(pdat);
@@ -612,28 +612,28 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	auto udigdat = dynamic_cast<UniformDigitalWaveform*>(pdat);
 	if(sandat)
 	{
-		comp->BindBufferNonblocking(1, sandat->m_samples, data->m_vkCmdBuf);
-		comp->BindBufferNonblocking(2, sandat->m_offsets, data->m_vkCmdBuf);
-		comp->BindBufferNonblocking(3, data->m_indexBuffer, data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(1, sandat->m_samples, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(2, sandat->m_offsets, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
 	}
 	else if(uandat)
 	{
-		comp->BindBufferNonblocking(1, uandat->m_samples, data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(1, uandat->m_samples, *data->m_vkCmdBuf);
 	}
 	else if(sdigdat)
 	{
-		comp->BindBufferNonblocking(1, sdigdat->m_samples, data->m_vkCmdBuf);
-		comp->BindBufferNonblocking(2, sdigdat->m_offsets, data->m_vkCmdBuf);
-		comp->BindBufferNonblocking(3, data->m_indexBuffer, data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(1, sdigdat->m_samples, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(2, sdigdat->m_offsets, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
 	}
 	else if(udigdat)
 	{
-		comp->BindBufferNonblocking(1, udigdat->m_samples, data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(1, udigdat->m_samples, *data->m_vkCmdBuf);
 	}
-	comp->Dispatch(data->m_vkCmdBuf, data->m_config, numGroups, 1, 1);
-	comp->AddComputeMemoryBarrier(data->m_vkCmdBuf);
-	data->m_vkCmdBuf.end();
-	SubmitAndBlock(data->m_vkCmdBuf, m_parent->m_vkQueue);
+	comp->Dispatch(*data->m_vkCmdBuf, data->m_config, numGroups, 1, 1);
+	comp->AddComputeMemoryBarrier(*data->m_vkCmdBuf);
+	data->m_vkCmdBuf->end();
+	SubmitAndBlock(*data->m_vkCmdBuf, *m_parent->m_vkQueue);
 	data->m_renderedWaveform.MarkModifiedFromGpu();
 
 	//Copy the rendered waveform data to a GL Texture for compositing

@@ -90,10 +90,12 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	, m_cursorX(0)
 	, m_cursorY(0)
 	, m_nextMarker(1)
-	, m_vkQueue(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue())
+	, m_vkQueue()
 {
 	SetTitle();
 	FindScopeFuncGens();
+
+	m_vkQueue = std::make_unique<vk::raii::Queue>(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
 
 	//Initial setup
 	set_reallocate_redraws(true);
@@ -180,6 +182,8 @@ OscilloscopeWindow::~OscilloscopeWindow()
 	//Terminate the waveform processing thread
 	g_waveformProcessedEvent.Signal();
 	m_waveformProcessingThread.join();
+
+	m_vkQueue = nullptr;
 }
 
 /**
