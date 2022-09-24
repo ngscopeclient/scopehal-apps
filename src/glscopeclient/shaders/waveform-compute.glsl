@@ -88,24 +88,24 @@ layout(std430, binding=0) buffer outputTex
 };
 
 #ifdef ANALOG_PATH
-    layout(std430, binding=1) buffer waveform_y
-    {
-        float voltage[];  //y value of the sample, in volts
-    };
+	layout(std430, binding=1) buffer waveform_y
+	{
+		float voltage[];  //y value of the sample, in volts
+	};
 #endif /* ANALOG_PATH */
 
 #ifdef DIGITAL_PATH
-    layout(std430, binding=1) buffer waveform_y
-    {
-        int voltage[]; //y value of the sample, boolean 0/1 for 4 samples per int
-    };
+	layout(std430, binding=1) buffer waveform_y
+	{
+		int voltage[]; //y value of the sample, boolean 0/1 for 4 samples per int
+	};
 
-    int GetBoolean(uint i)
-    {
-        int block = voltage[i/4];
-        uint nbyte = (i & 3);
-        return (block >> (8*nbyte) ) & 0xff;
-    }
+	int GetBoolean(uint i)
+	{
+		int block = voltage[i/4];
+		uint nbyte = (i & 3);
+		return (block >> (8*nbyte) ) & 0xff;
+	}
 #endif /* DIGITAL_PATH */
 
 #ifndef DENSE_PACK
@@ -129,45 +129,45 @@ layout(std430, binding=3) buffer index
 float FetchX(uint i)
 {
 #ifdef HAS_INT64
-    #ifdef DENSE_PACK
-        return float(int64_t(i) + innerXoff);
-    #else
-        return float(xpos[i] + innerXoff);
-    #endif
+	#ifdef DENSE_PACK
+		return float(int64_t(i) + innerXoff);
+	#else
+		return float(xpos[i] + innerXoff);
+	#endif
 #else
-    //All this just because most Intel integrated GPUs lack GL_ARB_gpu_shader_int64...
-    #ifdef DENSE_PACK
-        uint xpos_lo = i;
-        uint xpos_hi = 0;
-    #else
-        //Fetch the input
-        uint xpos_lo = xpos[i*2];
-        uint xpos_hi = xpos[i*2 + 1];
-    #endif
-    uint offset_lo = innerXoff_lo;
+	//All this just because most Intel integrated GPUs lack GL_ARB_gpu_shader_int64...
+	#ifdef DENSE_PACK
+		uint xpos_lo = i;
+		uint xpos_hi = 0;
+	#else
+		//Fetch the input
+		uint xpos_lo = xpos[i*2];
+		uint xpos_hi = xpos[i*2 + 1];
+	#endif
+	uint offset_lo = innerXoff_lo;
 
-    //Sum the low halves
-    uint carry;
-    uint sum_lo = uaddCarry(xpos_lo, offset_lo, carry);
+	//Sum the low halves
+	uint carry;
+	uint sum_lo = uaddCarry(xpos_lo, offset_lo, carry);
 
-    //Sum the high halves with carry in
-    uint sum_hi = xpos_hi + innerXoff_hi + carry;
+	//Sum the high halves with carry in
+	uint sum_hi = xpos_hi + innerXoff_hi + carry;
 
-    //If MSB is 1, we're negative.
-    //Calculate the twos complement by flipping all the bits.
-    //To complete the complement we need to add 1, but that comes later.
-    bool negative = ( (sum_hi & 0x80000000) == 0x80000000 );
-    if(negative)
-    {
-        sum_lo = ~sum_lo;
-        sum_hi = ~sum_hi;
-    }
+	//If MSB is 1, we're negative.
+	//Calculate the twos complement by flipping all the bits.
+	//To complete the complement we need to add 1, but that comes later.
+	bool negative = ( (sum_hi & 0x80000000) == 0x80000000 );
+	if(negative)
+	{
+		sum_lo = ~sum_lo;
+		sum_hi = ~sum_hi;
+	}
 
-    //Convert back to floating point
-    float f = (float(sum_hi) * 4294967296.0) + float(sum_lo);
-    if(negative)
-        f = -f + 1;
-    return f;
+	//Convert back to floating point
+	float f = (float(sum_hi) * 4294967296.0) + float(sum_lo);
+	if(negative)
+		f = -f + 1;
+	return f;
 #endif
 }
 
@@ -180,12 +180,12 @@ float InterpolateY(vec2 left, vec2 right, float slope, float x)
 void main()
 {
 	//Abort if window height is too big, or if we're off the end of the window
-    if(windowHeight > MAX_HEIGHT)
-        return;
-    if(gl_GlobalInvocationID.x > windowWidth)
-        return;
-    if(memDepth < 2)
-        return;
+	if(windowHeight > MAX_HEIGHT)
+		return;
+	if(gl_GlobalInvocationID.x > windowWidth)
+		return;
+	if(memDepth < 2)
+		return;
 	
 	//Clear (or persistence load) working buffer
 	for(uint y=gl_LocalInvocationID.y; y < windowHeight; y += ROWS_PER_BLOCK)
@@ -199,7 +199,7 @@ void main()
 		}
 	}
 
-    //Setup for main loop
+	//Setup for main loop
 	if(gl_LocalInvocationID.y == 0)
 		g_done = false;
 
