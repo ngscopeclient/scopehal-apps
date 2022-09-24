@@ -169,9 +169,15 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	{
 		int64_t* offsets;
 		if(sandat)
+		{
+			sandat->m_offsets.PrepareForCpuAccess();
 			offsets = sandat->m_offsets.GetCpuPointer();
+		}
 		else
+		{
+			sdigdat->m_offsets.PrepareForCpuAccess();
 			offsets = sdigdat->m_offsets.GetCpuPointer();
+		}
 
 		wdata->m_indexBuffer.resize(wdata->m_area->m_width);
 		for(int j=0; j<wdata->m_area->m_width; j++)
@@ -182,6 +188,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 				wdata->m_count,
 				target-2);
 		}
+		data->m_indexBuffer.MarkModifiedFromCpu();
 	}
 
 	//Scale alpha by zoom.
@@ -218,8 +225,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		wdata->m_config.persistScale = persistDecay;
 
 	//Allocate output buffer
-	wdata->m_renderedWaveform.resize(
-		wdata->m_config.windowWidth * wdata->m_config.windowHeight);
+	wdata->m_renderedWaveform.resize(wdata->m_config.windowWidth * wdata->m_config.windowHeight);
 
 	//Done
 	wdata->m_geometryOK = true;
