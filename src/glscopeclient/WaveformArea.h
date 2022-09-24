@@ -66,28 +66,33 @@ public:
 	, m_count(0)
 	, m_persistence(false)
 	{
-		std::string shaderfn = "waveform-compute.";
-		/**/ if (IsHistogram()) { shaderfn += "histogram"; }
-		else if (IsAnalog()   ) { shaderfn += "analog";    }
-		else if (IsDigital()  ) { shaderfn += "digital";   }
-		else {
-			LogFatal("Unknown waveform render type, aborting.");
-		}
-		if (GLEW_ARB_gpu_shader_int64 && !g_noglint64) {
-			shaderfn += ".int64";
-		}
-		std::string denseShaderFn = shaderfn + ".dense.spv";
-		std::string sparseShaderFn = shaderfn + ".spv";
-		m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
-		m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, 4, sizeof(ConfigPushConstants));
+		if(IsAnalog() || IsDigital())
+		{
+			std::string shaderfn = "waveform-compute.";
 
-		vk::CommandPoolCreateInfo poolInfo(
-			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-			g_computeQueueType );
-		m_vkCmdPool = std::move(vk::raii::CommandPool(*g_vkComputeDevice, poolInfo));
+			if(IsHistogram())
+				shaderfn += "histogram";
+			else if(IsAnalog())
+				shaderfn += "analog";
+			else if(IsDigital())
+				shaderfn += "digital";
 
-		vk::CommandBufferAllocateInfo bufinfo(*m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
-		m_vkCmdBuf = std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front());
+			if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
+				shaderfn += ".int64";
+			
+			std::string denseShaderFn = shaderfn + ".dense.spv";
+			std::string sparseShaderFn = shaderfn + ".spv";
+			m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
+			m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, 4, sizeof(ConfigPushConstants));
+
+			vk::CommandPoolCreateInfo poolInfo(
+				vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+				g_computeQueueType );
+			m_vkCmdPool = std::move(vk::raii::CommandPool(*g_vkComputeDevice, poolInfo));
+
+			vk::CommandBufferAllocateInfo bufinfo(*m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
+			m_vkCmdBuf = std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front());
+		}
 	}
 
 	bool IsAnalog()
