@@ -164,7 +164,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		else if(sdigdat)
 			//sdigdat->m_offsets.PrepareForGpuAccessNonblocking(false, wdata->m_vkCmdBuf);
 			sdigdat->m_offsets.PrepareForGpuAccess(false);
-		
+
 		//wdata->m_vkCmdBuf.end();
 
 		//vk::raii::Fence fence(*g_vkComputeDevice, vk::FenceCreateInfo());
@@ -186,7 +186,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 			offsets = sandat->m_offsets.GetCpuPointer();
 		else
 			offsets = sdigdat->m_offsets.GetCpuPointer();
-		
+
 		wdata->m_indexBuffer.resize(wdata->m_area->m_width);
 		for(int j=0; j<wdata->m_area->m_width; j++)
 		{
@@ -649,6 +649,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	//Copy the rendered waveform data to a GL Texture for compositing
 	data->m_renderedWaveform.PrepareForCpuAccess();
 	data->m_waveformTexture.Bind();
+	ResetTextureFiltering();
 	data->m_waveformTexture.SetData(m_width, m_height,
 		data->m_renderedWaveform.GetCpuPointer(),
 		GL_RED,
