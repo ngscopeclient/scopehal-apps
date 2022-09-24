@@ -414,7 +414,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 				continue;
 
 			auto wdat = m_overlayRenderData[overlay];
-			wdat->m_renderedWaveform.resize(m_width * m_height);
+			wdat->m_renderedWaveform.resize(m_plotRight * m_height);
 			//TODO: Still necessary?
 			ResetTextureFiltering();
 
@@ -650,7 +650,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	data->m_renderedWaveform.PrepareForCpuAccess();
 	data->m_waveformTexture.Bind();
 	ResetTextureFiltering();
-	data->m_waveformTexture.SetData(m_width, m_height,
+	data->m_waveformTexture.SetData(m_plotRight, m_height,
 		data->m_renderedWaveform.GetCpuPointer(),
 		GL_RED,
 		GL_FLOAT,
