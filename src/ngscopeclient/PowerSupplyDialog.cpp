@@ -95,7 +95,8 @@ bool PowerSupplyDialog::DoRender()
 	//Top level settings
 	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if(m_psu->SupportsMasterOutputSwitching()) {
+		if(m_psu->SupportsMasterOutputSwitching())
+		{
 			if(ImGui::Checkbox("Output Enable", &m_masterEnable))
 				m_psu->SetMasterPowerEnable(m_masterEnable);
 
@@ -207,7 +208,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		//Advanced features (not available with all PSUs)
 		if(ImGui::TreeNode("Advanced"))
 		{
-			if(m_psu->SupportsOvercurrentShutdown()) {
+			if(m_psu->SupportsOvercurrentShutdown())
+			{
 				if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
 					m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
 				HelpMarker(
@@ -217,7 +219,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 					"restore power to the load.");
 			}
 
-			if(m_psu->SupportsSoftStart()) {
+			if(m_psu->SupportsSoftStart())
+			{
 				if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
 					m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
 
