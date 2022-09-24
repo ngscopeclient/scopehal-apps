@@ -90,9 +90,12 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	, m_cursorX(0)
 	, m_cursorY(0)
 	, m_nextMarker(1)
+	, m_vkQueue()
 {
 	SetTitle();
 	FindScopeFuncGens();
+
+	m_vkQueue = std::make_unique<vk::raii::Queue>(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
 
 	//Initial setup
 	set_reallocate_redraws(true);
@@ -179,6 +182,8 @@ OscilloscopeWindow::~OscilloscopeWindow()
 	//Terminate the waveform processing thread
 	g_waveformProcessedEvent.Signal();
 	m_waveformProcessingThread.join();
+
+	m_vkQueue = nullptr;
 }
 
 /**
@@ -2951,11 +2956,7 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 	{
 		w->CalculateOverlayPositions();
 		w->ClearPersistence(false);
-
-		if(geometry_dirty)
-			w->MapAllBuffers(true);
-		else if(position_dirty)
-			w->MapAllBuffers(false);
+		w->UpdateCounts();
 	}
 
 	//Do the actual updates
@@ -2985,7 +2986,6 @@ void OscilloscopeWindow::ClearPersistence(WaveformGroup* group, bool geometry_di
 		for(auto w : areas)
 		{
 			w->SetNotDirty();
-			w->UnmapAllBuffers(geometry_dirty);
 		}
 	}
 
@@ -3310,7 +3310,7 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring, bool updateFi
 		{
 			w->OnWaveformDataReady();
 			w->CalculateOverlayPositions();
-			w->MapAllBuffers(true);
+			w->UpdateCounts();
 		}
 
 		float alpha = GetTraceAlpha();
@@ -3336,7 +3336,6 @@ void OscilloscopeWindow::OnAllWaveformsUpdated(bool reconfiguring, bool updateFi
 		for(auto w : m_waveformAreas)
 		{
 			w->SetNotDirty();
-			w->UnmapAllBuffers(true);
 		}
 
 		//Submit update requests for each area

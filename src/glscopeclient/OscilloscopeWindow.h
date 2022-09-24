@@ -489,6 +489,9 @@ public:
 	FilterGraphExecutor m_graphExecutor;
 
 	void ApplyPreferences(Oscilloscope* scope);
+
+	//Vulkan Queue for render shaders, used by WaveformArea
+	std::unique_ptr<vk::raii::Queue> m_vkQueue;
 };
 
 #endif
