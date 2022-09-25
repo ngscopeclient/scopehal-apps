@@ -507,8 +507,12 @@ void WaveformArea::RenderEye()
 
 void WaveformArea::RenderSpectrogram()
 {
+#ifdef _APPLE_SILICON //spectrogram broken on apple silicon due to missing ffts, FIXME
+	return;
+#else
 	if(m_channel.GetType() != Stream::STREAM_TYPE_SPECTROGRAM)
 		return;
+
 	auto pcap = dynamic_cast<SpectrogramWaveform*>(m_channel.GetData());
 	if(pcap == NULL)
 		return;
@@ -548,6 +552,7 @@ void WaveformArea::RenderSpectrogram()
 	m_spectrogramProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
 }
 
 void WaveformArea::RenderWaterfall()
