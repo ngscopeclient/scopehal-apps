@@ -68,11 +68,7 @@ public:
 	{
 		if(IsAnalog() || IsDigital())
 		{
-<<<<<<< Updated upstream
-			std::string shaderfn = "waveform-compute.";
-=======
 			std::string shaderfn = "shaders/waveform-compute.";
->>>>>>> Stashed changes
 
 			if(IsHistogram())
 				shaderfn += "histogram";
