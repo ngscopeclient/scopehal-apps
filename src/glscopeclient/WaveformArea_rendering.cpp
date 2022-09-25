@@ -138,6 +138,9 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		yscale = digheight;
 	}
 
+	//FIXME: Using m_plotRight instead of m_width here is more efficient, but
+	// there is some subtle bug with the alignment of cursors when using m_plotRight.
+
 	//Ensure GPU has actual waveform timestamps and voltages
 	//FIXME: This can be optimized by batching all calls to a cmdbuf, but can't
 	// use wdata->m_vkCmdBuf for this because RenderTrace uses that.
@@ -210,7 +213,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	int64_t fractional_offset    = group->m_xAxisOffset % pdat->m_timescale;
 	wdata->m_config.innerXoff    = -innerxoff;
 	wdata->m_config.windowHeight = height;
-	wdata->m_config.windowWidth  = wdata->m_area->m_plotRight;
+	wdata->m_config.windowWidth  = wdata->m_area->m_width;
 	wdata->m_config.memDepth     = wdata->m_count;
 	wdata->m_config.offset_samples = offset_samples - 2;
 	wdata->m_config.alpha        = alpha_scaled;
@@ -406,7 +409,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 				continue;
 
 			auto wdat = m_overlayRenderData[overlay];
-			wdat->m_renderedWaveform.resize(m_plotRight * m_height);
+			wdat->m_renderedWaveform.resize(m_width * m_height);
 
 			RenderTrace(wdat);
 		}
@@ -651,7 +654,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	data->m_renderedWaveform.PrepareForCpuAccess();
 	data->m_waveformTexture.Bind();
 	ResetTextureFiltering();
-	data->m_waveformTexture.SetData(m_plotRight, m_height,
+	data->m_waveformTexture.SetData(m_width, m_height,
 		data->m_renderedWaveform.GetCpuPointer(),
 		GL_RED,
 		GL_FLOAT,
