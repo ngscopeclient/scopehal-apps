@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* libscopeprotocols                                                                                                    *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,84 +27,33 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of TextureManager
- */
-#ifndef TextureManager_h
-#define TextureManager_h
+#version 430
+#pragma shader_stage(compute)
 
-class TextureManager;
-
-/**
-	@brief Encapsulates the various Vulkan objects we need to represent texture image memory
-
-	We don't do multitexturing at the moment, so each texture has its own single-binding descriptor set
- */
-class Texture
+layout(std430, binding=0) restrict readonly buffer buf_pixels
 {
-public:
-	Texture(
-		const vk::raii::Device& device,
-		const vk::ImageCreateInfo& imageInfo,
-		const vk::raii::Buffer& srcBuf,
-		int width,
-		int height,
-		TextureManager* mgr
-		);
-
-	Texture(
-		const vk::raii::Device& device,
-		const vk::ImageCreateInfo& imageInfo,
-		TextureManager* mgr
-		);
-
-	void LayoutTransition(
-		vk::AccessFlags src,
-		vk::AccessFlags dst,
-		vk::ImageLayout from,
-		vk::ImageLayout to);
-
-	ImTextureID GetTexture()
-	{ return m_texture; }
-
-protected:
-
-	///@brief Image object for our texture
-	vk::raii::Image m_image;
-
-	///@brief View of the image
-	std::unique_ptr<vk::raii::ImageView> m_view;
-
-	ImTextureID m_texture;
-
-	///@brief Device memory backing the image
-	std::unique_ptr<vk::raii::DeviceMemory> m_deviceMemory;
+	float pixels[];
 };
 
-/**
-	@brief Manages loading and saving texture resources to files
- */
-class TextureManager
+layout(binding=1, rgba32f) uniform image2D outputTex;
+
+layout(std430, push_constant) uniform constants
 {
-public:
-	TextureManager();
-	virtual ~TextureManager();
-
-	void LoadTexture(const std::string& name, const std::string& path);
-
-	ImTextureID GetTexture(const std::string& name)
-	{ return m_textures[name]->GetTexture(); }
-
-	std::unique_ptr<vk::raii::Sampler>& GetSampler()
-	{ return m_sampler; }
-
-protected:
-	std::map<std::string, std::shared_ptr<Texture> > m_textures;
-
-	//@brief Sampler for textures
-	std::unique_ptr<vk::raii::Sampler> m_sampler;
+	uint width;
+	uint height;
 };
 
-#endif
+layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= width)
+		return;
+	if(gl_GlobalInvocationID.y >= height)
+		return;
+
+	imageStore(
+		outputTex,
+		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),
+		vec4(1, 0, 1, 1));
+}

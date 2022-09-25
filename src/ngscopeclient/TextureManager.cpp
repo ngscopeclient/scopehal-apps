@@ -42,6 +42,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Texture
 
+/**
+	@brief Creates a texture from an externally supplied staging buffer
+ */
 Texture::Texture(
 	const vk::raii::Device& device,
 	const vk::ImageCreateInfo& imageInfo,
@@ -124,6 +127,56 @@ Texture::Texture(
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
 	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+/**
+	@brief Creates a blank texture, to be written to by a compute shader in the future
+ */
+Texture::Texture(
+	const vk::raii::Device& device,
+	const vk::ImageCreateInfo& imageInfo,
+	TextureManager* mgr)
+	: m_image(device, imageInfo)
+{
+	auto req = m_image.getMemoryRequirements();
+
+	//Figure out memory requirements of the buffer and decide what physical memory type to use
+	uint32_t memType = 0;
+	auto memProperties = g_vkComputePhysicalDevice->getMemoryProperties();
+	for(uint32_t i=0; i<32; i++)
+	{
+		//Skip anything not device local, since we're optimizing this buffer for performance
+		if(!(memProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal))
+			continue;
+
+		//Stop if buffer is compatible
+		if(req.memoryTypeBits & (1 << i) )
+		{
+			memType = i;
+			break;
+		}
+	}
+	LogTrace("Using memory type %u for texture buffer\n", memType);
+
+	//Once the image is created, allocate device memory to back it
+	vk::MemoryAllocateInfo info(req.size, memType);
+	m_deviceMemory = make_unique<vk::raii::DeviceMemory>(*g_vkComputeDevice, info);
+	m_image.bindMemory(**m_deviceMemory, 0);
+
+	//Don't fill anything, we'll be writing in a shader later on when the time is right
+
+	//Make a view for the image
+	vk::ImageViewCreateInfo vinfo(
+		{},
+		*m_image,
+		vk::ImageViewType::e2D,
+		vk::Format::eR8G8B8A8Uint,
+		{},
+		vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
+
+	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void Texture::LayoutTransition(
@@ -342,9 +395,4 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 	//Clean up
 	png_destroy_read_struct(&png, &info, &end);
 	fclose(fp);
-}
-
-ImTextureID TextureManager::GetTexture(const string& name)
-{
-	return m_textures[name]->GetTexture();
 }

@@ -49,6 +49,9 @@ public:
 
 	virtual void Render();
 
+	vk::raii::Queue& GetRenderQueue()
+	{ return m_renderQueue; }
+
 protected:
 	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);

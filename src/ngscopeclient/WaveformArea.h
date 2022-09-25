@@ -38,6 +38,13 @@
 class WaveformArea;
 class WaveformGroup;
 class MainWindow;
+class Texture;
+
+class ToneMapArgs
+{
+	uint32_t width;
+	uint32_t height;
+};
 
 /**
 	@brief Context data for a single channel being displayed within a WaveformArea
@@ -62,8 +69,37 @@ public:
 	StreamDescriptor GetStream()
 	{ return m_stream; }
 
+	std::shared_ptr<Texture> GetTexture()
+	{ return m_texture; }
+
+	void SetTexture(std::shared_ptr<Texture> tex)
+	{ m_texture = tex; }
+
+	/**
+		@brief Handles a change in size of the displayed waveform
+
+		@param newSize	New size of WaveformArea
+
+		@return true if size has changed, false otherwose
+	 */
+	bool UpdateSize(ImVec2 newSize)
+	{
+		if( (m_cachedSize.x != newSize.x) || (m_cachedSize.y != newSize.y) )
+		{
+			m_cachedSize = newSize;
+			return true;
+		}
+		return false;
+	}
+
 protected:
 	StreamDescriptor m_stream;
+
+	///@brief The texture storing our rendered waveform
+	std::shared_ptr<Texture> m_texture;
+
+	///@brief Size of the texture
+	ImVec2 m_cachedSize;
 };
 
 /**
@@ -98,7 +134,8 @@ protected:
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
-	void RenderAnalogWaveform(StreamDescriptor stream, ImVec2 start, ImVec2 size);
+	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 size);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
@@ -168,6 +205,15 @@ protected:
 
 	///@brief The trigger we're configuring
 	Trigger* m_triggerDuringDrag;
+
+	///@brief Compute pipeline for tone mapping fp32 images to RGBA
+	ComputePipeline m_toneMapPipe;
+
+	///@brief Command pool for allocating our command buffers
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Command buffer used during rendering operations
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
 #include "MainWindow.h"
+#include "TextureManager.h"
 #include "../../scopehal/TwoLevelTrigger.h"
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
@@ -58,12 +59,24 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_mouseOverTriggerArrow(false)
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
+	, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
+
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_renderQueueType );
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 }
 
 WaveformArea::~WaveformArea()
 {
+	m_cmdBuffer = nullptr;
+	m_cmdPool = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,7 +308,7 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				RenderAnalogWaveform(stream, start, size);
+				RenderAnalogWaveform(chan, start, size);
 				break;
 
 			default:
@@ -308,14 +321,18 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 /**
 	@brief Renders a single analog waveform
  */
-void WaveformArea::RenderAnalogWaveform(StreamDescriptor stream, ImVec2 /*start*/, ImVec2 /*size*/)
+void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 /*start*/, ImVec2 size)
 {
+	auto stream = channel->GetStream();
 	auto chan = stream.m_channel;
 	auto data = stream.GetData();
 	if(data == nullptr)
 		return;
 
 	auto list = ImGui::GetWindowDrawList();
+
+	//Tone map the waveform
+	ToneMapAnalogWaveform(channel, size);
 
 	//DEBUG: simple quick-and-dirty renderer for testing
 	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
@@ -336,6 +353,61 @@ void WaveformArea::RenderAnalogWaveform(StreamDescriptor stream, ImVec2 /*start*
 			list->AddLine(start, end, color);
 		}
 	}
+}
+
+/**
+	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
+ */
+void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 size)
+{
+	//TODO: only do this if the texture was updated
+	//TODO: what kind of mutexing etc do we need, if any?
+
+	//Reallocate the texture if its size has changed
+	if(channel->UpdateSize(size))
+	{
+		LogTrace("Waveform area resized (to %.0f x %.0f), reallocating texture\n", size.x, size.y);
+
+		vector<uint32_t> queueFamilies;
+		vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+		queueFamilies.push_back(g_computeQueueType);	//FIXME: separate transfer queue?
+		if(g_renderQueueType != g_computeQueueType)
+		{
+			queueFamilies.push_back(g_renderQueueType);
+			sharingMode = vk::SharingMode::eConcurrent;
+		}
+		vk::ImageCreateInfo imageInfo(
+			{},
+			vk::ImageType::e2D,
+			vk::Format::eR8G8B8A8Uint,
+			vk::Extent3D(size.y, size.y, 1),
+			1,
+			1,
+			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
+			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
+			sharingMode,
+			queueFamilies,
+			vk::ImageLayout::eUndefined
+			);
+
+		channel->SetTexture(make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager()));
+	}
+
+	LogTrace("tone map\n");
+
+	//Temporary buffer until we have real rendering shader done
+	AcceleratorBuffer<float> temp;
+	temp.resize(1);
+
+	//Run the compute shader to update the waveform
+	//cmdBuf.begin({});
+	auto tex = channel->GetTexture();
+	m_toneMapPipe.BindBuffer(0, temp);
+	//m_toneMapPipe.BindStorageImage(1, tex);
+	//m_computePipeline.Dispatch(cmdBuf, (uint32_t)len, GetComputeBlockCount(len, 64));
+	//cmdBuf.end();
+	//SubmitAndBlock(cmdBuf, queue);
 }
 
 /**

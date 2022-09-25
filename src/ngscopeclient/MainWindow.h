@@ -253,6 +253,9 @@ public:
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }
+
+	TextureManager* GetTextureManager()
+	{ return &m_texmgr; }
 };
 
 #endif
