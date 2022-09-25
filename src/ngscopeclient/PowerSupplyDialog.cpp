@@ -95,13 +95,16 @@ bool PowerSupplyDialog::DoRender()
 	//Top level settings
 	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if(ImGui::Checkbox("Output Enable", &m_masterEnable))
-			m_psu->SetMasterPowerEnable(m_masterEnable);
+		if(m_psu->SupportsMasterOutputSwitching())
+		{
+			if(ImGui::Checkbox("Output Enable", &m_masterEnable))
+				m_psu->SetMasterPowerEnable(m_masterEnable);
 
-		HelpMarker(
-			"Top level output enable, gating all outputs from the PSU.\n"
-			"\n"
-			"This acts as a second switch in series with the per-channel output enables.");
+			HelpMarker(
+				"Top level output enable, gating all outputs from the PSU.\n"
+				"\n"
+				"This acts as a second switch in series with the per-channel output enables.");
+		}
 	}
 
 	//Grab asynchronously loaded channel state if it's ready
@@ -181,41 +184,50 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		bool shdn = m_state->m_channelFuseTripped[i].load();
 		bool cc = m_state->m_channelConstantCurrent[i].load();
 
-		if(ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled))
-			m_psu->SetPowerChannelActive(i, m_channelUIState[i].m_outputEnabled);
-		if(shdn)
+		if(m_psu->SupportsIndividualOutputSwitching())
 		{
-			//TODO: preference for configuring this?
-			float alpha = fabs(sin(etime*M_PI))*0.5 + 0.5;
+			if(ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled))
+				m_psu->SetPowerChannelActive(i, m_channelUIState[i].m_outputEnabled);
+			if(shdn)
+			{
+				//TODO: preference for configuring this?
+				float alpha = fabs(sin(etime*M_PI))*0.5 + 0.5;
 
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1*alpha, 0, 0, 1*alpha));
-			ImGui::Text("Overload shutdown");
-			ImGui::PopStyleColor();
-			Tooltip(
-				"Overcurrent shutdown has been triggered.\n\n"
-				"Clear the fault on your load, then turn the output off and on again to reset."
-				);
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1*alpha, 0, 0, 1*alpha));
+				ImGui::Text("Overload shutdown");
+				ImGui::PopStyleColor();
+				Tooltip(
+					"Overcurrent shutdown has been triggered.\n\n"
+					"Clear the fault on your load, then turn the output off and on again to reset."
+					);
+			}
+			HelpMarker("Turns power from this channel on or off");
 		}
-		HelpMarker("Turns power from this channel on or off");
 
 		//Advanced features (not available with all PSUs)
 		if(ImGui::TreeNode("Advanced"))
 		{
-			if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
-				m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
-			HelpMarker(
-				"When enabled, the channel will shut down on overcurrent rather than switching to constant current mode.\n"
-				"\n"
-				"Once the overcurrent shutdown has been activated, the channel must be disabled and re-enabled to "
-				"restore power to the load.");
+			if(m_psu->SupportsOvercurrentShutdown())
+			{
+				if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
+					m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
+				HelpMarker(
+					"When enabled, the channel will shut down on overcurrent rather than switching to constant current mode.\n"
+					"\n"
+					"Once the overcurrent shutdown has been activated, the channel must be disabled and re-enabled to "
+					"restore power to the load.");
+			}
 
-			if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
-				m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
+			if(m_psu->SupportsSoftStart())
+			{
+				if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
+					m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
 
-			HelpMarker(
-				"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
-				"capacitive loads.\n");
+				HelpMarker(
+					"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
+					"capacitive loads.\n");
+			}
 
 			ImGui::TreePop();
 		}
@@ -236,7 +248,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			if(UnitInputWithExplicitApply(
 				"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
 			{
-				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetCurrent);
+				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_committedSetCurrent);
 			}
 			HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
