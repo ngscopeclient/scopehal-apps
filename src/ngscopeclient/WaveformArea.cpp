@@ -70,6 +70,21 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
 	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
 		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	if(g_hasDebugUtils)
+	{
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				"WaveformArea.m_cmdPool"));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandBuffer,
+				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
+				"WaveformArea.m_cmdBuffer"));
+	}
 }
 
 WaveformArea::~WaveformArea()
@@ -426,7 +441,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 	//Temporary buffer until we have real rendering shader done
 	int width = size.x;
 	int npixels = width * (int)size.y;
-	AcceleratorBuffer<float> temp;
+	AcceleratorBuffer<float> temp("ToneMapTemp");
 	temp.resize(npixels);
 	for(int y=0; y<size.y; y++)
 	{

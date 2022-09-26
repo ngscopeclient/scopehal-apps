@@ -51,7 +51,8 @@ public:
 		const vk::raii::Buffer& srcBuf,
 		int width,
 		int height,
-		TextureManager* mgr
+		TextureManager* mgr,
+		const std::string& name = ""
 		);
 
 	Texture(

@@ -2,7 +2,7 @@ function(add_render_shader_variants target)
 	cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "OUTPUTS")
 
 	set(spvfiles "")
-	
+
 	set(source waveform-compute.glsl)
 	foreach(outfn ${arg_OUTPUTS})
 		set(outfile ${CMAKE_CURRENT_BINARY_DIR}/${outfn})
@@ -30,7 +30,7 @@ function(add_render_shader_variants target)
 			OUTPUT ${outfile}
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
 			COMMENT "Compile ${outfile} with ${options}"
-			COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${options} -o ${outfile})
+			COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${options} -g -o ${outfile})
 
 			install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
 
