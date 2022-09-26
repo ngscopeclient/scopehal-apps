@@ -89,6 +89,8 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 
 WaveformArea::~WaveformArea()
 {
+	m_displayedChannels.clear();
+
 	m_cmdBuffer = nullptr;
 	m_cmdPool = nullptr;
 }

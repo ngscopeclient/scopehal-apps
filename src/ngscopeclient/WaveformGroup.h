@@ -46,6 +46,8 @@ public:
 	WaveformGroup(MainWindow* parent, const std::string& title);
 	virtual ~WaveformGroup();
 
+	void Clear();
+
 	bool Render();
 
 	const std::string& GetTitle()

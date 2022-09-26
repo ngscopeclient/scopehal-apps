@@ -55,6 +55,17 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 
 WaveformGroup::~WaveformGroup()
 {
+	Clear();
+}
+
+void WaveformGroup::Clear()
+{
+	LogTrace("Destroying areas\n");
+	LogIndenter li;
+
+	m_areas.clear();
+
+	LogTrace("All areas removed\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

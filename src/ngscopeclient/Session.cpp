@@ -69,6 +69,9 @@ Session::~Session()
 
 void Session::Clear()
 {
+	LogTrace("Clearing session\n");
+	LogIndenter li;
+
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	//Stop the trigger so there's no pending waveforms
@@ -108,6 +111,8 @@ void Session::Clear()
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
+
+	LogTrace("Clear complete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

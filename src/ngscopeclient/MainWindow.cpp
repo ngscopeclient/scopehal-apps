@@ -130,19 +130,21 @@ MainWindow::~MainWindow()
 void MainWindow::CloseSession()
 {
 	LogTrace("Closing session\n");
-
-	//Clear the actual session object
-	m_session.Clear();
+	LogIndenter li;
 
 	SaveRecentInstrumentList();
 
 	//Destroy waveform views
+	LogTrace("Clearing views\n");
+	for(auto g : m_waveformGroups)
+		g->Clear();
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
+	LogTrace("Clearing dialogs\n");
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
@@ -151,6 +153,11 @@ void MainWindow::CloseSession()
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
+
+	//Clear the actual session object once all views / dialogs having handles to scopes etc have been destroyed
+	m_session.Clear();
+
+	LogTrace("Clear complete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -283,9 +290,11 @@ void MainWindow::RenderUI()
 		vector<size_t> groupsToClose;
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
-			if(!m_waveformGroups[i]->Render())
+			auto group = m_waveformGroups[i];
+			if(!group->Render())
 			{
-				LogTrace("Closing waveform group %s (i=%zu)\n", m_waveformGroups[i]->GetTitle().c_str(), i);
+				LogTrace("Closing waveform group %s (i=%zu)\n", group->GetTitle().c_str(), i);
+				group->Clear();
 				groupsToClose.push_back(i);
 			}
 		}
