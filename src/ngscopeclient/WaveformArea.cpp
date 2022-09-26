@@ -323,7 +323,6 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
 {
 	auto stream = channel->GetStream();
-	//auto chan = stream.m_channel;
 	auto data = stream.GetData();
 	if(data == nullptr)
 		return;
@@ -337,16 +336,18 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 
 	//Render the tone mapped output
 	list->AddImage(channel->GetTextureHandle(), start, ImVec2(start.x+size.x, start.y+size.y));
+	m_parent->AddTextureUsedThisFrame(channel->GetTexture());
 
 	//DEBUG: simple quick-and-dirty renderer for testing
-	/*auto u = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
 	if(u)
 	{
 		auto n = data->size();
+		auto chan = stream.m_channel;
 		auto color = ColorFromString(chan->m_displaycolor);
 		for(size_t i=1; i<n; i++)
 		{
-			ImVec2 start(
+			ImVec2 pstart(
 				m_group->XAxisUnitsToXPosition(((i-1) * data->m_timescale) + data->m_triggerPhase),
 				YAxisUnitsToYPosition(u->m_samples[i-1]));
 
@@ -354,10 +355,9 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 				m_group->XAxisUnitsToXPosition((i * data->m_timescale) + data->m_triggerPhase),
 				YAxisUnitsToYPosition(u->m_samples[i]));
 
-			list->AddLine(start, end, color);
+			list->AddLine(pstart, end, color);
 		}
 	}
-	*/
 }
 
 /**
@@ -395,6 +395,11 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 			vk::ImageLayout::eUndefined
 			);
 
+		//Keep a reference to the old texture around for one more frame
+		//in case the previous frame hasn't fully completed rendering yet
+		auto oldTex = channel->GetTexture();
+		m_parent->AddTextureUsedThisFrame(oldTex);
+
 		auto tex = make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager());
 		channel->SetTexture(tex);
 
@@ -426,7 +431,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 	for(int y=0; y<size.y; y++)
 	{
 		for(int x=0; x<width; x++)
-			temp[y*width + x] = fabs(sin(( x*1.0 + 10*channel->GetStream().m_channel->GetIndex()) / 50) + sin(y*1.0 / 30));
+			temp[y*width + x] = fabs(sin(x/10.0f) * sin(y / 20.0f)) * 0.1;
 	}
 	temp.MarkModifiedFromCpu();
 

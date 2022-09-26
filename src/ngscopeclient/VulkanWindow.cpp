@@ -33,6 +33,7 @@
 	@brief Implementation of VulkanWindow
  */
 #include "ngscopeclient.h"
+#include "TextureManager.h"
 #include "VulkanWindow.h"
 #include "VulkanFFTPlan.h"
 
@@ -331,6 +332,11 @@ void VulkanWindow::Render()
 		//Make sure the old frame has completed
 		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
+
+		//We can now free references to last frame's textures
+		//This will delete them if the containing object was destroyed that frame
+		m_renderQueue.waitIdle();
+		m_texturesUsedThisFrame.clear();
 
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
