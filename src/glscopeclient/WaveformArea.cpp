@@ -682,6 +682,7 @@ void WaveformArea::InitializeWaveformPass()
 	ComputeShader hwc;
 	ComputeShader dwc;
 	ComputeShader awc;
+	ComputeShader zawc;
 	ComputeShader adwc;
 	if(GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 	{
@@ -707,6 +708,14 @@ void WaveformArea::InitializeWaveformPass()
 			"shaders/waveform-compute-core.glsl",
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
+		if(!zawc.Load(
+			"#version 420",
+			"#define NO_INTERPOLATION",
+			"shaders/waveform-compute-head.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
+			LogFatal("failed to load zero-hold analog waveform compute shader, aborting\n");
 		if(!adwc.Load(
 			"#version 420",
 			"#define DENSE_PACK",
@@ -740,6 +749,14 @@ void WaveformArea::InitializeWaveformPass()
 			"shaders/waveform-compute-core.glsl",
 			NULL))
 			LogFatal("failed to load analog waveform compute shader, aborting\n");
+		if(!zawc.Load(
+			"#version 420",
+			"#define NO_INTERPOLATION",
+			"shaders/waveform-compute-head-noint64.glsl",
+			"shaders/waveform-compute-analog.glsl",
+			"shaders/waveform-compute-core.glsl",
+			NULL))
+			LogFatal("failed to load zero-hold analog waveform compute shader, aborting\n");
 		if(!adwc.Load(
 			"#version 420",
 			"#define DENSE_PACK",
@@ -762,6 +779,10 @@ void WaveformArea::InitializeWaveformPass()
 	m_analogWaveformComputeProgram.Add(awc);
 	if(!m_analogWaveformComputeProgram.Link())
 		LogFatal("failed to link analog waveform shader program, aborting\n");
+
+	m_zeroHoldAnalogWaveformComputeProgram.Add(awc);
+	if(!m_zeroHoldAnalogWaveformComputeProgram.Link())
+		LogFatal("failed to link zero-hold analog waveform shader program, aborting\n");
 
 	m_denseAnalogWaveformComputeProgram.Add(adwc);
 	if(!m_denseAnalogWaveformComputeProgram.Link())

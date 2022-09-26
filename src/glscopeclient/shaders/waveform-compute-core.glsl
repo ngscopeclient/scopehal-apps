@@ -107,6 +107,10 @@ void main()
 						if(right.x > gl_GlobalInvocationID.x + 1)
 							endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
 
+					#else
+						#define DIGITAL_PATH
+						// Pick up digital path below to get right endpoint
+
 					#endif
 
 				#endif

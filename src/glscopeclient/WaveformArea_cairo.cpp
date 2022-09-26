@@ -870,8 +870,13 @@ void WaveformArea::RenderVerticalCursor(
 	if(!IsAnalog() && !IsWaterfall())
 		return;
 
-	//Draw the value label at the bottom
-	string text = m_channel.GetYAxisUnits().PrettyPrint(GetValueAtTime(pos));
+	// Draw value label at the bottom
+	pair<bool, float> value = GetValueAtTime(pos);
+	string text;
+	if (!value.first) // isnan not working for some reason
+		text = "-"; // No value at this point
+	else
+		text = m_channel.GetYAxisUnits().PrettyPrint(value.second);
 
 	//Figure out text size
 	int twidth;
@@ -1002,13 +1007,13 @@ void WaveformArea::RenderHorizontalCursor(
 /**
 	@brief Gets the value of our channel at the specified timestamp (absolute, not waveform ticks)
  */
-float WaveformArea::GetValueAtTime(int64_t time_fs)
+pair<bool, float> WaveformArea::GetValueAtTime(int64_t time_fs)
 {
 	auto waveform = m_channel.GetData();
 	auto uwaveform = dynamic_cast<UniformAnalogWaveform*>(waveform);
 	auto swaveform = dynamic_cast<SparseAnalogWaveform*>(waveform);
 	if(!swaveform && !uwaveform)
-		return 0;
+		return {false, 0};
 
 	//Make sure we have a current copy of the data
 	waveform->PrepareForCpuAccess();
@@ -1031,15 +1036,30 @@ float WaveformArea::GetValueAtTime(int64_t time_fs)
 
 	//Clamp to bounds
 	if(index <= 0)
-		return GetValue(swaveform, uwaveform, 0);
+		return {true, GetValue(swaveform, uwaveform, 0)};
 	if(index >= end)
-		return GetValue(swaveform, uwaveform, end);
+		return {true, GetValue(swaveform, uwaveform, end)};
+
+	// If waveform wants zero-hold rendering, do not interpolate cursor-displayed value
+	if (m_waveformRenderData->WantsZeroHold())
+	{
+		if (swaveform)
+		{
+			if (GetOffsetScaled(swaveform, index) + GetDurationScaled(swaveform, index) < time_fs)
+			{
+				// Sample found with GE search does not extend to selected point
+				return {false, 0};
+			}
+		}
+		
+		return {true, GetValue(swaveform, uwaveform, index)};
+	}
 
 	//In bounds, interpolate
 	if(swaveform)
-		return Filter::InterpolateValue(swaveform, index-1, ticks - swaveform->m_offsets[index-1]);
+		return {true, Filter::InterpolateValue(swaveform, index-1, ticks - swaveform->m_offsets[index-1])};
 	else
-		return Filter::InterpolateValue(uwaveform, index-1, ticks - (index-1) );
+		return {true, Filter::InterpolateValue(uwaveform, index-1, ticks - (index-1) )};
 }
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)

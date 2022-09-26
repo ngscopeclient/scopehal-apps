@@ -76,6 +76,13 @@ public:
 	bool IsHistogram()
 	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
 
+	bool WantsZeroHold()
+	{
+		return IsHistogram() || (m_channel.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE);
+		// Histogram included here to avoid interpolating count values
+		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
+	}
+
 	bool IsDensePacked()
 	{
 		auto data = m_channel.m_channel->GetData(0);
@@ -355,6 +362,7 @@ protected:
 	Program m_denseAnalogWaveformComputeProgram;
 	Program m_digitalWaveformComputeProgram;
 	Program m_histogramWaveformComputeProgram;
+	Program m_zeroHoldAnalogWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
 	std::map<StreamDescriptor, WaveformRenderData*>	m_overlayRenderData;
 
@@ -465,7 +473,7 @@ protected:
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
 	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
-	float GetValueAtTime(int64_t time_fs);
+	std::pair<bool, float> GetValueAtTime(int64_t time_fs);
 
 	float GetDPIScale()
 	{ return get_pango_context()->get_resolution() / 96; }
