@@ -38,12 +38,19 @@
 class WaveformArea;
 class WaveformGroup;
 class MainWindow;
-class Texture;
+
+#include "TextureManager.h"
 
 class ToneMapArgs
 {
-	uint32_t width;
-	uint32_t height;
+public:
+	ToneMapArgs(uint32_t w, uint32_t h)
+	: m_width(w)
+	, m_height(h)
+	{}
+
+	uint32_t m_width;
+	uint32_t m_height;
 };
 
 /**
@@ -71,6 +78,9 @@ public:
 
 	std::shared_ptr<Texture> GetTexture()
 	{ return m_texture; }
+
+	ImTextureID GetTextureHandle()
+	{ return m_texture->GetTexture(); }
 
 	void SetTexture(std::shared_ptr<Texture> tex)
 	{ m_texture = tex; }

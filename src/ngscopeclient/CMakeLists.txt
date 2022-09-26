@@ -75,49 +75,6 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
-# Compile the waveform render shader in all its variations
-# This function also implicitly adds the HAS_INT64 and DENSE_PACK variants for each input
-function(add_render_shader_variant outname)
-	cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "OPTIONS")
-	set(source shaders/waveform-compute.glsl)
-	get_filename_component(base ${source} NAME_WE)
-	set(outfile ${CMAKE_CURRENT_BINARY_DIR}/${base}.${outname}.spv)
-	add_custom_command(
-		OUTPUT ${outfile}
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
-		COMMENT "Compile compute shader ${base}.${outname} with ${arg_OPTIONS}"
-		COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${arg_OPTIONS} -o ${outfile})
-	install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
-	if(NOT outname MATCHES "int64")
-		add_render_shader_variant(${outname}.int64 OPTIONS ${arg_OPTIONS} -DHAS_INT64)
-	endif()
-	if(NOT outname MATCHES "dense")
-		add_render_shader_variant(${outname}.dense OPTIONS ${arg_OPTIONS} -DDENSE_PACK)
-	endif()
-endfunction()
-
-add_render_shader_variant(analog    OPTIONS -DANALOG_PATH)
-add_render_shader_variant(digital   OPTIONS -DDIGITAL_PATH)
-add_render_shader_variant(histogram OPTIONS -DANALOG_PATH -DNO_INTERPOLATION -DHISTOGRAM_PATH)
-
-add_custom_target(
-	ngrendershaders
-	COMMAND ${CMAKE_COMMAND} -E true
-	SOURCES
-		waveform-compute.analog.spv
-		waveform-compute.digital.spv
-		waveform-compute.histogram.spv
-		waveform-compute.analog.int64.spv
-		waveform-compute.digital.int64.spv
-		waveform-compute.histogram.int64.spv
-		waveform-compute.analog.dense.spv
-		waveform-compute.digital.dense.spv
-		waveform-compute.histogram.dense.spv
-		waveform-compute.analog.int64.dense.spv
-		waveform-compute.digital.int64.dense.spv
-		waveform-compute.histogram.int64.dense.spv
-	)
-
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons

@@ -170,7 +170,7 @@ Texture::Texture(
 		{},
 		*m_image,
 		vk::ImageViewType::e2D,
-		vk::Format::eR8G8B8A8Uint,
+		vk::Format::eR32G32B32A32Sfloat,
 		{},
 		vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);

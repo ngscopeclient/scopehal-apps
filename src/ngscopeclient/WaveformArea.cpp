@@ -35,7 +35,6 @@
 #include "ngscopeclient.h"
 #include "WaveformArea.h"
 #include "MainWindow.h"
-#include "TextureManager.h"
 #include "../../scopehal/TwoLevelTrigger.h"
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
@@ -321,10 +320,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 /**
 	@brief Renders a single analog waveform
  */
-void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 /*start*/, ImVec2 size)
+void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
 {
 	auto stream = channel->GetStream();
-	auto chan = stream.m_channel;
+	//auto chan = stream.m_channel;
 	auto data = stream.GetData();
 	if(data == nullptr)
 		return;
@@ -332,10 +331,15 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	auto list = ImGui::GetWindowDrawList();
 
 	//Tone map the waveform
+	//TODO: only do this if the texture was updated
+	//TODO: what kind of mutexing etc do we need, if any?
 	ToneMapAnalogWaveform(channel, size);
 
+	//Render the tone mapped output
+	list->AddImage(channel->GetTextureHandle(), start, ImVec2(start.x+size.x, start.y+size.y));
+
 	//DEBUG: simple quick-and-dirty renderer for testing
-	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
+	/*auto u = dynamic_cast<UniformAnalogWaveform*>(data);
 	if(u)
 	{
 		auto n = data->size();
@@ -353,6 +357,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 			list->AddLine(start, end, color);
 		}
 	}
+	*/
 }
 
 /**
@@ -360,8 +365,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
  */
 void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 size)
 {
-	//TODO: only do this if the texture was updated
-	//TODO: what kind of mutexing etc do we need, if any?
+	m_cmdBuffer->begin({});
 
 	//Reallocate the texture if its size has changed
 	if(channel->UpdateSize(size))
@@ -379,8 +383,8 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 		vk::ImageCreateInfo imageInfo(
 			{},
 			vk::ImageType::e2D,
-			vk::Format::eR8G8B8A8Uint,
-			vk::Extent3D(size.y, size.y, 1),
+			vk::Format::eR32G32B32A32Sfloat,
+			vk::Extent3D(size.x, size.y, 1),
 			1,
 			1,
 			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
@@ -391,23 +395,64 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 			vk::ImageLayout::eUndefined
 			);
 
-		channel->SetTexture(make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager()));
-	}
+		auto tex = make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager());
+		channel->SetTexture(tex);
 
-	LogTrace("tone map\n");
+		//Add a barrier to convert the image format to "general"
+		vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+		vk::ImageMemoryBarrier barrier(
+			vk::AccessFlagBits::eNone,
+			vk::AccessFlagBits::eShaderWrite,
+			vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eGeneral,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			tex->GetImage(),
+			range);
+		m_cmdBuffer->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eComputeShader,
+				{},
+				{},
+				{},
+				barrier);
+	}
 
 	//Temporary buffer until we have real rendering shader done
 	AcceleratorBuffer<float> temp;
 	temp.resize(1);
 
-	//Run the compute shader to update the waveform
-	//cmdBuf.begin({});
+	//Run the actual compute shader
 	auto tex = channel->GetTexture();
 	m_toneMapPipe.BindBuffer(0, temp);
-	//m_toneMapPipe.BindStorageImage(1, tex);
-	//m_computePipeline.Dispatch(cmdBuf, (uint32_t)len, GetComputeBlockCount(len, 64));
-	//cmdBuf.end();
-	//SubmitAndBlock(cmdBuf, queue);
+	m_toneMapPipe.BindStorageImage(
+		1,
+		**m_parent->GetTextureManager()->GetSampler(),
+		tex->GetView(),
+		vk::ImageLayout::eGeneral);
+	ToneMapArgs args(size.x, size.y);
+	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(size.x, 64), (uint32_t)size.y);
+
+	//Add a barrier before we read from the fragment shader
+	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+	vk::ImageMemoryBarrier barrier(
+		vk::AccessFlagBits::eShaderWrite,
+		vk::AccessFlagBits::eShaderRead,
+		vk::ImageLayout::eGeneral,
+		vk::ImageLayout::eGeneral,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		tex->GetImage(),
+		range);
+	m_cmdBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::PipelineStageFlagBits::eFragmentShader,
+			{},
+			{},
+			{},
+			barrier);
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, m_parent->GetRenderQueue());
 }
 
 /**
