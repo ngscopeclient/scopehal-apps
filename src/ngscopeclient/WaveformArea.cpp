@@ -426,7 +426,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 	for(int y=0; y<size.y; y++)
 	{
 		for(int x=0; x<width; x++)
-			temp[y*width + x] = fabs(sin(x*1.0 / 50) + sin(y*1.0 / 30));
+			temp[y*width + x] = fabs(sin(( x*1.0 + 10*channel->GetStream().m_channel->GetIndex()) / 50) + sin(y*1.0 / 30));
 	}
 	temp.MarkModifiedFromCpu();
 

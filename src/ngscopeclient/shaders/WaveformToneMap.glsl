@@ -64,15 +64,24 @@ void main()
 	y = min(y, 2);
 	y = max(y, 0);
 
-	//convert to rgba
+	//Supersaturated: 100% alpha, color gets even more intense
 	vec4 colorOut;
-	colorOut.r = channelRed * y;
-	colorOut.g = channelGreen * y;
-	colorOut.b = channelBlue * y;
-	if(y > 0)
+	if(y > 1)
+	{
+		colorOut.r = min(channelRed * y, 1);
+		colorOut.g = min(channelGreen * y, 1);
+		colorOut.b = min(channelBlue * y, 1);
 		colorOut.a = 1;
+	}
+
+	//No, normal
 	else
-		colorOut.a = 0;
+	{
+		colorOut.r = channelRed;
+		colorOut.g = channelGreen;
+		colorOut.b = channelBlue;
+		colorOut.a = y;
+	}
 
 	//Write final output
 	imageStore(
