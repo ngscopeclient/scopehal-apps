@@ -44,11 +44,17 @@ class MainWindow;
 class ToneMapArgs
 {
 public:
-	ToneMapArgs(uint32_t w, uint32_t h)
-	: m_width(w)
+	ToneMapArgs(ImVec4 channelColor, uint32_t w, uint32_t h)
+	: m_red(channelColor.x)
+	, m_green(channelColor.y)
+	, m_blue(channelColor.z)
+	, m_width(w)
 	, m_height(h)
 	{}
 
+	float m_red;
+	float m_green;
+	float m_blue;
 	uint32_t m_width;
 	uint32_t m_height;
 };

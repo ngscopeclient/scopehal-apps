@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* libscopeprotocols                                                                                                    *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
@@ -39,6 +39,9 @@ layout(binding=1, rgba32f) uniform image2D outputTex;
 
 layout(std430, push_constant) uniform constants
 {
+	float channelRed;
+	float channelGreen;
+	float channelBlue;
 	uint width;
 	uint height;
 };
@@ -52,8 +55,28 @@ void main()
 	if(gl_GlobalInvocationID.y >= height)
 		return;
 
+	//Intensity graded grayscale input
+	uint npixel = gl_GlobalInvocationID.y*width + gl_GlobalInvocationID.x;
+	float pixval = pixels[npixel];
+
+	//Logarithmic shading
+	float y = pow(pixval, 1.0 / 4);
+	y = min(y, 2);
+	y = max(y, 0);
+
+	//convert to rgba
+	vec4 colorOut;
+	colorOut.r = channelRed * y;
+	colorOut.g = channelGreen * y;
+	colorOut.b = channelBlue * y;
+	if(y > 0)
+		colorOut.a = 1;
+	else
+		colorOut.a = 0;
+
+	//Write final output
 	imageStore(
 		outputTex,
 		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),
-		vec4(1, 0, 1, 1));
+		colorOut);
 }

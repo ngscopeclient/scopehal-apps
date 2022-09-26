@@ -419,8 +419,16 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 	}
 
 	//Temporary buffer until we have real rendering shader done
+	int width = size.x;
+	int npixels = width * (int)size.y;
 	AcceleratorBuffer<float> temp;
-	temp.resize(1);
+	temp.resize(npixels);
+	for(int y=0; y<size.y; y++)
+	{
+		for(int x=0; x<width; x++)
+			temp[y*width + x] = fabs(sin(x*1.0 / 50) + sin(y*1.0 / 30));
+	}
+	temp.MarkModifiedFromCpu();
 
 	//Run the actual compute shader
 	auto tex = channel->GetTexture();
@@ -430,7 +438,8 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 		**m_parent->GetTextureManager()->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
-	ToneMapArgs args(size.x, size.y);
+	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
+	ToneMapArgs args(color, size.x, size.y);
 	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(size.x, 64), (uint32_t)size.y);
 
 	//Add a barrier before we read from the fragment shader
