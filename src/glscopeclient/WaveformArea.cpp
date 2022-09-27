@@ -640,6 +640,7 @@ void WaveformArea::CleanupGLHandles()
 	m_histogramWaveformComputeProgram.Destroy();
 	m_digitalWaveformComputeProgram.Destroy();
 	m_analogWaveformComputeProgram.Destroy();
+	m_zeroHoldAnalogWaveformComputeProgram.Destroy();
 	m_denseAnalogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_eyeProgram.Destroy();
@@ -780,7 +781,7 @@ void WaveformArea::InitializeWaveformPass()
 	if(!m_analogWaveformComputeProgram.Link())
 		LogFatal("failed to link analog waveform shader program, aborting\n");
 
-	m_zeroHoldAnalogWaveformComputeProgram.Add(awc);
+	m_zeroHoldAnalogWaveformComputeProgram.Add(zawc);
 	if(!m_zeroHoldAnalogWaveformComputeProgram.Link())
 		LogFatal("failed to link zero-hold analog waveform shader program, aborting\n");
 

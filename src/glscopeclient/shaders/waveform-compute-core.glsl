@@ -109,7 +109,7 @@ void main()
 
 					#else
 						#define DIGITAL_PATH
-						// Pick up digital path below to get right endpoint
+						// Take uninterpolated right edge height below
 
 					#endif
 

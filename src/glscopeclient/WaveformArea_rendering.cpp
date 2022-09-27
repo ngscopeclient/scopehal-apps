@@ -669,7 +669,7 @@ Program* WaveformArea::GetProgramForWaveform(WaveformRenderData* data)
 		return &m_digitalWaveformComputeProgram;
 	else if(data->IsHistogram())
 		return &m_histogramWaveformComputeProgram;
-	else if(data->WantsZeroHold())
+	else if(data->WantsZeroHold() && !data->IsDensePacked()) // Don't support dense-packed && zero-hold at the moment
 		return &m_zeroHoldAnalogWaveformComputeProgram;
 	else if(data->IsDensePacked())
 		return &m_denseAnalogWaveformComputeProgram;
