@@ -41,6 +41,8 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
+extern std::mutex g_waveformThreadBlockMutex;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -229,6 +231,7 @@ VulkanWindow::~VulkanWindow()
 bool VulkanWindow::UpdateFramebuffer()
 {
 	LogTrace("Recreating framebuffer due to window resize\n");
+	lock_guard<mutex> lock(g_waveformThreadBlockMutex);
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();

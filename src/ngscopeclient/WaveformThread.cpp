@@ -46,6 +46,8 @@ Event g_waveformProcessedEvent;
 
 void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session);
 
+std::mutex g_waveformThreadBlockMutex;
+
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
 	pthread_setname_np_compat("WaveformThread");
@@ -93,6 +95,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//If re-rendering was requested due to a window resize etc, do that.
 		if(g_rerenderRequestedEvent.Peek())
 		{
+			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+
 			LogTrace("Re-render requested\n");
 			RenderAllWaveforms(cmdbuf, session);
 			SubmitAndBlock(cmdbuf, queue);
@@ -114,8 +118,12 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		session->RefreshAllFilters();
 
 		//Rerun the heavyweight rendering shaders
-		RenderAllWaveforms(cmdbuf, session);
-		SubmitAndBlock(cmdbuf, queue);
+		{
+			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+
+			RenderAllWaveforms(cmdbuf, session);
+			SubmitAndBlock(cmdbuf, queue);
+		}
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
