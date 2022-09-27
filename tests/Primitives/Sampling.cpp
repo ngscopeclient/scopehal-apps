@@ -32,7 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for SampleOn* primitives
  */
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
 #include <catch2/catch.hpp>
+#endif
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"

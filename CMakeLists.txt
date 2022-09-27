@@ -155,6 +155,12 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 if(BUILD_TESTING)
 	find_package(Catch2 REQUIRED)
 	include(Catch)
+	#Catch2 v3.x.y have a breaking change:
+	# Must include catch2/catch_all.hpp instead of catch2/catch.hpp
+	# So we set a compile flag to let the code know.
+	if(NOT Catch2_VERSION MATCHES "^[0-2]\\.")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CATCH2_V3")
+	endif()
 	add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 endif()
 
