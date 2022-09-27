@@ -64,6 +64,7 @@ public:
 	, m_mappedConfigBuffer(NULL)
 	, m_mappedConfigBuffer64(NULL)
 	, m_mappedFloatConfigBuffer(NULL)
+	, m_mappedDurationsBuffer(NULL)
 	, m_persistence(false)
 	{}
 
@@ -105,6 +106,7 @@ public:
 	ShaderStorageBuffer		m_waveformYBuffer;
 	ShaderStorageBuffer		m_waveformConfigBuffer;
 	ShaderStorageBuffer		m_waveformIndexBuffer;
+	ShaderStorageBuffer		m_waveformDurationsBuffer;
 
 	//RGBA32 but only alpha actually used
 	Texture					m_waveformTexture;
@@ -120,6 +122,7 @@ public:
 	uint32_t*				m_mappedConfigBuffer;
 	int64_t*				m_mappedConfigBuffer64;
 	float*					m_mappedFloatConfigBuffer;
+	float*					m_mappedDurationsBuffer;
 
 	//Persistence flags
 	bool					m_persistence;

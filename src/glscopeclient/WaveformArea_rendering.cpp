@@ -87,6 +87,11 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 			m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
 			m_mappedDigitalYBuffer = NULL;
 		}
+
+		if(!IsDensePacked())
+			m_mappedDurationsBuffer = (float*)m_waveformDurationsBuffer.Map(m_count*sizeof(int64_t));
+		else
+			m_mappedDurationsBuffer = NULL;
 	}
 
 	//Skip mapping index buffer if dense packed analog
@@ -110,6 +115,9 @@ void WaveformRenderData::UnmapBuffers(bool update_waveform)
 		if(m_mappedXBuffer != NULL)
 			m_waveformXBuffer.Unmap();
 		m_waveformYBuffer.Unmap();
+
+		if (!IsDensePacked())
+			m_waveformDurationsBuffer.Unmap();
 	}
 	if(m_mappedIndexBuffer != NULL)
 		m_waveformIndexBuffer.Unmap();
@@ -203,9 +211,15 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
 		if(sandat)
+		{
 			memcpy(wdata->m_mappedXBuffer, sandat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+			memcpy(wdata->m_mappedDurationsBuffer, sandat->m_durations.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+		}
 		else if(sdigdat)
+		{
 			memcpy(wdata->m_mappedXBuffer, sdigdat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+			memcpy(wdata->m_mappedDurationsBuffer, sdigdat->m_durations.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+		}
 
 		//TODO: skip for dense packed digital path too once the shader supports that
 		//For now, fill it beacuse apparently the shader still needs it?
@@ -701,6 +715,9 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	data->m_waveformYBuffer.BindBase(4);
 	data->m_waveformConfigBuffer.BindBase(2);
 	data->m_waveformIndexBuffer.BindBase(3);
+
+	if (!data->IsDensePacked())
+		data->m_waveformDurationsBuffer.BindBase(5);
 
 	prog->DispatchCompute(numGroups, 1, 1);
 }

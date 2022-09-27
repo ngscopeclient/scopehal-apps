@@ -14,6 +14,13 @@ layout(std430, binding=3) buffer index
 	uint xind[];
 };
 
+#ifndef DENSE_PACK
+layout(std430, binding=5) buffer durs
+{
+	int64_t durations[];
+};
+#endif
+
 //Shared buffer for the local working buffer (8 kB)
 shared float g_workingBuffer[MAX_HEIGHT];
 
@@ -78,16 +85,44 @@ void main()
 	{
 		if(i < (memDepth-1) )
 		{
+
+			#ifdef NO_INTERPOLATION
+				#ifndef HISTOGRAM_PATH
+					#undef USE_NEXT_COORDS
+					// No interpolation requested, use exact bounds
+				#else
+					#define USE_NEXT_COORDS
+					// Histogram needs next coords to draw bar
+				#endif
+			#else
+				#define USE_NEXT_COORDS
+				// Use coordinates of next point to allow interpolation
+				// TODO: Somehow avoid doing this if the waveform is not continous
+			#endif
+
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
 				vec2 left = vec2(FetchX(i) * xscale + xoff, (voltage[i] + yoff)*yscale + ybase);
-				vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+
+				#ifdef USE_NEXT_COORDS
+					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+				#else
+					vec2 right = left;
+					right.x += float(durations[i]) * xscale;
+				#endif
 			#endif
 
 			#ifdef DIGITAL_PATH
 				vec2 left = vec2(FetchX(i) * xscale + xoff, GetBoolean(i)*yscale + ybase);
-				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+
+				#ifdef USE_NEXT_COORDS
+					vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+				#else
+					vec2 right = left;
+					right.x += float(durations[i]) * xscale;
+				#endif
 			#endif
+
 
 			//Skip offscreen samples
 			if( (right.x >= gl_GlobalInvocationID.x) && (left.x <= gl_GlobalInvocationID.x + 1) )
@@ -106,10 +141,6 @@ void main()
 							starty = InterpolateY(left, right, slope, gl_GlobalInvocationID.x);
 						if(right.x > gl_GlobalInvocationID.x + 1)
 							endy = InterpolateY(left, right, slope, gl_GlobalInvocationID.x + 1);
-
-					#else
-						#define DIGITAL_PATH
-						// Take uninterpolated right edge height below
 
 					#endif
 
