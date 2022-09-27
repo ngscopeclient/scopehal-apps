@@ -129,38 +129,7 @@ Texture::Texture(
 
 	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	if(g_hasDebugUtils && !name.empty())
-	{
-		string prefix = string("Texture.") + name;
-		string texName = prefix + ".dset";
-		string viewName = prefix + ".view";
-		string imageName = prefix + ".image";
-		string memName = prefix + ".mem";
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eDescriptorSet,
-				reinterpret_cast<int64_t>(m_texture),
-				texName.c_str()));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eImage,
-				reinterpret_cast<int64_t>(static_cast<VkImage>(*m_image)),
-				imageName.c_str()));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eImageView,
-				reinterpret_cast<int64_t>(static_cast<VkImageView>(**m_view)),
-				viewName.c_str()));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eDeviceMemory,
-				reinterpret_cast<int64_t>(static_cast<VkDeviceMemory>(**m_deviceMemory)),
-				memName.c_str()));
-	}
+	SetName(name);
 }
 
 /**
@@ -169,7 +138,8 @@ Texture::Texture(
 Texture::Texture(
 	const vk::raii::Device& device,
 	const vk::ImageCreateInfo& imageInfo,
-	TextureManager* mgr)
+	TextureManager* mgr,
+	const string& name)
 	: m_image(device, imageInfo)
 {
 	auto req = m_image.getMemoryRequirements();
@@ -211,6 +181,44 @@ Texture::Texture(
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
 	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_GENERAL);
+
+	SetName(name);
+}
+
+void Texture::SetName(const string& name)
+{
+	if(g_hasDebugUtils && !name.empty())
+	{
+		string prefix = string("Texture.") + name;
+		string texName = prefix + ".dset";
+		string viewName = prefix + ".view";
+		string imageName = prefix + ".image";
+		string memName = prefix + ".mem";
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eDescriptorSet,
+				reinterpret_cast<int64_t>(m_texture),
+				texName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eImage,
+				reinterpret_cast<int64_t>(static_cast<VkImage>(*m_image)),
+				imageName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eImageView,
+				reinterpret_cast<int64_t>(static_cast<VkImageView>(**m_view)),
+				viewName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eDeviceMemory,
+				reinterpret_cast<int64_t>(static_cast<VkDeviceMemory>(**m_deviceMemory)),
+				memName.c_str()));
+	}
 }
 
 void Texture::LayoutTransition(

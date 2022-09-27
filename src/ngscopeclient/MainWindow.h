@@ -94,6 +94,9 @@ public:
 	void ToneMapAllWaveforms();
 	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
+	void SetNeedRender()
+	{ m_needRender = true; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -246,6 +249,13 @@ protected:
 	ImFont* m_monospaceFont;
 
 	TextureManager m_texmgr;
+
+	/**
+		@brief true if a resize or other event this frame requires we re-rasterize waveforms
+
+		(even if data has not changed)
+	 */
+	bool m_needRender;
 
 public:
 	ImFont* GetMonospaceFont()

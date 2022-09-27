@@ -58,7 +58,8 @@ public:
 	Texture(
 		const vk::raii::Device& device,
 		const vk::ImageCreateInfo& imageInfo,
-		TextureManager* mgr
+		TextureManager* mgr,
+		const std::string& name = ""
 		);
 
 	ImTextureID GetTexture()
@@ -69,6 +70,8 @@ public:
 
 	vk::Image GetImage()
 	{ return *m_image; }
+
+	void SetName(const std::string& name);
 
 protected:
 	void LayoutTransition(

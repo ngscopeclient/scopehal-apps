@@ -42,6 +42,89 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DisplayedChannel
+
+/**
+	@brief Handles a change in size of the displayed waveform
+
+	@param newSize	New size of WaveformArea
+
+	@return true if size has changed, false otherwose
+ */
+bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
+{
+	size_t x = newSize.x;
+	size_t y = newSize.y;
+
+	if( (m_cachedX != x) || (m_cachedY != y) )
+	{
+		m_cachedX = x;
+		m_cachedY = y;
+
+		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
+
+		vector<uint32_t> queueFamilies;
+		vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+		queueFamilies.push_back(g_computeQueueType);	//TODO: separate transfer queue?
+		if(g_renderQueueType != g_computeQueueType)
+		{
+			queueFamilies.push_back(g_renderQueueType);
+			sharingMode = vk::SharingMode::eConcurrent;
+		}
+		vk::ImageCreateInfo imageInfo(
+			{},
+			vk::ImageType::e2D,
+			vk::Format::eR32G32B32A32Sfloat,
+			vk::Extent3D(x, y, 1),
+			1,
+			1,
+			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
+			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
+			sharingMode,
+			queueFamilies,
+			vk::ImageLayout::eUndefined
+			);
+
+		//Keep a reference to the old texture around for one more frame
+		//in case the previous frame hasn't fully completed rendering yet
+		top->AddTextureUsedThisFrame(m_texture);
+
+		//Make the new texture and mark that as in use too
+		m_texture = make_shared<Texture>(
+			*g_vkComputeDevice, imageInfo, top->GetTextureManager(), "DisplayedChannel.m_texture");
+		top->AddTextureUsedThisFrame(m_texture);
+
+		//Add a barrier to convert the image format to "general"
+		lock_guard<mutex> lock(g_vkTransferMutex);
+		vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+		vk::ImageMemoryBarrier barrier(
+			vk::AccessFlagBits::eNone,
+			vk::AccessFlagBits::eShaderWrite,
+			vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eGeneral,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			m_texture->GetImage(),
+			range);
+		g_vkTransferCommandBuffer->begin({});
+		g_vkTransferCommandBuffer->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eComputeShader,
+				{},
+				{},
+				{},
+				barrier);
+		g_vkTransferCommandBuffer->end();
+		SubmitAndBlock(*g_vkTransferCommandBuffer, *g_vkTransferQueue);
+
+		return true;
+	}
+
+	return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> group, MainWindow* parent)
@@ -348,15 +431,19 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 
 	auto list = ImGui::GetWindowDrawList();
 
-	//Tone map the waveform
-	//TODO: only do this if the texture was updated
-	//TODO: what kind of mutexing etc do we need, if any?
-	//ToneMapAnalogWaveform(channel, size);
+	//Mark the waveform as resized
+	if(channel->UpdateSize(size, m_parent))
+		m_parent->SetNeedRender();
 
-	//Render the tone mapped output
-	list->AddImage(channel->GetTextureHandle(), start, ImVec2(start.x+size.x, start.y+size.y));
-	m_parent->AddTextureUsedThisFrame(channel->GetTexture());
+	//Render the tone mapped output (if it's ready)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+	{
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y));
+		m_parent->AddTextureUsedThisFrame(tex);
+	}
 
+	/*
 	//DEBUG: simple quick-and-dirty renderer for testing
 	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
 	if(u)
@@ -377,6 +464,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 			list->AddLine(pstart, end, color);
 		}
 	}
+	*/
 }
 
 /**
@@ -384,15 +472,13 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
  */
 void WaveformArea::ToneMapAllWaveforms()
 {
-	ImVec2 size(m_width, m_height);
-
 	for(auto& chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ToneMapAnalogWaveform(chan, size);
+				ToneMapAnalogWaveform(chan);
 				break;
 
 			default:
@@ -409,95 +495,44 @@ void WaveformArea::ToneMapAllWaveforms()
  */
 void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 {
+	for(auto c : m_displayedChannels)
+		RasterizeAnalogWaveform(c, cmdbuf);
+}
+
+void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+{
+	//Prepare the memory so we can rasterize it
+	size_t w = m_width;
+	size_t h = m_height;
+	channel->PrepareToRasterize(w, h);
 }
 
 /**
 	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 size)
+void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
 {
+	auto tex = channel->GetTexture();
+	m_parent->AddTextureUsedThisFrame(tex);
+
+	//Nothing to draw? Early out if we haven't processed the window resize yet
+	auto width = channel->GetRasterizedX();
+	auto height = channel->GetRasterizedY();
+	if( (width == 0) || (height == 0) )
+		return;
+
 	m_cmdBuffer->begin({});
 
-	//Reallocate the texture if its size has changed
-	if(channel->UpdateSize(size))
-	{
-		LogTrace("Waveform area resized (to %.0f x %.0f), reallocating texture\n", size.x, size.y);
-
-		vector<uint32_t> queueFamilies;
-		vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-		queueFamilies.push_back(g_computeQueueType);	//FIXME: separate transfer queue?
-		if(g_renderQueueType != g_computeQueueType)
-		{
-			queueFamilies.push_back(g_renderQueueType);
-			sharingMode = vk::SharingMode::eConcurrent;
-		}
-		vk::ImageCreateInfo imageInfo(
-			{},
-			vk::ImageType::e2D,
-			vk::Format::eR32G32B32A32Sfloat,
-			vk::Extent3D(size.x, size.y, 1),
-			1,
-			1,
-			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
-			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-			sharingMode,
-			queueFamilies,
-			vk::ImageLayout::eUndefined
-			);
-
-		//Keep a reference to the old texture around for one more frame
-		//in case the previous frame hasn't fully completed rendering yet
-		auto oldTex = channel->GetTexture();
-		m_parent->AddTextureUsedThisFrame(oldTex);
-
-		auto tex = make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager());
-		channel->SetTexture(tex);
-
-		//Add a barrier to convert the image format to "general"
-		vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-		vk::ImageMemoryBarrier barrier(
-			vk::AccessFlagBits::eNone,
-			vk::AccessFlagBits::eShaderWrite,
-			vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eGeneral,
-			VK_QUEUE_FAMILY_IGNORED,
-			VK_QUEUE_FAMILY_IGNORED,
-			tex->GetImage(),
-			range);
-		m_cmdBuffer->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTopOfPipe,
-				vk::PipelineStageFlagBits::eComputeShader,
-				{},
-				{},
-				{},
-				barrier);
-	}
-
-	//Temporary buffer until we have real rendering shader done
-	int width = size.x;
-	int height = size.y;
-	int npixels = width * height;
-	AcceleratorBuffer<float> temp("ToneMapTemp");
-	temp.resize(npixels);
-	for(int y=0; y<height; y++)
-	{
-		for(int x=0; x<width; x++)
-			temp[y*width + x] = fabs(sin(x/10.0f) * sin(y / 20.0f)) * 0.1;
-	}
-	temp.MarkModifiedFromCpu();
-
 	//Run the actual compute shader
-	auto tex = channel->GetTexture();
-	m_toneMapPipe.BindBuffer(0, temp);
+	m_toneMapPipe.BindBuffer(0, channel->GetRasterizedWaveform());
 	m_toneMapPipe.BindStorageImage(
 		1,
 		**m_parent->GetTextureManager()->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
 	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
-	ToneMapArgs args(color, size.x, size.y);
-	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(size.x, 64), (uint32_t)size.y);
+	ToneMapArgs args(color, width, height);
+	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(width, 64), height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
@@ -518,7 +553,9 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 			{},
 			barrier);
 	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, m_parent->GetRenderQueue());
+
+	vk::SubmitInfo info({}, {}, **m_cmdBuffer);
+	m_parent->GetRenderQueue().submit(info);
 }
 
 /**

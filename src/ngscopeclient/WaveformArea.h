@@ -67,8 +67,14 @@ class DisplayedChannel
 public:
 	DisplayedChannel(StreamDescriptor stream)
 		: m_stream(stream)
+		, m_rasterizedX(0)
+		, m_rasterizedY(0)
+		, m_cachedX(0)
+		, m_cachedY(0)
 	{
 		stream.m_channel->AddRef();
+
+		m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
 	}
 
 	~DisplayedChannel()
@@ -85,37 +91,67 @@ public:
 	std::shared_ptr<Texture> GetTexture()
 	{ return m_texture; }
 
-	ImTextureID GetTextureHandle()
-	{ return m_texture->GetTexture(); }
-
 	void SetTexture(std::shared_ptr<Texture> tex)
 	{ m_texture = tex; }
 
 	/**
-		@brief Handles a change in size of the displayed waveform
-
-		@param newSize	New size of WaveformArea
-
-		@return true if size has changed, false otherwose
+		@brief Prepares to rasterize the waveform at the specified resolution
 	 */
-	bool UpdateSize(ImVec2 newSize)
+	void PrepareToRasterize(size_t x, size_t y)
 	{
-		if( (m_cachedSize.x != newSize.x) || (m_cachedSize.y != newSize.y) )
+		m_rasterizedX = x;
+		m_rasterizedY = y;
+
+		size_t npixels = x*y;
+		m_rasterizedWaveform.resize(npixels);
+
+		//DEBUG: write test pattern to buffer
+		m_rasterizedWaveform.PrepareForCpuAccess();
+		for(size_t ty=0; ty<m_rasterizedY; ty++)
 		{
-			m_cachedSize = newSize;
-			return true;
+			for(size_t tx=0; tx<m_rasterizedX; tx++)
+				m_rasterizedWaveform[ty*m_rasterizedX + tx] = fabs(sin(tx/10.0f) * sin(ty / 20.0f)) * 0.1;
 		}
-		return false;
+		m_rasterizedWaveform.MarkModifiedFromCpu();
 	}
+
+	bool UpdateSize(ImVec2 newSize, MainWindow* top);
+
+	AcceleratorBuffer<float>& GetRasterizedWaveform()
+	{ return m_rasterizedWaveform; }
+
+	/**
+		@brief Return the X axis size of the rasterized waveform
+	 */
+	size_t GetRasterizedX()
+	{ return m_rasterizedX; }
+
+	/**
+		@brief Return the Y axis size of the rasterized waveform
+	 */
+	size_t GetRasterizedY()
+	{ return m_rasterizedY; }
 
 protected:
 	StreamDescriptor m_stream;
 
-	///@brief The texture storing our rendered waveform
+	///@brief Buffer storing our rasterized waveform, prior to tone mapping
+	AcceleratorBuffer<float> m_rasterizedWaveform;
+
+	///@brief X axis size of rasterized waveform
+	size_t m_rasterizedX;
+
+	///@brief Y axis size of rasterized waveform
+	size_t m_rasterizedY;
+
+	///@brief The texture storing our final rendered waveform
 	std::shared_ptr<Texture> m_texture;
 
-	///@brief Size of the texture
-	ImVec2 m_cachedSize;
+	///@brief X axis size of the texture as of last UpdateSize() call
+	size_t m_cachedX;
+
+	///@brief Y axis size of the texture as of last UpdateSize() call
+	size_t m_cachedY;
 };
 
 /**
@@ -153,7 +189,8 @@ protected:
 	void RenderCursors(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
-	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 size);
+	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel);
+	void RasterizeAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);

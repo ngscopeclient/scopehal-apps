@@ -44,7 +44,7 @@ Event g_rerenderDoneEvent;
 Event g_waveformReadyEvent;
 Event g_waveformProcessedEvent;
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vk::raii::Queue& queue, Session* session);
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session);
 
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
@@ -94,7 +94,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		if(g_rerenderRequestedEvent.Peek())
 		{
 			LogTrace("Re-render requested\n");
-			RenderAllWaveforms(cmdbuf, queue, session);
+			RenderAllWaveforms(cmdbuf, session);
+			SubmitAndBlock(cmdbuf, queue);
 			g_rerenderDoneEvent.Signal();
 			continue;
 		}
@@ -113,7 +114,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		session->RefreshAllFilters();
 
 		//Rerun the heavyweight rendering shaders
-		RenderAllWaveforms(cmdbuf, queue, session);
+		RenderAllWaveforms(cmdbuf, session);
+		SubmitAndBlock(cmdbuf, queue);
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
@@ -123,11 +125,10 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Shutting down\n");
 }
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vk::raii::Queue& queue, Session* session)
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session)
 {
 	cmdbuf.begin({});
 	session->RenderWaveformTextures(cmdbuf);
 	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
 	cmdbuf.end();
-	SubmitAndBlock(cmdbuf, queue);
 }

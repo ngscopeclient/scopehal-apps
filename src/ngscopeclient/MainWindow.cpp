@@ -57,6 +57,8 @@
 
 using namespace std;
 
+extern Event g_rerenderRequestedEvent;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -66,6 +68,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_needRender(false)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
@@ -302,6 +305,8 @@ void MainWindow::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 
 void MainWindow::RenderUI()
 {
+	m_needRender = false;
+
 	//See if we have new waveform data to look at
 	m_session.CheckForWaveforms();
 
@@ -339,6 +344,12 @@ void MainWindow::RenderUI()
 	}
 	for(auto& dlg : dlgsToClose)
 		OnDialogClosed(dlg);
+
+	if(m_needRender)
+	{
+		LogTrace("Re-render requested\n");
+		g_rerenderRequestedEvent.Signal();
+	}
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
