@@ -17,7 +17,13 @@ layout(std430, binding=3) buffer index
 #ifndef DENSE_PACK
 layout(std430, binding=5) buffer durs
 {
+#ifdef INT64
 	int64_t durations[];
+	#define FETCH_DURATION(i) float(durations[i])
+#else
+	uint durations[];
+	#define FETCH_DURATION(i) ((float(durations[i*2 + 1]) * 4294967296.0) + float(durations[i]))
+#endif
 };
 #endif
 
@@ -114,7 +120,7 @@ void main()
 					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
 				#else
 					vec2 right = left;
-					right.x += float(durations[i]) * xscale;
+					right.x += FETCH_DURATION(i) * xscale;
 				#endif
 			#endif
 
@@ -125,7 +131,7 @@ void main()
 					vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
 				#else
 					vec2 right = left;
-					right.x += float(durations[i]) * xscale;
+					right.x += FETCH_DURATION(i) * xscale;
 				#endif
 			#endif
 

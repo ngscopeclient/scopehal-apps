@@ -67,3 +67,5 @@ float FetchX(uint i)
 		return float(xpos[i] + innerXoff);
 	#endif
 }
+
+#define INT64
