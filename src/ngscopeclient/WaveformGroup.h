@@ -50,6 +50,7 @@ public:
 
 	bool Render();
 	void ToneMapAllWaveforms();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	const std::string& GetTitle()
 	{ return m_title; }

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -50,6 +50,50 @@ public:
 	}
 
 	/**
+		@brief Sends an event to the receiving thread
+
+		If another event is pending, returns false indicating no submission was actually made
+	 */
+	bool SignalIfNotAlreadySignaled()
+	{
+		//Existing event pending? We did nothing
+		if(m_ready.exchange(true) == true)
+			return false;
+
+		//No event was already pending so we submitted one.
+		else
+		{
+			m_cond.notify_one();
+			return true;
+		}
+	}
+
+
+	/**
+		@brief Sends an event to the receiving thread
+
+		If another event is pending, blocks until that one has been processed to avoid dropping events.
+
+		@param processedEvent	Event indicating that the previous message has been processed completely
+	 */
+	void SignalExactlyOnce(Event& processedEvent)
+	{
+		while(true)
+		{
+			//Existing event pending? Block until it's completed
+			if(m_ready.exchange(true) == true)
+				processedEvent.Block();
+
+			//No event was already pending so we submitted one.
+			else
+			{
+				m_cond.notify_one();
+				break;
+			}
+		}
+	}
+
+	/**
 		@brief Blocks until the event is signaled
 	 */
 	void Block()
@@ -60,7 +104,9 @@ public:
 	}
 
 	/**
-		@brief Checks if the event is signaled, and returns immediately if it's not
+		@brief Checks if the event is signaled, and returns immediately without blocking regardless of event state.
+
+		This clears the event-pending flag.
 	 */
 	bool Peek()
 	{

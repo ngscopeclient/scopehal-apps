@@ -38,8 +38,13 @@
 
 using namespace std;
 
+Event g_rerenderRequestedEvent;
+Event g_rerenderDoneEvent;
+
 Event g_waveformReadyEvent;
 Event g_waveformProcessedEvent;
+
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vk::raii::Queue& queue, Session* session);
 
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
@@ -47,8 +52,53 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 
 	LogTrace("Starting\n");
 
+	//Create a queue and command buffer for this thread's accelerated processing
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		g_computeQueueType );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
+
+	if(g_hasDebugUtils)
+	{
+		string prefix = "WaveformThread";
+		string poolname = prefix + ".pool";
+		string bufname = prefix + ".cmdbuf";
+		string qname = prefix + ".queue";
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(*pool)),
+				poolname.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandBuffer,
+				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(*cmdbuf)),
+				bufname.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eQueue,
+				reinterpret_cast<int64_t>(static_cast<VkQueue>(*queue)),
+				qname.c_str()));
+	}
+
 	while(!*shuttingDown)
 	{
+		//If re-rendering was requested due to a window resize etc, do that.
+		if(g_rerenderRequestedEvent.Peek())
+		{
+			LogTrace("Re-render requested\n");
+			RenderAllWaveforms(cmdbuf, queue, session);
+			g_rerenderDoneEvent.Signal();
+			continue;
+		}
+
 		//Wait for data to be available from all scopes
 		if(!session->CheckForPendingWaveforms())
 		{
@@ -63,7 +113,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		session->RefreshAllFilters();
 
 		//Rerun the heavyweight rendering shaders
-		session->RenderWaveformTextures();
+		RenderAllWaveforms(cmdbuf, queue, session);
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
@@ -71,4 +121,13 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	}
 
 	LogTrace("Shutting down\n");
+}
+
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, vk::raii::Queue& queue, Session* session)
+{
+	cmdbuf.begin({});
+	session->RenderWaveformTextures(cmdbuf);
+	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
+	cmdbuf.end();
+	SubmitAndBlock(cmdbuf, queue);
 }

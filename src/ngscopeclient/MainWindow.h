@@ -92,6 +92,7 @@ public:
 	}
 
 	void ToneMapAllWaveforms();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);

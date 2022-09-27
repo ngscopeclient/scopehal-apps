@@ -102,6 +102,17 @@ void WaveformGroup::ToneMapAllWaveforms()
 		a->ToneMapAllWaveforms();
 }
 
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by MainWindow::RenderWaveformTextures() in WaveformThread
+ */
+void WaveformGroup::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+{
+	for(auto a : m_areas)
+		a->RenderWaveformTextures(cmdbuf);
+}
+
 bool WaveformGroup::Render()
 {
 	bool open = true;

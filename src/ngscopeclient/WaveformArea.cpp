@@ -403,6 +403,15 @@ void WaveformArea::ToneMapAllWaveforms()
 }
 
 /**
+	@brief Runs the rendering shader on all of our waveforms
+
+	Called from WaveformThread
+ */
+void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+{
+}
+
+/**
 	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
  */
 void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 size)

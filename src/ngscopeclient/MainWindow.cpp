@@ -289,6 +289,17 @@ void MainWindow::ToneMapAllWaveforms()
 	m_toneMapTime = dt * FS_PER_SECOND;
 }
 
+/**
+	@brief Runs the rendering shader on all of our waveforms
+
+	Called by Session::RenderWaveformTextures() from WaveformThread after downloading data from all scopes is complete
+ */
+void MainWindow::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+{
+	for(auto g : m_waveformGroups)
+		g->RenderWaveformTextures(cmdbuf);
+}
+
 void MainWindow::RenderUI()
 {
 	//See if we have new waveform data to look at

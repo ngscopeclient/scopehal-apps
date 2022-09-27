@@ -167,7 +167,7 @@ public:
 	void DownloadWaveforms();
 	void CheckForWaveforms();
 	void RefreshAllFilters();
-	void RenderWaveformTextures();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	void Clear();
 

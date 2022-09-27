@@ -42,6 +42,7 @@
 
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
+extern Event g_rerenderDoneEvent;
 
 using namespace std;
 
@@ -625,6 +626,10 @@ void Session::CheckForWaveforms()
 			if(m_multiScopeFreeRun)
 				ArmTrigger(TRIGGER_TYPE_NORMAL);
 		}
+
+		//If a re-render operation completed, tone map everything again
+		if(g_rerenderDoneEvent.Peek())
+			m_mainWindow->ToneMapAllWaveforms();
 	}
 
 	//Discard all pending waveform data if the trigger isn't armed.
@@ -687,9 +692,9 @@ int64_t Session::GetToneMapTime()
 /**
 	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
  */
-void Session::RenderWaveformTextures()
+void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 {
 	double tstart = GetTime();
-
+	m_mainWindow->RenderWaveformTextures(cmdbuf);
 	m_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }

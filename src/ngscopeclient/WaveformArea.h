@@ -130,6 +130,7 @@ public:
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 	void ToneMapAllWaveforms();
 
 	StreamDescriptor GetStream(size_t i)
