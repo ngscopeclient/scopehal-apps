@@ -304,6 +304,9 @@ size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
 	size_t last_lo = 0;
 	size_t last_hi = len-1;
 
+	if (!len)
+		return 0;
+
 	//Clip if out of range
 	if(buf[0] >= value)
 		return 0;

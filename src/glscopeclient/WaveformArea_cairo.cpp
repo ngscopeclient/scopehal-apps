@@ -1018,6 +1018,9 @@ pair<bool, float> WaveformArea::GetValueAtTime(int64_t time_fs)
 	//Make sure we have a current copy of the data
 	waveform->PrepareForCpuAccess();
 
+	if (!waveform->size())
+		return {false, 0};
+
 	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
 
 	//Find the approximate index of the sample of interest and interpolate the cursor position

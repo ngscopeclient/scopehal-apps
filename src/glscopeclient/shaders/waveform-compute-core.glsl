@@ -38,6 +38,26 @@ float InterpolateY(vec2 left, vec2 right, float slope, float x)
 	return left.y + ( (x - left.x) * slope );
 }
 
+#ifdef NO_INTERPOLATION
+	#ifndef HISTOGRAM_PATH
+		#undef USE_NEXT_COORDS
+		// No interpolation requested, use exact bounds
+	#else
+		#define USE_NEXT_COORDS
+		// Histogram needs next coords to draw bar
+	#endif
+#else
+	#define USE_NEXT_COORDS
+	// Use coordinates of next point to allow interpolation
+	// TODO: Somehow avoid doing this if the waveform is not continous
+#endif
+
+#ifdef USE_NEXT_COORDS
+	#define ADDTL_NEEDED_SAMPLES 1
+#else
+	#define ADDTL_NEEDED_SAMPLES 0
+#endif
+
 void main()
 {
 	//Abort if window height is too big, or if we're off the end of the window
@@ -45,7 +65,7 @@ void main()
 		return;
 	if(gl_GlobalInvocationID.x > windowWidth)
 		return;
-	if(memDepth < 2)
+	if(memDepth < (1 + ADDTL_NEEDED_SAMPLES))
 		return;
 
 	//Clear (or persistence load) working buffer
@@ -83,22 +103,8 @@ void main()
 	//Main loop
 	while(true)
 	{
-		if(i < (memDepth-1) )
+		if(i < (memDepth - ADDTL_NEEDED_SAMPLES))
 		{
-
-			#ifdef NO_INTERPOLATION
-				#ifndef HISTOGRAM_PATH
-					#undef USE_NEXT_COORDS
-					// No interpolation requested, use exact bounds
-				#else
-					#define USE_NEXT_COORDS
-					// Histogram needs next coords to draw bar
-				#endif
-			#else
-				#define USE_NEXT_COORDS
-				// Use coordinates of next point to allow interpolation
-				// TODO: Somehow avoid doing this if the waveform is not continous
-			#endif
 
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
