@@ -91,6 +91,17 @@ bool WaveformGroup::IsChannelBeingDragged()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
+ */
+void WaveformGroup::ToneMapAllWaveforms()
+{
+	for(auto a : m_areas)
+		a->ToneMapAllWaveforms();
+}
+
 bool WaveformGroup::Render()
 {
 	bool open = true;

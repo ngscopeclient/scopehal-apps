@@ -45,7 +45,8 @@ using namespace std;
 // Construction / destruction
 
 WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> group, MainWindow* parent)
-	: m_height(1)
+	: m_width(1)
+	, m_height(1)
 	, m_yAxisOffset(0)
 	, m_ymid(0)
 	, m_pixelsPerYAxisUnit(1)
@@ -237,6 +238,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
+	m_width = clientArea.x;
 	auto first = GetFirstAnalogOrEyeStream();
 	if(first)
 	{
@@ -349,7 +351,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	//Tone map the waveform
 	//TODO: only do this if the texture was updated
 	//TODO: what kind of mutexing etc do we need, if any?
-	ToneMapAnalogWaveform(channel, size);
+	//ToneMapAnalogWaveform(channel, size);
 
 	//Render the tone mapped output
 	list->AddImage(channel->GetTextureHandle(), start, ImVec2(start.x+size.x, start.y+size.y));
@@ -373,6 +375,29 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 				YAxisUnitsToYPosition(u->m_samples[i]));
 
 			list->AddLine(pstart, end, color);
+		}
+	}
+}
+
+/**
+	@brief Tone map our waveforms
+ */
+void WaveformArea::ToneMapAllWaveforms()
+{
+	ImVec2 size(m_width, m_height);
+
+	for(auto& chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		switch(stream.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG:
+				ToneMapAnalogWaveform(chan, size);
+				break;
+
+			default:
+				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
+				break;
 		}
 	}
 }
@@ -442,10 +467,11 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 
 	//Temporary buffer until we have real rendering shader done
 	int width = size.x;
-	int npixels = width * (int)size.y;
+	int height = size.y;
+	int npixels = width * height;
 	AcceleratorBuffer<float> temp("ToneMapTemp");
 	temp.resize(npixels);
-	for(int y=0; y<size.y; y++)
+	for(int y=0; y<height; y++)
 	{
 		for(int x=0; x<width; x++)
 			temp[y*width + x] = fabs(sin(x/10.0f) * sin(y / 20.0f)) * 0.1;

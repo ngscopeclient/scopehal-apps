@@ -130,6 +130,7 @@ public:
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+	void ToneMapAllWaveforms();
 
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
@@ -165,6 +166,9 @@ protected:
 
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
+
+	///@brief Cached plot width
+	float m_width;
 
 	///@brief Cached plot height
 	float m_height;

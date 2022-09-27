@@ -185,6 +185,8 @@ public:
 
 	bool IsChannelBeingDragged();
 
+	int64_t GetToneMapTime();
+
 	/**
 		@brief Gets the last execution time of the filter graph
 	 */

@@ -49,6 +49,7 @@ public:
 	void Clear();
 
 	bool Render();
+	void ToneMapAllWaveforms();
 
 	const std::string& GetTitle()
 	{ return m_title; }

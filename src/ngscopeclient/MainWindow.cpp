@@ -66,6 +66,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
 
@@ -270,6 +271,22 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
 
+}
+
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by Session::CheckForWaveforms() at the start of each frame if new data is ready to render
+ */
+void MainWindow::ToneMapAllWaveforms()
+{
+	double start = GetTime();
+
+	for(auto group : m_waveformGroups)
+		group->ToneMapAllWaveforms();
+
+	double dt = GetTime() - start;
+	m_toneMapTime = dt * FS_PER_SECOND;
 }
 
 void MainWindow::RenderUI()

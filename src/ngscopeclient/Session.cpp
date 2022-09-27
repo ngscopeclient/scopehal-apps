@@ -583,6 +583,11 @@ void Session::DownloadWaveforms()
 	}
 }
 
+/**
+	@brief Check if new waveform data has arrived
+
+	This runs in the main GUI thread.
+ */
 void Session::CheckForWaveforms()
 {
 	if(m_triggerArmed)
@@ -609,6 +614,9 @@ void Session::CheckForWaveforms()
 				OnAllWaveformsUpdated(false, false);
 				*/
 			}
+
+			//Tone-map all of our waveforms
+			m_mainWindow->ToneMapAllWaveforms();
 
 			//Release the waveform processing thread
 			g_waveformProcessedEvent.Signal();
@@ -667,6 +675,14 @@ void Session::RefreshAllFilters()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
+
+/**
+	@brief Gets the last execution time of the tone mapping shaders
+ */
+int64_t Session::GetToneMapTime()
+{
+	return m_mainWindow->GetToneMapTime();
+}
 
 /**
 	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
