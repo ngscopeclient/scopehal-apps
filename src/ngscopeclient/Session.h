@@ -167,7 +167,7 @@ public:
 	void DownloadWaveforms();
 	void CheckForWaveforms();
 	void RefreshAllFilters();
-	void RenderWaveformTextures();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	void Clear();
 
@@ -184,6 +184,8 @@ public:
 	size_t GetFilterCount();
 
 	bool IsChannelBeingDragged();
+
+	int64_t GetToneMapTime();
 
 	/**
 		@brief Gets the last execution time of the filter graph

@@ -91,6 +91,9 @@ public:
 			m_timebaseDialog->Refresh();
 	}
 
+	void ToneMapAllWaveforms();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -256,6 +259,16 @@ public:
 
 	TextureManager* GetTextureManager()
 	{ return &m_texmgr; }
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Performance counters
+
+protected:
+	int64_t m_toneMapTime;
+
+public:
+	int64_t GetToneMapTime()
+	{ return m_toneMapTime; }
 };
 
 #endif

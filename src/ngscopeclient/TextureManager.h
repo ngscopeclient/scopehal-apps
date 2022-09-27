@@ -51,7 +51,8 @@ public:
 		const vk::raii::Buffer& srcBuf,
 		int width,
 		int height,
-		TextureManager* mgr
+		TextureManager* mgr,
+		const std::string& name = ""
 		);
 
 	Texture(
@@ -60,16 +61,21 @@ public:
 		TextureManager* mgr
 		);
 
+	ImTextureID GetTexture()
+	{ return m_texture; }
+
+	vk::ImageView GetView()
+	{ return **m_view; }
+
+	vk::Image GetImage()
+	{ return *m_image; }
+
+protected:
 	void LayoutTransition(
 		vk::AccessFlags src,
 		vk::AccessFlags dst,
 		vk::ImageLayout from,
 		vk::ImageLayout to);
-
-	ImTextureID GetTexture()
-	{ return m_texture; }
-
-protected:
 
 	///@brief Image object for our texture
 	vk::raii::Image m_image;

@@ -35,6 +35,8 @@
 #ifndef VulkanWindow_h
 #define VulkanWindow_h
 
+class Texture;
+
 /**
 	@brief A GLFW window containing a Vulkan surface
  */
@@ -51,6 +53,9 @@ public:
 
 	vk::raii::Queue& GetRenderQueue()
 	{ return m_renderQueue; }
+
+	void AddTextureUsedThisFrame(std::shared_ptr<Texture> tex)
+	{ m_texturesUsedThisFrame.emplace(tex); }
 
 protected:
 	bool UpdateFramebuffer();
@@ -133,6 +138,9 @@ protected:
 
 	///@brief implot context
 	ImPlotContext* m_plotContext;
+
+	///@brief Textures used this frame
+	std::set<std::shared_ptr<Texture> > m_texturesUsedThisFrame;
 };
 
 #endif

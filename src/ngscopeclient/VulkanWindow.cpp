@@ -33,6 +33,7 @@
 	@brief Implementation of VulkanWindow
  */
 #include "ngscopeclient.h"
+#include "TextureManager.h"
 #include "VulkanWindow.h"
 #include "VulkanFFTPlan.h"
 
@@ -138,6 +139,72 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
 
 	m_plotContext = ImPlot::CreateContext();
+
+	//Name a bunch of objects
+	if(g_hasDebugUtils)
+	{
+		string prefix = "VulkanWindow.";
+		string poolName = prefix + "imguiDescriptorPool";
+		string surfName = prefix + "renderSurface";
+		string rpName = prefix + "renderCommandPool";
+		string rqName = prefix + "renderQueue";
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eDescriptorPool,
+				reinterpret_cast<int64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
+				poolName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eSurfaceKHR,
+				reinterpret_cast<int64_t>(static_cast<VkSurfaceKHR>(**m_surface)),
+				surfName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				rpName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eQueue,
+				reinterpret_cast<int64_t>(static_cast<VkQueue>(*m_renderQueue)),
+				rqName.c_str()));
+
+		for(size_t i=0; i<m_backBuffers.size(); i++)
+		{
+			string iaName = prefix + "imageAcquired[" + to_string(i) + "]";
+			string rcName = prefix + "renderComplete[" + to_string(i) + "]";
+			string fName = prefix + "fence[" + to_string(i) + "]";
+			string cbName = prefix + "cmdBuf[" + to_string(i) + "]";
+
+			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+				vk::DebugUtilsObjectNameInfoEXT(
+					vk::ObjectType::eSemaphore,
+					reinterpret_cast<int64_t>(static_cast<VkSemaphore>(**m_imageAcquiredSemaphores[i])),
+					iaName.c_str()));
+
+			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+				vk::DebugUtilsObjectNameInfoEXT(
+					vk::ObjectType::eSemaphore,
+					reinterpret_cast<int64_t>(static_cast<VkSemaphore>(**m_renderCompleteSemaphores[i])),
+					rcName.c_str()));
+
+			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+				vk::DebugUtilsObjectNameInfoEXT(
+					vk::ObjectType::eFence,
+					reinterpret_cast<int64_t>(static_cast<VkFence>(**m_fences[i])),
+					fName.c_str()));
+
+			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+				vk::DebugUtilsObjectNameInfoEXT(
+					vk::ObjectType::eCommandBuffer,
+					reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffers[i])),
+					cbName.c_str()));
+		}
+	}
 }
 
 /**
@@ -331,6 +398,11 @@ void VulkanWindow::Render()
 		//Make sure the old frame has completed
 		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
+
+		//We can now free references to last frame's textures
+		//This will delete them if the containing object was destroyed that frame
+		m_renderQueue.waitIdle();
+		m_texturesUsedThisFrame.clear();
 
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];

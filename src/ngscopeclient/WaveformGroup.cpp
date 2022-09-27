@@ -55,6 +55,17 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 
 WaveformGroup::~WaveformGroup()
 {
+	Clear();
+}
+
+void WaveformGroup::Clear()
+{
+	LogTrace("Destroying areas\n");
+	LogIndenter li;
+
+	m_areas.clear();
+
+	LogTrace("All areas removed\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,6 +90,28 @@ bool WaveformGroup::IsChannelBeingDragged()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
+
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
+ */
+void WaveformGroup::ToneMapAllWaveforms()
+{
+	for(auto a : m_areas)
+		a->ToneMapAllWaveforms();
+}
+
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by MainWindow::RenderWaveformTextures() in WaveformThread
+ */
+void WaveformGroup::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+{
+	for(auto a : m_areas)
+		a->RenderWaveformTextures(cmdbuf);
+}
 
 bool WaveformGroup::Render()
 {

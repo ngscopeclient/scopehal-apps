@@ -109,10 +109,23 @@ bool MetricsDialog::DoRender()
 		ImGui::EndDisabled();
 
 		HelpMarker(
-			"Execution time for the waveform rasterizing compute shader (total across all waveforms).\n\n"
+			"Most recent execution time for the waveform rasterizing compute shader (total across all waveforms).\n\n"
 			"This shader runs every time a waveform is panned, zoomed, or updated and does not "
 			"necessarily execute every frame. It runs asynchronously and is not locked to the display framerate."
 			);
+
+		ImGui::BeginDisabled();
+			str = fs.PrettyPrint(m_session->GetToneMapTime());
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Tone map time", &str);
+		ImGui::EndDisabled();
+
+		HelpMarker(
+			"Most recent execution time for the tone mapping compute shader (total across all waveforms).\n\n"
+			"This shader runs every time a waveform is re-rasterized or display color ramp settings are changed, and "
+			"does not necessarily execute every frame. When needed, it runs synchronously during frame rendering."
+			);
+
 
 		ImGui::BeginDisabled();
 			str = counts.PrettyPrint(ImGui::GetIO().MetricsRenderVertices);

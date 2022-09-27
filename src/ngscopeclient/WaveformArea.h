@@ -38,12 +38,25 @@
 class WaveformArea;
 class WaveformGroup;
 class MainWindow;
-class Texture;
+
+#include "TextureManager.h"
 
 class ToneMapArgs
 {
-	uint32_t width;
-	uint32_t height;
+public:
+	ToneMapArgs(ImVec4 channelColor, uint32_t w, uint32_t h)
+	: m_red(channelColor.x)
+	, m_green(channelColor.y)
+	, m_blue(channelColor.z)
+	, m_width(w)
+	, m_height(h)
+	{}
+
+	float m_red;
+	float m_green;
+	float m_blue;
+	uint32_t m_width;
+	uint32_t m_height;
 };
 
 /**
@@ -71,6 +84,9 @@ public:
 
 	std::shared_ptr<Texture> GetTexture()
 	{ return m_texture; }
+
+	ImTextureID GetTextureHandle()
+	{ return m_texture->GetTexture(); }
 
 	void SetTexture(std::shared_ptr<Texture> tex)
 	{ m_texture = tex; }
@@ -114,6 +130,8 @@ public:
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapAllWaveforms();
 
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
@@ -149,6 +167,9 @@ protected:
 
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
+
+	///@brief Cached plot width
+	float m_width;
 
 	///@brief Cached plot height
 	float m_height;

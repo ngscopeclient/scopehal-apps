@@ -46,7 +46,11 @@ public:
 	WaveformGroup(MainWindow* parent, const std::string& title);
 	virtual ~WaveformGroup();
 
+	void Clear();
+
 	bool Render();
+	void ToneMapAllWaveforms();
+	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	const std::string& GetTitle()
 	{ return m_title; }

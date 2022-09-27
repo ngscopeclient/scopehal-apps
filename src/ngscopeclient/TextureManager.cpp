@@ -51,7 +51,8 @@ Texture::Texture(
 	const vk::raii::Buffer& srcBuf,
 	int width,
 	int height,
-	TextureManager* mgr
+	TextureManager* mgr,
+	const std::string& name
 	)
 	: m_image(device, imageInfo)
 {
@@ -127,6 +128,39 @@ Texture::Texture(
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
 	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	if(g_hasDebugUtils && !name.empty())
+	{
+		string prefix = string("Texture.") + name;
+		string texName = prefix + ".dset";
+		string viewName = prefix + ".view";
+		string imageName = prefix + ".image";
+		string memName = prefix + ".mem";
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eDescriptorSet,
+				reinterpret_cast<int64_t>(m_texture),
+				texName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eImage,
+				reinterpret_cast<int64_t>(static_cast<VkImage>(*m_image)),
+				imageName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eImageView,
+				reinterpret_cast<int64_t>(static_cast<VkImageView>(**m_view)),
+				viewName.c_str()));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eDeviceMemory,
+				reinterpret_cast<int64_t>(static_cast<VkDeviceMemory>(**m_deviceMemory)),
+				memName.c_str()));
+	}
 }
 
 /**
@@ -170,7 +204,7 @@ Texture::Texture(
 		{},
 		*m_image,
 		vk::ImageViewType::e2D,
-		vk::Format::eR8G8B8A8Uint,
+		vk::Format::eR32G32B32A32Sfloat,
 		{},
 		vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
@@ -390,7 +424,7 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 		queueFamilies,
 		vk::ImageLayout::eUndefined
 		);
-	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this);
+	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this, name);
 
 	//Clean up
 	png_destroy_read_struct(&png, &info, &end);

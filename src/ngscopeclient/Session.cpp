@@ -42,6 +42,7 @@
 
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
+extern Event g_rerenderDoneEvent;
 
 using namespace std;
 
@@ -69,6 +70,9 @@ Session::~Session()
 
 void Session::Clear()
 {
+	LogTrace("Clearing session\n");
+	LogIndenter li;
+
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
 	//Stop the trigger so there's no pending waveforms
@@ -108,6 +112,8 @@ void Session::Clear()
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
+
+	LogTrace("Clear complete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -578,6 +584,11 @@ void Session::DownloadWaveforms()
 	}
 }
 
+/**
+	@brief Check if new waveform data has arrived
+
+	This runs in the main GUI thread.
+ */
 void Session::CheckForWaveforms()
 {
 	if(m_triggerArmed)
@@ -605,6 +616,9 @@ void Session::CheckForWaveforms()
 				*/
 			}
 
+			//Tone-map all of our waveforms
+			m_mainWindow->ToneMapAllWaveforms();
+
 			//Release the waveform processing thread
 			g_waveformProcessedEvent.Signal();
 
@@ -612,6 +626,10 @@ void Session::CheckForWaveforms()
 			if(m_multiScopeFreeRun)
 				ArmTrigger(TRIGGER_TYPE_NORMAL);
 		}
+
+		//If a re-render operation completed, tone map everything again
+		if(g_rerenderDoneEvent.Peek())
+			m_mainWindow->ToneMapAllWaveforms();
 	}
 
 	//Discard all pending waveform data if the trigger isn't armed.
@@ -664,11 +682,19 @@ void Session::RefreshAllFilters()
 // Rendering
 
 /**
+	@brief Gets the last execution time of the tone mapping shaders
+ */
+int64_t Session::GetToneMapTime()
+{
+	return m_mainWindow->GetToneMapTime();
+}
+
+/**
 	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
  */
-void Session::RenderWaveformTextures()
+void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 {
 	double tstart = GetTime();
-
+	m_mainWindow->RenderWaveformTextures(cmdbuf);
 	m_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }

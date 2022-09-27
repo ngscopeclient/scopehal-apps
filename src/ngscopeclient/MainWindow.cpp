@@ -66,6 +66,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
 
@@ -130,19 +131,21 @@ MainWindow::~MainWindow()
 void MainWindow::CloseSession()
 {
 	LogTrace("Closing session\n");
-
-	//Clear the actual session object
-	m_session.Clear();
+	LogIndenter li;
 
 	SaveRecentInstrumentList();
 
 	//Destroy waveform views
+	LogTrace("Clearing views\n");
+	for(auto g : m_waveformGroups)
+		g->Clear();
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
+	LogTrace("Clearing dialogs\n");
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
@@ -151,6 +154,11 @@ void MainWindow::CloseSession()
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
+
+	//Clear the actual session object once all views / dialogs having handles to scopes etc have been destroyed
+	m_session.Clear();
+
+	LogTrace("Clear complete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -265,6 +273,33 @@ void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 
 }
 
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by Session::CheckForWaveforms() at the start of each frame if new data is ready to render
+ */
+void MainWindow::ToneMapAllWaveforms()
+{
+	double start = GetTime();
+
+	for(auto group : m_waveformGroups)
+		group->ToneMapAllWaveforms();
+
+	double dt = GetTime() - start;
+	m_toneMapTime = dt * FS_PER_SECOND;
+}
+
+/**
+	@brief Runs the rendering shader on all of our waveforms
+
+	Called by Session::RenderWaveformTextures() from WaveformThread after downloading data from all scopes is complete
+ */
+void MainWindow::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+{
+	for(auto g : m_waveformGroups)
+		g->RenderWaveformTextures(cmdbuf);
+}
+
 void MainWindow::RenderUI()
 {
 	//See if we have new waveform data to look at
@@ -283,9 +318,11 @@ void MainWindow::RenderUI()
 		vector<size_t> groupsToClose;
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
-			if(!m_waveformGroups[i]->Render())
+			auto group = m_waveformGroups[i];
+			if(!group->Render())
 			{
-				LogTrace("Closing waveform group %s (i=%zu)\n", m_waveformGroups[i]->GetTitle().c_str(), i);
+				LogTrace("Closing waveform group %s (i=%zu)\n", group->GetTitle().c_str(), i);
+				group->Clear();
 				groupsToClose.push_back(i);
 			}
 		}
