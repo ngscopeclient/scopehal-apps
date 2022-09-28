@@ -44,6 +44,19 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DisplayedChannel
 
+DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
+		: m_stream(stream)
+		, m_rasterizedX(0)
+		, m_rasterizedY(0)
+		, m_cachedX(0)
+		, m_cachedY(0)
+		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
+{
+	stream.m_channel->AddRef();
+
+	m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
+}
+
 /**
 	@brief Handles a change in size of the displayed waveform
 
@@ -164,25 +177,13 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_mouseOverTriggerArrow(false)
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
-	, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
-
-	//Load compute pipelines
-	string base = "shaders/waveform-compute.";
-	string suffix;
-	if(g_hasShaderInt64)
-		suffix = ".int64";
-	m_uniformAnalogComputePipeline = make_shared<ComputePipeline>(
-		base + "analog" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
-	m_sparseAnalogComputePipeline = make_shared<ComputePipeline>(
-		base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
-	//TODO: digital
-	//TODO: histograms using this shader or implot?
 }
 
 WaveformArea::~WaveformArea()
 {
+	LogTrace("WaveformArea dtor\n");
 	m_displayedChannels.clear();
 }
 
@@ -202,6 +203,9 @@ void WaveformArea::AddStream(StreamDescriptor desc)
  */
 void WaveformArea::RemoveStream(size_t i)
 {
+	//Keep a reference to the texture open until end of frame in case we already rendered this stream
+	m_parent->AddTextureUsedThisFrame(m_displayedChannels[i]->GetTexture());
+
 	m_displayedChannels.erase(m_displayedChannels.begin() + i);
 }
 
@@ -518,8 +522,8 @@ void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel,
 	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
 	if(udata)
 	{
-		comp = m_uniformAnalogComputePipeline;
-		m_uniformAnalogComputePipeline->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
+		comp = channel->GetUniformAnalogPipeline();
+		comp->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
 		//don't bind offsets or indexes as they're not used
 	}
 
@@ -580,6 +584,9 @@ void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel,
 void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
+	if(tex == nullptr)
+		return;
+
 	m_parent->AddTextureUsedThisFrame(tex);
 
 	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
@@ -589,15 +596,16 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, v
 		return;
 
 	//Run the actual compute shader
-	m_toneMapPipe.BindBuffer(0, channel->GetRasterizedWaveform());
-	m_toneMapPipe.BindStorageImage(
+	auto& pipe = channel->GetToneMapPipeline();
+	pipe.BindBuffer(0, channel->GetRasterizedWaveform());
+	pipe.BindStorageImage(
 		1,
 		**m_parent->GetTextureManager()->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
 	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
 	ToneMapArgs args(color, width, height);
-	m_toneMapPipe.Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
+	pipe.Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
@@ -1214,7 +1222,6 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 void WaveformArea::ClearPersistence()
 {
-	m_parent->SetNeedRender();
 	//TODO: set persistence clear flag
 }
 

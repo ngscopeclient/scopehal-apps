@@ -102,15 +102,10 @@ void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		a->ToneMapAllWaveforms(cmdbuf);
 }
 
-/**
-	@brief Run the tone-mapping shader on all of our waveforms
-
-	Called by MainWindow::RenderWaveformTextures() in WaveformThread
- */
-void WaveformGroup::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void WaveformGroup::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
 {
 	for(auto a : m_areas)
-		a->RenderWaveformTextures(cmdbuf);
+		areas.push_back(a);
 }
 
 bool WaveformGroup::Render()
@@ -381,7 +376,7 @@ int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
  */
 void WaveformGroup::ClearPersistence()
 {
-	LogTrace("Not implemented\n");
+	m_parent->SetNeedRender();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

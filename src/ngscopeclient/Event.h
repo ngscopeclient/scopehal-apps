@@ -106,13 +106,14 @@ public:
 	/**
 		@brief Checks if the event is signaled, and returns immediately without blocking regardless of event state.
 
-		This clears the event-pending flag.
+		This clears the event-pending flag if clearReady is set.
 	 */
-	bool Peek()
+	bool Peek(bool clearReady = true)
 	{
 		if(m_ready)
 		{
-			m_ready = false;
+			if(clearReady)
+				m_ready = false;
 			return true;
 		}
 

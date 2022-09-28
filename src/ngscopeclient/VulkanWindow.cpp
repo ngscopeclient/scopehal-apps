@@ -381,20 +381,30 @@ void VulkanWindow::Render()
 			if(result.first == vk::Result::eSuboptimalKHR)
 			{
 				LogTrace("eSuboptimalKHR\n");
+
+				//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
+				//which it seems cannot occur while any other Vulkan call is active on the device
+				lock_guard<mutex> lock(g_waveformThreadBlockMutex);
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
 				Render();
+
 				return;
 			}
 		}
 		catch(const vk::OutOfDateKHRError& err)
 		{
 			LogTrace("OutOfDateKHR\n");
+
+			//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
+			//which it seems cannot occur while any other Vulkan call is active on the device
+			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 			Render();
+
 			return;
 		}
 
@@ -441,8 +451,13 @@ void VulkanWindow::Render()
 	}
 
 	//Handle any additional popup windows created by imgui
-	ImGui::UpdatePlatformWindows();
-	ImGui::RenderPlatformWindowsDefault();
+	//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
+	//which it seems cannot occur while any other Vulkan call is active on the device
+	{
+		lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	}
 
 	//Present the main window
 	if(!main_is_minimized)

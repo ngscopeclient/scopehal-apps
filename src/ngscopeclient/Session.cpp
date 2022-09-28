@@ -59,7 +59,6 @@ Session::Session(MainWindow* wnd)
 	, m_triggerOneShot(false)
 	, m_multiScopeFreeRun(false)
 	, m_lastFilterGraphExecTime(0)
-	, m_lastWaveformRenderTime(0)
 {
 }
 
@@ -614,13 +613,12 @@ void Session::DownloadWaveforms()
  */
 void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
+	bool hadNewWaveforms = false;
 	if(m_triggerArmed)
 	{
 		if(g_waveformReadyEvent.Peek())
 		{
 			LogTrace("Waveform is ready\n");
-
-			//m_framesClock.Tick();
 
 			//Crunch the new waveform
 			{
@@ -633,13 +631,11 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 					if(!scope->IsOffline())
 						m_historyWindows[scope]->OnWaveformDataReady();
 				}
-
-				//Update filters etc once every instrument has been updated
-				OnAllWaveformsUpdated(false, false);
 				*/
 			}
 
 			//Tone-map all of our waveforms
+			hadNewWaveforms = true;
 			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
 			//Release the waveform processing thread
@@ -649,10 +645,6 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 			if(m_multiScopeFreeRun)
 				ArmTrigger(TRIGGER_TYPE_NORMAL);
 		}
-
-		//If a re-render operation completed, tone map everything again
-		if(g_rerenderDoneEvent.Peek())
-			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 	}
 
 	//Discard all pending waveform data if the trigger isn't armed.
@@ -662,7 +654,16 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		lock_guard<mutex> lock(m_scopeMutex);
 		for(auto scope : m_oscilloscopes)
 			scope->ClearPendingWaveforms();
+
+		//If waveform thread is blocking for us to process its last waveform, release it
+		if(g_waveformReadyEvent.Peek())
+			g_waveformProcessedEvent.Signal();
 	}
+
+	//If a re-render operation completed, tone map everything again
+	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
+		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -712,12 +713,8 @@ int64_t Session::GetToneMapTime()
 	return m_mainWindow->GetToneMapTime();
 }
 
-/**
-	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
- */
-void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void Session::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
 {
-	double tstart = GetTime();
-	m_mainWindow->RenderWaveformTextures(cmdbuf);
-	m_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+	m_mainWindow->EnumerateWaveformAreas(areas);
 }

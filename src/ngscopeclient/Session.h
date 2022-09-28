@@ -36,8 +36,11 @@
 #define Session_h
 
 class MainWindow;
+class WaveformArea;
 
 #include "../xptools/HzClock.h"
+
+extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
 /**
 	@brief Internal state for a connection to an RF signal generator
@@ -167,7 +170,8 @@ public:
 	void DownloadWaveforms();
 	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
-	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+
+	void EnumerateWaveformAreas(std::vector<std::shared_ptr<WaveformArea> >& areas);
 
 	void Clear();
 	void ClearBackgroundThreads();
@@ -198,7 +202,7 @@ public:
 		@brief Gets the last run time of the waveform rendering shaders
 	 */
 	int64_t GetLastWaveformRenderTime()
-	{ return m_lastWaveformRenderTime.load(); }
+	{ return g_lastWaveformRenderTime.load(); }
 
 	/**
 		@brief Gets the average rate at which we are pulling waveforms off the scope, in Hz
@@ -298,9 +302,6 @@ protected:
 
 	///@brief Time spent on the last filter graph execution
 	std::atomic<int64_t> m_lastFilterGraphExecTime;
-
-	///@brief Time spent on the last cycle of waveform rendering shaders
-	std::atomic<int64_t> m_lastWaveformRenderTime;
 
 	///@brief Mutex for controlling access to performance counters
 	std::mutex m_perfClockMutex;

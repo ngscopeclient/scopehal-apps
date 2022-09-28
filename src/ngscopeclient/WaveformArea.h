@@ -81,17 +81,7 @@ struct ConfigPushConstants
 class DisplayedChannel
 {
 public:
-	DisplayedChannel(StreamDescriptor stream)
-		: m_stream(stream)
-		, m_rasterizedX(0)
-		, m_rasterizedY(0)
-		, m_cachedX(0)
-		, m_cachedY(0)
-	{
-		stream.m_channel->AddRef();
-
-		m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
-	}
+	DisplayedChannel(StreamDescriptor stream);
 
 	~DisplayedChannel()
 	{
@@ -129,6 +119,41 @@ public:
 	size_t GetRasterizedY()
 	{ return m_rasterizedY; }
 
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetUniformAnalogPipeline()
+	{
+		if(m_uniformAnalogComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix = ".int64";
+			m_uniformAnalogComputePipeline = std::make_shared<ComputePipeline>(
+				base + "analog" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+		}
+
+		return m_uniformAnalogComputePipeline;
+	}
+
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetSparseAnalogPipeline()
+	{
+		if(m_sparseAnalogComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix = ".int64";
+			m_sparseAnalogComputePipeline = std::make_shared<ComputePipeline>(
+				base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
+		}
+
+		return m_sparseAnalogComputePipeline;
+	}
+
+	ComputePipeline& GetToneMapPipeline()
+	{ return m_toneMapPipe; }
+
 protected:
 	StreamDescriptor m_stream;
 
@@ -149,6 +174,15 @@ protected:
 
 	///@brief Y axis size of the texture as of last UpdateSize() call
 	size_t m_cachedY;
+
+	///@brief Compute pipeline for tone mapping fp32 images to RGBA
+	ComputePipeline m_toneMapPipe;
+
+	///@brief Compute pipeline for rendering uniform analog waveforms
+	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering sparse analog waveforms
+	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
 };
 
 /**
@@ -260,15 +294,6 @@ protected:
 
 	///@brief The trigger we're configuring
 	Trigger* m_triggerDuringDrag;
-
-	///@brief Compute pipeline for tone mapping fp32 images to RGBA
-	ComputePipeline m_toneMapPipe;
-
-	///@brief Compute pipeline for rendering uniform analog waveforms
-	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
-
-	///@brief Compute pipeline for rendering sparse analog waveforms
-	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

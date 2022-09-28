@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "pthread_compat.h"
 #include "Session.h"
+#include "WaveformArea.h"
 
 using namespace std;
 
@@ -44,7 +45,10 @@ Event g_rerenderDoneEvent;
 Event g_waveformReadyEvent;
 Event g_waveformProcessedEvent;
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session);
+///@brief Time spent on the last cycle of waveform rendering shaders
+atomic<int64_t> g_lastWaveformRenderTime;
+
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue);
 
 std::mutex g_waveformThreadBlockMutex;
 
@@ -95,11 +99,9 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//If re-rendering was requested due to a window resize etc, do that.
 		if(g_rerenderRequestedEvent.Peek())
 		{
+			LogTrace("WaveformThread: re-rendering\n");
 			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
-
-			LogTrace("Re-render requested\n");
-			RenderAllWaveforms(cmdbuf, session);
-			SubmitAndBlock(cmdbuf, queue);
+			RenderAllWaveforms(cmdbuf, session, queue);
 			g_rerenderDoneEvent.Signal();
 			continue;
 		}
@@ -118,9 +120,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//Rerun the heavyweight rendering shaders
 		{
 			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
-
-			RenderAllWaveforms(cmdbuf, session);
-			SubmitAndBlock(cmdbuf, queue);
+			RenderAllWaveforms(cmdbuf, session, queue);
 		}
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
@@ -131,10 +131,22 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Shutting down\n");
 }
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session)
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue)
 {
+	double tstart = GetTime();
+
+	//Find all of the waveform areas
+	vector<shared_ptr<WaveformArea> > areas;
+	session->EnumerateWaveformAreas(areas);
+
+	//Render them
 	cmdbuf.begin({});
-	session->RenderWaveformTextures(cmdbuf);
+	for(auto a : areas)
+		a->RenderWaveformTextures(cmdbuf);
 	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
 	cmdbuf.end();
+
+	SubmitAndBlock(cmdbuf, queue);
+
+	g_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }

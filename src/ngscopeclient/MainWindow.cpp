@@ -334,15 +334,10 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	m_toneMapTime = dt * FS_PER_SECOND;
 }
 
-/**
-	@brief Runs the rendering shader on all of our waveforms
-
-	Called by Session::RenderWaveformTextures() from WaveformThread after downloading data from all scopes is complete
- */
-void MainWindow::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void MainWindow::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
 {
 	for(auto g : m_waveformGroups)
-		g->RenderWaveformTextures(cmdbuf);
+		g->EnumerateWaveformAreas(areas);
 }
 
 void MainWindow::RenderUI()
@@ -388,10 +383,7 @@ void MainWindow::RenderUI()
 		OnDialogClosed(dlg);
 
 	if(m_needRender)
-	{
-		LogTrace("Re-render requested\n");
 		g_rerenderRequestedEvent.Signal();
-	}
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);

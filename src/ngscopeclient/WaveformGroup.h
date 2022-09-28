@@ -50,7 +50,7 @@ public:
 
 	bool Render();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
-	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+	void EnumerateWaveformAreas(std::vector<std::shared_ptr<WaveformArea> >& areas);
 
 	const std::string& GetTitle()
 	{ return m_title; }
