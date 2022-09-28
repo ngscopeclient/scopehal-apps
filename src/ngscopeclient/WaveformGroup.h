@@ -84,6 +84,12 @@ public:
 	float XAxisUnitsToXPosition(int64_t t)
 	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + ImGui::GetWindowPos().x; }
 
+	float GetPixelsPerXUnit()
+	{ return m_pixelsPerXUnit; }
+
+	int64_t GetXAxisOffset()
+	{ return m_xAxisOffset; }
+
 	void ClearPersistence();
 
 	bool IsChannelBeingDragged();

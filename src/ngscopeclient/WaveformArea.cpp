@@ -155,6 +155,18 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
 		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
+	//Load compute pipelines
+	string base = "shaders/waveform-compute.";
+	string suffix;
+	if(g_hasShaderInt64)
+		suffix = ".int64";
+	m_uniformAnalogComputePipeline = make_shared<ComputePipeline>(
+		base + "analog" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+	m_sparseAnalogComputePipeline = make_shared<ComputePipeline>(
+		base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
+	//TODO: digital
+	//TODO: histograms using this shader or implot?
+
 	if(g_hasDebugUtils)
 	{
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
@@ -435,36 +447,13 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	if(channel->UpdateSize(size, m_parent))
 		m_parent->SetNeedRender();
 
-	//Render the tone mapped output (if it's ready)
+	//Render the tone mapped output (if we have it)
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
 	{
 		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y));
 		m_parent->AddTextureUsedThisFrame(tex);
 	}
-
-	/*
-	//DEBUG: simple quick-and-dirty renderer for testing
-	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
-	if(u)
-	{
-		auto n = data->size();
-		auto chan = stream.m_channel;
-		auto color = ColorFromString(chan->m_displaycolor);
-		for(size_t i=1; i<n; i++)
-		{
-			ImVec2 pstart(
-				m_group->XAxisUnitsToXPosition(((i-1) * data->m_timescale) + data->m_triggerPhase),
-				YAxisUnitsToYPosition(u->m_samples[i-1]));
-
-			ImVec2 end(
-				m_group->XAxisUnitsToXPosition((i * data->m_timescale) + data->m_triggerPhase),
-				YAxisUnitsToYPosition(u->m_samples[i]));
-
-			list->AddLine(pstart, end, color);
-		}
-	}
-	*/
 }
 
 /**
@@ -482,7 +471,7 @@ void WaveformArea::ToneMapAllWaveforms()
 				break;
 
 			default:
-				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
+				LogWarning("Unimplemented stream type %d, don't know how to tone map it\n", stream.GetType());
 				break;
 		}
 	}
@@ -495,16 +484,99 @@ void WaveformArea::ToneMapAllWaveforms()
  */
 void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 {
-	for(auto c : m_displayedChannels)
-		RasterizeAnalogWaveform(c, cmdbuf);
+	for(auto& chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		switch(stream.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG:
+				RasterizeAnalogWaveform(chan, cmdbuf);
+				break;
+
+			default:
+				LogWarning("Unimplemented stream type %d, don't know how to rasterize it\n", stream.GetType());
+				break;
+		}
+	}
 }
 
 void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+
 	//Prepare the memory so we can rasterize it
+	//If no data, set to 0x0 pixels and return
+	if(data == nullptr)
+	{
+		channel->PrepareToRasterize(0, 0);
+		return;
+	}
 	size_t w = m_width;
 	size_t h = m_height;
 	channel->PrepareToRasterize(w, h);
+
+	shared_ptr<ComputePipeline> comp;
+
+	//Bind input buffers
+	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
+	if(udata)
+	{
+		comp = m_uniformAnalogComputePipeline;
+		m_uniformAnalogComputePipeline->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
+		//don't bind offsets or indexes as they're not used
+	}
+
+	else
+	{
+		LogWarning("Don't know how to rasterize sparse analog data yet\n");
+	}
+
+	if(!comp)
+		return;
+
+	//Bind output texture
+	auto& imgOut = channel->GetRasterizedWaveform();
+	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
+
+	//Calculate a bunch of constants
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t innerxoff = offset / data->m_timescale;
+	int64_t fractional_offset = offset % data->m_timescale;
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+	double pixelsPerX = m_group->GetPixelsPerXUnit();
+
+	//Scale alpha by zoom.
+	//As we zoom out more, reduce alpha to get proper intensity grading
+	float alpha = 0.5;	//TODO: get from gui slider
+	auto end = data->size() - 1;
+	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
+	float capture_len = lastOff;
+	float avg_sample_len = capture_len / data->size();
+	float samplesPerPixel = 1.0 / (pixelsPerX * avg_sample_len);
+	float alpha_scaled = alpha / sqrt(samplesPerPixel);
+	alpha_scaled = min(1.0f, alpha_scaled) * 2;
+
+	//Fill shader configuration
+	ConfigPushConstants config;
+	config.innerXoff = -innerxoff;
+	config.windowHeight = h;
+	config.windowWidth = w;
+	config.memDepth = data->size();
+	config.offset_samples = offset_samples - 2;
+	config.alpha = alpha_scaled;
+	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
+	config.xscale = data->m_timescale * pixelsPerX;
+	config.ybase = h * 0.5f;
+	config.yscale = m_pixelsPerYAxisUnit;
+	config.yoff = stream.GetOffset();
+	config.persistScale = 0;		//no persistence yet
+
+	//Dispatch the shader
+	comp->Dispatch(cmdbuf, config, w, 1, 1);
+	comp->AddComputeMemoryBarrier(cmdbuf);
+	imgOut.MarkModifiedFromGpu();
 }
 
 /**
@@ -515,7 +587,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
 	auto tex = channel->GetTexture();
 	m_parent->AddTextureUsedThisFrame(tex);
 
-	//Nothing to draw? Early out if we haven't processed the window resize yet
+	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
 	auto width = channel->GetRasterizedX();
 	auto height = channel->GetRasterizedY();
 	if( (width == 0) || (height == 0) )

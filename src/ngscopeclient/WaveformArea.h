@@ -59,6 +59,22 @@ public:
 	uint32_t m_height;
 };
 
+struct ConfigPushConstants
+{
+	int64_t innerXoff;
+	uint32_t windowHeight;
+	uint32_t windowWidth;
+	uint32_t memDepth;
+	uint32_t offset_samples;
+	float alpha;
+	float xoff;
+	float xscale;
+	float ybase;
+	float yscale;
+	float yoff;
+	float persistScale;
+};
+
 /**
 	@brief Context data for a single channel being displayed within a WaveformArea
  */
@@ -104,15 +120,6 @@ public:
 
 		size_t npixels = x*y;
 		m_rasterizedWaveform.resize(npixels);
-
-		//DEBUG: write test pattern to buffer
-		m_rasterizedWaveform.PrepareForCpuAccess();
-		for(size_t ty=0; ty<m_rasterizedY; ty++)
-		{
-			for(size_t tx=0; tx<m_rasterizedX; tx++)
-				m_rasterizedWaveform[ty*m_rasterizedX + tx] = fabs(sin(tx/10.0f) * sin(ty / 20.0f)) * 0.1;
-		}
-		m_rasterizedWaveform.MarkModifiedFromCpu();
 	}
 
 	bool UpdateSize(ImVec2 newSize, MainWindow* top);
@@ -242,7 +249,7 @@ protected:
 	/**
 		@brief The channels currently living within this WaveformArea
 
-		TODO: make this a FlowGraphNode and just hook up inputs
+		TODO: make this a FlowGraphNode and just hook up inputs??
 	 */
 	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
 
@@ -272,6 +279,12 @@ protected:
 
 	///@brief Command buffer used during rendering operations
 	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
+
+	///@brief Compute pipeline for rendering uniform analog waveforms
+	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering sparse analog waveforms
+	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;
