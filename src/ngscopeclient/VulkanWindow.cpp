@@ -43,6 +43,15 @@ using namespace std;
 
 extern std::shared_mutex g_vulkanActivityMutex;
 
+static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport);
+static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport);
+static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size);
+
+//original function pointers
+void (*ImGui_ImplVulkan_CreateWindow)(ImGuiViewport* viewport);
+void (*ImGui_ImplVulkan_DestroyWindow)(ImGuiViewport* viewport);
+void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -140,6 +149,15 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
+
+	//Hook a couple of backend functions with mutexing
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	ImGui_ImplVulkan_CreateWindow = platform_io.Renderer_CreateWindow;
+	ImGui_ImplVulkan_DestroyWindow = platform_io.Renderer_DestroyWindow;
+	ImGui_ImplVulkan_SetWindowSize = platform_io.Renderer_SetWindowSize;
+	platform_io.Renderer_CreateWindow = Mutexed_ImGui_ImplVulkan_CreateWindow;
+	platform_io.Renderer_DestroyWindow = Mutexed_ImGui_ImplVulkan_DestroyWindow;
+	platform_io.Renderer_SetWindowSize = Mutexed_ImGui_ImplVulkan_SetWindowSize;
 
 	m_plotContext = ImPlot::CreateContext();
 
@@ -388,9 +406,6 @@ void VulkanWindow::Render()
 			{
 				LogTrace("eSuboptimalKHR\n");
 
-				//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
-				//which it seems cannot occur while any other Vulkan call is active on the device
-				lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
@@ -403,9 +418,6 @@ void VulkanWindow::Render()
 		{
 			LogTrace("OutOfDateKHR\n");
 
-			//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
-			//which it seems cannot occur while any other Vulkan call is active on the device
-			lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
@@ -453,13 +465,8 @@ void VulkanWindow::Render()
 	}
 
 	//Handle any additional popup windows created by imgui
-	//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
-	//which it seems cannot occur while any other Vulkan call is active on the device
-	{
-		//lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault();
-	}
+	ImGui::UpdatePlatformWindows();
+	ImGui::RenderPlatformWindowsDefault();
 
 	//Present the main window
 	if(!main_is_minimized)
@@ -528,4 +535,25 @@ void VulkanWindow::SetFullscreen(bool fullscreen)
 			m_windowedHeight,
 			GLFW_DONT_CARE);
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ImGui hooks
+
+static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	ImGui_ImplVulkan_CreateWindow(viewport);
+}
+
+static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	ImGui_ImplVulkan_DestroyWindow(viewport);
+}
+
+static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	ImGui_ImplVulkan_SetWindowSize(viewport, size);
 }
