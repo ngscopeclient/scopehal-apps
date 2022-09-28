@@ -110,17 +110,7 @@ public:
 	void SetTexture(std::shared_ptr<Texture> tex)
 	{ m_texture = tex; }
 
-	/**
-		@brief Prepares to rasterize the waveform at the specified resolution
-	 */
-	void PrepareToRasterize(size_t x, size_t y)
-	{
-		m_rasterizedX = x;
-		m_rasterizedY = y;
-
-		size_t npixels = x*y;
-		m_rasterizedWaveform.resize(npixels);
-	}
+	void PrepareToRasterize(size_t x, size_t y);
 
 	bool UpdateSize(ImVec2 newSize, MainWindow* top);
 

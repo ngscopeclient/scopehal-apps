@@ -111,8 +111,6 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 			continue;
 		}
 
-		LogTrace("Got a waveform\n");
-
 		//We've got data. Download it, then run the filter graph
 		session->DownloadWaveforms();
 		session->RefreshAllFilters();

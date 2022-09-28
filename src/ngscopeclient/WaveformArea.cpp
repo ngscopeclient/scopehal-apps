@@ -124,6 +124,28 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 	return false;
 }
 
+/**
+	@brief Prepares to rasterize the waveform at the specified resolution
+ */
+void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
+{
+	bool sizeChanged = (m_rasterizedX != x) || (m_rasterizedY != y);
+
+	m_rasterizedX = x;
+	m_rasterizedY = y;
+
+	if(sizeChanged)
+	{
+		size_t npixels = x*y;
+		m_rasterizedWaveform.resize(npixels);
+
+		//fill with black
+		m_rasterizedWaveform.PrepareForCpuAccess();
+		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
+		m_rasterizedWaveform.MarkModifiedFromCpu();
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
