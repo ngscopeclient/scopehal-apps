@@ -169,6 +169,7 @@ void MainWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
+	m_groupsToClose.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
@@ -334,15 +335,27 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	m_toneMapTime = dt * FS_PER_SECOND;
 }
 
-void MainWindow::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
+void MainWindow::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& channels)
 {
-	for(auto g : m_waveformGroups)
-		g->EnumerateWaveformAreas(areas);
+	for(auto group : m_waveformGroups)
+		group->RenderWaveformTextures(cmdbuf, channels);
 }
 
 void MainWindow::RenderUI()
 {
 	m_needRender = false;
+
+	//Keep references to all of our waveform textures until next frame
+	//Any groups we're closing will be destroyed at the start of that frame, once rendering has finished
+	for(auto g : m_waveformGroups)
+		g->ReferenceWaveformTextures();
+
+	//Destroy all waveform groups we were asked to close
+	for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
+		m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
+	m_groupsToClose.clear();
 
 	//See if we have new waveform data to look at
 	m_session.CheckForWaveforms(*m_cmdBuffer);
@@ -357,7 +370,6 @@ void MainWindow::RenderUI()
 	//Waveform groups
 	{
 		lock_guard<recursive_mutex> lock(m_session.GetWaveformDataMutex());
-		vector<size_t> groupsToClose;
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
 			auto group = m_waveformGroups[i];
@@ -365,11 +377,9 @@ void MainWindow::RenderUI()
 			{
 				LogTrace("Closing waveform group %s (i=%zu)\n", group->GetTitle().c_str(), i);
 				group->Clear();
-				groupsToClose.push_back(i);
+				m_groupsToClose.push_back(i);
 			}
 		}
-		for(ssize_t i = static_cast<ssize_t>(groupsToClose.size())-1; i >= 0; i--)
-			m_waveformGroups.erase(m_waveformGroups.begin() + groupsToClose[i]);
 	}
 
 	//Dialog boxes

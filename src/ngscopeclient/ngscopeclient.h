@@ -44,6 +44,7 @@
 #pragma GCC diagnostic pop
 
 #include <atomic>
+#include <shared_mutex>
 
 #include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"

@@ -197,7 +197,10 @@ public:
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
-	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+	void ReferenceWaveformTextures();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
 	StreamDescriptor GetStream(size_t i)
@@ -221,7 +224,9 @@ protected:
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
-	void RasterizeAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void RasterizeAnalogWaveform(
+		std::shared_ptr<DisplayedChannel> channel,
+		vk::raii::CommandBuffer& cmdbuf);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);

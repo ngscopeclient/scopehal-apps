@@ -183,7 +183,6 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 
 WaveformArea::~WaveformArea()
 {
-	LogTrace("WaveformArea dtor\n");
 	m_displayedChannels.clear();
 }
 
@@ -203,9 +202,6 @@ void WaveformArea::AddStream(StreamDescriptor desc)
  */
 void WaveformArea::RemoveStream(size_t i)
 {
-	//Keep a reference to the texture open until end of frame in case we already rendered this stream
-	m_parent->AddTextureUsedThisFrame(m_displayedChannels[i]->GetTexture());
-
 	m_displayedChannels.erase(m_displayedChannels.begin() + i);
 }
 
@@ -243,6 +239,15 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 	}
 
 	return StreamDescriptor(nullptr, 0);
+}
+
+/**
+	@brief Marks all of our waveform textures as being used this frame
+ */
+void WaveformArea::ReferenceWaveformTextures()
+{
+	for(auto chan : m_displayedChannels)
+		m_parent->AddTextureUsedThisFrame(chan->GetTexture());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -449,10 +454,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	//Render the tone mapped output (if we have it)
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
-	{
 		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y));
-		m_parent->AddTextureUsedThisFrame(tex);
-	}
 }
 
 /**
@@ -480,10 +482,18 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	@brief Runs the rendering shader on all of our waveforms
 
 	Called from WaveformThread
+
+	@param cmdbuf	Command buffer to record rendering commands into
+	@param chans	Set of channels we rendered into
+					Used to keep references active until rendering completes if we close them this frame
  */
-void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& chans)
 {
-	for(auto& chan : m_displayedChannels)
+	chans = m_displayedChannels;
+
+	for(auto& chan : chans)
 	{
 		auto stream = chan->GetStream();
 		switch(stream.GetType())
@@ -499,7 +509,10 @@ void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
 	}
 }
 
-void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::RasterizeAnalogWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf
+	)
 {
 	auto stream = channel->GetStream();
 	auto data = stream.GetData();
@@ -586,8 +599,6 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, v
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
 		return;
-
-	m_parent->AddTextureUsedThisFrame(tex);
 
 	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
 	auto width = channel->GetRasterizedX();

@@ -41,7 +41,7 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
-extern std::mutex g_waveformThreadBlockMutex;
+extern std::shared_mutex g_vulkanActivityMutex;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -54,6 +54,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
 	, m_frameIndex(0)
+	, m_lastFrameIndex(0)
 	, m_width(0)
 	, m_height(0)
 	, m_fullscreen(false)
@@ -231,7 +232,7 @@ VulkanWindow::~VulkanWindow()
 bool VulkanWindow::UpdateFramebuffer()
 {
 	LogTrace("Recreating framebuffer due to window resize\n");
-	lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();
@@ -323,9 +324,11 @@ bool VulkanWindow::UpdateFramebuffer()
 
 	//Make per-frame buffer views and framebuffers
 	m_backBuffers = m_swapchain->getImages();
-	m_backBufferViews.resize(m_backBuffers.size());
-	m_framebuffers.resize(m_backBuffers.size());
-	for (uint32_t i = 0; i < m_backBuffers.size(); i++)
+	auto nbuffers = m_backBuffers.size();
+	m_backBufferViews.resize(nbuffers);
+	m_framebuffers.resize(nbuffers);
+	m_texturesUsedThisFrame.resize(nbuffers);
+	for (uint32_t i = 0; i < nbuffers; i++)
 	{
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
@@ -366,6 +369,8 @@ void VulkanWindow::Render()
 	RenderUI();
 
 	//Internal GUI rendering
+	set<shared_ptr<Texture> > texturesToClear = m_texturesUsedThisFrame[m_lastFrameIndex];
+	m_texturesUsedThisFrame[m_lastFrameIndex].clear();
 	ImGui::Render();
 
 	//Render the main window
@@ -377,6 +382,7 @@ void VulkanWindow::Render()
 		try
 		{
 			auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
+			m_lastFrameIndex = m_frameIndex;
 			m_frameIndex = result.second;
 			if(result.first == vk::Result::eSuboptimalKHR)
 			{
@@ -384,7 +390,7 @@ void VulkanWindow::Render()
 
 				//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
 				//which it seems cannot occur while any other Vulkan call is active on the device
-				lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+				lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
@@ -399,7 +405,7 @@ void VulkanWindow::Render()
 
 			//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
 			//which it seems cannot occur while any other Vulkan call is active on the device
-			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+			lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
@@ -411,11 +417,7 @@ void VulkanWindow::Render()
 		//Make sure the old frame has completed
 		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
-
-		//We can now free references to last frame's textures
-		//This will delete them if the containing object was destroyed that frame
 		m_renderQueue.waitIdle();
-		m_texturesUsedThisFrame.clear();
 
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
@@ -454,7 +456,7 @@ void VulkanWindow::Render()
 	//Need to lock because ImGui::UpdatePlatformWindows() can call vkCreateSwapchainKHR(),
 	//which it seems cannot occur while any other Vulkan call is active on the device
 	{
-		lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+		//lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
@@ -480,6 +482,10 @@ void VulkanWindow::Render()
 			return;
 		}
 	}
+
+	//We can now free references to last frame's textures
+	//This will delete them if the containing object was destroyed that frame
+	texturesToClear.clear();
 }
 
 void VulkanWindow::RenderUI()

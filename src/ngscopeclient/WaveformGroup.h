@@ -50,7 +50,11 @@ public:
 
 	bool Render();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
-	void EnumerateWaveformAreas(std::vector<std::shared_ptr<WaveformArea> >& areas);
+	void ReferenceWaveformTextures();
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
 
 	const std::string& GetTitle()
 	{ return m_title; }
@@ -122,6 +126,9 @@ protected:
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
+
+	///@brief List of waveform areas to close next frame
+	std::vector<size_t> m_areasToClose;
 };
 
 #endif

@@ -50,7 +50,12 @@ atomic<int64_t> g_lastWaveformRenderTime;
 
 void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue);
 
-std::mutex g_waveformThreadBlockMutex;
+/**
+	@brief Mutex for controlling access to background Vulkan activity
+
+	Arbitrarily many threads can own this mutex at once, but recreating the swapchain conflicts with any and all uses
+ */
+std::shared_mutex g_vulkanActivityMutex;
 
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
@@ -100,7 +105,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		if(g_rerenderRequestedEvent.Peek())
 		{
 			LogTrace("WaveformThread: re-rendering\n");
-			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+			shared_lock<shared_mutex> lock(g_vulkanActivityMutex);
 			RenderAllWaveforms(cmdbuf, session, queue);
 			g_rerenderDoneEvent.Signal();
 			continue;
@@ -119,7 +124,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 
 		//Rerun the heavyweight rendering shaders
 		{
-			lock_guard<mutex> lock(g_waveformThreadBlockMutex);
+			shared_lock<shared_mutex> lock(g_vulkanActivityMutex);
 			RenderAllWaveforms(cmdbuf, session, queue);
 		}
 
@@ -135,15 +140,11 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::r
 {
 	double tstart = GetTime();
 
-	//Find all of the waveform areas
-	vector<shared_ptr<WaveformArea> > areas;
-	session->EnumerateWaveformAreas(areas);
-
-	//Render them
+	//Keep references to all displayed channels open until the rendering finishes
+	//This prevents problems if we close a WaveformArea or remove a channel from it before the shader completes
+	vector< shared_ptr<DisplayedChannel> > channels;
 	cmdbuf.begin({});
-	for(auto a : areas)
-		a->RenderWaveformTextures(cmdbuf);
-	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
+	session->RenderWaveformTextures(cmdbuf, channels);
 	cmdbuf.end();
 
 	SubmitAndBlock(cmdbuf, queue);

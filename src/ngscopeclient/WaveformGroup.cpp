@@ -102,10 +102,17 @@ void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		a->ToneMapAllWaveforms(cmdbuf);
 }
 
-void WaveformGroup::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
+void WaveformGroup::ReferenceWaveformTextures()
 {
 	for(auto a : m_areas)
-		areas.push_back(a);
+		a->ReferenceWaveformTextures();
+}
+
+void WaveformGroup::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
+{
+	for(auto a : m_areas)
+		a->RenderWaveformTextures(cmdbuf, channels);
 }
 
 bool WaveformGroup::Render()
@@ -125,27 +132,27 @@ bool WaveformGroup::Render()
 	clientArea.y -= timelineHeight;
 	RenderTimeline(clientArea.x, timelineHeight);
 
+	//Close any areas that we destroyed last frame
+	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
+		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+	if(!m_areasToClose.empty())
+		m_parent->RefreshTimebasePropertiesDialog();
+	m_areasToClose.clear();
+
 	//Render our waveform areas
 	//TODO: waveform areas full of protocol or digital decodes should be fixed size
 	//while analog will fill the gap?
-	vector<size_t> areasToClose;
 	for(size_t i=0; i<m_areas.size(); i++)
 	{
 		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
-			areasToClose.push_back(i);
+			m_areasToClose.push_back(i);
 	}
-
-	//Close any areas that are now empty
-	for(ssize_t i=static_cast<ssize_t>(areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + areasToClose[i]);
-	if(!areasToClose.empty())
-		m_parent->RefreshTimebasePropertiesDialog();
 
 	//If we no longer have any areas in the group, close the group
 	if(m_areas.empty())
 		open = false;
 
-	//Render cursors over everything else
+	//TODO: Render cursors over everything else
 
 	ImGui::End();
 	return open;

@@ -62,6 +62,8 @@ public:
 		const std::string& name = ""
 		);
 
+	~Texture();
+
 	ImTextureID GetTexture()
 	{ return m_texture; }
 

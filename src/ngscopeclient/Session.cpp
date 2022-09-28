@@ -44,6 +44,8 @@ extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
 
+extern std::shared_mutex g_vulkanActivityMutex;
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -689,9 +691,11 @@ void Session::RefreshAllFilters()
 
 	set<Filter*> filters;
 	{
-		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		lock_guard<mutex> lock3(m_filterUpdatingMutex);
 		filters = Filter::GetAllInstances();
 	}
+
+	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
 	m_graphExecutor.RunBlocking(filters);
 
 	//Update statistic displays after the filter graph update is complete
@@ -713,8 +717,8 @@ int64_t Session::GetToneMapTime()
 	return m_mainWindow->GetToneMapTime();
 }
 
-void Session::EnumerateWaveformAreas(vector<shared_ptr<WaveformArea> >& areas)
+void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
 {
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-	m_mainWindow->EnumerateWaveformAreas(areas);
+	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
 }

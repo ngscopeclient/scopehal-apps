@@ -37,6 +37,7 @@
 
 class MainWindow;
 class WaveformArea;
+class DisplayedChannel;
 
 #include "../xptools/HzClock.h"
 
@@ -171,7 +172,9 @@ public:
 	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
 
-	void EnumerateWaveformAreas(std::vector<std::shared_ptr<WaveformArea> >& areas);
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
 
 	void Clear();
 	void ClearBackgroundThreads();

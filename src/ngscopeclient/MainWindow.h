@@ -92,7 +92,10 @@ public:
 	}
 
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
-	void EnumerateWaveformAreas(std::vector<std::shared_ptr<WaveformArea> >& areas);
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
 
 	void SetNeedRender()
 	{ m_needRender = true; }
@@ -195,6 +198,9 @@ protected:
 
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
+
+	///@brief Pending requests to close waveform groups
+	std::vector<size_t> m_groupsToClose;
 
 	std::shared_ptr<WaveformGroup> GetBestGroupForWaveform(StreamDescriptor stream);
 
