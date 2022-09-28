@@ -68,6 +68,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_sessionClosing(false)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {
@@ -94,19 +95,36 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	io.Fonts->Build();
 	io.FontDefault = m_defaultFont;
 
-	//Temporary command pool for initialization
+	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		g_renderQueueType );
-	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
-	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	if(g_hasDebugUtils)
+	{
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				"MainWindow.m_cmdPool"));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandBuffer,
+				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
+				"MainWindow.m_cmdBuffer"));
+	}
 
 	//Download imgui fonts
-	cmdBuf.begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
-	cmdBuf.end();
-	SubmitAndBlock(cmdBuf, queue);
+	m_cmdBuffer->begin({});
+	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, queue);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
@@ -125,6 +143,9 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 MainWindow::~MainWindow()
 {
+	m_cmdBuffer = nullptr;
+	m_cmdPool = nullptr;
+
 	CloseSession();
 }
 
@@ -137,6 +158,9 @@ void MainWindow::CloseSession()
 	LogIndenter li;
 
 	SaveRecentInstrumentList();
+
+	//Close background threads in our session before destroying views
+	m_session.ClearBackgroundThreads();
 
 	//Destroy waveform views
 	LogTrace("Clearing views\n");
@@ -162,6 +186,8 @@ void MainWindow::CloseSession()
 	m_session.Clear();
 
 	LogTrace("Clear complete\n");
+
+	m_sessionClosing = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -271,6 +297,17 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+void MainWindow::Render()
+{
+	if(m_sessionClosing)
+	{
+		m_renderQueue.waitIdle();
+		CloseSession();
+	}
+
+	VulkanWindow::Render();
+}
+
 void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
 
@@ -281,12 +318,17 @@ void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 
 	Called by Session::CheckForWaveforms() at the start of each frame if new data is ready to render
  */
-void MainWindow::ToneMapAllWaveforms()
+void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	double start = GetTime();
 
+	m_cmdBuffer->begin({});
+
 	for(auto group : m_waveformGroups)
-		group->ToneMapAllWaveforms();
+		group->ToneMapAllWaveforms(cmdbuf);
+
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
 
 	double dt = GetTime() - start;
 	m_toneMapTime = dt * FS_PER_SECOND;
@@ -308,7 +350,7 @@ void MainWindow::RenderUI()
 	m_needRender = false;
 
 	//See if we have new waveform data to look at
-	m_session.CheckForWaveforms();
+	m_session.CheckForWaveforms(*m_cmdBuffer);
 
 	//Menu for main window
 	MainMenu();

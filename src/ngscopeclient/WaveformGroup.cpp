@@ -96,10 +96,10 @@ bool WaveformGroup::IsChannelBeingDragged()
 
 	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
  */
-void WaveformGroup::ToneMapAllWaveforms()
+void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	for(auto a : m_areas)
-		a->ToneMapAllWaveforms();
+		a->ToneMapAllWaveforms(cmdbuf);
 }
 
 /**

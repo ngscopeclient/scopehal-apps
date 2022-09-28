@@ -49,7 +49,7 @@ public:
 	void Clear();
 
 	bool Render();
-	void ToneMapAllWaveforms();
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	const std::string& GetTitle()

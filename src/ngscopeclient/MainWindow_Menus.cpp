@@ -100,7 +100,7 @@ void MainWindow::FileMenu()
 	if(ImGui::BeginMenu("File"))
 	{
 		if(ImGui::MenuItem("Close"))
-			CloseSession();
+			QueueCloseSession();
 
 		ImGui::Separator();
 

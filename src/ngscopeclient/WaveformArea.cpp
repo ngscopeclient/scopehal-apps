@@ -168,15 +168,6 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 
-	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
-	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
-
-	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
-	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
-		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-
 	//Load compute pipelines
 	string base = "shaders/waveform-compute.";
 	string suffix;
@@ -188,29 +179,11 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 		base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
 	//TODO: digital
 	//TODO: histograms using this shader or implot?
-
-	if(g_hasDebugUtils)
-	{
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
-				"WaveformArea.m_cmdPool"));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eCommandBuffer,
-				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
-				"WaveformArea.m_cmdBuffer"));
-	}
 }
 
 WaveformArea::~WaveformArea()
 {
 	m_displayedChannels.clear();
-
-	m_cmdBuffer = nullptr;
-	m_cmdPool = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -481,7 +454,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 /**
 	@brief Tone map our waveforms
  */
-void WaveformArea::ToneMapAllWaveforms()
+void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	for(auto& chan : m_displayedChannels)
 	{
@@ -489,7 +462,7 @@ void WaveformArea::ToneMapAllWaveforms()
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ToneMapAnalogWaveform(chan);
+				ToneMapAnalogWaveform(chan, cmdbuf);
 				break;
 
 			default:
@@ -604,7 +577,7 @@ void WaveformArea::RasterizeAnalogWaveform(shared_ptr<DisplayedChannel> channel,
 /**
 	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
+void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
 	m_parent->AddTextureUsedThisFrame(tex);
@@ -615,8 +588,6 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
 	if( (width == 0) || (height == 0) )
 		return;
 
-	m_cmdBuffer->begin({});
-
 	//Run the actual compute shader
 	m_toneMapPipe.BindBuffer(0, channel->GetRasterizedWaveform());
 	m_toneMapPipe.BindStorageImage(
@@ -626,7 +597,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
 		vk::ImageLayout::eGeneral);
 	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
 	ToneMapArgs args(color, width, height);
-	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(width, 64), height);
+	m_toneMapPipe.Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
@@ -639,17 +610,13 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel)
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	m_cmdBuffer->pipelineBarrier(
+	cmdbuf.pipelineBarrier(
 			vk::PipelineStageFlagBits::eComputeShader,
 			vk::PipelineStageFlagBits::eFragmentShader,
 			{},
 			{},
 			{},
 			barrier);
-	m_cmdBuffer->end();
-
-	vk::SubmitInfo info({}, {}, **m_cmdBuffer);
-	m_parent->GetRenderQueue().submit(info);
 }
 
 /**
@@ -1247,6 +1214,8 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 void WaveformArea::ClearPersistence()
 {
+	m_parent->SetNeedRender();
+	//TODO: set persistence clear flag
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

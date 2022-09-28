@@ -164,7 +164,7 @@ public:
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
 	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
-	void ToneMapAllWaveforms();
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
@@ -186,7 +186,7 @@ protected:
 	void RenderCursors(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
-	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel);
+	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
@@ -263,12 +263,6 @@ protected:
 
 	///@brief Compute pipeline for tone mapping fp32 images to RGBA
 	ComputePipeline m_toneMapPipe;
-
-	///@brief Command pool for allocating our command buffers
-	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
-
-	///@brief Command buffer used during rendering operations
-	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 
 	///@brief Compute pipeline for rendering uniform analog waveforms
 	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;

@@ -91,11 +91,16 @@ public:
 			m_timebaseDialog->Refresh();
 	}
 
-	void ToneMapAllWaveforms();
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	void SetNeedRender()
 	{ m_needRender = true; }
+
+	virtual void Render();
+
+	void QueueCloseSession()
+	{ m_sessionClosing = true; }
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -199,6 +204,9 @@ protected:
 	///@brief Our session object
 	Session m_session;
 
+	///@brief True if a close-session request came in this frame
+	bool m_sessionClosing;
+
 	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -256,6 +264,12 @@ protected:
 		(even if data has not changed)
 	 */
 	bool m_needRender;
+
+	///@brief Command pool for allocating our command buffers
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Command buffer used during rendering operations
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 
 public:
 	ImFont* GetMonospaceFont()

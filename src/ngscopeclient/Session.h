@@ -165,11 +165,12 @@ public:
 	void StopTrigger();
 	bool HasOnlineScopes();
 	void DownloadWaveforms();
-	void CheckForWaveforms();
+	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
 	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
 
 	void Clear();
+	void ClearBackgroundThreads();
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
