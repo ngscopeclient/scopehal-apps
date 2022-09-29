@@ -427,7 +427,7 @@ void VulkanWindow::Render()
 		}
 
 		//Make sure the old frame has completed
-		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+		(void)g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
 		m_renderQueue.waitIdle();
 

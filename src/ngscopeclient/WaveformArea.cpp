@@ -55,6 +55,11 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	stream.m_channel->AddRef();
 
 	m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
+
+	//Use GPU-side memory for rasterized waveform
+	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
+	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 }
 
 /**
@@ -454,7 +459,7 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	//Render the tone mapped output (if we have it)
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
-		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y));
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
 }
 
 /**
@@ -583,7 +588,7 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.ybase = h * 0.5f;
 	config.yscale = m_pixelsPerYAxisUnit;
 	config.yoff = stream.GetOffset();
-	config.persistScale = 0;		//no persistence yet
+	config.persistScale = 0;				//TODO: persistence configuration
 
 	//Dispatch the shader
 	comp->Dispatch(cmdbuf, config, w, 1, 1);
@@ -608,7 +613,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, v
 
 	//Run the actual compute shader
 	auto& pipe = channel->GetToneMapPipeline();
-	pipe.BindBuffer(0, channel->GetRasterizedWaveform());
+	pipe.BindBufferNonblocking(0, channel->GetRasterizedWaveform(), cmdbuf);
 	pipe.BindStorageImage(
 		1,
 		**m_parent->GetTextureManager()->GetSampler(),
@@ -990,8 +995,6 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
 	EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
-
-	//Draw the icons for landing spots
 }
 
 /**
@@ -1247,6 +1250,8 @@ void WaveformArea::OnMouseUp()
 			LogTrace("End dragging Y axis\n");
 			for(auto c : m_displayedChannels)
 				c->GetStream().SetOffset(m_yAxisOffset);
+			ClearPersistence();
+			m_parent->SetNeedRender();
 			break;
 
 		case DRAG_STATE_TRIGGER_LEVEL:
