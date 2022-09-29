@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2019 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,54 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Top-level window for the application
+	@brief Declaration of ChannelPropertiesDialog
  */
+#ifndef ChannelPropertiesDialog_h
+#define ChannelPropertiesDialog_h
 
-#ifndef MainWindow_h
-#define MainWindow_h
+#include "Dialog.h"
 
-#include "../scopehal/Multimeter.h"
-
-/**
-	@brief Main application window class for a power supply
- */
-class MainWindow	: public Gtk::Window
+class MetricsDialog : public Dialog
 {
 public:
-	MainWindow(Multimeter* dmm);
-	~MainWindow();
+	MetricsDialog(Session* session);
+	virtual ~MetricsDialog();
+
+	virtual bool DoRender();
 
 protected:
+	Session* m_session;
 
-	//Initialization
-	void CreateWidgets();
-
-	//Widgets
-	Gtk::VBox m_vbox;
-		Gtk::Frame m_tempFrame;
-			Gtk::HBox m_tempBox;
-				Graph m_tempGraph;
-				Graphable m_tempData;
-				Gtk::VBox m_tempLabelBox;
-					Gtk::Label m_tempLabel;
-					Gtk::Label m_talLabel;
-					Gtk::Label m_peakLabel;
-
-		Gtk::Frame m_rateFrame;
-			Gtk::HBox m_rateBox;
-				Graph m_rateGraph;
-				Graphable m_rateData;
-				Gtk::Label m_rateLabel;
-
-	bool OnTimer(int timer);
-
-protected:
-
-	std::vector<float> m_tempBuffer;
-	int m_tal;
-	float m_peak;
-
-	Multimeter* m_dmm;
+	int m_displayRefreshRate;
 };
 
 #endif

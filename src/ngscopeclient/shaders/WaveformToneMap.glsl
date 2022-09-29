@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ANTIKERNEL v0.1                                                                                                      *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,168 +27,65 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Program entry point
- */
+#version 430
+#pragma shader_stage(compute)
 
-#include "reflowmon.h"
-#include "MainWindow.h"
-#include "../scopehal/RohdeSchwarzHMC8012Multimeter.h"
-
-using namespace std;
-
-/**
-	@brief The main application class
- */
-class ReflowApp : public Gtk::Application
+layout(std430, binding=0) restrict readonly buffer buf_pixels
 {
-public:
-	ReflowApp()
-	 : Gtk::Application()
-	 , m_meter(NULL)
-	 , m_window(NULL)
-	{}
-
-	virtual ~ReflowApp();
-
-	static Glib::RefPtr<ReflowApp> create()
-	{
-		return Glib::RefPtr<ReflowApp>(new ReflowApp);
-	}
-
-	Multimeter* m_meter;
-
-	virtual void run();
-
-protected:
-	MainWindow* m_window;
-
-	virtual void on_activate();
+	float pixels[];
 };
 
-ReflowApp::~ReflowApp()
-{
-	delete m_meter;
-	m_meter = NULL;
-}
+layout(binding=1, rgba32f) uniform image2D outputTex;
 
-void ReflowApp::run()
+layout(std430, push_constant) uniform constants
 {
-	register_application();
-	on_activate();
+	float channelRed;
+	float channelGreen;
+	float channelBlue;
+	uint width;
+	uint height;
+};
 
-	while(true)
+layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= width)
+		return;
+	if(gl_GlobalInvocationID.y >= height)
+		return;
+
+	//Intensity graded grayscale input
+	uint npixel = gl_GlobalInvocationID.y*width + gl_GlobalInvocationID.x;
+	float pixval = pixels[npixel];
+
+	//Logarithmic shading
+	float y = pow(pixval, 1.0 / 4);
+	y = min(y, 2);
+	y = max(y, 0);
+
+	//Supersaturated: 100% alpha, color gets even more intense
+	vec4 colorOut;
+	if(y > 1)
 	{
-		//Dispatch events if we have any
-		while(Gtk::Main::events_pending())
-			Gtk::Main::iteration();
-
-		//Stop if the main window got closed
-		if(!m_window->is_visible())
-			break;
-	}
-	delete m_window;
-	m_window = NULL;
-}
-
-/**
-	@brief Create the main window
- */
-void ReflowApp::on_activate()
-{
-	//Test application
-	m_window = new MainWindow(m_meter);
-	add_window(*m_window);
-	m_window->present();
-}
-
-int main(int argc, char* argv[])
-{
-	auto app = ReflowApp::create();
-
-	//Global settings
-	Severity console_verbosity = Severity::NOTICE;
-
-	//Parse command-line arguments
-	string mname;
-	for(int i=1; i<argc; i++)
-	{
-		string s(argv[i]);
-
-		//Let the logger eat its args first
-		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
-			continue;
-
-		if(s == "--help")
-		{
-			//not implemented
-			return 0;
-		}
-		else if(s == "--version")
-		{
-			//not implemented
-			//ShowVersion();
-			return 0;
-		}
-		else if(s[0] == '-')
-		{
-			fprintf(stderr, "Unrecognized command-line argument \"%s\", use --help\n", s.c_str());
-			return 1;
-		}
-		else
-			mname = s;
+		colorOut.r = min(channelRed * y, 1);
+		colorOut.g = min(channelGreen * y, 1);
+		colorOut.b = min(channelBlue * y, 1);
+		colorOut.a = 1;
 	}
 
-	//Set up logging
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(console_verbosity));
-
-	//Scope format: name:api:host[:port]
-	char nick[128];
-	char api[128];
-	char args[128];
-	if(3 != sscanf(mname.c_str(), "%127[^:]:%127[^:]:%127s", nick, api, args))
-	{
-		LogError("Invalid multimeter string %s\n", mname.c_str());
-		return 1;
-	}
-
-	string sapi(api);
-
-	//Connect to the scope
-	if(sapi == "rs_hmc8")
-	{
-		auto dmm = new RohdeSchwarzHMC8012Multimeter(new SCPISocketTransport(args));
-		dmm->m_nickname = nick;
-		app->m_meter = dmm;
-	}
+	//No, normal
 	else
 	{
-		LogError("Unrecognized API \"%s\", use --help\n", api);
-		return 1;
+		colorOut.r = channelRed;
+		colorOut.g = channelGreen;
+		colorOut.b = channelBlue;
+		colorOut.a = y;
 	}
 
-	app->run();
-	return 0;
+	//Write final output
+	imageStore(
+		outputTex,
+		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),
+		colorOut);
 }
-
-double GetTime()
-{
-#ifdef _WIN32
-	uint64_t tm;
-	static uint64_t freq = 0;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&tm));
-	double ret = tm;
-	if(freq == 0)
-		QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&freq));
-	return ret / freq;
-#else
-	timespec t;
-	clock_gettime(CLOCK_REALTIME,&t);
-	double d = static_cast<double>(t.tv_nsec) / 1E9f;
-	d += t.tv_sec;
-	return d;
-#endif
-}
-

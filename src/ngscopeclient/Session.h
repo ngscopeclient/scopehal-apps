@@ -36,6 +36,12 @@
 #define Session_h
 
 class MainWindow;
+class WaveformArea;
+class DisplayedChannel;
+
+#include "../xptools/HzClock.h"
+
+extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
 /**
 	@brief Internal state for a connection to an RF signal generator
@@ -152,7 +158,26 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	enum TriggerType
+	{
+		TRIGGER_TYPE_SINGLE,
+		TRIGGER_TYPE_FORCED,
+		TRIGGER_TYPE_AUTO,
+		TRIGGER_TYPE_NORMAL
+	};
+	void ArmTrigger(TriggerType type);
+	void StopTrigger();
+	bool HasOnlineScopes();
+	void DownloadWaveforms();
+	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	void RefreshAllFilters();
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+
 	void Clear();
+	void ClearBackgroundThreads();
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
@@ -164,18 +189,68 @@ public:
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 
+	size_t GetFilterCount();
+
+	bool IsChannelBeingDragged();
+
+	int64_t GetToneMapTime();
+
+	/**
+		@brief Gets the last execution time of the filter graph
+	 */
+	int64_t GetFilterGraphExecTime()
+	{ return m_lastFilterGraphExecTime.load(); }
+
+	/**
+		@brief Gets the last run time of the waveform rendering shaders
+	 */
+	int64_t GetLastWaveformRenderTime()
+	{ return g_lastWaveformRenderTime.load(); }
+
+	/**
+		@brief Gets the average rate at which we are pulling waveforms off the scope, in Hz
+	 */
+	double GetWaveformDownloadRate()
+	{
+		std::lock_guard<std::mutex> lock(m_perfClockMutex);
+		return m_waveformDownloadRate.GetAverageHz();
+	}
+
 	/**
 		@brief Get the set of scopes we're currently connected to
 	 */
-	const std::vector<Oscilloscope*>& GetScopes()
-	{ return m_oscilloscopes; }
+	const std::vector<Oscilloscope*> GetScopes()
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_oscilloscopes;
+	}
 
 	/**
 		@brief Gets the set of all SCPI instruments we're connect to (regardless of type)
 	 */
 	std::set<SCPIInstrument*> GetSCPIInstruments();
 
+	/**
+		@brief Check if we have data available from all of our scopes
+	 */
+	bool CheckForPendingWaveforms();
+
+	/**
+		@brief Get the mutex controlling access to waveform data
+	 */
+	std::recursive_mutex& GetWaveformDataMutex()
+	{ return m_waveformDataMutex; }
+
 protected:
+
+	///@brief Mutex for controlling access to scope vectors
+	std::mutex m_scopeMutex;
+
+	///@brief Mutex for controlling access to waveform data
+	std::recursive_mutex m_waveformDataMutex;
+
+	///@brief Mutex for controlling access to filter graph
+	std::mutex m_filterUpdatingMutex;
 
 	///@brief Top level UI window
 	MainWindow* m_mainWindow;
@@ -188,6 +263,9 @@ protected:
 
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<Oscilloscope*> m_oscilloscopes;
+
+	///@brief Deskew correction coefficients for multi-scope
+	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
 
 	///@brief Power supplies we are currently connected to
 	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
@@ -203,6 +281,36 @@ protected:
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;
+
+	///@brief Processing thread for waveform data
+	std::unique_ptr<std::thread> m_waveformThread;
+
+	///@brief Time we last armed the global trigger
+	double m_tArm;
+
+	///@brief Time that the primary scope triggered (in multi-scope setups)
+	double m_tPrimaryTrigger;
+
+	///@brief Indicates trigger is armed (incoming waveforms are ignored if not armed)
+	bool m_triggerArmed;
+
+	///@brief If true, trigger is currently armed in single-shot mode
+	bool m_triggerOneShot;
+
+	///@brief True if we have multiple scopes and are in normal trigger mode
+	bool m_multiScopeFreeRun;
+
+	///@brief Context for filter graph evaluation
+	FilterGraphExecutor m_graphExecutor;
+
+	///@brief Time spent on the last filter graph execution
+	std::atomic<int64_t> m_lastFilterGraphExecTime;
+
+	///@brief Mutex for controlling access to performance counters
+	std::mutex m_perfClockMutex;
+
+	///@brief Frequency at which we are pulling waveforms off of scopes
+	HzClock m_waveformDownloadRate;
 };
 
 #endif

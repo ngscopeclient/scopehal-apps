@@ -51,13 +51,36 @@ public:
 		const vk::raii::Buffer& srcBuf,
 		int width,
 		int height,
-		TextureManager* mgr
+		TextureManager* mgr,
+		const std::string& name = ""
 		);
+
+	Texture(
+		const vk::raii::Device& device,
+		const vk::ImageCreateInfo& imageInfo,
+		TextureManager* mgr,
+		const std::string& name = ""
+		);
+
+	~Texture();
 
 	ImTextureID GetTexture()
 	{ return m_texture; }
 
+	vk::ImageView GetView()
+	{ return **m_view; }
+
+	vk::Image GetImage()
+	{ return *m_image; }
+
+	void SetName(const std::string& name);
+
 protected:
+	void LayoutTransition(
+		vk::AccessFlags src,
+		vk::AccessFlags dst,
+		vk::ImageLayout from,
+		vk::ImageLayout to);
 
 	///@brief Image object for our texture
 	vk::raii::Image m_image;
@@ -69,12 +92,6 @@ protected:
 
 	///@brief Device memory backing the image
 	std::unique_ptr<vk::raii::DeviceMemory> m_deviceMemory;
-
-	void LayoutTransition(
-		vk::AccessFlags src,
-		vk::AccessFlags dst,
-		vk::ImageLayout from,
-		vk::ImageLayout to);
 };
 
 /**
@@ -88,7 +105,8 @@ public:
 
 	void LoadTexture(const std::string& name, const std::string& path);
 
-	ImTextureID GetTexture(const std::string& name);
+	ImTextureID GetTexture(const std::string& name)
+	{ return m_textures[name]->GetTexture(); }
 
 	std::unique_ptr<vk::raii::Sampler>& GetSampler()
 	{ return m_sampler; }

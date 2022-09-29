@@ -39,30 +39,54 @@ class WaveformArea;
 class WaveformGroup;
 class MainWindow;
 
-/**
-	@brief Drag context for a waveform being dragged
- */
-class WaveformDragContext
+#include "TextureManager.h"
+
+class ToneMapArgs
 {
 public:
-	WaveformDragContext(WaveformArea* src)
-	: m_sourceArea(src)
-	, m_streamIndex(0)
+	ToneMapArgs(ImVec4 channelColor, uint32_t w, uint32_t h)
+	: m_red(channelColor.x)
+	, m_green(channelColor.y)
+	, m_blue(channelColor.z)
+	, m_width(w)
+	, m_height(h)
 	{}
 
-	WaveformArea* m_sourceArea;
-	size_t m_streamIndex;
+	float m_red;
+	float m_green;
+	float m_blue;
+	uint32_t m_width;
+	uint32_t m_height;
+};
+
+struct ConfigPushConstants
+{
+	int64_t innerXoff;
+	uint32_t windowHeight;
+	uint32_t windowWidth;
+	uint32_t memDepth;
+	uint32_t offset_samples;
+	float alpha;
+	float xoff;
+	float xscale;
+	float ybase;
+	float yscale;
+	float yoff;
+	float persistScale;
 };
 
 /**
-	@brief Placeholder for a single channel being displayed within a WaveformArea
+	@brief Context data for a single channel being displayed within a WaveformArea
  */
 class DisplayedChannel
 {
 public:
-	DisplayedChannel(StreamDescriptor stream)
-		: m_stream(stream)
-	{}
+	DisplayedChannel(StreamDescriptor stream);
+
+	~DisplayedChannel()
+	{
+		m_stream.m_channel->Release();
+	}
 
 	std::string GetName()
 	{ return m_stream.GetName(); }
@@ -70,8 +94,95 @@ public:
 	StreamDescriptor GetStream()
 	{ return m_stream; }
 
+	std::shared_ptr<Texture> GetTexture()
+	{ return m_texture; }
+
+	void SetTexture(std::shared_ptr<Texture> tex)
+	{ m_texture = tex; }
+
+	void PrepareToRasterize(size_t x, size_t y);
+
+	bool UpdateSize(ImVec2 newSize, MainWindow* top);
+
+	AcceleratorBuffer<float>& GetRasterizedWaveform()
+	{ return m_rasterizedWaveform; }
+
+	/**
+		@brief Return the X axis size of the rasterized waveform
+	 */
+	size_t GetRasterizedX()
+	{ return m_rasterizedX; }
+
+	/**
+		@brief Return the Y axis size of the rasterized waveform
+	 */
+	size_t GetRasterizedY()
+	{ return m_rasterizedY; }
+
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetUniformAnalogPipeline()
+	{
+		if(m_uniformAnalogComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix = ".int64";
+			m_uniformAnalogComputePipeline = std::make_shared<ComputePipeline>(
+				base + "analog" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+		}
+
+		return m_uniformAnalogComputePipeline;
+	}
+
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetSparseAnalogPipeline()
+	{
+		if(m_sparseAnalogComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix = ".int64";
+			m_sparseAnalogComputePipeline = std::make_shared<ComputePipeline>(
+				base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
+		}
+
+		return m_sparseAnalogComputePipeline;
+	}
+
+	ComputePipeline& GetToneMapPipeline()
+	{ return m_toneMapPipe; }
+
 protected:
 	StreamDescriptor m_stream;
+
+	///@brief Buffer storing our rasterized waveform, prior to tone mapping
+	AcceleratorBuffer<float> m_rasterizedWaveform;
+
+	///@brief X axis size of rasterized waveform
+	size_t m_rasterizedX;
+
+	///@brief Y axis size of rasterized waveform
+	size_t m_rasterizedY;
+
+	///@brief The texture storing our final rendered waveform
+	std::shared_ptr<Texture> m_texture;
+
+	///@brief X axis size of the texture as of last UpdateSize() call
+	size_t m_cachedX;
+
+	///@brief Y axis size of the texture as of last UpdateSize() call
+	size_t m_cachedY;
+
+	///@brief Compute pipeline for tone mapping fp32 images to RGBA
+	ComputePipeline m_toneMapPipe;
+
+	///@brief Compute pipeline for rendering uniform analog waveforms
+	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering sparse analog waveforms
+	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
 };
 
 /**
@@ -86,6 +197,11 @@ public:
 	virtual ~WaveformArea();
 
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+	void ReferenceWaveformTextures();
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
@@ -96,13 +212,23 @@ public:
 
 	void ClearPersistence();
 
+	bool IsChannelBeingDragged();
+
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
+	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
+	void RenderCursors(ImVec2 start, ImVec2 size);
+	void RenderWaveforms(ImVec2 start, ImVec2 size);
+	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void RasterizeAnalogWaveform(
+		std::shared_ptr<DisplayedChannel> channel,
+		vk::raii::CommandBuffer& cmdbuf);
 
-	void DragDropOverlays(int iArea, int numAreas);
+	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
@@ -114,6 +240,9 @@ protected:
 
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
+
+	///@brief Cached plot width
+	float m_width;
 
 	///@brief Cached plot height
 	float m_height;
@@ -131,11 +260,15 @@ protected:
 	Unit m_yAxisUnit;
 
 	///@brief Drag and drop of UI elements
-	enum
+	enum DragState
 	{
 		DRAG_STATE_NONE,
-		DRAG_STATE_Y_AXIS
+		DRAG_STATE_CHANNEL,
+		DRAG_STATE_Y_AXIS,
+		DRAG_STATE_TRIGGER_LEVEL
 	} m_dragState;
+
+	DragState m_lastDragState;
 
 	void OnMouseWheelPlotArea(float delta);
 	void OnMouseWheelYAxis(float delta);
@@ -145,12 +278,9 @@ protected:
 	/**
 		@brief The channels currently living within this WaveformArea
 
-		TODO: make this a FlowGraphNode and just hook up inputs
+		TODO: make this a FlowGraphNode and just hook up inputs??
 	 */
 	std::vector<std::shared_ptr<DisplayedChannel>> m_displayedChannels;
-
-	///@brief Drag context for waveform we're dragging
-	WaveformDragContext m_dragContext;
 
 	///@brief Waveform group containing us
 	std::shared_ptr<WaveformGroup> m_group;
@@ -160,7 +290,18 @@ protected:
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
+
+	///@brief True if mouse is over a trigger level arrow
+	bool m_mouseOverTriggerArrow;
+
+	///@brief Current trigger level, if dragging
+	float m_triggerLevelDuringDrag;
+
+	///@brief The trigger we're configuring
+	Trigger* m_triggerDuringDrag;
 };
+
+typedef std::pair<WaveformArea*, size_t> DragDescriptor;
 
 #endif
 

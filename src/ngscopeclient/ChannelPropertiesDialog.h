@@ -51,6 +51,8 @@ public:
 protected:
 	OscilloscopeChannel* m_channel;
 
+	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
+
 	std::string m_displayName;
 	std::string m_committedDisplayName;
 
@@ -66,6 +68,23 @@ protected:
 	std::vector<std::string> m_couplingNames;
 	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
 	int m_coupling;
+
+	std::vector<std::string> m_bwlNames;
+	std::vector<unsigned int> m_bwlValues;
+	int m_bwl;
+
+	std::vector<std::string> m_imuxNames;
+	int m_imux;
+
+	std::vector<std::string> m_modeNames;
+	int m_mode;
+
+	float m_color[3];
+
+	bool m_inverted;
+
+	std::string m_probe;
+	bool m_canAutoZero;
 };
 
 #endif

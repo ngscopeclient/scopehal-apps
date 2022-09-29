@@ -9,6 +9,7 @@ include_directories(
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
+find_package(PNG REQUIRED)
 
 ###############################################################################
 #C++ compilation
@@ -40,6 +41,7 @@ add_executable(ngscopeclient
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp
+	MetricsDialog.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
 	PowerSupplyDialog.cpp
@@ -54,9 +56,11 @@ add_executable(ngscopeclient
 	SCPIConsoleDialog.cpp
 	Session.cpp
 	TextureManager.cpp
+	TimebasePropertiesDialog.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp
+	WaveformThread.cpp
 
 	main.cpp
 )
@@ -74,7 +78,10 @@ add_custom_target(
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
+	ngrendershaders
 	)
+
+add_subdirectory(shaders)
 
 # implot has a bunch of warnings, turn them off to avoid cluttering the build
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -99,7 +106,7 @@ target_link_libraries(ngscopeclient
 	scopeprotocols
 	scopeexports
 	glfw
-	png
+	PNG::PNG
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	)

@@ -42,6 +42,8 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+#include "TimebasePropertiesDialog.h"
+
 class MultimeterDialog;
 
 class SplitGroupRequest
@@ -76,6 +78,32 @@ public:
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
+	void ShowTimebaseProperties();
+
+	bool IsChannelBeingDragged();
+
+	/**
+		@brief Update the timebase properties dialog
+	 */
+	void RefreshTimebasePropertiesDialog()
+	{
+		if(m_timebaseDialog)
+			m_timebaseDialog->Refresh();
+	}
+
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+
+	void SetNeedRender()
+	{ m_needRender = true; }
+
+	virtual void Render();
+
+	void QueueCloseSession()
+	{ m_sessionClosing = true; }
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -106,6 +134,7 @@ protected:
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddChannelsMenu();
+			void SetupMenu();
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
@@ -159,10 +188,19 @@ protected:
 	///@brief Logfile viewer
 	std::shared_ptr<Dialog> m_logViewerDialog;
 
+	///@brief Performance metrics
+	std::shared_ptr<Dialog> m_metricsDialog;
+
+	///@brief Timebase properties
+	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
+
+	///@brief Pending requests to close waveform groups
+	std::vector<size_t> m_groupsToClose;
 
 	std::shared_ptr<WaveformGroup> GetBestGroupForWaveform(StreamDescriptor stream);
 
@@ -171,6 +209,9 @@ protected:
 
 	///@brief Our session object
 	Session m_session;
+
+	///@brief True if a close-session request came in this frame
+	bool m_sessionClosing;
 
 	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
 
@@ -223,6 +264,19 @@ protected:
 
 	TextureManager m_texmgr;
 
+	/**
+		@brief true if a resize or other event this frame requires we re-rasterize waveforms
+
+		(even if data has not changed)
+	 */
+	bool m_needRender;
+
+	///@brief Command pool for allocating our command buffers
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Command buffer used during rendering operations
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
+
 public:
 	ImFont* GetMonospaceFont()
 	{ return m_monospaceFont; }
@@ -232,6 +286,19 @@ public:
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }
+
+	TextureManager* GetTextureManager()
+	{ return &m_texmgr; }
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Performance counters
+
+protected:
+	int64_t m_toneMapTime;
+
+public:
+	int64_t GetToneMapTime()
+	{ return m_toneMapTime; }
 };
 
 #endif

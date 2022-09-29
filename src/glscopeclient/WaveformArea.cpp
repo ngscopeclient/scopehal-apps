@@ -37,6 +37,7 @@
 #include "OscilloscopeWindow.h"
 #include <random>
 #include <stdlib.h>
+#include "../../lib/scopehal/ComputePipeline.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 
 using namespace std;
@@ -618,7 +619,6 @@ void WaveformArea::on_realize()
 	m_waveformRenderData = new WaveformRenderData(m_channel, this);
 
 	//Set stuff up for each rendering pass
-	InitializeWaveformPass();
 	InitializeColormapPass();
 	InitializeCairoPass();
 	InitializeEyePass();
@@ -636,12 +636,6 @@ void WaveformArea::on_unrealize()
 
 void WaveformArea::CleanupGLHandles()
 {
-	//Clean up old shaders
-	m_histogramWaveformComputeProgram.Destroy();
-	m_digitalWaveformComputeProgram.Destroy();
-	m_analogWaveformComputeProgram.Destroy();
-	m_zeroHoldAnalogWaveformComputeProgram.Destroy();
-	m_denseAnalogWaveformComputeProgram.Destroy();
 	m_colormapProgram.Destroy();
 	m_eyeProgram.Destroy();
 	m_spectrogramProgram.Destroy();
@@ -675,119 +669,6 @@ void WaveformArea::CleanupGLHandles()
 	//Detach the FBO so we don't destroy it!!
 	//GTK manages this, and it might be used by more than one waveform area within the application.
 	m_windowFramebuffer.Detach();
-}
-
-void WaveformArea::InitializeWaveformPass()
-{
-	//Load all of the compute shaders
-	ComputeShader hwc;
-	ComputeShader dwc;
-	ComputeShader awc;
-	ComputeShader zawc;
-	ComputeShader adwc;
-	if(GLEW_ARB_gpu_shader_int64 && !g_noglint64)
-	{
-		if(!hwc.Load(
-			"#version 420",
-			"#define DENSE_PACK",
-			"shaders/waveform-compute-head.glsl",
-			"shaders/waveform-compute-histogram.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load histogram waveform compute shader, aborting\n");
-		if(!dwc.Load(
-			"#version 420",
-			"shaders/waveform-compute-head.glsl",
-			"shaders/waveform-compute-digital.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load digital waveform compute shader, aborting\n");
-		if(!awc.Load(
-			"#version 420",
-			"shaders/waveform-compute-head.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load analog waveform compute shader, aborting\n");
-		if(!zawc.Load(
-			"#version 420",
-			"#define NO_INTERPOLATION",
-			"shaders/waveform-compute-head.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load zero-hold analog waveform compute shader, aborting\n");
-		if(!adwc.Load(
-			"#version 420",
-			"#define DENSE_PACK",
-			"shaders/waveform-compute-head.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load dense analog waveform compute shader, aborting\n");
-	}
-	else
-	{
-		if(!hwc.Load(
-			"#version 420",
-			"#define DENSE_PACK",
-			"shaders/waveform-compute-head-noint64.glsl",
-			"shaders/waveform-compute-histogram.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load histogram waveform compute shader, aborting\n");
-		if(!dwc.Load(
-			"#version 420",
-			"shaders/waveform-compute-head-noint64.glsl",
-			"shaders/waveform-compute-digital.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load digital waveform compute shader, aborting\n");
-		if(!awc.Load(
-			"#version 420",
-			"shaders/waveform-compute-head-noint64.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load analog waveform compute shader, aborting\n");
-		if(!zawc.Load(
-			"#version 420",
-			"#define NO_INTERPOLATION",
-			"shaders/waveform-compute-head-noint64.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load zero-hold analog waveform compute shader, aborting\n");
-		if(!adwc.Load(
-			"#version 420",
-			"#define DENSE_PACK",
-			"shaders/waveform-compute-head-noint64.glsl",
-			"shaders/waveform-compute-analog.glsl",
-			"shaders/waveform-compute-core.glsl",
-			NULL))
-			LogFatal("failed to load dense analog waveform compute shader, aborting\n");
-	}
-
-	//Link them
-	m_histogramWaveformComputeProgram.Add(hwc);
-	if(!m_histogramWaveformComputeProgram.Link())
-		LogFatal("failed to link histogram waveform shader program, aborting\n");
-
-	m_digitalWaveformComputeProgram.Add(dwc);
-	if(!m_digitalWaveformComputeProgram.Link())
-		LogFatal("failed to link digital waveform shader program, aborting\n");
-
-	m_analogWaveformComputeProgram.Add(awc);
-	if(!m_analogWaveformComputeProgram.Link())
-		LogFatal("failed to link analog waveform shader program, aborting\n");
-
-	m_zeroHoldAnalogWaveformComputeProgram.Add(zawc);
-	if(!m_zeroHoldAnalogWaveformComputeProgram.Link())
-		LogFatal("failed to link zero-hold analog waveform shader program, aborting\n");
-
-	m_denseAnalogWaveformComputeProgram.Add(adwc);
-	if(!m_denseAnalogWaveformComputeProgram.Link())
-		LogFatal("failed to link dense analog waveform shader program, aborting\n");
 }
 
 void WaveformArea::InitializeColormapPass()

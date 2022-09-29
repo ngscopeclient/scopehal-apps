@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddScopeDialog::AddScopeDialog(Session& session)
-	: AddInstrumentDialog("Add Oscilloscope", session)
+	: AddInstrumentDialog("Add Oscilloscope", "scope", session)
 {
 	Oscilloscope::EnumDrivers(m_drivers);
 }

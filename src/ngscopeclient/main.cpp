@@ -138,9 +138,6 @@ int main(int argc, char* argv[])
 			//poll and return immediately
 			glfwPollEvents();
 
-			//block until we have something to do, then process events
-			//glfwWaitEvents();
-
 			//Draw the main window
 			g_mainWindow->Render();
 		}
@@ -170,3 +167,34 @@ void Relaunch(int argc, char* argv[])
 	execvp(argv[0], &args[0]);
 }
 #endif
+
+/**
+	@brief Converts a hex color code into a color (assuming alpha of 255)
+ */
+ImU32 ColorFromString(const string& str)
+{
+	if( (str[0] != '#') || ( (str.length() != 7) && (str.length() != 13) ) )
+	{
+		LogWarning("Malformed color string \"%s\"\n", str.c_str());
+		return ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
+	}
+
+	unsigned int r = 0;
+	unsigned int g = 0;
+	unsigned int b = 0;
+
+	//Normal HTML color code
+	if(str.length() == 7)
+		sscanf(str.c_str(), "#%02x%02x%02x", &r, &g, &b);
+
+	//legacy GTK 16 bit format
+	else
+	{
+		sscanf(str.c_str(), "#%04x%04x%04x", &r, &g, &b);
+		r >>= 8;
+		g >>= 8;
+		b >>= 8;
+	}
+
+	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (0xff << IM_COL32_A_SHIFT);
+}

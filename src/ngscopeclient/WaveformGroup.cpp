@@ -55,6 +55,17 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 
 WaveformGroup::~WaveformGroup()
 {
+	Clear();
+}
+
+void WaveformGroup::Clear()
+{
+	LogTrace("Destroying areas\n");
+	LogIndenter li;
+
+	m_areas.clear();
+
+	LogTrace("All areas removed\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,10 +74,46 @@ WaveformGroup::~WaveformGroup()
 void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 {
 	m_areas.push_back(area);
+
+	m_parent->RefreshTimebasePropertiesDialog();
+}
+
+bool WaveformGroup::IsChannelBeingDragged()
+{
+	for(auto a : m_areas)
+	{
+		if(a->IsChannelBeingDragged())
+			return true;
+	}
+	return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
+
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
+ */
+void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
+{
+	for(auto a : m_areas)
+		a->ToneMapAllWaveforms(cmdbuf);
+}
+
+void WaveformGroup::ReferenceWaveformTextures()
+{
+	for(auto a : m_areas)
+		a->ReferenceWaveformTextures();
+}
+
+void WaveformGroup::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
+{
+	for(auto a : m_areas)
+		a->RenderWaveformTextures(cmdbuf, channels);
+}
 
 bool WaveformGroup::Render()
 {
@@ -85,25 +132,27 @@ bool WaveformGroup::Render()
 	clientArea.y -= timelineHeight;
 	RenderTimeline(clientArea.x, timelineHeight);
 
+	//Close any areas that we destroyed last frame
+	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
+		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+	if(!m_areasToClose.empty())
+		m_parent->RefreshTimebasePropertiesDialog();
+	m_areasToClose.clear();
+
 	//Render our waveform areas
 	//TODO: waveform areas full of protocol or digital decodes should be fixed size
 	//while analog will fill the gap?
-	vector<size_t> areasToClose;
 	for(size_t i=0; i<m_areas.size(); i++)
 	{
 		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
-			areasToClose.push_back(i);
+			m_areasToClose.push_back(i);
 	}
-
-	//Close any areas that are now empty
-	for(ssize_t i=static_cast<ssize_t>(areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + areasToClose[i]);
 
 	//If we no longer have any areas in the group, close the group
 	if(m_areas.empty())
 		open = false;
 
-	//Render cursors over everything else
+	//TODO: Render cursors over everything else
 
 	ImGui::End();
 	return open;
@@ -138,27 +187,33 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-		ImGui::TextUnformatted("Click and drag to scroll the timeline.\nUse mouse wheel to zoom.");
+		ImGui::TextUnformatted(
+			"Click and drag to scroll the timeline.\n"
+			"Use mouse wheel to zoom.\n"
+			"Double-click to open timebase properties.");
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
 
-	//Catch mouse wheel events
 	ImGui::SetItemUsingMouseWheel();
 	if(ImGui::IsItemHovered())
 	{
+		//Catch mouse wheel events
 		auto wheel = ImGui::GetIO().MouseWheel;
 		if(wheel != 0)
 			OnMouseWheel(wheel);
+
+		//Double click to open the timebase properties
+		if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			m_parent->ShowTimebaseProperties();
+
+		//Start dragging
+		if(ImGui::IsMouseClicked(0))
+			m_draggingTimeline = true;
 	}
 
 	//Handle dragging
 	//(Mouse is allowed to leave the window, as long as original click was within us)
-	if(ImGui::IsItemHovered())
-	{
-		if(ImGui::IsMouseClicked(0))
-			m_draggingTimeline = true;
-	}
 	if(m_draggingTimeline)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame
@@ -328,7 +383,7 @@ int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
  */
 void WaveformGroup::ClearPersistence()
 {
-	LogTrace("Not implemented\n");
+	m_parent->SetNeedRender();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

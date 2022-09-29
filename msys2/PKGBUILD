@@ -32,8 +32,6 @@ pkgver() {
 build() {
   cd "${srcdir}"/../..
 
-  git pull --recurse-submodules
-
   mkdir -p build
   cd build
 

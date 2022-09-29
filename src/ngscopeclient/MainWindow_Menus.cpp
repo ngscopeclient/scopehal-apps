@@ -48,6 +48,7 @@
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "LogViewerDialog.h"
+#include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
@@ -84,6 +85,7 @@ void MainWindow::MainMenu()
 		FileMenu();
 		ViewMenu();
 		AddMenu();
+		SetupMenu();
 		WindowMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
@@ -98,7 +100,7 @@ void MainWindow::FileMenu()
 	if(ImGui::BeginMenu("File"))
 	{
 		if(ImGui::MenuItem("Close"))
-			CloseSession();
+			QueueCloseSession();
 
 		ImGui::Separator();
 
@@ -544,6 +546,10 @@ void MainWindow::AddChannelsMenu()
 						if(chan->GetType(j) == Stream::STREAM_TYPE_TRIGGER)
 							continue;
 
+						//Skip channels we can't enable
+						if(!scope->CanEnableChannel(i))
+							continue;
+
 						StreamDescriptor stream(chan, j);
 						if(ImGui::MenuItem(stream.GetName().c_str()))
 						{
@@ -557,6 +563,25 @@ void MainWindow::AddChannelsMenu()
 				ImGui::EndMenu();
 			}
 		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Setup menu
+ */
+void MainWindow::SetupMenu()
+{
+	if(ImGui::BeginMenu("Setup"))
+	{
+		bool timebaseVisible = (m_timebaseDialog != nullptr);
+		if(timebaseVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Timebase"))
+			ShowTimebaseProperties();
+		if(timebaseVisible)
+			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
 	}
@@ -584,6 +609,19 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasLogViewer)
+			ImGui::EndDisabled();
+
+		bool hasMetrics = m_metricsDialog != nullptr;
+		if(hasMetrics)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Performance Metrics"))
+		{
+			m_metricsDialog = make_shared<MetricsDialog>(&m_session);
+			AddDialog(m_metricsDialog);
+		}
+
+		if(hasMetrics)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();

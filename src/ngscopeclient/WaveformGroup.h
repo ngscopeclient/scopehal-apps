@@ -46,7 +46,15 @@ public:
 	WaveformGroup(MainWindow* parent, const std::string& title);
 	virtual ~WaveformGroup();
 
+	void Clear();
+
 	bool Render();
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	void ReferenceWaveformTextures();
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
 
 	const std::string& GetTitle()
 	{ return m_title; }
@@ -74,7 +82,21 @@ public:
 	float XAxisUnitsToPixels(int64_t t)
 	{ return t * m_pixelsPerXUnit; }
 
+	/**
+		@brief Converts a position in X axis units to pixels (in window coordinates)
+	 */
+	float XAxisUnitsToXPosition(int64_t t)
+	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + ImGui::GetWindowPos().x; }
+
+	float GetPixelsPerXUnit()
+	{ return m_pixelsPerXUnit; }
+
+	int64_t GetXAxisOffset()
+	{ return m_xAxisOffset; }
+
 	void ClearPersistence();
+
+	bool IsChannelBeingDragged();
 
 protected:
 	void RenderTimeline(float width, float height);
@@ -104,6 +126,9 @@ protected:
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
+
+	///@brief List of waveform areas to close next frame
+	std::vector<size_t> m_areasToClose;
 };
 
 #endif

@@ -45,6 +45,9 @@ class EyeWaveform;
 class SpectrogramWaveform;
 class PacketDecoder;
 class Marker;
+class ComputePipeline;
+
+extern bool g_noglint64;
 
 /**
 	@brief GL buffers etc needed to render a single waveform
@@ -54,19 +57,58 @@ class WaveformRenderData
 public:
 	WaveformRenderData(StreamDescriptor channel, WaveformArea* area)
 	: m_area(area)
+	, m_shaderDense()
+	, m_shaderSparse()
+	, m_vkCmdPool()
+	, m_vkCmdBuf()
 	, m_channel(channel)
 	, m_geometryOK(false)
 	, m_count(0)
-	, m_mappedXBuffer(NULL)
-	, m_mappedYBuffer(NULL)
-	, m_mappedDigitalYBuffer(NULL)
-	, m_mappedIndexBuffer(NULL)
-	, m_mappedConfigBuffer(NULL)
-	, m_mappedConfigBuffer64(NULL)
-	, m_mappedFloatConfigBuffer(NULL)
-	, m_mappedDurationsBuffer(NULL)
 	, m_persistence(false)
-	{}
+	{
+		if(IsAnalog() || IsDigital())
+		{
+			std::string shaderfn = "shaders/waveform-compute.";
+
+			if(IsHistogram())
+				shaderfn += "histogram";
+			else if(IsAnalog())
+				shaderfn += "analog";
+			else if(IsDigital())
+				shaderfn += "digital";
+
+			int durationsSSBOs = 0;
+
+			if(ZeroHoldFlagSet())
+			{
+				// TODO: Need to be able to dispatch this at runtime once we grow a UI setting for interpolation behavior
+				shaderfn += ".zerohold";
+				durationsSSBOs = 1;
+			}
+
+			if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
+				shaderfn += ".int64";
+			
+			std::string denseShaderFn = shaderfn + ".dense.spv";
+			std::string sparseShaderFn = shaderfn + ".spv";
+			m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
+			m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, durationsSSBOs + 4, sizeof(ConfigPushConstants));
+
+			vk::CommandPoolCreateInfo poolInfo(
+				vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+				g_computeQueueType );
+			m_vkCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+			vk::CommandBufferAllocateInfo bufinfo(**m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
+			m_vkCmdBuf = std::make_unique<vk::raii::CommandBuffer>(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+		}
+	}
+
+	~WaveformRenderData()
+	{
+		m_vkCmdBuf = nullptr;
+		m_vkCmdPool = nullptr;
+	}
 
 	bool IsAnalog()
 	{ return m_channel.GetType() == Stream::STREAM_TYPE_ANALOG; }
@@ -77,11 +119,22 @@ public:
 	bool IsHistogram()
 	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
 
-	bool WantsZeroHold()
+	bool ZeroHoldFlagSet()
 	{
-		return IsHistogram() || (m_channel.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE);
-		// Histogram included here to avoid interpolating count values
+		return m_channel.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
 		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
+	}
+
+	bool ZeroHoldCursorBehaviour()
+	{
+		return ZeroHoldFlagSet() || IsHistogram();
+		// Histogram included here to avoid interpolating count values inside bins
+	}
+
+	bool ShouldMapDurations()
+	{
+		return ZeroHoldFlagSet() && !IsDensePacked();
+		// Do not need durations if dense because each duration is "1"
 	}
 
 	bool IsDensePacked()
@@ -95,41 +148,49 @@ public:
 
 	WaveformArea*			m_area;
 
+	std::shared_ptr<ComputePipeline> m_shaderDense;
+	std::shared_ptr<ComputePipeline> m_shaderSparse;
+	//Command pool and buffer for compute shaders
+	std::unique_ptr<vk::raii::CommandPool> m_vkCmdPool;
+	std::unique_ptr<vk::raii::CommandBuffer> m_vkCmdBuf;
+
 	//The channel of interest
 	StreamDescriptor		m_channel;
 
 	//True if everything is good to render
 	bool					m_geometryOK;
 
-	//SSBOs with waveform data
-	ShaderStorageBuffer		m_waveformXBuffer;
-	ShaderStorageBuffer		m_waveformYBuffer;
-	ShaderStorageBuffer		m_waveformConfigBuffer;
-	ShaderStorageBuffer		m_waveformIndexBuffer;
-	ShaderStorageBuffer		m_waveformDurationsBuffer;
-
-	//RGBA32 but only alpha actually used
-	Texture					m_waveformTexture;
+	//Render compute shader configuration constants
+	struct ConfigPushConstants {
+		int64_t innerXoff;
+		uint32_t windowHeight;
+		uint32_t windowWidth;
+		uint32_t memDepth;
+		uint32_t offset_samples;
+		float alpha;
+		float xoff;
+		float xscale;
+		float ybase;
+		float yscale;
+		float yoff;
+		float persistScale;
+	} m_config;
+	
+	//Indexes for rendering of spares waveforms
+	AcceleratorBuffer<int64_t> m_indexBuffer;
+	//Rendered waveform data, 1 float per pixel
+	AcceleratorBuffer<float> m_renderedWaveform;
+	//Texture to copy m_renderedWaveform into for final compositing
+	Texture m_waveformTexture;
 
 	//Number of samples in the buffer
 	size_t					m_count;
 
-	//OpenGL-mapped buffers for the data
-	int64_t*				m_mappedXBuffer;
-	float*					m_mappedYBuffer;
-	bool*					m_mappedDigitalYBuffer;
-	uint32_t*				m_mappedIndexBuffer;
-	uint32_t*				m_mappedConfigBuffer;
-	int64_t*				m_mappedConfigBuffer64;
-	float*					m_mappedFloatConfigBuffer;
-	float*					m_mappedDurationsBuffer;
-
 	//Persistence flags
 	bool					m_persistence;
 
-	//Map all buffers for download
-	void MapBuffers(size_t width, bool update_waveform = true);
-	void UnmapBuffers(bool update_waveform = true);
+	//Calculate number of points we'll need to draw (m_count)
+	void UpdateCount();
 };
 
 float sinc(float x, float width);
@@ -220,8 +281,7 @@ public:
 	void UpdateCachedScales();
 	void GetAllRenderData(std::vector<WaveformRenderData*>& data);
 	static void PrepareGeometry(WaveformRenderData* wdata, bool update_waveform, float alpha, float persistDecay);
-	void MapAllBuffers(bool update_y);
-	void UnmapAllBuffers(bool update_y);
+	void UpdateCounts();
 	void CalculateOverlayPositions();
 
 	void CenterPacket(int64_t time, int64_t len);
@@ -358,14 +418,7 @@ protected:
 	Framebuffer m_windowFramebuffer;
 
 	//Trace rendering
-	Program* GetProgramForWaveform(WaveformRenderData* data);
 	void RenderTrace(WaveformRenderData* wdata);
-	void InitializeWaveformPass();
-	Program m_analogWaveformComputeProgram;
-	Program m_denseAnalogWaveformComputeProgram;
-	Program m_digitalWaveformComputeProgram;
-	Program m_histogramWaveformComputeProgram;
-	Program m_zeroHoldAnalogWaveformComputeProgram;
 	WaveformRenderData*						m_waveformRenderData;
 	std::map<StreamDescriptor, WaveformRenderData*>	m_overlayRenderData;
 

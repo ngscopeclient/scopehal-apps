@@ -50,7 +50,7 @@ template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
-void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
+void WaveformRenderData::UpdateCount()
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
 	if(!IsAnalog() && !IsDigital() )
@@ -67,61 +67,6 @@ void WaveformRenderData::MapBuffers(size_t width, bool update_waveform)
 			m_count = max((size_t)1, m_count);
 		}
 	}
-
-	if(update_waveform)
-	{
-		//Skip mapping X buffer if dense packed analog
-		if(IsDensePacked() && IsAnalog() )
-			m_mappedXBuffer = NULL;
-		else
-			m_mappedXBuffer = (int64_t*)m_waveformXBuffer.Map(m_count*sizeof(int64_t));
-
-		if(IsDigital())
-		{
-			//round up to next multiple of 4 since buffer is actually made of int32's
-			m_mappedDigitalYBuffer = (bool*)m_waveformYBuffer.Map((m_count*sizeof(bool) | 3) + 1);
-			m_mappedYBuffer = NULL;
-		}
-		else
-		{
-			m_mappedYBuffer = (float*)m_waveformYBuffer.Map(m_count*sizeof(float));
-			m_mappedDigitalYBuffer = NULL;
-		}
-
-		if(!IsDensePacked())
-			m_mappedDurationsBuffer = (float*)m_waveformDurationsBuffer.Map(m_count*sizeof(int64_t));
-		else
-			m_mappedDurationsBuffer = NULL;
-	}
-
-	//Skip mapping index buffer if dense packed analog
-	if(IsDensePacked() && IsAnalog())
-		m_mappedIndexBuffer = NULL;
-	else
-		m_mappedIndexBuffer = (uint32_t*)m_waveformIndexBuffer.Map(width*sizeof(uint32_t));
-
-	m_mappedConfigBuffer = (uint32_t*)m_waveformConfigBuffer.Map(sizeof(float)*13);
-	//We're writing to different offsets in the buffer, not reinterpreting, so this is safe.
-	//A struct is probably the better long term solution...
-	//cppcheck-suppress invalidPointerCast
-	m_mappedFloatConfigBuffer = (float*)m_mappedConfigBuffer;
-	m_mappedConfigBuffer64 = (int64_t*)m_mappedConfigBuffer;
-}
-
-void WaveformRenderData::UnmapBuffers(bool update_waveform)
-{
-	if(update_waveform)
-	{
-		if(m_mappedXBuffer != NULL)
-			m_waveformXBuffer.Unmap();
-		m_waveformYBuffer.Unmap();
-
-		if (!IsDensePacked())
-			m_waveformDurationsBuffer.Unmap();
-	}
-	if(m_mappedIndexBuffer != NULL)
-		m_waveformIndexBuffer.Unmap();
-	m_waveformConfigBuffer.Unmap();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -168,9 +113,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		return;
 	}
 
-	//FIXME: Until we implement a Vulkan based rendering shader, need to have the data on the CPU
-	pdat->PrepareForCpuAccess();
-
 	//Figure out zero voltage level and scaling
 	auto height = area->m_height;
 	float ybase = height/2;
@@ -196,37 +138,34 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		yscale = digheight;
 	}
 
-	//Download actual waveform timestamps and voltages
+	//FIXME: Using m_plotRight instead of m_width here is more efficient, but
+	// there is some subtle bug with the alignment of cursors when using m_plotRight.
+
+	//Ensure GPU has actual waveform timestamps and voltages
+	//FIXME: This can be optimized by batching all calls to a cmdbuf, but can't
+	// use wdata->m_vkCmdBuf for this because RenderTrace uses that.
 	if(update_waveform)
 	{
 		if(sandat)
-			memcpy(wdata->m_mappedYBuffer, sandat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(float));
+			sandat->m_samples.PrepareForGpuAccess(false);
 		else if(uandat)
-			memcpy(wdata->m_mappedYBuffer, uandat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(float));
+			uandat->m_samples.PrepareForGpuAccess(false);
 		else if(sdigdat)
-			memcpy(wdata->m_mappedDigitalYBuffer, sdigdat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(bool));
+			sdigdat->m_samples.PrepareForGpuAccess(false);
 		else if(udigdat)
-			memcpy(wdata->m_mappedDigitalYBuffer, udigdat->m_samples.GetCpuPointer(), wdata->m_count*sizeof(bool));
+			udigdat->m_samples.PrepareForGpuAccess(false);
 
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
 		if(sandat)
 		{
-			memcpy(wdata->m_mappedXBuffer, sandat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
-			memcpy(wdata->m_mappedDurationsBuffer, sandat->m_durations.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
+			sandat->m_offsets.PrepareForGpuAccess(false);
+			sandat->m_durations.PrepareForGpuAccess(false);
 		}
 		else if(sdigdat)
 		{
-			memcpy(wdata->m_mappedXBuffer, sdigdat->m_offsets.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
-			memcpy(wdata->m_mappedDurationsBuffer, sdigdat->m_durations.GetCpuPointer(), wdata->m_count*sizeof(int64_t));
-		}
-
-		//TODO: skip for dense packed digital path too once the shader supports that
-		//For now, fill it beacuse apparently the shader still needs it?
-		else if(udigdat)
-		{
-			for(size_t i=0; i<wdata->m_count; i++)
-				wdata->m_mappedXBuffer[i] = i;
+			sdigdat->m_offsets.PrepareForGpuAccess(false);
+			sdigdat->m_offsets.PrepareForGpuAccess(false);
 		}
 	}
 
@@ -235,24 +174,30 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 	auto group = wdata->m_area->m_group;
 	int64_t offset_samples = (group->m_xAxisOffset - pdat->m_triggerPhase) / pdat->m_timescale;
 	double xscale = (pdat->m_timescale * group->m_pixelsPerXUnit);
-	if(sandat || sdigdat || udigdat)
+	if(sandat || sdigdat)
 	{
 		int64_t* offsets;
 		if(sandat)
+		{
+			sandat->m_offsets.PrepareForCpuAccess();
 			offsets = sandat->m_offsets.GetCpuPointer();
-		else if(sdigdat)
-			offsets = sdigdat->m_offsets.GetCpuPointer();
+		}
 		else
-			offsets = wdata->m_mappedXBuffer;
+		{
+			sdigdat->m_offsets.PrepareForCpuAccess();
+			offsets = sdigdat->m_offsets.GetCpuPointer();
+		}
 
+		wdata->m_indexBuffer.resize(wdata->m_area->m_width);
 		for(int j=0; j<wdata->m_area->m_width; j++)
 		{
 			int64_t target = floor(j / xscale) + offset_samples;
-			wdata->m_mappedIndexBuffer[j] = BinarySearchForGequal(
+			wdata->m_indexBuffer[j] = BinarySearchForGequal(
 				offsets,
 				wdata->m_count,
 				target-2);
 		}
+		wdata->m_indexBuffer.MarkModifiedFromCpu();
 	}
 
 	//Scale alpha by zoom.
@@ -271,24 +216,25 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Config stuff
 	int64_t innerxoff = group->m_xAxisOffset / pdat->m_timescale;
-	int64_t fractional_offset = group->m_xAxisOffset % pdat->m_timescale;
-	wdata->m_mappedConfigBuffer64[0] = -innerxoff;											//innerXoff
-	wdata->m_mappedConfigBuffer[2] = height;												//windowHeight
-	wdata->m_mappedConfigBuffer[3] = wdata->m_area->m_plotRight;							//windowWidth
-	wdata->m_mappedConfigBuffer[4] = wdata->m_count;										//depth
-	wdata->m_mappedConfigBuffer[5] = offset_samples - 2;									//offset_samples
-	wdata->m_mappedFloatConfigBuffer[6] = alpha_scaled;										//alpha
-	wdata->m_mappedFloatConfigBuffer[7] = (pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit;	//xoff
-	wdata->m_mappedFloatConfigBuffer[8] = xscale;											//xscale
-	wdata->m_mappedFloatConfigBuffer[9] = ybase;											//ybase
-	wdata->m_mappedFloatConfigBuffer[10] = yscale;											//yscale
-	wdata->m_mappedFloatConfigBuffer[11] = wdata->m_channel.GetOffset();					//yoff
-
-	//persistScale
+	int64_t fractional_offset    = group->m_xAxisOffset % pdat->m_timescale;
+	wdata->m_config.innerXoff    = -innerxoff;
+	wdata->m_config.windowHeight = height;
+	wdata->m_config.windowWidth  = wdata->m_area->m_width;
+	wdata->m_config.memDepth     = wdata->m_count;
+	wdata->m_config.offset_samples = offset_samples - 2;
+	wdata->m_config.alpha        = alpha_scaled;
+	wdata->m_config.xoff         = (pdat->m_triggerPhase - fractional_offset) * group->m_pixelsPerXUnit;
+	wdata->m_config.xscale       = xscale;
+	wdata->m_config.ybase        = ybase;
+	wdata->m_config.yscale       = yscale;
+	wdata->m_config.yoff         = wdata->m_channel.GetOffset();
 	if(!wdata->m_persistence)
-		wdata->m_mappedFloatConfigBuffer[12] = 0;
+		wdata->m_config.persistScale = 0;
 	else
-		wdata->m_mappedFloatConfigBuffer[12] = persistDecay;
+		wdata->m_config.persistScale = persistDecay;
+
+	//Allocate output buffer
+	wdata->m_renderedWaveform.resize(wdata->m_config.windowWidth * wdata->m_config.windowHeight);
 
 	//Done
 	wdata->m_geometryOK = true;
@@ -379,13 +325,14 @@ void WaveformArea::GetAllRenderData(vector<WaveformRenderData*>& data)
 	}
 }
 
-void WaveformArea::MapAllBuffers(bool update_y)
+void WaveformArea::UpdateCounts()
 {
-	make_current();
+	//TODO: Can probably eliminate this entirely and just put the
+	// WaveformRenderData::m_count update in PrepareGeometry?
 
 	//Main waveform
 	if(IsAnalog() || IsDigital())
-		m_waveformRenderData->MapBuffers(m_width, update_y);
+		m_waveformRenderData->UpdateCount();
 
 	for(auto overlay : m_overlays)
 	{
@@ -393,25 +340,7 @@ void WaveformArea::MapAllBuffers(bool update_y)
 			continue;
 
 		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			m_overlayRenderData[overlay]->MapBuffers(m_width, update_y);
-	}
-}
-
-void WaveformArea::UnmapAllBuffers(bool update_y)
-{
-	make_current();
-
-	//Main waveform
-	if(IsAnalog() || IsDigital())
-		m_waveformRenderData->UnmapBuffers(update_y);
-
-	for(auto overlay : m_overlays)
-	{
-		if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
-			continue;
-
-		if(m_overlayRenderData.find(overlay) != m_overlayRenderData.end())
-			m_overlayRenderData[overlay]->UnmapBuffers(update_y);
+			m_overlayRenderData[overlay]->UpdateCount();
 	}
 }
 
@@ -455,10 +384,9 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 			GetAllRenderData(data);
 
 			//Do the actual update
-			MapAllBuffers(m_geometryDirty);
+			UpdateCounts();
 			for(auto d : data)
 				PrepareGeometry(d, m_geometryDirty, alpha, persistDecay);
-			UnmapAllBuffers(m_geometryDirty);
 
 			m_geometryDirty = false;
 			m_positionDirty = false;
@@ -477,7 +405,7 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 		}
 
 		//Draw the main waveform
-		if(IsAnalog() || IsDigital() )
+		if(IsAnalog() || IsDigital())
 			RenderTrace(m_waveformRenderData);
 
 		//Launch software rendering passes and push the resulting data to the GPU
@@ -489,11 +417,8 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 			if(overlay.GetType() != Stream::STREAM_TYPE_DIGITAL)
 				continue;
 
-			//Create the texture
 			auto wdat = m_overlayRenderData[overlay];
-			wdat->m_waveformTexture.Bind();
-			wdat->m_waveformTexture.SetData(m_width, m_height, NULL, GL_RGBA, GL_UNSIGNED_BYTE, GL_RGBA32F);
-			ResetTextureFiltering();
+			wdat->m_renderedWaveform.resize(m_width * m_height);
 
 			RenderTrace(wdat);
 		}
@@ -501,13 +426,6 @@ bool WaveformArea::on_render(const Glib::RefPtr<Gdk::GLContext>& /*context*/)
 
 	//Underlays don't care about the mutex
 	ComputeAndDownloadCairoUnderlays();
-
-	//Make sure all compute shaders are done before we composite
-	m_digitalWaveformComputeProgram.MemoryBarrier();
-	m_histogramWaveformComputeProgram.MemoryBarrier();
-	m_zeroHoldAnalogWaveformComputeProgram.MemoryBarrier();
-	m_denseAnalogWaveformComputeProgram.MemoryBarrier();
-	m_analogWaveformComputeProgram.MemoryBarrier();
 
 	//Final compositing of data being drawn to the screen
 	m_windowFramebuffer.Bind(GL_FRAMEBUFFER);
@@ -680,20 +598,6 @@ void WaveformArea::RenderWaterfall()
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
-Program* WaveformArea::GetProgramForWaveform(WaveformRenderData* data)
-{
-	if(data->IsDigital())
-		return &m_digitalWaveformComputeProgram;
-	else if(data->IsHistogram())
-		return &m_histogramWaveformComputeProgram;
-	else if(data->WantsZeroHold() && !data->IsDensePacked()) // Don't support dense-packed && zero-hold at the moment
-		return &m_zeroHoldAnalogWaveformComputeProgram;
-	else if(data->IsDensePacked())
-		return &m_denseAnalogWaveformComputeProgram;
-	else
-		return &m_analogWaveformComputeProgram;
-}
-
 void WaveformArea::RenderTrace(WaveformRenderData* data)
 {
 	if(!data->m_geometryOK)
@@ -710,19 +614,61 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	}
 	int numGroups = numCols / localSize;
 
-	auto prog = GetProgramForWaveform(data);
-	prog->Bind();
-	prog->SetImageUniform(data->m_waveformTexture, "outputTex");
+	std::shared_ptr<ComputePipeline> comp;
+	if(data->IsDensePacked())
+		comp = data->m_shaderDense;
+	else
+		comp = data->m_shaderSparse;
+	data->m_vkCmdBuf->begin({});
+	//Bind the output buffer
+	//TODO: Can we use outputOnly=true if no persistence?
+	comp->BindBufferNonblocking(0, data->m_renderedWaveform, *data->m_vkCmdBuf);
+	auto pdat = data->m_channel.GetData();
+	auto sandat = dynamic_cast<SparseAnalogWaveform*>(pdat);
+	auto uandat = dynamic_cast<UniformAnalogWaveform*>(pdat);
+	auto sdigdat = dynamic_cast<SparseDigitalWaveform*>(pdat);
+	auto udigdat = dynamic_cast<UniformDigitalWaveform*>(pdat);
+	if(sandat)
+	{
+		comp->BindBufferNonblocking(1, sandat->m_samples, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(2, sandat->m_offsets, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
 
-	data->m_waveformXBuffer.BindBase(1);
-	data->m_waveformYBuffer.BindBase(4);
-	data->m_waveformConfigBuffer.BindBase(2);
-	data->m_waveformIndexBuffer.BindBase(3);
+		if (data->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sandat->m_durations, *data->m_vkCmdBuf);
+	}
+	else if(uandat)
+	{
+		comp->BindBufferNonblocking(1, uandat->m_samples, *data->m_vkCmdBuf);
+	}
+	else if(sdigdat)
+	{
+		comp->BindBufferNonblocking(1, sdigdat->m_samples, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(2, sdigdat->m_offsets, *data->m_vkCmdBuf);
+		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
 
-	if (!data->IsDensePacked())
-		data->m_waveformDurationsBuffer.BindBase(5);
+		if (data->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sdigdat->m_durations, *data->m_vkCmdBuf);
+	}
+	else if(udigdat)
+	{
+		comp->BindBufferNonblocking(1, udigdat->m_samples, *data->m_vkCmdBuf);
+	}
+	comp->Dispatch(*data->m_vkCmdBuf, data->m_config, numGroups, 1, 1);
+	comp->AddComputeMemoryBarrier(*data->m_vkCmdBuf);
+	data->m_vkCmdBuf->end();
+	SubmitAndBlock(*data->m_vkCmdBuf, *m_parent->m_vkQueue);
+	data->m_renderedWaveform.MarkModifiedFromGpu();
 
-	prog->DispatchCompute(numGroups, 1, 1);
+	//Copy the rendered waveform data to a GL Texture for compositing
+	data->m_renderedWaveform.PrepareForCpuAccess();
+	data->m_waveformTexture.Bind();
+	ResetTextureFiltering();
+	data->m_waveformTexture.SetData(m_width, m_height,
+		data->m_renderedWaveform.GetCpuPointer(),
+		GL_RED,
+		GL_FLOAT,
+		GL_RGBA32F);
 }
 
 void WaveformArea::RenderTraceColorCorrection(WaveformRenderData* data)

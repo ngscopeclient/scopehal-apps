@@ -44,11 +44,13 @@
 #pragma GCC diagnostic pop
 
 #include <atomic>
+#include <shared_mutex>
 
 #include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"
 #include "MultimeterState.h"
 #include "GuiLogSink.h"
+#include "Event.h"
 
 class RFSignalGeneratorThreadArgs
 {
@@ -92,9 +94,14 @@ public:
 	std::shared_ptr<MultimeterState> state;
 };
 
+class Session;
+
 void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
 void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
+void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
+
+ImU32 ColorFromString(const std::string& str);
 
 #endif

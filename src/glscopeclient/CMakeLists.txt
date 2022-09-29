@@ -7,6 +7,9 @@ endif()
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# Vulkan is required for compute shaders used in rendering
+find_package(Vulkan REQUIRED)
+
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
 
@@ -134,10 +137,12 @@ add_dependencies(protoshaders
 	shaders
 	)
 
+add_subdirectory(shaders)
 add_dependencies(glscopeclient
 	gradients
 	protoshaders
 	shaders
+	rendershaders
 	styles
 	icons
 )

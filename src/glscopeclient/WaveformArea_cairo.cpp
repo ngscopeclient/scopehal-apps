@@ -1044,7 +1044,7 @@ pair<bool, float> WaveformArea::GetValueAtTime(int64_t time_fs)
 		return {true, GetValue(swaveform, uwaveform, end)};
 
 	// If waveform wants zero-hold rendering, do not interpolate cursor-displayed value
-	if (m_waveformRenderData->WantsZeroHold())
+	if (m_waveformRenderData->ZeroHoldCursorBehaviour())
 	{
 		if (swaveform)
 		{

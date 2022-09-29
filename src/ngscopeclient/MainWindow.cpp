@@ -53,8 +53,11 @@
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
+#include "TimebasePropertiesDialog.h"
 
 using namespace std;
+
+extern Event g_rerenderRequestedEvent;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -65,6 +68,9 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_sessionClosing(false)
+	, m_needRender(false)
+	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
 
@@ -89,19 +95,36 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	io.Fonts->Build();
 	io.FontDefault = m_defaultFont;
 
-	//Temporary command pool for initialization
+	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		g_renderQueueType );
-	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
-	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	if(g_hasDebugUtils)
+	{
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				"MainWindow.m_cmdPool"));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandBuffer,
+				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
+				"MainWindow.m_cmdBuffer"));
+	}
 
 	//Download imgui fonts
-	cmdBuf.begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
-	cmdBuf.end();
-	SubmitAndBlock(cmdBuf, queue);
+	m_cmdBuffer->begin({});
+	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, queue);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
@@ -120,6 +143,9 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 MainWindow::~MainWindow()
 {
+	m_cmdBuffer = nullptr;
+	m_cmdPool = nullptr;
+
 	CloseSession();
 }
 
@@ -129,25 +155,40 @@ MainWindow::~MainWindow()
 void MainWindow::CloseSession()
 {
 	LogTrace("Closing session\n");
-
-	//Clear the actual session object
-	m_session.Clear();
+	LogIndenter li;
 
 	SaveRecentInstrumentList();
 
+	//Close background threads in our session before destroying views
+	m_session.ClearBackgroundThreads();
+
 	//Destroy waveform views
+	LogTrace("Clearing views\n");
+	for(auto g : m_waveformGroups)
+		g->Clear();
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
+	m_groupsToClose.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
+	LogTrace("Clearing dialogs\n");
 	m_logViewerDialog = nullptr;
+	m_metricsDialog = nullptr;
+	m_timebaseDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
+
+	//Clear the actual session object once all views / dialogs having handles to scopes etc have been destroyed
+	m_session.Clear();
+
+	LogTrace("Clear complete\n");
+
+	m_sessionClosing = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,13 +298,68 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+void MainWindow::Render()
+{
+	if(m_sessionClosing)
+	{
+		m_renderQueue.waitIdle();
+		CloseSession();
+	}
+
+	VulkanWindow::Render();
+}
+
 void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
 
 }
 
+/**
+	@brief Run the tone-mapping shader on all of our waveforms
+
+	Called by Session::CheckForWaveforms() at the start of each frame if new data is ready to render
+ */
+void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
+{
+	double start = GetTime();
+
+	m_cmdBuffer->begin({});
+
+	for(auto group : m_waveformGroups)
+		group->ToneMapAllWaveforms(cmdbuf);
+
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+
+	double dt = GetTime() - start;
+	m_toneMapTime = dt * FS_PER_SECOND;
+}
+
+void MainWindow::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& channels)
+{
+	for(auto group : m_waveformGroups)
+		group->RenderWaveformTextures(cmdbuf, channels);
+}
+
 void MainWindow::RenderUI()
 {
+	m_needRender = false;
+
+	//Keep references to all of our waveform textures until next frame
+	//Any groups we're closing will be destroyed at the start of that frame, once rendering has finished
+	for(auto g : m_waveformGroups)
+		g->ReferenceWaveformTextures();
+
+	//Destroy all waveform groups we were asked to close
+	for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
+		m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
+	m_groupsToClose.clear();
+
+	//See if we have new waveform data to look at
+	m_session.CheckForWaveforms(*m_cmdBuffer);
+
 	//Menu for main window
 	MainMenu();
 	Toolbar();
@@ -272,14 +368,19 @@ void MainWindow::RenderUI()
 	DockingArea();
 
 	//Waveform groups
-	vector<size_t> groupsToClose;
-	for(size_t i=0; i<m_waveformGroups.size(); i++)
 	{
-		if(!m_waveformGroups[i]->Render())
-			groupsToClose.push_back(i);
+		lock_guard<recursive_mutex> lock(m_session.GetWaveformDataMutex());
+		for(size_t i=0; i<m_waveformGroups.size(); i++)
+		{
+			auto group = m_waveformGroups[i];
+			if(!group->Render())
+			{
+				LogTrace("Closing waveform group %s (i=%zu)\n", group->GetTitle().c_str(), i);
+				group->Clear();
+				m_groupsToClose.push_back(i);
+			}
+		}
 	}
-	for(ssize_t i = static_cast<ssize_t>(groupsToClose.size())-1; i >= 0; i--)
-		m_waveformGroups.erase(m_waveformGroups.begin() + i);
 
 	//Dialog boxes
 	set< shared_ptr<Dialog> > dlgsToClose;
@@ -290,6 +391,9 @@ void MainWindow::RenderUI()
 	}
 	for(auto& dlg : dlgsToClose)
 		OnDialogClosed(dlg);
+
+	if(m_needRender)
+		g_rerenderRequestedEvent.Signal();
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
@@ -338,19 +442,19 @@ void MainWindow::ToolbarButtons()
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
-		LogDebug("start trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_NORMAL);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
-		LogDebug("single trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_SINGLE);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
-		LogDebug("force trigger\n");
+		m_session.ArmTrigger(Session::TRIGGER_TYPE_FORCED);
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
-		LogDebug("stop trigger\n");
+		m_session.StopTrigger();
 
 	//History selector
 	ImGui::SameLine();
@@ -400,6 +504,9 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
+
+	if(m_timebaseDialog == dlg)
+		m_timebaseDialog = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
@@ -532,6 +639,25 @@ void MainWindow::DockingArea()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
+
+bool MainWindow::IsChannelBeingDragged()
+{
+	for(auto group : m_waveformGroups)
+	{
+		if(group->IsChannelBeingDragged())
+			return true;
+	}
+	return false;
+}
+
+void MainWindow::ShowTimebaseProperties()
+{
+	if(m_timebaseDialog != nullptr)
+		return;
+
+	m_timebaseDialog = make_shared<TimebasePropertiesDialog>(&m_session);
+	AddDialog(m_timebaseDialog);
+}
 
 void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 {

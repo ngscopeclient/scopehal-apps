@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -26,74 +26,112 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
+#ifndef Event_h
+#define Event_h
 
 /**
-	@file
-	@brief Waveform rendering shader for without GL_ARB_gpu_shader_int64 support
+	@brief Synchronization primitive for sending a "something is ready" notification to a thread
+
+	Unlike std::condition_variable, an Event can be signaled before the receiver has started to wait.
  */
-
-#extension GL_ARB_compute_shader : require
-#extension GL_ARB_arrays_of_arrays : require
-#extension GL_ARB_shader_storage_buffer_object : require
-
-layout(std430, binding=1) buffer waveform_x
+class Event
 {
-	uint xpos[];		//x position, in time ticks
-						//actually 64-bit little endian signed ints
-};
+public:
+	Event()
+	{ m_ready = false; }
 
-//Global configuration for the run
-layout(std430, binding=2) buffer config
-{
-	uint innerXoff_lo;	//actually a 64-bit little endian signed int
-	uint innerXoff_hi;
-
-	uint windowHeight;
-	uint windowWidth;
-	uint memDepth;
-	uint offset_samples;
-	float alpha;
-	float xoff;
-	float xscale;
-	float ybase;
-	float yscale;
-	float yoff;
-	float persistScale;
-};
-
-//All this just because most Intel integrated GPUs lack GL_ARB_gpu_shader_int64...
-float FetchX(uint i)
-{
-	#ifdef DENSE_PACK
-		uint xpos_lo = i;
-		uint xpos_hi = 0;
-	#else
-		//Fetch the input
-		uint xpos_lo = xpos[i*2];
-		uint xpos_hi = xpos[i*2 + 1];
-	#endif
-	uint offset_lo = innerXoff_lo;
-
-	//Sum the low halves
-	uint carry;
-	uint sum_lo = uaddCarry(xpos_lo, offset_lo, carry);
-
-	//Sum the high halves with carry in
-	uint sum_hi = xpos_hi + innerXoff_hi + carry;
-
-	//If MSB is 1, we're negative.
-	//Calculate the twos complement by flipping all the bits.
-	//To complete the complement we need to add 1, but that comes later.
-	bool negative = ( (sum_hi & 0x80000000) == 0x80000000 );
-	if(negative)
+	/**
+		@brief Sends an event to the receiving thread
+	 */
+	void Signal()
 	{
-		sum_lo = ~sum_lo;
-		sum_hi = ~sum_hi;
+		m_ready = true;
+		m_cond.notify_one();
 	}
 
-	//Convert back to floating point
-	float f = (float(sum_hi) * 4294967296.0) + float(sum_lo);
-	if(negative)
-		f = -f + 1;
-	return f;
-}
+	/**
+		@brief Sends an event to the receiving thread
+
+		If another event is pending, returns false indicating no submission was actually made
+	 */
+	bool SignalIfNotAlreadySignaled()
+	{
+		//Existing event pending? We did nothing
+		if(m_ready.exchange(true) == true)
+			return false;
+
+		//No event was already pending so we submitted one.
+		else
+		{
+			m_cond.notify_one();
+			return true;
+		}
+	}
+
+
+	/**
+		@brief Sends an event to the receiving thread
+
+		If another event is pending, blocks until that one has been processed to avoid dropping events.
+
+		@param processedEvent	Event indicating that the previous message has been processed completely
+	 */
+	void SignalExactlyOnce(Event& processedEvent)
+	{
+		while(true)
+		{
+			//Existing event pending? Block until it's completed
+			if(m_ready.exchange(true) == true)
+				processedEvent.Block();
+
+			//No event was already pending so we submitted one.
+			else
+			{
+				m_cond.notify_one();
+				break;
+			}
+		}
+	}
+
+	/**
+		@brief Blocks until the event is signaled
+	 */
+	void Block()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_cond.wait(lock, [&]{ return m_ready.load(); });
+		m_ready = false;
+	}
+
+	/**
+		@brief Checks if the event is signaled, and returns immediately without blocking regardless of event state.
+
+		This clears the event-pending flag if clearReady is set.
+	 */
+	bool Peek(bool clearReady = true)
+	{
+		if(m_ready)
+		{
+			if(clearReady)
+				m_ready = false;
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+		@brief Clears the event state if it's currently signaled
+	 */
+	void Clear()
+	{
+		m_ready = false;
+	}
+
+protected:
+	std::mutex m_mutex;
+	std::condition_variable m_cond;
+	std::atomic_bool m_ready;
+};
+
+#endif

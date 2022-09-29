@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -29,43 +29,48 @@
 
 /**
 	@file
-	@brief Waveform rendering shader for analog waveforms with GL_ARB_gpu_shader_int64 support
+	@author Andrew D. Zonenberg
+	@brief Declaration of TimebasePropertiesDialog
  */
+#ifndef TimebasePropertiesDialog_h
+#define TimebasePropertiesDialog_h
 
-#extension GL_ARB_compute_shader : require
-#extension GL_ARB_gpu_shader_int64 : require
-#extension GL_ARB_arrays_of_arrays : require
-#extension GL_ARB_shader_storage_buffer_object : require
+#include "Dialog.h"
 
-layout(std430, binding=1) buffer waveform_x
+class TimebasePropertiesPage
 {
-	int64_t xpos[];		//x position, in time ticks
+public:
+	TimebasePropertiesPage(Oscilloscope* scope);
+
+	Oscilloscope* m_scope;
+
+	//Sample rate
+	std::vector<uint64_t> m_rates;
+	std::vector<std::string> m_rateNames;
+	int m_rate;
+
+	//Memory depth
+	std::vector<uint64_t> m_depths;
+	std::vector<std::string> m_depthNames;
+	int m_depth;
+
+	bool m_interleaving;
 };
 
-//Global configuration for the run
-layout(std430, binding=2) buffer config
+class TimebasePropertiesDialog : public Dialog
 {
-	int64_t innerXoff;
-	uint windowHeight;
-	uint windowWidth;
-	uint memDepth;
-	uint offset_samples;
-	float alpha;
-	float xoff;
-	float xscale;
-	float ybase;
-	float yscale;
-	float yoff;
-	float persistScale;
+public:
+	TimebasePropertiesDialog(Session* session);
+	virtual ~TimebasePropertiesDialog();
+
+	void Refresh();
+
+	virtual bool DoRender();
+
+protected:
+	Session* m_session;
+
+	std::vector<std::unique_ptr<TimebasePropertiesPage>> m_pages;
 };
 
-float FetchX(uint i)
-{
-	#ifdef DENSE_PACK
-		return float(int64_t(i) + innerXoff);
-	#else
-		return float(xpos[i] + innerXoff);
-	#endif
-}
-
-#define INT64
+#endif // TimebasePropertiesDialog_h

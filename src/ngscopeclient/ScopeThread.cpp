@@ -42,6 +42,8 @@ void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
 	pthread_setname_np_compat("ScopeThread");
 	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
 
+	LogTrace("Initializing %s\n", scope->m_nickname.c_str());
+
 	while(!*shuttingDown)
 	{
 		//Push any pending queued commands
@@ -60,7 +62,7 @@ void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
 		//If trigger isn't armed, don't even bother polling for a while.
 		if(!scope->IsTriggerArmed())
 		{
-			LogTrace("Scope isn't armed, sleeping\n");
+			//LogTrace("Scope isn't armed, sleeping\n");
 			this_thread::sleep_for(chrono::milliseconds(5));
 			continue;
 		}

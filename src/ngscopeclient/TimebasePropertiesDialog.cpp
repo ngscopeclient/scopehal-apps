@@ -30,29 +30,85 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddInstrumentDialog
+	@brief Implementation of TimebasePropertiesDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddInstrumentDialog.h"
+#include "TimebasePropertiesDialog.h"
+#include "Session.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
+// TimebasePropertiesPage
 
-AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
-	: Dialog(title, ImVec2(600, 150))
-	, m_session(session)
-	, m_nickname(nickname)
-	, m_selectedDriver(0)
-	, m_selectedTransport(0)
+TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
+	: m_scope(scope)
 {
-	SCPITransport::EnumTransports(m_transports);
+	//Interleaving flag
+	m_interleaving = scope->IsInterleaving();
+
+	//Sample rate
+	Unit srate(Unit::UNIT_SAMPLERATE);
+	auto rate = scope->GetSampleRate();
+	if(m_interleaving)
+		m_rates = scope->GetSampleRatesInterleaved();
+	else
+		m_rates = scope->GetSampleRatesNonInterleaved();
+
+	m_rate = 0;
+	for(size_t i=0; i<m_rates.size(); i++)
+	{
+		m_rateNames.push_back(srate.PrettyPrint(m_rates[i]));
+		if(m_rates[i] == rate)
+			m_rate = i;
+	}
+
+	//Sample depth
+	Unit sdepth(Unit::UNIT_SAMPLEDEPTH);
+	auto depth = scope->GetSampleDepth();
+	if(m_interleaving)
+		m_depths = scope->GetSampleDepthsInterleaved();
+	else
+		m_depths = scope->GetSampleDepthsNonInterleaved();
+
+	m_depth = 0;
+	for(size_t i=0; i<m_depths.size(); i++)
+	{
+		m_depthNames.push_back(sdepth.PrettyPrint(m_depths[i]));
+		if(m_depths[i] == depth)
+			m_depth = i;
+	}
 }
 
-AddInstrumentDialog::~AddInstrumentDialog()
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+TimebasePropertiesDialog::TimebasePropertiesDialog(Session* session)
+	: Dialog("Timebase properties", ImVec2(300, 400))
+	, m_session(session)
 {
+	Refresh();
+}
+
+TimebasePropertiesDialog::~TimebasePropertiesDialog()
+{
+}
+
+/**
+	@brief Refreshes the dialog whenever the set of valid configurations changes
+
+	Examples of events that will need to trigger a refresh:
+	* Enabling or disabling a channel
+	* Changing ADC mode
+ */
+void TimebasePropertiesDialog::Refresh()
+{
+	m_pages.clear();
+
+	auto scopes = m_session->GetScopes();
+	for(auto s : scopes)
+		m_pages.push_back(make_unique<TimebasePropertiesPage>(s));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,64 +120,66 @@ AddInstrumentDialog::~AddInstrumentDialog()
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
-bool AddInstrumentDialog::DoRender()
+bool TimebasePropertiesDialog::DoRender()
 {
-	ImGui::InputText("Nickname", &m_nickname);
-	HelpMarker(
-		"Text nickname for this instrument so you can distinguish between multiple similar devices.\n"
-		"\n"
-		"This is shown on the list of recent instruments, to disambiguate channel names in multi-instrument setups, etc.");
+	float width = 10 * ImGui::GetFontSize();
 
-	Combo("Driver", m_drivers, m_selectedDriver);
-	HelpMarker(
-		"Select the instrument driver to use.\n"
-		"\n"
-		"Most commonly there is one driver supporting all hardware of a given type from a given vendor (e.g. Siglent oscilloscopes),"
-		"however there may be multiple drivers to choose from if a given vendor has several product lines with very different "
-		"software stacks.\n"
-		"\n"
-		"Check the user manual for details of what driver to use with a given instrument.");
-
-	Combo("Transport", m_transports, m_selectedTransport);
-	HelpMarker(
-		"Select the SCPI transport for the connection between your computer and the instrument.\n"
-		"\n"
-		"This controls how remote control commands and waveform data get to/from the instrument (USB, Ethernet, GPIB, etc).\n"
-		"\n"
-		"Note that there are four different transports which run over TCP/IP, since instruments vary greatly:\n",
-			{
-				"lan: raw SCPI over TCP socket with no framing",
-				"lxi: LXI VXI-11",
-				"twinlan: separate sockets for SCPI text control commands and raw binary waveforms.\n"
-				"Commonly used with bridge servers for interfacing to USB instruments (Digilent, DreamSourceLabs, Pico).",
-				"vicp: Teledyne LeCroy Virtual Instrument Control Protocol"
-			}
-		);
-
-	ImGui::InputText("Path", &m_path);
-	HelpMarker(
-		"Transport-specific description of how to connect to the instrument.\n",
-			{
-				"GPIB: board index and primary address (0:7)",
-				"TCP/IP transports: IP or hostname : port (localhost:5025).\n"
-				"Note that for twinlan, two port numbers are required (localhost:5025:5026) for SCPI and data ports respectively.",
-				"UART: device path and baud rate (/dev/ttyUSB0:9600, COM1). Default id 115200 if not specified. ",
-				"USBTMC: Linux device path (/dev/usbtmcX)"
-			}
-		);
-
-	if(ImGui::Button("Add"))
+	for(auto& p : m_pages)
 	{
-		if(m_nickname.empty())
+		auto scope = p->m_scope;
+
+		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ShowErrorPopup(
-			"Nickname error",
-			"Nickname shall be not empty");
-		}
-		else
-		{
-			if(DoConnect())
-				return false;
+			ImGui::PushID(scope->m_nickname.c_str());
+
+			//Time domain configuration
+			if(scope->HasTimebaseControls())
+			{
+
+				//Sample rate
+				ImGui::SetNextItemWidth(width);
+				if(Combo("Sample rate", p->m_rateNames, p->m_rate))
+					scope->SetSampleRate(p->m_rates[p->m_rate]);
+				HelpMarker(
+					"Time domain sample rate.\n\n"
+					"For some instruments, available sample rates may vary depending on which channels are active."
+					);
+
+				//Memory depth
+				ImGui::SetNextItemWidth(width);
+				if(Combo("Sample depth", p->m_depthNames, p->m_depth))
+					scope->SetSampleDepth(p->m_depths[p->m_depth]);
+				HelpMarker(
+					"Acquisition record length, in samples.\n\n"
+					"For some instruments, available memory depths may vary depending on which channels are active."
+					);
+
+				//Interleaving
+				if(scope->CanInterleave())
+				{
+					if(ImGui::Checkbox("Interleaving", &p->m_interleaving))
+					{
+						scope->SetInterleaving(p->m_interleaving);
+						Refresh();
+					}
+
+					HelpMarker(
+						"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
+						"\n"
+						"Some instruments do not have an explicit interleaving switch, but available sample rates "
+						"may vary depending on which channels are active."
+						);
+				}
+
+			}
+
+			//Frequency domain configuration
+			if(scope->HasFrequencyControls())
+			{
+				//TODO
+			}
+
+			ImGui::PopID();
 		}
 	}
 
