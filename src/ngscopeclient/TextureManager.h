@@ -92,6 +92,9 @@ protected:
 
 	///@brief Device memory backing the image
 	std::unique_ptr<vk::raii::DeviceMemory> m_deviceMemory;
+
+	///@brief Descriptor pool our textures should be freed from (whatever imgui allocates from);
+	std::shared_ptr<vk::raii::DescriptorPool> m_pool;
 };
 
 /**
@@ -100,7 +103,7 @@ protected:
 class TextureManager
 {
 public:
-	TextureManager();
+	TextureManager(std::shared_ptr<vk::raii::DescriptorPool> pool);
 	virtual ~TextureManager();
 
 	void LoadTexture(const std::string& name, const std::string& path);
@@ -111,10 +114,16 @@ public:
 	std::unique_ptr<vk::raii::Sampler>& GetSampler()
 	{ return m_sampler; }
 
+	std::shared_ptr<vk::raii::DescriptorPool> GetPool()
+	{ return m_pool; }
+
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
-	//@brief Sampler for textures
+	///@brief Descriptor pool our textures should be freed from (whatever imgui allocates from);
+	std::shared_ptr<vk::raii::DescriptorPool> m_pool;
+
+	///@brief Sampler for textures
 	std::unique_ptr<vk::raii::Sampler> m_sampler;
 };
 

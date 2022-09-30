@@ -73,6 +73,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
 	, m_sessionClosing(false)
+	, m_texmgr(m_imguiDescriptorPool)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {

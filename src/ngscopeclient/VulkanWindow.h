@@ -71,7 +71,7 @@ protected:
 	std::shared_ptr<vk::raii::SurfaceKHR> m_surface;
 
 	///@brief Descriptor pool for ImGui
-	std::unique_ptr<vk::raii::DescriptorPool> m_imguiDescriptorPool;
+	std::shared_ptr<vk::raii::DescriptorPool> m_imguiDescriptorPool;
 
 	///@brief Queue for rendering to
 	vk::raii::Queue& m_renderQueue;

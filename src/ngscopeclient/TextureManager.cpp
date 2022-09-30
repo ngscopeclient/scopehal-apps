@@ -55,6 +55,7 @@ Texture::Texture(
 	const std::string& name
 	)
 	: m_image(device, imageInfo)
+	, m_pool(mgr->GetPool())
 {
 	auto req = m_image.getMemoryRequirements();
 
@@ -141,6 +142,7 @@ Texture::Texture(
 	TextureManager* mgr,
 	const string& name)
 	: m_image(device, imageInfo)
+	, m_pool(mgr->GetPool())
 {
 	auto req = m_image.getMemoryRequirements();
 
@@ -266,12 +268,20 @@ void Texture::LayoutTransition(
 
 Texture::~Texture()
 {
+	//Need to free our descriptor set to avoid leaking resources
+	//(imgui backend currently does not provide any way to do this)
+	//Easiest way is to wrap it up in a vk::raii object then let it go out of scope.
+	vk::raii::DescriptorSet set(
+		*g_vkComputeDevice,
+		reinterpret_cast<VkDescriptorSet>(m_texture),
+		**m_pool);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-TextureManager::TextureManager()
+TextureManager::TextureManager(shared_ptr<vk::raii::DescriptorPool> pool)
+	: m_pool(pool)
 {
 	//Make a sampler using configuration that matches imgui
 	vk::SamplerCreateInfo sinfo(
