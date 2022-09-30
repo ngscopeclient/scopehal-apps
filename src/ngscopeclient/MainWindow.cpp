@@ -64,9 +64,9 @@ extern Event g_rerenderRequestedEvent;
 
 MainWindow::MainWindow(vk::raii::Queue& queue)
 #ifdef _DEBUG
-	: VulkanWindow("ngscopeclient", queue)
-#else
 	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
+#else
+	: VulkanWindow("ngscopeclient", queue)
 #endif
 	, m_showDemo(true)
 	, m_showPlot(false)
@@ -326,7 +326,7 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	double start = GetTime();
 
-	m_cmdBuffer->begin({});
+	m_cmdBuffer->begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
 	for(auto group : m_waveformGroups)
 		group->ToneMapAllWaveforms(cmdbuf);
