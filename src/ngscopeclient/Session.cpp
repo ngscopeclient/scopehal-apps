@@ -665,7 +665,6 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	//If a re-render operation completed, tone map everything again
 	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
 		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

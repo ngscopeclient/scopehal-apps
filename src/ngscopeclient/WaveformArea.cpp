@@ -437,6 +437,11 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	ImGui::PopID();
 
+	//Update scale again in case we had a mouse wheel event
+	//(we need scale to be accurate for the re-render in the background thread)
+	if(first)
+		m_pixelsPerYAxisUnit = unspacedHeightPerArea / first.GetVoltageRange();
+
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
@@ -1530,4 +1535,5 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 	}
 
 	ClearPersistence();
+	m_parent->SetNeedRender();
 }
