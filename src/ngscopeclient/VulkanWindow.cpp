@@ -381,6 +381,10 @@ void VulkanWindow::Render()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	//Make sure the old frame has completed
+	//Otherwise we risk modifying textures that last frame is still using
+	(void)g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+
 	//Draw all of our application UI objects
 	RenderUI();
 
@@ -424,8 +428,7 @@ void VulkanWindow::Render()
 			return;
 		}
 
-		//Make sure the old frame has completed
-		(void)g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+		//Reset fences for next frame
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
 		m_renderQueue.waitIdle();
 
