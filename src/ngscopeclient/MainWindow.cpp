@@ -63,7 +63,11 @@ extern Event g_rerenderRequestedEvent;
 // Construction / destruction
 
 MainWindow::MainWindow(vk::raii::Queue& queue)
+#ifdef _DEBUG
 	: VulkanWindow("ngscopeclient", queue)
+#else
+	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
+#endif
 	, m_showDemo(true)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)

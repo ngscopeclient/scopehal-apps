@@ -894,7 +894,82 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
  */
 void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 {
-	//TODO
+	//No analog streams? No mismatch possible
+	auto firstStream = GetFirstAnalogOrEyeStream();
+	if(!firstStream)
+		return;
+
+	//Look for a mismatch
+	float firstRange = firstStream.GetVoltageRange();
+	bool mismatchFound = true;
+	StreamDescriptor mismatchStream;
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.GetVoltageRange() > 1.2 * firstRange)
+		{
+			mismatchFound = true;
+			mismatchStream = stream;
+			break;
+		}
+	}
+	if(!mismatchFound || !mismatchStream)
+		return;
+
+	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
+	//above everything else
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float warningSize = ImGui::GetFontSize() * 3;
+
+	//Warning icon
+	auto list = ImGui::GetWindowDrawList();
+	list->AddImage(
+		m_parent->GetTextureManager()->GetTexture("warning"),
+		ImVec2(center.x - 0.5, center.y - warningSize/2 - 0.5),
+		ImVec2(center.x + warningSize + 0.5, center.y + warningSize/2 + 0.5));
+
+	//Prepare to draw text
+	center.x += warningSize;
+	float fontHeight = ImGui::GetFontSize();
+	auto font = m_parent->GetDefaultFont();
+	string str = "Caution: Potential for instrument damage!\n\n";
+	str += string("The channel ") + mismatchStream.GetName() + " has a full-scale range of " +
+		mismatchStream.GetYAxisUnits().PrettyPrint(mismatchStream.GetVoltageRange()) + ",\n";
+	str += string("but this plot has a full-scale range of ") +
+		firstStream.GetYAxisUnits().PrettyPrint(firstRange) + ".\n\n";
+	str += "Setting this channel to match the plot scale may result\n";
+	str += "in overdriving the instrument input.\n";
+	str += "\n";
+	str += string("If the instrument \"") + mismatchStream.m_channel->GetScope()->m_nickname +
+		"\" can safely handle the applied signal at this plot's scale setting,\n";
+	str += "adjust the vertical scale of this plot slightly to set all signals to the same scale\n";
+	str += "and eliminate this message.\n\n";
+	str += "If it cannot, move the channel to another plot.\n";
+
+	//Draw background for text
+	float wrapWidth = 40 * fontHeight;
+	auto textsize = font->CalcTextSizeA(
+		fontHeight,
+		FLT_MAX,
+		wrapWidth,
+		str.c_str());
+	float padding = 5;
+	float wrounding = 2;
+	list->AddRectFilled(
+		ImVec2(center.x, center.y - textsize.y/2 - padding),
+		ImVec2(center.x + textsize.x + 2*padding, center.y + textsize.y/2 + padding),
+		ImGui::GetColorU32(ImGuiCol_PopupBg),
+		wrounding);
+
+	//Draw the text
+	list->AddText(
+		font,
+		fontHeight,
+		ImVec2(center.x + padding, center.y - textsize.y/2),
+		ImGui::GetColorU32(ImGuiCol_Text),
+		str.c_str(),
+		nullptr,
+		wrapWidth);
 }
 
 /**
@@ -1140,6 +1215,16 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
+	//Reject streams with incompatible Y axis units
+	//TODO: display nice error message
+	auto stream = m_parent->GetChannelBeingDragged();
+	auto first = GetFirstAnalogOrEyeStream();
+	if(first)
+	{
+		if(first.GetYAxisUnits() != stream.GetYAxisUnits())
+			return;
+	}
+
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
 	//ImGui::Button("center", size);
@@ -1152,11 +1237,11 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
 		{
 			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
-			auto stream = desc->first->GetStream(desc->second);
+			auto sdrag = desc->first->GetStream(desc->second);
 
 			//Add the new stream to us
 			//TODO: copy view settings from the DisplayedChannel over?
-			AddStream(stream);
+			AddStream(sdrag);
 
 			//Remove the stream from the originating waveform area
 			desc->first->RemoveStream(desc->second);
@@ -1188,10 +1273,8 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 
 	//If trying to drop into the center marker, display warning if incompatible scales
 	//(new signal has significantly wider range) and not a filter
-	//TODO: handle incompatible units?
 	if(ImGui::IsItemHovered())
 	{
-		auto stream = m_parent->GetChannelBeingDragged();
 		if(!stream)
 			return;
 		if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
@@ -1262,7 +1345,6 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 			str.c_str(),
 			nullptr,
 			wrapWidth);
-
 	}
 }
 
