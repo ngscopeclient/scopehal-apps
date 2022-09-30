@@ -189,6 +189,10 @@ void Texture::SetName(const string& name)
 {
 	if(g_hasDebugUtils && !name.empty())
 	{
+		//Not sure why this is being reported as a conflict by validation layers
+		//but let's go ahead and lock to be safe for now
+		lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+
 		string prefix = string("Texture.") + name;
 		string texName = prefix + ".dset";
 		string viewName = prefix + ".view";

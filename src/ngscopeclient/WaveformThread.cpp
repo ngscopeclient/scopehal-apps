@@ -105,7 +105,6 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		if(g_rerenderRequestedEvent.Peek())
 		{
 			LogTrace("WaveformThread: re-rendering\n");
-			shared_lock<shared_mutex> lock(g_vulkanActivityMutex);
 			RenderAllWaveforms(cmdbuf, session, queue);
 			g_rerenderDoneEvent.Signal();
 			continue;
@@ -123,10 +122,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		session->RefreshAllFilters();
 
 		//Rerun the heavyweight rendering shaders
-		{
-			shared_lock<shared_mutex> lock(g_vulkanActivityMutex);
-			RenderAllWaveforms(cmdbuf, session, queue);
-		}
+		RenderAllWaveforms(cmdbuf, session, queue);
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
@@ -139,6 +135,10 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue)
 {
 	double tstart = GetTime();
+
+	//Must lock mutexes in this order to avoid deadlock
+	lock_guard<recursive_mutex> lock1(session->GetWaveformDataMutex());
+	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
 
 	//Keep references to all displayed channels open until the rendering finishes
 	//This prevents problems if we close a WaveformArea or remove a channel from it before the shader completes

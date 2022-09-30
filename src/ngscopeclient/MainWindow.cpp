@@ -351,9 +351,12 @@ void MainWindow::RenderUI()
 		g->ReferenceWaveformTextures();
 
 	//Destroy all waveform groups we were asked to close
-	for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
-		m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
-	m_groupsToClose.clear();
+	//Block until all background processing completes to ensure no command buffers are still pending
+	if(!m_groupsToClose.empty())
+	{
+		g_vkComputeDevice->waitIdle();
+		m_groupsToClose.clear();
+	}
 
 	//See if we have new waveform data to look at
 	m_session.CheckForWaveforms(*m_cmdBuffer);
@@ -378,6 +381,8 @@ void MainWindow::RenderUI()
 				m_groupsToClose.push_back(i);
 			}
 		}
+		for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
+			m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
 	}
 
 	//Dialog boxes

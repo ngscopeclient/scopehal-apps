@@ -133,20 +133,26 @@ bool WaveformGroup::Render()
 	RenderTimeline(clientArea.x, timelineHeight);
 
 	//Close any areas that we destroyed last frame
-	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+	//Block until all background processing completes to ensure no command buffers are still pending
 	if(!m_areasToClose.empty())
-		m_parent->RefreshTimebasePropertiesDialog();
-	m_areasToClose.clear();
+	{
+		g_vkComputeDevice->waitIdle();
+		m_areasToClose.clear();
+	}
 
 	//Render our waveform areas
-	//TODO: waveform areas full of protocol or digital decodes should be fixed size
-	//while analog will fill the gap?
+	//TODO: waveform areas full of protocol or digital decodes should be fixed size while analog will fill the gap?
+	//Anything we closed is removed from the list THIS frame, so we stop rendering to them etc
+	//but not actually destroyed until next frame
 	for(size_t i=0; i<m_areas.size(); i++)
 	{
 		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
 			m_areasToClose.push_back(i);
 	}
+	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
+		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+	if(!m_areasToClose.empty())
+		m_parent->RefreshTimebasePropertiesDialog();
 
 	//If we no longer have any areas in the group, close the group
 	if(m_areas.empty())

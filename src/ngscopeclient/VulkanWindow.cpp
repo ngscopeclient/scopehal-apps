@@ -41,8 +41,6 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
-extern std::shared_mutex g_vulkanActivityMutex;
-
 static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport);
 static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport);
 static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size);
@@ -543,17 +541,20 @@ void VulkanWindow::SetFullscreen(bool fullscreen)
 static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
 	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
 	ImGui_ImplVulkan_CreateWindow(viewport);
 }
 
 static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 {
 	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
 	ImGui_ImplVulkan_DestroyWindow(viewport);
 }
 
 static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
 	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
 	ImGui_ImplVulkan_SetWindowSize(viewport, size);
 }

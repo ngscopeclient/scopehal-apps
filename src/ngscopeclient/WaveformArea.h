@@ -299,6 +299,9 @@ protected:
 
 	///@brief The trigger we're configuring
 	Trigger* m_triggerDuringDrag;
+
+	///@brief Channels we're in the process of removing
+	std::vector<std::shared_ptr<DisplayedChannel> > m_channelsToRemove;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

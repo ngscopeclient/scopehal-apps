@@ -719,6 +719,5 @@ int64_t Session::GetToneMapTime()
 
 void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
 {
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
 }

@@ -104,4 +104,6 @@ void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
 ImU32 ColorFromString(const std::string& str);
 
+extern std::shared_mutex g_vulkanActivityMutex;
+
 #endif

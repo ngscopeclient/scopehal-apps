@@ -105,6 +105,9 @@ public:
 	void QueueCloseSession()
 	{ m_sessionClosing = true; }
 
+	Session& GetSession()
+	{ return m_session; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 

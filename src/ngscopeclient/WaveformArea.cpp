@@ -207,6 +207,7 @@ void WaveformArea::AddStream(StreamDescriptor desc)
  */
 void WaveformArea::RemoveStream(size_t i)
 {
+	m_channelsToRemove.push_back(m_displayedChannels[i]);
 	m_displayedChannels.erase(m_displayedChannels.begin() + i);
 }
 
@@ -326,6 +327,13 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		OnMouseUp();
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
+
+	//Clear channels from last frame
+	if(!m_channelsToRemove.empty())
+	{
+		g_vkComputeDevice->waitIdle();
+		m_channelsToRemove.clear();
+	}
 
 	//Detect mouse movement
 	double tnow = GetTime();
