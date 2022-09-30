@@ -126,8 +126,10 @@ public:
 		{
 			std::string base = "shaders/waveform-compute.";
 			std::string suffix;
+			if(ZeroHoldFlagSet())
+				suffix += ".zerohold";
 			if(g_hasShaderInt64)
-				suffix = ".int64";
+				suffix += ".int64";
 			m_uniformAnalogComputePipeline = std::make_shared<ComputePipeline>(
 				base + "analog" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
 		}
@@ -142,10 +144,16 @@ public:
 		{
 			std::string base = "shaders/waveform-compute.";
 			std::string suffix;
+			int durationSSBOs = 0;
+			if(ZeroHoldFlagSet())
+			{
+				suffix += ".zerohold";
+				durationSSBOs++;
+			}
 			if(g_hasShaderInt64)
-				suffix = ".int64";
+				suffix += ".int64";
 			m_sparseAnalogComputePipeline = std::make_shared<ComputePipeline>(
-				base + "analog" + suffix + ".sparse.spv", 4, sizeof(ConfigPushConstants));
+				base + "analog" + suffix + ".sparse.spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
 		}
 
 		return m_sparseAnalogComputePipeline;
@@ -153,6 +161,36 @@ public:
 
 	ComputePipeline& GetToneMapPipeline()
 	{ return m_toneMapPipe; }
+
+	bool ZeroHoldFlagSet()
+	{
+		return m_stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
+		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
+	}
+
+	bool IsDensePacked()
+	{
+		auto data = m_stream.m_channel->GetData(0);
+		if(dynamic_cast<UniformWaveformBase*>(data) != nullptr)
+			return true;
+		else
+			return false;
+	}
+
+	bool IsHistogram()
+	{ return m_stream.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
+
+	bool ZeroHoldCursorBehaviour()
+	{
+		return ZeroHoldFlagSet() || IsHistogram();
+		// Histogram included here to avoid interpolating count values inside bins
+	}
+
+	bool ShouldMapDurations()
+	{
+		return ZeroHoldFlagSet() && !IsDensePacked();
+		// Do not need durations if dense because each duration is "1"
+	}
 
 protected:
 	StreamDescriptor m_stream;
