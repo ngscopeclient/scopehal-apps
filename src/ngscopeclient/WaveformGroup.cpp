@@ -78,6 +78,9 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshTimebasePropertiesDialog();
 }
 
+/**
+	@brief Returns true if a channel is being dragged from any WaveformArea within the group
+ */
 bool WaveformGroup::IsChannelBeingDragged()
 {
 	for(auto a : m_areas)
@@ -87,6 +90,21 @@ bool WaveformGroup::IsChannelBeingDragged()
 	}
 	return false;
 }
+
+/**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor WaveformGroup::GetChannelBeingDragged()
+{
+	for(auto a : m_areas)
+	{
+		auto stream = a->GetChannelBeingDragged();
+		if(stream)
+			return stream;
+	}
+	return StreamDescriptor(nullptr, 0);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
@@ -130,7 +148,8 @@ bool WaveformGroup::Render()
 	//Render the timeline
 	auto timelineHeight = 2.5 * ImGui::GetFontSize();
 	clientArea.y -= timelineHeight;
-	RenderTimeline(clientArea.x, timelineHeight);
+	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
+	RenderTimeline(clientArea.x - yAxisWidthSpaced, timelineHeight);
 
 	//Close any areas that we destroyed last frame
 	//Block until all background processing completes to ensure no command buffers are still pending
@@ -250,7 +269,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	list->PathStroke(color, 0, thickLineWidth);
 
 	//Figure out rounding granularity, based on our time scales
-	float xscale = m_pixelsPerXUnit / dpiScale;
+	float xscale = m_pixelsPerXUnit;
 	int64_t width_xunits = width / xscale;
 	auto round_divisor = GetRoundingDivisor(width_xunits);
 

@@ -127,7 +127,6 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 	//Load some textures
 	//TODO: use preference to decide what size to make the icons
-	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"));
 	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"));
 	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"));
 	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"));
@@ -137,6 +136,8 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"));	//no dedicated icon yet
 	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"));
 	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"));
+
+	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 }
 
 MainWindow::~MainWindow()
@@ -643,6 +644,9 @@ void MainWindow::DockingArea()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
 
+/**
+	@brief Returns true if a channel is being dragged from any WaveformArea within this window
+ */
 bool MainWindow::IsChannelBeingDragged()
 {
 	for(auto group : m_waveformGroups)
@@ -651,6 +655,20 @@ bool MainWindow::IsChannelBeingDragged()
 			return true;
 	}
 	return false;
+}
+
+/**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor MainWindow::GetChannelBeingDragged()
+{
+	for(auto group : m_waveformGroups)
+	{
+		auto stream = group->GetChannelBeingDragged();
+		if(stream)
+			return stream;
+	}
+	return StreamDescriptor(nullptr, 0);
 }
 
 void MainWindow::ShowTimebaseProperties()

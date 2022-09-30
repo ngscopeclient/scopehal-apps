@@ -213,6 +213,7 @@ public:
 	void ClearPersistence();
 
 	bool IsChannelBeingDragged();
+	StreamDescriptor GetChannelBeingDragged();
 
 protected:
 	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
@@ -221,12 +222,19 @@ protected:
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
+	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf);
+
+	void DrawDropRangeMismatchMessage(
+		ImDrawList* list,
+		ImVec2 center,
+		StreamDescriptor ourStream,
+		StreamDescriptor theirStream);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
@@ -241,7 +249,7 @@ protected:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
 
-	///@brief Cached plot width
+	///@brief Cached plot width (excluding Y axis)
 	float m_width;
 
 	///@brief Cached plot height
@@ -267,6 +275,9 @@ protected:
 		DRAG_STATE_Y_AXIS,
 		DRAG_STATE_TRIGGER_LEVEL
 	} m_dragState;
+
+	///@brief The stream currently being dragged (invalid if m_dragState != DRAG_STATE_CHANNEL)
+	StreamDescriptor m_dragStream;
 
 	DragState m_lastDragState;
 

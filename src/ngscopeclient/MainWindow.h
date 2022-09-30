@@ -81,6 +81,7 @@ public:
 	void ShowTimebaseProperties();
 
 	bool IsChannelBeingDragged();
+	StreamDescriptor GetChannelBeingDragged();
 
 	/**
 		@brief Update the timebase properties dialog

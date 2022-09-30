@@ -316,6 +316,17 @@ bool WaveformArea::IsChannelBeingDragged()
 }
 
 /**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor WaveformArea::GetChannelBeingDragged()
+{
+	if(!IsChannelBeingDragged())
+		return StreamDescriptor(nullptr, 0);
+	else
+		return m_dragStream;
+}
+
+/**
 	@brief Renders a waveform area
 
 	Returns false if the area should be closed (no more waveforms visible in it)
@@ -344,13 +355,12 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	ImGui::PushID(to_string(iArea).c_str());
 
 	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
-	float spacing = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
+	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
 	float unspacedHeightPerArea = heightPerArea - spacing;
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
-	m_width = clientArea.x;
 	auto first = GetFirstAnalogOrEyeStream();
 	if(first)
 	{
@@ -363,7 +373,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	}
 
 	//Size of the Y axis view at the right of the plot
-	float yAxisWidth = 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale();
+	float yAxisWidth = m_group->GetYAxisWidth();
 	float yAxisWidthSpaced = yAxisWidth + spacing;
 
 	//Settings calculated by RenderGrid() then reused in RenderYAxis()
@@ -375,6 +385,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
+
+		m_width = csize.x;
 
 		//Calculate midpoint of our plot
 		m_ymid = pos.y + unspacedHeightPerArea / 2;
@@ -404,6 +416,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);
+
+		//Make sure all channels have same vertical scale and warn if not
+		CheckForScaleMismatch(pos, csize);
 
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
@@ -875,6 +890,14 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 }
 
 /**
+	@brief Look for mismatched vertical scales and display warning message
+ */
+void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
+{
+	//TODO
+}
+
+/**
 	@brief Arrows pointing to trigger levels
  */
 void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
@@ -1162,11 +1185,91 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
 		lineColor,
 		rounding);
+
+	//If trying to drop into the center marker, display warning if incompatible scales
+	//(new signal has significantly wider range) and not a filter
+	//TODO: handle incompatible units?
+	if(ImGui::IsItemHovered())
+	{
+		auto stream = m_parent->GetChannelBeingDragged();
+		if(!stream)
+			return;
+		if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
+			return;
+		auto chan = stream.m_channel;
+		if(dynamic_cast<Filter*>(chan) != nullptr)
+			return;
+
+		center.x += fillSize;
+		DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
+	}
+}
+
+/**
+	@brief Display a warning message about mismatched vertical scale
+ */
+void WaveformArea::DrawDropRangeMismatchMessage(
+		ImDrawList* list,
+		ImVec2 center,
+		StreamDescriptor ourStream,
+		StreamDescriptor theirStream)
+{
+	float ourRange = ourStream.GetVoltageRange();
+	float theirRange = theirStream.GetVoltageRange();
+	if(theirRange > 1.2*ourRange)
+	{
+		float warningSize = ImGui::GetFontSize() * 3;
+
+		//Warning icon
+		list->AddImage(
+			m_parent->GetTextureManager()->GetTexture("warning"),
+			ImVec2(center.x - 0.5, center.y - warningSize/2 - 0.5),
+			ImVec2(center.x + warningSize + 0.5, center.y + warningSize/2 + 0.5));
+
+		//Prepare to draw text
+		center.x += warningSize;
+		float fontHeight = ImGui::GetFontSize();
+		auto font = m_parent->GetDefaultFont();
+		string str = "Caution: Potential for instrument damage!\n\n";
+		str += string("The channel being dragged has a full-scale range of ") +
+			theirStream.GetYAxisUnits().PrettyPrint(theirRange) + ",\n";
+		str += string("but this plot has a full-scale range of ") +
+			ourStream.GetYAxisUnits().PrettyPrint(ourRange) + ".\n\n";
+		str += "Setting this channel to match the plot scale may result\n";
+		str += "in overdriving the instrument input.";
+
+		//Draw background for text
+		float wrapWidth = 40 * fontHeight;
+		auto textsize = font->CalcTextSizeA(
+			fontHeight,
+			FLT_MAX,
+			wrapWidth,
+			str.c_str());
+		float padding = 5;
+		float wrounding = 2;
+		list->AddRectFilled(
+			ImVec2(center.x, center.y - textsize.y/2 - padding),
+			ImVec2(center.x + textsize.x + 2*padding, center.y + textsize.y/2 + padding),
+			ImGui::GetColorU32(ImGuiCol_PopupBg),
+			wrounding);
+
+		//Draw the text
+		list->AddText(
+			font,
+			fontHeight,
+			ImVec2(center.x + padding, center.y - textsize.y/2),
+			ImGui::GetColorU32(ImGuiCol_Text),
+			str.c_str(),
+			nullptr,
+			wrapWidth);
+
+	}
 }
 
 void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
-	auto rchan = chan->GetStream().m_channel;
+	auto stream = chan->GetStream();
+	auto rchan = stream.m_channel;
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -1189,6 +1292,7 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
 		m_dragState = DRAG_STATE_CHANNEL;
+		m_dragStream = stream;
 
 		DragDescriptor desc(this, index);
 		ImGui::SetDragDropPayload("Waveform", &desc, sizeof(desc));

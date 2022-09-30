@@ -97,6 +97,13 @@ public:
 	void ClearPersistence();
 
 	bool IsChannelBeingDragged();
+	StreamDescriptor GetChannelBeingDragged();
+
+	float GetYAxisWidth()
+	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
+
+	float GetSpacing()
+	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
 
 protected:
 	void RenderTimeline(float width, float height);
