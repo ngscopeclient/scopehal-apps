@@ -571,6 +571,7 @@ void WaveformArea::RasterizeAnalogWaveform(
 	else
 	{
 		LogWarning("Don't know how to rasterize sparse analog data yet\n");
+		// TODO: Remember to bind durations to 4 if comp->ShouldMapDurations()
 	}
 
 	if(!comp)

@@ -77,13 +77,22 @@ public:
 			else if(IsDigital())
 				shaderfn += "digital";
 
+			int durationsSSBOs = 0;
+
+			if(ZeroHoldFlagSet())
+			{
+				// TODO: Need to be able to dispatch this at runtime once we grow a UI setting for interpolation behavior
+				shaderfn += ".zerohold";
+				durationsSSBOs = 1;
+			}
+
 			if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 				shaderfn += ".int64";
 			
 			std::string denseShaderFn = shaderfn + ".dense.spv";
 			std::string sparseShaderFn = shaderfn + ".spv";
 			m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
-			m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, 4, sizeof(ConfigPushConstants));
+			m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, durationsSSBOs + 4, sizeof(ConfigPushConstants));
 
 			vk::CommandPoolCreateInfo poolInfo(
 				vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -109,6 +118,24 @@ public:
 
 	bool IsHistogram()
 	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
+
+	bool ZeroHoldFlagSet()
+	{
+		return m_channel.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
+		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
+	}
+
+	bool ZeroHoldCursorBehaviour()
+	{
+		return ZeroHoldFlagSet() || IsHistogram();
+		// Histogram included here to avoid interpolating count values inside bins
+	}
+
+	bool ShouldMapDurations()
+	{
+		return ZeroHoldFlagSet() && !IsDensePacked();
+		// Do not need durations if dense because each duration is "1"
+	}
 
 	bool IsDensePacked()
 	{
@@ -502,7 +529,7 @@ protected:
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
 	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
-	float GetValueAtTime(int64_t time_fs);
+	std::pair<bool, float> GetValueAtTime(int64_t time_fs);
 
 	float GetDPIScale()
 	{ return get_pango_context()->get_resolution() / 96; }

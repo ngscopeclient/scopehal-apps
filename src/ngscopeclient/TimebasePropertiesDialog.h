@@ -73,4 +73,4 @@ protected:
 	std::vector<std::unique_ptr<TimebasePropertiesPage>> m_pages;
 };
 
-#endif
+#endif // TimebasePropertiesDialog_h

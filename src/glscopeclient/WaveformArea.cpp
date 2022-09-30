@@ -636,7 +636,6 @@ void WaveformArea::on_unrealize()
 
 void WaveformArea::CleanupGLHandles()
 {
-	//Clean up old shaders
 	m_colormapProgram.Destroy();
 	m_eyeProgram.Destroy();
 	m_spectrogramProgram.Destroy();
