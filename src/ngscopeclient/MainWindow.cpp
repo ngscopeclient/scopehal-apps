@@ -77,10 +77,8 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
 	ImGuiIO& io = ImGui::GetIO();
 	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
 	builder.AddChar(L'°');
-	for(wchar_t i=0x370; i<=0x3ff; i++)	//Greek and Coptic
-		builder.AddChar(i);
 
 	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
