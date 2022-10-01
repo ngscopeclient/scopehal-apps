@@ -557,11 +557,11 @@ void WaveformArea::on_realize()
 		else
 			LogDebug("    GL_ARB_gpu_shader_int64     = not supported\n");
 
-		//Check for GL 4.2 (required for glBindImageTexture)
-		if(!GLEW_VERSION_4_2)
+		//Check for GL 4.2 (required for glBindImageTexture) -- FIXME: No longer required due to Vulkan render path
+		if(!GLEW_VERSION_4_1)
 		{
 			string err =
-				"Your graphics card or driver does not appear to support OpenGL 4.2.\n"
+				"Your graphics card or driver does not appear to support OpenGL 4.1.\n"
 				"\n"
 				"Unfortunately, glscopeclient cannot run on your system.\n";
 
@@ -577,18 +577,22 @@ void WaveformArea::on_realize()
 			exit(1);
 		}
 
+#if !defined(__APPLE__) //HACK FIXME
 		//Make sure we have the required extensions
+		LogDebug("GLEW_EXT_blend_equation_separate: %s\n", (GLEW_EXT_blend_equation_separate ? "true":"false"));
+		LogDebug("GLEW_EXT_framebuffer_object: %s\n", (GLEW_EXT_framebuffer_object ? "true":"false"));
+		LogDebug("GLEW_ARB_vertex_array_object: %s\n", (GLEW_ARB_vertex_array_object ? "true":"false"));
+		LogDebug("GLEW_ARB_shader_storage_buffer_object: %s\n", (GLEW_ARB_shader_storage_buffer_object ? "true":"false"));
+		LogDebug("GLEW_ARB_arrays_of_arrays: %s\n", (GLEW_ARB_arrays_of_arrays ? "true":"false"));
 		if(	!GLEW_EXT_blend_equation_separate ||
 			!GLEW_EXT_framebuffer_object ||
 			!GLEW_ARB_vertex_array_object ||
 			!GLEW_ARB_shader_storage_buffer_object ||
-			!GLEW_ARB_arrays_of_arrays ||
-			!GLEW_ARB_compute_shader)
+			!GLEW_ARB_arrays_of_arrays)
 		{
 			string err =
 				"Your graphics card or driver does not appear to support one or more of the following required extensions:\n"
 				"* GL_ARB_arrays_of_arrays\n"
-				"* GL_ARB_compute_shader\n"
 				"* GL_ARB_shader_storage_buffer_object\n"
 				"* GL_ARB_vertex_array_object\n"
 				"* GL_EXT_blend_equation_separate\n"
@@ -607,6 +611,7 @@ void WaveformArea::on_realize()
 			dlg.run();
 			exit(1);
 		}
+#endif
 
 		m_isGlewInitialized = true;
 	}
