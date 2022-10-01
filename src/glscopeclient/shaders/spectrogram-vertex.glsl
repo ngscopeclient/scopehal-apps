@@ -1,4 +1,4 @@
-#version 130
+#version 150 //hack: brought up from version 130 for apple compat, make dynamic if this hurts other platforms
 
 in vec2 		vert;
 out vec2		texcoord;
