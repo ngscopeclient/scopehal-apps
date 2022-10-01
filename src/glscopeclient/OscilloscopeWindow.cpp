@@ -95,7 +95,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	SetTitle();
 	FindScopeFuncGens();
 
-	m_vkQueue = std::make_unique<vk::raii::Queue>(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
+	m_vkQueue = g_vkQueueManager->GetComputeQueue("OscilloscopeWindow.m_vkQueue");
 
 	//Initial setup
 	set_reallocate_redraws(true);

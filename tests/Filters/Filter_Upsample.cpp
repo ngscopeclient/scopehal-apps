@@ -52,14 +52,14 @@ TEST_CASE("Filter_Upsample")
 	filter->AddRef();
 
 	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_Upsample.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_computeQueueType );
+		queue->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	//Create an empty input waveform
 	const size_t depth = 10000000;
@@ -87,14 +87,23 @@ TEST_CASE("Filter_Upsample")
 			//Run the filter once on CPU and GPU each
 			//without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 
 			//Baseline on the CPU
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double tbase = GetTime() - start;
 			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
@@ -105,7 +114,10 @@ TEST_CASE("Filter_Upsample")
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
 			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double dt = GetTime() - start;
 			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 

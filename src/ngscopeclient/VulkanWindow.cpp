@@ -47,8 +47,9 @@ using namespace std;
 /**
 	@brief Creates a new top level window with the specified title
  */
-VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
+VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue, size_t queueFamily)
 	: m_renderQueue(queue)
+	, m_queueFamily(queueFamily)
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
 	, m_frameIndex(0)
@@ -106,7 +107,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	//Set up command pool
 	vk::CommandPoolCreateInfo cmdPoolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
+		m_queueFamily );
 	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_backBuffers.size());
 
@@ -128,7 +129,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.Instance = **g_vkInstance;
 	info.PhysicalDevice = **g_vkComputePhysicalDevice;
 	info.Device = **g_vkComputeDevice;
-	info.QueueFamily = g_renderQueueType;
+	info.QueueFamily = m_queueFamily;
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.Subpass = 0;

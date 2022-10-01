@@ -60,8 +60,8 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(vk::raii::Queue& queue)
-	: VulkanWindow("ngscopeclient", queue)
+MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
+	: VulkanWindow("ngscopeclient", queue, queueFamily)
 	, m_showDemo(true)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
@@ -94,7 +94,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	//Temporary command pool for initialization
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
+		m_queueFamily );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
@@ -108,16 +108,16 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 	//Load some textures
 	//TODO: use preference to decide what size to make the icons
-	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"));
-	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"));
-	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"));
-	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"));
-	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"));
-	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"));
-	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"));
-	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"));	//no dedicated icon yet
-	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"));
-	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"));
+	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"), queue, cmdBuf);	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"), queue, cmdBuf);
 }
 
 MainWindow::~MainWindow()

@@ -491,7 +491,7 @@ public:
 	void ApplyPreferences(Oscilloscope* scope);
 
 	//Vulkan Queue for render shaders, used by WaveformArea
-	std::unique_ptr<vk::raii::Queue> m_vkQueue;
+	std::shared_ptr<QueueHandle> m_vkQueue;
 };
 
 #endif

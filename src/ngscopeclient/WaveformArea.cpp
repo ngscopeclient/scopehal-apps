@@ -65,7 +65,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
+		parent->GetRenderQueueFamily() );
 	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
@@ -423,14 +423,7 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 	{
 		LogTrace("Waveform area resized (to %.0f x %.0f), reallocating texture\n", size.x, size.y);
 
-		vector<uint32_t> queueFamilies;
-		vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-		queueFamilies.push_back(g_computeQueueType);	//FIXME: separate transfer queue?
-		if(g_renderQueueType != g_computeQueueType)
-		{
-			queueFamilies.push_back(g_renderQueueType);
-			sharingMode = vk::SharingMode::eConcurrent;
-		}
+		//NOTE: Assumes the render queue is also capable of transfers (see QueueManager)
 		vk::ImageCreateInfo imageInfo(
 			{},
 			vk::ImageType::e2D,
@@ -441,8 +434,8 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
 			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
 			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-			sharingMode,
-			queueFamilies,
+			vk::SharingMode::eExclusive,
+			{},
 			vk::ImageLayout::eUndefined
 			);
 

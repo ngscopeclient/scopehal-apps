@@ -55,45 +55,7 @@ extern bool g_noglint64;
 class WaveformRenderData
 {
 public:
-	WaveformRenderData(StreamDescriptor channel, WaveformArea* area)
-	: m_area(area)
-	, m_shaderDense()
-	, m_shaderSparse()
-	, m_vkCmdPool()
-	, m_vkCmdBuf()
-	, m_channel(channel)
-	, m_geometryOK(false)
-	, m_count(0)
-	, m_persistence(false)
-	{
-		if(IsAnalog() || IsDigital())
-		{
-			std::string shaderfn = "shaders/waveform-compute.";
-
-			if(IsHistogram())
-				shaderfn += "histogram";
-			else if(IsAnalog())
-				shaderfn += "analog";
-			else if(IsDigital())
-				shaderfn += "digital";
-
-			if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
-				shaderfn += ".int64";
-			
-			std::string denseShaderFn = shaderfn + ".dense.spv";
-			std::string sparseShaderFn = shaderfn + ".spv";
-			m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
-			m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, 4, sizeof(ConfigPushConstants));
-
-			vk::CommandPoolCreateInfo poolInfo(
-				vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-				g_computeQueueType );
-			m_vkCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
-
-			vk::CommandBufferAllocateInfo bufinfo(**m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
-			m_vkCmdBuf = std::make_unique<vk::raii::CommandBuffer>(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-		}
-	}
+	WaveformRenderData(StreamDescriptor channel, WaveformArea* area);
 
 	~WaveformRenderData()
 	{
@@ -177,6 +139,9 @@ public:
 	WaveformArea(StreamDescriptor channel, OscilloscopeWindow* parent);
 	WaveformArea(const WaveformArea* clone);
 	virtual ~WaveformArea();
+
+	OscilloscopeWindow* GetParent()
+	{ return m_parent; }
 
 	void OnWaveformDataReady();
 

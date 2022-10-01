@@ -49,6 +49,8 @@ public:
 		const vk::raii::Device& device,
 		const vk::ImageCreateInfo& imageInfo,
 		const vk::raii::Buffer& srcBuf,
+		vk::raii::Queue& queue,
+		vk::raii::CommandBuffer& cmdBuf,
 		int width,
 		int height,
 		TextureManager* mgr,
@@ -72,6 +74,7 @@ public:
 
 protected:
 	void LayoutTransition(
+		vk::raii::CommandBuffer& cmdBuf,
 		vk::AccessFlags src,
 		vk::AccessFlags dst,
 		vk::ImageLayout from,
@@ -98,7 +101,11 @@ public:
 	TextureManager();
 	virtual ~TextureManager();
 
-	void LoadTexture(const std::string& name, const std::string& path);
+	void LoadTexture(
+		const std::string& name,
+		const std::string& path,
+		vk::raii::Queue& queue,
+		vk::raii::CommandBuffer& cmdBuf);
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_textures[name]->GetTexture(); }

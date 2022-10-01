@@ -66,7 +66,7 @@ public:
 class MainWindow : public VulkanWindow
 {
 public:
-	MainWindow(vk::raii::Queue& queue);
+	MainWindow(vk::raii::Queue& queue, size_t queueFamily);
 	virtual ~MainWindow();
 
 	void AddDialog(std::shared_ptr<Dialog> dlg);
