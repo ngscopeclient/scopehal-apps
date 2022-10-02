@@ -47,6 +47,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
@@ -622,6 +623,17 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasMetrics)
+			ImGui::EndDisabled();
+
+		bool hasHistory = m_historyDialog != nullptr;
+		if(hasHistory)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("History"))
+		{
+			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+			AddDialog(m_historyDialog);
+		}
+		if(hasHistory)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();

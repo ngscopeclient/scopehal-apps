@@ -38,6 +38,8 @@ add_executable(ngscopeclient
 	Dialog.cpp
 	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp
+	HistoryDialog.cpp
+	HistoryManager.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp

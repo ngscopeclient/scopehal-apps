@@ -40,6 +40,7 @@ class WaveformArea;
 class DisplayedChannel;
 
 #include "../xptools/HzClock.h"
+#include "HistoryManager.h"
 
 extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
@@ -169,7 +170,7 @@ public:
 	void StopTrigger();
 	bool HasOnlineScopes();
 	void DownloadWaveforms();
-	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	bool CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
 
 	void RenderWaveformTextures(
@@ -241,6 +242,12 @@ public:
 	std::recursive_mutex& GetWaveformDataMutex()
 	{ return m_waveformDataMutex; }
 
+	/**
+		@brief Get our history manager
+	 */
+	HistoryManager& GetHistory()
+	{ return m_history; }
+
 protected:
 
 	///@brief Mutex for controlling access to scope vectors
@@ -311,6 +318,9 @@ protected:
 
 	///@brief Frequency at which we are pulling waveforms off of scopes
 	HzClock m_waveformDownloadRate;
+
+	///@brief Historical waveform data
+	HistoryManager m_history;
 };
 
 #endif

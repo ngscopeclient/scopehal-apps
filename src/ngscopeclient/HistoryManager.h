@@ -30,56 +30,54 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Declaration of HistoryManager
  */
-#ifndef Dialog_h
-#define Dialog_h
+#ifndef HistoryManager_h
+#define HistoryManager_h
 
-#include "imgui_stdlib.h"
+//Waveform history for a single instrument
+typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
 
 /**
-	@brief Generic dialog box or other popup window
+	@brief A single point of waveform history
  */
-class Dialog
+class HistoryPoint
 {
 public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+	HistoryPoint();
+	~HistoryPoint();
 
-	bool Render();
-	virtual bool DoRender() =0;
+	///@brief Seconds component of zero-time reference for these waveforms
+	time_t m_timestamp;
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
+	///@brief Fractional component of zero-time reference for these waveforms. Femtoseconds since the UTC second.
+	int64_t m_fs;
+
+	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
+	bool m_pinned;
+
+	///@brief Free-form text nickname for this acquisition (may be blank)
+	std::string m_nickname;
+
+	///@brief Waveform data
+	std::map<Oscilloscope*, WaveformHistory> m_history;
+};
+
+/**
+	@brief Keeps track of recently acquired waveforms
+ */
+class HistoryManager
+{
 public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+	HistoryManager();
+	~HistoryManager();
 
-protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+	void AddHistory(const std::vector<Oscilloscope*>& scopes);
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+	void clear()
+	{ m_history.clear(); }
 
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
+	std::list<std::shared_ptr<HistoryPoint>> m_history;
 };
 
 #endif

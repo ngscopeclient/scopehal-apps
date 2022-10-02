@@ -45,6 +45,7 @@
 #include "TimebasePropertiesDialog.h"
 
 class MultimeterDialog;
+class HistoryDialog;
 
 class SplitGroupRequest
 {
@@ -194,6 +195,9 @@ protected:
 
 	///@brief Performance metrics
 	std::shared_ptr<Dialog> m_metricsDialog;
+
+	///@brief History
+	std::shared_ptr<HistoryDialog> m_historyDialog;
 
 	///@brief Timebase properties
 	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;

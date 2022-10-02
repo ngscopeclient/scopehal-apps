@@ -133,6 +133,9 @@ void Session::Clear()
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
 
+	//Clear history
+	m_history.clear();
+
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
@@ -533,16 +536,13 @@ void Session::DownloadWaveforms()
 		if(scope->IsOffline())
 			continue;
 
-		//Make sure we don't free the old waveform data
-		//TODO: only do this once we have history
-		LogTrace("TODO: release waveform once we have history\n");
-		/*
+		//Detach old waveforms since they're now owned by history manager
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
-		}*/
+		}
 
 		//Download the data
 		scope->PopPendingWaveform();
@@ -612,8 +612,10 @@ void Session::DownloadWaveforms()
 	This runs in the main GUI thread.
 
 	TODO: this might be best to move to MainWindow?
+
+	@return True if a new waveform came in, false if not
  */
-void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
+bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	bool hadNewWaveforms = false;
 	if(m_triggerArmed)
@@ -622,21 +624,15 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		{
 			LogTrace("Waveform is ready\n");
 
-			//Crunch the new waveform
+			//Add to history
+			auto scopes = GetScopes();
 			{
 				lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
-
-				//Update the history windows
-				/*
-				for(auto scope : m_oscilloscopes)
-				{
-					if(!scope->IsOffline())
-						m_historyWindows[scope]->OnWaveformDataReady();
-				}
-				*/
+				m_history.AddHistory(scopes);
 			}
 
 			//Tone-map all of our waveforms
+			//(does not need waveform data locked since it only works on *rendered* data)
 			hadNewWaveforms = true;
 			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
@@ -665,6 +661,8 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	//If a re-render operation completed, tone map everything again
 	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
 		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+
+	return hadNewWaveforms;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

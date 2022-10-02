@@ -49,6 +49,7 @@
 #include "AddScopeDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
@@ -181,6 +182,7 @@ void MainWindow::CloseSession()
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
+	m_historyDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -364,8 +366,13 @@ void MainWindow::RenderUI()
 		m_groupsToClose.clear();
 	}
 
-	//See if we have new waveform data to look at
-	m_session.CheckForWaveforms(*m_cmdBuffer);
+	//See if we have new waveform data to look at.
+	//If we got one, highlight the new waveform in history
+	if(m_session.CheckForWaveforms(*m_cmdBuffer))
+	{
+		if(m_historyDialog != nullptr)
+			m_historyDialog->UpdateSelectionToLatest();
+	}
 
 	//Menu for main window
 	MainMenu();
@@ -400,6 +407,15 @@ void MainWindow::RenderUI()
 	}
 	for(auto& dlg : dlgsToClose)
 		OnDialogClosed(dlg);
+
+	//If we had a history dialog, check if we changed the selection
+	bool historyUpdated = false;
+	if( (m_historyDialog != nullptr) && (m_historyDialog->PollForSelectionChanges()))
+	{
+		historyUpdated = true;
+		m_historyDialog->LoadHistoryFromSelection(m_session);
+		m_needRender = true;
+	}
 
 	if(m_needRender)
 		g_rerenderRequestedEvent.Signal();
@@ -452,33 +468,52 @@ void MainWindow::ToolbarButtons()
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_NORMAL);
+	Dialog::Tooltip("Arm the trigger in normal mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_SINGLE);
+	Dialog::Tooltip("Arm the trigger in one-shot mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_FORCED);
+	Dialog::Tooltip("Acquire a waveform immediately, ignoring the trigger condition");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
 		m_session.StopTrigger();
+	Dialog::Tooltip("Stop acquiring waveforms");
 
 	//History selector
+	bool hasHist = (m_historyDialog != nullptr);
 	ImGui::SameLine();
+	if(hasHist)
+		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
-		LogDebug("history\n");
+	{
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+		AddDialog(m_historyDialog);
+	}
+	if(hasHist)
+		ImGui::EndDisabled();
+	Dialog::Tooltip("Show waveform history window");
 
 	//Refresh scope settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("refresh-settings", GetTexture("refresh-settings"), buttonsize))
 		LogDebug("refresh settings\n");
+	Dialog::Tooltip(
+		"Flush PC-side cached instrument state and reload configuration from the instrument.\n\n"
+		"This will cause a brief slowdown of the application, but can be used to re-sync when\n"
+		"changes are made on the instrument front panel that ngscopeclient does not detect."
+		);
 
 	//View settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
 		LogDebug("clear-sweeps\n");
+	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 
 	//Fullscreen toggle
 	ImGui::SameLine(0.0, 0.0);
@@ -486,11 +521,13 @@ void MainWindow::ToolbarButtons()
 	{
 		if(ImGui::ImageButton("fullscreen-exit", GetTexture("fullscreen-exit"), buttonsize))
 			SetFullscreen(false);
+		Dialog::Tooltip("Leave fullscreen mode");
 	}
 	else
 	{
 		if(ImGui::ImageButton("fullscreen-enter", GetTexture("fullscreen-enter"), buttonsize))
 			SetFullscreen(true);
+		Dialog::Tooltip("Enter fullscreen mode");
 	}
 }
 

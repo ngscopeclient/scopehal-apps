@@ -165,9 +165,13 @@ void Dialog::HelpMarker(const string& str)
 /**
 	@brief Helper based on imgui demo for displaying tooltip text over the previously rendered widget
  */
-void Dialog::Tooltip(const string& str)
+void Dialog::Tooltip(const string& str, bool allowDisabled)
 {
-	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+	int extraFlags = 0;
+	if(allowDisabled)
+		extraFlags |= ImGuiHoveredFlags_AllowWhenDisabled;
+
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | extraFlags))
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);

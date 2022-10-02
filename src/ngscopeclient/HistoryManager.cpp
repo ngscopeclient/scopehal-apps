@@ -30,56 +30,117 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Implementation of HistoryManager
  */
-#ifndef Dialog_h
-#define Dialog_h
+#include "ngscopeclient.h"
+#include "HistoryManager.h"
 
-#include "imgui_stdlib.h"
+using namespace std;
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// HistoryPoint
+
+HistoryPoint::HistoryPoint()
+	: m_timestamp(0)
+	, m_fs(0)
+	, m_pinned(false)
+	, m_nickname("")
 {
-public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+}
 
-	bool Render();
-	virtual bool DoRender() =0;
+HistoryPoint::~HistoryPoint()
+{
+	for(auto it : m_history)
+	{
+		auto scope = it.first;
+		auto hist = it.second;
+		for(auto jt : hist)
+		{
+			auto wfm = jt.second;
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+			//Add known waveform types to pool for reuse
+			//Delete anything else
+			//TODO: this assumes the waveforms are currently configured for GPU-local or mirrored memory.
+			//This will have to change when we start paging old waveforms out to disk.
+			if(dynamic_cast<UniformAnalogWaveform*>(wfm) != nullptr)
+				scope->AddWaveformToAnalogPool(wfm);
+			else if(dynamic_cast<SparseDigitalWaveform*>(wfm) != nullptr)
+				scope->AddWaveformToDigitalPool(wfm);
+			else
+				delete wfm;
+		}
+	}
+}
 
-protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+HistoryManager::HistoryManager()
+{
+}
 
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
-};
+HistoryManager::~HistoryManager()
+{
+}
 
-#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// History processing
+
+void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
+{
+	bool foundTimestamp = false;
+	time_t stamp = 0;
+	int64_t fs = 0;
+
+	//First pass: find first waveform with a timestamp
+	for(auto scope : scopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+			{
+				auto wfm = chan->GetData(j);
+				if(wfm)
+				{
+					stamp = wfm->m_startTimestamp;
+					fs = wfm->m_startFemtoseconds;
+					foundTimestamp = true;
+					break;
+				}
+			}
+		}
+	}
+
+	//If we get here, there were no waveforms anywhere!
+	//Nothing for us to do
+	if(!foundTimestamp)
+		return;
+
+	//All good. Generate a new history point and add it
+	auto pt = make_shared<HistoryPoint>();
+	m_history.push_back(pt);
+	pt->m_timestamp = stamp;
+	pt->m_fs = fs;
+	pt->m_pinned = false;
+
+	//Add waveforms
+	for(auto scope : scopes)
+	{
+		WaveformHistory hist;
+
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				hist[StreamDescriptor(chan, j)] = chan->GetData(j);
+		}
+
+		pt->m_history[scope] = hist;
+	}
+
+	//TODO: check history size in MB/GB etc
+	//TODO: convert older stuff to disk, free GPU memory, etc?
+	while(m_history.size() > 10)
+		m_history.pop_front();
+}
