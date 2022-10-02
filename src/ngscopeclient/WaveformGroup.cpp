@@ -215,6 +215,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		ImGui::TextUnformatted(
 			"Click and drag to scroll the timeline.\n"
 			"Use mouse wheel to zoom.\n"
+			"Middle click to zoom to fit the entire waveform.\n"
 			"Double-click to open timebase properties.");
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
@@ -233,8 +234,47 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			m_parent->ShowTimebaseProperties();
 
 		//Start dragging
-		if(ImGui::IsMouseClicked(0))
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			m_draggingTimeline = true;
+
+		//Autoscale on middle mouse
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+		{
+			LogTrace("middle mouse autoscale\n");
+
+			//Find beginning and end of all waveforms in the group
+			int64_t start = INT64_MAX;
+			int64_t end = -INT64_MAX;
+			for(auto a : m_areas)
+			{
+				for(size_t i=0; i<a->GetStreamCount(); i++)
+				{
+					auto stream = a->GetStream(i);
+					auto data = stream.GetData();
+					if(data == nullptr)
+						continue;
+					auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+					auto udata = dynamic_cast<UniformWaveformBase*>(data);
+
+					int64_t wstart = GetOffsetScaled(sdata, udata, 0);
+					int64_t wend =
+						GetOffsetScaled(sdata, udata, data->size()-1) +
+						GetDurationScaled(sdata, udata, data->size()-1);
+
+					start = min(start, wstart);
+					end = max(end, wend);
+				}
+			}
+			int64_t sigwidth = end - start;
+
+			//Don't divide by zero if no data!
+			if(sigwidth > 1)
+			{
+				m_pixelsPerXUnit = width / sigwidth;
+				m_xAxisOffset = start;
+				ClearPersistence();
+			}
+		}
 	}
 
 	//Handle dragging

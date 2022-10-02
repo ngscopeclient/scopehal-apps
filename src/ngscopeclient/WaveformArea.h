@@ -241,6 +241,9 @@ public:
 	void ReferenceWaveformTextures();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
+	size_t GetStreamCount()
+	{ return m_displayedChannels.size(); }
+
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
 
