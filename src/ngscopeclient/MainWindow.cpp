@@ -411,6 +411,7 @@ void MainWindow::RenderUI()
 	//If we had a history dialog, check if we changed the selection
 	if( (m_historyDialog != nullptr) && (m_historyDialog->PollForSelectionChanges()))
 	{
+		LogTrace("history selection changed\n");
 		m_historyDialog->LoadHistoryFromSelection(m_session);
 		m_needRender = true;
 	}

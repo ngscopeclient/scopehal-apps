@@ -124,6 +124,11 @@ void Session::Clear()
 	//Might be redundant.
 	lock_guard<mutex> lock2(m_scopeMutex);
 
+	//Clear history before destroying scopes.
+	//This ordering is important since waveforms removed from history get pushed into the WaveformPool of the scopes,
+	//so the scopes must not have been destroyed yet.
+	m_history.clear();
+
 	//Delete scopes once we've terminated the threads
 	for(auto scope : m_oscilloscopes)
 		delete scope;
@@ -132,9 +137,6 @@ void Session::Clear()
 	m_rfgenerators.clear();
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
-
-	//Clear history
-	m_history.clear();
 
 	//Reset state
 	m_triggerOneShot = false;

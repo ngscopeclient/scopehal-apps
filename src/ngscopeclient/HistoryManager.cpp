@@ -142,5 +142,21 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 	//TODO: check history size in MB/GB etc
 	//TODO: convert older stuff to disk, free GPU memory, etc?
 	while(m_history.size() > 10)
-		m_history.pop_front();
+	{
+		bool deletedSomething = false;
+
+		//Delete first un-pinned entry
+		for(auto it = m_history.begin(); it != m_history.end(); it++)
+		{
+			if((*it)->m_pinned)
+				continue;
+
+			m_history.erase(it);
+			break;
+		}
+
+		//If nothing deleted, all remaining items are pinned. Stop.
+		if(!deletedSomething)
+			break;
+	}
 }

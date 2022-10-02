@@ -102,8 +102,11 @@ bool HistoryDialog::DoRender()
 		ImGui::TableSetupColumn("Label");
 		ImGui::TableHeadersRow();
 
-		for(auto point : m_mgr.m_history)
+		list<shared_ptr<HistoryPoint> >::iterator itDelete;
+		bool deleting = false;
+		for(auto it = m_mgr.m_history.begin(); it != m_mgr.m_history.end(); it++)
 		{
+			auto point = *it;
 			ImGui::PushID(point.get());
 
 			ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
@@ -120,6 +123,16 @@ bool HistoryDialog::DoRender()
 				m_selectedPoint = point;
 				rowIsSelected = true;
 				m_selectionChanged = true;
+			}
+
+			if(ImGui::BeginPopupContextItem())
+			{
+				if(ImGui::MenuItem("Delete"))
+				{
+					itDelete = it;
+					deleting = true;
+				}
+				ImGui::EndPopup();
 			}
 
 			//Force pin if we have a nickname
@@ -157,6 +170,24 @@ bool HistoryDialog::DoRender()
 				ImGui::TextUnformatted(point->m_nickname.c_str());
 
 			ImGui::PopID();
+		}
+
+		//Deleting a row?
+		if(deleting)
+		{
+			//Deleting selected row? Select the last row (if we have one)
+			bool deletedSelection = false;
+			if( (*itDelete == m_selectedPoint) && (m_mgr.m_history.size() > 1) )
+				deletedSelection = true;
+
+			//Delete the selected row
+			m_mgr.m_history.erase(itDelete);
+
+			if(deletedSelection)
+			{
+				m_selectionChanged = true;
+				m_selectedPoint = *m_mgr.m_history.rbegin();
+			}
 		}
 
 		ImGui::EndTable();
@@ -202,6 +233,7 @@ void HistoryDialog::LoadHistoryFromSelection(Session& session)
 		//Scope is in history. Load our saved waveform data
 		else
 		{
+			LogTrace("Loading saved history\n");
 			auto hist = m_selectedPoint->m_history[scope];
 			for(auto it : hist)
 			{
@@ -218,5 +250,6 @@ void HistoryDialog::LoadHistoryFromSelection(Session& session)
  */
 void HistoryDialog::UpdateSelectionToLatest()
 {
+	LogTrace("Selecting most recent waveform\n");
 	m_selectedPoint = *m_mgr.m_history.rbegin();
 }
