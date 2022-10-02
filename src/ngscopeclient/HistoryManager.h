@@ -78,6 +78,9 @@ public:
 	{ m_history.clear(); }
 
 	std::list<std::shared_ptr<HistoryPoint>> m_history;
+
+	///@brief has to be an int for imgui compatibility
+	int m_maxDepth;
 };
 
 #endif

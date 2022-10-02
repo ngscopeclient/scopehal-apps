@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 HistoryDialog::HistoryDialog(HistoryManager& mgr)
-	: Dialog("History", ImVec2(500, 300))
+	: Dialog("History", ImVec2(400, 300))
 	, m_mgr(mgr)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
@@ -91,12 +91,22 @@ string HistoryDialog::FormatTimestamp(time_t base, int64_t offset)
  */
 bool HistoryDialog::DoRender()
 {
-	static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+	static ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY;
 
 	float width = ImGui::GetFontSize();
 
+	ImGui::InputInt("History Depth", &m_mgr.m_maxDepth, 1, 10);
+	HelpMarker(
+		"Adjust the cap on total history depth, in waveforms.\n"
+		"Large history depths can use significant amounts of RAM with deep memory.");
+
 	if(ImGui::BeginTable("history", 3, flags))
 	{
+		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 10*width);
 		ImGui::TableSetupColumn("Pin", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableSetupColumn("Label");

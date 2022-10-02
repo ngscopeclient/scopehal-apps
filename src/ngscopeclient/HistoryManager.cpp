@@ -76,6 +76,7 @@ HistoryPoint::~HistoryPoint()
 // Construction / destruction
 
 HistoryManager::HistoryManager()
+	: m_maxDepth(10)
 {
 }
 
@@ -141,7 +142,7 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 
 	//TODO: check history size in MB/GB etc
 	//TODO: convert older stuff to disk, free GPU memory, etc?
-	while(m_history.size() > 10)
+	while(m_history.size() > (size_t) m_maxDepth)
 	{
 		bool deletedSomething = false;
 
