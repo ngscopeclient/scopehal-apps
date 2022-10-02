@@ -289,7 +289,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			ClearPersistence();
 		}
 
-		if(ImGui::IsMouseReleased(0))
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			m_draggingTimeline = false;
 	}
 
