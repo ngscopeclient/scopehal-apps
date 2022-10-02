@@ -409,10 +409,8 @@ void MainWindow::RenderUI()
 		OnDialogClosed(dlg);
 
 	//If we had a history dialog, check if we changed the selection
-	bool historyUpdated = false;
 	if( (m_historyDialog != nullptr) && (m_historyDialog->PollForSelectionChanges()))
 	{
-		historyUpdated = true;
 		m_historyDialog->LoadHistoryFromSelection(m_session);
 		m_needRender = true;
 	}
