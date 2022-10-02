@@ -860,7 +860,7 @@ void MainWindow::RenderErrorPopup()
 {
 	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text(m_errorPopupMessage.c_str());
+		ImGui::TextUnformatted(m_errorPopupMessage.c_str());
 		ImGui::Separator();
 		if(ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();

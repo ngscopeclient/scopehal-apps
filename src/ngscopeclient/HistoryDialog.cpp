@@ -154,7 +154,7 @@ bool HistoryDialog::DoRender()
 				ImGui::InputText("###nick", &point->m_nickname);
 			}
 			else
-				ImGui::Text(point->m_nickname.c_str());
+				ImGui::TextUnformatted(point->m_nickname.c_str());
 
 			ImGui::PopID();
 		}

@@ -195,7 +195,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1*alpha, 0, 0, 1*alpha));
-				ImGui::Text("Overload shutdown");
+				ImGui::TextUnformatted("Overload shutdown");
 				ImGui::PopStyleColor();
 				Tooltip(
 					"Overcurrent shutdown has been triggered.\n\n"
@@ -269,7 +269,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			{
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-				ImGui::Text("CV");
+				ImGui::TextUnformatted("CV");
 				ImGui::PopStyleColor();
 				Tooltip("Channel is operating in constant-voltage mode");
 			}
@@ -285,7 +285,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			{
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-				ImGui::Text("CC");
+				ImGui::TextUnformatted("CC");
 				Tooltip("Channel is operating in constant-current mode");
 				ImGui::PopStyleColor();
 			}
