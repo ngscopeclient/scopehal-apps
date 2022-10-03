@@ -43,7 +43,7 @@ class Texture;
 class VulkanWindow
 {
 public:
-	VulkanWindow(const std::string& title, vk::raii::Queue& queue, size_t queueFamily);
+	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue);
 	virtual ~VulkanWindow();
 
 	GLFWwindow* GetWindow()
@@ -51,10 +51,8 @@ public:
 
 	virtual void Render();
 
-	vk::raii::Queue& GetRenderQueue()
+	std::shared_ptr<QueueHandle> GetRenderQueue()
 	{ return m_renderQueue; }
-	size_t GetRenderQueueFamily()
-	{ return m_queueFamily; }
 
 	void AddTextureUsedThisFrame(std::shared_ptr<Texture> tex)
 	{ m_texturesUsedThisFrame[m_frameIndex].emplace(tex); }
@@ -76,9 +74,7 @@ protected:
 	std::shared_ptr<vk::raii::DescriptorPool> m_imguiDescriptorPool;
 
 	///@brief Queue for rendering to
-	vk::raii::Queue& m_renderQueue;
-	///@brief Family index of m_renderQueue
-	size_t m_queueFamily;
+	std::shared_ptr<QueueHandle> m_renderQueue;
 
 	///@brief Set true if we have to handle a resize event
 	bool m_resizeEventPending;

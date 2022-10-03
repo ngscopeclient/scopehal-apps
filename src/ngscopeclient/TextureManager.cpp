@@ -49,7 +49,7 @@ Texture::Texture(
 	const vk::raii::Device& device,
 	const vk::ImageCreateInfo& imageInfo,
 	const vk::raii::Buffer& srcBuf,
-	vk::raii::Queue& queue,
+	shared_ptr<QueueHandle> queue,
 	vk::raii::CommandBuffer& cmdBuf,
 	int width,
 	int height,
@@ -112,7 +112,7 @@ Texture::Texture(
 		cmdBuf.end();
 
 		//Submit the request and block until it completes
-		SubmitAndBlock(cmdBuf, queue);
+		queue->SubmitAndBlock(cmdBuf);
 	}
 
 	//Make a view for the image
@@ -318,7 +318,7 @@ TextureManager::~TextureManager()
 void TextureManager::LoadTexture(
 	const string& name,
 	const string& path,
-	vk::raii::Queue& queue,
+	shared_ptr<QueueHandle> queue,
 	vk::raii::CommandBuffer& cmdBuf
 	)
 {

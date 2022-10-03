@@ -49,7 +49,7 @@ public:
 		const vk::raii::Device& device,
 		const vk::ImageCreateInfo& imageInfo,
 		const vk::raii::Buffer& srcBuf,
-		vk::raii::Queue& queue,
+		std::shared_ptr<QueueHandle> queue,
 		vk::raii::CommandBuffer& cmdBuf,
 		int width,
 		int height,
@@ -112,7 +112,7 @@ public:
 	void LoadTexture(
 		const std::string& name,
 		const std::string& path,
-		vk::raii::Queue& queue,
+		std::shared_ptr<QueueHandle> queue,
 		vk::raii::CommandBuffer& cmdBuf);
 
 	ImTextureID GetTexture(const std::string& name)

@@ -129,13 +129,8 @@ int main(int argc, char* argv[])
 
 	{
 		//Make the top level window
-		//HACK: FIXME: In VulkanWindow, we pass ImGui a VkQueue handle, which it holds onto.
-		//ImGui only uses this handle in ImGui_ImplVulkan_RenderDrawData and ImGui_ImplVulkan_SwapBuffers.
-		//For now, holding a lock on this queue for the lifetime of the VulkanWindow instance.
-		//This needs fixed for GPUs that only have a single queue.
 		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("main render queue"));
-		QueueLock queueLock(queue);
-		g_mainWindow = make_unique<MainWindow>(*queueLock, queue->m_family);
+		g_mainWindow = make_unique<MainWindow>(queue);
 
 		//Main event loop
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))

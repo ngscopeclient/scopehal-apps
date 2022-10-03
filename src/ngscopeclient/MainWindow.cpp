@@ -62,11 +62,11 @@ extern Event g_rerenderRequestedEvent;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
+MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 #ifdef _DEBUG
-	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue, queueFamily)
+	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
 #else
-	: VulkanWindow("ngscopeclient", queue, queueFamily)
+	: VulkanWindow("ngscopeclient", queue)
 #endif
 	, m_showDemo(true)
 	, m_showPlot(false)
@@ -101,7 +101,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
 	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		m_queueFamily );
+		queue->m_family );
 	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
@@ -127,7 +127,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
 	m_cmdBuffer->begin({});
 	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
 	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, queue);
+	queue->SubmitAndBlock(*m_cmdBuffer);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
@@ -305,7 +305,10 @@ void MainWindow::Render()
 {
 	if(m_sessionClosing)
 	{
-		m_renderQueue.waitIdle();
+		{
+			QueueLock qlock(m_renderQueue);
+			(*qlock).waitIdle();
+		}
 		CloseSession();
 	}
 
@@ -332,7 +335,7 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		group->ToneMapAllWaveforms(cmdbuf);
 
 	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
 
 	double dt = GetTime() - start;
 	m_toneMapTime = dt * FS_PER_SECOND;
