@@ -44,13 +44,17 @@ using namespace std;
 
 WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	: m_parent(parent)
+	, m_xpos(0)
 	, m_pixelsPerXUnit(0.00005)
 	, m_xAxisOffset(0)
 	, m_title(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
-	, m_draggingTimeline(false)
+	, m_dragState(DRAG_STATE_NONE)
 	, m_tLastMouseMove(GetTime())
+	, m_xAxisCursorMode(X_CURSOR_NONE)
 {
+	m_xAxisCursorPositions[0] = 0;
+	m_xAxisCursorPositions[1] = 0;
 }
 
 WaveformGroup::~WaveformGroup()
@@ -143,7 +147,8 @@ bool WaveformGroup::Render()
 		return false;
 	}
 
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	auto pos = ImGui::GetCursorScreenPos();
+	ImVec2 clientArea = ImGui::GetContentRegionMax();
 
 	//Render the timeline
 	auto timelineHeight = 2.5 * ImGui::GetFontSize();
@@ -177,10 +182,69 @@ bool WaveformGroup::Render()
 	if(m_areas.empty())
 		open = false;
 
-	//TODO: Render cursors over everything else
+	//Render cursors over everything else
+	RenderXAxisCursors(pos, clientArea);
 
 	ImGui::End();
 	return open;
+}
+
+/**
+	@brief Render our cursors
+ */
+void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
+{
+	//No cursors? Nothing to do
+	if(m_xAxisCursorMode == X_CURSOR_NONE)
+		return;
+
+	float searchRadius = 0.25 * ImGui::GetFontSize();
+
+	//Create a child window to draw into
+	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
+	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+	if(ImGui::BeginChild("cursors", size))
+	{
+		auto list = ImGui::GetWindowDrawList();
+
+		//TODO: get these colors from preferences
+		auto cursor0_color = ColorFromString("#ffff00");
+
+		//Draw the first cursor
+		float xpos = XAxisUnitsToXPosition(m_xAxisCursorPositions[0]);
+		xpos = round(xpos);
+		list->AddLine(ImVec2(xpos, pos.y), ImVec2(xpos, pos.y + size.y), cursor0_color, 1);
+
+		//Check if the mouse hit us
+		auto mouse = ImGui::GetMousePos();
+		if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+		{
+			if( fabs(mouse.x - xpos) < searchRadius)
+			{
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+				//Start dragging if clicked
+				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					m_dragState = DRAG_STATE_X_CURSOR0;
+				}
+			}
+		}
+
+		//If dragging, move the cursor to track
+		switch(m_dragState)
+		{
+			case DRAG_STATE_X_CURSOR0:
+				if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+					m_dragState = DRAG_STATE_NONE;
+				m_xAxisCursorPositions[0] = XPositionToXAxisUnits(mouse.x);
+				break;
+
+			default:
+				break;
+		}
+	}
+	ImGui::EndChild();
 }
 
 void WaveformGroup::RenderTimeline(float width, float height)
@@ -198,6 +262,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
+	m_xpos = pos.x;
 	ImGui::Dummy(ImVec2(width, height));
 
 	//Detect mouse movement
@@ -235,7 +300,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-			m_draggingTimeline = true;
+			m_dragState = DRAG_STATE_TIMELINE;
 
 		//Autoscale on middle mouse
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
@@ -279,7 +344,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	//Handle dragging
 	//(Mouse is allowed to leave the window, as long as original click was within us)
-	if(m_draggingTimeline)
+	if(m_dragState == DRAG_STATE_TIMELINE)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame
 		float dx = mouseDelta.x * ImGui::GetWindowDpiScale();
@@ -290,7 +355,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		}
 
 		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-			m_draggingTimeline = false;
+			m_dragState = DRAG_STATE_NONE;
 	}
 
 	//Dimensions for various things
@@ -386,13 +451,9 @@ void WaveformGroup::RenderTimeline(float width, float height)
  */
 void WaveformGroup::OnMouseWheel(float delta)
 {
-	auto pos = ImGui::GetWindowPos();
-	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
-	relativeMouseX *= ImGui::GetWindowDpiScale();
-
 	//TODO: if shift is held, scroll horizontally
 
-	int64_t target = XPositionToXAxisUnits(relativeMouseX);
+	int64_t target = XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);
 
 	//Zoom in
 	if(delta > 0)

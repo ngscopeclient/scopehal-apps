@@ -188,6 +188,8 @@ ImU32 ColorFromString(const string& str)
 	if(str.length() == 7)
 		sscanf(str.c_str(), "#%02x%02x%02x", &r, &g, &b);
 
+	//TODO: support a few named colors
+
 	//legacy GTK 16 bit format
 	else
 	{

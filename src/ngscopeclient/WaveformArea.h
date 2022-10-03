@@ -270,6 +270,7 @@ protected:
 	void RasterizeAnalogWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf);
+	void PlotContextMenu();
 
 	void DrawDropRangeMismatchMessage(
 		ImDrawList* list,

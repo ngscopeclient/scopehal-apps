@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 HistoryDialog::HistoryDialog(HistoryManager& mgr)
-	: Dialog("History", ImVec2(400, 300))
+	: Dialog("History", ImVec2(400, 350))
 	, m_mgr(mgr)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)

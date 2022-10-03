@@ -396,8 +396,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		RenderGrid(pos, csize, gridmap, vbot, vtop);
 
 		//Blank out space for the actual waveform
-		ImGui::Dummy(ImVec2(csize.x, csize.y));
+		ImGui::InvisibleButton("plot", ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
+		PlotContextMenu();
 
 		//Draw actual waveforms (and protocol decode overlays)
 		RenderWaveforms(pos, csize);
@@ -445,6 +446,39 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
+}
+
+/**
+	@brief Run the context menu for the main plot area
+ */
+void WaveformArea::PlotContextMenu()
+{
+	if(ImGui::BeginPopupContextItem())
+	{
+		if(ImGui::BeginMenu("Cursors"))
+		{
+			if(ImGui::BeginMenu("X axis"))
+			{
+				if(ImGui::MenuItem("None", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_NONE)))
+					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+				if(ImGui::MenuItem("Single", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_SINGLE)))
+					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
+				if(ImGui::MenuItem("Dual", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)))
+					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+
+				ImGui::EndMenu();
+			}
+
+			if(ImGui::BeginMenu("Y axis"))
+			{
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndPopup();
+	}
 }
 
 /**
@@ -1497,13 +1531,9 @@ void WaveformArea::OnDragUpdate()
  */
 void WaveformArea::OnMouseWheelPlotArea(float delta)
 {
-	auto pos = ImGui::GetWindowPos();
-	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
-	relativeMouseX *= ImGui::GetWindowDpiScale();
-
 	//TODO: if shift is held, scroll horizontally
 
-	int64_t target = m_group->XPositionToXAxisUnits(relativeMouseX);
+	int64_t target = m_group->XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);
 
 	//Zoom in
 	if(delta > 0)

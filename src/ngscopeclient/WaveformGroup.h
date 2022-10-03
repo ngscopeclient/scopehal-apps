@@ -65,10 +65,10 @@ public:
 	void OnZoomOutHorizontal(int64_t target, float step);
 
 	/**
-		@brief Converts a position in X axis units (relative to time zero) to pixels (relative to left side of plot)
+		@brief Converts a position in pixels (relative to left side of plot) to X axis units (relative to time zero)
 	 */
 	int64_t XPositionToXAxisUnits(float pix)
-	{ return m_xAxisOffset + PixelsToXAxisUnits(pix); }
+	{ return m_xAxisOffset + PixelsToXAxisUnits(pix - m_xpos); }
 
 	/**
 		@brief Converts a distance measurement in pixels to X axis units
@@ -86,7 +86,7 @@ public:
 		@brief Converts a position in X axis units to pixels (in window coordinates)
 	 */
 	float XAxisUnitsToXPosition(int64_t t)
-	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + ImGui::GetWindowPos().x; }
+	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + m_xpos; }
 
 	float GetPixelsPerXUnit()
 	{ return m_pixelsPerXUnit; }
@@ -107,11 +107,16 @@ public:
 
 protected:
 	void RenderTimeline(float width, float height);
+	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
+
 	int64_t GetRoundingDivisor(int64_t width_xunits);
 	void OnMouseWheel(float delta);
 
 	///@brief Top level window we're attached to
 	MainWindow* m_parent;
+
+	///@brief X position of our child windows
+	float m_xpos;
 
 	///@brief Display scale factor
 	float m_pixelsPerXUnit;
@@ -128,14 +133,32 @@ protected:
 	///@brief The set of waveform areas within this group
 	std::vector< std::shared_ptr<WaveformArea> > m_areas;
 
-	///@brief True if dragging timeline
-	bool m_draggingTimeline;
+	///@brief Description of item being dragged, if any
+	enum
+	{
+		DRAG_STATE_NONE,
+		DRAG_STATE_TIMELINE,
+		DRAG_STATE_X_CURSOR0
+	} m_dragState;
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
 
 	///@brief List of waveform areas to close next frame
 	std::vector<size_t> m_areasToClose;
+
+public:
+
+	///@brief Type of X axis cursor we're displaying
+	enum CursorMode_t
+	{
+		X_CURSOR_NONE,
+		X_CURSOR_SINGLE,
+		X_CURSOR_DUAL
+	} m_xAxisCursorMode;
+
+	///@brief Position (in X axis units) of each cursor
+	int64_t m_xAxisCursorPositions[2];
 };
 
 #endif
