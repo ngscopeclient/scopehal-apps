@@ -51,6 +51,7 @@
 #include "LogViewerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PreferenceDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 
@@ -579,9 +580,20 @@ void MainWindow::SetupMenu()
 		bool timebaseVisible = (m_timebaseDialog != nullptr);
 		if(timebaseVisible)
 			ImGui::BeginDisabled();
-		if(ImGui::MenuItem("Timebase"))
+		if(ImGui::MenuItem("Timebase..."))
 			ShowTimebaseProperties();
 		if(timebaseVisible)
+			ImGui::EndDisabled();
+
+		bool prefsVisible = (m_preferenceDialog != nullptr);
+		if(prefsVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Preferences..."))
+		{
+			m_preferenceDialog = make_shared<PreferenceDialog>(m_session.GetPreferences());
+			AddDialog(m_preferenceDialog);
+		}
+		if(prefsVisible)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();

@@ -41,6 +41,7 @@ class DisplayedChannel;
 
 #include "../xptools/HzClock.h"
 #include "HistoryManager.h"
+#include "PreferenceManager.h"
 
 extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
@@ -321,6 +322,16 @@ protected:
 
 	///@brief Historical waveform data
 	HistoryManager m_history;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// End user preferences (persistent across sessions)
+
+	//Preferences state
+	PreferenceManager m_preferences;
+
+public:
+	PreferenceManager& GetPreferences()
+	{ return m_preferences; }
 };
 
 #endif

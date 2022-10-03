@@ -68,6 +68,7 @@ public:
 
     // Value retrieval methods
     int64_t GetInt(const std::string& path) const;
+    int64_t GetEnumRaw(const std::string& path) const;
     const std::string& GetString(const std::string& path) const;
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;

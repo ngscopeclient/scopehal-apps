@@ -102,7 +102,7 @@ void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
-ImU32 ColorFromString(const std::string& str);
+ImU32 ColorFromString(const std::string& str, uint8_t alpha = 255);
 
 extern std::shared_mutex g_vulkanActivityMutex;
 

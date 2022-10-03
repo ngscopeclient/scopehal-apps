@@ -49,6 +49,7 @@ add_executable(ngscopeclient
 	PowerSupplyDialog.cpp
 	PowerSupplyThread.cpp
 	Preference.cpp
+	PreferenceDialog.cpp
 	PreferenceManager.cpp
 	PreferenceSchema.cpp
 	PreferenceTree.cpp

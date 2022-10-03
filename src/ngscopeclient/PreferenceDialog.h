@@ -30,141 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of WaveformGroup
+	@brief Declaration of PreferenceDialog
  */
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
+#ifndef PreferenceDialog_h
+#define PreferenceDialog_h
 
-#include "WaveformArea.h"
+#include "Dialog.h"
 
-/**
-	@brief A WaveformGroup is a container for one or more WaveformArea's.
- */
-class WaveformGroup
+class PreferenceManager;
+class PreferenceCategory;
+class Preference;
+
+class PreferenceDialog : public Dialog
 {
 public:
-	WaveformGroup(MainWindow* parent, const std::string& title);
-	virtual ~WaveformGroup();
+	PreferenceDialog(PreferenceManager& prefs);
+	virtual ~PreferenceDialog();
 
-	void Clear();
-
-	bool Render();
-	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
-	void ReferenceWaveformTextures();
-
-	void RenderWaveformTextures(
-		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
-
-	const std::string& GetTitle()
-	{ return m_title; }
-
-	void AddArea(std::shared_ptr<WaveformArea>& area);
-
-	void OnZoomInHorizontal(int64_t target, float step);
-	void OnZoomOutHorizontal(int64_t target, float step);
-
-	/**
-		@brief Converts a position in pixels (relative to left side of plot) to X axis units (relative to time zero)
-	 */
-	int64_t XPositionToXAxisUnits(float pix)
-	{ return m_xAxisOffset + PixelsToXAxisUnits(pix - m_xpos); }
-
-	/**
-		@brief Converts a distance measurement in pixels to X axis units
-	 */
-	int64_t PixelsToXAxisUnits(float pix)
-	{ return pix / m_pixelsPerXUnit; }
-
-	/**
-		@brief Converts a distance measurement in X axis units to pixels
-	 */
-	float XAxisUnitsToPixels(int64_t t)
-	{ return t * m_pixelsPerXUnit; }
-
-	/**
-		@brief Converts a position in X axis units to pixels (in window coordinates)
-	 */
-	float XAxisUnitsToXPosition(int64_t t)
-	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + m_xpos; }
-
-	float GetPixelsPerXUnit()
-	{ return m_pixelsPerXUnit; }
-
-	int64_t GetXAxisOffset()
-	{ return m_xAxisOffset; }
-
-	void ClearPersistence();
-
-	bool IsChannelBeingDragged();
-	StreamDescriptor GetChannelBeingDragged();
-
-	float GetYAxisWidth()
-	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
-
-	float GetSpacing()
-	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
+	virtual bool DoRender();
 
 protected:
-	void RenderTimeline(float width, float height);
-	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
+	void ProcessCategory(PreferenceCategory& cat);
+	void ProcessPreference(Preference& pref);
 
-	enum DragState
-	{
-		DRAG_STATE_NONE,
-		DRAG_STATE_TIMELINE,
-		DRAG_STATE_X_CURSOR0,
-		DRAG_STATE_X_CURSOR1
-	};
-
-	void DoCursor(int iCursor, DragState state);
-
-	int64_t GetRoundingDivisor(int64_t width_xunits);
-	void OnMouseWheel(float delta);
-
-	///@brief Top level window we're attached to
-	MainWindow* m_parent;
-
-	///@brief X position of our child windows
-	float m_xpos;
-
-	///@brief Display scale factor
-	float m_pixelsPerXUnit;
-
-	///@brief X axis position of the left edge of our view
-	int64_t m_xAxisOffset;
-
-	///@brief Display title of the group
-	std::string m_title;
-
-	///@brief X axis unit
-	Unit m_xAxisUnit;
-
-	///@brief The set of waveform areas within this group
-	std::vector< std::shared_ptr<WaveformArea> > m_areas;
-
-	///@brief Description of item being dragged, if any
-	DragState m_dragState;
-
-	///@brief Time of last mouse movement
-	double m_tLastMouseMove;
-
-	///@brief List of waveform areas to close next frame
-	std::vector<size_t> m_areasToClose;
-
-public:
-
-	///@brief Type of X axis cursor we're displaying
-	enum CursorMode_t
-	{
-		X_CURSOR_NONE,
-		X_CURSOR_SINGLE,
-		X_CURSOR_DUAL
-	} m_xAxisCursorMode;
-
-	///@brief Position (in X axis units) of each cursor
-	int64_t m_xAxisCursorPositions[2];
+	PreferenceManager& m_prefs;
 };
 
 #endif
-

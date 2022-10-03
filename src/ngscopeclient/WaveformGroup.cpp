@@ -198,53 +198,100 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	if(m_xAxisCursorMode == X_CURSOR_NONE)
 		return;
 
-	float searchRadius = 0.25 * ImGui::GetFontSize();
-
-	//Create a child window to draw into
+	//Create a child window for all of our drawing
 	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
 	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-	if(ImGui::BeginChild("cursors", size))
+	if(ImGui::BeginChild("cursors", size, false, ImGuiWindowFlags_NoInputs))
 	{
 		auto list = ImGui::GetWindowDrawList();
 
 		//TODO: get these colors from preferences
 		auto cursor0_color = ColorFromString("#ffff00");
+		auto cursor1_color = ColorFromString("#ff8000");
+		auto fill_color = ColorFromString("#ffff00", 32);
 
-		//Draw the first cursor
-		float xpos = XAxisUnitsToXPosition(m_xAxisCursorPositions[0]);
-		xpos = round(xpos);
-		list->AddLine(ImVec2(xpos, pos.y), ImVec2(xpos, pos.y + size.y), cursor0_color, 1);
+		float xpos0 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[0]));
+		float xpos1 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[1]));
 
-		//Check if the mouse hit us
-		auto mouse = ImGui::GetMousePos();
-		if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
-		{
-			if( fabs(mouse.x - xpos) < searchRadius)
-			{
-				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+		//Fill between if dual cursor
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			list->AddRectFilled(ImVec2(xpos0, pos.y), ImVec2(xpos1, pos.y + size.y), fill_color);
 
-				//Start dragging if clicked
-				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-				{
-					m_dragState = DRAG_STATE_X_CURSOR0;
-				}
-			}
-		}
+		//First cursor
+		list->AddLine(ImVec2(xpos0, pos.y), ImVec2(xpos0, pos.y + size.y), cursor0_color, 1);
 
-		//If dragging, move the cursor to track
-		switch(m_dragState)
-		{
-			case DRAG_STATE_X_CURSOR0:
-				if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-					m_dragState = DRAG_STATE_NONE;
-				m_xAxisCursorPositions[0] = XPositionToXAxisUnits(mouse.x);
-				break;
+		//Second cursor
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			list->AddLine(ImVec2(xpos1, pos.y), ImVec2(xpos1, pos.y + size.y), cursor1_color, 1);
 
-			default:
-				break;
-		}
+		//TODO: position text on the
 	}
 	ImGui::EndChild();
+
+	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+	//So we have to do all of our interaction processing inside the top level window
+	DoCursor(0, DRAG_STATE_X_CURSOR0);
+	if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		DoCursor(1, DRAG_STATE_X_CURSOR1);
+
+	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
+	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		(m_dragState == DRAG_STATE_NONE) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		{
+			m_dragState = DRAG_STATE_X_CURSOR1;
+			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+		}
+		else
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+
+	//Cursor 0 should always be left of cursor 1 (if both are enabled).
+	//If they get swapped, exchange them.
+	if( (m_xAxisCursorPositions[0] > m_xAxisCursorPositions[1]) && (m_xAxisCursorMode == X_CURSOR_DUAL) )
+	{
+		//Swap the cursors themselves
+		int64_t tmp = m_xAxisCursorPositions[0];
+		m_xAxisCursorPositions[0] = m_xAxisCursorPositions[1];
+		m_xAxisCursorPositions[1] = tmp;
+
+		//If dragging one cursor, switch to dragging the other
+		if(m_dragState == DRAG_STATE_X_CURSOR0)
+			m_dragState = DRAG_STATE_X_CURSOR1;
+		else if(m_dragState == DRAG_STATE_X_CURSOR1)
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+}
+
+void WaveformGroup::DoCursor(int iCursor, DragState state)
+{
+	float xpos = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[iCursor]));
+	float searchRadius = 0.25 * ImGui::GetFontSize();
+
+	//Check if the mouse hit us
+	auto mouse = ImGui::GetMousePos();
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+	{
+		if( fabs(mouse.x - xpos) < searchRadius)
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+			//Start dragging if clicked
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				m_dragState = state;
+		}
+	}
+
+	//If dragging, move the cursor to track
+	if(m_dragState == state)
+	{
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_NONE;
+		m_xAxisCursorPositions[iCursor] = XPositionToXAxisUnits(mouse.x);
+	}
 }
 
 void WaveformGroup::RenderTimeline(float width, float height)

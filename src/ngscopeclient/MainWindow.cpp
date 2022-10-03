@@ -72,6 +72,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showDemo(true)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
+	, m_toolbarIconSize(0)
 	, m_session(this)
 	, m_sessionClosing(false)
 	, m_texmgr(m_imguiDescriptorPool)
@@ -132,17 +133,8 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
-	//TODO: use preference to decide what size to make the icons
-	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"));
-	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"));
-	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"));
-	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"));
-	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"));
-	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"));
-	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"));	//no dedicated icon yet
-	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"));
-	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"));
-
+	m_toolbarIconSize = 0;
+	LoadToolbarIcons();
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 }
 
@@ -183,6 +175,7 @@ void MainWindow::CloseSession()
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
 	m_historyDialog = nullptr;
+	m_preferenceDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -426,10 +419,13 @@ void MainWindow::RenderUI()
 
 void MainWindow::Toolbar()
 {
+	//Update icons, if needed
+	LoadToolbarIcons();
+
 	//Toolbar should be at the top of the main window.
 	//Update work area size so docking area doesn't include the toolbar rectangle
 	auto viewport = ImGui::GetMainViewport();
-	auto toolbarHeight = ImGui::GetFontSize() * 2.5;
+	float toolbarHeight = m_toolbarIconSize + 8;
 	m_workPos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y + toolbarHeight);
 	m_workSize = ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - toolbarHeight);
 	ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -459,10 +455,35 @@ void MainWindow::Toolbar()
 	ImGui::End();
 }
 
+/**
+	@brief Load toolbar icons from disk if preferences changed
+ */
+void MainWindow::LoadToolbarIcons()
+{
+	int iconSize = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_size");
+
+	if(m_toolbarIconSize == iconSize)
+		return;
+
+	m_toolbarIconSize = iconSize;
+
+	string prefix = string("icons/") + to_string(iconSize) + "x" + to_string(iconSize) + "/";
+
+	//Load the icons
+	m_texmgr.LoadTexture("clear-sweeps", FindDataFile(prefix + "clear-sweeps.png"));
+	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile(prefix + "fullscreen-enter.png"));
+	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile(prefix + "fullscreen-exit.png"));
+	m_texmgr.LoadTexture("history", FindDataFile(prefix + "history.png"));
+	m_texmgr.LoadTexture("refresh-settings", FindDataFile(prefix + "refresh-settings.png"));
+	m_texmgr.LoadTexture("trigger-single", FindDataFile(prefix + "trigger-single.png"));
+	m_texmgr.LoadTexture("trigger-force", FindDataFile(prefix + "trigger-single.png"));	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-start", FindDataFile(prefix + "trigger-start.png"));
+	m_texmgr.LoadTexture("trigger-stop", FindDataFile(prefix + "trigger-stop.png"));
+}
+
 void MainWindow::ToolbarButtons()
 {
-	auto sz = 24;//ImGui::GetFontSize() * 2;
-	ImVec2 buttonsize(sz, sz);
+	ImVec2 buttonsize(m_toolbarIconSize, m_toolbarIconSize);
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
@@ -547,11 +568,13 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
 
+	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
-
 	if(m_timebaseDialog == dlg)
 		m_timebaseDialog = nullptr;
+	if(m_preferenceDialog == dlg)
+		m_preferenceDialog = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
@@ -745,7 +768,7 @@ void MainWindow::LoadRecentInstrumentList()
 {
 	try
 	{
-		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recent.yml");
+		auto docs = YAML::LoadAllFromFile(m_session.GetPreferences().GetConfigDirectory() + "/recent.yml");
 		if(docs.empty())
 			return;
 		auto node = docs[0];
@@ -766,7 +789,9 @@ void MainWindow::LoadRecentInstrumentList()
 
 void MainWindow::SaveRecentInstrumentList()
 {
-	auto path = m_preferences.GetConfigDirectory() + "/recent.yml";
+	LogTrace("Saving recent instrument list\n");
+
+	auto path = m_session.GetPreferences().GetConfigDirectory() + "/recent.yml";
 	FILE* fp = fopen(path.c_str(), "w");
 
 	for(auto it : m_recentInstruments)
@@ -784,6 +809,8 @@ void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
 {
 	if(inst == nullptr)
 		return;
+
+	LogTrace("Adding instrument \"%s\" to recent instrument list\n", inst->m_nickname.c_str());
 
 	auto now = time(NULL);
 

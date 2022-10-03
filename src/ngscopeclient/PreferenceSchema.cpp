@@ -207,14 +207,6 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& toolbar = appearance.AddCategory("Toolbar");
 			toolbar.AddPreference(
-				Preference::Enum("button_style", Gtk::TOOLBAR_ICONS)
-					.Label("Button Style")
-					.Description("Toolbar button style (icon, text, or both)")
-					.EnumValue("Icon only", Gtk::TOOLBAR_ICONS)
-					.EnumValue("Text only", Gtk::TOOLBAR_TEXT)
-					.EnumValue("Icon + text", Gtk::TOOLBAR_BOTH)
-				);
-			toolbar.AddPreference(
 				Preference::Enum("icon_size", 24)
 					.Label("Icon Size")
 					.Description("Toolbar icon size, in pixels")
@@ -223,10 +215,6 @@ void PreferenceManager::InitializeDefaults()
 				);
 
 		auto& waveforms = appearance.AddCategory("Waveforms");
-			waveforms.AddPreference(
-				Preference::Font("infobox_font", "sans normal 10")
-				.Label("Info box font")
-				.Description("Font used for channel information box"));
 			waveforms.AddPreference(
 				Preference::Font("y_axis_font", "monospace normal 10")
 				.Label("Y axis font")
@@ -238,14 +226,6 @@ void PreferenceManager::InitializeDefaults()
 				.Unit(Unit::UNIT_COUNTS));
 
 		auto& windows = appearance.AddCategory("Windows");
-			windows.AddPreference(
-				Preference::Color("insertion_bar_color", Gdk::Color("yellow"))
-				.Label("Insertion bar color (insert)")
-				.Description("Color for the insertion bar when dragging a waveform within a group"));
-			windows.AddPreference(
-				Preference::Color("insertion_bar_split_color", Gdk::Color("orange"))
-				.Label("Insertion bar color (split)")
-				.Description("Color for the insertion bar when splitting a waveform group"));
 			windows.AddPreference(
 				Preference::Color("trigger_bar_color", Gdk::Color("white"))
 				.Label("Trigger bar color")
@@ -269,24 +249,6 @@ void PreferenceManager::InitializeDefaults()
 					"the transfer format for active sessions is not updated."
 				));
 
-	/*
-	auto& instrument = this->m_treeRoot.AddCategory("Instrument");
-		auto& trans = instrument.AddCategory("Transports");
-			trans.AddPreference(
-				Preference::String("test_string", "string")
-				.Label("Test string")
-				.Description("First test value"));
-			trans.AddPreference(
-				Preference::Real("test_real", 42.09)
-				.Label("Test real")
-				.Description("Second test value")
-				.Unit(Unit::UNIT_VOLTS));
-			trans.AddPreference(
-				Preference::Bool("test_bool", true)
-				.Label("Test boolean")
-				.Description("Third test value"));
-	*/
-
 	auto& files = this->m_treeRoot.AddCategory("Files");
 		files.AddPreference(
 			Preference::Int("max_recent_files", 10)
@@ -299,7 +261,7 @@ void PreferenceManager::InitializeDefaults()
 			Preference::Bool("redact_serial_in_title", false)
 			.Label("Redact serial number in title bar")
 			.Description(
-				"Partially hide instrument serial numbers in the glscopeclient window title bar.\n\n"
+				"Partially hide instrument serial numbers in the window title bar.\n\n"
 				"This allows you to share screenshots without revealing your serial numbers."
 			));
 }

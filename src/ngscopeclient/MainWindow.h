@@ -36,7 +36,6 @@
 #define MainWindow_h
 
 #include "Dialog.h"
-#include "PreferenceManager.h"
 #include "Session.h"
 #include "TextureManager.h"
 #include "VulkanWindow.h"
@@ -146,6 +145,7 @@ protected:
 				void WindowSCPIConsoleMenu();
 			void HelpMenu();
 		void Toolbar();
+			void LoadToolbarIcons();
 			void ToolbarButtons();
 		void DockingArea();
 
@@ -196,6 +196,9 @@ protected:
 	///@brief Performance metrics
 	std::shared_ptr<Dialog> m_metricsDialog;
 
+	///@brief Preferences
+	std::shared_ptr<Dialog> m_preferenceDialog;
+
 	///@brief History
 	std::shared_ptr<HistoryDialog> m_historyDialog;
 
@@ -212,6 +215,9 @@ protected:
 
 	std::shared_ptr<WaveformGroup> GetBestGroupForWaveform(StreamDescriptor stream);
 
+	///@brief Cached toolbar icon size
+	int m_toolbarIconSize;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
 
@@ -222,16 +228,6 @@ protected:
 	bool m_sessionClosing;
 
 	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// End user preferences (persistent across sessions)
-
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
-	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
 
 protected:
 

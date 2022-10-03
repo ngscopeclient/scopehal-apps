@@ -170,9 +170,9 @@ void Relaunch(int argc, char* argv[])
 #endif
 
 /**
-	@brief Converts a hex color code into a color (assuming alpha of 255)
+	@brief Converts a hex color code plus externally supplied alpha value into a color
  */
-ImU32 ColorFromString(const string& str)
+ImU32 ColorFromString(const string& str, uint8_t alpha)
 {
 	if( (str[0] != '#') || ( (str.length() != 7) && (str.length() != 13) ) )
 	{
@@ -199,5 +199,5 @@ ImU32 ColorFromString(const string& str)
 		b >>= 8;
 	}
 
-	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (0xff << IM_COL32_A_SHIFT);
+	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (alpha << IM_COL32_A_SHIFT);
 }
