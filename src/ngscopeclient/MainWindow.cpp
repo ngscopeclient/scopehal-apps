@@ -57,15 +57,24 @@
 
 using namespace std;
 
+extern Event g_rerenderRequestedEvent;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
+#ifdef _DEBUG
+	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue, queueFamily)
+#else
 	: VulkanWindow("ngscopeclient", queue, queueFamily)
+#endif
 	, m_showDemo(true)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_session(this)
+	, m_sessionClosing(false)
+	, m_texmgr(m_imguiDescriptorPool)
+	, m_needRender(false)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
@@ -73,10 +82,8 @@ MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
 	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
 	ImGuiIO& io = ImGui::GetIO();
 	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
 	builder.AddChar(L'°');
-	for(wchar_t i=0x370; i<=0x3ff; i++)	//Greek and Coptic
-		builder.AddChar(i);
 
 	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
@@ -91,37 +98,57 @@ MainWindow::MainWindow(vk::raii::Queue& queue, size_t queueFamily)
 	io.Fonts->Build();
 	io.FontDefault = m_defaultFont;
 
-	//Temporary command pool for initialization
+	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		m_queueFamily );
-	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
-	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	if(g_hasDebugUtils)
+	{
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandPool,
+				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				"MainWindow.m_cmdPool"));
+
+		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+			vk::DebugUtilsObjectNameInfoEXT(
+				vk::ObjectType::eCommandBuffer,
+				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
+				"MainWindow.m_cmdBuffer"));
+	}
 
 	//Download imgui fonts
-	cmdBuf.begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(*cmdBuf);
-	cmdBuf.end();
-	SubmitAndBlock(cmdBuf, queue);
+	m_cmdBuffer->begin({});
+	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, queue);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	//Load some textures
 	//TODO: use preference to decide what size to make the icons
-	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"), queue, cmdBuf);	//no dedicated icon yet
-	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"), queue, cmdBuf);
-	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"), queue, cmdBuf);
+	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"), queue, *m_cmdBuffer);	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"), queue, *m_cmdBuffer);
+	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"), queue, *m_cmdBuffer);
 }
 
 MainWindow::~MainWindow()
 {
+	m_cmdBuffer = nullptr;
+	m_cmdPool = nullptr;
+
 	CloseSession();
 }
 
@@ -135,6 +162,9 @@ void MainWindow::CloseSession()
 
 	SaveRecentInstrumentList();
 
+	//Close background threads in our session before destroying views
+	m_session.ClearBackgroundThreads();
+
 	//Destroy waveform views
 	LogTrace("Clearing views\n");
 	for(auto g : m_waveformGroups)
@@ -142,6 +172,7 @@ void MainWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
+	m_groupsToClose.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
@@ -159,6 +190,8 @@ void MainWindow::CloseSession()
 	m_session.Clear();
 
 	LogTrace("Clear complete\n");
+
+	m_sessionClosing = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,6 +301,17 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+void MainWindow::Render()
+{
+	if(m_sessionClosing)
+	{
+		m_renderQueue.waitIdle();
+		CloseSession();
+	}
+
+	VulkanWindow::Render();
+}
+
 void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 {
 
@@ -278,32 +322,49 @@ void MainWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 
 	Called by Session::CheckForWaveforms() at the start of each frame if new data is ready to render
  */
-void MainWindow::ToneMapAllWaveforms()
+void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	double start = GetTime();
 
+	m_cmdBuffer->begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
 	for(auto group : m_waveformGroups)
-		group->ToneMapAllWaveforms();
+		group->ToneMapAllWaveforms(cmdbuf);
+
+	m_cmdBuffer->end();
+	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
 
 	double dt = GetTime() - start;
 	m_toneMapTime = dt * FS_PER_SECOND;
 }
 
-/**
-	@brief Runs the rendering shader on all of our waveforms
-
-	Called by Session::RenderWaveformTextures() from WaveformThread after downloading data from all scopes is complete
- */
-void MainWindow::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void MainWindow::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& channels)
 {
-	for(auto g : m_waveformGroups)
-		g->RenderWaveformTextures(cmdbuf);
+	for(auto group : m_waveformGroups)
+		group->RenderWaveformTextures(cmdbuf, channels);
 }
 
 void MainWindow::RenderUI()
 {
+	m_needRender = false;
+
+	//Keep references to all of our waveform textures until next frame
+	//Any groups we're closing will be destroyed at the start of that frame, once rendering has finished
+	for(auto g : m_waveformGroups)
+		g->ReferenceWaveformTextures();
+
+	//Destroy all waveform groups we were asked to close
+	//Block until all background processing completes to ensure no command buffers are still pending
+	if(!m_groupsToClose.empty())
+	{
+		g_vkComputeDevice->waitIdle();
+		m_groupsToClose.clear();
+	}
+
 	//See if we have new waveform data to look at
-	m_session.CheckForWaveforms();
+	m_session.CheckForWaveforms(*m_cmdBuffer);
 
 	//Menu for main window
 	MainMenu();
@@ -315,7 +376,6 @@ void MainWindow::RenderUI()
 	//Waveform groups
 	{
 		lock_guard<recursive_mutex> lock(m_session.GetWaveformDataMutex());
-		vector<size_t> groupsToClose;
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
 			auto group = m_waveformGroups[i];
@@ -323,11 +383,11 @@ void MainWindow::RenderUI()
 			{
 				LogTrace("Closing waveform group %s (i=%zu)\n", group->GetTitle().c_str(), i);
 				group->Clear();
-				groupsToClose.push_back(i);
+				m_groupsToClose.push_back(i);
 			}
 		}
-		for(ssize_t i = static_cast<ssize_t>(groupsToClose.size())-1; i >= 0; i--)
-			m_waveformGroups.erase(m_waveformGroups.begin() + groupsToClose[i]);
+		for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
+			m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
 	}
 
 	//Dialog boxes
@@ -339,6 +399,9 @@ void MainWindow::RenderUI()
 	}
 	for(auto& dlg : dlgsToClose)
 		OnDialogClosed(dlg);
+
+	if(m_needRender)
+		g_rerenderRequestedEvent.Signal();
 
 	//DEBUG: draw the demo windows
 	ImGui::ShowDemoWindow(&m_showDemo);
@@ -585,6 +648,9 @@ void MainWindow::DockingArea()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
 
+/**
+	@brief Returns true if a channel is being dragged from any WaveformArea within this window
+ */
 bool MainWindow::IsChannelBeingDragged()
 {
 	for(auto group : m_waveformGroups)
@@ -593,6 +659,20 @@ bool MainWindow::IsChannelBeingDragged()
 			return true;
 	}
 	return false;
+}
+
+/**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor MainWindow::GetChannelBeingDragged()
+{
+	for(auto group : m_waveformGroups)
+	{
+		auto stream = group->GetChannelBeingDragged();
+		if(stream)
+			return stream;
+	}
+	return StreamDescriptor(nullptr, 0);
 }
 
 void MainWindow::ShowTimebaseProperties()

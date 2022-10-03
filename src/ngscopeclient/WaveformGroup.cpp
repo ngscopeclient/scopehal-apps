@@ -78,6 +78,9 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshTimebasePropertiesDialog();
 }
 
+/**
+	@brief Returns true if a channel is being dragged from any WaveformArea within the group
+ */
 bool WaveformGroup::IsChannelBeingDragged()
 {
 	for(auto a : m_areas)
@@ -88,6 +91,21 @@ bool WaveformGroup::IsChannelBeingDragged()
 	return false;
 }
 
+/**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor WaveformGroup::GetChannelBeingDragged()
+{
+	for(auto a : m_areas)
+	{
+		auto stream = a->GetChannelBeingDragged();
+		if(stream)
+			return stream;
+	}
+	return StreamDescriptor(nullptr, 0);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
@@ -96,21 +114,23 @@ bool WaveformGroup::IsChannelBeingDragged()
 
 	Called by MainWindow::ToneMapAllWaveforms() at the start of each frame if new data is ready to render
  */
-void WaveformGroup::ToneMapAllWaveforms()
+void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	for(auto a : m_areas)
-		a->ToneMapAllWaveforms();
+		a->ToneMapAllWaveforms(cmdbuf);
 }
 
-/**
-	@brief Run the tone-mapping shader on all of our waveforms
-
-	Called by MainWindow::RenderWaveformTextures() in WaveformThread
- */
-void WaveformGroup::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void WaveformGroup::ReferenceWaveformTextures()
 {
 	for(auto a : m_areas)
-		a->RenderWaveformTextures(cmdbuf);
+		a->ReferenceWaveformTextures();
+}
+
+void WaveformGroup::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
+{
+	for(auto a : m_areas)
+		a->RenderWaveformTextures(cmdbuf, channels);
 }
 
 bool WaveformGroup::Render()
@@ -128,29 +148,36 @@ bool WaveformGroup::Render()
 	//Render the timeline
 	auto timelineHeight = 2.5 * ImGui::GetFontSize();
 	clientArea.y -= timelineHeight;
-	RenderTimeline(clientArea.x, timelineHeight);
+	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
+	RenderTimeline(clientArea.x - yAxisWidthSpaced, timelineHeight);
+
+	//Close any areas that we destroyed last frame
+	//Block until all background processing completes to ensure no command buffers are still pending
+	if(!m_areasToClose.empty())
+	{
+		g_vkComputeDevice->waitIdle();
+		m_areasToClose.clear();
+	}
 
 	//Render our waveform areas
-	//TODO: waveform areas full of protocol or digital decodes should be fixed size
-	//while analog will fill the gap?
-	vector<size_t> areasToClose;
+	//TODO: waveform areas full of protocol or digital decodes should be fixed size while analog will fill the gap?
+	//Anything we closed is removed from the list THIS frame, so we stop rendering to them etc
+	//but not actually destroyed until next frame
 	for(size_t i=0; i<m_areas.size(); i++)
 	{
 		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
-			areasToClose.push_back(i);
+			m_areasToClose.push_back(i);
 	}
-
-	//Close any areas that are now empty
-	for(ssize_t i=static_cast<ssize_t>(areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + areasToClose[i]);
-	if(!areasToClose.empty())
+	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
+		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+	if(!m_areasToClose.empty())
 		m_parent->RefreshTimebasePropertiesDialog();
 
 	//If we no longer have any areas in the group, close the group
 	if(m_areas.empty())
 		open = false;
 
-	//Render cursors over everything else
+	//TODO: Render cursors over everything else
 
 	ImGui::End();
 	return open;
@@ -242,7 +269,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	list->PathStroke(color, 0, thickLineWidth);
 
 	//Figure out rounding granularity, based on our time scales
-	float xscale = m_pixelsPerXUnit / dpiScale;
+	float xscale = m_pixelsPerXUnit;
 	int64_t width_xunits = width / xscale;
 	auto round_divisor = GetRoundingDivisor(width_xunits);
 
@@ -381,7 +408,7 @@ int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
  */
 void WaveformGroup::ClearPersistence()
 {
-	LogTrace("Not implemented\n");
+	m_parent->SetNeedRender();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

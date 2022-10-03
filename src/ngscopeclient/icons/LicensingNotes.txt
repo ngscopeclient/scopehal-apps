@@ -1,0 +1,5 @@
+Icons in this directory were commissioned for the project and are covered by the main project license,
+EXCEPT for the following icons which are from the Open Icon Library and covered by the respective licenses
+(details in OpenIconLibraryLicensing.txt):
+
+dialog-warning-2.png (public domain)

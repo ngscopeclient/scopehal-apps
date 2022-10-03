@@ -72,13 +72,22 @@ WaveformRenderData::WaveformRenderData(StreamDescriptor channel, WaveformArea* a
 		else if(IsDigital())
 			shaderfn += "digital";
 
+		int durationsSSBOs = 0;
+
+		if(ZeroHoldFlagSet())
+		{
+			// TODO: Need to be able to dispatch this at runtime once we grow a UI setting for interpolation behavior
+			shaderfn += ".zerohold";
+			durationsSSBOs = 1;
+		}
+
 		if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
 			shaderfn += ".int64";
 		
 		std::string denseShaderFn = shaderfn + ".dense.spv";
 		std::string sparseShaderFn = shaderfn + ".spv";
 		m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
-		m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, 4, sizeof(ConfigPushConstants));
+		m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, durationsSSBOs + 4, sizeof(ConfigPushConstants));
 
 		vk::CommandPoolCreateInfo poolInfo(
 			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -198,9 +207,15 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		//Copy the X axis timestamps, no conversion needed.
 		//But if dense packed, we can skip this
 		if(sandat)
+		{
 			sandat->m_offsets.PrepareForGpuAccess(false);
+			sandat->m_durations.PrepareForGpuAccess(false);
+		}
 		else if(sdigdat)
+		{
 			sdigdat->m_offsets.PrepareForGpuAccess(false);
+			sdigdat->m_offsets.PrepareForGpuAccess(false);
+		}
 	}
 
 	//Calculate indexes for rendering of sparse waveforms
@@ -283,6 +298,9 @@ size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
 	size_t pos = len/2;
 	size_t last_lo = 0;
 	size_t last_hi = len-1;
+
+	if (!len)
+		return 0;
 
 	//Clip if out of range
 	if(buf[0] >= value)
@@ -669,6 +687,9 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		comp->BindBufferNonblocking(1, sandat->m_samples, *data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(2, sandat->m_offsets, *data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
+
+		if (data->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sandat->m_durations, *data->m_vkCmdBuf);
 	}
 	else if(uandat)
 	{
@@ -679,6 +700,9 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		comp->BindBufferNonblocking(1, sdigdat->m_samples, *data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(2, sdigdat->m_offsets, *data->m_vkCmdBuf);
 		comp->BindBufferNonblocking(3, data->m_indexBuffer, *data->m_vkCmdBuf);
+
+		if (data->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sdigdat->m_durations, *data->m_vkCmdBuf);
 	}
 	else if(udigdat)
 	{

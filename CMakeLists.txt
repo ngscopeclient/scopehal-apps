@@ -8,9 +8,9 @@ include(CTest)
 set(BUILD_DOCS CACHE BOOL "Build the documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++14
-set(CMAKE_CXX_EXTENSIONS OFF) # use c++14 instead of gnu++14
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++17
+set(CMAKE_CXX_EXTENSIONS OFF) # use c++17 instead of gnu++17
 
 # Compiler flags
 set(WARNINGS "-Wall -Wextra -Wuninitialized ")
@@ -166,7 +166,6 @@ endif()
 
 # Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/reflowmon")
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
 if(NOT APPLE_SILICON)
 	# Requires ffts, which does not build on apple silicon currently

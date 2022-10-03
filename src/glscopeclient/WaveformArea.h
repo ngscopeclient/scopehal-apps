@@ -72,6 +72,24 @@ public:
 	bool IsHistogram()
 	{ return m_channel.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
 
+	bool ZeroHoldFlagSet()
+	{
+		return m_channel.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
+		// TODO: Allow this to be overridden by a configuration option in the WaveformArea
+	}
+
+	bool ZeroHoldCursorBehaviour()
+	{
+		return ZeroHoldFlagSet() || IsHistogram();
+		// Histogram included here to avoid interpolating count values inside bins
+	}
+
+	bool ShouldMapDurations()
+	{
+		return ZeroHoldFlagSet() && !IsDensePacked();
+		// Do not need durations if dense because each duration is "1"
+	}
+
 	bool IsDensePacked()
 	{
 		auto data = m_channel.m_channel->GetData(0);
@@ -467,7 +485,7 @@ protected:
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
 	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
-	float GetValueAtTime(int64_t time_fs);
+	std::pair<bool, float> GetValueAtTime(int64_t time_fs);
 
 	float GetDPIScale()
 	{ return get_pango_context()->get_resolution() / 96; }

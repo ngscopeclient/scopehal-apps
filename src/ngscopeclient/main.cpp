@@ -147,6 +147,7 @@ int main(int argc, char* argv[])
 			g_mainWindow->Render();
 		}
 
+		g_mainWindow->GetSession().ClearBackgroundThreads();
 		g_vkComputeDevice->waitIdle();
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();

@@ -44,6 +44,8 @@ extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
 
+extern std::shared_mutex g_vulkanActivityMutex;
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,7 +61,6 @@ Session::Session(MainWindow* wnd)
 	, m_triggerOneShot(false)
 	, m_multiScopeFreeRun(false)
 	, m_lastFilterGraphExecTime(0)
-	, m_lastWaveformRenderTime(0)
 {
 }
 
@@ -68,12 +69,22 @@ Session::~Session()
 	Clear();
 }
 
-void Session::Clear()
-{
-	LogTrace("Clearing session\n");
-	LogIndenter li;
+/**
+	@brief Terminate all background threads for instruments
 
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+	You must call Clear() after calling this function, however it's OK to do other cleanup in between.
+
+	The reason for the split is that canceling the background threads is needed to prevent rendering or waveform
+	processing from happening while we're in the middle of destroying stuff. But we can't clear the scopes etc until
+	we've deleted all of the views and waveform groups as they hold onto references to them.
+ */
+void Session::ClearBackgroundThreads()
+{
+	LogTrace("Clearing background threads\n");
+
+	//Signal our threads to exit
+	//The sooner we do this, the faster they'll exit.
+	m_shuttingDown = true;
 
 	//Stop the trigger so there's no pending waveforms
 	StopTrigger();
@@ -82,10 +93,8 @@ void Session::Clear()
 	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
 	m_triggerArmed = false;
 	g_waveformReadyEvent.Clear();
+	g_rerenderDoneEvent.Clear();
 	g_waveformProcessedEvent.Signal();
-
-	//Signal our threads to exit
-	m_shuttingDown = true;
 
 	//Block until our processing threads exit
 	for(auto& t : m_threads)
@@ -95,6 +104,24 @@ void Session::Clear()
 	m_waveformThread = nullptr;
 	m_threads.clear();
 
+	//Clear shutdown flag in case we're reusing the session object
+	m_shuttingDown = false;
+}
+
+/**
+	@brief Clears all session state and returns the object to an empty state
+ */
+void Session::Clear()
+{
+	LogTrace("Clearing session\n");
+	LogIndenter li;
+
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	ClearBackgroundThreads();
+
+	//TODO: do we need to lock the mutex now that all of the background threads should have terminated?
+	//Might be redundant.
 	lock_guard<mutex> lock2(m_scopeMutex);
 
 	//Delete scopes once we've terminated the threads
@@ -106,14 +133,9 @@ void Session::Clear()
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
 
-	//Clear shutdown flag in case we're reusing the session object
-	m_shuttingDown = false;
-
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
-
-	LogTrace("Clear complete\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -588,16 +610,17 @@ void Session::DownloadWaveforms()
 	@brief Check if new waveform data has arrived
 
 	This runs in the main GUI thread.
+
+	TODO: this might be best to move to MainWindow?
  */
-void Session::CheckForWaveforms()
+void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
+	bool hadNewWaveforms = false;
 	if(m_triggerArmed)
 	{
 		if(g_waveformReadyEvent.Peek())
 		{
 			LogTrace("Waveform is ready\n");
-
-			//m_framesClock.Tick();
 
 			//Crunch the new waveform
 			{
@@ -610,14 +633,12 @@ void Session::CheckForWaveforms()
 					if(!scope->IsOffline())
 						m_historyWindows[scope]->OnWaveformDataReady();
 				}
-
-				//Update filters etc once every instrument has been updated
-				OnAllWaveformsUpdated(false, false);
 				*/
 			}
 
 			//Tone-map all of our waveforms
-			m_mainWindow->ToneMapAllWaveforms();
+			hadNewWaveforms = true;
+			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
 			//Release the waveform processing thread
 			g_waveformProcessedEvent.Signal();
@@ -626,10 +647,6 @@ void Session::CheckForWaveforms()
 			if(m_multiScopeFreeRun)
 				ArmTrigger(TRIGGER_TYPE_NORMAL);
 		}
-
-		//If a re-render operation completed, tone map everything again
-		if(g_rerenderDoneEvent.Peek())
-			m_mainWindow->ToneMapAllWaveforms();
 	}
 
 	//Discard all pending waveform data if the trigger isn't armed.
@@ -639,7 +656,15 @@ void Session::CheckForWaveforms()
 		lock_guard<mutex> lock(m_scopeMutex);
 		for(auto scope : m_oscilloscopes)
 			scope->ClearPendingWaveforms();
+
+		//If waveform thread is blocking for us to process its last waveform, release it
+		if(g_waveformReadyEvent.Peek())
+			g_waveformProcessedEvent.Signal();
 	}
+
+	//If a re-render operation completed, tone map everything again
+	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
+		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -665,9 +690,11 @@ void Session::RefreshAllFilters()
 
 	set<Filter*> filters;
 	{
-		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		lock_guard<mutex> lock3(m_filterUpdatingMutex);
 		filters = Filter::GetAllInstances();
 	}
+
+	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
 	m_graphExecutor.RunBlocking(filters);
 
 	//Update statistic displays after the filter graph update is complete
@@ -689,12 +716,7 @@ int64_t Session::GetToneMapTime()
 	return m_mainWindow->GetToneMapTime();
 }
 
-/**
-	@brief Runs the heavy rendering pass (sample data -> fp32 density map)
- */
-void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
 {
-	double tstart = GetTime();
-	m_mainWindow->RenderWaveformTextures(cmdbuf);
-	m_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
+	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
 }

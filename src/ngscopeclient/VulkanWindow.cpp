@@ -41,6 +41,15 @@ using namespace std;
 
 #define IMAGE_COUNT 2
 
+static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport);
+static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport);
+static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size);
+
+//original function pointers
+void (*ImGui_ImplVulkan_CreateWindow)(ImGuiViewport* viewport);
+void (*ImGui_ImplVulkan_DestroyWindow)(ImGuiViewport* viewport);
+void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -53,6 +62,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue, size_t q
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
 	, m_frameIndex(0)
+	, m_lastFrameIndex(0)
 	, m_width(0)
 	, m_height(0)
 	, m_fullscreen(false)
@@ -99,8 +109,11 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue, size_t q
 	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBufferDynamic, numImguiDescriptors));
 	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eStorageBufferDynamic, numImguiDescriptors));
 	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eInputAttachment, numImguiDescriptors));
-	vk::DescriptorPoolCreateInfo poolInfo(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, numImguiDescriptors, poolSizes);
-	m_imguiDescriptorPool = make_unique<vk::raii::DescriptorPool>(*g_vkComputeDevice, poolInfo);
+	vk::DescriptorPoolCreateInfo poolInfo(
+		vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+		numImguiDescriptors,
+		poolSizes);
+	m_imguiDescriptorPool = make_shared<vk::raii::DescriptorPool>(*g_vkComputeDevice, poolInfo);
 
 	UpdateFramebuffer();
 
@@ -138,6 +151,15 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue, size_t q
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.Queue = *queue;
 	ImGui_ImplVulkan_Init(&info, **m_renderPass);
+
+	//Hook a couple of backend functions with mutexing
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	ImGui_ImplVulkan_CreateWindow = platform_io.Renderer_CreateWindow;
+	ImGui_ImplVulkan_DestroyWindow = platform_io.Renderer_DestroyWindow;
+	ImGui_ImplVulkan_SetWindowSize = platform_io.Renderer_SetWindowSize;
+	platform_io.Renderer_CreateWindow = Mutexed_ImGui_ImplVulkan_CreateWindow;
+	platform_io.Renderer_DestroyWindow = Mutexed_ImGui_ImplVulkan_DestroyWindow;
+	platform_io.Renderer_SetWindowSize = Mutexed_ImGui_ImplVulkan_SetWindowSize;
 
 	m_plotContext = ImPlot::CreateContext();
 
@@ -230,6 +252,7 @@ VulkanWindow::~VulkanWindow()
 bool VulkanWindow::UpdateFramebuffer()
 {
 	LogTrace("Recreating framebuffer due to window resize\n");
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 
 	//Wait until any previous rendering has finished
 	g_vkComputeDevice->waitIdle();
@@ -321,9 +344,11 @@ bool VulkanWindow::UpdateFramebuffer()
 
 	//Make per-frame buffer views and framebuffers
 	m_backBuffers = m_swapchain->getImages();
-	m_backBufferViews.resize(m_backBuffers.size());
-	m_framebuffers.resize(m_backBuffers.size());
-	for (uint32_t i = 0; i < m_backBuffers.size(); i++)
+	auto nbuffers = m_backBuffers.size();
+	m_backBufferViews.resize(nbuffers);
+	m_framebuffers.resize(nbuffers);
+	m_texturesUsedThisFrame.resize(nbuffers);
+	for (uint32_t i = 0; i < nbuffers; i++)
 	{
 		vk::ComponentMapping components(
 		vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
@@ -360,10 +385,16 @@ void VulkanWindow::Render()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	//Make sure the old frame has completed
+	//Otherwise we risk modifying textures that last frame is still using
+	(void)g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+
 	//Draw all of our application UI objects
 	RenderUI();
 
 	//Internal GUI rendering
+	set<shared_ptr<Texture> > texturesToClear = m_texturesUsedThisFrame[m_lastFrameIndex];
+	m_texturesUsedThisFrame[m_lastFrameIndex].clear();
 	ImGui::Render();
 
 	//Render the main window
@@ -375,35 +406,35 @@ void VulkanWindow::Render()
 		try
 		{
 			auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
+			m_lastFrameIndex = m_frameIndex;
 			m_frameIndex = result.second;
 			if(result.first == vk::Result::eSuboptimalKHR)
 			{
 				LogTrace("eSuboptimalKHR\n");
+
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
 				Render();
+
 				return;
 			}
 		}
 		catch(const vk::OutOfDateKHRError& err)
 		{
 			LogTrace("OutOfDateKHR\n");
+
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 			Render();
+
 			return;
 		}
 
-		//Make sure the old frame has completed
-		g_vkComputeDevice->waitForFences({**m_fences[m_frameIndex]}, VK_TRUE, UINT64_MAX);
+		//Reset fences for next frame
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
-
-		//We can now free references to last frame's textures
-		//This will delete them if the containing object was destroyed that frame
 		m_renderQueue.waitIdle();
-		m_texturesUsedThisFrame.clear();
 
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
@@ -463,6 +494,10 @@ void VulkanWindow::Render()
 			return;
 		}
 	}
+
+	//We can now free references to last frame's textures
+	//This will delete them if the containing object was destroyed that frame
+	texturesToClear.clear();
 }
 
 void VulkanWindow::RenderUI()
@@ -505,4 +540,28 @@ void VulkanWindow::SetFullscreen(bool fullscreen)
 			m_windowedHeight,
 			GLFW_DONT_CARE);
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ImGui hooks
+
+static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
+	ImGui_ImplVulkan_CreateWindow(viewport);
+}
+
+static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
+	ImGui_ImplVulkan_DestroyWindow(viewport);
+}
+
+static void Mutexed_ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+	g_vkComputeDevice->waitIdle();
+	ImGui_ImplVulkan_SetWindowSize(viewport, size);
 }

@@ -44,6 +44,7 @@
 #pragma GCC diagnostic pop
 
 #include <atomic>
+#include <shared_mutex>
 
 #include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"
@@ -102,5 +103,7 @@ void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
 ImU32 ColorFromString(const std::string& str);
+
+extern std::shared_mutex g_vulkanActivityMutex;
 
 #endif

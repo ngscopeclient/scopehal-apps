@@ -49,8 +49,12 @@ public:
 	void Clear();
 
 	bool Render();
-	void ToneMapAllWaveforms();
-	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	void ReferenceWaveformTextures();
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
 
 	const std::string& GetTitle()
 	{ return m_title; }
@@ -84,9 +88,22 @@ public:
 	float XAxisUnitsToXPosition(int64_t t)
 	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + ImGui::GetWindowPos().x; }
 
+	float GetPixelsPerXUnit()
+	{ return m_pixelsPerXUnit; }
+
+	int64_t GetXAxisOffset()
+	{ return m_xAxisOffset; }
+
 	void ClearPersistence();
 
 	bool IsChannelBeingDragged();
+	StreamDescriptor GetChannelBeingDragged();
+
+	float GetYAxisWidth()
+	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
+
+	float GetSpacing()
+	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
 
 protected:
 	void RenderTimeline(float width, float height);
@@ -116,6 +133,9 @@ protected:
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
+
+	///@brief List of waveform areas to close next frame
+	std::vector<size_t> m_areasToClose;
 };
 
 #endif

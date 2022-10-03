@@ -60,6 +60,10 @@ function(add_render_shader_variants target)
 			set(options ${options} -DDENSE_PACK)
 		endif()
 
+		if(outfn MATCHES "zerohold")
+			set(options ${options} -DNO_INTERPOLATION)
+		endif()
+
 		add_custom_command(
 			OUTPUT ${outfile}
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
@@ -81,15 +85,19 @@ add_render_shader_variants(
 	ngrendershaders
 	OUTPUTS
 		waveform-compute.analog.spv
+		waveform-compute.analog.zerohold.spv
 		waveform-compute.digital.spv
 		waveform-compute.histogram.spv
 		waveform-compute.analog.int64.spv
+		waveform-compute.analog.zerohold.int64.spv
 		waveform-compute.digital.int64.spv
 		waveform-compute.histogram.int64.spv
 		waveform-compute.analog.dense.spv
+		waveform-compute.analog.zerohold.dense.spv
 		waveform-compute.digital.dense.spv
 		waveform-compute.histogram.dense.spv
 		waveform-compute.analog.int64.dense.spv
+		waveform-compute.analog.zerohold.int64.dense.spv
 		waveform-compute.digital.int64.dense.spv
 		waveform-compute.histogram.int64.dense.spv
 	)

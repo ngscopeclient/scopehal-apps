@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "pthread_compat.h"
 #include "Session.h"
+#include "WaveformArea.h"
 
 using namespace std;
 
@@ -44,7 +45,17 @@ Event g_rerenderDoneEvent;
 Event g_waveformReadyEvent;
 Event g_waveformProcessedEvent;
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, shared_ptr<QueueHandle> queue, Session* session);
+///@brief Time spent on the last cycle of waveform rendering shaders
+atomic<int64_t> g_lastWaveformRenderTime;
+
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue);
+
+/**
+	@brief Mutex for controlling access to background Vulkan activity
+
+	Arbitrarily many threads can own this mutex at once, but recreating the swapchain conflicts with any and all uses
+ */
+std::shared_mutex g_vulkanActivityMutex;
 
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
@@ -86,8 +97,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//If re-rendering was requested due to a window resize etc, do that.
 		if(g_rerenderRequestedEvent.Peek())
 		{
-			LogTrace("Re-render requested\n");
-			RenderAllWaveforms(cmdbuf, queue, session);
+			LogTrace("WaveformThread: re-rendering\n");
+			RenderAllWaveforms(cmdbuf, session, queue);
 			g_rerenderDoneEvent.Signal();
 			continue;
 		}
@@ -99,14 +110,12 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 			continue;
 		}
 
-		LogTrace("Got a waveform\n");
-
 		//We've got data. Download it, then run the filter graph
 		session->DownloadWaveforms();
 		session->RefreshAllFilters();
 
 		//Rerun the heavyweight rendering shaders
-		RenderAllWaveforms(cmdbuf, queue, session);
+		RenderAllWaveforms(cmdbuf, session, queue);
 
 		//Unblock the UI threads, then wait for acknowledgement that it's processed
 		g_waveformReadyEvent.Signal();
@@ -116,11 +125,21 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Shutting down\n");
 }
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, shared_ptr<QueueHandle> queue, Session* session)
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue)
 {
+	double tstart = GetTime();
+
+	//Must lock mutexes in this order to avoid deadlock
+	lock_guard<recursive_mutex> lock1(session->GetWaveformDataMutex());
+	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
+
+	//Keep references to all displayed channels open until the rendering finishes
+	//This prevents problems if we close a WaveformArea or remove a channel from it before the shader completes
+	vector< shared_ptr<DisplayedChannel> > channels;
 	cmdbuf.begin({});
-	session->RenderWaveformTextures(cmdbuf);
-	ComputePipeline::AddComputeMemoryBarrier(cmdbuf);
+	session->RenderWaveformTextures(cmdbuf, channels);
 	cmdbuf.end();
 	queue->SubmitAndBlock(cmdbuf);
+
+	g_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }

@@ -81,6 +81,7 @@ public:
 	void ShowTimebaseProperties();
 
 	bool IsChannelBeingDragged();
+	StreamDescriptor GetChannelBeingDragged();
 
 	/**
 		@brief Update the timebase properties dialog
@@ -91,8 +92,22 @@ public:
 			m_timebaseDialog->Refresh();
 	}
 
-	void ToneMapAllWaveforms();
-	void RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
+
+	void RenderWaveformTextures(
+		vk::raii::CommandBuffer& cmdbuf,
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+
+	void SetNeedRender()
+	{ m_needRender = true; }
+
+	virtual void Render();
+
+	void QueueCloseSession()
+	{ m_sessionClosing = true; }
+
+	Session& GetSession()
+	{ return m_session; }
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -188,6 +203,9 @@ protected:
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
 
+	///@brief Pending requests to close waveform groups
+	std::vector<size_t> m_groupsToClose;
+
 	std::shared_ptr<WaveformGroup> GetBestGroupForWaveform(StreamDescriptor stream);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,6 +213,9 @@ protected:
 
 	///@brief Our session object
 	Session m_session;
+
+	///@brief True if a close-session request came in this frame
+	bool m_sessionClosing;
 
 	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
 
@@ -246,6 +267,19 @@ protected:
 	ImFont* m_monospaceFont;
 
 	TextureManager m_texmgr;
+
+	/**
+		@brief true if a resize or other event this frame requires we re-rasterize waveforms
+
+		(even if data has not changed)
+	 */
+	bool m_needRender;
+
+	///@brief Command pool for allocating our command buffers
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+
+	///@brief Command buffer used during rendering operations
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 
 public:
 	ImFont* GetMonospaceFont()

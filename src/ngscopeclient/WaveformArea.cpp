@@ -42,6 +42,122 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DisplayedChannel
+
+DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
+		: m_stream(stream)
+		, m_rasterizedX(0)
+		, m_rasterizedY(0)
+		, m_cachedX(0)
+		, m_cachedY(0)
+		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
+{
+	stream.m_channel->AddRef();
+
+	m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
+
+	//Use GPU-side memory for rasterized waveform
+	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
+	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+}
+
+/**
+	@brief Handles a change in size of the displayed waveform
+
+	@param newSize	New size of WaveformArea
+
+	@return true if size has changed, false otherwose
+ */
+bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
+{
+	size_t x = newSize.x;
+	size_t y = newSize.y;
+
+	if( (m_cachedX != x) || (m_cachedY != y) )
+	{
+		m_cachedX = x;
+		m_cachedY = y;
+
+		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
+
+		//NOTE: Assumes the render queue is also capable of transfers (see QueueManager)
+		vk::ImageCreateInfo imageInfo(
+			{},
+			vk::ImageType::e2D,
+			vk::Format::eR32G32B32A32Sfloat,
+			vk::Extent3D(x, y, 1),
+			1,
+			1,
+			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
+			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
+			vk::SharingMode::eExclusive,
+			{},
+			vk::ImageLayout::eUndefined
+			);
+
+		//Keep a reference to the old texture around for one more frame
+		//in case the previous frame hasn't fully completed rendering yet
+		top->AddTextureUsedThisFrame(m_texture);
+
+		//Make the new texture and mark that as in use too
+		m_texture = make_shared<Texture>(
+			*g_vkComputeDevice, imageInfo, top->GetTextureManager(), "DisplayedChannel.m_texture");
+		top->AddTextureUsedThisFrame(m_texture);
+
+		//Add a barrier to convert the image format to "general"
+		lock_guard<mutex> lock(g_vkTransferMutex);
+		vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+		vk::ImageMemoryBarrier barrier(
+			vk::AccessFlagBits::eNone,
+			vk::AccessFlagBits::eShaderWrite,
+			vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eGeneral,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			m_texture->GetImage(),
+			range);
+		g_vkTransferCommandBuffer->begin({});
+		g_vkTransferCommandBuffer->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eComputeShader,
+				{},
+				{},
+				{},
+				barrier);
+		g_vkTransferCommandBuffer->end();
+		g_vkTransferQueue->SubmitAndBlock(*g_vkTransferCommandBuffer);
+
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Prepares to rasterize the waveform at the specified resolution
+ */
+void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
+{
+	bool sizeChanged = (m_rasterizedX != x) || (m_rasterizedY != y);
+
+	m_rasterizedX = x;
+	m_rasterizedY = y;
+
+	if(sizeChanged)
+	{
+		size_t npixels = x*y;
+		m_rasterizedWaveform.resize(npixels);
+
+		//fill with black
+		m_rasterizedWaveform.PrepareForCpuAccess();
+		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
+		m_rasterizedWaveform.MarkModifiedFromCpu();
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> group, MainWindow* parent)
@@ -59,41 +175,13 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_mouseOverTriggerArrow(false)
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
-	, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
-
-	vk::CommandPoolCreateInfo poolInfo(
-		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		parent->GetRenderQueueFamily() );
-	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
-
-	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
-	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
-		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-
-	if(g_hasDebugUtils)
-	{
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
-				"WaveformArea.m_cmdPool"));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eCommandBuffer,
-				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffer)),
-				"WaveformArea.m_cmdBuffer"));
-	}
 }
 
 WaveformArea::~WaveformArea()
 {
 	m_displayedChannels.clear();
-
-	m_cmdBuffer = nullptr;
-	m_cmdPool = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,6 +200,7 @@ void WaveformArea::AddStream(StreamDescriptor desc)
  */
 void WaveformArea::RemoveStream(size_t i)
 {
+	m_channelsToRemove.push_back(m_displayedChannels[i]);
 	m_displayedChannels.erase(m_displayedChannels.begin() + i);
 }
 
@@ -149,6 +238,15 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 	}
 
 	return StreamDescriptor(nullptr, 0);
+}
+
+/**
+	@brief Marks all of our waveform textures as being used this frame
+ */
+void WaveformArea::ReferenceWaveformTextures()
+{
+	for(auto chan : m_displayedChannels)
+		m_parent->AddTextureUsedThisFrame(chan->GetTexture());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -211,6 +309,17 @@ bool WaveformArea::IsChannelBeingDragged()
 }
 
 /**
+	@brief Returns the channel being dragged, if one exists
+ */
+StreamDescriptor WaveformArea::GetChannelBeingDragged()
+{
+	if(!IsChannelBeingDragged())
+		return StreamDescriptor(nullptr, 0);
+	else
+		return m_dragStream;
+}
+
+/**
 	@brief Renders a waveform area
 
 	Returns false if the area should be closed (no more waveforms visible in it)
@@ -223,6 +332,13 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
 
+	//Clear channels from last frame
+	if(!m_channelsToRemove.empty())
+	{
+		g_vkComputeDevice->waitIdle();
+		m_channelsToRemove.clear();
+	}
+
 	//Detect mouse movement
 	double tnow = GetTime();
 	auto mouseDelta = ImGui::GetIO().MouseDelta;
@@ -232,13 +348,12 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	ImGui::PushID(to_string(iArea).c_str());
 
 	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
-	float spacing = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
+	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
 	float unspacedHeightPerArea = heightPerArea - spacing;
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
-	m_width = clientArea.x;
 	auto first = GetFirstAnalogOrEyeStream();
 	if(first)
 	{
@@ -251,7 +366,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	}
 
 	//Size of the Y axis view at the right of the plot
-	float yAxisWidth = 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale();
+	float yAxisWidth = m_group->GetYAxisWidth();
 	float yAxisWidthSpaced = yAxisWidth + spacing;
 
 	//Settings calculated by RenderGrid() then reused in RenderYAxis()
@@ -263,6 +378,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
+
+		m_width = csize.x;
 
 		//Calculate midpoint of our plot
 		m_ymid = pos.y + unspacedHeightPerArea / 2;
@@ -293,6 +410,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);
 
+		//Make sure all channels have same vertical scale and warn if not
+		CheckForScaleMismatch(pos, csize);
+
 		//Draw control widgets
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
@@ -309,6 +429,11 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 
 	ImGui::PopID();
+
+	//Update scale again in case we had a mouse wheel event
+	//(we need scale to be accurate for the re-render in the background thread)
+	if(first)
+		m_pixelsPerYAxisUnit = unspacedHeightPerArea / first.GetVoltageRange();
 
 	if(m_displayedChannels.empty())
 		return false;
@@ -348,55 +473,32 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 
 	auto list = ImGui::GetWindowDrawList();
 
-	//Tone map the waveform
-	//TODO: only do this if the texture was updated
-	//TODO: what kind of mutexing etc do we need, if any?
-	//ToneMapAnalogWaveform(channel, size);
+	//Mark the waveform as resized
+	if(channel->UpdateSize(size, m_parent))
+		m_parent->SetNeedRender();
 
-	//Render the tone mapped output
-	list->AddImage(channel->GetTextureHandle(), start, ImVec2(start.x+size.x, start.y+size.y));
-	m_parent->AddTextureUsedThisFrame(channel->GetTexture());
-
-	//DEBUG: simple quick-and-dirty renderer for testing
-	auto u = dynamic_cast<UniformAnalogWaveform*>(data);
-	if(u)
-	{
-		auto n = data->size();
-		auto chan = stream.m_channel;
-		auto color = ColorFromString(chan->m_displaycolor);
-		for(size_t i=1; i<n; i++)
-		{
-			ImVec2 pstart(
-				m_group->XAxisUnitsToXPosition(((i-1) * data->m_timescale) + data->m_triggerPhase),
-				YAxisUnitsToYPosition(u->m_samples[i-1]));
-
-			ImVec2 end(
-				m_group->XAxisUnitsToXPosition((i * data->m_timescale) + data->m_triggerPhase),
-				YAxisUnitsToYPosition(u->m_samples[i]));
-
-			list->AddLine(pstart, end, color);
-		}
-	}
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
 }
 
 /**
 	@brief Tone map our waveforms
  */
-void WaveformArea::ToneMapAllWaveforms()
+void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
-	ImVec2 size(m_width, m_height);
-
 	for(auto& chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ToneMapAnalogWaveform(chan, size);
+				ToneMapAnalogWaveform(chan, cmdbuf);
 				break;
 
 			default:
-				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
+				LogWarning("Unimplemented stream type %d, don't know how to tone map it\n", stream.GetType());
 				break;
 		}
 	}
@@ -406,91 +508,142 @@ void WaveformArea::ToneMapAllWaveforms()
 	@brief Runs the rendering shader on all of our waveforms
 
 	Called from WaveformThread
+
+	@param cmdbuf	Command buffer to record rendering commands into
+	@param chans	Set of channels we rendered into
+					Used to keep references active until rendering completes if we close them this frame
  */
-void WaveformArea::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::RenderWaveformTextures(
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& chans)
 {
+	chans = m_displayedChannels;
+
+	for(auto& chan : chans)
+	{
+		auto stream = chan->GetStream();
+		switch(stream.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG:
+				RasterizeAnalogWaveform(chan, cmdbuf);
+				break;
+
+			default:
+				LogWarning("Unimplemented stream type %d, don't know how to rasterize it\n", stream.GetType());
+				break;
+		}
+	}
+}
+
+void WaveformArea::RasterizeAnalogWaveform(
+	shared_ptr<DisplayedChannel> channel,
+	vk::raii::CommandBuffer& cmdbuf
+	)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+
+	//Prepare the memory so we can rasterize it
+	//If no data, set to 0x0 pixels and return
+	if(data == nullptr)
+	{
+		channel->PrepareToRasterize(0, 0);
+		return;
+	}
+	size_t w = m_width;
+	size_t h = m_height;
+	channel->PrepareToRasterize(w, h);
+
+	shared_ptr<ComputePipeline> comp;
+
+	//Bind input buffers
+	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
+	if(udata)
+	{
+		comp = channel->GetUniformAnalogPipeline();
+		comp->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
+		//don't bind offsets or indexes as they're not used
+	}
+
+	else
+	{
+		LogWarning("Don't know how to rasterize sparse analog data yet\n");
+		// TODO: Remember to bind durations to 4 if comp->ShouldMapDurations()
+	}
+
+	if(!comp)
+		return;
+
+	//Bind output texture
+	auto& imgOut = channel->GetRasterizedWaveform();
+	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
+
+	//Calculate a bunch of constants
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t innerxoff = offset / data->m_timescale;
+	int64_t fractional_offset = offset % data->m_timescale;
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+	double pixelsPerX = m_group->GetPixelsPerXUnit();
+
+	//Scale alpha by zoom.
+	//As we zoom out more, reduce alpha to get proper intensity grading
+	float alpha = 0.5;	//TODO: get from gui slider
+	auto end = data->size() - 1;
+	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
+	float capture_len = lastOff;
+	float avg_sample_len = capture_len / data->size();
+	float samplesPerPixel = 1.0 / (pixelsPerX * avg_sample_len);
+	float alpha_scaled = alpha / sqrt(samplesPerPixel);
+	alpha_scaled = min(1.0f, alpha_scaled) * 2;
+
+	//Fill shader configuration
+	ConfigPushConstants config;
+	config.innerXoff = -innerxoff;
+	config.windowHeight = h;
+	config.windowWidth = w;
+	config.memDepth = data->size();
+	config.offset_samples = offset_samples - 2;
+	config.alpha = alpha_scaled;
+	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
+	config.xscale = data->m_timescale * pixelsPerX;
+	config.ybase = h * 0.5f;
+	config.yscale = m_pixelsPerYAxisUnit;
+	config.yoff = stream.GetOffset();
+	config.persistScale = 0;				//TODO: persistence configuration
+
+	//Dispatch the shader
+	comp->Dispatch(cmdbuf, config, w, 1, 1);
+	comp->AddComputeMemoryBarrier(cmdbuf);
+	imgOut.MarkModifiedFromGpu();
 }
 
 /**
 	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 size)
+void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
-	m_cmdBuffer->begin({});
+	auto tex = channel->GetTexture();
+	if(tex == nullptr)
+		return;
 
-	//Reallocate the texture if its size has changed
-	if(channel->UpdateSize(size))
-	{
-		LogTrace("Waveform area resized (to %.0f x %.0f), reallocating texture\n", size.x, size.y);
-
-		//NOTE: Assumes the render queue is also capable of transfers (see QueueManager)
-		vk::ImageCreateInfo imageInfo(
-			{},
-			vk::ImageType::e2D,
-			vk::Format::eR32G32B32A32Sfloat,
-			vk::Extent3D(size.x, size.y, 1),
-			1,
-			1,
-			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
-			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-			vk::SharingMode::eExclusive,
-			{},
-			vk::ImageLayout::eUndefined
-			);
-
-		//Keep a reference to the old texture around for one more frame
-		//in case the previous frame hasn't fully completed rendering yet
-		auto oldTex = channel->GetTexture();
-		m_parent->AddTextureUsedThisFrame(oldTex);
-
-		auto tex = make_shared<Texture>(*g_vkComputeDevice, imageInfo, m_parent->GetTextureManager());
-		channel->SetTexture(tex);
-
-		//Add a barrier to convert the image format to "general"
-		vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-		vk::ImageMemoryBarrier barrier(
-			vk::AccessFlagBits::eNone,
-			vk::AccessFlagBits::eShaderWrite,
-			vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eGeneral,
-			VK_QUEUE_FAMILY_IGNORED,
-			VK_QUEUE_FAMILY_IGNORED,
-			tex->GetImage(),
-			range);
-		m_cmdBuffer->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTopOfPipe,
-				vk::PipelineStageFlagBits::eComputeShader,
-				{},
-				{},
-				{},
-				barrier);
-	}
-
-	//Temporary buffer until we have real rendering shader done
-	int width = size.x;
-	int height = size.y;
-	int npixels = width * height;
-	AcceleratorBuffer<float> temp("ToneMapTemp");
-	temp.resize(npixels);
-	for(int y=0; y<height; y++)
-	{
-		for(int x=0; x<width; x++)
-			temp[y*width + x] = fabs(sin(x/10.0f) * sin(y / 20.0f)) * 0.1;
-	}
-	temp.MarkModifiedFromCpu();
+	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
+	auto width = channel->GetRasterizedX();
+	auto height = channel->GetRasterizedY();
+	if( (width == 0) || (height == 0) )
+		return;
 
 	//Run the actual compute shader
-	auto tex = channel->GetTexture();
-	m_toneMapPipe.BindBuffer(0, temp);
-	m_toneMapPipe.BindStorageImage(
+	auto& pipe = channel->GetToneMapPipeline();
+	pipe.BindBufferNonblocking(0, channel->GetRasterizedWaveform(), cmdbuf);
+	pipe.BindStorageImage(
 		1,
 		**m_parent->GetTextureManager()->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
 	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
-	ToneMapArgs args(color, size.x, size.y);
-	m_toneMapPipe.Dispatch(*m_cmdBuffer, args, GetComputeBlockCount(size.x, 64), (uint32_t)size.y);
+	ToneMapArgs args(color, width, height);
+	pipe.Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
@@ -503,15 +656,13 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, I
 		VK_QUEUE_FAMILY_IGNORED,
 		tex->GetImage(),
 		range);
-	m_cmdBuffer->pipelineBarrier(
+	cmdbuf.pipelineBarrier(
 			vk::PipelineStageFlagBits::eComputeShader,
 			vk::PipelineStageFlagBits::eFragmentShader,
 			{},
 			{},
 			{},
 			barrier);
-	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, m_parent->GetRenderQueue());
 }
 
 /**
@@ -738,6 +889,89 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 }
 
 /**
+	@brief Look for mismatched vertical scales and display warning message
+ */
+void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
+{
+	//No analog streams? No mismatch possible
+	auto firstStream = GetFirstAnalogOrEyeStream();
+	if(!firstStream)
+		return;
+
+	//Look for a mismatch
+	float firstRange = firstStream.GetVoltageRange();
+	bool mismatchFound = true;
+	StreamDescriptor mismatchStream;
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.GetVoltageRange() > 1.2 * firstRange)
+		{
+			mismatchFound = true;
+			mismatchStream = stream;
+			break;
+		}
+	}
+	if(!mismatchFound || !mismatchStream)
+		return;
+
+	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
+	//above everything else
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float warningSize = ImGui::GetFontSize() * 3;
+
+	//Warning icon
+	auto list = ImGui::GetWindowDrawList();
+	list->AddImage(
+		m_parent->GetTextureManager()->GetTexture("warning"),
+		ImVec2(center.x - 0.5, center.y - warningSize/2 - 0.5),
+		ImVec2(center.x + warningSize + 0.5, center.y + warningSize/2 + 0.5));
+
+	//Prepare to draw text
+	center.x += warningSize;
+	float fontHeight = ImGui::GetFontSize();
+	auto font = m_parent->GetDefaultFont();
+	string str = "Caution: Potential for instrument damage!\n\n";
+	str += string("The channel ") + mismatchStream.GetName() + " has a full-scale range of " +
+		mismatchStream.GetYAxisUnits().PrettyPrint(mismatchStream.GetVoltageRange()) + ",\n";
+	str += string("but this plot has a full-scale range of ") +
+		firstStream.GetYAxisUnits().PrettyPrint(firstRange) + ".\n\n";
+	str += "Setting this channel to match the plot scale may result\n";
+	str += "in overdriving the instrument input.\n";
+	str += "\n";
+	str += string("If the instrument \"") + mismatchStream.m_channel->GetScope()->m_nickname +
+		"\" can safely handle the applied signal at this plot's scale setting,\n";
+	str += "adjust the vertical scale of this plot slightly to set all signals to the same scale\n";
+	str += "and eliminate this message.\n\n";
+	str += "If it cannot, move the channel to another plot.\n";
+
+	//Draw background for text
+	float wrapWidth = 40 * fontHeight;
+	auto textsize = font->CalcTextSizeA(
+		fontHeight,
+		FLT_MAX,
+		wrapWidth,
+		str.c_str());
+	float padding = 5;
+	float wrounding = 2;
+	list->AddRectFilled(
+		ImVec2(center.x, center.y - textsize.y/2 - padding),
+		ImVec2(center.x + textsize.x + 2*padding, center.y + textsize.y/2 + padding),
+		ImGui::GetColorU32(ImGuiCol_PopupBg),
+		wrounding);
+
+	//Draw the text
+	list->AddText(
+		font,
+		fontHeight,
+		ImVec2(center.x + padding, center.y - textsize.y/2),
+		ImGui::GetColorU32(ImGuiCol_Text),
+		str.c_str(),
+		nullptr,
+		wrapWidth);
+}
+
+/**
 	@brief Arrows pointing to trigger levels
  */
 void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
@@ -866,8 +1100,6 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
 	EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
-
-	//Draw the icons for landing spots
 }
 
 /**
@@ -982,6 +1214,16 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
+	//Reject streams with incompatible Y axis units
+	//TODO: display nice error message
+	auto stream = m_parent->GetChannelBeingDragged();
+	auto first = GetFirstAnalogOrEyeStream();
+	if(first)
+	{
+		if(first.GetYAxisUnits() != stream.GetYAxisUnits())
+			return;
+	}
+
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
 	//ImGui::Button("center", size);
@@ -994,11 +1236,11 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
 		{
 			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
-			auto stream = desc->first->GetStream(desc->second);
+			auto sdrag = desc->first->GetStream(desc->second);
 
 			//Add the new stream to us
 			//TODO: copy view settings from the DisplayedChannel over?
-			AddStream(stream);
+			AddStream(sdrag);
 
 			//Remove the stream from the originating waveform area
 			desc->first->RemoveStream(desc->second);
@@ -1027,11 +1269,88 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
 		lineColor,
 		rounding);
+
+	//If trying to drop into the center marker, display warning if incompatible scales
+	//(new signal has significantly wider range) and not a filter
+	if(ImGui::IsItemHovered())
+	{
+		if(!stream)
+			return;
+		if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
+			return;
+		auto chan = stream.m_channel;
+		if(dynamic_cast<Filter*>(chan) != nullptr)
+			return;
+
+		center.x += fillSize;
+		DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
+	}
+}
+
+/**
+	@brief Display a warning message about mismatched vertical scale
+ */
+void WaveformArea::DrawDropRangeMismatchMessage(
+		ImDrawList* list,
+		ImVec2 center,
+		StreamDescriptor ourStream,
+		StreamDescriptor theirStream)
+{
+	float ourRange = ourStream.GetVoltageRange();
+	float theirRange = theirStream.GetVoltageRange();
+	if(theirRange > 1.2*ourRange)
+	{
+		float warningSize = ImGui::GetFontSize() * 3;
+
+		//Warning icon
+		list->AddImage(
+			m_parent->GetTextureManager()->GetTexture("warning"),
+			ImVec2(center.x - 0.5, center.y - warningSize/2 - 0.5),
+			ImVec2(center.x + warningSize + 0.5, center.y + warningSize/2 + 0.5));
+
+		//Prepare to draw text
+		center.x += warningSize;
+		float fontHeight = ImGui::GetFontSize();
+		auto font = m_parent->GetDefaultFont();
+		string str = "Caution: Potential for instrument damage!\n\n";
+		str += string("The channel being dragged has a full-scale range of ") +
+			theirStream.GetYAxisUnits().PrettyPrint(theirRange) + ",\n";
+		str += string("but this plot has a full-scale range of ") +
+			ourStream.GetYAxisUnits().PrettyPrint(ourRange) + ".\n\n";
+		str += "Setting this channel to match the plot scale may result\n";
+		str += "in overdriving the instrument input.";
+
+		//Draw background for text
+		float wrapWidth = 40 * fontHeight;
+		auto textsize = font->CalcTextSizeA(
+			fontHeight,
+			FLT_MAX,
+			wrapWidth,
+			str.c_str());
+		float padding = 5;
+		float wrounding = 2;
+		list->AddRectFilled(
+			ImVec2(center.x, center.y - textsize.y/2 - padding),
+			ImVec2(center.x + textsize.x + 2*padding, center.y + textsize.y/2 + padding),
+			ImGui::GetColorU32(ImGuiCol_PopupBg),
+			wrounding);
+
+		//Draw the text
+		list->AddText(
+			font,
+			fontHeight,
+			ImVec2(center.x + padding, center.y - textsize.y/2),
+			ImGui::GetColorU32(ImGuiCol_Text),
+			str.c_str(),
+			nullptr,
+			wrapWidth);
+	}
 }
 
 void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
-	auto rchan = chan->GetStream().m_channel;
+	auto stream = chan->GetStream();
+	auto rchan = stream.m_channel;
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -1054,6 +1373,7 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
 		m_dragState = DRAG_STATE_CHANNEL;
+		m_dragStream = stream;
 
 		DragDescriptor desc(this, index);
 		ImGui::SetDragDropPayload("Waveform", &desc, sizeof(desc));
@@ -1109,6 +1429,7 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 void WaveformArea::ClearPersistence()
 {
+	//TODO: set persistence clear flag
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1122,6 +1443,8 @@ void WaveformArea::OnMouseUp()
 			LogTrace("End dragging Y axis\n");
 			for(auto c : m_displayedChannels)
 				c->GetStream().SetOffset(m_yAxisOffset);
+			ClearPersistence();
+			m_parent->SetNeedRender();
 			break;
 
 		case DRAG_STATE_TRIGGER_LEVEL:
@@ -1205,4 +1528,5 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 	}
 
 	ClearPersistence();
+	m_parent->SetNeedRender();
 }

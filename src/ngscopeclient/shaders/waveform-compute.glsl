@@ -126,6 +126,41 @@ layout(std430, binding=3) buffer index
 };
 #endif
 
+#ifndef DENSE_PACK
+layout(std430, binding=4) buffer durs
+{
+#ifdef HAS_INT64
+	int64_t durations[];
+	#define FETCH_DURATION(i) float(durations[i])
+#else
+	uint durations[];
+	#define FETCH_DURATION(i) ((float(durations[i*2 + 1]) * 4294967296.0) + float(durations[i]))
+#endif
+};
+#else
+#define FETCH_DURATION(i) float(1)
+#endif
+
+#ifdef NO_INTERPOLATION
+	#ifndef HISTOGRAM_PATH
+		#undef USE_NEXT_COORDS
+		// No interpolation requested, use exact bounds
+	#else
+		#define USE_NEXT_COORDS
+		// Histogram needs next coords to draw bar
+	#endif
+#else
+	#define USE_NEXT_COORDS
+	// Use coordinates of next point to allow interpolation
+	// TODO: Somehow avoid doing this if the waveform is not continous
+#endif
+
+#ifdef USE_NEXT_COORDS
+	#define ADDTL_NEEDED_SAMPLES 1
+#else
+	#define ADDTL_NEEDED_SAMPLES 0
+#endif
+
 float FetchX(uint i)
 {
 #ifdef HAS_INT64
@@ -184,7 +219,7 @@ void main()
 		return;
 	if(gl_GlobalInvocationID.x > windowWidth)
 		return;
-	if(memDepth < 2)
+	if(memDepth < (1 + ADDTL_NEEDED_SAMPLES))
 		return;
 	
 	//Clear (or persistence load) working buffer
@@ -222,17 +257,29 @@ void main()
 	//Main loop
 	while(true)
 	{
-		if(i < (memDepth-1) )
+		if(i < (memDepth - ADDTL_NEEDED_SAMPLES) )
 		{
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
 				vec2 left = vec2(FetchX(i) * xscale + xoff, (voltage[i] + yoff)*yscale + ybase);
-				vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+
+				#ifdef USE_NEXT_COORDS
+					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
+				#else
+					vec2 right = left;
+					right.x += FETCH_DURATION(i) * xscale;
+				#endif
 			#endif
 
 			#ifdef DIGITAL_PATH
 				vec2 left = vec2(FetchX(i) * xscale + xoff, GetBoolean(i)*yscale + ybase);
-				vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+
+				#ifdef USE_NEXT_COORDS
+					vec2 right = vec2(FetchX(i+1)*xscale + xoff, GetBoolean(i+1)*yscale + ybase);
+				#else
+					vec2 right = left;
+					right.x += FETCH_DURATION(i) * xscale;
+				#endif
 			#endif
 
 			//Skip offscreen samples
