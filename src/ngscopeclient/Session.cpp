@@ -40,6 +40,8 @@
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
 
+#include "../scopehal/LeCroyOscilloscope.h"
+
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
@@ -145,6 +147,19 @@ void Session::Clear()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
+
+void Session::ApplyPreferences(Oscilloscope* scope)
+{
+	//Apply driver-specific preference settings
+	auto lecroy = dynamic_cast<LeCroyOscilloscope*>(scope);
+	if(lecroy)
+	{
+		if(m_preferences.GetBool("Drivers.Teledyne LeCroy.force_16bit"))
+			lecroy->ForceHDMode(true);
+
+		//else auto resolution depending on instrument type
+	}
+}
 
 void Session::AddOscilloscope(Oscilloscope* scope)
 {

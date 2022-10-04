@@ -90,8 +90,7 @@ bool AddScopeDialog::DoConnect()
 		return false;
 	}
 
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
+	m_session.ApplyPreferences(scope);
 
 	scope->m_nickname = m_nickname;
 	m_session.AddOscilloscope(scope);

@@ -335,7 +335,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
-				if(fields.size() < 4)
+				if(fields.size() < 3)
 					continue;
 
 				auto nick = fields[0];
@@ -346,7 +346,9 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 				{
 					if(ImGui::MenuItem(nick.c_str()))
 					{
-						auto path = fields[3];
+						string path;
+						if(fields.size() >= 4)
+							path = fields[3];
 						for(size_t j=4; j<fields.size(); j++)
 							path = path + ":" + fields[j];
 
@@ -365,9 +367,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 
 							else
 							{
-								//TODO: apply preferences
-								LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
+								m_session.ApplyPreferences(scope);
 								scope->m_nickname = nick;
 								m_session.AddOscilloscope(scope);
 							}

@@ -139,7 +139,7 @@ bool PreferenceManager::GetBool(const string& path) const
 	return GetPreference(path).GetBool();
 }
 
-Gdk::Color PreferenceManager::GetColor(const std::string& path) const
+ImU32 PreferenceManager::GetColor(const std::string& path) const
 {
 	return GetPreference(path).GetColor();
 }

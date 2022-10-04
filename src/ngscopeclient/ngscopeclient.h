@@ -106,4 +106,11 @@ ImU32 ColorFromString(const std::string& str, uint8_t alpha = 255);
 
 extern std::shared_mutex g_vulkanActivityMutex;
 
+enum GuiTheme
+{
+	THEME_LIGHT = 0,
+	THEME_DARK = 1,
+	THEME_CLASSIC = 2
+};
+
 #endif

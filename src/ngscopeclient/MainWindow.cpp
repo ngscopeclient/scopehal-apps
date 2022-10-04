@@ -344,6 +344,22 @@ void MainWindow::RenderWaveformTextures(
 
 void MainWindow::RenderUI()
 {
+	//Set up colors
+	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
+	{
+		case THEME_LIGHT:
+			ImGui::StyleColorsLight();
+			break;
+
+		case THEME_DARK:
+			ImGui::StyleColorsDark();
+			break;
+
+		case THEME_CLASSIC:
+			ImGui::StyleColorsClassic();
+			break;
+	}
+
 	m_needRender = false;
 
 	//Keep references to all of our waveform textures until next frame

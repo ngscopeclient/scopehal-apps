@@ -191,6 +191,8 @@ public:
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 
+	void ApplyPreferences(Oscilloscope* scope);
+
 	size_t GetFilterCount();
 
 	bool IsChannelBeingDragged();

@@ -29,25 +29,26 @@
 
 #include "PreferenceManager.h"
 #include "PreferenceTypes.h"
+#include "ngscopeclient.h"
 
 void PreferenceManager::InitializeDefaults()
 {
 	auto& appearance = this->m_treeRoot.AddCategory("Appearance");
 		auto& cursors = appearance.AddCategory("Cursors");
 			cursors.AddPreference(
-				Preference::Color("cursor_1_color", Gdk::Color("yellow"))
+				Preference::Color("cursor_1_color", ColorFromString("#ffff00"))
 				.Label("Cursor #1 color")
 				.Description("Color for the left or top cursor"));
 			cursors.AddPreference(
-				Preference::Color("cursor_2_color", Gdk::Color("orange"))
+				Preference::Color("cursor_2_color", ColorFromString("#ff8000"))
 				.Label("Cursor #2 color")
 				.Description("Color for the right or bottom cursor"));
 			cursors.AddPreference(
-				Preference::Color("cursor_fill_color", Gdk::Color("yellow"))
+				Preference::Color("cursor_fill_color", ColorFromString("#ffff0040"))
 				.Label("Cursor fill color")
 				.Description("Color for the filled area between cursors"));
 			cursors.AddPreference(
-				Preference::Color("cursor_fill_text_color", Gdk::Color("yellow"))
+				Preference::Color("cursor_fill_text_color", ColorFromString("#ffff00"))
 				.Label("Cursor fill text color")
 				.Description("Color for in-band power and other text drawn between cursors"));
 			cursors.AddPreference(
@@ -55,7 +56,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Cursor label font")
 				.Description("Font used for voltage measurements displayed next to cursors"));
 			cursors.AddPreference(
-				Preference::Color("marker_color", Gdk::Color("#ff00a0"))
+				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));
 
@@ -65,57 +66,57 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Protocol font")
 				.Description("Font used for protocol decode overlay text"));
 			decodes.AddPreference(
-				Preference::Color("address_color", Gdk::Color("#ffff00"))
+				Preference::Color("address_color", ColorFromString("#ffff00"))
 				.Label("Address color")
 				.Description("Color for register/memory addresses"));
 			decodes.AddPreference(
-				Preference::Color("checksum_bad_color", Gdk::Color("#ff0000"))
+				Preference::Color("checksum_bad_color", ColorFromString("#ff0000"))
 				.Label("Checksum/CRC color (Bad)")
 				.Description("Color for incorrect checksums/CRCs"));
 			decodes.AddPreference(
-				Preference::Color("checksum_ok_color", Gdk::Color("#00ff00"))
+				Preference::Color("checksum_ok_color", ColorFromString("#00ff00"))
 				.Label("Checksum/CRC color (OK)")
 				.Description("Color for correct checksums/CRCs"));
 			decodes.AddPreference(
-				Preference::Color("control_color", Gdk::Color("#c000a0"))
+				Preference::Color("control_color", ColorFromString("#c000a0"))
 				.Label("Control color")
 				.Description("Color for control events"));
 			decodes.AddPreference(
-				Preference::Color("data_color", Gdk::Color("#336699"))
+				Preference::Color("data_color", ColorFromString("#336699"))
 				.Label("Data color")
 				.Description("Color for generic protocol data bytes"));
 			decodes.AddPreference(
-				Preference::Color("error_color", Gdk::Color("#ff0000"))
+				Preference::Color("error_color", ColorFromString("#ff0000"))
 				.Label("Error color")
 				.Description("Color for malformed data or error conditions"));
 			decodes.AddPreference(
-				Preference::Color("idle_color", Gdk::Color("#404040"))
+				Preference::Color("idle_color", ColorFromString("#404040"))
 				.Label("Idle color")
 				.Description("Color for idle sequences between meaningful data"));
 			decodes.AddPreference(
-				Preference::Color("preamble_color", Gdk::Color("#808080"))
+				Preference::Color("preamble_color", ColorFromString("#808080"))
 				.Label("Preamble color")
 				.Description("Color for preambles, sync bytes, and other fixed header data"));
 
 		auto& graph = appearance.AddCategory("Filter Graph");
 			graph.AddPreference(
-				Preference::Color("background_color", Gdk::Color("#101010"))
+				Preference::Color("background_color", ColorFromString("#101010"))
 				.Label("Background color")
 				.Description("Color for the background of the filter graph editor"));
 			graph.AddPreference(
-				Preference::Color("node_color", Gdk::Color("#404040"))
+				Preference::Color("node_color", ColorFromString("#404040"))
 				.Label("Node color")
 				.Description("Color for node background"));
 			graph.AddPreference(
-				Preference::Color("node_title_text_color", Gdk::Color("#000000"))
+				Preference::Color("node_title_text_color", ColorFromString("#000000"))
 				.Label("Node title text color")
 				.Description("Color for node title"));
 			graph.AddPreference(
-				Preference::Color("node_text_color", Gdk::Color("#ffffff"))
+				Preference::Color("node_text_color", ColorFromString("#ffffff"))
 				.Label("Node text color")
 				.Description("Color for node text"));
 			graph.AddPreference(
-				Preference::Color("outline_color", Gdk::Color("#009900"))
+				Preference::Color("outline_color", ColorFromString("#009900"))
 				.Label("Outline color")
 				.Description("Color for node outlines"));
 			graph.AddPreference(
@@ -131,71 +132,81 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Parameter font")
 				.Description("Font used for parameters"));
 			graph.AddPreference(
-				Preference::Color("analog_port_color", Gdk::Color("#000080"))
+				Preference::Color("analog_port_color", ColorFromString("#000080"))
 				.Label("Analog port color")
 				.Description("Color for analog node ports"));
 			graph.AddPreference(
-				Preference::Color("digital_port_color", Gdk::Color("#800080"))
+				Preference::Color("digital_port_color", ColorFromString("#800080"))
 				.Label("Digital port color")
 				.Description("Color for digital node ports"));
 			graph.AddPreference(
-				Preference::Color("complex_port_color", Gdk::Color("#808000"))
+				Preference::Color("complex_port_color", ColorFromString("#808000"))
 				.Label("Complex port color")
 				.Description("Color for complex node ports"));
 			graph.AddPreference(
-				Preference::Color("line_color", Gdk::Color("#c0c0c0"))
+				Preference::Color("line_color", ColorFromString("#c0c0c0"))
 				.Label("Line color")
 				.Description("Color for lines between nodes"));
 			graph.AddPreference(
-				Preference::Color("line_highlight_color", Gdk::Color("#ff8000"))
+				Preference::Color("line_highlight_color", ColorFromString("#ff8000"))
 				.Label("Highlighted line color")
 				.Description("Color for highlighted lines between nodes"));
 			graph.AddPreference(
-				Preference::Color("disabled_port_color", Gdk::Color("#404040"))
+				Preference::Color("disabled_port_color", ColorFromString("#404040"))
 				.Label("Disabled port color")
 				.Description("Color for ports which cannot be selected in the current mode"));
 
+		auto& general = appearance.AddCategory("General");
+			general.AddPreference(
+				Preference::Enum("theme", THEME_DARK)
+					.Label("GUI Theme")
+					.Description("Color scheme for GUI widgets")
+					.EnumValue("Light", THEME_LIGHT)
+					.EnumValue("Dark", THEME_DARK)
+					.EnumValue("Classic", THEME_CLASSIC)
+				);
+
 		auto& peaks = appearance.AddCategory("Peaks");
 			peaks.AddPreference(
-				Preference::Color("peak_outline_color", Gdk::Color("#009900"))
+				Preference::Color("peak_outline_color", ColorFromString("#009900"))
 				.Label("Outline color")
 				.Description("Color for the outline of peak labels"));
 			peaks.AddPreference(
-				Preference::Color("peak_text_color", Gdk::Color("#ffffff"))
+				Preference::Color("peak_text_color", ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for the text on peak labels"));
 			peaks.AddPreference(
-				Preference::Color("peak_background_color", Gdk::Color("#000000"))
+				Preference::Color("peak_background_color", ColorFromString("#000000"))
 				.Label("Background color")
 				.Description("Color for the background of peak labels"));
 
 		auto& proto = appearance.AddCategory("Protocol Analyzer");
 			proto.AddPreference(
-				Preference::Color("command_color", Gdk::Color("#600050"))
+				Preference::Color("command_color", ColorFromString("#600050"))
 				.Label("Command color")
 				.Description("Color for packets that execute commands"));
 			proto.AddPreference(
-				Preference::Color("control_color", Gdk::Color("#808000"))
+				Preference::Color("control_color", ColorFromString("#808000"))
 				.Label("Control color")
 				.Description("Color for packets that have control functionality"));
 			proto.AddPreference(
-				Preference::Color("data_read_color", Gdk::Color("#336699"))
+				Preference::Color("data_read_color", ColorFromString("#336699"))
 				.Label("Data read color")
 				.Description("Color for packets that read information from a peripheral"));
 			proto.AddPreference(
-				Preference::Color("data_write_color", Gdk::Color("#339966"))
+				Preference::Color("data_write_color", ColorFromString("#339966"))
 				.Label("Data write color")
 				.Description("Color for packets that write information from a peripheral"));
 			proto.AddPreference(
-				Preference::Color("error_color", Gdk::Color("#800000"))
+				Preference::Color("error_color", ColorFromString("#800000"))
 				.Label("Error color")
 				.Description("Color for packets that are malformed or indicate an error condition"));
 			proto.AddPreference(
-				Preference::Color("status_color", Gdk::Color("#000080"))
+				Preference::Color("status_color", ColorFromString("#000080"))
 				.Label("Status color")
 				.Description("Color for packets that convey status information"));
 			proto.AddPreference(
-				Preference::Color("default_color", Gdk::Color("#101010"))
+				Preference::Color("default_color", ColorFromString("#101010"))
 				.Label("Default color")
 				.Description("Color for packets that don't fit any other category"));
 
@@ -227,7 +238,7 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& windows = appearance.AddCategory("Windows");
 			windows.AddPreference(
-				Preference::Color("trigger_bar_color", Gdk::Color("white"))
+				Preference::Color("trigger_bar_color", ColorFromString("#ffffff"))
 				.Label("Trigger bar color")
 				.Description("Color for the dotted line shown when dragging a trigger"));
 

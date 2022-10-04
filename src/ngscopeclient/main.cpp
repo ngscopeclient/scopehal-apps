@@ -122,7 +122,6 @@ int main(int argc, char* argv[])
 	io.IniFilename = nullptr;
 
 	//Set up appearance settings
-	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 0.0f;
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
@@ -170,11 +169,16 @@ void Relaunch(int argc, char* argv[])
 #endif
 
 /**
-	@brief Converts a hex color code plus externally supplied alpha value into a color
+	@brief Converts a hex color code plus externally supplied default alpha value into a color
+
+	Supported formats:
+		#RRGGBB
+		#RRGGBBAA
+		#RRRRGGGGBBBB
  */
 ImU32 ColorFromString(const string& str, uint8_t alpha)
 {
-	if( (str[0] != '#') || ( (str.length() != 7) && (str.length() != 13) ) )
+	if(str[0] != '#')
 	{
 		LogWarning("Malformed color string \"%s\"\n", str.c_str());
 		return ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
@@ -188,15 +192,22 @@ ImU32 ColorFromString(const string& str, uint8_t alpha)
 	if(str.length() == 7)
 		sscanf(str.c_str(), "#%02x%02x%02x", &r, &g, &b);
 
-	//TODO: support a few named colors
+	//HTML color code plus alpha
+	else if(str.length() == 9)
+		sscanf(str.c_str(), "#%02x%02x%02x%02x", &r, &g, &b, &alpha);
 
 	//legacy GTK 16 bit format
-	else
+	else if(str.length() == 13)
 	{
 		sscanf(str.c_str(), "#%04x%04x%04x", &r, &g, &b);
 		r >>= 8;
 		g >>= 8;
 		b >>= 8;
+	}
+	else
+	{
+		LogWarning("Malformed color string \"%s\"\n", str.c_str());
+		return ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
 	}
 
 	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (alpha << IM_COL32_A_SHIFT);

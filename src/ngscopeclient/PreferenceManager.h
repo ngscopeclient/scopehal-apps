@@ -39,6 +39,7 @@
 #include <map>
 #include <string>
 #include "PreferenceTree.h"
+#include <imgui.h>
 
 class PreferenceManager
 {
@@ -72,7 +73,7 @@ public:
     const std::string& GetString(const std::string& path) const;
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;
-    Gdk::Color GetColor(const std::string& path) const;
+    ImU32 GetColor(const std::string& path) const;
     Pango::FontDescription GetFont(const std::string& path) const;
 
     template< typename E >

@@ -161,6 +161,13 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 			}
 			break;
 
+		//Colors: show color chooser widget
+		case PreferenceType::Color:
+			{
+
+			}
+			break;
+
 		default:
 			ImGui::TextDisabled(
 				"Unimplemented: %s = %s\n",
