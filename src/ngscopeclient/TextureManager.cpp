@@ -49,8 +49,6 @@ Texture::Texture(
 	const vk::raii::Device& device,
 	const vk::ImageCreateInfo& imageInfo,
 	const vk::raii::Buffer& srcBuf,
-	shared_ptr<QueueHandle> queue,
-	vk::raii::CommandBuffer& cmdBuf,
 	int width,
 	int height,
 	TextureManager* mgr,
@@ -86,6 +84,7 @@ Texture::Texture(
 
 	//Transfer our image data over from the staging buffer
 	{
+		vk::raii::CommandBuffer& cmdBuf = mgr->GetCmdBuffer();
 		cmdBuf.begin({});
 
 		//Initial image layout transition
@@ -112,7 +111,7 @@ Texture::Texture(
 		cmdBuf.end();
 
 		//Submit the request and block until it completes
-		queue->SubmitAndBlock(cmdBuf);
+		mgr->GetQueue()->SubmitAndBlock(cmdBuf);
 	}
 
 	//Make a view for the image
@@ -279,8 +278,9 @@ Texture::~Texture()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-TextureManager::TextureManager(shared_ptr<vk::raii::DescriptorPool> pool)
+TextureManager::TextureManager(shared_ptr<vk::raii::DescriptorPool> pool, shared_ptr<QueueHandle> queue)
 	: m_pool(pool)
+	, m_queue(queue)
 {
 	//Make a sampler using configuration that matches imgui
 	vk::SamplerCreateInfo sinfo(
@@ -300,11 +300,23 @@ TextureManager::TextureManager(shared_ptr<vk::raii::DescriptorPool> pool)
 		1000
 	);
 	m_sampler = make_unique<vk::raii::Sampler>(*g_vkComputeDevice, sinfo);
+
+	//Initialize command pool/buffer
+	vk::CommandPoolCreateInfo poolInfo(
+	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		queue->m_family );
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuf = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 }
 
 TextureManager::~TextureManager()
 {
-
+	m_cmdBuf = nullptr;
+	m_cmdPool = nullptr;
+	m_queue = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -317,10 +329,7 @@ TextureManager::~TextureManager()
  */
 void TextureManager::LoadTexture(
 	const string& name,
-	const string& path,
-	shared_ptr<QueueHandle> queue,
-	vk::raii::CommandBuffer& cmdBuf
-	)
+	const string& path)
 {
 	LogTrace("Loading texture \"%s\" from file \"%s\"\n", name.c_str(), path.c_str());
 	LogIndenter li;
@@ -446,7 +455,7 @@ void TextureManager::LoadTexture(
 		{},
 		vk::ImageLayout::eUndefined
 		);
-	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, queue, cmdBuf, width, height, this, name);
+	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this, name);
 
 	//Clean up
 	png_destroy_read_struct(&png, &info, &end);

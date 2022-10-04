@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
 
 	{
 		//Make the top level window
-		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("main render queue"));
+		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("g_mainWindow.render"));
 		g_mainWindow = make_unique<MainWindow>(queue);
 
 		//Main event loop

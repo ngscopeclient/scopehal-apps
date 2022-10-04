@@ -49,8 +49,6 @@ public:
 		const vk::raii::Device& device,
 		const vk::ImageCreateInfo& imageInfo,
 		const vk::raii::Buffer& srcBuf,
-		std::shared_ptr<QueueHandle> queue,
-		vk::raii::CommandBuffer& cmdBuf,
 		int width,
 		int height,
 		TextureManager* mgr,
@@ -106,14 +104,12 @@ protected:
 class TextureManager
 {
 public:
-	TextureManager(std::shared_ptr<vk::raii::DescriptorPool> pool);
+	TextureManager(std::shared_ptr<vk::raii::DescriptorPool> pool, std::shared_ptr<QueueHandle> queue);
 	virtual ~TextureManager();
 
 	void LoadTexture(
 		const std::string& name,
-		const std::string& path,
-		std::shared_ptr<QueueHandle> queue,
-		vk::raii::CommandBuffer& cmdBuf);
+		const std::string& path);
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_textures[name]->GetTexture(); }
@@ -124,6 +120,12 @@ public:
 	std::shared_ptr<vk::raii::DescriptorPool> GetPool()
 	{ return m_pool; }
 
+	vk::raii::CommandBuffer& GetCmdBuffer()
+	{ return *m_cmdBuf; }
+	
+	std::shared_ptr<QueueHandle> GetQueue()
+	{ return m_queue; }
+
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
@@ -132,6 +134,10 @@ protected:
 
 	///@brief Sampler for textures
 	std::unique_ptr<vk::raii::Sampler> m_sampler;
+
+	std::shared_ptr<QueueHandle> m_queue;
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuf;
 };
 
 #endif
