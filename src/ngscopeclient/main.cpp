@@ -176,7 +176,7 @@ void Relaunch(int argc, char* argv[])
 		#RRGGBBAA
 		#RRRRGGGGBBBB
  */
-ImU32 ColorFromString(const string& str, uint8_t alpha)
+ImU32 ColorFromString(const string& str, unsigned int alpha)
 {
 	if(str[0] != '#')
 	{
