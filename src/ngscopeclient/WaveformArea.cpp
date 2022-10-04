@@ -354,10 +354,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	ImGui::PushID(to_string(iArea).c_str());
 
-	float totalHeightAvailable = clientArea.y - ImGui::GetFrameHeightWithSpacing();
+	float totalHeightAvailable = floor(clientArea.y - ImGui::GetFrameHeightWithSpacing());
 	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
-	float unspacedHeightPerArea = heightPerArea - spacing;
+	float unspacedHeightPerArea = floor(heightPerArea - spacing);
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
@@ -713,8 +713,9 @@ void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, v
  */
 void WaveformArea::RenderBackgroundGradient(ImVec2 start, ImVec2 size)
 {
-	ImU32 color_bottom = ImGui::GetColorU32(IM_COL32(0, 0, 0, 255));
-	ImU32 color_top = ImGui::GetColorU32(IM_COL32(32, 32, 32, 255));
+	auto& prefs = m_parent->GetSession().GetPreferences();
+	auto color_bottom = prefs.GetColor("Appearance.Graphs.bottom_color");
+	auto color_top = prefs.GetColor("Appearance.Graphs.top_color");
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	draw_list->AddRectFilledMultiColor(
@@ -750,14 +751,18 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 		return;
 	}
 
+	float theight = ImGui::GetFontSize();
+
 	//Decide what voltage step to use. Pick from a list (in volts)
-	float selected_step = PickStepSize(volts_per_half_span);
+	int min_steps = 1;								//Always have at least one division
+	int max_steps = floor(halfheight / theight);	//Do not have more divisions than can fit given our font size
+	max_steps = min(max_steps, 10);					//Do not have more than ten divisions regardless of font size
+	float selected_step = PickStepSize(volts_per_half_span, min_steps, max_steps);
 
 	//Special case a few scenarios
 	if(stream.GetYAxisUnits() == Unit::UNIT_LOG_BER)
 		selected_step = 2;
 
-	float theight = ImGui::GetFontSize();
 	float bottom_edge = (ybot - theight/2);
 	float top_edge = (ytop + theight/2);
 
@@ -798,28 +803,34 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	}
 
 	//Style settings
-	//TODO: get some/all of this from preferences
-	ImU32 gridColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.75, 0.75, 0.75, 0.25));
-	ImU32 axisColor = ImGui::ColorConvertFloat4ToU32(ImVec4(0.75, 0.75, 0.75, 1));
-	float axisWidth = 2;
-	float gridWidth = 2;
+	auto& prefs = m_parent->GetSession().GetPreferences();
+	auto axisColor = prefs.GetColor("Appearance.Graphs.grid_centerline_color");
+	auto gridColor = prefs.GetColor("Appearance.Graphs.grid_color");
+	auto axisWidth = prefs.GetReal("Appearance.Graphs.grid_centerline_width");
+	auto gridWidth = prefs.GetReal("Appearance.Graphs.grid_width");
 
 	auto list = ImGui::GetWindowDrawList();
 	float left = start.x;
 	float right = start.x + size.x;
 	for(auto it : gridmap)
 	{
-		list->PathLineTo(ImVec2(left, it.second));
-		list->PathLineTo(ImVec2(right, it.second));
-		list->PathStroke(gridColor, gridWidth);
+		float y = round(it.second);
+		list->AddLine(
+			ImVec2(left, y),
+			ImVec2(right, y),
+			gridColor,
+			gridWidth);
 	}
 
 	//draw Y=0 line
 	if( (yzero > ytop) && (yzero < ybot) )
 	{
-		list->PathLineTo(ImVec2(left, yzero));
-		list->PathLineTo(ImVec2(right, yzero));
-		list->PathStroke(axisColor, axisWidth);
+		float y = round(yzero);
+		list->AddLine(
+			ImVec2(left, y),
+			ImVec2(right, y),
+			axisColor,
+			axisWidth);
 	}
 }
 
@@ -840,8 +851,9 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Style settings
 	//TODO: get some/all of this from preferences
 	auto font = m_parent->GetDefaultFont();
+	auto& prefs = m_parent->GetSession().GetPreferences();
 	float theight = ImGui::GetFontSize();
-	ImU32 color = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
+	auto textColor = prefs.GetColor("Appearance.Graphs.y_axis_text_color");
 
 	//Reserve an empty area we're going to draw into
 	ImGui::Dummy(size);
@@ -894,7 +906,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 		auto tsize = font->CalcTextSizeA(theight, FLT_MAX, 0, label.c_str());
 
-		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), color, label.c_str());
+		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), textColor, label.c_str());
 	}
 
 	ImGui::EndChild();

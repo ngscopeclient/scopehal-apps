@@ -205,10 +205,10 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	{
 		auto list = ImGui::GetWindowDrawList();
 
-		//TODO: get these colors from preferences
-		auto cursor0_color = ColorFromString("#ffff00");
-		auto cursor1_color = ColorFromString("#ff8000");
-		auto fill_color = ColorFromString("#ffff00", 32);
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto cursor0_color = prefs.GetColor("Appearance.Cursors.cursor_1_color");
+		auto cursor1_color = prefs.GetColor("Appearance.Cursors.cursor_2_color");
+		auto fill_color = prefs.GetColor("Appearance.Cursors.cursor_fill_color");
 
 		float xpos0 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[0]));
 		float xpos1 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[1]));
@@ -224,7 +224,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		if(m_xAxisCursorMode == X_CURSOR_DUAL)
 			list->AddLine(ImVec2(xpos1, pos.y), ImVec2(xpos1, pos.y + size.y), cursor1_color, 1);
 
-		//TODO: position text on the
+		//TODO: text for value readouts, in-band power, etc
 	}
 	ImGui::EndChild();
 
@@ -304,7 +304,9 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	//Style settings
 	//TODO: get some/all of this from preferences
-	ImU32 color = ImGui::GetColorU32(ImVec4(1, 1, 1, 1));
+	auto& prefs = m_parent->GetSession().GetPreferences();
+	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
+	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");
 	auto font = m_parent->GetDefaultFont();
 
 	//Reserve an empty area for the timeline
@@ -481,12 +483,11 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		list->PathStroke(color, 0, thickLineWidth);
 
 		//Render label
-		//TODO: is using the default font faster? by enough to matter?
 		list->AddText(
 			font,
 			fontSize,
 			ImVec2(x + textMargin, ymid),
-			color,
+			textcolor,
 			m_xAxisUnit.PrettyPrint(t).c_str());
 	}
 

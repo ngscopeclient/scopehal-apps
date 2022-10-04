@@ -132,7 +132,6 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 				bool b = pref.GetBool();
 				if(ImGui::Checkbox(label.c_str(), &b))
 					pref.SetBool(b);
-				HelpMarker(pref.GetDescription());
 			}
 			break;
 
@@ -156,15 +155,39 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 
 				if(Combo(label.c_str(), names, selection))
 					pref.SetEnumRaw(map.GetValue(names[selection]));
-
-				HelpMarker(pref.GetDescription());
 			}
 			break;
 
 		//Colors: show color chooser widget
 		case PreferenceType::Color:
 			{
+				auto color = pref.GetColorRaw();
+				float fcolor[4] =
+				{
+					color.m_r / 255.0f,
+					color.m_g / 255.0f,
+					color.m_b / 255.0f,
+					color.m_a / 255.0f
+				};
 
+				if(ImGui::ColorEdit4(label.c_str(), fcolor))
+				{
+					pref.SetColorRaw(impl::Color(
+						static_cast<uint8_t>(fcolor[0] * 255),
+						static_cast<uint8_t>(fcolor[1] * 255),
+						static_cast<uint8_t>(fcolor[2] * 255),
+						static_cast<uint8_t>(fcolor[3] * 255)
+						));
+				}
+			}
+			break;
+
+		//Real: show a text box
+		case PreferenceType::Real:
+			{
+				float f = pref.GetReal();
+				if(ImGui::InputFloat(label.c_str(), &f))
+					pref.SetReal(f);
 			}
 			break;
 
@@ -175,4 +198,6 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 				pref.ToString().c_str());
 			break;
 	}
+
+	HelpMarker(pref.GetDescription());
 }

@@ -166,6 +166,36 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("Classic", THEME_CLASSIC)
 				);
 
+		auto& graphs = appearance.AddCategory("Graphs");
+			graphs.AddPreference(
+				Preference::Color("bottom_color", ColorFromString("#000000ff"))
+				.Label("Background color bottom")
+				.Description("Color for the bottom side of the background gradient in a waveform graph"));
+			graphs.AddPreference(
+				Preference::Color("top_color", ColorFromString("#202020ff"))
+				.Label("Background color top")
+				.Description("Color for the top side of the background gradient in a waveform graph"));
+			graphs.AddPreference(
+				Preference::Color("grid_centerline_color", ColorFromString("#c0c0c0ff"))
+				.Label("Grid centerline color")
+				.Description("Color for the grid line at Y=0"));
+			graphs.AddPreference(
+				Preference::Color("grid_color", ColorFromString("#c0c0c040"))
+				.Label("Grid color")
+				.Description("Color for grid lines at Y=0"));
+			graphs.AddPreference(
+				Preference::Real("grid_centerline_width", 1)
+				.Label("Axis width")
+				.Description("Width of grid line at Y=0"));
+			graphs.AddPreference(
+				Preference::Real("grid_width", 1)
+				.Label("Grid width")
+				.Description("Width of grid lines"));
+			graphs.AddPreference(
+				Preference::Color("y_axis_text_color", ColorFromString("#ffffffff"))
+				.Label("Y axis text color")
+				.Description("Color for Y axis text"));
+
 		auto& peaks = appearance.AddCategory("Peaks");
 			peaks.AddPreference(
 				Preference::Color("peak_outline_color", ColorFromString("#009900"))
@@ -211,6 +241,15 @@ void PreferenceManager::InitializeDefaults()
 				.Description("Color for packets that don't fit any other category"));
 
 		auto& timeline = appearance.AddCategory("Timeline");
+			timeline.AddPreference(
+				Preference::Color("axis_color", ColorFromString("#ffffff"))
+				.Label("Axis color")
+				.Description("Color for the X axis line and tick marks"));
+			timeline.AddPreference(
+				Preference::Color("text_color", ColorFromString("#ffffff"))
+				.Label("Text color")
+				.Description("Color for text labels on the X axis"));
+
 			timeline.AddPreference(
 				Preference::Font("tick_label_font", "sans normal 10")
 				.Label("Tick font")
