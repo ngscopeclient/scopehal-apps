@@ -217,11 +217,11 @@ void main()
 	//Abort if window height is too big, or if we're off the end of the window
 	if(windowHeight > MAX_HEIGHT)
 		return;
-	if(gl_GlobalInvocationID.x > windowWidth)
+	if(gl_GlobalInvocationID.x >= windowWidth)
 		return;
 	if(memDepth < (1 + ADDTL_NEEDED_SAMPLES))
 		return;
-	
+
 	//Clear (or persistence load) working buffer
 	for(uint y=gl_LocalInvocationID.y; y < windowHeight; y += ROWS_PER_BLOCK)
 	{
@@ -350,6 +350,7 @@ void main()
 			}
 			else
 				g_updating[gl_LocalInvocationID.y] = false;
+
 		}
 
 		else

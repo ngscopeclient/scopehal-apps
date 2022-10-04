@@ -36,412 +36,424 @@
 #include <stdexcept>
 
 #include "Preference.h"
+#include "ngscopeclient.h"
 
 using namespace std;
 
 namespace impl
 {
-    PreferenceBuilder::PreferenceBuilder(Preference&& pref)
-        : m_pref{move(pref)}
-    {
+	PreferenceBuilder::PreferenceBuilder(Preference&& pref)
+		: m_pref{move(pref)}
+	{
 
-    }
+	}
 
-    PreferenceBuilder PreferenceBuilder::Invisible() &&
-    {
-        this->m_pref.m_isVisible = false;
-        return move(*this);
-    }
+	PreferenceBuilder PreferenceBuilder::Invisible() &&
+	{
+		this->m_pref.m_isVisible = false;
+		return move(*this);
+	}
 
-    PreferenceBuilder PreferenceBuilder::Label(std::string label) &&
-    {
-        this->m_pref.m_label = std::move(label);
-        return move(*this);
-    }
+	PreferenceBuilder PreferenceBuilder::Label(std::string label) &&
+	{
+		this->m_pref.m_label = std::move(label);
+		return move(*this);
+	}
 
-    PreferenceBuilder PreferenceBuilder::Description(std::string description) &&
-    {
-        this->m_pref.m_description = std::move(description);
-        return move(*this);
-    }
+	PreferenceBuilder PreferenceBuilder::Description(std::string description) &&
+	{
+		this->m_pref.m_description = std::move(description);
+		return move(*this);
+	}
 
-    PreferenceBuilder PreferenceBuilder::Unit(Unit::UnitType type) &&
-    {
-        this->m_pref.m_unit = ::Unit{ type };
-        return move(*this);
-    }
+	PreferenceBuilder PreferenceBuilder::Unit(Unit::UnitType type) &&
+	{
+		this->m_pref.m_unit = ::Unit{ type };
+		return move(*this);
+	}
 
-    Preference PreferenceBuilder::Build() &&
-    {
-        return move(this->m_pref);
-    }
+	Preference PreferenceBuilder::Build() &&
+	{
+		return move(this->m_pref);
+	}
 }
 
 void EnumMapping::AddEnumMember(const std::string& name, base_type value)
 {
-    if(this->m_forwardMap.count(name) != 0)
-        throw std::runtime_error("Enum mapping already contains given enum value");
+	if(this->m_forwardMap.count(name) != 0)
+		throw std::runtime_error("Enum mapping already contains given enum value");
 
-    this->m_forwardMap.insert(std::make_pair(name, value));
-    this->m_backwardMap.insert(std::make_pair(value, name));
-    this->m_names.push_back(name);
+	this->m_forwardMap.insert(std::make_pair(name, value));
+	this->m_backwardMap.insert(std::make_pair(value, name));
+	this->m_names.push_back(name);
 }
 
 const std::string& EnumMapping::GetName(base_type value) const
 {
-    const auto it = this->m_backwardMap.find(value);
+	const auto it = this->m_backwardMap.find(value);
 
-    if(it == this->m_backwardMap.end())
-        throw std::runtime_error("Enum mapping doesnt contain requested entry");
+	if(it == this->m_backwardMap.end())
+		throw std::runtime_error("Enum mapping doesnt contain requested entry");
 
-    return it->second;
+	return it->second;
 }
 
 bool EnumMapping::HasNameFor(base_type value) const
 {
-    return this->m_backwardMap.count(value) > 0;
+	return this->m_backwardMap.count(value) > 0;
 }
 
 bool EnumMapping::HasValueFor(const std::string& name) const
 {
-    return this->m_forwardMap.count(name) > 0;
+	return this->m_forwardMap.count(name) > 0;
 }
 
 EnumMapping::base_type EnumMapping::GetValue(const std::string& name) const
 {
-    const auto it = this->m_forwardMap.find(name);
+	const auto it = this->m_forwardMap.find(name);
 
-     if(it == this->m_forwardMap.end())
-        throw std::runtime_error("Enum mapping doesnt contain requested entry");
+	 if(it == this->m_forwardMap.end())
+		throw std::runtime_error("Enum mapping doesnt contain requested entry");
 
-    return it->second;
+	return it->second;
 }
 
 const std::vector<std::string>& EnumMapping::GetNames() const
 {
-    return this->m_names;
+	return this->m_names;
 }
 
 void Preference::SetLabel(std::string label)
 {
-    this->m_label = std::move(label);
+	this->m_label = std::move(label);
 }
 
 void Preference::SetDescription(std::string description)
 {
-    this->m_description = std::move(description);
+	this->m_description = std::move(description);
 }
 
 const string& Preference::GetIdentifier() const
 {
-    return m_identifier;
+	return m_identifier;
 }
 
 const string& Preference::GetDescription() const
 {
-    return m_description;
+	return m_description;
 }
 
 PreferenceType Preference::GetType() const
 {
-    return m_type;
+	return m_type;
 }
 
 bool Preference::GetIsVisible() const
 {
-    return m_isVisible;
+	return m_isVisible;
 }
 
 bool Preference::GetBool() const
 {
-    if(m_type != PreferenceType::Boolean)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Boolean)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<bool>();
+	return GetValueRaw<bool>();
 }
 
 int64_t Preference::GetInt() const
 {
-    if(m_type != PreferenceType::Int)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Int)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<int64_t>();
+	return GetValueRaw<int64_t>();
 }
 
 std::int64_t Preference::GetEnumRaw() const
 {
-    if(m_type != PreferenceType::Enum)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Enum)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<std::int64_t>();
+	return GetValueRaw<std::int64_t>();
 }
 
-Gdk::Color Preference::GetColor() const
+ImU32 Preference::GetColor() const
 {
-    if(m_type != PreferenceType::Color)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Color)
+		throw runtime_error("Preference type mismatch");
 
-    const auto& value = GetValueRaw<impl::Color>();
-    Gdk::Color color{};
-    color.set_red(value.m_r);
-    color.set_green(value.m_g);
-    color.set_blue(value.m_b);
-    return color;
+	const auto& value = GetValueRaw<impl::Color>();
+
+	return
+		(value.m_b << IM_COL32_B_SHIFT) |
+		(value.m_g << IM_COL32_G_SHIFT) |
+		(value.m_r << IM_COL32_R_SHIFT) |
+		(value.m_a << IM_COL32_A_SHIFT);
 }
 
 const impl::Color& Preference::GetColorRaw() const
 {
-    if(m_type != PreferenceType::Color)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Color)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<impl::Color>();
+	return GetValueRaw<impl::Color>();
 }
 
 double Preference::GetReal() const
 {
-    if(m_type != PreferenceType::Real)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Real)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<double>();
+	return GetValueRaw<double>();
 }
 
 bool Preference::HasUnit()
 {
-    return this->m_unit.GetType() != Unit::UNIT_COUNTS;
+	return this->m_unit.GetType() != Unit::UNIT_COUNTS;
 }
 
 Unit& Preference::GetUnit()
 {
-    return this->m_unit;
+	return this->m_unit;
 }
 
 const std::string& Preference::GetString() const
 {
-    if(m_type != PreferenceType::String)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::String)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<std::string>();
+	return GetValueRaw<std::string>();
 }
 
 void Preference::CleanUp()
 {
-    if(m_hasValue && (m_type == PreferenceType::String || m_type == PreferenceType::Font))
-        (reinterpret_cast<string*>(&m_value))->~basic_string();
+	if(m_hasValue && (m_type == PreferenceType::String || m_type == PreferenceType::Font))
+		(reinterpret_cast<string*>(&m_value))->~basic_string();
 }
 
 string Preference::ToString() const
 {
-    switch(m_type)
-    {
-        case PreferenceType::String:
-            return GetString();
-        case PreferenceType::Font:
-            return GetFontRaw();
-        case PreferenceType::Boolean:
-            return GetBool() ? "true" : "false";
-        case PreferenceType::Real:
-            return to_string(GetReal());
-        case PreferenceType::Int:
-            return to_string(GetInt());
-        case PreferenceType::Color:
-            return "Color";
-        case PreferenceType::Enum:
-        {
-            const auto& mapper = this->GetMapping();
-            const auto value = this->GetEnumRaw();
-            return mapper.GetName(value);
-        }
-        default:
-            throw runtime_error("tried to retrieve value from preference in moved-from state");
-    }
+	switch(m_type)
+	{
+		case PreferenceType::String:
+			return GetString();
+		case PreferenceType::Font:
+			return GetFontRaw();
+		case PreferenceType::Boolean:
+			return GetBool() ? "true" : "false";
+		case PreferenceType::Real:
+			return to_string(GetReal());
+		case PreferenceType::Int:
+			return to_string(GetInt());
+		case PreferenceType::Color:
+			return "Color";
+		case PreferenceType::Enum:
+		{
+			const auto& mapper = this->GetMapping();
+			const auto value = this->GetEnumRaw();
+			return mapper.GetName(value);
+		}
+		default:
+			throw runtime_error("tried to retrieve value from preference in moved-from state");
+	}
 }
 
 void Preference::MoveFrom(Preference& other)
 {
-    m_type = other.m_type;
-    m_identifier = move(other.m_identifier);
-    m_description = move(other.m_description);
-    m_label = move(other.m_label);
-    m_isVisible = move(other.m_isVisible);
-    m_unit = move(other.m_unit);
-    m_hasValue = move(other.m_hasValue);
-    m_mapping = move(other.m_mapping);
+	m_type = other.m_type;
+	m_identifier = move(other.m_identifier);
+	m_description = move(other.m_description);
+	m_label = move(other.m_label);
+	m_isVisible = move(other.m_isVisible);
+	m_unit = move(other.m_unit);
+	m_hasValue = move(other.m_hasValue);
+	m_mapping = move(other.m_mapping);
 
-    if(m_hasValue)
-    {
-        switch(other.m_type)
-        {
-            case PreferenceType::Boolean:
-                Construct<bool>(other.GetBool());
-                break;
+	if(m_hasValue)
+	{
+		switch(other.m_type)
+		{
+			case PreferenceType::Boolean:
+				Construct<bool>(other.GetBool());
+				break;
 
-            case PreferenceType::Real:
-                Construct<double>(other.GetReal());
-                break;
+			case PreferenceType::Real:
+				Construct<double>(other.GetReal());
+				break;
 
-            case PreferenceType::String:
-            case PreferenceType::Font:
-                Construct<string>(move(other.GetValueRaw<string>()));
-                break;
+			case PreferenceType::String:
+			case PreferenceType::Font:
+				Construct<string>(move(other.GetValueRaw<string>()));
+				break;
 
-            case PreferenceType::Color:
-                Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
-                break;
+			case PreferenceType::Color:
+				Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
+				break;
 
-            case PreferenceType::Enum:
-            case PreferenceType::Int:
-                Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
-                break;
+			case PreferenceType::Enum:
+			case PreferenceType::Int:
+				Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
+				break;
 
-            default:
-                break;
-        }
-    }
+			default:
+				break;
+		}
+	}
 
-    other.m_type = PreferenceType::None;
+	other.m_type = PreferenceType::None;
 }
 
 
 const std::string& Preference::GetLabel() const
 {
-    return m_label;
+	return m_label;
 }
 
 const ::std::string& Preference::GetFontRaw() const
 {
-    if(m_type != PreferenceType::Font)
-        throw runtime_error("Preference type mismatch");
+	if(m_type != PreferenceType::Font)
+		throw runtime_error("Preference type mismatch");
 
-    return GetValueRaw<std::string>();
+	return GetValueRaw<std::string>();
 }
 
 Pango::FontDescription Preference::GetFont() const
 {
-    const auto str = this->GetFontRaw();
+	const auto str = this->GetFontRaw();
 
-    return Pango::FontDescription(str.c_str());
+	return Pango::FontDescription(str.c_str());
 }
 
 void Preference::SetFontRaw(const std::string& fontRaw)
 {
-    CleanUp();
-    Construct<string>(fontRaw);
+	CleanUp();
+	Construct<string>(fontRaw);
 }
 
 void Preference::SetFont(const Pango::FontDescription& font)
 {
-    string str = font.to_string();
-    this->SetFontRaw(str);
+	string str = font.to_string();
+	this->SetFontRaw(str);
 }
 
 void Preference::SetBool(bool value)
 {
-    CleanUp();
-    Construct<bool>(value);
+	CleanUp();
+	Construct<bool>(value);
 }
 
 void Preference::SetReal(double value)
 {
-    CleanUp();
-    Construct<double>(value);
+	CleanUp();
+	Construct<double>(value);
 }
 
 void Preference::SetInt(std::int64_t value)
 {
-    CleanUp();
-    Construct<std::int64_t>(value);
+	CleanUp();
+	Construct<std::int64_t>(value);
 }
 
 void Preference::SetEnumRaw(std::int64_t value)
 {
-    CleanUp();
-    Construct<std::int64_t>(value);
+	CleanUp();
+	Construct<std::int64_t>(value);
 }
 
 void Preference::SetString(string value)
 {
-    CleanUp();
-    Construct<string>(move(value));
+	CleanUp();
+	Construct<string>(move(value));
 }
 
-void Preference::SetColor(const Gdk::Color& color)
+void Preference::SetColor(const ImU32& color)
 {
-    CleanUp();
-    impl::Color clr{ color.get_red(), color.get_green(), color.get_blue() };
-    Construct<impl::Color>(move(clr));
+	CleanUp();
+
+	impl::Color clr
+	{
+		static_cast<uint8_t>((color >> IM_COL32_R_SHIFT) & 0xff),
+		static_cast<uint8_t>((color >> IM_COL32_G_SHIFT) & 0xff),
+		static_cast<uint8_t>((color >> IM_COL32_B_SHIFT) & 0xff),
+		static_cast<uint8_t>((color >> IM_COL32_A_SHIFT) & 0xff)
+	};
+
+	Construct<impl::Color>(move(clr));
 }
 
 void Preference::SetColorRaw(const impl::Color& color)
 {
-    CleanUp();
-    Construct<impl::Color>(color);
+	CleanUp();
+	Construct<impl::Color>(color);
 }
 
 const EnumMapping& Preference::GetMapping() const
 {
-    return this->m_mapping;
+	return this->m_mapping;
 }
 
 void Preference::SetMapping(EnumMapping mapping)
 {
-    this->m_mapping = std::move(mapping);
+	this->m_mapping = std::move(mapping);
 }
 
 impl::PreferenceBuilder Preference::Int(std::string identifier, int64_t defaultValue)
 {
-    Preference pref(PreferenceType::Int, std::move(identifier));
-    pref.Construct<int64_t>(defaultValue);
+	Preference pref(PreferenceType::Int, std::move(identifier));
+	pref.Construct<int64_t>(defaultValue);
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::Real(std::string identifier, double defaultValue)
 {
-    Preference pref(PreferenceType::Real, std::move(identifier));
-    pref.Construct<double>(defaultValue);
+	Preference pref(PreferenceType::Real, std::move(identifier));
+	pref.Construct<double>(defaultValue);
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::Bool(std::string identifier, bool defaultValue)
 {
-    Preference pref(PreferenceType::Boolean, std::move(identifier));
-    pref.Construct<bool>(defaultValue);
+	Preference pref(PreferenceType::Boolean, std::move(identifier));
+	pref.Construct<bool>(defaultValue);
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::String(std::string identifier, std::string defaultValue)
 {
-    Preference pref(PreferenceType::String, std::move(identifier));
-    pref.Construct<std::string>(defaultValue);
+	Preference pref(PreferenceType::String, std::move(identifier));
+	pref.Construct<std::string>(defaultValue);
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
-impl::PreferenceBuilder Preference::Color(std::string identifier, const Gdk::Color& defaultValue)
+impl::PreferenceBuilder Preference::Color(std::string identifier, const ImU32& defaultValue)
 {
-    Preference pref(PreferenceType::Color, std::move(identifier));
-    pref.Construct<impl::Color>(impl::Color{
-        defaultValue.get_red(), defaultValue.get_green(), defaultValue.get_blue()
-    });
+	Preference pref(PreferenceType::Color, std::move(identifier));
+	pref.Construct<impl::Color>(impl::Color(
+			static_cast<uint8_t>((defaultValue >> IM_COL32_R_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff)));
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::EnumRaw(std::string identifier, std::int64_t defaultValue)
 {
-    Preference pref(PreferenceType::Enum, std::move(identifier));
-    pref.Construct<std::int64_t>(defaultValue);
+	Preference pref(PreferenceType::Enum, std::move(identifier));
+	pref.Construct<std::int64_t>(defaultValue);
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
 impl::PreferenceBuilder Preference::Font(std::string identifier, std::string defaultValue)
 {
-    Preference pref(PreferenceType::Font, std::move(identifier));
-    pref.Construct<string>(std::move(defaultValue));
+	Preference pref(PreferenceType::Font, std::move(identifier));
+	pref.Construct<string>(std::move(defaultValue));
 
-    return impl::PreferenceBuilder{ std::move(pref) };
+	return impl::PreferenceBuilder{ std::move(pref) };
 }
 

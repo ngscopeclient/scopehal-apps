@@ -81,7 +81,7 @@ void PreferenceManager::DeterminePath()
 	}
 
 	wchar_t directory[MAX_PATH];
-	if(NULL == PathCombineW(directory, stem, L"glscopeclient"))
+	if(NULL == PathCombineW(directory, stem, L"ngscopeclient"))
 	{
 		throw runtime_error("failed to build directory path");
 	}
@@ -107,16 +107,21 @@ void PreferenceManager::DeterminePath()
 #else
 	// Ensure all directories in path exist
 	CreateDirectory("~/.config");
-	CreateDirectory("~/.config/glscopeclient");
-	m_configDir = ExpandPath("~/.config/glscopeclient");
+	CreateDirectory("~/.config/ngscopeclient");
+	m_configDir = ExpandPath("~/.config/ngscopeclient");
 
-	m_filePath = ExpandPath("~/.config/glscopeclient/preferences.yml");
+	m_filePath = ExpandPath("~/.config/ngscopeclient/preferences.yml");
 #endif
 }
 
 int64_t PreferenceManager::GetInt(const string& path) const
 {
 	return GetPreference(path).GetInt();
+}
+
+int64_t PreferenceManager::GetEnumRaw(const string& path) const
+{
+	return GetPreference(path).GetEnumRaw();
 }
 
 const std::string& PreferenceManager::GetString(const string& path) const
@@ -134,7 +139,7 @@ bool PreferenceManager::GetBool(const string& path) const
 	return GetPreference(path).GetBool();
 }
 
-Gdk::Color PreferenceManager::GetColor(const std::string& path) const
+ImU32 PreferenceManager::GetColor(const std::string& path) const
 {
 	return GetPreference(path).GetColor();
 }

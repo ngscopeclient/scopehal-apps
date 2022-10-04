@@ -36,8 +36,11 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	FontManager.cpp
 	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp
+	HistoryDialog.cpp
+	HistoryManager.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp
@@ -47,6 +50,7 @@ add_executable(ngscopeclient
 	PowerSupplyDialog.cpp
 	PowerSupplyThread.cpp
 	Preference.cpp
+	PreferenceDialog.cpp
 	PreferenceManager.cpp
 	PreferenceSchema.cpp
 	PreferenceTree.cpp

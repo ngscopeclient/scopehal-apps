@@ -46,6 +46,8 @@
 #include <gtkmm.h>
 #include <pangomm/fontdescription.h>
 
+#include <imgui.h>
+
 #include "Unit.h"
 
 constexpr std::size_t max(std::size_t a, std::size_t b)
@@ -71,13 +73,13 @@ namespace impl
 
     struct Color
     {
-        Color(std::uint16_t r, std::uint16_t g, std::uint16_t b)
-            : m_r{r}, m_g{g}, m_b{b}
+        Color(std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a)
+            : m_r{r}, m_g{g}, m_b{b}, m_a{a}
         {
 
         }
 
-        std::uint16_t m_r, m_g, m_b;
+        std::uint8_t m_r, m_g, m_b, m_a;
     };
 }
 
@@ -173,13 +175,13 @@ public:
     const std::string& GetString() const;
     std::string ToString() const;
     bool GetIsVisible() const;
-    Gdk::Color GetColor() const;
+    ImU32 GetColor() const;
     const impl::Color& GetColorRaw() const;
     void SetBool(bool value);
     void SetReal(double value);
     void SetInt(std::int64_t value);
     void SetString(std::string value);
-    void SetColor(const Gdk::Color& value);
+    void SetColor(const ImU32& value);
     void SetColorRaw(const impl::Color& value);
     void SetLabel(std::string label);
     void SetDescription(std::string description);
@@ -204,7 +206,7 @@ public:
     static impl::PreferenceBuilder Real(std::string identifier, double defaultValue);
     static impl::PreferenceBuilder Bool(std::string identifier, bool defaultValue);
     static impl::PreferenceBuilder String(std::string identifier, std::string defaultValue);
-    static impl::PreferenceBuilder Color(std::string identifier, const Gdk::Color& defaultValue);
+    static impl::PreferenceBuilder Color(std::string identifier, const ImU32& defaultValue);
     static impl::PreferenceBuilder EnumRaw(std::string identifier, std::int64_t defaultValue);
     static impl::PreferenceBuilder Font(std::string identifier, std::string defaultValue);
 

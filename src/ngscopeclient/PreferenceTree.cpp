@@ -140,6 +140,7 @@ namespace internal
                 child["r"] = color.m_r;
                 child["g"] = color.m_g;
                 child["b"] = color.m_b;
+                child["a"] = color.m_a;
 
                 node[this->m_identifier] = child;
                 break;
@@ -195,11 +196,12 @@ namespace internal
 
                     case PreferenceType::Color:
                     {
-                        const auto n_r = n["r"].as<std::uint16_t>();
-                        const auto n_g = n["g"].as<std::uint16_t>();
-                        const auto n_b = n["b"].as<std::uint16_t>();
+                        const auto n_r = n["r"].as<std::uint8_t>();
+                        const auto n_g = n["g"].as<std::uint8_t>();
+                        const auto n_b = n["b"].as<std::uint8_t>();
+                        const auto n_a = n["a"].as<std::uint8_t>();
 
-                        this->m_pref.SetColorRaw(impl::Color(n_r, n_g, n_b));
+                        this->m_pref.SetColorRaw(impl::Color(n_r, n_g, n_b, n_a));
                         break;
                     }
 

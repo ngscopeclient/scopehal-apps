@@ -40,6 +40,8 @@
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
 
+#include "../scopehal/LeCroyOscilloscope.h"
+
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
@@ -124,6 +126,11 @@ void Session::Clear()
 	//Might be redundant.
 	lock_guard<mutex> lock2(m_scopeMutex);
 
+	//Clear history before destroying scopes.
+	//This ordering is important since waveforms removed from history get pushed into the WaveformPool of the scopes,
+	//so the scopes must not have been destroyed yet.
+	m_history.clear();
+
 	//Delete scopes once we've terminated the threads
 	for(auto scope : m_oscilloscopes)
 		delete scope;
@@ -140,6 +147,19 @@ void Session::Clear()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
+
+void Session::ApplyPreferences(Oscilloscope* scope)
+{
+	//Apply driver-specific preference settings
+	auto lecroy = dynamic_cast<LeCroyOscilloscope*>(scope);
+	if(lecroy)
+	{
+		if(m_preferences.GetBool("Drivers.Teledyne LeCroy.force_16bit"))
+			lecroy->ForceHDMode(true);
+
+		//else auto resolution depending on instrument type
+	}
+}
 
 void Session::AddOscilloscope(Oscilloscope* scope)
 {
@@ -533,16 +553,13 @@ void Session::DownloadWaveforms()
 		if(scope->IsOffline())
 			continue;
 
-		//Make sure we don't free the old waveform data
-		//TODO: only do this once we have history
-		LogTrace("TODO: release waveform once we have history\n");
-		/*
+		//Detach old waveforms since they're now owned by history manager
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
-		}*/
+		}
 
 		//Download the data
 		scope->PopPendingWaveform();
@@ -612,8 +629,10 @@ void Session::DownloadWaveforms()
 	This runs in the main GUI thread.
 
 	TODO: this might be best to move to MainWindow?
+
+	@return True if a new waveform came in, false if not
  */
-void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
+bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	bool hadNewWaveforms = false;
 	if(m_triggerArmed)
@@ -622,21 +641,15 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		{
 			LogTrace("Waveform is ready\n");
 
-			//Crunch the new waveform
+			//Add to history
+			auto scopes = GetScopes();
 			{
 				lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
-
-				//Update the history windows
-				/*
-				for(auto scope : m_oscilloscopes)
-				{
-					if(!scope->IsOffline())
-						m_historyWindows[scope]->OnWaveformDataReady();
-				}
-				*/
+				m_history.AddHistory(scopes);
 			}
 
 			//Tone-map all of our waveforms
+			//(does not need waveform data locked since it only works on *rendered* data)
 			hadNewWaveforms = true;
 			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
@@ -665,6 +678,8 @@ void Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	//If a re-render operation completed, tone map everything again
 	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
 		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+
+	return hadNewWaveforms;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -40,6 +40,8 @@ class WaveformArea;
 class DisplayedChannel;
 
 #include "../xptools/HzClock.h"
+#include "HistoryManager.h"
+#include "PreferenceManager.h"
 
 extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
@@ -169,7 +171,7 @@ public:
 	void StopTrigger();
 	bool HasOnlineScopes();
 	void DownloadWaveforms();
-	void CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
+	bool CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
 
 	void RenderWaveformTextures(
@@ -188,6 +190,8 @@ public:
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
+
+	void ApplyPreferences(Oscilloscope* scope);
 
 	size_t GetFilterCount();
 
@@ -240,6 +244,12 @@ public:
 	 */
 	std::recursive_mutex& GetWaveformDataMutex()
 	{ return m_waveformDataMutex; }
+
+	/**
+		@brief Get our history manager
+	 */
+	HistoryManager& GetHistory()
+	{ return m_history; }
 
 protected:
 
@@ -311,6 +321,19 @@ protected:
 
 	///@brief Frequency at which we are pulling waveforms off of scopes
 	HzClock m_waveformDownloadRate;
+
+	///@brief Historical waveform data
+	HistoryManager m_history;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// End user preferences (persistent across sessions)
+
+	//Preferences state
+	PreferenceManager m_preferences;
+
+public:
+	PreferenceManager& GetPreferences()
+	{ return m_preferences; }
 };
 
 #endif

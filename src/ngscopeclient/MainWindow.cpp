@@ -49,6 +49,7 @@
 #include "AddScopeDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
 #include "RFGeneratorDialog.h"
@@ -71,32 +72,16 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_showDemo(true)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
+	, m_toolbarIconSize(0)
 	, m_session(this)
 	, m_sessionClosing(false)
-	, m_texmgr(m_imguiDescriptorPool)
+	, m_defaultFont(nullptr)
+	, m_monospaceFont(nullptr)
+	, m_texmgr(m_imguiDescriptorPool, queue)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
-
-	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
-	ImGuiIO& io = ImGui::GetIO();
-	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
-	builder.AddChar(L'°');
-
-	//Build the range of glyphs we're using for the font
-	ImVector<ImWchar> ranges;
-	builder.BuildRanges(&ranges);
-
-	//Load our fonts
-	m_defaultFont = LoadFont("fonts/DejaVuSans.ttf", 13, ranges);
-	m_monospaceFont = LoadFont("fonts/DejaVuSansMono.ttf", 13, ranges);
-
-	//Done loading fonts, build the texture
-	io.Fonts->Flags = ImFontAtlasFlags_NoMouseCursors;
-	io.Fonts->Build();
-	io.FontDefault = m_defaultFont;
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -123,25 +108,12 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 				"MainWindow.m_cmdBuffer"));
 	}
 
-	//Download imgui fonts
-	m_cmdBuffer->begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
-	m_cmdBuffer->end();
-	queue->SubmitAndBlock(*m_cmdBuffer);
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	UpdateFonts();
 
 	//Load some textures
-	//TODO: use preference to decide what size to make the icons
-	m_texmgr.LoadTexture("foo", FindDataFile("icons/24x24/trigger-start.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("clear-sweeps", FindDataFile("icons/24x24/clear-sweeps.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile("icons/24x24/fullscreen-enter.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile("icons/24x24/fullscreen-exit.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("history", FindDataFile("icons/24x24/history.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("refresh-settings", FindDataFile("icons/24x24/refresh-settings.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("trigger-single", FindDataFile("icons/24x24/trigger-single.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("trigger-force", FindDataFile("icons/24x24/trigger-single.png"), queue, *m_cmdBuffer);	//no dedicated icon yet
-	m_texmgr.LoadTexture("trigger-start", FindDataFile("icons/24x24/trigger-start.png"), queue, *m_cmdBuffer);
-	m_texmgr.LoadTexture("trigger-stop", FindDataFile("icons/24x24/trigger-stop.png"), queue, *m_cmdBuffer);
+	m_toolbarIconSize = 0;
+	LoadToolbarIcons();
+	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 }
 
 MainWindow::~MainWindow()
@@ -180,6 +152,8 @@ void MainWindow::CloseSession()
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
+	m_historyDialog = nullptr;
+	m_preferenceDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -303,6 +277,7 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 
 void MainWindow::Render()
 {
+	//Shut down session, if requested, before starting the frame
 	if(m_sessionClosing)
 	{
 		{
@@ -311,6 +286,9 @@ void MainWindow::Render()
 		}
 		CloseSession();
 	}
+
+	//Load all of our fonts
+	UpdateFonts();
 
 	VulkanWindow::Render();
 }
@@ -351,6 +329,22 @@ void MainWindow::RenderWaveformTextures(
 
 void MainWindow::RenderUI()
 {
+	//Set up colors
+	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
+	{
+		case THEME_LIGHT:
+			ImGui::StyleColorsLight();
+			break;
+
+		case THEME_DARK:
+			ImGui::StyleColorsDark();
+			break;
+
+		case THEME_CLASSIC:
+			ImGui::StyleColorsClassic();
+			break;
+	}
+
 	m_needRender = false;
 
 	//Keep references to all of our waveform textures until next frame
@@ -366,8 +360,13 @@ void MainWindow::RenderUI()
 		m_groupsToClose.clear();
 	}
 
-	//See if we have new waveform data to look at
-	m_session.CheckForWaveforms(*m_cmdBuffer);
+	//See if we have new waveform data to look at.
+	//If we got one, highlight the new waveform in history
+	if(m_session.CheckForWaveforms(*m_cmdBuffer))
+	{
+		if(m_historyDialog != nullptr)
+			m_historyDialog->UpdateSelectionToLatest();
+	}
 
 	//Menu for main window
 	MainMenu();
@@ -403,6 +402,14 @@ void MainWindow::RenderUI()
 	for(auto& dlg : dlgsToClose)
 		OnDialogClosed(dlg);
 
+	//If we had a history dialog, check if we changed the selection
+	if( (m_historyDialog != nullptr) && (m_historyDialog->PollForSelectionChanges()))
+	{
+		LogTrace("history selection changed\n");
+		m_historyDialog->LoadHistoryFromSelection(m_session);
+		m_needRender = true;
+	}
+
 	if(m_needRender)
 		g_rerenderRequestedEvent.Signal();
 
@@ -413,10 +420,13 @@ void MainWindow::RenderUI()
 
 void MainWindow::Toolbar()
 {
+	//Update icons, if needed
+	LoadToolbarIcons();
+
 	//Toolbar should be at the top of the main window.
 	//Update work area size so docking area doesn't include the toolbar rectangle
 	auto viewport = ImGui::GetMainViewport();
-	auto toolbarHeight = ImGui::GetFontSize() * 2.5;
+	float toolbarHeight = m_toolbarIconSize + 8;
 	m_workPos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y + toolbarHeight);
 	m_workSize = ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - toolbarHeight);
 	ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -446,41 +456,85 @@ void MainWindow::Toolbar()
 	ImGui::End();
 }
 
+/**
+	@brief Load toolbar icons from disk if preferences changed
+ */
+void MainWindow::LoadToolbarIcons()
+{
+	int iconSize = m_session.GetPreferences().GetEnumRaw("Appearance.Toolbar.icon_size");
+
+	if(m_toolbarIconSize == iconSize)
+		return;
+
+	m_toolbarIconSize = iconSize;
+
+	string prefix = string("icons/") + to_string(iconSize) + "x" + to_string(iconSize) + "/";
+
+	//Load the icons
+	m_texmgr.LoadTexture("clear-sweeps", FindDataFile(prefix + "clear-sweeps.png"));
+	m_texmgr.LoadTexture("fullscreen-enter", FindDataFile(prefix + "fullscreen-enter.png"));
+	m_texmgr.LoadTexture("fullscreen-exit", FindDataFile(prefix + "fullscreen-exit.png"));
+	m_texmgr.LoadTexture("history", FindDataFile(prefix + "history.png"));
+	m_texmgr.LoadTexture("refresh-settings", FindDataFile(prefix + "refresh-settings.png"));
+	m_texmgr.LoadTexture("trigger-single", FindDataFile(prefix + "trigger-single.png"));
+	m_texmgr.LoadTexture("trigger-force", FindDataFile(prefix + "trigger-single.png"));	//no dedicated icon yet
+	m_texmgr.LoadTexture("trigger-start", FindDataFile(prefix + "trigger-start.png"));
+	m_texmgr.LoadTexture("trigger-stop", FindDataFile(prefix + "trigger-stop.png"));
+}
+
 void MainWindow::ToolbarButtons()
 {
-	auto sz = 24;//ImGui::GetFontSize() * 2;
-	ImVec2 buttonsize(sz, sz);
+	ImVec2 buttonsize(m_toolbarIconSize, m_toolbarIconSize);
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_NORMAL);
+	Dialog::Tooltip("Arm the trigger in normal mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_SINGLE);
+	Dialog::Tooltip("Arm the trigger in one-shot mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
 		m_session.ArmTrigger(Session::TRIGGER_TYPE_FORCED);
+	Dialog::Tooltip("Acquire a waveform immediately, ignoring the trigger condition");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
 		m_session.StopTrigger();
+	Dialog::Tooltip("Stop acquiring waveforms");
 
 	//History selector
+	bool hasHist = (m_historyDialog != nullptr);
 	ImGui::SameLine();
+	if(hasHist)
+		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
-		LogDebug("history\n");
+	{
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+		AddDialog(m_historyDialog);
+	}
+	if(hasHist)
+		ImGui::EndDisabled();
+	Dialog::Tooltip("Show waveform history window");
 
 	//Refresh scope settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("refresh-settings", GetTexture("refresh-settings"), buttonsize))
 		LogDebug("refresh settings\n");
+	Dialog::Tooltip(
+		"Flush PC-side cached instrument state and reload configuration from the instrument.\n\n"
+		"This will cause a brief slowdown of the application, but can be used to re-sync when\n"
+		"changes are made on the instrument front panel that ngscopeclient does not detect."
+		);
 
 	//View settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
 		LogDebug("clear-sweeps\n");
+	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 
 	//Fullscreen toggle
 	ImGui::SameLine(0.0, 0.0);
@@ -488,11 +542,13 @@ void MainWindow::ToolbarButtons()
 	{
 		if(ImGui::ImageButton("fullscreen-exit", GetTexture("fullscreen-exit"), buttonsize))
 			SetFullscreen(false);
+		Dialog::Tooltip("Leave fullscreen mode");
 	}
 	else
 	{
 		if(ImGui::ImageButton("fullscreen-enter", GetTexture("fullscreen-enter"), buttonsize))
 			SetFullscreen(true);
+		Dialog::Tooltip("Enter fullscreen mode");
 	}
 }
 
@@ -513,11 +569,13 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
 
+	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
-
 	if(m_timebaseDialog == dlg)
 		m_timebaseDialog = nullptr;
+	if(m_preferenceDialog == dlg)
+		m_preferenceDialog = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
@@ -711,7 +769,7 @@ void MainWindow::LoadRecentInstrumentList()
 {
 	try
 	{
-		auto docs = YAML::LoadAllFromFile(m_preferences.GetConfigDirectory() + "/recent.yml");
+		auto docs = YAML::LoadAllFromFile(m_session.GetPreferences().GetConfigDirectory() + "/recent.yml");
 		if(docs.empty())
 			return;
 		auto node = docs[0];
@@ -732,7 +790,9 @@ void MainWindow::LoadRecentInstrumentList()
 
 void MainWindow::SaveRecentInstrumentList()
 {
-	auto path = m_preferences.GetConfigDirectory() + "/recent.yml";
+	LogTrace("Saving recent instrument list\n");
+
+	auto path = m_session.GetPreferences().GetConfigDirectory() + "/recent.yml";
 	FILE* fp = fopen(path.c_str(), "w");
 
 	for(auto it : m_recentInstruments)
@@ -750,6 +810,8 @@ void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
 {
 	if(inst == nullptr)
 		return;
+
+	LogTrace("Adding instrument \"%s\" to recent instrument list\n", inst->m_nickname.c_str());
 
 	auto now = time(NULL);
 
@@ -827,7 +889,7 @@ void MainWindow::RenderErrorPopup()
 {
 	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text(m_errorPopupMessage.c_str());
+		ImGui::TextUnformatted(m_errorPopupMessage.c_str());
 		ImGui::Separator();
 		if(ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();
@@ -845,5 +907,33 @@ void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
 	{
 		m_generatorDialogs.erase(gen);
 		m_dialogs.erase(it->second);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Font handling
+
+/**
+	@brief Font
+ */
+void MainWindow::UpdateFonts()
+{
+	//Check if fonts have changed
+	if(m_defaultFont == nullptr)
+	{
+		//Rebuild our font atlas etc
+		m_fontmgr.UpdateFonts(GetSession().GetPreferences().AllPreferences());
+
+		//TODO: remove these when we use preferences for everything
+		m_defaultFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
+		m_monospaceFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
+		ImGui::GetIO().FontDefault = m_defaultFont;
+
+		//Download imgui fonts
+		m_cmdBuffer->begin({});
+		ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+		m_cmdBuffer->end();
+		SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
 }

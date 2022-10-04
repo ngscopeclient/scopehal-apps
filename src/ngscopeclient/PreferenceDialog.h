@@ -30,56 +30,30 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Declaration of PreferenceDialog
  */
-#ifndef Dialog_h
-#define Dialog_h
+#ifndef PreferenceDialog_h
+#define PreferenceDialog_h
 
-#include "imgui_stdlib.h"
+#include "Dialog.h"
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+class PreferenceManager;
+class PreferenceCategory;
+class Preference;
+
+class PreferenceDialog : public Dialog
 {
 public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+	PreferenceDialog(PreferenceManager& prefs);
+	virtual ~PreferenceDialog();
 
-	bool Render();
-	virtual bool DoRender() =0;
-
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+	virtual bool DoRender();
 
 protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+	void ProcessCategory(PreferenceCategory& cat);
+	void ProcessPreference(Preference& pref);
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
-
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
+	PreferenceManager& m_prefs;
 };
 
 #endif

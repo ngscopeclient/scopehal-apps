@@ -27,59 +27,55 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
- */
-#ifndef Dialog_h
-#define Dialog_h
+#include "ngscopeclient.h"
+#include "FontManager.h"
 
-#include "imgui_stdlib.h"
+using namespace std;
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+FontManager::FontManager()
 {
-public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+}
 
-	bool Render();
-	virtual bool DoRender() =0;
+FontManager::~FontManager()
+{
+}
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Font building
 
-protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+void FontManager::UpdateFonts(const PreferenceCategory& root)
+{
+	//Clear existing fonts, if any
+	ImGuiIO& io = ImGui::GetIO();
+	auto& atlas = io.Fonts;
+	atlas->Clear();
+	m_fonts.clear();
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
+	ImFontGlyphRangesBuilder builder;
+	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
+	builder.AddChar(L'°');
 
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
-};
+	//Build the range of glyphs we're using for the font
+	ImVector<ImWchar> ranges;
+	builder.BuildRanges(&ranges);
 
-#endif
+	//Make a list of fonts we want to load
+	//TODO: get this from enumerating preferences
+	set<FontDescription> fonts;
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 20));
+
+	//Load the fonts
+	for(auto f : fonts)
+		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second, nullptr, ranges.Data);
+
+	//Done loading fonts, build the texture
+	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;
+	atlas->Build();
+}

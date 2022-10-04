@@ -130,7 +130,7 @@ public:
 	} m_config;
 	
 	//Indexes for rendering of spares waveforms
-	AcceleratorBuffer<int64_t> m_indexBuffer;
+	AcceleratorBuffer<uint32_t> m_indexBuffer;
 	//Rendered waveform data, 1 float per pixel
 	AcceleratorBuffer<float> m_renderedWaveform;
 	//Texture to copy m_renderedWaveform into for final compositing

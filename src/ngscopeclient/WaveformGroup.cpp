@@ -44,13 +44,17 @@ using namespace std;
 
 WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	: m_parent(parent)
+	, m_xpos(0)
 	, m_pixelsPerXUnit(0.00005)
 	, m_xAxisOffset(0)
 	, m_title(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
-	, m_draggingTimeline(false)
+	, m_dragState(DRAG_STATE_NONE)
 	, m_tLastMouseMove(GetTime())
+	, m_xAxisCursorMode(X_CURSOR_NONE)
 {
+	m_xAxisCursorPositions[0] = 0;
+	m_xAxisCursorPositions[1] = 0;
 }
 
 WaveformGroup::~WaveformGroup()
@@ -143,7 +147,8 @@ bool WaveformGroup::Render()
 		return false;
 	}
 
-	ImVec2 clientArea = ImGui::GetContentRegionAvail();
+	auto pos = ImGui::GetCursorScreenPos();
+	ImVec2 clientArea = ImGui::GetContentRegionMax();
 
 	//Render the timeline
 	auto timelineHeight = 2.5 * ImGui::GetFontSize();
@@ -177,10 +182,116 @@ bool WaveformGroup::Render()
 	if(m_areas.empty())
 		open = false;
 
-	//TODO: Render cursors over everything else
+	//Render cursors over everything else
+	RenderXAxisCursors(pos, clientArea);
 
 	ImGui::End();
 	return open;
+}
+
+/**
+	@brief Render our cursors
+ */
+void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
+{
+	//No cursors? Nothing to do
+	if(m_xAxisCursorMode == X_CURSOR_NONE)
+		return;
+
+	//Create a child window for all of our drawing
+	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
+	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+	if(ImGui::BeginChild("cursors", size, false, ImGuiWindowFlags_NoInputs))
+	{
+		auto list = ImGui::GetWindowDrawList();
+
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto cursor0_color = prefs.GetColor("Appearance.Cursors.cursor_1_color");
+		auto cursor1_color = prefs.GetColor("Appearance.Cursors.cursor_2_color");
+		auto fill_color = prefs.GetColor("Appearance.Cursors.cursor_fill_color");
+
+		float xpos0 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[0]));
+		float xpos1 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[1]));
+
+		//Fill between if dual cursor
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			list->AddRectFilled(ImVec2(xpos0, pos.y), ImVec2(xpos1, pos.y + size.y), fill_color);
+
+		//First cursor
+		list->AddLine(ImVec2(xpos0, pos.y), ImVec2(xpos0, pos.y + size.y), cursor0_color, 1);
+
+		//Second cursor
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			list->AddLine(ImVec2(xpos1, pos.y), ImVec2(xpos1, pos.y + size.y), cursor1_color, 1);
+
+		//TODO: text for value readouts, in-band power, etc
+	}
+	ImGui::EndChild();
+
+	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+	//So we have to do all of our interaction processing inside the top level window
+	DoCursor(0, DRAG_STATE_X_CURSOR0);
+	if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		DoCursor(1, DRAG_STATE_X_CURSOR1);
+
+	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
+	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		(m_dragState == DRAG_STATE_NONE) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		{
+			m_dragState = DRAG_STATE_X_CURSOR1;
+			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+		}
+		else
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+
+	//Cursor 0 should always be left of cursor 1 (if both are enabled).
+	//If they get swapped, exchange them.
+	if( (m_xAxisCursorPositions[0] > m_xAxisCursorPositions[1]) && (m_xAxisCursorMode == X_CURSOR_DUAL) )
+	{
+		//Swap the cursors themselves
+		int64_t tmp = m_xAxisCursorPositions[0];
+		m_xAxisCursorPositions[0] = m_xAxisCursorPositions[1];
+		m_xAxisCursorPositions[1] = tmp;
+
+		//If dragging one cursor, switch to dragging the other
+		if(m_dragState == DRAG_STATE_X_CURSOR0)
+			m_dragState = DRAG_STATE_X_CURSOR1;
+		else if(m_dragState == DRAG_STATE_X_CURSOR1)
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+}
+
+void WaveformGroup::DoCursor(int iCursor, DragState state)
+{
+	float xpos = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[iCursor]));
+	float searchRadius = 0.25 * ImGui::GetFontSize();
+
+	//Check if the mouse hit us
+	auto mouse = ImGui::GetMousePos();
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+	{
+		if( fabs(mouse.x - xpos) < searchRadius)
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+			//Start dragging if clicked
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				m_dragState = state;
+		}
+	}
+
+	//If dragging, move the cursor to track
+	if(m_dragState == state)
+	{
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_NONE;
+		m_xAxisCursorPositions[iCursor] = XPositionToXAxisUnits(mouse.x);
+	}
 }
 
 void WaveformGroup::RenderTimeline(float width, float height)
@@ -193,11 +304,14 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	//Style settings
 	//TODO: get some/all of this from preferences
-	ImU32 color = ImGui::GetColorU32(ImVec4(1, 1, 1, 1));
+	auto& prefs = m_parent->GetSession().GetPreferences();
+	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
+	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");
 	auto font = m_parent->GetDefaultFont();
 
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
+	m_xpos = pos.x;
 	ImGui::Dummy(ImVec2(width, height));
 
 	//Detect mouse movement
@@ -215,6 +329,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		ImGui::TextUnformatted(
 			"Click and drag to scroll the timeline.\n"
 			"Use mouse wheel to zoom.\n"
+			"Middle click to zoom to fit the entire waveform.\n"
 			"Double-click to open timebase properties.");
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
@@ -233,13 +348,52 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			m_parent->ShowTimebaseProperties();
 
 		//Start dragging
-		if(ImGui::IsMouseClicked(0))
-			m_draggingTimeline = true;
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_TIMELINE;
+
+		//Autoscale on middle mouse
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+		{
+			LogTrace("middle mouse autoscale\n");
+
+			//Find beginning and end of all waveforms in the group
+			int64_t start = INT64_MAX;
+			int64_t end = -INT64_MAX;
+			for(auto a : m_areas)
+			{
+				for(size_t i=0; i<a->GetStreamCount(); i++)
+				{
+					auto stream = a->GetStream(i);
+					auto data = stream.GetData();
+					if(data == nullptr)
+						continue;
+					auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+					auto udata = dynamic_cast<UniformWaveformBase*>(data);
+
+					int64_t wstart = GetOffsetScaled(sdata, udata, 0);
+					int64_t wend =
+						GetOffsetScaled(sdata, udata, data->size()-1) +
+						GetDurationScaled(sdata, udata, data->size()-1);
+
+					start = min(start, wstart);
+					end = max(end, wend);
+				}
+			}
+			int64_t sigwidth = end - start;
+
+			//Don't divide by zero if no data!
+			if(sigwidth > 1)
+			{
+				m_pixelsPerXUnit = width / sigwidth;
+				m_xAxisOffset = start;
+				ClearPersistence();
+			}
+		}
 	}
 
 	//Handle dragging
 	//(Mouse is allowed to leave the window, as long as original click was within us)
-	if(m_draggingTimeline)
+	if(m_dragState == DRAG_STATE_TIMELINE)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame
 		float dx = mouseDelta.x * ImGui::GetWindowDpiScale();
@@ -249,8 +403,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			ClearPersistence();
 		}
 
-		if(ImGui::IsMouseReleased(0))
-			m_draggingTimeline = false;
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_NONE;
 	}
 
 	//Dimensions for various things
@@ -329,12 +483,11 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		list->PathStroke(color, 0, thickLineWidth);
 
 		//Render label
-		//TODO: is using the default font faster? by enough to matter?
 		list->AddText(
 			font,
 			fontSize,
 			ImVec2(x + textMargin, ymid),
-			color,
+			textcolor,
 			m_xAxisUnit.PrettyPrint(t).c_str());
 	}
 
@@ -346,13 +499,9 @@ void WaveformGroup::RenderTimeline(float width, float height)
  */
 void WaveformGroup::OnMouseWheel(float delta)
 {
-	auto pos = ImGui::GetWindowPos();
-	float relativeMouseX = ImGui::GetIO().MousePos.x - pos.x;
-	relativeMouseX *= ImGui::GetWindowDpiScale();
-
 	//TODO: if shift is held, scroll horizontally
 
-	int64_t target = XPositionToXAxisUnits(relativeMouseX);
+	int64_t target = XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);
 
 	//Zoom in
 	if(delta > 0)

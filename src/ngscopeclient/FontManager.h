@@ -30,56 +30,34 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Declaration of FontManager
  */
-#ifndef Dialog_h
-#define Dialog_h
+#ifndef FontManager_h
+#define FontManager_h
 
-#include "imgui_stdlib.h"
+class PreferenceCategory;
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+//pair of (font file, size)
+typedef std::pair<std::string, float> FontDescription;
+
+class FontManager
 {
 public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+	FontManager();
+	~FontManager();
 
-	bool Render();
-	virtual bool DoRender() =0;
+	void UpdateFonts(const PreferenceCategory& root);
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+	/**
+		@brief Gets the font, if any, for the provided description
+	 */
+	ImFont* GetFont(FontDescription desc)
+	{ return m_fonts[desc]; }
 
 protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
-
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
+	//Map of font descriptions to fonts
+	std::map<FontDescription, ImFont*> m_fonts;
 };
 
 #endif

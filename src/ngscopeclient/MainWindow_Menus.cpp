@@ -47,9 +47,11 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "FunctionGeneratorDialog.h"
+#include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PreferenceDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 
@@ -333,7 +335,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
-				if(fields.size() < 4)
+				if(fields.size() < 3)
 					continue;
 
 				auto nick = fields[0];
@@ -344,7 +346,9 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 				{
 					if(ImGui::MenuItem(nick.c_str()))
 					{
-						auto path = fields[3];
+						string path;
+						if(fields.size() >= 4)
+							path = fields[3];
 						for(size_t j=4; j<fields.size(); j++)
 							path = path + ":" + fields[j];
 
@@ -363,9 +367,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 
 							else
 							{
-								//TODO: apply preferences
-								LogDebug("FIXME: apply PreferenceManager settings to newly created scope\n");
-
+								m_session.ApplyPreferences(scope);
 								scope->m_nickname = nick;
 								m_session.AddOscilloscope(scope);
 							}
@@ -578,9 +580,20 @@ void MainWindow::SetupMenu()
 		bool timebaseVisible = (m_timebaseDialog != nullptr);
 		if(timebaseVisible)
 			ImGui::BeginDisabled();
-		if(ImGui::MenuItem("Timebase"))
+		if(ImGui::MenuItem("Timebase..."))
 			ShowTimebaseProperties();
 		if(timebaseVisible)
+			ImGui::EndDisabled();
+
+		bool prefsVisible = (m_preferenceDialog != nullptr);
+		if(prefsVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Preferences..."))
+		{
+			m_preferenceDialog = make_shared<PreferenceDialog>(m_session.GetPreferences());
+			AddDialog(m_preferenceDialog);
+		}
+		if(prefsVisible)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
@@ -622,6 +635,17 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasMetrics)
+			ImGui::EndDisabled();
+
+		bool hasHistory = m_historyDialog != nullptr;
+		if(hasHistory)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("History"))
+		{
+			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+			AddDialog(m_historyDialog);
+		}
+		if(hasHistory)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();

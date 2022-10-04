@@ -30,56 +30,48 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Declaration of HistoryDialog
  */
-#ifndef Dialog_h
-#define Dialog_h
+#ifndef HistoryDialog_h
+#define HistoryDialog_h
 
-#include "imgui_stdlib.h"
+#include "Dialog.h"
+#include "Session.h"
 
 /**
-	@brief Generic dialog box or other popup window
+	@brief UI for the history system
  */
-class Dialog
+class HistoryDialog : public Dialog
 {
 public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+	HistoryDialog(HistoryManager& mgr);
+	virtual ~HistoryDialog();
 
-	bool Render();
-	virtual bool DoRender() =0;
+	virtual bool DoRender();
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+	bool PollForSelectionChanges()
+	{
+		bool changed = m_selectionChanged;
+		m_selectionChanged = false;
+		return changed;
+	}
+
+	void LoadHistoryFromSelection(Session& session);
+	void UpdateSelectionToLatest();
 
 protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+	HistoryManager& m_mgr;
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+	std::string FormatTimestamp(time_t base, int64_t offset);
 
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
+	///@brief Height of a row in the dialog
+	float m_rowHeight;
+
+	///@brief True if a new row in the dialog was selected this frame
+	bool m_selectionChanged;
+
+	///@brief The currently selected point of history
+	std::shared_ptr<HistoryPoint> m_selectedPoint;
 };
 
 #endif

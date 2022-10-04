@@ -102,8 +102,15 @@ void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
-ImU32 ColorFromString(const std::string& str);
+ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
 
 extern std::shared_mutex g_vulkanActivityMutex;
+
+enum GuiTheme
+{
+	THEME_LIGHT = 0,
+	THEME_DARK = 1,
+	THEME_CLASSIC = 2
+};
 
 #endif
