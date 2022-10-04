@@ -138,9 +138,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		yscale = digheight;
 	}
 
-	//FIXME: Using m_plotRight instead of m_width here is more efficient, but
-	// there is some subtle bug with the alignment of cursors when using m_plotRight.
-
 	//Ensure GPU has actual waveform timestamps and voltages
 	//FIXME: This can be optimized by batching all calls to a cmdbuf, but can't
 	// use wdata->m_vkCmdBuf for this because RenderTrace uses that.
