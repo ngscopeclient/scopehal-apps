@@ -51,20 +51,20 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("cursor_fill_text_color", ColorFromString("#ffff00"))
 				.Label("Cursor fill text color")
 				.Description("Color for in-band power and other text drawn between cursors"));
-			cursors.AddPreference(
+			/*cursors.AddPreference(
 				Preference::Font("label_font", "sans normal 10")
 				.Label("Cursor label font")
-				.Description("Font used for voltage measurements displayed next to cursors"));
+				.Description("Font used for voltage measurements displayed next to cursors"));*/
 			cursors.AddPreference(
 				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));
 
 		auto& decodes = appearance.AddCategory("Decodes");
-			decodes.AddPreference(
+			/*decodes.AddPreference(
 				Preference::Font("protocol_font", "sans normal 10")
 				.Label("Protocol font")
-				.Description("Font used for protocol decode overlay text"));
+				.Description("Font used for protocol decode overlay text"));*/
 			decodes.AddPreference(
 				Preference::Color("address_color", ColorFromString("#ffff00"))
 				.Label("Address color")
@@ -119,7 +119,7 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("outline_color", ColorFromString("#009900"))
 				.Label("Outline color")
 				.Description("Color for node outlines"));
-			graph.AddPreference(
+			/*graph.AddPreference(
 				Preference::Font("node_name_font", "sans bold 12")
 				.Label("Node name font")
 				.Description("Font used for graph node title"));
@@ -130,7 +130,7 @@ void PreferenceManager::InitializeDefaults()
 			graph.AddPreference(
 				Preference::Font("param_font", "sans 10")
 				.Label("Parameter font")
-				.Description("Font used for parameters"));
+				.Description("Font used for parameters"));*/
 			graph.AddPreference(
 				Preference::Color("analog_port_color", ColorFromString("#000080"))
 				.Label("Analog port color")
@@ -250,10 +250,10 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Text color")
 				.Description("Color for text labels on the X axis"));
 
-			timeline.AddPreference(
+			/*timeline.AddPreference(
 				Preference::Font("tick_label_font", "sans normal 10")
 				.Label("Tick font")
-				.Description("Font used for tickmark labels on the timeline"));
+				.Description("Font used for tickmark labels on the timeline"));*/
 
 		auto& toolbar = appearance.AddCategory("Toolbar");
 			toolbar.AddPreference(
@@ -265,10 +265,10 @@ void PreferenceManager::InitializeDefaults()
 				);
 
 		auto& waveforms = appearance.AddCategory("Waveforms");
-			waveforms.AddPreference(
+			/*waveforms.AddPreference(
 				Preference::Font("y_axis_font", "monospace normal 10")
 				.Label("Y axis font")
-				.Description("Font used for text on the vertical axis of waveforms"));
+				.Description("Font used for text on the vertical axis of waveforms"));*/
 			waveforms.AddPreference(
 				Preference::Real("persist_decay_rate", 0.9)
 				.Label("Persistence decay rate (0 = none, 1 = infinite)")

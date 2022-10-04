@@ -144,7 +144,7 @@ ImU32 PreferenceManager::GetColor(const std::string& path) const
 	return GetPreference(path).GetColor();
 }
 
-Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
+FontDescription PreferenceManager::GetFont(const std::string& path) const
 {
 	return GetPreference(path).GetFont();
 }
