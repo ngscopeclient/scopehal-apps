@@ -86,6 +86,7 @@ WaveformRenderData::WaveformRenderData(StreamDescriptor channel, WaveformArea* a
 		
 		std::string denseShaderFn = shaderfn + ".dense.spv";
 		std::string sparseShaderFn = shaderfn + ".spv";
+		LogDebug("Channel %s loading shader %s\n", channel.GetName().c_str(), sparseShaderFn.c_str());
 		m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
 		m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, durationsSSBOs + 4, sizeof(ConfigPushConstants));
 
@@ -214,7 +215,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		else if(sdigdat)
 		{
 			sdigdat->m_offsets.PrepareForGpuAccess(false);
-			sdigdat->m_offsets.PrepareForGpuAccess(false);
+			sdigdat->m_durations.PrepareForGpuAccess(false);
 		}
 	}
 
@@ -658,7 +659,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		return;
 
 	//Round thread block size up to next multiple of the local size (must be power of two)
-	//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl
+	//localSize must match COLS_PER_BLOCK in waveform-compute.glsl
 	int localSize = 1;
 	int numCols = m_plotRight;
 	if(0 != (numCols % localSize) )
