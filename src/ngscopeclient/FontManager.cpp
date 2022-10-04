@@ -27,184 +27,55 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Implementation of PreferenceDialog
- */
-
 #include "ngscopeclient.h"
-#include "PreferenceDialog.h"
-#include "PreferenceManager.h"
+#include "FontManager.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-PreferenceDialog::PreferenceDialog(PreferenceManager& prefs)
-	: Dialog("Preferences", ImVec2(600, 400))
-	, m_prefs(prefs)
+FontManager::FontManager()
 {
-
 }
 
-PreferenceDialog::~PreferenceDialog()
+FontManager::~FontManager()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+// Font building
 
-/**
-	@brief Renders the dialog and handles UI events
-
-	@return		True if we should continue showing the dialog
-				False if it's been closed
- */
-bool PreferenceDialog::DoRender()
+void FontManager::UpdateFonts(const PreferenceCategory& root)
 {
-	auto& root = m_prefs.AllPreferences();
-	auto& children = root.GetChildren();
+	//Clear existing fonts, if any
+	ImGuiIO& io = ImGui::GetIO();
+	auto& atlas = io.Fonts;
+	atlas->Clear();
+	m_fonts.clear();
 
-	//Top level uses collapsing headers
-	for(const auto& identifier: root.GetOrdering())
-	{
-		auto& node = children[identifier];
+	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
+	ImFontGlyphRangesBuilder builder;
+	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
+	builder.AddChar(L'°');
 
-		if(node->IsCategory())
-		{
-			auto& subCategory = node->AsCategory();
-			if(subCategory.IsVisible())
-			{
-				if(ImGui::CollapsingHeader(identifier.c_str()))
-					ProcessCategory(subCategory);
-			}
-		}
-	}
+	//Build the range of glyphs we're using for the font
+	ImVector<ImWchar> ranges;
+	builder.BuildRanges(&ranges);
 
-	return true;
-}
+	//Make a list of fonts we want to load
+	//TODO: get this from enumerating preferences
+	set<FontDescription> fonts;
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 13));
+	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 20));
 
-/**
-	@brief Run the UI for a category, including any subcategories or preferences
- */
-void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
-{
-	auto& children = cat.GetChildren();
-	for(const auto& identifier: cat.GetOrdering())
-	{
-		auto& node = children[identifier];
+	//Load the fonts
+	for(auto f : fonts)
+		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second, nullptr, ranges.Data);
 
-		//Add child categories
-		if(node->IsCategory())
-		{
-			auto& subCategory = node->AsCategory();
-
-			if(subCategory.IsVisible())
-			{
-				if(ImGui::TreeNode(identifier.c_str()))
-				{
-					ProcessCategory(subCategory);
-					ImGui::TreePop();
-				}
-			}
-		}
-
-		//Add preference widgets
-		if(node->IsPreference())
-			ProcessPreference(node->AsPreference());
-	}
-}
-
-/**
-	@brief Run the UI for a single preference
- */
-void PreferenceDialog::ProcessPreference(Preference& pref)
-{
-	string label = pref.GetLabel() + "###" + pref.GetIdentifier();
-
-	switch(pref.GetType())
-	{
-		//Bool: show a checkbox
-		case PreferenceType::Boolean:
-			{
-				bool b = pref.GetBool();
-				if(ImGui::Checkbox(label.c_str(), &b))
-					pref.SetBool(b);
-			}
-			break;
-
-		//Enums: show a combo box
-		case PreferenceType::Enum:
-			{
-				auto map = pref.GetMapping();
-				auto names = map.GetNames();
-				auto curValue = pref.ToString();
-
-				//This is a bit ugly and slow, but works...
-				int selection = 0;
-				for(size_t i=0; i<names.size(); i++)
-				{
-					if(curValue == names[i])
-					{
-						selection = i;
-						break;
-					}
-				}
-
-				if(Combo(label.c_str(), names, selection))
-					pref.SetEnumRaw(map.GetValue(names[selection]));
-			}
-			break;
-
-		//Colors: show color chooser widget
-		case PreferenceType::Color:
-			{
-				auto color = pref.GetColorRaw();
-				float fcolor[4] =
-				{
-					color.m_r / 255.0f,
-					color.m_g / 255.0f,
-					color.m_b / 255.0f,
-					color.m_a / 255.0f
-				};
-
-				if(ImGui::ColorEdit4(label.c_str(), fcolor))
-				{
-					pref.SetColorRaw(impl::Color(
-						static_cast<uint8_t>(fcolor[0] * 255),
-						static_cast<uint8_t>(fcolor[1] * 255),
-						static_cast<uint8_t>(fcolor[2] * 255),
-						static_cast<uint8_t>(fcolor[3] * 255)
-						));
-				}
-			}
-			break;
-
-		//Real: show a text box
-		case PreferenceType::Real:
-			{
-				float f = pref.GetReal();
-				if(ImGui::InputFloat(label.c_str(), &f))
-					pref.SetReal(f);
-			}
-			break;
-
-		//Font: show a dropdown for the set of available fonts
-		//and a selector for sizes
-		case PreferenceType::Font:
-			{
-			}
-			break;
-
-		default:
-			ImGui::TextDisabled(
-				"Unimplemented: %s = %s\n",
-				pref.GetIdentifier().c_str(),
-				pref.ToString().c_str());
-			break;
-	}
-
-	HelpMarker(pref.GetDescription());
+	//Done loading fonts, build the texture
+	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;
+	atlas->Build();
 }

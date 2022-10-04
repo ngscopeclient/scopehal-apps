@@ -75,30 +75,13 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_toolbarIconSize(0)
 	, m_session(this)
 	, m_sessionClosing(false)
+	, m_defaultFont(nullptr)
+	, m_monospaceFont(nullptr)
 	, m_texmgr(m_imguiDescriptorPool)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
-
-	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
-	ImGuiIO& io = ImGui::GetIO();
-	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
-	builder.AddChar(L'°');
-
-	//Build the range of glyphs we're using for the font
-	ImVector<ImWchar> ranges;
-	builder.BuildRanges(&ranges);
-
-	//Load our fonts
-	m_defaultFont = LoadFont("fonts/DejaVuSans.ttf", 13, ranges);
-	m_monospaceFont = LoadFont("fonts/DejaVuSansMono.ttf", 13, ranges);
-
-	//Done loading fonts, build the texture
-	io.Fonts->Flags = ImFontAtlasFlags_NoMouseCursors;
-	io.Fonts->Build();
-	io.FontDefault = m_defaultFont;
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -125,12 +108,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 				"MainWindow.m_cmdBuffer"));
 	}
 
-	//Download imgui fonts
-	m_cmdBuffer->begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
-	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, queue);
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	UpdateFonts();
 
 	//Load some textures
 	m_toolbarIconSize = 0;
@@ -299,11 +277,15 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 
 void MainWindow::Render()
 {
+	//Shut down session, if requested, before starting the frame
 	if(m_sessionClosing)
 	{
 		m_renderQueue.waitIdle();
 		CloseSession();
 	}
+
+	//Load all of our fonts
+	UpdateFonts();
 
 	VulkanWindow::Render();
 }
@@ -922,5 +904,33 @@ void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
 	{
 		m_generatorDialogs.erase(gen);
 		m_dialogs.erase(it->second);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Font handling
+
+/**
+	@brief Font
+ */
+void MainWindow::UpdateFonts()
+{
+	//Check if fonts have changed
+	if(m_defaultFont == nullptr)
+	{
+		//Rebuild our font atlas etc
+		m_fontmgr.UpdateFonts(GetSession().GetPreferences().AllPreferences());
+
+		//TODO: remove these when we use preferences for everything
+		m_defaultFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
+		m_monospaceFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
+		ImGui::GetIO().FontDefault = m_defaultFont;
+
+		//Download imgui fonts
+		m_cmdBuffer->begin({});
+		ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+		m_cmdBuffer->end();
+		SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
 }

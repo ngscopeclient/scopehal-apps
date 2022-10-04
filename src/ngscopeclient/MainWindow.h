@@ -37,6 +37,7 @@
 
 #include "Dialog.h"
 #include "Session.h"
+#include "FontManager.h"
 #include "TextureManager.h"
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
@@ -259,10 +260,6 @@ protected:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Graphics items
 
-	//TODO: use preference manager for all this
-	ImFont* LoadFont(const std::string& path, int size, ImVector<ImWchar>& ranges)
-	{ return ImGui::GetIO().Fonts->AddFontFromFileTTF(FindDataFile(path).c_str(), size, nullptr, ranges.Data); }
-
 	ImFont* m_defaultFont;
 	ImFont* m_monospaceFont;
 
@@ -293,6 +290,11 @@ public:
 
 	TextureManager* GetTextureManager()
 	{ return &m_texmgr; }
+
+protected:
+	FontManager m_fontmgr;
+
+	void UpdateFonts();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Performance counters
