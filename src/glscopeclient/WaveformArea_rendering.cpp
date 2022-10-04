@@ -162,7 +162,7 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 		else if(sdigdat)
 		{
 			sdigdat->m_offsets.PrepareForGpuAccess(false);
-			sdigdat->m_offsets.PrepareForGpuAccess(false);
+			sdigdat->m_durations.PrepareForGpuAccess(false);
 		}
 	}
 
