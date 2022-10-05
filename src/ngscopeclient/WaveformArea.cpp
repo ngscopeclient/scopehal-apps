@@ -850,9 +850,9 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 	//Style settings
 	//TODO: get some/all of this from preferences
-	auto font = m_parent->GetDefaultFont();
+	auto font = m_parent->GetFontPref("Appearance.Graphs.y_axis_font");
 	auto& prefs = m_parent->GetSession().GetPreferences();
-	float theight = ImGui::GetFontSize();
+	float theight = font->FontSize;
 	auto textColor = prefs.GetColor("Appearance.Graphs.y_axis_text_color");
 
 	//Reserve an empty area we're going to draw into
@@ -983,7 +983,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	//Prepare to draw text
 	center.x += warningSize;
 	float fontHeight = ImGui::GetFontSize();
-	auto font = m_parent->GetDefaultFont();
+	auto font = m_parent->GetFontPref("Appearance.General.default_font");
 	string str = "Caution: Potential for instrument damage!\n\n";
 	str += string("The channel ") + mismatchStream.GetName() + " has a full-scale range of " +
 		mismatchStream.GetYAxisUnits().PrettyPrint(mismatchStream.GetVoltageRange()) + ",\n";
@@ -1364,7 +1364,7 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 		//Prepare to draw text
 		center.x += warningSize;
 		float fontHeight = ImGui::GetFontSize();
-		auto font = m_parent->GetDefaultFont();
+		auto font = m_parent->GetFontPref("Appearance.General.default_font");
 		string str = "Caution: Potential for instrument damage!\n\n";
 		str += string("The channel being dragged has a full-scale range of ") +
 			theirStream.GetYAxisUnits().PrettyPrint(theirRange) + ",\n";

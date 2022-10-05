@@ -29,6 +29,7 @@
 
 #include "ngscopeclient.h"
 #include "FontManager.h"
+#include "PreferenceManager.h"
 
 using namespace std;
 
@@ -46,8 +47,32 @@ FontManager::~FontManager()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Font building
 
-void FontManager::UpdateFonts(const PreferenceCategory& root)
+/**
+	@brief Check for changes to our fonts and, if any are found, reload
+
+	@return True if changes were made to the font atlas
+ */
+bool FontManager::UpdateFonts(PreferenceCategory& root)
 {
+	//Make a list of fonts we want to have
+	set<FontDescription> fonts;
+	AddFontDescriptions(root.AsCategory(), fonts);
+
+	//Check if we have them all
+	bool missingFonts = false;
+	for(auto f : fonts)
+	{
+		if(m_fonts.find(f) == m_fonts.end())
+		{
+			missingFonts = true;
+			break;
+		}
+	}
+
+	//If no missing fonts, no need to touch anything
+	if(!missingFonts)
+		return false;
+
 	//Clear existing fonts, if any
 	ImGuiIO& io = ImGui::GetIO();
 	auto& atlas = io.Fonts;
@@ -63,14 +88,6 @@ void FontManager::UpdateFonts(const PreferenceCategory& root)
 	ImVector<ImWchar> ranges;
 	builder.BuildRanges(&ranges);
 
-	//Make a list of fonts we want to load
-	//TODO: get this from enumerating preferences
-	set<FontDescription> fonts;
-	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
-	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
-	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 13));
-	fonts.emplace(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 20));
-
 	//Load the fonts
 	for(auto f : fonts)
 		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second, nullptr, ranges.Data);
@@ -78,4 +95,30 @@ void FontManager::UpdateFonts(const PreferenceCategory& root)
 	//Done loading fonts, build the texture
 	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;
 	atlas->Build();
+
+	return true;
+}
+
+/**
+	@brief Get the font descriptions for each preference category
+ */
+void FontManager::AddFontDescriptions(PreferenceCategory& cat, set<FontDescription>& fonts)
+{
+	auto& children = cat.GetChildren();
+	for(const auto& identifier: cat.GetOrdering())
+	{
+		auto& node = children[identifier];
+
+		if(node->IsCategory())
+			AddFontDescriptions(node->AsCategory(), fonts);
+
+		if(node->IsPreference())
+		{
+			auto& pref = node->AsPreference();
+			if(pref.GetType() != PreferenceType::Font)
+				continue;
+
+			fonts.emplace(pref.GetFont());
+		}
+	}
 }

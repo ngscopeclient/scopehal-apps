@@ -79,7 +79,7 @@ bool SCPIConsoleDialog::DoRender()
 	//Scroll area for console output is full window minus command box
 	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
 	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::PushFont(m_parent->GetMonospaceFont());
+		ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
 		for(auto& line : m_output)
 			ImGui::TextUnformatted(line.c_str());
 		ImGui::PopFont();

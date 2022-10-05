@@ -54,6 +54,12 @@ protected:
 	void ProcessPreference(Preference& pref);
 
 	PreferenceManager& m_prefs;
+
+	std::vector<std::string> m_fontPaths;
+	std::vector<std::string> m_fontShortNames;
+	std::map<std::string, size_t> m_fontReverseMap;
+
+	void FindFontFiles(const std::string& path);
 };
 
 #endif

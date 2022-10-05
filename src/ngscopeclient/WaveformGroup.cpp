@@ -307,7 +307,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
 	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");
-	auto font = m_parent->GetDefaultFont();
+	auto font = m_parent->GetFontPref("Appearance.Timeline.x_axis_font");
+	float fontSize = font->FontSize;
 
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
@@ -414,7 +415,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	const double min_label_grad_width = 75 * dpiScale;	//Minimum distance between text labels
 	float thickLineWidth = 2;
 	float thinLineWidth = 1;
-	float fontSize = ImGui::GetFontSize();
 	float ymid = pos.y + height/2;
 
 	//Top line

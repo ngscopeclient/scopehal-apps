@@ -46,7 +46,7 @@ public:
 	FontManager();
 	~FontManager();
 
-	void UpdateFonts(const PreferenceCategory& root);
+	bool UpdateFonts(PreferenceCategory& root);
 
 	/**
 		@brief Gets the font, if any, for the provided description
@@ -55,6 +55,7 @@ public:
 	{ return m_fonts[desc]; }
 
 protected:
+	void AddFontDescriptions(PreferenceCategory& cat, std::set<FontDescription>& fonts);
 
 	//Map of font descriptions to fonts
 	std::map<FontDescription, ImFont*> m_fonts;

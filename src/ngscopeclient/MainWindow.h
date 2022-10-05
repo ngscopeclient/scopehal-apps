@@ -260,9 +260,6 @@ protected:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Graphics items
 
-	ImFont* m_defaultFont;
-	ImFont* m_monospaceFont;
-
 	TextureManager m_texmgr;
 
 	/**
@@ -279,11 +276,12 @@ protected:
 	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 
 public:
-	ImFont* GetMonospaceFont()
-	{ return m_monospaceFont; }
 
-	ImFont* GetDefaultFont()
-	{ return m_defaultFont; }
+	/**
+		@brief Returns a font, given the name of a preference setting
+	 */
+	ImFont* GetFontPref(const std::string& name)
+	{ return m_fontmgr.GetFont(m_session.GetPreferences().GetFont(name.c_str())); }
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }

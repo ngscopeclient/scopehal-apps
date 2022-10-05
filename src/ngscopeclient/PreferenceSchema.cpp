@@ -165,6 +165,14 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("Dark", THEME_DARK)
 					.EnumValue("Classic", THEME_CLASSIC)
 				);
+			general.AddPreference(
+				Preference::Font("default_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+					.Label("Default font")
+					.Description("Font used for most GUI elements"));
+			general.AddPreference(
+				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
+					.Label("Console font")
+					.Description("Font used for SCPI console and log viewer"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(
@@ -195,6 +203,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("y_axis_text_color", ColorFromString("#ffffffff"))
 				.Label("Y axis text color")
 				.Description("Color for Y axis text"));
+			graphs.AddPreference(
+				Preference::Font("y_axis_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+					.Label("Y axis font")
+					.Description("Font used for Y axis text"));
 
 		auto& peaks = appearance.AddCategory("Peaks");
 			peaks.AddPreference(
@@ -249,11 +261,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("text_color", ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for text labels on the X axis"));
-
-			/*timeline.AddPreference(
-				Preference::Font("tick_label_font", "sans normal 10")
-				.Label("Tick font")
-				.Description("Font used for tickmark labels on the timeline"));*/
+			timeline.AddPreference(
+				Preference::Font("x_axis_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))
+				.Label("X axis font")
+				.Description("Font used for X axis text"));
 
 		auto& toolbar = appearance.AddCategory("Toolbar");
 			toolbar.AddPreference(

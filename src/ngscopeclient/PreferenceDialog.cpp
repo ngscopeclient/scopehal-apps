@@ -36,6 +36,7 @@
 #include "ngscopeclient.h"
 #include "PreferenceDialog.h"
 #include "PreferenceManager.h"
+#include "../../lib/scopehal/FileSystem.h"
 
 using namespace std;
 
@@ -46,11 +47,47 @@ PreferenceDialog::PreferenceDialog(PreferenceManager& prefs)
 	: Dialog("Preferences", ImVec2(600, 400))
 	, m_prefs(prefs)
 {
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSans.ttf"));
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSansMono.ttf"));
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSans-Bold.ttf"));
 
+	#ifdef _WIN32
+		FindFontFiles("C:\\Windows\\Fonts");
+	#else
+		//TODO: is this appropriate for MacOS too? other places to check?
+		FindFontFiles("/usr/share/fonts");
+	#endif
+
+	//Get short names for each file
+	for(size_t i=0; i<m_fontPaths.size(); i++)
+	{
+		auto path = m_fontPaths[i];
+		auto shortname = BaseName(path);
+		shortname = shortname.substr(0, shortname.length() - 4);	//trim off extension
+
+		m_fontShortNames.push_back(shortname);
+		m_fontReverseMap[path] = i;
+	}
 }
 
 PreferenceDialog::~PreferenceDialog()
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Font search
+
+void PreferenceDialog::FindFontFiles(const string& path)
+{
+	auto files = Glob(path + "/*", false);
+	for(auto f : files)
+	{
+		if( (f.find(".ttf") != string::npos) || (f.find(".TTF") != string::npos) )
+			m_fontPaths.push_back(f);
+
+		else if(f.find(".") == string::npos)
+			FindFontFiles(f);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -195,6 +232,30 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 		//and a selector for sizes
 		case PreferenceType::Font:
 			{
+				auto font = pref.GetFont();
+
+				string path = font.first;
+				float size = font.second;
+				int sel = m_fontReverseMap[path];
+				label = string("###") + pref.GetIdentifier() + "face";
+				bool changed = false;
+
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
+				if(Combo(label, m_fontShortNames, sel))
+				{
+					path = m_fontPaths[sel];
+					changed = true;
+				}
+
+				//Font size
+				label = pref.GetLabel() + "###" + pref.GetIdentifier() + "size";
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				if(ImGui::InputFloat(label.c_str(), &size, 1, 5))
+					changed = true;
+
+				if(changed)
+					pref.SetFont(FontDescription(path, size));
 			}
 			break;
 

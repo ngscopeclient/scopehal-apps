@@ -63,7 +63,7 @@ bool LogViewerDialog::DoRender()
 
 	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-	ImGui::PushFont(m_parent->GetMonospaceFont());
+	ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
 	auto& lines = g_guiLog->GetLines();
 	for(auto& line : lines)
 		ImGui::TextUnformatted(line.c_str());

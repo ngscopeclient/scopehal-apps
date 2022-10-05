@@ -324,6 +324,8 @@ void Preference::SetFont(const FontDescription& font)
 {
 	CleanUp();
 	Construct<FontDescription>(font);
+
+	LogTrace("Set %s to %s, %.2f px\n", GetIdentifier().c_str(), font.first.c_str(), font.second);
 }
 
 void Preference::SetBool(bool value)
