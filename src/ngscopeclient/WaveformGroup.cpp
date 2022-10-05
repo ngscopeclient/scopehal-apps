@@ -303,7 +303,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto list = ImGui::GetWindowDrawList();
 
 	//Style settings
-	//TODO: get some/all of this from preferences
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
 	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");

@@ -849,7 +849,6 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	float ybot = origin.y + size.y;
 
 	//Style settings
-	//TODO: get some/all of this from preferences
 	auto font = m_parent->GetFontPref("Appearance.Graphs.y_axis_font");
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	float theight = font->FontSize;
@@ -1112,9 +1111,6 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
  */
 void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
-	//TODO: set ImGuiCol_DragDropTarget to invisible (zero alpha)
-	//and/or set ImGuiDragDropFlags_AcceptNoDrawDefaultRect
-
 	//Drag/drop areas for splitting
 	float heightOfVerticalRegion = size.y * 0.25;
 	float widthOfVerticalEdge = size.x*0.25;

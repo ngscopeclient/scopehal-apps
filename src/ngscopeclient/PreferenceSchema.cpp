@@ -312,7 +312,16 @@ void PreferenceManager::InitializeDefaults()
 			.Label("Max recent files")
 			.Description("Maximum number of recent .scopesession file paths to save in history")
 			.Unit(Unit::UNIT_COUNTS));
+	*/
 
+	auto& misc = this->m_treeRoot.AddCategory("Miscellaneous");
+		auto& menus = misc.AddCategory("Menus");
+			menus.AddPreference(
+				Preference::Int("recent_instrument_count", 20)
+				.Label("Recent instrument count")
+				.Description("Number of recently used instruments to display"));
+
+	/*
 	auto& privacy = this->m_treeRoot.AddCategory("Privacy");
 		 privacy.AddPreference(
 			Preference::Bool("redact_serial_in_title", false)

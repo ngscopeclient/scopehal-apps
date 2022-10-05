@@ -818,8 +818,7 @@ void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
 	m_recentInstruments[connectionString] = now;
 
 	//Delete anything old
-	//TODO: have a preference for this
-	const int maxRecentInstruments = 20;
+	const int maxRecentInstruments = m_session.GetPreferences().GetInt("Miscellaneous.Menus.recent_instrument_count");
 	while(m_recentInstruments.size() > maxRecentInstruments)
 	{
 		string oldestPath = "";

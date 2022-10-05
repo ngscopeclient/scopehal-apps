@@ -190,6 +190,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 					}
 				}
 
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
 				if(Combo(label.c_str(), names, selection))
 					pref.SetEnumRaw(map.GetValue(names[selection]));
 			}
@@ -207,6 +208,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 					color.m_a / 255.0f
 				};
 
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
 				if(ImGui::ColorEdit4(label.c_str(), fcolor))
 				{
 					pref.SetColorRaw(impl::Color(
@@ -223,8 +225,19 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 		case PreferenceType::Real:
 			{
 				float f = pref.GetReal();
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
 				if(ImGui::InputFloat(label.c_str(), &f))
 					pref.SetReal(f);
+			}
+			break;
+
+		//Int: show a text box
+		case PreferenceType::Int:
+			{
+				int i = pref.GetInt();
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+				if(ImGui::InputInt(label.c_str(), &i))
+					pref.SetReal(i);
 			}
 			break;
 
