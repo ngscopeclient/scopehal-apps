@@ -258,8 +258,6 @@ size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
 
 	while(true)
 	{
-		LogIndenter li;
-
 		//Stop if we've bracketed the target
 		if( (last_hi - last_lo) <= 1)
 			break;
