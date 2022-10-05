@@ -1572,8 +1572,9 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 				(sacap->m_offsets[nlast] == nlast) &&
 				(sacap->m_durations[nlast] == 1) )
 			{
-				//cap->m_densePacked = true;
-				LogWarning("sparsev1 waveform is actually uniform\n");
+				//Waveform was actually uniform, so convert it
+				cap = new UniformAnalogWaveform(*sacap);
+				chan->SetData(cap, stream);
 			}
 		}
 	}
