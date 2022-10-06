@@ -106,10 +106,11 @@ jobs:
         glscopeclient --help
 
     - name: List files
-      shell: msys2 
+      shell: msys2 {0}
       run: |
-        ls *
-        ls */*
+        cd .
+        ls ./*
+        ls ./*/*
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
