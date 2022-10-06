@@ -85,7 +85,7 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 // Construction / destruction
 
 TimebasePropertiesDialog::TimebasePropertiesDialog(Session* session)
-	: Dialog("Timebase properties", ImVec2(300, 400))
+	: Dialog("Timebase", ImVec2(300, 400))
 	, m_session(session)
 {
 	Refresh();
