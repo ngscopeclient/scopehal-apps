@@ -144,8 +144,9 @@ bool WaveformGroup::Render()
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin(m_title.c_str(), &open))
 	{
+		//tabbed out, don't draw anything until we're back in the foreground
 		ImGui::End();
-		return false;
+		return true;
 	}
 
 	auto pos = ImGui::GetCursorScreenPos();
