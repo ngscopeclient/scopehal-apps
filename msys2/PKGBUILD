@@ -40,6 +40,7 @@ build() {
   ${MINGW_PREFIX}/bin/cmake.exe \
     -G "Ninja" \
     -DCMAKE_BUILD_TYPE=Debug \
+    -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin"
     -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
     -DBUILD_TESTING=OFF \
     ../

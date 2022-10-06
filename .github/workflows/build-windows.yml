@@ -105,33 +105,26 @@ jobs:
         pacman -U --noconfirm msys2/*.zst
         glscopeclient --help
 
+    - name: List files
+      shell: msys2 
+      run: |
+        ls *
+        ls */*
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows
         path: msys2/*.zst
 
-    - name: Build MSI / portable zip
-      shell: msys2 {0}
-      run: |
-        mkdir build_msi
-        cd build_msi
-        cmake \
-          -G"Ninja" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTING=OFF \
-          -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
-          ../
-        cmake --build ./
-
     - name: Upload Artifacts (portable zip)
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows-portable
-        path: build_msi/dist/windows_x64
+        path: build/dist/windows_x64
 
     - name: Upload Artifacts (MSI)
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows.msi
-        path: build_msi/dist/*.msi
+        path: build/dist/*.msi
