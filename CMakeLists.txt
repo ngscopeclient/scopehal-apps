@@ -26,12 +26,6 @@ endif()
 set(CMAKE_CXX_FLAGS "-g ${WARNINGS} -mtune=native -ffast-math -fsigned-char")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-# clang doesn't properly use the attributes and so requires avx to build
-# should get fixed in #475
-if((NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
-endif()
-
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif(NOT CMAKE_BUILD_TYPE)
