@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
-	: Dialog(string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400))
+	: Dialog(chan->GetHwname(), ImVec2(300, 400))
 	, m_channel(chan)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
