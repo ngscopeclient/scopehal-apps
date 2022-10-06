@@ -68,8 +68,10 @@ bool Dialog::Render()
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
 	if(!ImGui::Begin(m_title.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
 	{
+		//If we get here, the window is tabbed out or the content area is otherwise not visible.
+		//Save time by not drawing anything, but don't close the window!
 		ImGui::End();
-		return false;
+		return true;
 	}
 
 	if(!DoRender())
