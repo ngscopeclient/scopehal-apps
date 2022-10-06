@@ -50,12 +50,12 @@ void PreferenceManager::InitializeDefaults()
 			/*cursors.AddPreference(
 				Preference::Color("cursor_fill_text_color", ColorFromString("#ffff00"))
 				.Label("Cursor fill text color")
-				.Description("Color for in-band power and other text drawn between cursors"));
+				.Description("Color for in-band power and other text drawn between cursors"));*/
 			cursors.AddPreference(
-				Preference::Font("label_font", "sans normal 10")
-				.Label("Cursor label font")
-				.Description("Font used for voltage measurements displayed next to cursors"));
-			cursors.AddPreference(
+				Preference::Font("label_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+				.Label("Label font")
+				.Description("Font used for cursor labels"));
+			/*cursors.AddPreference(
 				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));*/
@@ -167,12 +167,12 @@ void PreferenceManager::InitializeDefaults()
 				);
 			general.AddPreference(
 				Preference::Font("default_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
-					.Label("Default font")
-					.Description("Font used for most GUI elements"));
+				.Label("Default font")
+				.Description("Font used for most GUI elements"));
 			general.AddPreference(
 				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
-					.Label("Console font")
-					.Description("Font used for SCPI console and log viewer"));
+				.Label("Console font")
+				.Description("Font used for SCPI console and log viewer"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(

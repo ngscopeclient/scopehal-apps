@@ -152,6 +152,9 @@ protected:
 	///@brief List of waveform areas to close next frame
 	std::vector<size_t> m_areasToClose;
 
+	///@brief Height of the timeline
+	float m_timelineHeight;
+
 public:
 
 	///@brief Type of X axis cursor we're displaying

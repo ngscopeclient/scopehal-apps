@@ -51,6 +51,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_xAxisUnit(Unit::UNIT_FS)
 	, m_dragState(DRAG_STATE_NONE)
 	, m_tLastMouseMove(GetTime())
+	, m_timelineHeight(0)
 	, m_xAxisCursorMode(X_CURSOR_NONE)
 {
 	m_xAxisCursorPositions[0] = 0;
@@ -151,10 +152,11 @@ bool WaveformGroup::Render()
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
 
 	//Render the timeline
-	auto timelineHeight = 2.5 * ImGui::GetFontSize();
-	clientArea.y -= timelineHeight;
+	m_timelineHeight = 2.5 * ImGui::GetFontSize();
+	clientArea.y -= m_timelineHeight;
 	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
-	RenderTimeline(clientArea.x - yAxisWidthSpaced, timelineHeight);
+	float plotWidth = clientArea.x - yAxisWidthSpaced;
+	RenderTimeline(plotWidth, m_timelineHeight);
 
 	//Close any areas that we destroyed last frame
 	//Block until all background processing completes to ensure no command buffers are still pending
@@ -183,7 +185,7 @@ bool WaveformGroup::Render()
 		open = false;
 
 	//Render cursors over everything else
-	RenderXAxisCursors(pos, clientArea);
+	RenderXAxisCursors(pos, ImVec2(plotWidth, clientArea.y));
 
 	ImGui::End();
 	return open;
@@ -209,6 +211,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		auto cursor0_color = prefs.GetColor("Appearance.Cursors.cursor_1_color");
 		auto cursor1_color = prefs.GetColor("Appearance.Cursors.cursor_2_color");
 		auto fill_color = prefs.GetColor("Appearance.Cursors.cursor_fill_color");
+		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
 
 		float xpos0 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[0]));
 		float xpos1 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[1]));
@@ -220,9 +223,54 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		//First cursor
 		list->AddLine(ImVec2(xpos0, pos.y), ImVec2(xpos0, pos.y + size.y), cursor0_color, 1);
 
+		//Text
+		//Anchor bottom right at the cursor
+		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
+		auto tsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0.0, str.c_str());
+		float padding = 2;
+		float wrounding = 2;
+		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+		list->AddRectFilled(
+			ImVec2(xpos0 - (2*padding + tsize.x), textTop - padding ),
+			ImVec2(xpos0 - 1, pos.y + m_timelineHeight),
+			ImGui::GetColorU32(ImGuiCol_PopupBg),
+			wrounding);
+		list->AddText(
+			font,
+			font->FontSize,
+			ImVec2(xpos0 - (padding + tsize.x), textTop),
+			cursor0_color,
+			str.c_str());
+
 		//Second cursor
 		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		{
 			list->AddLine(ImVec2(xpos1, pos.y), ImVec2(xpos1, pos.y + size.y), cursor1_color, 1);
+
+			int64_t delta = m_xAxisCursorPositions[1] - m_xAxisCursorPositions[0];
+			str = string("X2: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[1]) + "\n" +
+				"ΔX = " + m_xAxisUnit.PrettyPrint(delta);
+
+			//If X axis is time domain, show frequency dual
+			Unit hz(Unit::UNIT_HZ);
+			if(m_xAxisUnit.GetType() == Unit::UNIT_FS)
+				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
+
+			//Text
+			tsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0.0, str.c_str());
+			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+			list->AddRectFilled(
+				ImVec2(xpos1 + 1, textTop - padding ),
+				ImVec2(xpos1 + (2*padding + tsize.x), pos.y + m_timelineHeight),
+				ImGui::GetColorU32(ImGuiCol_PopupBg),
+				wrounding);
+			list->AddText(
+				font,
+				font->FontSize,
+				ImVec2(xpos1 + padding, textTop),
+				cursor1_color,
+				str.c_str());
+		}
 
 		//TODO: text for value readouts, in-band power, etc
 	}
