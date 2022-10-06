@@ -1,0 +1,124 @@
+name: Build-macOS
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 5'
+  workflow_dispatch:
+
+jobs:
+
+  Tarball:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Make Source Tarball
+      run: |
+        cd ..
+        tar -cf source.tar scopehal-apps
+        gzip -S .gz -9 source.tar
+        mv source.tar.gz scopehal-apps/
+
+    - name: Upload Source
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-source
+        path: source.tar.gz
+
+  macOS:
+    runs-on: macos-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install Dependencies
+      run: |
+        brew update
+        brew install \
+          ninja \
+          libomp \
+          libsigc++@2 \
+          yaml-cpp \
+          gtkmm3 \
+          glew \
+          glfw
+
+    - name: Clone and Build FFTS Library
+      run: |
+        git clone https://github.com/anthonix/ffts.git /tmp/ffts
+        pushd /tmp/ffts
+        mkdir build
+        cd build
+        cmake \
+          -DENABLE_SHARED=ON \
+          ..
+        make -j4
+        sudo make install
+        popd
+
+    - name: Clone and Build Catch2 Library
+      run: |
+        git clone https://github.com/catchorg/Catch2 /tmp/catch2
+        pushd /tmp/catch2
+        git checkout v2.13.2
+        mkdir build
+        cd build
+        cmake ..
+        make -j 4
+        sudo make install
+        popd
+
+    - name: Install Vulkan SDK
+      uses: humbletim/install-vulkan-sdk@v1.1.1
+      with:
+        version: 1.3.224.1
+        cache: true
+
+    - name: Build
+      run: |
+        export PATH=$(brew --prefix llvm@14)/bin:$PATH
+        export CC=clang
+        export CXX=clang++
+        mkdir build
+        cd build
+        cmake \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_DOCS=OFF \
+          ..
+          ninja
+
+    - name: Run Tests
+      if: ${{ false }} # Temporary disable Run Tests
+      run: |
+        cd build
+        ninja test
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-macos
+        path: |
+          build/src/glscopeclient/glscopeclient
+          build/src/glscopeclient/gradients/*
+          build/src/glscopeclient/shaders/*
+          build/src/glscopeclient/styles/*
+          build/lib/graphwidget/libgraphwidget.dylib
+          build/lib/scopehal/libscopehal.dylib
+          build/lib/scopeprotocols/libscopeprotocols.dylib
+
+    - name: Upload Documentation
+      if: ${{ false }} # a LaTeX toolchain for macOS takes a while to install, so skip for now
+      uses: actions/upload-artifact@v2
+      with:
+        name: glscopeclient-manual
+        path: build/doc/glscopeclient-manual.pdf
