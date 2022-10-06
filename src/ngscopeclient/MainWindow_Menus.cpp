@@ -89,6 +89,7 @@ void MainWindow::MainMenu()
 		AddMenu();
 		SetupMenu();
 		WindowMenu();
+		DebugMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
 	}
@@ -731,6 +732,33 @@ void MainWindow::WindowSCPIConsoleMenu()
 				AddDialog(dlg);
 			}
 		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Debug menu
+ */
+void MainWindow::DebugMenu()
+{
+	if(ImGui::BeginMenu("Debug"))
+	{
+		bool showDemo = m_showDemo;
+		if(showDemo)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("ImGui Demo"))
+			m_showDemo = true;
+		if(showDemo)
+			ImGui::EndDisabled();
+
+		bool showPlot = m_showPlot;
+		if(showPlot)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("ImPlot Demo"))
+			m_showPlot = true;
+		if(showPlot)
+			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
 	}

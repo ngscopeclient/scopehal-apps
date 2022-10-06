@@ -144,6 +144,7 @@ protected:
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
 				void WindowSCPIConsoleMenu();
+			void DebugMenu();
 			void HelpMenu();
 		void Toolbar();
 			void LoadToolbarIcons();

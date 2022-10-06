@@ -69,7 +69,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 #else
 	: VulkanWindow("ngscopeclient", queue)
 #endif
-	, m_showDemo(true)
+	, m_showDemo(false)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
@@ -409,8 +409,10 @@ void MainWindow::RenderUI()
 		g_rerenderRequestedEvent.Signal();
 
 	//DEBUG: draw the demo windows
-	ImGui::ShowDemoWindow(&m_showDemo);
-	//ImPlot::ShowDemoWindow(&m_showPlot);
+	if(m_showDemo)
+		ImGui::ShowDemoWindow(&m_showDemo);
+	if(m_showPlot)
+		ImPlot::ShowDemoWindow(&m_showPlot);
 }
 
 void MainWindow::Toolbar()
