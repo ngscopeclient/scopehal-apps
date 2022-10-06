@@ -629,7 +629,9 @@ void WaveformArea::RasterizeAnalogWaveform(
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float alpha = 0.5;	//TODO: get from gui slider
+	//TODO: make this constant, then apply a second alpha pass in tone mapping?
+	//This will eliminate the need for a (potentially heavy) re-render when adjusting the slider.
+	float alpha = m_parent->GetTraceAlpha();
 	auto end = data->size() - 1;
 	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
 	float capture_len = lastOff;

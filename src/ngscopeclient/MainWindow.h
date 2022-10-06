@@ -110,6 +110,9 @@ public:
 	Session& GetSession()
 	{ return m_session; }
 
+	float GetTraceAlpha()
+	{ return m_traceAlpha; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -219,6 +222,9 @@ protected:
 
 	///@brief Cached toolbar icon size
 	int m_toolbarIconSize;
+
+	///@brief Trace alpha
+	float m_traceAlpha;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state

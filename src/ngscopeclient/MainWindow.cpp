@@ -73,6 +73,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
+	, m_traceAlpha(0.75)
 	, m_session(this)
 	, m_sessionClosing(false)
 	, m_texmgr(m_imguiDescriptorPool)
@@ -449,6 +450,15 @@ void MainWindow::Toolbar()
 
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(2);
+
+	//Slider for trace alpha
+	ImGui::SameLine();
+	float y = ImGui::GetCursorPosY();
+	ImGui::SetCursorPosY(y + 5);
+	ImGui::SetNextItemWidth(6 * toolbarHeight);
+	if(ImGui::SliderFloat("Intensity", &m_traceAlpha, 0, 0.75, "", ImGuiSliderFlags_Logarithmic))
+		SetNeedRender();
+	ImGui::SetCursorPosY(y);
 
 	ImGui::End();
 }
