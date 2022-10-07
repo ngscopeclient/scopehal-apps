@@ -42,9 +42,6 @@
 #include <type_traits>
 #include <cstdint>
 
-#include <giomm.h>
-#include <gtkmm.h>
-
 #include <imgui.h>
 
 #include "Unit.h"
