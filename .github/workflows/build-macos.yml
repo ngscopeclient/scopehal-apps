@@ -3,33 +3,9 @@ name: Build-macOS
 on:
   push:
   pull_request:
-  schedule:
-    - cron: '0 0 * * 5'
   workflow_dispatch:
 
 jobs:
-
-  Tarball:
-    runs-on: ubuntu-latest
-
-    steps:
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Make Source Tarball
-      run: |
-        cd ..
-        tar -cf source.tar scopehal-apps
-        gzip -S .gz -9 source.tar
-        mv source.tar.gz scopehal-apps/
-
-    - name: Upload Source
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-source
-        path: source.tar.gz
 
   macOS:
     runs-on: macos-latest
