@@ -80,6 +80,7 @@
 
 #include "PreferenceTypes.h"
 
+#include "../graphwidget/Graph.h"
 #include "OscilloscopeWindow.h"
 #include "ScopeApp.h"
 

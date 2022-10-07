@@ -95,6 +95,7 @@ target_link_libraries(glscopeclient
 	scopehal
 	scopeprotocols
 	scopeexports
+	graphwidget
 	${GTKMM_LIBRARIES}
 	${SIGCXX_LIBRARIES}
 	${OPENGL_LIBRARY}
