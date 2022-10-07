@@ -105,13 +105,6 @@ jobs:
         pacman -U --noconfirm msys2/*.zst
         glscopeclient --help
 
-    - name: List files
-      shell: msys2 {0}
-      run: |
-        cd .
-        ls ./*
-        ls ./*/*
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
