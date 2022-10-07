@@ -553,7 +553,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 					break;
 
 				double cellwidth = xe - xs;
-				auto color = data->GetColor(i);
+				auto color = Gdk::Color(data->GetColor(i));
 				if(cellwidth < 2)
 				{
 					//This sample is really skinny. There's no text to render so don't waste time with that.
@@ -571,7 +571,7 @@ void WaveformArea::RenderDecodeOverlays(Cairo::RefPtr< Cairo::Context > cr)
 						if(cellxs > xs+2)
 							break;
 
-						auto c = data->GetColor(j);
+						auto c = Gdk::Color(data->GetColor(j));
 						sum_red += c.get_red_p();
 						sum_green += c.get_green_p();
 						sum_blue += c.get_blue_p();

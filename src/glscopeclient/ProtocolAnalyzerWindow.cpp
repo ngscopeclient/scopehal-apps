@@ -664,8 +664,8 @@ void ProtocolAnalyzerWindow::FillOutRow(
 	stime += tmp;
 
 	//Create the row
-	row[m_columns.m_bgcolor] = p->m_displayBackgroundColor;
-	row[m_columns.m_fgcolor] = p->m_displayForegroundColor;
+	row[m_columns.m_bgcolor] = Gdk::Color(p->m_displayBackgroundColor);
+	row[m_columns.m_fgcolor] = Gdk::Color(p->m_displayForegroundColor);
 	row[m_columns.m_timestamp] = stime;
 	row[m_columns.m_capturekey] = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	row[m_columns.m_offset] = p->m_offset;

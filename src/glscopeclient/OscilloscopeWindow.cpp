@@ -663,37 +663,37 @@ void OscilloscopeWindow::SyncFilterColors()
 {
 	//Filter colors
 	StandardColors::colors[StandardColors::COLOR_DATA] =
-		m_preferences.GetColor("Appearance.Decodes.data_color");
+		m_preferences.GetColor("Appearance.Decodes.data_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_CONTROL] =
-		m_preferences.GetColor("Appearance.Decodes.control_color");
+		m_preferences.GetColor("Appearance.Decodes.control_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_ADDRESS] =
-		m_preferences.GetColor("Appearance.Decodes.address_color");
+		m_preferences.GetColor("Appearance.Decodes.address_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_PREAMBLE] =
-		m_preferences.GetColor("Appearance.Decodes.preamble_color");
+		m_preferences.GetColor("Appearance.Decodes.preamble_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_CHECKSUM_OK] =
-		m_preferences.GetColor("Appearance.Decodes.checksum_ok_color");
+		m_preferences.GetColor("Appearance.Decodes.checksum_ok_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_CHECKSUM_BAD] =
-		m_preferences.GetColor("Appearance.Decodes.checksum_bad_color");
+		m_preferences.GetColor("Appearance.Decodes.checksum_bad_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_ERROR] =
-		m_preferences.GetColor("Appearance.Decodes.error_color");
+		m_preferences.GetColor("Appearance.Decodes.error_color").to_string();
 	StandardColors::colors[StandardColors::COLOR_IDLE] =
-		m_preferences.GetColor("Appearance.Decodes.idle_color");
+		m_preferences.GetColor("Appearance.Decodes.idle_color").to_string();
 
 	//Protocol analyzer colors
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DEFAULT] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.default_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.default_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_ERROR] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.error_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.error_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_STATUS] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.status_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.status_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_CONTROL] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.control_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.control_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DATA_READ] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.data_read_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.data_read_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_DATA_WRITE] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.data_write_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.data_write_color").to_string();
 	PacketDecoder::m_backgroundColors[PacketDecoder::PROTO_COLOR_COMMAND] =
-		m_preferences.GetColor("Appearance.Protocol Analyzer.command_color");
+		m_preferences.GetColor("Appearance.Protocol Analyzer.command_color").to_string();
 }
 
 void OscilloscopeWindow::OnPreferenceDialogResponse(int response)
