@@ -44,9 +44,6 @@
 
 using namespace std;
 
-template size_t WaveformArea::BinarySearchForGequal<float>(float* buf, size_t len, float value);
-template size_t WaveformArea::BinarySearchForGequal<int64_t>(int64_t* buf, size_t len, int64_t value);
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
@@ -235,51 +232,6 @@ void WaveformArea::PrepareGeometry(WaveformRenderData* wdata, bool update_wavefo
 
 	//Done
 	wdata->m_geometryOK = true;
-}
-
-/**
-	@brief Look for a value greater than or equal to "value" in buf and return the index
- */
-template<class T>
-size_t WaveformArea::BinarySearchForGequal(T* buf, size_t len, T value)
-{
-	size_t pos = len/2;
-	size_t last_lo = 0;
-	size_t last_hi = len-1;
-
-	if (!len)
-		return 0;
-
-	//Clip if out of range
-	if(buf[0] >= value)
-		return 0;
-	if(buf[last_hi] < value)
-		return len-1;
-
-	while(true)
-	{
-		//Stop if we've bracketed the target
-		if( (last_hi - last_lo) <= 1)
-			break;
-
-		//Move down
-		if(buf[pos] > value)
-		{
-			size_t delta = pos - last_lo;
-			last_hi = pos;
-			pos = last_lo + delta/2;
-		}
-
-		//Move up
-		else
-		{
-			size_t delta = last_hi - pos;
-			last_lo = pos;
-			pos = last_hi - delta/2;
-		}
-	}
-
-	return last_lo;
 }
 
 void WaveformArea::ResetTextureFiltering()

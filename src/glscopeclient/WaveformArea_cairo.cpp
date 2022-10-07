@@ -871,12 +871,12 @@ void WaveformArea::RenderVerticalCursor(
 		return;
 
 	// Draw value label at the bottom
-	pair<bool, float> value = GetValueAtTime(pos);
+	optional<float> value = GetValueAtTime(m_channel.GetData(), pos, m_waveformRenderData->ZeroHoldCursorBehaviour());
 	string text;
-	if (!value.first) // isnan not working for some reason
+	if (!value.has_value())
 		text = "-"; // No value at this point
 	else
-		text = m_channel.GetYAxisUnits().PrettyPrint(value.second);
+		text = m_channel.GetYAxisUnits().PrettyPrint(value.value());
 
 	//Figure out text size
 	int twidth;
@@ -1002,67 +1002,6 @@ void WaveformArea::RenderHorizontalCursor(
 		tlayout->update_from_cairo_context(cr);
 		tlayout->show_in_cairo_context(cr);
 	cr->restore();
-}
-
-/**
-	@brief Gets the value of our channel at the specified timestamp (absolute, not waveform ticks)
- */
-pair<bool, float> WaveformArea::GetValueAtTime(int64_t time_fs)
-{
-	auto waveform = m_channel.GetData();
-	auto uwaveform = dynamic_cast<UniformAnalogWaveform*>(waveform);
-	auto swaveform = dynamic_cast<SparseAnalogWaveform*>(waveform);
-	if(!swaveform && !uwaveform)
-		return {false, 0};
-
-	//Make sure we have a current copy of the data
-	waveform->PrepareForCpuAccess();
-
-	if (!waveform->size())
-		return {false, 0};
-
-	double ticks = 1.0f * (time_fs - waveform->m_triggerPhase)  / waveform->m_timescale;
-
-	//Find the approximate index of the sample of interest and interpolate the cursor position
-	size_t end = waveform->size() - 1;
-	size_t index;
-	int64_t target = ceil(ticks);
-	if(swaveform)
-	{
-		index = BinarySearchForGequal(
-			swaveform->m_offsets.GetCpuPointer(),
-			waveform->size(),
-			target);
-	}
-	else
-		index = target;
-
-	//Clamp to bounds
-	if(index <= 0)
-		return {true, GetValue(swaveform, uwaveform, 0)};
-	if(index >= end)
-		return {true, GetValue(swaveform, uwaveform, end)};
-
-	// If waveform wants zero-hold rendering, do not interpolate cursor-displayed value
-	if (m_waveformRenderData->ZeroHoldCursorBehaviour())
-	{
-		if (swaveform)
-		{
-			if (GetOffsetScaled(swaveform, index) + GetDurationScaled(swaveform, index) < time_fs)
-			{
-				// Sample found with GE search does not extend to selected point
-				return {false, 0};
-			}
-		}
-		
-		return {true, GetValue(swaveform, uwaveform, index)};
-	}
-
-	//In bounds, interpolate
-	if(swaveform)
-		return {true, Filter::InterpolateValue(swaveform, index-1, ticks - swaveform->m_offsets[index-1])};
-	else
-		return {true, Filter::InterpolateValue(uwaveform, index-1, ticks - (index-1) )};
 }
 
 void WaveformArea::RenderCursors(Cairo::RefPtr< Cairo::Context > cr)

@@ -528,8 +528,6 @@ protected:
 	float XAxisUnitsToPixels(int64_t t);
 	float XAxisUnitsToXPosition(int64_t t);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
-	template<class T> static size_t BinarySearchForGequal(T* buf, size_t len, T value);
-	std::pair<bool, float> GetValueAtTime(int64_t time_fs);
 
 	float GetDPIScale()
 	{ return get_pango_context()->get_resolution() / 96; }
