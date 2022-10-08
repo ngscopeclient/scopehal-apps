@@ -49,8 +49,6 @@
 #include "FunctionGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "FileSystem.h"
-#include <unistd.h>
-#include <fcntl.h>
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/SpectrogramFilter.h"
 #include "../scopehal/LeCroyOscilloscope.h"
@@ -59,6 +57,7 @@
 #include <windows.h>
 #include <shlwapi.h>
 #else
+#include <fcntl.h>
 #include <sys/mman.h>
 #endif
 
