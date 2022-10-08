@@ -52,6 +52,7 @@
 #include "../scopehal/Multimeter.h"
 #include "../scopehal/OscilloscopeChannel.h"
 #include "../scopehal/Filter.h"
+#include "../scopeexports/scopeexports.h"
 
 #include <locale.h>
 
@@ -80,6 +81,7 @@
 
 #include "PreferenceTypes.h"
 
+#include "../graphwidget/Graph.h"
 #include "OscilloscopeWindow.h"
 #include "ScopeApp.h"
 

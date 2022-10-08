@@ -35,7 +35,6 @@
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
-#include "../scopeexports/scopeexports.h"
 
 using namespace std;
 
@@ -105,7 +104,6 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
-	ScopeExportStaticInit();
 	InitializePlugins();
 
 	//Initialize ImGui

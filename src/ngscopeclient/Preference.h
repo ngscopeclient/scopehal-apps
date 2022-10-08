@@ -41,9 +41,7 @@
 #include <utility>
 #include <type_traits>
 #include <cstdint>
-
-#include <giomm.h>
-#include <gtkmm.h>
+#include <set>
 
 #include <imgui.h>
 
