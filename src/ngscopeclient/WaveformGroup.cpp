@@ -249,7 +249,10 @@ void WaveformGroup::DoCursorReadouts()
 
 					//Channel name
 					ImGui::TableSetColumnIndex(0);
+					auto color = ColorFromString(stream.m_channel->m_displaycolor);
+					ImGui::PushStyleColor(ImGuiCol_Text, color);
 					ImGui::TextUnformatted(sname.c_str());
+					ImGui::PopStyleColor();
 
 					//Cursor 0 value
 					ImGui::TableSetColumnIndex(1);
