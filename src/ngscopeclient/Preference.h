@@ -41,6 +41,7 @@
 #include <utility>
 #include <type_traits>
 #include <cstdint>
+#include <set>
 
 #include <imgui.h>
 
