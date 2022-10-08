@@ -426,7 +426,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::BeginGroup();
 
 			for(size_t i=0; i<m_displayedChannels.size(); i++)
-				DraggableButton(m_displayedChannels[i], i);
+				ChannelButton(m_displayedChannels[i], i);
 
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
@@ -1398,10 +1398,14 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 	}
 }
 
-void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
+/**
+	@brief Handles a button for a channel
+ */
+void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
 	auto stream = chan->GetStream();
 	auto rchan = stream.m_channel;
+	auto data = stream.GetData();
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -1445,7 +1449,6 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 		tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + rchan->GetScope()->m_nickname + "\n\n";
 
 		//See if we have data
-		auto data = chan->GetStream().GetData();
 		if(data)
 		{
 			Unit samples(Unit::UNIT_SAMPLEDEPTH);
@@ -1475,6 +1478,80 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 		ImGui::TextUnformatted(tooltip.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
+	}
+
+	//Draw cursor text if we have any
+	if(m_group->m_xAxisCursorMode != WaveformGroup::X_CURSOR_NONE)
+	{
+		ImGui::SameLine();
+		auto pos = ImGui::GetCursorScreenPos();
+		auto list = ImGui::GetWindowDrawList();
+
+		string str;
+		if(data == nullptr)
+			str = "(no data)";
+		else
+		{
+			//need data CPU side to pull value
+			data->PrepareForCpuAccess();
+
+			bool zhold = (stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE) ? true : false;
+			auto v1 = GetValueAtTime(data, m_group->m_xAxisCursorPositions[0], zhold);
+			auto v2 = GetValueAtTime(data, m_group->m_xAxisCursorPositions[1], zhold);
+
+			//First cursor
+			str = string("V1: ");
+			if(stream.GetType() == Stream::STREAM_TYPE_ANALOG)
+			{
+				if(v1)
+					str += stream.GetYAxisUnits().PrettyPrint(v1.value());
+				else
+					str += "(no data)";
+			}
+			else
+				str += "(unimplemented)";
+
+			//Second cursor
+			if(m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)
+			{
+				str += " V2: ";
+				if(stream.GetType() == Stream::STREAM_TYPE_ANALOG)
+				{
+					bool zhold = (stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE) ? true : false;
+
+					if(v2)
+					{
+						str += stream.GetYAxisUnits().PrettyPrint(v2.value());
+
+						if(v1 && v2)
+						{
+							str += " Δ = ";
+							str += stream.GetYAxisUnits().PrettyPrint(v2.value() - v1.value());
+						}
+
+					}
+					else
+						str += "(no data)";
+				}
+				else
+					str += "(unimplemented)";
+			}
+		}
+
+		auto tsize = ImGui::CalcTextSize(str.c_str());
+
+		float padding = 2;
+		list->AddRectFilled(
+			pos,
+			ImVec2(pos.x + tsize.x + 2*padding, pos.y + tsize.y + 2*padding),
+			ImGui::GetColorU32(ImGuiCol_PopupBg));
+		list->AddText(
+			ImVec2(pos.x + padding, pos.y + padding),
+			color,
+			str.c_str());
+
+
+		ImGui::NewLine();
 	}
 }
 

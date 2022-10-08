@@ -257,7 +257,7 @@ public:
 	StreamDescriptor GetChannelBeingDragged();
 
 protected:
-	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
+	void ChannelButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
