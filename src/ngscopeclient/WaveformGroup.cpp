@@ -187,9 +187,102 @@ bool WaveformGroup::Render()
 
 	//Render cursors over everything else
 	RenderXAxisCursors(pos, ImVec2(plotWidth, clientArea.y));
+	if(m_xAxisCursorMode != X_CURSOR_NONE)
+		DoCursorReadouts();
 
 	ImGui::End();
 	return open;
+}
+
+/**
+	@brief Run the popup window with cursor values
+ */
+void WaveformGroup::DoCursorReadouts()
+{
+	bool hasSecondCursor = (m_xAxisCursorMode == X_CURSOR_DUAL);
+
+	string name = string("Cursors (") + m_title + ")";
+	float width = ImGui::GetFontSize();
+	ImGui::SetNextWindowSize(ImVec2(38*width, 15*width), ImGuiCond_Appearing);
+	if(ImGui::Begin(name.c_str(), nullptr, ImGuiWindowFlags_NoCollapse))
+	{
+		static ImGuiTableFlags flags =
+			ImGuiTableFlags_Resizable |
+			ImGuiTableFlags_BordersOuter |
+			ImGuiTableFlags_BordersV |
+			ImGuiTableFlags_ScrollY;
+
+		//Add columns for second cursor if enabled
+		int ncols = 2;
+		if(hasSecondCursor)
+			ncols += 2;
+
+		if(ImGui::BeginTable("cursors", ncols, flags))
+		{
+			//Header row
+			ImGui::TableSetupScrollFreeze(0, 1); 	//Header row does not scroll
+			ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 10*width);
+			ImGui::TableSetupColumn("Value 1", ImGuiTableColumnFlags_WidthFixed, 8*width);
+			if(hasSecondCursor)
+			{
+				ImGui::TableSetupColumn("Value 2", ImGuiTableColumnFlags_WidthFixed, 8*width);
+				ImGui::TableSetupColumn("Delta", ImGuiTableColumnFlags_WidthFixed, 8*width);
+			}
+			ImGui::TableHeadersRow();
+
+			//Readout for each channel in all of our waveform areas
+			for(auto a : m_areas)
+			{
+				for(size_t i=0; i<a->GetStreamCount(); i++)
+				{
+					auto stream = a->GetStream(i);
+					auto sname = stream.GetName();
+
+					//Fetch the values for each cursor
+					auto data = stream.GetData();
+					bool zhold = (stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE) ? true : false;
+					auto v1 = GetValueAtTime(data, m_xAxisCursorPositions[0], zhold);
+					auto v2 = GetValueAtTime(data, m_xAxisCursorPositions[1], zhold);
+
+					ImGui::PushID(sname.c_str());
+					ImGui::TableNextRow(ImGuiTableRowFlags_None, 0);
+
+					//Channel name
+					ImGui::TableSetColumnIndex(0);
+					ImGui::TextUnformatted(sname.c_str());
+
+					//Cursor 0 value
+					ImGui::TableSetColumnIndex(1);
+					if(!v1)
+						RightJustifiedText("(no data)");
+					else
+						RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v1.value()));
+
+					if(hasSecondCursor)
+					{
+						//Cursor 1 value
+						ImGui::TableSetColumnIndex(2);
+						if(!v2)
+							RightJustifiedText("(no data)");
+						else
+							RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v2.value()));
+
+						//Delta
+						ImGui::TableSetColumnIndex(3);
+						if(!v1 || !v2)
+							RightJustifiedText("(no data)");
+						else
+							RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v2.value() - v1.value()));
+					}
+
+					ImGui::PopID();
+				}
+			}
+
+			ImGui::EndTable();
+		}
+	}
+	ImGui::End();
 }
 
 /**

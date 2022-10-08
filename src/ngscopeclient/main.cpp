@@ -210,3 +210,14 @@ ImU32 ColorFromString(const string& str, unsigned int alpha)
 
 	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (alpha << IM_COL32_A_SHIFT);
 }
+
+/**
+	@brief Helper function for right justified text in a table
+ */
+void RightJustifiedText(const std::string& str)
+{
+	ImGui::SetCursorPosX(
+		ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(str.c_str()).x -
+		ImGui::GetScrollX() - 2*ImGui::GetStyle().ItemSpacing.x);
+	ImGui::TextUnformatted(str.c_str());
+}
