@@ -34,7 +34,15 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-toolchain
 
+    - name: Cache glslang
+      id: cache-glslang
+      uses: actions/cache@v3
+      with:
+        path: D:/a/_temp/msys64/home/runneradmin/glslang
+        key: ${{ runner.os }}-glslang-1.3.224.1
+
     - name: Build glslang tags/sdk-1.3.224.1
+      if: steps.cache-glslang.outputs.cache-hit != 'true'
       run: |
         # Windows mingw64 glslang build (as it is not fully integrated in VulkanSDK-1.3.224.1 for Windows and built with Visual Studio 2017)
         cd ~
