@@ -398,6 +398,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Blank out space for the actual waveform
 		ImGui::InvisibleButton("plot", ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
+
+		//Check for context menu if we didn't do one yet
 		PlotContextMenu();
 
 		//Draw actual waveforms (and protocol decode overlays)
@@ -1478,6 +1480,15 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		ImGui::TextUnformatted(tooltip.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
+	}
+
+	//Context menu
+	if(ImGui::BeginPopupContextItem())
+	{
+		if(ImGui::MenuItem("Delete"))
+			RemoveStream(index);
+
+		ImGui::EndPopup();
 	}
 }
 
