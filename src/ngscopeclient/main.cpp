@@ -130,17 +130,20 @@ int main(int argc, char* argv[])
 		g_mainWindow = make_unique<MainWindow>(queue);
 
 		//Main event loop
+		auto& session = g_mainWindow->GetSession();
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 		{
-			//poll and return immediately
-			glfwPollEvents();
-			//glfwWaitEventsTimeout(0.25);
+			//Check which event loop model to use
+			if(session.GetPreferences().GetEnumRaw("Power.Events.event_driven_ui") == 1)
+				glfwWaitEventsTimeout(session.GetPreferences().GetReal("Power.Events.polling_timeout") / FS_PER_SECOND);
+			else
+				glfwPollEvents();
 
 			//Draw the main window
 			g_mainWindow->Render();
 		}
 
-		g_mainWindow->GetSession().ClearBackgroundThreads();
+		session.ClearBackgroundThreads();
 		g_vkComputeDevice->waitIdle();
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
