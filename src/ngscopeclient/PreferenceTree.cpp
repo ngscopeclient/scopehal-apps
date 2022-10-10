@@ -137,6 +137,7 @@ namespace internal
 
 				const auto& color = this->m_pref.GetColorRaw();
 
+				//Save as int rather than uint8 because uint8 is often a character type
 				child["r"] = (int)color.m_r;
 				child["g"] = (int)color.m_g;
 				child["b"] = (int)color.m_b;
@@ -209,10 +210,11 @@ namespace internal
 
 					case PreferenceType::Color:
 					{
-						const auto n_r = n["r"].as<std::uint8_t>();
-						const auto n_g = n["g"].as<std::uint8_t>();
-						const auto n_b = n["b"].as<std::uint8_t>();
-						const auto n_a = n["a"].as<std::uint8_t>();
+						//Load as int rather than uint8 because uint8 is often a character type
+						const auto n_r = n["r"].as<int>();
+						const auto n_g = n["g"].as<int>();
+						const auto n_b = n["b"].as<int>();
+						const auto n_a = n["a"].as<int>();
 
 						this->m_pref.SetColorRaw(impl::Color(n_r, n_g, n_b, n_a));
 						break;

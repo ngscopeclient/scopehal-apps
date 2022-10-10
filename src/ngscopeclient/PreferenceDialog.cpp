@@ -224,10 +224,32 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 		//Real: show a text box
 		case PreferenceType::Real:
 			{
-				float f = pref.GetReal();
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
-				if(ImGui::InputFloat(label.c_str(), &f))
-					pref.SetReal(f);
+
+				//Units get special handling
+				if(pref.HasUnit())
+				{
+					//No value yet, format the value
+					auto id = pref.GetIdentifier();
+					auto unit = pref.GetUnit();
+					if(m_preferenceTemporaries.find(id) == m_preferenceTemporaries.end())
+						m_preferenceTemporaries[id] = unit.PrettyPrint(pref.GetReal());
+
+					//Input box
+					if(ImGui::InputText(label.c_str(), &m_preferenceTemporaries[id]))
+					{
+						pref.SetReal(unit.ParseString(m_preferenceTemporaries[id]));
+						m_preferenceTemporaries[id] = unit.PrettyPrint(pref.GetReal());
+					}
+				}
+
+				//Raw numeric input
+				else
+				{
+					float f = pref.GetReal();
+					if(ImGui::InputFloat(label.c_str(), &f))
+						pref.SetReal(f);
+				}
 			}
 			break;
 

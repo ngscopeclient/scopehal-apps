@@ -343,7 +343,7 @@ void PreferenceManager::InitializeDefaults()
 			events.AddPreference(
 				Preference::Real("polling_timeout", FS_PER_SECOND / 4)
 				.Label("Polling timeout")
-				.Unit(Unit::UNIT_HZ)
+				.Unit(Unit::UNIT_FS)
 				.Description(
 					"Polling timeout for event loop in power-optimized mode.\n\n"
 					"Longer timeout values reduce power consumption, but also slows display updates.\n")
