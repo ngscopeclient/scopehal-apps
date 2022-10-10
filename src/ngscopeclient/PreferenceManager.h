@@ -52,6 +52,11 @@ public:
         LoadPreferences();
     }
 
+	~PreferenceManager()
+	{
+		SavePreferences();
+	}
+
 public:
     // Disallow copy
     PreferenceManager(const PreferenceManager&) = delete;
