@@ -137,10 +137,10 @@ namespace internal
 
 				const auto& color = this->m_pref.GetColorRaw();
 
-				child["r"] = color.m_r;
-				child["g"] = color.m_g;
-				child["b"] = color.m_b;
-				child["a"] = color.m_a;
+				child["r"] = (int)color.m_r;
+				child["g"] = (int)color.m_g;
+				child["b"] = (int)color.m_b;
+				child["a"] = (int)color.m_a;
 
 				node[this->m_identifier] = child;
 				break;
