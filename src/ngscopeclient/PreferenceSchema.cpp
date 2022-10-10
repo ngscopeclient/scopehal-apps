@@ -321,6 +321,35 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Recent instrument count")
 				.Description("Number of recently used instruments to display"));
 
+	auto& pwr = this->m_treeRoot.AddCategory("Power");
+		auto& events = pwr.AddCategory("Events");
+			events.AddPreference(
+				Preference::Enum("event_driven_ui", 0)
+					.Label("Event loop mode")
+					.Description(
+						"Specify how the main event loop should operate.\n"
+						"\n"
+						"In Performance mode, the event loop runs at a constant speed locked to the display\n"
+						"refresh rate. This results in the smoothest GUI and maximum waveform update, but the\n"
+						"constant redraws increase power consumption.\n"
+						"\n"
+						"In Power mode, the event loop blocks until a GUI event (keystroke, mouse movement, etc.)\n"
+						"occurs, or a user-specified timeout elapses. This results in more jerky display updates\n"
+						"but keeps the CPU idle most of the time, saving power."
+						)
+					.EnumValue("Performance", 0)
+					.EnumValue("Power", 1)
+				);
+			events.AddPreference(
+				Preference::Real("polling_timeout", FS_PER_SECOND / 4)
+				.Label("Polling timeout")
+				.Unit(Unit::UNIT_HZ)
+				.Description(
+					"Polling timeout for event loop in power-optimized mode.\n\n"
+					"Longer timeout values reduce power consumption, but also slows display updates.\n")
+				);
+
+
 	/*
 	auto& privacy = this->m_treeRoot.AddCategory("Privacy");
 		 privacy.AddPreference(
