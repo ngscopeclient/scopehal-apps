@@ -39,26 +39,13 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
+// TimePoint
 
-HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session)
-	: Dialog("History", ImVec2(425, 350))
-	, m_mgr(mgr)
-	, m_session(session)
-	, m_rowHeight(0)
-	, m_selectionChanged(false)
+string TimePoint::PrettyPrint()
 {
-}
+	auto base = GetSec();
+	auto offset = GetFs();
 
-HistoryDialog::~HistoryDialog()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
-
-string HistoryDialog::FormatTimestamp(time_t base, int64_t offset)
-{
 	//If offset is >1 sec, shift the timestamp
 	if(offset > FS_PER_SECOND)
 	{
@@ -83,6 +70,25 @@ string HistoryDialog::FormatTimestamp(time_t base, int64_t offset)
 	stime += tmp;
 	return stime;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session)
+	: Dialog("History", ImVec2(425, 350))
+	, m_mgr(mgr)
+	, m_session(session)
+	, m_rowHeight(0)
+	, m_selectionChanged(false)
+{
+}
+
+HistoryDialog::~HistoryDialog()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
 /**
 	@brief Renders the dialog and handles UI events
@@ -125,10 +131,10 @@ bool HistoryDialog::DoRender()
 			//Timestamp (and row selection logic)
 			bool rowIsSelected = (m_selectedPoint == point);
 			ImGui::TableSetColumnIndex(0);
-			auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+			auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen);
 			ImGui::SameLine();
 			if(ImGui::Selectable(
-				FormatTimestamp(point->m_timestamp, point->m_fs).c_str(),
+				point->m_time.PrettyPrint().c_str(),
 				rowIsSelected,
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 				ImVec2(0, m_rowHeight)))
@@ -186,7 +192,7 @@ bool HistoryDialog::DoRender()
 			//Child nodes for markers
 			if(open)
 			{
-				auto& markers = m_session.GetMarkers(TimePoint(point->m_timestamp, point->m_fs));
+				auto& markers = m_session.GetMarkers(point->m_time);
 
 				for(size_t i=0; i<markers.size(); i++)
 				{
@@ -197,13 +203,14 @@ bool HistoryDialog::DoRender()
 
 					//Timestamp
 					ImGui::TableSetColumnIndex(0);
+					ImGui::TextUnformatted(m.GetMarkerTime().PrettyPrint().c_str());
 
 					//Nothing in pin box
 					ImGui::TableSetColumnIndex(1);
 
 					//Nickname box
 					ImGui::TableSetColumnIndex(2);
-					ImGui::TextUnformatted(m.m_name.c_str());
+					ImGui::InputText("###nick", &m.m_name);
 
 					ImGui::PopID();
 				}

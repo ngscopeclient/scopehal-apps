@@ -63,8 +63,6 @@ protected:
 	HistoryManager& m_mgr;
 	Session& m_session;
 
-	std::string FormatTimestamp(time_t base, int64_t offset);
-
 	///@brief Height of a row in the dialog
 	float m_rowHeight;
 

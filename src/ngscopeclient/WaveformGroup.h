@@ -114,6 +114,7 @@ public:
 protected:
 	void RenderTimeline(float width, float height);
 	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
+	void RenderMarkers(ImVec2 pos, ImVec2 size);
 	void DoCursorReadouts();
 
 	enum DragState

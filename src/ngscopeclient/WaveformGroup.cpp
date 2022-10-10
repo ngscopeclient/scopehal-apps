@@ -186,9 +186,11 @@ bool WaveformGroup::Render()
 		open = false;
 
 	//Render cursors over everything else
-	RenderXAxisCursors(pos, ImVec2(plotWidth, clientArea.y));
+	ImVec2 plotSize(plotWidth, clientArea.y);
+	RenderXAxisCursors(pos, plotSize);
 	if(m_xAxisCursorMode != X_CURSOR_NONE)
 		DoCursorReadouts();
+	RenderMarkers(pos, plotSize);
 
 	ImGui::End();
 	return open;
@@ -286,6 +288,93 @@ void WaveformGroup::DoCursorReadouts()
 		}
 	}
 	ImGui::End();
+}
+
+/**
+	@brief Render our markers
+ */
+void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
+{
+	//Create a child window for all of our drawing
+	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
+	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+	if(ImGui::BeginChild("markers", size, false, ImGuiWindowFlags_NoInputs))
+	{
+		auto list = ImGui::GetWindowDrawList();
+
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto color = prefs.GetColor("Appearance.Cursors.marker_color");
+		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
+
+		auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
+
+		//Draw the markers
+		for(auto& m : markers)
+		{
+			//Lines
+			float xpos = round(XAxisUnitsToXPosition(m.m_offset));
+			list->AddLine(ImVec2(xpos, pos.y), ImVec2(xpos, pos.y + size.y), color);
+
+			//Text
+			//Anchor bottom right at the cursor
+			auto str = m.m_name + ": " + m_xAxisUnit.PrettyPrint(m.m_offset);
+			auto tsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0.0, str.c_str());
+			float padding = 2;
+			float wrounding = 2;
+			float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+			list->AddRectFilled(
+				ImVec2(xpos - (2*padding + tsize.x), textTop - padding ),
+				ImVec2(xpos - 1, pos.y + m_timelineHeight),
+				ImGui::GetColorU32(ImGuiCol_PopupBg),
+				wrounding);
+			list->AddText(
+				font,
+				font->FontSize,
+				ImVec2(xpos - (padding + tsize.x), textTop),
+				color,
+				str.c_str());
+		}
+	}
+	ImGui::EndChild();
+
+	/*
+	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+	//So we have to do all of our interaction processing inside the top level window
+	DoCursor(0, DRAG_STATE_X_CURSOR0);
+	if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		DoCursor(1, DRAG_STATE_X_CURSOR1);
+
+	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
+	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		(m_dragState == DRAG_STATE_NONE) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		{
+			m_dragState = DRAG_STATE_X_CURSOR1;
+			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+		}
+		else
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+
+	//Cursor 0 should always be left of cursor 1 (if both are enabled).
+	//If they get swapped, exchange them.
+	if( (m_xAxisCursorPositions[0] > m_xAxisCursorPositions[1]) && (m_xAxisCursorMode == X_CURSOR_DUAL) )
+	{
+		//Swap the cursors themselves
+		int64_t tmp = m_xAxisCursorPositions[0];
+		m_xAxisCursorPositions[0] = m_xAxisCursorPositions[1];
+		m_xAxisCursorPositions[1] = tmp;
+
+		//If dragging one cursor, switch to dragging the other
+		if(m_dragState == DRAG_STATE_X_CURSOR0)
+			m_dragState = DRAG_STATE_X_CURSOR1;
+		else if(m_dragState == DRAG_STATE_X_CURSOR1)
+			m_dragState = DRAG_STATE_X_CURSOR0;
+	}
+	*/
 }
 
 /**

@@ -55,10 +55,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Font("label_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
 				.Label("Label font")
 				.Description("Font used for cursor labels"));
-			/*cursors.AddPreference(
+			cursors.AddPreference(
 				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
-				.Description("Color for markers"));*/
+				.Description("Color for markers"));
 
 		/*auto& decodes = appearance.AddCategory("Decodes");
 			decodes.AddPreference(

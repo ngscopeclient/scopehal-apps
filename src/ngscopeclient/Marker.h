@@ -56,6 +56,8 @@ public:
 
 	void SetFs(int64_t fs)
 	{ second = fs; }
+
+	std::string PrettyPrint();
 };
 
 /**
@@ -78,6 +80,12 @@ public:
 
 	///@brief Position of the marker within the parent waveform (X axis units)
 	int64_t m_offset;
+
+	/**
+		@brief Helper to get the absolute timestamp of the marker
+	 */
+	TimePoint GetMarkerTime()
+	{ return TimePoint(m_timestamp.first, m_timestamp.second + m_offset); }
 
 	///@brief Display name of the marker
 	std::string m_name;
