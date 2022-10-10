@@ -44,7 +44,7 @@
 class HistoryDialog : public Dialog
 {
 public:
-	HistoryDialog(HistoryManager& mgr);
+	HistoryDialog(HistoryManager& mgr, Session& session);
 	virtual ~HistoryDialog();
 
 	virtual bool DoRender();
@@ -61,6 +61,7 @@ public:
 
 protected:
 	HistoryManager& m_mgr;
+	Session& m_session;
 
 	std::string FormatTimestamp(time_t base, int64_t offset);
 

@@ -40,6 +40,7 @@ class WaveformGroup;
 class MainWindow;
 
 #include "TextureManager.h"
+#include "Marker.h"
 
 class ToneMapArgs
 {
@@ -256,6 +257,8 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	TimePoint GetWaveformTimestamp();
+
 protected:
 	void ChannelButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
@@ -355,6 +358,9 @@ protected:
 
 	///@brief Channels we're in the process of removing
 	std::vector<std::shared_ptr<DisplayedChannel> > m_channelsToRemove;
+
+	///@brief X axis position of the mouse at the most recent right click
+	int64_t m_lastRightClickOffset;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

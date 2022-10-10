@@ -63,6 +63,7 @@ Session::Session(MainWindow* wnd)
 	, m_triggerOneShot(false)
 	, m_multiScopeFreeRun(false)
 	, m_lastFilterGraphExecTime(0)
+	, m_nextMarkerNum(1)
 {
 }
 

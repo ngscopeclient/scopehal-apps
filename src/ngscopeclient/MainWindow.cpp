@@ -520,7 +520,7 @@ void MainWindow::ToolbarButtons()
 		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
 	{
-		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session);
 		AddDialog(m_historyDialog);
 	}
 	if(hasHist)

@@ -134,6 +134,7 @@ int main(int argc, char* argv[])
 		{
 			//poll and return immediately
 			glfwPollEvents();
+			//glfwWaitEventsTimeout(0.25);
 
 			//Draw the main window
 			g_mainWindow->Render();

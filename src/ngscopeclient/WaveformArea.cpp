@@ -182,6 +182,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_mouseOverTriggerArrow(false)
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
+	, m_lastRightClickOffset(0)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -346,6 +347,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		m_channelsToRemove.clear();
 	}
 
+	//Save timestamps if we right clicked
+	if(ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		m_lastRightClickOffset = m_group->XPositionToXAxisUnits(ImGui::GetMousePos().x);
+
 	//Detect mouse movement
 	double tnow = GetTime();
 	auto mouseDelta = ImGui::GetIO().MouseDelta;
@@ -455,6 +460,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
  */
 void WaveformArea::PlotContextMenu()
 {
+	//TODO: if we right clicked on or very close to a marker, show "delete" menu instead
+
+	//Otherwise, normal GUI context menu
 	if(ImGui::BeginPopupContextItem())
 	{
 		if(ImGui::BeginMenu("Cursors"))
@@ -477,6 +485,12 @@ void WaveformArea::PlotContextMenu()
 			}
 
 			ImGui::EndMenu();
+		}
+
+		if(ImGui::MenuItem("Add Marker"))
+		{
+			auto& session = m_parent->GetSession();
+			session.AddMarker(Marker(GetWaveformTimestamp(), m_lastRightClickOffset, session.GetNextMarkerName()));
 		}
 
 		ImGui::EndPopup();
@@ -1590,4 +1604,19 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 
 	ClearPersistence();
 	m_parent->SetNeedRender();
+}
+
+/**
+	@brief Gets the timestamp of our current waveform (if we have one)
+ */
+TimePoint WaveformArea::GetWaveformTimestamp()
+{
+	for(auto d : m_displayedChannels)
+	{
+		auto data = d->GetStream().GetData();
+		if(data != nullptr)
+			return TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
+	}
+
+	return TimePoint(0, 0);
 }

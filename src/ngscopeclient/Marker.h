@@ -30,151 +30,57 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of WaveformGroup
+	@brief Declaration of Marker
  */
-#ifndef WaveformGroup_h
-#define WaveformGroup_h
-
-#include "WaveformArea.h"
+#ifndef Marker_h
+#define Marker_h
 
 /**
-	@brief A WaveformGroup is a container for one or more WaveformArea's.
+	@brief A timestamp, measured in seconds + femtoseconds
  */
-class WaveformGroup
+class TimePoint : public std::pair<time_t, int64_t>
 {
 public:
-	WaveformGroup(MainWindow* parent, const std::string& title);
-	virtual ~WaveformGroup();
+	TimePoint(time_t sec, int64_t fs)
+	: std::pair<time_t, int64_t>(sec, fs)
+	{}
 
-	void Clear();
+	time_t GetSec() const
+	{ return first; }
 
-	bool Render();
-	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
-	void ReferenceWaveformTextures();
+	int64_t GetFs() const
+	{ return second; }
 
-	void RenderWaveformTextures(
-		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+	void SetSec(time_t sec)
+	{ first = sec; }
 
-	const std::string& GetTitle()
-	{ return m_title; }
+	void SetFs(int64_t fs)
+	{ second = fs; }
+};
 
-	void AddArea(std::shared_ptr<WaveformArea>& area);
+/**
+	@brief Data for a marker
 
-	void OnZoomInHorizontal(int64_t target, float step);
-	void OnZoomOutHorizontal(int64_t target, float step);
-
-	/**
-		@brief Gets the X axis unit for this group
-	 */
-	Unit GetXAxisUnit()
-	{ return m_xAxisUnit; }
-
-	/**
-		@brief Converts a position in pixels (relative to left side of plot) to X axis units (relative to time zero)
-	 */
-	int64_t XPositionToXAxisUnits(float pix)
-	{ return m_xAxisOffset + PixelsToXAxisUnits(pix - m_xpos); }
-
-	/**
-		@brief Converts a distance measurement in pixels to X axis units
-	 */
-	int64_t PixelsToXAxisUnits(float pix)
-	{ return pix / m_pixelsPerXUnit; }
-
-	/**
-		@brief Converts a distance measurement in X axis units to pixels
-	 */
-	float XAxisUnitsToPixels(int64_t t)
-	{ return t * m_pixelsPerXUnit; }
-
-	/**
-		@brief Converts a position in X axis units to pixels (in window coordinates)
-	 */
-	float XAxisUnitsToXPosition(int64_t t)
-	{ return XAxisUnitsToPixels(t - m_xAxisOffset) + m_xpos; }
-
-	float GetPixelsPerXUnit()
-	{ return m_pixelsPerXUnit; }
-
-	int64_t GetXAxisOffset()
-	{ return m_xAxisOffset; }
-
-	void ClearPersistence();
-
-	bool IsChannelBeingDragged();
-	StreamDescriptor GetChannelBeingDragged();
-
-	float GetYAxisWidth()
-	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
-
-	float GetSpacing()
-	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
-
-protected:
-	void RenderTimeline(float width, float height);
-	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
-	void DoCursorReadouts();
-
-	enum DragState
-	{
-		DRAG_STATE_NONE,
-		DRAG_STATE_TIMELINE,
-		DRAG_STATE_X_CURSOR0,
-		DRAG_STATE_X_CURSOR1
-	};
-
-	void DoCursor(int iCursor, DragState state);
-
-	int64_t GetRoundingDivisor(int64_t width_xunits);
-	void OnMouseWheel(float delta);
-
-	///@brief Top level window we're attached to
-	MainWindow* m_parent;
-
-	///@brief X position of our child windows
-	float m_xpos;
-
-	///@brief Display scale factor
-	float m_pixelsPerXUnit;
-
-	///@brief X axis position of the left edge of our view
-	int64_t m_xAxisOffset;
-
-	///@brief Display title of the group
-	std::string m_title;
-
-	///@brief X axis unit
-	Unit m_xAxisUnit;
-
-	///@brief The set of waveform areas within this group
-	std::vector< std::shared_ptr<WaveformArea> > m_areas;
-
-	///@brief Description of item being dragged, if any
-	DragState m_dragState;
-
-	///@brief Time of last mouse movement
-	double m_tLastMouseMove;
-
-	///@brief List of waveform areas to close next frame
-	std::vector<size_t> m_areasToClose;
-
-	///@brief Height of the timeline
-	float m_timelineHeight;
-
+	A marker is similar to a cursor, but is persistent and attached to a point in absolute time (a specific location
+	within a specific acquisition). Markers, unlike cursors, can be named.
+ */
+class Marker
+{
 public:
+	Marker(TimePoint t, int64_t o, const std::string& n)
+	: m_timestamp(t)
+	, m_offset(o)
+	, m_name(n)
+	{}
 
-	///@brief Type of X axis cursor we're displaying
-	enum CursorMode_t
-	{
-		X_CURSOR_NONE,
-		X_CURSOR_SINGLE,
-		X_CURSOR_DUAL
-	} m_xAxisCursorMode;
+	///@brief Timestamp of the parent waveform (UTC)
+	TimePoint m_timestamp;
 
-	///@brief Position (in X axis units) of each cursor
-	int64_t m_xAxisCursorPositions[2];
+	///@brief Position of the marker within the parent waveform (X axis units)
+	int64_t m_offset;
+
+	///@brief Display name of the marker
+	std::string m_name;
 };
 
 #endif
-

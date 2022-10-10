@@ -41,9 +41,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-HistoryDialog::HistoryDialog(HistoryManager& mgr)
-	: Dialog("History", ImVec2(400, 350))
+HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session)
+	: Dialog("History", ImVec2(425, 350))
 	, m_mgr(mgr)
+	, m_session(session)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
 {
@@ -107,7 +108,7 @@ bool HistoryDialog::DoRender()
 	if(ImGui::BeginTable("history", 3, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 10*width);
+		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
 		ImGui::TableSetupColumn("Pin", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableSetupColumn("Label");
 		ImGui::TableHeadersRow();
@@ -124,6 +125,8 @@ bool HistoryDialog::DoRender()
 			//Timestamp (and row selection logic)
 			bool rowIsSelected = (m_selectedPoint == point);
 			ImGui::TableSetColumnIndex(0);
+			auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+			ImGui::SameLine();
 			if(ImGui::Selectable(
 				FormatTimestamp(point->m_timestamp, point->m_fs).c_str(),
 				rowIsSelected,
@@ -174,10 +177,39 @@ bool HistoryDialog::DoRender()
 			{
 				if(m_selectionChanged)
 					ImGui::SetKeyboardFocusHere();
+				ImGui::SetNextItemWidth(ImGui::GetColumnWidth() - 4);
 				ImGui::InputText("###nick", &point->m_nickname);
 			}
 			else
 				ImGui::TextUnformatted(point->m_nickname.c_str());
+
+			//Child nodes for markers
+			if(open)
+			{
+				auto& markers = m_session.GetMarkers(TimePoint(point->m_timestamp, point->m_fs));
+
+				for(size_t i=0; i<markers.size(); i++)
+				{
+					auto& m = markers[i];
+
+					ImGui::PushID(i);
+					ImGui::TableNextRow();
+
+					//Timestamp
+					ImGui::TableSetColumnIndex(0);
+
+					//Nothing in pin box
+					ImGui::TableSetColumnIndex(1);
+
+					//Nickname box
+					ImGui::TableSetColumnIndex(2);
+					ImGui::TextUnformatted(m.m_name.c_str());
+
+					ImGui::PopID();
+				}
+
+				ImGui::TreePop();
+			}
 
 			ImGui::PopID();
 		}
