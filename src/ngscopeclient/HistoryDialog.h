@@ -71,6 +71,9 @@ protected:
 
 	///@brief The currently selected point of history
 	std::shared_ptr<HistoryPoint> m_selectedPoint;
+
+	///@brief The currently selected marker
+	Marker* m_selectedMarker;
 };
 
 #endif

@@ -490,8 +490,6 @@ void WaveformArea::PlotContextMenu()
 		if(ImGui::MenuItem("Add Marker"))
 		{
 			auto& session = m_parent->GetSession();
-			auto stamp = GetWaveformTimestamp();
-			LogDebug("stamp = %s\n", stamp.PrettyPrint().c_str());
 			session.AddMarker(Marker(GetWaveformTimestamp(), m_lastRightClickOffset, session.GetNextMarkerName()));
 		}
 

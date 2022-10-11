@@ -80,6 +80,7 @@ HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session)
 	, m_session(session)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
+	, m_selectedMarker(nullptr)
 {
 }
 
@@ -135,13 +136,14 @@ bool HistoryDialog::DoRender()
 			ImGui::SameLine();
 			if(ImGui::Selectable(
 				point->m_time.PrettyPrint().c_str(),
-				rowIsSelected,
+				rowIsSelected && !m_selectedMarker,
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 				ImVec2(0, m_rowHeight)))
 			{
 				m_selectedPoint = point;
 				rowIsSelected = true;
 				m_selectionChanged = true;
+				m_selectedMarker = nullptr;
 			}
 
 			if(ImGui::BeginPopupContextItem())
@@ -202,8 +204,28 @@ bool HistoryDialog::DoRender()
 					ImGui::TableNextRow();
 
 					//Timestamp
+					bool markerIsSelected = (m_selectedMarker == &m);
 					ImGui::TableSetColumnIndex(0);
-					ImGui::TextUnformatted(m.GetMarkerTime().PrettyPrint().c_str());
+					if(ImGui::Selectable(
+						m.GetMarkerTime().PrettyPrint().c_str(),
+						markerIsSelected,
+						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+						ImVec2(0, m_rowHeight)))
+					{
+						//Select the marker
+						m_selectedMarker = &m;
+						markerIsSelected = true;
+
+						//Navigate to the selected waveform
+						if(!rowIsSelected)
+						{
+							rowIsSelected = true;
+							m_selectedPoint = point;
+							m_selectionChanged = true;
+						}
+
+						//TODO: navigate to the selected marker
+					}
 
 					//Nothing in pin box
 					ImGui::TableSetColumnIndex(1);
