@@ -50,6 +50,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_title(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
 	, m_dragState(DRAG_STATE_NONE)
+	, m_dragMarker(nullptr)
 	, m_tLastMouseMove(GetTime())
 	, m_timelineHeight(0)
 	, m_xAxisCursorMode(X_CURSOR_NONE)
@@ -295,6 +296,8 @@ void WaveformGroup::DoCursorReadouts()
  */
 void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 {
+	auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
+
 	//Create a child window for all of our drawing
 	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
 	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
@@ -305,8 +308,6 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 		auto& prefs = m_parent->GetSession().GetPreferences();
 		auto color = prefs.GetColor("Appearance.Cursors.marker_color");
 		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
-
-		auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
 
 		//Draw the markers
 		for(auto& m : markers)
@@ -337,44 +338,39 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	}
 	ImGui::EndChild();
 
-	/*
-	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
-	//So we have to do all of our interaction processing inside the top level window
-	DoCursor(0, DRAG_STATE_X_CURSOR0);
-	if(m_xAxisCursorMode == X_CURSOR_DUAL)
-		DoCursor(1, DRAG_STATE_X_CURSOR1);
-
-	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
-	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
-		(m_dragState == DRAG_STATE_NONE) &&
-		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	auto mouse = ImGui::GetMousePos();
+	for(auto& m : markers)
 	{
-		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
-		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+		//So we have to do all of our interaction processing inside the top level window
+		//TODO: this is basically DoCursor(), can we de-duplicate this code?
+		float xpos = round(XAxisUnitsToXPosition(m.m_offset));
+		float searchRadius = 0.25 * ImGui::GetFontSize();
+
+		//Check if the mouse hit us
+		if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
 		{
-			m_dragState = DRAG_STATE_X_CURSOR1;
-			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+			if( fabs(mouse.x - xpos) < searchRadius)
+			{
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+				//Start dragging if clicked
+				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					m_dragState = DRAG_STATE_MARKER;
+					m_dragMarker = &m;
+				}
+			}
 		}
-		else
-			m_dragState = DRAG_STATE_X_CURSOR0;
 	}
 
-	//Cursor 0 should always be left of cursor 1 (if both are enabled).
-	//If they get swapped, exchange them.
-	if( (m_xAxisCursorPositions[0] > m_xAxisCursorPositions[1]) && (m_xAxisCursorMode == X_CURSOR_DUAL) )
+	//If dragging, move the cursor to track
+	if(m_dragState == DRAG_STATE_MARKER)
 	{
-		//Swap the cursors themselves
-		int64_t tmp = m_xAxisCursorPositions[0];
-		m_xAxisCursorPositions[0] = m_xAxisCursorPositions[1];
-		m_xAxisCursorPositions[1] = tmp;
-
-		//If dragging one cursor, switch to dragging the other
-		if(m_dragState == DRAG_STATE_X_CURSOR0)
-			m_dragState = DRAG_STATE_X_CURSOR1;
-		else if(m_dragState == DRAG_STATE_X_CURSOR1)
-			m_dragState = DRAG_STATE_X_CURSOR0;
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_NONE;
+		m_dragMarker->m_offset = XPositionToXAxisUnits(mouse.x);
 	}
-	*/
 }
 
 /**

@@ -122,7 +122,8 @@ protected:
 		DRAG_STATE_NONE,
 		DRAG_STATE_TIMELINE,
 		DRAG_STATE_X_CURSOR0,
-		DRAG_STATE_X_CURSOR1
+		DRAG_STATE_X_CURSOR1,
+		DRAG_STATE_MARKER
 	};
 
 	void DoCursor(int iCursor, DragState state);
@@ -153,6 +154,9 @@ protected:
 
 	///@brief Description of item being dragged, if any
 	DragState m_dragState;
+
+	///@brief Marker being dragged, if any
+	Marker* m_dragMarker;
 
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
