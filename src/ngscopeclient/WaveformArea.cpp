@@ -460,37 +460,63 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
  */
 void WaveformArea::PlotContextMenu()
 {
-	//TODO: if we right clicked on or very close to a marker, show "delete" menu instead
-
-	//Otherwise, normal GUI context menu
 	if(ImGui::BeginPopupContextItem())
 	{
-		if(ImGui::BeginMenu("Cursors"))
+		//Look for markers that might be near our right click location
+		float lastRightClickPos = m_group->XAxisUnitsToXPosition(m_lastRightClickOffset);
+		auto& markers = m_parent->GetSession().GetMarkers(GetWaveformTimestamp());
+		bool hitMarker = false;
+		size_t selectedMarker = 0;
+		for(size_t i=0; i<markers.size(); i++)
 		{
-			if(ImGui::BeginMenu("X axis"))
+			auto& m = markers[i];
+			float xpos = round(m_group->XAxisUnitsToXPosition(m.m_offset));
+			float searchRadius = 0.25 * ImGui::GetFontSize();
+			if(fabs(xpos - lastRightClickPos) < searchRadius)
 			{
-				if(ImGui::MenuItem("None", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_NONE)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
-				if(ImGui::MenuItem("Single", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_SINGLE)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
-				if(ImGui::MenuItem("Dual", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
-
-				ImGui::EndMenu();
+				hitMarker = true;
+				selectedMarker = i;
+				break;
 			}
-
-			if(ImGui::BeginMenu("Y axis"))
-			{
-				ImGui::EndMenu();
-			}
-
-			ImGui::EndMenu();
 		}
 
-		if(ImGui::MenuItem("Add Marker"))
+		//If we right clicked on or very close to a marker, show "delete" menu instead
+		if(hitMarker)
 		{
-			auto& session = m_parent->GetSession();
-			session.AddMarker(Marker(GetWaveformTimestamp(), m_lastRightClickOffset, session.GetNextMarkerName()));
+			if(ImGui::MenuItem("Delete"))
+				markers.erase(markers.begin() + selectedMarker);
+		}
+
+		//Otherwise, normal GUI context menu
+		else
+		{
+			if(ImGui::BeginMenu("Cursors"))
+			{
+				if(ImGui::BeginMenu("X axis"))
+				{
+					if(ImGui::MenuItem("None", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_NONE)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+					if(ImGui::MenuItem("Single", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_SINGLE)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
+					if(ImGui::MenuItem("Dual", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+
+					ImGui::EndMenu();
+				}
+
+				if(ImGui::BeginMenu("Y axis"))
+				{
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMenu();
+			}
+
+			if(ImGui::MenuItem("Add Marker"))
+			{
+				auto& session = m_parent->GetSession();
+				session.AddMarker(Marker(GetWaveformTimestamp(), m_lastRightClickOffset, session.GetNextMarkerName()));
+			}
 		}
 
 		ImGui::EndPopup();
