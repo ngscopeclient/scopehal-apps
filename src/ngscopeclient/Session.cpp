@@ -134,8 +134,17 @@ void Session::Clear()
 	m_history.clear();
 
 	//Delete scopes once we've terminated the threads
+	//Detach waveforms before we destroy the scope, since history owns them
 	for(auto scope : m_oscilloscopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				chan->Detach(j);
+		}
 		delete scope;
+	}
 	m_oscilloscopes.clear();
 	m_psus.clear();
 	m_rfgenerators.clear();
