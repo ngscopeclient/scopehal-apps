@@ -156,10 +156,10 @@ bool HistoryDialog::DoRender()
 				ImGui::EndPopup();
 			}
 
-			//Force pin if we have a nickname
-			//TODO: force pin if we have markers
+			//Force pin if we have a nickname or markers
+			auto& markers = m_session.GetMarkers(point->m_time);
 			bool forcePin = false;
-			if(!point->m_nickname.empty())
+			if(!point->m_nickname.empty() || !markers.empty())
 			{
 				forcePin = true;
 				point->m_pinned = true;
@@ -194,7 +194,8 @@ bool HistoryDialog::DoRender()
 			//Child nodes for markers
 			if(open)
 			{
-				auto& markers = m_session.GetMarkers(point->m_time);
+				size_t markerToDelete = 0;
+				bool deletingMarker = false;
 
 				for(size_t i=0; i<markers.size(); i++)
 				{
@@ -227,6 +228,16 @@ bool HistoryDialog::DoRender()
 						//TODO: navigate to the selected marker
 					}
 
+					if(ImGui::BeginPopupContextItem())
+					{
+						if(ImGui::MenuItem("Delete"))
+						{
+							deletingMarker = true;
+							markerToDelete = i;
+						}
+						ImGui::EndPopup();
+					}
+
 					//Nothing in pin box
 					ImGui::TableSetColumnIndex(1);
 
@@ -236,6 +247,10 @@ bool HistoryDialog::DoRender()
 
 					ImGui::PopID();
 				}
+
+				//Execute deletion after drawing the rest of the list
+				if(deletingMarker)
+					markers.erase(markers.begin() + markerToDelete);
 
 				ImGui::TreePop();
 			}
