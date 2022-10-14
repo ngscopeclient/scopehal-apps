@@ -637,44 +637,29 @@ void Session::DownloadWaveforms()
 bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	bool hadNewWaveforms = false;
-	if(m_triggerArmed)
+
+	if(g_waveformReadyEvent.Peek())
 	{
-		if(g_waveformReadyEvent.Peek())
+		LogTrace("Waveform is ready\n");
+
+		//Add to history
+		auto scopes = GetScopes();
 		{
-			LogTrace("Waveform is ready\n");
-
-			//Add to history
-			auto scopes = GetScopes();
-			{
-				lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
-				m_history.AddHistory(scopes);
-			}
-
-			//Tone-map all of our waveforms
-			//(does not need waveform data locked since it only works on *rendered* data)
-			hadNewWaveforms = true;
-			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
-
-			//Release the waveform processing thread
-			g_waveformProcessedEvent.Signal();
-
-			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
-			if(m_multiScopeFreeRun)
-				ArmTrigger(TRIGGER_TYPE_NORMAL);
+			lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
+			m_history.AddHistory(scopes);
 		}
-	}
 
-	//Discard all pending waveform data if the trigger isn't armed.
-	//Failure to do this can lead to a spurious trigger after we wanted to stop.
-	else
-	{
-		lock_guard<mutex> lock(m_scopeMutex);
-		for(auto scope : m_oscilloscopes)
-			scope->ClearPendingWaveforms();
+		//Tone-map all of our waveforms
+		//(does not need waveform data locked since it only works on *rendered* data)
+		hadNewWaveforms = true;
+		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
-		//If waveform thread is blocking for us to process its last waveform, release it
-		if(g_waveformReadyEvent.Peek())
-			g_waveformProcessedEvent.Signal();
+		//Release the waveform processing thread
+		g_waveformProcessedEvent.Signal();
+
+		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+		if(m_multiScopeFreeRun)
+			ArmTrigger(TRIGGER_TYPE_NORMAL);
 	}
 
 	//If a re-render operation completed, tone map everything again
