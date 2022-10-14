@@ -319,8 +319,9 @@ void MainWindow::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
 	vector<shared_ptr<DisplayedChannel> >& channels)
 {
+	bool clear = m_clearPersistence.exchange(false);
 	for(auto group : m_waveformGroups)
-		group->RenderWaveformTextures(cmdbuf, channels);
+		group->RenderWaveformTextures(cmdbuf, channels, clear);
 }
 
 void MainWindow::RenderUI()
@@ -540,7 +541,7 @@ void MainWindow::ToolbarButtons()
 	//View settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
-		LogDebug("clear-sweeps\n");
+		ClearPersistence();
 	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 
 	//Fullscreen toggle

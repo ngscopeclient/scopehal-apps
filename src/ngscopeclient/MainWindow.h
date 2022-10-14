@@ -104,6 +104,12 @@ public:
 	void SetNeedRender()
 	{ m_needRender = true; }
 
+	void ClearPersistence()
+	{
+		m_clearPersistence = true;
+		SetNeedRender();
+	}
+
 	virtual void Render();
 
 	void QueueCloseSession()
@@ -272,11 +278,16 @@ protected:
 	TextureManager m_texmgr;
 
 	/**
-		@brief true if a resize or other event this frame requires we re-rasterize waveforms
+		@brief True if a resize or other event this frame requires we re-rasterize waveforms
 
 		(even if data has not changed)
 	 */
 	bool m_needRender;
+
+	/**
+		@brief True if we should clear persistence on the next render pass
+	 */
+	std::atomic<bool> m_clearPersistence;
 
 	///@brief Command pool for allocating our command buffers
 	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;

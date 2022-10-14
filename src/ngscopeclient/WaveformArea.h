@@ -193,6 +193,12 @@ public:
 		// Do not need durations if dense because each duration is "1"
 	}
 
+	bool IsPersistenceEnabled()
+	{ return m_persistenceEnabled; }
+
+	void SetPersistenceEnabled(bool b)
+	{ m_persistenceEnabled = b; }
+
 protected:
 	StreamDescriptor m_stream;
 
@@ -213,6 +219,9 @@ protected:
 
 	///@brief Y axis size of the texture as of last UpdateSize() call
 	size_t m_cachedY;
+
+	///@brief Persistence enable flag
+	bool m_persistenceEnabled;
 
 	///@brief Compute pipeline for tone mapping fp32 images to RGBA
 	ComputePipeline m_toneMapPipe;
@@ -238,7 +247,8 @@ public:
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
+		bool clearPersistence);
 	void ReferenceWaveformTextures();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
@@ -272,7 +282,8 @@ protected:
 	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
-		vk::raii::CommandBuffer& cmdbuf);
+		vk::raii::CommandBuffer& cmdbuf,
+		bool clearPersistence);
 	void PlotContextMenu();
 
 	void DrawDropRangeMismatchMessage(

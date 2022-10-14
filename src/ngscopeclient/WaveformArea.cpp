@@ -50,6 +50,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		, m_rasterizedY(0)
 		, m_cachedX(0)
 		, m_cachedY(0)
+		, m_persistenceEnabled(false)
 		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
 {
 	stream.m_channel->AddRef();
@@ -592,13 +593,15 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 
 	Called from WaveformThread
 
-	@param cmdbuf	Command buffer to record rendering commands into
-	@param chans	Set of channels we rendered into
-					Used to keep references active until rendering completes if we close them this frame
+	@param cmdbuf				Command buffer to record rendering commands into
+	@param chans				Set of channels we rendered into
+								Used to keep references active until rendering completes if we close them this frame
+	@param clearPersistence		True if persistence maps should be erased before rendering
  */
 void WaveformArea::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
-	vector<shared_ptr<DisplayedChannel> >& chans)
+	vector<shared_ptr<DisplayedChannel> >& chans,
+	bool clearPersistence)
 {
 	chans = m_displayedChannels;
 
@@ -608,7 +611,7 @@ void WaveformArea::RenderWaveformTextures(
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				RasterizeAnalogWaveform(chan, cmdbuf);
+				RasterizeAnalogWaveform(chan, cmdbuf, clearPersistence);
 				break;
 
 			default:
@@ -620,7 +623,8 @@ void WaveformArea::RenderWaveformTextures(
 
 void WaveformArea::RasterizeAnalogWaveform(
 	shared_ptr<DisplayedChannel> channel,
-	vk::raii::CommandBuffer& cmdbuf
+	vk::raii::CommandBuffer& cmdbuf,
+	bool clearPersistence
 	)
 {
 	auto stream = channel->GetStream();
@@ -695,7 +699,10 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.ybase = h * 0.5f;
 	config.yscale = m_pixelsPerYAxisUnit;
 	config.yoff = stream.GetOffset();
-	config.persistScale = 0;				//TODO: persistence configuration
+	if(channel->IsPersistenceEnabled() && !clearPersistence)
+		config.persistScale = 0.95;				//TODO: make decay factor configurable
+	else
+		config.persistScale = 0;
 
 	//Dispatch the shader
 	comp->Dispatch(cmdbuf, config, w, 1, 1);
@@ -1513,7 +1520,8 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 
 		tooltip +=
 			"Drag to move this waveform to another plot.\n"
-			"Double click to view/edit channel properties.";
+			"Double click to view/edit channel properties.\n"
+			"Right click for display settings menu.";
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
@@ -1527,6 +1535,10 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	{
 		if(ImGui::MenuItem("Delete"))
 			RemoveStream(index);
+		ImGui::Separator();
+		bool persist = chan->IsPersistenceEnabled();
+		if(ImGui::MenuItem("Persistence", nullptr, persist))
+			chan->SetPersistenceEnabled(!persist);
 
 		ImGui::EndPopup();
 	}

@@ -54,7 +54,8 @@ public:
 
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
+		bool clearPersistence);
 
 	const std::string& GetTitle()
 	{ return m_title; }
@@ -170,6 +171,9 @@ protected:
 
 	///@brief Height of the timeline
 	float m_timelineHeight;
+
+	///@brief True if clearing persistence
+	std::atomic<bool> m_clearPersistence;
 
 public:
 

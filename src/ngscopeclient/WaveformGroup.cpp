@@ -134,10 +134,14 @@ void WaveformGroup::ReferenceWaveformTextures()
 }
 
 void WaveformGroup::RenderWaveformTextures(
-	vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
+	vk::raii::CommandBuffer& cmdbuf,
+	vector<shared_ptr<DisplayedChannel> >& channels,
+	bool clearPersistence)
 {
+	bool clearThisGroupOnly = m_clearPersistence.exchange(false);
+
 	for(auto a : m_areas)
-		a->RenderWaveformTextures(cmdbuf, channels);
+		a->RenderWaveformTextures(cmdbuf, channels, clearThisGroupOnly || clearPersistence);
 }
 
 bool WaveformGroup::Render()
@@ -795,6 +799,7 @@ int64_t WaveformGroup::GetRoundingDivisor(int64_t width_xunits)
 void WaveformGroup::ClearPersistence()
 {
 	m_parent->SetNeedRender();
+	m_clearPersistence = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
