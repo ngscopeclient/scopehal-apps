@@ -35,6 +35,7 @@
 
 #include "ngscopeclient.h"
 #include "HistoryDialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
@@ -74,10 +75,11 @@ string TimePoint::PrettyPrint()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session)
+HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session, MainWindow& wnd)
 	: Dialog("History", ImVec2(425, 350))
 	, m_mgr(mgr)
 	, m_session(session)
+	, m_parent(wnd)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
 	, m_selectedMarker(nullptr)
@@ -225,7 +227,7 @@ bool HistoryDialog::DoRender()
 							m_selectionChanged = true;
 						}
 
-						//TODO: navigate to the selected marker
+						m_parent.NavigateToTimestamp(m.m_offset);
 					}
 
 					if(ImGui::BeginPopupContextItem())

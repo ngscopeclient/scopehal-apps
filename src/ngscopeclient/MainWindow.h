@@ -84,6 +84,8 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	void NavigateToTimestamp(int64_t stamp);
+
 	/**
 		@brief Update the timebase properties dialog
 	 */

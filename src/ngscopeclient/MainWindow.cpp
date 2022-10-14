@@ -520,7 +520,7 @@ void MainWindow::ToolbarButtons()
 		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
 	{
-		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session);
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
 		AddDialog(m_historyDialog);
 	}
 	if(hasHist)
@@ -711,6 +711,15 @@ void MainWindow::DockingArea()
 
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
 	ImGui::End();
+}
+
+/**
+	@brief Scrolls all waveform groups so that the specified timestamp is visible
+ */
+void MainWindow::NavigateToTimestamp(int64_t stamp)
+{
+	for(auto group : m_waveformGroups)
+		group->NavigateToTimestamp(stamp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

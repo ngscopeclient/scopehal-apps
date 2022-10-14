@@ -38,13 +38,15 @@
 #include "Dialog.h"
 #include "Session.h"
 
+class MainWindow;
+
 /**
 	@brief UI for the history system
  */
 class HistoryDialog : public Dialog
 {
 public:
-	HistoryDialog(HistoryManager& mgr, Session& session);
+	HistoryDialog(HistoryManager& mgr, Session& session, MainWindow& wnd);
 	virtual ~HistoryDialog();
 
 	virtual bool DoRender();
@@ -62,6 +64,7 @@ public:
 protected:
 	HistoryManager& m_mgr;
 	Session& m_session;
+	MainWindow& m_parent;
 
 	///@brief Height of a row in the dialog
 	float m_rowHeight;

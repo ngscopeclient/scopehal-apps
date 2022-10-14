@@ -63,6 +63,7 @@ public:
 
 	void OnZoomInHorizontal(int64_t target, float step);
 	void OnZoomOutHorizontal(int64_t target, float step);
+	void NavigateToTimestamp(int64_t timestamp);
 
 	/**
 		@brief Gets the X axis unit for this group
@@ -136,6 +137,9 @@ protected:
 
 	///@brief X position of our child windows
 	float m_xpos;
+
+	///@brief Width of the window (used for autoscaling)
+	float m_width;
 
 	///@brief Display scale factor
 	float m_pixelsPerXUnit;

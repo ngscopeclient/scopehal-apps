@@ -45,6 +45,7 @@ using namespace std;
 WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	: m_parent(parent)
 	, m_xpos(0)
+	, m_width(0)
 	, m_pixelsPerXUnit(0.00005)
 	, m_xAxisOffset(0)
 	, m_title(title)
@@ -152,6 +153,7 @@ bool WaveformGroup::Render()
 
 	auto pos = ImGui::GetCursorScreenPos();
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
+	m_width = clientArea.x;
 
 	//Render the timeline
 	m_timelineHeight = 2.5 * ImGui::GetFontSize();
@@ -296,6 +298,12 @@ void WaveformGroup::DoCursorReadouts()
  */
 void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 {
+	//Don't draw anything if our unit isn't fs
+	//TODO: support units for frequency domain channels etc?
+	//TODO: early out if eye pattern
+	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
+		return;
+
 	auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
 
 	//Create a child window for all of our drawing
@@ -820,4 +828,19 @@ void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
 	m_xAxisOffset = target - (delta*step);
 
 	ClearPersistence();
+}
+
+/**
+	@brief Scrolls the group so the specified tiestamp is visible
+ */
+void WaveformGroup::NavigateToTimestamp(int64_t timestamp)
+{
+	//If X axis unit is not fs, don't scroll
+	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
+		return;
+
+	//TODO: support markers with other units? how to handle that?
+	//TODO: early out if eye pattern
+
+	m_xAxisOffset = timestamp - 0.5*(m_width / m_pixelsPerXUnit);
 }

@@ -643,7 +643,7 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("History"))
 		{
-			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session);
+			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
 			AddDialog(m_historyDialog);
 		}
 		if(hasHistory)
