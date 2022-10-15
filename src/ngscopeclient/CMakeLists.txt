@@ -111,7 +111,8 @@ target_link_libraries(ngscopeclient
 	scopeexports
 	glfw
 	PNG::PNG
-	${GTKMM_LIBRARIES}
+	cairomm-1.0
+	cairo
 	${SIGCXX_LIBRARIES}
 	)
 
