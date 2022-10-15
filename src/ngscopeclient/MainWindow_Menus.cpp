@@ -51,6 +51,7 @@
 #include "LogViewerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PersistenceSettingsDialog.h"
 #include "PreferenceDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
@@ -123,6 +124,14 @@ void MainWindow::ViewMenu()
 	{
 		if(ImGui::MenuItem("Fullscreen"))
 			SetFullscreen(!m_fullscreen);
+
+		ImGui::Separator();
+
+		if(ImGui::MenuItem("Persistence Setup"))
+		{
+			m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+			AddDialog(m_persistenceDialog);
+		}
 
 		ImGui::EndMenu();
 	}

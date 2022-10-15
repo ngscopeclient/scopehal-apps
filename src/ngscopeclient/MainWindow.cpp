@@ -74,6 +74,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
 	, m_traceAlpha(0.75)
+	, m_persistenceDecay(0.8)
 	, m_session(this)
 	, m_sessionClosing(false)
 	, m_texmgr(m_imguiDescriptorPool)
@@ -153,6 +154,7 @@ void MainWindow::CloseSession()
 	m_timebaseDialog = nullptr;
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
+	m_persistenceDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -584,6 +586,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_timebaseDialog = nullptr;
 	if(m_preferenceDialog == dlg)
 		m_preferenceDialog = nullptr;
+	if(m_persistenceDialog == dlg)
+		m_persistenceDialog = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)

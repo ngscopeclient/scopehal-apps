@@ -700,7 +700,7 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.yscale = m_pixelsPerYAxisUnit;
 	config.yoff = stream.GetOffset();
 	if(channel->IsPersistenceEnabled() && !clearPersistence)
-		config.persistScale = 0.95;				//TODO: make decay factor configurable
+		config.persistScale = m_parent->GetPersistDecay();
 	else
 		config.persistScale = 0;
 

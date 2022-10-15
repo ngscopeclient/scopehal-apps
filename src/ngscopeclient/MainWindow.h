@@ -121,6 +121,12 @@ public:
 	float GetTraceAlpha()
 	{ return m_traceAlpha; }
 
+	float GetPersistDecay()
+	{ return m_persistenceDecay; }
+
+	void SetPersistDecay(float f)
+	{ m_persistenceDecay = f; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -218,6 +224,9 @@ protected:
 	///@brief Timebase properties
 	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
 
+	///@brief Persistence settings
+	std::shared_ptr<Dialog> m_persistenceDialog;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups
@@ -233,6 +242,9 @@ protected:
 
 	///@brief Trace alpha
 	float m_traceAlpha;
+
+	///@brief Persistence decay factor
+	float m_persistenceDecay;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
