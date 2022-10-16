@@ -66,11 +66,13 @@ Session::Session(MainWindow* wnd)
 	, m_history(*this)
 	, m_nextMarkerNum(1)
 {
+	CreateReferenceFilters();
 }
 
 Session::~Session()
 {
 	Clear();
+	DestroyReferenceFilters();
 }
 
 /**
@@ -730,4 +732,40 @@ int64_t Session::GetToneMapTime()
 void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
 {
 	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Reference filters
+
+/**
+	@brief Creates one filter of each known type to use as a reference for what inputs are legal to use to a new filter
+ */
+void Session::CreateReferenceFilters()
+{
+	double start = GetTime();
+
+	vector<string> names;
+	Filter::EnumProtocols(names);
+
+	for(auto n : names)
+	{
+		auto f = Filter::CreateFilter(n.c_str(), "");;
+		f->HideFromList();
+		m_referenceFilters[n] = f;
+	}
+
+	LogTrace("Created %zu reference filters in %.2f ms\n", m_referenceFilters.size(), (GetTime() - start) * 1000);
+}
+
+/**
+	@brief Destroys the reference filters
+
+	This only needs to be done at application shutdown, not in Clear(), because the reference filters have no persistent
+	state. The only thing they're ever used for is calling ValidateChannel() on them.
+ */
+void Session::DestroyReferenceFilters()
+{
+	for(auto it : m_referenceFilters)
+		delete it.second;
+	m_referenceFilters.clear();
 }

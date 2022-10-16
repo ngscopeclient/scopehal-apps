@@ -372,6 +372,23 @@ protected:
 public:
 	PreferenceManager& GetPreferences()
 	{ return m_preferences; }
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Reference filters (used to query legal inputs to filters etc)
+
+public:
+
+	/**
+		@brief Gets the reference instance of a given filter
+	 */
+	Filter* GetReferenceFilter(const std::string& name)
+	{ return m_referenceFilters[name]; }
+
+protected:
+	void CreateReferenceFilters();
+	void DestroyReferenceFilters();
+
+	std::map<std::string, Filter*> m_referenceFilters;
 };
 
 #endif
