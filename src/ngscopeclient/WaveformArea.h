@@ -296,6 +296,9 @@ protected:
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
+	void FilterMenu(std::shared_ptr<DisplayedChannel> chan);
+	void FilterSubmenu(std::shared_ptr<DisplayedChannel> chan, const std::string& name, Filter::Category cat);
+
 	float PixelsToYAxisUnits(float pix);
 	float YAxisUnitsToPixels(float volt);
 	float YAxisUnitsToYPosition(float volt);
@@ -372,6 +375,9 @@ protected:
 
 	///@brief X axis position of the mouse at the most recent right click
 	int64_t m_lastRightClickOffset;
+
+	///@brief True if clearing persistence next render
+	std::atomic<bool> m_clearPersistence;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

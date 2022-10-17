@@ -605,13 +605,16 @@ void WaveformArea::RenderWaveformTextures(
 {
 	chans = m_displayedChannels;
 
+	bool clearThisAreaOnly = m_clearPersistence.exchange(false);
+	bool clearing = clearThisAreaOnly || clearPersistence;
+
 	for(auto& chan : chans)
 	{
 		auto stream = chan->GetStream();
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				RasterizeAnalogWaveform(chan, cmdbuf, clearPersistence);
+				RasterizeAnalogWaveform(chan, cmdbuf, clearing);
 				break;
 
 			default:
@@ -1539,14 +1542,77 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		bool persist = chan->IsPersistenceEnabled();
 		if(ImGui::MenuItem("Persistence", nullptr, persist))
 			chan->SetPersistenceEnabled(!persist);
+		ImGui::Separator();
+
+		FilterMenu(chan);
 
 		ImGui::EndPopup();
 	}
 }
 
+/**
+	@brief
+ */
+void WaveformArea::FilterMenu(shared_ptr<DisplayedChannel> chan)
+{
+	FilterSubmenu(chan, "Bus", Filter::CAT_BUS);
+	FilterSubmenu(chan, "Clocking", Filter::CAT_CLOCK);
+	FilterSubmenu(chan, "Generation", Filter::CAT_GENERATION);
+	FilterSubmenu(chan, "Math", Filter::CAT_MATH);
+	FilterSubmenu(chan, "Measurement", Filter::CAT_MEASUREMENT);
+	FilterSubmenu(chan, "Memory", Filter::CAT_MEMORY);
+	FilterSubmenu(chan, "Miscellaneous", Filter::CAT_MISC);
+	FilterSubmenu(chan, "Power", Filter::CAT_POWER);
+	FilterSubmenu(chan, "RF", Filter::CAT_RF);
+	FilterSubmenu(chan, "Serial", Filter::CAT_SERIAL);
+	FilterSubmenu(chan, "Signal integrity", Filter::CAT_ANALYSIS);
+}
+
+/**
+	@brief Run the submenu for a single filter category
+ */
+void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string& name, Filter::Category cat)
+{
+	auto& refs = m_parent->GetSession().GetReferenceFilters();
+
+	if(ImGui::BeginMenu(name.c_str()))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == cat)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			auto it = refs.find(fname);
+			bool valid = false;
+			if(it->second->GetInputCount() == 0)		//No inputs? Always valid
+				valid = true;
+			else
+				valid = it->second->ValidateChannel(0, chan->GetStream());
+
+			//Hide import filters to avoid cluttering the UI
+			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
+			{
+				//TODO: actually create the filter
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
 void WaveformArea::ClearPersistence()
 {
-	//TODO: set persistence clear flag
+	m_clearPersistence = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

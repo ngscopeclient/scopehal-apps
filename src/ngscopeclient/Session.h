@@ -384,6 +384,9 @@ public:
 	Filter* GetReferenceFilter(const std::string& name)
 	{ return m_referenceFilters[name]; }
 
+	const std::map<std::string, Filter*>& GetReferenceFilters()
+	{ return m_referenceFilters; }
+
 protected:
 	void CreateReferenceFilters();
 	void DestroyReferenceFilters();

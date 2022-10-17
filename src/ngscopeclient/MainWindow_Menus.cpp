@@ -167,6 +167,8 @@ void MainWindow::AddMenu()
 		ImGui::Separator();
 
 		AddChannelsMenu();
+		AddGenerateMenu();
+		AddImportMenu();
 
 		ImGui::EndMenu();
 	}
@@ -573,6 +575,78 @@ void MainWindow::AddChannelsMenu()
 				}
 
 				ImGui::EndMenu();
+			}
+		}
+
+		//TODO: add all existing filters
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Import menu
+ */
+void MainWindow::AddImportMenu()
+{
+	auto& refs = m_session.GetReferenceFilters();
+
+	if(ImGui::BeginMenu("Import"))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == Filter::CAT_GENERATION)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide import filters
+			if(fname.find("Import") == string::npos)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+			{
+				//TODO: actually create the filter
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Generate menu
+ */
+void MainWindow::AddGenerateMenu()
+{
+	auto& refs = m_session.GetReferenceFilters();
+
+	if(ImGui::BeginMenu("Generation"))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == Filter::CAT_GENERATION)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide import filters
+			if(fname.find("Import") != string::npos)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+			{
+				//TODO: actually create the filter
 			}
 		}
 

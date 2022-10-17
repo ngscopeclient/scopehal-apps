@@ -156,6 +156,8 @@ protected:
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddChannelsMenu();
+				void AddImportMenu();
+				void AddGenerateMenu();
 			void SetupMenu();
 			void WindowMenu();
 				void WindowGeneratorMenu();
