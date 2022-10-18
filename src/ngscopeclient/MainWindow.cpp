@@ -954,3 +954,27 @@ void MainWindow::UpdateFonts()
 	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filter creation etc
+
+/**
+	@brief Creates a filter and adds all of its streams to the best waveform area (may not be the one we created it from)
+
+	@param name				Name of the filter
+	@param area				Waveform area we launched the context menu from (if any)
+	@param initialStream	Stream we launched the context menu from (if any)
+ */
+void MainWindow::CreateFilter(const string& name, shared_ptr<WaveformArea> area, StreamDescriptor initialStream)
+{
+	auto f = Filter::CreateFilter(name, GetDefaultChannelColor(g_numDecodes++));
+
+	for(size_t i=0; i<f->GetStreamCount(); i++)
+		FindAreaForStream(area, StreamDescriptor(f, i));
+
+	//TODO: create filter properties dialog
+}
+
+void MainWindow::FindAreaForStream(shared_ptr<WaveformArea> area, StreamDescriptor stream)
+{
+}
