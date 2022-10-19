@@ -967,7 +967,7 @@ void MainWindow::UpdateFonts()
  */
 void MainWindow::CreateFilter(const string& name, shared_ptr<WaveformArea> area, StreamDescriptor initialStream)
 {
-	auto f = Filter::CreateFilter(name, GetDefaultChannelColor(g_numDecodes++));
+	auto f = Filter::CreateFilter(name, GetDefaultChannelColor(Filter::GetNumInstances()));
 
 	for(size_t i=0; i<f->GetStreamCount(); i++)
 		FindAreaForStream(area, StreamDescriptor(f, i));
