@@ -110,7 +110,7 @@ public:
 	StreamDescriptor GetChannelBeingDragged();
 
 	float GetYAxisWidth()
-	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
+	{ return 6 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
 
 	float GetSpacing()
 	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }

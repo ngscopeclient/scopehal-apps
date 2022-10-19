@@ -1002,10 +1002,13 @@ void MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDesc
 	for(size_t i=0; i<f->GetStreamCount(); i++)
 		FindAreaForStream(area, StreamDescriptor(f, i));
 
-	//Create filter properties dialog
-	auto dlg = make_shared<FilterPropertiesDialog>(f, this);
-	m_channelPropertiesDialogs[f] = dlg;
-	AddDialog(dlg);
+	//Create and show filter properties dialog
+	if(f->NeedsConfig())
+	{
+		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
+		m_channelPropertiesDialogs[f] = dlg;
+		AddDialog(dlg);
+	}
 }
 
 /**
@@ -1038,7 +1041,7 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 		return;
 	}
 
-	//TODO: how to handle Y axis scaling if it doesn's match the group we decide to add it to?
+	//TODO: how to handle Y axis scale if it doesn's match the group we decide to add it to?
 
 	//Try the provided area first, if we have one
 	if( (area != nullptr) && (area->IsCompatible(stream) ) )
@@ -1048,28 +1051,44 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 		return;
 	}
 
-	//TODO: try making a new area in the same group
+	//If X axis unit is compatible, but not Y, make a new area in the same group
+	auto group = area->GetGroup();
+	if(group->GetXAxisUnit() == stream.GetXAxisUnits())
+	{
+		LogTrace("Making new area in suggested group\n");
+		auto a = make_shared<WaveformArea>(stream, group, this);
+		group->AddArea(a);
+		return;
+	}
 
-	//Try all of our other areas
+	//Try all of our other areas and see if any of them fit
 	for(auto g : m_waveformGroups)
 	{
-		//TODO
+		//TODO: check areas within the group
+
+		if(g->GetXAxisUnit() == stream.GetXAxisUnits())
+		{
+			LogTrace("Making new area in a different group\n");
+			auto a = make_shared<WaveformArea>(stream, g, this);
+			group->AddArea(a);
+			return;
+		}
 	}
 
-	/*
+	//If we get here, we've run out of options so we have to make a new group
+	LogTrace("Gave up on finding something good, making a new group\n");
 
-	//Add waveform areas for the streams
-	for(auto s : streams)
-	{
-		auto group = GetBestGroupForWaveform(s);
-		auto area = make_shared<WaveformArea>(s, group, this);
-		group->AddArea(area);
-	}
-	*/
+	//Make it
+	auto name = NameNewWaveformGroup();
+	group = make_shared<WaveformGroup>(this, name);
+	m_waveformGroups.push_back(group);
 
-	//If we get here, give up and make a new area
-	//LogTrace("Giving up, making a new area\n");
-	LogTrace("Couldn't find a good area, giving up\n");
+	//Group is newly created and not yet docked
+	m_newWaveformGroups.push_back(group);
+
+	//Make an area
+	auto a = make_shared<WaveformArea>(stream, group, this);
+	group->AddArea(a);
 }
 
 /**

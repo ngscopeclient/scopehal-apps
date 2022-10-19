@@ -46,6 +46,8 @@ using namespace std;
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		: m_stream(stream)
+		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
+		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
 		, m_rasterizedX(0)
 		, m_rasterizedY(0)
 		, m_cachedX(0)
@@ -55,12 +57,14 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 {
 	stream.m_channel->AddRef();
 
-	m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
-
 	//Use GPU-side memory for rasterized waveform
 	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
 	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+
+	//Use pinned memory for index buffer since it should only be read once
+	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<int64_t>::HINT_LIKELY);
+	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<int64_t>::HINT_UNLIKELY);
 }
 
 /**
@@ -163,6 +167,10 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
 		m_rasterizedWaveform.MarkModifiedFromCpu();
 	}
+
+	//Allocate index buffer for sparse waveforms
+	if(!IsDensePacked())
+		m_indexBuffer.resize(x);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -646,6 +654,14 @@ void WaveformArea::RasterizeAnalogWaveform(
 
 	shared_ptr<ComputePipeline> comp;
 
+	//Calculate a bunch of constants
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t innerxoff = offset / data->m_timescale;
+	int64_t fractional_offset = offset % data->m_timescale;
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+	double pixelsPerX = m_group->GetPixelsPerXUnit();
+	double xscale = data->m_timescale * pixelsPerX;
+
 	//Bind input buffers
 	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
 	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
@@ -658,8 +674,28 @@ void WaveformArea::RasterizeAnalogWaveform(
 
 	else
 	{
-		LogWarning("Don't know how to rasterize sparse analog data yet\n");
-		// TODO: Remember to bind durations to 4 if comp->ShouldMapDurations()
+		comp = channel->GetSparseAnalogPipeline();
+		comp->BindBufferNonblocking(1, sdata->m_samples, cmdbuf);
+
+		//Map offsets and, if requested, durations
+		comp->BindBufferNonblocking(2, sdata->m_offsets, cmdbuf);
+		if(channel->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sdata->m_durations, cmdbuf);
+
+		//Calculate indexes for X axis
+		auto& ibuf = channel->GetIndexBuffer();
+		ibuf.PrepareForCpuAccess();
+		sdata->m_offsets.PrepareForCpuAccess();
+		for(size_t i=0; i<w; i++)
+		{
+			int64_t target = floor(i / xscale) + offset_samples;
+			ibuf[i] = BinarySearchForGequal(
+				sdata->m_offsets.GetCpuPointer(),
+				data->size(),
+				target-2);
+		}
+		ibuf.MarkModifiedFromCpu();
+		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
 	}
 
 	if(!comp)
@@ -668,13 +704,6 @@ void WaveformArea::RasterizeAnalogWaveform(
 	//Bind output texture
 	auto& imgOut = channel->GetRasterizedWaveform();
 	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
-
-	//Calculate a bunch of constants
-	int64_t offset = m_group->GetXAxisOffset();
-	int64_t innerxoff = offset / data->m_timescale;
-	int64_t fractional_offset = offset % data->m_timescale;
-	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
-	double pixelsPerX = m_group->GetPixelsPerXUnit();
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
@@ -698,7 +727,7 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.offset_samples = offset_samples - 2;
 	config.alpha = alpha_scaled;
 	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
-	config.xscale = data->m_timescale * pixelsPerX;
+	config.xscale = xscale;
 	config.ybase = h * 0.5f;
 	config.yscale = m_pixelsPerYAxisUnit;
 	config.yoff = stream.GetOffset();
@@ -1602,6 +1631,8 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 			//Hide import filters to avoid cluttering the UI
 			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
 				continue;
+
+			//TODO: measurements should have summary option
 
 			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
 				m_parent->CreateFilter(fname, this, stream);

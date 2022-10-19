@@ -120,6 +120,9 @@ public:
 	size_t GetRasterizedY()
 	{ return m_rasterizedY; }
 
+	/**
+		@brief Gets the pipeline for drawing uniform analog waveforms, creating it if necessary
+	*/
 	__attribute__((noinline))
 	std::shared_ptr<ComputePipeline> GetUniformAnalogPipeline()
 	{
@@ -138,6 +141,9 @@ public:
 		return m_uniformAnalogComputePipeline;
 	}
 
+	/**
+		@brief Gets the pipeline for drawing sparse analog waveforms, creating it if necessary
+	*/
 	__attribute__((noinline))
 	std::shared_ptr<ComputePipeline> GetSparseAnalogPipeline()
 	{
@@ -154,7 +160,7 @@ public:
 			if(g_hasShaderInt64)
 				suffix += ".int64";
 			m_sparseAnalogComputePipeline = std::make_shared<ComputePipeline>(
-				base + "analog" + suffix + ".sparse.spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
+				base + "analog" + suffix + ".spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
 		}
 
 		return m_sparseAnalogComputePipeline;
@@ -171,7 +177,7 @@ public:
 
 	bool IsDensePacked()
 	{
-		auto data = m_stream.m_channel->GetData(0);
+		auto data = m_stream.GetData();
 		if(dynamic_cast<UniformWaveformBase*>(data) != nullptr)
 			return true;
 		else
@@ -199,11 +205,17 @@ public:
 	void SetPersistenceEnabled(bool b)
 	{ m_persistenceEnabled = b; }
 
+	AcceleratorBuffer<int64_t>& GetIndexBuffer()
+	{ return m_indexBuffer; }
+
 protected:
 	StreamDescriptor m_stream;
 
 	///@brief Buffer storing our rasterized waveform, prior to tone mapping
 	AcceleratorBuffer<float> m_rasterizedWaveform;
+
+	///@brief Buffer for X axis indexes (only used for sparse waveforms)
+	AcceleratorBuffer<int64_t> m_indexBuffer;
 
 	///@brief X axis size of rasterized waveform
 	size_t m_rasterizedX;
