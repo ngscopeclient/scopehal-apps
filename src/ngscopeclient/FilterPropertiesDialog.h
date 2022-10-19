@@ -30,61 +30,24 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Declaration of FilterPropertiesDialog
  */
-#ifndef Dialog_h
-#define Dialog_h
+#ifndef FilterPropertiesDialog_h
+#define FilterPropertiesDialog_h
 
-#include "imgui_stdlib.h"
+class MainWindow;
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+class FilterPropertiesDialog : public ChannelPropertiesDialog
 {
 public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
+	FilterPropertiesDialog(Filter* f, MainWindow* parent);
 
-	bool Render();
-	virtual bool DoRender() =0;
+	virtual bool DoRender();
 
 protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		double& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+	std::map<std::string, std::string> m_paramTempValues;
 
-protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
-
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
-
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
+	MainWindow* m_parent;
 };
 
 #endif

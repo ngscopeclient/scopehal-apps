@@ -30,61 +30,126 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Dialog
+	@brief Implementation of FilterPropertiesDialog
  */
-#ifndef Dialog_h
-#define Dialog_h
+#include "ngscopeclient.h"
+#include "ChannelPropertiesDialog.h"
+#include "FilterPropertiesDialog.h"
+#include "MainWindow.h"
 
-#include "imgui_stdlib.h"
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Constuction / destruction
 
-/**
-	@brief Generic dialog box or other popup window
- */
-class Dialog
+FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent)
+	: ChannelPropertiesDialog(f)
+	, m_parent(parent)
 {
-public:
-	Dialog(const std::string& title, ImVec2 defaultSize = ImVec2(300, 100) );
-	virtual ~Dialog();
 
-	bool Render();
-	virtual bool DoRender() =0;
+}
 
-protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
-	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		double& committedValue,
-		Unit unit);
-public:
-	static void Tooltip(const std::string& str, bool allowDisabled = false);
-	static void HelpMarker(const std::string& str);
-	static void HelpMarker(const std::string& header, const std::vector<std::string>& bullets);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main GUI
 
-protected:
-	void RenderErrorPopup();
-	void ShowErrorPopup(const std::string& title, const std::string& msg);
+//TODO: some of this code needs to be shared by the trigger dialog
 
-	bool m_open;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+bool FilterPropertiesDialog::DoRender()
+{
+	//Update name as we go
+	m_title = m_channel->GetHwname();
 
-	std::string m_errorPopupTitle;
-	std::string m_errorPopupMessage;
-};
+	if(!ChannelPropertiesDialog::DoRender())
+		return false;
 
-#endif
+	auto f = dynamic_cast<Filter*>(m_channel);
+
+	//Show inputs (if we have any)
+	if(f->GetInputCount() != 0)
+	{
+		if(ImGui::CollapsingHeader("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+
+		}
+	}
+
+	bool reconfigured = false;
+
+	//Show parameters (if we have any)
+	if(f->GetParamCount() != 0)
+	{
+		if(ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for(auto it = f->GetParamBegin(); it != f->GetParamEnd(); it++)
+			{
+				auto& param = it->second;
+				auto name = it->first;
+
+				//See what kind of parameter it is
+				switch(param.GetType())
+				{
+					case FilterParameter::TYPE_FLOAT:
+						{
+							//If we don't have a temporary value, make one
+							auto nval = param.GetFloatVal();
+							if(m_paramTempValues.find(name) == m_paramTempValues.end())
+								m_paramTempValues[name] = param.GetUnit().PrettyPrint(nval);
+
+							//Input path
+							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+							if(UnitInputWithImplicitApply(name.c_str(), m_paramTempValues[name], nval, param.GetUnit()))
+							{
+								param.SetFloatVal(nval);
+								reconfigured = true;
+							}
+						}
+						break;
+
+					case FilterParameter::TYPE_INT:
+						{
+							//If we don't have a temporary value, make one
+							//TODO: can we figure out how to preserve full int64 precision end to end here?
+							//For now, use a double to get as close as we can
+							double nval = param.GetIntVal();
+							if(m_paramTempValues.find(name) == m_paramTempValues.end())
+								m_paramTempValues[name] = param.GetUnit().PrettyPrint(nval);
+
+							//Input path
+							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+							if(UnitInputWithImplicitApply(name.c_str(), m_paramTempValues[name], nval, param.GetUnit()))
+							{
+								param.SetIntVal(nval);
+								reconfigured = true;
+							}
+						}
+						break;
+
+					/*
+					TYPE_BOOL,			//boolean value
+					TYPE_FILENAME,		//file path
+					TYPE_ENUM,			//enumerated constant
+					TYPE_STRING,		//arbitrary string
+					TYPE_8B10B_PATTERN	//8B/10B pattern
+					*/
+
+					default:
+						ImGui::Text("Parameter %s is unimplemented type", name.c_str());
+						break;
+				}
+			}
+		}
+	}
+
+	if(reconfigured)
+	{
+		//Update auto generated name
+		if(f->IsUsingDefaultName())
+		{
+			f->SetDefaultName();
+			m_committedDisplayName = f->GetDisplayName();
+			m_displayName = m_committedDisplayName;
+		}
+
+		m_parent->OnFilterReconfigured(f);
+	}
+
+	return true;
+}

@@ -66,6 +66,8 @@ public:
 	void OnZoomOutHorizontal(int64_t target, float step);
 	void NavigateToTimestamp(int64_t timestamp);
 
+	void ClearPersistenceOfChannel(OscilloscopeChannel* chan);
+
 	/**
 		@brief Gets the X axis unit for this group
 	 */

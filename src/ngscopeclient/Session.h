@@ -258,6 +258,8 @@ public:
 	void AddMarker(Marker m)
 	{ m_markers[m.m_timestamp].push_back(m); }
 
+	void StartWaveformThreadIfNeeded();
+
 protected:
 
 	///@brief Mutex for controlling access to scope vectors

@@ -127,8 +127,10 @@ public:
 	void SetPersistDecay(float f)
 	{ m_persistenceDecay = f; }
 
-	void CreateFilter(const std::string& name, std::shared_ptr<WaveformArea> area, StreamDescriptor initialStream);
-	void FindAreaForStream(std::shared_ptr<WaveformArea> area, StreamDescriptor stream);
+	void CreateFilter(const std::string& name, WaveformArea* area, StreamDescriptor initialStream);
+	void FindAreaForStream(WaveformArea* area, StreamDescriptor stream);
+
+	void OnFilterReconfigured(Filter* f);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);

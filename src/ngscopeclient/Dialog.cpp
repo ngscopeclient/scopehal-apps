@@ -65,8 +65,11 @@ bool Dialog::Render()
 	if(!m_open)
 		return false;
 
+	//Use our pointer as the imgui ID, so that we can retain state even if we change title
+	string name = m_title + "###" + to_string(reinterpret_cast<int64_t>(this));
+
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
+	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
 	{
 		//If we get here, the window is tabbed out or the content area is otherwise not visible.
 		//Save time by not drawing anything, but don't close the window!
@@ -293,6 +296,36 @@ bool Dialog::UnitInputWithImplicitApply(
 		const std::string& label,
 		std::string& currentValue,
 		float& committedValue,
+		Unit unit)
+{
+	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
+
+	ImGui::InputText(label.c_str(), &currentValue);
+
+	if(!ImGui::IsItemActive() && dirty )
+	{
+		committedValue = unit.ParseString(currentValue);
+		currentValue = unit.PrettyPrint(committedValue);
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Input box for a double precision floating point value with an associated unit
+
+	@param label			Text label
+	@param currentValue		Current text box content
+	@param committedValue	Most recently applied value
+	@param unit				The unit for the input
+
+	@return	True when focus is lost or user presses enter
+ */
+bool Dialog::UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		double& committedValue,
 		Unit unit)
 {
 	bool dirty = unit.PrettyPrint(committedValue) != currentValue;

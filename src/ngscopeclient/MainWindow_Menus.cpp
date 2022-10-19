@@ -610,9 +610,7 @@ void MainWindow::AddImportMenu()
 				continue;
 
 			if(ImGui::MenuItem(fname.c_str()))
-			{
-				//TODO: actually create the filter
-			}
+				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::EndMenu();
@@ -626,7 +624,7 @@ void MainWindow::AddGenerateMenu()
 {
 	auto& refs = m_session.GetReferenceFilters();
 
-	if(ImGui::BeginMenu("Generation"))
+	if(ImGui::BeginMenu("Generate"))
 	{
 		//Find all filters in this category and sort them alphabetically
 		vector<string> sortedNames;
@@ -644,10 +642,12 @@ void MainWindow::AddGenerateMenu()
 			if(fname.find("Import") != string::npos)
 				continue;
 
+			//Hide filters that have inputs
+			if(refs.find(fname)->second->GetInputCount() != 0)
+				continue;
+
 			if(ImGui::MenuItem(fname.c_str()))
-			{
-				//TODO: actually create the filter
-			}
+				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
 		ImGui::EndMenu();

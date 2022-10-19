@@ -229,10 +229,36 @@ bool ChannelPropertiesDialog::DoRender()
 	//Al channels have display settings
 	if(ImGui::CollapsingHeader("Display", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		auto f = dynamic_cast<Filter*>(m_channel);
+
 		ImGui::SetNextItemWidth(width);
 		if(TextInputWithImplicitApply("Nickname", m_displayName, m_committedDisplayName))
-			m_channel->SetDisplayName(m_committedDisplayName);
-		HelpMarker("Display name for the channel");
+		{
+			//If it's a filter, we're not using a default name anymore (unless the provided name is blank)
+			if(f != nullptr)
+			{
+				if(m_committedDisplayName == "")
+				{
+					f->UseDefaultName(true);
+					m_committedDisplayName = f->GetDisplayName();
+					m_displayName = m_committedDisplayName;
+				}
+				else
+				{
+					f->UseDefaultName(false);
+					m_channel->SetDisplayName(m_committedDisplayName);
+				}
+			}
+
+			//No, just set the name
+			else
+				m_channel->SetDisplayName(m_committedDisplayName);
+		}
+
+		if(f)
+			HelpMarker("Display name for the filter.\n\nSet blank to use an auto-generated default name.");
+		else
+			HelpMarker("Display name for the channel");
 
 		if(ImGui::ColorEdit3(
 			"Color",

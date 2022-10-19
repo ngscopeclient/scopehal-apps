@@ -260,12 +260,21 @@ public:
 
 	void AddStream(StreamDescriptor desc);
 
+	bool IsCompatible(StreamDescriptor desc);
+
 	void RemoveStream(size_t i);
 
 	void ClearPersistence();
+	void ClearPersistenceOfChannel(OscilloscopeChannel* chan);
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
+
+	/**
+		@brief Gets the WaveformGroup for this area
+	 */
+	std::shared_ptr<WaveformGroup> GetGroup()
+	{ return m_group; }
 
 	TimePoint GetWaveformTimestamp();
 

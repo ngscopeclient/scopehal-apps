@@ -1574,6 +1574,7 @@ void WaveformArea::FilterMenu(shared_ptr<DisplayedChannel> chan)
 void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string& name, Filter::Category cat)
 {
 	auto& refs = m_parent->GetSession().GetReferenceFilters();
+	auto stream = chan->GetStream();
 
 	if(ImGui::BeginMenu(name.c_str()))
 	{
@@ -1594,16 +1595,14 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 			if(it->second->GetInputCount() == 0)		//No inputs? Always valid
 				valid = true;
 			else
-				valid = it->second->ValidateChannel(0, chan->GetStream());
+				valid = it->second->ValidateChannel(0, stream);
 
 			//Hide import filters to avoid cluttering the UI
 			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
 				continue;
 
 			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
-			{
-				//TODO: actually create the filter
-			}
+				m_parent->CreateFilter(fname, this, stream);
 		}
 
 		ImGui::EndMenu();
@@ -1613,6 +1612,25 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 void WaveformArea::ClearPersistence()
 {
 	m_clearPersistence = true;
+}
+
+/**
+	@brief Clear persistence iff we are displaying the specified channel
+
+	TODO: can we clear *only* that channel and nothing else?
+	TODO: clear if we have any dependency chain leading to the specified channel
+ */
+void WaveformArea::ClearPersistenceOfChannel(OscilloscopeChannel* chan)
+{
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.m_channel == chan)
+		{
+			m_clearPersistence = true;
+			return;
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1723,4 +1741,23 @@ TimePoint WaveformArea::GetWaveformTimestamp()
 	}
 
 	return TimePoint(0, 0);
+}
+
+/**
+	@brief Checks if this area is compatible with a provided stream
+ */
+bool WaveformArea::IsCompatible(StreamDescriptor desc)
+{
+	//Can't go anywhere in our group if the X unit is different (e.g. frequency vs time)
+	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
+		return false;
+
+	//Can't go in this area if the Y unit is different
+	if(m_yAxisUnit != desc.GetYAxisUnits())
+		return false;
+
+	//TODO: can't mix eye and non-eye
+
+	//All good if we get here
+	return true;
 }

@@ -48,6 +48,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "ChannelPropertiesDialog.h"
+#include "FilterPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
@@ -778,9 +779,19 @@ void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 	}
 
 	//Dialog wasn't already open, create it
-	auto dlg = make_shared<ChannelPropertiesDialog>(channel);
-	m_channelPropertiesDialogs[channel] = dlg;
-	AddDialog(dlg);
+	auto f = dynamic_cast<Filter*>(channel);
+	if(f)
+	{
+		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
+		m_channelPropertiesDialogs[channel] = dlg;
+		AddDialog(dlg);
+	}
+	else
+	{
+		auto dlg = make_shared<ChannelPropertiesDialog>(channel);
+		m_channelPropertiesDialogs[channel] = dlg;
+		AddDialog(dlg);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -965,16 +976,119 @@ void MainWindow::UpdateFonts()
 	@param area				Waveform area we launched the context menu from (if any)
 	@param initialStream	Stream we launched the context menu from (if any)
  */
-void MainWindow::CreateFilter(const string& name, shared_ptr<WaveformArea> area, StreamDescriptor initialStream)
+void MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDescriptor initialStream)
 {
+	LogTrace("CreateFilter %s\n", name.c_str());
+
+	//Make sure we have a WaveformThread to handle background processing
+	m_session.StartWaveformThreadIfNeeded();
+
+	//Make the filter
 	auto f = Filter::CreateFilter(name, GetDefaultChannelColor(Filter::GetNumInstances()));
 
+	//Attempt to hook up first input
+	if(f->ValidateChannel(0, initialStream))
+		f->SetInput(0, initialStream);
+
+	//Give it an initial name, may change later
+	f->SetDefaultName();
+
+	//Re-run the filter graph so we have an initial waveform to look at
+	//Then force a re-render
+	m_session.RefreshAllFilters();
+	SetNeedRender();
+
+	//Find a home for each of its streams
 	for(size_t i=0; i<f->GetStreamCount(); i++)
 		FindAreaForStream(area, StreamDescriptor(f, i));
 
-	//TODO: create filter properties dialog
+	//Create filter properties dialog
+	auto dlg = make_shared<FilterPropertiesDialog>(f, this);
+	m_channelPropertiesDialogs[f] = dlg;
+	AddDialog(dlg);
 }
 
-void MainWindow::FindAreaForStream(shared_ptr<WaveformArea> area, StreamDescriptor stream)
+/**
+	@brief Given a stream and optionally a WaveformArea, adds the stream to some area.
+
+	The provided area is considered first; if it's not a good fit then another area is selected. If no compatible
+	area can be found, a new one is created.
+ */
+void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 {
+	LogTrace("Looking for area for stream %s\n", stream.GetName().c_str());
+	LogIndenter li;
+
+	//No areas?
+	if(m_waveformGroups.empty())
+	{
+		LogTrace("No waveform groups, making a new one\n");
+
+		//Make it
+		auto name = NameNewWaveformGroup();
+		auto group = make_shared<WaveformGroup>(this, name);
+		m_waveformGroups.push_back(group);
+
+		//Group is newly created and not yet docked
+		m_newWaveformGroups.push_back(group);
+
+		//Make an area
+		auto a = make_shared<WaveformArea>(stream, group, this);
+		group->AddArea(a);
+		return;
+	}
+
+	//TODO: how to handle Y axis scaling if it doesn's match the group we decide to add it to?
+
+	//Try the provided area first, if we have one
+	if( (area != nullptr) && (area->IsCompatible(stream) ) )
+	{
+		LogTrace("Suggested area looks good\n");
+		area->AddStream(stream);
+		return;
+	}
+
+	//TODO: try making a new area in the same group
+
+	//Try all of our other areas
+	for(auto g : m_waveformGroups)
+	{
+		//TODO
+	}
+
+	/*
+
+	//Add waveform areas for the streams
+	for(auto s : streams)
+	{
+		auto group = GetBestGroupForWaveform(s);
+		auto area = make_shared<WaveformArea>(s, group, this);
+		group->AddArea(area);
+	}
+	*/
+
+	//If we get here, give up and make a new area
+	//LogTrace("Giving up, making a new area\n");
+	LogTrace("Couldn't find a good area, giving up\n");
+}
+
+/**
+	@brief Handle a filter being reconfigured
+
+	TODO: push this to a background thread to avoid hanging the UI thread
+ */
+void MainWindow::OnFilterReconfigured(Filter* f)
+{
+	//Remove any saved configuration, eye patterns, etc
+	f->ClearSweeps();
+
+	//Re-run the filter
+	m_session.RefreshAllFilters();
+
+	//Clear persistence of any waveform areas showing this waveform
+	for(auto g : m_waveformGroups)
+		g->ClearPersistenceOfChannel(f);
+
+	//Rerun the filter and request a redraw
+	SetNeedRender();
 }

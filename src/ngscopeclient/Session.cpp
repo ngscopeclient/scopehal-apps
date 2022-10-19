@@ -174,6 +174,15 @@ void Session::ApplyPreferences(Oscilloscope* scope)
 	}
 }
 
+/**
+	@brief Starts the WaveformThread if we don't already have one
+ */
+void Session::StartWaveformThreadIfNeeded()
+{
+	if(m_waveformThread == nullptr)
+		m_waveformThread = make_unique<thread>(WaveformThread, this, &m_shuttingDown);
+}
+
 void Session::AddOscilloscope(Oscilloscope* scope)
 {
 	lock_guard<mutex> lock(m_scopeMutex);
@@ -186,8 +195,7 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
 	m_mainWindow->OnScopeAdded(scope);
 
-	if(m_waveformThread == nullptr)
-		m_waveformThread = make_unique<thread>(WaveformThread, this, &m_shuttingDown);
+	StartWaveformThreadIfNeeded();
 }
 
 /**
@@ -699,15 +707,13 @@ void Session::RefreshAllFilters()
 
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
-	//SyncFilterColors();
-
 	set<Filter*> filters;
 	{
-		lock_guard<mutex> lock3(m_filterUpdatingMutex);
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
 		filters = Filter::GetAllInstances();
 	}
 
-	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
+	shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 	m_graphExecutor.RunBlocking(filters);
 
 	//Update statistic displays after the filter graph update is complete

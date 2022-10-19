@@ -802,6 +802,17 @@ void WaveformGroup::ClearPersistence()
 	m_clearPersistence = true;
 }
 
+/**
+	@brief Clear saved persistence waveforms of any WaveformArea's within this group containing a stream of one channel
+
+	Typically called when a channel is reconfigured.
+ */
+void WaveformGroup::ClearPersistenceOfChannel(OscilloscopeChannel* chan)
+{
+	for(auto a : m_areas)
+		a->ClearPersistenceOfChannel(chan);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Zooming
 

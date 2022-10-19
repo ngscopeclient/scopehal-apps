@@ -36,6 +36,7 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	FilterPropertiesDialog.cpp
 	FontManager.cpp
 	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp
