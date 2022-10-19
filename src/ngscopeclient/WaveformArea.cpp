@@ -1498,7 +1498,9 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
 		string tooltip;
-		tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + rchan->GetScope()->m_nickname + "\n\n";
+		auto scope = rchan->GetScope();
+		if(scope)
+			tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + scope->m_nickname + "\n\n";
 
 		//See if we have data
 		if(data)
