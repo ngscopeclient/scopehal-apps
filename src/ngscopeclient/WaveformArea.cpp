@@ -54,6 +54,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		, m_cachedY(0)
 		, m_persistenceEnabled(false)
 		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
+		, m_yButtonPos(0)
 {
 	stream.m_channel->AddRef();
 
@@ -192,6 +193,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
 	, m_lastRightClickOffset(0)
+	, m_channelButtonHeight(0)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -546,6 +548,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderAnalogWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_DIGITAL:
+				RenderDigitalWaveform(chan, start, size);
+				break;
+
 			default:
 				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
 				break;
@@ -576,6 +582,36 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 }
 
 /**
+	@brief Renders a single digital waveform
+ */
+void WaveformArea::RenderDigitalWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Mark the waveform as resized
+	if(channel->UpdateSize(ImVec2(size.x, m_channelButtonHeight), m_parent))
+		m_parent->SetNeedRender();
+
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+	{
+		auto ypos = (channel->GetYButtonPos() * ImGui::GetWindowDpiScale()) + start.y;
+		list->AddImage(
+			tex->GetTexture(),
+			ImVec2(start.x, ypos - m_channelButtonHeight),
+			ImVec2(start.x+size.x, ypos),
+			ImVec2(0, 1),
+			ImVec2(1, 0) );
+	}
+}
+
+/**
 	@brief Tone map our waveforms
  */
 void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
@@ -586,7 +622,8 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ToneMapAnalogWaveform(chan, cmdbuf);
+			case Stream::STREAM_TYPE_DIGITAL:
+				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
 				break;
 
 			default:
@@ -622,7 +659,8 @@ void WaveformArea::RenderWaveformTextures(
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				RasterizeAnalogWaveform(chan, cmdbuf, clearing);
+			case Stream::STREAM_TYPE_DIGITAL:
+				RasterizeAnalogOrDigitalWaveform(chan, cmdbuf, clearing);
 				break;
 
 			default:
@@ -632,7 +670,7 @@ void WaveformArea::RenderWaveformTextures(
 	}
 }
 
-void WaveformArea::RasterizeAnalogWaveform(
+void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	shared_ptr<DisplayedChannel> channel,
 	vk::raii::CommandBuffer& cmdbuf,
 	bool clearPersistence
@@ -650,6 +688,8 @@ void WaveformArea::RasterizeAnalogWaveform(
 	}
 	size_t w = m_width;
 	size_t h = m_height;
+	if(channel->GetStream().GetType() == Stream::STREAM_TYPE_DIGITAL)
+		h = m_channelButtonHeight;
 	channel->PrepareToRasterize(w, h);
 
 	shared_ptr<ComputePipeline> comp;
@@ -662,20 +702,38 @@ void WaveformArea::RasterizeAnalogWaveform(
 	double pixelsPerX = m_group->GetPixelsPerXUnit();
 	double xscale = data->m_timescale * pixelsPerX;
 
-	//Bind input buffers
-	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
-	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
-	if(udata)
-	{
+	//Figure out which shader to use
+	auto udata = dynamic_cast<UniformWaveformBase*>(data);
+	auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+	auto uadata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sadata = dynamic_cast<SparseAnalogWaveform*>(data);
+	auto uddata = dynamic_cast<UniformDigitalWaveform*>(data);
+	auto sddata = dynamic_cast<SparseDigitalWaveform*>(data);
+	if(uadata)
 		comp = channel->GetUniformAnalogPipeline();
-		comp->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
-		//don't bind offsets or indexes as they're not used
+	else if(uddata)
+		comp = channel->GetUniformDigitalPipeline();
+	else if(sadata)
+		comp = channel->GetSparseAnalogPipeline();
+	else if(sddata)
+		comp = channel->GetSparseDigitalPipeline();
+	if(!comp)
+	{
+		LogWarning("no pipeline found\n");
+		return;
 	}
 
-	else
+	//Bind input buffers
+	if(uadata)
+		comp->BindBufferNonblocking(1, uadata->m_samples, cmdbuf);
+	if(uddata)
+		comp->BindBufferNonblocking(1, uddata->m_samples, cmdbuf);
+	if(sdata)
 	{
-		comp = channel->GetSparseAnalogPipeline();
-		comp->BindBufferNonblocking(1, sdata->m_samples, cmdbuf);
+		if(sadata)
+			comp->BindBufferNonblocking(1, sadata->m_samples, cmdbuf);
+		if(sddata)
+			comp->BindBufferNonblocking(1, sddata->m_samples, cmdbuf);
 
 		//Map offsets and, if requested, durations
 		comp->BindBufferNonblocking(2, sdata->m_offsets, cmdbuf);
@@ -697,9 +755,6 @@ void WaveformArea::RasterizeAnalogWaveform(
 		ibuf.MarkModifiedFromCpu();
 		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
 	}
-
-	if(!comp)
-		return;
 
 	//Bind output texture
 	auto& imgOut = channel->GetRasterizedWaveform();
@@ -728,9 +783,18 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.alpha = alpha_scaled;
 	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
 	config.xscale = xscale;
-	config.ybase = h * 0.5f;
-	config.yscale = m_pixelsPerYAxisUnit;
-	config.yoff = stream.GetOffset();
+	if(sadata || uadata)	//analog
+	{
+		config.yscale = m_pixelsPerYAxisUnit;
+		config.yoff = stream.GetOffset();
+		config.ybase = h * 0.5f;
+	}
+	else					//digital
+	{
+		config.yoff = 0;
+		config.yscale = m_channelButtonHeight - 1;
+		config.ybase = 0;
+	}
 	if(channel->IsPersistenceEnabled() && !clearPersistence)
 		config.persistScale = m_parent->GetPersistDecay();
 	else
@@ -743,9 +807,9 @@ void WaveformArea::RasterizeAnalogWaveform(
 }
 
 /**
-	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
+	@brief Tone maps an analog or digital waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -1346,15 +1410,11 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
-	//Reject streams with incompatible Y axis units
+	//Reject streams not compatible with this plot
 	//TODO: display nice error message
 	auto stream = m_parent->GetChannelBeingDragged();
-	auto first = GetFirstAnalogOrEyeStream();
-	if(first)
-	{
-		if(first.GetYAxisUnits() != stream.GetYAxisUnits())
-			return;
-	}
+	if(!IsCompatible(stream))
+		return;
 
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
@@ -1499,12 +1559,15 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto acolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*amul, fcolor.y*amul, fcolor.z*amul, fcolor.w) );
 
 	//The actual button
+	float ystart = ImGui::GetCursorScreenPos().y;
 	ImGui::PushStyleColor(ImGuiCol_Text, color);
 	ImGui::PushStyleColor(ImGuiCol_Button, bcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, acolor);
 		ImGui::Button(chan->GetName().c_str());
 	ImGui::PopStyleColor(4);
+	m_channelButtonHeight = (ImGui::GetCursorScreenPos().y - ystart) - (ImGui::GetStyle().ItemSpacing.y);
+	chan->SetYButtonPos(ImGui::GetCursorPosY());
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
@@ -1785,11 +1848,15 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
 		return false;
 
+	//TODO: can't mix eye and non-eye
+
+	//Digital channels can be overlaid on anything
+	if(desc.GetType() == Stream::STREAM_TYPE_DIGITAL)
+		return true;
+
 	//Can't go in this area if the Y unit is different
 	if(m_yAxisUnit != desc.GetYAxisUnits())
 		return false;
-
-	//TODO: can't mix eye and non-eye
 
 	//All good if we get here
 	return true;

@@ -166,6 +166,45 @@ public:
 		return m_sparseAnalogComputePipeline;
 	}
 
+	/**
+		@brief Gets the pipeline for drawing uniform digital waveforms, creating it if necessary
+	*/
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetUniformDigitalPipeline()
+	{
+		if(m_uniformDigitalComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix += ".int64";
+			m_uniformDigitalComputePipeline = std::make_shared<ComputePipeline>(
+				base + "digital" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+		}
+
+		return m_uniformDigitalComputePipeline;
+	}
+
+	/**
+		@brief Gets the pipeline for drawing sparse digital waveforms, creating it if necessary
+	*/
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetSparseDigitalPipeline()
+	{
+		if(m_sparseDigitalComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			int durationSSBOs = 0;	//TODO: support gaps
+			if(g_hasShaderInt64)
+				suffix += ".int64";
+			m_sparseDigitalComputePipeline = std::make_shared<ComputePipeline>(
+				base + "digital" + suffix + ".spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
+		}
+
+		return m_sparseDigitalComputePipeline;
+	}
+
 	ComputePipeline& GetToneMapPipeline()
 	{ return m_toneMapPipe; }
 
@@ -208,6 +247,12 @@ public:
 	AcceleratorBuffer<uint32_t>& GetIndexBuffer()
 	{ return m_indexBuffer; }
 
+	void SetYButtonPos(float y)
+	{ m_yButtonPos = y; }
+
+	float GetYButtonPos()
+	{ return m_yButtonPos; }
+
 protected:
 	StreamDescriptor m_stream;
 
@@ -243,6 +288,15 @@ protected:
 
 	///@brief Compute pipeline for rendering sparse analog waveforms
 	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering uniform digital waveforms
+	std::shared_ptr<ComputePipeline> m_uniformDigitalComputePipeline;
+
+	///@brief Compute pipeline for rendering sparse digital waveforms
+	std::shared_ptr<ComputePipeline> m_sparseDigitalComputePipeline;
+
+	///@brief Y axis position of our button within the view
+	float m_yButtonPos;
 };
 
 /**
@@ -300,8 +354,9 @@ protected:
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
-	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
-	void RasterizeAnalogWaveform(
+	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf,
 		bool clearPersistence);
@@ -399,6 +454,9 @@ protected:
 
 	///@brief True if clearing persistence next render
 	std::atomic<bool> m_clearPersistence;
+
+	///@brief Height of a channel button
+	float m_channelButtonHeight;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;
