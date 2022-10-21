@@ -692,7 +692,7 @@ void WaveformArea::RasterizeAnalogWaveform(
 			ibuf[i] = BinarySearchForGequal(
 				sdata->m_offsets.GetCpuPointer(),
 				data->size(),
-				target-2);
+				target);
 		}
 		ibuf.MarkModifiedFromCpu();
 		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
