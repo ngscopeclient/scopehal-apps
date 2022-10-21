@@ -205,7 +205,7 @@ public:
 	void SetPersistenceEnabled(bool b)
 	{ m_persistenceEnabled = b; }
 
-	AcceleratorBuffer<int64_t>& GetIndexBuffer()
+	AcceleratorBuffer<uint32_t>& GetIndexBuffer()
 	{ return m_indexBuffer; }
 
 protected:
@@ -215,7 +215,7 @@ protected:
 	AcceleratorBuffer<float> m_rasterizedWaveform;
 
 	///@brief Buffer for X axis indexes (only used for sparse waveforms)
-	AcceleratorBuffer<int64_t> m_indexBuffer;
+	AcceleratorBuffer<uint32_t> m_indexBuffer;
 
 	///@brief X axis size of rasterized waveform
 	size_t m_rasterizedX;

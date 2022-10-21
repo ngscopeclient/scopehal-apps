@@ -63,8 +63,8 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
 	//Use pinned memory for index buffer since it should only be read once
-	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<int64_t>::HINT_LIKELY);
-	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<int64_t>::HINT_UNLIKELY);
+	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
+	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_UNLIKELY);
 }
 
 /**
