@@ -47,6 +47,8 @@ public:
 protected:
 	std::map<std::string, std::string> m_paramTempValues;
 
+	void FindAllStreams(std::vector<StreamDescriptor>& streams);
+
 	MainWindow* m_parent;
 };
 

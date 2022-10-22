@@ -37,6 +37,8 @@
 #include "FilterPropertiesDialog.h"
 #include "MainWindow.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constuction / destruction
 
@@ -62,16 +64,44 @@ bool FilterPropertiesDialog::DoRender()
 
 	auto f = dynamic_cast<Filter*>(m_channel);
 
+	bool reconfigured = false;
+
 	//Show inputs (if we have any)
 	if(f->GetInputCount() != 0)
 	{
 		if(ImGui::CollapsingHeader("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			//TODO: cache some of this?
+			vector<StreamDescriptor> streams;
+			FindAllStreams(streams);
 
+			for(size_t i=0; i<f->GetInputCount(); i++)
+			{
+				//Find the set of legal streams for this input
+				vector<StreamDescriptor> matchingInputs;
+				vector<string> names;
+				int sel = 0;
+				for(auto stream : streams)
+				{
+					if(!f->ValidateChannel(i, stream))
+						continue;
+
+					if(f->GetInput(i) == stream)
+						sel = matchingInputs.size();
+
+					matchingInputs.push_back(stream);
+					names.push_back(stream.GetName());
+				}
+
+				//The actual combo box
+				if(Combo(f->GetInputName(i).c_str(), names, sel))
+				{
+					f->SetInput(i, matchingInputs[sel]);
+					reconfigured = true;
+				}
+			}
 		}
 	}
-
-	bool reconfigured = false;
 
 	//Show parameters (if we have any)
 	if(f->GetParamCount() != 0)
@@ -152,4 +182,33 @@ bool FilterPropertiesDialog::DoRender()
 	}
 
 	return true;
+}
+
+/**
+	@brief Get every stream that might be usable as an input to a filter
+ */
+void FilterPropertiesDialog::FindAllStreams(vector<StreamDescriptor>& streams)
+{
+	//Null stream always has to be considered
+	streams.push_back(StreamDescriptor(nullptr, 0));
+
+	//Then find every channel of every scope
+	auto& scopes = m_parent->GetSession().GetScopes();
+	for(auto scope : scopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				streams.push_back(StreamDescriptor(chan, j));
+		}
+	}
+
+	//Then add every stream of every filter
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		for(size_t j=0; j<f->GetStreamCount(); j++)
+			streams.push_back(StreamDescriptor(f, j));
+	}
 }

@@ -85,6 +85,10 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 		m_cachedX = x;
 		m_cachedY = y;
 
+		//Don't actually create an image object if the image is degenerate (zero pixels)
+		if( (x == 0) || (y == 0) )
+			return true;
+
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
 
 		vector<uint32_t> queueFamilies;
@@ -756,8 +760,10 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
 	}
 
-	//Bind output texture
+	//Bind output texture and bail if there's nothing there
 	auto& imgOut = channel->GetRasterizedWaveform();
+	if(imgOut.empty())
+		return;
 	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
 
 	//Scale alpha by zoom.
