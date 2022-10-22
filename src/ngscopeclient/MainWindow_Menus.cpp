@@ -46,6 +46,7 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "FilterGraphEditor.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
@@ -730,6 +731,17 @@ void MainWindow::WindowMenu()
 			AddDialog(m_historyDialog);
 		}
 		if(hasHistory)
+			ImGui::EndDisabled();
+
+		bool hasGraphEditor = m_graphEditor != nullptr;
+		if(hasGraphEditor)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Filter Graph"))
+		{
+			m_graphEditor = make_shared<FilterGraphEditor>(m_session);
+			AddDialog(m_graphEditor);
+		}
+		if(hasGraphEditor)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();

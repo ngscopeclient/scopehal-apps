@@ -158,6 +158,7 @@ void MainWindow::CloseSession()
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
+	m_graphEditor = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -591,6 +592,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_preferenceDialog = nullptr;
 	if(m_persistenceDialog == dlg)
 		m_persistenceDialog = nullptr;
+	if(m_graphEditor == dlg)
+		m_graphEditor = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)

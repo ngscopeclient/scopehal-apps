@@ -25,6 +25,10 @@ add_executable(ngscopeclient
 	../implot/implot.cpp
 	../implot/implot_demo.cpp
 	../implot/implot_items.cpp
+	../imgui-node-editor/imgui_node_editor.cpp
+	../imgui-node-editor/imgui_node_editor_api.cpp
+	../imgui-node-editor/imgui_canvas.cpp
+	../imgui-node-editor/crude_json.cpp
 
 	pthread_compat.cpp
 
@@ -36,6 +40,7 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	FilterGraphEditor.cpp
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
 	FunctionGeneratorDialog.cpp

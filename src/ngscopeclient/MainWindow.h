@@ -234,6 +234,9 @@ protected:
 	///@brief Persistence settings
 	std::shared_ptr<Dialog> m_persistenceDialog;
 
+	///@brief Filter graph editor
+	std::shared_ptr<Dialog> m_graphEditor;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups
