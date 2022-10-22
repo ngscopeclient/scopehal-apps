@@ -55,7 +55,6 @@ Texture::Texture(
 	const std::string& name
 	)
 	: m_image(device, imageInfo)
-	, m_pool(mgr->GetPool())
 {
 	auto req = m_image.getMemoryRequirements();
 
@@ -142,7 +141,6 @@ Texture::Texture(
 	TextureManager* mgr,
 	const string& name)
 	: m_image(device, imageInfo)
-	, m_pool(mgr->GetPool())
 {
 	auto req = m_image.getMemoryRequirements();
 
@@ -274,8 +272,7 @@ Texture::~Texture()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-TextureManager::TextureManager(shared_ptr<vk::raii::DescriptorPool> pool)
-	: m_pool(pool)
+TextureManager::TextureManager()
 {
 	//Make a sampler using configuration that matches imgui
 	vk::SamplerCreateInfo sinfo(
