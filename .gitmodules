@@ -10,3 +10,6 @@
 [submodule "src/implot"]
 	path = src/implot
 	url = https://github.com/epezent/implot
+[submodule "src/imgui-node-editor"]
+	path = src/imgui-node-editor
+	url = https://github.com/thedmd/imgui-node-editor
