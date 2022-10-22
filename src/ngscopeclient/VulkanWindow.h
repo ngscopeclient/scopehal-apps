@@ -67,6 +67,9 @@ protected:
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;
 
+	///@brief ImGui context for GUI objects
+	ImGuiContext* m_context;
+
 	///@brief Surface for drawing onto
 	std::shared_ptr<vk::raii::SurfaceKHR> m_surface;
 

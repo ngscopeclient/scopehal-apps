@@ -106,24 +106,6 @@ int main(int argc, char* argv[])
 	ScopeProtocolStaticInit();
 	InitializePlugins();
 
-	//Initialize ImGui
-	IMGUI_CHECKVERSION();
-	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
-	auto ctx = ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-	//Don't serialize UI config for now
-	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
-	io.IniFilename = nullptr;
-
-	//Set up appearance settings
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.WindowRounding = 0.0f;
-	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-
 	{
 		//Make the top level window
 		vk::raii::Queue queue(*g_vkComputeDevice, g_renderQueueType, AllocateVulkanRenderQueue());
@@ -144,10 +126,6 @@ int main(int argc, char* argv[])
 		}
 
 		session.ClearBackgroundThreads();
-		g_vkComputeDevice->waitIdle();
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext(ctx);
 	}
 
 	//Done, clean up

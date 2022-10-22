@@ -119,6 +119,9 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 
 MainWindow::~MainWindow()
 {
+	g_vkComputeDevice->waitIdle();
+	m_texmgr.clear();
+
 	m_cmdBuffer = nullptr;
 	m_cmdPool = nullptr;
 

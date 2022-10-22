@@ -117,6 +117,9 @@ public:
 	std::shared_ptr<vk::raii::DescriptorPool> GetPool()
 	{ return m_pool; }
 
+	void clear()
+	{ m_textures.clear(); }
+
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
