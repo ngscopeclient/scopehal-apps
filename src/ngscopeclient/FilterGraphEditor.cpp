@@ -103,6 +103,7 @@ bool FilterGraphEditor::DoRender()
 	auto invalidcolor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Filter Graph.invalid_link_color"));
 
 	//Handle creation requests
+	Filter* fReconfigure = nullptr;
 	if(ax::NodeEditor::BeginCreate())
 	{
 		ax::NodeEditor::PinId startId, endId;
@@ -138,12 +139,7 @@ bool FilterGraphEditor::DoRender()
 							inputPort.first->SetInput(inputPort.second, stream);
 
 							//Update names, if needed
-							auto f = dynamic_cast<Filter*>(inputPort.first);
-							if(f)
-							{
-								if(f->IsUsingDefaultName())
-									f->SetDefaultName();
-							}
+							fReconfigure = dynamic_cast<Filter*>(inputPort.first);
 						}
 					}
 
@@ -170,15 +166,25 @@ bool FilterGraphEditor::DoRender()
 				auto pins = m_linkMap[lid];
 				auto inputPort = m_inputIDMap[pins.second];
 				inputPort.first->SetInput(inputPort.second, StreamDescriptor(nullptr, 0), true);
+
+				fReconfigure = dynamic_cast<Filter*>(inputPort.first);
 			}
 		}
 	}
 	ax::NodeEditor::EndDelete();
 
-	//TODO: force refresh of the filter graph
-
 	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
+
+	//Handle changes
+	if(fReconfigure)
+	{
+		//Update auto generated name
+		if(fReconfigure->IsUsingDefaultName())
+			fReconfigure->SetDefaultName();
+
+		m_parent->OnFilterReconfigured(fReconfigure);
+	}
 
 	return true;
 }
