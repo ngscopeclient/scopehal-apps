@@ -231,6 +231,17 @@ bool ChannelPropertiesDialog::DoRender()
 	{
 		auto f = dynamic_cast<Filter*>(m_channel);
 
+		//If it's a filter, using the default name, check for changes made outside of this properties window
+		//(e.g. via filter graph editor)
+		if(f)
+		{
+			if(f->IsUsingDefaultName() && (f->GetDisplayName() != m_committedDisplayName))
+			{
+				m_committedDisplayName = f->GetDisplayName();
+				m_displayName = m_committedDisplayName;
+			}
+		}
+
 		ImGui::SetNextItemWidth(width);
 		if(TextInputWithImplicitApply("Nickname", m_displayName, m_committedDisplayName))
 		{

@@ -738,7 +738,7 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("Filter Graph"))
 		{
-			m_graphEditor = make_shared<FilterGraphEditor>(m_session);
+			m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
 			AddDialog(m_graphEditor);
 		}
 		if(hasGraphEditor)

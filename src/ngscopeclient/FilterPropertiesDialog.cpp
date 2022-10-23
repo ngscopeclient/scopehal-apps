@@ -80,7 +80,7 @@ bool FilterPropertiesDialog::DoRender()
 				//Find the set of legal streams for this input
 				vector<StreamDescriptor> matchingInputs;
 				vector<string> names;
-				int sel = 0;
+				int sel = -1;
 				for(auto stream : streams)
 				{
 					if(!f->ValidateChannel(i, stream))

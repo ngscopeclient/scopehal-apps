@@ -98,7 +98,25 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Preamble color")
 				.Description("Color for preambles, sync bytes, and other fixed header data"));*/
 
-		/*auto& graph = appearance.AddCategory("Filter Graph");
+		auto& graph = appearance.AddCategory("Filter Graph");
+			graph.AddPreference(
+				Preference::Font("header_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))
+				.Label("Header font")
+				.Description("Font for filter/channel names"));
+			graph.AddPreference(
+				Preference::Color("header_text_color", ColorFromString("#000000"))
+				.Label("Header text color")
+				.Description("Color for filter/channel names"));
+			graph.AddPreference(
+				Preference::Color("valid_link_color", ColorFromString("#00ff00"))
+				.Label("Valid link color")
+				.Description("Color indicating a potential connection path is valid"));
+			graph.AddPreference(
+				Preference::Color("invalid_link_color", ColorFromString("#ff0000"))
+				.Label("Invalid link color")
+				.Description("Color indicating a potential connection path is invalid"));
+
+		/*
 			graph.AddPreference(
 				Preference::Color("background_color", ColorFromString("#101010"))
 				.Label("Background color")

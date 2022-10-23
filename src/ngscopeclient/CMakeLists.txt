@@ -6,6 +6,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)

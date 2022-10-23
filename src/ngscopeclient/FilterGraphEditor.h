@@ -37,18 +37,90 @@
 
 #include "Dialog.h"
 #include "Session.h"
+#include "Bijection.h"
+
+#include <imgui_node_editor.h>
+
+template<class T>
+class lessID
+{
+public:
+	bool operator()(const T& a, const T& b) const
+	{ return a.AsPointer() < b.AsPointer(); }
+};
+
+class lessIDPair
+{
+public:
+	bool operator()(
+		const std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>& a,
+		const std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>& b) const
+	{
+		auto fpa = a.first.AsPointer();
+		auto fpb = b.first.AsPointer();
+		if(fpa < fpb)
+			return true;
+		else if(fpa > fpb)
+			return false;
+		else
+			return a.second.AsPointer() < b.second.AsPointer();
+	}
+};
 
 class FilterGraphEditor : public Dialog
 {
 public:
-	FilterGraphEditor(Session& session);
+	FilterGraphEditor(Session& session, MainWindow* parent);
 	virtual ~FilterGraphEditor();
 
 	virtual bool DoRender();
 
 protected:
+	void DoNodeForChannel(OscilloscopeChannel* channel);
 
+	///@brief Session being manipuulated
 	Session& m_session;
+
+	///@brief Top level window
+	MainWindow* m_parent;
+
+	///@brief Graph editor setup
+	ax::NodeEditor::Config m_config;
+
+	///@brief Context containing current state of the graph editor
+	ax::NodeEditor::EditorContext* m_context;
+
+	///@brief Map of channels / filters to IDs
+	std::map<OscilloscopeChannel*, ax::NodeEditor::NodeId> m_channelIDMap;
+
+	///@brief Map of streams to output port IDs
+	Bijection<
+		StreamDescriptor,
+		ax::NodeEditor::PinId,
+		std::less<StreamDescriptor>,
+		lessID<ax::NodeEditor::PinId> > m_streamIDMap;
+
+	///@brief Map of (channel, input number) to input port IDs
+	Bijection<
+		std::pair<OscilloscopeChannel*, int>,
+		ax::NodeEditor::PinId,
+		std::less< std::pair<OscilloscopeChannel*, int> >,
+		lessID<ax::NodeEditor::PinId> > m_inputIDMap;
+
+	///@brief Map of (ID, ID) to link IDs
+	Bijection<
+		std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>,
+		ax::NodeEditor::LinkId,
+		lessIDPair,
+		lessID<ax::NodeEditor::LinkId> > m_linkMap;
+
+	///@brief Next ID to be allocated
+	int m_nextID;
+
+	ax::NodeEditor::NodeId GetID(OscilloscopeChannel* chan);
+	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
+	ax::NodeEditor::PinId GetID(std::pair<OscilloscopeChannel*, size_t> input);
+	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
 };
 
 #endif
