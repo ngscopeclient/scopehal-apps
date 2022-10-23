@@ -254,6 +254,8 @@ VulkanWindow::~VulkanWindow()
 {
 	g_vkComputeDevice->waitIdle();
 
+	m_texturesUsedThisFrame.clear();
+
 	ImPlot::DestroyContext(m_plotContext);
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
