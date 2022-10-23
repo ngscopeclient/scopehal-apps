@@ -97,13 +97,37 @@ bool FilterGraphEditor::DoRender()
 		}
 	}
 
+	//Handle creation or deletion requests
+	Filter* fReconfigure = nullptr;
+	HandleLinkCreationRequests(fReconfigure);
+	HandleLinkDeletionRequests(fReconfigure);
+
+	ax::NodeEditor::End();
+	ax::NodeEditor::SetCurrentEditor(nullptr);
+
+	//If any filters were reconfigured, dispatch events accordingly
+	if(fReconfigure)
+	{
+		//Update auto generated name
+		if(fReconfigure->IsUsingDefaultName())
+			fReconfigure->SetDefaultName();
+
+		m_parent->OnFilterReconfigured(fReconfigure);
+	}
+
+	return true;
+}
+
+/**
+	@brief Handle requests to create a new link
+ */
+void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
+{
 	//for some reason node editor wants colors as vec4 not ImU32
 	auto& prefs = m_session.GetPreferences();
 	auto validcolor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Filter Graph.valid_link_color"));
 	auto invalidcolor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Filter Graph.invalid_link_color"));
 
-	//Handle creation requests
-	Filter* fReconfigure = nullptr;
 	if(ax::NodeEditor::BeginCreate())
 	{
 		ax::NodeEditor::PinId startId, endId;
@@ -121,19 +145,30 @@ bool FilterGraphEditor::DoRender()
 					endId = tmp;
 				}
 
-				//Make sure both paths exist
+				//Make sure both paths exist and it's a path from output to input
 				if(m_inputIDMap.HasEntry(endId) && m_streamIDMap.HasEntry(startId))
 				{
 					//Get the stream and port we want to look at
 					auto inputPort = m_inputIDMap[endId];
 					auto stream = m_streamIDMap[startId];
 
-					//TODO: check for and reject attempts to create cycles in the graph
+					//Check for and reject back edges (creates cycles)
+					if(IsBackEdge(stream.m_channel, inputPort.first))
+					{
+						ax::NodeEditor::RejectNewItem(invalidcolor);
+
+						ImGui::BeginTooltip();
+							ImGui::TextColored(invalidcolor, "x Cannot create loops in filter graph");
+						ImGui::EndTooltip();
+					}
 
 					//See if the path is valid
-					if(inputPort.first->ValidateChannel(inputPort.second, stream))
+					else if(inputPort.first->ValidateChannel(inputPort.second, stream))
 					{
 						//Yep, looks good
+						ImGui::BeginTooltip();
+							ImGui::TextColored(validcolor, "+ Connect Port");
+						ImGui::EndTooltip();
 
 						if(ax::NodeEditor::AcceptNewItem(validcolor))
 						{
@@ -175,10 +210,129 @@ bool FilterGraphEditor::DoRender()
 				}
 			}
 		}
+
+		if(ax::NodeEditor::QueryNewNode(&startId))
+		{
+			if(startId && m_streamIDMap.HasEntry(startId))
+			{
+				ImGui::BeginTooltip();
+					ImGui::TextColored(validcolor, "+ Create Filter");
+				ImGui::EndTooltip();
+
+				if(ax::NodeEditor::AcceptNewItem())
+				{
+					ax::NodeEditor::Suspend();
+					m_newFilterSourceStream = m_streamIDMap[startId];
+					ImGui::OpenPopup("Create Filter");
+					ax::NodeEditor::Resume();
+				}
+			}
+		}
 	}
 	ax::NodeEditor::EndCreate();
 
-	//Handle deletion requests
+	//Create-filter menu
+	ax::NodeEditor::Suspend();
+	if(ImGui::BeginPopup("Create Filter"))
+	{
+		FilterMenu(m_newFilterSourceStream);
+		ImGui::EndPopup();
+	}
+	ax::NodeEditor::Resume();
+}
+
+/**
+	@brief Determine if a proposed edge in the filter graph is a back edge (one whose creation would lead to a cycle)
+
+	@param src	Source node
+	@param dst	Destination node
+
+	@return True if dst is equal to src, or if dst is directly or indirectly used as an input by src.
+ */
+bool FilterGraphEditor::IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst)
+{
+	if(src == dst)
+		return true;
+
+	//Check each input of src
+	auto fsrc = dynamic_cast<Filter*>(src);
+	if(!fsrc)
+		return false;
+	for(size_t i=0; i<fsrc->GetInputCount(); i++)
+	{
+		auto stream = fsrc->GetInput(i);
+		if(IsBackEdge(stream.m_channel, dst))
+			return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Runs the "create filter" menu
+ */
+void FilterGraphEditor::FilterMenu(StreamDescriptor stream)
+{
+	FilterSubmenu(stream, "Bus", Filter::CAT_BUS);
+	FilterSubmenu(stream, "Clocking", Filter::CAT_CLOCK);
+	FilterSubmenu(stream, "Generation", Filter::CAT_GENERATION);
+	FilterSubmenu(stream, "Math", Filter::CAT_MATH);
+	FilterSubmenu(stream, "Measurement", Filter::CAT_MEASUREMENT);
+	FilterSubmenu(stream, "Memory", Filter::CAT_MEMORY);
+	FilterSubmenu(stream, "Miscellaneous", Filter::CAT_MISC);
+	FilterSubmenu(stream, "Power", Filter::CAT_POWER);
+	FilterSubmenu(stream, "RF", Filter::CAT_RF);
+	FilterSubmenu(stream, "Serial", Filter::CAT_SERIAL);
+	FilterSubmenu(stream, "Signal integrity", Filter::CAT_ANALYSIS);
+}
+
+/**
+	@brief Run the submenu for a single filter category
+ */
+void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& name, Filter::Category cat)
+{
+	auto& refs = m_parent->GetSession().GetReferenceFilters();
+
+	if(ImGui::BeginMenu(name.c_str()))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == cat)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			auto it = refs.find(fname);
+			bool valid = false;
+			if(it->second->GetInputCount() == 0)		//No inputs? Always valid
+				valid = true;
+			else
+				valid = it->second->ValidateChannel(0, stream);
+
+			//Hide import filters to avoid cluttering the UI
+			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
+				continue;
+
+			//TODO: measurements should have summary option
+
+			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
+				m_parent->CreateFilter(fname, nullptr, stream);
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Handle requests to delete a link
+ */
+void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
+{
 	if(ax::NodeEditor::BeginDelete())
 	{
 		ax::NodeEditor::LinkId lid;
@@ -199,20 +353,6 @@ bool FilterGraphEditor::DoRender()
 	}
 	ax::NodeEditor::EndDelete();
 
-	ax::NodeEditor::End();
-	ax::NodeEditor::SetCurrentEditor(nullptr);
-
-	//Handle changes
-	if(fReconfigure)
-	{
-		//Update auto generated name
-		if(fReconfigure->IsUsingDefaultName())
-			fReconfigure->SetDefaultName();
-
-		m_parent->OnFilterReconfigured(fReconfigure);
-	}
-
-	return true;
 }
 
 void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)

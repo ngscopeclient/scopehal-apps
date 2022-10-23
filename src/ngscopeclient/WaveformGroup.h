@@ -115,6 +115,10 @@ public:
 	float GetSpacing()
 	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
 
+	///@brief gets the waveform areas in this group
+	const std::vector< std::shared_ptr<WaveformArea> >& GetWaveformAreas()
+	{ return m_areas; }
+
 protected:
 	void RenderTimeline(float width, float height);
 	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);

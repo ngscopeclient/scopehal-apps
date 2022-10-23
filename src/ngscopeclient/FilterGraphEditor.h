@@ -77,6 +77,12 @@ public:
 
 protected:
 	void DoNodeForChannel(OscilloscopeChannel* channel);
+	void HandleLinkCreationRequests(Filter*& fReconfigure);
+	void HandleLinkDeletionRequests(Filter*& fReconfigure);
+	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
+
+	void FilterMenu(StreamDescriptor src);
+	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
 
 	///@brief Session being manipuulated
 	Session& m_session;
@@ -121,6 +127,8 @@ protected:
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
 	ax::NodeEditor::PinId GetID(std::pair<OscilloscopeChannel*, size_t> input);
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
+
+	StreamDescriptor m_newFilterSourceStream;
 };
 
 #endif

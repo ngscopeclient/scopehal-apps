@@ -1048,34 +1048,49 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 
 	//TODO: how to handle Y axis scale if it doesn's match the group we decide to add it to?
 
-	//Try the provided area first, if we have one
-	if( (area != nullptr) && (area->IsCompatible(stream) ) )
+	//Attempt to place close to the existing area
+	if(area != nullptr)
 	{
-		LogTrace("Suggested area looks good\n");
-		area->AddStream(stream);
-		return;
-	}
+		//If a suggested area was provided, try it first
+		if(area->IsCompatible(stream))
+		{
+			LogTrace("Suggested area looks good\n");
+			area->AddStream(stream);
+			return;
+		}
 
-	//If X axis unit is compatible, but not Y, make a new area in the same group
-	auto group = area->GetGroup();
-	if(group->GetXAxisUnit() == stream.GetXAxisUnits())
-	{
-		LogTrace("Making new area in suggested group\n");
-		auto a = make_shared<WaveformArea>(stream, group, this);
-		group->AddArea(a);
-		return;
+		//If X axis unit is compatible, but not Y, make a new area in the same group
+		auto group = area->GetGroup();
+		if(group->GetXAxisUnit() == stream.GetXAxisUnits())
+		{
+			LogTrace("Making new area in suggested group\n");
+			auto a = make_shared<WaveformArea>(stream, group, this);
+			group->AddArea(a);
+			return;
+		}
 	}
 
 	//Try all of our other areas and see if any of them fit
 	for(auto g : m_waveformGroups)
 	{
-		//TODO: check areas within the group
+		//Try each area within the group
+		auto& areas = g->GetWaveformAreas();
+		for(auto a : areas)
+		{
+			if(a->IsCompatible(stream))
+			{
+				LogTrace("Adding to existing area in different group\n");
+				a->AddStream(stream);
+				return;
+			}
+		}
 
+		//Try making new area in the group
 		if(g->GetXAxisUnit() == stream.GetXAxisUnits())
 		{
 			LogTrace("Making new area in a different group\n");
 			auto a = make_shared<WaveformArea>(stream, g, this);
-			group->AddArea(a);
+			g->AddArea(a);
 			return;
 		}
 	}
@@ -1085,7 +1100,7 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 
 	//Make it
 	auto name = NameNewWaveformGroup();
-	group = make_shared<WaveformGroup>(this, name);
+	auto group = make_shared<WaveformGroup>(this, name);
 	m_waveformGroups.push_back(group);
 
 	//Group is newly created and not yet docked
