@@ -133,6 +133,8 @@ bool FilterGraphEditor::DoRender()
 					//See if the path is valid
 					if(inputPort.first->ValidateChannel(inputPort.second, stream))
 					{
+						//Yep, looks good
+
 						if(ax::NodeEditor::AcceptNewItem(validcolor))
 						{
 							//Hook it up
@@ -145,7 +147,31 @@ bool FilterGraphEditor::DoRender()
 
 					//Not valid
 					else
+					{
 						ax::NodeEditor::RejectNewItem(invalidcolor);
+
+						ImGui::BeginTooltip();
+							ImGui::TextColored(invalidcolor, "x Incompatible stream type for input");
+						ImGui::EndTooltip();
+					}
+				}
+
+				//Complain if both ports are input or both output
+				if(m_inputIDMap.HasEntry(endId) && m_inputIDMap.HasEntry(startId))
+				{
+					ax::NodeEditor::RejectNewItem(invalidcolor);
+
+					ImGui::BeginTooltip();
+						ImGui::TextColored(invalidcolor, "x Cannot connect two input ports");
+					ImGui::EndTooltip();
+				}
+				if(m_streamIDMap.HasEntry(endId) && m_streamIDMap.HasEntry(startId))
+				{
+					ax::NodeEditor::RejectNewItem(invalidcolor);
+
+					ImGui::BeginTooltip();
+						ImGui::TextColored(invalidcolor, "x Cannot connect two output ports");
+					ImGui::EndTooltip();
 				}
 			}
 		}
@@ -244,8 +270,9 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 		{
 			auto sid = GetID(StreamDescriptor(channel, i));
 
+			string portname = channel->GetStreamName(i) + " ‣";
 			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
-				ImGui::TextUnformatted(channel->GetStreamName(i).c_str());
+				RightJustifiedText(portname);
 			ax::NodeEditor::EndPin();
 		}
 
