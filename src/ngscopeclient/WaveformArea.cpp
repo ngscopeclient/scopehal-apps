@@ -1120,6 +1120,12 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	if(!mismatchFound || !mismatchStream)
 		return;
 
+	//If the mismatched stream isn't part of a scope, don't bother showing any warnings etc
+	//Filters can't be overdriven, so just silently clip
+	auto scope = mismatchStream.m_channel->GetScope();
+	if(scope == nullptr)
+		return;
+
 	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
 	//above everything else
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
@@ -1144,7 +1150,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	str += "Setting this channel to match the plot scale may result\n";
 	str += "in overdriving the instrument input.\n";
 	str += "\n";
-	str += string("If the instrument \"") + mismatchStream.m_channel->GetScope()->m_nickname +
+	str += string("If the instrument \"") + scope->m_nickname +
 		"\" can safely handle the applied signal at this plot's scale setting,\n";
 	str += "adjust the vertical scale of this plot slightly to set all signals to the same scale\n";
 	str += "and eliminate this message.\n\n";
