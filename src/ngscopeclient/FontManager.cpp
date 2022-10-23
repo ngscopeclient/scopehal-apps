@@ -83,6 +83,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root)
 	ImFontGlyphRangesBuilder builder;
 	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
 	builder.AddChar(L'°');
+	builder.AddChar(L'‣');
 
 	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
