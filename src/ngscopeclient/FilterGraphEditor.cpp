@@ -123,9 +123,13 @@ bool FilterGraphEditor::DoRender()
 				//Make sure both paths exist
 				if(m_inputIDMap.HasEntry(endId) && m_streamIDMap.HasEntry(startId))
 				{
-					//See if the path is valid
+					//Get the stream and port we want to look at
 					auto inputPort = m_inputIDMap[endId];
 					auto stream = m_streamIDMap[startId];
+
+					//TODO: check for and reject attempts to create cycles in the graph
+
+					//See if the path is valid
 					if(inputPort.first->ValidateChannel(inputPort.second, stream))
 					{
 						if(ax::NodeEditor::AcceptNewItem(validcolor))
@@ -151,6 +155,27 @@ bool FilterGraphEditor::DoRender()
 		}
 	}
 	ax::NodeEditor::EndCreate();
+
+	//Handle deletion requests
+	if(ax::NodeEditor::BeginDelete())
+	{
+		ax::NodeEditor::LinkId lid;
+		while(ax::NodeEditor::QueryDeletedLink(&lid))
+		{
+			//All paths are deleteable for now
+			if(ax::NodeEditor::AcceptDeletedItem())
+			{
+				//All paths are from stream to input port
+				//so second ID in the link should be the input, which is now connected to nothing
+				auto pins = m_linkMap[lid];
+				auto inputPort = m_inputIDMap[pins.second];
+				inputPort.first->SetInput(inputPort.second, StreamDescriptor(nullptr, 0), true);
+			}
+		}
+	}
+	ax::NodeEditor::EndDelete();
+
+	//TODO: force refresh of the filter graph
 
 	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
