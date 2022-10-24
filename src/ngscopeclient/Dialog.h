@@ -51,7 +51,7 @@ public:
 	virtual bool DoRender() =0;
 
 protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	virtual bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
 	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
 	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);

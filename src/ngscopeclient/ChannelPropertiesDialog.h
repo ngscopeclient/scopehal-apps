@@ -37,6 +37,23 @@
 
 #include "Dialog.h"
 
+class DeferredComboBoxState
+{
+public:
+	DeferredComboBoxState()
+	: m_selection(-1)
+	, m_lastReturnValue(false)
+	{}
+
+	std::vector<std::string> m_items;
+	int m_selection;
+
+	ImVec2 m_pos;
+	ImVec2 m_size;
+
+	bool m_lastReturnValue;
+};
+
 class ChannelPropertiesDialog : public Dialog
 {
 public:
@@ -47,6 +64,8 @@ public:
 
 	OscilloscopeChannel* GetChannel()
 	{ return m_channel; }
+
+	void RunDeferredComboBoxes();
 
 protected:
 	OscilloscopeChannel* m_channel;
@@ -92,6 +111,12 @@ protected:
 
 	std::string m_probe;
 	bool m_canAutoZero;
+
+	//Special deferred combo box logic for use with node editor
+	virtual bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+
+	///@brief State for deferred combo boxes
+	std::map<std::string, DeferredComboBoxState> m_deferredComboStates;
 };
 
 #endif

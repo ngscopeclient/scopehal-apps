@@ -35,6 +35,7 @@
 
 #include "ngscopeclient.h"
 #include "ChannelPropertiesDialog.h"
+#include <imgui_node_editor.h>
 
 using namespace std;
 
@@ -192,6 +193,8 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
 /**
 	@brief Renders the dialog and handles UI events
 
+	TODO: see if there is a way we can make help markers work properly in the graph editor
+
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
@@ -217,14 +220,15 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				ImGui::InputText("Instrument", &nickname);
 			ImGui::EndDisabled();
-			HelpMarker("The instrument this channel was measured by");
+			if(!m_graphEditorMode)
+				HelpMarker("The instrument this channel was measured by");
 
 			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(width);
 				ImGui::InputText("Hardware Channel", &index);
 			ImGui::EndDisabled();
-
-			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
+			if(!m_graphEditorMode)
+				HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 		}
 
 		//TODO: filter info
@@ -270,10 +274,13 @@ bool ChannelPropertiesDialog::DoRender()
 				m_channel->SetDisplayName(m_committedDisplayName);
 		}
 
-		if(f)
-			HelpMarker("Display name for the filter.\n\nSet blank to use an auto-generated default name.");
-		else
-			HelpMarker("Display name for the channel");
+		if(!m_graphEditorMode)
+		{
+			if(f)
+				HelpMarker("Display name for the filter.\n\nSet blank to use an auto-generated default name.");
+			else
+				HelpMarker("Display name for the channel");
+		}
 
 		if(ImGui::ColorEdit3(
 			"Color",
@@ -304,7 +311,8 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				ImGui::InputText("Probe Type", &ptype);
 			ImGui::EndDisabled();
-			HelpMarker("Type of probe connected to the instrument input");
+			if(!m_graphEditorMode)
+				HelpMarker("Type of probe connected to the instrument input");
 
 			//Attenuation
 			Unit counts(Unit::UNIT_COUNTS);
@@ -329,7 +337,8 @@ bool ChannelPropertiesDialog::DoRender()
 			}
 			if(m_probe != "")
 				ImGui::EndDisabled();
-			HelpMarker("Attenuation setting for the probe (for example, 10 for a 10:1 probe)");
+			if(!m_graphEditorMode)
+				HelpMarker("Attenuation setting for the probe (for example, 10 for a 10:1 probe)");
 
 			//Only show coupling box if the instrument has configurable coupling
 			if( (m_couplings.size() > 1) && (m_probe == "") )
@@ -337,7 +346,8 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				if(Combo("Coupling", m_couplingNames, m_coupling))
 					m_channel->SetCoupling(m_couplings[m_coupling]);
-				HelpMarker("Coupling configuration for the input");
+				if(!m_graphEditorMode)
+					HelpMarker("Coupling configuration for the input");
 			}
 
 			//Bandwidth limiters (only show if more than one value available)
@@ -346,7 +356,8 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				if(Combo("Bandwidth", m_bwlNames, m_bwl))
 					m_channel->SetBandwidthLimit(m_bwlValues[m_bwl]);
-				HelpMarker("Hardware bandwidth limiter setting");
+				if(!m_graphEditorMode)
+					HelpMarker("Hardware bandwidth limiter setting");
 			}
 
 			//If there's an input mux, show a combo box for it
@@ -361,8 +372,8 @@ bool ChannelPropertiesDialog::DoRender()
 					//the set of valid values can change
 					RefreshInputSettings(scope, index);
 				}
-
-				HelpMarker("Hardware input multiplexer setting");
+				if(!m_graphEditorMode)
+					HelpMarker("Hardware input multiplexer setting");
 			}
 
 			//If the scope has configurable ADC modes, show dropdown for that
@@ -381,12 +392,15 @@ bool ChannelPropertiesDialog::DoRender()
 				if(nomodes)
 					ImGui::EndDisabled();
 
-				HelpMarker(
-					"Operating mode for the analog-to-digital converter.\n\n"
-					"Some instruments allow the ADC to operate in several modes, typically trading bit depth "
-					"against sample rate. Available modes may vary depending on the current sample rate and "
-					"which channels are in use."
-					);
+				if(!m_graphEditorMode)
+				{
+					HelpMarker(
+						"Operating mode for the analog-to-digital converter.\n\n"
+						"Some instruments allow the ADC to operate in several modes, typically trading bit depth "
+						"against sample rate. Available modes may vary depending on the current sample rate and "
+						"which channels are in use."
+						);
+				}
 			}
 
 			//If the probe supports inversion, show a checkbox for it
@@ -395,10 +409,13 @@ bool ChannelPropertiesDialog::DoRender()
 				if(ImGui::Checkbox("Invert", &m_inverted))
 					m_channel->Invert(m_inverted);
 
-				HelpMarker(
-					"When checked, input value is multiplied by -1.\n\n"
-					"For a differential probe, this is equivalent to swapping the positive and negative inputs."
-					);
+				if(!m_graphEditorMode)
+				{
+					HelpMarker(
+						"When checked, input value is multiplied by -1.\n\n"
+						"For a differential probe, this is equivalent to swapping the positive and negative inputs."
+						);
+				}
 			}
 
 			//If the probe supports auto zeroing, show a button for it
@@ -406,10 +423,13 @@ bool ChannelPropertiesDialog::DoRender()
 			{
 				if(ImGui::Button("Auto Zero"))
 					m_channel->AutoZero();
-				HelpMarker(
-					"Click to automatically zero offset of active probe.\n\n"
-					"Check probe documentation to see whether input signal must be removed before zeroing."
-					);
+				if(!m_graphEditorMode)
+				{
+					HelpMarker(
+						"Click to automatically zero offset of active probe.\n\n"
+						"Check probe documentation to see whether input signal must be removed before zeroing."
+						);
+				}
 			}
 		}
 	}
@@ -455,4 +475,46 @@ bool ChannelPropertiesDialog::DoRender()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
+// Special deferred combo box implementation
+
+bool ChannelPropertiesDialog::Combo(const string& label, const vector<string>& items, int& selection)
+{
+	//Early out if not inside graph editor
+	if(!m_graphEditorMode)
+		return Dialog::Combo(label, items, selection);
+
+	//Get actual dimensions
+	auto& state = m_deferredComboStates[label];
+	state.m_pos = ax::NodeEditor::CanvasToScreen(ImGui::GetCursorPos());
+	state.m_size.x = ImGui::CalcItemWidth();
+	state.m_size.y = ImGui::GetTextLineHeightWithSpacing();
+	state.m_items = items;
+
+	//Make a dummy object to preserve space for later
+	ImGui::Dummy(ImVec2(state.m_size.x, state.m_size.y));
+
+	//If we updated last frame, push that out
+	if(state.m_lastReturnValue)
+	{
+		selection = state.m_selection;
+		return true;
+	}
+	else
+	{
+		state.m_selection = selection;
+		return false;
+	}
+}
+
+void ChannelPropertiesDialog::RunDeferredComboBoxes()
+{
+	for(auto& it : m_deferredComboStates)
+	{
+		auto& state = it.second;
+		ImGui::SetCursorScreenPos(state.m_pos);
+		ImGui::SetNextItemWidth(state.m_size.x);
+		state.m_lastReturnValue = Dialog::Combo(it.first, state.m_items, state.m_selection);
+	}
+
+	//float GetCurrentZoom()
+}

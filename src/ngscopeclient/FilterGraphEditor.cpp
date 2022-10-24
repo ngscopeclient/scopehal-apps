@@ -111,6 +111,10 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
 
+	//Run deferred processing for combo boxes
+	for(auto it : m_propertiesDialogs)
+		it.second->RunDeferredComboBoxes();
+
 	//If any filters were reconfigured, dispatch events accordingly
 	if(fReconfigure)
 	{
