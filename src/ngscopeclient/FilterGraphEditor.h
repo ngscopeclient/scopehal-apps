@@ -79,7 +79,7 @@ public:
 protected:
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForChannel(OscilloscopeChannel* channel);
-	void NodeConfig(ax::NodeEditor::NodeId id, OscilloscopeChannel* channel);
+	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
@@ -146,6 +146,9 @@ protected:
 		ax::NodeEditor::NodeId,
 		std::shared_ptr<ChannelPropertiesDialog>,
 		lessID<ax::NodeEditor::NodeId> > m_propertiesDialogs;
+
+	///@brief Node whose properties we're currently interacting with
+	ax::NodeEditor::NodeId m_selectedProperties;
 
 	ImVec2 m_createMousePos;
 };

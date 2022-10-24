@@ -100,20 +100,17 @@ bool FilterGraphEditor::DoRender()
 		}
 	}
 
-	//Handle creation or deletion requests
+	//Handle other user input
 	Filter* fReconfigure = nullptr;
 	HandleLinkCreationRequests(fReconfigure);
 	HandleLinkDeletionRequests(fReconfigure);
+	HandleNodeProperties();
 
 	//Look for and avoid overlaps
 	HandleOverlaps();
 
 	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
-
-	//Run deferred processing for combo boxes
-	for(auto it : m_propertiesDialogs)
-		it.second->RunDeferredComboBoxes();
 
 	//If any filters were reconfigured, dispatch events accordingly
 	if(fReconfigure)
@@ -197,6 +194,7 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				ImGui::TextUnformatted("Unknown channel type");
 				break;
 		}
+		ImGui::TextUnformatted("Drag from this port to create a connection.");
 	ImGui::EndTooltip();
 }
 
@@ -579,6 +577,16 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 	//Get node info
 	auto pos = ax::NodeEditor::GetNodePosition(id);
 	auto size = ax::NodeEditor::GetNodeSize(id);
+	auto f = dynamic_cast<Filter*>(channel);
+	string headerText;
+	if(f)
+		headerText = f->GetProtocolDisplayName() + ": " + channel->GetDisplayName();
+	else
+		headerText = string("Channel: ") + channel->GetDisplayName();
+
+	//Figure out how big the header text is
+	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+	float nodewidth = max(20*tsize, headerSize.x);
 
 	//Reserve space for the node header
 	ImGui::Dummy(ImVec2(0, headerheight));
@@ -586,8 +594,7 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 
 	//Table of inputs at left and outputs at right
 	static ImGuiTableFlags flags = 0;
-	auto f = dynamic_cast<Filter*>(channel);
-	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(20*tsize, 0 ) ) )
+	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
 	{
 		//Input ports
 		ImGui::TableNextRow();
@@ -631,17 +638,22 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 		ImGui::EndTable();
 	}
 
-	NodeConfig(id, channel);
+	//Tooltip on hovered node
+	if(ax::NodeEditor::GetHoveredPin())
+	{}
+	else if(id == ax::NodeEditor::GetHoveredNode())
+	{
+		ax::NodeEditor::Suspend();
+			ImGui::BeginTooltip();
+				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
+			ImGui::EndTooltip();
+		ax::NodeEditor::Resume();
+	}
 
 	ImGui::PopID();
 	ax::NodeEditor::EndNode();
 
 	//Draw header after the node is done
-	string headerText;
-	if(f)
-		headerText = f->GetProtocolDisplayName() + ": " + channel->GetDisplayName();
-	else
-		headerText = string("Channel: ") + channel->GetDisplayName();
 	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(id);
 	bgList->AddRectFilled(
 		ImVec2(pos.x + 1, pos.y + 1),
@@ -658,19 +670,19 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 }
 
 /**
-	@brief Do channel configuration stuff
+	@brief Open the properties window when a node is right clicked
  */
-void FilterGraphEditor::NodeConfig(ax::NodeEditor::NodeId id, OscilloscopeChannel* channel)
+void FilterGraphEditor::HandleNodeProperties()
 {
-	//Create a fixed size table to put everything else inside of
-	auto tsize = ImGui::GetFontSize();
-	if(ImGui::BeginTable("nodeconfig", 1, 0, ImVec2(20*tsize, 0 ) ) )
+	//Look for context menu
+	ax::NodeEditor::NodeId id;
+	if(ax::NodeEditor::ShowNodeContextMenu(&id))
 	{
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
+		m_selectedProperties = id;
 
+		//Make the properties window
+		auto channel = m_channelIDMap[id];
 		auto f = dynamic_cast<Filter*>(channel);
-
 		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
 		{
 			if(f)
@@ -679,10 +691,20 @@ void FilterGraphEditor::NodeConfig(ax::NodeEditor::NodeId id, OscilloscopeChanne
 				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(channel, true);
 		}
 
-		m_propertiesDialogs[id]->RenderAsChild();
-
-		ImGui::EndTable();
+		//Create the popup
+		ax::NodeEditor::Suspend();
+			ImGui::OpenPopup("Node Properties");
+		ax::NodeEditor::Resume();
 	}
+
+	//Run the popup
+	ax::NodeEditor::Suspend();
+	if(ImGui::BeginPopup("Node Properties"))
+	{
+		m_propertiesDialogs[m_selectedProperties]->RenderAsChild();
+		ImGui::EndPopup();
+	}
+	ax::NodeEditor::Resume();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
