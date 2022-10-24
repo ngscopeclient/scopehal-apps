@@ -80,6 +80,8 @@ protected:
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
+	void HandleOverlaps();
+	bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 	void FilterMenu(StreamDescriptor src);
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
@@ -97,7 +99,11 @@ protected:
 	ax::NodeEditor::EditorContext* m_context;
 
 	///@brief Map of channels / filters to IDs
-	std::map<OscilloscopeChannel*, ax::NodeEditor::NodeId> m_channelIDMap;
+	Bijection<
+		OscilloscopeChannel*,
+		ax::NodeEditor::NodeId,
+		std::less<OscilloscopeChannel*>,
+		lessID<ax::NodeEditor::NodeId> > m_channelIDMap;
 
 	///@brief Map of streams to output port IDs
 	Bijection<
@@ -128,7 +134,10 @@ protected:
 	ax::NodeEditor::PinId GetID(std::pair<OscilloscopeChannel*, size_t> input);
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
 
+	///@brief Source stream of the newly created filter
 	StreamDescriptor m_newFilterSourceStream;
+
+	ImVec2 m_createMousePos;
 };
 
 #endif

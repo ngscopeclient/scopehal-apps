@@ -981,7 +981,7 @@ void MainWindow::UpdateFonts()
 	@param area				Waveform area we launched the context menu from (if any)
 	@param initialStream	Stream we launched the context menu from (if any)
  */
-void MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDescriptor initialStream)
+Filter* MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDescriptor initialStream)
 {
 	LogTrace("CreateFilter %s\n", name.c_str());
 
@@ -1014,6 +1014,8 @@ void MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDesc
 		m_channelPropertiesDialogs[f] = dlg;
 		AddDialog(dlg);
 	}
+
+	return f;
 }
 
 /**

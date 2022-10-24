@@ -127,7 +127,7 @@ public:
 	void SetPersistDecay(float f)
 	{ m_persistenceDecay = f; }
 
-	void CreateFilter(const std::string& name, WaveformArea* area, StreamDescriptor initialStream);
+	Filter* CreateFilter(const std::string& name, WaveformArea* area, StreamDescriptor initialStream);
 	void FindAreaForStream(WaveformArea* area, StreamDescriptor stream);
 
 	void OnFilterReconfigured(Filter* f);

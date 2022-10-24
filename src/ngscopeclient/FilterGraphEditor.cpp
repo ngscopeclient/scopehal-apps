@@ -102,6 +102,9 @@ bool FilterGraphEditor::DoRender()
 	HandleLinkCreationRequests(fReconfigure);
 	HandleLinkDeletionRequests(fReconfigure);
 
+	//Look for and avoid overlaps
+	HandleOverlaps();
+
 	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
 
@@ -115,6 +118,111 @@ bool FilterGraphEditor::DoRender()
 		m_parent->OnFilterReconfigured(fReconfigure);
 	}
 
+	return true;
+}
+
+/**
+	@brief Find nodes that are intersecting, and apply forces to avoid collisions
+ */
+void FilterGraphEditor::HandleOverlaps()
+{
+	//Early out: if left mouse button is down we are probably dragging an item
+	//Do nothing
+	if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		return;
+
+	//Get all of the node IDs
+	int nnodes = ax::NodeEditor::GetNodeCount();
+	vector<ax::NodeEditor::NodeId> nodes;
+	nodes.resize(nnodes);
+	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+
+	//Loop over all nodes and find potential collisions
+	for(int i=0; i<nnodes; i++)
+	{
+		auto nodeA = nodes[i];
+		auto posA = ax::NodeEditor::GetNodePosition(nodeA);
+		auto sizeA = ax::NodeEditor::GetNodeSize(nodeA);
+
+		for(int j=0; j<nnodes; j++)
+		{
+			//Don't check for self intersection
+			if(i == j)
+				continue;
+
+			auto nodeB = nodes[j];
+			auto posB = ax::NodeEditor::GetNodePosition(nodeB);
+			auto sizeB = ax::NodeEditor::GetNodeSize(nodeB);
+
+			//If no overlap, no action required
+			if(!RectIntersect(posA, sizeA, posB, sizeB))
+				continue;
+
+			//We have an overlap!
+			//Find the unit vector between the node positions
+			float dx = posB.x - posA.x;
+			float dy = posB.y - posA.y;
+			float mag = sqrt(dx*dx + dy*dy);
+
+			//Shift both nodes away from each other
+			//If magnitude is ~zero (nodes are at exactly the same position), arbitrarily move second one down or right at random
+			if(mag < 1e-2f)
+			{
+				if(rand() & 10)
+					posB.x ++;
+				else
+					posB.y ++;
+			}
+
+			else
+			{
+				float distance = 10;
+				float scale = distance / mag;
+				posB.x += scale * dx;
+				posB.y += scale * dy;
+			}
+
+			//TODO: take paths into account?
+
+			//Set the new node position
+			ax::NodeEditor::SetNodePosition(nodeB, posB);
+		}
+	}
+}
+
+/**
+	@brief Check if two rectangles intersect
+ */
+bool FilterGraphEditor::RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB)
+{
+	//Enlarge hitboxes by a small margin to keep spacing between nodes
+	float margin = 5;
+	posA.x -= margin;
+	posA.y -= margin;
+	posB.x -= margin;
+	posB.y -= margin;
+	sizeA.x += 2*margin;
+	sizeA.y += 2*margin;
+	sizeB.x += 2*margin;
+	sizeB.y += 2*margin;
+
+	//A completely above B? No intersection
+	if( (posA.y + sizeA.y) < posB.y)
+		return false;
+
+	//B completely above A? No intersection
+	if( (posB.y + sizeB.y) < posA.y)
+		return false;
+
+	//A completely left of B? No intersection
+	if( (posA.x + sizeA.x) < posB.x)
+		return false;
+
+	//B completely left of A? No intersection
+	if( (posB.x + sizeB.x) < posA.x)
+		return false;
+
+	//If we get here, they overlap
 	return true;
 }
 
@@ -223,6 +331,7 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 				{
 					ax::NodeEditor::Suspend();
 					m_newFilterSourceStream = m_streamIDMap[startId];
+					m_createMousePos = ImGui::GetMousePos();
 					ImGui::OpenPopup("Create Filter");
 					ax::NodeEditor::Resume();
 				}
@@ -321,7 +430,15 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 			//TODO: measurements should have summary option
 
 			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
-				m_parent->CreateFilter(fname, nullptr, stream);
+			{
+				auto f = m_parent->CreateFilter(fname, nullptr, stream);
+
+				//Get relative mouse position
+				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
+
+				//Assign initial positions
+				ax::NodeEditor::SetNodePosition(GetID(f), mousePos);
+			}
 		}
 
 		ImGui::EndMenu();
@@ -446,14 +563,13 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 ax::NodeEditor::NodeId FilterGraphEditor::GetID(OscilloscopeChannel* chan)
 {
 	//If it's in the table already, just return the ID
-	auto it = m_channelIDMap.find(chan);
-	if(it != m_channelIDMap.end())
-		return it->second;
+	if(m_channelIDMap.HasEntry(chan))
+		return m_channelIDMap[chan];
 
 	//Not in the table, allocate an ID
 	int id = m_nextID;
 	m_nextID ++;
-	m_channelIDMap[chan] = id;
+	m_channelIDMap.emplace(chan, id);
 	return id;
 }
 
