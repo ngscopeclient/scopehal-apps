@@ -40,7 +40,7 @@ class MainWindow;
 class FilterPropertiesDialog : public ChannelPropertiesDialog
 {
 public:
-	FilterPropertiesDialog(Filter* f, MainWindow* parent);
+	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
 
 	virtual bool DoRender();
 

@@ -38,6 +38,7 @@
 #include "Dialog.h"
 #include "Session.h"
 #include "Bijection.h"
+class ChannelPropertiesDialog;
 
 #include <imgui_node_editor.h>
 
@@ -76,11 +77,14 @@ public:
 	virtual bool DoRender();
 
 protected:
+	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForChannel(OscilloscopeChannel* channel);
+	void NodeConfig(ax::NodeEditor::NodeId id, OscilloscopeChannel* channel);
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
 	void HandleOverlaps();
+	void ClearOldPropertiesDialogs();
 	bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 	void FilterMenu(StreamDescriptor src);
@@ -136,6 +140,12 @@ protected:
 
 	///@brief Source stream of the newly created filter
 	StreamDescriptor m_newFilterSourceStream;
+
+	///@brief Properties dialogs for channels to be displayed inside nodes
+	std::map<
+		ax::NodeEditor::NodeId,
+		std::shared_ptr<ChannelPropertiesDialog>,
+		lessID<ax::NodeEditor::NodeId> > m_propertiesDialogs;
 
 	ImVec2 m_createMousePos;
 };

@@ -89,6 +89,14 @@ bool Dialog::Render()
 	return true;
 }
 
+/**
+	@brief Runs the dialog's contents directly into a parent window
+ */
+void Dialog::RenderAsChild()
+{
+	DoRender();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Error messages
 

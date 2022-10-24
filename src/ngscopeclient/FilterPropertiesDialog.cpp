@@ -42,8 +42,8 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Constuction / destruction
 
-FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent)
-	: ChannelPropertiesDialog(f)
+FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode)
+	: ChannelPropertiesDialog(f, graphEditorMode)
 	, m_parent(parent)
 {
 
@@ -56,6 +56,9 @@ FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent)
 
 bool FilterPropertiesDialog::DoRender()
 {
+	//Flags for a header that should be open by default EXCEPT in the graph editor
+	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
+
 	//Update name as we go
 	m_title = m_channel->GetHwname();
 
@@ -67,7 +70,7 @@ bool FilterPropertiesDialog::DoRender()
 	bool reconfigured = false;
 
 	//Show inputs (if we have any)
-	if(f->GetInputCount() != 0)
+	if( (f->GetInputCount() != 0) && !m_graphEditorMode)
 	{
 		if(ImGui::CollapsingHeader("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -106,7 +109,7 @@ bool FilterPropertiesDialog::DoRender()
 	//Show parameters (if we have any)
 	if(f->GetParamCount() != 0)
 	{
-		if(ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+		if(ImGui::CollapsingHeader("Parameters", defaultOpenFlags))
 		{
 			for(auto it = f->GetParamBegin(); it != f->GetParamEnd(); it++)
 			{

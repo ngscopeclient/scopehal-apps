@@ -980,8 +980,13 @@ void MainWindow::UpdateFonts()
 	@param name				Name of the filter
 	@param area				Waveform area we launched the context menu from (if any)
 	@param initialStream	Stream we launched the context menu from (if any)
+	@param showProperties	True to show the properties dialog
  */
-Filter* MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamDescriptor initialStream)
+Filter* MainWindow::CreateFilter(
+	const string& name,
+	WaveformArea* area,
+	StreamDescriptor initialStream,
+	bool showProperties)
 {
 	LogTrace("CreateFilter %s\n", name.c_str());
 
@@ -1008,7 +1013,7 @@ Filter* MainWindow::CreateFilter(const string& name, WaveformArea* area, StreamD
 		FindAreaForStream(area, StreamDescriptor(f, i));
 
 	//Create and show filter properties dialog
-	if(f->NeedsConfig())
+	if(f->NeedsConfig() && showProperties)
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[f] = dlg;

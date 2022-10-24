@@ -40,7 +40,7 @@
 class ChannelPropertiesDialog : public Dialog
 {
 public:
-	ChannelPropertiesDialog(OscilloscopeChannel* chan);
+	ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode = false);
 	virtual ~ChannelPropertiesDialog();
 
 	virtual bool DoRender();
@@ -50,6 +50,13 @@ public:
 
 protected:
 	OscilloscopeChannel* m_channel;
+
+	/**
+		@brief If true, we're a sub-window of a filter graph editor node
+
+		Collapse all tree headers by default, and don't show some settings (like filter inputs) that are redundant
+	 */
+	bool m_graphEditorMode;
 
 	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
 

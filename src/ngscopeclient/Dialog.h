@@ -47,6 +47,7 @@ public:
 	virtual ~Dialog();
 
 	bool Render();
+	void RenderAsChild();
 	virtual bool DoRender() =0;
 
 protected:

@@ -41,9 +41,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
+ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode)
 	: Dialog(chan->GetHwname(), ImVec2(300, 400))
 	, m_channel(chan)
+	, m_graphEditorMode(graphEditorMode)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
@@ -196,6 +197,9 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
  */
 bool ChannelPropertiesDialog::DoRender()
 {
+	//Flags for a header that should be open by default EXCEPT in the graph editor
+	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
+
 	//TODO: handle stream count changing dynamically on some filters
 
 	float width = 10 * ImGui::GetFontSize();
@@ -227,7 +231,7 @@ bool ChannelPropertiesDialog::DoRender()
 	}
 
 	//Al channels have display settings
-	if(ImGui::CollapsingHeader("Display", ImGuiTreeNodeFlags_DefaultOpen))
+	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
 	{
 		auto f = dynamic_cast<Filter*>(m_channel);
 
@@ -289,7 +293,7 @@ bool ChannelPropertiesDialog::DoRender()
 	auto nstreams = m_channel->GetStreamCount();
 	if(scope)
 	{
-		if(ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
+		if(ImGui::CollapsingHeader("Input", defaultOpenFlags))
 		{
 			//Type of probe connected
 			auto index = m_channel->GetIndex();

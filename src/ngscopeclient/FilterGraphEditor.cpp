@@ -36,6 +36,8 @@
 #include "ngscopeclient.h"
 #include "FilterGraphEditor.h"
 #include "MainWindow.h"
+#include "ChannelPropertiesDialog.h"
+#include "FilterPropertiesDialog.h"
 
 using namespace std;
 
@@ -80,6 +82,7 @@ bool FilterGraphEditor::DoRender()
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		DoNodeForChannel(f);
+	ClearOldPropertiesDialogs();
 
 	//Add links from each filter input to the stream it's fed by
 	for(auto f : filters)
@@ -119,6 +122,78 @@ bool FilterGraphEditor::DoRender()
 	}
 
 	return true;
+}
+
+/**
+	@brief Delete old properties dialogs for no-longer-extant nodes
+ */
+void FilterGraphEditor::ClearOldPropertiesDialogs()
+{
+	//Get all of the node IDs
+	int nnodes = ax::NodeEditor::GetNodeCount();
+	vector<ax::NodeEditor::NodeId> nodes;
+	nodes.resize(nnodes);
+	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+
+	//Make a set we can quickly search
+	set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > nodeset;
+	for(auto n : nodes)
+		nodeset.emplace(n);
+
+	//Find any node IDs that no longer are in use
+	vector<ax::NodeEditor::NodeId> idsToRemove;
+	for(auto it : m_propertiesDialogs)
+	{
+		if(nodeset.find(it.first) == nodeset.end())
+			idsToRemove.push_back(it.first);
+	}
+
+	//Remove them
+	for(auto i : idsToRemove)
+		m_propertiesDialogs.erase(i);
+}
+
+/**
+	@brief Display tooltips when mousing over interesting stuff
+ */
+void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
+{
+	ImGui::BeginTooltip();
+		switch(stream.GetType())
+		{
+			case Stream::STREAM_TYPE_ANALOG:
+				ImGui::TextUnformatted("Analog output channel");
+				break;
+
+			case Stream::STREAM_TYPE_DIGITAL:
+				ImGui::TextUnformatted("Digital output channel");
+				break;
+
+			case Stream::STREAM_TYPE_DIGITAL_BUS:
+				ImGui::TextUnformatted("Digital bus output channel");
+				break;
+
+			case Stream::STREAM_TYPE_EYE:
+				ImGui::TextUnformatted("Eye pattern");
+				break;
+
+			case Stream::STREAM_TYPE_SPECTROGRAM:
+				ImGui::TextUnformatted("Spectrogram");
+				break;
+
+			case Stream::STREAM_TYPE_WATERFALL:
+				ImGui::TextUnformatted("Waterfall");
+				break;
+
+			case Stream::STREAM_TYPE_PROTOCOL:
+				ImGui::TextUnformatted("Protocol data");
+				break;
+
+			default:
+				ImGui::TextUnformatted("Unknown channel type");
+				break;
+		}
+	ImGui::EndTooltip();
 }
 
 /**
@@ -431,7 +506,8 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 
 			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
 			{
-				auto f = m_parent->CreateFilter(fname, nullptr, stream);
+				//Make the filter but don't spawn a properties dialog for it
+				auto f = m_parent->CreateFilter(fname, nullptr, stream, false);
 
 				//Get relative mouse position
 				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
@@ -472,6 +548,9 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 
 }
 
+/**
+	@brief Make a node for a single channel (may be instrument channel or filter)
+ */
 void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 {
 	auto& prefs = m_session.GetPreferences();
@@ -515,8 +594,11 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 			{
 				auto sid = GetID(pair<OscilloscopeChannel*, size_t>(f, i));
 
+				string portname("‣ ");
+				portname += f->GetInputName(i);
 				ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
-					ImGui::TextUnformatted(f->GetInputName(i).c_str());
+					ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+					ImGui::TextUnformatted(portname.c_str());
 				ax::NodeEditor::EndPin();
 			}
 		}
@@ -525,23 +607,37 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 		ImGui::TableNextColumn();
 		for(size_t i=0; i<channel->GetStreamCount(); i++)
 		{
-			auto sid = GetID(StreamDescriptor(channel, i));
+			StreamDescriptor stream(channel, i);
+			auto sid = GetID(stream);
 
 			string portname = channel->GetStreamName(i) + " ‣";
 			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
 				RightJustifiedText(portname);
 			ax::NodeEditor::EndPin();
+
+			if(sid == ax::NodeEditor::GetHoveredPin())
+			{
+				ax::NodeEditor::Suspend();
+					OutputPortTooltip(stream);
+				ax::NodeEditor::Resume();
+			}
 		}
 
 		ImGui::EndTable();
 	}
 
-	//Table of properties TODO
+	NodeConfig(id, channel);
 
 	ImGui::PopID();
 	ax::NodeEditor::EndNode();
 
 	//Draw header after the node is done
+	string headerText;
+	if(f)
+		headerText = f->GetProtocolDisplayName() + ": " + channel->GetDisplayName();
+	else
+		headerText = string("Channel: ") + channel->GetDisplayName();
 	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(id);
 	bgList->AddRectFilled(
 		ImVec2(pos.x + 1, pos.y + 1),
@@ -554,7 +650,35 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 		headerfont->FontSize,
 		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
 		headercolor,
-		channel->GetDisplayName().c_str());
+		headerText.c_str());
+}
+
+/**
+	@brief Do channel configuration stuff
+ */
+void FilterGraphEditor::NodeConfig(ax::NodeEditor::NodeId id, OscilloscopeChannel* channel)
+{
+	//Create a fixed size table to put everything else inside of
+	auto tsize = ImGui::GetFontSize();
+	if(ImGui::BeginTable("nodeconfig", 1, 0, ImVec2(20*tsize, 0 ) ) )
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		auto f = dynamic_cast<Filter*>(channel);
+
+		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
+		{
+			if(f)
+				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
+			else
+				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(channel, true);
+		}
+
+		m_propertiesDialogs[id]->RenderAsChild();
+
+		ImGui::EndTable();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
