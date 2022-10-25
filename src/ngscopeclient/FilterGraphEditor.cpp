@@ -586,7 +586,7 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
-	float nodewidth = max(20*tsize, headerSize.x);
+	float nodewidth = max(15*tsize, headerSize.x);
 
 	//Reserve space for the node header
 	ImGui::Dummy(ImVec2(0, headerheight));

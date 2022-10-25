@@ -1055,7 +1055,7 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 
 	//TODO: how to handle Y axis scale if it doesn's match the group we decide to add it to?
 
-	//Attempt to place close to the existing area
+	//Attempt to place close to the existing area, if one was suggested
 	if(area != nullptr)
 	{
 		//If a suggested area was provided, try it first
@@ -1074,6 +1074,46 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 			auto a = make_shared<WaveformArea>(stream, group, this);
 			group->AddArea(a);
 			return;
+		}
+	}
+
+	//If it's a filter, attempt to place on top of any compatible WaveformArea displaying our first (non-null) input
+	auto f = dynamic_cast<Filter*>(stream.m_channel);
+	if(f)
+	{
+		//Find first input that has something hooked up
+		StreamDescriptor firstInput(nullptr, 0);
+		for(size_t i=0; i<f->GetInputCount(); i++)
+		{
+			firstInput = f->GetInput(i);
+			if(firstInput)
+				break;
+		}
+
+		//If at least one input is hooked up, see what we can do
+		if(firstInput)
+		{
+			for(auto g : m_waveformGroups)
+			{
+				//Try each area within the group
+				auto& areas = g->GetWaveformAreas();
+				for(auto a : areas)
+				{
+					if(!a->IsCompatible(stream))
+						continue;
+
+					for(size_t i=0; i<a->GetStreamCount(); i++)
+					{
+						if(firstInput == a->GetStream(i))
+						{
+							LogTrace("Adding to an area that was already displaying %s\n",
+								firstInput.GetName().c_str());
+							a->AddStream(stream);
+							return;
+						}
+					}
+				}
+			}
 		}
 	}
 
