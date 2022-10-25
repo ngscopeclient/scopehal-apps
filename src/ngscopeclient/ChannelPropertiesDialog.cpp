@@ -193,8 +193,6 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
 /**
 	@brief Renders the dialog and handles UI events
 
-	TODO: see if there is a way we can make help markers work properly in the graph editor
-
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
@@ -208,6 +206,7 @@ bool ChannelPropertiesDialog::DoRender()
 	float width = 10 * ImGui::GetFontSize();
 
 	auto scope = m_channel->GetScope();
+	auto f = dynamic_cast<Filter*>(m_channel);
 	if(ImGui::CollapsingHeader("Info"))
 	{
 		//Scope info
@@ -229,14 +228,22 @@ bool ChannelPropertiesDialog::DoRender()
 			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 		}
 
-		//TODO: filter info
+		//Filter info
+		if(f)
+		{
+			string fname = f->GetProtocolDisplayName();
+
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Filter Type", &fname);
+			ImGui::EndDisabled();
+			HelpMarker("Type of filter object");
+		}
 	}
 
 	//Al channels have display settings
 	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
 	{
-		auto f = dynamic_cast<Filter*>(m_channel);
-
 		//If it's a filter, using the default name, check for changes made outside of this properties window
 		//(e.g. via filter graph editor)
 		if(f)

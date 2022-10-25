@@ -578,11 +578,7 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 	auto pos = ax::NodeEditor::GetNodePosition(id);
 	auto size = ax::NodeEditor::GetNodeSize(id);
 	auto f = dynamic_cast<Filter*>(channel);
-	string headerText;
-	if(f)
-		headerText = f->GetProtocolDisplayName() + ": " + channel->GetDisplayName();
-	else
-		headerText = string("Channel: ") + channel->GetDisplayName();
+	string headerText = channel->GetDisplayName();
 
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
