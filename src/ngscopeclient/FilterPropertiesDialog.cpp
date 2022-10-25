@@ -155,11 +155,60 @@ bool FilterPropertiesDialog::DoRender()
 						}
 						break;
 
+					case FilterParameter::TYPE_BOOL:
+						{
+							bool b = param.GetBoolVal();
+							if(ImGui::Checkbox(name.c_str(), &b))
+							{
+								param.SetBoolVal(b);
+								reconfigured = true;
+							}
+						}
+						break;
+
+					case FilterParameter::TYPE_STRING:
+						{
+							//If we don't have a temporary value, make one
+							string s = param.ToString();
+							if(m_paramTempValues.find(name) == m_paramTempValues.end())
+								m_paramTempValues[name] = s;
+
+							//Input path
+							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+							if(TextInputWithImplicitApply(name.c_str(), m_paramTempValues[name], s))
+							{
+								param.SetStringVal(s);
+								reconfigured = true;
+							}
+						}
+						break;
+
+					case FilterParameter::TYPE_ENUM:
+						{
+							vector<string> enumValues;
+							param.GetEnumValues(enumValues);
+
+							int nsel = -1;
+							string s = param.ToString();
+							for(size_t i=0; i<enumValues.size(); i++)
+							{
+								if(enumValues[i] == s)
+								{
+									nsel = i;
+									break;
+								}
+							}
+
+							if(Combo(name.c_str(), enumValues, nsel))
+							{
+								param.ParseString(enumValues[nsel]);
+								reconfigured = true;
+							}
+						}
+						break;
+
 					/*
-					TYPE_BOOL,			//boolean value
 					TYPE_FILENAME,		//file path
-					TYPE_ENUM,			//enumerated constant
-					TYPE_STRING,		//arbitrary string
 					TYPE_8B10B_PATTERN	//8B/10B pattern
 					*/
 
