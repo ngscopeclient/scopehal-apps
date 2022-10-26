@@ -207,10 +207,34 @@ bool FilterPropertiesDialog::DoRender()
 						}
 						break;
 
-					/*
-					TYPE_FILENAME,		//file path
-					TYPE_8B10B_PATTERN	//8B/10B pattern
-					*/
+					case FilterParameter::TYPE_FILENAME:
+						{
+							string s = param.GetFileName();
+							if(m_paramTempValues.find(name) == m_paramTempValues.end())
+								m_paramTempValues[name] = s;
+
+							//Input path
+							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+							string tname = string("###path") + name;
+							if(TextInputWithImplicitApply(tname.c_str(), m_paramTempValues[name], s))
+							{
+								param.SetStringVal(s);
+								reconfigured = true;
+							}
+
+							//Browser button
+							ImGui::SameLine();
+							string bname = string("...###browse") + name;
+							if(ImGui::Button(bname.c_str()))
+							{
+								LogDebug("browser\n");
+							}
+							ImGui::SameLine();
+							ImGui::TextUnformatted(name.c_str());
+						}
+						break;
+
+					//TODO: TYPE_8B10B_PATTERN
 
 					default:
 						ImGui::Text("Parameter %s is unimplemented type", name.c_str());

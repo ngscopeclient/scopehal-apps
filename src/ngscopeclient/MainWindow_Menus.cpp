@@ -606,11 +606,13 @@ void MainWindow::AddImportMenu()
 		//Do all of the menu items
 		for(auto fname : sortedNames)
 		{
-			//Hide import filters
+			//Hide everything but import filters
 			if(fname.find("Import") == string::npos)
 				continue;
 
-			if(ImGui::MenuItem(fname.c_str()))
+			string shortname = fname.substr(0, fname.size() - strlen(" Import"));
+
+			if(ImGui::MenuItem(shortname.c_str()))
 				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
