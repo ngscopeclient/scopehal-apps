@@ -163,15 +163,15 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ImGui::TextUnformatted("Analog output channel");
+				ImGui::TextUnformatted("Analog channel");
 				break;
 
 			case Stream::STREAM_TYPE_DIGITAL:
-				ImGui::TextUnformatted("Digital output channel");
+				ImGui::TextUnformatted("Digital channel");
 				break;
 
 			case Stream::STREAM_TYPE_DIGITAL_BUS:
-				ImGui::TextUnformatted("Digital bus output channel");
+				ImGui::TextUnformatted("Digital bus");
 				break;
 
 			case Stream::STREAM_TYPE_EYE:
@@ -188,6 +188,10 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 
 			case Stream::STREAM_TYPE_PROTOCOL:
 				ImGui::TextUnformatted("Protocol data");
+				break;
+
+			case Stream::STREAM_TYPE_TRIGGER:
+				ImGui::TextUnformatted("External trigger");
 				break;
 
 			default:
@@ -400,17 +404,33 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 		{
 			if(startId && m_streamIDMap.HasEntry(startId))
 			{
-				ImGui::BeginTooltip();
-					ImGui::TextColored(validcolor, "+ Create Filter");
-				ImGui::EndTooltip();
+				//See what the stream is
+				m_newFilterSourceStream = m_streamIDMap[startId];
 
-				if(ax::NodeEditor::AcceptNewItem())
+				//Cannot create filters using external trigger as input
+				if(m_newFilterSourceStream.GetType() == Stream::STREAM_TYPE_TRIGGER)
 				{
-					ax::NodeEditor::Suspend();
-					m_newFilterSourceStream = m_streamIDMap[startId];
-					m_createMousePos = ImGui::GetMousePos();
-					ImGui::OpenPopup("Create Filter");
-					ax::NodeEditor::Resume();
+					ImGui::BeginTooltip();
+						ImGui::TextColored(invalidcolor, "x Cannot use external trigger as input to a filter");
+					ImGui::EndTooltip();
+
+					ax::NodeEditor::RejectNewItem(invalidcolor);
+				}
+
+				//All good otherwise
+				else
+				{
+					ImGui::BeginTooltip();
+						ImGui::TextColored(validcolor, "+ Create Filter");
+					ImGui::EndTooltip();
+
+					if(ax::NodeEditor::AcceptNewItem())
+					{
+						ax::NodeEditor::Suspend();
+						m_createMousePos = ImGui::GetMousePos();
+						ImGui::OpenPopup("Create Filter");
+						ax::NodeEditor::Resume();
+					}
 				}
 			}
 		}
