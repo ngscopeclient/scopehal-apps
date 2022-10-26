@@ -91,14 +91,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
 
-		vector<uint32_t> queueFamilies;
-		vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-		queueFamilies.push_back(g_computeQueueType);	//TODO: separate transfer queue?
-		if(g_renderQueueType != g_computeQueueType)
-		{
-			queueFamilies.push_back(g_renderQueueType);
-			sharingMode = vk::SharingMode::eConcurrent;
-		}
+		//NOTE: Assumes the render queue is also capable of transfers (see QueueManager)
 		vk::ImageCreateInfo imageInfo(
 			{},
 			vk::ImageType::e2D,
@@ -109,8 +102,8 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
 			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
 			vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
-			sharingMode,
-			queueFamilies,
+			vk::SharingMode::eExclusive,
+			{},
 			vk::ImageLayout::eUndefined
 			);
 
@@ -144,7 +137,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 				{},
 				barrier);
 		g_vkTransferCommandBuffer->end();
-		SubmitAndBlock(*g_vkTransferCommandBuffer, *g_vkTransferQueue);
+		g_vkTransferQueue->SubmitAndBlock(*g_vkTransferCommandBuffer);
 
 		return true;
 	}

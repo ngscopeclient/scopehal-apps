@@ -48,7 +48,7 @@ Event g_waveformProcessedEvent;
 ///@brief Time spent on the last cycle of waveform rendering shaders
 atomic<int64_t> g_lastWaveformRenderTime;
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue);
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue);
 
 /**
 	@brief Mutex for controlling access to background Vulkan activity
@@ -64,21 +64,20 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Starting\n");
 
 	//Create a queue and command buffer for this thread's accelerated processing
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("WaveformThread.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_computeQueueType );
+		queue->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
 
 	if(g_hasDebugUtils)
 	{
 		string prefix = "WaveformThread";
 		string poolname = prefix + ".pool";
 		string bufname = prefix + ".cmdbuf";
-		string qname = prefix + ".queue";
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
@@ -91,12 +90,6 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 				vk::ObjectType::eCommandBuffer,
 				reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(*cmdbuf)),
 				bufname.c_str()));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eQueue,
-				reinterpret_cast<int64_t>(static_cast<VkQueue>(*queue)),
-				qname.c_str()));
 	}
 
 	while(!*shuttingDown)
@@ -132,7 +125,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	LogTrace("Shutting down\n");
 }
 
-void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::raii::Queue& queue)
+void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue)
 {
 	double tstart = GetTime();
 
@@ -146,8 +139,7 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, vk::r
 	cmdbuf.begin({});
 	session->RenderWaveformTextures(cmdbuf, channels);
 	cmdbuf.end();
-
-	SubmitAndBlock(cmdbuf, queue);
+	queue->SubmitAndBlock(cmdbuf);
 
 	g_lastWaveformRenderTime = (GetTime() - tstart) * FS_PER_SECOND;
 }

@@ -77,6 +77,7 @@ public:
 
 protected:
 	void LayoutTransition(
+		vk::raii::CommandBuffer& cmdBuf,
 		vk::AccessFlags src,
 		vk::AccessFlags dst,
 		vk::ImageLayout from,
@@ -100,10 +101,12 @@ protected:
 class TextureManager
 {
 public:
-	TextureManager();
+	TextureManager(std::shared_ptr<QueueHandle> queue);
 	virtual ~TextureManager();
 
-	void LoadTexture(const std::string& name, const std::string& path);
+	void LoadTexture(
+		const std::string& name,
+		const std::string& path);
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_textures[name]->GetTexture(); }
@@ -114,11 +117,21 @@ public:
 	void clear()
 	{ m_textures.clear(); }
 
+	vk::raii::CommandBuffer& GetCmdBuffer()
+	{ return *m_cmdBuf; }
+	
+	std::shared_ptr<QueueHandle> GetQueue()
+	{ return m_queue; }
+
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
 	///@brief Sampler for textures
 	std::unique_ptr<vk::raii::Sampler> m_sampler;
+
+	std::shared_ptr<QueueHandle> m_queue;
+	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
+	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuf;
 };
 
 #endif

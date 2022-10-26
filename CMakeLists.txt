@@ -40,11 +40,18 @@ if(WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS")
 endif()
 
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_APPLE_SILICON")
+	set(APPLE_SILICON TRUE)
+endif()
+
 # Package detection
 find_package(PkgConfig)
 pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
-find_package(FFTS)
+if(NOT APPLE_SILICON)
+	find_package(FFTS)
+endif()
 include(FindOpenMP)
 find_package(glfw3 3.2 REQUIRED)
 
@@ -142,13 +149,22 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 if(BUILD_TESTING)
 	find_package(Catch2 REQUIRED)
 	include(Catch)
+	#Catch2 v3.x.y have a breaking change:
+	# Must include catch2/catch_all.hpp instead of catch2/catch.hpp
+	# So we set a compile flag to let the code know.
+	if(NOT Catch2_VERSION MATCHES "^[0-2]\\.")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CATCH2_V3")
+	endif()
 	add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 endif()
 
 # Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
+if(NOT APPLE_SILICON)
+	# Requires ffts, which does not build on apple silicon currently
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/impulse")
+endif(NOT APPLE_SILICON)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
 	#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
 endif()

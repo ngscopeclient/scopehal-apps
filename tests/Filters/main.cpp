@@ -34,7 +34,11 @@
  */
 
 #define CATCH_CONFIG_RUNNER
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
 #include <catch2/catch.hpp>
+#endif
 #include "Filters.h"
 
 using namespace std;

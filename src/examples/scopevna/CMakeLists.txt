@@ -10,11 +10,19 @@ add_executable(scopevna
 
 ###############################################################################
 #Linker settings
-target_link_libraries(scopevna
-	scopehal
-	scopeprotocols
-	${GTKMM_LIBRARIES}
-	${SIGCXX_LIBRARIES}
-	${LIBFFTS_LIBRARIES}
-	)
-
+if(APPLE_SILICON)
+	target_link_libraries(scopevna
+		scopehal
+		scopeprotocols
+		${GTKMM_LIBRARIES}
+		${SIGCXX_LIBRARIES}
+		)
+else()
+	target_link_libraries(scopevna
+		scopehal
+		scopeprotocols
+		${GTKMM_LIBRARIES}
+		${SIGCXX_LIBRARIES}
+		${LIBFFTS_LIBRARIES}
+		)
+endif()

@@ -108,6 +108,7 @@ public:
 		glUniform1i(GetUniformLocation(name), texid);
 	}
 
+#if false //TODO: Delete this, no longer needed?
 	void SetImageUniform(Texture& tex, const char* name, int texid = 0)
 	{
 		glActiveTexture(GL_TEXTURE0 + texid);
@@ -115,6 +116,7 @@ public:
 		glUniform1i(GetUniformLocation(name), texid);
 		glBindImageTexture(texid, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	}
+#endif
 
 	void DispatchCompute(GLuint x, GLuint y, GLuint z)
 	{ glDispatchCompute(x,y,z); }

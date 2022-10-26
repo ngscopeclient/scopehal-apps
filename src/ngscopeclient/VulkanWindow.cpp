@@ -56,7 +56,7 @@ void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
 /**
 	@brief Creates a new top level window with the specified title
  */
-VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
+VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
 	, m_semaphoreIndex(0)
@@ -137,7 +137,7 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	//Set up command pool
 	vk::CommandPoolCreateInfo cmdPoolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
+		queue->m_family );
 	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_backBuffers.size());
 
@@ -159,15 +159,21 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 	info.Instance = **g_vkInstance;
 	info.PhysicalDevice = **g_vkComputePhysicalDevice;
 	info.Device = **g_vkComputeDevice;
-	info.QueueFamily = g_renderQueueType;
+	info.QueueFamily = queue->m_family;
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.Subpass = 0;
 	info.MinImageCount = IMAGE_COUNT;
 	info.ImageCount = m_backBuffers.size();
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-	info.Queue = *queue;
-	ImGui_ImplVulkan_Init(&info, **m_renderPass);
+	//HERE BE DRAGONS:
+	// We're handing imgui a VkQueue here without holding the lock.
+	// This is only safe as long as we hold the QueueLock during any imgui rendering!!
+	{
+		QueueLock lock(m_renderQueue);
+		info.Queue = **lock;
+		ImGui_ImplVulkan_Init(&info, **m_renderPass);
+	}
 
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -187,7 +193,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 		string poolName = prefix + "imguiDescriptorPool";
 		string surfName = prefix + "renderSurface";
 		string rpName = prefix + "renderCommandPool";
-		string rqName = prefix + "renderQueue";
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
@@ -206,12 +211,6 @@ VulkanWindow::VulkanWindow(const string& title, vk::raii::Queue& queue)
 				vk::ObjectType::eCommandPool,
 				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
 				rpName.c_str()));
-
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eQueue,
-				reinterpret_cast<int64_t>(static_cast<VkQueue>(*m_renderQueue)),
-				rqName.c_str()));
 
 		for(size_t i=0; i<m_backBuffers.size(); i++)
 		{
@@ -439,7 +438,11 @@ void VulkanWindow::Render()
 
 				m_resizeEventPending = true;
 				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
+				{
+					//Hold queue lock, ImGui_ImplVulkan_RenderDrawData uses the VkQueue handle passed into ImGui_ImplVulkan_Init
+					QueueLock qlock(m_renderQueue);
+					ImGui::RenderPlatformWindowsDefault();
+				}
 				Render();
 
 				return;
@@ -451,7 +454,10 @@ void VulkanWindow::Render()
 
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
+			{
+				QueueLock qlock(m_renderQueue);
+				ImGui::RenderPlatformWindowsDefault();
+			}
 			Render();
 
 			return;
@@ -459,7 +465,7 @@ void VulkanWindow::Render()
 
 		//Reset fences for next frame
 		g_vkComputeDevice->resetFences({**m_fences[m_frameIndex]});
-		m_renderQueue.waitIdle();
+		(*QueueLock(m_renderQueue)).waitIdle();
 
 		//Start render pass
 		auto& cmdBuf = *m_cmdBuffers[m_frameIndex];
@@ -491,12 +497,16 @@ void VulkanWindow::Render()
 			flags,
 			*cmdBuf,
 			**m_renderCompleteSemaphores[m_semaphoreIndex]);
-		m_renderQueue.submit(info, **m_fences[m_frameIndex]);
+		QueueLock qlock(m_renderQueue);
+		(*qlock).submit(info, **m_fences[m_frameIndex]);
 	}
 
 	//Handle any additional popup windows created by imgui
 	ImGui::UpdatePlatformWindows();
-	ImGui::RenderPlatformWindowsDefault();
+	{
+		QueueLock qlock(m_renderQueue);
+		ImGui::RenderPlatformWindowsDefault();
+	}
 
 	//Present the main window
 	if(!main_is_minimized)
@@ -505,7 +515,8 @@ void VulkanWindow::Render()
 		m_semaphoreIndex = (m_semaphoreIndex + 1) % m_backBuffers.size();
 		try
 		{
-			if(vk::Result::eSuboptimalKHR == m_renderQueue.presentKHR(presentInfo))
+			QueueLock qlock(m_renderQueue);
+			if(vk::Result::eSuboptimalKHR == (*qlock).presentKHR(presentInfo))
 			{
 				LogTrace("eSuboptimal at present\n");
 				m_resizeEventPending = true;

@@ -94,7 +94,7 @@ OscilloscopeWindow::OscilloscopeWindow(const vector<Oscilloscope*>& scopes)
 	SetTitle();
 	FindScopeFuncGens();
 
-	m_vkQueue = std::make_unique<vk::raii::Queue>(*g_vkComputeDevice, g_computeQueueType, AllocateVulkanComputeQueue());
+	m_vkQueue = g_vkQueueManager->GetComputeQueue("OscilloscopeWindow.m_vkQueue");
 
 	//Initial setup
 	set_reallocate_redraws(true);
@@ -2838,15 +2838,19 @@ int64_t OscilloscopeWindow::GetLongestWaveformDuration(WaveformGroup* group)
 	int64_t duration = 0;
 	for(auto w : wfms)
 	{
+#ifndef _APPLE_SILICON // spectrogram relies on ffts, currently broken on apple silicon
 		auto spec = dynamic_cast<SpectrogramWaveform*>(w);
+#endif
 		auto u = dynamic_cast<UniformWaveformBase*>(w);
 		auto s = dynamic_cast<SparseWaveformBase*>(w);
 
+#ifndef _APPLE_SILICON // spectrogram relies on ffts, currently broken on apple silicon
 		//Spectrograms need special treatment
 		if(spec)
 			duration = max(duration, spec->GetDuration());
 
 		else
+#endif
 		{
 			size_t len = w->size();
 			if(len < 2)

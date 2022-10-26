@@ -47,6 +47,56 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // WaveformRenderData
 
+WaveformRenderData::WaveformRenderData(StreamDescriptor channel, WaveformArea* area)
+: m_area(area)
+, m_shaderDense()
+, m_shaderSparse()
+, m_vkCmdPool()
+, m_vkCmdBuf()
+, m_channel(channel)
+, m_geometryOK(false)
+, m_count(0)
+, m_persistence(false)
+{
+	if(IsAnalog() || IsDigital())
+	{
+		std::string shaderfn = "shaders/waveform-compute.";
+
+		if(IsHistogram())
+			shaderfn += "histogram";
+		else if(IsAnalog())
+			shaderfn += "analog";
+		else if(IsDigital())
+			shaderfn += "digital";
+
+		int durationsSSBOs = 0;
+
+		if(ZeroHoldFlagSet())
+		{
+			// TODO: Need to be able to dispatch this at runtime once we grow a UI setting for interpolation behavior
+			shaderfn += ".zerohold";
+			durationsSSBOs = 1;
+		}
+
+		if (GLEW_ARB_gpu_shader_int64 && !g_noglint64)
+			shaderfn += ".int64";
+		
+		std::string denseShaderFn = shaderfn + ".dense.spv";
+		std::string sparseShaderFn = shaderfn + ".spv";
+		LogDebug("Channel %s loading shader %s\n", channel.GetName().c_str(), sparseShaderFn.c_str());
+		m_shaderDense = std::make_shared<ComputePipeline>(denseShaderFn, 2, sizeof(ConfigPushConstants));
+		m_shaderSparse = std::make_shared<ComputePipeline>(sparseShaderFn, durationsSSBOs + 4, sizeof(ConfigPushConstants));
+
+		vk::CommandPoolCreateInfo poolInfo(
+			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+			area->GetParent()->m_vkQueue->m_family );
+		m_vkCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+		vk::CommandBufferAllocateInfo bufinfo(**m_vkCmdPool, vk::CommandBufferLevel::ePrimary, 1);
+		m_vkCmdBuf = std::make_unique<vk::raii::CommandBuffer>(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	}
+}
+
 void WaveformRenderData::UpdateCount()
 {
 	//Calculate the number of points we'll need to draw. Default to 1 if no data
@@ -466,8 +516,12 @@ void WaveformArea::RenderEye()
 
 void WaveformArea::RenderSpectrogram()
 {
+#ifdef _APPLE_SILICON //spectrogram broken on apple silicon due to missing ffts, FIXME
+	return;
+#else
 	if(m_channel.GetType() != Stream::STREAM_TYPE_SPECTROGRAM)
 		return;
+
 	auto pcap = dynamic_cast<SpectrogramWaveform*>(m_channel.GetData());
 	if(pcap == NULL)
 		return;
@@ -507,6 +561,7 @@ void WaveformArea::RenderSpectrogram()
 	m_spectrogramProgram.SetUniform(m_eyeColorRamp[m_parent->GetEyeColor()], "ramp", 1);
 
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
 }
 
 void WaveformArea::RenderWaterfall()
@@ -551,7 +606,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 		return;
 
 	//Round thread block size up to next multiple of the local size (must be power of two)
-	//localSize must match COLS_PER_BLOCK in waveform-compute-core.glsl
+	//localSize must match COLS_PER_BLOCK in waveform-compute.glsl
 	int localSize = 1;
 	int numCols = m_plotRight;
 	if(0 != (numCols % localSize) )
@@ -604,7 +659,7 @@ void WaveformArea::RenderTrace(WaveformRenderData* data)
 	comp->Dispatch(*data->m_vkCmdBuf, data->m_config, numGroups, 1, 1);
 	comp->AddComputeMemoryBarrier(*data->m_vkCmdBuf);
 	data->m_vkCmdBuf->end();
-	SubmitAndBlock(*data->m_vkCmdBuf, *m_parent->m_vkQueue);
+	m_parent->m_vkQueue->SubmitAndBlock(*data->m_vkCmdBuf);
 	data->m_renderedWaveform.MarkModifiedFromGpu();
 
 	//Copy the rendered waveform data to a GL Texture for compositing

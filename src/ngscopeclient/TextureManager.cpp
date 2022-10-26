@@ -83,12 +83,12 @@ Texture::Texture(
 
 	//Transfer our image data over from the staging buffer
 	{
-		std::lock_guard<std::mutex> lock(g_vkTransferMutex);
-
-		g_vkTransferCommandBuffer->begin({});
+		vk::raii::CommandBuffer& cmdBuf = mgr->GetCmdBuffer();
+		cmdBuf.begin({});
 
 		//Initial image layout transition
 		LayoutTransition(
+			cmdBuf,
 			vk::AccessFlagBits::eNone,
 			vk::AccessFlagBits::eTransferWrite,
 			vk::ImageLayout::eUndefined,
@@ -97,23 +97,20 @@ Texture::Texture(
 		//Copy the buffer to the image
 		vk::ImageSubresourceLayers subresource(vk::ImageAspectFlagBits::eColor, 0, 0, 1);
 		vk::BufferImageCopy region(0, 0, 0, subresource, vk::Offset3D(0, 0, 0), vk::Extent3D(width, height, 1) );
-		g_vkTransferCommandBuffer->copyBufferToImage(*srcBuf, *m_image, vk::ImageLayout::eTransferDstOptimal, region);
+		cmdBuf.copyBufferToImage(*srcBuf, *m_image, vk::ImageLayout::eTransferDstOptimal, region);
 
 		//Convert to something optimal for texture reads
 		LayoutTransition(
+			cmdBuf,
 			vk::AccessFlagBits::eTransferWrite,
 			vk::AccessFlagBits::eShaderRead,
 			vk::ImageLayout::eTransferDstOptimal,
 			vk::ImageLayout::eShaderReadOnlyOptimal);
 
-		g_vkTransferCommandBuffer->end();
+		cmdBuf.end();
 
 		//Submit the request and block until it completes
-		vk::raii::Fence fence(*g_vkComputeDevice, vk::FenceCreateInfo());
-		vk::SubmitInfo sinfo({}, {}, **g_vkTransferCommandBuffer);
-		g_vkTransferQueue->submit(sinfo, *fence);
-		while(vk::Result::eTimeout == g_vkComputeDevice->waitForFences({*fence}, VK_TRUE, 1000 * 1000))
-		{}
+		mgr->GetQueue()->SubmitAndBlock(cmdBuf);
 	}
 
 	//Make a view for the image
@@ -226,6 +223,7 @@ void Texture::SetName(const string& name)
 }
 
 void Texture::LayoutTransition(
+	vk::raii::CommandBuffer& cmdBuf,
 	vk::AccessFlags src,
 	vk::AccessFlags dst,
 	vk::ImageLayout from,
@@ -244,7 +242,7 @@ void Texture::LayoutTransition(
 
 	if(dst == vk::AccessFlagBits::eShaderRead)
 	{
-		g_vkTransferCommandBuffer->pipelineBarrier(
+		cmdBuf.pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::PipelineStageFlagBits::eFragmentShader,
 			{},
@@ -254,7 +252,7 @@ void Texture::LayoutTransition(
 	}
 	else
 	{
-		g_vkTransferCommandBuffer->pipelineBarrier(
+		cmdBuf.pipelineBarrier(
 			vk::PipelineStageFlagBits::eTopOfPipe,
 			vk::PipelineStageFlagBits::eTransfer,
 			{},
@@ -272,7 +270,8 @@ Texture::~Texture()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-TextureManager::TextureManager()
+TextureManager::TextureManager(shared_ptr<QueueHandle> queue)
+	: m_queue(queue)
 {
 	//Make a sampler using configuration that matches imgui
 	vk::SamplerCreateInfo sinfo(
@@ -292,11 +291,23 @@ TextureManager::TextureManager()
 		1000
 	);
 	m_sampler = make_unique<vk::raii::Sampler>(*g_vkComputeDevice, sinfo);
+
+	//Initialize command pool/buffer
+	vk::CommandPoolCreateInfo poolInfo(
+	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		queue->m_family );
+	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
+	m_cmdBuf = make_unique<vk::raii::CommandBuffer>(
+		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 }
 
 TextureManager::~TextureManager()
 {
-
+	m_cmdBuf = nullptr;
+	m_cmdPool = nullptr;
+	m_queue = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -307,7 +318,9 @@ TextureManager::~TextureManager()
 
 	If an existing texture by the same name already exists, it is overwritten.
  */
-void TextureManager::LoadTexture(const string& name, const string& path)
+void TextureManager::LoadTexture(
+	const string& name,
+	const string& path)
 {
 	LogTrace("Loading texture \"%s\" from file \"%s\"\n", name.c_str(), path.c_str());
 	LogIndenter li;
@@ -419,14 +432,6 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 	physMem.unmapMemory();
 
 	//Make the texture object
-	vector<uint32_t> queueFamilies;
-	vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
-	queueFamilies.push_back(g_computeQueueType);	//FIXME: separate transfer queue?
-	if(g_renderQueueType != g_computeQueueType)
-	{
-		queueFamilies.push_back(g_renderQueueType);
-		sharingMode = vk::SharingMode::eConcurrent;
-	}
 	vk::ImageCreateInfo imageInfo(
 		{},
 		vk::ImageType::e2D,
@@ -437,8 +442,8 @@ void TextureManager::LoadTexture(const string& name, const string& path)
 		VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
 		VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-		sharingMode,
-		queueFamilies,
+		vk::SharingMode::eExclusive,
+		{},
 		vk::ImageLayout::eUndefined
 		);
 	m_textures[name] = make_shared<Texture>(*g_vkComputeDevice, imageInfo, stagingBuf, width, height, this, name);

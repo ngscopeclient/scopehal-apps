@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 
 	{
 		//Make the top level window
-		vk::raii::Queue queue(*g_vkComputeDevice, g_renderQueueType, AllocateVulkanRenderQueue());
+		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("g_mainWindow.render"));
 		g_mainWindow = make_unique<MainWindow>(queue);
 
 		//Main event loop

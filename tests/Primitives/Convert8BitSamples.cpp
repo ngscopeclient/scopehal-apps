@@ -32,7 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for Convert8BitSamples primitive
  */
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
 #include <catch2/catch.hpp>
+#endif
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
@@ -48,14 +52,14 @@ TEST_CASE("Primitive_Convert8BitSamples")
 	#endif
 
 	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_Convert8BitSamples.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_computeQueueType );
+		queue->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	AcceleratorBuffer<int8_t> data_in;
 	AcceleratorBuffer<float> data_out;
@@ -149,7 +153,7 @@ TEST_CASE("Primitive_Convert8BitSamples")
 				args.offset = off;
 				pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(wavelen, 64));
 				cmdbuf.end();
-				SubmitAndBlock(cmdbuf, queue);
+				queue->SubmitAndBlock(cmdbuf);
 				float dt = GetTime() - start;
 				data_out.MarkModifiedFromGpu();
 

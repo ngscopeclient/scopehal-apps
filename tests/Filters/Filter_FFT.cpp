@@ -32,7 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for Upsample filter
  */
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
 #include <catch2/catch.hpp>
+#endif
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
@@ -48,14 +52,14 @@ TEST_CASE("Filter_FFT")
 	filter->AddRef();
 
 	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_FFT.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_computeQueueType );
+		queue->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	//Create an empty input waveform
 	const size_t depth = 1000000;
@@ -92,7 +96,10 @@ TEST_CASE("Filter_FFT")
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 
 			//Baseline on the CPU with no AVX
 			#ifdef __x86_64__
@@ -100,7 +107,10 @@ TEST_CASE("Filter_FFT")
 			#endif
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double tbase = GetTime() - start;
 			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
 
@@ -114,7 +124,10 @@ TEST_CASE("Filter_FFT")
 				{
 					g_hasAvx2 = true;
 					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
+					{
+						QueueLock lock(queue);
+						filter->Refresh(cmdbuf, *lock);
+					}
 					float dt = GetTime() - start;
 					LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
@@ -128,11 +141,17 @@ TEST_CASE("Filter_FFT")
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double dt = GetTime() - start;
 			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 

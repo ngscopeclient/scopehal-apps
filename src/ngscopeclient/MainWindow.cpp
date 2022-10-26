@@ -64,7 +64,7 @@ extern Event g_rerenderRequestedEvent;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(vk::raii::Queue& queue)
+MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 #ifdef _DEBUG
 	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
 #else
@@ -78,6 +78,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	, m_persistenceDecay(0.8)
 	, m_session(this)
 	, m_sessionClosing(false)
+	, m_texmgr(queue)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {
@@ -86,7 +87,7 @@ MainWindow::MainWindow(vk::raii::Queue& queue)
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
 	vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_renderQueueType );
+		queue->m_family );
 	m_cmdPool = make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
@@ -285,7 +286,10 @@ void MainWindow::Render()
 	//Shut down session, if requested, before starting the frame
 	if(m_sessionClosing)
 	{
-		m_renderQueue.waitIdle();
+		{
+			QueueLock qlock(m_renderQueue);
+			(*qlock).waitIdle();
+		}
 		CloseSession();
 	}
 
@@ -315,7 +319,7 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		group->ToneMapAllWaveforms(cmdbuf);
 
 	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
 
 	double dt = GetTime() - start;
 	m_toneMapTime = dt * FS_PER_SECOND;
@@ -967,7 +971,7 @@ void MainWindow::UpdateFonts()
 	m_cmdBuffer->begin({});
 	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
 	m_cmdBuffer->end();
-	SubmitAndBlock(*m_cmdBuffer, m_renderQueue);
+	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 

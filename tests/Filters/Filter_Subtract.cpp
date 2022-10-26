@@ -32,7 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Unit test for Subtract filter
  */
+#ifdef _CATCH2_V3
+#include <catch2/catch_all.hpp>
+#else
 #include <catch2/catch.hpp>
+#endif
 
 #include "../../lib/scopehal/scopehal.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
@@ -50,14 +54,14 @@ TEST_CASE("Filter_Subtract")
 	filter->AddRef();
 
 	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_Subtract.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		g_computeQueueType );
+		queue->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
-	vk::raii::Queue queue(*g_vkComputeDevice, g_computeQueueType, 0);
 
 	//Create two empty input waveforms
 	const size_t depth = 10000000;
@@ -96,11 +100,17 @@ TEST_CASE("Filter_Subtract")
 			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 
 			//Baseline on the CPU with no AVX
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double tbase = GetTime() - start;
 			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
 
@@ -112,7 +122,10 @@ TEST_CASE("Filter_Subtract")
 				{
 					g_hasAvx2 = true;
 					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
+					{
+						QueueLock lock(queue);
+						filter->Refresh(cmdbuf, *lock);
+					}
 					double dt = GetTime() - start;
 					LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
@@ -123,7 +136,10 @@ TEST_CASE("Filter_Subtract")
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
 			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			{
+				QueueLock lock(queue);
+				filter->Refresh(cmdbuf, *lock);
+			}
 			double dt = GetTime() - start;
 			LogVerbose("GPU:          %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
