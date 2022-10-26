@@ -70,6 +70,24 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	, m_windowedWidth(0)
 	, m_windowedHeight(0)
 {
+	//Initialize ImGui
+	IMGUI_CHECKVERSION();
+	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
+	m_context = ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+	//Don't serialize UI config for now
+	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
+	io.IniFilename = nullptr;
+
+	//Set up appearance settings
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 0.0f;
+	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
@@ -233,12 +251,20 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
  */
 VulkanWindow::~VulkanWindow()
 {
+	g_vkComputeDevice->waitIdle();
+
+	m_texturesUsedThisFrame.clear();
+
 	ImPlot::DestroyContext(m_plotContext);
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
 	m_surface = nullptr;
 	glfwDestroyWindow(m_window);
 	m_imguiDescriptorPool = nullptr;
+
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext(m_context);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

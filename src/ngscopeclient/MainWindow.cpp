@@ -48,6 +48,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "ChannelPropertiesDialog.h"
+#include "FilterPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
@@ -69,15 +70,15 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 #else
 	: VulkanWindow("ngscopeclient", queue)
 #endif
-	, m_showDemo(true)
+	, m_showDemo(false)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
+	, m_traceAlpha(0.75)
+	, m_persistenceDecay(0.8)
 	, m_session(this)
 	, m_sessionClosing(false)
-	, m_defaultFont(nullptr)
-	, m_monospaceFont(nullptr)
-	, m_texmgr(m_imguiDescriptorPool, queue)
+	, m_texmgr(queue)
 	, m_needRender(false)
 	, m_toneMapTime(0)
 {
@@ -118,6 +119,9 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 
 MainWindow::~MainWindow()
 {
+	g_vkComputeDevice->waitIdle();
+	m_texmgr.clear();
+
 	m_cmdBuffer = nullptr;
 	m_cmdPool = nullptr;
 
@@ -154,6 +158,8 @@ void MainWindow::CloseSession()
 	m_timebaseDialog = nullptr;
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
+	m_persistenceDialog = nullptr;
+	m_graphEditor = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -323,8 +329,9 @@ void MainWindow::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
 	vector<shared_ptr<DisplayedChannel> >& channels)
 {
+	bool clear = m_clearPersistence.exchange(false);
 	for(auto group : m_waveformGroups)
-		group->RenderWaveformTextures(cmdbuf, channels);
+		group->RenderWaveformTextures(cmdbuf, channels, clear);
 }
 
 void MainWindow::RenderUI()
@@ -414,8 +421,10 @@ void MainWindow::RenderUI()
 		g_rerenderRequestedEvent.Signal();
 
 	//DEBUG: draw the demo windows
-	ImGui::ShowDemoWindow(&m_showDemo);
-	//ImPlot::ShowDemoWindow(&m_showPlot);
+	if(m_showDemo)
+		ImGui::ShowDemoWindow(&m_showDemo);
+	if(m_showPlot)
+		ImPlot::ShowDemoWindow(&m_showPlot);
 }
 
 void MainWindow::Toolbar()
@@ -452,6 +461,15 @@ void MainWindow::Toolbar()
 
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(2);
+
+	//Slider for trace alpha
+	ImGui::SameLine();
+	float y = ImGui::GetCursorPosY();
+	ImGui::SetCursorPosY(y + 5);
+	ImGui::SetNextItemWidth(6 * toolbarHeight);
+	if(ImGui::SliderFloat("Intensity", &m_traceAlpha, 0, 0.75, "", ImGuiSliderFlags_Logarithmic))
+		SetNeedRender();
+	ImGui::SetCursorPosY(y);
 
 	ImGui::End();
 }
@@ -513,7 +531,7 @@ void MainWindow::ToolbarButtons()
 		ImGui::BeginDisabled();
 	if(ImGui::ImageButton("history", GetTexture("history"), buttonsize))
 	{
-		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
 		AddDialog(m_historyDialog);
 	}
 	if(hasHist)
@@ -533,7 +551,7 @@ void MainWindow::ToolbarButtons()
 	//View settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
-		LogDebug("clear-sweeps\n");
+		ClearPersistence();
 	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 
 	//Fullscreen toggle
@@ -576,6 +594,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_timebaseDialog = nullptr;
 	if(m_preferenceDialog == dlg)
 		m_preferenceDialog = nullptr;
+	if(m_persistenceDialog == dlg)
+		m_persistenceDialog = nullptr;
+	if(m_graphEditor == dlg)
+		m_graphEditor = nullptr;
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
@@ -706,6 +728,15 @@ void MainWindow::DockingArea()
 	ImGui::End();
 }
 
+/**
+	@brief Scrolls all waveform groups so that the specified timestamp is visible
+ */
+void MainWindow::NavigateToTimestamp(int64_t stamp)
+{
+	for(auto group : m_waveformGroups)
+		group->NavigateToTimestamp(stamp);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
 
@@ -757,9 +788,19 @@ void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 	}
 
 	//Dialog wasn't already open, create it
-	auto dlg = make_shared<ChannelPropertiesDialog>(channel);
-	m_channelPropertiesDialogs[channel] = dlg;
-	AddDialog(dlg);
+	auto f = dynamic_cast<Filter*>(channel);
+	if(f)
+	{
+		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
+		m_channelPropertiesDialogs[channel] = dlg;
+		AddDialog(dlg);
+	}
+	else
+	{
+		auto dlg = make_shared<ChannelPropertiesDialog>(channel);
+		m_channelPropertiesDialogs[channel] = dlg;
+		AddDialog(dlg);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -823,8 +864,7 @@ void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
 	m_recentInstruments[connectionString] = now;
 
 	//Delete anything old
-	//TODO: have a preference for this
-	const int maxRecentInstruments = 20;
+	size_t maxRecentInstruments = m_session.GetPreferences().GetInt("Miscellaneous.Menus.recent_instrument_count");
 	while(m_recentInstruments.size() > maxRecentInstruments)
 	{
 		string oldestPath = "";
@@ -918,22 +958,227 @@ void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
  */
 void MainWindow::UpdateFonts()
 {
-	//Check if fonts have changed
-	if(m_defaultFont == nullptr)
+	//Check for any changes to font preferences and rebuild the atlas if so
+	//Early out if nothing changed
+	auto& prefs = GetSession().GetPreferences();
+	if(!m_fontmgr.UpdateFonts(prefs.AllPreferences()))
+		return;
+
+	//Set the default font
+	ImGui::GetIO().FontDefault = m_fontmgr.GetFont(prefs.GetFont("Appearance.General.default_font"));
+
+	//Download imgui fonts
+	m_cmdBuffer->begin({});
+	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
+	m_cmdBuffer->end();
+	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filter creation etc
+
+/**
+	@brief Creates a filter and adds all of its streams to the best waveform area (may not be the one we created it from)
+
+	@param name				Name of the filter
+	@param area				Waveform area we launched the context menu from (if any)
+	@param initialStream	Stream we launched the context menu from (if any)
+	@param showProperties	True to show the properties dialog
+ */
+Filter* MainWindow::CreateFilter(
+	const string& name,
+	WaveformArea* area,
+	StreamDescriptor initialStream,
+	bool showProperties)
+{
+	LogTrace("CreateFilter %s\n", name.c_str());
+
+	//Make sure we have a WaveformThread to handle background processing
+	m_session.StartWaveformThreadIfNeeded();
+
+	//Make the filter
+	auto f = Filter::CreateFilter(name, GetDefaultChannelColor(Filter::GetNumInstances()));
+
+	//Attempt to hook up first input
+	if(f->ValidateChannel(0, initialStream))
+		f->SetInput(0, initialStream);
+
+	//Give it an initial name, may change later
+	f->SetDefaultName();
+
+	//Re-run the filter graph so we have an initial waveform to look at
+	//Then force a re-render
+	m_session.RefreshAllFilters();
+	SetNeedRender();
+
+	//Find a home for each of its streams
+	for(size_t i=0; i<f->GetStreamCount(); i++)
+		FindAreaForStream(area, StreamDescriptor(f, i));
+
+	//Create and show filter properties dialog
+	if(f->NeedsConfig() && showProperties)
 	{
-		//Rebuild our font atlas etc
-		m_fontmgr.UpdateFonts(GetSession().GetPreferences().AllPreferences());
-
-		//TODO: remove these when we use preferences for everything
-		m_defaultFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13));
-		m_monospaceFont = m_fontmgr.GetFont(FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13));
-		ImGui::GetIO().FontDefault = m_defaultFont;
-
-		//Download imgui fonts
-		m_cmdBuffer->begin({});
-		ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
-		m_cmdBuffer->end();
-		m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
+		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
+		m_channelPropertiesDialogs[f] = dlg;
+		AddDialog(dlg);
 	}
+
+	return f;
+}
+
+/**
+	@brief Given a stream and optionally a WaveformArea, adds the stream to some area.
+
+	The provided area is considered first; if it's not a good fit then another area is selected. If no compatible
+	area can be found, a new one is created.
+ */
+void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
+{
+	LogTrace("Looking for area for stream %s\n", stream.GetName().c_str());
+	LogIndenter li;
+
+	//No areas?
+	if(m_waveformGroups.empty())
+	{
+		LogTrace("No waveform groups, making a new one\n");
+
+		//Make it
+		auto name = NameNewWaveformGroup();
+		auto group = make_shared<WaveformGroup>(this, name);
+		m_waveformGroups.push_back(group);
+
+		//Group is newly created and not yet docked
+		m_newWaveformGroups.push_back(group);
+
+		//Make an area
+		auto a = make_shared<WaveformArea>(stream, group, this);
+		group->AddArea(a);
+		return;
+	}
+
+	//TODO: how to handle Y axis scale if it doesn's match the group we decide to add it to?
+
+	//Attempt to place close to the existing area, if one was suggested
+	if(area != nullptr)
+	{
+		//If a suggested area was provided, try it first
+		if(area->IsCompatible(stream))
+		{
+			LogTrace("Suggested area looks good\n");
+			area->AddStream(stream);
+			return;
+		}
+
+		//If X axis unit is compatible, but not Y, make a new area in the same group
+		auto group = area->GetGroup();
+		if(group->GetXAxisUnit() == stream.GetXAxisUnits())
+		{
+			LogTrace("Making new area in suggested group\n");
+			auto a = make_shared<WaveformArea>(stream, group, this);
+			group->AddArea(a);
+			return;
+		}
+	}
+
+	//If it's a filter, attempt to place on top of any compatible WaveformArea displaying our first (non-null) input
+	auto f = dynamic_cast<Filter*>(stream.m_channel);
+	if(f)
+	{
+		//Find first input that has something hooked up
+		StreamDescriptor firstInput(nullptr, 0);
+		for(size_t i=0; i<f->GetInputCount(); i++)
+		{
+			firstInput = f->GetInput(i);
+			if(firstInput)
+				break;
+		}
+
+		//If at least one input is hooked up, see what we can do
+		if(firstInput)
+		{
+			for(auto g : m_waveformGroups)
+			{
+				//Try each area within the group
+				auto& areas = g->GetWaveformAreas();
+				for(auto a : areas)
+				{
+					if(!a->IsCompatible(stream))
+						continue;
+
+					for(size_t i=0; i<a->GetStreamCount(); i++)
+					{
+						if(firstInput == a->GetStream(i))
+						{
+							LogTrace("Adding to an area that was already displaying %s\n",
+								firstInput.GetName().c_str());
+							a->AddStream(stream);
+							return;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//Try all of our other areas and see if any of them fit
+	for(auto g : m_waveformGroups)
+	{
+		//Try each area within the group
+		auto& areas = g->GetWaveformAreas();
+		for(auto a : areas)
+		{
+			if(a->IsCompatible(stream))
+			{
+				LogTrace("Adding to existing area in different group\n");
+				a->AddStream(stream);
+				return;
+			}
+		}
+
+		//Try making new area in the group
+		if(g->GetXAxisUnit() == stream.GetXAxisUnits())
+		{
+			LogTrace("Making new area in a different group\n");
+			auto a = make_shared<WaveformArea>(stream, g, this);
+			g->AddArea(a);
+			return;
+		}
+	}
+
+	//If we get here, we've run out of options so we have to make a new group
+	LogTrace("Gave up on finding something good, making a new group\n");
+
+	//Make it
+	auto name = NameNewWaveformGroup();
+	auto group = make_shared<WaveformGroup>(this, name);
+	m_waveformGroups.push_back(group);
+
+	//Group is newly created and not yet docked
+	m_newWaveformGroups.push_back(group);
+
+	//Make an area
+	auto a = make_shared<WaveformArea>(stream, group, this);
+	group->AddArea(a);
+}
+
+/**
+	@brief Handle a filter being reconfigured
+
+	TODO: push this to a background thread to avoid hanging the UI thread
+ */
+void MainWindow::OnFilterReconfigured(Filter* f)
+{
+	//Remove any saved configuration, eye patterns, etc
+	f->ClearSweeps();
+
+	//Re-run the filter
+	m_session.RefreshAllFilters();
+
+	//Clear persistence of any waveform areas showing this waveform
+	for(auto g : m_waveformGroups)
+		g->ClearPersistenceOfChannel(f);
+
+	//Rerun the filter and request a redraw
+	SetNeedRender();
 }

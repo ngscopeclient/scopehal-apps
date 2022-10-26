@@ -6,6 +6,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
@@ -25,6 +26,10 @@ add_executable(ngscopeclient
 	../implot/implot.cpp
 	../implot/implot_demo.cpp
 	../implot/implot_items.cpp
+	../imgui-node-editor/imgui_node_editor.cpp
+	../imgui-node-editor/imgui_node_editor_api.cpp
+	../imgui-node-editor/imgui_canvas.cpp
+	../imgui-node-editor/crude_json.cpp
 
 	pthread_compat.cpp
 
@@ -36,6 +41,8 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	FilterGraphEditor.cpp
+	FilterPropertiesDialog.cpp
 	FontManager.cpp
 	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp
@@ -47,6 +54,7 @@ add_executable(ngscopeclient
 	MetricsDialog.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
+	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
 	PowerSupplyThread.cpp
 	Preference.cpp
@@ -79,10 +87,18 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
+file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*")
+add_custom_target(
+	ngprotoshaders
+	COMMENT "Copying protocol shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPIRV_SHADERS} ${CMAKE_BINARY_DIR}/src/ngscopeclient/shaders
+	)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
 	ngrendershaders
+	ngprotoshaders
 	)
 
 add_subdirectory(shaders)
@@ -111,7 +127,8 @@ target_link_libraries(ngscopeclient
 	scopeexports
 	glfw
 	PNG::PNG
-	${GTKMM_LIBRARIES}
+	cairomm-1.0
+	cairo
 	${SIGCXX_LIBRARIES}
 	)
 

@@ -35,15 +35,17 @@
 
 #include "ngscopeclient.h"
 #include "ChannelPropertiesDialog.h"
+#include <imgui_node_editor.h>
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan)
-	: Dialog(string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400))
+ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode)
+	: Dialog(chan->GetHwname(), ImVec2(300, 400))
 	, m_channel(chan)
+	, m_graphEditorMode(graphEditorMode)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
@@ -196,11 +198,15 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
  */
 bool ChannelPropertiesDialog::DoRender()
 {
+	//Flags for a header that should be open by default EXCEPT in the graph editor
+	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
+
 	//TODO: handle stream count changing dynamically on some filters
 
 	float width = 10 * ImGui::GetFontSize();
 
 	auto scope = m_channel->GetScope();
+	auto f = dynamic_cast<Filter*>(m_channel);
 	if(ImGui::CollapsingHeader("Info"))
 	{
 		//Scope info
@@ -219,20 +225,64 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				ImGui::InputText("Hardware Channel", &index);
 			ImGui::EndDisabled();
-
 			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 		}
 
-		//TODO: filter info
+		//Filter info
+		if(f)
+		{
+			string fname = f->GetProtocolDisplayName();
+
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Filter Type", &fname);
+			ImGui::EndDisabled();
+			HelpMarker("Type of filter object");
+		}
 	}
 
 	//Al channels have display settings
-	if(ImGui::CollapsingHeader("Display", ImGuiTreeNodeFlags_DefaultOpen))
+	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
 	{
+		//If it's a filter, using the default name, check for changes made outside of this properties window
+		//(e.g. via filter graph editor)
+		if(f)
+		{
+			if(f->IsUsingDefaultName() && (f->GetDisplayName() != m_committedDisplayName))
+			{
+				m_committedDisplayName = f->GetDisplayName();
+				m_displayName = m_committedDisplayName;
+			}
+		}
+
 		ImGui::SetNextItemWidth(width);
 		if(TextInputWithImplicitApply("Nickname", m_displayName, m_committedDisplayName))
-			m_channel->SetDisplayName(m_committedDisplayName);
-		HelpMarker("Display name for the channel");
+		{
+			//If it's a filter, we're not using a default name anymore (unless the provided name is blank)
+			if(f != nullptr)
+			{
+				if(m_committedDisplayName == "")
+				{
+					f->UseDefaultName(true);
+					m_committedDisplayName = f->GetDisplayName();
+					m_displayName = m_committedDisplayName;
+				}
+				else
+				{
+					f->UseDefaultName(false);
+					m_channel->SetDisplayName(m_committedDisplayName);
+				}
+			}
+
+			//No, just set the name
+			else
+				m_channel->SetDisplayName(m_committedDisplayName);
+		}
+
+		if(f)
+			HelpMarker("Display name for the filter.\n\nSet blank to use an auto-generated default name.");
+		else
+			HelpMarker("Display name for the channel");
 
 		if(ImGui::ColorEdit3(
 			"Color",
@@ -252,7 +302,7 @@ bool ChannelPropertiesDialog::DoRender()
 	auto nstreams = m_channel->GetStreamCount();
 	if(scope)
 	{
-		if(ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
+		if(ImGui::CollapsingHeader("Input", defaultOpenFlags))
 		{
 			//Type of probe connected
 			auto index = m_channel->GetIndex();
@@ -320,7 +370,6 @@ bool ChannelPropertiesDialog::DoRender()
 					//the set of valid values can change
 					RefreshInputSettings(scope, index);
 				}
-
 				HelpMarker("Hardware input multiplexer setting");
 			}
 
@@ -412,6 +461,3 @@ bool ChannelPropertiesDialog::DoRender()
 
 	return true;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers

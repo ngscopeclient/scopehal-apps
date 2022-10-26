@@ -324,7 +324,7 @@ void main()
 
 				//If start and end are both off screen, nothing to draw
 				if( ( (starty < 0) && (endy < 0) ) ||
-					( (starty >= MAX_HEIGHT) && (endy >= MAX_HEIGHT) ) )
+					( (starty >= windowHeight) && (endy >= windowHeight) ) )
 				{
 					g_updating[gl_LocalInvocationID.y] = false;
 				}
@@ -334,8 +334,8 @@ void main()
 				{
 					g_updating[gl_LocalInvocationID.y] = true;
 
-					starty = min(starty, MAX_HEIGHT - 1);
-					endy = min(endy, MAX_HEIGHT - 1);
+					starty = min(starty, windowHeight - 1);
+					endy = min(endy, windowHeight - 1);
 					starty = max(starty, 0);
 					endy = max(endy, 0);
 

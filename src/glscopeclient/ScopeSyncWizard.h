@@ -130,11 +130,11 @@ protected:
 	bool OnTimer();
 
 	void DoProcessWaveformDensePackedEqualRateGeneric();
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__clang__)
 	void DoProcessWaveformDensePackedEqualRateAVX512F();
 #endif
 	void DoProcessWaveformDensePackedDoubleRateGeneric();
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__clang__)
 	void DoProcessWaveformDensePackedDoubleRateAVX512F();
 #endif
 	void DoProcessWaveformDensePackedUnequalRate();

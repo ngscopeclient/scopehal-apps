@@ -238,7 +238,7 @@ string Preference::ToString() const
 		case PreferenceType::String:
 			return GetString();
 		case PreferenceType::Font:
-			return GetFontRaw();
+			return "Font";
 		case PreferenceType::Boolean:
 			return GetBool() ? "true" : "false";
 		case PreferenceType::Real:
@@ -282,8 +282,11 @@ void Preference::MoveFrom(Preference& other)
 				break;
 
 			case PreferenceType::String:
-			case PreferenceType::Font:
 				Construct<string>(move(other.GetValueRaw<string>()));
+				break;
+
+			case PreferenceType::Font:
+				Construct<FontDescription>(move(other.GetFont()));
 				break;
 
 			case PreferenceType::Color:
@@ -309,31 +312,20 @@ const std::string& Preference::GetLabel() const
 	return m_label;
 }
 
-const ::std::string& Preference::GetFontRaw() const
+FontDescription Preference::GetFont() const
 {
 	if(m_type != PreferenceType::Font)
 		throw runtime_error("Preference type mismatch");
 
-	return GetValueRaw<std::string>();
+	return GetValueRaw<FontDescription>();
 }
 
-Pango::FontDescription Preference::GetFont() const
-{
-	const auto str = this->GetFontRaw();
-
-	return Pango::FontDescription(str.c_str());
-}
-
-void Preference::SetFontRaw(const std::string& fontRaw)
+void Preference::SetFont(const FontDescription& font)
 {
 	CleanUp();
-	Construct<string>(fontRaw);
-}
+	Construct<FontDescription>(font);
 
-void Preference::SetFont(const Pango::FontDescription& font)
-{
-	string str = font.to_string();
-	this->SetFontRaw(str);
+	LogTrace("Set %s to %s, %.2f px\n", GetIdentifier().c_str(), font.first.c_str(), font.second);
 }
 
 void Preference::SetBool(bool value)
@@ -449,10 +441,10 @@ impl::PreferenceBuilder Preference::EnumRaw(std::string identifier, std::int64_t
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
 
-impl::PreferenceBuilder Preference::Font(std::string identifier, std::string defaultValue)
+impl::PreferenceBuilder Preference::Font(std::string identifier, FontDescription defaultValue)
 {
 	Preference pref(PreferenceType::Font, std::move(identifier));
-	pref.Construct<string>(std::move(defaultValue));
+	pref.Construct<FontDescription>(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }

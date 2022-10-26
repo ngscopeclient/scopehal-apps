@@ -38,13 +38,15 @@
 #include "Dialog.h"
 #include "Session.h"
 
+class MainWindow;
+
 /**
 	@brief UI for the history system
  */
 class HistoryDialog : public Dialog
 {
 public:
-	HistoryDialog(HistoryManager& mgr);
+	HistoryDialog(HistoryManager& mgr, Session& session, MainWindow& wnd);
 	virtual ~HistoryDialog();
 
 	virtual bool DoRender();
@@ -61,8 +63,8 @@ public:
 
 protected:
 	HistoryManager& m_mgr;
-
-	std::string FormatTimestamp(time_t base, int64_t offset);
+	Session& m_session;
+	MainWindow& m_parent;
 
 	///@brief Height of a row in the dialog
 	float m_rowHeight;
@@ -72,6 +74,9 @@ protected:
 
 	///@brief The currently selected point of history
 	std::shared_ptr<HistoryPoint> m_selectedPoint;
+
+	///@brief The currently selected marker
+	Marker* m_selectedMarker;
 };
 
 #endif

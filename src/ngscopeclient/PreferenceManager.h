@@ -52,6 +52,11 @@ public:
         LoadPreferences();
     }
 
+	~PreferenceManager()
+	{
+		SavePreferences();
+	}
+
 public:
     // Disallow copy
     PreferenceManager(const PreferenceManager&) = delete;
@@ -74,7 +79,7 @@ public:
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;
     ImU32 GetColor(const std::string& path) const;
-    Pango::FontDescription GetFont(const std::string& path) const;
+    FontDescription GetFont(const std::string& path) const;
 
     template< typename E >
     E GetEnum(const std::string& path) const

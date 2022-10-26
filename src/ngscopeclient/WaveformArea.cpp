@@ -46,20 +46,26 @@ using namespace std;
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		: m_stream(stream)
+		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
+		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
 		, m_rasterizedX(0)
 		, m_rasterizedY(0)
 		, m_cachedX(0)
 		, m_cachedY(0)
+		, m_persistenceEnabled(false)
 		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
+		, m_yButtonPos(0)
 {
 	stream.m_channel->AddRef();
-
-	m_rasterizedWaveform.SetName("DisplayedChannel.m_rasterizedWaveform");
 
 	//Use GPU-side memory for rasterized waveform
 	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
 	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+
+	//Use pinned memory for index buffer since it should only be read once
+	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
+	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_UNLIKELY);
 }
 
 /**
@@ -78,6 +84,10 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 	{
 		m_cachedX = x;
 		m_cachedY = y;
+
+		//Don't actually create an image object if the image is degenerate (zero pixels)
+		if( (x == 0) || (y == 0) )
+			return true;
 
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
 
@@ -155,6 +165,10 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
 		m_rasterizedWaveform.MarkModifiedFromCpu();
 	}
+
+	//Allocate index buffer for sparse waveforms
+	if(!IsDensePacked())
+		m_indexBuffer.resize(x);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,6 +189,8 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_mouseOverTriggerArrow(false)
 	, m_triggerLevelDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
+	, m_lastRightClickOffset(0)
+	, m_channelButtonHeight(0)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -339,6 +355,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		m_channelsToRemove.clear();
 	}
 
+	//Save timestamps if we right clicked
+	if(ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		m_lastRightClickOffset = m_group->XPositionToXAxisUnits(ImGui::GetMousePos().x);
+
 	//Detect mouse movement
 	double tnow = GetTime();
 	auto mouseDelta = ImGui::GetIO().MouseDelta;
@@ -391,6 +411,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Blank out space for the actual waveform
 		ImGui::InvisibleButton("plot", ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
+
+		//Check for context menu if we didn't do one yet
 		PlotContextMenu();
 
 		//Draw actual waveforms (and protocol decode overlays)
@@ -419,7 +441,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::BeginGroup();
 
 			for(size_t i=0; i<m_displayedChannels.size(); i++)
-				DraggableButton(m_displayedChannels[i], i);
+				ChannelButton(m_displayedChannels[i], i);
 
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
@@ -448,26 +470,61 @@ void WaveformArea::PlotContextMenu()
 {
 	if(ImGui::BeginPopupContextItem())
 	{
-		if(ImGui::BeginMenu("Cursors"))
+		//Look for markers that might be near our right click location
+		float lastRightClickPos = m_group->XAxisUnitsToXPosition(m_lastRightClickOffset);
+		auto& markers = m_parent->GetSession().GetMarkers(GetWaveformTimestamp());
+		bool hitMarker = false;
+		size_t selectedMarker = 0;
+		for(size_t i=0; i<markers.size(); i++)
 		{
-			if(ImGui::BeginMenu("X axis"))
+			auto& m = markers[i];
+			float xpos = round(m_group->XAxisUnitsToXPosition(m.m_offset));
+			float searchRadius = 0.25 * ImGui::GetFontSize();
+			if(fabs(xpos - lastRightClickPos) < searchRadius)
 			{
-				if(ImGui::MenuItem("None", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_NONE)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
-				if(ImGui::MenuItem("Single", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_SINGLE)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
-				if(ImGui::MenuItem("Dual", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)))
-					m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+				hitMarker = true;
+				selectedMarker = i;
+				break;
+			}
+		}
+
+		//If we right clicked on or very close to a marker, show "delete" menu instead
+		if(hitMarker)
+		{
+			if(ImGui::MenuItem("Delete"))
+				markers.erase(markers.begin() + selectedMarker);
+		}
+
+		//Otherwise, normal GUI context menu
+		else
+		{
+			if(ImGui::BeginMenu("Cursors"))
+			{
+				if(ImGui::BeginMenu("X axis"))
+				{
+					if(ImGui::MenuItem("None", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_NONE)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+					if(ImGui::MenuItem("Single", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_SINGLE)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
+					if(ImGui::MenuItem("Dual", nullptr, (m_group->m_xAxisCursorMode == WaveformGroup::X_CURSOR_DUAL)))
+						m_group->m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+
+					ImGui::EndMenu();
+				}
+
+				if(ImGui::BeginMenu("Y axis"))
+				{
+					ImGui::EndMenu();
+				}
 
 				ImGui::EndMenu();
 			}
 
-			if(ImGui::BeginMenu("Y axis"))
+			if(ImGui::MenuItem("Add Marker"))
 			{
-				ImGui::EndMenu();
+				auto& session = m_parent->GetSession();
+				session.AddMarker(Marker(GetWaveformTimestamp(), m_lastRightClickOffset, session.GetNextMarkerName()));
 			}
-
-			ImGui::EndMenu();
 		}
 
 		ImGui::EndPopup();
@@ -486,6 +543,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 		{
 			case Stream::STREAM_TYPE_ANALOG:
 				RenderAnalogWaveform(chan, start, size);
+				break;
+
+			case Stream::STREAM_TYPE_DIGITAL:
+				RenderDigitalWaveform(chan, start, size);
 				break;
 
 			default:
@@ -518,6 +579,36 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 }
 
 /**
+	@brief Renders a single digital waveform
+ */
+void WaveformArea::RenderDigitalWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Mark the waveform as resized
+	if(channel->UpdateSize(ImVec2(size.x, m_channelButtonHeight), m_parent))
+		m_parent->SetNeedRender();
+
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+	{
+		auto ypos = (channel->GetYButtonPos() * ImGui::GetWindowDpiScale()) + start.y;
+		list->AddImage(
+			tex->GetTexture(),
+			ImVec2(start.x, ypos - m_channelButtonHeight),
+			ImVec2(start.x+size.x, ypos),
+			ImVec2(0, 1),
+			ImVec2(1, 0) );
+	}
+}
+
+/**
 	@brief Tone map our waveforms
  */
 void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
@@ -528,7 +619,8 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				ToneMapAnalogWaveform(chan, cmdbuf);
+			case Stream::STREAM_TYPE_DIGITAL:
+				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
 				break;
 
 			default:
@@ -543,15 +635,20 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 
 	Called from WaveformThread
 
-	@param cmdbuf	Command buffer to record rendering commands into
-	@param chans	Set of channels we rendered into
-					Used to keep references active until rendering completes if we close them this frame
+	@param cmdbuf				Command buffer to record rendering commands into
+	@param chans				Set of channels we rendered into
+								Used to keep references active until rendering completes if we close them this frame
+	@param clearPersistence		True if persistence maps should be erased before rendering
  */
 void WaveformArea::RenderWaveformTextures(
 	vk::raii::CommandBuffer& cmdbuf,
-	vector<shared_ptr<DisplayedChannel> >& chans)
+	vector<shared_ptr<DisplayedChannel> >& chans,
+	bool clearPersistence)
 {
 	chans = m_displayedChannels;
+
+	bool clearThisAreaOnly = m_clearPersistence.exchange(false);
+	bool clearing = clearThisAreaOnly || clearPersistence;
 
 	for(auto& chan : chans)
 	{
@@ -559,7 +656,8 @@ void WaveformArea::RenderWaveformTextures(
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
-				RasterizeAnalogWaveform(chan, cmdbuf);
+			case Stream::STREAM_TYPE_DIGITAL:
+				RasterizeAnalogOrDigitalWaveform(chan, cmdbuf, clearing);
 				break;
 
 			default:
@@ -569,9 +667,10 @@ void WaveformArea::RenderWaveformTextures(
 	}
 }
 
-void WaveformArea::RasterizeAnalogWaveform(
+void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	shared_ptr<DisplayedChannel> channel,
-	vk::raii::CommandBuffer& cmdbuf
+	vk::raii::CommandBuffer& cmdbuf,
+	bool clearPersistence
 	)
 {
 	auto stream = channel->GetStream();
@@ -586,32 +685,11 @@ void WaveformArea::RasterizeAnalogWaveform(
 	}
 	size_t w = m_width;
 	size_t h = m_height;
+	if(channel->GetStream().GetType() == Stream::STREAM_TYPE_DIGITAL)
+		h = m_channelButtonHeight;
 	channel->PrepareToRasterize(w, h);
 
 	shared_ptr<ComputePipeline> comp;
-
-	//Bind input buffers
-	auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
-	auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
-	if(udata)
-	{
-		comp = channel->GetUniformAnalogPipeline();
-		comp->BindBufferNonblocking(1, udata->m_samples, cmdbuf);
-		//don't bind offsets or indexes as they're not used
-	}
-
-	else
-	{
-		LogWarning("Don't know how to rasterize sparse analog data yet\n");
-		// TODO: Remember to bind durations to 4 if comp->ShouldMapDurations()
-	}
-
-	if(!comp)
-		return;
-
-	//Bind output texture
-	auto& imgOut = channel->GetRasterizedWaveform();
-	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
 
 	//Calculate a bunch of constants
 	int64_t offset = m_group->GetXAxisOffset();
@@ -619,10 +697,73 @@ void WaveformArea::RasterizeAnalogWaveform(
 	int64_t fractional_offset = offset % data->m_timescale;
 	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
 	double pixelsPerX = m_group->GetPixelsPerXUnit();
+	double xscale = data->m_timescale * pixelsPerX;
+
+	//Figure out which shader to use
+	auto udata = dynamic_cast<UniformWaveformBase*>(data);
+	auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+	auto uadata = dynamic_cast<UniformAnalogWaveform*>(data);
+	auto sadata = dynamic_cast<SparseAnalogWaveform*>(data);
+	auto uddata = dynamic_cast<UniformDigitalWaveform*>(data);
+	auto sddata = dynamic_cast<SparseDigitalWaveform*>(data);
+	if(uadata)
+		comp = channel->GetUniformAnalogPipeline();
+	else if(uddata)
+		comp = channel->GetUniformDigitalPipeline();
+	else if(sadata)
+		comp = channel->GetSparseAnalogPipeline();
+	else if(sddata)
+		comp = channel->GetSparseDigitalPipeline();
+	if(!comp)
+	{
+		LogWarning("no pipeline found\n");
+		return;
+	}
+
+	//Bind input buffers
+	if(uadata)
+		comp->BindBufferNonblocking(1, uadata->m_samples, cmdbuf);
+	if(uddata)
+		comp->BindBufferNonblocking(1, uddata->m_samples, cmdbuf);
+	if(sdata)
+	{
+		if(sadata)
+			comp->BindBufferNonblocking(1, sadata->m_samples, cmdbuf);
+		if(sddata)
+			comp->BindBufferNonblocking(1, sddata->m_samples, cmdbuf);
+
+		//Map offsets and, if requested, durations
+		comp->BindBufferNonblocking(2, sdata->m_offsets, cmdbuf);
+		if(channel->ShouldMapDurations())
+			comp->BindBufferNonblocking(4, sdata->m_durations, cmdbuf);
+
+		//Calculate indexes for X axis
+		auto& ibuf = channel->GetIndexBuffer();
+		ibuf.PrepareForCpuAccess();
+		sdata->m_offsets.PrepareForCpuAccess();
+		for(size_t i=0; i<w; i++)
+		{
+			int64_t target = floor(i / xscale) + offset_samples;
+			ibuf[i] = BinarySearchForGequal(
+				sdata->m_offsets.GetCpuPointer(),
+				data->size(),
+				target);
+		}
+		ibuf.MarkModifiedFromCpu();
+		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
+	}
+
+	//Bind output texture and bail if there's nothing there
+	auto& imgOut = channel->GetRasterizedWaveform();
+	if(imgOut.empty())
+		return;
+	comp->BindBufferNonblocking(0, imgOut, cmdbuf);
 
 	//Scale alpha by zoom.
 	//As we zoom out more, reduce alpha to get proper intensity grading
-	float alpha = 0.5;	//TODO: get from gui slider
+	//TODO: make this constant, then apply a second alpha pass in tone mapping?
+	//This will eliminate the need for a (potentially heavy) re-render when adjusting the slider.
+	float alpha = m_parent->GetTraceAlpha();
 	auto end = data->size() - 1;
 	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
 	float capture_len = lastOff;
@@ -640,11 +781,23 @@ void WaveformArea::RasterizeAnalogWaveform(
 	config.offset_samples = offset_samples - 2;
 	config.alpha = alpha_scaled;
 	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
-	config.xscale = data->m_timescale * pixelsPerX;
-	config.ybase = h * 0.5f;
-	config.yscale = m_pixelsPerYAxisUnit;
-	config.yoff = stream.GetOffset();
-	config.persistScale = 0;				//TODO: persistence configuration
+	config.xscale = xscale;
+	if(sadata || uadata)	//analog
+	{
+		config.yscale = m_pixelsPerYAxisUnit;
+		config.yoff = stream.GetOffset();
+		config.ybase = h * 0.5f;
+	}
+	else					//digital
+	{
+		config.yoff = 0;
+		config.yscale = m_channelButtonHeight - 1;
+		config.ybase = 0;
+	}
+	if(channel->IsPersistenceEnabled() && !clearPersistence)
+		config.persistScale = m_parent->GetPersistDecay();
+	else
+		config.persistScale = 0;
 
 	//Dispatch the shader
 	comp->Dispatch(cmdbuf, config, w, 1, 1);
@@ -653,9 +806,9 @@ void WaveformArea::RasterizeAnalogWaveform(
 }
 
 /**
-	@brief Tone maps an analog waveform by converting the internal fp32 buffer to RGBA
+	@brief Tone maps an analog or digital waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapAnalogWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
@@ -842,10 +995,9 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	float ybot = origin.y + size.y;
 
 	//Style settings
-	//TODO: get some/all of this from preferences
-	auto font = m_parent->GetDefaultFont();
+	auto font = m_parent->GetFontPref("Appearance.Graphs.y_axis_font");
 	auto& prefs = m_parent->GetSession().GetPreferences();
-	float theight = ImGui::GetFontSize();
+	float theight = font->FontSize;
 	auto textColor = prefs.GetColor("Appearance.Graphs.y_axis_text_color");
 
 	//Reserve an empty area we're going to draw into
@@ -961,6 +1113,12 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	if(!mismatchFound || !mismatchStream)
 		return;
 
+	//If the mismatched stream isn't part of a scope, don't bother showing any warnings etc
+	//Filters can't be overdriven, so just silently clip
+	auto scope = mismatchStream.m_channel->GetScope();
+	if(scope == nullptr)
+		return;
+
 	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
 	//above everything else
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
@@ -976,7 +1134,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	//Prepare to draw text
 	center.x += warningSize;
 	float fontHeight = ImGui::GetFontSize();
-	auto font = m_parent->GetDefaultFont();
+	auto font = m_parent->GetFontPref("Appearance.General.default_font");
 	string str = "Caution: Potential for instrument damage!\n\n";
 	str += string("The channel ") + mismatchStream.GetName() + " has a full-scale range of " +
 		mismatchStream.GetYAxisUnits().PrettyPrint(mismatchStream.GetVoltageRange()) + ",\n";
@@ -985,7 +1143,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 	str += "Setting this channel to match the plot scale may result\n";
 	str += "in overdriving the instrument input.\n";
 	str += "\n";
-	str += string("If the instrument \"") + mismatchStream.m_channel->GetScope()->m_nickname +
+	str += string("If the instrument \"") + scope->m_nickname +
 		"\" can safely handle the applied signal at this plot's scale setting,\n";
 	str += "adjust the vertical scale of this plot slightly to set all signals to the same scale\n";
 	str += "and eliminate this message.\n\n";
@@ -1105,9 +1263,6 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
  */
 void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
-	//TODO: set ImGuiCol_DragDropTarget to invisible (zero alpha)
-	//and/or set ImGuiDragDropFlags_AcceptNoDrawDefaultRect
-
 	//Drag/drop areas for splitting
 	float heightOfVerticalRegion = size.y * 0.25;
 	float widthOfVerticalEdge = size.x*0.25;
@@ -1260,15 +1415,11 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
-	//Reject streams with incompatible Y axis units
+	//Reject streams not compatible with this plot
 	//TODO: display nice error message
 	auto stream = m_parent->GetChannelBeingDragged();
-	auto first = GetFirstAnalogOrEyeStream();
-	if(first)
-	{
-		if(first.GetYAxisUnits() != stream.GetYAxisUnits())
-			return;
-	}
+	if(!IsCompatible(stream))
+		return;
 
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
@@ -1357,7 +1508,7 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 		//Prepare to draw text
 		center.x += warningSize;
 		float fontHeight = ImGui::GetFontSize();
-		auto font = m_parent->GetDefaultFont();
+		auto font = m_parent->GetFontPref("Appearance.General.default_font");
 		string str = "Caution: Potential for instrument damage!\n\n";
 		str += string("The channel being dragged has a full-scale range of ") +
 			theirStream.GetYAxisUnits().PrettyPrint(theirRange) + ",\n";
@@ -1393,10 +1544,14 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 	}
 }
 
-void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t index)
+/**
+	@brief Handles a button for a channel
+ */
+void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index)
 {
 	auto stream = chan->GetStream();
 	auto rchan = stream.m_channel;
+	auto data = stream.GetData();
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -1409,12 +1564,15 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 	auto acolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*amul, fcolor.y*amul, fcolor.z*amul, fcolor.w) );
 
 	//The actual button
+	float ystart = ImGui::GetCursorScreenPos().y;
 	ImGui::PushStyleColor(ImGuiCol_Text, color);
 	ImGui::PushStyleColor(ImGuiCol_Button, bcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, acolor);
 		ImGui::Button(chan->GetName().c_str());
 	ImGui::PopStyleColor(4);
+	m_channelButtonHeight = (ImGui::GetCursorScreenPos().y - ystart) - (ImGui::GetStyle().ItemSpacing.y);
+	chan->SetYButtonPos(ImGui::GetCursorPosY());
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
@@ -1437,10 +1595,11 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
 		string tooltip;
-		tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + rchan->GetScope()->m_nickname + "\n\n";
+		auto scope = rchan->GetScope();
+		if(scope)
+			tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + scope->m_nickname + "\n\n";
 
 		//See if we have data
-		auto data = chan->GetStream().GetData();
 		if(data)
 		{
 			Unit samples(Unit::UNIT_SAMPLEDEPTH);
@@ -1463,7 +1622,8 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 
 		tooltip +=
 			"Drag to move this waveform to another plot.\n"
-			"Double click to view/edit channel properties.";
+			"Double click to view/edit channel properties.\n"
+			"Right click for display settings menu.";
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
@@ -1471,11 +1631,107 @@ void WaveformArea::DraggableButton(shared_ptr<DisplayedChannel> chan, size_t ind
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
+
+	//Context menu
+	if(ImGui::BeginPopupContextItem())
+	{
+		if(ImGui::MenuItem("Delete"))
+			RemoveStream(index);
+		ImGui::Separator();
+		bool persist = chan->IsPersistenceEnabled();
+		if(ImGui::MenuItem("Persistence", nullptr, persist))
+			chan->SetPersistenceEnabled(!persist);
+		ImGui::Separator();
+
+		FilterMenu(chan);
+
+		ImGui::EndPopup();
+	}
+}
+
+/**
+	@brief
+ */
+void WaveformArea::FilterMenu(shared_ptr<DisplayedChannel> chan)
+{
+	FilterSubmenu(chan, "Bus", Filter::CAT_BUS);
+	FilterSubmenu(chan, "Clocking", Filter::CAT_CLOCK);
+	FilterSubmenu(chan, "Generation", Filter::CAT_GENERATION);
+	FilterSubmenu(chan, "Math", Filter::CAT_MATH);
+	FilterSubmenu(chan, "Measurement", Filter::CAT_MEASUREMENT);
+	FilterSubmenu(chan, "Memory", Filter::CAT_MEMORY);
+	FilterSubmenu(chan, "Miscellaneous", Filter::CAT_MISC);
+	FilterSubmenu(chan, "Power", Filter::CAT_POWER);
+	FilterSubmenu(chan, "RF", Filter::CAT_RF);
+	FilterSubmenu(chan, "Serial", Filter::CAT_SERIAL);
+	FilterSubmenu(chan, "Signal integrity", Filter::CAT_ANALYSIS);
+}
+
+/**
+	@brief Run the submenu for a single filter category
+ */
+void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string& name, Filter::Category cat)
+{
+	auto& refs = m_parent->GetSession().GetReferenceFilters();
+	auto stream = chan->GetStream();
+
+	if(ImGui::BeginMenu(name.c_str()))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == cat)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			auto it = refs.find(fname);
+			bool valid = false;
+			if(it->second->GetInputCount() == 0)		//No inputs? Always valid
+				valid = true;
+			else
+				valid = it->second->ValidateChannel(0, stream);
+
+			//Hide import filters to avoid cluttering the UI
+			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
+				continue;
+
+			//TODO: measurements should have summary option
+
+			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
+				m_parent->CreateFilter(fname, this, stream);
+		}
+
+		ImGui::EndMenu();
+	}
 }
 
 void WaveformArea::ClearPersistence()
 {
-	//TODO: set persistence clear flag
+	m_clearPersistence = true;
+}
+
+/**
+	@brief Clear persistence iff we are displaying the specified channel
+
+	TODO: can we clear *only* that channel and nothing else?
+	TODO: clear if we have any dependency chain leading to the specified channel
+ */
+void WaveformArea::ClearPersistenceOfChannel(OscilloscopeChannel* chan)
+{
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.m_channel == chan)
+		{
+			m_clearPersistence = true;
+			return;
+		}
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1571,4 +1827,42 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 
 	ClearPersistence();
 	m_parent->SetNeedRender();
+}
+
+/**
+	@brief Gets the timestamp of our current waveform (if we have one)
+ */
+TimePoint WaveformArea::GetWaveformTimestamp()
+{
+	for(auto d : m_displayedChannels)
+	{
+		auto data = d->GetStream().GetData();
+		if(data != nullptr)
+			return TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
+	}
+
+	return TimePoint(0, 0);
+}
+
+/**
+	@brief Checks if this area is compatible with a provided stream
+ */
+bool WaveformArea::IsCompatible(StreamDescriptor desc)
+{
+	//Can't go anywhere in our group if the X unit is different (e.g. frequency vs time)
+	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
+		return false;
+
+	//TODO: can't mix eye and non-eye
+
+	//Digital channels can be overlaid on anything
+	if(desc.GetType() == Stream::STREAM_TYPE_DIGITAL)
+		return true;
+
+	//Can't go in this area if the Y unit is different
+	if(m_yAxisUnit != desc.GetYAxisUnits())
+		return false;
+
+	//All good if we get here
+	return true;
 }

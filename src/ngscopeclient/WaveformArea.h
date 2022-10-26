@@ -40,6 +40,7 @@ class WaveformGroup;
 class MainWindow;
 
 #include "TextureManager.h"
+#include "Marker.h"
 
 class ToneMapArgs
 {
@@ -119,6 +120,9 @@ public:
 	size_t GetRasterizedY()
 	{ return m_rasterizedY; }
 
+	/**
+		@brief Gets the pipeline for drawing uniform analog waveforms, creating it if necessary
+	*/
 	__attribute__((noinline))
 	std::shared_ptr<ComputePipeline> GetUniformAnalogPipeline()
 	{
@@ -137,6 +141,9 @@ public:
 		return m_uniformAnalogComputePipeline;
 	}
 
+	/**
+		@brief Gets the pipeline for drawing sparse analog waveforms, creating it if necessary
+	*/
 	__attribute__((noinline))
 	std::shared_ptr<ComputePipeline> GetSparseAnalogPipeline()
 	{
@@ -153,10 +160,49 @@ public:
 			if(g_hasShaderInt64)
 				suffix += ".int64";
 			m_sparseAnalogComputePipeline = std::make_shared<ComputePipeline>(
-				base + "analog" + suffix + ".sparse.spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
+				base + "analog" + suffix + ".spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
 		}
 
 		return m_sparseAnalogComputePipeline;
+	}
+
+	/**
+		@brief Gets the pipeline for drawing uniform digital waveforms, creating it if necessary
+	*/
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetUniformDigitalPipeline()
+	{
+		if(m_uniformDigitalComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix += ".int64";
+			m_uniformDigitalComputePipeline = std::make_shared<ComputePipeline>(
+				base + "digital" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+		}
+
+		return m_uniformDigitalComputePipeline;
+	}
+
+	/**
+		@brief Gets the pipeline for drawing sparse digital waveforms, creating it if necessary
+	*/
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetSparseDigitalPipeline()
+	{
+		if(m_sparseDigitalComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			int durationSSBOs = 0;	//TODO: support gaps
+			if(g_hasShaderInt64)
+				suffix += ".int64";
+			m_sparseDigitalComputePipeline = std::make_shared<ComputePipeline>(
+				base + "digital" + suffix + ".spv", durationSSBOs + 4, sizeof(ConfigPushConstants));
+		}
+
+		return m_sparseDigitalComputePipeline;
 	}
 
 	ComputePipeline& GetToneMapPipeline()
@@ -170,7 +216,7 @@ public:
 
 	bool IsDensePacked()
 	{
-		auto data = m_stream.m_channel->GetData(0);
+		auto data = m_stream.GetData();
 		if(dynamic_cast<UniformWaveformBase*>(data) != nullptr)
 			return true;
 		else
@@ -192,11 +238,29 @@ public:
 		// Do not need durations if dense because each duration is "1"
 	}
 
+	bool IsPersistenceEnabled()
+	{ return m_persistenceEnabled; }
+
+	void SetPersistenceEnabled(bool b)
+	{ m_persistenceEnabled = b; }
+
+	AcceleratorBuffer<uint32_t>& GetIndexBuffer()
+	{ return m_indexBuffer; }
+
+	void SetYButtonPos(float y)
+	{ m_yButtonPos = y; }
+
+	float GetYButtonPos()
+	{ return m_yButtonPos; }
+
 protected:
 	StreamDescriptor m_stream;
 
 	///@brief Buffer storing our rasterized waveform, prior to tone mapping
 	AcceleratorBuffer<float> m_rasterizedWaveform;
+
+	///@brief Buffer for X axis indexes (only used for sparse waveforms)
+	AcceleratorBuffer<uint32_t> m_indexBuffer;
 
 	///@brief X axis size of rasterized waveform
 	size_t m_rasterizedX;
@@ -213,6 +277,9 @@ protected:
 	///@brief Y axis size of the texture as of last UpdateSize() call
 	size_t m_cachedY;
 
+	///@brief Persistence enable flag
+	bool m_persistenceEnabled;
+
 	///@brief Compute pipeline for tone mapping fp32 images to RGBA
 	ComputePipeline m_toneMapPipe;
 
@@ -221,6 +288,15 @@ protected:
 
 	///@brief Compute pipeline for rendering sparse analog waveforms
 	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering uniform digital waveforms
+	std::shared_ptr<ComputePipeline> m_uniformDigitalComputePipeline;
+
+	///@brief Compute pipeline for rendering sparse digital waveforms
+	std::shared_ptr<ComputePipeline> m_sparseDigitalComputePipeline;
+
+	///@brief Y axis position of our button within the view
+	float m_yButtonPos;
 };
 
 /**
@@ -237,7 +313,8 @@ public:
 	bool Render(int iArea, int numAreas, ImVec2 clientArea);
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
+		bool clearPersistence);
 	void ReferenceWaveformTextures();
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
 
@@ -249,15 +326,26 @@ public:
 
 	void AddStream(StreamDescriptor desc);
 
+	bool IsCompatible(StreamDescriptor desc);
+
 	void RemoveStream(size_t i);
 
 	void ClearPersistence();
+	void ClearPersistenceOfChannel(OscilloscopeChannel* chan);
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	/**
+		@brief Gets the WaveformGroup for this area
+	 */
+	std::shared_ptr<WaveformGroup> GetGroup()
+	{ return m_group; }
+
+	TimePoint GetWaveformTimestamp();
+
 protected:
-	void DraggableButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
+	void ChannelButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
@@ -266,10 +354,12 @@ protected:
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
-	void ToneMapAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
-	void RasterizeAnalogWaveform(
+	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
-		vk::raii::CommandBuffer& cmdbuf);
+		vk::raii::CommandBuffer& cmdbuf,
+		bool clearPersistence);
 	void PlotContextMenu();
 
 	void DrawDropRangeMismatchMessage(
@@ -281,6 +371,9 @@ protected:
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
+
+	void FilterMenu(std::shared_ptr<DisplayedChannel> chan);
+	void FilterSubmenu(std::shared_ptr<DisplayedChannel> chan, const std::string& name, Filter::Category cat);
 
 	float PixelsToYAxisUnits(float pix);
 	float YAxisUnitsToPixels(float volt);
@@ -355,6 +448,15 @@ protected:
 
 	///@brief Channels we're in the process of removing
 	std::vector<std::shared_ptr<DisplayedChannel> > m_channelsToRemove;
+
+	///@brief X axis position of the mouse at the most recent right click
+	int64_t m_lastRightClickOffset;
+
+	///@brief True if clearing persistence next render
+	std::atomic<bool> m_clearPersistence;
+
+	///@brief Height of a channel button
+	float m_channelButtonHeight;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

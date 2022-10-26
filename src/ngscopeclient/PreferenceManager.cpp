@@ -144,7 +144,7 @@ ImU32 PreferenceManager::GetColor(const std::string& path) const
 	return GetPreference(path).GetColor();
 }
 
-Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
+FontDescription PreferenceManager::GetFont(const std::string& path) const
 {
 	return GetPreference(path).GetFont();
 }
@@ -152,10 +152,14 @@ Pango::FontDescription PreferenceManager::GetFont(const std::string& path) const
 void PreferenceManager::LoadPreferences()
 {
 	if(!HasPreferenceFile())
+	{
+		LogTrace("No preference file found\n");
 		return;
+	}
 
 	try
 	{
+		LogTrace("Loading preferences from %s\n", m_filePath.c_str());
 		auto doc = YAML::LoadAllFromFile(m_filePath)[0];
 		this->m_treeRoot.FromYAML(doc);
 	}
@@ -167,6 +171,8 @@ void PreferenceManager::LoadPreferences()
 
 void PreferenceManager::SavePreferences()
 {
+	LogTrace("Saving preferences to %s\n", m_filePath.c_str());
+
 	YAML::Node node{ };
 
 	this->m_treeRoot.ToYAML(node);

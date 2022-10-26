@@ -47,20 +47,20 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("cursor_fill_color", ColorFromString("#ffff0040"))
 				.Label("Cursor fill color")
 				.Description("Color for the filled area between cursors"));
-			cursors.AddPreference(
+			/*cursors.AddPreference(
 				Preference::Color("cursor_fill_text_color", ColorFromString("#ffff00"))
 				.Label("Cursor fill text color")
-				.Description("Color for in-band power and other text drawn between cursors"));
+				.Description("Color for in-band power and other text drawn between cursors"));*/
 			cursors.AddPreference(
-				Preference::Font("label_font", "sans normal 10")
-				.Label("Cursor label font")
-				.Description("Font used for voltage measurements displayed next to cursors"));
+				Preference::Font("label_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+				.Label("Label font")
+				.Description("Font used for cursor labels"));
 			cursors.AddPreference(
 				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));
 
-		auto& decodes = appearance.AddCategory("Decodes");
+		/*auto& decodes = appearance.AddCategory("Decodes");
 			decodes.AddPreference(
 				Preference::Font("protocol_font", "sans normal 10")
 				.Label("Protocol font")
@@ -96,9 +96,27 @@ void PreferenceManager::InitializeDefaults()
 			decodes.AddPreference(
 				Preference::Color("preamble_color", ColorFromString("#808080"))
 				.Label("Preamble color")
-				.Description("Color for preambles, sync bytes, and other fixed header data"));
+				.Description("Color for preambles, sync bytes, and other fixed header data"));*/
 
 		auto& graph = appearance.AddCategory("Filter Graph");
+			graph.AddPreference(
+				Preference::Font("header_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))
+				.Label("Header font")
+				.Description("Font for filter/channel names"));
+			graph.AddPreference(
+				Preference::Color("header_text_color", ColorFromString("#000000"))
+				.Label("Header text color")
+				.Description("Color for filter/channel names"));
+			graph.AddPreference(
+				Preference::Color("valid_link_color", ColorFromString("#00ff00"))
+				.Label("Valid link color")
+				.Description("Color indicating a potential connection path is valid"));
+			graph.AddPreference(
+				Preference::Color("invalid_link_color", ColorFromString("#ff0000"))
+				.Label("Invalid link color")
+				.Description("Color indicating a potential connection path is invalid"));
+
+		/*
 			graph.AddPreference(
 				Preference::Color("background_color", ColorFromString("#101010"))
 				.Label("Background color")
@@ -155,7 +173,7 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("disabled_port_color", ColorFromString("#404040"))
 				.Label("Disabled port color")
 				.Description("Color for ports which cannot be selected in the current mode"));
-
+		*/
 		auto& general = appearance.AddCategory("General");
 			general.AddPreference(
 				Preference::Enum("theme", THEME_DARK)
@@ -165,6 +183,14 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("Dark", THEME_DARK)
 					.EnumValue("Classic", THEME_CLASSIC)
 				);
+			general.AddPreference(
+				Preference::Font("default_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+				.Label("Default font")
+				.Description("Font used for most GUI elements"));
+			general.AddPreference(
+				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
+				.Label("Console font")
+				.Description("Font used for SCPI console and log viewer"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(
@@ -195,8 +221,12 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("y_axis_text_color", ColorFromString("#ffffffff"))
 				.Label("Y axis text color")
 				.Description("Color for Y axis text"));
+			graphs.AddPreference(
+				Preference::Font("y_axis_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
+					.Label("Y axis font")
+					.Description("Font used for Y axis text"));
 
-		auto& peaks = appearance.AddCategory("Peaks");
+		/*auto& peaks = appearance.AddCategory("Peaks");
 			peaks.AddPreference(
 				Preference::Color("peak_outline_color", ColorFromString("#009900"))
 				.Label("Outline color")
@@ -238,7 +268,7 @@ void PreferenceManager::InitializeDefaults()
 			proto.AddPreference(
 				Preference::Color("default_color", ColorFromString("#101010"))
 				.Label("Default color")
-				.Description("Color for packets that don't fit any other category"));
+				.Description("Color for packets that don't fit any other category"));*/
 
 		auto& timeline = appearance.AddCategory("Timeline");
 			timeline.AddPreference(
@@ -249,11 +279,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("text_color", ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for text labels on the X axis"));
-
 			timeline.AddPreference(
-				Preference::Font("tick_label_font", "sans normal 10")
-				.Label("Tick font")
-				.Description("Font used for tickmark labels on the timeline"));
+				Preference::Font("x_axis_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))
+				.Label("X axis font")
+				.Description("Font used for X axis text"));
 
 		auto& toolbar = appearance.AddCategory("Toolbar");
 			toolbar.AddPreference(
@@ -264,11 +293,7 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("48x48", 48)
 				);
 
-		auto& waveforms = appearance.AddCategory("Waveforms");
-			waveforms.AddPreference(
-				Preference::Font("y_axis_font", "monospace normal 10")
-				.Label("Y axis font")
-				.Description("Font used for text on the vertical axis of waveforms"));
+		/*auto& waveforms = appearance.AddCategory("Waveforms");
 			waveforms.AddPreference(
 				Preference::Real("persist_decay_rate", 0.9)
 				.Label("Persistence decay rate (0 = none, 1 = infinite)")
@@ -279,7 +304,7 @@ void PreferenceManager::InitializeDefaults()
 			windows.AddPreference(
 				Preference::Color("trigger_bar_color", ColorFromString("#ffffff"))
 				.Label("Trigger bar color")
-				.Description("Color for the dotted line shown when dragging a trigger"));
+				.Description("Color for the dotted line shown when dragging a trigger"));*/
 
 	auto& drivers = this->m_treeRoot.AddCategory("Drivers");
 		auto& lecroy = drivers.AddCategory("Teledyne LeCroy");
@@ -299,13 +324,51 @@ void PreferenceManager::InitializeDefaults()
 					"the transfer format for active sessions is not updated."
 				));
 
-	auto& files = this->m_treeRoot.AddCategory("Files");
+	/*auto& files = this->m_treeRoot.AddCategory("Files");
 		files.AddPreference(
 			Preference::Int("max_recent_files", 10)
 			.Label("Max recent files")
 			.Description("Maximum number of recent .scopesession file paths to save in history")
 			.Unit(Unit::UNIT_COUNTS));
+	*/
 
+	auto& misc = this->m_treeRoot.AddCategory("Miscellaneous");
+		auto& menus = misc.AddCategory("Menus");
+			menus.AddPreference(
+				Preference::Int("recent_instrument_count", 20)
+				.Label("Recent instrument count")
+				.Description("Number of recently used instruments to display"));
+
+	auto& pwr = this->m_treeRoot.AddCategory("Power");
+		auto& events = pwr.AddCategory("Events");
+			events.AddPreference(
+				Preference::Enum("event_driven_ui", 0)
+					.Label("Event loop mode")
+					.Description(
+						"Specify how the main event loop should operate.\n"
+						"\n"
+						"In Performance mode, the event loop runs at a constant speed locked to the display\n"
+						"refresh rate. This results in the smoothest GUI and maximum waveform update, but the\n"
+						"constant redraws increase power consumption.\n"
+						"\n"
+						"In Power mode, the event loop blocks until a GUI event (keystroke, mouse movement, etc.)\n"
+						"occurs, or a user-specified timeout elapses. This results in more jerky display updates\n"
+						"but keeps the CPU idle most of the time, saving power."
+						)
+					.EnumValue("Performance", 0)
+					.EnumValue("Power", 1)
+				);
+			events.AddPreference(
+				Preference::Real("polling_timeout", FS_PER_SECOND / 4)
+				.Label("Polling timeout")
+				.Unit(Unit::UNIT_FS)
+				.Description(
+					"Polling timeout for event loop in power-optimized mode.\n\n"
+					"Longer timeout values reduce power consumption, but also slows display updates.\n")
+				);
+
+
+	/*
 	auto& privacy = this->m_treeRoot.AddCategory("Privacy");
 		 privacy.AddPreference(
 			Preference::Bool("redact_serial_in_title", false)
@@ -313,5 +376,5 @@ void PreferenceManager::InitializeDefaults()
 			.Description(
 				"Partially hide instrument serial numbers in the window title bar.\n\n"
 				"This allows you to share screenshots without revealing your serial numbers."
-			));
+			));*/
 }

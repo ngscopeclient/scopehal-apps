@@ -30,95 +30,127 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of SCPIConsoleDialog
+	@brief Declaration of FilterGraphEditor
  */
+#ifndef FilterGraphEditor_h
+#define FilterGraphEditor_h
 
-#include "ngscopeclient.h"
-#include "MainWindow.h"
-#include "SCPIConsoleDialog.h"
+#include "Dialog.h"
+#include "Session.h"
+#include "Bijection.h"
+class ChannelPropertiesDialog;
 
-using namespace std;
-using namespace std::chrono_literals;
+#include <imgui_node_editor.h>
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst)
-	: Dialog(("SCPI Console: ") + inst->m_nickname, ImVec2(500, 300))
-	, m_parent(parent)
-	, m_inst(inst)
-	, m_commandPending(false)
+template<class T>
+class lessID
 {
-}
+public:
+	bool operator()(const T& a, const T& b) const
+	{ return a.AsPointer() < b.AsPointer(); }
+};
 
-SCPIConsoleDialog::~SCPIConsoleDialog()
+class lessIDPair
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
-
-bool SCPIConsoleDialog::DoRender()
-{
-	auto csize = ImGui::GetContentRegionAvail();
-
-	//Check for results of pending commands
-	if(m_commandPending)
+public:
+	bool operator()(
+		const std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>& a,
+		const std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>& b) const
 	{
-		if(m_commandReturnValue.wait_for(0s) == future_status::ready)
-		{
-			auto str = m_commandReturnValue.get();
-			if(Trim(str).empty())
-				m_output.push_back("Request timed out.");
-			else
-				m_output.push_back(str);
-			m_commandPending = false;
-		}
-	}
-
-	//Scroll area for console output is full window minus command box
-	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
-	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
-		for(auto& line : m_output)
-			ImGui::TextUnformatted(line.c_str());
-		ImGui::PopFont();
-
-		if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-			ImGui::SetScrollHereY(1.0f);
-	ImGui::EndChild();
-
-	//Command input box
-	ImGui::SetNextItemWidth(csize.x);
-	bool pending = m_commandPending;
-	if(pending)
-		ImGui::BeginDisabled();
-	if(ImGui::InputText("Command", &m_command, ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-		//Show command immediately
-		m_output.push_back(string("> ") + m_command);
-
-		//Push command to the instrument immediately
-		auto trans = m_inst->GetTransport();
-		if(m_command.find('?') == string::npos)
-			trans->SendCommandQueued(m_command);
-
-		//Commands are sent immediately, but reply is deferred to avoid blocking the UI
+		auto fpa = a.first.AsPointer();
+		auto fpb = b.first.AsPointer();
+		if(fpa < fpb)
+			return true;
+		else if(fpa > fpb)
+			return false;
 		else
-		{
-			m_commandPending = true;
-			string cmd = m_command;
-			m_commandReturnValue = async(launch::async, [cmd, trans]{ return trans->SendCommandQueuedWithReply(cmd); });
-		}
-
-		m_command = "";
-
-		//Re-set focus back into the box
-		//because imgui defaults to unfocusing once it's closed
-		ImGui::SetKeyboardFocusHere(-1);
+			return a.second.AsPointer() < b.second.AsPointer();
 	}
-	if(pending)
-		ImGui::EndDisabled();
+};
 
-	return true;
-}
+class FilterGraphEditor : public Dialog
+{
+public:
+	FilterGraphEditor(Session& session, MainWindow* parent);
+	virtual ~FilterGraphEditor();
+
+	virtual bool DoRender();
+
+protected:
+	void OutputPortTooltip(StreamDescriptor stream);
+	void DoNodeForChannel(OscilloscopeChannel* channel);
+	void HandleNodeProperties();
+	void HandleLinkCreationRequests(Filter*& fReconfigure);
+	void HandleLinkDeletionRequests(Filter*& fReconfigure);
+	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
+	void HandleOverlaps();
+	void ClearOldPropertiesDialogs();
+	bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
+
+	void FilterMenu(StreamDescriptor src);
+	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
+
+	///@brief Session being manipuulated
+	Session& m_session;
+
+	///@brief Top level window
+	MainWindow* m_parent;
+
+	///@brief Graph editor setup
+	ax::NodeEditor::Config m_config;
+
+	///@brief Context containing current state of the graph editor
+	ax::NodeEditor::EditorContext* m_context;
+
+	///@brief Map of channels / filters to IDs
+	Bijection<
+		OscilloscopeChannel*,
+		ax::NodeEditor::NodeId,
+		std::less<OscilloscopeChannel*>,
+		lessID<ax::NodeEditor::NodeId> > m_channelIDMap;
+
+	///@brief Map of streams to output port IDs
+	Bijection<
+		StreamDescriptor,
+		ax::NodeEditor::PinId,
+		std::less<StreamDescriptor>,
+		lessID<ax::NodeEditor::PinId> > m_streamIDMap;
+
+	///@brief Map of (channel, input number) to input port IDs
+	Bijection<
+		std::pair<OscilloscopeChannel*, int>,
+		ax::NodeEditor::PinId,
+		std::less< std::pair<OscilloscopeChannel*, int> >,
+		lessID<ax::NodeEditor::PinId> > m_inputIDMap;
+
+	///@brief Map of (ID, ID) to link IDs
+	Bijection<
+		std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>,
+		ax::NodeEditor::LinkId,
+		lessIDPair,
+		lessID<ax::NodeEditor::LinkId> > m_linkMap;
+
+	///@brief Next ID to be allocated
+	int m_nextID;
+
+	ax::NodeEditor::NodeId GetID(OscilloscopeChannel* chan);
+	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
+	ax::NodeEditor::PinId GetID(std::pair<OscilloscopeChannel*, size_t> input);
+	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
+
+	///@brief Source stream of the newly created filter
+	StreamDescriptor m_newFilterSourceStream;
+
+	///@brief Properties dialogs for channels to be displayed inside nodes
+	std::map<
+		ax::NodeEditor::NodeId,
+		std::shared_ptr<ChannelPropertiesDialog>,
+		lessID<ax::NodeEditor::NodeId> > m_propertiesDialogs;
+
+	///@brief Node whose properties we're currently interacting with
+	ax::NodeEditor::NodeId m_selectedProperties;
+
+	ImVec2 m_createMousePos;
+};
+
+#endif

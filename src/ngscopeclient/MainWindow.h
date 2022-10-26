@@ -84,6 +84,8 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	void NavigateToTimestamp(int64_t stamp);
+
 	/**
 		@brief Update the timebase properties dialog
 	 */
@@ -102,6 +104,12 @@ public:
 	void SetNeedRender()
 	{ m_needRender = true; }
 
+	void ClearPersistence()
+	{
+		m_clearPersistence = true;
+		SetNeedRender();
+	}
+
 	virtual void Render();
 
 	void QueueCloseSession()
@@ -109,6 +117,24 @@ public:
 
 	Session& GetSession()
 	{ return m_session; }
+
+	float GetTraceAlpha()
+	{ return m_traceAlpha; }
+
+	float GetPersistDecay()
+	{ return m_persistenceDecay; }
+
+	void SetPersistDecay(float f)
+	{ m_persistenceDecay = f; }
+
+	Filter* CreateFilter(
+		const std::string& name,
+		WaveformArea* area,
+		StreamDescriptor initialStream,
+		bool showProperties = true);
+	void FindAreaForStream(WaveformArea* area, StreamDescriptor stream);
+
+	void OnFilterReconfigured(Filter* f);
 
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
@@ -139,11 +165,14 @@ protected:
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddChannelsMenu();
+				void AddImportMenu();
+				void AddGenerateMenu();
 			void SetupMenu();
 			void WindowMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
 				void WindowSCPIConsoleMenu();
+			void DebugMenu();
 			void HelpMenu();
 		void Toolbar();
 			void LoadToolbarIcons();
@@ -206,6 +235,12 @@ protected:
 	///@brief Timebase properties
 	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
 
+	///@brief Persistence settings
+	std::shared_ptr<Dialog> m_persistenceDialog;
+
+	///@brief Filter graph editor
+	std::shared_ptr<Dialog> m_graphEditor;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups
@@ -218,6 +253,12 @@ protected:
 
 	///@brief Cached toolbar icon size
 	int m_toolbarIconSize;
+
+	///@brief Trace alpha
+	float m_traceAlpha;
+
+	///@brief Persistence decay factor
+	float m_persistenceDecay;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
@@ -260,17 +301,19 @@ protected:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Graphics items
 
-	ImFont* m_defaultFont;
-	ImFont* m_monospaceFont;
-
 	TextureManager m_texmgr;
 
 	/**
-		@brief true if a resize or other event this frame requires we re-rasterize waveforms
+		@brief True if a resize or other event this frame requires we re-rasterize waveforms
 
 		(even if data has not changed)
 	 */
 	bool m_needRender;
+
+	/**
+		@brief True if we should clear persistence on the next render pass
+	 */
+	std::atomic<bool> m_clearPersistence;
 
 	///@brief Command pool for allocating our command buffers
 	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
@@ -279,11 +322,12 @@ protected:
 	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
 
 public:
-	ImFont* GetMonospaceFont()
-	{ return m_monospaceFont; }
 
-	ImFont* GetDefaultFont()
-	{ return m_defaultFont; }
+	/**
+		@brief Returns a font, given the name of a preference setting
+	 */
+	ImFont* GetFontPref(const std::string& name)
+	{ return m_fontmgr.GetFont(m_session.GetPreferences().GetFont(name.c_str())); }
 
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }

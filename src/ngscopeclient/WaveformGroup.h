@@ -54,7 +54,8 @@ public:
 
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
-		std::vector<std::shared_ptr<DisplayedChannel> >& channels);
+		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
+		bool clearPersistence);
 
 	const std::string& GetTitle()
 	{ return m_title; }
@@ -63,6 +64,15 @@ public:
 
 	void OnZoomInHorizontal(int64_t target, float step);
 	void OnZoomOutHorizontal(int64_t target, float step);
+	void NavigateToTimestamp(int64_t timestamp);
+
+	void ClearPersistenceOfChannel(OscilloscopeChannel* chan);
+
+	/**
+		@brief Gets the X axis unit for this group
+	 */
+	Unit GetXAxisUnit()
+	{ return m_xAxisUnit; }
 
 	/**
 		@brief Converts a position in pixels (relative to left side of plot) to X axis units (relative to time zero)
@@ -100,21 +110,28 @@ public:
 	StreamDescriptor GetChannelBeingDragged();
 
 	float GetYAxisWidth()
-	{ return 5 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
+	{ return 6 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
 
 	float GetSpacing()
 	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
 
+	///@brief gets the waveform areas in this group
+	const std::vector< std::shared_ptr<WaveformArea> >& GetWaveformAreas()
+	{ return m_areas; }
+
 protected:
 	void RenderTimeline(float width, float height);
 	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
+	void RenderMarkers(ImVec2 pos, ImVec2 size);
+	void DoCursorReadouts();
 
 	enum DragState
 	{
 		DRAG_STATE_NONE,
 		DRAG_STATE_TIMELINE,
 		DRAG_STATE_X_CURSOR0,
-		DRAG_STATE_X_CURSOR1
+		DRAG_STATE_X_CURSOR1,
+		DRAG_STATE_MARKER
 	};
 
 	void DoCursor(int iCursor, DragState state);
@@ -127,6 +144,9 @@ protected:
 
 	///@brief X position of our child windows
 	float m_xpos;
+
+	///@brief Width of the window (used for autoscaling)
+	float m_width;
 
 	///@brief Display scale factor
 	float m_pixelsPerXUnit;
@@ -146,11 +166,20 @@ protected:
 	///@brief Description of item being dragged, if any
 	DragState m_dragState;
 
+	///@brief Marker being dragged, if any
+	Marker* m_dragMarker;
+
 	///@brief Time of last mouse movement
 	double m_tLastMouseMove;
 
 	///@brief List of waveform areas to close next frame
 	std::vector<size_t> m_areasToClose;
+
+	///@brief Height of the timeline
+	float m_timelineHeight;
+
+	///@brief True if clearing persistence
+	std::atomic<bool> m_clearPersistence;
 
 public:
 

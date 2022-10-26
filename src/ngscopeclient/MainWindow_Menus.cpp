@@ -46,11 +46,13 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "FilterGraphEditor.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PersistenceSettingsDialog.h"
 #include "PreferenceDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
@@ -89,6 +91,7 @@ void MainWindow::MainMenu()
 		AddMenu();
 		SetupMenu();
 		WindowMenu();
+		DebugMenu();
 		HelpMenu();
 		ImGui::EndMainMenuBar();
 	}
@@ -122,6 +125,14 @@ void MainWindow::ViewMenu()
 	{
 		if(ImGui::MenuItem("Fullscreen"))
 			SetFullscreen(!m_fullscreen);
+
+		ImGui::Separator();
+
+		if(ImGui::MenuItem("Persistence Setup"))
+		{
+			m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+			AddDialog(m_persistenceDialog);
+		}
 
 		ImGui::EndMenu();
 	}
@@ -157,6 +168,8 @@ void MainWindow::AddMenu()
 		ImGui::Separator();
 
 		AddChannelsMenu();
+		AddGenerateMenu();
+		AddImportMenu();
 
 		ImGui::EndMenu();
 	}
@@ -566,6 +579,78 @@ void MainWindow::AddChannelsMenu()
 			}
 		}
 
+		//TODO: add all existing filters
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Import menu
+ */
+void MainWindow::AddImportMenu()
+{
+	auto& refs = m_session.GetReferenceFilters();
+
+	if(ImGui::BeginMenu("Import"))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == Filter::CAT_GENERATION)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide import filters
+			if(fname.find("Import") == string::npos)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Generate menu
+ */
+void MainWindow::AddGenerateMenu()
+{
+	auto& refs = m_session.GetReferenceFilters();
+
+	if(ImGui::BeginMenu("Generate"))
+	{
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
+		{
+			if(it.second->GetCategory() == Filter::CAT_GENERATION)
+				sortedNames.push_back(it.first);
+		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide import filters
+			if(fname.find("Import") != string::npos)
+				continue;
+
+			//Hide filters that have inputs
+			if(refs.find(fname)->second->GetInputCount() != 0)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+				CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+		}
+
 		ImGui::EndMenu();
 	}
 }
@@ -642,10 +727,21 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("History"))
 		{
-			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory());
+			m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
 			AddDialog(m_historyDialog);
 		}
 		if(hasHistory)
+			ImGui::EndDisabled();
+
+		bool hasGraphEditor = m_graphEditor != nullptr;
+		if(hasGraphEditor)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Filter Graph"))
+		{
+			m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
+			AddDialog(m_graphEditor);
+		}
+		if(hasGraphEditor)
 			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
@@ -731,6 +827,33 @@ void MainWindow::WindowSCPIConsoleMenu()
 				AddDialog(dlg);
 			}
 		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Debug menu
+ */
+void MainWindow::DebugMenu()
+{
+	if(ImGui::BeginMenu("Debug"))
+	{
+		bool showDemo = m_showDemo;
+		if(showDemo)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("ImGui Demo"))
+			m_showDemo = true;
+		if(showDemo)
+			ImGui::EndDisabled();
+
+		bool showPlot = m_showPlot;
+		if(showPlot)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("ImPlot Demo"))
+			m_showPlot = true;
+		if(showPlot)
+			ImGui::EndDisabled();
 
 		ImGui::EndMenu();
 	}

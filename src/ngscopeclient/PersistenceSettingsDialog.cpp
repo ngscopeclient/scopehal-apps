@@ -30,95 +30,46 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of SCPIConsoleDialog
+	@brief Implementation of PersistenceSettingsDialog
  */
 
 #include "ngscopeclient.h"
+#include "PersistenceSettingsDialog.h"
 #include "MainWindow.h"
-#include "SCPIConsoleDialog.h"
 
 using namespace std;
-using namespace std::chrono_literals;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst)
-	: Dialog(("SCPI Console: ") + inst->m_nickname, ImVec2(500, 300))
+PersistenceSettingsDialog::PersistenceSettingsDialog(MainWindow& parent)
+	: Dialog("Persistence", ImVec2(600, 150))
 	, m_parent(parent)
-	, m_inst(inst)
-	, m_commandPending(false)
 {
+
 }
 
-SCPIConsoleDialog::~SCPIConsoleDialog()
+PersistenceSettingsDialog::~PersistenceSettingsDialog()
 {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-bool SCPIConsoleDialog::DoRender()
+/**
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool PersistenceSettingsDialog::DoRender()
 {
-	auto csize = ImGui::GetContentRegionAvail();
-
-	//Check for results of pending commands
-	if(m_commandPending)
-	{
-		if(m_commandReturnValue.wait_for(0s) == future_status::ready)
-		{
-			auto str = m_commandReturnValue.get();
-			if(Trim(str).empty())
-				m_output.push_back("Request timed out.");
-			else
-				m_output.push_back(str);
-			m_commandPending = false;
-		}
-	}
-
-	//Scroll area for console output is full window minus command box
-	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
-	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
-		for(auto& line : m_output)
-			ImGui::TextUnformatted(line.c_str());
-		ImGui::PopFont();
-
-		if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-			ImGui::SetScrollHereY(1.0f);
-	ImGui::EndChild();
-
-	//Command input box
-	ImGui::SetNextItemWidth(csize.x);
-	bool pending = m_commandPending;
-	if(pending)
-		ImGui::BeginDisabled();
-	if(ImGui::InputText("Command", &m_command, ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-		//Show command immediately
-		m_output.push_back(string("> ") + m_command);
-
-		//Push command to the instrument immediately
-		auto trans = m_inst->GetTransport();
-		if(m_command.find('?') == string::npos)
-			trans->SendCommandQueued(m_command);
-
-		//Commands are sent immediately, but reply is deferred to avoid blocking the UI
-		else
-		{
-			m_commandPending = true;
-			string cmd = m_command;
-			m_commandReturnValue = async(launch::async, [cmd, trans]{ return trans->SendCommandQueuedWithReply(cmd); });
-		}
-
-		m_command = "";
-
-		//Re-set focus back into the box
-		//because imgui defaults to unfocusing once it's closed
-		ImGui::SetKeyboardFocusHere(-1);
-	}
-	if(pending)
-		ImGui::EndDisabled();
+	float decay = m_parent.GetPersistDecay();
+	if(ImGui::SliderFloat("Decay Coefficient", &decay, 0, 1, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+		m_parent.SetPersistDecay(decay);
 
 	return true;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers

@@ -34,6 +34,7 @@
  */
 #include "ngscopeclient.h"
 #include "HistoryManager.h"
+#include "Session.h"
 
 using namespace std;
 
@@ -41,8 +42,7 @@ using namespace std;
 // HistoryPoint
 
 HistoryPoint::HistoryPoint()
-	: m_timestamp(0)
-	, m_fs(0)
+	: m_time(0, 0)
 	, m_pinned(false)
 	, m_nickname("")
 {
@@ -75,8 +75,9 @@ HistoryPoint::~HistoryPoint()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-HistoryManager::HistoryManager()
+HistoryManager::HistoryManager(Session& session)
 	: m_maxDepth(10)
+	, m_session(session)
 {
 }
 
@@ -90,8 +91,7 @@ HistoryManager::~HistoryManager()
 void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 {
 	bool foundTimestamp = false;
-	time_t stamp = 0;
-	int64_t fs = 0;
+	TimePoint tp(0,0);
 
 	//First pass: find first waveform with a timestamp
 	for(auto scope : scopes)
@@ -104,8 +104,8 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 				auto wfm = chan->GetData(j);
 				if(wfm)
 				{
-					stamp = wfm->m_startTimestamp;
-					fs = wfm->m_startFemtoseconds;
+					tp.SetSec(wfm->m_startTimestamp);
+					tp.SetFs(wfm->m_startFemtoseconds);
 					foundTimestamp = true;
 					break;
 				}
@@ -121,8 +121,7 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 	//All good. Generate a new history point and add it
 	auto pt = make_shared<HistoryPoint>();
 	m_history.push_back(pt);
-	pt->m_timestamp = stamp;
-	pt->m_fs = fs;
+	pt->m_time = tp;
 	pt->m_pinned = false;
 
 	//Add waveforms
@@ -149,9 +148,13 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 		//Delete first un-pinned entry
 		for(auto it = m_history.begin(); it != m_history.end(); it++)
 		{
-			if((*it)->m_pinned)
+			auto& point = (*it);
+			if(point->m_pinned)
+				continue;
+			if(!m_session.GetMarkers(point->m_time).empty())
 				continue;
 
+			m_session.RemoveMarkers(point->m_time);
 			m_history.erase(it);
 			break;
 		}

@@ -3,33 +3,9 @@ name: Build-windows
 on:
   push:
   pull_request:
-  schedule:
-    - cron: '0 0 * * 5'
   workflow_dispatch:
 
 jobs:
-
-  Tarball:
-    runs-on: ubuntu-latest
-
-    steps:
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Make Source Tarball
-      run: |
-        cd ..
-        tar -cf source.tar scopehal-apps
-        gzip -S .gz -9 source.tar
-        mv source.tar.gz scopehal-apps/
-
-    - name: Upload Source
-      uses: actions/upload-artifact@v2
-      with:
-        name: glscopeclient-source
-        path: source.tar.gz
 
   Windows:
     runs-on: windows-latest
@@ -58,7 +34,15 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-toolchain
 
+    - name: Cache glslang
+      id: cache-glslang
+      uses: actions/cache@v3
+      with:
+        path: D:/a/_temp/msys64/home/runneradmin/glslang
+        key: ${{ runner.os }}-glslang-1.3.224.1
+
     - name: Build glslang tags/sdk-1.3.224.1
+      if: steps.cache-glslang.outputs.cache-hit != 'true'
       run: |
         # Windows mingw64 glslang build (as it is not fully integrated in VulkanSDK-1.3.224.1 for Windows and built with Visual Studio 2017)
         cd ~
@@ -111,27 +95,14 @@ jobs:
         name: glscopeclient-windows
         path: msys2/*.zst
 
-    - name: Build MSI / portable zip
-      shell: msys2 {0}
-      run: |
-        mkdir build_msi
-        cd build_msi
-        cmake \
-          -G"Ninja" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTING=OFF \
-          -DWIXPATH="/c/Program Files (x86)/WiX Toolset v3.11/bin" \
-          ../
-        cmake --build ./
-
     - name: Upload Artifacts (portable zip)
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows-portable
-        path: build_msi/dist/windows_x64
+        path: build/dist/windows_x64
 
     - name: Upload Artifacts (MSI)
       uses: actions/upload-artifact@v2
       with:
         name: glscopeclient-windows.msi
-        path: build_msi/dist/*.msi
+        path: build/dist/*.msi

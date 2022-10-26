@@ -104,6 +104,8 @@ void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
 ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
 
+void RightJustifiedText(const std::string& str);
+
 extern std::shared_mutex g_vulkanActivityMutex;
 
 enum GuiTheme

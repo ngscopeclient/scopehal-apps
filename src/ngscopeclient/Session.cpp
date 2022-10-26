@@ -63,12 +63,16 @@ Session::Session(MainWindow* wnd)
 	, m_triggerOneShot(false)
 	, m_multiScopeFreeRun(false)
 	, m_lastFilterGraphExecTime(0)
+	, m_history(*this)
+	, m_nextMarkerNum(1)
 {
+	CreateReferenceFilters();
 }
 
 Session::~Session()
 {
 	Clear();
+	DestroyReferenceFilters();
 }
 
 /**
@@ -132,8 +136,17 @@ void Session::Clear()
 	m_history.clear();
 
 	//Delete scopes once we've terminated the threads
+	//Detach waveforms before we destroy the scope, since history owns them
 	for(auto scope : m_oscilloscopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				chan->Detach(j);
+		}
 		delete scope;
+	}
 	m_oscilloscopes.clear();
 	m_psus.clear();
 	m_rfgenerators.clear();
@@ -161,6 +174,15 @@ void Session::ApplyPreferences(Oscilloscope* scope)
 	}
 }
 
+/**
+	@brief Starts the WaveformThread if we don't already have one
+ */
+void Session::StartWaveformThreadIfNeeded()
+{
+	if(m_waveformThread == nullptr)
+		m_waveformThread = make_unique<thread>(WaveformThread, this, &m_shuttingDown);
+}
+
 void Session::AddOscilloscope(Oscilloscope* scope)
 {
 	lock_guard<mutex> lock(m_scopeMutex);
@@ -173,8 +195,7 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
 	m_mainWindow->OnScopeAdded(scope);
 
-	if(m_waveformThread == nullptr)
-		m_waveformThread = make_unique<thread>(WaveformThread, this, &m_shuttingDown);
+	StartWaveformThreadIfNeeded();
 }
 
 /**
@@ -635,44 +656,29 @@ void Session::DownloadWaveforms()
 bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	bool hadNewWaveforms = false;
-	if(m_triggerArmed)
+
+	if(g_waveformReadyEvent.Peek())
 	{
-		if(g_waveformReadyEvent.Peek())
+		LogTrace("Waveform is ready\n");
+
+		//Add to history
+		auto scopes = GetScopes();
 		{
-			LogTrace("Waveform is ready\n");
-
-			//Add to history
-			auto scopes = GetScopes();
-			{
-				lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
-				m_history.AddHistory(scopes);
-			}
-
-			//Tone-map all of our waveforms
-			//(does not need waveform data locked since it only works on *rendered* data)
-			hadNewWaveforms = true;
-			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
-
-			//Release the waveform processing thread
-			g_waveformProcessedEvent.Signal();
-
-			//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
-			if(m_multiScopeFreeRun)
-				ArmTrigger(TRIGGER_TYPE_NORMAL);
+			lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
+			m_history.AddHistory(scopes);
 		}
-	}
 
-	//Discard all pending waveform data if the trigger isn't armed.
-	//Failure to do this can lead to a spurious trigger after we wanted to stop.
-	else
-	{
-		lock_guard<mutex> lock(m_scopeMutex);
-		for(auto scope : m_oscilloscopes)
-			scope->ClearPendingWaveforms();
+		//Tone-map all of our waveforms
+		//(does not need waveform data locked since it only works on *rendered* data)
+		hadNewWaveforms = true;
+		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
-		//If waveform thread is blocking for us to process its last waveform, release it
-		if(g_waveformReadyEvent.Peek())
-			g_waveformProcessedEvent.Signal();
+		//Release the waveform processing thread
+		g_waveformProcessedEvent.Signal();
+
+		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
+		if(m_multiScopeFreeRun)
+			ArmTrigger(TRIGGER_TYPE_NORMAL);
 	}
 
 	//If a re-render operation completed, tone map everything again
@@ -701,15 +707,13 @@ void Session::RefreshAllFilters()
 
 	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 
-	//SyncFilterColors();
-
 	set<Filter*> filters;
 	{
-		lock_guard<mutex> lock3(m_filterUpdatingMutex);
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
 		filters = Filter::GetAllInstances();
 	}
 
-	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
+	shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 	m_graphExecutor.RunBlocking(filters);
 
 	//Update statistic displays after the filter graph update is complete
@@ -734,4 +738,40 @@ int64_t Session::GetToneMapTime()
 void Session::RenderWaveformTextures(vk::raii::CommandBuffer& cmdbuf, vector<shared_ptr<DisplayedChannel> >& channels)
 {
 	m_mainWindow->RenderWaveformTextures(cmdbuf, channels);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Reference filters
+
+/**
+	@brief Creates one filter of each known type to use as a reference for what inputs are legal to use to a new filter
+ */
+void Session::CreateReferenceFilters()
+{
+	double start = GetTime();
+
+	vector<string> names;
+	Filter::EnumProtocols(names);
+
+	for(auto n : names)
+	{
+		auto f = Filter::CreateFilter(n.c_str(), "");;
+		f->HideFromList();
+		m_referenceFilters[n] = f;
+	}
+
+	LogTrace("Created %zu reference filters in %.2f ms\n", m_referenceFilters.size(), (GetTime() - start) * 1000);
+}
+
+/**
+	@brief Destroys the reference filters
+
+	This only needs to be done at application shutdown, not in Clear(), because the reference filters have no persistent
+	state. The only thing they're ever used for is calling ValidateChannel() on them.
+ */
+void Session::DestroyReferenceFilters()
+{
+	for(auto it : m_referenceFilters)
+		delete it.second;
+	m_referenceFilters.clear();
 }

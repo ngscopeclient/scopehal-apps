@@ -35,7 +35,6 @@
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
-#include "../scopeexports/scopeexports.h"
 
 using namespace std;
 
@@ -105,26 +104,7 @@ int main(int argc, char* argv[])
 	TransportStaticInit();
 	DriverStaticInit();
 	ScopeProtocolStaticInit();
-	ScopeExportStaticInit();
 	InitializePlugins();
-
-	//Initialize ImGui
-	IMGUI_CHECKVERSION();
-	LogDebug("Using ImGui version %s\n", IMGUI_VERSION);
-	auto ctx = ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-	//Don't serialize UI config for now
-	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
-	io.IniFilename = nullptr;
-
-	//Set up appearance settings
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.WindowRounding = 0.0f;
-	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
 	{
 		//Make the top level window
@@ -132,20 +112,20 @@ int main(int argc, char* argv[])
 		g_mainWindow = make_unique<MainWindow>(queue);
 
 		//Main event loop
+		auto& session = g_mainWindow->GetSession();
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 		{
-			//poll and return immediately
-			glfwPollEvents();
+			//Check which event loop model to use
+			if(session.GetPreferences().GetEnumRaw("Power.Events.event_driven_ui") == 1)
+				glfwWaitEventsTimeout(session.GetPreferences().GetReal("Power.Events.polling_timeout") / FS_PER_SECOND);
+			else
+				glfwPollEvents();
 
 			//Draw the main window
 			g_mainWindow->Render();
 		}
 
-		g_mainWindow->GetSession().ClearBackgroundThreads();
-		g_vkComputeDevice->waitIdle();
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext(ctx);
+		session.ClearBackgroundThreads();
 	}
 
 	//Done, clean up
@@ -211,4 +191,15 @@ ImU32 ColorFromString(const string& str, unsigned int alpha)
 	}
 
 	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (alpha << IM_COL32_A_SHIFT);
+}
+
+/**
+	@brief Helper function for right justified text in a table
+ */
+void RightJustifiedText(const std::string& str)
+{
+	ImGui::SetCursorPosX(
+		ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(str.c_str()).x -
+		ImGui::GetScrollX() - 2*ImGui::GetStyle().ItemSpacing.x);
+	ImGui::TextUnformatted(str.c_str());
 }

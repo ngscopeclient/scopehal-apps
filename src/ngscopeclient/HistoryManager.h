@@ -35,6 +35,8 @@
 #ifndef HistoryManager_h
 #define HistoryManager_h
 
+#include "Marker.h"
+
 //Waveform history for a single instrument
 typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
 
@@ -47,11 +49,8 @@ public:
 	HistoryPoint();
 	~HistoryPoint();
 
-	///@brief Seconds component of zero-time reference for these waveforms
-	time_t m_timestamp;
-
-	///@brief Fractional component of zero-time reference for these waveforms. Femtoseconds since the UTC second.
-	int64_t m_fs;
+	///@brief Timstamp of the point
+	TimePoint m_time;
 
 	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
 	bool m_pinned;
@@ -69,7 +68,7 @@ public:
 class HistoryManager
 {
 public:
-	HistoryManager();
+	HistoryManager(Session& session);
 	~HistoryManager();
 
 	void AddHistory(const std::vector<Oscilloscope*>& scopes);
@@ -81,6 +80,9 @@ public:
 
 	///@brief has to be an int for imgui compatibility
 	int m_maxDepth;
+
+protected:
+	Session& m_session;
 };
 
 #endif

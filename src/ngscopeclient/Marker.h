@@ -30,95 +30,65 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of SCPIConsoleDialog
+	@brief Declaration of Marker
  */
+#ifndef Marker_h
+#define Marker_h
 
-#include "ngscopeclient.h"
-#include "MainWindow.h"
-#include "SCPIConsoleDialog.h"
-
-using namespace std;
-using namespace std::chrono_literals;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst)
-	: Dialog(("SCPI Console: ") + inst->m_nickname, ImVec2(500, 300))
-	, m_parent(parent)
-	, m_inst(inst)
-	, m_commandPending(false)
+/**
+	@brief A timestamp, measured in seconds + femtoseconds
+ */
+class TimePoint : public std::pair<time_t, int64_t>
 {
-}
+public:
+	TimePoint(time_t sec, int64_t fs)
+	: std::pair<time_t, int64_t>(sec, fs)
+	{}
 
-SCPIConsoleDialog::~SCPIConsoleDialog()
+	time_t GetSec() const
+	{ return first; }
+
+	int64_t GetFs() const
+	{ return second; }
+
+	void SetSec(time_t sec)
+	{ first = sec; }
+
+	void SetFs(int64_t fs)
+	{ second = fs; }
+
+	std::string PrettyPrint();
+};
+
+/**
+	@brief Data for a marker
+
+	A marker is similar to a cursor, but is persistent and attached to a point in absolute time (a specific location
+	within a specific acquisition). Markers, unlike cursors, can be named.
+ */
+class Marker
 {
-}
+public:
+	Marker(TimePoint t, int64_t o, const std::string& n)
+	: m_timestamp(t)
+	, m_offset(o)
+	, m_name(n)
+	{}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
+	///@brief Timestamp of the parent waveform (UTC)
+	TimePoint m_timestamp;
 
-bool SCPIConsoleDialog::DoRender()
-{
-	auto csize = ImGui::GetContentRegionAvail();
+	///@brief Position of the marker within the parent waveform (X axis units)
+	int64_t m_offset;
 
-	//Check for results of pending commands
-	if(m_commandPending)
-	{
-		if(m_commandReturnValue.wait_for(0s) == future_status::ready)
-		{
-			auto str = m_commandReturnValue.get();
-			if(Trim(str).empty())
-				m_output.push_back("Request timed out.");
-			else
-				m_output.push_back(str);
-			m_commandPending = false;
-		}
-	}
+	/**
+		@brief Helper to get the absolute timestamp of the marker
+	 */
+	TimePoint GetMarkerTime()
+	{ return TimePoint(m_timestamp.first, m_timestamp.second + m_offset); }
 
-	//Scroll area for console output is full window minus command box
-	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
-	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
-		for(auto& line : m_output)
-			ImGui::TextUnformatted(line.c_str());
-		ImGui::PopFont();
+	///@brief Display name of the marker
+	std::string m_name;
+};
 
-		if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-			ImGui::SetScrollHereY(1.0f);
-	ImGui::EndChild();
-
-	//Command input box
-	ImGui::SetNextItemWidth(csize.x);
-	bool pending = m_commandPending;
-	if(pending)
-		ImGui::BeginDisabled();
-	if(ImGui::InputText("Command", &m_command, ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-		//Show command immediately
-		m_output.push_back(string("> ") + m_command);
-
-		//Push command to the instrument immediately
-		auto trans = m_inst->GetTransport();
-		if(m_command.find('?') == string::npos)
-			trans->SendCommandQueued(m_command);
-
-		//Commands are sent immediately, but reply is deferred to avoid blocking the UI
-		else
-		{
-			m_commandPending = true;
-			string cmd = m_command;
-			m_commandReturnValue = async(launch::async, [cmd, trans]{ return trans->SendCommandQueuedWithReply(cmd); });
-		}
-
-		m_command = "";
-
-		//Re-set focus back into the box
-		//because imgui defaults to unfocusing once it's closed
-		ImGui::SetKeyboardFocusHere(-1);
-	}
-	if(pending)
-		ImGui::EndDisabled();
-
-	return true;
-}
+#endif

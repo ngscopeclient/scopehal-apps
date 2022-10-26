@@ -67,6 +67,9 @@ protected:
 	///@brief The underlying GLFW window object
 	GLFWwindow* m_window;
 
+	///@brief ImGui context for GUI objects
+	ImGuiContext* m_context;
+
 	///@brief Surface for drawing onto
 	std::shared_ptr<vk::raii::SurfaceKHR> m_surface;
 
@@ -115,8 +118,17 @@ protected:
 	///@brief Swapchain for presenting to the screen
 	std::unique_ptr<vk::raii::SwapchainKHR> m_swapchain;
 
-	///@brief Back buffer images
-	std::vector<VkImage> m_backBuffers;
+	/**
+		@brief Back buffer images
+
+		Note that the return value of SwapchainKHR::getImages() changed in the 1.3.229 Vulkan SDK
+		See https://github.com/KhronosGroup/Vulkan-Hpp/issues/1417
+	 */
+	#if VK_HEADER_VERSION >= 229
+		std::vector<vk::Image> m_backBuffers;
+	#else
+		std::vector<VkImage> m_backBuffers;
+	#endif
 
 	///@brief Current window width
 	int m_width;

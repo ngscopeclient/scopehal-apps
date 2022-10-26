@@ -47,10 +47,11 @@ public:
 	virtual ~Dialog();
 
 	bool Render();
+	void RenderAsChild();
 	virtual bool DoRender() =0;
 
 protected:
-	bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	virtual bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
 	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
 	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
@@ -64,6 +65,11 @@ protected:
 		const std::string& label,
 		std::string& currentValue,
 		float& committedValue,
+		Unit unit);
+	bool UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		double& committedValue,
 		Unit unit);
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);

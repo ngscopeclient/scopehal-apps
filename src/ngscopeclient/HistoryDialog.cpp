@@ -35,29 +35,18 @@
 
 #include "ngscopeclient.h"
 #include "HistoryDialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
+// TimePoint
 
-HistoryDialog::HistoryDialog(HistoryManager& mgr)
-	: Dialog("History", ImVec2(400, 350))
-	, m_mgr(mgr)
-	, m_rowHeight(0)
-	, m_selectionChanged(false)
+string TimePoint::PrettyPrint()
 {
-}
+	auto base = GetSec();
+	auto offset = GetFs();
 
-HistoryDialog::~HistoryDialog()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
-
-string HistoryDialog::FormatTimestamp(time_t base, int64_t offset)
-{
 	//If offset is >1 sec, shift the timestamp
 	if(offset > FS_PER_SECOND)
 	{
@@ -83,6 +72,27 @@ string HistoryDialog::FormatTimestamp(time_t base, int64_t offset)
 	return stime;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+HistoryDialog::HistoryDialog(HistoryManager& mgr, Session& session, MainWindow& wnd)
+	: Dialog("History", ImVec2(425, 350))
+	, m_mgr(mgr)
+	, m_session(session)
+	, m_parent(wnd)
+	, m_rowHeight(0)
+	, m_selectionChanged(false)
+	, m_selectedMarker(nullptr)
+{
+}
+
+HistoryDialog::~HistoryDialog()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
 /**
 	@brief Renders the dialog and handles UI events
 
@@ -107,7 +117,7 @@ bool HistoryDialog::DoRender()
 	if(ImGui::BeginTable("history", 3, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 10*width);
+		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
 		ImGui::TableSetupColumn("Pin", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableSetupColumn("Label");
 		ImGui::TableHeadersRow();
@@ -124,15 +134,18 @@ bool HistoryDialog::DoRender()
 			//Timestamp (and row selection logic)
 			bool rowIsSelected = (m_selectedPoint == point);
 			ImGui::TableSetColumnIndex(0);
+			auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen);
+			ImGui::SameLine();
 			if(ImGui::Selectable(
-				FormatTimestamp(point->m_timestamp, point->m_fs).c_str(),
-				rowIsSelected,
+				point->m_time.PrettyPrint().c_str(),
+				rowIsSelected && !m_selectedMarker,
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 				ImVec2(0, m_rowHeight)))
 			{
 				m_selectedPoint = point;
 				rowIsSelected = true;
 				m_selectionChanged = true;
+				m_selectedMarker = nullptr;
 			}
 
 			if(ImGui::BeginPopupContextItem())
@@ -145,10 +158,10 @@ bool HistoryDialog::DoRender()
 				ImGui::EndPopup();
 			}
 
-			//Force pin if we have a nickname
-			//TODO: force pin if we have markers
+			//Force pin if we have a nickname or markers
+			auto& markers = m_session.GetMarkers(point->m_time);
 			bool forcePin = false;
-			if(!point->m_nickname.empty())
+			if(!point->m_nickname.empty() || !markers.empty())
 			{
 				forcePin = true;
 				point->m_pinned = true;
@@ -174,10 +187,75 @@ bool HistoryDialog::DoRender()
 			{
 				if(m_selectionChanged)
 					ImGui::SetKeyboardFocusHere();
+				ImGui::SetNextItemWidth(ImGui::GetColumnWidth() - 4);
 				ImGui::InputText("###nick", &point->m_nickname);
 			}
 			else
 				ImGui::TextUnformatted(point->m_nickname.c_str());
+
+			//Child nodes for markers
+			if(open)
+			{
+				size_t markerToDelete = 0;
+				bool deletingMarker = false;
+
+				for(size_t i=0; i<markers.size(); i++)
+				{
+					auto& m = markers[i];
+
+					ImGui::PushID(i);
+					ImGui::TableNextRow();
+
+					//Timestamp
+					bool markerIsSelected = (m_selectedMarker == &m);
+					ImGui::TableSetColumnIndex(0);
+					if(ImGui::Selectable(
+						m.GetMarkerTime().PrettyPrint().c_str(),
+						markerIsSelected,
+						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+						ImVec2(0, m_rowHeight)))
+					{
+						//Select the marker
+						m_selectedMarker = &m;
+						markerIsSelected = true;
+
+						//Navigate to the selected waveform
+						if(!rowIsSelected)
+						{
+							rowIsSelected = true;
+							m_selectedPoint = point;
+							m_selectionChanged = true;
+						}
+
+						m_parent.NavigateToTimestamp(m.m_offset);
+					}
+
+					if(ImGui::BeginPopupContextItem())
+					{
+						if(ImGui::MenuItem("Delete"))
+						{
+							deletingMarker = true;
+							markerToDelete = i;
+						}
+						ImGui::EndPopup();
+					}
+
+					//Nothing in pin box
+					ImGui::TableSetColumnIndex(1);
+
+					//Nickname box
+					ImGui::TableSetColumnIndex(2);
+					ImGui::InputText("###nick", &m.m_name);
+
+					ImGui::PopID();
+				}
+
+				//Execute deletion after drawing the rest of the list
+				if(deletingMarker)
+					markers.erase(markers.begin() + markerToDelete);
+
+				ImGui::TreePop();
+			}
 
 			ImGui::PopID();
 		}

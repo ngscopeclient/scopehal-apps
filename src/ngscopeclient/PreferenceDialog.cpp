@@ -36,6 +36,7 @@
 #include "ngscopeclient.h"
 #include "PreferenceDialog.h"
 #include "PreferenceManager.h"
+#include "../../lib/scopehal/FileSystem.h"
 
 using namespace std;
 
@@ -46,11 +47,47 @@ PreferenceDialog::PreferenceDialog(PreferenceManager& prefs)
 	: Dialog("Preferences", ImVec2(600, 400))
 	, m_prefs(prefs)
 {
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSans.ttf"));
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSansMono.ttf"));
+	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSans-Bold.ttf"));
 
+	#ifdef _WIN32
+		FindFontFiles("C:\\Windows\\Fonts");
+	#else
+		//TODO: is this appropriate for MacOS too? other places to check?
+		FindFontFiles("/usr/share/fonts");
+	#endif
+
+	//Get short names for each file
+	for(size_t i=0; i<m_fontPaths.size(); i++)
+	{
+		auto path = m_fontPaths[i];
+		auto shortname = BaseName(path);
+		shortname = shortname.substr(0, shortname.length() - 4);	//trim off extension
+
+		m_fontShortNames.push_back(shortname);
+		m_fontReverseMap[path] = i;
+	}
 }
 
 PreferenceDialog::~PreferenceDialog()
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Font search
+
+void PreferenceDialog::FindFontFiles(const string& path)
+{
+	auto files = Glob(path + "/*", false);
+	for(auto f : files)
+	{
+		if( (f.find(".ttf") != string::npos) || (f.find(".TTF") != string::npos) )
+			m_fontPaths.push_back(f);
+
+		else if(f.find(".") == string::npos)
+			FindFontFiles(f);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,6 +190,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 					}
 				}
 
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
 				if(Combo(label.c_str(), names, selection))
 					pref.SetEnumRaw(map.GetValue(names[selection]));
 			}
@@ -170,6 +208,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 					color.m_a / 255.0f
 				};
 
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
 				if(ImGui::ColorEdit4(label.c_str(), fcolor))
 				{
 					pref.SetColorRaw(impl::Color(
@@ -185,9 +224,42 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 		//Real: show a text box
 		case PreferenceType::Real:
 			{
-				float f = pref.GetReal();
-				if(ImGui::InputFloat(label.c_str(), &f))
-					pref.SetReal(f);
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+
+				//Units get special handling
+				if(pref.HasUnit())
+				{
+					//No value yet, format the value
+					auto id = pref.GetIdentifier();
+					auto unit = pref.GetUnit();
+					if(m_preferenceTemporaries.find(id) == m_preferenceTemporaries.end())
+						m_preferenceTemporaries[id] = unit.PrettyPrint(pref.GetReal());
+
+					//Input box
+					if(ImGui::InputText(label.c_str(), &m_preferenceTemporaries[id]))
+					{
+						pref.SetReal(unit.ParseString(m_preferenceTemporaries[id]));
+						m_preferenceTemporaries[id] = unit.PrettyPrint(pref.GetReal());
+					}
+				}
+
+				//Raw numeric input
+				else
+				{
+					float f = pref.GetReal();
+					if(ImGui::InputFloat(label.c_str(), &f))
+						pref.SetReal(f);
+				}
+			}
+			break;
+
+		//Int: show a text box
+		case PreferenceType::Int:
+			{
+				int i = pref.GetInt();
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+				if(ImGui::InputInt(label.c_str(), &i))
+					pref.SetReal(i);
 			}
 			break;
 
@@ -195,6 +267,30 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 		//and a selector for sizes
 		case PreferenceType::Font:
 			{
+				auto font = pref.GetFont();
+
+				string path = font.first;
+				float size = font.second;
+				int sel = m_fontReverseMap[path];
+				label = string("###") + pref.GetIdentifier() + "face";
+				bool changed = false;
+
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 15);
+				if(Combo(label, m_fontShortNames, sel))
+				{
+					path = m_fontPaths[sel];
+					changed = true;
+				}
+
+				//Font size
+				label = pref.GetLabel() + "###" + pref.GetIdentifier() + "size";
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				if(ImGui::InputFloat(label.c_str(), &size, 1, 5))
+					changed = true;
+
+				if(changed)
+					pref.SetFont(FontDescription(path, size));
 			}
 			break;
 
