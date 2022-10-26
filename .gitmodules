@@ -13,3 +13,6 @@
 [submodule "src/imgui-node-editor"]
 	path = src/imgui-node-editor
 	url = ../imgui-node-editor.git
+[submodule "src/ImGuiFileDialog"]
+	path = src/ImGuiFileDialog
+	url = https://github.com/aiekick/ImGuiFileDialog
