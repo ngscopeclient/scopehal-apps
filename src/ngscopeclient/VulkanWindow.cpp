@@ -428,7 +428,10 @@ void VulkanWindow::Render()
 
 			m_resizeEventPending = true;
 			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
+			{
+				QueueLock qlock(m_renderQueue);
+				ImGui::RenderPlatformWindowsDefault();
+			}
 			Render();
 
 			return;
@@ -453,11 +456,7 @@ void VulkanWindow::Render()
 		cmdBuf.beginRenderPass(passInfo, vk::SubpassContents::eInline);
 
 		//Draw GUI
-		{
-			//Hold queue lock, ImGui_ImplVulkan_RenderDrawData uses the VkQueue handle passed into ImGui_ImplVulkan_Init
-			QueueLock qlock(m_renderQueue);
-			ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
-		}
+		ImGui_ImplVulkan_RenderDrawData(main_draw_data, *cmdBuf);
 
 		//Draw waveform data etc
 		DoRender(cmdBuf);
@@ -478,7 +477,10 @@ void VulkanWindow::Render()
 
 	//Handle any additional popup windows created by imgui
 	ImGui::UpdatePlatformWindows();
-	ImGui::RenderPlatformWindowsDefault();
+	{
+		QueueLock qlock(m_renderQueue);
+		ImGui::RenderPlatformWindowsDefault();
+	}
 
 	//Present the main window
 	if(!main_is_minimized)
