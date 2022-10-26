@@ -161,10 +161,6 @@ endif()
 # Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
-if(NOT APPLE_SILICON)
-	# Requires ffts, which does not build on apple silicon currently
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/impulse")
-endif(NOT APPLE_SILICON)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
 	#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
 endif()
