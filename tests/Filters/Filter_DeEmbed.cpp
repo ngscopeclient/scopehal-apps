@@ -132,7 +132,8 @@ TEST_CASE("Filter_DeEmbed")
 				{
 					g_hasAvx2 = true;
 					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
+					QueueLock lock(queue);
+					filter->Refresh(cmdbuf, *lock);
 					float dt = GetTime() - start;
 					LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
