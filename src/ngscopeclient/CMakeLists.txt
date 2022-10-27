@@ -93,21 +93,7 @@ add_custom_target(
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
 
-SET(SPIRV_SHADERS
-	BlackmanHarrisWindow.spv
-	ComplexToMagnitude.spv
-	Convert8BitSamples.spv
-	DeEmbedFilter.spv
-	FIRFilter.spv
-	SubtractFilter.spv
-	ComplexToLogMagnitude.spv
-	Convert16BitSamples.spv
-	CosineSumWindow.spv
-	DeEmbedNormalization.spv
-	RectangularWindow.spv
-	UpsampleFilter.spv
-)
-list(TRANSFORM SPIRV_SHADERS PREPEND "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/")
+get_target_property(SPIRV_SHADERS protocolshaders SOURCES)
 
 add_custom_target(
 	ngprotoshaders
