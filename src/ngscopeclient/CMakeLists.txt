@@ -98,6 +98,8 @@ add_custom_target(
 	COMMENT "Copying protocol shaders..."
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPIRV_SHADERS} ${CMAKE_BINARY_DIR}/src/ngscopeclient/shaders
 	)
+add_dependencies(ngprotoshaders
+	protocolshaders)
 
 add_dependencies(ngscopeclient
 	ngfonts
