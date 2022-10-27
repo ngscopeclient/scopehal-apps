@@ -52,6 +52,28 @@ FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bo
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Main GUI
 
+bool FilterPropertiesDialog::Render()
+{
+	//Run file dialog and handle it being closed
+	if(m_fileDialog)
+	{
+		float fontsize = ImGui::GetFontSize();
+		if(m_fileDialog->Display("FileChooser", ImGuiWindowFlags_NoCollapse, ImVec2(60*fontsize, 30*fontsize)))
+		{
+			if(m_fileDialog->IsOk())
+			{
+				auto f = dynamic_cast<Filter*>(m_channel);
+				f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFilePathName());
+				m_paramTempValues.erase(m_fileParamName);
+			}
+
+			m_fileDialog->Close();
+		}
+	}
+
+	return Dialog::Render();
+}
+
 //TODO: some of this code needs to be shared by the trigger dialog
 
 bool FilterPropertiesDialog::DoRender()
@@ -222,12 +244,28 @@ bool FilterPropertiesDialog::DoRender()
 								reconfigured = true;
 							}
 
+							//Tweak the mask for imgui filedialog
+							//(needs to be in parentheses to be recognized as a regex)
+							//Special case for touchstone since internal parentheses aren't well supported by IGFD
+							string mask;
+							if(param.m_fileFilterMask == "*.s*p")
+								mask = "Touchstone files (*.s*p){.s2p,.s3p,.s4p,.s5p,.s6p,.s7p,.s8p,.s9p,.snp}";
+							else
+								mask = param.m_fileFilterName + "{" + param.m_fileFilterMask.substr(1) + "}";
+
 							//Browser button
 							ImGui::SameLine();
 							string bname = string("...###browse") + name;
 							if(ImGui::Button(bname.c_str()))
 							{
-								LogDebug("browser\n");
+								m_fileDialog = make_unique<ImGuiFileDialog>();
+								m_fileDialog->OpenDialog(
+									"FileChooser",
+									"Select File",
+									mask.c_str(),
+									".",
+									s);
+								m_fileParamName = name;
 							}
 							ImGui::SameLine();
 							ImGui::TextUnformatted(name.c_str());

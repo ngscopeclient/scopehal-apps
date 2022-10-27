@@ -35,6 +35,8 @@
 #ifndef FilterPropertiesDialog_h
 #define FilterPropertiesDialog_h
 
+#include <ImGuiFileDialog.h>
+
 class MainWindow;
 
 class FilterPropertiesDialog : public ChannelPropertiesDialog
@@ -42,6 +44,7 @@ class FilterPropertiesDialog : public ChannelPropertiesDialog
 public:
 	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
 
+	virtual bool Render();
 	virtual bool DoRender();
 
 protected:
@@ -50,6 +53,11 @@ protected:
 	void FindAllStreams(std::vector<StreamDescriptor>& streams);
 
 	MainWindow* m_parent;
+
+	///@brief File dialog (can only ever have one at a time)
+	std::unique_ptr<ImGuiFileDialog> m_fileDialog;
+
+	std::string m_fileParamName;
 };
 
 #endif

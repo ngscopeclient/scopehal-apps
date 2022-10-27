@@ -7,10 +7,14 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
+	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
 find_package(PNG REQUIRED)
+
+# use custom config for imguifiledialog
+add_compile_definitions(CUSTOM_IMGUIFILEDIALOG_CONFIG="../ngscopeclient/IGFDConfig.h")
 
 ###############################################################################
 #C++ compilation
@@ -30,6 +34,7 @@ add_executable(ngscopeclient
 	../imgui-node-editor/imgui_node_editor_api.cpp
 	../imgui-node-editor/imgui_canvas.cpp
 	../imgui-node-editor/crude_json.cpp
+	../ImGuiFileDialog/ImGuiFileDialog.cpp
 
 	pthread_compat.cpp
 
@@ -87,7 +92,7 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
-file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*")
+file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*.spv")
 add_custom_target(
 	ngprotoshaders
 	COMMENT "Copying protocol shaders..."
@@ -117,7 +122,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	../implot/implot_items.cpp
 	PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
 endif()
-
 
 ###############################################################################
 #Linker settings
