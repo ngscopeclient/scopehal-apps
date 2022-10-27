@@ -92,7 +92,23 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
-file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*.spv")
+
+SET(SPIRV_SHADERS
+	BlackmanHarrisWindow.spv
+	ComplexToMagnitude.spv
+	Convert8BitSamples.spv
+	DeEmbedFilter.spv
+	FIRFilter.spv
+	SubtractFilter.spv
+	ComplexToLogMagnitude.spv
+	Convert16BitSamples.spv
+	CosineSumWindow.spv
+	DeEmbedNormalization.spv
+	RectangularWindow.spv
+	UpsampleFilter.spv
+)
+list(TRANSFORM SPIRV_SHADERS PREPEND "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/")
+
 add_custom_target(
 	ngprotoshaders
 	COMMENT "Copying protocol shaders..."
