@@ -1774,7 +1774,18 @@ void WaveformArea::OnDragUpdate()
 				float dy = ImGui::GetIO().MouseDelta.y * ImGui::GetWindowDpiScale();
 				m_yAxisOffset -= PixelsToYAxisUnits(dy);
 
-				//TODO: push to hardware at a controlled rate (after each trigger?)
+				for(auto chan : m_displayedChannels)
+				{
+					//Update filters and such instantly
+					auto stream = chan->GetStream();
+					auto f = dynamic_cast<Filter*>(stream.m_channel);
+					if(f != nullptr)
+						stream.SetOffset(m_yAxisOffset);
+
+					//TODO: push to hardware at a controlled rate (after each trigger? fixed rate in Hz?)
+				}
+
+				m_parent->SetNeedRender();
 			}
 			break;
 

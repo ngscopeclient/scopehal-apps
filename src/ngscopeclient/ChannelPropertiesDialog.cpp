@@ -422,6 +422,26 @@ bool ChannelPropertiesDialog::DoRender()
 		}
 	}
 
+	//If we have more streams than we did when the dialog was created, update them
+	size_t noldstreams = m_committedOffset.size();
+	if(noldstreams != nstreams)
+	{
+		m_committedOffset.resize(nstreams);
+		m_offset.resize(nstreams);
+		m_committedRange.resize(nstreams);
+		m_range.resize(nstreams);
+		for(size_t i = noldstreams; i<nstreams; i++)
+		{
+			auto unit = m_channel->GetYAxisUnits(i);
+
+			m_committedOffset[i] = m_channel->GetOffset(i);
+			m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
+
+			m_committedRange[i] = m_channel->GetVoltageRange(i);
+			m_range[i] = unit.PrettyPrint(m_committedRange[i]);
+		}
+	}
+
 	//Vertical settings are per stream
 	for(size_t i = 0; i<nstreams; i++)
 	{

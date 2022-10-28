@@ -579,7 +579,20 @@ void MainWindow::AddChannelsMenu()
 			}
 		}
 
-		//TODO: add all existing filters
+		auto filters = Filter::GetAllInstances();
+		for(auto f : filters)
+		{
+			for(size_t j=0; j<f->GetStreamCount(); j++)
+			{
+				StreamDescriptor stream(f, j);
+				if(ImGui::MenuItem(stream.GetName().c_str()))
+				{
+					auto group = GetBestGroupForWaveform(stream);
+					auto area = make_shared<WaveformArea>(stream, group, this);
+					group->AddArea(area);
+				}
+			}
+		}
 
 		ImGui::EndMenu();
 	}

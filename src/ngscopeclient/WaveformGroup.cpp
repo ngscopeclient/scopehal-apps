@@ -155,6 +155,10 @@ bool WaveformGroup::Render()
 		return true;
 	}
 
+	//Update X axis unit
+	if(!m_areas.empty())
+		m_xAxisUnit = m_areas[0]->GetStream(0).GetXAxisUnits();
+
 	auto pos = ImGui::GetCursorScreenPos();
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
 	m_width = clientArea.x;

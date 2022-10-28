@@ -46,7 +46,7 @@ FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bo
 	: ChannelPropertiesDialog(f, graphEditorMode)
 	, m_parent(parent)
 {
-
+	//TODO: if linux read ~/.config/gtk-3.0/bookmarks
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,6 +65,16 @@ bool FilterPropertiesDialog::Render()
 				auto f = dynamic_cast<Filter*>(m_channel);
 				f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFilePathName());
 				m_paramTempValues.erase(m_fileParamName);
+
+				//Update auto generated name
+				if(f->IsUsingDefaultName())
+				{
+					f->SetDefaultName();
+					m_committedDisplayName = f->GetDisplayName();
+					m_displayName = m_committedDisplayName;
+				}
+
+				m_parent->OnFilterReconfigured(f);
 			}
 
 			m_fileDialog->Close();
