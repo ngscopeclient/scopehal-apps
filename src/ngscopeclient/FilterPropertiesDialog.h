@@ -43,6 +43,7 @@ class FilterPropertiesDialog : public ChannelPropertiesDialog
 {
 public:
 	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
+	virtual ~FilterPropertiesDialog();
 
 	virtual bool Render();
 	virtual bool DoRender();
@@ -59,6 +60,9 @@ protected:
 	std::unique_ptr<ImGuiFileDialog> m_fileDialog;
 
 	std::string m_fileParamName;
+
+	///@brief Bookmark paths
+	std::map<std::string, std::string> m_bookmarks;
 };
 
 #endif

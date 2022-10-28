@@ -46,7 +46,34 @@ FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bo
 	: ChannelPropertiesDialog(f, graphEditorMode)
 	, m_parent(parent)
 {
-	//TODO: if linux read ~/.config/gtk-3.0/bookmarks
+	//If linux read ~/.config/gtk-3.0/bookmarks
+	//TODO: read bookmarks on other OSes
+	#ifdef __linux__
+		string home = getenv("HOME");
+		string path = home + "/.config/gtk-3.0/bookmarks";
+		FILE* fp = fopen(path.c_str(), "r");
+		if(fp)
+		{
+			char line[1024];
+			char fname[512] = "";
+			char bname[512] = "";
+			while(fgets(line, sizeof(line), fp) != nullptr)
+			{
+				auto sline = Trim(line);
+				auto nfields = sscanf(sline.c_str(), "file://%511[^ ] %511s", fname, bname);
+				if(nfields == 2)
+					m_bookmarks[fname] = bname;
+				else if(nfields == 1)
+					m_bookmarks[fname] = BaseName(fname);
+			}
+			fclose(fp);
+		}
+	#endif
+}
+
+FilterPropertiesDialog::~FilterPropertiesDialog()
+{
+	//TODO: save bookmarks at exit
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -264,6 +291,8 @@ bool FilterPropertiesDialog::DoRender()
 							if(ImGui::Button(bname.c_str()))
 							{
 								m_fileDialog = make_unique<ImGuiFileDialog>();
+								for(auto jt : m_bookmarks)
+									m_fileDialog->AddBookmark(jt.second, jt.first);
 								m_fileDialog->OpenDialog(
 									"FileChooser",
 									"Select File",
