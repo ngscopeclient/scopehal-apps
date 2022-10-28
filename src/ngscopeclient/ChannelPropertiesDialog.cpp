@@ -241,7 +241,7 @@ bool ChannelPropertiesDialog::DoRender()
 		}
 	}
 
-	//Al channels have display settings
+	//All channels have display settings
 	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
 	{
 		//If it's a filter, using the default name, check for changes made outside of this properties window

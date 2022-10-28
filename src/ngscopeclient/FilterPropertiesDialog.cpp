@@ -63,18 +63,11 @@ bool FilterPropertiesDialog::Render()
 			if(m_fileDialog->IsOk())
 			{
 				auto f = dynamic_cast<Filter*>(m_channel);
+				auto oldStreamCount = f->GetStreamCount();
 				f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFilePathName());
 				m_paramTempValues.erase(m_fileParamName);
 
-				//Update auto generated name
-				if(f->IsUsingDefaultName())
-				{
-					f->SetDefaultName();
-					m_committedDisplayName = f->GetDisplayName();
-					m_displayName = m_committedDisplayName;
-				}
-
-				m_parent->OnFilterReconfigured(f);
+				OnReconfigured(f, oldStreamCount);
 			}
 
 			m_fileDialog->Close();
@@ -100,6 +93,8 @@ bool FilterPropertiesDialog::DoRender()
 	auto f = dynamic_cast<Filter*>(m_channel);
 
 	bool reconfigured = false;
+
+	auto oldStreamCount = m_channel->GetStreamCount();
 
 	//Show inputs (if we have any)
 	if( (f->GetInputCount() != 0) && !m_graphEditorMode)
@@ -293,19 +288,34 @@ bool FilterPropertiesDialog::DoRender()
 	}
 
 	if(reconfigured)
-	{
-		//Update auto generated name
-		if(f->IsUsingDefaultName())
-		{
-			f->SetDefaultName();
-			m_committedDisplayName = f->GetDisplayName();
-			m_displayName = m_committedDisplayName;
-		}
-
-		m_parent->OnFilterReconfigured(f);
-	}
+		OnReconfigured(f, oldStreamCount);
 
 	return true;
+}
+
+/**
+	@brief Handle a filter being reconfigured
+ */
+void FilterPropertiesDialog::OnReconfigured(Filter* f, size_t oldStreamCount)
+{
+	//Update auto generated name
+	if(f->IsUsingDefaultName())
+	{
+		f->SetDefaultName();
+		m_committedDisplayName = f->GetDisplayName();
+		m_displayName = m_committedDisplayName;
+	}
+
+	m_parent->OnFilterReconfigured(f);
+
+	//If we have more streams than before, add views for them
+	//(this is typically the case if we added a filename to a new import filter)
+	auto newStreamCount = m_channel->GetStreamCount();
+	if(oldStreamCount < newStreamCount)
+	{
+		for(size_t i=oldStreamCount; i < newStreamCount; i++)
+			m_parent->FindAreaForStream(nullptr, StreamDescriptor(m_channel, i));
+	}
 }
 
 /**

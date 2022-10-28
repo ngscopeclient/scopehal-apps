@@ -80,6 +80,10 @@ void WaveformGroup::Clear()
 
 void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 {
+	//If this is our first area, adopt its X axis unit as our own
+	if(m_areas.empty())
+		m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
+
 	m_areas.push_back(area);
 
 	m_parent->RefreshTimebasePropertiesDialog();

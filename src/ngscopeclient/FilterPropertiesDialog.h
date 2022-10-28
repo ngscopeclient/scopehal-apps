@@ -51,6 +51,7 @@ protected:
 	std::map<std::string, std::string> m_paramTempValues;
 
 	void FindAllStreams(std::vector<StreamDescriptor>& streams);
+	void OnReconfigured(Filter* f, size_t oldStreamCount);
 
 	MainWindow* m_parent;
 
