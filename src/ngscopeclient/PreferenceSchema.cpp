@@ -60,12 +60,12 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Marker color")
 				.Description("Color for markers"));
 
-		/*auto& decodes = appearance.AddCategory("Decodes");
+		auto& decodes = appearance.AddCategory("Decodes");
 			decodes.AddPreference(
-				Preference::Font("protocol_font", "sans normal 10")
+				Preference::Font("protocol_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
 				.Label("Protocol font")
 				.Description("Font used for protocol decode overlay text"));
-			decodes.AddPreference(
+			/*decodes.AddPreference(
 				Preference::Color("address_color", ColorFromString("#ffff00"))
 				.Label("Address color")
 				.Description("Color for register/memory addresses"));

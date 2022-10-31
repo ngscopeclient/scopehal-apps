@@ -355,6 +355,15 @@ protected:
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderComplexSignal(
+		ImDrawList* list,
+		int visleft, int visright,
+		float xstart, float xend, float xoff,
+		float ybot, float ymid, float ytop,
+		std::string str,
+		ImU32 color);
+	void MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop);
 	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,

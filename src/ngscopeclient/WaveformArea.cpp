@@ -549,6 +549,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderDigitalWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_PROTOCOL:
+				RenderProtocolWaveform(chan, start, size);
+				break;
+
 			default:
 				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
 				break;
@@ -609,6 +613,289 @@ void WaveformArea::RenderDigitalWaveform(shared_ptr<DisplayedChannel> channel, I
 }
 
 /**
+	@brief Renders a single protocol waveform (assume it's sparse)
+
+	TODO: should we ever support uniform protocol data? maybe coming off some kind of analyzer?
+ */
+void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = dynamic_cast<SparseWaveformBase*>(stream.GetData());
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Calculate a bunch of constants
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+
+	//Find the index of the first sample visible on screen
+	data->PrepareForCpuAccess();
+	auto ifirst = BinarySearchForGequal(
+		data->m_offsets.GetCpuPointer(),
+		data->size(),
+		offset_samples);
+
+	//Go left by one sample
+	//The last sample BEFORE the left side of our view might extend into the visible space
+	if(ifirst > 0)
+		ifirst --;
+
+	float ybot = (channel->GetYButtonPos() * ImGui::GetWindowDpiScale()) + start.y;
+	float ytop = ybot - m_channelButtonHeight;
+	float ymid = ybot - m_channelButtonHeight/2;
+
+	//Draw the actual stuff
+	size_t len = data->size();
+	size_t xend = start.x + size.x;
+	for(size_t i=ifirst; i<len; i++)
+	{
+		int64_t tstart = (data->m_offsets[i] * data->m_timescale) + data->m_triggerPhase;
+		int64_t end = tstart + (data->m_durations[i] * data->m_timescale);
+
+		double xs = m_group->XAxisUnitsToXPosition(tstart);
+		double xe = m_group->XAxisUnitsToXPosition(end);
+
+		if(xe < start.x)
+			continue;
+		if(xs > xend)
+			break;
+
+		double cellwidth = xe - xs;
+		auto color = ColorFromString(data->GetColor(i));
+		if(cellwidth < 2)
+		{
+			//This sample is really skinny. There's no text to render so don't waste time with that.
+
+			//Average the color of all samples touching this pixel
+			size_t nmerged = 1;
+			float sum_red = (color >> IM_COL32_R_SHIFT) & 0xff;
+			float sum_green = (color >> IM_COL32_G_SHIFT) & 0xff;
+			float sum_blue = (color >> IM_COL32_B_SHIFT) & 0xff;
+			for(size_t j=i+1; j<len; j++)
+			{
+				int64_t cellstart = (data->m_offsets[j] * data->m_timescale) + data->m_triggerPhase;
+				double cellxs = m_group->XAxisUnitsToXPosition(cellstart);
+
+				if(cellxs > xs+2)
+					break;
+
+				auto c = ColorFromString(data->GetColor(j));
+
+				sum_red += (c >> IM_COL32_R_SHIFT) & 0xff;
+				sum_green += (c >> IM_COL32_G_SHIFT) & 0xff;
+				sum_blue += (c >> IM_COL32_B_SHIFT) & 0xff;
+				nmerged ++;
+
+				//Skip these samples in the outer loop
+				i = j-1;
+			}
+
+			//Render a single box for them all
+			sum_red /= nmerged;
+			sum_green /= nmerged;
+			sum_blue /= nmerged;
+			color =
+				((static_cast<int>(sum_red) & 0xff) << IM_COL32_R_SHIFT) |
+				((static_cast<int>(sum_green) & 0xff) << IM_COL32_G_SHIFT) |
+				((static_cast<int>(sum_blue) & 0xff) << IM_COL32_B_SHIFT) |
+				(0xff << IM_COL32_A_SHIFT);
+
+
+			RenderComplexSignal(
+				list,
+				start.x, xend,
+				xs, xe, 5,
+				ybot, ymid, ytop,
+				"",
+				color);
+		}
+		else
+		{
+			RenderComplexSignal(
+				list,
+				start.x, xend,
+				xs, xe, 5,
+				ybot, ymid, ytop,
+				data->GetText(i),
+				color);
+		}
+	}
+}
+
+void WaveformArea::RenderComplexSignal(
+		ImDrawList* list,
+		int visleft, int visright,
+		float xstart, float xend, float xoff,
+		float ybot, float ymid, float ytop,
+		string str,
+		ImU32 color)
+{
+	//Clamp start point to left side of display
+	if(xstart < visleft)
+		xstart = visleft;
+
+	//First-order guess of position: center of the value
+	float xp = xstart + (xend-xstart)/2;
+
+	//Width within this signal outline
+	float available_width = xend - xstart - 2*xoff;
+
+	//Convert all whitespace in text to spaces
+	for(size_t i=0; i<str.length(); i++)
+	{
+		if(isspace(str[i]))
+			str[i] = ' ';
+	}
+
+	//If the space is tiny, don't even attempt to render it.
+	//Figuring out text size is expensive when we have hundreds or thousands of packets on screen, but in this case
+	//we *know* it won't fit.
+	bool drew_text = false;
+	if(available_width > 15)
+	{
+		auto font = m_parent->GetFontPref("Appearance.Decodes.protocol_font");
+		auto textsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str.c_str());
+
+		//Minimum width (if outline ends up being smaller than this, just fill)
+		float min_width = 40;
+		if(textsize.x < min_width)
+			min_width = textsize.x;
+
+		//Does the string fit at all? If not, skip all of the messy math
+		if(available_width < min_width)
+			str = "";
+		else
+		{
+			//Center the text by moving it left half a width
+			xp -= textsize.x/2;
+
+			//Off the left end? Push it right
+			float new_width = available_width;
+			int padding = 5;
+			if(xp < (visleft + padding))
+			{
+				xp = visleft + padding;
+				new_width = xend - xp - xoff;
+			}
+
+			//Off the right end? Push it left
+			else if( (xp + textsize.x + padding) > visright)
+			{
+				xp = visright - (textsize.x + padding + xoff);
+				if(xp < xstart)
+					xp = xstart + xoff;
+
+				if(xend < visright)
+					new_width = xend - xp - xoff;
+				else
+					new_width = visright - xp - xoff;
+			}
+
+			if(new_width < available_width)
+				available_width = new_width;
+
+			//If we don't fit under the new constraints, give up
+			if(available_width < min_width)
+				str = "";
+		}
+
+		//Draw the text
+		if(str != "")
+		{
+			//If we need to trim, decide which way to do it.
+			//If the text is all caps and includes an underscore, it's probably a macro with a prefix.
+			//Trim from the left in this case. Otherwise, trim from the right.
+			bool trim_from_right = true;
+			bool is_all_upper = true;
+			for(size_t i=0; i<str.length(); i++)
+			{
+				if(islower(str[i]))
+					is_all_upper = false;
+			}
+			if(is_all_upper && (str.find("_") != string::npos))
+				trim_from_right = false;
+
+			//Some text fits, but maybe not all of it
+			//We know there's enough room for "some" text
+			//Try shortening the string a bit at a time until it fits
+			//(Need to do an O(n) search since character width is variable and unknown to us without knowing details
+			//of the font currently in use)
+			string str_render = str;
+			if(textsize.x > available_width)
+			{
+				for(int len = str.length() - 1; len > 1; len--)
+				{
+					if(trim_from_right)
+						str_render = str.substr(0, len) + "...";
+					else
+						str_render = "..." + str.substr(str.length() - len - 1);
+
+					textsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str_render.c_str());
+					if(textsize.x < available_width)
+					{
+						//Re-center text in available space
+						xp += (available_width - textsize.x)/2;
+						if(xp < (xstart + xoff))
+							xp = (xstart + xoff);
+						break;
+					}
+				}
+			}
+
+			//Draw filler to darken background for better contrast
+			ImU32 bgcolor = (0xc0 << IM_COL32_A_SHIFT);
+			MakePathSignalBody(list, xstart, xend, ybot, ymid, ytop);
+			list->PathFillConvex(bgcolor);
+
+			drew_text = true;
+			ImU32 textcolor = 0xffffffff;	//TODO: figure out color based on theme or something
+			list->AddText(font, font->FontSize, ImVec2(xp, ymid-textsize.y/2), textcolor, str_render.c_str());
+		}
+	}
+
+	if(xend > visright)
+		xend = visright;
+
+	//If no text fit, draw filler instead
+	if(!drew_text)
+	{
+		float r = ((color >> IM_COL32_R_SHIFT) & 0xff) / 4;
+		float g = ((color >> IM_COL32_G_SHIFT) & 0xff) / 4;
+		float b = ((color >> IM_COL32_B_SHIFT) & 0xff) / 4;
+		ImU32 darkcolor =
+			((static_cast<int>(r) & 0xff) << IM_COL32_R_SHIFT) |
+			((static_cast<int>(g) & 0xff) << IM_COL32_G_SHIFT) |
+			((static_cast<int>(b) & 0xff) << IM_COL32_B_SHIFT) |
+			(0xff << IM_COL32_A_SHIFT);
+
+		MakePathSignalBody(list, xstart, xend, ybot, ymid, ytop);
+		list->PathFillConvex(darkcolor);
+	}
+
+	//Draw the body outline after any filler so it shows up on top
+	MakePathSignalBody(list, xstart, xend, ybot, ymid, ytop);
+	list->PathStroke(color, 0, 2);
+}
+
+void WaveformArea::MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop)
+{
+	//Square off edges if really tiny
+	float rounding = 5;
+	if((xend-xstart) < 2*rounding)
+		rounding = 0;
+
+	list->PathLineTo(ImVec2(xstart, 			ymid));	//left point
+	list->PathLineTo(ImVec2(xstart + rounding,	ytop));	//top left corner
+	list->PathLineTo(ImVec2(xend - rounding, 	ytop));	//top right corner
+	list->PathLineTo(ImVec2(xend,				ymid));	//right point
+	list->PathLineTo(ImVec2(xend - rounding,	ybot));	//bottom right corner
+	list->PathLineTo(ImVec2(xstart + rounding,	ybot));	//bottom left corner
+	list->PathLineTo(ImVec2(xstart, 			ymid));	//left point again
+}
+
+/**
 	@brief Tone map our waveforms
  */
 void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
@@ -621,6 +908,10 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 			case Stream::STREAM_TYPE_ANALOG:
 			case Stream::STREAM_TYPE_DIGITAL:
 				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
+				break;
+
+			//no tone mapping required
+			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
 
 			default:
@@ -658,6 +949,10 @@ void WaveformArea::RenderWaveformTextures(
 			case Stream::STREAM_TYPE_ANALOG:
 			case Stream::STREAM_TYPE_DIGITAL:
 				RasterizeAnalogOrDigitalWaveform(chan, cmdbuf, clearing);
+				break;
+
+			//no background rendering required
+			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
 
 			default:
@@ -1866,8 +2161,10 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 	//TODO: can't mix eye and non-eye
 
-	//Digital channels can be overlaid on anything
+	//Digital and protocol channels can be overlaid on anything
 	if(desc.GetType() == Stream::STREAM_TYPE_DIGITAL)
+		return true;
+	if(desc.GetType() == Stream::STREAM_TYPE_PROTOCOL)
 		return true;
 
 	//Can't go in this area if the Y unit is different

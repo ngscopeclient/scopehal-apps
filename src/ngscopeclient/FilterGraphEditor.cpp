@@ -105,6 +105,7 @@ bool FilterGraphEditor::DoRender()
 	HandleLinkCreationRequests(fReconfigure);
 	HandleLinkDeletionRequests(fReconfigure);
 	HandleNodeProperties();
+	HandleBackgroundContextMenu();
 
 	//Look for and avoid overlaps
 	HandleOverlaps();
@@ -721,6 +722,95 @@ void FilterGraphEditor::HandleNodeProperties()
 		ImGui::EndPopup();
 	}
 	ax::NodeEditor::Resume();
+}
+
+/**
+	@brief Show add menu when background is right clicked
+ */
+void FilterGraphEditor::HandleBackgroundContextMenu()
+{
+	if(ax::NodeEditor::ShowBackgroundContextMenu())
+	{
+		ax::NodeEditor::Suspend();
+			ImGui::OpenPopup("Add Menu");
+		ax::NodeEditor::Resume();
+	}
+
+	//Run the popup
+	ax::NodeEditor::Suspend();
+	if(ImGui::BeginPopup("Add Menu"))
+	{
+		DoAddMenu();
+		ImGui::EndPopup();
+	}
+
+	//If no nodes, show help message
+	//(but only if popup isn't already open)
+	else
+	{
+		if(ax::NodeEditor::GetNodeCount() == 0)
+		{
+			ImGui::BeginTooltip();
+				ImGui::TextUnformatted("Right click to create a waveform\nor import data from a file");
+			ImGui::EndTooltip();
+		}
+	}
+	ax::NodeEditor::Resume();
+}
+
+/**
+	@brief Implement the add menu
+ */
+void FilterGraphEditor::DoAddMenu()
+{
+	//Get all generation filters, sorted alphabetically
+	auto& refs = m_session.GetReferenceFilters();
+	vector<string> sortedNames;
+	for(auto it : refs)
+	{
+		if(it.second->GetCategory() == Filter::CAT_GENERATION)
+			sortedNames.push_back(it.first);
+	}
+	std::sort(sortedNames.begin(), sortedNames.end());
+
+	if(ImGui::BeginMenu("Import"))
+	{
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide everything but import filters
+			if(fname.find("Import") == string::npos)
+				continue;
+
+			string shortname = fname.substr(0, fname.size() - strlen(" Import"));
+
+			//Unlike normal filter creation, we DO want the properties dialog shown immediately
+			//since we need to specify a file name to do anything
+			if(ImGui::MenuItem(shortname.c_str()))
+				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+		}
+		ImGui::EndMenu();
+	}
+
+	if(ImGui::BeginMenu("Generate"))
+	{
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			//Hide import filters
+			if(fname.find("Import") != string::npos)
+				continue;
+
+			//Hide filters that have inputs
+			if(refs.find(fname)->second->GetInputCount() != 0)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
+		}
+
+		ImGui::EndMenu();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -82,6 +82,8 @@ protected:
 	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
+	void HandleBackgroundContextMenu();
+	void DoAddMenu();
 	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
 	void HandleOverlaps();
 	void ClearOldPropertiesDialogs();
