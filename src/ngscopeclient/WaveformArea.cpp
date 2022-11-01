@@ -580,6 +580,39 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
 		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
+
+	//If it's a peak detection filter, draw the peaks and annotations
+	auto pf = dynamic_cast<PeakDetectionFilter*>(stream.m_channel);
+	if(pf)
+		RenderSpectrumPeaks(list, channel);
+}
+
+/**
+	@brief Draw peaks from a FFT or similar waveform
+ */
+void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedChannel> channel)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	auto& peaks = dynamic_cast<PeakDetectionFilter*>(stream.m_channel)->GetPeaks();
+
+	//TODO: add a preference for peak circle color and size?
+	ImU32 color = 0xffffffff;
+	float radius = ImGui::GetFontSize() * 0.5;
+
+	//Draw the circles around each peak
+	for(auto p : peaks)
+	{
+		auto x = (p.m_x * data->m_timescale) + data->m_triggerPhase;
+		list->AddCircle(
+			ImVec2(m_group->XAxisUnitsToXPosition(x), YAxisUnitsToYPosition(p.m_y)),
+			radius,
+			color,
+			0,
+			1);
+	}
+
+	//TODO: labels
 }
 
 /**

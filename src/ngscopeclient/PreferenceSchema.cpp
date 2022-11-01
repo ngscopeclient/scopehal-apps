@@ -226,20 +226,7 @@ void PreferenceManager::InitializeDefaults()
 					.Label("Y axis font")
 					.Description("Font used for Y axis text"));
 
-		/*auto& peaks = appearance.AddCategory("Peaks");
-			peaks.AddPreference(
-				Preference::Color("peak_outline_color", ColorFromString("#009900"))
-				.Label("Outline color")
-				.Description("Color for the outline of peak labels"));
-			peaks.AddPreference(
-				Preference::Color("peak_text_color", ColorFromString("#ffffff"))
-				.Label("Text color")
-				.Description("Color for the text on peak labels"));
-			peaks.AddPreference(
-				Preference::Color("peak_background_color", ColorFromString("#000000"))
-				.Label("Background color")
-				.Description("Color for the background of peak labels"));
-
+		/*
 		auto& proto = appearance.AddCategory("Protocol Analyzer");
 			proto.AddPreference(
 				Preference::Color("command_color", ColorFromString("#600050"))

@@ -354,6 +354,7 @@ protected:
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderSpectrumPeaks(ImDrawList* list, std::shared_ptr<DisplayedChannel> channel);
 	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderComplexSignal(
