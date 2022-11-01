@@ -600,9 +600,23 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 	ImU32 color = 0xffffffff;
 	float radius = ImGui::GetFontSize() * 0.5;
 
-	//Draw the circles around each peak
+	//Distance within which two peaks are considered to be the same
+	float neighborThresholdPixels = 3 * ImGui::GetFontSize();
+	int64_t neighborThresholdXUnits = m_group->PixelsToXAxisUnits(neighborThresholdPixels);
+
+	//Go through the list of peaks and decay all of the alpha values by one
+	vector<size_t> peaksToDelete;
+	for(size_t i=0; i<channel->m_peakLabels.size(); i++)
+	{
+		channel->m_peakLabels[i].m_peakAlpha --;
+		if(channel->m_peakLabels[i].m_peakAlpha < -255)
+			peaksToDelete.push_back(i);
+	}
+
+	//Initial peak processing
 	for(auto p : peaks)
 	{
+		//Draw the circle for the peak
 		auto x = (p.m_x * data->m_timescale) + data->m_triggerPhase;
 		list->AddCircle(
 			ImVec2(m_group->XAxisUnitsToXPosition(x), YAxisUnitsToYPosition(p.m_y)),
@@ -610,9 +624,26 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			color,
 			0,
 			1);
-	}
 
-	//TODO: labels
+		//Check for peaks fairly close to this one
+		bool hit = false;
+		for(size_t i=0; i<channel->m_peakLabels.size(); i++)
+		{
+			if( llabs(channel->m_peakLabels[i].m_peakXpos - x) < neighborThresholdXUnits )
+			{
+				//This peak is close enough we'll call it the same. Update the position.
+				hit = true;
+				channel->m_peakLabels[i].m_peakXpos = x;
+				break;
+			}
+		}
+
+		//Not found, create a new peak
+		if(!hit)
+		{
+			//TODO
+		}
+	}
 }
 
 /**

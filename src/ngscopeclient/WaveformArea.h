@@ -77,6 +77,32 @@ struct ConfigPushConstants
 };
 
 /**
+	@brief State for a single peak label
+
+	X/Y positions are in waveform units, not screen units, so that as we drag the waveform peaks move with it.
+ */
+struct PeakLabel
+{
+	///@brief X axis position of the label
+	int64_t m_labelXpos;
+
+	///@brief Y axis position of the label
+	float m_labelYpos;
+
+	///@brief X axis position of the peak last refresh
+	int64_t m_peakXpos;
+
+	/**
+		@brief Alpha decay. Decays by one unit per frame after the peak disappears
+
+		255 = fully visible
+		0 = invisible
+		Negative = invisible for several frames (eventually will be garbage collected)
+	 */
+	int m_peakAlpha;
+};
+
+/**
 	@brief Context data for a single channel being displayed within a WaveformArea
  */
 class DisplayedChannel
@@ -252,6 +278,9 @@ public:
 
 	float GetYButtonPos()
 	{ return m_yButtonPos; }
+
+	///@brief Active labels for peaks associated with the current waveform
+	std::vector<PeakLabel> m_peakLabels;
 
 protected:
 	StreamDescriptor m_stream;
