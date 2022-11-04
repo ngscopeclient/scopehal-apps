@@ -191,6 +191,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_triggerDuringDrag(nullptr)
 	, m_lastRightClickOffset(0)
 	, m_channelButtonHeight(0)
+	, m_dragPeakLabel(nullptr)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -588,6 +589,31 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 }
 
 /**
+	@brief Computes the closest point on a line segment (given the endpoints) to a given point.
+
+	Reference: https://en.wikibooks.org/wiki/Linear_Algebra/Orthogonal_Projection_Onto_a_Line
+ */
+ImVec2 WaveformArea::ClosestPointOnLineSegment(ImVec2 lineA, ImVec2 lineB, ImVec2 pt)
+{
+	//Offset the line and point so the first endpoint of the line is at the origin
+	ImVec2 vseg(lineB.x - lineA.x, lineB.y - lineA.y);
+	ImVec2 vpt(pt.x - lineA.x, pt.y - lineA.y);
+
+	//Project the point onto the line (may be beyond endpoints)
+	float scale = (vseg.x*vpt.x + vseg.y*vpt.y) / (vseg.x*vseg.x + vseg.y*vseg.y);
+	ImVec2 vproj(vseg.x*scale, vseg.y*scale);
+
+	//Clamp to endpoints
+	if(scale < 0)
+		return lineA;
+	if(scale > 1)
+		return lineB;
+
+	//Otherwise return the projection
+	return ImVec2(vproj.x + lineA.x, vproj.y + lineA.y);
+}
+
+/**
 	@brief Draw peaks from a FFT or similar waveform
  */
 void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedChannel> channel)
@@ -597,20 +623,35 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 	auto& peaks = dynamic_cast<PeakDetectionFilter*>(stream.m_channel)->GetPeaks();
 
 	//TODO: add a preference for peak circle color and size?
-	ImU32 color = 0xffffffff;
+	ImU32 circleColor = 0xffffffff;
+	ImU32 lineColor = ColorFromString("#00ff00ff");
 	float radius = ImGui::GetFontSize() * 0.5;
 
 	//Distance within which two peaks are considered to be the same
 	float neighborThresholdPixels = 3 * ImGui::GetFontSize();
 	int64_t neighborThresholdXUnits = m_group->PixelsToXAxisUnits(neighborThresholdPixels);
 
-	//Go through the list of peaks and decay all of the alpha values by one
+	//Go through the list of peaks and decay all of the alpha values
 	vector<size_t> peaksToDelete;
 	for(size_t i=0; i<channel->m_peakLabels.size(); i++)
 	{
-		channel->m_peakLabels[i].m_peakAlpha --;
+		channel->m_peakLabels[i].m_peakAlpha -= 4;
 		if(channel->m_peakLabels[i].m_peakAlpha < -255)
+		{
 			peaksToDelete.push_back(i);
+
+			//Stop dragging if we're deleting it
+			if( (&channel->m_peakLabels[i] == m_dragPeakLabel) && (m_dragState = DRAG_STATE_PEAK_MARKER) )
+			{
+				m_dragState = DRAG_STATE_NONE;
+				m_dragPeakLabel = nullptr;
+			}
+		}
+	}
+	if(!peaksToDelete.empty())
+	{
+		for(ssize_t n=peaksToDelete.size() - 1; n >= 0; n--)
+			channel->m_peakLabels.erase(channel->m_peakLabels.begin() + n);
 	}
 
 	//Initial peak processing
@@ -621,7 +662,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 		list->AddCircle(
 			ImVec2(m_group->XAxisUnitsToXPosition(x), YAxisUnitsToYPosition(p.m_y)),
 			radius,
-			color,
+			circleColor,
 			0,
 			1);
 
@@ -634,6 +675,8 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 				//This peak is close enough we'll call it the same. Update the position.
 				hit = true;
 				channel->m_peakLabels[i].m_peakXpos = x;
+				channel->m_peakLabels[i].m_peakYpos = p.m_y;
+				channel->m_peakLabels[i].m_peakAlpha = 255;
 				break;
 			}
 		}
@@ -641,7 +684,217 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 		//Not found, create a new peak
 		if(!hit)
 		{
-			//TODO
+			PeakLabel npeak;
+
+			//Initial X position is just left of the peak
+			npeak.m_labelXpos = x - m_group->PixelsToXAxisUnits(5 * ImGui::GetFontSize());
+			npeak.m_peakXpos = x;
+			npeak.m_peakYpos = p.m_y;
+
+			//Initial Y position is above the peak if in the bottom half, otherwise below
+			if(p.m_y > stream.GetOffset())
+				npeak.m_labelYpos = p.m_y + PixelsToYAxisUnits(3*ImGui::GetFontSize());
+			else
+				npeak.m_labelYpos = p.m_y - PixelsToYAxisUnits(3*ImGui::GetFontSize());
+
+			//Default to 100% alpha
+			npeak.m_peakAlpha = 255;
+
+			channel->m_peakLabels.push_back(npeak);
+		}
+	}
+
+	//Foreground color is used to determine background color and hovered/active colors
+	auto chancolor = ColorFromString(stream.m_channel->m_displaycolor);
+	auto fcolor = ImGui::ColorConvertU32ToFloat4(chancolor);
+
+	auto wmin = ImGui::GetWindowPos();
+	auto wsize = ImGui::GetWindowSize();
+	ImVec2 wmax(wmin.x + wsize.x, wmin.y + wsize.y);
+
+	//Draw the peaks and update X/Y size for collision detection
+	auto font = m_parent->GetFontPref("Appearance.Peaks.label_font");
+	auto& prefs = m_parent->GetSession().GetPreferences();
+	auto textColor = prefs.GetColor("Appearance.Peaks.peak_text_color");
+	auto mousePos = ImGui::GetMousePos();
+	float springMaxLength = 15 * ImGui::GetFontSize();
+	for(size_t i=0; i<channel->m_peakLabels.size(); i++)
+	{
+		auto& label = channel->m_peakLabels[i];
+
+		//Figure out text size
+		string str =
+			stream.GetXAxisUnits().PrettyPrint(label.m_peakXpos) + "\n" +
+			stream.GetYAxisUnits().PrettyPrint(label.m_peakYpos);
+		auto textSizePixels = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str.c_str());
+
+		//Create rectangle for box around centroid
+		float padding = 2;
+		float labelXpos = m_group->XAxisUnitsToXPosition(label.m_labelXpos);
+		float labelYpos = YAxisUnitsToYPosition(label.m_labelYpos);
+		float xrad = textSizePixels.x/2 + padding;
+		float yrad = textSizePixels.y/2 + padding;
+		float labelLeft = labelXpos - xrad;
+		float labelRight = labelXpos + xrad;
+		float labelTop = labelYpos - yrad;
+		float labelBottom = labelYpos + yrad;
+
+		//Update alpha
+		if(label.m_peakAlpha < 0)
+			continue;
+		lineColor &= ~(0xff << IM_COL32_A_SHIFT);
+		lineColor |= (label.m_peakAlpha << IM_COL32_A_SHIFT);
+
+		ImVec2 peak(m_group->XAxisUnitsToXPosition(label.m_peakXpos), YAxisUnitsToYPosition(label.m_peakYpos));
+
+		//Line from peak to closest point on label perimeter
+		//TODO: this doesn't account for rounding of rectangle corners
+		ImVec2 corner;
+		bool left = labelRight < peak.x;
+		bool right = labelLeft > peak.x;
+		bool below = labelTop > peak.y;
+		bool above = labelBottom < peak.y;
+		ImVec2 tl(labelLeft, labelTop);
+		ImVec2 tr(labelRight, labelTop);
+		ImVec2 bl(labelLeft, labelBottom);
+		ImVec2 br(labelRight, labelBottom);
+		if(left && below)
+			corner = tr;
+		else if(left && above)
+			corner = br;
+		else if(right && below)
+			corner = tl;
+		else if(right && above)
+			corner = bl;
+		else if(left)
+			corner = ClosestPointOnLineSegment(tr, br, peak);
+		else if(right)
+			corner = ClosestPointOnLineSegment(tl, bl, peak);
+		else if(below)
+			corner = ClosestPointOnLineSegment(tl, tr, peak);
+		else /*if(above) */
+			corner = ClosestPointOnLineSegment(bl, br, peak);
+		list->AddLine(
+			peak,
+			corner,
+			lineColor,
+			1);
+
+		//Mouse drag hit testing
+		bool mouseHit = false;
+		if( (mousePos.x >= labelLeft) && (mousePos.x <= labelRight) &&
+			(mousePos.y >= labelTop) && (mousePos.y <= labelBottom) )
+		{
+			mouseHit = true;
+		}
+
+		//Start dragging
+		if(mouseHit && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+			m_dragPeakLabel = &label;
+			m_dragState = DRAG_STATE_PEAK_MARKER;
+			m_dragPeakAnchorOffset = ImVec2(labelXpos - mousePos.x, labelYpos - mousePos.y);
+		}
+
+		//Make background lighter if dragging
+		float fmul = 0.3;
+		if( (m_dragState == DRAG_STATE_PEAK_MARKER) && (m_dragPeakLabel == &label) )
+			fmul = 0.5;
+
+		//Draw rectangle filling
+		float rounding = 3;
+		auto fillColor = ImGui::ColorConvertFloat4ToU32(
+			ImVec4(fcolor.x*fmul, fcolor.y*fmul, fcolor.z*fmul, label.m_peakAlpha/255.0f) );
+		list->AddRectFilled(
+			ImVec2(labelLeft, labelTop),
+			ImVec2(labelRight, labelBottom),
+			fillColor,
+			rounding);
+
+		//Draw rectangle outline
+		list->AddRect(
+			ImVec2(labelLeft, labelTop),
+			ImVec2(labelRight, labelBottom),
+			chancolor,
+			rounding);
+
+		//Draw text
+		list->AddText(
+			font,
+			font->FontSize,
+			ImVec2(labelLeft + padding, labelTop + padding),
+			textColor,
+			str.c_str());
+
+		//Update label info for physics
+		label.m_labelXsize = m_group->PixelsToXAxisUnits(textSizePixels.x);
+		label.m_labelYsize = PixelsToYAxisUnits(textSizePixels.y);
+
+		//Skip physics on anything being dragged
+		//TODO: omit springs if manually positioning a label?
+		bool draggingThis = (m_dragState == DRAG_STATE_PEAK_MARKER) && (&label == m_dragPeakLabel);
+		float step = 3;
+		if(!draggingThis)
+		{
+			//Calculate magnitude (in pixels) and unit vector for direction of line
+			float dx = labelXpos - peak.x;
+			float dy = labelYpos - peak.y;
+			float mag = sqrtf(dx*dx + dy*dy);
+			float ux = dx / mag;
+			float uy = dy / mag;
+
+			//Physics 1: Spring to pull labels closer to peaks if they're too far away
+			if(mag > springMaxLength)
+			{
+				label.m_labelXpos -= m_group->PixelsToXAxisUnits(step * ux);
+				label.m_labelYpos += PixelsToYAxisUnits(step * uy);
+			}
+
+			//Physics 2: If peak is on screen but label is not, move label closer to peak
+			//TODO: omit if label is manually positioned?
+			bool peakIsOnScreen = (peak.x >= wmin.x) && (peak.x <= wmax.x) && (peak.y >= wmin.y) && (peak.y <= wmax.y);
+			bool labelIsOnScreen =
+				(labelLeft >= wmin.x) && (labelRight <= wmax.x) && (labelTop >= wmin.y) && (labelBottom <= wmax.y);
+			if(peakIsOnScreen && !labelIsOnScreen)
+			{
+				label.m_labelXpos -= m_group->PixelsToXAxisUnits(step * ux);
+				label.m_labelYpos += PixelsToYAxisUnits(step * uy);
+			}
+		}
+
+		//Physics 3: If labels collide, move them apart
+		//Only search labels after this one, to avoid moving stuff twice
+		for(size_t j=i+1; j<channel->m_peakLabels.size(); j++)
+		{
+			auto& jlabel = channel->m_peakLabels[j];
+			ImVec2 jpos(m_group->XAxisUnitsToXPosition(jlabel.m_labelXpos), YAxisUnitsToYPosition(jlabel.m_labelYpos));
+			ImVec2 jsize(m_group->XAxisUnitsToPixels(jlabel.m_labelXsize), YAxisUnitsToPixels(jlabel.m_labelYsize));
+
+			if(RectIntersect(
+				ImVec2(labelXpos, labelYpos),
+				ImVec2(xrad*2, yrad*2),
+				jpos,
+				jsize))
+			{
+				float jdx = labelXpos - jpos.x;
+				float jdy = labelYpos - jpos.y;
+				float jmag = sqrt(jdx*jdx + jdy*jdy);
+				float jux = jdx / jmag;
+				float juy = jdy / jmag;
+
+				if(!draggingThis)
+				{
+					label.m_labelXpos += m_group->PixelsToXAxisUnits(jux * step);
+					label.m_labelYpos -= PixelsToYAxisUnits(juy * step);
+				}
+
+				//Don't move the other label if we're dragging it
+				if( (m_dragState == DRAG_STATE_PEAK_MARKER) && (&jlabel == m_dragPeakLabel) )
+					continue;
+
+				jlabel.m_labelXpos -= m_group->PixelsToXAxisUnits(jux * step);
+				jlabel.m_labelYpos += PixelsToYAxisUnits(juy * step);
+			}
 		}
 	}
 }
@@ -2117,6 +2370,10 @@ void WaveformArea::OnMouseUp()
 			}
 			break;
 
+		case DRAG_STATE_PEAK_MARKER:
+			m_dragPeakLabel = nullptr;
+			break;
+
 		default:
 			break;
 	}
@@ -2150,6 +2407,19 @@ void WaveformArea::OnDragUpdate()
 
 		case DRAG_STATE_TRIGGER_LEVEL:
 			//TODO: push to hardware at a controlled rate (after each trigger?)
+			break;
+
+		case DRAG_STATE_PEAK_MARKER:
+			if(m_dragPeakLabel != nullptr)
+			{
+				auto mouse = ImGui::GetMousePos();
+
+				float anchorX = mouse.x + m_dragPeakAnchorOffset.x;
+				float anchorY = mouse.y + m_dragPeakAnchorOffset.y;
+
+				m_dragPeakLabel->m_labelXpos = m_group->XPositionToXAxisUnits(anchorX);
+				m_dragPeakLabel->m_labelYpos = YPositionToYAxisUnits(anchorY);
+			}
 			break;
 
 		default:

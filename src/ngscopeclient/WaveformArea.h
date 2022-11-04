@@ -79,21 +79,30 @@ struct ConfigPushConstants
 /**
 	@brief State for a single peak label
 
-	X/Y positions are in waveform units, not screen units, so that as we drag the waveform peaks move with it.
+	All positions/sizes are in waveform units, not screen units, so that they scale/move correctly with the waveform
  */
 struct PeakLabel
 {
-	///@brief X axis position of the label
+	///@brief X axis position of the label's centroid
 	int64_t m_labelXpos;
 
-	///@brief Y axis position of the label
+	///@brief Y axis position of the label's centroid
 	float m_labelYpos;
 
 	///@brief X axis position of the peak last refresh
 	int64_t m_peakXpos;
 
+	///@brief Y axis position of the peak last refresh
+	float m_peakYpos;
+
+	///@brief X axis size of the label (for collision detection)
+	int64_t m_labelXsize;
+
+	///@brief Y axis size of the label (for collision detection)
+	int64_t m_labelYsize;
+
 	/**
-		@brief Alpha decay. Decays by one unit per frame after the peak disappears
+		@brief Alpha decay. Decays by a small amount per frame after the peak disappears
 
 		255 = fully visible
 		0 = invisible
@@ -447,7 +456,8 @@ protected:
 		DRAG_STATE_NONE,
 		DRAG_STATE_CHANNEL,
 		DRAG_STATE_Y_AXIS,
-		DRAG_STATE_TRIGGER_LEVEL
+		DRAG_STATE_TRIGGER_LEVEL,
+		DRAG_STATE_PEAK_MARKER
 	} m_dragState;
 
 	///@brief The stream currently being dragged (invalid if m_dragState != DRAG_STATE_CHANNEL)
@@ -496,6 +506,14 @@ protected:
 
 	///@brief Height of a channel button
 	float m_channelButtonHeight;
+
+	///@brief Peak label being dragged, if any
+	PeakLabel* m_dragPeakLabel;
+
+	///@brief Offset, in pixels, from mouse to anchor point of peak being dragged
+	ImVec2 m_dragPeakAnchorOffset;
+
+	ImVec2 ClosestPointOnLineSegment(ImVec2 lineA, ImVec2 lineB, ImVec2 pt);
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

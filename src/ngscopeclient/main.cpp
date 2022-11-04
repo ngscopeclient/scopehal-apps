@@ -203,3 +203,39 @@ void RightJustifiedText(const std::string& str)
 		ImGui::GetScrollX() - 2*ImGui::GetStyle().ItemSpacing.x);
 	ImGui::TextUnformatted(str.c_str());
 }
+
+/**
+	@brief Check if two rectangles intersect
+ */
+bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB)
+{
+	//Enlarge hitboxes by a small margin to keep spacing between nodes
+	float margin = 5;
+	posA.x -= margin;
+	posA.y -= margin;
+	posB.x -= margin;
+	posB.y -= margin;
+	sizeA.x += 2*margin;
+	sizeA.y += 2*margin;
+	sizeB.x += 2*margin;
+	sizeB.y += 2*margin;
+
+	//A completely above B? No intersection
+	if( (posA.y + sizeA.y) < posB.y)
+		return false;
+
+	//B completely above A? No intersection
+	if( (posB.y + sizeB.y) < posA.y)
+		return false;
+
+	//A completely left of B? No intersection
+	if( (posA.x + sizeA.x) < posB.x)
+		return false;
+
+	//B completely left of A? No intersection
+	if( (posB.x + sizeB.x) < posA.x)
+		return false;
+
+	//If we get here, they overlap
+	return true;
+}

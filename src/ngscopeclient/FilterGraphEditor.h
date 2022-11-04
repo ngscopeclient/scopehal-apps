@@ -87,7 +87,6 @@ protected:
 	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
 	void HandleOverlaps();
 	void ClearOldPropertiesDialogs();
-	bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 	void FilterMenu(StreamDescriptor src);
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
