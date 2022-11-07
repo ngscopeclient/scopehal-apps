@@ -2235,7 +2235,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		tooltip +=
 			"Drag to move this waveform to another plot.\n"
 			"Double click to view/edit channel properties.\n"
-			"Right click for display settings menu.";
+			"Right click for more options.";
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
