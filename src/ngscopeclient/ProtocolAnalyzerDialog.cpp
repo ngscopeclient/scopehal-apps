@@ -72,7 +72,6 @@ ProtocolAnalyzerDialog::~ProtocolAnalyzerDialog()
  */
 bool ProtocolAnalyzerDialog::DoRender()
 {
-	/*
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
@@ -81,21 +80,31 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 	float width = ImGui::GetFontSize();
 
-	ImGui::InputInt("ProtocolAnalyzer Depth", &m_mgr.m_maxDepth, 1, 10);
-	HelpMarker(
-		"Adjust the cap on total history depth, in waveforms.\n"
-		"Large history depths can use significant amounts of RAM with deep memory.");
+	//Figure out channel setup
+	//Default is timestamp plus all headers, add optional other channels as needed
+	auto cols = m_filter->GetHeaders();
+	int ncols = 1 + cols.size();
+	if(m_filter->GetShowDataColumn())
+		ncols ++;
+	if(m_filter->GetShowImageColumn())
+		ncols ++;
+	//TODO: integrate length natively vs having to make the filter calculate it??
 
-	if(ImGui::BeginTable("history", 3, flags))
+	if(ImGui::BeginTable("table", ncols, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
-		ImGui::TableSetupColumn("Pin", ImGuiTableColumnFlags_WidthFixed, 0.0f);
-		ImGui::TableSetupColumn("Label");
+		for(auto c : cols)
+			ImGui::TableSetupColumn(c.c_str(), ImGuiTableColumnFlags_WidthFixed, 0.0f);
+		if(m_filter->GetShowDataColumn())
+			ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, 0.0f);
+		if(m_filter->GetShowImageColumn())
+			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
 
-		list<shared_ptr<ProtocolAnalyzerPoint> >::iterator itDelete;
-		bool deleting = false;
+		//TODO: actual packet stuff
+
+		/*
 		for(auto it = m_mgr.m_history.begin(); it != m_mgr.m_history.end(); it++)
 		{
 			auto point = *it;
@@ -231,28 +240,10 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 			ImGui::PopID();
 		}
-
-		//Deleting a row?
-		if(deleting)
-		{
-			//Deleting selected row? Select the last row (if we have one)
-			bool deletedSelection = false;
-			if( (*itDelete == m_selectedPoint) && (m_mgr.m_history.size() > 1) )
-				deletedSelection = true;
-
-			//Delete the selected row
-			m_mgr.m_history.erase(itDelete);
-
-			if(deletedSelection)
-			{
-				m_selectionChanged = true;
-				m_selectedPoint = *m_mgr.m_history.rbegin();
-			}
-		}
+		*/
 
 		ImGui::EndTable();
 	}
-	*/
 	return true;
 }
 
