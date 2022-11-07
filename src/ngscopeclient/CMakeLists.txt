@@ -67,6 +67,7 @@ add_executable(ngscopeclient
 	PreferenceManager.cpp
 	PreferenceSchema.cpp
 	PreferenceTree.cpp
+	ProtocolAnalyzerDialog.cpp
 	RFGeneratorDialog.cpp
 	RFSignalGeneratorThread.cpp
 	ScopeThread.cpp

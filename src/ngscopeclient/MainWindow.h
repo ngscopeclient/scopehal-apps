@@ -44,6 +44,8 @@
 
 #include "TimebasePropertiesDialog.h"
 
+#include "../scopehal/PacketDecoder.h"
+
 class MultimeterDialog;
 class HistoryDialog;
 
@@ -169,6 +171,7 @@ protected:
 				void AddGenerateMenu();
 			void SetupMenu();
 			void WindowMenu();
+				void WindowAnalyzerMenu();
 				void WindowGeneratorMenu();
 				void WindowMultimeterMenu();
 				void WindowSCPIConsoleMenu();
@@ -208,6 +211,9 @@ protected:
 
 	///@brief Map of channels to properties dialogs
 	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
+
+	///@brief Map of filters to analyzer dialogs
+	std::map<PacketDecoder*, std::shared_ptr<Dialog> > m_protocolAnalyzerDialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;

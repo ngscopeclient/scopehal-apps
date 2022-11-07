@@ -53,6 +53,7 @@
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
+#include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "TimebasePropertiesDialog.h"
@@ -572,20 +573,30 @@ void MainWindow::ToolbarButtons()
 
 void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 {
-	//Multimeter dialogs are stored in a separate list
+	//Handle multi-instance dialogs
 	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
 	if(meterDlg)
 		m_meterDialogs.erase(meterDlg->GetMeter());
 
-	//Function generator dialogs are stored in a separate list
 	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
 	if(genDlg)
 		m_generatorDialogs.erase(genDlg->GetGenerator());
 
-	//RF generator dialogs are stored in a separate list
 	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
+	if(conDlg)
+		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
+
+	auto chanDlg = dynamic_pointer_cast<ChannelPropertiesDialog>(dlg);
+	if(chanDlg)
+		m_channelPropertiesDialogs.erase(chanDlg->GetChannel());
+
+	auto protoDlg = dynamic_pointer_cast<ProtocolAnalyzerDialog>(dlg);
+	if(protoDlg)
+		m_protocolAnalyzerDialogs.erase(protoDlg->GetFilter());
 
 	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
@@ -599,14 +610,7 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(m_graphEditor == dlg)
 		m_graphEditor = nullptr;
 
-	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
-	if(conDlg)
-		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
-
-	auto chanDlg = dynamic_pointer_cast<ChannelPropertiesDialog>(dlg);
-	if(chanDlg)
-		m_channelPropertiesDialogs.erase(chanDlg->GetChannel());
-
+	//Remove the general list
 	m_dialogs.erase(dlg);
 }
 
@@ -1021,6 +1025,15 @@ Filter* MainWindow::CreateFilter(
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[f] = dlg;
+		AddDialog(dlg);
+	}
+
+	//Create and show protocol analyzer dialog
+	auto pd = dynamic_cast<PacketDecoder*>(f);
+	if(pd)
+	{
+		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session, *this);
+		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}
 
