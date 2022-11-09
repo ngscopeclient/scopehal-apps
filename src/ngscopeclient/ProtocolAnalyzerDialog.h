@@ -48,7 +48,7 @@ class MainWindow;
 class ProtocolAnalyzerDialog : public Dialog
 {
 public:
-	ProtocolAnalyzerDialog(PacketDecoder* filter, /*ProtocolManager& mgr, */Session& session, MainWindow& wnd);
+	ProtocolAnalyzerDialog(PacketDecoder* filter, std::shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd);
 	virtual ~ProtocolAnalyzerDialog();
 
 	virtual bool DoRender();
@@ -65,7 +65,7 @@ public:
 
 protected:
 	PacketDecoder* m_filter;
-	//ProtocolManager& m_mgr;
+	std::shared_ptr<PacketManager> m_mgr;
 	Session& m_session;
 	MainWindow& m_parent;
 

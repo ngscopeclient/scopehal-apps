@@ -713,8 +713,11 @@ void Session::RefreshAllFilters()
 		filters = Filter::GetAllInstances();
 	}
 
-	shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
-	m_graphExecutor.RunBlocking(filters);
+	{
+		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		m_graphExecutor.RunBlocking(filters);
+	}
+	UpdatePacketManagers(filters);
 
 	//Update statistic displays after the filter graph update is complete
 	//for(auto g : m_waveformGroups)
@@ -722,6 +725,43 @@ void Session::RefreshAllFilters()
 	LogTrace("TODO: refresh statistics\n");
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+}
+
+/**
+	@brief Update all of the packet managers when new data arrives
+ */
+void Session::UpdatePacketManagers(const set<Filter*>& filters)
+{
+	lock_guard<mutex> lock(m_packetMgrMutex);
+
+	set<PacketDecoder*> deletedFilters;
+	for(auto it : m_packetmgrs)
+	{
+		//Remove filters that no longer exist
+		if(filters.find(it.first) == filters.end())
+			deletedFilters.emplace(it.first);
+
+		//It exists, update it
+		else
+			it.second->Update();
+	}
+
+	//Delete managers for nonexistent filters
+	for(auto f : deletedFilters)
+		m_packetmgrs.erase(f);
+}
+
+/**
+	@brief Called when a new packet filter is created
+ */
+shared_ptr<PacketManager> Session::AddPacketFilter(PacketDecoder* filter)
+{
+	LogTrace("Adding packet manager for %s\n", filter->GetDisplayName().c_str());
+
+	lock_guard<mutex> lock(m_packetMgrMutex);
+	shared_ptr<PacketManager> ret = make_shared<PacketManager>(filter);
+	m_packetmgrs[filter] = ret;
+	return ret;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

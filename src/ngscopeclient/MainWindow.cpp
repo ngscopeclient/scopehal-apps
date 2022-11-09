@@ -1032,7 +1032,9 @@ Filter* MainWindow::CreateFilter(
 	auto pd = dynamic_cast<PacketDecoder*>(f);
 	if(pd)
 	{
-		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session, *this);
+		m_session.AddPacketFilter(pd);
+
+		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
 		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}

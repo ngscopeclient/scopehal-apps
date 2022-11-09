@@ -59,6 +59,7 @@ add_executable(ngscopeclient
 	MetricsDialog.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
+	PacketManager.cpp
 	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
 	PowerSupplyThread.cpp

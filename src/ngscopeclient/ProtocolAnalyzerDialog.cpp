@@ -43,10 +43,10 @@ using namespace std;
 // Construction / destruction
 
 ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
-	PacketDecoder* filter, /*ProtocolManager& mgr, */Session& session, MainWindow& wnd)
+	PacketDecoder* filter, shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd)
 	: Dialog(string("Protocol: ") + filter->GetDisplayName(), ImVec2(425, 350))
 	, m_filter(filter)
-	//, m_mgr(mgr)
+	, m_mgr(mgr)
 	, m_session(session)
 	, m_parent(wnd)
 	, m_rowHeight(0)

@@ -790,7 +790,7 @@ void MainWindow::WindowAnalyzerMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(pd->GetDisplayName().c_str()))
 			{
-				auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session, *this);
+				auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
 				m_protocolAnalyzerDialogs[pd] = dlg;
 				AddDialog(dlg);
 			}

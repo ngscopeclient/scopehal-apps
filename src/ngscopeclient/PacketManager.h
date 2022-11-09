@@ -30,59 +30,33 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of HistoryManager
+	@brief Declaration of PacketManager
  */
-#ifndef HistoryManager_h
-#define HistoryManager_h
+#ifndef PacketManager_h
+#define PacketManager_h
 
+#include "../../lib/scopehal/PacketDecoder.h"
 #include "Marker.h"
 
-//Waveform history for a single instrument
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
-
 /**
-	@brief A single point of waveform history
+	@brief Keeps track of packetized data history from a single protocol analyzer filter
  */
-class HistoryPoint
+class PacketManager
 {
 public:
-	HistoryPoint();
-	~HistoryPoint();
+	PacketManager(PacketDecoder* pd);
+	virtual ~PacketManager();
 
-	///@brief Timestamp of the point
-	TimePoint m_time;
-
-	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
-	bool m_pinned;
-
-	///@brief Free-form text nickname for this acquisition (may be blank)
-	std::string m_nickname;
-
-	///@brief Waveform data
-	std::map<Oscilloscope*, WaveformHistory> m_history;
-};
-
-/**
-	@brief Keeps track of recently acquired waveforms
- */
-class HistoryManager
-{
-public:
-	HistoryManager(Session& session);
-	~HistoryManager();
-
-	void AddHistory(const std::vector<Oscilloscope*>& scopes);
-
-	void clear()
-	{ m_history.clear(); }
-
-	std::list<std::shared_ptr<HistoryPoint>> m_history;
-
-	///@brief has to be an int for imgui compatibility
-	int m_maxDepth;
+	void Update();
+	void RemoveHistoryFrom(TimePoint timestamp);
 
 protected:
-	Session& m_session;
+
+	///@brief The filter we're managing
+	PacketDecoder* m_filter;
+
+	///@brief Our saved packet data
+	std::map<TimePoint, std::vector<Packet*> > m_packets;
 };
 
 #endif
