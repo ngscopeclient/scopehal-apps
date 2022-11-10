@@ -51,6 +51,8 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_parent(wnd)
 	, m_rowHeight(0)
 	, m_selectionChanged(false)
+	, m_selectedPacket(nullptr)
+	, m_dataFormat(FORMAT_HEX)
 {
 	//Hold a reference open to the filter so it doesn't disappear on us
 	m_filter->AddRef();
@@ -76,19 +78,33 @@ bool ProtocolAnalyzerDialog::DoRender()
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
 		ImGuiTableFlags_BordersV |
-		ImGuiTableFlags_ScrollY;
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
 
 	float width = ImGui::GetFontSize();
 
+	auto cols = m_filter->GetHeaders();
+	//TODO: hide certain headers like length and ascii?
+
 	//Figure out channel setup
 	//Default is timestamp plus all headers, add optional other channels as needed
-	auto cols = m_filter->GetHeaders();
 	int ncols = 1 + cols.size();
+	int datacol = 0;
 	if(m_filter->GetShowDataColumn())
-		ncols ++;
+		datacol = (ncols ++);
 	if(m_filter->GetShowImageColumn())
 		ncols ++;
 	//TODO: integrate length natively vs having to make the filter calculate it??
+
+	auto dataFont = m_parent.GetFontPref("Appearance.Protocol Analyzer.data_font");
+
+	//Output format for data column
+	if(m_filter->GetShowDataColumn())
+	{
+		ImGui::SetNextItemWidth(10 * width);
+		ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0");
+	}
 
 	if(ImGui::BeginTable("table", ncols, flags))
 	{
@@ -102,145 +118,174 @@ bool ProtocolAnalyzerDialog::DoRender()
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
 
-		//TODO: actual packet stuff
+		//Do an update cycle to make sure any recently acquired packets are captured
+		m_mgr->Update();
 
-		/*
-		for(auto it = m_mgr.m_history.begin(); it != m_mgr.m_history.end(); it++)
+		lock_guard lock(m_mgr->GetMutex());
+		auto packets = m_mgr->GetPackets();
+
+		//Make a list of waveform timestamps and make sure we display them in order
+		vector<TimePoint> times;
+		for(auto& it : packets)
+			times.push_back(it.first);
+		std::sort(times.begin(), times.end());
+
+		//Process packets from each waveform
+		for(auto wavetime : times)
 		{
-			auto point = *it;
-			ImGui::PushID(point.get());
+			//TODO: add some kind of marker to indicate gaps between waveforms (if we have >1)?
 
-			ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
-
-			//Timestamp (and row selection logic)
-			bool rowIsSelected = (m_selectedPoint == point);
-			ImGui::TableSetColumnIndex(0);
-			auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen);
-			ImGui::SameLine();
-			if(ImGui::Selectable(
-				point->m_time.PrettyPrint().c_str(),
-				rowIsSelected && !m_selectedMarker,
-				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-				ImVec2(0, m_rowHeight)))
+			auto& wpackets = packets[wavetime];
+			for(auto pack : wpackets)
 			{
-				m_selectedPoint = point;
-				rowIsSelected = true;
-				m_selectionChanged = true;
-				m_selectedMarker = nullptr;
-			}
+				ImGui::PushID(pack);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
 
-			if(ImGui::BeginPopupContextItem())
-			{
-				if(ImGui::MenuItem("Delete"))
+				//Set up colors for the packet
+				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(pack->m_displayBackgroundColor));
+				ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(pack->m_displayForegroundColor));
+
+				//Timestamp (and row selection logic)
+				ImGui::TableSetColumnIndex(0);
+				auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+				ImGui::SameLine();
+				bool rowIsSelected = (m_selectedPacket == pack);
+				TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
+				if(ImGui::Selectable(
+					packtime.PrettyPrint().c_str(),
+					rowIsSelected,
+					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+					ImVec2(0, m_rowHeight)))
 				{
-					itDelete = it;
-					deleting = true;
+					m_selectedPacket = pack;
+					rowIsSelected = true;
+					m_selectionChanged = true;
 				}
-				ImGui::EndPopup();
-			}
-
-			//Force pin if we have a nickname or markers
-			auto& markers = m_session.GetMarkers(point->m_time);
-			bool forcePin = false;
-			if(!point->m_nickname.empty() || !markers.empty())
-			{
-				forcePin = true;
-				point->m_pinned = true;
-			}
-
-			//Pin box
-			ImGui::TableSetColumnIndex(1);
-			if(forcePin)
-				ImGui::BeginDisabled();
-			ImGui::Checkbox("###pin", &point->m_pinned);
-			m_rowHeight = ImGui::GetItemRectSize().y;
-			if(forcePin)
-				ImGui::EndDisabled();
-			Dialog::Tooltip(
-				"Check to \"pin\" this waveform and keep it in history rather\n"
-				"than rolling off the end of the buffer as new data comes in.\n\n"
-				"Waveforms with a nickname, or containing any labeled timestamps,\n"
-				"are automatically pinned.", true);
-
-			//Editable nickname box
-			ImGui::TableSetColumnIndex(2);
-			if(rowIsSelected)
-			{
-				if(m_selectionChanged)
-					ImGui::SetKeyboardFocusHere();
-				ImGui::SetNextItemWidth(ImGui::GetColumnWidth() - 4);
-				ImGui::InputText("###nick", &point->m_nickname);
-			}
-			else
-				ImGui::TextUnformatted(point->m_nickname.c_str());
-
-			//Child nodes for markers
-			if(open)
-			{
-				size_t markerToDelete = 0;
-				bool deletingMarker = false;
-
-				for(size_t i=0; i<markers.size(); i++)
+				/*
+				if(ImGui::BeginPopupContextItem())
 				{
-					auto& m = markers[i];
+					//For now, no context menu for packets
+					ImGui::EndPopup();
+				}
+				*/
 
-					ImGui::PushID(i);
-					ImGui::TableNextRow();
-
-					//Timestamp
-					bool markerIsSelected = (m_selectedMarker == &m);
-					ImGui::TableSetColumnIndex(0);
-					if(ImGui::Selectable(
-						m.GetMarkerTime().PrettyPrint().c_str(),
-						markerIsSelected,
-						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-						ImVec2(0, m_rowHeight)))
-					{
-						//Select the marker
-						m_selectedMarker = &m;
-						markerIsSelected = true;
-
-						//Navigate to the selected waveform
-						if(!rowIsSelected)
-						{
-							rowIsSelected = true;
-							m_selectedPoint = point;
-							m_selectionChanged = true;
-						}
-
-						m_parent.NavigateToTimestamp(m.m_offset);
-					}
-
-					if(ImGui::BeginPopupContextItem())
-					{
-						if(ImGui::MenuItem("Delete"))
-						{
-							deletingMarker = true;
-							markerToDelete = i;
-						}
-						ImGui::EndPopup();
-					}
-
-					//Nothing in pin box
-					ImGui::TableSetColumnIndex(1);
-
-					//Nickname box
-					ImGui::TableSetColumnIndex(2);
-					ImGui::InputText("###nick", &m.m_name);
-
-					ImGui::PopID();
+				//Headers
+				for(size_t i=0; i<cols.size(); i++)
+				{
+					if(ImGui::TableSetColumnIndex(i+1))
+						ImGui::TextUnformatted(pack->m_headers[cols[i]].c_str());
 				}
 
-				//Execute deletion after drawing the rest of the list
-				if(deletingMarker)
-					markers.erase(markers.begin() + markerToDelete);
+				//Data
+				if(m_filter->GetShowDataColumn())
+				{
+					if(ImGui::TableSetColumnIndex(datacol))
+					{
+						auto& bytes = pack->m_data;
 
-				ImGui::TreePop();
+						const int hexWidth = 16;
+						const int asciiWidth = 32;
+						const int dumpWidth = 8;
+						size_t linestart = 0;
+
+						string lineHex;
+						string lineAscii;
+
+						//Format the data
+						string data;
+						char tmp[32];
+						switch(m_dataFormat)
+						{
+							case FORMAT_HEX:
+								for(size_t i=0; i<bytes.size(); i++)
+								{
+									if( (i % hexWidth) == 0)
+									{
+										snprintf(tmp, sizeof(tmp), "%04zx ", i);
+										data += tmp;
+									}
+
+									snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
+									data += tmp;
+									if( (i % hexWidth) == hexWidth-1)
+										data += "\n";
+								}
+								break;
+
+							case FORMAT_ASCII:
+								for(size_t i=0; i<bytes.size(); i++)
+								{
+									if( (i % asciiWidth) == 0)
+									{
+										snprintf(tmp, sizeof(tmp), "%04zx ", i);
+										data += tmp;
+									}
+
+									if(isprint(bytes[i]) || (bytes[i] == ' '))
+										data += bytes[i];
+									else
+										data += '.';
+
+									if( (i % asciiWidth) == asciiWidth-1)
+										data += "\n";
+								}
+								break;
+
+							case FORMAT_HEXDUMP:
+								for(size_t i=0; i<bytes.size(); i++)
+								{
+									if( (i % dumpWidth) == 0)
+										linestart = i;
+
+									//hex dump
+									snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
+									lineHex += tmp;
+
+									//ascii
+									if(isprint(bytes[i]) || (bytes[i] == ' '))
+										lineAscii += bytes[i];
+									else
+										lineAscii += '.';
+
+									//process the actual dump at the end of each line
+									if( (i % dumpWidth) == dumpWidth-1)
+									{
+										snprintf(tmp, sizeof(tmp), "%04zx ", linestart);
+										data += tmp + lineHex + "   " + lineAscii + "\n";
+										lineHex = "";
+										lineAscii = "";
+									}
+								}
+
+								//process last partial line at end
+								if(!lineHex.empty())
+								{
+									while(lineHex.length() < 3*dumpWidth)
+										lineHex += ' ';
+
+									snprintf(tmp, sizeof(tmp), "%04zx ", linestart);
+									data += tmp + lineHex + "   " + lineAscii;
+								}
+								break;
+						}
+
+						ImGui::PushFont(dataFont);
+						ImGui::TextUnformatted(data.c_str());
+						ImGui::PopFont();
+					}
+				}
+
+				//Child nodes for merged packets
+				//TODO: the actual merging probably needs to happen in PacketManager to avoid doing it every frame
+				if(open)
+				{
+					ImGui::TreePop();
+				}
+
+				ImGui::PopStyleColor();
+				ImGui::PopID();
 			}
-
-			ImGui::PopID();
 		}
-		*/
 
 		ImGui::EndTable();
 	}

@@ -74,6 +74,17 @@ protected:
 
 	///@brief True if a new row in the dialog was selected this frame
 	bool m_selectionChanged;
+
+	///@brief Currently selected packet
+	Packet* m_selectedPacket;
+
+	///@brief Output data format
+	enum
+	{
+		FORMAT_HEX,
+		FORMAT_ASCII,
+		FORMAT_HEXDUMP
+	} m_dataFormat;
 };
 
 #endif

@@ -245,9 +245,9 @@ void PreferenceManager::InitializeDefaults()
 					.Label("Label font")
 					.Description("Font used for peak labels"));
 
-		/*
+
 		auto& proto = appearance.AddCategory("Protocol Analyzer");
-			proto.AddPreference(
+			/*proto.AddPreference(
 				Preference::Color("command_color", ColorFromString("#600050"))
 				.Label("Command color")
 				.Description("Color for packets that execute commands"));
@@ -275,6 +275,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("default_color", ColorFromString("#101010"))
 				.Label("Default color")
 				.Description("Color for packets that don't fit any other category"));*/
+			proto.AddPreference(
+				Preference::Font("data_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
+					.Label("Data font")
+					.Description("Font used for packet data hex dumps"));
 
 		auto& timeline = appearance.AddCategory("Timeline");
 			timeline.AddPreference(

@@ -50,13 +50,25 @@ public:
 	void Update();
 	void RemoveHistoryFrom(TimePoint timestamp);
 
+	std::mutex& GetMutex()
+	{ return m_mutex; }
+
+	const std::map<TimePoint, std::vector<Packet*> >& GetPackets()
+	{ return m_packets; }
+
 protected:
+
+	///@brief Mutex controlling access to m_packets
+	std::mutex m_mutex;
 
 	///@brief The filter we're managing
 	PacketDecoder* m_filter;
 
 	///@brief Our saved packet data
 	std::map<TimePoint, std::vector<Packet*> > m_packets;
+
+	///@brief Cache key for the current waveform
+	WaveformCacheKey m_cachekey;
 };
 
 #endif

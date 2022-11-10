@@ -35,6 +35,8 @@
 #include "ngscopeclient.h"
 #include "PacketManager.h"
 
+using namespace std;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -56,19 +58,28 @@ PacketManager::~PacketManager()
  */
 void PacketManager::Update()
 {
-	LogTrace("updating\n");
-
 	//Do nothing if there's no waveform to get a timestamp from
 	auto data = m_filter->GetData(0);
 	if(!data)
 		return;
 	TimePoint time(data->m_startTimestamp, data->m_startFemtoseconds);
 
-	//Remove any old history we might have from this timestamp
+	//If waveform is unchanged, no action needed
+	WaveformCacheKey key(data);
+	if(key == m_cachekey)
+		return;
+
+	//If we get here, waveform changed. Update cache key
+	m_cachekey = key;
+
+	//Remove any old history we might have had from this timestamp
 	RemoveHistoryFrom(time);
 
 	//Copy the new packets and detach them so the filter doesn't delete them
-	m_packets[time] = m_filter->GetPackets();
+	{
+		lock_guard<mutex> lock(m_mutex);
+		m_packets[time] = m_filter->GetPackets();
+	}
 	m_filter->DetachPackets();
 }
 
@@ -77,6 +88,8 @@ void PacketManager::Update()
  */
 void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 {
+	lock_guard<mutex> lock(m_mutex);
+
 	auto& packets = m_packets[timestamp];
 	for(auto p : packets)
 		delete p;
