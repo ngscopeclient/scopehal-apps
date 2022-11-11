@@ -148,6 +148,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//Timestamp (and row selection logic)
 				ImGui::TableSetColumnIndex(0);
 				auto open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+				if(open)
+					ImGui::TreePop();
 				ImGui::SameLine();
 				bool rowIsSelected = (m_selectedPacket == pack);
 				TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
@@ -179,14 +181,27 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//Data
 				if(m_filter->GetShowDataColumn())
 				{
+					size_t bytesPerLine;
+					switch(m_dataFormat)
+					{
+						case FORMAT_HEX:
+							bytesPerLine = 16;
+							break;
+
+						case FORMAT_ASCII:
+							bytesPerLine = 32;
+							break;
+
+						case FORMAT_HEXDUMP:
+							bytesPerLine = 8;
+							break;
+					}
+
 					if(ImGui::TableSetColumnIndex(datacol))
 					{
-						auto& bytes = pack->m_data;
+						string firstLine;
 
-						const int hexWidth = 16;
-						const int asciiWidth = 32;
-						const int dumpWidth = 8;
-						size_t linestart = 0;
+						auto& bytes = pack->m_data;
 
 						string lineHex;
 						string lineAscii;
@@ -194,48 +209,29 @@ bool ProtocolAnalyzerDialog::DoRender()
 						//Format the data
 						string data;
 						char tmp[32];
-						switch(m_dataFormat)
+						for(size_t i=0; i<bytes.size(); i++)
 						{
-							case FORMAT_HEX:
-								for(size_t i=0; i<bytes.size(); i++)
-								{
-									if( (i % hexWidth) == 0)
-									{
-										snprintf(tmp, sizeof(tmp), "%04zx ", i);
-										data += tmp;
-									}
+							if( (i % bytesPerLine) == 0)
+							{
+								snprintf(tmp, sizeof(tmp), "%04zx ", i);
+								data += tmp;
+							}
 
+							switch(m_dataFormat)
+							{
+								case FORMAT_HEX:
 									snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
 									data += tmp;
-									if( (i % hexWidth) == hexWidth-1)
-										data += "\n";
-								}
-								break;
+									break;
 
-							case FORMAT_ASCII:
-								for(size_t i=0; i<bytes.size(); i++)
-								{
-									if( (i % asciiWidth) == 0)
-									{
-										snprintf(tmp, sizeof(tmp), "%04zx ", i);
-										data += tmp;
-									}
-
+								case FORMAT_ASCII:
 									if(isprint(bytes[i]) || (bytes[i] == ' '))
 										data += bytes[i];
 									else
 										data += '.';
+									break;
 
-									if( (i % asciiWidth) == asciiWidth-1)
-										data += "\n";
-								}
-								break;
-
-							case FORMAT_HEXDUMP:
-								for(size_t i=0; i<bytes.size(); i++)
-								{
-									if( (i % dumpWidth) == 0)
-										linestart = i;
+								case FORMAT_HEXDUMP:
 
 									//hex dump
 									snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
@@ -246,31 +242,48 @@ bool ProtocolAnalyzerDialog::DoRender()
 										lineAscii += bytes[i];
 									else
 										lineAscii += '.';
+									break;
+							}
 
-									//process the actual dump at the end of each line
-									if( (i % dumpWidth) == dumpWidth-1)
-									{
-										snprintf(tmp, sizeof(tmp), "%04zx ", linestart);
-										data += tmp + lineHex + "   " + lineAscii + "\n";
-										lineHex = "";
-										lineAscii = "";
-									}
-								}
-
-								//process last partial line at end
-								if(!lineHex.empty())
+							if( (i % bytesPerLine) == bytesPerLine-1)
+							{
+								//Special processing for hex dump
+								if(m_dataFormat == FORMAT_HEXDUMP)
 								{
-									while(lineHex.length() < 3*dumpWidth)
-										lineHex += ' ';
-
-									snprintf(tmp, sizeof(tmp), "%04zx ", linestart);
-									data += tmp + lineHex + "   " + lineAscii;
+									data += lineHex + "   " + lineAscii;
+									lineHex = "";
+									lineAscii = "";
 								}
-								break;
+
+								if(firstLine.empty())
+								{
+									firstLine = data;
+									data = "";
+								}
+								else
+									data += "\n";
+							}
+						}
+
+						if(m_dataFormat == FORMAT_HEXDUMP)
+						{
+							//process last partial line at end
+							if(!lineHex.empty())
+							{
+								while(lineHex.length() < 3*bytesPerLine)
+									lineHex += ' ';
+
+								data += lineHex + "   " + lineAscii;
+							}
 						}
 
 						ImGui::PushFont(dataFont);
-						ImGui::TextUnformatted(data.c_str());
+						firstLine += "##data";
+						if(ImGui::TreeNodeEx(firstLine.c_str(), ImGuiTreeNodeFlags_OpenOnArrow))
+						{
+							ImGui::TextUnformatted(data.c_str());
+							ImGui::TreePop();
+						}
 						ImGui::PopFont();
 					}
 				}
@@ -279,7 +292,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//TODO: the actual merging probably needs to happen in PacketManager to avoid doing it every frame
 				if(open)
 				{
-					ImGui::TreePop();
+
 				}
 
 				ImGui::PopStyleColor();
