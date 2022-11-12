@@ -662,7 +662,7 @@ void MainWindow::DockingArea()
 	{
 		LogTrace("Processing split request\n");
 
-		for(auto request : m_splitRequests)
+		for(auto& request : m_splitRequests)
 		{
 			//Get the window for the group
 			auto window = ImGui::FindWindowByName(request.m_group->GetTitle().c_str());
@@ -751,10 +751,10 @@ void MainWindow::DockingArea()
 /**
 	@brief Scrolls all waveform groups so that the specified timestamp is visible
  */
-void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration)
+void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDescriptor target)
 {
 	for(auto group : m_waveformGroups)
-		group->NavigateToTimestamp(stamp, duration);
+		group->NavigateToTimestamp(stamp, duration, target);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

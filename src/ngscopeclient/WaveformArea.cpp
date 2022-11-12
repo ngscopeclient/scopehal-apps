@@ -2508,3 +2508,16 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	//All good if we get here
 	return true;
 }
+
+/**
+	@brief Checks if this area is currently displaying a provided stream
+ */
+bool WaveformArea::IsStreamBeingDisplayed(StreamDescriptor target)
+{
+	for(auto& c : m_displayedChannels)
+	{
+		if(c->GetStream() == target)
+			return true;
+	}
+	return false;
+}

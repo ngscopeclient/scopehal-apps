@@ -168,7 +168,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 						m_waveformChanged = true;
 					m_lastSelectedWaveform = wavetime;
 
-					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len);
+					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
 				}
 				/*
 				if(ImGui::BeginPopupContextItem())

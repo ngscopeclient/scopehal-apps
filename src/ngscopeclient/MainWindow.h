@@ -57,7 +57,24 @@ public:
 	: m_group(group)
 	, m_direction(direction)
 	, m_stream(stream)
-	{}
+	{
+		stream.m_channel->AddRef();
+	}
+
+	SplitGroupRequest(const SplitGroupRequest& rhs)
+	: m_group(rhs.m_group)
+	, m_direction(rhs.m_direction)
+	, m_stream(rhs.m_stream)
+	{
+		m_stream.m_channel->AddRef();
+	}
+
+	SplitGroupRequest& operator=(const SplitGroupRequest& /*rhs*/) =delete;
+
+	~SplitGroupRequest()
+	{
+		m_stream.m_channel->Release();
+	}
 
 	std::shared_ptr<WaveformGroup> m_group;
 	ImGuiDir m_direction;
@@ -87,7 +104,10 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
-	void NavigateToTimestamp(int64_t stamp, int64_t duration = 0);
+	void NavigateToTimestamp(
+		int64_t stamp,
+		int64_t duration = 0,
+		StreamDescriptor target = StreamDescriptor(nullptr, 0));
 
 	/**
 		@brief Update the timebase properties dialog

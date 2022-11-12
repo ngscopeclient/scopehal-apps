@@ -867,12 +867,31 @@ void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
 	If the duration is nonzero:
 	* If the entire requested region is visible, center the packet in the visible area of the plot
 	* If the region is too large to see, move the start to the left 10% of the view.
+
+	If a target stream is requested, we should only navigate if the provided stream is displayed somewhere
+	within this group.
  */
-void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration)
+void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration, StreamDescriptor target)
 {
 	//If X axis unit is not fs, don't scroll
 	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
 		return;
+
+	//Check if target is in one of our areas
+	if(target)
+	{
+		bool found = false;
+		for(auto& a : m_areas)
+		{
+			if(a->IsStreamBeingDisplayed(target))
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found)
+			return;
+	}
 
 	//TODO: support markers with other units? how to handle that?
 	//TODO: early out if eye pattern

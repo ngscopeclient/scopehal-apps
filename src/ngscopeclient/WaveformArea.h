@@ -362,6 +362,8 @@ public:
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
 
+	bool IsStreamBeingDisplayed(StreamDescriptor target);
+
 	void AddStream(StreamDescriptor desc);
 
 	bool IsCompatible(StreamDescriptor desc);
