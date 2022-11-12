@@ -489,14 +489,21 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		(m_dragState == DRAG_STATE_NONE) &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
-		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		auto xpos = ImGui::GetMousePos().x;
+
+		//Don't check for clicks outside of the main plot area
+		//(clicks on the Y axis should not be treated as cursor events)
+		if(xpos < (pos.x + m_width - GetYAxisWidth()) )
 		{
-			m_dragState = DRAG_STATE_X_CURSOR1;
-			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+			m_xAxisCursorPositions[0] = XPositionToXAxisUnits(xpos);
+			if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			{
+				m_dragState = DRAG_STATE_X_CURSOR1;
+				m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+			}
+			else
+				m_dragState = DRAG_STATE_X_CURSOR0;
 		}
-		else
-			m_dragState = DRAG_STATE_X_CURSOR0;
 	}
 
 	//Cursor 0 should always be left of cursor 1 (if both are enabled).
@@ -855,9 +862,13 @@ void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
 }
 
 /**
-	@brief Scrolls the group so the specified tiestamp is visible
+	@brief Scrolls the group so the specified timestamp is visible
+
+	If the duration is nonzero:
+	* If the entire requested region is visible, center the packet in the visible area of the plot
+	* If the region is too large to see, move the start to the left 10% of the view.
  */
-void WaveformGroup::NavigateToTimestamp(int64_t timestamp)
+void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration)
 {
 	//If X axis unit is not fs, don't scroll
 	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
@@ -866,5 +877,25 @@ void WaveformGroup::NavigateToTimestamp(int64_t timestamp)
 	//TODO: support markers with other units? how to handle that?
 	//TODO: early out if eye pattern
 
-	m_xAxisOffset = timestamp - 0.5*(m_width / m_pixelsPerXUnit);
+	if(duration > 0)
+	{
+		//If the packet is too long to fit on screen at the current zoom, have it start 10% of the way across
+		int64_t viewWidth = PixelsToXAxisUnits(m_width);
+		if(duration > viewWidth)
+			m_xAxisOffset = timestamp - viewWidth*0.1;
+
+		//Otherwise, the entire packet fits. Center it.
+		else
+			m_xAxisOffset = timestamp - viewWidth/2 + duration/2;
+	}
+
+	//Just center the packet
+	else
+		m_xAxisOffset = timestamp - 0.5*(m_width / m_pixelsPerXUnit);
+
+	//If it's a packet, and we have a single vertical cursor, move it there
+	if( (duration > 0) && (m_xAxisCursorMode == X_CURSOR_SINGLE) )
+		m_xAxisCursorPositions[0] = timestamp;
+
+	ClearPersistence();
 }

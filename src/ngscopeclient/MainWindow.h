@@ -42,6 +42,7 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+#include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
 
 #include "../scopehal/PacketDecoder.h"
@@ -86,7 +87,7 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
-	void NavigateToTimestamp(int64_t stamp);
+	void NavigateToTimestamp(int64_t stamp, int64_t duration = 0);
 
 	/**
 		@brief Update the timebase properties dialog
@@ -213,7 +214,7 @@ protected:
 	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
 
 	///@brief Map of filters to analyzer dialogs
-	std::map<PacketDecoder*, std::shared_ptr<Dialog> > m_protocolAnalyzerDialogs;
+	std::map<PacketDecoder*, std::shared_ptr<ProtocolAnalyzerDialog> > m_protocolAnalyzerDialogs;
 
 	///@brief Waveform groups
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;

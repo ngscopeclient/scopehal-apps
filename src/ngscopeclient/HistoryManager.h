@@ -60,6 +60,8 @@ public:
 
 	///@brief Waveform data
 	std::map<Oscilloscope*, WaveformHistory> m_history;
+
+	void LoadHistoryToSession(Session& session);
 };
 
 /**
@@ -72,6 +74,8 @@ public:
 	~HistoryManager();
 
 	void AddHistory(const std::vector<Oscilloscope*>& scopes);
+
+	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
 
 	void clear()
 	{ m_history.clear(); }

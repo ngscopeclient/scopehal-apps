@@ -418,6 +418,22 @@ void MainWindow::RenderUI()
 		m_needRender = true;
 	}
 
+	//Check if we changed the selected waveform from a protocol analyzer dialog
+	for(auto it : m_protocolAnalyzerDialogs)
+	{
+		if(it.second->PollForSelectionChanges())
+		{
+			auto tstamp = it.second->GetSelectedWaveformTimestamp();
+			auto& hist = m_session.GetHistory();
+			if(m_historyDialog)
+				m_historyDialog->SelectTimestamp(tstamp);
+
+			auto hpt = hist.GetHistory(tstamp);
+			if(hpt)
+				hpt->LoadHistoryToSession(m_session);
+		}
+	}
+
 	if(m_needRender)
 		g_rerenderRequestedEvent.Signal();
 
@@ -735,10 +751,10 @@ void MainWindow::DockingArea()
 /**
 	@brief Scrolls all waveform groups so that the specified timestamp is visible
  */
-void MainWindow::NavigateToTimestamp(int64_t stamp)
+void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration)
 {
 	for(auto group : m_waveformGroups)
-		group->NavigateToTimestamp(stamp);
+		group->NavigateToTimestamp(stamp, duration);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

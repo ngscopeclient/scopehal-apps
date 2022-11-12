@@ -72,6 +72,49 @@ HistoryPoint::~HistoryPoint()
 	}
 }
 
+/**
+	@brief Update all instruments in the specified session with our saved historical data
+ */
+void HistoryPoint::LoadHistoryToSession(Session& session)
+{
+	//We don't want to keep capturing if we're trying to look at a historical waveform. That would be a bit silly.
+	session.StopTrigger();
+
+	//Go over each scope in the session and load the relevant history
+	//We do this rather than just looping over the scopes in the history so that we can handle missing data.
+	auto scopes = session.GetScopes();
+	for(auto scope : scopes)
+	{
+		//Scope is not in history! Must have been added recently
+		//Set all channels' data to null
+		if(m_history.find(scope) == m_history.end() )
+		{
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetChannel(i);
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+				{
+					chan->Detach(j);
+					chan->SetData(nullptr, j);
+				}
+			}
+		}
+
+		//Scope is in history. Load our saved waveform data
+		else
+		{
+			LogTrace("Loading saved history\n");
+			auto hist = m_history[scope];
+			for(auto it : hist)
+			{
+				auto stream = it.first;
+				stream.m_channel->Detach(stream.m_stream);
+				stream.m_channel->SetData(it.second, stream.m_stream);
+			}
+		}
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -163,4 +206,18 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 		if(!deletedSomething)
 			break;
 	}
+}
+
+/**
+	@brief Gets the history point for a specific timestamp
+ */
+shared_ptr<HistoryPoint> HistoryManager::GetHistory(TimePoint t)
+{
+	for(auto it : m_history)
+	{
+		if(it->m_time == t)
+			return it;
+	}
+
+	return nullptr;
 }

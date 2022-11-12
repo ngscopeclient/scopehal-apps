@@ -50,7 +50,8 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_session(session)
 	, m_parent(wnd)
 	, m_rowHeight(0)
-	, m_selectionChanged(false)
+	, m_waveformChanged(false)
+	, m_lastSelectedWaveform(0, 0)
 	, m_selectedPacket(nullptr)
 	, m_dataFormat(FORMAT_HEX)
 {
@@ -161,7 +162,13 @@ bool ProtocolAnalyzerDialog::DoRender()
 				{
 					m_selectedPacket = pack;
 					rowIsSelected = true;
-					m_selectionChanged = true;
+
+					//See if a new waveform was selected
+					if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
+						m_waveformChanged = true;
+					m_lastSelectedWaveform = wavetime;
+
+					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len);
 				}
 				/*
 				if(ImGui::BeginPopupContextItem())

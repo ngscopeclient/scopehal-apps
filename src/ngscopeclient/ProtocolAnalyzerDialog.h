@@ -53,12 +53,20 @@ public:
 
 	virtual bool DoRender();
 
+	/**
+		@brief Returns true if a new waveform was selected this frame.
+
+		Returns false if only a new packet was selected, but within the same waveform
+	 */
 	bool PollForSelectionChanges()
 	{
-		bool changed = m_selectionChanged;
-		m_selectionChanged = false;
+		bool changed = m_waveformChanged;
+		m_waveformChanged = false;
 		return changed;
 	}
+
+	TimePoint GetSelectedWaveformTimestamp()
+	{ return m_lastSelectedWaveform; }
 
 	PacketDecoder* GetFilter()
 	{ return m_filter; }
@@ -72,8 +80,11 @@ protected:
 	///@brief Height of a row in the dialog
 	float m_rowHeight;
 
-	///@brief True if a new row in the dialog was selected this frame
-	bool m_selectionChanged;
+	///@brief True if a new waveform in the dialog was selected this frame
+	bool m_waveformChanged;
+
+	///@brief Timestamp of the previously selected waveform
+	TimePoint m_lastSelectedWaveform;
 
 	///@brief Currently selected packet
 	Packet* m_selectedPacket;
