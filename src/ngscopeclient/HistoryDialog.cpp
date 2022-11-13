@@ -315,3 +315,14 @@ void HistoryDialog::SelectTimestamp(TimePoint t)
 {
 	m_selectedPoint = m_mgr.GetHistory(t);
 }
+
+/**
+	@brief Gets the timestamp of our selection
+ */
+TimePoint HistoryDialog::GetSelectedPoint()
+{
+	if(m_selectedPoint)
+		return m_selectedPoint->m_time;
+	else
+		return TimePoint(0, 0);
+}

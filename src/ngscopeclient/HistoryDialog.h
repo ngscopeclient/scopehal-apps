@@ -62,6 +62,8 @@ public:
 	void UpdateSelectionToLatest();
 	void SelectTimestamp(TimePoint t);
 
+	TimePoint GetSelectedPoint();
+
 protected:
 	HistoryManager& m_mgr;
 	Session& m_session;

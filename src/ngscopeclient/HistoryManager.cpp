@@ -209,6 +209,17 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 }
 
 /**
+	@brief Gets the timestamp of the most recent waveform
+ */
+TimePoint HistoryManager::GetMostRecentPoint()
+{
+	if(m_history.empty())
+		return TimePoint(0, 0);
+	else
+		return (*m_history.rbegin())->m_time;
+}
+
+/**
 	@brief Gets the history point for a specific timestamp
  */
 shared_ptr<HistoryPoint> HistoryManager::GetHistory(TimePoint t)

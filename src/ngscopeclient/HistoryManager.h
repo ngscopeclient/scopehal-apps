@@ -77,6 +77,8 @@ public:
 
 	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
 
+	TimePoint GetMostRecentPoint();
+
 	void clear()
 	{ m_history.clear(); }
 

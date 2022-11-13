@@ -104,6 +104,8 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	void OnCursorMoved(int64_t offset);
+
 	void NavigateToTimestamp(
 		int64_t stamp,
 		int64_t duration = 0,

@@ -374,6 +374,11 @@ void MainWindow::RenderUI()
 	{
 		if(m_historyDialog != nullptr)
 			m_historyDialog->UpdateSelectionToLatest();
+
+		//Tell protocol analyzer dialogs a new waveform arrived
+		auto t = m_session.GetHistory().GetMostRecentPoint();
+		for(auto it : m_protocolAnalyzerDialogs)
+			it.second->OnWaveformLoaded(t);
 	}
 
 	//Menu for main window
@@ -415,6 +420,11 @@ void MainWindow::RenderUI()
 	{
 		LogTrace("history selection changed\n");
 		m_historyDialog->LoadHistoryFromSelection(m_session);
+
+		auto t = m_historyDialog->GetSelectedPoint();
+		for(auto it : m_protocolAnalyzerDialogs)
+			it.second->OnWaveformLoaded(t);
+
 		m_needRender = true;
 	}
 
@@ -430,7 +440,10 @@ void MainWindow::RenderUI()
 
 			auto hpt = hist.GetHistory(tstamp);
 			if(hpt)
+			{
 				hpt->LoadHistoryToSession(m_session);
+				m_needRender = true;
+			}
 		}
 	}
 
@@ -1212,4 +1225,13 @@ void MainWindow::OnFilterReconfigured(Filter* f)
 
 	//Rerun the filter and request a redraw
 	SetNeedRender();
+}
+
+/**
+	@brief Called when a cursor is moved, so protocol analyzers can move highlights as needed
+ */
+void MainWindow::OnCursorMoved(int64_t offset)
+{
+	for(auto it : m_protocolAnalyzerDialogs)
+		it.second->OnCursorMoved(offset);
 }

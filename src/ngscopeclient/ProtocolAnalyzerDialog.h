@@ -71,6 +71,14 @@ public:
 	PacketDecoder* GetFilter()
 	{ return m_filter; }
 
+	/**
+		@brief Called when a new waveform arrives
+	 */
+	void OnWaveformLoaded(TimePoint t)
+	{ m_lastSelectedWaveform = t; }
+
+	void OnCursorMoved(int64_t offset);
+
 protected:
 	PacketDecoder* m_filter;
 	std::shared_ptr<PacketManager> m_mgr;
@@ -96,6 +104,9 @@ protected:
 		FORMAT_ASCII,
 		FORMAT_HEXDUMP
 	} m_dataFormat;
+
+	///@brief True if the selected packet should be scrolled to
+	bool m_needToScrollToSelectedPacket;
 };
 
 #endif

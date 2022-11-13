@@ -54,6 +54,7 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_lastSelectedWaveform(0, 0)
 	, m_selectedPacket(nullptr)
 	, m_dataFormat(FORMAT_HEX)
+	, m_needToScrollToSelectedPacket(false)
 {
 	//Hold a reference open to the filter so it doesn't disappear on us
 	m_filter->AddRef();
@@ -135,11 +136,16 @@ bool ProtocolAnalyzerDialog::DoRender()
 		for(auto wavetime : times)
 		{
 			//TODO: add some kind of marker to indicate gaps between waveforms (if we have >1)?
+			ImGui::PushID(wavetime.first);
+			ImGui::PushID(wavetime.second);
 
 			auto& wpackets = packets[wavetime];
 			for(auto pack : wpackets)
 			{
-				ImGui::PushID(pack);
+				//Instead of using packet pointer as identifier (can change if filter graph re-runs for
+				//unrelated reasons), use timestamp instead.
+				ImGui::PushID(pack->m_offset);
+
 				ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
 
 				//Set up colors for the packet
@@ -178,6 +184,13 @@ bool ProtocolAnalyzerDialog::DoRender()
 				}
 				*/
 
+				//Update scroll position if requested
+				if(rowIsSelected && m_needToScrollToSelectedPacket)
+				{
+					m_needToScrollToSelectedPacket = false;
+					ImGui::SetScrollHereY();
+				}
+
 				//Headers
 				for(size_t i=0; i<cols.size(); i++)
 				{
@@ -188,7 +201,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//Data
 				if(m_filter->GetShowDataColumn())
 				{
-					size_t bytesPerLine;
+					size_t bytesPerLine = 1;
 					switch(m_dataFormat)
 					{
 						case FORMAT_HEX:
@@ -305,6 +318,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 				ImGui::PopStyleColor();
 				ImGui::PopID();
 			}
+
+			ImGui::PopID();
+			ImGui::PopID();
 		}
 
 		ImGui::EndTable();
@@ -314,3 +330,35 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+/**
+	@brief Notifies the dialog that a cursor has been moved
+ */
+void ProtocolAnalyzerDialog::OnCursorMoved(int64_t offset)
+{
+	//If nothing is selected, use our current waveform timestamp as a reference
+	if(m_lastSelectedWaveform == TimePoint(0, 0))
+	{
+		auto data = m_filter->GetData(0);
+		m_lastSelectedWaveform = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
+	}
+
+	auto& allpackets = m_mgr->GetPackets();
+	auto it = allpackets.find(m_lastSelectedWaveform);
+	if(it == allpackets.end())
+		return;
+	auto packets = it->second;
+
+	//TODO: binary search vs linear
+	for(auto p : packets)
+	{
+		if(offset > (p->m_offset + p->m_len) )
+			continue;
+		if(p->m_offset > offset)
+			break;
+
+		m_selectedPacket = p;
+		m_needToScrollToSelectedPacket = true;
+		break;
+	}
+}
