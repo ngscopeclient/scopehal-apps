@@ -425,6 +425,7 @@ void MainWindow::RenderUI()
 		for(auto it : m_protocolAnalyzerDialogs)
 			it.second->OnWaveformLoaded(t);
 
+		m_session.RefreshAllFiltersNonblocking();
 		m_needRender = true;
 	}
 
@@ -444,6 +445,7 @@ void MainWindow::RenderUI()
 				hpt->LoadHistoryToSession(m_session);
 				m_needRender = true;
 			}
+			m_session.RefreshAllFiltersNonblocking();
 		}
 	}
 
@@ -1041,9 +1043,7 @@ Filter* MainWindow::CreateFilter(
 	f->SetDefaultName();
 
 	//Re-run the filter graph so we have an initial waveform to look at
-	//Then force a re-render
-	m_session.RefreshAllFilters();
-	SetNeedRender();
+	m_session.RefreshAllFiltersNonblocking();
 
 	//Find a home for each of its streams
 	for(size_t i=0; i<f->GetStreamCount(); i++)
@@ -1217,14 +1217,11 @@ void MainWindow::OnFilterReconfigured(Filter* f)
 	f->ClearSweeps();
 
 	//Re-run the filter
-	m_session.RefreshAllFilters();
+	m_session.RefreshAllFiltersNonblocking();
 
 	//Clear persistence of any waveform areas showing this waveform
 	for(auto g : m_waveformGroups)
 		g->ClearPersistenceOfChannel(f);
-
-	//Rerun the filter and request a redraw
-	SetNeedRender();
 }
 
 /**

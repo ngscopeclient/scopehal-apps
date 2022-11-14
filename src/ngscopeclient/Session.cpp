@@ -45,6 +45,8 @@
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
+extern Event g_refilterRequestedEvent;
+extern Event g_refilterDoneEvent;
 
 extern std::shared_mutex g_vulkanActivityMutex;
 
@@ -682,7 +684,7 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	}
 
 	//If a re-render operation completed, tone map everything again
-	if(g_rerenderDoneEvent.Peek() && !hadNewWaveforms)
+	if((g_rerenderDoneEvent.Peek() || g_refilterDoneEvent.Peek()) && !hadNewWaveforms)
 		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
 
 	return hadNewWaveforms;
@@ -699,6 +701,14 @@ size_t Session::GetFilterCount()
 		filters = Filter::GetAllInstances();
 	}
 	return filters.size();
+}
+
+/**
+	@brief Queues a request to refresh filters the next time we poll stuff
+ */
+void Session::RefreshAllFiltersNonblocking()
+{
+	g_refilterRequestedEvent.Signal();
 }
 
 void Session::RefreshAllFilters()
