@@ -1603,7 +1603,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 			format.c_str());
 	}
 
-	cap->MarkSamplesModifiedFromCpu();
+	cap->MarkModifiedFromCpu();
 
 	#ifdef _WIN32
 		delete[] buf;
