@@ -124,13 +124,12 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/src/glscopeclient/icons)
 
-file(GLOB SPIRV_SHADERS "${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders/*")
+get_target_property(SPIRV_SHADERS protocolshaders SOURCES)
 add_custom_target(
 	protoshaders
-	COMMENT "Copying SPIR-V shaders..."
+	COMMENT "Copying protocol shaders..."
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPIRV_SHADERS} ${CMAKE_BINARY_DIR}/src/glscopeclient/shaders
 	)
-
 # can't copy protocol shaders until they've been compiled
 # also rely on shaders target to make sure the dest dir exists
 add_dependencies(protoshaders
