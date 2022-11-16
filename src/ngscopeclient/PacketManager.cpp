@@ -30,65 +30,68 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of HistoryManager
+	@brief Implementation of PacketManager
  */
-#ifndef HistoryManager_h
-#define HistoryManager_h
+#include "ngscopeclient.h"
+#include "PacketManager.h"
 
-#include "Marker.h"
+using namespace std;
 
-//Waveform history for a single instrument
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+PacketManager::PacketManager(PacketDecoder* pd)
+	: m_filter(pd)
+{
+
+}
+
+PacketManager::~PacketManager()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Waveform data processing
 
 /**
-	@brief A single point of waveform history
+	@brief Handle newly arrived waveform data (may be a change to parameters or a freshly arrived waveform)
  */
-class HistoryPoint
+void PacketManager::Update()
 {
-public:
-	HistoryPoint();
-	~HistoryPoint();
+	//Do nothing if there's no waveform to get a timestamp from
+	auto data = m_filter->GetData(0);
+	if(!data)
+		return;
+	TimePoint time(data->m_startTimestamp, data->m_startFemtoseconds);
 
-	///@brief Timestamp of the point
-	TimePoint m_time;
+	//If waveform is unchanged, no action needed
+	WaveformCacheKey key(data);
+	if(key == m_cachekey)
+		return;
 
-	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
-	bool m_pinned;
+	//If we get here, waveform changed. Update cache key
+	m_cachekey = key;
 
-	///@brief Free-form text nickname for this acquisition (may be blank)
-	std::string m_nickname;
+	//Remove any old history we might have had from this timestamp
+	RemoveHistoryFrom(time);
 
-	///@brief Waveform data
-	std::map<Oscilloscope*, WaveformHistory> m_history;
-
-	void LoadHistoryToSession(Session& session);
-};
+	//Copy the new packets and detach them so the filter doesn't delete them
+	{
+		lock_guard<mutex> lock(m_mutex);
+		m_packets[time] = m_filter->GetPackets();
+	}
+	m_filter->DetachPackets();
+}
 
 /**
-	@brief Keeps track of recently acquired waveforms
+	@brief Removes all history from the specified timestamp
  */
-class HistoryManager
+void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 {
-public:
-	HistoryManager(Session& session);
-	~HistoryManager();
+	lock_guard<mutex> lock(m_mutex);
 
-	void AddHistory(const std::vector<Oscilloscope*>& scopes);
-
-	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
-
-	TimePoint GetMostRecentPoint();
-
-	void clear()
-	{ m_history.clear(); }
-
-	std::list<std::shared_ptr<HistoryPoint>> m_history;
-
-	///@brief has to be an int for imgui compatibility
-	int m_maxDepth;
-
-protected:
-	Session& m_session;
-};
-
-#endif
+	auto& packets = m_packets[timestamp];
+	for(auto p : packets)
+		delete p;
+	m_packets.erase(timestamp);
+}

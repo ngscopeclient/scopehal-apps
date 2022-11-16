@@ -2235,7 +2235,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		tooltip +=
 			"Drag to move this waveform to another plot.\n"
 			"Double click to view/edit channel properties.\n"
-			"Right click for display settings menu.";
+			"Right click for more options.";
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
@@ -2507,4 +2507,17 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 	//All good if we get here
 	return true;
+}
+
+/**
+	@brief Checks if this area is currently displaying a provided stream
+ */
+bool WaveformArea::IsStreamBeingDisplayed(StreamDescriptor target)
+{
+	for(auto& c : m_displayedChannels)
+	{
+		if(c->GetStream() == target)
+			return true;
+	}
+	return false;
 }

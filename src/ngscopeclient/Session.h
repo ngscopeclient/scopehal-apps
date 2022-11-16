@@ -41,6 +41,7 @@ class DisplayedChannel;
 
 #include "../xptools/HzClock.h"
 #include "HistoryManager.h"
+#include "PacketManager.h"
 #include "PreferenceManager.h"
 #include "Marker.h"
 
@@ -174,6 +175,7 @@ public:
 	void DownloadWaveforms();
 	bool CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);
 	void RefreshAllFilters();
+	void RefreshAllFiltersNonblocking();
 
 	void RenderWaveformTextures(
 		vk::raii::CommandBuffer& cmdbuf,
@@ -191,6 +193,16 @@ public:
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
+	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
+
+	/**
+		@brief Returns a pointer to the existing packet manager for a protocol decode filter
+	 */
+	std::shared_ptr<PacketManager> GetPacketManager(PacketDecoder* filter)
+	{
+		std::lock_guard<std::mutex> lock(m_packetMgrMutex);
+		return m_packetmgrs[filter];
+	}
 
 	void ApplyPreferences(Oscilloscope* scope);
 
@@ -261,6 +273,7 @@ public:
 	void StartWaveformThreadIfNeeded();
 
 protected:
+	void UpdatePacketManagers(const std::set<Filter*>& filters);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;
@@ -333,6 +346,12 @@ protected:
 
 	///@brief Historical waveform data
 	HistoryManager m_history;
+
+	///@brief Mutex for controlling access to m_packetmgrs
+	std::mutex m_packetMgrMutex;
+
+	///@brief Historical packet data from filters
+	std::map<PacketDecoder*, std::shared_ptr<PacketManager> > m_packetmgrs;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Markers

@@ -42,6 +42,9 @@ using namespace std;
 Event g_rerenderRequestedEvent;
 Event g_rerenderDoneEvent;
 
+Event g_refilterRequestedEvent;
+Event g_refilterDoneEvent;
+
 Event g_waveformReadyEvent;
 Event g_waveformProcessedEvent;
 
@@ -94,6 +97,16 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 
 	while(!*shuttingDown)
 	{
+		//If re-running the filter graph was requested, do that (and re-render)
+		if(g_refilterRequestedEvent.Peek())
+		{
+			LogTrace("WaveformThread: re-running filter graph and re-rendering\n");
+			session->RefreshAllFilters();
+			RenderAllWaveforms(cmdbuf, session, queue);
+			g_refilterDoneEvent.Signal();
+			continue;
+		}
+
 		//If re-rendering was requested due to a window resize etc, do that.
 		if(g_rerenderRequestedEvent.Peek())
 		{

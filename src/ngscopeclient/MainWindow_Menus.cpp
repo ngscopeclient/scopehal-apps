@@ -54,6 +54,7 @@
 #include "MultimeterDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PreferenceDialog.h"
+#include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 
@@ -707,6 +708,7 @@ void MainWindow::WindowMenu()
 {
 	if(ImGui::BeginMenu("Window"))
 	{
+		WindowAnalyzerMenu();
 		WindowGeneratorMenu();
 		WindowMultimeterMenu();
 		WindowSCPIConsoleMenu();
@@ -758,6 +760,41 @@ void MainWindow::WindowMenu()
 		}
 		if(hasGraphEditor)
 			ImGui::EndDisabled();
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Window | Analyzer menu
+
+	This menu is used for displaying protocol analyzers
+ */
+void MainWindow::WindowAnalyzerMenu()
+{
+	if(ImGui::BeginMenu("Analyzer"))
+	{
+		//Make a list of all filters
+		auto instances = Filter::GetAllInstances();
+		for(auto f : instances)
+		{
+			//Ignore anything that isn't a protocol decoder
+			auto pd = dynamic_cast<PacketDecoder*>(f);
+			if(!pd)
+				continue;
+
+			//Do we already have a dialog open for it? If so, don't make another
+			if(m_protocolAnalyzerDialogs.find(pd) != m_protocolAnalyzerDialogs.end())
+				continue;
+
+			//Add it to the menu
+			if(ImGui::MenuItem(pd->GetDisplayName().c_str()))
+			{
+				auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+				m_protocolAnalyzerDialogs[pd] = dlg;
+				AddDialog(dlg);
+			}
+		}
 
 		ImGui::EndMenu();
 	}

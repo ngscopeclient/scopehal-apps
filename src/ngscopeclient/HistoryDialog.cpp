@@ -290,47 +290,13 @@ bool HistoryDialog::DoRender()
 /**
 	@brief Applies waveforms from the currently selected history row to the scopes
 
-	This is done at the very of the frame following the actual selection change, to avoid inconsistent UI state
+	This is done at the very end of the frame following the actual selection change, to avoid inconsistent UI state
 	from making the change mid-frame.
  */
 void HistoryDialog::LoadHistoryFromSelection(Session& session)
 {
-	//We don't want to keep capturing if we're trying to look at a historical waveform. That would be a bit silly.
-	session.StopTrigger();
-
-	//Go over each scope in the session and load the relevant history
-	//We do this rather than just looping over the scopes in the history so that we can handle missing data.
-	auto scopes = session.GetScopes();
-	for(auto scope : scopes)
-	{
-		//Scope is not in history! Must have been added recently
-		//Set all channels' data to null
-		if(m_selectedPoint->m_history.find(scope) == m_selectedPoint->m_history.end() )
-		{
-			for(size_t i=0; i<scope->GetChannelCount(); i++)
-			{
-				auto chan = scope->GetChannel(i);
-				for(size_t j=0; j<chan->GetStreamCount(); j++)
-				{
-					chan->Detach(j);
-					chan->SetData(nullptr, j);
-				}
-			}
-		}
-
-		//Scope is in history. Load our saved waveform data
-		else
-		{
-			LogTrace("Loading saved history\n");
-			auto hist = m_selectedPoint->m_history[scope];
-			for(auto it : hist)
-			{
-				auto stream = it.first;
-				stream.m_channel->Detach(stream.m_stream);
-				stream.m_channel->SetData(it.second, stream.m_stream);
-			}
-		}
-	}
+	if(m_selectedPoint)
+		m_selectedPoint->LoadHistoryToSession(session);
 }
 
 /**
@@ -340,4 +306,23 @@ void HistoryDialog::UpdateSelectionToLatest()
 {
 	LogTrace("Selecting most recent waveform\n");
 	m_selectedPoint = *m_mgr.m_history.rbegin();
+}
+
+/**
+	@brief Selects the row with a specified timestamp
+ */
+void HistoryDialog::SelectTimestamp(TimePoint t)
+{
+	m_selectedPoint = m_mgr.GetHistory(t);
+}
+
+/**
+	@brief Gets the timestamp of our selection
+ */
+TimePoint HistoryDialog::GetSelectedPoint()
+{
+	if(m_selectedPoint)
+		return m_selectedPoint->m_time;
+	else
+		return TimePoint(0, 0);
 }

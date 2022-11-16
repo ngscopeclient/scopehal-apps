@@ -60,6 +60,9 @@ public:
 
 	void LoadHistoryFromSelection(Session& session);
 	void UpdateSelectionToLatest();
+	void SelectTimestamp(TimePoint t);
+
+	TimePoint GetSelectedPoint();
 
 protected:
 	HistoryManager& m_mgr;

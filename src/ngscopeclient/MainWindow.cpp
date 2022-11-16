@@ -53,6 +53,7 @@
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MultimeterDialog.h"
+#include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "TimebasePropertiesDialog.h"
@@ -373,6 +374,11 @@ void MainWindow::RenderUI()
 	{
 		if(m_historyDialog != nullptr)
 			m_historyDialog->UpdateSelectionToLatest();
+
+		//Tell protocol analyzer dialogs a new waveform arrived
+		auto t = m_session.GetHistory().GetMostRecentPoint();
+		for(auto it : m_protocolAnalyzerDialogs)
+			it.second->OnWaveformLoaded(t);
 	}
 
 	//Menu for main window
@@ -414,7 +420,33 @@ void MainWindow::RenderUI()
 	{
 		LogTrace("history selection changed\n");
 		m_historyDialog->LoadHistoryFromSelection(m_session);
+
+		auto t = m_historyDialog->GetSelectedPoint();
+		for(auto it : m_protocolAnalyzerDialogs)
+			it.second->OnWaveformLoaded(t);
+
+		m_session.RefreshAllFiltersNonblocking();
 		m_needRender = true;
+	}
+
+	//Check if we changed the selected waveform from a protocol analyzer dialog
+	for(auto it : m_protocolAnalyzerDialogs)
+	{
+		if(it.second->PollForSelectionChanges())
+		{
+			auto tstamp = it.second->GetSelectedWaveformTimestamp();
+			auto& hist = m_session.GetHistory();
+			if(m_historyDialog)
+				m_historyDialog->SelectTimestamp(tstamp);
+
+			auto hpt = hist.GetHistory(tstamp);
+			if(hpt)
+			{
+				hpt->LoadHistoryToSession(m_session);
+				m_needRender = true;
+			}
+			m_session.RefreshAllFiltersNonblocking();
+		}
 	}
 
 	if(m_needRender)
@@ -572,20 +604,30 @@ void MainWindow::ToolbarButtons()
 
 void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 {
-	//Multimeter dialogs are stored in a separate list
+	//Handle multi-instance dialogs
 	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
 	if(meterDlg)
 		m_meterDialogs.erase(meterDlg->GetMeter());
 
-	//Function generator dialogs are stored in a separate list
 	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
 	if(genDlg)
 		m_generatorDialogs.erase(genDlg->GetGenerator());
 
-	//RF generator dialogs are stored in a separate list
 	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
+	if(conDlg)
+		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
+
+	auto chanDlg = dynamic_pointer_cast<ChannelPropertiesDialog>(dlg);
+	if(chanDlg)
+		m_channelPropertiesDialogs.erase(chanDlg->GetChannel());
+
+	auto protoDlg = dynamic_pointer_cast<ProtocolAnalyzerDialog>(dlg);
+	if(protoDlg)
+		m_protocolAnalyzerDialogs.erase(protoDlg->GetFilter());
 
 	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
@@ -599,14 +641,7 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(m_graphEditor == dlg)
 		m_graphEditor = nullptr;
 
-	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
-	if(conDlg)
-		m_scpiConsoleDialogs.erase(conDlg->GetInstrument());
-
-	auto chanDlg = dynamic_pointer_cast<ChannelPropertiesDialog>(dlg);
-	if(chanDlg)
-		m_channelPropertiesDialogs.erase(chanDlg->GetChannel());
-
+	//Remove the general list
 	m_dialogs.erase(dlg);
 }
 
@@ -642,7 +677,7 @@ void MainWindow::DockingArea()
 	{
 		LogTrace("Processing split request\n");
 
-		for(auto request : m_splitRequests)
+		for(auto& request : m_splitRequests)
 		{
 			//Get the window for the group
 			auto window = ImGui::FindWindowByName(request.m_group->GetTitle().c_str());
@@ -731,10 +766,10 @@ void MainWindow::DockingArea()
 /**
 	@brief Scrolls all waveform groups so that the specified timestamp is visible
  */
-void MainWindow::NavigateToTimestamp(int64_t stamp)
+void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDescriptor target)
 {
 	for(auto group : m_waveformGroups)
-		group->NavigateToTimestamp(stamp);
+		group->NavigateToTimestamp(stamp, duration, target);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1008,9 +1043,7 @@ Filter* MainWindow::CreateFilter(
 	f->SetDefaultName();
 
 	//Re-run the filter graph so we have an initial waveform to look at
-	//Then force a re-render
-	m_session.RefreshAllFilters();
-	SetNeedRender();
+	m_session.RefreshAllFiltersNonblocking();
 
 	//Find a home for each of its streams
 	for(size_t i=0; i<f->GetStreamCount(); i++)
@@ -1021,6 +1054,17 @@ Filter* MainWindow::CreateFilter(
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[f] = dlg;
+		AddDialog(dlg);
+	}
+
+	//Create and show protocol analyzer dialog
+	auto pd = dynamic_cast<PacketDecoder*>(f);
+	if(pd)
+	{
+		m_session.AddPacketFilter(pd);
+
+		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}
 
@@ -1173,12 +1217,18 @@ void MainWindow::OnFilterReconfigured(Filter* f)
 	f->ClearSweeps();
 
 	//Re-run the filter
-	m_session.RefreshAllFilters();
+	m_session.RefreshAllFiltersNonblocking();
 
 	//Clear persistence of any waveform areas showing this waveform
 	for(auto g : m_waveformGroups)
 		g->ClearPersistenceOfChannel(f);
+}
 
-	//Rerun the filter and request a redraw
-	SetNeedRender();
+/**
+	@brief Called when a cursor is moved, so protocol analyzers can move highlights as needed
+ */
+void MainWindow::OnCursorMoved(int64_t offset)
+{
+	for(auto it : m_protocolAnalyzerDialogs)
+		it.second->OnCursorMoved(offset);
 }

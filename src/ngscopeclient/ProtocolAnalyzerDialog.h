@@ -30,65 +30,83 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of HistoryManager
+	@brief Declaration of ProtocolAnalyzerDialog
  */
-#ifndef HistoryManager_h
-#define HistoryManager_h
+#ifndef ProtocolAnalyzerDialog_h
+#define ProtocolAnalyzerDialog_h
 
-#include "Marker.h"
+#include "Dialog.h"
+#include "Session.h"
 
-//Waveform history for a single instrument
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
+#include "../scopehal/PacketDecoder.h"
+
+class MainWindow;
 
 /**
-	@brief A single point of waveform history
+	@brief UI for the history system
  */
-class HistoryPoint
+class ProtocolAnalyzerDialog : public Dialog
 {
 public:
-	HistoryPoint();
-	~HistoryPoint();
+	ProtocolAnalyzerDialog(PacketDecoder* filter, std::shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd);
+	virtual ~ProtocolAnalyzerDialog();
 
-	///@brief Timestamp of the point
-	TimePoint m_time;
+	virtual bool DoRender();
 
-	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
-	bool m_pinned;
+	/**
+		@brief Returns true if a new waveform was selected this frame.
 
-	///@brief Free-form text nickname for this acquisition (may be blank)
-	std::string m_nickname;
+		Returns false if only a new packet was selected, but within the same waveform
+	 */
+	bool PollForSelectionChanges()
+	{
+		bool changed = m_waveformChanged;
+		m_waveformChanged = false;
+		return changed;
+	}
 
-	///@brief Waveform data
-	std::map<Oscilloscope*, WaveformHistory> m_history;
+	TimePoint GetSelectedWaveformTimestamp()
+	{ return m_lastSelectedWaveform; }
 
-	void LoadHistoryToSession(Session& session);
-};
+	PacketDecoder* GetFilter()
+	{ return m_filter; }
 
-/**
-	@brief Keeps track of recently acquired waveforms
- */
-class HistoryManager
-{
-public:
-	HistoryManager(Session& session);
-	~HistoryManager();
+	/**
+		@brief Called when a new waveform arrives
+	 */
+	void OnWaveformLoaded(TimePoint t)
+	{ m_lastSelectedWaveform = t; }
 
-	void AddHistory(const std::vector<Oscilloscope*>& scopes);
-
-	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
-
-	TimePoint GetMostRecentPoint();
-
-	void clear()
-	{ m_history.clear(); }
-
-	std::list<std::shared_ptr<HistoryPoint>> m_history;
-
-	///@brief has to be an int for imgui compatibility
-	int m_maxDepth;
+	void OnCursorMoved(int64_t offset);
 
 protected:
+	PacketDecoder* m_filter;
+	std::shared_ptr<PacketManager> m_mgr;
 	Session& m_session;
+	MainWindow& m_parent;
+
+	///@brief Height of a row in the dialog
+	float m_rowHeight;
+
+	///@brief True if a new waveform in the dialog was selected this frame
+	bool m_waveformChanged;
+
+	///@brief Timestamp of the previously selected waveform
+	TimePoint m_lastSelectedWaveform;
+
+	///@brief Currently selected packet
+	Packet* m_selectedPacket;
+
+	///@brief Output data format
+	enum
+	{
+		FORMAT_HEX,
+		FORMAT_ASCII,
+		FORMAT_HEXDUMP
+	} m_dataFormat;
+
+	///@brief True if the selected packet should be scrolled to
+	bool m_needToScrollToSelectedPacket;
 };
 
 #endif

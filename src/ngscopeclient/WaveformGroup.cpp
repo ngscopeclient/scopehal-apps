@@ -255,11 +255,75 @@ void WaveformGroup::DoCursorReadouts()
 					auto stream = a->GetStream(i);
 					auto sname = stream.GetName();
 
-					//Fetch the values for each cursor
+					//Prepare to pretty print
 					auto data = stream.GetData();
-					bool zhold = (stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE) ? true : false;
-					auto v1 = GetValueAtTime(data, m_xAxisCursorPositions[0], zhold);
-					auto v2 = GetValueAtTime(data, m_xAxisCursorPositions[1], zhold);
+					string sv1 = "(no data)";
+					string sv2 = "(no data)";
+					string svd = "(no data)";
+
+					switch(stream.GetType())
+					{
+						//Analog path
+						case Stream::STREAM_TYPE_ANALOG:
+							{
+								bool zhold = (stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE) ? true : false;
+								auto v1 = GetValueAtTime(data, m_xAxisCursorPositions[0], zhold);
+								auto v2 = GetValueAtTime(data, m_xAxisCursorPositions[1], zhold);
+								if(v1)
+									sv1 = stream.GetYAxisUnits().PrettyPrint(v1.value());
+								if(v2)
+									sv2 = stream.GetYAxisUnits().PrettyPrint(v2.value());
+								if(v1 && v2)
+									svd = stream.GetYAxisUnits().PrettyPrint(v2.value() - v1.value());
+							}
+						break;
+
+						//Digital path
+						case Stream::STREAM_TYPE_DIGITAL:
+							{
+								auto v1 = GetDigitalValueAtTime(data, m_xAxisCursorPositions[0]);
+								auto v2 = GetDigitalValueAtTime(data, m_xAxisCursorPositions[1]);
+								if(v1)
+									sv1 = to_string(v1.value());
+								if(v2)
+									sv2 = to_string(v2.value());
+
+								svd = "";
+							}
+						break;
+
+						//TODO
+						case Stream::STREAM_TYPE_DIGITAL_BUS:
+							sv1 = "(unimplemented)";
+							sv2 = "(unimplemented)";
+							svd = "(unimplemented)";
+							break;
+
+						//Cursor readout on density plots makes no sense
+						//TODO: read out eye height or something for eyes?
+						case Stream::STREAM_TYPE_EYE:
+						case Stream::STREAM_TYPE_SPECTROGRAM:
+						case Stream::STREAM_TYPE_WATERFALL:
+						case Stream::STREAM_TYPE_TRIGGER:
+						case Stream::STREAM_TYPE_UNDEFINED:
+							sv1 = "";
+							sv2 = "";
+							svd = "";
+							break;
+
+						//Read out protocol decode stuff
+						case Stream::STREAM_TYPE_PROTOCOL:
+							{
+								auto v1 = GetProtocolValueAtTime(data, m_xAxisCursorPositions[0]);
+								auto v2 = GetProtocolValueAtTime(data, m_xAxisCursorPositions[1]);
+								if(v1)
+									sv1 = v1.value();
+								if(v2)
+									sv2 = v2.value();
+								svd = "";
+							}
+							break;
+					}
 
 					ImGui::PushID(sname.c_str());
 					ImGui::TableNextRow(ImGuiTableRowFlags_None, 0);
@@ -273,26 +337,17 @@ void WaveformGroup::DoCursorReadouts()
 
 					//Cursor 0 value
 					ImGui::TableSetColumnIndex(1);
-					if(!v1)
-						RightJustifiedText("(no data)");
-					else
-						RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v1.value()));
+					RightJustifiedText(sv1);
 
 					if(hasSecondCursor)
 					{
 						//Cursor 1 value
 						ImGui::TableSetColumnIndex(2);
-						if(!v2)
-							RightJustifiedText("(no data)");
-						else
-							RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v2.value()));
+						RightJustifiedText(sv2);
 
 						//Delta
 						ImGui::TableSetColumnIndex(3);
-						if(!v1 || !v2)
-							RightJustifiedText("(no data)");
-						else
-							RightJustifiedText(stream.GetYAxisUnits().PrettyPrint(v2.value() - v1.value()));
+						RightJustifiedText(svd);
 					}
 
 					ImGui::PopID();
@@ -489,14 +544,22 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		(m_dragState == DRAG_STATE_NONE) &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		m_xAxisCursorPositions[0] = XPositionToXAxisUnits(ImGui::GetMousePos().x);
-		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		auto xpos = ImGui::GetMousePos().x;
+
+		//Don't check for clicks outside of the main plot area
+		//(clicks on the Y axis should not be treated as cursor events)
+		if(xpos < (pos.x + m_width - GetYAxisWidth()) )
 		{
-			m_dragState = DRAG_STATE_X_CURSOR1;
-			m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+			m_xAxisCursorPositions[0] = XPositionToXAxisUnits(xpos);
+			m_parent->OnCursorMoved(m_xAxisCursorPositions[0]);
+			if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			{
+				m_dragState = DRAG_STATE_X_CURSOR1;
+				m_xAxisCursorPositions[1] = m_xAxisCursorPositions[0];
+			}
+			else
+				m_dragState = DRAG_STATE_X_CURSOR0;
 		}
-		else
-			m_dragState = DRAG_STATE_X_CURSOR0;
 	}
 
 	//Cursor 0 should always be left of cursor 1 (if both are enabled).
@@ -541,6 +604,9 @@ void WaveformGroup::DoCursor(int iCursor, DragState state)
 		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			m_dragState = DRAG_STATE_NONE;
 		m_xAxisCursorPositions[iCursor] = XPositionToXAxisUnits(mouse.x);
+
+		if(iCursor == 0)
+			m_parent->OnCursorMoved(m_xAxisCursorPositions[iCursor]);
 	}
 }
 
@@ -855,16 +921,59 @@ void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
 }
 
 /**
-	@brief Scrolls the group so the specified tiestamp is visible
+	@brief Scrolls the group so the specified timestamp is visible
+
+	If the duration is nonzero:
+	* If the entire requested region is visible, center the packet in the visible area of the plot
+	* If the region is too large to see, move the start to the left 10% of the view.
+
+	If a target stream is requested, we should only navigate if the provided stream is displayed somewhere
+	within this group.
  */
-void WaveformGroup::NavigateToTimestamp(int64_t timestamp)
+void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration, StreamDescriptor target)
 {
 	//If X axis unit is not fs, don't scroll
 	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
 		return;
 
+	//Check if target is in one of our areas
+	if(target)
+	{
+		bool found = false;
+		for(auto& a : m_areas)
+		{
+			if(a->IsStreamBeingDisplayed(target))
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found)
+			return;
+	}
+
 	//TODO: support markers with other units? how to handle that?
 	//TODO: early out if eye pattern
 
-	m_xAxisOffset = timestamp - 0.5*(m_width / m_pixelsPerXUnit);
+	if(duration > 0)
+	{
+		//If the packet is too long to fit on screen at the current zoom, have it start 10% of the way across
+		int64_t viewWidth = PixelsToXAxisUnits(m_width);
+		if(duration > viewWidth)
+			m_xAxisOffset = timestamp - viewWidth*0.1;
+
+		//Otherwise, the entire packet fits. Center it.
+		else
+			m_xAxisOffset = timestamp - viewWidth/2 + duration/2;
+	}
+
+	//Just center the packet
+	else
+		m_xAxisOffset = timestamp - 0.5*(m_width / m_pixelsPerXUnit);
+
+	//If it's a packet, and we have a single vertical cursor, move it there
+	if( (duration > 0) && (m_xAxisCursorMode == X_CURSOR_SINGLE) )
+		m_xAxisCursorPositions[0] = timestamp;
+
+	ClearPersistence();
 }
