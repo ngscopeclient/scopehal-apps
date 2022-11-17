@@ -285,6 +285,13 @@ bool ProtocolAnalyzerDialog::DoRender()
 							}
 						}
 
+						//Handle data less than one line in size
+						if(firstLine.empty() && !data.empty())
+						{
+							firstLine = data;
+							data = "";
+						}
+
 						if(m_dataFormat == FORMAT_HEXDUMP)
 						{
 							//process last partial line at end
@@ -297,14 +304,17 @@ bool ProtocolAnalyzerDialog::DoRender()
 							}
 						}
 
-						ImGui::PushFont(dataFont);
-						firstLine += "##data";
-						if(ImGui::TreeNodeEx(firstLine.c_str(), ImGuiTreeNodeFlags_OpenOnArrow))
+						if(!firstLine.empty())
 						{
-							ImGui::TextUnformatted(data.c_str());
-							ImGui::TreePop();
+							ImGui::PushFont(dataFont);
+							firstLine += "##data";
+							if(ImGui::TreeNodeEx(firstLine.c_str(), ImGuiTreeNodeFlags_OpenOnArrow))
+							{
+								ImGui::TextUnformatted(data.c_str());
+								ImGui::TreePop();
+							}
+							ImGui::PopFont();
 						}
-						ImGui::PopFont();
 					}
 				}
 
