@@ -107,6 +107,8 @@ protected:
 
 	///@brief True if the selected packet should be scrolled to
 	bool m_needToScrollToSelectedPacket;
+
+	void DoDataColumn(int datacol, Packet* pack, ImFont* dataFont);
 };
 
 #endif

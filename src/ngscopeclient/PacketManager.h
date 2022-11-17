@@ -56,7 +56,11 @@ public:
 	const std::map<TimePoint, std::vector<Packet*> >& GetPackets()
 	{ return m_packets; }
 
+	const std::vector<Packet*>& GetChildPackets(Packet* pack)
+	{ return m_childPackets[pack]; }
+
 protected:
+	void RemoveChildHistoryFrom(Packet* pack);
 
 	///@brief Mutex controlling access to m_packets
 	std::mutex m_mutex;
@@ -66,6 +70,9 @@ protected:
 
 	///@brief Our saved packet data
 	std::map<TimePoint, std::vector<Packet*> > m_packets;
+
+	///@brief Merged child packets
+	std::map<Packet*, std::vector<Packet*> > m_childPackets;
 
 	///@brief Cache key for the current waveform
 	WaveformCacheKey m_cachekey;

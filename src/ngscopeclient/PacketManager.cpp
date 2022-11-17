@@ -48,6 +48,16 @@ PacketManager::PacketManager(PacketDecoder* pd)
 
 PacketManager::~PacketManager()
 {
+	for(auto& it : m_packets)
+	{
+		for(auto p : it.second)
+		{
+			RemoveChildHistoryFrom(p);
+			delete p;
+		}
+	}
+	m_packets.clear();
+	m_childPackets.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,10 +85,61 @@ void PacketManager::Update()
 	//Remove any old history we might have had from this timestamp
 	RemoveHistoryFrom(time);
 
-	//Copy the new packets and detach them so the filter doesn't delete them
+	//Copy the new packets and detach them so the filter doesn't delete them.
+	//Do the merging now
 	{
 		lock_guard<mutex> lock(m_mutex);
-		m_packets[time] = m_filter->GetPackets();
+
+		auto& outpackets = m_packets[time];
+		outpackets.clear();
+
+		auto& packets = m_filter->GetPackets();
+		auto npackets = packets.size();
+		Packet* parentOfGroup = nullptr;
+		Packet* firstChildPacketOfGroup = nullptr;
+		Packet* lastPacket = nullptr;
+		for(size_t i=0; i<npackets; i++)
+		{
+			auto p = packets[i];
+
+			//See if we should start a new merge group
+			bool starting_new_group;
+			if(i+1 >= npackets)									//No next packet to merge with
+				starting_new_group = false;
+			else if(!m_filter->CanMerge(p, p, packets[i+1]))	//This packet isn't compatible with the next
+				starting_new_group = false;
+			else if(firstChildPacketOfGroup == nullptr)			//If we get here, we're merging. But are we already?
+				starting_new_group = true;
+			else												//Already in a group, but it's not the same as the new one
+				starting_new_group = !m_filter->CanMerge(firstChildPacketOfGroup, lastPacket, p);
+
+			if(starting_new_group)
+			{
+				//Create the summary packet
+				firstChildPacketOfGroup = p;
+				parentOfGroup = m_filter->CreateMergedHeader(p, i);
+				outpackets.push_back(parentOfGroup);
+			}
+
+			//End a merge group
+			else if( (firstChildPacketOfGroup != nullptr) && !m_filter->CanMerge(firstChildPacketOfGroup, lastPacket, p) )
+			{
+				firstChildPacketOfGroup = nullptr;
+				parentOfGroup = nullptr;
+			}
+
+			//If we're a child of an group, add under the parent node
+			if(parentOfGroup)
+				m_childPackets[parentOfGroup].push_back(p);
+
+			//Otherwise add at the top level
+			else
+				outpackets.push_back(p);
+
+			lastPacket = p;
+		}
+
+		//TODO: apply filtering rules somewhere
 	}
 	m_filter->DetachPackets();
 }
@@ -92,6 +153,19 @@ void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 
 	auto& packets = m_packets[timestamp];
 	for(auto p : packets)
+	{
+		RemoveChildHistoryFrom(p);
 		delete p;
+	}
 	m_packets.erase(timestamp);
+}
+
+void PacketManager::RemoveChildHistoryFrom(Packet* pack)
+{
+	//For now, we can only have one level of hierarchy
+	//so no need to check for children of children
+	auto& children = m_childPackets[pack];
+	for(auto p : children)
+		delete p;
+	m_childPackets.erase(pack);
 }
