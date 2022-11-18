@@ -100,17 +100,11 @@ TEST_CASE("Filter_Subtract")
 			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU with no AVX
 			double start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
 			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
 
@@ -122,10 +116,7 @@ TEST_CASE("Filter_Subtract")
 				{
 					g_hasAvx2 = true;
 					start = GetTime();
-					{
-						QueueLock lock(queue);
-						filter->Refresh(cmdbuf, *lock);
-					}
+					filter->Refresh(cmdbuf, queue);
 					double dt = GetTime() - start;
 					LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
@@ -136,10 +127,7 @@ TEST_CASE("Filter_Subtract")
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
 			start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
 			LogVerbose("GPU:          %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 

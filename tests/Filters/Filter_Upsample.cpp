@@ -87,23 +87,14 @@ TEST_CASE("Filter_Upsample")
 			//Run the filter once on CPU and GPU each
 			//without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			g_gpuFilterEnabled = true;
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
 			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
@@ -114,10 +105,7 @@ TEST_CASE("Filter_Upsample")
 			//Try again on the GPU
 			g_gpuFilterEnabled = true;
 			start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
 			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 

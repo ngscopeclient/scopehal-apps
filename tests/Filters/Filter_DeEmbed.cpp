@@ -102,10 +102,7 @@ TEST_CASE("Filter_DeEmbed")
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = false;
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU with no AVX
 			#ifdef __x86_64__
@@ -113,10 +110,7 @@ TEST_CASE("Filter_DeEmbed")
 			#endif
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
 			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
 
@@ -132,8 +126,7 @@ TEST_CASE("Filter_DeEmbed")
 				{
 					g_hasAvx2 = true;
 					start = GetTime();
-					QueueLock lock(queue);
-					filter->Refresh(cmdbuf, *lock);
+					filter->Refresh(cmdbuf, queue);
 					float dt = GetTime() - start;
 					LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
@@ -147,17 +140,11 @@ TEST_CASE("Filter_DeEmbed")
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
-			{
-				QueueLock lock(queue);
-				filter->Refresh(cmdbuf, *lock);
-			}
+			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
 			LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
