@@ -52,6 +52,8 @@
 #include "../../lib/scopeprotocols/EyePattern.h"
 #include "../../lib/scopeprotocols/SpectrogramFilter.h"
 #include "../scopehal/LeCroyOscilloscope.h"
+#include "../scopehal/RemoteBridgeOscilloscope.h"
+#include "../scopehal/DemoOscilloscope.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -490,6 +492,45 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 	WaveformGroup* frequencyDomainGroup = NULL;
 	for(auto scope : m_scopes)
 	{
+		// Pre-enable some channels to deal with headless scopes and scopes with no currently enabled
+		//  channels.
+		if (dynamic_cast<RemoteBridgeOscilloscope*>(scope) || dynamic_cast<DemoOscilloscope*>(scope))
+		{
+			bool didEnableAnyChannel = false;
+			// On headless scopes, enable all analog channels
+			for (size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				if (scope->GetChannel(i)->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+				{
+					scope->EnableChannel(i);
+					didEnableAnyChannel |= scope->IsChannelEnabled(i);
+				}
+			}
+
+			if (!didEnableAnyChannel)
+			{
+				// Pure logic analyzer. Enable all
+				for (size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					scope->EnableChannel(i);
+				}
+			}
+		}
+		else
+		{
+			bool anyChannelEnabled = false;
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				anyChannelEnabled |= scope->IsChannelEnabled(i);
+			}
+
+			if (!anyChannelEnabled)
+			{
+				// On a regular scope, if no channels enabled, enable first channel
+				scope->EnableChannel(0);
+			}
+		}
+
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
@@ -507,12 +548,9 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 				continue;
 			}
 
-			//Only enable digital channels if they're already on
-			if(type == Stream::STREAM_TYPE_DIGITAL)
-			{
-				if(!chan->IsEnabled())
-					continue;
-			}
+			//Only enable channels if they are already enabled
+			if(!chan->IsEnabled())
+				continue;
 
 			//Skip channels we can't enable
 			if(!scope->CanEnableChannel(i))
