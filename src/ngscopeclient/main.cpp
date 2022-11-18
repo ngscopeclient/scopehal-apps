@@ -239,3 +239,16 @@ bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB)
 	//If we get here, they overlap
 	return true;
 }
+
+double GetNGScopeScaleFactor()
+{
+	double ngscope_scale = 0;
+	const char *tmp = getenv("NGSCOPE_SCALE");
+	if (tmp)
+		ngscope_scale = strtod(tmp, NULL);
+
+	if (ngscope_scale == 0)
+		ngscope_scale = 1;
+
+	return ngscope_scale;
+}

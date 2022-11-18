@@ -87,6 +87,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 0.0f;
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+	style.ScaleAllSizes(GetNGScopeScaleFactor());
 
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

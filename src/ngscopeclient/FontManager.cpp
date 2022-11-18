@@ -91,7 +91,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root)
 
 	//Load the fonts
 	for(auto f : fonts)
-		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second, nullptr, ranges.Data);
+		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second * GetNGScopeScaleFactor(), nullptr, ranges.Data);
 
 	//Done loading fonts, build the texture
 	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;
