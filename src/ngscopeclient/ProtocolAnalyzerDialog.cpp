@@ -55,6 +55,8 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_selectedPacket(nullptr)
 	, m_dataFormat(FORMAT_HEX)
 	, m_needToScrollToSelectedPacket(false)
+	, m_firstDataBlockOfFrame(true)
+	, m_bytesPerLine(1)
 {
 	//Hold a reference open to the filter so it doesn't disappear on us
 	m_filter->AddRef();
@@ -108,6 +110,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 		ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0");
 	}
 
+	m_firstDataBlockOfFrame = true;
 	if(ImGui::BeginTable("table", ncols, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
@@ -115,7 +118,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 		for(auto c : cols)
 			ImGui::TableSetupColumn(c.c_str(), ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		if(m_filter->GetShowDataColumn())
-			ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthFixed, 0.0f);
+			ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch, 0.0f);
 		if(m_filter->GetShowImageColumn())
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
@@ -284,24 +287,50 @@ bool ProtocolAnalyzerDialog::DoRender()
  */
 void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dataFont)
 {
-	size_t bytesPerLine = 1;
-	switch(m_dataFormat)
-	{
-		case FORMAT_HEX:
-			bytesPerLine = 16;
-			break;
-
-		case FORMAT_ASCII:
-			bytesPerLine = 32;
-			break;
-
-		case FORMAT_HEXDUMP:
-			bytesPerLine = 8;
-			break;
-	}
-
 	if(ImGui::TableSetColumnIndex(datacol))
 	{
+		//When drawing the first cell, figure out dimensions for subsequent stuff
+		if(m_firstDataBlockOfFrame)
+		{
+			//Available space (after subtracting tree button)
+			auto xsize = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().IndentSpacing;
+
+			//Figure out how many characters of text we can fit in the data region
+			//This assumes data font is fixed width, may break if user chooses variable width.
+			//But hex dumps with variable width will look horrible anyway so that's probably not a problem?
+			auto fontwidth = dataFont->CalcTextSizeA(dataFont->FontSize, FLT_MAX, -1, "W").x;
+			size_t charsPerLine = floor(xsize / fontwidth);
+
+			//TODO: use 2-nibble address if packet has <256 bytes of data
+
+			//Number of characters available for displaying data (address column doesn't count)
+			size_t dataCharsPerLine = charsPerLine - 5;
+
+			switch(m_dataFormat)
+			{
+				//Ascii is trivial: data bytes map 1:1 to characters
+				case FORMAT_ASCII:
+					m_bytesPerLine = dataCharsPerLine;
+					break;
+
+				//Hex needs three chars (2 hex + space)
+				//TODO: last char doesn't need the space
+				case FORMAT_HEX:
+					m_bytesPerLine = dataCharsPerLine / 3;
+					break;
+
+				//Hexdump needs a fixed 3 spaces between the hex and the ascii parts.
+				//Then we need 3 for each hex and one for each ascii.
+				case FORMAT_HEXDUMP:
+					m_bytesPerLine = (dataCharsPerLine - 3) / 4;
+					break;
+			}
+
+			if(m_bytesPerLine <= 0)
+				return;
+		}
+		m_firstDataBlockOfFrame = false;
+
 		string firstLine;
 
 		auto& bytes = pack->m_data;
@@ -314,7 +343,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 		char tmp[32];
 		for(size_t i=0; i<bytes.size(); i++)
 		{
-			if( (i % bytesPerLine) == 0)
+			if( (i % m_bytesPerLine) == 0)
 			{
 				snprintf(tmp, sizeof(tmp), "%04zx ", i);
 				data += tmp;
@@ -348,7 +377,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 					break;
 			}
 
-			if( (i % bytesPerLine) == bytesPerLine-1)
+			if( (i % m_bytesPerLine) == m_bytesPerLine-1)
 			{
 				//Special processing for hex dump
 				if(m_dataFormat == FORMAT_HEXDUMP)
@@ -380,7 +409,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			//process last partial line at end
 			if(!lineHex.empty())
 			{
-				while(lineHex.length() < 3*bytesPerLine)
+				while(lineHex.length() < 3*m_bytesPerLine)
 					lineHex += ' ';
 
 				data += lineHex + "   " + lineAscii;
@@ -394,8 +423,10 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			//If we have multiple data lines, show tree
 			if(!data.empty())
 			{
-				firstLine += "##data";
-				if(ImGui::TreeNodeEx(firstLine.c_str(), ImGuiTreeNodeFlags_OpenOnArrow))
+				bool open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
+				ImGui::SameLine();
+				ImGui::TextUnformatted(firstLine.c_str());
+				if(open)
 				{
 					ImGui::TextUnformatted(data.c_str());
 					ImGui::TreePop();

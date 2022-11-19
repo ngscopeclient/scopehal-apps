@@ -109,6 +109,12 @@ protected:
 	bool m_needToScrollToSelectedPacket;
 
 	void DoDataColumn(int datacol, Packet* pack, ImFont* dataFont);
+
+	///@brief True the first time DoDataColumn() is called in a given frame
+	bool m_firstDataBlockOfFrame;
+
+	///@brief The number of bytes per line we can display with the current column setup
+	size_t m_bytesPerLine;
 };
 
 #endif
