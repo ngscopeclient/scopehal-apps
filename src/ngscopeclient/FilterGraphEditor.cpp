@@ -77,7 +77,12 @@ bool FilterGraphEditor::DoRender()
 	for(auto scope : scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			if (!scope->CanEnableChannel(i))
+				continue;
+			
 			DoNodeForChannel(scope->GetChannel(i));
+		}
 	}
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
