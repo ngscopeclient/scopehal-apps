@@ -85,9 +85,6 @@ protected:
 	Session& m_session;
 	MainWindow& m_parent;
 
-	///@brief Height of a row in the dialog
-	float m_rowHeight;
-
 	///@brief True if a new waveform in the dialog was selected this frame
 	bool m_waveformChanged;
 

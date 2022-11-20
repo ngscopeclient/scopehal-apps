@@ -49,7 +49,6 @@ ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	, m_mgr(mgr)
 	, m_session(session)
 	, m_parent(wnd)
-	, m_rowHeight(0)
 	, m_waveformChanged(false)
 	, m_lastSelectedWaveform(0, 0)
 	, m_selectedPacket(nullptr)
@@ -149,7 +148,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//unrelated reasons), use timestamp instead.
 				ImGui::PushID(pack->m_offset);
 
-				ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 				//Set up colors for the packet
 				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(pack->m_displayBackgroundColor));
@@ -167,15 +166,15 @@ bool ProtocolAnalyzerDialog::DoRender()
 					open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
 					if(open)
 						ImGui::TreePop();
+					ImGui::SameLine();
 				}
-				ImGui::SameLine();
 				bool rowIsSelected = (m_selectedPacket == pack);
 				TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
 				if(ImGui::Selectable(
 					packtime.PrettyPrint().c_str(),
 					rowIsSelected,
 					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-					ImVec2(0, m_rowHeight)))
+					ImVec2(0, 0)))
 				{
 					m_selectedPacket = pack;
 					rowIsSelected = true;
@@ -186,6 +185,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 					m_lastSelectedWaveform = wavetime;
 
 					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
+
 				}
 
 				//Update scroll position if requested
@@ -217,7 +217,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 						//unrelated reasons), use timestamp instead.
 						ImGui::PushID(child->m_offset);
 
-						ImGui::TableNextRow(ImGuiTableRowFlags_None, m_rowHeight);
+						ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 						//Set up colors for the packet
 						ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(child->m_displayBackgroundColor));
@@ -231,7 +231,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 							ctime.PrettyPrint().c_str(),
 							childIsSelected,
 							ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-							ImVec2(0, m_rowHeight)))
+							ImVec2(0, 0)))
 						{
 							m_selectedPacket = child;
 							childIsSelected = true;
@@ -265,7 +265,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 						ImGui::PopStyleColor();
 						ImGui::PopID();
 					}
-
 					ImGui::TreePop();
 				}
 
