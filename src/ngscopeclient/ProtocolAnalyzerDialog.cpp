@@ -102,6 +102,45 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 	auto dataFont = m_parent.GetFontPref("Appearance.Protocol Analyzer.data_font");
 
+	//Figure out color for filter expression
+	ImU32 bgcolor;
+	size_t ifilter = 0;
+	ProtocolDisplayFilter filter(m_filterExpression, ifilter);
+	if(m_filterExpression == "")
+		bgcolor = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_FrameBg]);
+	else if(filter.Validate(cols))
+		bgcolor = ColorFromString("#008000");
+	else
+		bgcolor = ColorFromString("#800000");
+	//TODO: yellow for possibly wrong stuff?
+	//TODO: allow configuration under preferences
+
+	//Filter expression
+	float boxwidth = ImGui::GetContentRegionAvail().x;
+	ImGui::SetNextItemWidth(boxwidth - ImGui::CalcTextSize("Filter").x - ImGui::GetStyle().ItemSpacing.x);
+	ImGui::PushStyleColor(ImGuiCol_FrameBg, bgcolor);
+	ImGui::InputText("Filter", &m_filterExpression);
+	bool filterDirty = (m_committedFilterExpression != m_filterExpression);
+	ImGui::PopStyleColor();
+	if(!ImGui::IsItemActive() && filterDirty)
+	{
+		m_committedFilterExpression = m_filterExpression;
+
+		//No filter expression? Nothing to do
+		if(m_filterExpression == "")
+			m_mgr->SetDisplayFilter(nullptr);
+
+		else
+		{
+			//Parse the expression. Apply only if valid
+			//If not valid, keep old filter active
+			ifilter = 0;
+			auto pfilter = make_shared<ProtocolDisplayFilter>(m_filterExpression, ifilter);
+			if(pfilter->Validate(cols))
+				m_mgr->SetDisplayFilter(pfilter);
+		}
+	}
+
 	//Output format for data column
 	if(m_filter->GetShowDataColumn())
 	{
@@ -126,7 +165,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 		m_mgr->Update();
 
 		lock_guard lock(m_mgr->GetMutex());
-		auto packets = m_mgr->GetPackets();
+		auto packets = m_mgr->GetFilteredPackets();
 
 		//Make a list of waveform timestamps and make sure we display them in order
 		vector<TimePoint> times;
@@ -155,7 +194,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(pack->m_displayForegroundColor));
 
 				//See if we have child packets
-				auto children = m_mgr->GetChildPackets(pack);
+				auto children = m_mgr->GetFilteredChildPackets(pack);
 				bool hasChildren = !children.empty();
 
 				//Timestamp (and row selection logic)
@@ -456,7 +495,7 @@ void ProtocolAnalyzerDialog::OnCursorMoved(int64_t offset)
 		m_lastSelectedWaveform = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	}
 
-	auto& allpackets = m_mgr->GetPackets();
+	auto& allpackets = m_mgr->GetFilteredPackets();
 	auto it = allpackets.find(m_lastSelectedWaveform);
 	if(it == allpackets.end())
 		return;
@@ -466,7 +505,7 @@ void ProtocolAnalyzerDialog::OnCursorMoved(int64_t offset)
 	for(auto p : packets)
 	{
 		//Check child packets first
-		auto& children = m_mgr->GetChildPackets(p);
+		auto& children = m_mgr->GetFilteredChildPackets(p);
 		for(auto c : children)
 		{
 			if(offset > (c->m_offset + c->m_len) )

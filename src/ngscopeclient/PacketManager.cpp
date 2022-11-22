@@ -138,10 +138,62 @@ void PacketManager::Update()
 
 			lastPacket = p;
 		}
-
-		//TODO: apply filtering rules somewhere
 	}
 	m_filter->DetachPackets();
+
+	//Run filters
+	FilterPackets();
+}
+
+/**
+	@brief Run the filter expression against the packets
+ */
+void PacketManager::FilterPackets()
+{
+	//If we do NOT have a filter, early out: just copy stuff
+	if(m_filterExpression == nullptr)
+	{
+		m_filteredPackets = m_packets;
+		m_filteredChildPackets = m_childPackets;
+		return;
+	}
+
+	//We have a filter! Start out by clearing output, then we can re-add the ones that match
+	m_filteredPackets.clear();
+	m_filteredChildPackets.clear();
+
+	//Check all top level packets against the filter
+	for(auto it : m_packets)
+	{
+		auto timestamp = it.first;
+		auto& packets = it.second;
+		for(auto p : packets)
+		{
+			//If no children, just check the top level packet for a match
+			if(m_childPackets[p].empty())
+			{
+				if(m_filterExpression->Match(p))
+					m_filteredPackets[timestamp].push_back(p);
+			}
+
+			//We have children.
+			//Check them for matches, and add the parent if any child matches
+			else
+			{
+				bool anyChildMatched = false;
+				for(auto c : m_childPackets[p])
+				{
+					if(m_filterExpression->Match(c))
+					{
+						m_filteredChildPackets[p].push_back(c);
+						anyChildMatched = true;
+					}
+				}
+				if(anyChildMatched)
+					m_filteredPackets[timestamp].push_back(p);
+			}
+		}
+	}
 }
 
 /**
@@ -158,6 +210,8 @@ void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 		delete p;
 	}
 	m_packets.erase(timestamp);
+
+	m_filteredPackets.erase(timestamp);
 }
 
 void PacketManager::RemoveChildHistoryFrom(Packet* pack)
@@ -168,4 +222,398 @@ void PacketManager::RemoveChildHistoryFrom(Packet* pack)
 	for(auto p : children)
 		delete p;
 	m_childPackets.erase(pack);
+	m_filteredChildPackets.erase(pack);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ProtocolDisplayFilter
+
+ProtocolDisplayFilter::ProtocolDisplayFilter(string str, size_t& i)
+{
+	//One or more clauses separated by operators
+	while(i < str.length())
+	{
+		//Read the clause
+		m_clauses.push_back(new ProtocolDisplayFilterClause(str, i));
+
+		//Remove spaces before the operator
+		EatSpaces(str, i);
+		if( (i >= str.length()) || (str[i] == ')') || (str[i] == ']') )
+			break;
+
+		//Read the operator, if any
+		string tmp;
+		while(i < str.length())
+		{
+			if(isspace(str[i]) || (str[i] == '\"') || (str[i] == '(') || (str[i] == ')') )
+				break;
+
+			//An alphanumeric character after an operator other than text terminates it
+			if( (tmp != "") && !isalnum(tmp[0]) && isalnum(str[i]) )
+				break;
+
+			tmp += str[i];
+			i++;
+		}
+		m_operators.push_back(tmp);
+	}
+}
+
+ProtocolDisplayFilter::~ProtocolDisplayFilter()
+{
+	for(auto c : m_clauses)
+		delete c;
+}
+
+bool ProtocolDisplayFilter::Validate(vector<string> headers, bool nakedLiteralOK)
+{
+	//No clauses? valid all-pass filter
+	if(m_clauses.empty())
+		return true;
+
+	//We should always have one more clause than operator
+	if( (m_operators.size() + 1) != m_clauses.size())
+		return false;
+
+	//Operators must make sense. For now only equal/unequal and boolean and/or allowed
+	for(auto op : m_operators)
+	{
+		if( (op != "==") &&
+			(op != "!=") &&
+			(op != "||") &&
+			(op != "&&") &&
+			(op != "startswith") &&
+			(op != "contains")
+		)
+		{
+			return false;
+		}
+	}
+
+	//If any clause is invalid, we're invalid
+	for(auto c : m_clauses)
+	{
+		if(!c->Validate(headers))
+			return false;
+	}
+
+	//A single literal is not a legal filter, it has to be compared to something
+	//(But for sub-expressions used as indexes etc, it's OK)
+	if(!nakedLiteralOK)
+	{
+		if(m_clauses.size() == 1)
+		{
+			if(m_clauses[0]->m_type != ProtocolDisplayFilterClause::TYPE_EXPRESSION)
+				return false;
+		}
+	}
+
+	return true;
+}
+
+void ProtocolDisplayFilter::EatSpaces(string str, size_t& i)
+{
+	while( (i < str.length()) && isspace(str[i]) )
+		i++;
+}
+
+bool ProtocolDisplayFilter::Match(const Packet* pack)
+{
+	if(m_clauses.empty())
+		return true;
+	else
+		return Evaluate(pack) != "0";
+}
+
+std::string ProtocolDisplayFilter::Evaluate(const Packet* pack)
+{
+	//Calling code checks for validity so no need to verify here
+
+	//For now, all operators have equal precedence and are evaluated left to right.
+	string current = m_clauses[0]->Evaluate(pack);
+	for(size_t i=1; i<m_clauses.size(); i++)
+	{
+		string rhs = m_clauses[i]->Evaluate(pack);
+		string op = m_operators[i-1];
+
+		bool a = (current != "0");
+		bool b = (rhs != "0");
+
+		//== and != do exact string equality checks
+		bool temp = false;
+		if(op == "==")
+			temp = (current == rhs);
+		else if(op == "!=")
+			temp = (current != rhs);
+
+		//&& and || do boolean operations
+		else if(op == "&&")
+			temp = (a && b);
+		else if(op == "||")
+			temp = (a || b);
+
+		//String prefix
+		else if(op == "startswith")
+			temp = (current.find(rhs) == 0);
+		else if(op == "contains")
+			temp = (current.find(rhs) != string::npos);
+
+		//done, convert back to string
+		current = temp ? "1" : "0";
+	}
+	return current;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ProtocolDisplayFilterClause
+
+ProtocolDisplayFilterClause::ProtocolDisplayFilterClause(string str, size_t& i)
+{
+	ProtocolDisplayFilter::EatSpaces(str, i);
+
+	m_real = 0;
+	m_long = 0;
+	m_expression = 0;
+	m_invert = false;
+
+	//Parenthetical expression
+	if( (str[i] == '(') || (str[i] == '!') )
+	{
+		//Inversion
+		if(str[i] == '!')
+		{
+			m_invert = true;
+			i++;
+
+			if(str[i] != '(')
+			{
+				m_type = TYPE_ERROR;
+				i++;
+				return;
+			}
+		}
+
+		i++;
+		m_type = TYPE_EXPRESSION;
+		m_expression = new ProtocolDisplayFilter(str, i);
+
+		//eat trailing spaces
+		ProtocolDisplayFilter::EatSpaces(str, i);
+
+		//expect closing parentheses
+		if(str[i] != ')')
+			m_type = TYPE_ERROR;
+		i++;
+	}
+
+	//Quoted string
+	else if(str[i] == '\"')
+	{
+		m_type = TYPE_STRING;
+		i++;
+
+		while( (i < str.length()) && (str[i] != '\"') )
+		{
+			m_string += str[i];
+			i++;
+		}
+
+		if(str[i] != '\"')
+			m_type = TYPE_ERROR;
+
+		i++;
+	}
+
+	//Number
+	else if(isdigit(str[i]) || (str[i] == '-') || (str[i] == '.') )
+	{
+		string tmp;
+		while( (i < str.length()) && (isdigit(str[i]) || (str[i] == '-')  || (str[i] == '.') || (str[i] == 'x')) )
+		{
+			tmp += str[i];
+			i++;
+		}
+
+		//Hex string
+		if(tmp.find("0x") == 0)
+		{
+			sscanf(tmp.c_str(), "%lx", (unsigned long*)&m_long);
+			m_type = TYPE_INT;
+		}
+
+		//Number with decimal point
+		else if(tmp.find('.') != string::npos)
+		{
+			m_real = atof(tmp.c_str());
+			m_type = TYPE_REAL;
+		}
+
+		//Number without decimal point
+		else
+		{
+			m_real = atol(tmp.c_str());
+			m_type = TYPE_INT;
+		}
+	}
+
+	//Identifier (or data)
+	else
+	{
+		m_type = TYPE_IDENTIFIER;
+
+		while( (i < str.length()) && isalnum(str[i]) )
+		{
+			m_identifier += str[i];
+			i++;
+		}
+
+		//Opening square bracket
+		if(str[i] == '[')
+		{
+			if(m_identifier == "data")
+			{
+				m_type = TYPE_DATA;
+				i++;
+
+				//Read the index expression
+				m_expression = new ProtocolDisplayFilter(str, i);
+
+				//eat trailing spaces
+				ProtocolDisplayFilter::EatSpaces(str, i);
+
+				//expect closing square bracket
+				if(str[i] != ']')
+					m_type = TYPE_ERROR;
+				i++;
+			}
+
+			else
+			{
+				m_type = TYPE_ERROR;
+				i++;
+			}
+		}
+
+		if(m_identifier == "")
+		{
+			i++;
+			m_type = TYPE_ERROR;
+		}
+	}
+}
+
+/**
+	@brief Returns a copy of the input string with spaces removed
+ */
+string ProtocolDisplayFilterClause::EatSpaces(string str)
+{
+	string ret;
+	for(auto c : str)
+	{
+		if(!isspace(c))
+			ret += c;
+	}
+	return ret;
+}
+
+string ProtocolDisplayFilterClause::Evaluate(const Packet* pack)
+{
+	char tmp[32];
+
+
+	switch(m_type)
+	{
+		case TYPE_DATA:
+			{
+				string sindex = m_expression->Evaluate(pack);
+				int index = atoi(sindex.c_str());
+
+				//Bounds check
+				if(pack->m_data.size() <= (size_t)index)
+					return "NaN";
+
+				return to_string(pack->m_data[index]);
+			}
+			break;
+
+		case TYPE_IDENTIFIER:
+			{
+				auto it = pack->m_headers.find(m_identifier);
+				if(it != pack->m_headers.end())
+					return it->second;
+				else
+					return "NaN";
+			}
+
+		case TYPE_STRING:
+			return m_string;
+
+		case TYPE_REAL:
+			snprintf(tmp, sizeof(tmp), "%f", m_real);
+			return tmp;
+
+		case TYPE_INT:
+			snprintf(tmp, sizeof(tmp), "%ld", m_long);
+			return tmp;
+
+		case TYPE_EXPRESSION:
+			if(m_invert)
+			{
+				if(m_expression->Evaluate(pack) == "1")
+					return "0";
+				else
+					return "1";
+			}
+			else
+				return m_expression->Evaluate(pack);
+
+		case TYPE_ERROR:
+		default:
+			return "NaN";
+	}
+
+	//never happens because of the 'default" clause, but prevents -Wreturn-type warning with some gcc versions
+	return "NaN";
+}
+
+ProtocolDisplayFilterClause::~ProtocolDisplayFilterClause()
+{
+	if(m_expression)
+		delete m_expression;
+}
+
+bool ProtocolDisplayFilterClause::Validate(vector<string> headers)
+{
+	switch(m_type)
+	{
+		case TYPE_ERROR:
+			return false;
+
+		case TYPE_DATA:
+			return m_expression->Validate(headers, true);
+
+		//If we're an identifier, we must be a valid header field
+		//TODO: support comparisons on data
+		case TYPE_IDENTIFIER:
+			for(auto h : headers)
+			{
+				//Match, removing spaces from header names if needed
+				//Note that m_identifier is now the real, un-spaced version of the identifier name
+				//so we can look it up in the packet
+				if(EatSpaces(h) == m_identifier)
+				{
+					m_identifier = h;
+					return true;
+				}
+			}
+
+			return false;
+
+		//If we're an expression, it must be valid
+		case TYPE_EXPRESSION:
+			return m_expression->Validate(headers);
+
+		default:
+			return true;
+	}
 }

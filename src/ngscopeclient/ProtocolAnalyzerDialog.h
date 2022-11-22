@@ -112,6 +112,12 @@ protected:
 
 	///@brief The number of bytes per line we can display with the current column setup
 	size_t m_bytesPerLine;
+
+	///@brief Filter expression we're typing
+	std::string m_filterExpression;
+
+	///@brief Filter expression we're actually using
+	std::string m_committedFilterExpression;
 };
 
 #endif

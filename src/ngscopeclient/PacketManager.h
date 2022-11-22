@@ -38,6 +38,62 @@
 #include "../../lib/scopehal/PacketDecoder.h"
 #include "Marker.h"
 
+class ProtocolDisplayFilter;
+
+class ProtocolDisplayFilterClause
+{
+public:
+	ProtocolDisplayFilterClause(std::string str, size_t& i);
+	ProtocolDisplayFilterClause(const ProtocolDisplayFilterClause&) =delete;
+	ProtocolDisplayFilterClause& operator=(const ProtocolDisplayFilterClause&) =delete;
+
+	virtual ~ProtocolDisplayFilterClause();
+
+	bool Validate(std::vector<std::string> headers);
+
+	std::string Evaluate(const Packet* pack);
+
+	static std::string EatSpaces(std::string str);
+
+	enum
+	{
+		TYPE_DATA,
+		TYPE_IDENTIFIER,
+		TYPE_STRING,
+		TYPE_REAL,
+		TYPE_INT,
+		TYPE_EXPRESSION,
+		TYPE_ERROR
+	} m_type;
+
+	std::string m_identifier;
+	std::string m_string;
+	float m_real;
+	long m_long;
+	ProtocolDisplayFilter* m_expression;
+	bool m_invert;
+};
+
+class ProtocolDisplayFilter
+{
+public:
+	ProtocolDisplayFilter(std::string str, size_t& i);
+	ProtocolDisplayFilter(const ProtocolDisplayFilterClause&) =delete;
+	ProtocolDisplayFilter& operator=(const ProtocolDisplayFilter&) =delete;
+	virtual ~ProtocolDisplayFilter();
+
+	static void EatSpaces(std::string str, size_t& i);
+
+	bool Validate(std::vector<std::string> headers, bool nakedLiteralOK = false);
+
+	bool Match(const Packet* pack);
+	std::string Evaluate(const Packet* pack);
+
+protected:
+	std::vector<ProtocolDisplayFilterClause*> m_clauses;
+	std::vector<std::string> m_operators;
+};
+
 /**
 	@brief Keeps track of packetized data history from a single protocol analyzer filter
  */
@@ -59,6 +115,23 @@ public:
 	const std::vector<Packet*>& GetChildPackets(Packet* pack)
 	{ return m_childPackets[pack]; }
 
+	const std::map<TimePoint, std::vector<Packet*> >& GetFilteredPackets()
+	{ return m_filteredPackets; }
+
+	const std::vector<Packet*>& GetFilteredChildPackets(Packet* pack)
+	{ return m_filteredChildPackets[pack]; }
+
+	/**
+		@brief Sets the current filter expression
+	 */
+	void SetDisplayFilter(std::shared_ptr<ProtocolDisplayFilter> filter)
+	{
+		m_filterExpression = filter;
+		FilterPackets();
+	}
+
+	void FilterPackets();
+
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);
 
@@ -74,8 +147,17 @@ protected:
 	///@brief Merged child packets
 	std::map<Packet*, std::vector<Packet*> > m_childPackets;
 
+	///@brief Subset of m_packets that passed the current filter expression
+	std::map<TimePoint, std::vector<Packet*> > m_filteredPackets;
+
+	///@brief Subset of m_filteredChildPackets that passed the current filter expression
+	std::map<Packet*, std::vector<Packet*> > m_filteredChildPackets;
+
 	///@brief Cache key for the current waveform
 	WaveformCacheKey m_cachekey;
+
+	///@brief Current filter expression
+	std::shared_ptr<ProtocolDisplayFilter> m_filterExpression;
 };
 
 #endif
