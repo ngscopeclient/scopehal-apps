@@ -16,3 +16,6 @@
 [submodule "src/ImGuiFileDialog"]
 	path = src/ImGuiFileDialog
 	url = https://github.com/aiekick/ImGuiFileDialog
+[submodule "src/nativefiledialog-extended"]
+	path = src/nativefiledialog-extended
+	url = https://github.com/btzy/nativefiledialog-extended
