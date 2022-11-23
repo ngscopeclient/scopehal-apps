@@ -410,7 +410,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		RenderGrid(pos, csize, gridmap, vbot, vtop);
 
 		//Blank out space for the actual waveform
-		ImGui::InvisibleButton("plot", ImVec2(csize.x, csize.y));
+		ImGui::Dummy(ImVec2(csize.x, csize.y));
 		ImGui::SetItemAllowOverlap();
 
 		//Check for context menu if we didn't do one yet
@@ -469,7 +469,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
  */
 void WaveformArea::PlotContextMenu()
 {
-	if(ImGui::BeginPopupContextItem())
+	if(ImGui::BeginPopupContextWindow())
 	{
 		//Look for markers that might be near our right click location
 		float lastRightClickPos = m_group->XAxisUnitsToXPosition(m_lastRightClickOffset);
