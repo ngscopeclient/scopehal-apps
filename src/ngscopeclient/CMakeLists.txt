@@ -46,6 +46,7 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	FileBrowser.cpp
 	FilterGraphEditor.cpp
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
@@ -53,6 +54,7 @@ add_executable(ngscopeclient
 	GuiLogSink.cpp
 	HistoryDialog.cpp
 	HistoryManager.cpp
+	IGFDFileBrowser.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp

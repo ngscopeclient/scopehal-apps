@@ -30,36 +30,103 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterPropertiesDialog
+	@brief Implementation of IGFDFileBrowser
  */
-#ifndef FilterPropertiesDialog_h
-#define FilterPropertiesDialog_h
+#include "ngscopeclient.h"
+#include "IGFDFileBrowser.h"
 
-#include "FileBrowser.h"
+using namespace std;
 
-class MainWindow;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-class FilterPropertiesDialog : public ChannelPropertiesDialog
+IGFDFileBrowser::IGFDFileBrowser(
+	const string& initialPath,
+	const string& title,
+	const string& id,
+	const string& filterName,
+	const string& filterMask
+	)
+	: m_closed(false)
+	, m_closedOK(false)
+	, m_id(id)
 {
-public:
-	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
-	virtual ~FilterPropertiesDialog();
+	//If linux read ~/.config/gtk-3.0/bookmarks
+	//TODO: read bookmarks on other OSes
+	#ifdef __linux__
+		string home = getenv("HOME");
+		string path = home + "/.config/gtk-3.0/bookmarks";
+		FILE* fp = fopen(path.c_str(), "r");
+		if(fp)
+		{
+			char line[1024];
+			char fname[512] = "";
+			char bname[512] = "";
+			while(fgets(line, sizeof(line), fp) != nullptr)
+			{
+				auto sline = Trim(line);
+				auto nfields = sscanf(sline.c_str(), "file://%511[^ ] %511s", fname, bname);
+				if(nfields == 2)
+					m_bookmarks[fname] = bname;
+				else if(nfields == 1)
+					m_bookmarks[fname] = BaseName(fname);
+			}
+			fclose(fp);
+		}
+	#endif
 
-	virtual bool Render();
-	virtual bool DoRender();
+	//Tweak the mask for imgui filedialog
+	//(needs to be in parentheses to be recognized as a regex)
+	//Special case for touchstone since internal parentheses aren't well supported by IGFD
+	string mask;
+	if(filterMask == "*.s*p")
+		mask = "Touchstone files (*.s*p){.s2p,.s3p,.s4p,.s5p,.s6p,.s7p,.s8p,.s9p,.snp}";
+	else
+		mask = filterName + "{" + filterMask.substr(1) + "}";
 
-protected:
-	std::map<std::string, std::string> m_paramTempValues;
+	for(auto jt : m_bookmarks)
+		m_dialog.AddBookmark(jt.second, jt.first);
+	m_dialog.OpenDialog(
+		m_id,
+		title,
+		mask.c_str(),
+		".",
+		initialPath);
+}
 
-	void FindAllStreams(std::vector<StreamDescriptor>& streams);
-	void OnReconfigured(Filter* f, size_t oldStreamCount);
+IGFDFileBrowser::~IGFDFileBrowser()
+{
+	//TODO: save bookmarks at exit
+}
 
-	MainWindow* m_parent;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI handlers
 
-	///@brief File dialog (can only ever have one at a time)
-	std::shared_ptr<FileBrowser> m_fileDialog;
+void IGFDFileBrowser::Render()
+{
+	if(m_closed)
+		return;
 
-	std::string m_fileParamName;
-};
+	float fontsize = ImGui::GetFontSize();
+	if(m_dialog.Display(m_id, ImGuiWindowFlags_NoCollapse, ImVec2(60*fontsize, 30*fontsize)))
+	{
+		if(m_dialog.IsOk())
+			m_closedOK = true;
+		m_closed = true;
+	}
+}
 
-#endif
+bool IGFDFileBrowser::IsClosed()
+{
+	return m_closed;
+}
+
+bool IGFDFileBrowser::IsClosedOK()
+{
+	return m_closedOK;
+}
+
+string IGFDFileBrowser::GetFileName()
+{
+	return m_dialog.GetFilePathName();
+}

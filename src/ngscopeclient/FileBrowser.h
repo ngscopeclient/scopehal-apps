@@ -30,36 +30,41 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterPropertiesDialog
+	@brief Declaration of FileBrowser
  */
-#ifndef FilterPropertiesDialog_h
-#define FilterPropertiesDialog_h
+#ifndef FileBrowser_h
+#define FileBrowser_h
 
-#include "FileBrowser.h"
-
-class MainWindow;
-
-class FilterPropertiesDialog : public ChannelPropertiesDialog
+/**
+	@brief Abstract base class for a dialog that displays a file picker window
+ */
+class FileBrowser
 {
 public:
-	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
-	virtual ~FilterPropertiesDialog();
+	FileBrowser();
+	virtual ~FileBrowser();
 
-	virtual bool Render();
-	virtual bool DoRender();
+	/**
+		@brief Run imgui tasks (if needed) for the dialog
+	 */
+	virtual void Render() =0;
+
+	/**
+		@brief Returns true if the dialog has been closed
+	 */
+	virtual bool IsClosed() =0;
+
+	/**
+		@brief Returns true if the dialog has been closed with an "OK" response
+	 */
+	virtual bool IsClosedOK() =0;
+
+	/**
+		@brief Gets the filename the user selected
+	 */
+	virtual std::string GetFileName() =0;
 
 protected:
-	std::map<std::string, std::string> m_paramTempValues;
-
-	void FindAllStreams(std::vector<StreamDescriptor>& streams);
-	void OnReconfigured(Filter* f, size_t oldStreamCount);
-
-	MainWindow* m_parent;
-
-	///@brief File dialog (can only ever have one at a time)
-	std::shared_ptr<FileBrowser> m_fileDialog;
-
-	std::string m_fileParamName;
 };
 
 #endif

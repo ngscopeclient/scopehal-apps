@@ -30,36 +30,50 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterPropertiesDialog
+	@brief Declaration of IGFDFileBrowser
  */
-#ifndef FilterPropertiesDialog_h
-#define FilterPropertiesDialog_h
+#ifndef IGFDFileBrowser_h
+#define IGFDFileBrowser_h
 
+#include <ImGuiFileDialog.h>
 #include "FileBrowser.h"
 
-class MainWindow;
-
-class FilterPropertiesDialog : public ChannelPropertiesDialog
+/**
+	@brief File browser backed by ImGuiFileDialog
+ */
+class IGFDFileBrowser : public FileBrowser
 {
 public:
-	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
-	virtual ~FilterPropertiesDialog();
+	IGFDFileBrowser(
+		const std::string& initialPath,
+		const std::string& title,
+		const std::string& id,
+		const std::string& filterName,
+		const std::string& filterMask
+		);
+	virtual ~IGFDFileBrowser();
 
-	virtual bool Render();
-	virtual bool DoRender();
+	virtual void Render();
+	virtual bool IsClosed();
+	virtual bool IsClosedOK();
+	virtual std::string GetFileName();
 
 protected:
-	std::map<std::string, std::string> m_paramTempValues;
 
-	void FindAllStreams(std::vector<StreamDescriptor>& streams);
-	void OnReconfigured(Filter* f, size_t oldStreamCount);
+	///@brief True if the dialog has been closed
+	bool m_closed;
 
-	MainWindow* m_parent;
+	///@brief True if the dialog has been closed with an "OK" result
+	bool m_closedOK;
 
-	///@brief File dialog (can only ever have one at a time)
-	std::shared_ptr<FileBrowser> m_fileDialog;
+	///@brief The underlying dialog
+	ImGuiFileDialog m_dialog;
 
-	std::string m_fileParamName;
+	///@brief Bookmark paths
+	std::map<std::string, std::string> m_bookmarks;
+
+	///@brief Dialog ID
+	std::string m_id;
 };
 
 #endif

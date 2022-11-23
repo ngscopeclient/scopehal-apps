@@ -36,6 +36,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
 #include "MainWindow.h"
+#include "IGFDFileBrowser.h"
 
 using namespace std;
 
@@ -46,34 +47,12 @@ FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bo
 	: ChannelPropertiesDialog(f, graphEditorMode)
 	, m_parent(parent)
 {
-	//If linux read ~/.config/gtk-3.0/bookmarks
-	//TODO: read bookmarks on other OSes
-	#ifdef __linux__
-		string home = getenv("HOME");
-		string path = home + "/.config/gtk-3.0/bookmarks";
-		FILE* fp = fopen(path.c_str(), "r");
-		if(fp)
-		{
-			char line[1024];
-			char fname[512] = "";
-			char bname[512] = "";
-			while(fgets(line, sizeof(line), fp) != nullptr)
-			{
-				auto sline = Trim(line);
-				auto nfields = sscanf(sline.c_str(), "file://%511[^ ] %511s", fname, bname);
-				if(nfields == 2)
-					m_bookmarks[fname] = bname;
-				else if(nfields == 1)
-					m_bookmarks[fname] = BaseName(fname);
-			}
-			fclose(fp);
-		}
-	#endif
+
 }
 
 FilterPropertiesDialog::~FilterPropertiesDialog()
 {
-	//TODO: save bookmarks at exit
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,24 +60,23 @@ FilterPropertiesDialog::~FilterPropertiesDialog()
 
 bool FilterPropertiesDialog::Render()
 {
-	//Run file dialog and handle it being closed
+	//Run file browser dialog
 	if(m_fileDialog)
 	{
-		float fontsize = ImGui::GetFontSize();
-		if(m_fileDialog->Display("FileChooser", ImGuiWindowFlags_NoCollapse, ImVec2(60*fontsize, 30*fontsize)))
+		m_fileDialog->Render();
+
+		if(m_fileDialog->IsClosedOK())
 		{
-			if(m_fileDialog->IsOk())
-			{
-				auto f = dynamic_cast<Filter*>(m_channel);
-				auto oldStreamCount = f->GetStreamCount();
-				f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFilePathName());
-				m_paramTempValues.erase(m_fileParamName);
+			auto f = dynamic_cast<Filter*>(m_channel);
+			auto oldStreamCount = f->GetStreamCount();
+			f->GetParameter(m_fileParamName).SetFileName(m_fileDialog->GetFileName());
+			m_paramTempValues.erase(m_fileParamName);
 
-				OnReconfigured(f, oldStreamCount);
-			}
-
-			m_fileDialog->Close();
+			OnReconfigured(f, oldStreamCount);
 		}
+
+		if(m_fileDialog->IsClosed())
+			m_fileDialog = nullptr;
 	}
 
 	return Dialog::Render();
@@ -276,29 +254,17 @@ bool FilterPropertiesDialog::DoRender()
 								reconfigured = true;
 							}
 
-							//Tweak the mask for imgui filedialog
-							//(needs to be in parentheses to be recognized as a regex)
-							//Special case for touchstone since internal parentheses aren't well supported by IGFD
-							string mask;
-							if(param.m_fileFilterMask == "*.s*p")
-								mask = "Touchstone files (*.s*p){.s2p,.s3p,.s4p,.s5p,.s6p,.s7p,.s8p,.s9p,.snp}";
-							else
-								mask = param.m_fileFilterName + "{" + param.m_fileFilterMask.substr(1) + "}";
-
 							//Browser button
 							ImGui::SameLine();
 							string bname = string("...###browse") + name;
 							if(ImGui::Button(bname.c_str()))
 							{
-								m_fileDialog = make_unique<ImGuiFileDialog>();
-								for(auto jt : m_bookmarks)
-									m_fileDialog->AddBookmark(jt.second, jt.first);
-								m_fileDialog->OpenDialog(
-									"FileChooser",
+								m_fileDialog = make_shared<IGFDFileBrowser>(
+									s,
 									"Select File",
-									mask.c_str(),
-									".",
-									s);
+									"FileChooser",
+									param.m_fileFilterName,
+									param.m_fileFilterMask);
 								m_fileParamName = name;
 							}
 							ImGui::SameLine();

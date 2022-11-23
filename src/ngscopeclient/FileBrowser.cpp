@@ -30,36 +30,18 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterPropertiesDialog
+	@brief Implementation of FileBrowser
  */
-#ifndef FilterPropertiesDialog_h
-#define FilterPropertiesDialog_h
-
+#include "ngscopeclient.h"
 #include "FileBrowser.h"
 
-class MainWindow;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-class FilterPropertiesDialog : public ChannelPropertiesDialog
+FileBrowser::FileBrowser()
 {
-public:
-	FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode = false);
-	virtual ~FilterPropertiesDialog();
+}
 
-	virtual bool Render();
-	virtual bool DoRender();
-
-protected:
-	std::map<std::string, std::string> m_paramTempValues;
-
-	void FindAllStreams(std::vector<StreamDescriptor>& streams);
-	void OnReconfigured(Filter* f, size_t oldStreamCount);
-
-	MainWindow* m_parent;
-
-	///@brief File dialog (can only ever have one at a time)
-	std::shared_ptr<FileBrowser> m_fileDialog;
-
-	std::string m_fileParamName;
-};
-
-#endif
+FileBrowser::~FileBrowser()
+{
+}
