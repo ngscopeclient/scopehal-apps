@@ -520,7 +520,6 @@ string ProtocolDisplayFilterClause::Evaluate(const Packet* pack)
 {
 	char tmp[32];
 
-
 	switch(m_type)
 	{
 		case TYPE_DATA:
