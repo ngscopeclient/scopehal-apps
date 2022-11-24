@@ -144,6 +144,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
 # Unit tests
 if(BUILD_TESTING)

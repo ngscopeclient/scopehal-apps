@@ -8,6 +8,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
 	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/
+	${CMAKE_CURRENT_SOURCE_DIR}/../nativefiledialog-extended/src/include/
 	)
 link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
@@ -61,6 +62,7 @@ add_executable(ngscopeclient
 	MetricsDialog.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
+	NFDFileBrowser.cpp
 	PacketManager.cpp
 	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
@@ -137,6 +139,7 @@ target_link_libraries(ngscopeclient
 	scopehal
 	scopeprotocols
 	scopeexports
+	nfd
 	glfw
 	PNG::PNG
 	cairomm-1.0
