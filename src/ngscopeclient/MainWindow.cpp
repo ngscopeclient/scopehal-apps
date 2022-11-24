@@ -34,6 +34,7 @@
  */
 #include "ngscopeclient.h"
 #include "MainWindow.h"
+#include "PreferenceTypes.h"
 
 #include "DemoOscilloscope.h"
 #include "RemoteBridgeOscilloscope.h"

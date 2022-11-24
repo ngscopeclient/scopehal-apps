@@ -38,6 +38,7 @@
 #include "MainWindow.h"
 #include "IGFDFileBrowser.h"
 #include "NFDFileBrowser.h"
+#include "PreferenceTypes.h"
 
 using namespace std;
 
@@ -260,17 +261,26 @@ bool FilterPropertiesDialog::DoRender()
 							string bname = string("...###browse") + name;
 							if(ImGui::Button(bname.c_str()))
 							{
-								/*m_fileDialog = make_shared<IGFDFileBrowser>(
-									s,
-									"Select File",
-									"FileChooser",
-									param.m_fileFilterName,
-									param.m_fileFilterMask);*/
-								m_fileDialog = make_shared<NFDFileBrowser>(
-									s,
-									"Select File",
-									param.m_fileFilterName,
-									param.m_fileFilterMask);
+								auto pref = m_parent->GetSession().GetPreferences().GetEnumRaw(
+									"Appearance.File Browser.dialogmode");
+
+								if(pref == BROWSER_IMGUI)
+								{
+									m_fileDialog = make_shared<IGFDFileBrowser>(
+										s,
+										"Select File",
+										"FileChooser",
+										param.m_fileFilterName,
+										param.m_fileFilterMask);
+								}
+								else
+								{
+									m_fileDialog = make_shared<NFDFileBrowser>(
+										s,
+										"Select File",
+										param.m_fileFilterName,
+										param.m_fileFilterMask);
+								}
 								m_fileParamName = name;
 							}
 							ImGui::SameLine();

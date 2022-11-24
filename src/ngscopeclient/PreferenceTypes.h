@@ -35,4 +35,17 @@
 #ifndef PreferenceTypes_h
 #define PreferenceTypes_h
 
+enum FileBrowserType
+{
+	BROWSER_IMGUI,
+	BROWSER_NATIVE
+};
+
+enum GuiTheme
+{
+	THEME_LIGHT = 0,
+	THEME_DARK = 1,
+	THEME_CLASSIC = 2
+};
+
 #endif

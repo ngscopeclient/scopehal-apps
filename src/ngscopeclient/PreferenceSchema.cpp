@@ -98,6 +98,20 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Preamble color")
 				.Description("Color for preambles, sync bytes, and other fixed header data"));*/
 
+		auto& file = appearance.AddCategory("File Browser");
+			file.AddPreference(
+				Preference::Enum("dialogmode", BROWSER_NATIVE)
+					.Label("Non-fullscreened dialog style")
+					.Description(
+						"Select the file browser to use for loading and saving files when not in fullscreen mode.\n\n"
+
+						"The native file browser cannot be used when ngscopeclient is in fullscreen mode,\n"
+						"so the ImGui browser is always used when fullscreened."
+						)
+					.EnumValue("ImGui", BROWSER_IMGUI)
+					.EnumValue("Native", BROWSER_NATIVE)
+				);
+
 		auto& graph = appearance.AddCategory("Filter Graph");
 			graph.AddPreference(
 				Preference::Font("header_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))

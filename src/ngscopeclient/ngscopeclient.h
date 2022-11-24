@@ -110,11 +110,4 @@ extern std::shared_mutex g_vulkanActivityMutex;
 
 bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
-enum GuiTheme
-{
-	THEME_LIGHT = 0,
-	THEME_DARK = 1,
-	THEME_CLASSIC = 2
-};
-
 #endif
