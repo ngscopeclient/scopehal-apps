@@ -44,12 +44,14 @@ NFDFileBrowser::NFDFileBrowser(
 	const string& initialPath,
 	const string& title,
 	const string& filterName,
-	const string& filterMask
+	const string& filterMask,
+	bool saveDialog
 	)
 	: m_initialPath(initialPath)
 	, m_title(title)
 	, m_filterName(filterName)
 	, m_filterMask(filterMask)
+	, m_saveDialog(saveDialog)
 	, m_cachedResultValid(false)
 {
 	//Trim off filter name
@@ -122,7 +124,11 @@ optional<string> NFDFileBrowser::ThreadProc()
 
 	nfdchar_t* outPath;
 	nfdfilteritem_t filterItem = { m_filterName.c_str(), m_filterMask.c_str() };
-	nfdresult_t result = NFD_OpenDialog(&outPath, &filterItem, 1, nullptr);
+	nfdresult_t result;
+	if(m_saveDialog)
+		result = NFD_SaveDialog(&outPath, &filterItem, 1, nullptr, nullptr);
+	else
+		result = NFD_OpenDialog(&outPath, &filterItem, 1, nullptr);
 	if(result == NFD_OKAY)
 	{
 		string ret = outPath;

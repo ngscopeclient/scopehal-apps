@@ -105,6 +105,44 @@ void MainWindow::FileMenu()
 {
 	if(ImGui::BeginMenu("File"))
 	{
+		bool hasFileBrowser = (m_fileBrowser != nullptr);
+
+		//Don't allow opening a second file browser if we already have one open
+		if(hasFileBrowser)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Open Online..."))
+			OnOpenFile(true);
+		if(ImGui::MenuItem("Open Offline..."))
+			OnOpenFile(false);
+		if(hasFileBrowser)
+			ImGui::EndDisabled();
+
+		FileRecentMenu();
+
+		ImGui::Separator();
+
+		bool alreadyHaveSession = (m_sessionFileName != "");
+		if(!alreadyHaveSession)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Save"))
+			DoSaveFile(m_sessionFileName);
+		if(!alreadyHaveSession)
+			ImGui::EndDisabled();
+
+		//Don't allow opening a second file browser if we already have one open
+		if(hasFileBrowser)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Save As..."))
+			OnSaveAs();
+		if(hasFileBrowser)
+			ImGui::EndDisabled();
+
+		ImGui::Separator();
+
+		FileExportMenu();
+
+		ImGui::Separator();
+
 		if(ImGui::MenuItem("Close"))
 			QueueCloseSession();
 
@@ -112,6 +150,32 @@ void MainWindow::FileMenu()
 
 		if(ImGui::MenuItem("Exit"))
 			glfwSetWindowShouldClose(m_window, 1);
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Runs the File | Recent menu
+ */
+void MainWindow::FileRecentMenu()
+{
+	if(ImGui::BeginMenu("Recent Files"))
+	{
+		//TODO
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Runs the File | Export menu
+ */
+void MainWindow::FileExportMenu()
+{
+	if(ImGui::BeginMenu("Export"))
+	{
+		//TODO
 
 		ImGui::EndMenu();
 	}

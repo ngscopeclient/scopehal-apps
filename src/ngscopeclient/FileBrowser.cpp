@@ -63,7 +63,8 @@ shared_ptr<FileBrowser> MakeFileBrowser(
 	const string& initialPath,
 	const string& title,
 	const string& filterName,
-	const string& filterMask)
+	const string& filterMask,
+	bool saveDialog)
 {
 	auto pref = wnd->GetSession().GetPreferences().GetEnumRaw(
 		"Appearance.File Browser.dialogmode");
@@ -76,7 +77,8 @@ shared_ptr<FileBrowser> MakeFileBrowser(
 			title,
 			"FileChooser",
 			filterName,
-			filterMask);
+			filterMask,
+			saveDialog);
 	}
 	else
 	{
@@ -84,6 +86,7 @@ shared_ptr<FileBrowser> MakeFileBrowser(
 			initialPath,
 			title,
 			filterName,
-			filterMask);
+			filterMask,
+			saveDialog);
 	}
 }

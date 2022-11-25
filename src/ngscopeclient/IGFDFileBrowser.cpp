@@ -45,7 +45,8 @@ IGFDFileBrowser::IGFDFileBrowser(
 	const string& title,
 	const string& id,
 	const string& filterName,
-	const string& filterMask
+	const string& filterMask,
+	bool saveDialog
 	)
 	: m_closed(false)
 	, m_closedOK(false)
@@ -86,12 +87,25 @@ IGFDFileBrowser::IGFDFileBrowser(
 
 	for(auto jt : m_bookmarks)
 		m_dialog.AddBookmark(jt.second, jt.first);
-	m_dialog.OpenDialog(
-		m_id,
-		title,
-		mask.c_str(),
-		".",
-		initialPath);
+	if(saveDialog)
+	{
+		m_dialog.OpenDialog(
+			m_id,
+			title,
+			mask.c_str(),
+			".",
+			initialPath,
+			ImGuiFileDialogFlags_ConfirmOverwrite);
+	}
+	else
+	{
+		m_dialog.OpenDialog(
+			m_id,
+			title,
+			mask.c_str(),
+			".",
+			initialPath);
+	}
 }
 
 IGFDFileBrowser::~IGFDFileBrowser()

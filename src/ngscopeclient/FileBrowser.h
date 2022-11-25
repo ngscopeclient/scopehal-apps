@@ -74,6 +74,7 @@ std::shared_ptr<FileBrowser> MakeFileBrowser(
 	const std::string& initialPath,
 	const std::string& title,
 	const std::string& filterName,
-	const std::string& filterMask);
+	const std::string& filterMask,
+	bool saveDialog);
 
 #endif

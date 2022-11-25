@@ -265,7 +265,8 @@ bool FilterPropertiesDialog::DoRender()
 									s,
 									"Select File",
 									param.m_fileFilterName,
-									param.m_fileFilterMask);
+									param.m_fileFilterMask,
+									param.m_fileIsOutput);
 								m_fileParamName = name;
 							}
 							ImGui::SameLine();

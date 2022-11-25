@@ -49,7 +49,8 @@ public:
 		const std::string& initialPath,
 		const std::string& title,
 		const std::string& filterName,
-		const std::string& filterMask
+		const std::string& filterMask,
+		bool saveDialog
 		);
 	virtual ~NFDFileBrowser();
 
@@ -65,6 +66,7 @@ protected:
 	std::string m_title;
 	std::string m_filterName;
 	std::string m_filterMask;
+	bool m_saveDialog;
 
 	std::future<std::optional<std::string> > m_future;
 

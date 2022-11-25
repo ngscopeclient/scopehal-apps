@@ -49,6 +49,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "ChannelPropertiesDialog.h"
+#include "FileBrowser.h"
 #include "FilterPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
@@ -80,6 +81,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_persistenceDecay(0.8)
 	, m_session(this)
 	, m_sessionClosing(false)
+	, m_openOnline(false)
 	, m_texmgr(queue)
 	, m_needRender(false)
 	, m_toneMapTime(0)
@@ -162,6 +164,7 @@ void MainWindow::CloseSession()
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
 	m_graphEditor = nullptr;
+	m_fileBrowser = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -176,6 +179,7 @@ void MainWindow::CloseSession()
 	LogTrace("Clear complete\n");
 
 	m_sessionClosing = false;
+	m_sessionFileName = "";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -431,6 +435,10 @@ void MainWindow::RenderUI()
 		m_session.RefreshAllFiltersNonblocking();
 		m_needRender = true;
 	}
+
+	//File browser dialogs
+	if(m_fileBrowser)
+		RenderFileBrowser();
 
 	//Check if we changed the selected waveform from a protocol analyzer dialog
 	for(auto it : m_protocolAnalyzerDialogs)
@@ -1234,4 +1242,82 @@ void MainWindow::OnCursorMoved(int64_t offset)
 {
 	for(auto it : m_protocolAnalyzerDialogs)
 		it.second->OnCursorMoved(offset);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serialization and file load/save/export UI
+
+/**
+	@brief Handler for file | open menu. Spawns the browser dialog.
+ */
+void MainWindow::OnOpenFile(bool online)
+{
+	m_openOnline = online;
+	m_fileBrowserMode = BROWSE_OPEN_SESSION;
+	m_fileBrowser = MakeFileBrowser(
+		this,
+		".",
+		"Open Session",
+		"Session files (*.scopesession)",
+		"*.scopesession",
+		false);
+}
+
+/**
+	@brief Handler for file | save as menu. Spawns the browser dialog
+ */
+void MainWindow::OnSaveAs()
+{
+	m_fileBrowserMode = BROWSE_SAVE_SESSION;
+	m_fileBrowser = MakeFileBrowser(
+		this,
+		".",
+		"Save Session",
+		"Session files (*.scopesession)",
+		"*.scopesession",
+		true);
+}
+
+/**
+	@brief Runs the file browser dialog
+ */
+void MainWindow::RenderFileBrowser()
+{
+	m_fileBrowser->Render();
+
+	if(m_fileBrowser->IsClosed())
+	{
+		if(m_fileBrowser->IsClosedOK())
+		{
+			//A file was selected, actually execute the load/save operation
+			switch(m_fileBrowserMode)
+			{
+				case BROWSE_OPEN_SESSION:
+					DoOpenFile(m_fileBrowser->GetFileName(), m_openOnline);
+					break;
+
+				case BROWSE_SAVE_SESSION:
+					DoSaveFile(m_fileBrowser->GetFileName());
+					break;
+			}
+		}
+
+		//Done, clean up
+		m_fileBrowser = nullptr;
+	}
+}
+
+/**
+	@brief Actually open a file (may be triggered by dialog, command line request, or recent file menu)
+ */
+void MainWindow::DoOpenFile(const string& sessionPath, bool online)
+{
+}
+
+/**
+	@brief Actually save a file (may be triggered by file|save or file|save as)
+ */
+void MainWindow::DoSaveFile(const string& sessionPath)
+{
+
 }

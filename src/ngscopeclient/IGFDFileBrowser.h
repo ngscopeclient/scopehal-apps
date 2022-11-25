@@ -49,7 +49,8 @@ public:
 		const std::string& title,
 		const std::string& id,
 		const std::string& filterName,
-		const std::string& filterMask
+		const std::string& filterMask,
+		bool saveDialog
 		);
 	virtual ~IGFDFileBrowser();
 

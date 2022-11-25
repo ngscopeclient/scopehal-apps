@@ -49,6 +49,7 @@
 
 class MultimeterDialog;
 class HistoryDialog;
+class FileBrowser;
 
 class SplitGroupRequest
 {
@@ -172,6 +173,8 @@ protected:
 	virtual void RenderUI();
 		void MainMenu();
 			void FileMenu();
+				void FileRecentMenu();
+				void FileExportMenu();
 			void ViewMenu();
 			void AddMenu();
 				void AddGeneratorMenu(
@@ -299,6 +302,30 @@ protected:
 	bool m_sessionClosing;
 
 	SCPITransport* MakeTransport(const std::string& trans, const std::string& args);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Serialization
+
+	void OnOpenFile(bool online);
+	void DoOpenFile(const std::string& sessionPath, bool online);
+	void OnSaveAs();
+	void DoSaveFile(const std::string& sessionPath);
+	void RenderFileBrowser();
+
+	enum
+	{
+		BROWSE_OPEN_SESSION,
+		BROWSE_SAVE_SESSION
+	} m_fileBrowserMode;
+
+	///@brief Browser for pending file loads
+	std::shared_ptr<FileBrowser> m_fileBrowser;
+
+	///@brief Current session file path
+	std::string m_sessionFileName;
+
+	///@brief True if the pending file is to be opened online
+	bool m_openOnline;
 
 protected:
 
