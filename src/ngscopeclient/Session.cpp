@@ -155,6 +155,12 @@ void Session::Clear()
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
 
+	//We SHOULD not have any filters at this point.
+	//But there have been reports that some stick around. If this happens, print an error message.
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		LogWarning("Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
+
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;

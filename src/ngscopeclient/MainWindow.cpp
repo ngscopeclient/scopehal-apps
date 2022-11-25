@@ -167,6 +167,8 @@ void MainWindow::CloseSession()
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_dialogs.clear();
+	m_protocolAnalyzerDialogs.clear();
+	m_scpiConsoleDialogs.clear();
 
 	//Clear the actual session object once all views / dialogs having handles to scopes etc have been destroyed
 	m_session.Clear();
