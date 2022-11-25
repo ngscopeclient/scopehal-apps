@@ -34,6 +34,12 @@
  */
 #include "ngscopeclient.h"
 #include "FileBrowser.h"
+#include "MainWindow.h"
+#include "IGFDFileBrowser.h"
+#include "NFDFileBrowser.h"
+#include "PreferenceTypes.h"
+
+using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -44,4 +50,40 @@ FileBrowser::FileBrowser()
 
 FileBrowser::~FileBrowser()
 {
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Factory methods
+
+/**
+	@brief Helper function to create the correct FileBrowser based on user preferences
+ */
+shared_ptr<FileBrowser> MakeFileBrowser(
+	MainWindow* wnd,
+	const string& initialPath,
+	const string& title,
+	const string& filterName,
+	const string& filterMask)
+{
+	auto pref = wnd->GetSession().GetPreferences().GetEnumRaw(
+		"Appearance.File Browser.dialogmode");
+
+	//Fullscreen mode overrides preferences and forces use of imgui browser
+	if( (pref == BROWSER_IMGUI) || wnd->IsFullscreen() )
+	{
+		return make_shared<IGFDFileBrowser>(
+			initialPath,
+			title,
+			"FileChooser",
+			filterName,
+			filterMask);
+	}
+	else
+	{
+		return make_shared<NFDFileBrowser>(
+			initialPath,
+			title,
+			filterName,
+			filterMask);
+	}
 }

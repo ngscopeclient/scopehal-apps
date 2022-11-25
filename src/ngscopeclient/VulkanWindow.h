@@ -57,6 +57,9 @@ public:
 	void AddTextureUsedThisFrame(std::shared_ptr<Texture> tex)
 	{ m_texturesUsedThisFrame[m_frameIndex].emplace(tex); }
 
+	bool IsFullscreen()
+	{ return m_fullscreen; }
+
 protected:
 	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);

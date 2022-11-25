@@ -35,6 +35,8 @@
 #ifndef FileBrowser_h
 #define FileBrowser_h
 
+class MainWindow;
+
 /**
 	@brief Abstract base class for a dialog that displays a file picker window
  */
@@ -66,5 +68,12 @@ public:
 
 protected:
 };
+
+std::shared_ptr<FileBrowser> MakeFileBrowser(
+	MainWindow* wnd,
+	const std::string& initialPath,
+	const std::string& title,
+	const std::string& filterName,
+	const std::string& filterMask);
 
 #endif
