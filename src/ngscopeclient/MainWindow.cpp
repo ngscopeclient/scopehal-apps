@@ -36,6 +36,9 @@
 #include "MainWindow.h"
 #include "PreferenceTypes.h"
 
+#include <iostream>
+#include <fstream>
+
 #include "DemoOscilloscope.h"
 #include "RemoteBridgeOscilloscope.h"
 
@@ -1345,6 +1348,8 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		}
 
 		//Loading failed, clean up any half-loaded stuff
+		//Do not print any error message; LoadSessionFromYaml() is responsible for calling ShowErrorPopup()
+		//if something goes wrong there.
 		else
 			CloseSession();
 	}
@@ -1366,7 +1371,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 }
 
 /**
-	@brief Load a .scopesession file from a YAML::Node
+	@brief Deserialize a YAML::Node (and associated data directory) to the current session
 
 	@param node		Root YAML node of the file
 	@param dataDir	Path to the _data directory associated with the session
@@ -1376,6 +1381,8 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 	Examples include:
 	* changing V/div significantly on a scope channel
 	* enabling output of a signal generator or power supply
+
+	@return			True if successful, false on error
  */
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
@@ -1416,5 +1423,59 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 	//Stop the trigger so we don't have data races if a waveform comes in mid-save
 	m_session.StopTrigger();
 
-	//
+	//Get the data directory for the session
+	string base = sessionPath.substr(0, sessionPath.length() - strlen(".scopesession"));
+	string datadir = base + "_data";
+	LogDebug("Saving session file \"%s\" (data directory %s)\n", sessionPath.c_str(), datadir.c_str());
+
+	YAML::Node node{};
+
+	//Serialization successful
+	if(SaveSessionToYaml(node, datadir))
+	{
+		ofstream outfs(sessionPath);
+		if(!outfs)
+		{
+			ShowErrorPopup(
+				"Cannot open file",
+				string("Failed to open output session file \"") + sessionPath + "\" for writing");
+			return;
+		}
+
+		outfs << node;
+		outfs.close();
+
+		if(!outfs)
+		{
+			ShowErrorPopup(
+				"Write failed",
+				string("Failed to write session file \"") + sessionPath + "\"");
+		}
+	}
+
+	//Serialization failed
+	else
+	{
+		//Do not print any error message; SaveSessionFromYaml() is responsible for calling ShowErrorPopup()
+		//if something goes wrong there.
+	}
+}
+
+/**
+	@brief Serialize the current session to a YAML::Node
+
+	@param node		Node for the main .scopesession
+	@param dataDir	Path to the _data directory (may not have been created yet)
+
+	@return			True if successful, false on error
+ */
+bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
+{
+	ShowErrorPopup(
+		"Unimplemented",
+		"Session serialization is not finished, sorry!");
+
+	//DEBUG: return true even though "unimplemented" is technically a failure
+	//so we can test the rest of the file write code path
+	return true;
 }

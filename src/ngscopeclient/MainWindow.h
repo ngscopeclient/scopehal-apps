@@ -311,6 +311,7 @@ protected:
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
+	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
 	void RenderFileBrowser();
 
 	enum
