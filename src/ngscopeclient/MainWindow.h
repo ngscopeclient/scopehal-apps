@@ -308,6 +308,7 @@ protected:
 
 	void OnOpenFile(bool online);
 	void DoOpenFile(const std::string& sessionPath, bool online);
+	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	void RenderFileBrowser();

@@ -460,6 +460,9 @@ void MainWindow::RenderUI()
 		}
 	}
 
+	//Handle error messages
+	RenderErrorPopup();
+
 	if(m_needRender)
 		g_rerenderRequestedEvent.Signal();
 
@@ -969,7 +972,7 @@ void MainWindow::ShowErrorPopup(const string& title, const string& msg)
 }
 
 /**
-	@brief Popup message when we fail to connect
+	@brief Popup message when something big goes wrong
  */
 void MainWindow::RenderErrorPopup()
 {
@@ -1312,6 +1315,97 @@ void MainWindow::RenderFileBrowser()
  */
 void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 {
+	//Close any existing session
+	CloseSession();
+
+	//Get the data directory for the session
+	string base = sessionPath.substr(0, sessionPath.length() - strlen(".scopesession"));
+	string datadir = base + "_data";
+
+	LogDebug("Opening session file \"%s\" (data directory %s)\n", sessionPath.c_str(), datadir.c_str());
+	try
+	{
+		//Load all YAML
+		auto docs = YAML::LoadAllFromFile(sessionPath);
+		if(docs.size() != 1)
+		{
+			ShowErrorPopup(
+				"File loading error",
+				string("Could not load the file \"") + sessionPath + "\"!\n\n" +
+				"The file may not be in .scopesession format, or may have been corrupted.\n\n" +
+				"YAML parsing successfuul, but expected one document and found " + to_string(docs.size()) + " instead.");
+			return;
+		}
+
+		//Run the actual load
+		if(LoadSessionFromYaml(docs[0], datadir, online))
+		{
+			//If we get here, all good
+			m_sessionFileName = sessionPath;
+		}
+
+		//Loading failed, clean up any half-loaded stuff
+		else
+			CloseSession();
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		ShowErrorPopup("Cannot open file", string("Unable to open the file \"") + sessionPath + "\"!");
+		return;
+	}
+	catch(const YAML::Exception& ex)
+	{
+		ShowErrorPopup(
+			"File loading error",
+			string("Could not load the file \"") + sessionPath + "\"!\n\n" +
+			"The file may not be in .scopesession format, or may have been corrupted.\n\n" +
+			"Debug information:\n" +
+			ex.what());
+		return;
+	}
+}
+
+/**
+	@brief Load a .scopesession file from a YAML::Node
+
+	@param node		Root YAML node of the file
+	@param dataDir	Path to the _data directory associated with the session
+	@param online	True if we should reconnect to instruments
+
+	TODO: do we want some kind of popup to warn about reconfiguring instruments into potentially dangerous states?
+	Examples include:
+	* changing V/div significantly on a scope channel
+	* enabling output of a signal generator or power supply
+ */
+bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
+{
+	//TODO: actual load logic
+	//reference old code from glscopeclient below:
+	/*
+		//Load various sections of the file
+		IDTable table;
+		LoadInstruments(node["instruments"], reconnect, table);
+		LoadDecodes(node["decodes"], table);
+		LoadUIConfiguration(node["ui_config"], table);
+
+		//Create history windows for all of our scopes
+		for(auto scope : m_scopes)
+		{
+			auto hist = new HistoryWindow(this, scope);
+			hist->hide();
+			m_historyWindows[scope] = hist;
+		}
+
+		//Re-title the window for the new scope
+		SetTitle();
+
+		LoadWaveformData(filename, table);
+	*/
+
+	ShowErrorPopup(
+		"Unimplemented",
+		"Session file loading is not finished, sorry!");
+	return false;
 }
 
 /**
@@ -1319,5 +1413,8 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
  */
 void MainWindow::DoSaveFile(const string& sessionPath)
 {
+	//Stop the trigger so we don't have data races if a waveform comes in mid-save
+	m_session.StopTrigger();
 
+	//
 }
