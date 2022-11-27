@@ -46,7 +46,7 @@ using namespace std;
 // DisplayedChannel
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
-		: m_eyeGradient("eye-gradient-krain")
+		: m_eyeGradient("eye-gradient-viridis")
 		, m_stream(stream)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
 		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
@@ -73,7 +73,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	{
 		case Stream::STREAM_TYPE_EYE:
 			m_toneMapPipe = make_shared<ComputePipeline>(
-				"shaders/EyeToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1);
+				"shaders/EyeToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1, 1);
 			break;
 
 		default:
@@ -1553,14 +1553,20 @@ void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel,
 		return;
 
 	//Run the actual compute shader
-	//TODO: pass the eye ramp
 	auto pipe = channel->GetToneMapPipeline();
+	const auto& texmgr = m_parent->GetTextureManager();
 	pipe->BindBufferNonblocking(0, data->GetOutData(), cmdbuf);
 	pipe->BindStorageImage(
 		1,
-		**m_parent->GetTextureManager()->GetSampler(),
+		**texmgr->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
+	pipe->BindSampledImage(
+		2,
+		**texmgr->GetSampler(),
+		texmgr->GetView(channel->m_eyeGradient),
+		vk::ImageLayout::eShaderReadOnlyOptimal);
+
 	EyeToneMapArgs args(width, height);
 	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
 
@@ -2381,6 +2387,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		ImGui::Separator();
 
 		//Color ramp if it's an eye
+		//TODO: also show this for spectrogram, etc
 		if(edata)
 		{
 			if(ImGui::BeginMenu("Color ramp"))
@@ -2409,6 +2416,9 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 					if(ImGui::MenuItem(displayName.c_str(), nullptr, (internalName == chan->m_eyeGradient) ))
 					{
 						chan->m_eyeGradient = internalName;
+
+						//TODO: more efficient to request new tone map but not render
+						m_parent->SetNeedRender();
 					}
 				}
 

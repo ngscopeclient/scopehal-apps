@@ -744,6 +744,23 @@ void Session::RefreshAllFilters()
 }
 
 /**
+	@brief Clear state on all of our filters
+ */
+void Session::ClearSweeps()
+{
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	set<Filter*> filters;
+	{
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		filters = Filter::GetAllInstances();
+	}
+
+	for(auto f : filters)
+		f->ClearSweeps();
+}
+
+/**
 	@brief Update all of the packet managers when new data arrives
  */
 void Session::UpdatePacketManagers(const set<Filter*>& filters)

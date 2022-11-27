@@ -37,6 +37,8 @@ layout(std430, binding=0) restrict readonly buffer buf_pixels
 
 layout(binding=1, rgba32f) uniform image2D outputTex;
 
+layout(binding=2) uniform sampler2D colorRamp;
+
 layout(std430, push_constant) uniform constants
 {
 	uint width;
@@ -57,12 +59,9 @@ void main()
 	float pixval = pixels[npixel];
 
 	//Look it up in the gradient texture
-
-	vec4 colorOut;
-	colorOut.r = pixval;
-	colorOut.g = pixval;
-	colorOut.b = pixval;
-	colorOut.a = 1;
+	float clamped = min(pixval, 0.99);
+	clamped += 0.5 / 255.0;
+	vec4 colorOut = texture(colorRamp, vec2(clamped, 0.5));
 
 	//Write final output
 	imageStore(

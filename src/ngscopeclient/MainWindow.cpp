@@ -631,10 +631,7 @@ void MainWindow::ToolbarButtons()
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
 	{
 		ClearPersistence();
-
-		auto filters = Filter::GetAllInstances();
-		for(auto f : filters)
-			f->ClearSweeps();
+		m_session.ClearSweeps();
 	}
 	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 

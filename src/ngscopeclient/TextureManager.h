@@ -119,9 +119,12 @@ public:
 
 	vk::raii::CommandBuffer& GetCmdBuffer()
 	{ return *m_cmdBuf; }
-	
+
 	std::shared_ptr<QueueHandle> GetQueue()
 	{ return m_queue; }
+
+	vk::ImageView GetView(const std::string& name)
+	{ return m_textures[name]->GetView(); }
 
 protected:
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;

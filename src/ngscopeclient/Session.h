@@ -272,6 +272,8 @@ public:
 
 	void StartWaveformThreadIfNeeded();
 
+	void ClearSweeps();
+
 protected:
 	void UpdatePacketManagers(const std::set<Filter*>& filters);
 
