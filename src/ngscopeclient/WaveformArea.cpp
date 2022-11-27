@@ -36,6 +36,7 @@
 #include "WaveformArea.h"
 #include "MainWindow.h"
 #include "../../scopehal/TwoLevelTrigger.h"
+#include "../../scopeprotocols/EyePattern.h"
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
 
@@ -53,7 +54,6 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		, m_cachedX(0)
 		, m_cachedY(0)
 		, m_persistenceEnabled(false)
-		, m_toneMapPipe("shaders/WaveformToneMap.spv", 1, sizeof(ToneMapArgs), 1)
 		, m_yButtonPos(0)
 {
 	stream.m_channel->AddRef();
@@ -66,6 +66,19 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	//Use pinned memory for index buffer since it should only be read once
 	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
 	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_UNLIKELY);
+
+	//Create tone map pipeline depending on waveform type
+	switch(m_stream.GetType())
+	{
+		case Stream::STREAM_TYPE_EYE:
+			m_toneMapPipe = make_shared<ComputePipeline>(
+				"shaders/EyeToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1);
+			break;
+
+		default:
+			m_toneMapPipe = make_shared<ComputePipeline>(
+				"shaders/WaveformToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1);
+	}
 }
 
 /**
@@ -88,6 +101,27 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 		//Don't actually create an image object if the image is degenerate (zero pixels)
 		if( (x == 0) || (y == 0) )
 			return true;
+
+		//If this is an eye pattern, need to reallocate the texture
+		//To avoid constantly destroying the integrated eye if we slightly resize stuff, round up to next power of 2
+		auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
+		if(eye)
+		{
+			size_t roundedX = pow(2, ceil(log2(x)));
+			size_t roundedY = pow(2, ceil(log2(y)));
+
+			if( (eye->GetWidth() != roundedX) || (eye->GetHeight() != roundedY) )
+			{
+				eye->SetWidth(roundedX);
+				eye->SetHeight(roundedY);
+
+				//TODO: do we really want to do this every resize? might be better to set a deferred flag to refresh?
+				eye->Refresh();
+			}
+
+			x = roundedX;
+			y = roundedY;
+		}
 
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
 
@@ -546,6 +580,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderAnalogWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_EYE:
+				RenderEyeWaveform(chan, start, size);
+				break;
+
 			case Stream::STREAM_TYPE_DIGITAL:
 				RenderDigitalWaveform(chan, start, size);
 				break;
@@ -586,6 +624,28 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	auto pf = dynamic_cast<PeakDetectionFilter*>(stream.m_channel);
 	if(pf)
 		RenderSpectrumPeaks(list, channel);
+}
+
+/**
+	@brief Renders a single eye pattern
+ */
+void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Mark the waveform as resized
+	if(channel->UpdateSize(size, m_parent))
+		m_parent->SetNeedRender();
+
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
 }
 
 /**
@@ -1227,6 +1287,10 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
 				break;
 
+			case Stream::STREAM_TYPE_EYE:
+				ToneMapEyeWaveform(chan, cmdbuf);
+				break;
+
 			//no tone mapping required
 			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
@@ -1268,7 +1332,11 @@ void WaveformArea::RenderWaveformTextures(
 				RasterizeAnalogOrDigitalWaveform(chan, cmdbuf, clearing);
 				break;
 
-			//no background rendering required
+			//no background rendering required, we do everything in Refresh()
+			case Stream::STREAM_TYPE_EYE:
+				break;
+
+			//no background rendering required, we draw everything live
 			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
 
@@ -1433,16 +1501,67 @@ void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> c
 		return;
 
 	//Run the actual compute shader
-	auto& pipe = channel->GetToneMapPipeline();
-	pipe.BindBufferNonblocking(0, channel->GetRasterizedWaveform(), cmdbuf);
-	pipe.BindStorageImage(
+	auto pipe = channel->GetToneMapPipeline();
+	pipe->BindBufferNonblocking(0, channel->GetRasterizedWaveform(), cmdbuf);
+	pipe->BindStorageImage(
 		1,
 		**m_parent->GetTextureManager()->GetSampler(),
 		tex->GetView(),
 		vk::ImageLayout::eGeneral);
 	auto color = ImGui::ColorConvertU32ToFloat4(ColorFromString(channel->GetStream().m_channel->m_displaycolor));
-	ToneMapArgs args(color, width, height);
-	pipe.Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
+	WaveformToneMapArgs args(color, width, height);
+	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
+
+	//Add a barrier before we read from the fragment shader
+	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+	vk::ImageMemoryBarrier barrier(
+		vk::AccessFlagBits::eShaderWrite,
+		vk::AccessFlagBits::eShaderRead,
+		vk::ImageLayout::eGeneral,
+		vk::ImageLayout::eGeneral,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		tex->GetImage(),
+		range);
+	cmdbuf.pipelineBarrier(
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::PipelineStageFlagBits::eFragmentShader,
+			{},
+			{},
+			{},
+			barrier);
+}
+
+/**
+	@brief Tone maps an eye pattern by converting the internal fp32 buffer to RGBA
+ */
+void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+{
+	auto tex = channel->GetTexture();
+	if(tex == nullptr)
+		return;
+
+	auto data = dynamic_cast<EyeWaveform*>(channel->GetStream().GetData());
+	if(data == nullptr)
+		return;
+
+	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
+	auto width = data->GetWidth();
+	auto height = data->GetHeight();
+	if( (width == 0) || (height == 0) )
+		return;
+
+	//Run the actual compute shader
+	//TODO: pass the eye ramp
+	auto pipe = channel->GetToneMapPipeline();
+	pipe->BindBufferNonblocking(0, data->GetOutData(), cmdbuf);
+	pipe->BindStorageImage(
+		1,
+		**m_parent->GetTextureManager()->GetSampler(),
+		tex->GetView(),
+		vk::ImageLayout::eGeneral);
+	EyeToneMapArgs args(width, height);
+	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);

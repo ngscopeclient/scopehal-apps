@@ -37,6 +37,8 @@
 #include "MainWindow.h"
 #include "imgui_internal.h"
 
+#include "../../scopeprotocols/EyePattern.h"
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,19 +161,34 @@ bool WaveformGroup::Render()
 		return true;
 	}
 
-	//Update X axis unit
-	if(!m_areas.empty())
-		m_xAxisUnit = m_areas[0]->GetStream(0).GetXAxisUnits();
-
 	auto pos = ImGui::GetCursorScreenPos();
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
 	m_width = clientArea.x;
 
+	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
+	float plotWidth = clientArea.x - yAxisWidthSpaced;
+
+	//Update X axis unit
+	if(!m_areas.empty())
+	{
+		m_xAxisUnit = m_areas[0]->GetStream(0).GetXAxisUnits();
+
+		//Autoscale eye patterns
+		auto firstStream = m_areas[0]->GetFirstAnalogOrEyeStream();
+		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
+		{
+			auto eye = dynamic_cast<EyeWaveform*>(firstStream.GetData());
+			if(eye && eye->GetWidth())
+			{
+				m_pixelsPerXUnit = plotWidth / (2*eye->GetUIWidth());
+				m_xAxisOffset = -PixelsToXAxisUnits(plotWidth/2);
+			}
+		}
+	}
+
 	//Render the timeline
 	m_timelineHeight = 2.5 * ImGui::GetFontSize();
 	clientArea.y -= m_timelineHeight;
-	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
-	float plotWidth = clientArea.x - yAxisWidthSpaced;
 	RenderTimeline(plotWidth, m_timelineHeight);
 
 	//Close any areas that we destroyed last frame
@@ -756,7 +773,10 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	//avoid divide-by-zero in weird cases with no waveform etc
 	if(grad_xunits_rounded == 0)
+	{
+		ImGui::EndChild();
 		return;
+	}
 
 	//Calculate number of ticks within a division
 	double nsubticks = 5;
@@ -814,6 +834,14 @@ void WaveformGroup::RenderTimeline(float width, float height)
  */
 void WaveformGroup::OnMouseWheel(float delta)
 {
+	//Do not allow changing zoom on eye patterns
+	if(!m_areas.empty())
+	{
+		auto firstStream = m_areas[0]->GetFirstAnalogOrEyeStream();
+		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
+			return;
+	}
+
 	//TODO: if shift is held, scroll horizontally
 
 	int64_t target = XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);

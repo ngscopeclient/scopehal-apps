@@ -29,6 +29,7 @@ endfunction()
 add_compute_shaders(
 	ngcomputeshaders
 	SOURCES
+		EyeToneMap.glsl
 		WaveformToneMap.glsl
 	)
 

@@ -42,10 +42,10 @@ class MainWindow;
 #include "TextureManager.h"
 #include "Marker.h"
 
-class ToneMapArgs
+class WaveformToneMapArgs
 {
 public:
-	ToneMapArgs(ImVec4 channelColor, uint32_t w, uint32_t h)
+	WaveformToneMapArgs(ImVec4 channelColor, uint32_t w, uint32_t h)
 	: m_red(channelColor.x)
 	, m_green(channelColor.y)
 	, m_blue(channelColor.z)
@@ -56,6 +56,18 @@ public:
 	float m_red;
 	float m_green;
 	float m_blue;
+	uint32_t m_width;
+	uint32_t m_height;
+};
+
+class EyeToneMapArgs
+{
+public:
+	EyeToneMapArgs(uint32_t w, uint32_t h)
+	: m_width(w)
+	, m_height(h)
+	{}
+
 	uint32_t m_width;
 	uint32_t m_height;
 };
@@ -240,7 +252,7 @@ public:
 		return m_sparseDigitalComputePipeline;
 	}
 
-	ComputePipeline& GetToneMapPipeline()
+	std::shared_ptr<ComputePipeline> GetToneMapPipeline()
 	{ return m_toneMapPipe; }
 
 	bool ZeroHoldFlagSet()
@@ -319,7 +331,7 @@ protected:
 	bool m_persistenceEnabled;
 
 	///@brief Compute pipeline for tone mapping fp32 images to RGBA
-	ComputePipeline m_toneMapPipe;
+	std::shared_ptr<ComputePipeline> m_toneMapPipe;
 
 	///@brief Compute pipeline for rendering uniform analog waveforms
 	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
@@ -394,6 +406,7 @@ protected:
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderEyeWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderSpectrumPeaks(ImDrawList* list, std::shared_ptr<DisplayedChannel> channel);
 	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
@@ -406,6 +419,7 @@ protected:
 		ImU32 color);
 	void MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop);
 	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf,
@@ -431,9 +445,11 @@ protected:
 	float YPositionToYAxisUnits(float y);
 	float PickStepSize(float volts_per_half_span, int min_steps = 2, int max_steps = 5);
 
+public:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
 
+protected:
 	///@brief Cached plot width (excluding Y axis)
 	float m_width;
 

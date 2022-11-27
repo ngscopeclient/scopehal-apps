@@ -600,7 +600,13 @@ void MainWindow::ToolbarButtons()
 	//View settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("clear-sweeps", GetTexture("clear-sweeps"), buttonsize))
+	{
 		ClearPersistence();
+
+		auto filters = Filter::GetAllInstances();
+		for(auto f : filters)
+			f->ClearSweeps();
+	}
 	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
 
 	//Fullscreen toggle
@@ -1099,11 +1105,23 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 	LogTrace("Looking for area for stream %s\n", stream.GetName().c_str());
 	LogIndenter li;
 
+	//If it's an eye pattern, it automatically gets a new group
+	bool makeNewGroup = false;
+	if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+	{
+		LogTrace("It's an eye pattern, automatic new group\n");
+		makeNewGroup = true;
+	}
+
 	//No areas?
 	if(m_waveformGroups.empty())
 	{
 		LogTrace("No waveform groups, making a new one\n");
+		makeNewGroup = true;
+	}
 
+	if(makeNewGroup)
+	{
 		//Make it
 		auto name = NameNewWaveformGroup();
 		auto group = make_shared<WaveformGroup>(this, name);
