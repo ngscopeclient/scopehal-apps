@@ -303,6 +303,8 @@ public:
 	///@brief Active labels for peaks associated with the current waveform
 	std::vector<PeakLabel> m_peakLabels;
 
+	std::string m_eyeGradient;
+
 protected:
 	StreamDescriptor m_stream;
 

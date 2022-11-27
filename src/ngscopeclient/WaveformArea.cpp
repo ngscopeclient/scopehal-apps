@@ -46,7 +46,8 @@ using namespace std;
 // DisplayedChannel
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
-		: m_stream(stream)
+		: m_eyeGradient("eye-gradient-krain")
+		, m_stream(stream)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
 		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
 		, m_rasterizedX(0)
@@ -2384,7 +2385,33 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		{
 			if(ImGui::BeginMenu("Color ramp"))
 			{
-				//TODO
+				auto& gradients = m_parent->GetEyeGradients();
+
+				//Figure out how big the gradients should be
+				float height = ImGui::GetFontSize();
+				ImVec2 gradsize(8*height, height);
+
+				auto list = ImGui::GetWindowDrawList();
+				for(auto internalName : gradients)
+				{
+					auto displayName = m_parent->GetEyeGradientFriendlyName(internalName);
+
+					ImVec2 p = ImGui::GetCursorScreenPos();
+					list->AddImage(
+						m_parent->GetTexture(internalName),
+						p,
+						ImVec2(p.x + gradsize.x, p.y + gradsize.y),
+						ImVec2(0, 0),
+						ImVec2(1, 1));
+					ImGui::Dummy(gradsize);
+					ImGui::SameLine();
+
+					if(ImGui::MenuItem(displayName.c_str(), nullptr, (internalName == chan->m_eyeGradient) ))
+					{
+						chan->m_eyeGradient = internalName;
+					}
+				}
+
 				ImGui::EndMenu();
 			}
 			ImGui::Separator();

@@ -162,6 +162,12 @@ public:
 
 	void OnFilterReconfigured(Filter* f);
 
+	const std::vector<std::string>& GetEyeGradients()
+	{ return m_eyeGradients; }
+
+	std::string GetEyeGradientFriendlyName(std::string internalName)
+	{ return m_eyeGradientFriendlyNames[internalName]; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
