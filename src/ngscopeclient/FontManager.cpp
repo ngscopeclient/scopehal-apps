@@ -52,7 +52,7 @@ FontManager::~FontManager()
 
 	@return True if changes were made to the font atlas
  */
-bool FontManager::UpdateFonts(PreferenceCategory& root)
+bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 {
 	//Make a list of fonts we want to have
 	set<FontDescription> fonts;
@@ -91,7 +91,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root)
 
 	//Load the fonts
 	for(auto f : fonts)
-		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second, nullptr, ranges.Data);
+		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second * contentScale, nullptr, ranges.Data);
 
 	//Done loading fonts, build the texture
 	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;

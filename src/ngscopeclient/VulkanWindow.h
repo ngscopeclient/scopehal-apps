@@ -49,6 +49,10 @@ public:
 	GLFWwindow* GetWindow()
 	{ return m_window; }
 
+	// Return a DPI 'scale' value where 1 ~= 96DPI
+	// Akin to uses of `get_pango_context()->get_resolution() / 96` in glscopeclient
+	float GetContentScale();
+
 	virtual void Render();
 
 	std::shared_ptr<QueueHandle> GetRenderQueue()

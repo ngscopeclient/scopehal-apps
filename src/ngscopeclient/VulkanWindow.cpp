@@ -88,6 +88,10 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	style.WindowRounding = 0.0f;
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
+	float scale = GetContentScale();
+	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
+	ImGui::GetStyle().ScaleAllSizes(scale);
+
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
@@ -295,11 +299,6 @@ bool VulkanWindow::UpdateFramebuffer()
 		return false;
 	}
 
-	float xscale;
-	float yscale;
-	glfwGetWindowContentScale(m_window, &xscale, &yscale);
-	LogTrace("Scale: %.2f, %.2f\n", xscale, yscale);
-
 	const VkFormat requestSurfaceImageFormat[] =
 	{
 		VK_FORMAT_B8G8R8A8_UNORM,
@@ -392,6 +391,16 @@ bool VulkanWindow::UpdateFramebuffer()
 
 	m_resizeEventPending = false;
 	return true;
+}
+
+float VulkanWindow::GetContentScale()
+{
+	float xscale;
+	float yscale;
+	glfwGetWindowContentScale(m_window, &xscale, &yscale);
+
+	// Hope this works well should a screen have unequal X- and Y- DPIs...
+	return (xscale + yscale) / 2;
 }
 
 void VulkanWindow::Render()
