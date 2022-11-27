@@ -208,6 +208,11 @@ protected:
 			void ToolbarButtons();
 		void DockingArea();
 
+	void LoadGradients();
+	void LoadGradient(const std::string& friendlyName, const std::string& internalName);
+	std::map<std::string, std::string> m_eyeGradientFriendlyNames;
+	std::vector<std::string> m_eyeGradients;
+
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
 

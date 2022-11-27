@@ -2283,6 +2283,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto stream = chan->GetStream();
 	auto rchan = stream.m_channel;
 	auto data = stream.GetData();
+	auto edata = dynamic_cast<EyeWaveform*>(data);
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -2333,20 +2334,28 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		//See if we have data
 		if(data)
 		{
-			Unit samples(Unit::UNIT_SAMPLEDEPTH);
-			tooltip += samples.PrettyPrint(data->size()) + "\n";
-
-			if(dynamic_cast<UniformWaveformBase*>(data))
+			if(edata)
 			{
-				Unit rate(Unit::UNIT_SAMPLERATE);
-				if(data->m_timescale > 1)
-					tooltip += string("Uniformly sampled, ") + rate.PrettyPrint(FS_PER_SECOND / data->m_timescale) + "\n";
+				Unit ui(Unit::UNIT_UI);
+				tooltip += ui.PrettyPrint(edata->GetTotalUIs()) + "\n";
 			}
 			else
 			{
-				Unit fs(Unit::UNIT_FS);
-				if(data->m_timescale > 1)
-					tooltip += string("Sparsely sampled, ") + fs.PrettyPrint(data->m_timescale) + " resolution\n";
+				Unit samples(Unit::UNIT_SAMPLEDEPTH);
+				tooltip += samples.PrettyPrint(data->size()) + "\n";
+
+				if(dynamic_cast<UniformWaveformBase*>(data))
+				{
+					Unit rate(Unit::UNIT_SAMPLERATE);
+					if(data->m_timescale > 1)
+						tooltip += string("Uniformly sampled, ") + rate.PrettyPrint(FS_PER_SECOND / data->m_timescale) + "\n";
+				}
+				else
+				{
+					Unit fs(Unit::UNIT_FS);
+					if(data->m_timescale > 1)
+						tooltip += string("Sparsely sampled, ") + fs.PrettyPrint(data->m_timescale) + " resolution\n";
+				}
 			}
 			tooltip += "\n";
 		}
@@ -2369,6 +2378,18 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		if(ImGui::MenuItem("Delete"))
 			RemoveStream(index);
 		ImGui::Separator();
+
+		//Color ramp if it's an eye
+		if(edata)
+		{
+			if(ImGui::BeginMenu("Color ramp"))
+			{
+				//TODO
+				ImGui::EndMenu();
+			}
+			ImGui::Separator();
+		}
+
 		bool persist = chan->IsPersistenceEnabled();
 		if(ImGui::MenuItem("Persistence", nullptr, persist))
 			chan->SetPersistenceEnabled(!persist);

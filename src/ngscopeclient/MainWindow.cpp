@@ -121,6 +121,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	//Load some textures
 	m_toolbarIconSize = 0;
 	LoadToolbarIcons();
+	LoadGradients();
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 }
 
@@ -547,6 +548,34 @@ void MainWindow::LoadToolbarIcons()
 	m_texmgr.LoadTexture("trigger-force", FindDataFile(prefix + "trigger-single.png"));	//no dedicated icon yet
 	m_texmgr.LoadTexture("trigger-start", FindDataFile(prefix + "trigger-start.png"));
 	m_texmgr.LoadTexture("trigger-stop", FindDataFile(prefix + "trigger-stop.png"));
+}
+
+/**
+	@brief Load gradient images
+ */
+void MainWindow::LoadGradients()
+{
+	LogTrace("Loading eye pattern gradients...\n");
+	LogIndenter li;
+
+	LoadGradient("CRT", "eye-gradient-crt");
+	LoadGradient("Grayscale", "eye-gradient-grayscale");
+	LoadGradient("Ironbow", "eye-gradient-ironbow");
+	LoadGradient("KRain", "eye-gradient-krain");
+	LoadGradient("Rainbow", "eye-gradient-rainbow");
+	LoadGradient("Reverse Rainbow", "eye-gradient-reverse-rainbow");
+	LoadGradient("Viridis", "eye-gradient-viridis");
+}
+
+/**
+	@brief Load a single gradient
+ */
+void MainWindow::LoadGradient(const string& friendlyName, const string& internalName)
+{
+	string prefix = string("icons/gradients/");
+	m_texmgr.LoadTexture(internalName, FindDataFile(prefix + internalName + ".png"));
+	m_eyeGradientFriendlyNames[internalName] = friendlyName;
+	m_eyeGradients.push_back(internalName);
 }
 
 void MainWindow::ToolbarButtons()
