@@ -65,7 +65,8 @@ string TimePoint::PrettyPrint()
 #endif
 
 	//round to nearest 100ps for display
-	strftime(tmp, sizeof(tmp), "%X.", &ltime);
+	//TODO: do we want to include date as an optional column or something??
+	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
 	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(offset / 100000));
 	stime += tmp;
