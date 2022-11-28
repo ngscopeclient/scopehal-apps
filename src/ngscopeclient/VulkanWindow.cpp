@@ -88,10 +88,6 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	style.WindowRounding = 0.0f;
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
-	float scale = GetContentScale();
-	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
-	ImGui::GetStyle().ScaleAllSizes(scale);
-
 	//Don't configure Vulkan or center the mouse
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
@@ -178,6 +174,11 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		info.Queue = **lock;
 		ImGui_ImplVulkan_Init(&info, **m_renderPass);
 	}
+
+	// Apply DPI scaling now that glfw initialized
+	float scale = GetContentScale();
+	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
+	ImGui::GetStyle().ScaleAllSizes(scale);
 
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
