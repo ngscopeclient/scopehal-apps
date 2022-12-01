@@ -62,6 +62,7 @@
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "TimebasePropertiesDialog.h"
+#include "TriggerPropertiesDialog.h"
 
 using namespace std;
 
@@ -164,6 +165,7 @@ void MainWindow::CloseSession()
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
+	m_triggerDialog = nullptr;
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
@@ -288,6 +290,10 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 		auto area = make_shared<WaveformArea>(s, group, this);
 		group->AddArea(area);
 	}
+
+	//Refresh any dialogs that depend on it
+	RefreshTimebasePropertiesDialog();
+	RefreshTriggerPropertiesDialog();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -683,6 +689,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_logViewerDialog = nullptr;
 	if(m_timebaseDialog == dlg)
 		m_timebaseDialog = nullptr;
+	if(m_triggerDialog == dlg)
+		m_triggerDialog = nullptr;
 	if(m_preferenceDialog == dlg)
 		m_preferenceDialog = nullptr;
 	if(m_persistenceDialog == dlg)
@@ -858,6 +866,15 @@ void MainWindow::ShowTimebaseProperties()
 
 	m_timebaseDialog = make_shared<TimebasePropertiesDialog>(&m_session);
 	AddDialog(m_timebaseDialog);
+}
+
+void MainWindow::ShowTriggerProperties()
+{
+	if(m_triggerDialog != nullptr)
+		return;
+
+	m_triggerDialog = make_shared<TriggerPropertiesDialog>(&m_session);
+	AddDialog(m_triggerDialog);
 }
 
 void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)

@@ -80,6 +80,7 @@ add_executable(ngscopeclient
 	Session.cpp
 	TextureManager.cpp
 	TimebasePropertiesDialog.cpp
+	TriggerPropertiesDialog.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp

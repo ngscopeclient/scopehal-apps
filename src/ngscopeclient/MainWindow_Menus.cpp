@@ -750,6 +750,14 @@ void MainWindow::SetupMenu()
 		if(timebaseVisible)
 			ImGui::EndDisabled();
 
+		bool triggerVisible = (m_triggerDialog != nullptr);
+		if(triggerVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Trigger..."))
+			ShowTriggerProperties();
+		if(triggerVisible)
+			ImGui::EndDisabled();
+
 		bool prefsVisible = (m_preferenceDialog != nullptr);
 		if(prefsVisible)
 			ImGui::BeginDisabled();

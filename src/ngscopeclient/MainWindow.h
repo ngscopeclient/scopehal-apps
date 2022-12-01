@@ -44,6 +44,7 @@
 
 #include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
+#include "TriggerPropertiesDialog.h"
 
 #include "../scopehal/PacketDecoder.h"
 
@@ -101,6 +102,7 @@ public:
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 	void ShowTimebaseProperties();
+	void ShowTriggerProperties();
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
@@ -119,6 +121,15 @@ public:
 	{
 		if(m_timebaseDialog)
 			m_timebaseDialog->Refresh();
+	}
+
+	/**
+		@brief Update the trigger properties dialog
+	 */
+	void RefreshTriggerPropertiesDialog()
+	{
+		if(m_triggerDialog)
+			m_triggerDialog->Refresh();
 	}
 
 	void ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf);
@@ -277,6 +288,9 @@ protected:
 
 	///@brief Timebase properties
 	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
+
+	///@brief Trigger properties
+	std::shared_ptr<TriggerPropertiesDialog> m_triggerDialog;
 
 	///@brief Persistence settings
 	std::shared_ptr<Dialog> m_persistenceDialog;
