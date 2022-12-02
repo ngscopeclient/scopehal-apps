@@ -227,10 +227,37 @@ bool TriggerPropertiesDialog::DoRender()
 			if(Combo("Type", types, m_triggerTypeIndexes[i]))
 			{
 				LogDebug("Trigger type changed\n");
+
+				//Save the level and inputs of the old trigger so we can reuse it
+				auto oldTrig = scope->GetTrigger();
+				float level = 0;
+				if(oldTrig)
+					level = oldTrig->GetLevel();
+				vector<StreamDescriptor> inputs;
+				for(size_t j=0; j<oldTrig->GetInputCount(); j++)
+					inputs.push_back(oldTrig->GetInput(j));
+
+				//Create the new trigger
+				auto newTrig = Trigger::CreateTrigger(types[m_triggerTypeIndexes[i]], scope);
+				if(newTrig)
+				{
+					//Copy settings over from old trigger to new
+					//TODO: copy both levels if both are two level triggers
+					newTrig->SetLevel(level);
+					for(size_t j=0; (j<newTrig->GetInputCount()) && (j < inputs.size()); j++)
+						newTrig->SetInput(j, inputs[j]);
+
+					//Push changes to the scope all at once after the new trigger is set up
+					scope->SetTrigger(newTrig);
+					scope->PushTrigger();
+
+					//Replace the properties page with whatever the new trigger eeds
+					m_pages[i] = make_unique<TriggerPropertiesPage>(scope);
+				}
 			}
 			HelpMarker("Select the type of trigger for this instrument\n");
 
-			p->Render();
+			m_pages[i]->Render();
 
 			ImGui::PopID();
 		}
