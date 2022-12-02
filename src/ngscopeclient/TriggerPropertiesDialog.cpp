@@ -45,42 +45,62 @@ using namespace std;
 TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 	: m_scope(scope)
 {
-	/*
-	//Interleaving flag
-	m_interleaving = scope->IsInterleaving();
+	auto trig = scope->GetTrigger();
+	if(!trig)
+		return;
 
-	//Sample rate
-	Unit srate(Unit::UNIT_SAMPLERATE);
-	auto rate = scope->GetSampleRate();
-	if(m_interleaving)
-		m_rates = scope->GetSampleRatesInterleaved();
-	else
-		m_rates = scope->GetSampleRatesNonInterleaved();
-
-	m_rate = 0;
-	for(size_t i=0; i<m_rates.size(); i++)
+	//Show inputs (if we have any)
+	if(trig->GetInputCount() != 0)
 	{
-		m_rateNames.push_back(srate.PrettyPrint(m_rates[i]));
-		if(m_rates[i] == rate)
-			m_rate = i;
+		if(ImGui::TreeNodeEx("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			//TODO: cache some of this?
+			vector<StreamDescriptor> streams;
+			FindAllStreams(streams);
+
+			for(size_t i=0; i<trig->GetInputCount(); i++)
+			{
+				//Find the set of legal streams for this input
+				vector<StreamDescriptor> matchingInputs;
+				vector<string> names;
+				int sel = -1;
+				for(auto stream : streams)
+				{
+					if(!trig->ValidateChannel(i, stream))
+						continue;
+
+					if(trig->GetInput(i) == stream)
+						sel = matchingInputs.size();
+
+					matchingInputs.push_back(stream);
+					names.push_back(stream.GetName());
+				}
+
+				//The actual combo box
+				if(Dialog::Combo(trig->GetInputName(i).c_str(), names, sel))
+					trig->SetInput(i, matchingInputs[sel]);
+			}
+
+			ImGui::TreePop();
+		}
 	}
+}
 
-	//Sample depth
-	Unit sdepth(Unit::UNIT_SAMPLEDEPTH);
-	auto depth = scope->GetSampleDepth();
-	if(m_interleaving)
-		m_depths = scope->GetSampleDepthsInterleaved();
-	else
-		m_depths = scope->GetSampleDepthsNonInterleaved();
 
-	m_depth = 0;
-	for(size_t i=0; i<m_depths.size(); i++)
+/**
+	@brief Get every stream that might be usable as an input to this trigger
+ */
+void TriggerPropertiesPage::FindAllStreams(vector<StreamDescriptor>& streams)
+{
+	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		m_depthNames.push_back(sdepth.PrettyPrint(m_depths[i]));
-		if(m_depths[i] == depth)
-			m_depth = i;
+		auto chan = m_scope->GetChannel(i);
+		if(m_scope->CanEnableChannel(i))
+		{
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				streams.push_back(StreamDescriptor(chan, j));
+		}
 	}
-	*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,10 +120,30 @@ TriggerPropertiesDialog::~TriggerPropertiesDialog()
 void TriggerPropertiesDialog::Refresh()
 {
 	m_pages.clear();
+	m_triggerTypeIndexes.clear();
 
 	auto scopes = m_session->GetScopes();
 	for(auto s : scopes)
+	{
 		m_pages.push_back(make_unique<TriggerPropertiesPage>(s));
+
+		//Figure out combo index for active trigger
+		int index = -1;
+		vector<string> types = s->GetTriggerTypes();
+		auto trig = s->GetTrigger();
+		string ttype;
+		if(trig)
+			ttype = trig->GetTriggerDisplayName();
+		for(size_t i=0; i<types.size(); i++)
+		{
+			if(types[i] == ttype)
+			{
+				index = i;
+				break;
+			}
+		}
+		m_triggerTypeIndexes.push_back(index);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,13 +159,23 @@ bool TriggerPropertiesDialog::DoRender()
 {
 	float width = 10 * ImGui::GetFontSize();
 
-	for(auto& p : m_pages)
+	for(size_t i=0; i<m_pages.size(); i++)
 	{
+		auto& p = m_pages[i];
+
 		auto scope = p->m_scope;
 
 		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::PushID(scope->m_nickname.c_str());
+
+			//Dropdown with list of trigger types is outside the main trigger page
+			//TODO: cache some of this?
+			vector<string> types = scope->GetTriggerTypes();
+			if(Combo("Type", types, m_triggerTypeIndexes[i]))
+			{
+				LogDebug("Trigger type changed\n");
+			}
 
 /*
 			//Time domain configuration

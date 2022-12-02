@@ -50,8 +50,10 @@ public:
 	void RenderAsChild();
 	virtual bool DoRender() =0;
 
+	//TODO: this might be better off as a global method?
+	static bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+
 protected:
-	virtual bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
 	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
 	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);

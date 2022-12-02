@@ -330,8 +330,11 @@ void FilterPropertiesDialog::FindAllStreams(vector<StreamDescriptor>& streams)
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetChannel(i);
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-				streams.push_back(StreamDescriptor(chan, j));
+			if(scope->CanEnableChannel(i))
+			{
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+					streams.push_back(StreamDescriptor(chan, j));
+			}
 		}
 	}
 

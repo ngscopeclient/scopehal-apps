@@ -43,6 +43,9 @@ public:
 	TriggerPropertiesPage(Oscilloscope* scope);
 
 	Oscilloscope* m_scope;
+
+protected:
+	void FindAllStreams(std::vector<StreamDescriptor>& streams);
 };
 
 class TriggerPropertiesDialog : public Dialog
@@ -58,7 +61,10 @@ public:
 protected:
 	Session* m_session;
 
+	std::map<std::string, std::string> m_paramTempValues;
+
 	std::vector<std::unique_ptr<TriggerPropertiesPage>> m_pages;
+	std::vector<int> m_triggerTypeIndexes;
 };
 
 #endif // TriggerPropertiesDialog_h
