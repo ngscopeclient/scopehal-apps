@@ -52,6 +52,11 @@ public:
 
 	//TODO: this might be better off as a global method?
 	static bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	static bool UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		float& committedValue,
+		Unit unit);
 
 protected:
 	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
@@ -59,11 +64,6 @@ protected:
 	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
 	bool UnitInputWithExplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
 		const std::string& label,
 		std::string& currentValue,
 		float& committedValue,

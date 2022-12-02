@@ -44,8 +44,13 @@ public:
 
 	Oscilloscope* m_scope;
 
+	void Render();
+
 protected:
 	void FindAllStreams(std::vector<StreamDescriptor>& streams);
+
+	float m_committedLevel = 0;
+	std::string m_triggerLevel;
 };
 
 class TriggerPropertiesDialog : public Dialog

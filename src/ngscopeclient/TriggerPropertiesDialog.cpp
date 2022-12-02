@@ -44,12 +44,29 @@ using namespace std;
 
 TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 	: m_scope(scope)
+	, m_committedLevel(0)
 {
-	auto trig = scope->GetTrigger();
+	auto trig = m_scope->GetTrigger();
+	if(!trig)
+		return;
+
+	Unit volts(Unit::UNIT_VOLTS);
+
+	m_committedLevel = trig->GetLevel();
+	m_triggerLevel = volts.PrettyPrint(m_committedLevel);
+}
+
+/**
+	@brief Run the properties for this page
+ */
+void TriggerPropertiesPage::Render()
+{
+	auto trig = m_scope->GetTrigger();
 	if(!trig)
 		return;
 
 	//Show inputs (if we have any)
+	bool updated = false;
 	if(trig->GetInputCount() != 0)
 	{
 		if(ImGui::TreeNodeEx("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
@@ -78,14 +95,49 @@ TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 
 				//The actual combo box
 				if(Dialog::Combo(trig->GetInputName(i).c_str(), names, sel))
+				{
 					trig->SetInput(i, matchingInputs[sel]);
+					updated = true;
+				}
+				Dialog::HelpMarker(
+					"Select the channel to use as input to the trigger circuit.\n\n"
+					"Some instruments have restrictions on which channels can be used for some trigger types\n"
+					"(for example, dedicated routing to a CDR board)\n");
 			}
 
 			ImGui::TreePop();
 		}
-	}
-}
 
+		if(ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			//Primary level
+			Unit volts(Unit::UNIT_VOLTS);
+			if(Dialog::UnitInputWithImplicitApply(
+				"Level",
+				m_triggerLevel,
+				m_committedLevel,
+				volts))
+			{
+				trig->SetLevel(m_committedLevel);
+				updated = true;
+			}
+
+			//Check for changes made elsewhere in the GUI (dragging arrow etc)
+			if(trig->GetLevel() != m_committedLevel)
+			{
+				m_committedLevel = trig->GetLevel();
+				m_triggerLevel = volts.PrettyPrint(m_committedLevel);
+			}
+
+			//TODO: if we have a secondary level, do that
+
+			ImGui::TreePop();
+		}
+	}
+
+	if(updated)
+		m_scope->PushTrigger();
+}
 
 /**
 	@brief Get every stream that might be usable as an input to this trigger
@@ -176,54 +228,9 @@ bool TriggerPropertiesDialog::DoRender()
 			{
 				LogDebug("Trigger type changed\n");
 			}
+			HelpMarker("Select the type of trigger for this instrument\n");
 
-/*
-			//Time domain configuration
-			if(scope->HasTriggerControls())
-			{
-
-				//Sample rate
-				ImGui::SetNextItemWidth(width);
-				if(Combo("Sample rate", p->m_rateNames, p->m_rate))
-					scope->SetSampleRate(p->m_rates[p->m_rate]);
-				HelpMarker(
-					"Time domain sample rate.\n\n"
-					"For some instruments, available sample rates may vary depending on which channels are active."
-					);
-
-				//Memory depth
-				ImGui::SetNextItemWidth(width);
-				if(Combo("Sample depth", p->m_depthNames, p->m_depth))
-					scope->SetSampleDepth(p->m_depths[p->m_depth]);
-				HelpMarker(
-					"Acquisition record length, in samples.\n\n"
-					"For some instruments, available memory depths may vary depending on which channels are active."
-					);
-
-				//Interleaving
-				if(scope->CanInterleave())
-				{
-					if(ImGui::Checkbox("Interleaving", &p->m_interleaving))
-					{
-						scope->SetInterleaving(p->m_interleaving);
-						Refresh();
-					}
-
-					HelpMarker(
-						"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
-						"\n"
-						"Some instruments do not have an explicit interleaving switch, but available sample rates "
-						"may vary depending on which channels are active."
-						);
-				}
-
-			}
-
-			//Frequency domain configuration
-			if(scope->HasFrequencyControls())
-			{
-				//TODO
-			}*/
+			p->Render();
 
 			ImGui::PopID();
 		}
