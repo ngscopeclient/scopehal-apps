@@ -48,6 +48,8 @@ public:
 	virtual bool Render();
 	virtual bool DoRender();
 
+	static bool DoParameter(FilterParameter& param, std::string name, std::map<std::string, std::string>& tempValues);
+
 protected:
 	std::map<std::string, std::string> m_paramTempValues;
 

@@ -57,21 +57,24 @@ public:
 		std::string& currentValue,
 		float& committedValue,
 		Unit unit);
+	static bool UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		double& committedValue,
+		Unit unit);
+	static bool TextInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		std::string& committedValue);
 
 protected:
 	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
 	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
-	bool TextInputWithImplicitApply(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
 	bool UnitInputWithExplicitApply(
 		const std::string& label,
 		std::string& currentValue,
 		float& committedValue,
-		Unit unit);
-	bool UnitInputWithImplicitApply(
-		const std::string& label,
-		std::string& currentValue,
-		double& committedValue,
 		Unit unit);
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);

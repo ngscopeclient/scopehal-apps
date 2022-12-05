@@ -34,6 +34,8 @@
  */
 
 #include "ngscopeclient.h"
+#include "ChannelPropertiesDialog.h"
+#include "FilterPropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Session.h"
 
@@ -130,6 +132,21 @@ void TriggerPropertiesPage::Render()
 			}
 
 			//TODO: if we have a secondary level, do that
+
+			ImGui::TreePop();
+		}
+
+		if(ImGui::TreeNodeEx("Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it++)
+			{
+				//Skip trigger level as that's redundant
+				if(it->first == "Level")
+					continue;
+
+				if(FilterPropertiesDialog::DoParameter(it->second, it->first, m_paramTempValues))
+					updated = true;
+			}
 
 			ImGui::TreePop();
 		}

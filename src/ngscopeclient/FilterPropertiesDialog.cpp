@@ -146,140 +146,45 @@ bool FilterPropertiesDialog::DoRender()
 		{
 			for(auto it = f->GetParamBegin(); it != f->GetParamEnd(); it++)
 			{
-				auto& param = it->second;
-				auto name = it->first;
-
-				//See what kind of parameter it is
-				switch(param.GetType())
+				//This can never be used in a trigger so special case
+				if(it->second.GetType() == FilterParameter::TYPE_FILENAME)
 				{
-					case FilterParameter::TYPE_FLOAT:
-						{
-							//If we don't have a temporary value, make one
-							auto nval = param.GetFloatVal();
-							if(m_paramTempValues.find(name) == m_paramTempValues.end())
-								m_paramTempValues[name] = param.GetUnit().PrettyPrint(nval);
+					string name = it->first;
+					auto& param = it->second;
 
-							//Input path
-							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-							if(UnitInputWithImplicitApply(name.c_str(), m_paramTempValues[name], nval, param.GetUnit()))
-							{
-								param.SetFloatVal(nval);
-								reconfigured = true;
-							}
-						}
-						break;
+					string s = param.GetFileName();
+					if(m_paramTempValues.find(name) == m_paramTempValues.end())
+						m_paramTempValues[name] = s;
 
-					case FilterParameter::TYPE_INT:
-						{
-							//If we don't have a temporary value, make one
-							//TODO: can we figure out how to preserve full int64 precision end to end here?
-							//For now, use a double to get as close as we can
-							double nval = param.GetIntVal();
-							if(m_paramTempValues.find(name) == m_paramTempValues.end())
-								m_paramTempValues[name] = param.GetUnit().PrettyPrint(nval);
+					//Input path
+					ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+					string tname = string("###path") + name;
+					if(TextInputWithImplicitApply(tname.c_str(), m_paramTempValues[name], s))
+					{
+						param.SetStringVal(s);
+						reconfigured = true;
+					}
 
-							//Input path
-							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-							if(UnitInputWithImplicitApply(name.c_str(), m_paramTempValues[name], nval, param.GetUnit()))
-							{
-								param.SetIntVal(nval);
-								reconfigured = true;
-							}
-						}
-						break;
-
-					case FilterParameter::TYPE_BOOL:
-						{
-							bool b = param.GetBoolVal();
-							if(ImGui::Checkbox(name.c_str(), &b))
-							{
-								param.SetBoolVal(b);
-								reconfigured = true;
-							}
-						}
-						break;
-
-					case FilterParameter::TYPE_STRING:
-						{
-							//If we don't have a temporary value, make one
-							string s = param.ToString();
-							if(m_paramTempValues.find(name) == m_paramTempValues.end())
-								m_paramTempValues[name] = s;
-
-							//Input path
-							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-							if(TextInputWithImplicitApply(name.c_str(), m_paramTempValues[name], s))
-							{
-								param.SetStringVal(s);
-								reconfigured = true;
-							}
-						}
-						break;
-
-					case FilterParameter::TYPE_ENUM:
-						{
-							vector<string> enumValues;
-							param.GetEnumValues(enumValues);
-
-							int nsel = -1;
-							string s = param.ToString();
-							for(size_t i=0; i<enumValues.size(); i++)
-							{
-								if(enumValues[i] == s)
-								{
-									nsel = i;
-									break;
-								}
-							}
-
-							if(Combo(name.c_str(), enumValues, nsel))
-							{
-								param.ParseString(enumValues[nsel]);
-								reconfigured = true;
-							}
-						}
-						break;
-
-					case FilterParameter::TYPE_FILENAME:
-						{
-							string s = param.GetFileName();
-							if(m_paramTempValues.find(name) == m_paramTempValues.end())
-								m_paramTempValues[name] = s;
-
-							//Input path
-							ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
-							string tname = string("###path") + name;
-							if(TextInputWithImplicitApply(tname.c_str(), m_paramTempValues[name], s))
-							{
-								param.SetStringVal(s);
-								reconfigured = true;
-							}
-
-							//Browser button
-							ImGui::SameLine();
-							string bname = string("...###browse") + name;
-							if(ImGui::Button(bname.c_str()))
-							{
-								m_fileDialog = MakeFileBrowser(
-									m_parent,
-									s,
-									"Select File",
-									param.m_fileFilterName,
-									param.m_fileFilterMask,
-									param.m_fileIsOutput);
-								m_fileParamName = name;
-							}
-							ImGui::SameLine();
-							ImGui::TextUnformatted(name.c_str());
-						}
-						break;
-
-					//TODO: TYPE_8B10B_PATTERN
-
-					default:
-						ImGui::Text("Parameter %s is unimplemented type", name.c_str());
-						break;
+					//Browser button
+					ImGui::SameLine();
+					string bname = string("...###browse") + name;
+					if(ImGui::Button(bname.c_str()))
+					{
+						m_fileDialog = MakeFileBrowser(
+							m_parent,
+							s,
+							"Select File",
+							param.m_fileFilterName,
+							param.m_fileFilterMask,
+							param.m_fileIsOutput);
+						m_fileParamName = name;
+					}
+					ImGui::SameLine();
+					ImGui::TextUnformatted(name.c_str());
 				}
+
+				else if(DoParameter(it->second, it->first, m_paramTempValues))
+					reconfigured = true;
 			}
 		}
 	}
@@ -288,6 +193,115 @@ bool FilterPropertiesDialog::DoRender()
 		OnReconfigured(f, oldStreamCount);
 
 	return true;
+}
+
+/**
+	@brief Handle a single parameter row in the filter (or trigger) properties dialog
+
+	@return True if a change was made
+ */
+bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, map<string, string>& tempValues)
+{
+	//See what kind of parameter it is
+	switch(param.GetType())
+	{
+		case FilterParameter::TYPE_FLOAT:
+			{
+				//If we don't have a temporary value, make one
+				auto nval = param.GetFloatVal();
+				if(tempValues.find(name) == tempValues.end())
+					tempValues[name] = param.GetUnit().PrettyPrint(nval);
+
+				//Input path
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
+				{
+					param.SetFloatVal(nval);
+					return true;
+				}
+			}
+			break;
+
+		case FilterParameter::TYPE_INT:
+			{
+				//If we don't have a temporary value, make one
+				//TODO: can we figure out how to preserve full int64 precision end to end here?
+				//For now, use a double to get as close as we can
+				double nval = param.GetIntVal();
+				if(tempValues.find(name) == tempValues.end())
+					tempValues[name] = param.GetUnit().PrettyPrint(nval);
+
+				//Input path
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
+				{
+					param.SetIntVal(nval);
+					return true;
+				}
+			}
+			break;
+
+		case FilterParameter::TYPE_BOOL:
+			{
+				bool b = param.GetBoolVal();
+				if(ImGui::Checkbox(name.c_str(), &b))
+				{
+					param.SetBoolVal(b);
+					return true;
+				}
+			}
+			break;
+
+		case FilterParameter::TYPE_STRING:
+			{
+				//If we don't have a temporary value, make one
+				string s = param.ToString();
+				if(tempValues.find(name) == tempValues.end())
+					tempValues[name] = s;
+
+				//Input path
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				if(Dialog::TextInputWithImplicitApply(name.c_str(), tempValues[name], s))
+				{
+					param.SetStringVal(s);
+					return true;
+				}
+			}
+			break;
+
+		case FilterParameter::TYPE_ENUM:
+			{
+				vector<string> enumValues;
+				param.GetEnumValues(enumValues);
+
+				int nsel = -1;
+				string s = param.ToString();
+				for(size_t i=0; i<enumValues.size(); i++)
+				{
+					if(enumValues[i] == s)
+					{
+						nsel = i;
+						break;
+					}
+				}
+
+				if(Dialog::Combo(name.c_str(), enumValues, nsel))
+				{
+					param.ParseString(enumValues[nsel]);
+					return true;
+				}
+			}
+			break;
+
+		//TODO: TYPE_8B10B_PATTERN
+
+		default:
+			ImGui::Text("Parameter %s is unimplemented type", name.c_str());
+			break;
+	}
+
+	//if we get here, no change made
+	return false;
 }
 
 /**

@@ -51,6 +51,8 @@ protected:
 
 	float m_committedLevel = 0;
 	std::string m_triggerLevel;
+
+	std::map<std::string, std::string> m_paramTempValues;
 };
 
 class TriggerPropertiesDialog : public Dialog
@@ -65,8 +67,6 @@ public:
 
 protected:
 	Session* m_session;
-
-	std::map<std::string, std::string> m_paramTempValues;
 
 	std::vector<std::unique_ptr<TriggerPropertiesPage>> m_pages;
 	std::vector<int> m_triggerTypeIndexes;
