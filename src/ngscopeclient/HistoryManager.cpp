@@ -199,6 +199,7 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 
 			m_session.RemoveMarkers(point->m_time);
 			m_history.erase(it);
+			deletedSomething = true;
 			break;
 		}
 
