@@ -797,6 +797,15 @@ shared_ptr<PacketManager> Session::AddPacketFilter(PacketDecoder* filter)
 	return ret;
 }
 
+/**
+	@brief Deletes packets from our packet managers for a waveform timestamp
+ */
+void Session::RemovePackets(TimePoint t)
+{
+	for(auto it : m_packetmgrs)
+		it.second->RemoveHistoryFrom(t);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
