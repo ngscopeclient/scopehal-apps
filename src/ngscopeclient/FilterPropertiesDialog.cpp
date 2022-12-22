@@ -38,6 +38,7 @@
 #include "MainWindow.h"
 #include "IGFDFileBrowser.h"
 #include "NFDFileBrowser.h"
+#include "../scopehal/ActionProvider.h"
 
 using namespace std;
 
@@ -185,6 +186,25 @@ bool FilterPropertiesDialog::DoRender()
 
 				else if(DoParameter(it->second, it->first, m_paramTempValues))
 					reconfigured = true;
+			}
+		}
+	}
+
+	//Show actions (if we have any)
+	auto ap = dynamic_cast<ActionProvider*>(f);
+	if(ap)
+	{
+		if(ImGui::CollapsingHeader("Actions", defaultOpenFlags))
+		{
+			auto actions = ap->EnumActions();
+			for(auto a : actions)
+			{
+				if(ImGui::Button(a.c_str()))
+				{
+					//Assume that the action requires the filter to get re-rendered
+					ap->PerformAction(a);
+					reconfigured = true;
+				}
 			}
 		}
 	}
