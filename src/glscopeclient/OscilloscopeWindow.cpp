@@ -1182,7 +1182,12 @@ void OscilloscopeWindow::OnLoadComplete()
 	{
 		for(size_t i=0; i<area->GetOverlayCount(); i++)
 		{
-			auto pdecode = dynamic_cast<PacketDecoder*>(area->GetOverlay(i).m_channel);
+			//Do not create duplicate decode windows for stream indexes >1
+			auto stream = area->GetOverlay(i);
+			if(stream.m_stream > 0)
+				continue;
+
+			auto pdecode = dynamic_cast<PacketDecoder*>(stream.m_channel);
 			if(pdecode != NULL)
 			{
 				char title[256];
