@@ -1,4 +1,9 @@
+# macOS
+Chip:	Apple M1 Pro
+Model Name:	MacBook Pro
+System Version:	macOS 12.6.1 
 
+## Build
 ```
 
 export VULKAN_SDK=~/VulkanSDK/1.3.231.1/macOS
@@ -16,7 +21,7 @@ cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PA
 make -j4
 
 ```
-
+## Log
 
 ```
 
