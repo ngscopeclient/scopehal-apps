@@ -1,7 +1,10 @@
 # macOS
 Chip:	Apple M1 Pro
+
 Model Name:	MacBook Pro
+
 System Version:	macOS 12.6.1 
+
 
 ## Build
 ```
