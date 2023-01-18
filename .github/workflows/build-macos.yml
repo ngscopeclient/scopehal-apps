@@ -18,7 +18,6 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew update
         brew install \
           ninja \
           libomp \
