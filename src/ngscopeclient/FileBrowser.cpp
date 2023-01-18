@@ -68,9 +68,9 @@ shared_ptr<FileBrowser> MakeFileBrowser(
 {
 	auto pref = wnd->GetSession().GetPreferences().GetEnumRaw(
 		"Appearance.File Browser.dialogmode");
-	
-#ifdef _APPLE_SILICON     // only the native dialog works. NFDFileBrowser crashes on MacOS
-	pref = BROWSER_IMGUI;  
+
+#ifdef __APPLE__     // only the imgui file dialog works. NFDFileBrowser crashes on MacOS due to threading issues
+	pref = BROWSER_IMGUI;
 #endif
 
 	//Fullscreen mode overrides preferences and forces use of imgui browser
