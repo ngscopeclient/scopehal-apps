@@ -91,6 +91,7 @@ protected:
 
 	void FilterMenu(StreamDescriptor src);
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
+	void CreateChannelMenu();
 
 	///@brief Session being manipuulated
 	Session& m_session;
@@ -161,6 +162,9 @@ protected:
 	ax::NodeEditor::NodeId m_selectedProperties;
 
 	ImVec2 m_createMousePos;
+
+	///@brief Input we're considering hooking a new channel up to
+	std::pair<FlowGraphNode*, int> m_createInput;
 };
 
 #endif

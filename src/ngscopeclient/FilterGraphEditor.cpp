@@ -408,9 +408,10 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 			}
 		}
 
-		if(ax::NodeEditor::QueryNewNode(&startId))
+		if(ax::NodeEditor::QueryNewNode(&startId) && startId)
 		{
-			if(startId && m_streamIDMap.HasEntry(startId))
+			//Dragging from node output - create new filter from that
+			if(m_streamIDMap.HasEntry(startId))
 			{
 				//See what the stream is
 				m_newFilterSourceStream = m_streamIDMap[startId];
@@ -441,17 +442,44 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 					}
 				}
 			}
+
+			//Dragging from node input - display list of channels
+			else if(m_inputIDMap.HasEntry(startId))
+			{
+				ImGui::BeginTooltip();
+					ImGui::TextColored(validcolor, "+ Add Channel");
+				ImGui::EndTooltip();
+
+				if(ax::NodeEditor::AcceptNewItem())
+				{
+					m_createInput = m_inputIDMap[startId];
+
+					ax::NodeEditor::Suspend();
+					m_createMousePos = ImGui::GetMousePos();
+					ImGui::OpenPopup("Add Input");
+					ax::NodeEditor::Resume();
+				}
+			}
 		}
 	}
 	ax::NodeEditor::EndCreate();
 
-	//Create-filter menu
 	ax::NodeEditor::Suspend();
-	if(ImGui::BeginPopup("Create Filter"))
-	{
-		FilterMenu(m_newFilterSourceStream);
-		ImGui::EndPopup();
-	}
+
+		//Create-filter menu
+		if(ImGui::BeginPopup("Create Filter"))
+		{
+			FilterMenu(m_newFilterSourceStream);
+			ImGui::EndPopup();
+		}
+
+		//Add-input menu
+		if(ImGui::BeginPopup("Add Input"))
+		{
+			CreateChannelMenu();
+			ImGui::EndPopup();
+		}
+
 	ax::NodeEditor::Resume();
 }
 
@@ -477,6 +505,55 @@ bool FilterGraphEditor::IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst)
 	}
 
 	return false;
+}
+
+/**
+	@brief Runs the "add input" menu
+ */
+void FilterGraphEditor::CreateChannelMenu()
+{
+	vector<StreamDescriptor> streams;
+
+	auto& scopes = m_session.GetScopes();
+	for(auto scope : scopes)
+	{
+		//Channels
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			if(!scope->CanEnableChannel(i))
+				continue;
+
+			auto chan = scope->GetChannel(i);
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+				streams.push_back(StreamDescriptor(chan, j));
+		}
+	}
+
+	//Filters
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		for(size_t j=0; j<f->GetStreamCount(); j++)
+			streams.push_back(StreamDescriptor(f, j));
+	}
+
+	//Run the actual menu
+	for(auto s : streams)
+	{
+		//Skip anything not valid for this sink
+		if(!m_createInput.first->ValidateChannel(m_createInput.second, s))
+			continue;
+
+		//Show menu items
+		if(ImGui::MenuItem(s.GetName().c_str()))
+		{
+			m_createInput.first->SetInput(m_createInput.second, s);
+
+			auto trig = dynamic_cast<Trigger*>(m_createInput.first);
+			if(trig)
+				trig->GetScope()->PushTrigger();
+		}
+	}
 }
 
 /**
