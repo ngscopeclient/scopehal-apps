@@ -493,6 +493,9 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
  */
 bool FilterGraphEditor::IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst)
 {
+	if( (src == nullptr) || (dst == nullptr) )
+		return false;
+
 	if(src == dst)
 		return true;
 
