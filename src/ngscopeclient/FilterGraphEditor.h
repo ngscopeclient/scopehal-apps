@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -38,7 +38,7 @@
 #include "Dialog.h"
 #include "Session.h"
 #include "Bijection.h"
-class ChannelPropertiesDialog;
+class EmbeddableDialog;
 
 #include <imgui_node_editor.h>
 
@@ -79,12 +79,13 @@ public:
 protected:
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForChannel(OscilloscopeChannel* channel);
+	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	void HandleBackgroundContextMenu();
 	void DoAddMenu();
-	bool IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst);
+	bool IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst);
 	void HandleOverlaps();
 	void ClearOldPropertiesDialogs();
 
@@ -110,6 +111,13 @@ protected:
 		std::less<OscilloscopeChannel*>,
 		lessID<ax::NodeEditor::NodeId> > m_channelIDMap;
 
+	///@brief Map of triggers to IDs
+	Bijection<
+		Trigger*,
+		ax::NodeEditor::NodeId,
+		std::less<Trigger*>,
+		lessID<ax::NodeEditor::NodeId> > m_triggerIDMap;
+
 	///@brief Map of streams to output port IDs
 	Bijection<
 		StreamDescriptor,
@@ -119,9 +127,9 @@ protected:
 
 	///@brief Map of (channel, input number) to input port IDs
 	Bijection<
-		std::pair<OscilloscopeChannel*, int>,
+		std::pair<FlowGraphNode*, int>,
 		ax::NodeEditor::PinId,
-		std::less< std::pair<OscilloscopeChannel*, int> >,
+		std::less< std::pair<FlowGraphNode*, int> >,
 		lessID<ax::NodeEditor::PinId> > m_inputIDMap;
 
 	///@brief Map of (ID, ID) to link IDs
@@ -135,8 +143,9 @@ protected:
 	int m_nextID;
 
 	ax::NodeEditor::NodeId GetID(OscilloscopeChannel* chan);
+	ax::NodeEditor::NodeId GetID(Trigger* trig);
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
-	ax::NodeEditor::PinId GetID(std::pair<OscilloscopeChannel*, size_t> input);
+	ax::NodeEditor::PinId GetID(std::pair<FlowGraphNode*, size_t> input);
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
 
 	///@brief Source stream of the newly created filter
@@ -145,7 +154,7 @@ protected:
 	///@brief Properties dialogs for channels to be displayed inside nodes
 	std::map<
 		ax::NodeEditor::NodeId,
-		std::shared_ptr<ChannelPropertiesDialog>,
+		std::shared_ptr<EmbeddableDialog>,
 		lessID<ax::NodeEditor::NodeId> > m_propertiesDialogs;
 
 	///@brief Node whose properties we're currently interacting with

@@ -2544,6 +2544,7 @@ void WaveformArea::OnMouseUp()
 				LogTrace("End dragging trigger level (at %s)\n", volts.PrettyPrint(m_triggerLevelDuringDrag).c_str());
 
 				m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
+				m_triggerDuringDrag->GetScope()->PushTrigger();
 			}
 			break;
 

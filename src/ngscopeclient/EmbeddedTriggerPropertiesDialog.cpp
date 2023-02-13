@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,64 +27,83 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
-/**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of ChannelPropertiesDialog
- */
-#ifndef ChannelPropertiesDialog_h
-#define ChannelPropertiesDialog_h
+#include "ngscopeclient.h"
+#include "EmbeddedTriggerPropertiesDialog.h"
 
-#include "EmbeddableDialog.h"
+using namespace std;
 
-class ChannelPropertiesDialog : public EmbeddableDialog
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+EmbeddedTriggerPropertiesDialog::EmbeddedTriggerPropertiesDialog(Oscilloscope* scope)
+	: EmbeddableDialog("Trigger", ImVec2(300, 400), true)
+	, m_scope(scope)
 {
-public:
-	ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode = false);
-	virtual ~ChannelPropertiesDialog();
+	m_page = make_unique<TriggerPropertiesPage>(scope);
 
-	virtual bool DoRender();
+	//Figure out combo index for active trigger
+	m_triggerTypeIndex = 0;
+	vector<string> types = scope->GetTriggerTypes();
+	auto trig = scope->GetTrigger();
+	string ttype;
+	if(trig)
+		ttype = trig->GetTriggerDisplayName();
+	for(size_t i=0; i<types.size(); i++)
+	{
+		if(types[i] == ttype)
+		{
+			m_triggerTypeIndex = i;
+			break;
+		}
+	}
+}
 
-	OscilloscopeChannel* GetChannel()
-	{ return m_channel; }
+EmbeddedTriggerPropertiesDialog::~EmbeddedTriggerPropertiesDialog()
+{
+}
 
-protected:
-	OscilloscopeChannel* m_channel;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
+bool EmbeddedTriggerPropertiesDialog::DoRender()
+{
+	//Dropdown with list of trigger types is outside the main trigger panel
+	//TODO: cache some of this?
+	vector<string> types = m_scope->GetTriggerTypes();
+	if(Combo("Type", types, m_triggerTypeIndex))
+	{
+		//Save the level and inputs of the old trigger so we can reuse it
+		auto oldTrig = m_scope->GetTrigger();
+		float level = 0;
+		if(oldTrig)
+			level = oldTrig->GetLevel();
+		vector<StreamDescriptor> inputs;
+		for(size_t j=0; j<oldTrig->GetInputCount(); j++)
+			inputs.push_back(oldTrig->GetInput(j));
 
-	std::string m_displayName;
-	std::string m_committedDisplayName;
+		//Create the new trigger
+		auto newTrig = Trigger::CreateTrigger(types[m_triggerTypeIndex], m_scope);
+		if(newTrig)
+		{
+			//Copy settings over from old trigger to new
+			//TODO: copy both levels if both are two level triggers
+			newTrig->SetLevel(level);
+			for(size_t j=0; (j<newTrig->GetInputCount()) && (j < inputs.size()); j++)
+				newTrig->SetInput(j, inputs[j]);
 
-	std::vector<std::string> m_offset;
-	std::vector<float> m_committedOffset;
+			//Push changes to the scope all at once after the new trigger is set up
+			m_scope->SetTrigger(newTrig);
+			m_scope->PushTrigger();
 
-	std::vector<std::string> m_range;
-	std::vector<float> m_committedRange;
+			//Replace the properties page with whatever the new trigger eeds
+			m_page = make_unique<TriggerPropertiesPage>(m_scope);
+		}
+	}
+	HelpMarker("Select the type of trigger for this instrument\n");
 
-	std::string m_attenuation;
-	float m_committedAttenuation;
+	//Render the main trigger page
+	if(m_page)
+		m_page->Render(true);
 
-	std::vector<std::string> m_couplingNames;
-	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
-	int m_coupling;
-
-	std::vector<std::string> m_bwlNames;
-	std::vector<unsigned int> m_bwlValues;
-	int m_bwl;
-
-	std::vector<std::string> m_imuxNames;
-	int m_imux;
-
-	std::vector<std::string> m_modeNames;
-	int m_mode;
-
-	float m_color[3];
-
-	bool m_inverted;
-
-	std::string m_probe;
-	bool m_canAutoZero;
-};
-
-#endif
+	return true;
+}

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -38,6 +38,7 @@
 #include "MainWindow.h"
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
+#include "EmbeddedTriggerPropertiesDialog.h"
 
 using namespace std;
 
@@ -72,18 +73,30 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
-	//Make nodes for each channel and filter
+	//Make nodes for scope-derived objects
 	auto& scopes = m_session.GetScopes();
 	for(auto scope : scopes)
 	{
+		//Channels
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			if (!scope->CanEnableChannel(i))
 				continue;
-			
+
+			//Do not create nodes for channels which are not currently enabled
+			if(!scope->IsChannelEnabled(i))
+				continue;
+
 			DoNodeForChannel(scope->GetChannel(i));
 		}
+
+		//Triggers
+		auto trig = scope->GetTrigger();
+		if(trig)
+			DoNodeForTrigger(trig);
 	}
+
+	//Filters
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		DoNodeForChannel(f);
@@ -98,9 +111,29 @@ bool FilterGraphEditor::DoRender()
 			if(stream)
 			{
 				auto srcid = GetID(stream);
-				auto dstid = GetID(pair<OscilloscopeChannel*, size_t>(f, i));
+				auto dstid = GetID(pair<FlowGraphNode*, size_t>(f, i));
 				auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 				ax::NodeEditor::Link(linkid, srcid, dstid);
+			}
+		}
+	}
+
+	//Add links from each trigger input to the stream it's fed by
+	for(auto scope : scopes)
+	{
+		auto trig = scope->GetTrigger();
+		if(trig)
+		{
+			for(size_t i=0; i<trig->GetInputCount(); i++)
+			{
+				auto stream = trig->GetInput(i);
+				if(stream)
+				{
+					auto srcid = GetID(stream);
+					auto dstid = GetID(pair<FlowGraphNode*, size_t>(trig, i));
+					auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
+					ax::NodeEditor::Link(linkid, srcid, dstid);
+				}
 			}
 		}
 	}
@@ -336,6 +369,11 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 
 							//Update names, if needed
 							fReconfigure = dynamic_cast<Filter*>(inputPort.first);
+
+							//Push trigger changes if needed
+							auto t = dynamic_cast<Trigger*>(inputPort.first);
+							if(t != nullptr)
+								t->GetScope()->PushTrigger();
 						}
 					}
 
@@ -425,18 +463,15 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 
 	@return True if dst is equal to src, or if dst is directly or indirectly used as an input by src.
  */
-bool FilterGraphEditor::IsBackEdge(OscilloscopeChannel* src, OscilloscopeChannel* dst)
+bool FilterGraphEditor::IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst)
 {
 	if(src == dst)
 		return true;
 
 	//Check each input of src
-	auto fsrc = dynamic_cast<Filter*>(src);
-	if(!fsrc)
-		return false;
-	for(size_t i=0; i<fsrc->GetInputCount(); i++)
+	for(size_t i=0; i<src->GetInputCount(); i++)
 	{
-		auto stream = fsrc->GetInput(i);
+		auto stream = src->GetInput(i);
 		if(IsBackEdge(stream.m_channel, dst))
 			return true;
 	}
@@ -541,10 +576,101 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 }
 
 /**
+	@brief Make a node for a trigger
+ */
+void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
+{
+	//TODO: special color for triggers?
+	//Or use a preference?
+	auto& prefs = m_session.GetPreferences();
+	auto tsize = ImGui::GetFontSize();
+	auto color = ColorFromString("#808080");
+	auto id = GetID(trig);
+	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
+	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	float headerheight = headerfont->FontSize * 1.5;
+	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
+
+	ax::NodeEditor::BeginNode(id);
+	ImGui::PushID(id.AsPointer());
+
+	//Get node info
+	auto pos = ax::NodeEditor::GetNodePosition(id);
+	auto size = ax::NodeEditor::GetNodeSize(id);
+	string headerText = trig->GetScope()->m_nickname + ": " + trig->GetTriggerDisplayName();
+
+	//Figure out how big the header text is and reserve space for it
+	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+	float nodewidth = max(15*tsize, headerSize.x);
+	ImGui::Dummy(ImVec2(nodewidth, headerheight));
+
+	//Table of ports
+	static ImGuiTableFlags flags = 0;
+	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
+	{
+		//Input ports
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		for(size_t i=0; i<trig->GetInputCount(); i++)
+		{
+			auto sid = GetID(pair<FlowGraphNode*, size_t>(trig, i));
+
+			string portname("‣ ");
+			portname += trig->GetInputName(i);
+			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+				ImGui::TextUnformatted(portname.c_str());
+			ax::NodeEditor::EndPin();
+		}
+
+		//Output ports: none,  triggers are input only
+		ImGui::TableNextColumn();
+
+		ImGui::EndTable();
+	}
+
+	//Tooltip on hovered node
+	if(ax::NodeEditor::GetHoveredPin())
+	{}
+	else if(id == ax::NodeEditor::GetHoveredNode())
+	{
+		ax::NodeEditor::Suspend();
+			ImGui::BeginTooltip();
+				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
+			ImGui::EndTooltip();
+		ax::NodeEditor::Resume();
+	}
+
+	//Done with node
+	ImGui::PopID();
+	ax::NodeEditor::EndNode();
+
+	//Draw header after the node is done
+	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(id);
+	bgList->AddRectFilled(
+		ImVec2(pos.x + 1, pos.y + 1),
+		ImVec2(pos.x + size.x - 1, pos.y + headerheight - 1),
+		color,
+		rounding,
+		ImDrawFlags_RoundCornersTop);
+	bgList->AddText(
+		headerfont,
+		headerfont->FontSize,
+		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
+		headercolor,
+		headerText.c_str());
+}
+
+/**
 	@brief Make a node for a single channel (may be instrument channel or filter)
  */
 void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 {
+	//If the channel has no color, make it neutral gray
+	//(this is often true for e.g. external trigger)
+	if(channel->m_displaycolor == "")
+		channel->m_displaycolor = "#808080";
+
 	auto& prefs = m_session.GetPreferences();
 
 	//Get some configuration / style settings
@@ -666,12 +792,16 @@ void FilterGraphEditor::HandleNodeProperties()
 	{
 		m_selectedProperties = id;
 
-		//Make the properties window
+		auto trig = m_triggerIDMap[id];
 		auto channel = m_channelIDMap[id];
 		auto f = dynamic_cast<Filter*>(channel);
+
+		//Make the properties window
 		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
 		{
-			if(f)
+			if(trig)
+				m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
+			else if(f)
 				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
 			else
 				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(channel, true);
@@ -798,6 +928,19 @@ ax::NodeEditor::NodeId FilterGraphEditor::GetID(OscilloscopeChannel* chan)
 	return id;
 }
 
+ax::NodeEditor::NodeId FilterGraphEditor::GetID(Trigger* trig)
+{
+	//If it's in the table already, just return the ID
+	if(m_triggerIDMap.HasEntry(trig))
+		return m_triggerIDMap[trig];
+
+	//Not in the table, allocate an ID
+	int id = m_nextID;
+	m_nextID ++;
+	m_triggerIDMap.emplace(trig, id);
+	return id;
+}
+
 ax::NodeEditor::PinId FilterGraphEditor::GetID(StreamDescriptor stream)
 {
 	//If it's in the table already, just return the ID
@@ -811,7 +954,7 @@ ax::NodeEditor::PinId FilterGraphEditor::GetID(StreamDescriptor stream)
 	return id;
 }
 
-ax::NodeEditor::PinId FilterGraphEditor::GetID(pair<OscilloscopeChannel*, size_t> input)
+ax::NodeEditor::PinId FilterGraphEditor::GetID(pair<FlowGraphNode*, size_t> input)
 {
 	//If it's in the table already, just return the ID
 	if(m_inputIDMap.HasEntry(input))

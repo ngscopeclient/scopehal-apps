@@ -47,6 +47,8 @@ add_executable(ngscopeclient
 	AddScopeDialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	EmbeddableDialog.cpp
+	EmbeddedTriggerPropertiesDialog.cpp
 	FileBrowser.cpp
 	FilterGraphEditor.cpp
 	FilterPropertiesDialog.cpp

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -59,9 +59,31 @@ TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 }
 
 /**
+	@brief Starts a hierarchical block of widgets
+
+	May be either a collapsing header or tree node depending on if we're embedded in the filter graph editor or not
+ */
+bool TriggerPropertiesPage::StartSection(const string& name, bool graphEditorMode)
+{
+	if(graphEditorMode)
+		return ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+	else
+		return ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+}
+
+/**
+	@brief Ends a section started with StartSection()
+ */
+void TriggerPropertiesPage::EndSection(bool graphEditorMode)
+{
+	if(!graphEditorMode)
+		return ImGui::TreePop();
+}
+
+/**
 	@brief Run the properties for this page
  */
-void TriggerPropertiesPage::Render()
+void TriggerPropertiesPage::Render(bool graphEditorMode)
 {
 	auto trig = m_scope->GetTrigger();
 	if(!trig)
@@ -71,7 +93,7 @@ void TriggerPropertiesPage::Render()
 	bool updated = false;
 	if(trig->GetInputCount() != 0)
 	{
-		if(ImGui::TreeNodeEx("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
+		if(StartSection("Inputs", graphEditorMode))
 		{
 			//TODO: cache some of this?
 			vector<StreamDescriptor> streams;
@@ -107,10 +129,10 @@ void TriggerPropertiesPage::Render()
 					"(for example, dedicated routing to a CDR board)\n");
 			}
 
-			ImGui::TreePop();
+			EndSection(graphEditorMode);
 		}
 
-		if(ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_DefaultOpen))
+		if(StartSection("Thresholds", graphEditorMode))
 		{
 			//Primary level
 			Unit volts(Unit::UNIT_VOLTS);
@@ -133,10 +155,10 @@ void TriggerPropertiesPage::Render()
 
 			//TODO: if we have a secondary level, do that
 
-			ImGui::TreePop();
+			EndSection(graphEditorMode);
 		}
 
-		if(ImGui::TreeNodeEx("Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+		if(StartSection("Parameters", graphEditorMode))
 		{
 			for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it++)
 			{
@@ -148,7 +170,7 @@ void TriggerPropertiesPage::Render()
 					updated = true;
 			}
 
-			ImGui::TreePop();
+			EndSection(graphEditorMode);
 		}
 	}
 
@@ -243,8 +265,6 @@ bool TriggerPropertiesDialog::DoRender()
 			vector<string> types = scope->GetTriggerTypes();
 			if(Combo("Type", types, m_triggerTypeIndexes[i]))
 			{
-				LogDebug("Trigger type changed\n");
-
 				//Save the level and inputs of the old trigger so we can reuse it
 				auto oldTrig = scope->GetTrigger();
 				float level = 0;
@@ -274,7 +294,7 @@ bool TriggerPropertiesDialog::DoRender()
 			}
 			HelpMarker("Select the type of trigger for this instrument\n");
 
-			m_pages[i]->Render();
+			m_pages[i]->Render(false);
 
 			ImGui::PopID();
 		}

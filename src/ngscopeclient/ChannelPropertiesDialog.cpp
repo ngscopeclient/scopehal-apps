@@ -43,9 +43,8 @@ using namespace std;
 // Construction / destruction
 
 ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode)
-	: Dialog(chan->GetHwname(), ImVec2(300, 400))
+	: EmbeddableDialog(chan->GetHwname(), ImVec2(300, 400), graphEditorMode)
 	, m_channel(chan)
-	, m_graphEditorMode(graphEditorMode)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;

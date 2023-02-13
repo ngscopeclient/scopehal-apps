@@ -44,10 +44,13 @@ public:
 
 	Oscilloscope* m_scope;
 
-	void Render();
+	void Render(bool graphEditorMode);
 
 protected:
 	void FindAllStreams(std::vector<StreamDescriptor>& streams);
+
+	bool StartSection(const std::string& name, bool graphEditorMode);
+	void EndSection(bool graphEditorMode);
 
 	float m_committedLevel = 0;
 	std::string m_triggerLevel;

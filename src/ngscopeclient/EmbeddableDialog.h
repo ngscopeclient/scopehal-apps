@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,61 +30,27 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ChannelPropertiesDialog
+	@brief Declaration of EmbeddableDialog
  */
-#ifndef ChannelPropertiesDialog_h
-#define ChannelPropertiesDialog_h
+#ifndef EmbeddableDialog_h
+#define EmbeddableDialog_h
 
-#include "EmbeddableDialog.h"
+#include "Dialog.h"
 
-class ChannelPropertiesDialog : public EmbeddableDialog
+class EmbeddableDialog : public Dialog
 {
 public:
-	ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode = false);
-	virtual ~ChannelPropertiesDialog();
-
-	virtual bool DoRender();
-
-	OscilloscopeChannel* GetChannel()
-	{ return m_channel; }
+	EmbeddableDialog(const std::string& name, ImVec2 size, bool graphEditorMode = false);
+	virtual ~EmbeddableDialog();
 
 protected:
-	OscilloscopeChannel* m_channel;
 
-	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
+	/**
+		@brief If true, we're a sub-window of a filter graph editor node
 
-	std::string m_displayName;
-	std::string m_committedDisplayName;
-
-	std::vector<std::string> m_offset;
-	std::vector<float> m_committedOffset;
-
-	std::vector<std::string> m_range;
-	std::vector<float> m_committedRange;
-
-	std::string m_attenuation;
-	float m_committedAttenuation;
-
-	std::vector<std::string> m_couplingNames;
-	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
-	int m_coupling;
-
-	std::vector<std::string> m_bwlNames;
-	std::vector<unsigned int> m_bwlValues;
-	int m_bwl;
-
-	std::vector<std::string> m_imuxNames;
-	int m_imux;
-
-	std::vector<std::string> m_modeNames;
-	int m_mode;
-
-	float m_color[3];
-
-	bool m_inverted;
-
-	std::string m_probe;
-	bool m_canAutoZero;
+		Collapse all tree headers by default, and don't show some settings (like filter inputs) that are redundant
+	 */
+	bool m_graphEditorMode;
 };
 
 #endif
