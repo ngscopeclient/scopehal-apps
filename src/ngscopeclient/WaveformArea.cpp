@@ -1388,7 +1388,12 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	auto uddata = dynamic_cast<UniformDigitalWaveform*>(data);
 	auto sddata = dynamic_cast<SparseDigitalWaveform*>(data);
 	if(uadata)
-		comp = channel->GetUniformAnalogPipeline();
+	{
+		if(channel->ShouldFillUnder())
+			comp = channel->GetHistogramPipeline();
+		else
+			comp = channel->GetUniformAnalogPipeline();
+	}
 	else if(uddata)
 		comp = channel->GetUniformDigitalPipeline();
 	else if(sadata)

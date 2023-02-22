@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -189,6 +189,25 @@ public:
 	}
 
 	/**
+		@brief Gets the pipeline for drawing histogram waveforms, creating it if necessary
+	*/
+	__attribute__((noinline))
+	std::shared_ptr<ComputePipeline> GetHistogramPipeline()
+	{
+		if(m_histogramComputePipeline == nullptr)
+		{
+			std::string base = "shaders/waveform-compute.";
+			std::string suffix;
+			if(g_hasShaderInt64)
+				suffix += ".int64";
+			m_histogramComputePipeline = std::make_shared<ComputePipeline>(
+				base + "histogram" + suffix + ".dense.spv", 2, sizeof(ConfigPushConstants));
+		}
+
+		return m_histogramComputePipeline;
+	}
+
+	/**
 		@brief Gets the pipeline for drawing sparse analog waveforms, creating it if necessary
 	*/
 	__attribute__((noinline))
@@ -270,13 +289,12 @@ public:
 			return false;
 	}
 
-	bool IsHistogram()
-	{ return m_stream.GetYAxisUnits() == Unit(Unit::UNIT_COUNTS_SCI); }
+	bool ShouldFillUnder()
+	{ return m_stream.GetFlags() & Stream::STREAM_FILL_UNDER; }
 
 	bool ZeroHoldCursorBehaviour()
 	{
-		return ZeroHoldFlagSet() || IsHistogram();
-		// Histogram included here to avoid interpolating count values inside bins
+		return ZeroHoldFlagSet();
 	}
 
 	bool ShouldMapDurations()
@@ -337,6 +355,9 @@ protected:
 
 	///@brief Compute pipeline for rendering uniform analog waveforms
 	std::shared_ptr<ComputePipeline> m_uniformAnalogComputePipeline;
+
+	///@brief Compute pipeline for rendering histogram waveforms
+	std::shared_ptr<ComputePipeline> m_histogramComputePipeline;
 
 	///@brief Compute pipeline for rendering sparse analog waveforms
 	std::shared_ptr<ComputePipeline> m_sparseAnalogComputePipeline;
