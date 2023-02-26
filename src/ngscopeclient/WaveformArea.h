@@ -321,7 +321,7 @@ public:
 	///@brief Active labels for peaks associated with the current waveform
 	std::vector<PeakLabel> m_peakLabels;
 
-	std::string m_eyeGradient;
+	std::string m_colorRamp;
 
 protected:
 	StreamDescriptor m_stream;
@@ -430,6 +430,7 @@ protected:
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderEyeWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderSpectrumPeaks(ImDrawList* list, std::shared_ptr<DisplayedChannel> channel);
 	void RenderDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
@@ -442,7 +443,7 @@ protected:
 		ImU32 color);
 	void MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop);
 	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
-	void ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapDensityFunctionWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf,

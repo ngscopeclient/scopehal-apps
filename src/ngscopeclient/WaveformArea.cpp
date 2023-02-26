@@ -37,6 +37,8 @@
 #include "MainWindow.h"
 #include "../../scopehal/TwoLevelTrigger.h"
 #include "../../scopeprotocols/EyePattern.h"
+#include "../../scopeprotocols/Waterfall.h"
+#include "../../scopehal/DensityFunctionWaveform.h"
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
 
@@ -46,7 +48,7 @@ using namespace std;
 // DisplayedChannel
 
 DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
-		: m_eyeGradient("eye-gradient-viridis")
+		: m_colorRamp("eye-gradient-viridis")
 		, m_stream(stream)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
 		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
@@ -72,6 +74,8 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	switch(m_stream.GetType())
 	{
 		case Stream::STREAM_TYPE_EYE:
+		case Stream::STREAM_TYPE_SPECTROGRAM:
+		case Stream::STREAM_TYPE_WATERFALL:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/EyeToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1, 1);
 			break;
@@ -105,12 +109,12 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 		//If this is an eye pattern, need to reallocate the texture
 		//To avoid constantly destroying the integrated eye if we slightly resize stuff, round up to next power of 2
+		size_t roundedX = pow(2, ceil(log2(x)));
+		size_t roundedY = pow(2, ceil(log2(y)));
 		auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
+		auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
 		if(eye)
 		{
-			size_t roundedX = pow(2, ceil(log2(x)));
-			size_t roundedY = pow(2, ceil(log2(y)));
-
 			if( (eye->GetWidth() != roundedX) || (eye->GetHeight() != roundedY) )
 			{
 				eye->SetWidth(roundedX);
@@ -118,6 +122,22 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 				//TODO: do we really want to do this every resize? might be better to set a deferred flag to refresh?
 				eye->Refresh();
+			}
+
+			x = roundedX;
+			y = roundedY;
+		}
+
+		//Same deal for waterfalls
+		else if(waterfall)
+		{
+			if( (waterfall->GetWidth() != roundedX) || (waterfall->GetHeight() != roundedY) )
+			{
+				waterfall->SetWidth(roundedX);
+				waterfall->SetHeight(roundedY);
+
+				//TODO: do we really want to do this every resize? might be better to set a deferred flag to refresh?
+				waterfall->Refresh();
 			}
 
 			x = roundedX;
@@ -585,6 +605,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderEyeWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_WATERFALL:
+				RenderWaterfallWaveform(chan, start, size);
+				break;
+
 			case Stream::STREAM_TYPE_DIGITAL:
 				RenderDigitalWaveform(chan, start, size);
 				break;
@@ -625,6 +649,16 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
 	auto pf = dynamic_cast<PeakDetectionFilter*>(stream.m_channel);
 	if(pf)
 		RenderSpectrumPeaks(list, channel);
+}
+
+/**
+	@brief Renders a single waterfall
+
+	For now, same code path as eye patterns
+ */
+void WaveformArea::RenderWaterfallWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	RenderEyeWaveform(channel, start, size);
 }
 
 /**
@@ -1288,8 +1322,9 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 				ToneMapAnalogOrDigitalWaveform(chan, cmdbuf);
 				break;
 
+			case Stream::STREAM_TYPE_WATERFALL:
 			case Stream::STREAM_TYPE_EYE:
-				ToneMapEyeWaveform(chan, cmdbuf);
+				ToneMapDensityFunctionWaveform(chan, cmdbuf);
 				break;
 
 			//no tone mapping required
@@ -1335,6 +1370,7 @@ void WaveformArea::RenderWaveformTextures(
 
 			//no background rendering required, we do everything in Refresh()
 			case Stream::STREAM_TYPE_EYE:
+			case Stream::STREAM_TYPE_WATERFALL:
 				break;
 
 			//no background rendering required, we draw everything live
@@ -1539,15 +1575,15 @@ void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> c
 }
 
 /**
-	@brief Tone maps an eye pattern by converting the internal fp32 buffer to RGBA
+	@brief Tone maps a density function waveform by converting the internal fp32 buffer to RGBA
  */
-void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapDensityFunctionWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)
 		return;
 
-	auto data = dynamic_cast<EyeWaveform*>(channel->GetStream().GetData());
+	auto data = dynamic_cast<DensityFunctionWaveform*>(channel->GetStream().GetData());
 	if(data == nullptr)
 		return;
 
@@ -1569,7 +1605,7 @@ void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel,
 	pipe->BindSampledImage(
 		2,
 		**texmgr->GetSampler(),
-		texmgr->GetView(channel->m_eyeGradient),
+		texmgr->GetView(channel->m_colorRamp),
 		vk::ImageLayout::eShaderReadOnlyOptimal);
 
 	EyeToneMapArgs args(width, height);
@@ -2296,6 +2332,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto rchan = stream.m_channel;
 	auto data = stream.GetData();
 	auto edata = dynamic_cast<EyeWaveform*>(data);
+	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
 
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
@@ -2391,9 +2428,8 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 			RemoveStream(index);
 		ImGui::Separator();
 
-		//Color ramp if it's an eye
-		//TODO: also show this for spectrogram, etc
-		if(edata)
+		//Color ramp if it's a density plot
+		if(ddata)
 		{
 			if(ImGui::BeginMenu("Color ramp"))
 			{
@@ -2418,9 +2454,9 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 					ImGui::Dummy(gradsize);
 					ImGui::SameLine();
 
-					if(ImGui::MenuItem(displayName.c_str(), nullptr, (internalName == chan->m_eyeGradient) ))
+					if(ImGui::MenuItem(displayName.c_str(), nullptr, (internalName == chan->m_colorRamp) ))
 					{
-						chan->m_eyeGradient = internalName;
+						chan->m_colorRamp = internalName;
 
 						//TODO: more efficient to request new tone map but not render
 						m_parent->SetNeedRender();
@@ -2676,13 +2712,22 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
 		return false;
 
-	//TODO: can't mix eye and non-eye
+	switch(desc.GetType())
+	{
+		//All density plots must be in their own views and cannot stack
+		case Stream::STREAM_TYPE_EYE:
+		case Stream::STREAM_TYPE_SPECTROGRAM:
+		case Stream::STREAM_TYPE_WATERFALL:
+			return false;
 
-	//Digital and protocol channels can be overlaid on anything
-	if(desc.GetType() == Stream::STREAM_TYPE_DIGITAL)
-		return true;
-	if(desc.GetType() == Stream::STREAM_TYPE_PROTOCOL)
-		return true;
+		//Digital and protocol channels can be overlaid on anything other than a density plot
+		case Stream::STREAM_TYPE_DIGITAL:
+		case Stream::STREAM_TYPE_PROTOCOL:
+			return true;
+
+		default:
+			break;
+	}
 
 	//Can't go in this area if the Y unit is different
 	if(m_yAxisUnit != desc.GetYAxisUnits())
