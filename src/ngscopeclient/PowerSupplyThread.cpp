@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,7 +43,7 @@ void PowerSupplyThread(PowerSupplyThreadArgs args)
 
 	auto psu = args.psu;
 	auto state = args.state;
-	auto nchans = psu->GetPowerChannelCount();
+	auto nchans = psu->GetChannelCount();
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
@@ -52,8 +52,12 @@ void PowerSupplyThread(PowerSupplyThreadArgs args)
 		//TODO: skip polling if the channel in question is off
 
 		//Poll status
-		for(int i=0; i<nchans; i++)
+		for(size_t i=0; i<nchans; i++)
 		{
+			//Skip non-power channels
+			if( (psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
+				continue;
+
 			state->m_channelVoltage[i] = psu->GetPowerVoltageActual(i);
 			state->m_channelCurrent[i] = psu->GetPowerCurrentActual(i);
 			state->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);

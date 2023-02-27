@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -52,11 +52,20 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 	, m_state(state)
 {
 	//Set up initial empty state
-	m_channelUIState.resize(m_psu->GetPowerChannelCount());
+	m_channelUIState.resize(m_psu->GetChannelCount());
 
 	//Asynchronously load rest of the state
-	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
-		m_futureUIState.push_back(async(launch::async, [psu, i]{ return PowerSupplyChannelUIState(psu, i); }));
+	for(size_t i=0; i<m_psu->GetChannelCount(); i++)
+	{
+		//Add placeholders for non-power channels
+		//TODO: can we avoid spawning a thread here pointlessly?
+		if( (m_psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
+			m_futureUIState.push_back(async(launch::async, [psu, i]{ PowerSupplyChannelUIState dummy; return dummy; }));
+
+		//Actual power channels get async load
+		else
+			m_futureUIState.push_back(async(launch::async, [psu, i]{ return PowerSupplyChannelUIState(psu, i); }));
+	}
 }
 
 PowerSupplyDialog::~PowerSupplyDialog()
@@ -136,8 +145,12 @@ bool PowerSupplyDialog::DoRender()
 	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
 
 	//Per channel settings
-	for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+	for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 	{
+		//Skip non-power channels
+		if( (m_psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
+			continue;
+
 		float v = m_state->m_channelVoltage[i].load();
 		float a = m_state->m_channelCurrent[i].load();
 
@@ -353,7 +366,7 @@ void PowerSupplyDialog::CombinedTrendPlot(float etime)
 	{
 		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
 
-		for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 		{
 			auto chname = m_psu->GetPowerChannelName(i);
 			auto& hist = m_channelUIState[i].m_voltageHistory;
@@ -374,7 +387,7 @@ void PowerSupplyDialog::CombinedTrendPlot(float etime)
 	{
 		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
 
-		for(int i=0; i<m_psu->GetPowerChannelCount(); i++)
+		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 		{
 			auto chname = m_psu->GetPowerChannelName(i);
 			auto& hist = m_channelUIState[i].m_currentHistory;

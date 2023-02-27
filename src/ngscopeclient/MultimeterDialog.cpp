@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -54,7 +54,7 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 	m_meter->StartMeter();
 
 	//Inputs
-	for(int i=0; i<m_meter->GetMeterChannelCount(); i++)
+	for(size_t i=0; i<m_meter->GetChannelCount(); i++)
 		m_channelNames.push_back(m_meter->GetMeterChannelName(i));
 
 	//Primary operating modes
@@ -138,7 +138,7 @@ bool MultimeterDialog::DoRender()
 		HelpMarker("Enables automatic selection of meter scale ranges.");
 
 		//Channel selector (hide if we have only one channel)
-		if(m_meter->GetMeterChannelCount() > 1)
+		if(m_meter->GetChannelCount() > 1)
 		{
 			if(Combo("Channel", m_channelNames, m_selectedChannel))
 				m_meter->SetCurrentMeterChannel(m_selectedChannel);

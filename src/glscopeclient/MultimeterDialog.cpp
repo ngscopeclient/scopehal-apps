@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -52,12 +52,12 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 	//TODO: hide input selector if we only have one input?
 	//TODO: have some means of refreshing channel list when a channel is renamed
 	//TODO: hide illegal channels (digital probes on Tek MSO)? Means we can't use row number as channel number
-	if(meter->GetMeterChannelCount() >= 2)
+	if(meter->GetChannelCount() >= 2)
 	{
 		m_grid.attach(m_inputLabel, 0, 0, 1, 1);
 			m_inputLabel.set_text("Input Select");
 			m_grid.attach_next_to(m_inputBox, m_inputLabel, Gtk::POS_RIGHT, 1, 1);
-				for(int i=0; i<meter->GetMeterChannelCount(); i++)
+				for(int i=0; i<meter->GetChannelCount(); i++)
 					m_inputBox.append(meter->GetMeterChannelName(i));
 	}
 

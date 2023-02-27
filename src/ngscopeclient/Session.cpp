@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -214,7 +214,7 @@ void Session::AddPowerSupply(SCPIPowerSupply* psu)
 	m_modifiedSinceLastSave = true;
 
 	//Create shared PSU state
-	auto state = make_shared<PowerSupplyState>(psu->GetPowerChannelCount());
+	auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
 	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
 
 	//Add the dialog to view/control it
