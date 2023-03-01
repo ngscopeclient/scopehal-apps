@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -199,7 +199,9 @@ void TriggerPropertiesDialog::AddRows(Trigger* trig)
 		//TODO: multiple streams
 		for(size_t k=0; k<m_scope->GetChannelCount(); k++)
 		{
-			auto chan = m_scope->GetChannel(k);
+			auto chan = m_scope->GetOscilloscopeChannel(k);
+			if(!chan)
+				continue;
 
 			//Hide channels we can't enable due to interleave conflicts etc
 			//Trigger channel can't be enabled for display, but is always a legal source

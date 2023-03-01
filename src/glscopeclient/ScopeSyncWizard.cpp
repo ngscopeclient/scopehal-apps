@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -131,7 +131,9 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		for(size_t i=0; i<primary->GetChannelCount(); i++)
 		{
 			//For now, we can only use analog channels to deskew
-			auto chan = primary->GetChannel(i);
+			auto chan = primary->GetOscilloscopeChannel(i);
+			if(chan == nullptr)
+				continue;
 			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 				continue;
 
@@ -147,7 +149,9 @@ ScopeSyncDeskewSetupPage::ScopeSyncDeskewSetupPage(OscilloscopeWindow* parent, s
 		for(size_t i=0; i<secondary->GetChannelCount(); i++)
 		{
 			//For now, we can only use analog channels to deskew
-			auto chan = secondary->GetChannel(i);
+			auto chan = secondary->GetOscilloscopeChannel(i);
+			if(chan == nullptr)
+				continue;
 			if(chan->GetType(0) != Stream::STREAM_TYPE_ANALOG)
 				continue;
 
@@ -347,7 +351,7 @@ void ScopeSyncWizard::ConfigureSecondaryScope(Oscilloscope* scope)
 	//Set trigger to external
 	auto trig = new EdgeTrigger(scope);
 	auto nscope = m_welcomePage.m_scopeNameBoxes[scope]->get_active_row_number();
-	trig->SetInput(0, StreamDescriptor(scope->GetChannel(nscope), 0));
+	trig->SetInput(0, StreamDescriptor(scope->GetOscilloscopeChannel(nscope), 0));
 	trig->SetType(EdgeTrigger::EDGE_RISING);
 	trig->SetLevel(0.25);	//hard coded 250 mV threshold for now
 	scope->SetTrigger(trig);

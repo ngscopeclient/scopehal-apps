@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -500,7 +500,7 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 			// On headless scopes, enable all analog channels
 			for (size_t i=0; i<scope->GetChannelCount(); i++)
 			{
-				if (scope->GetChannel(i)->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+				if (scope->GetOscilloscopeChannel(i)->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 				{
 					scope->EnableChannel(i);
 					didEnableAnyChannel |= scope->IsChannelEnabled(i);
@@ -533,7 +533,7 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
 
 			//Qualify the channel name by the scope name if we have >1 scope enabled
 			if(m_scopes.size() > 1)
@@ -995,7 +995,7 @@ void OscilloscopeWindow::ConnectToScope(string path)
 
 			for(size_t i=0; i<s->GetChannelCount(); i++)
 			{
-				auto chan = s->GetChannel(i);
+				auto chan = s->GetOscilloscopeChannel(i);
 
 				//Qualify the channel name by the scope name
 				chan->SetDisplayName(s->m_nickname + ":" + chan->GetHwname());
@@ -1011,7 +1011,7 @@ void OscilloscopeWindow::ConnectToScope(string path)
 			}
 
 			if(!addedSomething)
-				OnAddChannel(StreamDescriptor(s->GetChannel(0), 0));
+				OnAddChannel(StreamDescriptor(s->GetOscilloscopeChannel(0), 0));
 		}
 
 		//Start scope thread for the new instrument
@@ -1291,7 +1291,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 	//Clear out any old waveforms the instrument may have
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
-		auto chan = scope->GetChannel(i);
+		auto chan = scope->GetOscilloscopeChannel(i);
 		for(size_t j=0; j<chan->GetStreamCount(); j++)
 			chan->SetData(NULL, j);
 	}
@@ -1340,7 +1340,7 @@ void OscilloscopeWindow::LoadWaveformDataForScope(
 			int stream = 0;
 			if(ch["stream"])
 				stream = ch["stream"].as<int>();
-			auto chan = scope->GetChannel(channel_index);
+			auto chan = scope->GetOscilloscopeChannel(channel_index);
 			channels.push_back(pair<int, int>(channel_index, stream));
 
 			//Waveform format defaults to sparsev1 as that's what was used before
@@ -1483,7 +1483,7 @@ void OscilloscopeWindow::DoLoadWaveformDataForScope(
 	volatile int* done
 	)
 {
-	auto chan = scope->GetChannel(channel_index);
+	auto chan = scope->GetOscilloscopeChannel(channel_index);
 
 	auto cap = chan->GetData(stream);
 	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
@@ -3255,7 +3255,7 @@ void OscilloscopeWindow::DownloadWaveforms()
 		//Make sure we don't free the old waveform data
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
 		}
@@ -3281,7 +3281,7 @@ void OscilloscopeWindow::DownloadWaveforms()
 		auto prim = m_scopes[0];
 		for(size_t i=0; i<prim->GetChannelCount(); i++)
 		{
-			auto chan = prim->GetChannel(i);
+			auto chan = prim->GetOscilloscopeChannel(i);
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 			{
 				auto data = chan->GetData(j);
@@ -3304,7 +3304,7 @@ void OscilloscopeWindow::DownloadWaveforms()
 
 			for(size_t j=0; j<sec->GetChannelCount(); j++)
 			{
-				auto chan = sec->GetChannel(j);
+				auto chan = sec->GetOscilloscopeChannel(j);
 				for(size_t k=0; k<chan->GetStreamCount(); k++)
 				{
 					auto data = chan->GetData(k);
@@ -3872,7 +3872,7 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
 
 			//Skip channels that can't be enabled for some reason
 			if(!scope->CanEnableChannel(i))
@@ -4131,7 +4131,7 @@ void OscilloscopeWindow::OnExport(string format)
 	for(auto scope : m_scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
-			channels.push_back(scope->GetChannel(i));
+			channels.push_back(scope->GetOscilloscopeChannel(i));
 	}
 
 	//If we already have an export wizard, get rid of it

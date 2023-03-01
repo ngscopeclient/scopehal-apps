@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -363,7 +363,10 @@ void FilterPropertiesDialog::FindAllStreams(vector<StreamDescriptor>& streams)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
+
 			if(scope->CanEnableChannel(i))
 			{
 				for(size_t j=0; j<chan->GetStreamCount(); j++)

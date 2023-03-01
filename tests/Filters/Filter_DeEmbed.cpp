@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -76,12 +76,12 @@ TEST_CASE("Filter_DeEmbed")
 	uang.m_triggerPhase = 0;
 
 	//Set up filter configuration
-	g_scope->GetChannel(0)->SetData(&ua, 0);
-	g_scope->GetChannel(2)->SetData(&umag, 0);
-	g_scope->GetChannel(3)->SetData(&uang, 0);
-	filter->SetInput("signal", g_scope->GetChannel(0));
-	filter->SetInput("mag", g_scope->GetChannel(2));
-	filter->SetInput("angle", g_scope->GetChannel(3));
+	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
+	g_scope->GetOscilloscopeChannel(2)->SetData(&umag, 0);
+	g_scope->GetOscilloscopeChannel(3)->SetData(&uang, 0);
+	filter->SetInput("signal", g_scope->GetOscilloscopeChannel(0));
+	filter->SetInput("mag", g_scope->GetOscilloscopeChannel(2));
+	filter->SetInput("angle", g_scope->GetOscilloscopeChannel(3));
 
 #ifdef __x86_64__
 	bool reallyHasAvx2 = g_hasAvx2;
@@ -160,9 +160,9 @@ TEST_CASE("Filter_DeEmbed")
 		g_hasAvx2 = reallyHasAvx2;
 	#endif
 
-	g_scope->GetChannel(0)->Detach(0);
-	g_scope->GetChannel(2)->Detach(0);
-	g_scope->GetChannel(3)->Detach(0);
+	g_scope->GetOscilloscopeChannel(0)->Detach(0);
+	g_scope->GetOscilloscopeChannel(2)->Detach(0);
+	g_scope->GetOscilloscopeChannel(3)->Detach(0);
 
 	filter->Release();
 }

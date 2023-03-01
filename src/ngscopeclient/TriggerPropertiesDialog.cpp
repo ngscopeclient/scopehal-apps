@@ -185,7 +185,9 @@ void TriggerPropertiesPage::FindAllStreams(vector<StreamDescriptor>& streams)
 {
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		auto chan = m_scope->GetChannel(i);
+		auto chan = m_scope->GetOscilloscopeChannel(i);
+		if(!chan)
+			continue;
 		if(m_scope->CanEnableChannel(i))
 		{
 			for(size_t j=0; j<chan->GetStreamCount(); j++)

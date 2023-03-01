@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -243,8 +243,8 @@ int main(int argc, char* argv[])
 
 void BuildFilterGraph(Oscilloscope* scope)
 {
-	g_refChannel = scope->GetChannel(3);
-	g_dutChannel = scope->GetChannel(2);
+	g_refChannel = scope->GetOscilloscopeChannel(3);
+	g_dutChannel = scope->GetOscilloscopeChannel(2);
 
 	//Mix the reference and DUT waveform with coherent LOs
 	g_refMixerFilter = Filter::CreateFilter("Downconvert");

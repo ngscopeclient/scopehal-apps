@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -197,7 +197,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 	WaveformBase* data = NULL;
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		chan = m_scope->GetChannel(i);
+		chan = m_scope->GetOscilloscopeChannel(i);
 		if(chan->IsEnabled())
 		{
 			data = chan->GetData(0);
@@ -229,7 +229,7 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 	WaveformHistory hist;
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
-		auto c = m_scope->GetChannel(i);
+		auto c = m_scope->GetOscilloscopeChannel(i);
 		for(size_t j=0; j<c->GetStreamCount(); j++)
 		{
 			auto dat = c->GetData(j);

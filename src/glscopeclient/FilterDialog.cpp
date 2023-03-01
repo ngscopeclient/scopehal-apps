@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -634,7 +634,9 @@ void FilterDialog::PopulateInputBox(
 		{
 			//If we can't enable the channel, don't show it.
 			//Aux inputs can't be enabled, but show those if they are legal
-			auto cn = scope->GetChannel(k);
+			auto cn = scope->GetOscilloscopeChannel(k);
+			if(!cn)
+				continue;
 			if( !scope->CanEnableChannel(k) && (cn->GetType(0) != Stream::STREAM_TYPE_TRIGGER) )
 				continue;
 
@@ -1095,7 +1097,7 @@ StreamDescriptor FilterDialog::FindCorrespondingSParameter(
 	{
 		//Coming from an instrument.
 		//Look for a channel called Sxx with a stream suffix.
-		auto chan = scope->GetChannelByHwName(param);
+		auto chan = scope->GetOscilloscopeChannelByHwName(param);
 		if(!chan)
 			return StreamDescriptor(nullptr, 0);
 

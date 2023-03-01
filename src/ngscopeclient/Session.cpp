@@ -143,7 +143,9 @@ void Session::Clear()
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
 		}
@@ -585,7 +587,9 @@ void Session::DownloadWaveforms()
 		//Detach old waveforms since they're now owned by history manager
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
 		}
@@ -611,7 +615,9 @@ void Session::DownloadWaveforms()
 		auto prim = m_oscilloscopes[0];
 		for(size_t i=0; i<prim->GetChannelCount(); i++)
 		{
-			auto chan = prim->GetChannel(i);
+			auto chan = prim->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 			{
 				auto data = chan->GetData(j);
@@ -634,7 +640,9 @@ void Session::DownloadWaveforms()
 
 			for(size_t j=0; j<sec->GetChannelCount(); j++)
 			{
-				auto chan = sec->GetChannel(j);
+				auto chan = sec->GetOscilloscopeChannel(j);
+				if(!chan)
+					continue;
 				for(size_t k=0; k<chan->GetStreamCount(); k++)
 				{
 					auto data = chan->GetData(k);

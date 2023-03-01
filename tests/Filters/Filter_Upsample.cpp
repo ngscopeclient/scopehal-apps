@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -66,8 +66,8 @@ TEST_CASE("Filter_Upsample")
 	UniformAnalogWaveform ua;
 
 	//Set up filter configuration
-	g_scope->GetChannel(0)->SetData(&ua, 0);
-	filter->SetInput("din", g_scope->GetChannel(0));
+	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
+	filter->SetInput("din", g_scope->GetOscilloscopeChannel(0));
 
 	const size_t niter = 5;
 	for(size_t i=0; i<niter; i++)
@@ -113,7 +113,7 @@ TEST_CASE("Filter_Upsample")
 		}
 	}
 
-	g_scope->GetChannel(0)->Detach(0);
+	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 
 	filter->Release();
 }

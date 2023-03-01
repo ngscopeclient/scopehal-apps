@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -92,7 +92,7 @@ void HaltConditionsDialog::RefreshChannels()
 		auto scope = m_parent->GetScope(j);
 		for(size_t k=0; k<scope->GetChannelCount(); k++)
 		{
-			auto c = scope->GetChannel(k);
+			auto c = scope->GetOscilloscopeChannel(k);
 			m_channelNameBox.append(c->GetDisplayName());
 			m_chanptrs[c->GetDisplayName()] = StreamDescriptor(c, 0);
 

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -236,7 +236,9 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 		LogTrace("Headless scope, enabling every analog channel\n");
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 			{
 				if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
@@ -251,7 +253,9 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
 			{
-				auto chan = scope->GetChannel(i);
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+				continue;
 				for(size_t j=0; j<chan->GetStreamCount(); j++)
 				{
 					if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
@@ -266,7 +270,9 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			if(!chan->IsEnabled())
 				continue;
 
@@ -276,10 +282,11 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope)
 		LogTrace("%zu streams were active when we connected\n", streams.size());
 
 		//No streams? Grab the first one.
+		//TODO: can we always assume that the first channel is an oscilloscope channel?
 		if(streams.empty())
 		{
 			LogTrace("Enabling first channel\n");
-			streams.push_back(StreamDescriptor(scope->GetChannel(0), 0));
+			streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
 		}
 	}
 

@@ -706,7 +706,9 @@ void FilterGraphEditorWidget::CreateNodes()
 		auto scope = w->GetScope(i);
 		for(size_t j=0; j<scope->GetChannelCount(); j++)
 		{
-			auto chan = scope->GetChannel(j);
+			auto chan = scope->GetOscilloscopeChannel(j);
+			if(!chan)
+				continue;
 			if(chan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 				continue;
 

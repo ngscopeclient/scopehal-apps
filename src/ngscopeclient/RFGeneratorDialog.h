@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -105,7 +105,7 @@ public:
 	{ return m_generator; }
 
 protected:
-	void DoChannel(int i);
+	void DoChannel(size_t i);
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;

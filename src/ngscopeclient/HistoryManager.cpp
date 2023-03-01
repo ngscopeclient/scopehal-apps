@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -91,7 +91,9 @@ void HistoryPoint::LoadHistoryToSession(Session& session)
 		{
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
 			{
-				auto chan = scope->GetChannel(i);
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+					continue;
 				for(size_t j=0; j<chan->GetStreamCount(); j++)
 				{
 					chan->Detach(j);
@@ -141,7 +143,9 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 			{
 				auto wfm = chan->GetData(j);
@@ -174,7 +178,9 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				hist[StreamDescriptor(chan, j)] = chan->GetData(j);
 		}

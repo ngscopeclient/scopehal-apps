@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -143,7 +143,7 @@ RFGeneratorDialog::RFGeneratorDialog(
 
 	double start = GetTime();
 
-	for(int i=0; i<m_generator->GetChannelCount(); i++)
+	for(size_t i=0; i<m_generator->GetChannelCount(); i++)
 		m_uiState.push_back(RFGeneratorChannelUIState(m_generator, i));
 
 	LogDebug("Intial UI state loaded in %.2f ms\n", (GetTime() - start) * 1000);
@@ -182,7 +182,7 @@ bool RFGeneratorDialog::DoRender()
 		ImGui::EndDisabled();
 	}
 
-	for(int i=0; i<m_generator->GetChannelCount(); i++)
+	for(size_t i=0; i<m_generator->GetChannelCount(); i++)
 		DoChannel(i);
 
 	return true;
@@ -191,8 +191,12 @@ bool RFGeneratorDialog::DoRender()
 /**
 	@brief Run the UI for a single channel
  */
-void RFGeneratorDialog::DoChannel(int i)
+void RFGeneratorDialog::DoChannel(size_t i)
 {
+	//Skip any other channels (baseband AWG outputs, etc)
+	if( (m_generator->GetInstrumentTypesForChannel(i) & Instrument::INST_RF_GEN) == 0)
+		return;
+
 	auto chname = m_generator->GetChannelName(i);
 
 	Unit fs(Unit::UNIT_FS);

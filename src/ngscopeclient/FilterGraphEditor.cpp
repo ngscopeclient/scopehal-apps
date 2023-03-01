@@ -80,6 +80,10 @@ bool FilterGraphEditor::DoRender()
 		//Channels
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
+			auto achan = scope->GetOscilloscopeChannel(i);
+			if(!achan)
+				continue;
+
 			if (!scope->CanEnableChannel(i))
 				continue;
 
@@ -87,7 +91,7 @@ bool FilterGraphEditor::DoRender()
 			if(!scope->IsChannelEnabled(i))
 				continue;
 
-			DoNodeForChannel(scope->GetChannel(i));
+			DoNodeForChannel(achan);
 		}
 
 		//Triggers
@@ -526,7 +530,10 @@ void FilterGraphEditor::CreateChannelMenu()
 			if(!scope->CanEnableChannel(i))
 				continue;
 
-			auto chan = scope->GetChannel(i);
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
+
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				streams.push_back(StreamDescriptor(chan, j));
 		}

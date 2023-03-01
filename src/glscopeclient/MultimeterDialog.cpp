@@ -57,7 +57,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 		m_grid.attach(m_inputLabel, 0, 0, 1, 1);
 			m_inputLabel.set_text("Input Select");
 			m_grid.attach_next_to(m_inputBox, m_inputLabel, Gtk::POS_RIGHT, 1, 1);
-				for(int i=0; i<meter->GetChannelCount(); i++)
+				for(size_t i=0; i<meter->GetChannelCount(); i++)
 					m_inputBox.append(meter->GetMeterChannelName(i));
 	}
 

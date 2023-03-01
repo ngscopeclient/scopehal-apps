@@ -49,7 +49,7 @@ void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args)
 		gen->GetTransport()->FlushCommandQueue();
 
 		//Poll status
-		for(int i=0; i<gen->GetChannelCount(); i++)
+		for(size_t i=0; i<gen->GetChannelCount(); i++)
 		{
 			state->m_channelLevel[i] = gen->GetChannelOutputPower(i);
 			state->m_channelFrequency[i] = gen->GetChannelCenterFrequency(i);

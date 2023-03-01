@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -69,10 +69,10 @@ TEST_CASE("Filter_Subtract")
 	UniformAnalogWaveform ub;
 
 	//Set up filter configuration
-	g_scope->GetChannel(0)->SetData(&ua, 0);
-	g_scope->GetChannel(1)->SetData(&ub, 0);
-	filter->SetInput("IN+", g_scope->GetChannel(0));
-	filter->SetInput("IN-", g_scope->GetChannel(1));
+	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
+	g_scope->GetOscilloscopeChannel(1)->SetData(&ub, 0);
+	filter->SetInput("IN+", g_scope->GetOscilloscopeChannel(0));
+	filter->SetInput("IN-", g_scope->GetOscilloscopeChannel(1));
 
 	#ifdef __x86_64__
 		bool reallyHasAvx2 = g_hasAvx2;
@@ -139,8 +139,8 @@ TEST_CASE("Filter_Subtract")
 		g_hasAvx2 = reallyHasAvx2;
 	#endif
 
-	g_scope->GetChannel(0)->Detach(0);
-	g_scope->GetChannel(1)->Detach(0);
+	g_scope->GetOscilloscopeChannel(0)->Detach(0);
+	g_scope->GetOscilloscopeChannel(1)->Detach(0);
 
 	filter->Release();
 }
