@@ -73,37 +73,46 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
-	//Make nodes for scope-derived objects
-	auto& scopes = m_session.GetScopes();
-	for(auto scope : scopes)
+	//Make nodes for all instrument channels
+	auto insts = m_session.GetInstruments();
+	for(auto inst : insts)
 	{
 		//Channels
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		for(size_t i=0; i<inst->GetChannelCount(); i++)
 		{
-			auto achan = scope->GetOscilloscopeChannel(i);
-			if(!achan)
-				continue;
+			auto chan = inst->GetChannel(i);
 
-			if (!scope->CanEnableChannel(i))
-				continue;
+			//Exclude scope channels that can't be, or are not, enabled
+			//TODO: should CanEnableChannel become an Instrument method?
+			if(scope)
+			{
+				if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_OSCILLOSCOPE)
+				{
+					if(!scope->CanEnableChannel(i))
+						continue;
+					if(!scope->IsChannelEnabled(i))
+						continue;
+				}
+			}
 
-			//Do not create nodes for channels which are not currently enabled
-			if(!scope->IsChannelEnabled(i))
-				continue;
-
-			DoNodeForChannel(achan);
+			//All good, we want to show the node
+			DoNodeForChannel(chan, inst);
 		}
 
-		//Triggers
-		auto trig = scope->GetTrigger();
-		if(trig)
-			DoNodeForTrigger(trig);
+		//Triggers (for now, only scopes have these)
+		if(scope)
+		{
+			auto trig = scope->GetTrigger();
+			if(trig)
+				DoNodeForTrigger(trig);
+		}
 	}
 
 	//Filters
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
-		DoNodeForChannel(f);
+		DoNodeForChannel(f, nullptr);
 	ClearOldPropertiesDialogs();
 
 	//Add links from each filter input to the stream it's fed by
@@ -123,6 +132,7 @@ bool FilterGraphEditor::DoRender()
 	}
 
 	//Add links from each trigger input to the stream it's fed by
+	auto& scopes = m_session.GetScopes();
 	for(auto scope : scopes)
 	{
 		auto trig = scope->GetTrigger();
@@ -749,14 +759,17 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 }
 
 /**
-	@brief Make a node for a single channel (may be instrument channel or filter)
+	@brief Make a node for a single channel, of any type
  */
-void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
+void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument* inst)
 {
 	//If the channel has no color, make it neutral gray
 	//(this is often true for e.g. external trigger)
-	if(channel->m_displaycolor == "")
-		channel->m_displaycolor = "#808080";
+	//TODO: add color to non-oscilloscope channels eventually?
+	string displaycolor = "#808080";
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(channel);
+	if(ochan && !ochan->m_displaycolor.empty())
+		displaycolor = ochan->m_displaycolor;
 
 	auto& prefs = m_session.GetPreferences();
 
@@ -765,7 +778,7 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 	//float bgmul = 0.2;
 	//float hmul = 0.4;
 	//float amul = 0.6;
-	auto color = ColorFromString(channel->m_displaycolor);
+	auto color = ColorFromString(displaycolor);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
 	float headerheight = headerfont->FontSize * 1.5;
@@ -780,8 +793,11 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 	//Get node info
 	auto pos = ax::NodeEditor::GetNodePosition(id);
 	auto size = ax::NodeEditor::GetNodeSize(id);
-	auto f = dynamic_cast<Filter*>(channel);
 	string headerText = channel->GetDisplayName();
+
+	//If NOT an oscilloscope channel: scope by instrument name
+	if(!ochan && inst)
+		headerText = inst->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
@@ -791,7 +807,50 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 	ImGui::Dummy(ImVec2(0, headerheight));
 	//auto nsize = ax::NodeEditor::GetNodeSize(id);
 
+	//Contents for oscilloscope channel
+	if(ochan)
+		DoContentForOscilloscopeChannel(ochan, nodewidth);
+
+	//Tooltip on hovered node
+	if(ax::NodeEditor::GetHoveredPin())
+	{}
+	else if(id == ax::NodeEditor::GetHoveredNode())
+	{
+		ax::NodeEditor::Suspend();
+			ImGui::BeginTooltip();
+				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
+			ImGui::EndTooltip();
+		ax::NodeEditor::Resume();
+	}
+
+	ImGui::PopID();
+	ax::NodeEditor::EndNode();
+
+	//Draw header after the node is done
+	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(id);
+	bgList->AddRectFilled(
+		ImVec2(pos.x + 1, pos.y + 1),
+		ImVec2(pos.x + size.x - 1, pos.y + headerheight - 1),
+		color,
+		rounding,
+		ImDrawFlags_RoundCornersTop);
+	bgList->AddText(
+		headerfont,
+		headerfont->FontSize,
+		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
+		headercolor,
+		headerText.c_str());
+}
+
+/**
+	@brief Make node content for a single oscilloscope channel (may be instrument channel or filter)
+ */
+void FilterGraphEditor::DoContentForOscilloscopeChannel(OscilloscopeChannel* channel, float nodewidth)
+{
+	auto f = dynamic_cast<Filter*>(channel);
+
 	//Table of inputs at left and outputs at right
+	//TODO: this should move up to base class or something?
 	static ImGuiTableFlags flags = 0;
 	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
 	{
@@ -836,36 +895,6 @@ void FilterGraphEditor::DoNodeForChannel(OscilloscopeChannel* channel)
 
 		ImGui::EndTable();
 	}
-
-	//Tooltip on hovered node
-	if(ax::NodeEditor::GetHoveredPin())
-	{}
-	else if(id == ax::NodeEditor::GetHoveredNode())
-	{
-		ax::NodeEditor::Suspend();
-			ImGui::BeginTooltip();
-				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
-			ImGui::EndTooltip();
-		ax::NodeEditor::Resume();
-	}
-
-	ImGui::PopID();
-	ax::NodeEditor::EndNode();
-
-	//Draw header after the node is done
-	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(id);
-	bgList->AddRectFilled(
-		ImVec2(pos.x + 1, pos.y + 1),
-		ImVec2(pos.x + size.x - 1, pos.y + headerheight - 1),
-		color,
-		rounding,
-		ImDrawFlags_RoundCornersTop);
-	bgList->AddText(
-		headerfont,
-		headerfont->FontSize,
-		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
-		headercolor,
-		headerText.c_str());
 }
 
 /**
@@ -881,6 +910,7 @@ void FilterGraphEditor::HandleNodeProperties()
 
 		auto trig = m_triggerIDMap[id];
 		auto channel = m_channelIDMap[id];
+		auto o = dynamic_cast<OscilloscopeChannel*>(channel);
 		auto f = dynamic_cast<Filter*>(channel);
 
 		//Make the properties window
@@ -890,8 +920,9 @@ void FilterGraphEditor::HandleNodeProperties()
 				m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
 			else if(f)
 				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
-			else
-				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(channel, true);
+			else if(o)
+				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
+			//else generic?
 		}
 
 		//Create the popup
@@ -1002,7 +1033,7 @@ void FilterGraphEditor::DoAddMenu()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ID allocation
 
-ax::NodeEditor::NodeId FilterGraphEditor::GetID(OscilloscopeChannel* chan)
+ax::NodeEditor::NodeId FilterGraphEditor::GetID(InstrumentChannel* chan)
 {
 	//If it's in the table already, just return the ID
 	if(m_channelIDMap.HasEntry(chan))

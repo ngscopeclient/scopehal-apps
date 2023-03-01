@@ -248,6 +248,11 @@ public:
 	std::set<SCPIInstrument*> GetSCPIInstruments();
 
 	/**
+		@brief Gets the set of all instruments we're connect to (regardless of type)
+	 */
+	std::set<Instrument*> GetInstruments();
+
+	/**
 		@brief Check if we have data available from all of our scopes
 	 */
 	bool CheckForPendingWaveforms();

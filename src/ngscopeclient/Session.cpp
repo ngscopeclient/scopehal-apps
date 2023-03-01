@@ -330,7 +330,7 @@ void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
 }
 
 /**
-	@brief Returns a list of all connected instruments, of any type
+	@brief Returns a list of all connected SCPI instruments, of any type
 
 	Multi-type instruments are only counted once.
  */
@@ -357,6 +357,30 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 		if(s != nullptr)
 			insts.emplace(s);
 	}
+	for(auto& it : m_rfgenerators)
+		insts.emplace(it.first);
+	for(auto gen : m_generators)
+		insts.emplace(gen);
+
+	return insts;
+}
+
+/**
+	@brief Returns a list of all connected instruments, of any type
+
+	Multi-type instruments are only counted once.
+ */
+set<Instrument*> Session::GetInstruments()
+{
+	lock_guard<mutex> lock(m_scopeMutex);
+
+	set<Instrument*> insts;
+	for(auto& scope : m_oscilloscopes)
+		insts.emplace(scope);
+	for(auto& it : m_psus)
+		insts.emplace(it.first);
+	for(auto& it : m_meters)
+		insts.emplace(it.first);
 	for(auto& it : m_rfgenerators)
 		insts.emplace(it.first);
 	for(auto gen : m_generators)

@@ -78,7 +78,8 @@ public:
 
 protected:
 	void OutputPortTooltip(StreamDescriptor stream);
-	void DoNodeForChannel(OscilloscopeChannel* channel);
+	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
+	void DoContentForOscilloscopeChannel(OscilloscopeChannel* channel, float nodewidth);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
@@ -107,9 +108,9 @@ protected:
 
 	///@brief Map of channels / filters to IDs
 	Bijection<
-		OscilloscopeChannel*,
+		InstrumentChannel*,
 		ax::NodeEditor::NodeId,
-		std::less<OscilloscopeChannel*>,
+		std::less<InstrumentChannel*>,
 		lessID<ax::NodeEditor::NodeId> > m_channelIDMap;
 
 	///@brief Map of triggers to IDs
@@ -143,7 +144,7 @@ protected:
 	///@brief Next ID to be allocated
 	int m_nextID;
 
-	ax::NodeEditor::NodeId GetID(OscilloscopeChannel* chan);
+	ax::NodeEditor::NodeId GetID(InstrumentChannel* chan);
 	ax::NodeEditor::NodeId GetID(Trigger* trig);
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
 	ax::NodeEditor::PinId GetID(std::pair<FlowGraphNode*, size_t> input);
