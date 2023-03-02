@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -60,7 +60,9 @@ public:
 	, m_direction(direction)
 	, m_stream(stream)
 	{
-		stream.m_channel->AddRef();
+		auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
+		if(schan)
+			schan->AddRef();
 	}
 
 	SplitGroupRequest(const SplitGroupRequest& rhs)
@@ -68,14 +70,18 @@ public:
 	, m_direction(rhs.m_direction)
 	, m_stream(rhs.m_stream)
 	{
-		m_stream.m_channel->AddRef();
+		auto schan = dynamic_cast<OscilloscopeChannel*>(rhs.m_stream.m_channel);
+		if(schan)
+			schan->AddRef();
 	}
 
 	SplitGroupRequest& operator=(const SplitGroupRequest& /*rhs*/) =delete;
 
 	~SplitGroupRequest()
 	{
-		m_stream.m_channel->Release();
+		auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
+		if(schan)
+			schan->Release();
 	}
 
 	std::shared_ptr<WaveformGroup> m_group;

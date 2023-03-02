@@ -133,7 +133,9 @@ public:
 
 	~DisplayedChannel()
 	{
-		m_stream.m_channel->Release();
+		auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
+		if(schan)
+			schan->Release();
 	}
 
 	std::string GetName()

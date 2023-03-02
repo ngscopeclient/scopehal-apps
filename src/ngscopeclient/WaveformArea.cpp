@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -59,7 +59,9 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		, m_persistenceEnabled(false)
 		, m_yButtonPos(0)
 {
-	stream.m_channel->AddRef();
+	auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
+	if(schan)
+		schan->AddRef();
 
 	//Use GPU-side memory for rasterized waveform
 	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
@@ -1894,9 +1896,14 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 
 	//If the mismatched stream isn't part of a scope, don't bother showing any warnings etc
 	//Filters can't be overdriven, so just silently clip
-	auto scope = mismatchStream.m_channel->GetScope();
-	if(scope == nullptr)
-		return;
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(mismatchStream.m_channel);
+	Oscilloscope* scope = nullptr;
+	if(ochan)
+	{
+		scope = ochan->GetScope();
+		if(!scope)
+			return;
+	}
 
 	//If we get here, we had a mismatch. Prepare to draw the warning message centered in the plot
 	//above everything else
@@ -1971,7 +1978,10 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 	for(auto c : m_displayedChannels)
 	{
 		auto stream = c->GetStream();
-		auto scope = stream.m_channel->GetScope();
+		auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
+		if(!ochan)
+			continue;
+		auto scope = ochan->GetScope();
 		if(scope == nullptr)
 			continue;
 
@@ -2369,16 +2379,24 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		ImGui::EndDragDropSource();
 	}
 
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(rchan);
 	if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-		m_parent->ShowChannelProperties(rchan);
+	{
+		if(ochan)
+			m_parent->ShowChannelProperties(ochan);
+		//TODO: properties of non-scope channels?
+	}
 
 	//Display channel information and help text in tooltip
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
 		string tooltip;
-		auto scope = rchan->GetScope();
-		if(scope)
-			tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + scope->m_nickname + "\n\n";
+		if(ochan)
+		{
+			auto scope = ochan->GetScope();
+			if(scope)
+				tooltip += string("Channel ") + rchan->GetHwname() + " of instrument " + scope->m_nickname + "\n\n";
+		}
 
 		//See if we have data
 		if(data)

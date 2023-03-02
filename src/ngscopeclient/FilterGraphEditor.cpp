@@ -765,12 +765,11 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 {
 	//If the channel has no color, make it neutral gray
 	//(this is often true for e.g. external trigger)
-	//TODO: add color to non-oscilloscope channels eventually?
-	string displaycolor = "#808080";
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(channel);
-	if(ochan && !ochan->m_displaycolor.empty())
-		displaycolor = ochan->m_displaycolor;
+	string displaycolor = channel->m_displaycolor;
+	if(displaycolor.empty())
+		displaycolor = "#808080";
 
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(channel);
 	auto& prefs = m_session.GetPreferences();
 
 	//Get some configuration / style settings
@@ -807,9 +806,51 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	ImGui::Dummy(ImVec2(0, headerheight));
 	//auto nsize = ax::NodeEditor::GetNodeSize(id);
 
-	//Contents for oscilloscope channel
-	if(ochan)
-		DoContentForOscilloscopeChannel(ochan, nodewidth);
+	//Table of inputs at left and outputs at right
+	//TODO: this should move up to base class or something?
+	static ImGuiTableFlags flags = 0;
+	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
+	{
+		//Input ports
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		for(size_t i=0; i<channel->GetInputCount(); i++)
+		{
+			auto sid = GetID(pair<InstrumentChannel*, size_t>(channel, i));
+
+			string portname("‣ ");
+			portname += channel->GetInputName(i);
+			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+				ImGui::TextUnformatted(portname.c_str());
+			ax::NodeEditor::EndPin();
+		}
+
+		//Output ports
+		ImGui::TableNextColumn();
+
+		for(size_t i=0; i<channel->GetStreamCount(); i++)
+		{
+			StreamDescriptor stream(channel, i);
+			auto sid = GetID(stream);
+
+			string portname = channel->GetStreamName(i) + " ‣";
+			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
+				RightJustifiedText(portname);
+			ax::NodeEditor::EndPin();
+
+			if(sid == ax::NodeEditor::GetHoveredPin())
+			{
+				ax::NodeEditor::Suspend();
+					OutputPortTooltip(stream);
+				ax::NodeEditor::Resume();
+			}
+		}
+
+		ImGui::EndTable();
+	}
 
 	//Tooltip on hovered node
 	if(ax::NodeEditor::GetHoveredPin())
@@ -840,61 +881,6 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
 		headercolor,
 		headerText.c_str());
-}
-
-/**
-	@brief Make node content for a single oscilloscope channel (may be instrument channel or filter)
- */
-void FilterGraphEditor::DoContentForOscilloscopeChannel(OscilloscopeChannel* channel, float nodewidth)
-{
-	auto f = dynamic_cast<Filter*>(channel);
-
-	//Table of inputs at left and outputs at right
-	//TODO: this should move up to base class or something?
-	static ImGuiTableFlags flags = 0;
-	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
-	{
-		//Input ports
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		if(f)
-		{
-			for(size_t i=0; i<f->GetInputCount(); i++)
-			{
-				auto sid = GetID(pair<OscilloscopeChannel*, size_t>(f, i));
-
-				string portname("‣ ");
-				portname += f->GetInputName(i);
-				ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
-					ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
-					ImGui::TextUnformatted(portname.c_str());
-				ax::NodeEditor::EndPin();
-			}
-		}
-
-		//Output ports
-		ImGui::TableNextColumn();
-		for(size_t i=0; i<channel->GetStreamCount(); i++)
-		{
-			StreamDescriptor stream(channel, i);
-			auto sid = GetID(stream);
-
-			string portname = channel->GetStreamName(i) + " ‣";
-			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
-				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
-				RightJustifiedText(portname);
-			ax::NodeEditor::EndPin();
-
-			if(sid == ax::NodeEditor::GetHoveredPin())
-			{
-				ax::NodeEditor::Suspend();
-					OutputPortTooltip(stream);
-				ax::NodeEditor::Resume();
-			}
-		}
-
-		ImGui::EndTable();
-	}
 }
 
 /**

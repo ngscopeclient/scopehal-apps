@@ -79,7 +79,6 @@ public:
 protected:
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
-	void DoContentForOscilloscopeChannel(OscilloscopeChannel* channel, float nodewidth);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
