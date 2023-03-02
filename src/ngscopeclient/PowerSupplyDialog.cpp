@@ -185,7 +185,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 {
 	float valueWidth = 100;
 
-	auto chname = m_psu->GetPowerChannelName(i);
+	auto chname = m_psu->GetChannel(i)->GetDisplayName();
 
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit amps(Unit::UNIT_AMPS);
@@ -368,7 +368,7 @@ void PowerSupplyDialog::CombinedTrendPlot(float etime)
 
 		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 		{
-			auto chname = m_psu->GetPowerChannelName(i);
+			auto chname = m_psu->GetChannel(i)->GetDisplayName();
 			auto& hist = m_channelUIState[i].m_voltageHistory;
 			ImPlot::PlotLine(
 				chname.c_str(),
@@ -389,7 +389,7 @@ void PowerSupplyDialog::CombinedTrendPlot(float etime)
 
 		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 		{
-			auto chname = m_psu->GetPowerChannelName(i);
+			auto chname = m_psu->GetChannel(i)->GetDisplayName();
 			auto& hist = m_channelUIState[i].m_currentHistory;
 			ImPlot::PlotLine(
 				chname.c_str(),
