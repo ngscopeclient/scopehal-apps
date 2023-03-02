@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -118,12 +118,12 @@ void WaveformArea::SharedCtorInit()
 
 	m_group = NULL;
 
-	m_channel.m_channel->AddRef();
+	dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel)->AddRef();
 }
 
 WaveformArea::~WaveformArea()
 {
-	m_channel.m_channel->Release();
+	dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel)->Release();
 
 	//Need to reload the menu in case we deleted the last reference to this channel
 	m_parent->RefreshChannelsMenu();
@@ -152,7 +152,7 @@ void WaveformArea::OnRemoveOverlay(StreamDescriptor filter)
 	if(it != m_overlayRenderData.end())
 		m_overlayRenderData.erase(it);
 
-	filter.m_channel->Release();
+	dynamic_cast<OscilloscopeChannel*>(filter.m_channel)->Release();
 
 	m_parent->GarbageCollectAnalyzers();
 }

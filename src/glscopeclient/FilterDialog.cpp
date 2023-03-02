@@ -1079,7 +1079,7 @@ StreamDescriptor FilterDialog::FindCorrespondingSParameter(
 {
 	//See if the input is coming from an instrument or a filter
 	auto f = dynamic_cast<Filter*>(ref.m_channel);
-	auto scope = ref.m_channel->GetScope();
+	auto scope = dynamic_cast<OscilloscopeChannel*>(ref.m_channel)->GetScope();
 	if(f)
 	{
 		//Coming from a filter. Look for an output called Sxx_suffix

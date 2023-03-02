@@ -128,7 +128,7 @@ public:
 		float yoff;
 		float persistScale;
 	} m_config;
-	
+
 	//Indexes for rendering of spares waveforms
 	AcceleratorBuffer<uint32_t> m_indexBuffer;
 	//Rendered waveform data, 1 float per pixel
@@ -214,7 +214,7 @@ public:
 
 	void AddOverlay(StreamDescriptor stream)
 	{
-		stream.m_channel->AddRef();
+		dynamic_cast<OscilloscopeChannel*>(stream.m_channel)->AddRef();
 		m_overlays.push_back(stream);
 	}
 

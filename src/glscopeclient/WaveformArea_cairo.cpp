@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -210,9 +210,10 @@ void WaveformArea::RenderGrid(Cairo::RefPtr< Cairo::Context > cr)
 	cr->begin_new_path();
 
 	//Render arrow for trigger
-	if(m_channel.m_channel->IsPhysicalChannel())
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+	if(ochan->IsPhysicalChannel())
 	{
-		auto scope = m_channel.m_channel->GetScope();
+		auto scope = ochan->GetScope();
 		auto trig = scope->GetTrigger();
 		if( (trig != NULL) && (trig->GetInput(0) == m_channel) )
 		{
@@ -361,7 +362,8 @@ void WaveformArea::DoRenderCairoOverlays(Cairo::RefPtr< Cairo::Context > cr)
 	RenderMarkers(cr);
 
 	//Render arrow and dotted line for trigger level
-	auto scope = m_channel.m_channel->GetScope();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+	auto scope = ochan->GetScope();
 	if(scope != NULL)
 	{
 		if(m_dragState == DRAG_TRIGGER)
@@ -644,9 +646,11 @@ void WaveformArea::CalculateOverlayPositions()
 
 void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 {
+	auto rchan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+
 	string label = m_channel.GetName();
 	auto data = m_channel.GetData();
-	auto scope = m_channel.m_channel->GetScope();
+	auto scope = rchan->GetScope();
 
 	auto eye = dynamic_cast<EyeWaveform*>(data);
 	auto ed = dynamic_cast<EyePattern*>(m_channel.m_channel);
@@ -654,7 +658,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	//Add sample rate info to physical analog channels
 	//and filters with no inputs (signal generators)
 	auto f = dynamic_cast<Filter*>(m_channel.m_channel);
-	bool printSampleRate = m_channel.m_channel->IsPhysicalChannel();
+	bool printSampleRate = rchan->IsPhysicalChannel();
 	if(f && f->GetInputCount() == 0)
 		printSampleRate = true;
 
@@ -663,7 +667,7 @@ void WaveformArea::RenderChannelLabel(Cairo::RefPtr< Cairo::Context > cr)
 	auto xunits = m_channel.m_channel->GetXAxisUnits();
 	if( (xunits == Unit::UNIT_HZ) && (data != NULL) )
 	{
-		if(scope && m_channel.m_channel->IsPhysicalChannel())
+		if(scope && rchan->IsPhysicalChannel())
 		{
 			double rbw = scope->GetResolutionBandwidth();
 			snprintf(tmp, sizeof(tmp), "\nRBW: %s", xunits.PrettyPrint(rbw).c_str());

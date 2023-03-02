@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -505,22 +505,24 @@ void WaveformArea::OnDoubleClick(GdkEventButton* /*event*/, int64_t /*timestamp*
 		queue_draw();
 	}
 
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_selectedChannel.m_channel);
+
 	switch(m_clickLocation)
 	{
 		//Double click on channel name to pop up the config dialog
 		case LOC_CHAN_NAME:
 			{
 				//See if it's a physical channel
-				if(m_selectedChannel.m_channel->IsPhysicalChannel())
+				if(ochan->IsPhysicalChannel())
 				{
 					//TODO: make this modeless
-					ChannelPropertiesDialog dialog(m_parent, m_selectedChannel.m_channel);
+					ChannelPropertiesDialog dialog(m_parent, ochan);
 					if(dialog.run() == Gtk::RESPONSE_OK)
 					{
 						auto oldname = m_selectedChannel.m_channel->GetDisplayName();
 						dialog.ConfigureChannel();
 						if(m_selectedChannel.m_channel->GetDisplayName() != oldname)
-							m_parent->OnChannelRenamed(m_selectedChannel.m_channel);
+							m_parent->OnChannelRenamed(ochan);
 
 						//Clear any waveforms acquired while the dialog was open
 						for(size_t i=0; i<m_parent->GetScopeCount(); i++)
@@ -572,13 +574,15 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 	int64_t timestamp = XPositionToXAxisUnits(event->x);
 	auto region = HitTest(event->x, event->y);
 
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+
 	switch(m_dragState)
 	{
 		//Update scope trigger configuration if left mouse is released
 		case DRAG_TRIGGER:
 			if(event->button == 1)
 			{
-				auto scope = m_channel.m_channel->GetScope();
+				auto scope = ochan->GetScope();
 				auto trig = scope->GetTrigger();
 				trig->SetLevel(YPositionToYAxisUnits(event->y));
 				scope->PushTrigger();
@@ -597,7 +601,7 @@ bool WaveformArea::on_button_release_event(GdkEventButton* event)
 		case DRAG_TRIGGER_SECONDARY:
 			if(event->button == 1)
 			{
-				auto scope = m_channel.m_channel->GetScope();
+				auto scope = ochan->GetScope();
 				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
@@ -745,13 +749,15 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 	ClickLocation oldLocation = m_mouseElementPosition;
 	m_mouseElementPosition = HitTest(event->x, event->y);
 
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+
 	switch(m_dragState)
 	{
 		//Trigger drag - update level and refresh
 		//TODO: what happens if window trigger arrows cross?
 		case DRAG_TRIGGER:
 			{
-				auto scope = m_channel.m_channel->GetScope();
+				auto scope = ochan->GetScope();
 				auto trig = scope->GetTrigger();
 				trig->SetLevel(YPositionToYAxisUnits(event->y));
 				scope->PushTrigger();
@@ -761,7 +767,7 @@ bool WaveformArea::on_motion_notify_event(GdkEventMotion* event)
 
 		case DRAG_TRIGGER_SECONDARY:
 			{
-				auto scope = m_channel.m_channel->GetScope();
+				auto scope = ochan->GetScope();
 				auto trig = dynamic_cast<TwoLevelTrigger*>(scope->GetTrigger());
 				if(trig)
 				{
@@ -1289,7 +1295,7 @@ void WaveformArea::OnCoupling(OscilloscopeChannel::CouplingType type, Gtk::Radio
 	if(m_updatingContextMenu || !item->get_active())
 		return;
 
-	m_selectedChannel.m_channel->SetCoupling(type);
+	dynamic_cast<OscilloscopeChannel*>(m_selectedChannel.m_channel)->SetCoupling(type);
 	ClearPersistence();
 
 	//TODO: we should also clear persistence for any other channels derived from this
@@ -1300,7 +1306,8 @@ void WaveformArea::OnWaveformDataReady()
 	//If we're a fixed width curve, refresh the parent's time scale
 	if(IsEyeOrBathtub())
 	{
-		auto eye = dynamic_cast<EyeWaveform*>(m_channel.m_channel->GetData(0));
+		auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+		auto eye = dynamic_cast<EyeWaveform*>(ochan->GetData(0));
 		auto f = dynamic_cast<Filter*>(m_channel.m_channel);
 		if(eye == NULL)
 			eye = dynamic_cast<EyeWaveform*>(f->GetInput(0).m_channel->GetData(0));
@@ -1352,7 +1359,8 @@ WaveformArea::ClickLocation WaveformArea::HitTest(double x, double y)
 	if(x > m_plotRight)
 	{
 		//On the trigger button?
-		auto scope = m_channel.m_channel->GetScope();
+		auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel.m_channel);
+		auto scope = ochan->GetScope();
 		if(scope != NULL)
 		{
 			auto trig = scope->GetTrigger();
@@ -1552,10 +1560,12 @@ void WaveformArea::UpdateContextMenu()
 		}
 	}
 
-	if(m_selectedChannel.m_channel->IsPhysicalChannel())
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_selectedChannel.m_channel);
+
+	if(ochan->IsPhysicalChannel())
 	{
 		//See what couplings are available
-		auto couplings = m_selectedChannel.m_channel->GetAvailableCouplings();
+		auto couplings = ochan->GetAvailableCouplings();
 		if(couplings.size() > 1)
 		{
 			m_couplingItem.set_sensitive(true);
@@ -1597,7 +1607,7 @@ void WaveformArea::UpdateContextMenu()
 			}
 
 			//Update the current coupling setting
-			auto coupling = m_selectedChannel.m_channel->GetCoupling();
+			auto coupling = ochan->GetCoupling();
 			m_couplingItem.set_sensitive(true);
 			switch(coupling)
 			{

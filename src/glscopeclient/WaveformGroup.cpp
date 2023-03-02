@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -223,7 +223,7 @@ void WaveformGroup::EnableStats(StreamDescriptor stream, size_t index)
 
 	RefreshMeasurements();
 
-	stream.m_channel->AddRef();
+	dynamic_cast<OscilloscopeChannel*>(stream.m_channel)->AddRef();
 
 	m_measurementView.show_all();
 	HideInactiveColumns();
@@ -242,7 +242,7 @@ void WaveformGroup::DisableStats(StreamDescriptor stream)
 	//Remove everything from our column records and free the channel
 	m_columnToIndexMap.erase(stream);
 	m_indexToColumnMap.erase(index);
-	stream.m_channel->Release();
+	dynamic_cast<OscilloscopeChannel*>(stream.m_channel)->Release();
 
 	HideInactiveColumns();
 
@@ -486,11 +486,12 @@ void WaveformGroup::OnMeasurementButtonPressEvent(GdkEventButton* event)
 void WaveformGroup::OnStatisticProperties()
 {
 	auto oldname = m_measurementContextMenuChannel.GetName();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_measurementContextMenuChannel.m_channel);
 
 	//Show the properties
-	if(m_measurementContextMenuChannel.m_channel->IsPhysicalChannel())
+	if(ochan->IsPhysicalChannel())
 	{
-		ChannelPropertiesDialog dialog(m_parent, m_measurementContextMenuChannel.m_channel);
+		ChannelPropertiesDialog dialog(m_parent, ochan);
 		if(dialog.run() != Gtk::RESPONSE_OK)
 			return;
 
@@ -506,7 +507,7 @@ void WaveformGroup::OnStatisticProperties()
 	}
 
 	if(m_measurementContextMenuChannel.GetName() != oldname)
-		m_parent->OnChannelRenamed(m_measurementContextMenuChannel.m_channel);
+		m_parent->OnChannelRenamed(ochan);
 
 	m_parent->RefreshChannelsMenu();
 }

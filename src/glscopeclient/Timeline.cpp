@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -357,7 +357,7 @@ bool Timeline::on_draw(const Cairo::RefPtr<Cairo::Context>& cr)
 	RefreshUnits();
 
 	//And actually draw the rest
-	Render(cr, m_group->GetFirstChannel().m_channel);
+	Render(cr, dynamic_cast<OscilloscopeChannel*>(m_group->GetFirstChannel().m_channel));
 
 	cr->restore();
 	return true;
