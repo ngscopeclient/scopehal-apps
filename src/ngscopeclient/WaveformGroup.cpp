@@ -323,6 +323,7 @@ void WaveformGroup::DoCursorReadouts()
 						case Stream::STREAM_TYPE_WATERFALL:
 						case Stream::STREAM_TYPE_TRIGGER:
 						case Stream::STREAM_TYPE_UNDEFINED:
+						case Stream::STREAM_TYPE_ANALOG_SCALAR:
 							sv1 = "";
 							sv2 = "";
 							svd = "";

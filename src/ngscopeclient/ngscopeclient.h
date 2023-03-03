@@ -52,6 +52,8 @@
 #include "GuiLogSink.h"
 #include "Event.h"
 
+class Session;
+
 class RFSignalGeneratorThreadArgs
 {
 public:
@@ -69,15 +71,17 @@ public:
 class PowerSupplyThreadArgs
 {
 public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st)
+	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
 	: psu(p)
 	, shuttingDown(s)
 	, state(st)
+	, session(sess)
 	{}
 
 	SCPIPowerSupply* psu;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<PowerSupplyState> state;
+	Session* session;
 };
 
 class MultimeterThreadArgs

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,6 +43,7 @@ Event g_rerenderRequestedEvent;
 Event g_rerenderDoneEvent;
 
 Event g_refilterRequestedEvent;
+Event g_partialRefilterRequestedEvent;
 Event g_refilterDoneEvent;
 
 Event g_waveformReadyEvent;
@@ -100,8 +101,20 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//If re-running the filter graph was requested, do that (and re-render)
 		if(g_refilterRequestedEvent.Peek())
 		{
+			//Clear any partial filter refresh event, if one was present (it's now redundant)
+			g_partialRefilterRequestedEvent.Peek();
+
 			LogTrace("WaveformThread: re-running filter graph and re-rendering\n");
 			session->RefreshAllFilters();
+			RenderAllWaveforms(cmdbuf, session, queue);
+			g_refilterDoneEvent.Signal();
+			continue;
+		}
+
+		if(g_partialRefilterRequestedEvent.Peek())
+		{
+			LogTrace("WaveformThread: re-running partial filter graph and re-rendering\n");
+			session->RefreshDirtyFilters();
 			RenderAllWaveforms(cmdbuf, session, queue);
 			g_refilterDoneEvent.Signal();
 			continue;

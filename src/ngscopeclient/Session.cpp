@@ -46,6 +46,7 @@ extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
 extern Event g_refilterRequestedEvent;
+extern Event g_partialRefilterRequestedEvent;
 extern Event g_refilterDoneEvent;
 
 extern std::shared_mutex g_vulkanActivityMutex;
@@ -217,7 +218,7 @@ void Session::AddPowerSupply(SCPIPowerSupply* psu)
 
 	//Create shared PSU state
 	auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
-	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state);
+	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state, this);
 
 	//Add the dialog to view/control it
 	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
@@ -742,11 +743,19 @@ size_t Session::GetFilterCount()
 }
 
 /**
-	@brief Queues a request to refresh filters the next time we poll stuff
+	@brief Queues a request to refresh all filters the next time we poll stuff
  */
 void Session::RefreshAllFiltersNonblocking()
 {
 	g_refilterRequestedEvent.Signal();
+}
+
+/**
+	@brief Queues a request to refresh dirty filters the next time we poll stuff
+ */
+void Session::RefreshDirtyFiltersNonblocking()
+{
+	g_partialRefilterRequestedEvent.Signal();
 }
 
 void Session::RefreshAllFilters()
@@ -773,6 +782,66 @@ void Session::RefreshAllFilters()
 	LogTrace("TODO: refresh statistics\n");
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+}
+
+/**
+	@brief Refresh dirty filters (and anything in their downstream influence cone)
+ */
+void Session::RefreshDirtyFilters()
+{
+	set<Filter*> filtersToUpdate;
+
+	{
+		lock_guard<mutex> lock(m_dirtyChannelsMutex);
+		if(m_dirtyChannels.empty())
+			return;
+
+		//Start with all filters
+		set<Filter*> filters;
+		{
+			lock_guard<mutex> lock2(m_filterUpdatingMutex);
+			filters = Filter::GetAllInstances();
+		}
+
+		//Check each one to see if it needs updating
+		for(auto f : filters)
+		{
+			if(f->IsDownstreamOf(m_dirtyChannels))
+				filtersToUpdate.emplace(f);
+		}
+
+		//Reset list for next round
+		m_dirtyChannels.clear();
+	}
+	if(filtersToUpdate.empty())
+		return;
+
+	//Refresh the dirty filters only
+	double tstart = GetTime();
+
+	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+
+	{
+		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		m_graphExecutor.RunBlocking(filtersToUpdate);
+	}
+	UpdatePacketManagers(filtersToUpdate);
+
+	//Update statistic displays after the filter graph update is complete
+	//for(auto g : m_waveformGroups)
+	//	g->RefreshMeasurements();
+	LogTrace("TODO: refresh statistics\n");
+
+	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+}
+
+/**
+	@brief Flags a single channel as dirty (updated outside of a global trigger event)
+ */
+void Session::MarkChannelDirty(InstrumentChannel* chan)
+{
+	lock_guard<mutex> lock(m_dirtyChannelsMutex);
+	m_dirtyChannels.emplace(chan);
 }
 
 /**

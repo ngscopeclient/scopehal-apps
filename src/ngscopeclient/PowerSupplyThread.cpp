@@ -33,6 +33,7 @@
 	@brief Implementation of PowerSupplyThread
  */
 #include "ngscopeclient.h"
+#include "Session.h"
 #include "pthread_compat.h"
 
 using namespace std;
@@ -68,6 +69,8 @@ void PowerSupplyThread(PowerSupplyThreadArgs args)
 			state->m_channelCurrent[i] = pchan->GetCurrentMeasured();
 			state->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
 			state->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
+
+			args.session->MarkChannelDirty(pchan);
 		}
 		state->m_firstUpdateDone = true;
 

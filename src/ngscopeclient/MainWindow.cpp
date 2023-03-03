@@ -392,6 +392,9 @@ void MainWindow::RenderUI()
 		m_groupsToClose.clear();
 	}
 
+	//Request a refresh of any dirty filters next frame
+	m_session.RefreshDirtyFiltersNonblocking();
+
 	//See if we have new waveform data to look at.
 	//If we got one, highlight the new waveform in history
 	if(m_session.CheckForWaveforms(*m_cmdBuffer))
