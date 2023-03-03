@@ -60,20 +60,11 @@ protected:
 	///@brief Timestamp of when we opened the dialog
 	double m_tstart;
 
-	///@brief Depth for historical sample data
-	float m_historyDepth;
-
 	///@brief The meter we're controlling
 	SCPIMultimeter* m_meter;
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<MultimeterState> m_state;
-
-	///@brief History of primary measurement
-	RollingBuffer m_primaryHistory;
-
-	///@brief History of secondary measurement
-	RollingBuffer m_secondaryHistory;
 
 	///@brief Set of channel names
 	std::vector<std::string> m_channelNames;

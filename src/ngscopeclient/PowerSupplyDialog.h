@@ -80,9 +80,6 @@ public:
 		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
 		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
 	}
-
-	RollingBuffer m_voltageHistory;
-	RollingBuffer m_currentHistory;
 };
 
 class PowerSupplyDialog : public Dialog
@@ -94,7 +91,6 @@ public:
 	virtual bool DoRender();
 
 protected:
-	void CombinedTrendPlot(float etime);
 	void ChannelSettings(int i, float v, float a, float etime);
 
 	///@brief Session handle so we can remove the PSU when closed
@@ -105,9 +101,6 @@ protected:
 
 	///@brief Timestamp of when we opened the dialog
 	double m_tstart;
-
-	///@brief Depth for historical sample data
-	float m_historyDepth;
 
 	///@brief The PSU we're controlling
 	SCPIPowerSupply* m_psu;

@@ -45,7 +45,6 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 	: Dialog(string("Multimeter: ") + meter->m_nickname, ImVec2(500, 400))
 	, m_session(session)
 	, m_tstart(GetTime())
-	, m_historyDepth(60)
 	, m_meter(meter)
 	, m_state(state)
 	, m_selectedChannel(m_meter->GetCurrentMeterChannel())
@@ -112,20 +111,10 @@ bool MultimeterDialog::DoRender()
 	}
 
 	//Save history
-	auto etime = GetTime() - m_tstart;
 	auto pri = m_state->m_primaryMeasurement.load();
 	auto sec = m_state->m_secondaryMeasurement.load();
 	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
 	bool hasSecondary = m_meter->GetSecondaryMeterMode() != Multimeter::NONE;
-	if(firstUpdateDone)
-	{
-		m_primaryHistory.AddPoint(etime, pri);
-		if(hasSecondary)
-			m_secondaryHistory.AddPoint(etime, sec);
-
-		m_primaryHistory.Span = m_historyDepth;
-		m_secondaryHistory.Span = m_historyDepth;
-	}
 
 	float valueWidth = 100;
 	auto primaryMode = m_meter->ModeToText(m_meter->GetMeterMode());
@@ -193,54 +182,6 @@ bool MultimeterDialog::DoRender()
 		}
 	}
 
-	auto csize = ImGui::GetContentRegionAvail();
-	if(ImGui::CollapsingHeader("Primary Trend"))
-	{
-		if(ImPlot::BeginPlot("Primary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-		{
-			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-			auto& hist = m_primaryHistory;
-			ImPlot::PlotLine(
-				primaryMode.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-
-			ImPlot::EndPlot();
-		}
-	}
-
-	if(!hasSecondary)
-		ImGui::BeginDisabled();
-
-	if(ImGui::CollapsingHeader("Secondary Trend"))
-	{
-		if(ImPlot::BeginPlot("Secondary Trend", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-		{
-			ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-			auto& hist = m_secondaryHistory;
-
-			ImPlot::PlotLine(
-				secondaryMode.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-
-			ImPlot::EndPlot();
-		}
-	}
-
-	if(!hasSecondary)
-		ImGui::EndDisabled();
-
 	return true;
 }
 
@@ -248,10 +189,6 @@ void MultimeterDialog::OnPrimaryModeChanged()
 {
 	//Push the new mode to the meter
 	m_meter->SetMeterMode(m_primaryModes[m_primaryModeSelector]);
-
-	//Clear historical data since we're not measuring the same thing anymore
-	m_primaryHistory.Clear();
-	m_secondaryHistory.Clear();
 
 	//Redo the list of available secondary meter modes
 	RefreshSecondaryModeList();

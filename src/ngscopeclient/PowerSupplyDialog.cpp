@@ -47,7 +47,6 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 	, m_session(session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
 	, m_tstart(GetTime())
-	, m_historyDepth(60)
 	, m_psu(psu)
 	, m_state(state)
 {
@@ -142,7 +141,6 @@ bool PowerSupplyDialog::DoRender()
 	}
 
 	auto t = GetTime() - m_tstart;
-	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
 
 	//Per channel settings
 	for(size_t i=0; i<m_psu->GetChannelCount(); i++)
@@ -151,24 +149,8 @@ bool PowerSupplyDialog::DoRender()
 		if( (m_psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
 			continue;
 
-		float v = m_state->m_channelVoltage[i].load();
-		float a = m_state->m_channelCurrent[i].load();
-
-		//Update history
-		if(firstUpdateDone)
-		{
-			m_channelUIState[i].m_voltageHistory.AddPoint(t, v);
-			m_channelUIState[i].m_currentHistory.AddPoint(t, a);
-		}
-		m_channelUIState[i].m_voltageHistory.Span = m_historyDepth;
-		m_channelUIState[i].m_currentHistory.Span = m_historyDepth;
-
-		ChannelSettings(i, v, a, t);
+		ChannelSettings(i, m_state->m_channelVoltage[i].load(), m_state->m_channelCurrent[i].load(), t);
 	}
-
-	//Combined trend plot for all channels
-	if(ImGui::CollapsingHeader("Trends"))
-		CombinedTrendPlot(t);
 
 	return true;
 }
@@ -179,7 +161,7 @@ bool PowerSupplyDialog::DoRender()
 	@param i		Channel index
 	@param v		Most recently observed voltage
 	@param a		Most recently observed current
-	@param etime	Elapsed time for plotting
+	@param etime	Elapsed time for animation
  */
 void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 {
@@ -308,99 +290,6 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			ImGui::TreePop();
 		}
 
-		//Historical voltage/current graph
-		if(ImGui::TreeNode("Trends"))
-		{
-			auto csize = ImGui::GetContentRegionAvail();
-
-			if(ImPlot::BeginPlot("Voltage History", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-			{
-				ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-				auto& hist = m_channelUIState[i].m_voltageHistory;
-				ImPlot::PlotLine(
-					chname.c_str(),
-					&hist.Data[0].x,
-					&hist.Data[0].y,
-					hist.Data.size(),
-					0,
-					0,
-					2*sizeof(float));
-
-				ImPlot::EndPlot();
-			}
-
-			if(ImPlot::BeginPlot("Current History", ImVec2(csize.x, 200), ImPlotFlags_NoLegend) )
-			{
-				ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-				auto& hist = m_channelUIState[i].m_currentHistory;
-
-				ImPlot::PlotLine(
-					chname.c_str(),
-					&hist.Data[0].x,
-					&hist.Data[0].y,
-					hist.Data.size(),
-					0,
-					0,
-					2*sizeof(float));
-
-				ImPlot::EndPlot();
-			}
-
-			ImGui::TreePop();
-		}
-
 		ImGui::PopID();
-	}
-}
-
-/**
-	@brief Combined trend plots for all channels
- */
-void PowerSupplyDialog::CombinedTrendPlot(float etime)
-{
-	auto csize = ImGui::GetContentRegionAvail();
-
-	if(ImPlot::BeginPlot("Voltage History", ImVec2(csize.x, 200)) )
-	{
-		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
-		{
-			auto chname = m_psu->GetChannel(i)->GetDisplayName();
-			auto& hist = m_channelUIState[i].m_voltageHistory;
-			ImPlot::PlotLine(
-				chname.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-		}
-
-		ImPlot::EndPlot();
-	}
-
-	if(ImPlot::BeginPlot("Current History", ImVec2(csize.x, 200)) )
-	{
-		ImPlot::SetupAxisLimits(ImAxis_X1, etime - m_historyDepth, etime, ImGuiCond_Always);
-
-		for(size_t i=0; i<m_psu->GetChannelCount(); i++)
-		{
-			auto chname = m_psu->GetChannel(i)->GetDisplayName();
-			auto& hist = m_channelUIState[i].m_currentHistory;
-			ImPlot::PlotLine(
-				chname.c_str(),
-				&hist.Data[0].x,
-				&hist.Data[0].y,
-				hist.Data.size(),
-				0,
-				0,
-				2*sizeof(float));
-		}
-
-		ImPlot::EndPlot();
 	}
 }
