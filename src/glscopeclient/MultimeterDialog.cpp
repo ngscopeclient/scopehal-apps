@@ -58,7 +58,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 			m_inputLabel.set_text("Input Select");
 			m_grid.attach_next_to(m_inputBox, m_inputLabel, Gtk::POS_RIGHT, 1, 1);
 				for(size_t i=0; i<meter->GetChannelCount(); i++)
-					m_inputBox.append(meter->GetMeterChannelName(i));
+					m_inputBox.append(meter->GetChannel(i)->GetDisplayName());
 	}
 
 	m_grid.attach(m_rateLabel, 0, 1, 1, 1);
@@ -120,7 +120,7 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 	m_secondaryTypeBox.signal_changed().connect(sigc::mem_fun(*this, &MultimeterDialog::OnSecondaryModeChanged));
 
 	//Enable the meter on the first channel by default
-	m_inputBox.set_active_text(meter->GetMeterChannelName(meter->GetCurrentMeterChannel()));
+	m_inputBox.set_active_text(meter->GetChannel(meter->GetCurrentMeterChannel())->GetDisplayName());
 
 	//Set up a timer for pulling updates
 	//TODO: make update rate configurable

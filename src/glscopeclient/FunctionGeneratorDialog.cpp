@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -146,7 +146,7 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 				case FunctionGenerator::SHAPE_CARDIAC:
 					str = "Cardiac";
 					break;
-					
+
 				case FunctionGenerator::SHAPE_STAIRCASE_UP:
 					str = "Staircase up";
 					break;
@@ -229,7 +229,7 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 
 				case FunctionGenerator::SHAPE_COT:
 					str = "Cot";
-					break;
+					break;getmeterchannelname
 
 				case FunctionGenerator::SHAPE_SEC:
 					str = "Sec";
@@ -466,58 +466,3 @@ void FunctionGeneratorDialog::on_hide()
 
 	//m_meter->StopMeter();
 }
-
-/*
-void FunctionGeneratorDialog::OnInputChanged()
-{
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
-
-	auto nchan = m_inputBox.get_active_row_number();
-	m_meter->SetCurrentMeterChannel(nchan);
-
-	m_graphData.m_name = m_meter->GetMeterChannelName(nchan);
-}
-
-void FunctionGeneratorDialog::OnModeChanged()
-{
-	m_minval = FLT_MAX;
-	m_maxval = -FLT_MAX;
-
-	auto mode = m_modemap[m_typeBox.get_active_text()];
-	m_meter->SetMeterMode(mode);
-}
-
-bool FunctionGeneratorDialog::OnTimer()
-{
-	//Update text display
-	double value = m_meter->GetMeterValue();
-	m_valueBox.set_text(m_meter->GetMeterUnit().PrettyPrint(value, m_meter->GetMeterDigits()));
-
-	//Add new value to the graph and trim to fit
-	auto series = m_graphData.GetSeries("data");
-	series->push_back(GraphPoint(GetTime(), value));
-	const int max_points = 4096;
-	while(series->size() > max_points)
-		series->pop_front();
-
-	//Update graph limits
-	m_minval = min(m_minval, value);
-	m_maxval = max(m_maxval, value);
-
-	m_graph.m_minScale = m_minval;
-	m_graph.m_maxScale = m_maxval;
-	double range = abs(m_maxval - m_minval);
-	if(range > 5)
-		m_graph.m_scaleBump = 2.5;
-	else if(range >= 0.5)
-		m_graph.m_scaleBump = 0.25;
-	else if(range > 0.05)
-		m_graph.m_scaleBump = 0.1;
-	else
-		m_graph.m_scaleBump = 0.025;
-
-
-	return true;
-}
-*/

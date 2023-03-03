@@ -55,7 +55,7 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 
 	//Inputs
 	for(size_t i=0; i<m_meter->GetChannelCount(); i++)
-		m_channelNames.push_back(m_meter->GetMeterChannelName(i));
+		m_channelNames.push_back(m_meter->GetChannel(i)->GetDisplayName());
 
 	//Primary operating modes
 	auto modemask = m_meter->GetMeasurementTypes();
