@@ -229,7 +229,7 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 
 				case FunctionGenerator::SHAPE_COT:
 					str = "Cot";
-					break;getmeterchannelname
+					break;
 
 				case FunctionGenerator::SHAPE_SEC:
 					str = "Sec";

@@ -247,6 +247,14 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				ImGui::TextUnformatted("External trigger");
 				break;
 
+			case Stream::STREAM_TYPE_ANALOG_SCALAR:
+				{
+					ImGui::TextUnformatted("Analog value:");
+					string value = stream.GetYAxisUnits().PrettyPrint(stream.GetScalarValue());
+					ImGui::TextUnformatted(value.c_str());
+				}
+				break;
+
 			default:
 				ImGui::TextUnformatted("Unknown channel type");
 				break;

@@ -39,7 +39,9 @@ using namespace std;
 
 void PowerSupplyThread(PowerSupplyThreadArgs args)
 {
+	#ifdef __linux__
 	pthread_setname_np_compat("PSUThread");
+	#endif
 
 	auto psu = args.psu;
 	auto state = args.state;
@@ -51,15 +53,19 @@ void PowerSupplyThread(PowerSupplyThreadArgs args)
 
 		//TODO: skip polling if the channel in question is off
 
+		//Acquire scalar values from hardware
+		psu->AcquireData();
+
 		//Poll status
 		for(size_t i=0; i<nchans; i++)
 		{
 			//Skip non-power channels
-			if( (psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
+			auto pchan = dynamic_cast<PowerSupplyChannel*>(psu->GetChannel(i));
+			if(!pchan)
 				continue;
 
-			state->m_channelVoltage[i] = psu->GetPowerVoltageActual(i);
-			state->m_channelCurrent[i] = psu->GetPowerCurrentActual(i);
+			state->m_channelVoltage[i] = pchan->GetVoltageMeasured();
+			state->m_channelCurrent[i] = pchan->GetCurrentMeasured();
 			state->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
 			state->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
 		}
