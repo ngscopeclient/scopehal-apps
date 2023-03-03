@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2020 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,8 +35,6 @@
 
 #ifndef MultimeterDialog_h
 #define MultimeterDialog_h
-
-#include "../../lib/scopeprotocols/MultimeterTrendFilter.h"
 
 class OscilloscopeWindow;
 
@@ -102,7 +100,6 @@ protected:
 
 	bool m_updatingSecondary;
 
-	MultimeterTrendFilter* m_trendFilter;
 	OscilloscopeWindow* m_parent;
 
 	bool m_timerIntervalChanged;

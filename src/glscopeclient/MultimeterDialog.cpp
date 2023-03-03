@@ -125,17 +125,10 @@ MultimeterDialog::MultimeterDialog(Multimeter* meter, OscilloscopeWindow* parent
 	//Set up a timer for pulling updates
 	//TODO: make update rate configurable
 	Glib::signal_timeout().connect(sigc::mem_fun(*this, &MultimeterDialog::OnTimer), 1000);
-
-	m_trendFilter = new MultimeterTrendFilter(GetDefaultChannelColor(g_numDecodes ++));
-	m_trendFilter->SetMeter(m_meter);
-	m_trendFilter->AddRef();
-
-	m_trendFilter->SetDisplayName(string("Trend(") + m_meter->m_nickname + ")");
 }
 
 MultimeterDialog::~MultimeterDialog()
 {
-	m_trendFilter->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,8 +194,6 @@ bool MultimeterDialog::OnTimer()
 		secvalue = m_meter->GetSecondaryMeterValue();
 		m_secondaryValueBox.set_text(m_meter->GetSecondaryMeterUnit().PrettyPrint(secvalue, m_meter->GetMeterDigits()));
 	}
-
-	m_trendFilter->OnDataReady(value, secvalue);
 
 	//Reset timer if interval was changed
 	if(m_timerIntervalChanged)
