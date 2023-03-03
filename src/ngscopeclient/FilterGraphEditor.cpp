@@ -808,7 +808,8 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 	//Table of inputs at left and outputs at right
 	//TODO: this should move up to base class or something?
-	static ImGuiTableFlags flags = 0;
+	static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchProp;
+	StreamDescriptor hoveredStream(nullptr, 0);
 	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
 	{
 		//Input ports
@@ -842,19 +843,24 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 			ax::NodeEditor::EndPin();
 
 			if(sid == ax::NodeEditor::GetHoveredPin())
-			{
-				ax::NodeEditor::Suspend();
-					OutputPortTooltip(stream);
-				ax::NodeEditor::Resume();
-			}
+				hoveredStream = stream;
 		}
 
 		ImGui::EndTable();
 	}
 
+	//Tooltip on hovered output port
+	if(hoveredStream)
+	{
+		//TODO: input port
+
+		//Output port
+		ax::NodeEditor::Suspend();
+			OutputPortTooltip(hoveredStream);
+		ax::NodeEditor::Resume();
+	}
+
 	//Tooltip on hovered node
-	if(ax::NodeEditor::GetHoveredPin())
-	{}
 	else if(id == ax::NodeEditor::GetHoveredNode())
 	{
 		ax::NodeEditor::Suspend();
