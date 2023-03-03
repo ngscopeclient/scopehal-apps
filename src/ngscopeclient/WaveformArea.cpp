@@ -619,6 +619,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderProtocolWaveform(chan, start, size);
 				break;
 
+			//nothing to draw, it's not a waveform (shouldn't even be here)
+			case Stream::STREAM_TYPE_ANALOG_SCALAR:
+				break;
+
 			default:
 				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
 				break;
@@ -1333,6 +1337,10 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
 
+			//nothing to draw, it's not a waveform (shouldn't even be here)
+			case Stream::STREAM_TYPE_ANALOG_SCALAR:
+				break;
+
 			default:
 				LogWarning("Unimplemented stream type %d, don't know how to tone map it\n", stream.GetType());
 				break;
@@ -1377,6 +1385,10 @@ void WaveformArea::RenderWaveformTextures(
 
 			//no background rendering required, we draw everything live
 			case Stream::STREAM_TYPE_PROTOCOL:
+				break;
+
+			//nothing to draw, it's not a waveform (shouldn't even be here)
+			case Stream::STREAM_TYPE_ANALOG_SCALAR:
 				break;
 
 			default:
