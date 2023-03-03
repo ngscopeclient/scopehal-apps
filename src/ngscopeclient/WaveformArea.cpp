@@ -1501,8 +1501,9 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	//This will eliminate the need for a (potentially heavy) re-render when adjusting the slider.
 	float alpha = m_parent->GetTraceAlpha();
 	auto end = data->size() - 1;
+	int64_t firstOff = GetOffsetScaled(sdata, udata, 0);
 	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
-	float capture_len = lastOff;
+	float capture_len = lastOff - firstOff;
 	float avg_sample_len = capture_len / data->size();
 	float samplesPerPixel = 1.0 / (pixelsPerX * avg_sample_len);
 	float alpha_scaled = alpha / sqrt(samplesPerPixel);
