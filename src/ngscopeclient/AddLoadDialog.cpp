@@ -30,69 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MultimeterDialog
+	@brief Implementation of AddLoadDialog
  */
-#ifndef MultimeterDialog_h
-#define MultimeterDialog_h
 
-#include "Dialog.h"
-#include "Session.h"
+#include "ngscopeclient.h"
+#include "AddLoadDialog.h"
 
-class MultimeterDialog : public Dialog
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+AddLoadDialog::AddLoadDialog(Session& session)
+	: AddInstrumentDialog("Add Load", "load", session)
 {
-public:
-	MultimeterDialog(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session);
-	virtual ~MultimeterDialog();
+	SCPILoad::EnumDrivers(m_drivers);
+}
 
-	virtual bool DoRender();
+AddLoadDialog::~AddLoadDialog()
+{
+}
 
-	SCPIMultimeter* GetMeter()
-	{ return m_meter; }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
 
-protected:
-	void OnPrimaryModeChanged();
-	void RefreshSecondaryModeList();
+/**
+	@brief Connects to a scope
 
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
+	@return True if successful
+ */
+bool AddLoadDialog::DoConnect()
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
 
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
 
-	///@brief The meter we're controlling
-	SCPIMultimeter* m_meter;
+	//Create the load
+	auto gen = SCPILoad::CreateLoad(m_drivers[m_selectedDriver], transport);
+	if(gen == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create load driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
 
-	///@brief Current channel stats, live updated
-	std::shared_ptr<MultimeterState> m_state;
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created load\n");
 
-	///@brief Set of channel names
-	std::vector<std::string> m_channelNames;
-
-	///@brief The currently selected input channel
-	int m_selectedChannel;
-
-	///@brief Names of primary channel operating modes
-	std::vector<std::string> m_primaryModeNames;
-
-	///@brief List of primary channel operating modes
-	std::vector<Multimeter::MeasurementTypes> m_primaryModes;
-
-	///@brief Index of primary mode
-	int m_primaryModeSelector;
-
-	///@brief Names of secondary channel operating modes
-	std::vector<std::string> m_secondaryModeNames;
-
-	///@brief List of secondary channel operating modes
-	std::vector<Multimeter::MeasurementTypes> m_secondaryModes;
-
-	///@brief Index of secondary mode
-	int m_secondaryModeSelector;
-
-	///@brief Autorange enable flag
-	bool m_autorange;
-};
-
-
-
-#endif
+	gen->m_nickname = m_nickname;
+	m_session.AddLoad(gen);
+	return true;
+}

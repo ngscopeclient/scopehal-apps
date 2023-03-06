@@ -36,7 +36,6 @@
 #define PowerSupplyDialog_h
 
 #include "Dialog.h"
-#include "RollingBuffer.h"
 #include "Session.h"
 
 #include <future>

@@ -49,6 +49,7 @@
 #include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"
 #include "MultimeterState.h"
+#include "LoadState.h"
 #include "GuiLogSink.h"
 #include "Event.h"
 
@@ -98,10 +99,25 @@ public:
 	std::shared_ptr<MultimeterState> state;
 };
 
+class LoadThreadArgs
+{
+public:
+	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st)
+	: load(m)
+	, shuttingDown(s)
+	, state(st)
+	{}
+
+	SCPILoad* load;
+	std::atomic<bool>* shuttingDown;
+	std::shared_ptr<LoadState> state;
+};
+
 class Session;
 
 void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
+void LoadThread(LoadThreadArgs args);
 void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);

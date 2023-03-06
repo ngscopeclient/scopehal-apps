@@ -85,7 +85,7 @@ bool AddRFGeneratorDialog::DoConnect()
 	{
 		ShowErrorPopup(
 			"Driver error",
-			"Failed to create RF cenerator driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+			"Failed to create RF generator driver of type \"" + m_drivers[m_selectedDriver] + "\"");
 		delete transport;
 		return false;
 	}

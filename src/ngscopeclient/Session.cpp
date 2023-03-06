@@ -36,6 +36,7 @@
 #include "Session.h"
 #include "MainWindow.h"
 #include "FunctionGeneratorDialog.h"
+#include "LoadDialog.h"
 #include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
@@ -154,6 +155,7 @@ void Session::Clear()
 	}
 	m_oscilloscopes.clear();
 	m_psus.clear();
+	m_loads.clear();
 	m_rfgenerators.clear();
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
@@ -296,6 +298,34 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 }
 
 /**
+	@brief Adds a Load to the session
+ */
+void Session::AddLoad(SCPILoad* load)
+{
+	m_modifiedSinceLastSave = true;
+
+	//Create shared load state
+	auto state = make_shared<LoadState>();
+	m_loads[load] = make_unique<LoadConnectionState>(load, state);
+
+	//Add the dialog to view/control it
+	m_mainWindow->AddDialog(make_shared<LoadDialog>(load, state, this));
+
+	m_mainWindow->AddToRecentInstrumentList(load);
+}
+
+/**
+	@brief Removes a function generator from the session
+ */
+void Session::RemoveLoad(SCPILoad* load)
+{
+	m_modifiedSinceLastSave = true;
+
+	m_loads.erase(load);
+	delete load;
+}
+
+/**
 	@brief Adds an RF signal generator to the session
  */
 void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
@@ -358,6 +388,12 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 		if(s != nullptr)
 			insts.emplace(s);
 	}
+	for(auto& it : m_loads)
+	{
+		auto s = dynamic_cast<SCPIInstrument*>(it.first);
+		if(s != nullptr)
+			insts.emplace(s);
+	}
 	for(auto& it : m_rfgenerators)
 		insts.emplace(it.first);
 	for(auto gen : m_generators)
@@ -381,6 +417,8 @@ set<Instrument*> Session::GetInstruments()
 	for(auto& it : m_psus)
 		insts.emplace(it.first);
 	for(auto& it : m_meters)
+		insts.emplace(it.first);
+	for(auto& it : m_loads)
 		insts.emplace(it.first);
 	for(auto& it : m_rfgenerators)
 		insts.emplace(it.first);
@@ -470,6 +508,7 @@ void Session::ArmTrigger(TriggerType type)
 				case TRIGGER_TYPE_FORCED:
 					m_oscilloscopes[i]->ForceTrigger();
 					break;
+
 
 				default:
 					break;
@@ -614,6 +653,7 @@ void Session::DownloadWaveforms()
 		{
 			auto chan = scope->GetOscilloscopeChannel(i);
 			if(!chan)
+
 				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
@@ -741,6 +781,7 @@ size_t Session::GetFilterCount()
 	}
 	return filters.size();
 }
+
 
 /**
 	@brief Queues a request to refresh all filters the next time we poll stuff

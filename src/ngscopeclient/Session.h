@@ -153,6 +153,37 @@ public:
 };
 
 /**
+	@brief Internal state for a connection to a load
+ */
+class LoadConnectionState
+{
+public:
+	LoadConnectionState(SCPILoad* load, std::shared_ptr<LoadState> state)
+		: m_load(load)
+		, m_shuttingDown(false)
+	{
+		LoadThreadArgs args(load, &m_shuttingDown, state);
+		m_thread = std::make_unique<std::thread>(LoadThread, args);
+	}
+
+	~LoadConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+	}
+
+	///@brief The load
+	SCPILoad* m_load;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the load
+	std::unique_ptr<std::thread> m_thread;
+};
+
+/**
 	@brief A Session stores all of the instrument configuration and other state the user has open.
 
 	Generally only accessed from the GUI thread.
@@ -192,6 +223,8 @@ public:
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
+	void AddLoad(SCPILoad* generator);
+	void RemoveLoad(SCPILoad* generator);
 	void AddMultimeter(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope);
@@ -317,6 +350,9 @@ protected:
 
 	///@brief Multimeters we are currently connected to
 	std::map<Multimeter*, std::unique_ptr<MultimeterConnectionState> > m_meters;
+
+	///@brief Loads we are currently connected to
+	std::map<Load*, std::unique_ptr<LoadConnectionState> > m_loads;
 
 	///@brief RF generators we are currently connected to
 	std::map<SCPIRFSignalGenerator*, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;

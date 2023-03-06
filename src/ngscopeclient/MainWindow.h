@@ -200,6 +200,9 @@ protected:
 				void FileExportMenu();
 			void ViewMenu();
 			void AddMenu();
+				void AddLoadMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddGeneratorMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);

@@ -30,67 +30,41 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of MultimeterDialog
+	@brief Declaration of LoadDialog
  */
-#ifndef MultimeterDialog_h
-#define MultimeterDialog_h
+#ifndef LoadDialog_h
+#define LoadDialog_h
 
 #include "Dialog.h"
 #include "Session.h"
 
-class MultimeterDialog : public Dialog
+class LoadDialog : public Dialog
 {
 public:
-	MultimeterDialog(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session);
-	virtual ~MultimeterDialog();
+	LoadDialog(SCPILoad* load, std::shared_ptr<LoadState> state, Session* session);
+	virtual ~LoadDialog();
 
 	virtual bool DoRender();
 
-	SCPIMultimeter* GetMeter()
-	{ return m_meter; }
+	SCPILoad* GetLoad()
+	{ return m_load; }
 
 protected:
-	void OnPrimaryModeChanged();
-	void RefreshSecondaryModeList();
 
-	///@brief Session handle so we can remove the PSU when closed
+	///@brief Session handle so we can remove the load when closed
 	Session* m_session;
 
 	///@brief Timestamp of when we opened the dialog
 	double m_tstart;
 
-	///@brief The meter we're controlling
-	SCPIMultimeter* m_meter;
+	///@brief The load we're controlling
+	SCPILoad* m_load;
 
 	///@brief Current channel stats, live updated
-	std::shared_ptr<MultimeterState> m_state;
+	std::shared_ptr<LoadState> m_state;
 
 	///@brief Set of channel names
 	std::vector<std::string> m_channelNames;
-
-	///@brief The currently selected input channel
-	int m_selectedChannel;
-
-	///@brief Names of primary channel operating modes
-	std::vector<std::string> m_primaryModeNames;
-
-	///@brief List of primary channel operating modes
-	std::vector<Multimeter::MeasurementTypes> m_primaryModes;
-
-	///@brief Index of primary mode
-	int m_primaryModeSelector;
-
-	///@brief Names of secondary channel operating modes
-	std::vector<std::string> m_secondaryModeNames;
-
-	///@brief List of secondary channel operating modes
-	std::vector<Multimeter::MeasurementTypes> m_secondaryModes;
-
-	///@brief Index of secondary mode
-	int m_secondaryModeSelector;
-
-	///@brief Autorange enable flag
-	bool m_autorange;
 };
 
 

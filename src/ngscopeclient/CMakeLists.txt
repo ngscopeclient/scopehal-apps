@@ -41,6 +41,7 @@ add_executable(ngscopeclient
 
 	AddGeneratorDialog.cpp
 	AddInstrumentDialog.cpp
+	AddLoadDialog.cpp
 	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp
 	AddRFGeneratorDialog.cpp
@@ -58,6 +59,8 @@ add_executable(ngscopeclient
 	HistoryDialog.cpp
 	HistoryManager.cpp
 	IGFDFileBrowser.cpp
+	LoadDialog.cpp
+	LoadThread.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp
