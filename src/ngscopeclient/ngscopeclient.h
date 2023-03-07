@@ -102,15 +102,17 @@ public:
 class LoadThreadArgs
 {
 public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st)
+	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
 	: load(m)
 	, shuttingDown(s)
 	, state(st)
+	, session(sess)
 	{}
 
 	SCPILoad* load;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<LoadState> state;
+	Session* session;
 };
 
 class Session;

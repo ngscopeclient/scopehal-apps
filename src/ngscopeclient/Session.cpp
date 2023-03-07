@@ -306,7 +306,7 @@ void Session::AddLoad(SCPILoad* load)
 
 	//Create shared load state
 	auto state = make_shared<LoadState>();
-	m_loads[load] = make_unique<LoadConnectionState>(load, state);
+	m_loads[load] = make_unique<LoadConnectionState>(load, state, this);
 
 	//Add the dialog to view/control it
 	m_mainWindow->AddDialog(make_shared<LoadDialog>(load, state, this));

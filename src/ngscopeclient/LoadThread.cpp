@@ -34,6 +34,8 @@
  */
 #include "ngscopeclient.h"
 #include "pthread_compat.h"
+#include "Session.h"
+#include "LoadChannel.h"
 
 using namespace std;
 
@@ -48,9 +50,19 @@ void LoadThread(LoadThreadArgs args)
 		//Flush any pending commands
 		load->GetTransport()->FlushCommandQueue();
 
+		//Read stuff
+		load->AcquireData();
+
 		//Poll status
-		//state->m_primaryMeasurement = meter->GetMeterValue();
-		//state->m_secondaryMeasurement = meter->GetSecondaryMeterValue();
+		for(size_t i=0; i<load->GetChannelCount(); i++)
+		{
+			auto lchan = dynamic_cast<LoadChannel*>(load->GetChannel(i));
+
+			state->m_channelVoltage[i] = lchan->GetScalarValue(LoadChannel::STREAM_VOLTAGE_MEASURED);
+			state->m_channelCurrent[i] = lchan->GetScalarValue(LoadChannel::STREAM_CURRENT_MEASURED);
+
+			args.session->MarkChannelDirty(lchan);
+		}
 		state->m_firstUpdateDone = true;
 
 		//Cap update rate to 20 Hz

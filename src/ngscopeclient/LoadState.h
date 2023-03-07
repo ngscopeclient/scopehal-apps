@@ -42,15 +42,29 @@ class LoadState
 {
 public:
 
-	LoadState()
+	LoadState(size_t n = 0)
 	{
-		//m_primaryMeasurement = 0;
-		//m_secondaryMeasurement = 0;
+		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
+		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
+		//m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
+		//m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
+
+		for(size_t i=0; i<n; i++)
+		{
+			m_channelVoltage[i] = 0;
+			m_channelCurrent[i] = 0;
+			//m_channelConstantCurrent[i] = false;
+			//m_channelFuseTripped[i] = false;
+		}
+
 		m_firstUpdateDone = false;
 	}
 
-	//std::atomic<float> m_primaryMeasurement;
-	//std::atomic<float> m_secondaryMeasurement;
+	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
+	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
+	//std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
+	//std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
+
 	std::atomic<bool> m_firstUpdateDone;
 };
 

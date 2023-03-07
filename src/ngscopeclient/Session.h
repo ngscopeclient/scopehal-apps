@@ -158,11 +158,11 @@ public:
 class LoadConnectionState
 {
 public:
-	LoadConnectionState(SCPILoad* load, std::shared_ptr<LoadState> state)
+	LoadConnectionState(SCPILoad* load, std::shared_ptr<LoadState> state, Session* session)
 		: m_load(load)
 		, m_shuttingDown(false)
 	{
-		LoadThreadArgs args(load, &m_shuttingDown, state);
+		LoadThreadArgs args(load, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(LoadThread, args);
 	}
 

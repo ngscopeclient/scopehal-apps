@@ -38,6 +38,52 @@
 #include "Dialog.h"
 #include "Session.h"
 
+#include <future>
+
+/**
+	@brief UI state for a single load channel
+
+	Stores uncommitted values we haven't pushed to hardware, etc
+ */
+class LoadChannelUIState
+{
+public:
+	bool m_loadEnabled;
+	/*
+	bool m_overcurrentShutdownEnabled;
+	bool m_softStartEnabled;
+
+	std::string m_setVoltage;
+	std::string m_setCurrent;
+
+	float m_committedSetVoltage;
+	float m_committedSetCurrent;
+	*/
+	LoadChannelUIState()
+		: m_loadEnabled(false)
+		/*, m_overcurrentShutdownEnabled(false)
+		, m_setVoltage("")
+		, m_setCurrent("")
+		, m_committedSetVoltage(0)
+		, m_committedSetCurrent(0)*/
+	{}
+
+	LoadChannelUIState(SCPILoad* load, int chan)
+		: m_loadEnabled(load->GetLoadActive(chan))
+		/*, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
+		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
+		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
+		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))*/
+	{
+		/*Unit volts(Unit::UNIT_VOLTS);
+		Unit amps(Unit::UNIT_AMPS);
+		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
+		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
+		*/
+	}
+};
+
+
 class LoadDialog : public Dialog
 {
 public:
@@ -50,6 +96,7 @@ public:
 	{ return m_load; }
 
 protected:
+	void ChannelSettings(size_t channel);
 
 	///@brief Session handle so we can remove the load when closed
 	Session* m_session;
@@ -65,6 +112,12 @@ protected:
 
 	///@brief Set of channel names
 	std::vector<std::string> m_channelNames;
+
+	//Future channel state during loading
+	std::vector<std::future<LoadChannelUIState> > m_futureUIState;
+
+	///@brief Channel state for the UI
+	std::vector<LoadChannelUIState> m_channelUIState;
 };
 
 

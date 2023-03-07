@@ -51,6 +51,22 @@ LoadDialog::LoadDialog(SCPILoad* load, shared_ptr<LoadState> state, Session* ses
 	//Inputs
 	for(size_t i=0; i<m_load->GetChannelCount(); i++)
 		m_channelNames.push_back(m_load->GetChannel(i)->GetDisplayName());
+
+	//Set up initial empty state
+	m_channelUIState.resize(m_load->GetChannelCount());
+
+	//Asynchronously load rest of the state
+	for(size_t i=0; i<m_load->GetChannelCount(); i++)
+	{
+		//Add placeholders for non-power channels
+		//TODO: can we avoid spawning a thread here pointlessly?
+		if( (m_load->GetInstrumentTypesForChannel(i) & Instrument::INST_LOAD) == 0)
+			m_futureUIState.push_back(async(launch::async, [load, i]{ LoadChannelUIState dummy; return dummy; }));
+
+		//Actual power channels get async load
+		else
+			m_futureUIState.push_back(async(launch::async, [load, i]{ return LoadChannelUIState(load, i); }));
+	}
 }
 
 LoadDialog::~LoadDialog()
@@ -85,78 +101,101 @@ bool LoadDialog::DoRender()
 
 		ImGui::EndDisabled();
 	}
-/*
-	//Save history
-	auto pri = m_state->m_primaryMeasurement.load();
-	auto sec = m_state->m_secondaryMeasurement.load();
-	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
-	bool hasSecondary = m_load->GetSecondaryMeterMode() != Load::NONE;
 
-	float valueWidth = 100;
-	auto primaryMode = m_load->ModeToText(m_load->GetMeterMode());
-	auto secondaryMode = m_load->ModeToText(m_load->GetSecondaryMeterMode());
-
-	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
+	//Grab asynchronously loaded channel state if it's ready
+	if(m_futureUIState.size())
 	{
-		if(ImGui::Checkbox("Autorange", &m_autorange))
-			m_load->SetMeterAutoRange(m_autorange);
-		HelpMarker("Enables automatic selection of load scale ranges.");
-
-		//Channel selector (hide if we have only one channel)
-		if(m_load->GetChannelCount() > 1)
+		bool allDone = true;
+		for(size_t i=0; i<m_futureUIState.size(); i++)
 		{
-			if(Combo("Channel", m_channelNames, m_selectedChannel))
-				m_load->SetCurrentMeterChannel(m_selectedChannel);
+			//Already loaded? No action needed
+			//if(m_channelUIState[i].m_setVoltage != "")
+			//	continue;
 
-			HelpMarker("Select which input channel is being monitored.");
+			//Not ready? Keep waiting
+			if(m_futureUIState[i].wait_for(0s) != future_status::ready)
+			{
+				allDone = false;
+				continue;
+			}
+
+			//Ready, process it
+			m_channelUIState[i] = m_futureUIState[i].get();
 		}
 
-		//Primary operating mode selector
-		if(Combo("Mode", m_primaryModeNames, m_primaryModeSelector))
-			OnPrimaryModeChanged();
-		HelpMarker("Select the type of measurement to make.");
-
-		//Secondary operating mode selector
-		if(m_secondaryModeNames.empty())
-			ImGui::BeginDisabled();
-		if(Combo("Secondary Mode", m_secondaryModeNames, m_secondaryModeSelector))
-			m_load->SetSecondaryMeterMode(m_secondaryModes[m_secondaryModeSelector]);
-		if(m_secondaryModeNames.empty())
-			ImGui::EndDisabled();
-
-		HelpMarker(
-			"Select auxiliary measurement mode, if supported.\n\n"
-			"The set of available auxiliary measurements depends on the current primary measurement mode.");
+		if(allDone)
+			m_futureUIState.clear();
 	}
 
-	if(ImGui::CollapsingHeader("Measurements", ImGuiTreeNodeFlags_DefaultOpen))
+	//Channel information
+	for(size_t i=0; i<m_load->GetChannelCount(); i++)
 	{
-		string spri;
-		string ssec;
+		//Skip non-load channels
+		if( (m_load->GetInstrumentTypesForChannel(i) & Instrument::INST_LOAD) == 0)
+			continue;
 
-		//Hide values until we get first readings back from the load
-		if(firstUpdateDone)
+		if(ImGui::CollapsingHeader(m_channelNames[i].c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			spri = m_load->GetMeterUnit().PrettyPrint(pri, m_load->GetMeterDigits());
-			if(hasSecondary)
-				ssec = m_load->GetSecondaryMeterUnit().PrettyPrint(sec, m_load->GetMeterDigits());
+			ImGui::PushID(m_channelNames[i].c_str());
+				ChannelSettings(i);
+			ImGui::PopID();
 		}
+	}
+
+	return true;
+}
+
+/**
+	@brief Run settings for a single channel of the load
+ */
+void LoadDialog::ChannelSettings(size_t channel)
+{
+	float valueWidth = 100;
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit amps(Unit::UNIT_AMPS);
+
+	if(ImGui::Checkbox("Load Enable", &m_channelUIState[channel].m_loadEnabled))
+		m_load->SetLoadActive(channel, m_channelUIState[channel].m_loadEnabled);
+
+	//Actual values of channels
+	ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+	if(ImGui::TreeNode("Measured"))
+	{
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(valueWidth);
+			auto svolts = volts.PrettyPrint(m_state->m_channelVoltage[channel]);
+			ImGui::InputText("Voltage###VMeasured", &svolts);
+		ImGui::EndDisabled();
+
+		/*if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
+		{
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+			ImGui::TextUnformatted("CV");
+			ImGui::PopStyleColor();
+			Tooltip("Channel is operating in constant-voltage mode");
+		}*/
+		HelpMarker("Measured voltage being sunk by the load");
 
 		ImGui::BeginDisabled();
 			ImGui::SetNextItemWidth(valueWidth);
-			ImGui::InputText(primaryMode.c_str(), &spri[0], spri.size());
+			auto scurr = amps.PrettyPrint(m_state->m_channelCurrent[channel]);
+			ImGui::InputText("Current###IMeasured", &scurr);
 		ImGui::EndDisabled();
-		HelpMarker("Most recent value for the primary measurement");
 
-		if(hasSecondary)
+		/*
+		if(cc && m_channelUIState[i].m_outputEnabled && !shdn)
 		{
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(valueWidth);
-				ImGui::InputText(secondaryMode.c_str(), &ssec[0], ssec.size());
-			ImGui::EndDisabled();
-			HelpMarker("Most recent value for the secondary measurement");
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+			ImGui::TextUnformatted("CC");
+			Tooltip("Channel is operating in constant-current mode");
+			ImGui::PopStyleColor();
 		}
+		*/
+
+		HelpMarker("Measured current being sunk by the load");
+
+		ImGui::TreePop();
 	}
-*/
-	return true;
 }
