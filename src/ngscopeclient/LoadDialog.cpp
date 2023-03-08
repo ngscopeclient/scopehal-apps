@@ -150,12 +150,56 @@ bool LoadDialog::DoRender()
  */
 void LoadDialog::ChannelSettings(size_t channel)
 {
-	float valueWidth = 100;
+	float valueWidth = 150;
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit amps(Unit::UNIT_AMPS);
+	Unit watts(Unit::UNIT_WATTS);
+	Unit ohms(Unit::UNIT_OHMS);
 
 	if(ImGui::Checkbox("Load Enable", &m_channelUIState[channel].m_loadEnabled))
 		m_load->SetLoadActive(channel, m_channelUIState[channel].m_loadEnabled);
+
+	ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+	if(ImGui::TreeNode("Configuration"))
+	{
+		ImGui::SetNextItemWidth(valueWidth);
+		if(Dialog::Combo("Voltage Range",
+			m_channelUIState[channel].m_voltageRangeNames,
+			m_channelUIState[channel].m_voltageRangeIndex))
+		{
+			m_load->SetLoadVoltageRange(channel, m_channelUIState[channel].m_voltageRangeIndex);
+		}
+		HelpMarker("Maximum operating voltage for the load");
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(Dialog::Combo("Current Range",
+			m_channelUIState[channel].m_currentRangeNames,
+			m_channelUIState[channel].m_currentRangeIndex))
+		{
+			m_load->SetLoadCurrentRange(channel, m_channelUIState[channel].m_currentRangeIndex);
+		}
+		HelpMarker("Maximum operating current for the load");
+
+		const char* modes[4] =
+		{
+			"Constant current",
+			"Constant voltage",
+			"Constant resistance",
+			"Constant power"
+		};
+
+		ImGui::SetNextItemWidth(valueWidth);
+		if(ImGui::Combo("Mode", (int*)&m_channelUIState[channel].m_mode, modes, 4))
+		{
+			//Turn the load off before changing mode, to avoid accidental overloading of the DUT
+			m_load->SetLoadActive(channel, false);
+			m_channelUIState[channel].m_loadEnabled = false;
+
+			m_load->SetLoadMode(channel, m_channelUIState[channel].m_mode);
+		}
+
+		ImGui::TreePop();
+	}
 
 	//Actual values of channels
 	ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
@@ -167,14 +211,6 @@ void LoadDialog::ChannelSettings(size_t channel)
 			ImGui::InputText("Voltage###VMeasured", &svolts);
 		ImGui::EndDisabled();
 
-		/*if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
-		{
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-			ImGui::TextUnformatted("CV");
-			ImGui::PopStyleColor();
-			Tooltip("Channel is operating in constant-voltage mode");
-		}*/
 		HelpMarker("Measured voltage being sunk by the load");
 
 		ImGui::BeginDisabled();
@@ -183,18 +219,23 @@ void LoadDialog::ChannelSettings(size_t channel)
 			ImGui::InputText("Current###IMeasured", &scurr);
 		ImGui::EndDisabled();
 
-		/*
-		if(cc && m_channelUIState[i].m_outputEnabled && !shdn)
-		{
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-			ImGui::TextUnformatted("CC");
-			Tooltip("Channel is operating in constant-current mode");
-			ImGui::PopStyleColor();
-		}
-		*/
-
 		HelpMarker("Measured current being sunk by the load");
+
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(valueWidth);
+			auto pcurr = watts.PrettyPrint(m_state->m_channelVoltage[channel] * m_state->m_channelCurrent[channel]);
+			ImGui::InputText("Power###PCalc", &pcurr);
+		ImGui::EndDisabled();
+
+		HelpMarker("Measured power being sunk by the load");
+
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(valueWidth);
+			auto rcurr = ohms.PrettyPrint(m_state->m_channelVoltage[channel] / m_state->m_channelCurrent[channel]);
+			ImGui::InputText("Resistance###RCalc", &rcurr);
+		ImGui::EndDisabled();
+
+		HelpMarker("Equivalent resistance of the load");
 
 		ImGui::TreePop();
 	}

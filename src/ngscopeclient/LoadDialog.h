@@ -49,37 +49,39 @@ class LoadChannelUIState
 {
 public:
 	bool m_loadEnabled;
-	/*
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
 
-	std::string m_setVoltage;
-	std::string m_setCurrent;
+	int m_voltageRangeIndex;
+	std::vector<std::string> m_voltageRangeNames;
 
-	float m_committedSetVoltage;
-	float m_committedSetCurrent;
-	*/
+	int m_currentRangeIndex;
+	std::vector<std::string> m_currentRangeNames;
+
+	Load::LoadMode m_mode;
+
 	LoadChannelUIState()
 		: m_loadEnabled(false)
-		/*, m_overcurrentShutdownEnabled(false)
-		, m_setVoltage("")
-		, m_setCurrent("")
-		, m_committedSetVoltage(0)
-		, m_committedSetCurrent(0)*/
+		, m_voltageRangeIndex(0)
+		, m_currentRangeIndex(0)
+		, m_mode(Load::MODE_CONSTANT_CURRENT)
 	{}
 
-	LoadChannelUIState(SCPILoad* load, int chan)
+	LoadChannelUIState(SCPILoad* load, size_t chan)
 		: m_loadEnabled(load->GetLoadActive(chan))
-		/*, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))*/
+		, m_mode(load->GetLoadMode(chan))
 	{
-		/*Unit volts(Unit::UNIT_VOLTS);
+		//Voltage ranges
+		Unit volts(Unit::UNIT_VOLTS);
+		auto vranges = load->GetLoadVoltageRanges(chan);
+		for(auto v : vranges)
+			m_voltageRangeNames.push_back(volts.PrettyPrint(v));
+		m_voltageRangeIndex = load->GetLoadVoltageRange(chan);
+
+		//Current ranges
 		Unit amps(Unit::UNIT_AMPS);
-		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
-		*/
+		auto iranges = load->GetLoadCurrentRanges(chan);
+		for(auto i : iranges)
+			m_currentRangeNames.push_back(amps.PrettyPrint(i));
+		m_currentRangeIndex = load->GetLoadCurrentRange(chan);
 	}
 };
 
