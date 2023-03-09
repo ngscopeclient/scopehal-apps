@@ -58,16 +58,24 @@ public:
 
 	Load::LoadMode m_mode;
 
+	float m_committedSetPoint;
+	std::string m_setPoint;
+
 	LoadChannelUIState()
 		: m_loadEnabled(false)
 		, m_voltageRangeIndex(0)
 		, m_currentRangeIndex(0)
 		, m_mode(Load::MODE_CONSTANT_CURRENT)
+		, m_committedSetPoint(0)
+		, m_chan(0)
+		, m_load(nullptr)
 	{}
 
 	LoadChannelUIState(SCPILoad* load, size_t chan)
 		: m_loadEnabled(load->GetLoadActive(chan))
 		, m_mode(load->GetLoadMode(chan))
+		, m_chan(chan)
+		, m_load(load)
 	{
 		//Voltage ranges
 		Unit volts(Unit::UNIT_VOLTS);
@@ -82,7 +90,48 @@ public:
 		for(auto i : iranges)
 			m_currentRangeNames.push_back(amps.PrettyPrint(i));
 		m_currentRangeIndex = load->GetLoadCurrentRange(chan);
+
+		RefreshSetPoint();
 	}
+
+	/**
+		@brief Pulls the set point from hardware
+	 */
+	void RefreshSetPoint()
+	{
+		m_committedSetPoint = m_load->GetLoadSetPoint(m_chan);
+
+		//Mode
+		Unit volts(Unit::UNIT_VOLTS);
+		Unit amps(Unit::UNIT_AMPS);
+		Unit watts(Unit::UNIT_WATTS);
+		Unit ohms(Unit::UNIT_OHMS);
+		switch(m_mode)
+		{
+			case Load::MODE_CONSTANT_CURRENT:
+				m_setPoint = amps.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case Load::MODE_CONSTANT_VOLTAGE:
+				m_setPoint = volts.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case Load::MODE_CONSTANT_POWER:
+				m_setPoint = watts.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case Load::MODE_CONSTANT_RESISTANCE:
+				m_setPoint = ohms.PrettyPrint(m_committedSetPoint);
+				break;
+
+			default:
+				break;
+		}
+	}
+
+protected:
+	size_t m_chan;
+	Load* m_load;
 };
 
 

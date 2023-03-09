@@ -196,7 +196,56 @@ void LoadDialog::ChannelSettings(size_t channel)
 			m_channelUIState[channel].m_loadEnabled = false;
 
 			m_load->SetLoadMode(channel, m_channelUIState[channel].m_mode);
+
+			//Refresh set point with hardware config for the new mode
+			m_channelUIState[channel].RefreshSetPoint();
 		}
+		HelpMarker("Operating mode for the control loop");
+
+		//Set point
+		ImGui::SetNextItemWidth(valueWidth);
+		bool applySetPoint = false;
+		switch(m_load->GetLoadMode(channel))
+		{
+			case Load::MODE_CONSTANT_CURRENT:
+				applySetPoint = UnitInputWithExplicitApply(
+					"Current",
+					m_channelUIState[channel].m_setPoint,
+					m_channelUIState[channel].m_committedSetPoint,
+					amps);
+				break;
+
+			case Load::MODE_CONSTANT_VOLTAGE:
+				applySetPoint = UnitInputWithExplicitApply(
+					"Voltage",
+					m_channelUIState[channel].m_setPoint,
+					m_channelUIState[channel].m_committedSetPoint,
+					volts);
+				break;
+
+			case Load::MODE_CONSTANT_RESISTANCE:
+				applySetPoint = UnitInputWithExplicitApply(
+					"Resistance",
+					m_channelUIState[channel].m_setPoint,
+					m_channelUIState[channel].m_committedSetPoint,
+					ohms);
+				break;
+
+			case Load::MODE_CONSTANT_POWER:
+				applySetPoint = UnitInputWithExplicitApply(
+					"Power",
+					m_channelUIState[channel].m_setPoint,
+					m_channelUIState[channel].m_committedSetPoint,
+					watts);
+				break;
+
+			default:
+				break;
+		}
+		if(applySetPoint)
+			m_load->SetLoadSetPoint(channel, m_channelUIState[channel].m_committedSetPoint);
+
+		HelpMarker("Set point for the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
 		ImGui::TreePop();
 	}
