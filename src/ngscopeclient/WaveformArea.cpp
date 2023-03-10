@@ -2517,6 +2517,7 @@ void WaveformArea::FilterMenu(shared_ptr<DisplayedChannel> chan)
 {
 	FilterSubmenu(chan, "Bus", Filter::CAT_BUS);
 	FilterSubmenu(chan, "Clocking", Filter::CAT_CLOCK);
+	FilterSubmenu(chan, "Export", Filter::CAT_EXPORT);
 	FilterSubmenu(chan, "Generation", Filter::CAT_GENERATION);
 	FilterSubmenu(chan, "Math", Filter::CAT_MATH);
 	FilterSubmenu(chan, "Measurement", Filter::CAT_MEASUREMENT);

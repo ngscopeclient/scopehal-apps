@@ -591,6 +591,7 @@ void FilterGraphEditor::FilterMenu(StreamDescriptor stream)
 {
 	FilterSubmenu(stream, "Bus", Filter::CAT_BUS);
 	FilterSubmenu(stream, "Clocking", Filter::CAT_CLOCK);
+	FilterSubmenu(stream, "Export", Filter::CAT_EXPORT);
 	FilterSubmenu(stream, "Generation", Filter::CAT_GENERATION);
 	FilterSubmenu(stream, "Math", Filter::CAT_MATH);
 	FilterSubmenu(stream, "Measurement", Filter::CAT_MEASUREMENT);
