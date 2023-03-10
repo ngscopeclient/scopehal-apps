@@ -34,6 +34,7 @@
  */
 #include "ngscopeclient.h"
 #include "Session.h"
+#include "../scopeprotocols/ExportFilter.h"
 #include "MainWindow.h"
 #include "FunctionGeneratorDialog.h"
 #include "LoadDialog.h"
@@ -130,6 +131,17 @@ void Session::Clear()
 
 	ClearBackgroundThreads();
 
+	//HACK: for now, export filters keep an open reference to themselves to avoid memory leaks
+	//Free this refererence now.
+	//Long term we can probably do this better https://github.com/glscopeclient/scopehal-apps/issues/573
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		auto e = dynamic_cast<ExportFilter*>(f);
+		if(e)
+			e->Release();
+	}
+
 	//TODO: do we need to lock the mutex now that all of the background threads should have terminated?
 	//Might be redundant.
 	lock_guard<mutex> lock2(m_scopeMutex);
@@ -162,7 +174,7 @@ void Session::Clear()
 
 	//We SHOULD not have any filters at this point.
 	//But there have been reports that some stick around. If this happens, print an error message.
-	auto filters = Filter::GetAllInstances();
+	filters = Filter::GetAllInstances();
 	for(auto f : filters)
 		LogWarning("Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
 
