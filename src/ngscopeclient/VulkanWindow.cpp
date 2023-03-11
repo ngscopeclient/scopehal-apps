@@ -200,6 +200,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 				reinterpret_cast<int64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
 				poolName.c_str()));
 
+		//Workaround for Mesa bug, see https://gitlab.freedesktop.org/mesa/mesa/-/issues/8596
 		if(g_vulkanDeviceIsAnyMesa)
 		{
 			LogDebug("Vulkan driver is Mesa.\n");
