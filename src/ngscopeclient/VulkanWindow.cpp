@@ -200,9 +200,9 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 				reinterpret_cast<int64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
 				poolName.c_str()));
 
-		if(g_vulkanDeviceIsIntelMesa)
+		if(g_vulkanDeviceIsAnyMesa)
 		{
-			LogDebug("Vulkan driver is Intel Mesa.\n");
+			LogDebug("Vulkan driver is Mesa.\n");
 			LogDebug("Disabling vkSetDebugUtilsObjectNameEXT on VkSurfaceKHR objects to work around driver bug.\n");
 		}
 		else
