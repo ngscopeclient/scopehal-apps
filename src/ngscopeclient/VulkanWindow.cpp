@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -200,11 +200,19 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 				reinterpret_cast<int64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
 				poolName.c_str()));
 
-		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
-			vk::DebugUtilsObjectNameInfoEXT(
-				vk::ObjectType::eSurfaceKHR,
-				reinterpret_cast<int64_t>(static_cast<VkSurfaceKHR>(**m_surface)),
-				surfName.c_str()));
+		if(g_vulkanDeviceIsIntelMesa)
+		{
+			LogDebug("Vulkan driver is Intel Mesa.\n");
+			LogDebug("Disabling vkSetDebugUtilsObjectNameEXT on VkSurfaceKHR objects to work around driver bug.\n");
+		}
+		else
+		{
+			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
+				vk::DebugUtilsObjectNameInfoEXT(
+					vk::ObjectType::eSurfaceKHR,
+					reinterpret_cast<int64_t>(static_cast<VkSurfaceKHR>(**m_surface)),
+					surfName.c_str()));
+		}
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
