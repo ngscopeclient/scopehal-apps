@@ -317,7 +317,7 @@ void Session::AddLoad(SCPILoad* load)
 	m_modifiedSinceLastSave = true;
 
 	//Create shared load state
-	auto state = make_shared<LoadState>();
+	auto state = make_shared<LoadState>(load->GetChannelCount());
 	m_loads[load] = make_unique<LoadConnectionState>(load, state, this);
 
 	//Add the dialog to view/control it
