@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -48,10 +48,17 @@ void MultimeterThread(MultimeterThreadArgs args)
 		//Flush any pending commands
 		meter->GetTransport()->FlushCommandQueue();
 
+		//Acquire scalar values from hardware
+		meter->AcquireData();
+
 		//Poll status
-		state->m_primaryMeasurement = meter->GetMeterValue();
-		state->m_secondaryMeasurement = meter->GetSecondaryMeterValue();
-		state->m_firstUpdateDone = true;
+		auto chan = dynamic_cast<MultimeterChannel*>(meter->GetChannel(meter->GetCurrentMeterChannel()));
+		if(chan)
+		{
+			state->m_primaryMeasurement = chan->GetPrimaryValue();
+			state->m_secondaryMeasurement = chan->GetSecondaryValue();
+			state->m_firstUpdateDone = true;
+		}
 
 		//Cap update rate to 20 Hz
 		this_thread::sleep_for(chrono::milliseconds(50));
