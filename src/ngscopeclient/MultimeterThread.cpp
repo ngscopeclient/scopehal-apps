@@ -33,6 +33,7 @@
 	@brief Implementation of MultimeterThread
  */
 #include "ngscopeclient.h"
+#include "Session.h"
 #include "pthread_compat.h"
 
 using namespace std;
@@ -58,6 +59,8 @@ void MultimeterThread(MultimeterThreadArgs args)
 			state->m_primaryMeasurement = chan->GetPrimaryValue();
 			state->m_secondaryMeasurement = chan->GetSecondaryValue();
 			state->m_firstUpdateDone = true;
+
+			args.session->MarkChannelDirty(chan);
 		}
 
 		//Cap update rate to 20 Hz

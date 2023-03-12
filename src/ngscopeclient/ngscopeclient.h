@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -88,15 +88,17 @@ public:
 class MultimeterThreadArgs
 {
 public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st)
+	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
 	: meter(m)
 	, shuttingDown(s)
 	, state(st)
+	, session(sess)
 	{}
 
 	SCPIMultimeter* meter;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<MultimeterState> state;
+	Session* session;
 };
 
 class LoadThreadArgs

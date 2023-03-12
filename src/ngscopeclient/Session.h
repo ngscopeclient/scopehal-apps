@@ -123,11 +123,11 @@ public:
 class MultimeterConnectionState
 {
 public:
-	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state)
+	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session)
 		: m_meter(meter)
 		, m_shuttingDown(false)
 	{
-		MultimeterThreadArgs args(meter, &m_shuttingDown, state);
+		MultimeterThreadArgs args(meter, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(MultimeterThread, args);
 	}
 

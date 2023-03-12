@@ -258,7 +258,7 @@ void Session::AddMultimeter(SCPIMultimeter* meter)
 
 	//Create shared meter state
 	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state);
+	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state, this);
 
 	//Add the dialog to view/control it
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
