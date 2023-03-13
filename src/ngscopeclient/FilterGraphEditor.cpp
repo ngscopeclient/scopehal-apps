@@ -32,7 +32,6 @@
 	@author Andrew D. Zonenberg
 	@brief Implementation of FilterGraphEditor
  */
-
 #include "ngscopeclient.h"
 #include "FilterGraphEditor.h"
 #include "MainWindow.h"
@@ -782,16 +781,11 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto& prefs = m_session.GetPreferences();
 
 	//Get some configuration / style settings
-	auto tsize = ImGui::GetFontSize();
-	//float bgmul = 0.2;
-	//float hmul = 0.4;
-	//float amul = 0.6;
 	auto color = ColorFromString(displaycolor);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	auto textfont = ImGui::GetFont();
 	float headerheight = headerfont->FontSize * 1.5;
-	//auto fcolor = ImGui::ColorConvertU32ToFloat4(color);
-	//auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(fcolor.x*bgmul, fcolor.y*bgmul, fcolor.z*bgmul, fcolor.w) );
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
 	auto id = GetID(channel);
@@ -809,50 +803,72 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
-	float nodewidth = max(15*tsize, headerSize.x);
+
+	//Figure out how big the port text is
+	float iportmax = 1;
+	float oportmax = 1;
+	vector<string> inames;
+	vector<string> onames;
+	for(size_t i=0; i<channel->GetInputCount(); i++)
+	{
+		auto name = string("‣ ") + channel->GetInputName(i);
+		inames.push_back(name);
+		iportmax = max(iportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+	}
+	for(size_t i=0; i<channel->GetStreamCount(); i++)
+	{
+		auto name = channel->GetStreamName(i) + " ‣";
+		onames.push_back(name);
+		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+	}
+	float nodewidth = max(iportmax+oportmax, headerSize.x) + 2*ImGui::GetStyle().ItemSpacing.x;
 
 	//Reserve space for the node header
-	ImGui::Dummy(ImVec2(0, headerheight));
+	ImGui::Dummy(ImVec2(nodewidth, headerheight));
 	//auto nsize = ax::NodeEditor::GetNodeSize(id);
 
 	//Table of inputs at left and outputs at right
 	//TODO: this should move up to base class or something?
-	static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchProp;
+	static ImGuiTableFlags flags = 0;
 	StreamDescriptor hoveredStream(nullptr, 0);
 	if(ImGui::BeginTable("Ports", 2, flags, ImVec2(nodewidth, 0 ) ) )
 	{
-		//Input ports
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
+		size_t maxports = max(channel->GetInputCount(), channel->GetStreamCount());
 
-		for(size_t i=0; i<channel->GetInputCount(); i++)
+		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, iportmax+2);
+		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, oportmax+2);
+
+		for(size_t i=0; i<maxports; i++)
 		{
-			auto sid = GetID(pair<InstrumentChannel*, size_t>(channel, i));
+			ImGui::TableNextRow();
 
-			string portname("‣ ");
-			portname += channel->GetInputName(i);
-			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
-				ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
-				ImGui::TextUnformatted(portname.c_str());
-			ax::NodeEditor::EndPin();
-		}
+			//Input ports
+			ImGui::TableNextColumn();
+			if(i < channel->GetInputCount())
+			{
+				auto sid = GetID(pair<InstrumentChannel*, size_t>(channel, i));
 
-		//Output ports
-		ImGui::TableNextColumn();
+				ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
+					ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+					ImGui::TextUnformatted(inames[i].c_str());
+				ax::NodeEditor::EndPin();
+			}
 
-		for(size_t i=0; i<channel->GetStreamCount(); i++)
-		{
-			StreamDescriptor stream(channel, i);
-			auto sid = GetID(stream);
+			//Output ports
+			ImGui::TableNextColumn();
+			if(i < channel->GetStreamCount())
+			{
+				StreamDescriptor stream(channel, i);
+				auto sid = GetID(stream);
 
-			string portname = channel->GetStreamName(i) + " ‣";
-			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
-				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
-				RightJustifiedText(portname);
-			ax::NodeEditor::EndPin();
+				ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
+					ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
+					RightJustifiedText(onames[i]);
+				ax::NodeEditor::EndPin();
 
-			if(sid == ax::NodeEditor::GetHoveredPin())
-				hoveredStream = stream;
+				if(sid == ax::NodeEditor::GetHoveredPin())
+					hoveredStream = stream;
+			}
 		}
 
 		ImGui::EndTable();
