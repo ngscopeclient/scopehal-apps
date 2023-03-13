@@ -32,9 +32,11 @@
 	@author Andrew D. Zonenberg
 	@brief Program entry point
  */
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "ngscopeclient.h"
 #include "MainWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
+#include "imgui_internal.h"
 
 using namespace std;
 
@@ -196,11 +198,17 @@ ImU32 ColorFromString(const string& str, unsigned int alpha)
 /**
 	@brief Helper function for right justified text in a table
  */
-void RightJustifiedText(const std::string& str)
+void RightJustifiedText(const string& str)
 {
-	ImGui::SetCursorPosX(
-		ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(str.c_str()).x -
-		ImGui::GetScrollX() - 2*ImGui::GetStyle().ItemSpacing.x);
+	//Getting column width is a pain, we have to use some nonpublic APIs here
+	auto rect = ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), ImGui::TableGetColumnIndex());
+
+	float delta = rect.GetWidth() -
+		(ImGui::CalcTextSize(str.c_str()).x + ImGui::GetScrollX() + 2*ImGui::GetStyle().ItemSpacing.x);
+	if(delta < 0)
+		delta = 0;
+
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + delta);
 	ImGui::TextUnformatted(str.c_str());
 }
 
