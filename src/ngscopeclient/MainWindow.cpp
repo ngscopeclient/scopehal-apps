@@ -338,6 +338,8 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
 	double start = GetTime();
 
+	lock_guard<mutex> lock(m_session.GetRasterizedWaveformMutex());
+
 	m_cmdBuffer->begin(vk::CommandBufferBeginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
 	for(auto group : m_waveformGroups)

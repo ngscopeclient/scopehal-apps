@@ -525,6 +525,7 @@ void VulkanWindow::Render()
 		try
 		{
 			QueueLock qlock(m_renderQueue);
+			(*qlock).waitIdle();
 			if(vk::Result::eSuboptimalKHR == (*qlock).presentKHR(presentInfo))
 			{
 				LogTrace("eSuboptimal at present\n");

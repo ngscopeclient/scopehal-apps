@@ -318,6 +318,12 @@ public:
 
 	void ClearSweeps();
 
+	/**
+		@brief Get the mutex controlling access to rasterized waveforms
+	 */
+	std::mutex& GetRasterizedWaveformMutex()
+	{ return m_rasterizedWaveformMutex; }
+
 protected:
 	void UpdatePacketManagers(const std::set<Filter*>& filters);
 
@@ -401,6 +407,9 @@ protected:
 
 	///@brief Historical packet data from filters
 	std::map<PacketDecoder*, std::shared_ptr<PacketManager> > m_packetmgrs;
+
+	///@brief Mutex for controlling access to rasterized waveforms
+	std::mutex m_rasterizedWaveformMutex;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Markers

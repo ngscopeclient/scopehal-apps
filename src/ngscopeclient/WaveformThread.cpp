@@ -158,6 +158,7 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, share
 	//Must lock mutexes in this order to avoid deadlock
 	lock_guard<recursive_mutex> lock1(session->GetWaveformDataMutex());
 	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
+	lock_guard<mutex> lock3(session->GetRasterizedWaveformMutex());
 
 	//Keep references to all displayed channels open until the rendering finishes
 	//This prevents problems if we close a WaveformArea or remove a channel from it before the shader completes
