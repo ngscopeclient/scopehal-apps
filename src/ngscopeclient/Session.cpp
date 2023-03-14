@@ -815,8 +815,6 @@ void Session::RefreshAllFilters()
 {
 	double tstart = GetTime();
 
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
 	set<Filter*> filters;
 	{
 		lock_guard<mutex> lock2(m_filterUpdatingMutex);
@@ -825,9 +823,10 @@ void Session::RefreshAllFilters()
 
 	{
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 		m_graphExecutor.RunBlocking(filters);
+		UpdatePacketManagers(filters);
 	}
-	UpdatePacketManagers(filters);
 
 	//Update statistic displays after the filter graph update is complete
 	//for(auto g : m_waveformGroups)
@@ -872,13 +871,12 @@ void Session::RefreshDirtyFilters()
 	//Refresh the dirty filters only
 	double tstart = GetTime();
 
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-
 	{
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 		m_graphExecutor.RunBlocking(filtersToUpdate);
+		UpdatePacketManagers(filtersToUpdate);
 	}
-	UpdatePacketManagers(filtersToUpdate);
 
 	//Update statistic displays after the filter graph update is complete
 	//for(auto g : m_waveformGroups)
