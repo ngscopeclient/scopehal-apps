@@ -2098,7 +2098,11 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 
 	//Center drop area should only be displayed if we are not the source area of the drag
 	if(m_dragState == DRAG_STATE_NONE)
-		CenterDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle, heightOfMiddle));
+		CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
+
+	//Only show split in bottom (or top?) area
+	if( (iArea == (numAreas-1)) /*|| (iArea == 0)*/ )
+		CenterRightDropArea(ImVec2(leftOfMiddle + widthOfMiddle/2, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
@@ -2215,7 +2219,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 
 	Dropping a waveform in here adds it to the plot
  */
-void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
+void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 {
 	//Reject streams not compatible with this plot
 	//TODO: display nice error message
@@ -2284,6 +2288,76 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		center.x += fillSize;
 		DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
 	}
+}
+
+/**
+	@brief Drop area for the middle of the plot
+
+	Dropping a waveform in here adds it to a new plot in the same group
+ */
+void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
+{
+	//Reject streams not compatible with this group
+	//TODO: display nice error message
+	auto stream = m_parent->GetChannelBeingDragged();
+	if(stream.GetXAxisUnits() != m_group->GetXAxisUnit())
+		return;
+
+	ImGui::SetCursorScreenPos(start);
+	ImGui::InvisibleButton("centersplit", size);
+	//ImGui::Button("center", size);
+	ImGui::SetItemAllowOverlap();
+
+	//Add drop target
+	if(ImGui::BeginDragDropTarget())
+	{
+		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
+		{
+			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
+			auto sdrag = desc->first->GetStream(desc->second);
+
+			auto area = make_shared<WaveformArea>(sdrag, m_group, m_parent);
+			m_group->AddArea(area);
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
+	//Draw overlay target
+	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
+	const ImU32 bgBase = ImGui::GetColorU32(ImGuiCol_DockingPreview, 0.70f);
+	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float fillSize = 34;
+	float lineSize = 32;
+
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	//Draw background and outline
+	draw_list->AddRectFilled(
+		ImVec2(center.x - fillSize/2 - 0.5, center.y - fillSize/2 - 0.5),
+		ImVec2(center.x + fillSize/2 + 0.5, center.y + fillSize/2 + 0.5),
+		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		rounding);
+	draw_list->AddRect(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y - lineSize/2 - 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y - 0.5),
+		lineColor,
+		rounding);
+
+	draw_list->AddRect(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y + 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
+		lineColor,
+		rounding);
+
+	//Draw line to show split
+	/*draw_list->AddLine(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y - 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y - 0.5),
+		lineColor);*/
 }
 
 /**

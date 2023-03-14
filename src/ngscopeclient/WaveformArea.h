@@ -459,7 +459,8 @@ protected:
 		StreamDescriptor theirStream);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
-	void CenterDropArea(ImVec2 start, ImVec2 size);
+	void CenterLeftDropArea(ImVec2 start, ImVec2 size);
+	void CenterRightDropArea(ImVec2 start, ImVec2 size);
 	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 
 	void FilterMenu(std::shared_ptr<DisplayedChannel> chan);
