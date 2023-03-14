@@ -276,7 +276,7 @@ protected:
 	std::vector<std::shared_ptr<WaveformGroup> > m_waveformGroups;
 
 	///@brief Mutex for controlling access to m_waveformGroups
-	std::mutex m_waveformGroupsMutex;
+	std::recursive_mutex m_waveformGroupsMutex;
 
 	///@brief Set of newly created waveform groups that aren't yet docked
 	std::vector<std::shared_ptr<WaveformGroup> > m_newWaveformGroups;

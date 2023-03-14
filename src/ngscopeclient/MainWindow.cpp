@@ -203,7 +203,7 @@ string MainWindow::NameNewWaveformGroup()
  */
 shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /*stream*/)
 {
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 
 	//If we have no waveform groups, make one
 	//TODO: reject existing group if units are incompatible
@@ -347,7 +347,7 @@ void MainWindow::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	//Tone map the waveforms, holding the group mutex for as short a time as possible
 	vector<shared_ptr<WaveformGroup>> groups;
 	{
-		lock_guard<mutex> lock2(m_waveformGroupsMutex);
+		lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
 		groups = m_waveformGroups;
 	}
 	for(auto group : groups)
@@ -367,7 +367,7 @@ void MainWindow::RenderWaveformTextures(
 	bool clear = m_clearPersistence.exchange(false);
 	vector<shared_ptr<WaveformGroup>> groups;
 	{
-		lock_guard<mutex> lock2(m_waveformGroupsMutex);
+		lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
 		groups = m_waveformGroups;
 	}
 	for(auto group : groups)
@@ -397,7 +397,7 @@ void MainWindow::RenderUI()
 	//Keep references to all of our waveform textures until next frame
 	//Any groups we're closing will be destroyed at the start of that frame, once rendering has finished
 	{
-		lock_guard<mutex> lock(m_waveformGroupsMutex);
+		lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 		for(auto g : m_waveformGroups)
 			g->ReferenceWaveformTextures();
 	}
@@ -436,7 +436,7 @@ void MainWindow::RenderUI()
 	//Waveform groups
 	{
 		lock_guard<recursive_mutex> lock(m_session.GetWaveformDataMutex());
-		lock_guard<mutex> lock2(m_waveformGroupsMutex);
+		lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
 			auto group = m_waveformGroups[i];
@@ -791,7 +791,7 @@ void MainWindow::DockingArea()
 			//Create a new waveform group and dock it into the new space
 			auto group = make_shared<WaveformGroup>(this, NameNewWaveformGroup());
 			{
-				lock_guard<mutex> lock(m_waveformGroupsMutex);
+				lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 				m_waveformGroups.push_back(group);
 			}
 			ImGui::DockBuilderDockWindow(group->GetTitle().c_str(), node->ID);
@@ -857,7 +857,7 @@ void MainWindow::DockingArea()
  */
 void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDescriptor target)
 {
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 	for(auto group : m_waveformGroups)
 		group->NavigateToTimestamp(stamp, duration, target);
 }
@@ -870,7 +870,7 @@ void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDesc
  */
 bool MainWindow::IsChannelBeingDragged()
 {
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 	for(auto group : m_waveformGroups)
 	{
 		if(group->IsChannelBeingDragged())
@@ -884,7 +884,7 @@ bool MainWindow::IsChannelBeingDragged()
  */
 StreamDescriptor MainWindow::GetChannelBeingDragged()
 {
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 	for(auto group : m_waveformGroups)
 	{
 		auto stream = group->GetChannelBeingDragged();
@@ -1180,7 +1180,7 @@ Filter* MainWindow::CreateFilter(
  */
 void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 {
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 
 	LogTrace("Looking for area for stream %s\n", stream.GetName().c_str());
 	LogIndenter li;
@@ -1335,7 +1335,7 @@ void MainWindow::OnFilterReconfigured(Filter* f)
 	m_session.RefreshAllFiltersNonblocking();
 
 	//Clear persistence of any waveform areas showing this waveform
-	lock_guard<mutex> lock(m_waveformGroupsMutex);
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 	for(auto g : m_waveformGroups)
 		g->ClearPersistenceOfChannel(f);
 }
