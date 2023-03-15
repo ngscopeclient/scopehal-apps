@@ -202,6 +202,10 @@ void LoadDialog::ChannelSettings(size_t channel)
 		}
 		HelpMarker("Operating mode for the control loop");
 
+		//Update set point text if it's been changed via the filter graph
+		if(m_channelUIState[channel].m_committedSetPoint != m_load->GetLoadSetPoint(channel))
+			m_channelUIState[channel].RefreshSetPoint();
+
 		//Set point
 		ImGui::SetNextItemWidth(valueWidth);
 		bool applySetPoint = false;

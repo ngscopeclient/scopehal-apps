@@ -99,6 +99,10 @@ public:
 	 */
 	void RefreshSetPoint()
 	{
+		//can happen if we're a placeholder prior to completion of async init
+		if(m_load == nullptr)
+			return;
+
 		m_committedSetPoint = m_load->GetLoadSetPoint(m_chan);
 
 		//Mode

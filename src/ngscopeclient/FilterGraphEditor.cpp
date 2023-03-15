@@ -114,8 +114,11 @@ bool FilterGraphEditor::DoRender()
 		DoNodeForChannel(f, nullptr);
 	ClearOldPropertiesDialogs();
 
-	//Add links from each filter input to the stream it's fed by
-	for(auto f : filters)
+	//All nodes
+	auto nodes = m_session.GetAllGraphNodes();
+
+	//Add links from each input to the stream it's fed by
+	for(auto f : nodes)
 	{
 		for(size_t i=0; i<f->GetInputCount(); i++)
 		{

@@ -451,8 +451,8 @@ public:
 
 	void RemovePackets(TimePoint t);
 
-protected:
 	std::set<FlowGraphNode*> GetAllGraphNodes();
+protected:
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// End user preferences (persistent across sessions)
