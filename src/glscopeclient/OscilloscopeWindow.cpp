@@ -3439,12 +3439,14 @@ void OscilloscopeWindow::RefreshAllFilters()
 
 	SyncFilterColors();
 
-	set<Filter*> filters;
+	set<FlowGraphNode*> nodes;
 	{
 		lock_guard<mutex> lock2(m_filterUpdatingMutex);
-		filters = Filter::GetAllInstances();
+		auto filters = Filter::GetAllInstances();
+		for(auto f : filters)
+			nodes.emplace(f);
 	}
-	m_graphExecutor.RunBlocking(filters);
+	m_graphExecutor.RunBlocking(nodes);
 
 	//Update statistic displays after the filter graph update is complete
 	for(auto g : m_waveformGroups)

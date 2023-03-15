@@ -352,7 +352,11 @@ void OnWaveform(float refFreqHz, int iteration)
 
 	//Run the filter graph
 	FilterGraphExecutor ex;
-	ex.RunBlocking(Filter::GetAllInstances());
+	auto filters = Filter::GetAllInstances();
+	set<FlowGraphNode*> nodes;
+	for(auto f : filters)
+		nodes.emplace(f);
+	ex.RunBlocking(nodes);
 
 	//Calculate average amplitude
 	float avgRef = 0;

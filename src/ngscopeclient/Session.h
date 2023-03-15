@@ -325,7 +325,7 @@ public:
 	{ return m_rasterizedWaveformMutex; }
 
 protected:
-	void UpdatePacketManagers(const std::set<Filter*>& filters);
+	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;
@@ -452,6 +452,7 @@ public:
 	void RemovePackets(TimePoint t);
 
 protected:
+	std::set<FlowGraphNode*> GetAllGraphNodes();
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// End user preferences (persistent across sessions)

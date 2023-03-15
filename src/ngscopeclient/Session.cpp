@@ -811,22 +811,43 @@ void Session::RefreshDirtyFiltersNonblocking()
 	g_partialRefilterRequestedEvent.Signal();
 }
 
+/**
+	@brief Gets all of our graph nodes (filters plus instrument channels)
+ */
+set<FlowGraphNode*> Session::GetAllGraphNodes()
+{
+	//Start with all filters
+	set<FlowGraphNode*> nodes;
+	{
+		lock_guard<mutex> lock2(m_filterUpdatingMutex);
+		auto filters = Filter::GetAllInstances();
+		for(auto f : filters)
+			nodes.emplace(f);
+	}
+
+	//then add instrument channels
+	auto insts = GetInstruments();
+	for(auto inst : insts)
+	{
+		for(size_t i=0; i<inst->GetChannelCount(); i++)
+			nodes.emplace(inst->GetChannel(i));
+	}
+
+	return nodes;
+}
+
 void Session::RefreshAllFilters()
 {
 	double tstart = GetTime();
 
-	set<Filter*> filters;
-	{
-		lock_guard<mutex> lock2(m_filterUpdatingMutex);
-		filters = Filter::GetAllInstances();
-	}
+	auto nodes = GetAllGraphNodes();
 
 	{
 		//Must lock mutexes in this order to avoid deadlock
 		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
-		m_graphExecutor.RunBlocking(filters);
-		UpdatePacketManagers(filters);
+		m_graphExecutor.RunBlocking(nodes);
+		UpdatePacketManagers(nodes);
 	}
 
 	//Update statistic displays after the filter graph update is complete
@@ -842,31 +863,27 @@ void Session::RefreshAllFilters()
  */
 void Session::RefreshDirtyFilters()
 {
-	set<Filter*> filtersToUpdate;
+	set<FlowGraphNode*> nodesToUpdate;
 
 	{
 		lock_guard<mutex> lock(m_dirtyChannelsMutex);
 		if(m_dirtyChannels.empty())
 			return;
 
-		//Start with all filters
-		set<Filter*> filters;
-		{
-			lock_guard<mutex> lock2(m_filterUpdatingMutex);
-			filters = Filter::GetAllInstances();
-		}
+		//Start with all nodes
+		auto nodes = GetAllGraphNodes();
 
 		//Check each one to see if it needs updating
-		for(auto f : filters)
+		for(auto f : nodes)
 		{
 			if(f->IsDownstreamOf(m_dirtyChannels))
-				filtersToUpdate.emplace(f);
+				nodesToUpdate.emplace(f);
 		}
 
 		//Reset list for next round
 		m_dirtyChannels.clear();
 	}
-	if(filtersToUpdate.empty())
+	if(nodesToUpdate.empty())
 		return;
 
 	//Refresh the dirty filters only
@@ -876,8 +893,8 @@ void Session::RefreshDirtyFilters()
 		//Must lock mutexes in this order to avoid deadlock
 		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
-		m_graphExecutor.RunBlocking(filtersToUpdate);
-		UpdatePacketManagers(filtersToUpdate);
+		m_graphExecutor.RunBlocking(nodesToUpdate);
+		UpdatePacketManagers(nodesToUpdate);
 	}
 
 	//Update statistic displays after the filter graph update is complete
@@ -917,7 +934,7 @@ void Session::ClearSweeps()
 /**
 	@brief Update all of the packet managers when new data arrives
  */
-void Session::UpdatePacketManagers(const set<Filter*>& filters)
+void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes)
 {
 	lock_guard<mutex> lock(m_packetMgrMutex);
 
@@ -925,7 +942,7 @@ void Session::UpdatePacketManagers(const set<Filter*>& filters)
 	for(auto it : m_packetmgrs)
 	{
 		//Remove filters that no longer exist
-		if(filters.find(it.first) == filters.end())
+		if(nodes.find(it.first) == nodes.end())
 			deletedFilters.emplace(it.first);
 
 		//It exists, update it
