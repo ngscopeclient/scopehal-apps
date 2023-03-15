@@ -822,8 +822,9 @@ void Session::RefreshAllFilters()
 	}
 
 	{
-		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		//Must lock mutexes in this order to avoid deadlock
 		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(filters);
 		UpdatePacketManagers(filters);
 	}
@@ -872,8 +873,9 @@ void Session::RefreshDirtyFilters()
 	double tstart = GetTime();
 
 	{
-		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		//Must lock mutexes in this order to avoid deadlock
 		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(filtersToUpdate);
 		UpdatePacketManagers(filtersToUpdate);
 	}
