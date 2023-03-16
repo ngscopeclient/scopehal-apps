@@ -51,6 +51,7 @@
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
+#include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "PersistenceSettingsDialog.h"
@@ -873,6 +874,19 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasLogViewer)
+			ImGui::EndDisabled();
+
+		bool hasMeasurements = m_measurementsDialog != nullptr;
+		if(hasMeasurements)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Measurements"))
+		{
+			m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+			AddDialog(m_measurementsDialog);
+		}
+
+		if(hasMeasurements)
 			ImGui::EndDisabled();
 
 		bool hasMetrics = m_metricsDialog != nullptr;

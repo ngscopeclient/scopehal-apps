@@ -171,6 +171,7 @@ void MainWindow::CloseSession()
 	m_persistenceDialog = nullptr;
 	m_graphEditor = nullptr;
 	m_fileBrowser = nullptr;
+	m_measurementsDialog = nullptr;
 	m_meterDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
@@ -726,6 +727,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_persistenceDialog = nullptr;
 	if(m_graphEditor == dlg)
 		m_graphEditor = nullptr;
+	if(m_measurementsDialog == dlg)
+		m_measurementsDialog = nullptr;
 
 	//Remove the general list
 	m_dialogs.erase(dlg);

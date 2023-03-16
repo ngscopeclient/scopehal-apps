@@ -311,6 +311,9 @@ protected:
 	///@brief Filter graph editor
 	std::shared_ptr<Dialog> m_graphEditor;
 
+	///@brief Measurements dialog
+	std::shared_ptr<Dialog> m_measurementsDialog;
+
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 
 	///@brief Pending requests to split waveform groups
