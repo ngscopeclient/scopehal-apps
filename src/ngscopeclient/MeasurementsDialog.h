@@ -46,8 +46,12 @@ public:
 
 	virtual bool DoRender() override;
 
+	void AddStream(StreamDescriptor stream);
+
 protected:
 	Session& m_session;
+
+	std::vector<StreamDescriptor> m_streams;
 };
 
 #endif

@@ -50,6 +50,13 @@ MeasurementsDialog::MeasurementsDialog(Session& session)
 
 MeasurementsDialog::~MeasurementsDialog()
 {
+	for(auto s : m_streams)
+	{
+		auto ochan = dynamic_cast<OscilloscopeChannel*>(s.m_channel);
+		if(ochan)
+			ochan->Release();
+	}
+	m_streams.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,9 +70,55 @@ MeasurementsDialog::~MeasurementsDialog()
  */
 bool MeasurementsDialog::DoRender()
 {
-	ImGui::TextUnformatted("ohai");
+	static ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
+
+	float width = ImGui::GetFontSize();
+
+	int ncols = 2;	//TODO: add statistics
+	if(ImGui::BeginTable("table", ncols, flags))
+	{
+		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 15*width);
+		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 10*width);
+		//TODO: statistics
+		ImGui::TableHeadersRow();
+
+		for(auto s : m_streams)
+		{
+			auto name = s.GetName();
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+			ImGui::PushID(name.c_str());
+
+			ImGui::TableSetColumnIndex(0);
+			ImGui::TextUnformatted(name.c_str());
+
+			ImGui::TableSetColumnIndex(1);
+			auto value = s.GetYAxisUnits().PrettyPrint(s.GetScalarValue());
+			ImGui::TextUnformatted(value.c_str());
+
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
+	}
 	return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+void MeasurementsDialog::AddStream(StreamDescriptor stream)
+{
+	//TODO: search for duplicates?
+	m_streams.push_back(stream);
+
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
+	if(ochan)
+		ochan->AddRef();
+}

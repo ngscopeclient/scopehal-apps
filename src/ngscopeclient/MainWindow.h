@@ -48,6 +48,7 @@
 
 #include "../scopehal/PacketDecoder.h"
 
+class MeasurementsDialog;
 class MultimeterDialog;
 class HistoryDialog;
 class FileBrowser;
@@ -312,7 +313,7 @@ protected:
 	std::shared_ptr<Dialog> m_graphEditor;
 
 	///@brief Measurements dialog
-	std::shared_ptr<Dialog> m_measurementsDialog;
+	std::shared_ptr<MeasurementsDialog> m_measurementsDialog;
 
 	void OnDialogClosed(const std::shared_ptr<Dialog>& dlg);
 

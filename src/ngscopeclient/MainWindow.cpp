@@ -57,6 +57,7 @@
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
+#include "MeasurementsDialog.h"
 #include "MultimeterDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
@@ -1192,6 +1193,19 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 
 	LogTrace("Looking for area for stream %s\n", stream.GetName().c_str());
 	LogIndenter li;
+
+	//If it's a scalar, add to the measurements dialog (creating it if necessary)
+	if(stream.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+	{
+		LogTrace("It's a scalar, adding to measurements\n");
+		if(m_measurementsDialog == nullptr)
+		{
+			m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+			AddDialog(m_measurementsDialog);
+		}
+		m_measurementsDialog->AddStream(stream);
+		return;
+	}
 
 	//If it's an eye pattern, it automatically gets a new group
 	bool makeNewGroup = false;
