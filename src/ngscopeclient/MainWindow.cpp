@@ -1159,6 +1159,17 @@ Filter* MainWindow::CreateFilter(
 			FindAreaForStream(area, StreamDescriptor(f, i));
 	}
 
+	//Not adding waveforms to plots, but still check for scalar values and add to measurements view
+	else
+	{
+		for(size_t i=0; i<f->GetStreamCount(); i++)
+		{
+			StreamDescriptor stream(f, i);
+			if(stream.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+				FindAreaForStream(area, stream);
+		}
+	}
+
 	//Create and show filter properties dialog
 	if(f->NeedsConfig() && showProperties)
 	{

@@ -2636,10 +2636,26 @@ void WaveformArea::FilterSubmenu(shared_ptr<DisplayedChannel> chan, const string
 			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
 				continue;
 
-			//TODO: measurements should have summary option
+			//Measurements should have summary option and not show properties by default
+			if( (cat == Filter::CAT_MEASUREMENT) && (it->second->GetStreamCount() > 1) )
+			{
+				if(ImGui::BeginMenu(fname.c_str(), valid))
+				{
+					if(ImGui::MenuItem("Trend"))
+						m_parent->CreateFilter(fname, this, stream, false);
 
-			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
-				m_parent->CreateFilter(fname, this, stream);
+					if(ImGui::MenuItem("Summary"))
+						m_parent->CreateFilter(fname, this, stream, false, false);
+
+					ImGui::EndMenu();
+				}
+			}
+
+			else
+			{
+				if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
+					m_parent->CreateFilter(fname, this, stream);
+			}
 		}
 
 		ImGui::EndMenu();
