@@ -174,7 +174,8 @@ public:
 		const std::string& name,
 		WaveformArea* area,
 		StreamDescriptor initialStream,
-		bool showProperties = true);
+		bool showProperties = true,
+		bool addToArea = true);
 	void FindAreaForStream(WaveformArea* area, StreamDescriptor stream);
 
 	void OnFilterReconfigured(Filter* f);

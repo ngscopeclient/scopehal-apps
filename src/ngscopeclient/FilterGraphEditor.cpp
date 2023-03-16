@@ -539,50 +539,103 @@ bool FilterGraphEditor::IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst)
  */
 void FilterGraphEditor::CreateChannelMenu()
 {
-	vector<StreamDescriptor> streams;
-
-	auto& scopes = m_session.GetScopes();
-	for(auto scope : scopes)
+	if(ImGui::BeginMenu("Channels"))
 	{
-		//Channels
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		vector<StreamDescriptor> streams;
+
+		auto& scopes = m_session.GetScopes();
+		for(auto scope : scopes)
 		{
-			if(!scope->CanEnableChannel(i))
+			//Channels
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				if(!scope->CanEnableChannel(i))
+					continue;
+
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+					continue;
+
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+					streams.push_back(StreamDescriptor(chan, j));
+			}
+		}
+
+		//Filters
+		auto filters = Filter::GetAllInstances();
+		for(auto f : filters)
+		{
+			for(size_t j=0; j<f->GetStreamCount(); j++)
+				streams.push_back(StreamDescriptor(f, j));
+		}
+
+		//Run the actual menu
+		for(auto s : streams)
+		{
+			//Skip anything not valid for this sink
+			if(!m_createInput.first->ValidateChannel(m_createInput.second, s))
 				continue;
 
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
+			//Don't allow creation of back edges
+			if(m_createInput.first == s.m_channel)
 				continue;
 
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-				streams.push_back(StreamDescriptor(chan, j));
+			//Show menu items
+			if(ImGui::MenuItem(s.GetName().c_str()))
+			{
+				m_createInput.first->SetInput(m_createInput.second, s);
+
+				auto trig = dynamic_cast<Trigger*>(m_createInput.first);
+				if(trig)
+					trig->GetScope()->PushTrigger();
+			}
 		}
+
+		ImGui::EndMenu();
 	}
-
-	//Filters
-	auto filters = Filter::GetAllInstances();
-	for(auto f : filters)
+	if(ImGui::BeginMenu("Create"))
 	{
-		for(size_t j=0; j<f->GetStreamCount(); j++)
-			streams.push_back(StreamDescriptor(f, j));
-	}
+		auto& refs = m_parent->GetSession().GetReferenceFilters();
 
-	//Run the actual menu
-	for(auto s : streams)
-	{
-		//Skip anything not valid for this sink
-		if(!m_createInput.first->ValidateChannel(m_createInput.second, s))
-			continue;
-
-		//Show menu items
-		if(ImGui::MenuItem(s.GetName().c_str()))
+		//Find all filters in this category and sort them alphabetically
+		vector<string> sortedNames;
+		for(auto it : refs)
 		{
-			m_createInput.first->SetInput(m_createInput.second, s);
-
-			auto trig = dynamic_cast<Trigger*>(m_createInput.first);
-			if(trig)
-				trig->GetScope()->PushTrigger();
+			if(it.second->GetCategory() == Filter::CAT_GENERATION)
+				sortedNames.push_back(it.first);
 		}
+		std::sort(sortedNames.begin(), sortedNames.end());
+
+		//Do all of the menu items
+		for(auto fname : sortedNames)
+		{
+			auto it = refs.find(fname);
+
+			//For now: don't allow creation of filters that take inputs if going back
+			if(it->second->GetInputCount() != 0)
+				continue;
+
+			if(ImGui::MenuItem(fname.c_str()))
+			{
+				//Make the filter but don't spawn a properties dialog for it
+				auto f = m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0), false, false);
+
+				//Get relative mouse position
+				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
+
+				//Assign initial positions
+				ax::NodeEditor::SetNodePosition(GetID(f), mousePos);
+
+				//Once the filter exists, hook it up
+				m_createInput.first->SetInput(m_createInput.second, StreamDescriptor(f, 0));
+
+				auto trig = dynamic_cast<Trigger*>(m_createInput.first);
+				if(trig)
+					trig->GetScope()->PushTrigger();
+			}
+		}
+
+		ImGui::EndMenu();
 	}
 }
 

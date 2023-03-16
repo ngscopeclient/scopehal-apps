@@ -1115,18 +1115,20 @@ void MainWindow::UpdateFonts()
 // Filter creation etc
 
 /**
-	@brief Creates a filter and adds all of its streams to the best waveform area (may not be the one we created it from)
+	@brief Creates a filter optionally and adds all of its streams to the best waveform area
 
 	@param name				Name of the filter
 	@param area				Waveform area we launched the context menu from (if any)
 	@param initialStream	Stream we launched the context menu from (if any)
 	@param showProperties	True to show the properties dialog
+	@param addtoArea		True to add to a waveform area
  */
 Filter* MainWindow::CreateFilter(
 	const string& name,
 	WaveformArea* area,
 	StreamDescriptor initialStream,
-	bool showProperties)
+	bool showProperties,
+	bool addToArea)
 {
 	LogTrace("CreateFilter %s\n", name.c_str());
 
@@ -1147,8 +1149,11 @@ Filter* MainWindow::CreateFilter(
 	m_session.RefreshAllFiltersNonblocking();
 
 	//Find a home for each of its streams
-	for(size_t i=0; i<f->GetStreamCount(); i++)
-		FindAreaForStream(area, StreamDescriptor(f, i));
+	if(addToArea)
+	{
+		for(size_t i=0; i<f->GetStreamCount(); i++)
+			FindAreaForStream(area, StreamDescriptor(f, i));
+	}
 
 	//Create and show filter properties dialog
 	if(f->NeedsConfig() && showProperties)
