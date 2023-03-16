@@ -617,7 +617,7 @@ void FilterGraphEditor::CreateChannelMenu()
 
 			if(ImGui::MenuItem(fname.c_str()))
 			{
-				//Make the filter but don't spawn a properties dialog for it
+				//Make the filter but don't spawn a properties dialog for it or add to a waveform area
 				auto f = m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0), false, false);
 
 				//Get relative mouse position
