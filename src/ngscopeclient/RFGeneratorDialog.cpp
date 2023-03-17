@@ -199,6 +199,8 @@ void RFGeneratorDialog::DoChannel(size_t i)
 
 	auto chname = m_generator->GetChannelName(i);
 
+	float valueWidth = 10 * ImGui::GetFontSize();
+
 	Unit fs(Unit::UNIT_FS);
 	Unit hz(Unit::UNIT_HZ);
 	Unit dbm(Unit::UNIT_DBM);
@@ -236,6 +238,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 		{
 			//Power level is a potentially damaging operation
 			//Require the user to explicitly commit changes before it takes effect
+			ImGui::SetNextItemWidth(valueWidth);
 			if(UnitInputWithExplicitApply("Level", m_uiState[i].m_level, m_uiState[i].m_committedLevel, dbm))
 				m_generator->SetChannelOutputPower(i, m_uiState[i].m_committedLevel);
 			HelpMarker("Power level of the generated waveform");
@@ -253,6 +256,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 		}
 		else
 		{
+			ImGui::SetNextItemWidth(valueWidth);
 			if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
 				m_generator->SetChannelCenterFrequency(i, m_uiState[i].m_committedFrequency);
 
@@ -265,10 +269,12 @@ void RFGeneratorDialog::DoChannel(size_t i)
 			{
 				ImGui::PushID("Sweep");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(Combo("Mode", m_uiState[i].m_sweepTypeNames, m_uiState[i].m_sweepType))
 					m_generator->SetSweepType(i, m_uiState[i].m_sweepTypes[m_uiState[i].m_sweepType]);
 				HelpMarker("Choose whether to sweep frequency, power, both, or neither.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(UnitInputWithImplicitApply("Dwell Time",
 					m_uiState[i].m_sweepDwellTime, m_uiState[i].m_committedSweepDwellTime, fs))
 				{
@@ -276,22 +282,27 @@ void RFGeneratorDialog::DoChannel(size_t i)
 				}
 				HelpMarker("Time to stay at each frequency before moving to the next.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(IntInputWithImplicitApply("Points", m_uiState[i].m_sweepPoints, m_uiState[i].m_committedSweepPoints))
 					m_generator->SetSweepPoints(i, m_uiState[i].m_committedSweepPoints);
 				HelpMarker("Number of steps in the sweep.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(Combo("Shape", m_uiState[i].m_sweepShapeNames, m_uiState[i].m_sweepShape))
 					m_generator->SetSweepShape(i, m_uiState[i].m_sweepShapes[m_uiState[i].m_sweepShape]);
 				HelpMarker("Select the shape of the sweep waveform (triangle or sawtooth).");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(Combo("Spacing", m_uiState[i].m_sweepSpaceNames, m_uiState[i].m_sweepSpacing))
 					m_generator->SetSweepSpacing(i, m_uiState[i].m_sweepSpaceTypes[m_uiState[i].m_sweepSpacing]);
 				HelpMarker("Specify how to divide the sweep range into points (linear or logarithmic spacing).");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(Combo("Direction", m_uiState[i].m_sweepDirectionNames, m_uiState[i].m_sweepDirection))
 					m_generator->SetSweepDirection(i, m_uiState[i].m_sweepDirections[m_uiState[i].m_sweepDirection]);
 				HelpMarker("Allows the direction of the sweep to be reversed.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(UnitInputWithImplicitApply("Start Frequency",
 					m_uiState[i].m_sweepStart, m_uiState[i].m_committedSweepStart, hz))
 				{
@@ -299,6 +310,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 				}
 				HelpMarker("Initial value for frequency sweeps. Ignored if not sweeping frequency.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(UnitInputWithExplicitApply("Start Level",
 					m_uiState[i].m_sweepStartLevel, m_uiState[i].m_committedSweepStartLevel, dbm))
 				{
@@ -306,6 +318,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 				}
 				HelpMarker("Initial value for power sweeps. Ignored if not sweeping power.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(UnitInputWithImplicitApply("Stop Frequency",
 					m_uiState[i].m_sweepStop, m_uiState[i].m_committedSweepStop, hz))
 				{
@@ -313,6 +326,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 				}
 				HelpMarker("Ending value for frequency sweeps. Ignored if not sweeping frequency.");
 
+				ImGui::SetNextItemWidth(valueWidth);
 				if(UnitInputWithExplicitApply("Stop Level",
 					m_uiState[i].m_sweepStopLevel, m_uiState[i].m_committedSweepStopLevel, dbm))
 				{
