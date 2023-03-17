@@ -997,7 +997,8 @@ void FilterGraphEditor::HandleNodeProperties()
 				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
 			else if(o)
 				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
-			//else generic?
+			else
+				LogWarning("Don't know how to display properties of this node!\n");
 		}
 
 		//Create the popup
@@ -1010,7 +1011,9 @@ void FilterGraphEditor::HandleNodeProperties()
 	ax::NodeEditor::Suspend();
 	if(ImGui::BeginPopup("Node Properties"))
 	{
-		m_propertiesDialogs[m_selectedProperties]->RenderAsChild();
+		auto dlg = m_propertiesDialogs[m_selectedProperties];
+		if(dlg)
+			dlg->RenderAsChild();
 		ImGui::EndPopup();
 	}
 	ax::NodeEditor::Resume();
