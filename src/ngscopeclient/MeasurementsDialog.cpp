@@ -81,6 +81,8 @@ bool MeasurementsDialog::DoRender()
 	float width = ImGui::GetFontSize();
 
 	int ncols = 2;	//TODO: add statistics
+	bool deleteRow = false;
+	size_t rowToDelete = 0;
 	if(ImGui::BeginTable("table", ncols, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
@@ -89,14 +91,25 @@ bool MeasurementsDialog::DoRender()
 		//TODO: statistics
 		ImGui::TableHeadersRow();
 
-		for(auto s : m_streams)
+		for(size_t i=0; i<m_streams.size(); i++)
 		{
+			auto s = m_streams[i];
 			auto name = s.GetName();
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 			ImGui::PushID(name.c_str());
 
 			ImGui::TableSetColumnIndex(0);
-			ImGui::TextUnformatted(name.c_str());
+			ImGui::Selectable(name.c_str(), false);
+			if(ImGui::BeginPopupContextItem())
+			{
+				if(ImGui::MenuItem("Delete"))
+				{
+					deleteRow = true;
+					rowToDelete = i;
+				}
+
+				ImGui::EndPopup();
+			}
 
 			ImGui::TableSetColumnIndex(1);
 			auto value = s.GetYAxisUnits().PrettyPrint(s.GetScalarValue());
@@ -107,7 +120,19 @@ bool MeasurementsDialog::DoRender()
 
 		ImGui::EndTable();
 	}
+
+	if(deleteRow)
+		RemoveStream(rowToDelete);
+
 	return true;
+}
+
+void MeasurementsDialog::RemoveStream(size_t i)
+{
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_streams[i].m_channel);
+	if(ochan)
+		ochan->Release();
+	m_streams.erase(m_streams.begin() + i);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

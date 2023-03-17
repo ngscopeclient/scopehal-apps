@@ -51,6 +51,8 @@ public:
 protected:
 	Session& m_session;
 
+	void RemoveStream(size_t i);
+
 	std::vector<StreamDescriptor> m_streams;
 };
 
