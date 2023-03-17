@@ -690,12 +690,14 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 			if( (cat == Filter::CAT_GENERATION) && (fname.find("Import") != string::npos))
 				continue;
 
-			//TODO: measurements should have summary option
-
 			if(ImGui::MenuItem(fname.c_str(), nullptr, false, valid))
 			{
 				//Make the filter but don't spawn a properties dialog for it
-				auto f = m_parent->CreateFilter(fname, nullptr, stream, false);
+				//If measurement, don't add trends by default
+				bool addToArea = true;
+				if(cat == Filter::CAT_MEASUREMENT )
+					addToArea = false;
+				auto f = m_parent->CreateFilter(fname, nullptr, stream, false, addToArea);
 
 				//Get relative mouse position
 				auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
