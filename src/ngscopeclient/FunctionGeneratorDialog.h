@@ -81,7 +81,7 @@ public:
 	{ return m_generator; }
 
 protected:
-	void DoChannel(int i);
+	void DoChannel(size_t i);
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;

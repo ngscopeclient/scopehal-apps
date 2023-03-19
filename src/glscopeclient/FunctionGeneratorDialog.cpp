@@ -48,7 +48,7 @@ FunctionGeneratorChannelPage::FunctionGeneratorChannelPage(FunctionGenerator* ge
 	Unit percent(Unit::UNIT_PERCENT);
 	Unit hz(Unit::UNIT_HZ);
 
-	m_frame.set_label(gen->GetFunctionChannelName(channel));
+	m_frame.set_label(gen->GetChannel(channel)->GetDisplayName());
 	m_frame.add(m_grid);
 
 		auto shapes = gen->GetAvailableWaveformShapes(channel);
@@ -419,9 +419,11 @@ FunctionGeneratorDialog::FunctionGeneratorDialog(FunctionGenerator* gen)
 	get_vbox()->add(m_grid);
 
 	//Add each channel page
-	size_t n = gen->GetFunctionChannelCount();
+	size_t n = gen->GetChannelCount();
 	for(size_t i=0; i<n; i++)
 	{
+		if(0 == (gen->GetInstrumentTypesForChannel(i) & Instrument::INST_FUNCTION))
+			continue;
 		auto page = new FunctionGeneratorChannelPage(gen, i);
 		m_grid.attach(page->m_frame, 0, i, 1, 1);
 		m_pages.push_back(page);

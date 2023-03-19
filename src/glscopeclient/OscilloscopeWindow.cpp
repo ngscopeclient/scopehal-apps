@@ -500,7 +500,10 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 			// On headless scopes, enable all analog channels
 			for (size_t i=0; i<scope->GetChannelCount(); i++)
 			{
-				if (scope->GetOscilloscopeChannel(i)->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+					continue;
+				if (chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 				{
 					scope->EnableChannel(i);
 					didEnableAnyChannel |= scope->IsChannelEnabled(i);
@@ -534,6 +537,8 @@ void OscilloscopeWindow::CreateDefaultWaveformAreas(Gtk::Paned* split)
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 
 			//Qualify the channel name by the scope name if we have >1 scope enabled
 			if(m_scopes.size() > 1)
@@ -3256,6 +3261,8 @@ void OscilloscopeWindow::DownloadWaveforms()
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
 		}
@@ -3282,6 +3289,8 @@ void OscilloscopeWindow::DownloadWaveforms()
 		for(size_t i=0; i<prim->GetChannelCount(); i++)
 		{
 			auto chan = prim->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 			{
 				auto data = chan->GetData(j);
@@ -3305,6 +3314,8 @@ void OscilloscopeWindow::DownloadWaveforms()
 			for(size_t j=0; j<sec->GetChannelCount(); j++)
 			{
 				auto chan = sec->GetOscilloscopeChannel(j);
+				if(!chan)
+					continue;
 				for(size_t k=0; k<chan->GetStreamCount(); k++)
 				{
 					auto data = chan->GetData(k);
@@ -3875,6 +3886,8 @@ void OscilloscopeWindow::RefreshChannelsMenu()
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
 			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
 
 			//Skip channels that can't be enabled for some reason
 			if(!scope->CanEnableChannel(i))

@@ -51,9 +51,17 @@ FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generato
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit fs(Unit::UNIT_FS);
 
-	for(int i=0; i<m_generator->GetFunctionChannelCount(); i++)
+	size_t n = m_generator->GetChannelCount();
+	for(size_t i=0; i<n; i++)
 	{
 		FunctionGeneratorChannelUIState state;
+		if(0 == (m_generator->GetInstrumentTypesForChannel(i) & Instrument::INST_FUNCTION))
+		{
+			//Add dummy placeholder (never used)
+			m_uiState.push_back(state);
+			continue;
+		}
+
 		state.m_outputEnabled = m_generator->GetFunctionChannelActive(i);
 
 		state.m_committedAmplitude = m_generator->GetFunctionChannelAmplitude(i);
@@ -132,8 +140,14 @@ bool FunctionGeneratorDialog::DoRender()
 		ImGui::EndDisabled();
 	}
 
-	for(int i=0; i<m_generator->GetFunctionChannelCount(); i++)
+	size_t n = m_generator->GetChannelCount();
+	for(size_t i=0; i<n; i++)
+	{
+		if(0 == (m_generator->GetInstrumentTypesForChannel(i) & Instrument::INST_FUNCTION))
+			continue;
+
 		DoChannel(i);
+	}
 
 	return true;
 }
@@ -141,9 +155,9 @@ bool FunctionGeneratorDialog::DoRender()
 /**
 	@brief Run the UI for a single channel
  */
-void FunctionGeneratorDialog::DoChannel(int i)
+void FunctionGeneratorDialog::DoChannel(size_t i)
 {
-	auto chname = m_generator->GetFunctionChannelName(i);
+	auto chname = m_generator->GetChannel(i)->GetDisplayName();
 
 	float valueWidth = 200;
 

@@ -198,6 +198,8 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
 		chan = m_scope->GetOscilloscopeChannel(i);
+		if(!chan)
+			continue;
 		if(chan->IsEnabled())
 		{
 			data = chan->GetData(0);
@@ -230,6 +232,8 @@ void HistoryWindow::OnWaveformDataReady(bool loading, bool pin, const string& la
 	for(size_t i=0; i<m_scope->GetChannelCount(); i++)
 	{
 		auto c = m_scope->GetOscilloscopeChannel(i);
+		if(!c)
+			continue;
 		for(size_t j=0; j<c->GetStreamCount(); j++)
 		{
 			auto dat = c->GetData(j);
