@@ -178,7 +178,16 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		{
 			ImGui::SetNextItemWidth(valueWidth);
 			if(Combo("Output Impedance", m_impedanceNames, m_uiState[i].m_impedanceIndex))
-				m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[m_uiState[i].m_impedanceIndex]);
+			{
+				auto& state = m_uiState[i];
+				m_generator->SetFunctionChannelOutputImpedance(i, m_impedances[state.m_impedanceIndex]);
+
+				//Refresh amplitude and offset when changing impedance
+				state.m_committedAmplitude = m_generator->GetFunctionChannelAmplitude(i);
+				state.m_amplitude = volts.PrettyPrint(state.m_committedAmplitude);
+				state.m_committedOffset = m_generator->GetFunctionChannelOffset(i);
+				state.m_offset = volts.PrettyPrint(state.m_committedOffset);
+			}
 			HelpMarker(
 				"Select the expected load impedance.\n\n"
 				"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
