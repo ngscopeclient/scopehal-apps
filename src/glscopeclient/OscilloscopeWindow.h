@@ -400,11 +400,11 @@ public:
 	std::string m_currentFileName;
 	std::string m_currentDataDirName;
 
-	std::string SerializeMetadata();
-	std::string SerializeConfiguration(IDTable& table);
-	std::string SerializeInstrumentConfiguration(IDTable& table);
-	std::string SerializeFilterConfiguration(IDTable& table);
-	std::string SerializeUIConfiguration(IDTable& table);
+	YAML::Node SerializeMetadata();
+	YAML::Node SerializeConfiguration(IDTable& table);
+	YAML::Node SerializeInstrumentConfiguration(IDTable& table);
+	YAML::Node SerializeFilterConfiguration(IDTable& table);
+	YAML::Node SerializeUIConfiguration(IDTable& table);
 	void SerializeWaveforms(IDTable& table);
 
 	//Performance counters

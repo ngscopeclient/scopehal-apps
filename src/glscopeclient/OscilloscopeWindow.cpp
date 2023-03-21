@@ -1871,7 +1871,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			stream = an["stream"].as<int>();
 		WaveformArea* area = new WaveformArea(StreamDescriptor(channel, stream), this);
 		table.emplace(an["id"].as<int>(), area);
-		area->SetPersistenceEnabled(an["persistence"].as<int>() ? true : false);
+		area->SetPersistenceEnabled(an["persistence"].as<bool>());
 		m_waveformAreas.emplace(area);
 
 		//Add any overlays
@@ -2168,7 +2168,8 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile)
 
 	//Serialize our configuration and save to the file
 	IDTable table;
-	string config = SerializeConfiguration(table);
+	YAML::Node configNode = SerializeConfiguration(table);
+	string config = YAML::Dump(configNode);
 	FILE* fp = fopen(m_currentFileName.c_str(), "w");
 	if(!fp)
 	{
@@ -2195,37 +2196,34 @@ void OscilloscopeWindow::OnFileSave(bool saveToCurrentFile)
 	RefreshRecentFileMenu();
 }
 
-string OscilloscopeWindow::SerializeConfiguration(IDTable& table)
+YAML::Node OscilloscopeWindow::SerializeConfiguration(IDTable& table)
 {
-	string config = "";
+	YAML::Node node;
 
 	//Save metadata
-	config += SerializeMetadata();
+	node["metadata"] = SerializeMetadata();
 
 	//Save instrument config regardless, since data etc needs it
-	config += SerializeInstrumentConfiguration(table);
+	node["instruments"] = SerializeInstrumentConfiguration(table);
 
 	//Decodes depend on scope channels, but need to happen before UI elements that use them
 	if(!Filter::GetAllInstances().empty())
-		config += SerializeFilterConfiguration(table);
+		node["decodes"] = SerializeFilterConfiguration(table);
 
 	//UI config
-	config += SerializeUIConfiguration(table);
+	node["ui_config"] = SerializeUIConfiguration(table);
 
-	return config;
+	return node;
 }
 
 /**
 	@brief Adds a write-only metadata block to a scopesession
  */
-string OscilloscopeWindow::SerializeMetadata()
+YAML::Node OscilloscopeWindow::SerializeMetadata()
 {
-	string config = "metadata:\n";
-	char tmp[256];
-	snprintf(tmp, sizeof(tmp), "    appver:  \"glscopeclient %s\"\n", GLSCOPECLIENT_VERSION);
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "    appdate: \"%s %s\"\n", __DATE__, __TIME__);
-	config += tmp;
+	YAML::Node node;
+	node["appver"] = "glscopeclient " GLSCOPECLIENT_VERSION;
+	node["appdate"] = __DATE__ __TIME__;
 
 	//Format timestamp
 	time_t now = time(nullptr);
@@ -2239,107 +2237,97 @@ string OscilloscopeWindow::SerializeMetadata()
 	char stime[32];
 	strftime(stime, sizeof(stime), "%X", &ltime);
 	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
+	node["created"] = string(sdate) + " " + string(stime);
 
-	snprintf(tmp, sizeof(tmp), "    created: \"%s %s\"\n", sdate, stime);
-	config += tmp;
-
-	return config;
+	return node;
 }
 
 /**
 	@brief Serialize the configuration for all oscilloscopes
  */
-string OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
+YAML::Node OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
 {
-	string config = "instruments:\n";
+	YAML::Node node;
 
 	for(auto scope : m_scopes)
 	{
-		config += scope->SerializeConfiguration(table);
+		auto instrumentConfig = scope->SerializeConfiguration(table);
 		if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
-			config += string("        triggerdeskew: ") + to_string(m_scopeDeskewCal[scope]) + "\n";
+			node["triggerdeskew"] = m_scopeDeskewCal[scope];
+		node["scope" + instrumentConfig["id"].as<string>()] = instrumentConfig;
 	}
 
-	return config;
+	return node;
 }
 
 /**
 	@brief Serialize the configuration for all protocol decoders
  */
-string OscilloscopeWindow::SerializeFilterConfiguration(IDTable& table)
+YAML::Node OscilloscopeWindow::SerializeFilterConfiguration(IDTable& table)
 {
-	string config = "decodes:\n";
+	YAML::Node node;
 
 	auto set = Filter::GetAllInstances();
 	for(auto d : set)
-		config += d->SerializeConfiguration(table);
+	{
+		YAML::Node filterNode = d->SerializeConfiguration(table);
+		node["filter" + filterNode["id"].as<string>()] = filterNode;
+	}
 
-	return config;
+	return node;
 }
 
-string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
+YAML::Node OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 {
-	char tmp[1024];
-	string config = "ui_config:\n";
+	YAML::Node node;
 
-	config += "    window:\n";
-	snprintf(tmp, sizeof(tmp), "        width: %d\n", get_width());
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "        height: %d\n", get_height());
-	config += tmp;
+	YAML::Node window;
+	window["width"] = get_width();
+	window["height"] = get_height();
+	node["window"] = window;
 
 	//Waveform areas
-	config += "    areas:\n";
+	YAML::Node areas;
 	for(auto area : m_waveformAreas)
 		table.emplace(area);
 	for(auto area : m_waveformAreas)
 	{
+		YAML::Node areaNode;
 		int id = table[area];
-		snprintf(tmp, sizeof(tmp), "        area%d:\n", id);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:          %d\n", id);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            persistence: %d\n", area->GetPersistenceEnabled());
-		config += tmp;
+		areaNode["id"] = id;
+		areaNode["persistence"] = area->GetPersistenceEnabled();
 
 		//Channels
 		//By the time we get here, all channels should be accounted for.
 		//So there should be no reason to assign names to channels at this point - just use what's already there
 		auto chan = area->GetChannel();
-		snprintf(tmp, sizeof(tmp), "            channel:     %d\n", table[chan.m_channel]);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            stream:      %zu\n", chan.m_stream);
-		config += tmp;
+		areaNode["channel"] = table[chan.m_channel];
+		areaNode["stream"] = chan.m_stream;
 
 		//Overlays
-		if(area->GetOverlayCount() != 0)
+		for(size_t i=0; i<area->GetOverlayCount(); i++)
 		{
-			snprintf(tmp, sizeof(tmp), "            overlays:\n");
-			config += tmp;
+			YAML::Node overlayNode;
+			int oid = table[area->GetOverlay(i).m_channel];
 
-			for(size_t i=0; i<area->GetOverlayCount(); i++)
-			{
-				int oid = table[area->GetOverlay(i).m_channel];
+			overlayNode["id"] = oid;
+			overlayNode["stream"] = area->GetOverlay(i).m_stream;
 
-				snprintf(tmp, sizeof(tmp), "                overlay%d:\n", oid);
-				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                    id:      %d\n", oid);
-				config += tmp;
-				snprintf(tmp, sizeof(tmp), "                    stream:  %zu\n", area->GetOverlay(i).m_stream);
-				config += tmp;
-			}
+			areaNode["overlays"]["overlay" + to_string(oid)] = overlayNode;
 		}
+
+		areas["area" + to_string(id)] = areaNode;
 	}
+	node["areas"] = areas;
 
 	//Waveform groups
-	config += "    groups: \n";
 	for(auto group : m_waveformGroups)
-		table.emplace(&group->m_frame);
-	for(auto group : m_waveformGroups)
-		config += group->SerializeConfiguration(table);
+	{
+		int id = table.emplace(&group->m_frame);
+		node["groups"]["group" + to_string(id)] = group->SerializeConfiguration(table);
+	}
 
 	//Markers
-	config += "    markers: \n";
 	int nmarker = 0;
 	int nwfm = 0;
 	for(auto it : m_markers)
@@ -2349,59 +2337,52 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 		if(markers.empty())
 			continue;
 
-		snprintf(tmp, sizeof(tmp), "        wfm%d:\n", nwfm);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            timestamp: %ld\n", key.first);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            time_fsec: %ld\n", key.second);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            markers:\n");
-		config += tmp;
+		YAML::Node markerNode;
+		YAML::Node wfmNode;
+		wfmNode["timestamp"] = key.first;
+		wfmNode["time_fsec"] = key.second;
 
 		for(auto m : markers)
 		{
-			snprintf(tmp, sizeof(tmp), "                marker%d:\n", nmarker);
-			config += tmp;
-
-			snprintf(tmp, sizeof(tmp), "                    offset: %ld\n", m->m_offset);
-			config += tmp;
+			YAML::Node wfmMarkerNode;
+			wfmMarkerNode["offset"] = m->m_offset;
 			string name = str_replace("\"", "\\\"", m->m_name);
-			snprintf(tmp, sizeof(tmp), "                    name:   \"%s\"\n", name.c_str());
-			config += tmp;
+			wfmMarkerNode["name"] = name;
+
+			wfmNode["markers"]["marker" + to_string(nmarker)] = wfmMarkerNode;
 
 			nmarker ++;
 		}
+
+		node["markers"]["wfm" + to_string(nwfm)] = wfmNode;
 
 		nwfm ++;
 	}
 
 	//Splitters
-	config += "    splitters: \n";
 	for(auto split : m_splitters)
 		table.emplace(split);
 	for(auto split : m_splitters)
 	{
 		//Splitter config
 		int sid = table[split];
-		snprintf(tmp, sizeof(tmp), "        split%d: \n", sid);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            id:     %d\n", sid);
-		config += tmp;
+		YAML::Node splitNode;
+
+		splitNode["id"] = sid;
 
 		if(split->get_orientation() == Gtk::ORIENTATION_HORIZONTAL)
-			config +=  "            dir:    h\n";
+			splitNode["dir"] = "h";
 		else
-			config +=  "            dir:    v\n";
+			splitNode["dir"] = "v";
 
 		//Splitter position
-		snprintf(tmp, sizeof(tmp), "            split:  %d\n", split->get_position());
-		config += tmp;
+		splitNode["split"] = split->get_position();
 
 		//Children
-		snprintf(tmp, sizeof(tmp), "            child0: %d\n", table[split->get_child1()]);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "            child1: %d\n", table[split->get_child2()]);
-		config += tmp;
+		splitNode["child0"] = table[split->get_child1()];
+		splitNode["child1"] = table[split->get_child2()];
+
+		node["splitters"]["split" + to_string(sid)] = splitNode;
 	}
 
 	//Top level splitter
@@ -2409,12 +2390,11 @@ string OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 	{
 		if(split->get_parent() == &m_vbox)
 		{
-			snprintf(tmp, sizeof(tmp), "    top: %d\n", table[split]);
-			config += tmp;
+			node["top"] = table[split];
 		}
 	}
 
-	return config;
+	return node;
 }
 
 /**

@@ -120,7 +120,7 @@ public:
 	OscilloscopeWindow* GetParent()
 	{ return m_parent; }
 
-	virtual std::string SerializeConfiguration(IDTable& table);
+	virtual YAML::Node SerializeConfiguration(IDTable& table);
 
 	Unit GetXAxisUnits();
 
