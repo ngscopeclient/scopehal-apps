@@ -35,7 +35,7 @@ add_executable(ngscopeclient
 	../imgui-node-editor/imgui_node_editor_api.cpp
 	../imgui-node-editor/imgui_canvas.cpp
 	../imgui-node-editor/crude_json.cpp
-	../ImGuiFileDialog/ImGuiFileDialog/ImGuiFileDialog.cpp
+	../ImGuiFileDialog/ImGuiFileDialog.cpp
 
 	pthread_compat.cpp
 
