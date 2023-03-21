@@ -324,7 +324,6 @@ void WaveformGroup::RefreshMeasurements()
 
 YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 {
-	YAML::Node node;
 	YAML::Node groupNode;
 
 	int id = table.emplace(&m_frame);
@@ -381,9 +380,7 @@ YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 		groupNode["stats"]["stat" + to_string(it.first)] = statNode;
 	}
 
-	node["group" + to_string(id)] = groupNode;
-
-	return node;
+	return groupNode;
 }
 
 int WaveformGroup::GetIndexOfChild(Gtk::Widget* child)

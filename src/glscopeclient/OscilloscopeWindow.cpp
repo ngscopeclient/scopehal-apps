@@ -1871,7 +1871,7 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			stream = an["stream"].as<int>();
 		WaveformArea* area = new WaveformArea(StreamDescriptor(channel, stream), this);
 		table.emplace(an["id"].as<int>(), area);
-		area->SetPersistenceEnabled(an["persistence"].as<int>() ? true : false);
+		area->SetPersistenceEnabled(an["persistence"].as<bool>());
 		m_waveformAreas.emplace(area);
 
 		//Add any overlays
