@@ -250,7 +250,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 				m_generator->SetFunctionChannelRiseTime(i, m_uiState[i].m_committedRiseTime);
 
 			ImGui::SetNextItemWidth(valueWidth);
-			if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_riseTime, m_uiState[i].m_committedFallTime, fs))
+			if(UnitInputWithImplicitApply("Fall Time", m_uiState[i].m_fallTime, m_uiState[i].m_committedFallTime, fs))
 				m_generator->SetFunctionChannelFallTime(i, m_uiState[i].m_committedFallTime);
 		}
 
