@@ -322,86 +322,68 @@ void WaveformGroup::RefreshMeasurements()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-string WaveformGroup::SerializeConfiguration(IDTable& table)
+YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 {
-	char tmp[1024];
+	YAML::Node node;
+	YAML::Node groupNode;
+
 	int id = table.emplace(&m_frame);
-	snprintf(tmp, sizeof(tmp), "        group%d:\n", id);
-	string config = tmp;
-	snprintf(tmp, sizeof(tmp), "            id:             %d\n", id);
-	config += tmp;
 
-	config += "            name:           \"" + m_framelabel.get_label() + "\"\n";
-
-	snprintf(tmp, sizeof(tmp), "            timebaseResolution: fs\n");
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            pixelsPerXUnit: %e\n", m_pixelsPerXUnit);
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            xAxisOffset:    %" PRIi64 "\n", m_xAxisOffset);
-	config += tmp;
+	groupNode["id"] = id;
+	groupNode["name"] = string(m_framelabel.get_label());
+	groupNode["timebaseResolution"] = "fs";
+	groupNode["pixelsPerXUnit"] = m_pixelsPerXUnit;
+	groupNode["xAxisOffset"] = m_xAxisOffset;
 
 	switch(m_cursorConfig)
 	{
 		case WaveformGroup::CURSOR_NONE:
-			config += "            cursorConfig:   none\n";
+			groupNode["cursorConfig"] = "none";
 			break;
 
 		case WaveformGroup::CURSOR_X_SINGLE:
-			config += "            cursorConfig:   x_single\n";
+			groupNode["cursorConfig"] = "x_single";
 			break;
 
 		case WaveformGroup::CURSOR_Y_SINGLE:
-			config += "            cursorConfig:   y_single\n";
+			groupNode["cursorConfig"] = "y_single";
 			break;
 
 		case WaveformGroup::CURSOR_X_DUAL:
-			config += "            cursorConfig:   x_dual\n";
+			groupNode["cursorConfig"] = "x_dual";
 			break;
 
 		case WaveformGroup::CURSOR_Y_DUAL:
-			config += "            cursorConfig:   y_dual\n";
+			groupNode["cursorConfig"] = "y_dual";
 			break;
 	}
 
-	snprintf(tmp, sizeof(tmp), "            xcursor0:       %" PRIi64 "\n", m_xCursorPos[0]);
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            xcursor1:       %" PRIi64 "\n", m_xCursorPos[1]);
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            ycursor0:       %f\n", m_yCursorPos[0]);
-	config += tmp;
-	snprintf(tmp, sizeof(tmp), "            ycursor1:       %f\n", m_yCursorPos[1]);
-	config += tmp;
+	groupNode["xcursor0"] = m_xCursorPos[0];
+	groupNode["xcursor1"] = m_xCursorPos[1];
+	groupNode["ycursor0"] = m_yCursorPos[0];
+	groupNode["ycursor1"] = m_yCursorPos[1];
 
 	//Waveform areas
-	config += "            areas:\n";
 	auto children = m_waveformBox.get_children();
 	for(size_t i=0; i<children.size(); i++)
 	{
 		int aid = table[children[i]];
-		snprintf(tmp, sizeof(tmp), "                area%d:\n", aid);
-		config += tmp;
-		snprintf(tmp, sizeof(tmp), "                    id: %d\n", aid);
-		config += tmp;
+		groupNode["areas"]["area" + to_string(aid)]["id"] = aid;
 	}
 
 	//Statistics
-	if(!m_indexToColumnMap.empty())
+	for(auto it : m_indexToColumnMap)
 	{
-		config += "            stats:\n";
-		for(auto it : m_indexToColumnMap)
-		{
-			snprintf(tmp, sizeof(tmp), "                stat%d:\n", it.first);
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                    index:   %d\n", it.first);
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                    channel: %d\n", table[it.second.m_channel]);
-			config += tmp;
-			snprintf(tmp, sizeof(tmp), "                    stream: %zu\n", it.second.m_stream);
-			config += tmp;
-		}
+		YAML::Node statNode;
+		statNode["index"] = it.first;
+		statNode["channel"] = table[it.second.m_channel];
+		statNode["stream"] = it.second.m_stream;
+		groupNode["stats"]["stat" + to_string(it.first)] = statNode;
 	}
 
-	return config;
+	node["group" + to_string(id)] = groupNode;
+
+	return node;
 }
 
 int WaveformGroup::GetIndexOfChild(Gtk::Widget* child)
