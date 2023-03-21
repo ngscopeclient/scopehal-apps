@@ -62,6 +62,12 @@ FilterPropertiesDialog::~FilterPropertiesDialog()
 
 bool FilterPropertiesDialog::Render()
 {
+	RunFileDialog();
+	return Dialog::Render();
+}
+
+void FilterPropertiesDialog::RunFileDialog()
+{
 	//Run file browser dialog
 	if(m_fileDialog)
 	{
@@ -80,8 +86,6 @@ bool FilterPropertiesDialog::Render()
 		if(m_fileDialog->IsClosed())
 			m_fileDialog = nullptr;
 	}
-
-	return Dialog::Render();
 }
 
 //TODO: some of this code needs to be shared by the trigger dialog

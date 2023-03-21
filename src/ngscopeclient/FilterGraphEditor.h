@@ -74,6 +74,7 @@ public:
 	FilterGraphEditor(Session& session, MainWindow* parent);
 	virtual ~FilterGraphEditor();
 
+	virtual bool Render();
 	virtual bool DoRender();
 
 protected:

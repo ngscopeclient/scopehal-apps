@@ -61,6 +61,16 @@ FilterGraphEditor::~FilterGraphEditor()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+bool FilterGraphEditor::Render()
+{
+	//If we have an open properties dialog with a file browser open, run it
+	auto dlg = dynamic_pointer_cast<FilterPropertiesDialog>(m_propertiesDialogs[m_selectedProperties]);
+	if(dlg)
+		dlg->RunFileDialog();
+
+	return Dialog::Render();
+}
+
 /**
 	@brief Renders the dialog and handles UI events
 

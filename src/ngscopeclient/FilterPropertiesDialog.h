@@ -47,6 +47,7 @@ public:
 
 	virtual bool Render();
 	virtual bool DoRender();
+	void RunFileDialog();
 
 	static bool DoParameter(FilterParameter& param, std::string name, std::map<std::string, std::string>& tempValues);
 
