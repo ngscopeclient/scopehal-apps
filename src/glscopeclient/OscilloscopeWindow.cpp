@@ -2254,7 +2254,7 @@ YAML::Node OscilloscopeWindow::SerializeInstrumentConfiguration(IDTable& table)
 		auto instrumentConfig = scope->SerializeConfiguration(table);
 		if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
 			node["triggerdeskew"] = m_scopeDeskewCal[scope];
-		node.push_back(instrumentConfig);
+		node["scope" + instrumentConfig["id"].as<string>()] = instrumentConfig;
 	}
 
 	return node;
@@ -2269,7 +2269,10 @@ YAML::Node OscilloscopeWindow::SerializeFilterConfiguration(IDTable& table)
 
 	auto set = Filter::GetAllInstances();
 	for(auto d : set)
-		node.push_back(d->SerializeConfiguration(table));
+	{
+		YAML::Node filterNode = d->SerializeConfiguration(table);
+		node["filter" + filterNode["id"].as<string>()] = filterNode;
+	}
 
 	return node;
 }
@@ -2310,7 +2313,7 @@ YAML::Node OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 			overlayNode["id"] = oid;
 			overlayNode["stream"] = area->GetOverlay(i).m_stream;
 
-			areaNode["overlays"].push_back(overlayNode);
+			areaNode["overlays"]["overlay" + to_string(oid)] = overlayNode;
 		}
 
 		areas["area" + to_string(id)] = areaNode;
@@ -2319,9 +2322,10 @@ YAML::Node OscilloscopeWindow::SerializeUIConfiguration(IDTable& table)
 
 	//Waveform groups
 	for(auto group : m_waveformGroups)
-		table.emplace(&group->m_frame);
-	for(auto group : m_waveformGroups)
-		node["groups"].push_back(group->SerializeConfiguration(table));
+	{
+		int id = table.emplace(&group->m_frame);
+		node["groups"]["group" + to_string(id)] = group->SerializeConfiguration(table);
+	}
 
 	//Markers
 	int nmarker = 0;
