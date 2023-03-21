@@ -376,14 +376,8 @@ void WaveformArea::CreateWidgets()
 
 				//Measurements need some special processing
 				case Filter::CAT_MEASUREMENT:
-
-					//Scalar measurement? Just add this item
-					if(d->IsScalarOutput())
-						m_decodeMeasurementMenu.append(*item);
-
-					//Vector measurements have two possible displays (graph and statistics)
-					else
 					{
+						//Vector measurements have two possible displays (graph and statistics)
 						auto childmenu = Gtk::manage(new Gtk::Menu);
 						childmenu->append(*item);
 						item->set_label("Graph");

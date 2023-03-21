@@ -1230,9 +1230,8 @@ void WaveformArea::OnDecodeSetupComplete()
 	//Run the decoder for the first time, so we get valid output even if there's not a trigger pending.
 	m_pendingDecode->Refresh();
 
-	//If the pending filter is a scalar output, add a statistic instead.
-	//Also do this if requested from the measurement menu
-	if(m_pendingDecode->IsScalarOutput() || m_showPendingDecodeAsStats)
+	//Add stats if requested
+	if(m_showPendingDecodeAsStats)
 		m_group->EnableStats(StreamDescriptor(m_pendingDecode, 0));
 
 	//Vector output
