@@ -39,6 +39,7 @@
 #include "IGFDFileBrowser.h"
 #include "NFDFileBrowser.h"
 #include "../scopehal/ActionProvider.h"
+#include "../scopeprotocols/TouchstoneImportFilter.h"
 
 using namespace std;
 
@@ -64,6 +65,47 @@ bool FilterPropertiesDialog::Render()
 {
 	RunFileDialog();
 	return Dialog::Render();
+}
+
+/**
+	@brief Spawns the file dialog if it's an import filter
+ */
+void FilterPropertiesDialog::SpawnFileDialogForImportFilter()
+{
+	//If the filter is an import filter, show the import dialog
+	auto f = dynamic_cast<ImportFilter*>(m_channel);
+	if(f)
+	{
+		auto name = f->GetFileNameParameter();
+		auto& param = f->GetParameter(name);
+
+		m_fileDialog = MakeFileBrowser(
+			m_parent,
+			param.GetFileName(),
+			"Select File",
+			param.m_fileFilterName,
+			param.m_fileFilterMask,
+			param.m_fileIsOutput);
+		m_fileParamName = name;
+	}
+
+	//Special case: TouchstoneImportFilter should be treated as an import filter but is not derived
+	//from ImportFilter because it's a SParameterSourceFilter
+	auto t = dynamic_cast<TouchstoneImportFilter*>(m_channel);
+	if(t)
+	{
+		auto name = t->GetFileNameParameter();
+		auto& param = t->GetParameter(name);
+
+		m_fileDialog = MakeFileBrowser(
+			m_parent,
+			param.GetFileName(),
+			"Select File",
+			param.m_fileFilterName,
+			param.m_fileFilterMask,
+			param.m_fileIsOutput);
+		m_fileParamName = name;
+	}
 }
 
 void FilterPropertiesDialog::RunFileDialog()

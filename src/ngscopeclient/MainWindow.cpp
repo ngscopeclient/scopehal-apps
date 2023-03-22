@@ -1171,11 +1171,12 @@ Filter* MainWindow::CreateFilter(
 	}
 
 	//Create and show filter properties dialog
-	if(f->NeedsConfig() && showProperties)
+	if( (f->NeedsConfig() && showProperties) || (f->GetCategory() == Filter::CAT_GENERATION))
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[f] = dlg;
 		AddDialog(dlg);
+		dlg->SpawnFileDialogForImportFilter();
 	}
 
 	//Create and show protocol analyzer dialog
