@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -129,6 +129,14 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("invalid_link_color", ColorFromString("#ff0000"))
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
+			graph.AddPreference(
+				Preference::Font("icon_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 40))
+				.Label("Icon font")
+				.Description("Font for math block icons"));
+			graph.AddPreference(
+				Preference::Color("icon_color", ColorFromString("#ffffff"))
+				.Label("Icon color")
+				.Description("Color for math block icons"));
 
 		/*
 			graph.AddPreference(

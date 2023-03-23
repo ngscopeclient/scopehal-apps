@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -79,11 +79,18 @@ bool FontManager::UpdateFonts(PreferenceCategory& root)
 	atlas->Clear();
 	m_fonts.clear();
 
-	//Add default Latin-1 glyph ranges plus some Greek letters and symbols we use
+	//Add default Latin-1 glyph ranges plus some Greek letters and math symbols we use
 	ImFontGlyphRangesBuilder builder;
 	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
 	builder.AddChar(L'°');
 	builder.AddChar(L'‣');
+	builder.AddChar(L'×');	//multiplication sign, not a letter 'x'
+	builder.AddChar(L'÷');
+	builder.AddChar(L'∑');
+	builder.AddChar(L'√');
+	builder.AddChar(L'∫');
+	builder.AddChar(L'∿');
+	builder.AddChar(L'─');	//U+2500 box drawings light horizontal
 
 	//Build the range of glyphs we're using for the font
 	ImVector<ImWchar> ranges;
