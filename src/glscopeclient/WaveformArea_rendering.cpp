@@ -71,7 +71,7 @@ WaveformRenderData::WaveformRenderData(StreamDescriptor channel, WaveformArea* a
 
 		int durationsSSBOs = 0;
 
-		if(ZeroHoldFlagSet())
+		if(ZeroHoldFlagSet() && !IsHistogram()) // Workaround for previous assumption that histogram implies STREAM_DO_NOT_INTERPOLATE
 		{
 			// TODO: Need to be able to dispatch this at runtime once we grow a UI setting for interpolation behavior
 			shaderfn += ".zerohold";
