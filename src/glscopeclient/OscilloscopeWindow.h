@@ -283,9 +283,9 @@ public:
 	void ConnectToScope(std::string path);
 	void OnFileOpen(bool reconnect);
 	void DoFileOpen(const std::string& filename, bool loadWaveform = true, bool reconnect = true);
-	void LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table);
+	void LoadInstruments(int version, const YAML::Node& node, bool reconnect, IDTable& table);
 	void LoadDecodes(const YAML::Node& node, IDTable& table);
-	void LoadUIConfiguration(const YAML::Node& node, IDTable& table);
+	void LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table);
 	void LoadWaveformData(std::string filename, IDTable& table);
 	void LoadWaveformDataForScope(
 		const YAML::Node& node,
