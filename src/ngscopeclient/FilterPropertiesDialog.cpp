@@ -217,14 +217,19 @@ bool FilterPropertiesDialog::DoRender()
 					string bname = string("...###browse") + name;
 					if(ImGui::Button(bname.c_str()))
 					{
-						m_fileDialog = MakeFileBrowser(
-							m_parent,
-							s,
-							"Select File",
-							param.m_fileFilterName,
-							param.m_fileFilterMask,
-							param.m_fileIsOutput);
-						m_fileParamName = name;
+						if(!m_fileDialog)
+						{
+							m_fileDialog = MakeFileBrowser(
+								m_parent,
+								s,
+								"Select File",
+								param.m_fileFilterName,
+								param.m_fileFilterMask,
+								param.m_fileIsOutput);
+							m_fileParamName = name;
+						}
+						else
+							LogTrace("file dialog is already open, ignoring additional button click\n");
 					}
 					ImGui::SameLine();
 					ImGui::TextUnformatted(name.c_str());
