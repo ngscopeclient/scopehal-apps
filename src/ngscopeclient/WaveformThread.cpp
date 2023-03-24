@@ -156,7 +156,7 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, share
 	double tstart = GetTime();
 
 	//Must lock mutexes in this order to avoid deadlock
-	lock_guard<recursive_mutex> lock1(session->GetWaveformDataMutex());
+	shared_lock<shared_mutex> lock1(session->GetWaveformDataMutex());
 	shared_lock<shared_mutex> lock2(g_vulkanActivityMutex);
 	lock_guard<mutex> lock3(session->GetRasterizedWaveformMutex());
 

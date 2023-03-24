@@ -127,7 +127,7 @@ void Session::Clear()
 	LogTrace("Clearing session\n");
 	LogIndenter li;
 
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 
 	ClearBackgroundThreads();
 
@@ -650,7 +650,7 @@ void Session::DownloadWaveforms()
 		m_waveformDownloadRate.Tick();
 	}
 
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 	lock_guard<mutex> lock2(m_scopeMutex);
 
 	//Process the waveform data from each instrument
@@ -757,7 +757,7 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		//Add to history
 		auto scopes = GetScopes();
 		{
-			lock_guard<recursive_mutex> lock2(m_waveformDataMutex);
+			shared_lock<shared_mutex> lock2(m_waveformDataMutex);
 			m_history.AddHistory(scopes);
 		}
 
@@ -844,8 +844,8 @@ void Session::RefreshAllFilters()
 
 	{
 		//Must lock mutexes in this order to avoid deadlock
-		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
-		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
+		lock_guard<shared_mutex> lock(m_waveformDataMutex);
+		//shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(nodes);
 		UpdatePacketManagers(nodes);
 	}
@@ -891,7 +891,7 @@ void Session::RefreshDirtyFilters()
 
 	{
 		//Must lock mutexes in this order to avoid deadlock
-		lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+		lock_guard<shared_mutex> lock(m_waveformDataMutex);
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(nodesToUpdate);
 		UpdatePacketManagers(nodesToUpdate);
@@ -919,7 +919,7 @@ void Session::MarkChannelDirty(InstrumentChannel* chan)
  */
 void Session::ClearSweeps()
 {
-	lock_guard<recursive_mutex> lock(m_waveformDataMutex);
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 
 	set<Filter*> filters;
 	{

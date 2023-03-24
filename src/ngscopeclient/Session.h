@@ -299,7 +299,7 @@ public:
 	/**
 		@brief Get the mutex controlling access to waveform data
 	 */
-	std::recursive_mutex& GetWaveformDataMutex()
+	std::shared_mutex& GetWaveformDataMutex()
 	{ return m_waveformDataMutex; }
 
 	/**
@@ -331,7 +331,7 @@ protected:
 	std::mutex m_scopeMutex;
 
 	///@brief Mutex for controlling access to waveform data
-	std::recursive_mutex m_waveformDataMutex;
+	std::shared_mutex m_waveformDataMutex;
 
 	///@brief Mutex for controlling access to filter graph
 	std::mutex m_filterUpdatingMutex;

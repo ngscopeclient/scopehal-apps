@@ -437,8 +437,9 @@ void MainWindow::RenderUI()
 
 	//Waveform groups
 	{
-		lock_guard<recursive_mutex> lock(m_session.GetWaveformDataMutex());
+		shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
 		lock_guard<recursive_mutex> lock2(m_waveformGroupsMutex);
+
 		for(size_t i=0; i<m_waveformGroups.size(); i++)
 		{
 			auto group = m_waveformGroups[i];
