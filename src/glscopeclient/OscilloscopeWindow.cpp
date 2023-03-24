@@ -1079,10 +1079,15 @@ void OscilloscopeWindow::DoFileOpen(const string& filename, bool loadWaveform, b
 		auto node = docs[0];
 
 		//Load various sections of the file
+		int version;
+		if (node["version"].IsDefined())
+			version = node["version"].as<int>();
+		else
+			version = 0;
 		IDTable table;
-		LoadInstruments(node["instruments"], reconnect, table);
+		LoadInstruments(version, node["instruments"], reconnect, table);
 		LoadDecodes(node["decodes"], table);
-		LoadUIConfiguration(node["ui_config"], table);
+		LoadUIConfiguration(version, node["ui_config"], table);
 
 		//Create history windows for all of our scopes
 		for(auto scope : m_scopes)
@@ -1683,7 +1688,7 @@ void OscilloscopeWindow::ApplyPreferences(Oscilloscope* scope)
 /**
 	@brief Reconnect to existing instruments and reconfigure them
  */
-void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect, IDTable& table)
+void OscilloscopeWindow::LoadInstruments(int version, const YAML::Node& node, bool reconnect, IDTable& table)
 {
 	if(!node)
 	{
@@ -1792,7 +1797,7 @@ void OscilloscopeWindow::LoadInstruments(const YAML::Node& node, bool reconnect,
 		table.emplace(inst["id"].as<int>(), scope);
 
 		//Configure the scope
-		scope->LoadConfiguration(inst, table);
+		scope->LoadConfiguration(version, inst, table);
 
 		//Load trigger deskew
 		if(inst["triggerdeskew"])
@@ -1851,7 +1856,7 @@ void OscilloscopeWindow::LoadDecodes(const YAML::Node& node, IDTable& table)
 /**
 	@brief Load user interface configuration
  */
-void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& table)
+void OscilloscopeWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table)
 {
 	//Window configuration
 	auto wnode = node["window"];
@@ -1871,7 +1876,10 @@ void OscilloscopeWindow::LoadUIConfiguration(const YAML::Node& node, IDTable& ta
 			stream = an["stream"].as<int>();
 		WaveformArea* area = new WaveformArea(StreamDescriptor(channel, stream), this);
 		table.emplace(an["id"].as<int>(), area);
-		area->SetPersistenceEnabled(an["persistence"].as<bool>());
+		if (version == 0)
+			area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+		else
+			area->SetPersistenceEnabled(an["persistence"].as<bool>());
 		m_waveformAreas.emplace(area);
 
 		//Add any overlays
