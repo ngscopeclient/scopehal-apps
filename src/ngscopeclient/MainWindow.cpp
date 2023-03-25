@@ -1102,7 +1102,7 @@ void MainWindow::UpdateFonts()
 	//Check for any changes to font preferences and rebuild the atlas if so
 	//Early out if nothing changed
 	auto& prefs = GetSession().GetPreferences();
-	if(!m_fontmgr.UpdateFonts(prefs.AllPreferences()))
+	if(!m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
 		return;
 
 	//Set the default font
