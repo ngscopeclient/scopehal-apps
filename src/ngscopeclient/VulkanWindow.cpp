@@ -175,6 +175,11 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		ImGui_ImplVulkan_Init(&info, **m_renderPass);
 	}
 
+	// Apply DPI scaling now that glfw initialized
+	float scale = GetContentScale();
+	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
+	ImGui::GetStyle().ScaleAllSizes(scale);
+
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 	ImGui_ImplVulkan_CreateWindow = platform_io.Renderer_CreateWindow;
@@ -304,11 +309,6 @@ bool VulkanWindow::UpdateFramebuffer()
 		return false;
 	}
 
-	float xscale;
-	float yscale;
-	glfwGetWindowContentScale(m_window, &xscale, &yscale);
-	LogTrace("Scale: %.2f, %.2f\n", xscale, yscale);
-
 	const VkFormat requestSurfaceImageFormat[] =
 	{
 		VK_FORMAT_B8G8R8A8_UNORM,
@@ -401,6 +401,16 @@ bool VulkanWindow::UpdateFramebuffer()
 
 	m_resizeEventPending = false;
 	return true;
+}
+
+float VulkanWindow::GetContentScale()
+{
+	float xscale;
+	float yscale;
+	glfwGetWindowContentScale(m_window, &xscale, &yscale);
+
+	// Hope this works well should a screen have unequal X- and Y- DPIs...
+	return (xscale + yscale) / 2;
 }
 
 void VulkanWindow::Render()
