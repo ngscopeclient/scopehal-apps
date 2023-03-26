@@ -98,6 +98,20 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Preamble color")
 				.Description("Color for preambles, sync bytes, and other fixed header data"));*/
 
+		auto& eye = appearance.AddCategory("Eye Patterns");
+			eye.AddPreference(
+				Preference::Color("border_color_pass", ColorFromString("#00ff00ff"))
+				.Label("Border color (pass)")
+				.Description("Color for drawing mask polygon border if no or acceptable violations"));
+			eye.AddPreference(
+				Preference::Color("border_color_fail", ColorFromString("#ff0000ff"))
+				.Label("Border color (fail)")
+				.Description("Color for drawing mask polygon border if unacceptable violations"));
+			eye.AddPreference(
+				Preference::Color("mask_color", ColorFromString("#0000ff80"))
+				.Label("Mask color")
+				.Description("Color for drawing mask overlays"));
+
 		auto& file = appearance.AddCategory("File Browser");
 			file.AddPreference(
 				Preference::Enum("dialogmode", BROWSER_NATIVE)

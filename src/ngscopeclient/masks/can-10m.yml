@@ -1,0 +1,29 @@
+protocol:
+    name:       CAN (10 meter)
+    reference:  TODO
+
+displaylimits:
+    ymin:       -500
+    ymax:        2500
+
+units:
+    xscale:     ui
+    yscale:     mv
+
+mask:
+    - points:
+        -   x:  -0.2
+            y:  700
+        -   x:  -0.15
+            y:  900
+        -   x:  0.15
+            y:  900
+        -   x:  0.2
+            y:  700
+        -   x:  0.15
+            y:  500
+        -   x:  -0.15
+            y:  500
+
+conditions:
+    hitrate: 0

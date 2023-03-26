@@ -687,6 +687,50 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
 		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
+
+	//Draw the mask (if there is one)
+	auto eye = dynamic_cast<EyePattern*>(stream.m_channel);
+	auto edata = dynamic_cast<EyeWaveform*>(data);
+	if(eye)
+	{
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto color = prefs.GetColor("Appearance.Eye Patterns.mask_color");
+		auto borderpass = prefs.GetColor("Appearance.Eye Patterns.border_color_pass");
+		auto borderfailed = prefs.GetColor("Appearance.Eye Patterns.border_color_fail");
+
+		auto mask = eye->GetMask();
+		auto polygons = mask.GetPolygons();
+		bool relative = mask.IsTimebaseRelative();
+		bool failed = edata->GetMaskHitRate() > mask.GetAllowedHitRate();
+		for(auto poly : polygons)
+		{
+			//NOTE: must use clockwise winding for correct antialiasing
+			vector<ImVec2> points;
+
+			for(auto point : poly.m_points)
+			{
+				float x = 0;
+				float y = YAxisUnitsToYPosition(point.m_voltage);
+
+				//Ratiometric, scaled by UI width
+				if(relative)
+					x = m_group->XAxisUnitsToXPosition(point.m_time * edata->GetUIWidth());
+
+				//Absolute
+				else
+					x = m_group->XAxisUnitsToXPosition(point.m_time);
+
+				points.push_back(ImVec2(x, y));
+			}
+
+			list->AddConvexPolyFilled(&points[0], points.size(), color);
+
+			if(failed)
+				list->AddPolyline(&points[0], points.size(), borderfailed, 0, 1);
+			else
+				list->AddPolyline(&points[0], points.size(), borderpass, 0, 1);
+		}
+	}
 }
 
 /**
@@ -2492,6 +2536,20 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 			{
 				Unit ui(Unit::UNIT_UI);
 				tooltip += ui.PrettyPrint(edata->GetTotalUIs()) + "\n";
+
+				auto echan = dynamic_cast<EyePattern*>(rchan);
+				if(echan && !echan->GetMask().empty())
+				{
+					char tmp[128];
+					auto hitrate = edata->GetMaskHitRate();
+					snprintf(tmp, sizeof(tmp), "Mask hit rate: %.2e ", hitrate);
+					tooltip += tmp;
+
+					if(echan->GetMask().GetAllowedHitRate() > hitrate)
+						tooltip += "(PASS)";
+					else
+						tooltip += "(FAIL)";
+				}
 			}
 			else
 			{
