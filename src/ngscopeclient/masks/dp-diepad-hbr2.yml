@@ -1,0 +1,22 @@
+protocol:
+    name:       Display Port HBR2 Silicon Pad
+    reference:  DP Standard v2.0 table D-6
+displaylimits:
+    ymin:       -400
+    ymax:        400
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+    - points:
+        -   x:   -0.15
+            y:    0
+        -   x:    0
+            y:   25
+        -   x:    0.15
+            y:    0
+        -   x:    0
+            y:  -25
+
+conditions:
+    hitrate: 1e-9

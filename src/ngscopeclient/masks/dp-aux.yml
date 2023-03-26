@@ -1,0 +1,26 @@
+protocol:
+    name:       Display Port Auxiliary Channel
+    reference:  DP Standard v2.0 table D-2
+displaylimits:
+    ymin:       -400
+    ymax:        400
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+    - points:
+        -   x:   -0.49
+            y:    0
+        -   x:   -0.39
+            y:  135
+        -   x:   0.39
+            y:  135
+        -   x:    0.49
+            y:    0
+        -   x:   0.39
+            y:  -135
+        -   x:  -0.39
+            y:  -135
+
+conditions:
+    hitrate: 0

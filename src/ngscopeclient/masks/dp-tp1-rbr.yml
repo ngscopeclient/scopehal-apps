@@ -1,0 +1,22 @@
+protocol:
+    name:       Display Port RBR TP1 Package Pin
+    reference:  DP Standard v2.0 table D-4
+displaylimits:
+    ymin:       -400
+    ymax:        400
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+    - points:
+        -   x:   -0.41
+            y:    0
+        -   x:    0
+            y:  170
+        -   x:    0.41
+            y:    0
+        -   x:    0
+            y: -170
+
+conditions:
+    hitrate: 0
