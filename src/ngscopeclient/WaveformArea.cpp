@@ -725,6 +725,9 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 
 			list->AddConvexPolyFilled(&points[0], points.size(), color);
 
+			//Form a closed loop
+			points.push_back(points[0]);
+
 			if(failed)
 				list->AddPolyline(&points[0], points.size(), borderfailed, 0, 1);
 			else
