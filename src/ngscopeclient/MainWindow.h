@@ -199,7 +199,6 @@ protected:
 		void MainMenu();
 			void FileMenu();
 				void FileRecentMenu();
-				void FileExportMenu();
 			void ViewMenu();
 			void AddMenu();
 				void AddLoadMenu(

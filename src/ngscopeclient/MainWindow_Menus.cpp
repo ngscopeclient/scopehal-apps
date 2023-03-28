@@ -141,10 +141,6 @@ void MainWindow::FileMenu()
 
 		ImGui::Separator();
 
-		FileExportMenu();
-
-		ImGui::Separator();
-
 		if(ImGui::MenuItem("Close"))
 			QueueCloseSession();
 
@@ -163,19 +159,6 @@ void MainWindow::FileMenu()
 void MainWindow::FileRecentMenu()
 {
 	if(ImGui::BeginMenu("Recent Files"))
-	{
-		//TODO
-
-		ImGui::EndMenu();
-	}
-}
-
-/**
-	@brief Runs the File | Export menu
- */
-void MainWindow::FileExportMenu()
-{
-	if(ImGui::BeginMenu("Export"))
 	{
 		//TODO
 
