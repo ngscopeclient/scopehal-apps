@@ -1897,13 +1897,45 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 	ImGui::EndChild();
 
-	//Start dragging
 	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow)
 	{
+		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 		{
 			LogTrace("Start dragging Y axis\n");
 			m_dragState = DRAG_STATE_Y_AXIS;
+		}
+
+		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+		{
+			//Find the min and max of all currently displayed analog channels
+			//TODO: do we want to not allow autoscale on instrument inputs?
+			float vmax = FLT_MIN;
+			float vmin = FLT_MAX;
+			bool found = false;
+			for(auto& c : m_displayedChannels)
+			{
+				auto data = c->GetStream().GetData();
+				auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
+				auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
+				if(!sdata && !udata)
+					continue;
+
+				found = true;
+				vmax = max(vmax, Filter::GetMaxVoltage(sdata, udata));
+				vmin = min(vmin, Filter::GetMinVoltage(sdata, udata));
+			}
+
+			if(found)
+			{
+				auto off = (vmax + vmin) / 2;
+				auto range = (vmax - vmin) * 1.05;
+				for(auto& c : m_displayedChannels)
+				{
+					c->GetStream().SetOffset(-off);
+					c->GetStream().SetVoltageRange(range);
+				}
+			}
 		}
 	}
 }
