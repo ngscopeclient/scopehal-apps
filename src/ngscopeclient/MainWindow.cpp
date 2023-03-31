@@ -1364,7 +1364,10 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 void MainWindow::OnFilterReconfigured(Filter* f)
 {
 	//Remove any saved configuration, eye patterns, etc
-	f->ClearSweeps();
+	{
+		lock_guard lock(m_session.GetWaveformDataMutex());
+		f->ClearSweeps();
+	}
 
 	//Re-run the filter
 	m_session.RefreshAllFiltersNonblocking();
