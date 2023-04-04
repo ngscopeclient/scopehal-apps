@@ -227,6 +227,10 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 			ImGui::TreePop();
 		}
 
+		if(    (m_channelUIState[i].m_committedSetVoltage != m_psu->GetPowerVoltageNominal(i))
+			|| (m_channelUIState[i].m_committedSetCurrent != m_psu->GetPowerCurrentNominal(i)))
+			m_channelUIState[i].RefreshSetPoint();
+
 		//Set points for channels
 		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
 		if(ImGui::TreeNode("Set Points"))

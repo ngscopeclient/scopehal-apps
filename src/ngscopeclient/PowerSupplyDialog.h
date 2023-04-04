@@ -71,14 +71,23 @@ public:
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
 		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
+		, m_powerSupply(psu)
+		, m_chan(chan)
 	{
-		Unit volts(Unit::UNIT_VOLTS);
-		Unit amps(Unit::UNIT_AMPS);
-		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
+		RefreshSetPoint();
 	}
+
+	void RefreshSetPoint()
+	{
+		m_committedSetVoltage = m_powerSupply->GetPowerVoltageNominal(m_chan);
+		m_committedSetCurrent = m_powerSupply->GetPowerCurrentNominal(m_chan);
+		m_setVoltage = Unit(Unit::UNIT_VOLTS).PrettyPrint(m_committedSetVoltage);
+		m_setCurrent = Unit(Unit::UNIT_AMPS).PrettyPrint(m_committedSetCurrent);
+	}
+
+protected:
+	PowerSupply* m_powerSupply;
+	size_t m_chan;
 };
 
 class PowerSupplyDialog : public Dialog
