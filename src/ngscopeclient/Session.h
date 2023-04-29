@@ -221,13 +221,15 @@ public:
 	void Clear();
 	void ClearBackgroundThreads();
 
+	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
+
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddLoad(SCPILoad* generator);
 	void RemoveLoad(SCPILoad* generator);
 	void AddMultimeter(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
-	void AddOscilloscope(Oscilloscope* scope);
+	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
@@ -326,6 +328,9 @@ public:
 
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
+
+	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

@@ -43,6 +43,7 @@
 #include "RFGeneratorDialog.h"
 
 #include "../scopehal/LeCroyOscilloscope.h"
+#include "../scopehal/MockOscilloscope.h"
 
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
@@ -184,6 +185,210 @@ void Session::Clear()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Scopesession management
+
+/**
+	@brief Deserialize a YAML::Node (and associated data directory) to the current session
+
+	@param node		Root YAML node of the file
+	@param dataDir	Path to the _data directory associated with the session
+	@param online	True if we should reconnect to instruments
+
+	TODO: do we want some kind of popup to warn about reconfiguring instruments into potentially dangerous states?
+	Examples include:
+	* changing V/div significantly on a scope channel
+	* enabling output of a signal generator or power supply
+
+	@return			True if successful, false on error
+ */
+bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool online)
+{
+	LogTrace("Loading saved session from YAML node\n");
+	LogIndenter li;
+
+	//Figure out file version
+	int version;
+	if (node["version"].IsDefined())
+	{
+		version = node["version"].as<int>();
+		LogTrace("File format version %d\n", version);
+	}
+	else
+	{
+		LogTrace("No file format version specified, assuming version 0\n");
+		version = 0;
+	}
+
+	IDTable table;
+	if(!LoadInstruments(version, node["instruments"], online, table))
+		return false;
+
+	//TODO: actual load logic
+	//reference old code from glscopeclient below:
+	/*
+		//Load various sections of the file
+		LoadInstruments(node["instruments"], reconnect, table);
+		LoadDecodes(node["decodes"], table);
+		LoadUIConfiguration(node["ui_config"], table);
+
+		//Create history windows for all of our scopes
+		for(auto scope : m_scopes)
+		{
+			auto hist = new HistoryWindow(this, scope);
+			hist->hide();
+			m_historyWindows[scope] = hist;
+		}
+
+		//Re-title the window for the new scope
+		SetTitle();
+
+		LoadWaveformData(filename, table);
+	*/
+
+	return true;
+}
+
+bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table)
+{
+	LogTrace("Loading saved instruments\n");
+	LogIndenter li;
+
+	if(!node)
+	{
+		m_mainWindow->ShowErrorPopup(
+			"File load error",
+			"The session file is invalid because there is no \"instruments\" section.");
+		return false;
+	}
+
+	//Load each instrument
+	for(auto it : node)
+	{
+		auto inst = it.second;
+		auto nick = inst["nick"].as<string>();
+		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
+
+		//See if it's a scope
+		//(if no type specified, assume scope for backward compat)
+		if(!node["type"].IsDefined() || (node["type"].as<string>() == "oscilloscope") )
+		{
+			if(!LoadOscilloscope(version, inst, online, table))
+				return false;
+		}
+
+		//Unknown instrument type - too new file format?
+		else
+		{
+			m_mainWindow->ShowErrorPopup(
+				"File load error",
+				string("Instrument ") + nick.c_str() + " is of unknown type " + node["type"].as<string>());
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table)
+{
+	Oscilloscope* scope = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demo") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the scope
+			auto transport = SCPITransport::CreateTransport(transtype, node["args"].as<string>());
+
+			//Check if the transport failed to initialize
+			if((transport == nullptr) || !transport->IsConnected())
+			{
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to connect to instrument using connection string ") + node["args"].as<string>() +
+					"Loading in offline mode.");
+			}
+
+			//All good, try to connect
+			else
+			{
+				scope = Oscilloscope::CreateOscilloscope(driver, transport);
+
+				//Sanity check make/model/serial. If mismatch, stop
+				string message;
+				bool fail = false;
+				if(node["name"].as<string>() != scope->GetName())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has model name \"") +
+						scope->GetName() + "\", save file has model name \"" + node["name"].as<string>()  + "\"";
+					fail = true;
+				}
+				else if(node["vendor"].as<string>() != scope->GetVendor())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
+						scope->GetVendor() + "\", save file has vendor \"" + node["vendor"].as<string>()  + "\"";
+					fail = true;
+				}
+				else if(node["serial"].as<string>() != scope->GetSerial())
+				{
+					message = string("Unable to connect to oscilloscope: instrument has serial \"") +
+						scope->GetSerial() + "\", save file has serial \"" + node["serial"].as<string>()  + "\"";
+					fail = true;
+				}
+
+				if(fail)
+				{
+					m_mainWindow->ShowErrorPopup( "Unable to reconnect", message);
+
+					delete scope;
+					scope = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!scope)
+	{
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	ApplyPreferences(scope);
+
+	//All good. Add to our list of scopes etc
+	AddOscilloscope(scope, false);
+	table.emplace(node["id"].as<int>(), scope);
+
+	//Configure the scope
+	scope->LoadConfiguration(version, node, table);
+
+	//Load trigger deskew
+	if(node["triggerdeskew"])
+		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
 
 void Session::ApplyPreferences(Oscilloscope* scope)
@@ -208,7 +413,13 @@ void Session::StartWaveformThreadIfNeeded()
 		m_waveformThread = make_unique<thread>(WaveformThread, this, &m_shuttingDown);
 }
 
-void Session::AddOscilloscope(Oscilloscope* scope)
+/**
+	@brief Adds an oscilloscope to the session
+
+	@param scope		The scope to add
+	@param createViews	True if we should add waveform areas for each enabled channel
+ */
+void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 {
 	lock_guard<mutex> lock(m_scopeMutex);
 
@@ -218,7 +429,7 @@ void Session::AddOscilloscope(Oscilloscope* scope)
 	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
 
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
-	m_mainWindow->OnScopeAdded(scope);
+	m_mainWindow->OnScopeAdded(scope, createViews);
 
 	StartWaveformThreadIfNeeded();
 }

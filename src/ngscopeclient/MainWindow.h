@@ -102,7 +102,7 @@ public:
 	void AddDialog(std::shared_ptr<Dialog> dlg);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
 
-	void OnScopeAdded(Oscilloscope* scope);
+	void OnScopeAdded(Oscilloscope* scope, bool createViews);
 
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
@@ -395,8 +395,10 @@ protected:
 	std::string m_errorPopupMessage;
 
 	void RenderErrorPopup();
+public:
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
+protected:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Graphics items
 

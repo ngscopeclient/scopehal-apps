@@ -225,81 +225,90 @@ shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /
 	return *m_waveformGroups.begin();
 }
 
-void MainWindow::OnScopeAdded(Oscilloscope* scope)
+/**
+	@brief Handles creation of a new oscilloscope
+
+	@param scope		The scope to add
+	@param createViews	True if we should add waveform areas for each enabled channel
+ */
+void MainWindow::OnScopeAdded(Oscilloscope* scope, bool createViews)
 {
 	LogTrace("Oscilloscope \"%s\" added\n", scope->m_nickname.c_str());
 	LogIndenter li;
 
-	//Add areas to it
-	//For now, one area per enabled channel
-	vector<StreamDescriptor> streams;
-
-	//Headless scope? Pick every channel.
-	if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
+	if(createViews)
 	{
-		LogTrace("Headless scope, enabling every analog channel\n");
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
-		{
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
-				continue;
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-			{
-				if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
-					streams.push_back(StreamDescriptor(chan, j));
-			}
-		}
+		//Add areas to it
+		//For now, one area per enabled channel
+		vector<StreamDescriptor> streams;
 
-		//Handle pure logic analyzers
-		if(streams.empty())
+		//Headless scope? Pick every channel.
+		if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
 		{
-			LogTrace("No analog channels found. Must be a logic analyzer. Enabling every digital channel\n");
-
+			LogTrace("Headless scope, enabling every analog channel\n");
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
 			{
 				auto chan = scope->GetOscilloscopeChannel(i);
 				if(!chan)
-				continue;
+					continue;
 				for(size_t j=0; j<chan->GetStreamCount(); j++)
 				{
-					if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
+					if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
 						streams.push_back(StreamDescriptor(chan, j));
 				}
 			}
-		}
-	}
 
-	//Use whatever was enabled when we connected
-	else
-	{
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
+			//Handle pure logic analyzers
+			if(streams.empty())
+			{
+				LogTrace("No analog channels found. Must be a logic analyzer. Enabling every digital channel\n");
+
+				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					auto chan = scope->GetOscilloscopeChannel(i);
+					if(!chan)
+					continue;
+					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					{
+						if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
+							streams.push_back(StreamDescriptor(chan, j));
+					}
+				}
+			}
+		}
+
+		//Use whatever was enabled when we connected
+		else
 		{
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
-				continue;
-			if(!chan->IsEnabled())
-				continue;
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+					continue;
+				if(!chan->IsEnabled())
+					continue;
 
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-				streams.push_back(StreamDescriptor(chan, j));
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+					streams.push_back(StreamDescriptor(chan, j));
+			}
+			LogTrace("%zu streams were active when we connected\n", streams.size());
+
+			//No streams? Grab the first one.
+			//TODO: can we always assume that the first channel is an oscilloscope channel?
+			if(streams.empty())
+			{
+				LogTrace("Enabling first channel\n");
+				streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
+			}
 		}
-		LogTrace("%zu streams were active when we connected\n", streams.size());
 
-		//No streams? Grab the first one.
-		//TODO: can we always assume that the first channel is an oscilloscope channel?
-		if(streams.empty())
+		//Add waveform areas for the streams
+		for(auto s : streams)
 		{
-			LogTrace("Enabling first channel\n");
-			streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
+			auto group = GetBestGroupForWaveform(s);
+			auto area = make_shared<WaveformArea>(s, group, this);
+			group->AddArea(area);
 		}
-	}
-
-	//Add waveform areas for the streams
-	for(auto s : streams)
-	{
-		auto group = GetBestGroupForWaveform(s);
-		auto area = make_shared<WaveformArea>(s, group, this);
-		group->AddArea(area);
 	}
 
 	//Refresh any dialogs that depend on it
@@ -1523,33 +1532,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
  */
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
-	//TODO: actual load logic
-	//reference old code from glscopeclient below:
-	/*
-		//Load various sections of the file
-		IDTable table;
-		LoadInstruments(node["instruments"], reconnect, table);
-		LoadDecodes(node["decodes"], table);
-		LoadUIConfiguration(node["ui_config"], table);
-
-		//Create history windows for all of our scopes
-		for(auto scope : m_scopes)
-		{
-			auto hist = new HistoryWindow(this, scope);
-			hist->hide();
-			m_historyWindows[scope] = hist;
-		}
-
-		//Re-title the window for the new scope
-		SetTitle();
-
-		LoadWaveformData(filename, table);
-	*/
-
-	ShowErrorPopup(
-		"Unimplemented",
-		"Session file loading is not finished, sorry!");
-	return false;
+	return m_session.LoadFromYaml(node, dataDir, online);
 }
 
 /**
