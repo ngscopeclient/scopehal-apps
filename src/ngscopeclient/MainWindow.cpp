@@ -1631,6 +1631,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 	{
 		for(auto it : markers)
 		{
+			LogWarning("markers not loaded yet\n");
 			/*
 			auto inode = it.second;
 			TimePoint timestamp;

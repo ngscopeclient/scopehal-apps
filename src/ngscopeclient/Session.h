@@ -338,6 +338,14 @@ protected:
 		Oscilloscope* scope,
 		const std::string& dataDir,
 		IDTable& table);
+	void DoLoadWaveformDataForScope(
+		int channel_index,
+		int stream,
+		Oscilloscope* scope,
+		std::string datadir,
+		int scope_id,
+		int waveform_id,
+		std::string format);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

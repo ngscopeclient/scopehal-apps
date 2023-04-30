@@ -45,6 +45,14 @@
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#else
+#include <fcntl.h>
+#include <sys/mman.h>
+#endif
+
 extern Event g_waveformReadyEvent;
 extern Event g_waveformProcessedEvent;
 extern Event g_rerenderDoneEvent;
@@ -232,23 +240,22 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	return true;
 }
 
+//TODO: this should run in a background thread or something to keep the UI responsive
 bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
 {
-	/*
 	//Load data for each scope
-	float progress_per_scope = 1.0f / m_scopes.size();
-	for(size_t i=0; i<m_scopes.size(); i++)
+	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
-		auto scope = m_scopes[i];
+		auto scope = m_oscilloscopes[i];
 		int id = table[scope];
 
 		char tmp[512];
-		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", datadir.c_str(), id);
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
-		LoadWaveformDataForScope(docs[0], scope, datadir, table, progress, i*progress_per_scope, progress_per_scope);
+		if(!LoadWaveformDataForScope(docs[0], scope, dataDir, table))
+			return false;
 	}
-	*/
 	return true;
 }
 
@@ -261,18 +268,11 @@ bool Session::LoadWaveformDataForScope(
 	const std::string& dataDir,
 	IDTable& table)
 {
-	/*
-	progress.Update("Loading oscilloscope configuration", base_progress);
+	TimePoint time(0, 0);
+	TimePoint newest(0, 0);
 
-	TimePoint time;
-	time.first = 0;
-	time.second = 0;
-
-	TimePoint newest;
-	newest.first = 0;
-	newest.second = 0;
-
-	auto window = m_historyWindows[scope];
+	//auto window = m_historyWindows[scope];
+	auto wavenode = node["waveforms"];
 	int scope_id = table[scope];
 
 	//Clear out any old waveforms the instrument may have
@@ -280,20 +280,15 @@ bool Session::LoadWaveformDataForScope(
 	{
 		auto chan = scope->GetOscilloscopeChannel(i);
 		for(size_t j=0; j<chan->GetStreamCount(); j++)
-			chan->SetData(NULL, j);
+			chan->SetData(nullptr, j);
 	}
 
 	//Preallocate size
-	auto wavenode = node["waveforms"];
-	window->SetMaxWaveforms(wavenode.size());
+	//window->SetMaxWaveforms(wavenode.size());
 
 	//Load the data for each waveform
-	float waveform_progress = progress_range / wavenode.size();
-	size_t iwave = 0;
 	for(auto it : wavenode)
 	{
-		iwave ++;
-
 		//Top level metadata
 		bool timebase_is_ps = true;
 		auto wfm = it.second;
@@ -376,88 +371,217 @@ bool Session::LoadWaveformDataForScope(
 			chan->SetData(cap, stream);
 		}
 
-		//Kick off a thread to load data for each channel
-		vector<thread*> threads;
+		//Actually load the data for each channel
 		size_t nchans = channels.size();
-		volatile float* channel_progress = new float[nchans];
-		volatile int* channel_done = new int[nchans];
-		for(size_t i=0; i<channels.size(); i++)
+		for(size_t i=0; i<nchans; i++)
 		{
-			channel_progress[i] = 0;
-			channel_done[i] = 0;
-
-			threads.push_back(new thread(
-				&OscilloscopeWindow::DoLoadWaveformDataForScope,
+			DoLoadWaveformDataForScope(
 				channels[i].first,
 				channels[i].second,
 				scope,
-				datadir,
+				dataDir,
 				scope_id,
 				waveform_id,
-				formats[i],
-				channel_progress + i,
-				channel_done + i
-				));
+				formats[i]);
 		}
 
-		//Process events and update the display with each thread's progress
-		while(true)
-		{
-			//Figure out total progress across each channel. Stop if all threads are done
-			bool done = true;
-			float frac = 0;
-			for(size_t i=0; i<nchans; i++)
-			{
-				if(!channel_done[i])
-					done = false;
-				frac += channel_progress[i];
-			}
-			if(done)
-				break;
-			frac /= nchans;
+		//TODO: propagate pins and labels
+		vector<Oscilloscope*> temp;
+		temp.push_back(scope);
+		m_history.AddHistory(temp);
 
-			//Update the UI
-			char tmp[256];
-			snprintf(
-				tmp,
-				sizeof(tmp),
-				"Loading waveform %zu/%zu for instrument %s: %.0f %% complete",
-				iwave,
-				wavenode.size(),
-				scope->m_nickname.c_str(),
-				frac * 100);
-			progress.Update(tmp, base_progress + frac*waveform_progress);
-			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
-
-			g_app->DispatchPendingEvents();
-		}
-
-		delete[] channel_progress;
-		delete[] channel_done;
-
-		//Wait for threads to complete
-		for(auto t : threads)
-		{
-			t->join();
-			delete t;
-		}
-
+		/*
 		//Add to history
 		window->OnWaveformDataReady(true, pinned, label);
+		*/
 
+		/*
 		//Keep track of the newest waveform (may not be in time order)
 		if( (time.first > newest.first) ||
 			( (time.first == newest.first) &&  (time.second > newest.second) ) )
 		{
 			newest = time;
 		}
+		*/
+	}
+	return true;
+}
 
-		base_progress += waveform_progress;
+void Session::DoLoadWaveformDataForScope(
+	int channel_index,
+	int stream,
+	Oscilloscope* scope,
+	string datadir,
+	int scope_id,
+	int waveform_id,
+	string format
+	)
+{
+	auto chan = scope->GetOscilloscopeChannel(channel_index);
+
+	auto cap = chan->GetData(stream);
+	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
+	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);
+	auto sdcap = dynamic_cast<SparseDigitalWaveform*>(cap);
+	auto udcap = dynamic_cast<UniformDigitalWaveform*>(cap);
+
+	cap->PrepareForCpuAccess();
+
+	//Load the actual sample data
+	char tmp[512];
+	if(stream == 0)
+	{
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+			datadir.c_str(),
+			scope_id,
+			waveform_id,
+			channel_index);
+	}
+	else
+	{
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%d.bin",
+			datadir.c_str(),
+			scope_id,
+			waveform_id,
+			channel_index,
+			stream);
 	}
 
-	window->JumpToHistory(newest);
-	*/
-	return true;
+	//Load samples into memory
+	unsigned char* buf = NULL;
+
+	//Windows: use generic file reads for now
+	#ifdef _WIN32
+		FILE* fp = fopen(tmp, "rb");
+		if(!fp)
+		{
+			LogError("couldn't open %s\n", tmp);
+			return;
+		}
+
+		//Read the whole file into a buffer a megabyte at a time
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		buf = new unsigned char[len];
+		long len_remaining = len;
+		long blocksize = 1024*1024;
+		long read_offset = 0;
+		while(len_remaining > 0)
+		{
+			if(blocksize > len_remaining)
+				blocksize = len_remaining;
+
+			//Most time is spent on the fread's when using this path
+			fread(buf + read_offset, 1, blocksize, fp);
+
+			len_remaining -= blocksize;
+			read_offset += blocksize;
+		}
+		fclose(fp);
+
+	//On POSIX, just memory map the file
+	#else
+		int fd = open(tmp, O_RDONLY);
+		if(fd < 0)
+		{
+			LogError("couldn't open %s\n", tmp);
+			return;
+		}
+		size_t len = lseek(fd, 0, SEEK_END);
+		buf = (unsigned char*)mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+	#endif
+
+	//Sparse interleaved
+	if(format == "sparsev1")
+	{
+		//Figure out how many samples we have
+		size_t samplesize = 2*sizeof(int64_t);
+		if(sacap)
+			samplesize += sizeof(float);
+		else
+			samplesize += sizeof(bool);
+		size_t nsamples = len / samplesize;
+		cap->Resize(nsamples);
+
+		//TODO: AVX this?
+		for(size_t j=0; j<nsamples; j++)
+		{
+			size_t offset = j*samplesize;
+
+			//Read start time and duration
+			int64_t* stime = reinterpret_cast<int64_t*>(buf+offset);
+			offset += 2*sizeof(int64_t);
+
+			//Read sample data
+			if(sacap)
+			{
+				//The file format assumes "float" is IEEE754 32-bit float.
+				//If your platform doesn't do that, good luck.
+				//cppcheck-suppress invalidPointerCast
+				sacap->m_samples[j] = *reinterpret_cast<float*>(buf+offset);
+
+				sacap->m_offsets[j] = stime[0];
+				sacap->m_durations[j] = stime[1];
+			}
+
+			else
+			{
+				sdcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
+				sdcap->m_offsets[j] = stime[0];
+				sdcap->m_durations[j] = stime[1];
+			}
+		}
+
+		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
+		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
+		int64_t nlast = nsamples - 1;
+		if(sacap)
+		{
+			if( (sacap->m_offsets[0] == 0) &&
+				(sacap->m_offsets[nlast] == nlast) &&
+				(sacap->m_durations[nlast] == 1) )
+			{
+				//Waveform was actually uniform, so convert it
+				cap = new UniformAnalogWaveform(*sacap);
+				chan->SetData(cap, stream);
+			}
+		}
+	}
+
+	//Dense packed
+	else if(format == "densev1")
+	{
+		//Figure out length
+		size_t nsamples = 0;
+		if(uacap)
+			nsamples = len / sizeof(float);
+		else if(udcap)
+			nsamples = len / sizeof(bool);
+		cap->Resize(nsamples);
+
+		//Read sample data
+		if(uacap)
+			memcpy(uacap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(float));
+		else
+			memcpy(udcap->m_samples.GetCpuPointer(), buf, nsamples*sizeof(bool));
+	}
+
+	else
+	{
+		LogError(
+			"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
+			format.c_str());
+	}
+
+	cap->MarkModifiedFromCpu();
+
+	#ifdef _WIN32
+		delete[] buf;
+	#else
+		munmap(buf, len);
+		::close(fd);
+	#endif
 }
 
 bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table)
