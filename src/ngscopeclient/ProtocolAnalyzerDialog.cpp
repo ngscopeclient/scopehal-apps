@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -367,7 +367,6 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			if(m_bytesPerLine <= 0)
 				return;
 		}
-		m_firstDataBlockOfFrame = false;
 
 		string firstLine;
 
@@ -376,15 +375,37 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 		string lineHex;
 		string lineAscii;
 
+		//Create the tree node early - before we've even rendered any data - so we know the open / closed state
+		ImGui::PushFont(dataFont);
+		bool open = false;
+		if(!bytes.empty())
+		{
+			//If we have more than one line worth of data, show the tree
+			if(bytes.size() > m_bytesPerLine)
+			{
+				open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
+				ImGui::SameLine();
+			}
+		}
+
 		//Format the data
 		string data;
 		char tmp[32];
 		for(size_t i=0; i<bytes.size(); i++)
 		{
+			//Address block
 			if( (i % m_bytesPerLine) == 0)
 			{
-				snprintf(tmp, sizeof(tmp), "%04zx ", i);
-				data += tmp;
+				//Is this the first block of an open tree view? Show address
+				if(open)
+				{
+					snprintf(tmp, sizeof(tmp), "%04zx ", i);
+					data += tmp;
+				}
+
+				//Tree closed or single line: don't show the 0000 which can be confused with data
+				else
+					data += "     ";
 			}
 
 			switch(m_dataFormat)
@@ -454,29 +475,17 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			}
 		}
 
-		if(!firstLine.empty())
+		ImGui::TextUnformatted(firstLine.c_str());
+
+		//Multiple lines? Only show if open
+		if(open)
 		{
-			ImGui::PushFont(dataFont);
-
-			//If we have multiple data lines, show tree
-			if(!data.empty())
-			{
-				bool open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
-				ImGui::SameLine();
-				ImGui::TextUnformatted(firstLine.c_str());
-				if(open)
-				{
-					ImGui::TextUnformatted(data.c_str());
-					ImGui::TreePop();
-				}
-			}
-
-			//If just one line, print it
-			else
-				ImGui::TextUnformatted(firstLine.c_str());
-
-			ImGui::PopFont();
+			ImGui::TextUnformatted(data.c_str());
+			ImGui::TreePop();
 		}
+
+		ImGui::PopFont();
+		m_firstDataBlockOfFrame = false;
 	}
 }
 
