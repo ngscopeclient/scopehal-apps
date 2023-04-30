@@ -350,6 +350,9 @@ protected:
 	void OnOpenFile(bool online);
 	void DoOpenFile(const std::string& sessionPath, bool online);
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
+public:
+	bool LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table);
+protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);

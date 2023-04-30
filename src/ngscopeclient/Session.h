@@ -332,6 +332,12 @@ protected:
 	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
+	bool LoadWaveformData(const std::string& dataDir, IDTable& table);
+	bool LoadWaveformDataForScope(
+		const YAML::Node& node,
+		Oscilloscope* scope,
+		const std::string& dataDir,
+		IDTable& table);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

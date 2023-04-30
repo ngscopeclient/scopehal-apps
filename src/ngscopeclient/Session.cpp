@@ -224,13 +224,239 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		return false;
 	if(!LoadFilters(version, node["decodes"], table))
 		return false;
+	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"], table))
+		return false;
+	if(!LoadWaveformData(dataDir, table))
+		return false;
 
-	//TODO: actual load logic
+	return true;
+}
+
+bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
+{
 	/*
-	LoadUIConfiguration(node["ui_config"], table);
-	LoadWaveformData(filename, table);
-	*/
+	//Load data for each scope
+	float progress_per_scope = 1.0f / m_scopes.size();
+	for(size_t i=0; i<m_scopes.size(); i++)
+	{
+		auto scope = m_scopes[i];
+		int id = table[scope];
 
+		char tmp[512];
+		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", datadir.c_str(), id);
+		auto docs = YAML::LoadAllFromFile(tmp);
+
+		LoadWaveformDataForScope(docs[0], scope, datadir, table, progress, i*progress_per_scope, progress_per_scope);
+	}
+	*/
+	return true;
+}
+
+/**
+	@brief Loads waveform data for a single scope
+ */
+bool Session::LoadWaveformDataForScope(
+	const YAML::Node& node,
+	Oscilloscope* scope,
+	const std::string& dataDir,
+	IDTable& table)
+{
+	/*
+	progress.Update("Loading oscilloscope configuration", base_progress);
+
+	TimePoint time;
+	time.first = 0;
+	time.second = 0;
+
+	TimePoint newest;
+	newest.first = 0;
+	newest.second = 0;
+
+	auto window = m_historyWindows[scope];
+	int scope_id = table[scope];
+
+	//Clear out any old waveforms the instrument may have
+	for(size_t i=0; i<scope->GetChannelCount(); i++)
+	{
+		auto chan = scope->GetOscilloscopeChannel(i);
+		for(size_t j=0; j<chan->GetStreamCount(); j++)
+			chan->SetData(NULL, j);
+	}
+
+	//Preallocate size
+	auto wavenode = node["waveforms"];
+	window->SetMaxWaveforms(wavenode.size());
+
+	//Load the data for each waveform
+	float waveform_progress = progress_range / wavenode.size();
+	size_t iwave = 0;
+	for(auto it : wavenode)
+	{
+		iwave ++;
+
+		//Top level metadata
+		bool timebase_is_ps = true;
+		auto wfm = it.second;
+		time.first = wfm["timestamp"].as<long long>();
+		if(wfm["time_psec"])
+		{
+			time.second = wfm["time_psec"].as<long long>() * 1000;
+			timebase_is_ps = true;
+		}
+		else
+		{
+			time.second = wfm["time_fsec"].as<long long>();
+			timebase_is_ps = false;
+		}
+		int waveform_id = wfm["id"].as<int>();
+		bool pinned = false;
+		if(wfm["pinned"])
+			pinned = wfm["pinned"].as<int>();
+		string label;
+		if(wfm["label"])
+			label = wfm["label"].as<string>();
+
+		//Set up channel metadata first (serialized)
+		auto chans = wfm["channels"];
+		vector<pair<int, int>> channels;	//pair<channel, stream>
+		vector<string> formats;
+		for(auto jt : chans)
+		{
+			auto ch = jt.second;
+			int channel_index = ch["index"].as<int>();
+			int stream = 0;
+			if(ch["stream"])
+				stream = ch["stream"].as<int>();
+			auto chan = scope->GetOscilloscopeChannel(channel_index);
+			channels.push_back(pair<int, int>(channel_index, stream));
+
+			//Waveform format defaults to sparsev1 as that's what was used before
+			//the metadata file contained a format ID at all
+			string format = "sparsev1";
+			if(ch["format"])
+				format = ch["format"].as<string>();
+			formats.push_back(format);
+
+			bool dense = (format == "densev1");
+
+			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
+			WaveformBase* cap = NULL;
+			SparseAnalogWaveform* sacap = NULL;
+			UniformAnalogWaveform* uacap = NULL;
+			SparseDigitalWaveform* sdcap = NULL;
+			UniformDigitalWaveform* udcap = NULL;
+			if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+			{
+				if(dense)
+					cap = uacap = new UniformAnalogWaveform;
+				else
+					cap = sacap = new SparseAnalogWaveform;
+			}
+			else
+			{
+				if(dense)
+					cap = udcap = new UniformDigitalWaveform;
+				else
+					cap = sdcap = new SparseDigitalWaveform;
+			}
+
+			//Channel waveform metadata
+			cap->m_timescale = ch["timescale"].as<long>();
+			cap->m_startTimestamp = time.first;
+			cap->m_startFemtoseconds = time.second;
+			if(timebase_is_ps)
+			{
+				cap->m_timescale *= 1000;
+				cap->m_triggerPhase = ch["trigphase"].as<float>() * 1000;
+			}
+			else
+				cap->m_triggerPhase = ch["trigphase"].as<long long>();
+
+			chan->Detach(stream);
+			chan->SetData(cap, stream);
+		}
+
+		//Kick off a thread to load data for each channel
+		vector<thread*> threads;
+		size_t nchans = channels.size();
+		volatile float* channel_progress = new float[nchans];
+		volatile int* channel_done = new int[nchans];
+		for(size_t i=0; i<channels.size(); i++)
+		{
+			channel_progress[i] = 0;
+			channel_done[i] = 0;
+
+			threads.push_back(new thread(
+				&OscilloscopeWindow::DoLoadWaveformDataForScope,
+				channels[i].first,
+				channels[i].second,
+				scope,
+				datadir,
+				scope_id,
+				waveform_id,
+				formats[i],
+				channel_progress + i,
+				channel_done + i
+				));
+		}
+
+		//Process events and update the display with each thread's progress
+		while(true)
+		{
+			//Figure out total progress across each channel. Stop if all threads are done
+			bool done = true;
+			float frac = 0;
+			for(size_t i=0; i<nchans; i++)
+			{
+				if(!channel_done[i])
+					done = false;
+				frac += channel_progress[i];
+			}
+			if(done)
+				break;
+			frac /= nchans;
+
+			//Update the UI
+			char tmp[256];
+			snprintf(
+				tmp,
+				sizeof(tmp),
+				"Loading waveform %zu/%zu for instrument %s: %.0f %% complete",
+				iwave,
+				wavenode.size(),
+				scope->m_nickname.c_str(),
+				frac * 100);
+			progress.Update(tmp, base_progress + frac*waveform_progress);
+			std::this_thread::sleep_for(std::chrono::microseconds(1000 * 50));
+
+			g_app->DispatchPendingEvents();
+		}
+
+		delete[] channel_progress;
+		delete[] channel_done;
+
+		//Wait for threads to complete
+		for(auto t : threads)
+		{
+			t->join();
+			delete t;
+		}
+
+		//Add to history
+		window->OnWaveformDataReady(true, pinned, label);
+
+		//Keep track of the newest waveform (may not be in time order)
+		if( (time.first > newest.first) ||
+			( (time.first == newest.first) &&  (time.second > newest.second) ) )
+		{
+			newest = time;
+		}
+
+		base_progress += waveform_progress;
+	}
+
+	window->JumpToHistory(newest);
+	*/
 	return true;
 }
 
@@ -402,6 +628,11 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 		//Parameters can't have dependencies on other channels etc.
 		//More importantly, parameters may change bus width etc
 		filter->LoadParameters(dnode, table);
+
+		//Create protocol analyzers
+		auto pd = dynamic_cast<PacketDecoder*>(filter);
+		if(pd)
+			AddPacketFilter(pd);
 	}
 
 	//Make a second pass to configure the filter inputs, once all of them have been instantiated.

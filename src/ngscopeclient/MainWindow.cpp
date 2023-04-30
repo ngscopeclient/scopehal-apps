@@ -1535,6 +1535,127 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 	return m_session.LoadFromYaml(node, dataDir, online);
 }
 
+bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table)
+{
+	LogTrace("Loading UI configuration\n");
+	LogIndenter li;
+
+	//ignore window width/height from legacy file format, imgui now handles that
+
+	//Waveform groups
+	auto groups = node["groups"];
+	auto areas = node["areas"];
+	for(auto it : groups)
+	{
+		//Create the group
+		auto gn = it.second;
+		auto gname = gn["name"].as<string>();
+		LogTrace("Creating group %s\n", gname.c_str());
+		auto group = make_shared<WaveformGroup>(this, gname);
+		m_waveformGroups.push_back(group);
+		table.emplace(gn["id"].as<int>(), group.get());
+
+		//Legacy file with no imgui config? auto dock the group next render
+		if(version < 2)
+			m_newWaveformGroups.push_back(group);
+
+		if(!group->LoadConfiguration(gn))
+			return false;
+
+		//Waveform areas
+		auto gareas = gn["areas"];
+		for(auto at : gareas)
+		{
+			//Load the area here (rather than by parsing the areas node as in glscopeclient)
+			//since ngscopeclient requires areas to be part of a group
+			auto aid = at.second["id"].as<int>();
+			LogTrace("Waveform area %d\n", aid);
+
+			//Find the area node
+			//Note that glscopeclient sessions use a list, without primary keys, so we just have to bruteforce search.
+			//Luckily there's not usually enough areas for this O(m*n) scaling to become problematic.
+			if(version < 2)
+			{
+				bool found = false;
+				for(auto ait : areas)
+				{
+					auto an = ait.second;
+					if(aid != an["id"].as<int>())
+						continue;
+					found = true;
+
+					//We found the node for the area of interest, load everything in it
+
+					//glscopeclient has separate stream/channel and overlays
+					auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+					if(!channel)	//don't crash on bad IDs or missing filters
+						continue;
+					size_t stream = 0;
+					if(an["stream"])
+						stream = an["stream"].as<int>();
+					auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+					group->AddArea(area);
+
+					//TODO: overlays
+					/*
+					//Add any overlays
+					auto overlays = an["overlays"];
+					for(auto jt : overlays)
+					{
+						auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+						stream = 0;
+						if(jt.second["stream"])
+							stream = jt.second["stream"].as<int>();
+						if(filter)
+							area->AddOverlay(StreamDescriptor(filter, stream));
+					}
+					*/
+
+					//FIXME: This borks on some v1 files that are mislabeled as v0
+					/*
+					if (version == 0)
+						area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+					else
+						area->SetPersistenceEnabled(an["persistence"].as<bool>());
+					*/
+				}
+
+				if(!found)
+					return false;
+			}
+
+			//TODO: ngscopeclient equivalent
+		}
+	}
+
+	//Markers
+	auto markers = node["markers"];
+	if(markers)
+	{
+		for(auto it : markers)
+		{
+			/*
+			auto inode = it.second;
+			TimePoint timestamp;
+			timestamp.first = inode["timestamp"].as<int64_t>();
+			timestamp.second = inode["time_fsec"].as<int64_t>();
+			for(auto jt : inode["markers"])
+			{
+				m_markers[timestamp].push_back(new Marker(
+					timestamp,
+					jt.second["offset"].as<int64_t>(),
+					jt.second["name"].as<string>()));
+			}
+			*/
+		}
+	}
+
+	//ignore splitter configuration from legacy format as imgui now handles that
+
+	return true;
+}
+
+
 /**
 	@brief Actually save a file (may be triggered by file|save or file|save as)
  */
