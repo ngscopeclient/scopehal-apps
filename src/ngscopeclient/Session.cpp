@@ -256,6 +256,9 @@ bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
 		if(!LoadWaveformDataForScope(docs[0], scope, dataDir, table))
 			return false;
 	}
+
+	m_history.SetMaxToCurrentDepth();
+
 	return true;
 }
 
@@ -282,9 +285,6 @@ bool Session::LoadWaveformDataForScope(
 		for(size_t j=0; j<chan->GetStreamCount(); j++)
 			chan->SetData(nullptr, j);
 	}
-
-	//Preallocate size
-	//window->SetMaxWaveforms(wavenode.size());
 
 	//Load the data for each waveform
 	for(auto it : wavenode)
@@ -386,23 +386,13 @@ bool Session::LoadWaveformDataForScope(
 		}
 
 		//TODO: propagate pins and labels
+		//window->OnWaveformDataReady(true, pinned, label);
 		vector<Oscilloscope*> temp;
 		temp.push_back(scope);
-		m_history.AddHistory(temp);
+		m_history.AddHistory(temp, false);
 
-		/*
-		//Add to history
-		window->OnWaveformDataReady(true, pinned, label);
-		*/
-
-		/*
-		//Keep track of the newest waveform (may not be in time order)
-		if( (time.first > newest.first) ||
-			( (time.first == newest.first) &&  (time.second > newest.second) ) )
-		{
-			newest = time;
-		}
-		*/
+		//TODO: this is not good for multiscope
+		RefreshAllFilters();
 	}
 	return true;
 }

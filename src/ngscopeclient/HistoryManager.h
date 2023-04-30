@@ -73,7 +73,10 @@ public:
 	HistoryManager(Session& session);
 	~HistoryManager();
 
-	void AddHistory(const std::vector<Oscilloscope*>& scopes);
+	void AddHistory(const std::vector<Oscilloscope*>& scopes, bool deleteOld = true);
+
+	void SetMaxToCurrentDepth()
+	{ m_maxDepth = m_history.size(); }
 
 	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
 
