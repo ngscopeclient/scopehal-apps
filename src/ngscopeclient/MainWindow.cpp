@@ -1596,8 +1596,6 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 					auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
 					group->AddArea(area);
 
-					//TODO: overlays
-					/*
 					//Add any overlays
 					auto overlays = an["overlays"];
 					for(auto jt : overlays)
@@ -1607,9 +1605,8 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 						if(jt.second["stream"])
 							stream = jt.second["stream"].as<int>();
 						if(filter)
-							area->AddOverlay(StreamDescriptor(filter, stream));
+							area->AddStream(StreamDescriptor(filter, stream));
 					}
-					*/
 
 					//FIXME: This borks on some v1 files that are mislabeled as v0
 					/*
