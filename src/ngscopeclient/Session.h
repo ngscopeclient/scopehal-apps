@@ -331,6 +331,7 @@ protected:
 
 	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

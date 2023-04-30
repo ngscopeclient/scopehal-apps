@@ -222,27 +222,13 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	IDTable table;
 	if(!LoadInstruments(version, node["instruments"], online, table))
 		return false;
+	if(!LoadFilters(version, node["decodes"], table))
+		return false;
 
 	//TODO: actual load logic
-	//reference old code from glscopeclient below:
 	/*
-		//Load various sections of the file
-		LoadInstruments(node["instruments"], reconnect, table);
-		LoadDecodes(node["decodes"], table);
-		LoadUIConfiguration(node["ui_config"], table);
-
-		//Create history windows for all of our scopes
-		for(auto scope : m_scopes)
-		{
-			auto hist = new HistoryWindow(this, scope);
-			hist->hide();
-			m_historyWindows[scope] = hist;
-		}
-
-		//Re-title the window for the new scope
-		SetTitle();
-
-		LoadWaveformData(filename, table);
+	LoadUIConfiguration(node["ui_config"], table);
+	LoadWaveformData(filename, table);
 	*/
 
 	return true;
@@ -384,6 +370,49 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online,
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+
+	return true;
+}
+
+bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& table)
+{
+	//No protocol decodes? Skip this section
+	if(!node)
+		return true;
+
+	//Load each decode
+	for(auto it : node)
+	{
+		auto dnode = it.second;
+
+		//Create the decode
+		auto proto = dnode["protocol"].as<string>();
+		auto filter = Filter::CreateFilter(proto, dnode["color"].as<string>());
+		if(filter == NULL)
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Filter creation failed",
+				string("Unable to create filter \"") + proto + "\". Skipping...\n");
+			continue;
+		}
+
+		table.emplace(dnode["id"].as<int>(), filter);
+
+		//Load parameters during the first pass.
+		//Parameters can't have dependencies on other channels etc.
+		//More importantly, parameters may change bus width etc
+		filter->LoadParameters(dnode, table);
+	}
+
+	//Make a second pass to configure the filter inputs, once all of them have been instantiated.
+	//Filters may depend on other filters as inputs, and serialization is not guaranteed to be a topological sort.
+	for(auto it : node)
+	{
+		auto dnode = it.second;
+		auto filter = static_cast<Filter*>(table[dnode["id"].as<int>()]);
+		if(filter)
+			filter->LoadInputs(dnode, table);
+	}
 
 	return true;
 }
