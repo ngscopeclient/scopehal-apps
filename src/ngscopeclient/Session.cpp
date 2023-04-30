@@ -44,6 +44,7 @@
 
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
+#include "../scopeprotocols/EyePattern.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -392,6 +393,7 @@ bool Session::LoadWaveformDataForScope(
 		m_history.AddHistory(temp, false);
 
 		//TODO: this is not good for multiscope
+		//TODO: handle eye patterns (need to know window size for it to work right)
 		RefreshAllFilters();
 	}
 	return true;
@@ -747,6 +749,15 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 		auto pd = dynamic_cast<PacketDecoder*>(filter);
 		if(pd)
 			AddPacketFilter(pd);
+
+		//Resize eye patterns to a reasonable default size
+		//TODO: ngscopeclient should save actual size
+		auto eye = dynamic_cast<EyePattern*>(filter);
+		if(eye)
+		{
+			eye->SetWidth(512);
+			eye->SetHeight(512);
+		}
 	}
 
 	//Make a second pass to configure the filter inputs, once all of them have been instantiated.
