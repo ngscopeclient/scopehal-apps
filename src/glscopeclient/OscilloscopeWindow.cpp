@@ -2208,6 +2208,8 @@ YAML::Node OscilloscopeWindow::SerializeConfiguration(IDTable& table)
 {
 	YAML::Node node;
 
+	node["version"] = 1;
+
 	//Save metadata
 	node["metadata"] = SerializeMetadata();
 
