@@ -1635,20 +1635,10 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 	{
 		for(auto it : markers)
 		{
-			LogWarning("markers not loaded yet\n");
-			/*
 			auto inode = it.second;
-			TimePoint timestamp;
-			timestamp.first = inode["timestamp"].as<int64_t>();
-			timestamp.second = inode["time_fsec"].as<int64_t>();
+			TimePoint timestamp(inode["timestamp"].as<int64_t>(), inode["time_fsec"].as<int64_t>());
 			for(auto jt : inode["markers"])
-			{
-				m_markers[timestamp].push_back(new Marker(
-					timestamp,
-					jt.second["offset"].as<int64_t>(),
-					jt.second["name"].as<string>()));
-			}
-			*/
+				m_session.AddMarker(Marker(timestamp, jt.second["offset"].as<int64_t>(), jt.second["name"].as<string>()));
 		}
 	}
 
