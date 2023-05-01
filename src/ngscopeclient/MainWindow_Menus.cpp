@@ -160,7 +160,45 @@ void MainWindow::FileRecentMenu()
 {
 	if(ImGui::BeginMenu("Recent Files"))
 	{
-		//TODO
+		//Make a reverse mapping
+		std::map<time_t, vector<string> > reverseMap;
+		for(auto it : m_recentFiles)
+			reverseMap[it.second].push_back(it.first);
+
+		//Deduplicate timestamps
+		set<time_t> timestampsDeduplicated;
+		for(auto it : m_recentFiles)
+			timestampsDeduplicated.emplace(it.second);
+
+		//Sort the list by most recent
+		vector<time_t> timestamps;
+		for(auto t : timestampsDeduplicated)
+			timestamps.push_back(t);
+		std::sort(timestamps.rbegin(), timestamps.rend());
+
+		//Add new ones
+		int nleft = m_session.GetPreferences().GetInt("Files.max_recent_files");
+		for(auto t : timestamps)
+		{
+			auto paths = reverseMap[t];
+			for(auto path : paths)
+			{
+				if(ImGui::BeginMenu(path.c_str()))
+				{
+					if(ImGui::MenuItem("Open Online"))
+						DoOpenFile(path, true);
+
+					if(ImGui::MenuItem("Open Offline"))
+						DoOpenFile(path, false);
+
+					ImGui::EndMenu();
+				}
+			}
+
+			nleft --;
+			if(nleft == 0)
+				break;
+		}
 
 		ImGui::EndMenu();
 	}

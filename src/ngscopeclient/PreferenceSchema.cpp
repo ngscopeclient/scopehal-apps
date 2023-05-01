@@ -370,13 +370,12 @@ void PreferenceManager::InitializeDefaults()
 					"the transfer format for active sessions is not updated."
 				));
 
-	/*auto& files = this->m_treeRoot.AddCategory("Files");
+	auto& files = this->m_treeRoot.AddCategory("Files");
 		files.AddPreference(
 			Preference::Int("max_recent_files", 10)
 			.Label("Max recent files")
 			.Description("Maximum number of recent .scopesession file paths to save in history")
 			.Unit(Unit::UNIT_COUNTS));
-	*/
 
 	auto& misc = this->m_treeRoot.AddCategory("Miscellaneous");
 		auto& menus = misc.AddCategory("Menus");

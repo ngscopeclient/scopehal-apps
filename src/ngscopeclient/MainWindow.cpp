@@ -92,6 +92,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
+	LoadRecentFileList();
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -1491,6 +1492,9 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		{
 			//If we get here, all good
 			m_sessionFileName = sessionPath;
+
+			m_recentFiles[sessionPath] = time(nullptr);
+			SaveRecentFileList();
 		}
 
 		//Loading failed, clean up any half-loaded stuff
@@ -1718,3 +1722,88 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	//so we can test the rest of the file write code path
 	return true;
 }
+
+void MainWindow::SaveRecentFileList()
+{
+	//Make a reverse mapping
+	std::map<time_t, vector<string> > reverseMap;
+	for(auto it : m_recentFiles)
+		reverseMap[it.second].push_back(it.first);
+
+	//Deduplicate timestamps
+	set<time_t> timestampsDeduplicated;
+	for(auto it : m_recentFiles)
+		timestampsDeduplicated.emplace(it.second);
+
+	//Sort the list by most recent
+	vector<time_t> timestamps;
+	for(auto t : timestampsDeduplicated)
+		timestamps.push_back(t);
+	std::sort(timestamps.rbegin(), timestamps.rend());
+
+	//Add new ones
+	int nleft = m_session.GetPreferences().GetInt("Files.max_recent_files");
+
+	//Generate the output data
+	YAML::Node node{};
+	int j = 0;
+	for(auto t : timestamps)
+	{
+		auto paths = reverseMap[t];
+		for(auto fpath : paths)
+		{
+			YAML::Node child;
+			child["path"] = fpath;
+			child["timestamp"] = t;
+
+			node[string("file") + to_string(j)] = child;
+			j++;
+		}
+
+		nleft --;
+		if(nleft == 0)
+			break;
+	}
+
+	//Save to file
+	auto fname = m_session.GetPreferences().GetConfigDirectory() + "/recentfiles.yml";
+	ofstream outfs(fname);
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open recent-files file \"") + fname + "\" for writing");
+		return;
+	}
+	outfs << node;
+	outfs.close();
+}
+
+void MainWindow::LoadRecentFileList()
+{
+	try
+	{
+		auto docs = YAML::LoadAllFromFile(m_session.GetPreferences().GetConfigDirectory() + "/recentfiles.yml");
+		if(docs.empty())
+			return;
+		auto node = docs[0];
+
+		for(auto it : node)
+		{
+			auto inst = it.second;
+			m_recentFiles[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+		}
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		LogDebug("Unable to open recently used files list (bad file)\n");
+		return;
+	}
+	catch(const YAML::ParserException& ex)
+	{
+		LogDebug("Unable to open recently used files list (parser exception)\n");
+		return;
+	}
+
+}
+

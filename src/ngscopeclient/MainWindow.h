@@ -386,6 +386,14 @@ protected:
 	void LoadRecentInstrumentList();
 	void SaveRecentInstrumentList();
 
+	/**
+		@brief List of recently used files
+	 */
+	std::map<std::string, time_t> m_recentFiles;
+
+	void LoadRecentFileList();
+	void SaveRecentFileList();
+
 public:
 	void AddToRecentInstrumentList(SCPIInstrument* inst);
 
