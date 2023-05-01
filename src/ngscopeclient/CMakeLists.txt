@@ -1,3 +1,22 @@
+# Vulkan is required for compute shaders used in rendering
+find_package(Vulkan REQUIRED)
+
+# Git is used for git-describe based version generation if we have it
+find_package(Git)
+
+#Set up versioning (with a dummy string for now if Git isn't present)
+if(Git_FOUND)
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} describe --always --tags
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+	set(NGSCOPECLIENT_VERSION "unknown")
+endif()
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
+
 #Set up include paths
 include_directories(
 	SYSTEM
