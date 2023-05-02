@@ -26,7 +26,8 @@ jobs:
           gtkmm3 \
           glew \
           glfw \
-          catch2
+          catch2 \
+          libomp
 
     - name: Clone and Build FFTS Library
       run: |
