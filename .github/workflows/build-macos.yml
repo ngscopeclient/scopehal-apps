@@ -59,7 +59,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
-          -DCMAKE_PREFIX_PATH="/opt/homebrew;/opt/homebrew/opt/libomp" \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
         ninja
 
