@@ -139,8 +139,14 @@ HistoryManager::~HistoryManager()
 	@param scopes		The instruments to add
 	@param deleteOld	True to delete old data that rolled off the end of the history buffer
 						Set false when loading waveforms from a sessio
+	@param pin			True to pin into history
+	@param nick			Nickname
  */
-void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes, bool deleteOld)
+void HistoryManager::AddHistory(
+	const vector<Oscilloscope*>& scopes,
+	bool deleteOld,
+	bool pin,
+	string nick)
 {
 	bool foundTimestamp = false;
 	TimePoint tp(0,0);
@@ -176,7 +182,8 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes, bool delete
 	auto pt = make_shared<HistoryPoint>();
 	m_history.push_back(pt);
 	pt->m_time = tp;
-	pt->m_pinned = false;
+	pt->m_pinned = pin;
+	pt->m_nickname = nick;
 
 	//Add waveforms
 	for(auto scope : scopes)

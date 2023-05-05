@@ -73,7 +73,11 @@ public:
 	HistoryManager(Session& session);
 	~HistoryManager();
 
-	void AddHistory(const std::vector<Oscilloscope*>& scopes, bool deleteOld = true);
+	void AddHistory(
+		const std::vector<Oscilloscope*>& scopes,
+		bool deleteOld = true,
+		bool pin = false,
+		std::string nick = "");
 
 	void SetMaxToCurrentDepth()
 	{ m_maxDepth = m_history.size(); }

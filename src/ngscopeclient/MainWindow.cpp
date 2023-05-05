@@ -33,6 +33,7 @@
 	@brief Implementation of MainWindow
  */
 #include "ngscopeclient.h"
+#include "ngscopeclient-version.h"
 #include "MainWindow.h"
 #include "PreferenceTypes.h"
 
@@ -74,9 +75,9 @@ extern Event g_rerenderRequestedEvent;
 
 MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 #ifdef _DEBUG
-	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " [DEBUG BUILD]", queue)
 #else
-	: VulkanWindow("ngscopeclient", queue)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION, queue)
 #endif
 	, m_showDemo(false)
 	, m_showPlot(false)
@@ -1704,13 +1705,56 @@ void MainWindow::DoSaveFile(const string& sessionPath)
  */
 bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 {
-	ShowErrorPopup(
-		"Unimplemented",
-		"Session serialization is not finished, sorry!");
+	/*
+		version unspecified (treated as version 0): original string concatenation based glscopeclient impl
+		version 1: yaml-cpp glscopeclient
+		version 2: initial ngscopeclient
+	 */
+	node["version"] = 2;
 
-	//DEBUG: return true even though "unimplemented" is technically a failure
-	//so we can test the rest of the file write code path
+	node["metadata"]  = SerializeMetadata();
+
+	/*
+	//Save instrument config regardless, since data etc needs it
+	node["instruments"] = SerializeInstrumentConfiguration(table);
+
+	//Decodes depend on scope channels, but need to happen before UI elements that use them
+	if(!Filter::GetAllInstances().empty())
+		node["decodes"] = SerializeFilterConfiguration(table);
+
+	//UI config
+	node["ui_config"] = SerializeUIConfiguration(table);
+	*/
+
 	return true;
+}
+
+/**
+	@brief Serializes metadata about the session / software stack
+
+	Not currently used for anything, but might be helpful for troubleshooting etc in the future
+ */
+YAML::Node MainWindow::SerializeMetadata()
+{
+	YAML::Node node;
+	node["appver"] = "ngscopeclient " NGSCOPECLIENT_VERSION;
+	node["appdate"] = __DATE__ __TIME__;
+
+	//Format timestamp
+	time_t now = time(nullptr);
+	struct tm ltime;
+#ifdef _WIN32
+	localtime_s(&ltime, &now);
+#else
+	localtime_r(&now, &ltime);
+#endif
+	char sdate[32];
+	char stime[32];
+	strftime(stime, sizeof(stime), "%X", &ltime);
+	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
+	node["created"] = string(sdate) + " " + string(stime);
+
+	return node;
 }
 
 void MainWindow::SaveRecentFileList()

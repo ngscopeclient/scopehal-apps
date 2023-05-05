@@ -386,11 +386,9 @@ bool Session::LoadWaveformDataForScope(
 				formats[i]);
 		}
 
-		//TODO: propagate pins and labels
-		//window->OnWaveformDataReady(true, pinned, label);
 		vector<Oscilloscope*> temp;
 		temp.push_back(scope);
-		m_history.AddHistory(temp, false);
+		m_history.AddHistory(temp, false, pinned, label);
 
 		//TODO: this is not good for multiscope
 		//TODO: handle eye patterns (need to know window size for it to work right)

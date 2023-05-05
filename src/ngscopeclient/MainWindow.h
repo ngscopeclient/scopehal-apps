@@ -356,6 +356,8 @@ protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
+	YAML::Node SerializeMetadata();
+
 	void RenderFileBrowser();
 
 	enum
