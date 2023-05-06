@@ -36,6 +36,7 @@
 #include "ngscopeclient-version.h"
 #include "MainWindow.h"
 #include "PreferenceTypes.h"
+#include "FileSystem.h"
 
 #include <iostream>
 #include <fstream>
@@ -65,6 +66,17 @@
 #include "SCPIConsoleDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#endif
+
 
 using namespace std;
 
@@ -1657,42 +1669,43 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 	//Stop the trigger so we don't have data races if a waveform comes in mid-save
 	m_session.StopTrigger();
 
+	//Saving the file conflicts with all other waveform data operations
+	lock_guard<shared_mutex> lock(m_session.GetWaveformDataMutex());
+
 	//Get the data directory for the session
 	string base = sessionPath.substr(0, sessionPath.length() - strlen(".scopesession"));
 	string datadir = base + "_data";
 	LogDebug("Saving session file \"%s\" (data directory %s)\n", sessionPath.c_str(), datadir.c_str());
 
+	//Serialize the session
 	YAML::Node node{};
+	if(!SaveSessionToYaml(node, datadir))
+		return;
 
-	//Serialization successful
-	if(SaveSessionToYaml(node, datadir))
+	//Write the generated YAML to disk
+	ofstream outfs(sessionPath);
+	if(!outfs)
 	{
-		ofstream outfs(sessionPath);
-		if(!outfs)
-		{
-			ShowErrorPopup(
-				"Cannot open file",
-				string("Failed to open output session file \"") + sessionPath + "\" for writing");
-			return;
-		}
-
-		outfs << node;
-		outfs.close();
-
-		if(!outfs)
-		{
-			ShowErrorPopup(
-				"Write failed",
-				string("Failed to write session file \"") + sessionPath + "\"");
-		}
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output session file \"") + sessionPath + "\" for writing");
+		return;
 	}
 
-	//Serialization failed
-	else
+	outfs << node;
+	outfs.close();
+
+	if(!outfs)
 	{
-		//Do not print any error message; SaveSessionFromYaml() is responsible for calling ShowErrorPopup()
-		//if something goes wrong there.
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write session file \"") + sessionPath + "\"");
 	}
+
+	//Add to recent files list
+	m_sessionFileName = sessionPath;
+	m_recentFiles[sessionPath] = time(nullptr);
+	SaveRecentFileList();
 }
 
 /**
@@ -1705,6 +1718,11 @@ void MainWindow::DoSaveFile(const string& sessionPath)
  */
 bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 {
+	if(!SetupDataDirectory(dataDir))
+		return false;
+
+	IDTable table;
+
 	/*
 		version unspecified (treated as version 0): original string concatenation based glscopeclient impl
 		version 1: yaml-cpp glscopeclient
@@ -1712,47 +1730,156 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	 */
 	node["version"] = 2;
 
-	node["metadata"]  = SerializeMetadata();
-
-	/*
-	//Save instrument config regardless, since data etc needs it
-	node["instruments"] = SerializeInstrumentConfiguration(table);
-
-	//Decodes depend on scope channels, but need to happen before UI elements that use them
+	//Save the session state
+	node["metadata"]  = m_session.SerializeMetadata();
+	node["instruments"] = m_session.SerializeInstrumentConfiguration(table);
 	if(!Filter::GetAllInstances().empty())
-		node["decodes"] = SerializeFilterConfiguration(table);
+		node["decodes"] = m_session.SerializeFilterConfiguration(table);
 
-	//UI config
+	//Save UI widgets
 	node["ui_config"] = SerializeUIConfiguration(table);
-	*/
+	node["markers"] = m_session.SerializeMarkers();
+
+	//TODO: waveform data
+	//SerializeWaveforms(table);
+
+	//Save ImGui configuration
+	string ipath = dataDir + "/imgui.ini";
+	ImGui::SaveIniSettingsToDisk(ipath.c_str());
 
 	return true;
 }
 
 /**
-	@brief Serializes metadata about the session / software stack
-
-	Not currently used for anything, but might be helpful for troubleshooting etc in the future
+	@brief Make sure the data directory exists
  */
-YAML::Node MainWindow::SerializeMetadata()
+bool MainWindow::SetupDataDirectory(const string& dataDir)
+{
+	//See if the directory exists
+	bool dir_exists = false;
+
+#ifndef _WIN32
+	int hfile = open(dataDir.c_str(), O_RDONLY);
+	if(hfile >= 0)
+	{
+		//It exists as a file. Reopen and check if it's a directory
+		::close(hfile);
+		hfile = open(dataDir.c_str(), O_RDONLY | O_DIRECTORY);
+
+		//If this open works, it's a directory.
+		if(hfile >= 0)
+		{
+			::close(hfile);
+			dir_exists = true;
+		}
+
+		//Data dir exists, but it's something else! Error out
+		else
+		{
+			ShowErrorPopup(
+				"Cannot save session",
+				string("The requested data directory ") + dataDir + " already exists, but is not a directory!");
+			return false;
+		}
+	}
+#else
+	auto fileType = GetFileAttributes(dataDir.c_str());
+
+	// Check if any file exists at this path
+	if(fileType != INVALID_FILE_ATTRIBUTES)
+	{
+		if(fileType & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			// directory exists
+			dir_exists = true;
+		}
+		else
+		{
+			// Its some other file
+			ShowErrorPopup(
+				"Cannot save session",
+				string("The requested data directory ") + dataDir + " already exists, but is not a directory!");
+			return false;
+		}
+	}
+#endif
+
+	//Create the directory we're saving to (if needed)
+	if(!dir_exists)
+	{
+#ifdef _WIN32
+		auto result = mkdir(dataDir.c_str());
+#else
+		auto result = mkdir(dataDir.c_str(), 0755);
+#endif
+
+		if(0 != result)
+		{
+			ShowErrorPopup(
+				"Failed to save session",
+				string("The data directory ") + dataDir + " could not be created!");
+			return false;
+		}
+	}
+
+	//Remove any existing waveform data
+	char cwd[PATH_MAX];
+	getcwd(cwd, PATH_MAX);
+
+	chdir(dataDir.c_str());
+	const auto directories = ::Glob("scope_*", true);
+	for(const auto& directory: directories)
+		::RemoveDirectory(directory);
+
+	chdir(cwd);
+
+	return true;
+}
+
+/**
+	@brief Serialize waveform areas etc to a YAML::Node
+ */
+YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 {
 	YAML::Node node;
-	node["appver"] = "ngscopeclient " NGSCOPECLIENT_VERSION;
-	node["appdate"] = __DATE__ __TIME__;
 
-	//Format timestamp
-	time_t now = time(nullptr);
-	struct tm ltime;
-#ifdef _WIN32
-	localtime_s(&ltime, &now);
-#else
-	localtime_r(&now, &ltime);
-#endif
-	char sdate[32];
-	char stime[32];
-	strftime(stime, sizeof(stime), "%X", &ltime);
-	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
-	node["created"] = string(sdate) + " " + string(stime);
+	//don't write legacy "window" section
+
+	//Waveform areas are hierarchical internally, but written as separate area and group headings
+	YAML::Node areas;
+	YAML::Node groups;
+	for(auto group : m_waveformGroups)
+	{
+		int gid = table.emplace(group.get());
+
+		auto& wareas = group->GetWaveformAreas();
+		for(auto area : wareas)
+		{
+			YAML::Node areaNode;
+			int id = table.emplace(area.get());
+			areaNode["id"] = id;
+
+			//Legacy glscopeclient format had one "channel" and zero or more "overlays".
+			//Now we just have a single "streams" array
+			YAML::Node streamNode;
+			for(size_t i=0; i<area->GetStreamCount(); i++)
+				streamNode["stream" + to_string(i)] = area->GetDisplayedChannel(i)->Serialize(table);
+
+			areaNode["streams"] = streamNode;
+			areas["area" + to_string(id)] = areaNode;
+		}
+
+		//Add the group once we've put everything in it
+		//(need IDs defined for all of the areas inside said group)
+		groups["group" + to_string(gid)] = group->SerializeConfiguration(table);
+	}
+
+	node["areas"] = areas;
+	node["groups"] = groups;
+
+	//don't write legacy "splitters" section
+
+	//TODO: save which dialogs are open so we can recreate properties dialogs etc
 
 	return node;
 }

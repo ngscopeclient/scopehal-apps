@@ -1062,3 +1062,31 @@ bool WaveformGroup::LoadConfiguration(const YAML::Node& node)
 
 	return true;
 }
+
+YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
+{
+	YAML::Node node;
+	node["timebaseResolution"] = "fs";
+
+	/*
+	m_pixelsPerXUnit = node["pixelsPerXUnit"].as<float>();
+	m_xAxisOffset = node["xAxisOffset"].as<long long>();
+
+	//Default to no cursors
+	m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+
+	//Cursor config
+	//Y axis cursor configs from legacy file format are ignored
+	string cursor = node["cursorConfig"].as<string>();
+	if(cursor == "none")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+	else if(cursor == "x_single")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
+	else if(cursor == "x_dual")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+	m_xAxisCursorPositions[0] = node["xcursor0"].as<long long>();
+	m_xAxisCursorPositions[1] = node["xcursor1"].as<long long>();
+	*/
+
+	return node;
+}

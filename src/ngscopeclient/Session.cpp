@@ -33,6 +33,7 @@
 	@brief Implementation of Session
  */
 #include "ngscopeclient.h"
+#include "ngscopeclient-version.h"
 #include "Session.h"
 #include "../scopeprotocols/ExportFilter.h"
 #include "MainWindow.h"
@@ -769,6 +770,107 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 	}
 
 	return true;
+}
+
+/**
+	@brief Serialize the configuration for all oscilloscopes
+ */
+YAML::Node Session::SerializeInstrumentConfiguration(IDTable& table)
+{
+	YAML::Node node;
+
+	for(auto scope : m_oscilloscopes)
+	{
+		auto instrumentConfig = scope->SerializeConfiguration(table);
+		if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
+			node["triggerdeskew"] = m_scopeDeskewCal[scope];
+		node["scope" + instrumentConfig["id"].as<string>()] = instrumentConfig;
+	}
+
+	//TODO: save other instrument types
+
+	return node;
+}
+
+/**
+	@brief Serialize the configuration for all protocol decoders
+ */
+YAML::Node Session::SerializeFilterConfiguration(IDTable& table)
+{
+	YAML::Node node;
+
+	auto set = Filter::GetAllInstances();
+	for(auto d : set)
+	{
+		YAML::Node filterNode = d->SerializeConfiguration(table);
+		node["filter" + filterNode["id"].as<string>()] = filterNode;
+	}
+
+	return node;
+}
+
+/**
+	@brief Serializes metadata about the session / software stack
+
+	Not currently used for anything, but might be helpful for troubleshooting etc in the future
+ */
+YAML::Node Session::SerializeMetadata()
+{
+	YAML::Node node;
+	node["appver"] = "ngscopeclient " NGSCOPECLIENT_VERSION;
+	node["appdate"] = __DATE__ __TIME__;
+
+	//Format timestamp
+	time_t now = time(nullptr);
+	struct tm ltime;
+#ifdef _WIN32
+	localtime_s(&ltime, &now);
+#else
+	localtime_r(&now, &ltime);
+#endif
+	char sdate[32];
+	char stime[32];
+	strftime(stime, sizeof(stime), "%X", &ltime);
+	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
+	node["created"] = string(sdate) + " " + string(stime);
+
+	return node;
+}
+
+YAML::Node Session::SerializeMarkers()
+{
+	YAML::Node node;
+
+	int nmarker = 0;
+	int nwfm = 0;
+	for(auto it : m_markers)
+	{
+		auto key = it.first;
+		auto& markers = it.second;
+		if(markers.empty())
+			continue;
+
+		YAML::Node markerNode;
+		YAML::Node wfmNode;
+		wfmNode["timestamp"] = key.first;
+		wfmNode["time_fsec"] = key.second;
+
+		for(auto m : markers)
+		{
+			YAML::Node wfmMarkerNode;
+			wfmMarkerNode["offset"] = m.m_offset;
+			wfmMarkerNode["name"] = m.m_name;
+			wfmNode["markers"]["marker" + to_string(nmarker)] = wfmMarkerNode;
+
+			nmarker ++;
+		}
+
+		node["wfm" + to_string(nwfm)] = wfmNode;
+
+		nwfm ++;
+	}
+
+	return node;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

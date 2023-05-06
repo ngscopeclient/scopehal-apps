@@ -138,6 +138,8 @@ public:
 			schan->Release();
 	}
 
+	YAML::Node Serialize(IDTable& table) const;
+
 	std::string GetName()
 	{ return m_stream.GetName(); }
 
@@ -398,6 +400,9 @@ public:
 
 	StreamDescriptor GetStream(size_t i)
 	{ return m_displayedChannels[i]->GetStream(); }
+
+	std::shared_ptr<DisplayedChannel> GetDisplayedChannel(size_t i)
+	{ return m_displayedChannels[i]; }
 
 	bool IsStreamBeingDisplayed(StreamDescriptor target);
 

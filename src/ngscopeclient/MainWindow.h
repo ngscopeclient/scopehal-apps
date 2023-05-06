@@ -356,7 +356,8 @@ protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
-	YAML::Node SerializeMetadata();
+	bool SetupDataDirectory(const std::string& dataDir);
+	YAML::Node SerializeUIConfiguration(IDTable& table);
 
 	void RenderFileBrowser();
 

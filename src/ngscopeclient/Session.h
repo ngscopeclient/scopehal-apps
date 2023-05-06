@@ -222,6 +222,10 @@ public:
 	void ClearBackgroundThreads();
 
 	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
+	YAML::Node SerializeInstrumentConfiguration(IDTable& table);
+	YAML::Node SerializeMetadata();
+	YAML::Node SerializeFilterConfiguration(IDTable& table);
+	YAML::Node SerializeMarkers();
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);

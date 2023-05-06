@@ -228,6 +228,21 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		m_indexBuffer.resize(x);
 }
 
+/**
+	@brief Serializes the configuration for this channel
+ */
+YAML::Node DisplayedChannel::Serialize(IDTable& table) const
+{
+	YAML::Node node;
+
+	node["persistence"] = m_persistenceEnabled;
+	node["channel"] = table[m_stream.m_channel];
+	node["stream"] = m_stream.m_stream;
+	node["colorRamp"] = m_colorRamp;
+
+	return node;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
