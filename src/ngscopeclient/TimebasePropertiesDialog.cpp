@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -85,7 +85,7 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 // Construction / destruction
 
 TimebasePropertiesDialog::TimebasePropertiesDialog(Session* session)
-	: Dialog("Timebase", ImVec2(300, 400))
+	: Dialog("Timebase", "Timebase", ImVec2(300, 400))
 	, m_session(session)
 {
 	Refresh();

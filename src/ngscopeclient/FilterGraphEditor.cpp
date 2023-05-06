@@ -53,7 +53,7 @@ using namespace std;
 // Construction / destruction
 
 FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
-	: Dialog("Filter Graph Editor", ImVec2(800, 600))
+	: Dialog("Filter Graph Editor", "Filter Graph Editor", ImVec2(800, 600))
 	, m_session(session)
 	, m_parent(parent)
 	, m_nextID(1)

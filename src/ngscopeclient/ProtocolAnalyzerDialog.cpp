@@ -44,7 +44,10 @@ using namespace std;
 
 ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
 	PacketDecoder* filter, shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd)
-	: Dialog(string("Protocol: ") + filter->GetDisplayName(), ImVec2(425, 350))
+	: Dialog(
+		string("Protocol: ") + filter->GetDisplayName(),
+		string("Protocol: ") + filter->GetHwname(),
+		ImVec2(425, 350))
 	, m_filter(filter)
 	, m_mgr(mgr)
 	, m_session(session)

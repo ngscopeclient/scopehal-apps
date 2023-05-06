@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -44,7 +44,10 @@ using namespace std::chrono_literals;
 // Construction / destruction
 
 SCPIConsoleDialog::SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst)
-	: Dialog(("SCPI Console: ") + inst->m_nickname, ImVec2(500, 300))
+	: Dialog(
+		("SCPI Console: ") + inst->m_nickname,
+		("SCPI Console: ") + inst->m_nickname,
+		ImVec2(500, 300))
 	, m_parent(parent)
 	, m_inst(inst)
 	, m_commandPending(false)

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -40,8 +40,9 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Dialog::Dialog(const string& title, ImVec2 defaultSize)
+Dialog::Dialog(const string& title, const string& id, ImVec2 defaultSize)
 	: m_open(true)
+	, m_id(id)
 	, m_title(title)
 	, m_defaultSize(defaultSize)
 {
@@ -65,9 +66,7 @@ bool Dialog::Render()
 	if(!m_open)
 		return false;
 
-	//Use our pointer as the imgui ID, so that we can retain state even if we change title
-	//FIXME: this is not ideal because it breaks serialization
-	string name = m_title + "###" + to_string(reinterpret_cast<int64_t>(this));
+	string name = m_title + "###" + m_id;
 
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
 	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))

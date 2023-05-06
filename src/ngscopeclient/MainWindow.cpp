@@ -1947,6 +1947,11 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 
 	node["markers"] = m_session.SerializeMarkers();
 
+	//Serialize dialogs
+	YAML::Node dialogs;
+
+	node["dialogs"] = dialogs;
+
 	return node;
 }
 
