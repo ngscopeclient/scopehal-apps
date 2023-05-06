@@ -66,6 +66,7 @@ bool Dialog::Render()
 		return false;
 
 	//Use our pointer as the imgui ID, so that we can retain state even if we change title
+	//FIXME: this is not ideal because it breaks serialization
 	string name = m_title + "###" + to_string(reinterpret_cast<int64_t>(this));
 
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);

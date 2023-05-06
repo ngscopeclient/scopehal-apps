@@ -227,6 +227,8 @@ public:
 	YAML::Node SerializeFilterConfiguration(IDTable& table);
 	YAML::Node SerializeMarkers();
 	bool SerializeWaveforms(IDTable& table, const std::string& dataDir);
+	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
+	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);

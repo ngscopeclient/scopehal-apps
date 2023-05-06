@@ -940,20 +940,24 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 					chnode["flags"] = (int)data->m_flags;
 					//don't serialize revision
 
+					//Save the actual waveform data
+					string datapath = datdir;
+					if(j == 0)
+						datapath += string("/channel_") + to_string(i) + ".bin";
+					else
+						datapath += string("/channel_") + to_string(i) + "_stream" + to_string(j) + ".bin";
 					auto sparse = dynamic_cast<SparseWaveformBase*>(data);
+					auto uniform = dynamic_cast<UniformWaveformBase*>(data);
 					if(sparse)
 					{
 						chnode["format"] = "sparsev1";
-
-						//TODO: save the actual sample data
+						SerializeSparseWaveform(sparse, datapath);
 					}
 					else
 					{
 						chnode["format"] = "densev1";
-
-						//TODO: save the actual sample data
+						SerializeUniformWaveform(uniform, datapath);
 					}
-
 
 					mnode[string("ch") + to_string(i) + "s" + to_string(j)] = chnode;
 				}
@@ -985,6 +989,170 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 	return true;
 }
 
+/**
+	@brief Saves waveform sample data in the "sparsev1" file format.
+
+	Interleaved (slow):
+		int64 offset
+		int64 len
+		for analog
+			float voltage
+		for digital
+			bool voltage
+ */
+bool Session::SerializeSparseWaveform(SparseWaveformBase* wfm, const string& path)
+{
+	FILE* fp = fopen(path.c_str(), "wb");
+	if(!fp)
+		return false;
+
+	wfm->PrepareForCpuAccess();
+	auto achan = dynamic_cast<SparseAnalogWaveform*>(wfm);
+	auto dchan = dynamic_cast<SparseDigitalWaveform*>(wfm);
+	size_t len = wfm->size();
+
+	//Analog channels
+	const size_t samples_per_block = 10000;
+	if(achan)
+	{
+		#pragma pack(push, 1)
+		class asample_t
+		{
+		public:
+			int64_t off;
+			int64_t dur;
+			float voltage;
+
+			asample_t(int64_t o=0, int64_t d=0, float v=0)
+			: off(o), dur(d), voltage(v)
+			{}
+		};
+		#pragma pack(pop)
+
+		//Copy sample data
+		vector<asample_t,	AlignedAllocator<asample_t, 64 > > samples;
+		samples.reserve(len);
+		for(size_t i=0; i<len; i++)
+			samples.push_back(asample_t(achan->m_offsets[i], achan->m_durations[i], achan->m_samples[i]));
+
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			size_t blocklen = min(len-i, samples_per_block);
+			if(blocklen != fwrite(&samples[i], sizeof(asample_t), blocklen, fp))
+			{
+				LogError("file write error\n");
+				fclose(fp);
+				return false;
+			}
+		}
+	}
+	else if(dchan)
+	{
+		#pragma pack(push, 1)
+		class dsample_t
+		{
+		public:
+			int64_t off;
+			int64_t dur;
+			bool voltage;
+
+			dsample_t(int64_t o=0, int64_t d=0, bool v=0)
+			: off(o), dur(d), voltage(v)
+			{}
+		};
+		#pragma pack(pop)
+
+		//Copy sample data
+		vector<dsample_t,	AlignedAllocator<dsample_t, 64 > > samples;
+		samples.reserve(len);
+		for(size_t i=0; i<len; i++)
+			samples.push_back(dsample_t(dchan->m_offsets[i], dchan->m_durations[i], dchan->m_samples[i]));
+
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			size_t blocklen = min(len-i, samples_per_block);
+			if(blocklen != fwrite(&samples[i], sizeof(dsample_t), blocklen, fp))
+			{
+				LogError("file write error\n");
+				fclose(fp);
+			}
+		}
+	}
+	else
+	{
+		//TODO: support other waveform types (buses, eyes, etc)
+		LogError("unrecognized sample type\n");
+		fclose(fp);
+		return false;
+	}
+
+	fclose(fp);
+	return true;
+}
+
+/**
+	@brief Saves waveform sample data in the "densev1" file format.
+
+	for analog
+		float[] voltage
+	for digital
+		bool[] voltage
+
+	Durations are implied {1....1} and offsets are implied {0...n-1}.
+ */
+bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& path)
+{
+	FILE* fp = fopen(path.c_str(), "wb");
+	if(!fp)
+		return false;
+
+	wfm->PrepareForCpuAccess();
+	auto achan = dynamic_cast<UniformAnalogWaveform*>(wfm);
+	auto dchan = dynamic_cast<UniformDigitalWaveform*>(wfm);
+	size_t len = wfm->size();
+
+	//Analog channels
+	const size_t samples_per_block = 10000;
+	if(achan)
+	{
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(achan->m_samples.GetCpuPointer() + i, sizeof(float), blocklen, fp))
+			{
+				LogError("file write error\n");
+				return false;
+			}
+		}
+	}
+	else if(dchan)
+	{
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			size_t blocklen = min(len-i, samples_per_block);
+
+			if(blocklen != fwrite(dchan->m_samples.GetCpuPointer() + i, sizeof(bool), blocklen, fp))
+			{
+				LogError("file write error\n");
+				return false;
+			}
+		}
+	}
+	else
+	{
+		//TODO: support other waveform types (buses, eyes, etc)
+		LogError("unrecognized sample type\n");
+		return false;
+	}
+
+	fclose(fp);
+	return true;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management

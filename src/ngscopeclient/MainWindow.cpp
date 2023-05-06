@@ -1762,6 +1762,8 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	outfs << m_graphEditorConfigBlob;
 	outfs.close();
 
+	//TODO: need to save/restore mapping of node editor IDs to pointers to ensure they remain stable
+
 	return true;
 }
 
