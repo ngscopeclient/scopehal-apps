@@ -124,7 +124,7 @@ public:
 
 	//Serialization
 	bool LoadConfiguration(const YAML::Node& node);
-	YAML::Node SerializeConfiguration(IDTable& table);
+	YAML::Node SerializeConfiguration();
 
 protected:
 	void RenderTimeline(float width, float height);

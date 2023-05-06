@@ -1741,11 +1741,14 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	node["markers"] = m_session.SerializeMarkers();
 
 	//TODO: waveform data
-	//SerializeWaveforms(table);
+	if(!m_session.SerializeWaveforms(table, dataDir))
+		return false;
 
 	//Save ImGui configuration
 	string ipath = dataDir + "/imgui.ini";
 	ImGui::SaveIniSettingsToDisk(ipath.c_str());
+
+	//TODO: save imgui_node_editor settings
 
 	return true;
 }
@@ -1871,7 +1874,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 
 		//Add the group once we've put everything in it
 		//(need IDs defined for all of the areas inside said group)
-		groups["group" + to_string(gid)] = group->SerializeConfiguration(table);
+		groups["group" + to_string(gid)] = group->SerializeConfiguration();
 	}
 
 	node["areas"] = areas;

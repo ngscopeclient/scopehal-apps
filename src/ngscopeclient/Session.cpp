@@ -42,6 +42,7 @@
 #include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
+#include <fstream>
 
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
@@ -872,6 +873,118 @@ YAML::Node Session::SerializeMarkers()
 
 	return node;
 }
+
+bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
+{
+	//Metadata nodes for each scope
+	std::map<Oscilloscope*, YAML::Node> metadataNodes;
+
+	//Serialize data from each history point
+	size_t numwfm = 0;
+	for(auto& hpoint : m_history.m_history)
+	{
+		auto timestamp = hpoint->m_time;
+
+		//Save each scope
+		//TODO: Do we want to change the directory hierarchy in a future file format schema?
+		//For now, we stick with scope / waveform.
+		//In the future we might want trigger group / waveform / scope.
+		for(auto it : hpoint->m_history)
+		{
+			auto scope = it.first;
+			auto& hist = it.second;
+
+			//Make the directory for the scope if needed
+			string scopedir = dataDir + "/scope_" + to_string(table[scope]) + "_waveforms";
+			#ifdef _WIN32
+				mkdir(scopedir.c_str());
+			#else
+				mkdir(scopedir.c_str(), 0755);
+			#endif
+
+			//Make directory for this waveform
+			string datdir = scopedir + "/waveform_" + to_string(numwfm);
+			#ifdef _WIN32
+				mkdir(datdir.c_str());
+			#else
+				mkdir(datdir.c_str(), 0755);
+			#endif
+
+			//Format metadata for this waveform
+			YAML::Node mnode;
+			mnode["timestamp"] = timestamp.first;
+			mnode["time_fsec"] = timestamp.second;
+			mnode["id"] = numwfm;
+			mnode["pinned"] = hpoint->m_pinned;
+			mnode["label"] = hpoint->m_nickname;
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto ochan = dynamic_cast<OscilloscopeChannel*>(scope->GetChannel(i));
+				if(!ochan)
+					continue;
+				for(size_t j=0; j<scope->GetChannel(i)->GetStreamCount(); j++)
+				{
+					StreamDescriptor stream(ochan, j);
+					if(hist.find(stream) == hist.end())
+						continue;
+					auto data = hist[stream];
+					if(data == nullptr)
+						continue;
+
+					//Got valid data, save the configuration for the channel
+					YAML::Node chnode;
+					chnode["index"] = i;
+					chnode["stream"] = j;
+					chnode["timescale"] = data->m_timescale;
+					chnode["trigphase"] = data->m_triggerPhase;
+					chnode["flags"] = (int)data->m_flags;
+					//don't serialize revision
+
+					auto sparse = dynamic_cast<SparseWaveformBase*>(data);
+					if(sparse)
+					{
+						chnode["format"] = "sparsev1";
+
+						//TODO: save the actual sample data
+					}
+					else
+					{
+						chnode["format"] = "densev1";
+
+						//TODO: save the actual sample data
+					}
+
+
+					mnode[string("ch") + to_string(i) + "s" + to_string(j)] = chnode;
+				}
+			}
+
+			metadataNodes[scope]["waveforms"][string("wfm") + to_string(numwfm)] = mnode;
+		}
+
+		numwfm ++;
+	}
+
+	//Write metadata files (by this point, data directories should have been created)
+	for(size_t i=0; i<m_oscilloscopes.size(); i++)
+	{
+		auto scope = m_oscilloscopes[i];
+		string scopename = "scope_" + to_string(table[scope]);
+		string scopedir = dataDir + "/" + scopename + "_waveforms";
+		string fname = scopedir + "/" + scopename + "_metadata.yml";
+
+		ofstream outfs(fname);
+		if(!outfs)
+			return false;
+		outfs << metadataNodes[scope];
+		outfs.close();
+	}
+
+	//TODO: how/when do we serialize data from filters that have cached state (eye patterns, memories, etc)?
+
+	return true;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
