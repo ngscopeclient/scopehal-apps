@@ -1063,12 +1063,13 @@ bool WaveformGroup::LoadConfiguration(const YAML::Node& node)
 	return true;
 }
 
-YAML::Node WaveformGroup::SerializeConfiguration()
+YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 {
 	YAML::Node node;
 	node["timebaseResolution"] = "fs";
 	node["pixelsPerXUnit"] = m_pixelsPerXUnit;
 	node["xAxisOffset"] = m_xAxisOffset;
+	node["name"] = m_title;
 
 	switch(m_xAxisCursorMode)
 	{
@@ -1087,6 +1088,12 @@ YAML::Node WaveformGroup::SerializeConfiguration()
 
 	node["xcursor0"] = m_xAxisCursorPositions[0];
 	node["xcursor1"] = m_xAxisCursorPositions[1];
+
+	for(size_t i=0; i<m_areas.size(); i++)
+	{
+		auto id = table[m_areas[i].get()];
+		node["areas"][string("area") + to_string(id)]["id"] = id;
+	}
 
 	return node;
 }

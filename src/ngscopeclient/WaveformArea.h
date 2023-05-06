@@ -406,7 +406,7 @@ public:
 
 	bool IsStreamBeingDisplayed(StreamDescriptor target);
 
-	void AddStream(StreamDescriptor desc);
+	void AddStream(StreamDescriptor desc, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 
 	bool IsCompatible(StreamDescriptor desc);
 

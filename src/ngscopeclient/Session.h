@@ -339,8 +339,9 @@ protected:
 	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
-	bool LoadWaveformData(const std::string& dataDir, IDTable& table);
+	bool LoadWaveformData(int version, const std::string& dataDir, IDTable& table);
 	bool LoadWaveformDataForScope(
+		int version,
 		const YAML::Node& node,
 		Oscilloscope* scope,
 		const std::string& dataDir,

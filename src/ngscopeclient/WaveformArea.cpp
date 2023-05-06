@@ -279,9 +279,12 @@ WaveformArea::~WaveformArea()
 /**
 	@brief Adds a new stream to this plot
  */
-void WaveformArea::AddStream(StreamDescriptor desc)
+void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const string& ramp)
 {
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>(desc));
+	auto chan = make_shared<DisplayedChannel>(desc);
+	chan->SetPersistenceEnabled(persistence);
+	chan->m_colorRamp = ramp;
+	m_displayedChannels.push_back(chan);
 }
 
 /**
@@ -1777,6 +1780,7 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	vmid -= zero_offset;
 
 	//Calculate grid positions
+	size_t igrid = 0;
 	for(float dv=0; ; dv += selected_step)
 	{
 		float vp = vmid + dv;
@@ -1796,7 +1800,9 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 		else
 			gridmap[vp] = yt;
 
-		if(gridmap.size() > 50)
+		//avoid infinite loop if grid settings are borked (zero range etc)
+		igrid ++;
+		if(igrid > 50)
 			break;
 
 		//Stop if we're off the edge

@@ -1081,7 +1081,6 @@ SCPITransport* MainWindow::MakeTransport(const string& trans, const string& args
  */
 void MainWindow::ShowErrorPopup(const string& title, const string& msg)
 {
-	ImGui::OpenPopup(title.c_str());
 	m_errorPopupTitle = title;
 	m_errorPopupMessage = msg;
 }
@@ -1091,12 +1090,19 @@ void MainWindow::ShowErrorPopup(const string& title, const string& msg)
  */
 void MainWindow::RenderErrorPopup()
 {
+	if(!m_errorPopupTitle.empty())
+		ImGui::OpenPopup(m_errorPopupTitle.c_str());
+
 	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::TextUnformatted(m_errorPopupMessage.c_str());
 		ImGui::Separator();
 		if(ImGui::Button("OK"))
+		{
+			m_errorPopupMessage = "";
+			m_errorPopupTitle = "";
 			ImGui::CloseCurrentPopup();
+		}
 		ImGui::EndPopup();
 	}
 }
@@ -1519,11 +1525,15 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 	}
 	catch(const YAML::BadFile& ex)
 	{
+		LogTrace("yaml badfile\n");
+
 		ShowErrorPopup("Cannot open file", string("Unable to open the file \"") + sessionPath + "\"!");
 		return;
 	}
 	catch(const YAML::Exception& ex)
 	{
+		LogTrace("yaml exception\n");
+
 		ShowErrorPopup(
 			"File loading error",
 			string("Could not load the file \"") + sessionPath + "\"!\n\n" +
@@ -1550,7 +1560,30 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
  */
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
-	return m_session.LoadFromYaml(node, dataDir, online);
+	if(!m_session.LoadFromYaml(node, dataDir, online))
+		return false;
+
+	//Load ImGui configuration
+	LogTrace("Loading ImGui configuration\n");
+	string ipath = dataDir + "/imgui.ini";
+	ImGui::LoadIniSettingsFromDisk(ipath.c_str());
+
+	/*
+	//Save imgui_node_editor settings
+	ofstream outfs(dataDir + "/filtergraph.json");
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Failed to save filter graph configuration",
+			"Unable to open filtergraph.json for writing");
+		return false;
+	}
+	outfs << m_graphEditorConfigBlob;
+	outfs.close();
+	*/
+
+	LogTrace("Load completed successfully\n");
+	return true;
 }
 
 bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table)
@@ -1571,14 +1604,16 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 		LogTrace("Creating group %s\n", gname.c_str());
 		auto group = make_shared<WaveformGroup>(this, gname);
 		m_waveformGroups.push_back(group);
-		table.emplace(gn["id"].as<int>(), group.get());
 
 		//Legacy file with no imgui config? auto dock the group next render
 		if(version < 2)
 			m_newWaveformGroups.push_back(group);
 
 		if(!group->LoadConfiguration(gn))
+		{
+			LogTrace("group loading failed\n");
 			return false;
+		}
 
 		//Waveform areas
 		auto gareas = gn["areas"];
@@ -1589,57 +1624,69 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 			auto aid = at.second["id"].as<int>();
 			LogTrace("Waveform area %d\n", aid);
 
-			//Find the area node
-			//Note that glscopeclient sessions use a list, without primary keys, so we just have to bruteforce search.
-			//Luckily there's not usually enough areas for this O(m*n) scaling to become problematic.
+			auto an = areas[string("area") + to_string(aid)];
+
+			//glscopeclient has separate stream/channel and overlays
 			if(version < 2)
 			{
-				bool found = false;
-				for(auto ait : areas)
+				auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+				if(!channel)	//don't crash on bad IDs or missing filters
+					continue;
+				size_t stream = 0;
+				if(an["stream"])
+					stream = an["stream"].as<int>();
+				auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+				group->AddArea(area);
+
+				//Add any overlays
+				auto overlays = an["overlays"];
+				for(auto jt : overlays)
 				{
-					auto an = ait.second;
-					if(aid != an["id"].as<int>())
-						continue;
-					found = true;
-
-					//We found the node for the area of interest, load everything in it
-
-					//glscopeclient has separate stream/channel and overlays
-					auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
-					if(!channel)	//don't crash on bad IDs or missing filters
-						continue;
-					size_t stream = 0;
-					if(an["stream"])
-						stream = an["stream"].as<int>();
-					auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
-					group->AddArea(area);
-
-					//Add any overlays
-					auto overlays = an["overlays"];
-					for(auto jt : overlays)
-					{
-						auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
-						stream = 0;
-						if(jt.second["stream"])
-							stream = jt.second["stream"].as<int>();
-						if(filter)
-							area->AddStream(StreamDescriptor(filter, stream));
-					}
-
-					//FIXME: This borks on some v1 files that are mislabeled as v0
-					/*
-					if (version == 0)
-						area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
-					else
-						area->SetPersistenceEnabled(an["persistence"].as<bool>());
-					*/
+					auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+					stream = 0;
+					if(jt.second["stream"])
+						stream = jt.second["stream"].as<int>();
+					if(filter)
+						area->AddStream(StreamDescriptor(filter, stream));
 				}
 
-				if(!found)
-					return false;
+				//FIXME: This borks on some v1 files that are mislabeled as v0
+				//For now, ignore persistence settings on all v0/v1 files
+				/*
+				if (version == 0)
+					area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+				else
+					area->SetPersistenceEnabled(an["persistence"].as<bool>());
+				*/
 			}
 
-			//TODO: ngscopeclient equivalent
+			//ngscopeclient has a single list of streams
+			else
+			{
+				shared_ptr<WaveformArea> area;
+
+				auto streams = an["streams"];
+				for(auto jt : streams)
+				{
+					auto chan = static_cast<OscilloscopeChannel*>(table[jt.second["channel"].as<int>()]);
+					auto stream = jt.second["stream"].as<int>();
+					auto persist = jt.second["persistence"].as<bool>();
+					auto ramp = jt.second["colorRamp"].as<string>();
+					if(chan)
+					{
+						//Make the waveform area if needed
+						if(!area)
+						{
+							area = make_shared<WaveformArea>(StreamDescriptor(chan, stream), group, this);
+							area->RemoveStream(0);
+						}
+
+						area->AddStream(StreamDescriptor(chan, stream), persist, ramp);
+					}
+				}
+
+				group->AddArea(area);
+			}
 		}
 	}
 
@@ -1658,6 +1705,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 
 	//ignore splitter configuration from legacy format as imgui now handles that
 
+	LogTrace("ui config loaded\n");
 	return true;
 }
 
@@ -1740,7 +1788,6 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 
 	//Save UI widgets
 	node["ui_config"] = SerializeUIConfiguration(table);
-	node["markers"] = m_session.SerializeMarkers();
 
 	//TODO: waveform data
 	if(!m_session.SerializeWaveforms(table, dataDir))
@@ -1761,8 +1808,6 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	}
 	outfs << m_graphEditorConfigBlob;
 	outfs.close();
-
-	//TODO: need to save/restore mapping of node editor IDs to pointers to ensure they remain stable
 
 	return true;
 }
@@ -1888,7 +1933,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 
 		//Add the group once we've put everything in it
 		//(need IDs defined for all of the areas inside said group)
-		groups["group" + to_string(gid)] = group->SerializeConfiguration();
+		groups["group" + to_string(gid)] = group->SerializeConfiguration(table);
 	}
 
 	node["areas"] = areas;
@@ -1897,6 +1942,10 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 	//don't write legacy "splitters" section
 
 	//TODO: save which dialogs are open so we can recreate properties dialogs etc
+
+	//TODO: need to save/restore mapping of node editor IDs to pointers to ensure they remain stable
+
+	node["markers"] = m_session.SerializeMarkers();
 
 	return node;
 }

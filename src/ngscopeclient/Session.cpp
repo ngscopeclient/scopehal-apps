@@ -237,15 +237,17 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		return false;
 	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"], table))
 		return false;
-	if(!LoadWaveformData(dataDir, table))
+	if(!LoadWaveformData(version, dataDir, table))
 		return false;
 
 	return true;
 }
 
 //TODO: this should run in a background thread or something to keep the UI responsive
-bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
+bool Session::LoadWaveformData(int version, const string& dataDir, IDTable& table)
 {
+	LogTrace("Loading waveform data\n");
+
 	//Load data for each scope
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
@@ -256,8 +258,11 @@ bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
-		if(!LoadWaveformDataForScope(docs[0], scope, dataDir, table))
+		if(!LoadWaveformDataForScope(version, docs[0], scope, dataDir, table))
+		{
+			LogTrace("Waveform data loading failed\n");
 			return false;
+		}
 	}
 
 	m_history.SetMaxToCurrentDepth();
@@ -269,11 +274,15 @@ bool Session::LoadWaveformData(const string& dataDir, IDTable& table)
 	@brief Loads waveform data for a single scope
  */
 bool Session::LoadWaveformDataForScope(
+	int version,
 	const YAML::Node& node,
 	Oscilloscope* scope,
 	const std::string& dataDir,
 	IDTable& table)
 {
+	LogTrace("Loading waveform data for scope \"%s\"\n", scope->m_nickname.c_str());
+	LogIndenter li;
+
 	TimePoint time(0, 0);
 	TimePoint newest(0, 0);
 
@@ -309,7 +318,12 @@ bool Session::LoadWaveformDataForScope(
 		int waveform_id = wfm["id"].as<int>();
 		bool pinned = false;
 		if(wfm["pinned"])
-			pinned = wfm["pinned"].as<int>();
+		{
+			if(version <= 1)
+				pinned = wfm["pinned"].as<int>();
+			else
+				pinned = wfm["pinned"].as<bool>();
+		}
 		string label;
 		if(wfm["label"])
 			label = wfm["label"].as<string>();
@@ -959,7 +973,7 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 						SerializeUniformWaveform(uniform, datapath);
 					}
 
-					mnode[string("ch") + to_string(i) + "s" + to_string(j)] = chnode;
+					mnode["channels"][string("ch") + to_string(i) + "s" + to_string(j)] = chnode;
 				}
 			}
 
@@ -973,9 +987,7 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		string scopename = "scope_" + to_string(table[scope]);
-		string scopedir = dataDir + "/" + scopename + "_waveforms";
-		string fname = scopedir + "/" + scopename + "_metadata.yml";
+		string fname = dataDir + "/scope_" + to_string(table[scope]) + "_metadata.yml";
 
 		ofstream outfs(fname);
 		if(!outfs)
