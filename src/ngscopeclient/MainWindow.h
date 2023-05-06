@@ -42,6 +42,7 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+#include "FilterGraphEditor.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
@@ -309,7 +310,10 @@ protected:
 	std::shared_ptr<Dialog> m_persistenceDialog;
 
 	///@brief Filter graph editor
-	std::shared_ptr<Dialog> m_graphEditor;
+	std::shared_ptr<FilterGraphEditor> m_graphEditor;
+
+	///@brief Config blob for filter graph editor
+	std::string m_graphEditorConfigBlob;
 
 	///@brief Measurements dialog
 	std::shared_ptr<MeasurementsDialog> m_measurementsDialog;
@@ -352,6 +356,10 @@ protected:
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 public:
 	bool LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table);
+
+	void OnGraphEditorConfigModified(const std::string& blob)
+	{ m_graphEditorConfigBlob = blob; }
+
 protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
@@ -372,6 +380,15 @@ protected:
 
 	///@brief Current session file path
 	std::string m_sessionFileName;
+
+	///@brief Current session data directory
+	std::string m_sessionDataDir;
+
+public:
+	std::string GetDataDir()
+	{ return m_sessionDataDir; }
+
+protected:
 
 	///@brief True if the pending file is to be opened online
 	bool m_openOnline;

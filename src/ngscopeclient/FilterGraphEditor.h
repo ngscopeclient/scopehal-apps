@@ -168,6 +168,12 @@ protected:
 
 	///@brief Input we're considering hooking a new channel up to
 	std::pair<FlowGraphNode*, int> m_createInput;
+
+	static bool SaveSettingsCallback(
+		const char* data,
+		size_t size,
+		ax::NodeEditor::SaveReasonFlags flags,
+		void* pThis);
 };
 
 #endif

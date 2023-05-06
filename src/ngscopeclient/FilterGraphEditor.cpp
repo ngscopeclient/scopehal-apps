@@ -32,7 +32,6 @@
 	@author Andrew D. Zonenberg
 	@brief Implementation of FilterGraphEditor
  */
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include "ngscopeclient.h"
 #include "FilterGraphEditor.h"
 #include "MainWindow.h"
@@ -59,6 +58,9 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	, m_parent(parent)
 	, m_nextID(1)
 {
+	m_config.SaveSettings = &FilterGraphEditor::SaveSettingsCallback;
+	m_config.UserPointer = this;
+
 	m_config.SettingsFile = "";
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
 }
@@ -1282,4 +1284,18 @@ ax::NodeEditor::LinkId FilterGraphEditor::GetID(pair<ax::NodeEditor::PinId, ax::
 	m_nextID ++;
 	m_linkMap.emplace(link, id);
 	return id;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Save configuration
+
+bool FilterGraphEditor::SaveSettingsCallback(
+	const char* data,
+	size_t size,
+	ax::NodeEditor::SaveReasonFlags /*flags*/,
+	void* pThis)
+{
+	auto ed = reinterpret_cast<FilterGraphEditor*>(pThis);
+	ed->m_parent->OnGraphEditorConfigModified(std::string(data, size));
+	return true;
 }

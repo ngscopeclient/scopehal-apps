@@ -1505,6 +1505,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		{
 			//If we get here, all good
 			m_sessionFileName = sessionPath;
+			m_sessionDataDir = datadir;
 
 			m_recentFiles[sessionPath] = time(nullptr);
 			SaveRecentFileList();
@@ -1704,6 +1705,7 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 
 	//Add to recent files list
 	m_sessionFileName = sessionPath;
+	m_sessionDataDir = datadir;
 	m_recentFiles[sessionPath] = time(nullptr);
 	SaveRecentFileList();
 }
@@ -1748,7 +1750,17 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	string ipath = dataDir + "/imgui.ini";
 	ImGui::SaveIniSettingsToDisk(ipath.c_str());
 
-	//TODO: save imgui_node_editor settings
+	//Save imgui_node_editor settings
+	ofstream outfs(dataDir + "/filtergraph.json");
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Failed to save filter graph configuration",
+			"Unable to open filtergraph.json for writing");
+		return false;
+	}
+	outfs << m_graphEditorConfigBlob;
+	outfs.close();
 
 	return true;
 }
