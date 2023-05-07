@@ -1730,6 +1730,16 @@ bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
 {
 	//TODO: all of the other dialog types
 
+	auto meters = node["meters"];
+	if(meters)
+	{
+		for(auto it : meters)
+		{
+			auto meter = static_cast<SCPIMultimeter*>(table[it.second.as<int>()]);
+			m_session.AddMultimeterDialog(meter);
+		}
+	}
+
 	//Single-instance dialogs
 
 	auto log = node["logviewer"];

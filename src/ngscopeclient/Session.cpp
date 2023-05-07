@@ -612,9 +612,16 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, 
 
 		//See if it's a scope
 		//(if no type specified, assume scope for backward compat)
-		if(!node["type"].IsDefined() || (node["type"].as<string>() == "oscilloscope") )
+		if(!inst["type"].IsDefined() || (inst["type"].as<string>() == "oscilloscope") )
 		{
 			if(!LoadOscilloscope(version, inst, online, table))
+				return false;
+		}
+
+		//Check other types
+		else if(inst["type"].as<string>() == "multimeter")
+		{
+			if(!LoadMultimeter(version, inst, online, table))
 				return false;
 		}
 
@@ -623,9 +630,58 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, 
 		{
 			m_mainWindow->ShowErrorPopup(
 				"File load error",
-				string("Instrument ") + nick.c_str() + " is of unknown type " + node["type"].as<string>());
+				string("Instrument ") + nick.c_str() + " is of unknown type " + inst["type"].as<string>());
 			return false;
 		}
+	}
+
+	return true;
+}
+
+SCPITransport* Session::CreateTransportForNode(const YAML::Node& node)
+{
+	//Create the scope
+	auto transport = SCPITransport::CreateTransport(node["transport"].as<string>(), node["args"].as<string>());
+
+	//Check if the transport failed to initialize
+	if((transport == nullptr) || !transport->IsConnected())
+	{
+		m_mainWindow->ShowErrorPopup(
+			"Unable to reconnect",
+			string("Failed to connect to instrument using connection string ") + node["args"].as<string>() +
+			"Loading in offline mode.");
+	}
+
+	return transport;
+}
+
+bool Session::VerifyInstrument(const YAML::Node& node, Instrument* inst)
+{
+	//Sanity check make/model/serial. If mismatch, stop
+	//TODO: preference to enforce serial match?
+	if(node["name"].as<string>() != inst->GetName())
+	{
+		m_mainWindow->ShowErrorPopup(
+			"Unable to reconnect",
+			string("Unable to connect to oscilloscope: instrument has model name \"") +
+			inst->GetName() + "\", save file has model name \"" + node["name"].as<string>()  + "\"");
+		return false;
+	}
+	else if(node["vendor"].as<string>() != inst->GetVendor())
+	{
+		m_mainWindow->ShowErrorPopup(
+			"Unable to reconnect",
+			string("Unable to connect to oscilloscope: instrument has vendor \"") +
+			inst->GetVendor() + "\", save file has vendor \"" + node["vendor"].as<string>()  + "\"");
+		return false;
+	}
+	else if(node["serial"].as<string>() != inst->GetSerial())
+	{
+		m_mainWindow->ShowErrorPopup(
+			"Unable to reconnect",
+			string("Unable to connect to oscilloscope: instrument has serial \"") +
+			inst->GetSerial() + "\", save file has serial \"" + node["serial"].as<string>()  + "\"");
+		return false;
 	}
 
 	return true;
@@ -651,48 +707,13 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online,
 		else
 		{
 			//Create the scope
-			auto transport = SCPITransport::CreateTransport(transtype, node["args"].as<string>());
+			auto transport = CreateTransportForNode(node);
 
-			//Check if the transport failed to initialize
-			if((transport == nullptr) || !transport->IsConnected())
-			{
-				m_mainWindow->ShowErrorPopup(
-					"Unable to reconnect",
-					string("Failed to connect to instrument using connection string ") + node["args"].as<string>() +
-					"Loading in offline mode.");
-			}
-
-			//All good, try to connect
-			else
+			if(transport)
 			{
 				scope = Oscilloscope::CreateOscilloscope(driver, transport);
-
-				//Sanity check make/model/serial. If mismatch, stop
-				string message;
-				bool fail = false;
-				if(node["name"].as<string>() != scope->GetName())
+				if(!VerifyInstrument(node, scope))
 				{
-					message = string("Unable to connect to oscilloscope: instrument has model name \"") +
-						scope->GetName() + "\", save file has model name \"" + node["name"].as<string>()  + "\"";
-					fail = true;
-				}
-				else if(node["vendor"].as<string>() != scope->GetVendor())
-				{
-					message = string("Unable to connect to oscilloscope: instrument has vendor \"") +
-						scope->GetVendor() + "\", save file has vendor \"" + node["vendor"].as<string>()  + "\"";
-					fail = true;
-				}
-				else if(node["serial"].as<string>() != scope->GetSerial())
-				{
-					message = string("Unable to connect to oscilloscope: instrument has serial \"") +
-						scope->GetSerial() + "\", save file has serial \"" + node["serial"].as<string>()  + "\"";
-					fail = true;
-				}
-
-				if(fail)
-				{
-					m_mainWindow->ShowErrorPopup( "Unable to reconnect", message);
-
 					delete scope;
 					scope = nullptr;
 				}
@@ -726,6 +747,66 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online,
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+
+	return true;
+}
+
+bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online, IDTable& table)
+{
+	SCPIMultimeter* meter = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if(transtype == "null" /*&& (driver != "demo")*/ )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the meter
+			auto transport = CreateTransportForNode(node);
+			if(transport)
+			{
+				meter = SCPIMultimeter::CreateMultimeter(driver, transport);
+				if(!VerifyInstrument(node, meter))
+				{
+					delete meter;
+					meter = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!meter)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+
+		//placeholder: there's no MockMultimeter yet
+		return true;
+	}
+
+	//Make any config settings to the instrument from our preference settings, then add it and we're good to go
+	//ApplyPreferences(meter);
+	table.emplace(node["id"].as<int>(), meter);
+	meter->LoadConfiguration(version, node, table);
+	AddMultimeter(meter, false);
 
 	return true;
 }
@@ -1251,7 +1332,7 @@ void Session::RemovePowerSupply(SCPIPowerSupply* psu)
 /**
 	@brief Adds a multimeter to the session
  */
-void Session::AddMultimeter(SCPIMultimeter* meter)
+void Session::AddMultimeter(SCPIMultimeter* meter, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -1260,9 +1341,20 @@ void Session::AddMultimeter(SCPIMultimeter* meter)
 	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state, this);
 
 	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
+	if(createDialog)
+		m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(meter);
+}
+
+/**
+	@brief Adds a multimeter dialog to the session
+
+	Low level helper, intended to be only used by file loading
+ */
+void Session::AddMultimeterDialog(SCPIMultimeter* meter)
+{
+	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter]->m_state, this));
 }
 
 /**

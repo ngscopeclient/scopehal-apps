@@ -126,6 +126,7 @@ public:
 	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session)
 		: m_meter(meter)
 		, m_shuttingDown(false)
+		, m_state(state)
 	{
 		MultimeterThreadArgs args(meter, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(MultimeterThread, args);
@@ -150,6 +151,9 @@ public:
 
 	///@brief Thread for polling the meter
 	std::unique_ptr<std::thread> m_thread;
+
+	///@brief State object
+	std::shared_ptr<MultimeterState> m_state;
 };
 
 /**
@@ -234,7 +238,8 @@ public:
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddLoad(SCPILoad* generator);
 	void RemoveLoad(SCPILoad* generator);
-	void AddMultimeter(SCPIMultimeter* meter);
+	void AddMultimeter(SCPIMultimeter* meter, bool createDialog = true);
+	void AddMultimeterDialog(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
 	void AddPowerSupply(SCPIPowerSupply* psu);
@@ -337,7 +342,10 @@ protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
 	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
+	SCPITransport* CreateTransportForNode(const YAML::Node& node);
+	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
 	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadMultimeter(int version, const YAML::Node& node, bool online, IDTable& table);
 	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
 	bool LoadWaveformData(int version, const std::string& dataDir, IDTable& table);
 	bool LoadWaveformDataForScope(
