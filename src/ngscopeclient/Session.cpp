@@ -794,15 +794,25 @@ YAML::Node Session::SerializeInstrumentConfiguration(IDTable& table)
 {
 	YAML::Node node;
 
-	for(auto scope : m_oscilloscopes)
+	auto instruments = GetInstruments();
+	for(auto inst : instruments)
 	{
-		auto instrumentConfig = scope->SerializeConfiguration(table);
-		if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
-			node["triggerdeskew"] = m_scopeDeskewCal[scope];
-		node["scope" + instrumentConfig["id"].as<string>()] = instrumentConfig;
-	}
+		auto config = inst->SerializeConfiguration(table);
 
-	//TODO: save other instrument types
+		//Save type fields so we know how to recreate the instrument
+		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
+		if(scope)
+		{
+			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
+				config["triggerdeskew"] = m_scopeDeskewCal[scope];
+			config["type"] = "oscilloscope";
+		}
+		else if(meter)
+			config["type"] = "multimeter";
+
+		node["inst" + config["id"].as<string>()] = config;
+	}
 
 	return node;
 }

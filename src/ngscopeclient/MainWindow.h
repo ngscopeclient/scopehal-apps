@@ -366,6 +366,8 @@ protected:
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
 	bool SetupDataDirectory(const std::string& dataDir);
 	YAML::Node SerializeUIConfiguration(IDTable& table);
+	YAML::Node SerializeDialogs(IDTable& table);
+	bool LoadDialogs(const YAML::Node& node, IDTable& table);
 
 	void RenderFileBrowser();
 

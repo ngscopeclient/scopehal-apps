@@ -60,7 +60,10 @@
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MeasurementsDialog.h"
+#include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PersistenceSettingsDialog.h"
+#include "PreferenceDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
@@ -1561,7 +1564,11 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
 	if(!m_session.LoadFromYaml(node, dataDir, online))
+	{
+		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state
+		CloseSession();
 		return false;
+	}
 
 	//Load ImGui configuration
 	LogTrace("Loading ImGui configuration\n");
@@ -1705,10 +1712,85 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 
 	//ignore splitter configuration from legacy format as imgui now handles that
 
+	auto dialogs = node["dialogs"];
+	if(dialogs)
+	{
+		if(!LoadDialogs(dialogs, table))
+			return false;
+	}
+
 	LogTrace("ui config loaded\n");
 	return true;
 }
 
+/**
+	@brief Load dialog configuration
+ */
+bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
+{
+	//TODO: all of the other dialog types
+
+	//Single-instance dialogs
+
+	auto log = node["logviewer"];
+	if(log && log.as<bool>())
+	{
+		m_logViewerDialog = make_shared<LogViewerDialog>(this);
+		AddDialog(m_logViewerDialog);
+	}
+
+	auto metrics = node["metrics"];
+	if(metrics && metrics.as<bool>())
+	{
+		m_metricsDialog = make_shared<MetricsDialog>(&m_session);
+		AddDialog(m_metricsDialog);
+	}
+
+	auto pref = node["preferences"];
+	if(pref && pref.as<bool>())
+	{
+		m_preferenceDialog = make_shared<PreferenceDialog>(m_session.GetPreferences());
+		AddDialog(m_preferenceDialog);
+	}
+
+	auto hist = node["history"];
+	if(hist && hist.as<bool>())
+	{
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
+		AddDialog(m_historyDialog);
+	}
+
+	auto time = node["timebase"];
+	if(time && time.as<bool>())
+		ShowTimebaseProperties();
+
+	auto trig = node["trigger"];
+	if(trig && trig.as<bool>())
+		ShowTriggerProperties();
+
+	auto persist = node["persistence"];
+	if(persist && persist.as<bool>())
+	{
+		m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+		AddDialog(m_persistenceDialog);
+	}
+
+	auto graph = node["filtergraph"];
+	if(graph && graph.as<bool>())
+	{
+		m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
+		AddDialog(m_graphEditor);
+	}
+
+	auto measure = node["measurements"];
+	if(measure && measure.as<bool>())
+	{
+		m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+		AddDialog(m_measurementsDialog);
+	}
+
+	return true;
+}
 
 /**
 	@brief Actually save a file (may be triggered by file|save or file|save as)
@@ -1948,9 +2030,94 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 	node["markers"] = m_session.SerializeMarkers();
 
 	//Serialize dialogs
-	YAML::Node dialogs;
+	node["dialogs"] = SerializeDialogs(table);
 
-	node["dialogs"] = dialogs;
+	return node;
+}
+
+/**
+	@brief Serializes the list of open dialogs
+ */
+YAML::Node MainWindow::SerializeDialogs(IDTable& table)
+{
+	YAML::Node node;
+
+	//Meter dialogs
+	if(!m_meterDialogs.empty())
+	{
+		YAML::Node mnode;
+
+		for(auto it : m_meterDialogs)
+		{
+			auto meter = it.first;
+			mnode[meter->m_nickname] = table.emplace(meter);
+		}
+
+		node["meters"] = mnode;
+	}
+
+	//TODO: generator dialogs
+	//TODO: rf generator dialogs
+	//TODO: SCPI console
+	//TODO: Channel properties
+	//TODO: protocol analyzers
+
+	/*
+	///@brief Map of multimeters to meter control dialogs
+	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
+
+	///@brief Map of generators to generator control dialogs
+	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
+
+	///@brief Map of RF generators to generator control dialogs
+	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
+
+	///@brief Map of instruments to SCPI console dialogs
+	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
+
+	///@brief Map of channels to properties dialogs
+	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
+
+	///@brief Map of filters to analyzer dialogs
+	std::map<PacketDecoder*, std::shared_ptr<ProtocolAnalyzerDialog> > m_protocolAnalyzerDialogs;
+
+	*/
+
+	//Logfile viewer has no separate settings
+	if(m_logViewerDialog)
+		node["logviewer"] = true;
+
+	//Metrics dialog has no separate settings
+	if(m_metricsDialog)
+		node["metrics"] = true;
+
+	//Preferences dialog has no separate settings
+	if(m_preferenceDialog)
+		node["preferences"] = true;
+
+	//History
+	if(m_historyDialog)
+		node["history"] = true;
+
+	//Timebase
+	if(m_timebaseDialog)
+		node["timebase"] = true;
+
+	//Trigger
+	if(m_triggerDialog)
+		node["trigger"] = true;
+
+	//Persistence settings
+	if(m_persistenceDialog)
+		node["persistence"] = true;
+
+	//Graph editor
+	if(m_graphEditor)
+		node["filtergraph"] = true;
+
+	//Measurements
+	if(m_measurementsDialog)
+		node["measurements"] = true;
 
 	return node;
 }
