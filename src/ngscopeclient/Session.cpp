@@ -804,7 +804,7 @@ bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online, I
 
 	//Make any config settings to the instrument from our preference settings, then add it and we're good to go
 	//ApplyPreferences(meter);
-	table.emplace(node["id"].as<int>(), meter);
+	table.emplace(node["meterid"].as<int>(), meter);
 	meter->LoadConfiguration(version, node, table);
 	AddMultimeter(meter, false);
 
@@ -890,7 +890,10 @@ YAML::Node Session::SerializeInstrumentConfiguration(IDTable& table)
 			config["type"] = "oscilloscope";
 		}
 		else if(meter)
+		{
 			config["type"] = "multimeter";
+			config["id"] = config["meterid"].as<int>();
+		}
 
 		node["inst" + config["id"].as<string>()] = config;
 	}
