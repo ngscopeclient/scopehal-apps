@@ -19,7 +19,7 @@ jobs:
     - run: git config --global core.autocrlf input
       shell: bash
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
         fetch-depth: 0
@@ -90,19 +90,19 @@ jobs:
         glscopeclient --help
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-windows
         path: msys2/*.zst
 
     - name: Upload Artifacts (portable zip)
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-windows-portable
         path: build/dist/windows_x64
 
     - name: Upload Artifacts (MSI)
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-windows.msi
         path: build/dist/*.msi
