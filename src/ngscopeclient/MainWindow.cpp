@@ -73,6 +73,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#include <sys/stat.h>
 #else
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -12,7 +12,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
 
@@ -97,7 +97,7 @@ jobs:
         make test
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-linux
         path: |
@@ -110,7 +110,7 @@ jobs:
           build/lib/scopeprotocols/libscopeprotocols.so
 
     - name: Upload Documentation
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
