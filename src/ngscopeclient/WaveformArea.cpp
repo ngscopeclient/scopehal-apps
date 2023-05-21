@@ -2419,6 +2419,9 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 
 			auto area = make_shared<WaveformArea>(sdrag, m_group, m_parent);
 			m_group->AddArea(area);
+
+			//Remove the stream from the originating waveform area
+			desc->first->RemoveStream(desc->second);
 		}
 
 		ImGui::EndDragDropTarget();

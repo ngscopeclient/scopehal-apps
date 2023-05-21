@@ -1632,45 +1632,86 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 			auto aid = at.second["id"].as<int>();
 			LogTrace("Waveform area %d\n", aid);
 
-			auto an = areas[string("area") + to_string(aid)];
-
-			//glscopeclient has separate stream/channel and overlays
 			if(version < 2)
 			{
-				auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
-				if(!channel)	//don't crash on bad IDs or missing filters
-					continue;
-				size_t stream = 0;
-				if(an["stream"])
-					stream = an["stream"].as<int>();
-				auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
-				group->AddArea(area);
-
-				//Add any overlays
-				auto overlays = an["overlays"];
-				for(auto jt : overlays)
+				//glscopeclient pre yaml-cpp refactor doesn't have named areas, need to bruteforce search for ID match
+				if(version == 0)
 				{
-					auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
-					stream = 0;
-					if(jt.second["stream"])
-						stream = jt.second["stream"].as<int>();
-					if(filter)
-						area->AddStream(StreamDescriptor(filter, stream));
+					for(auto kt : areas)
+					{
+						auto an = kt.second;
+						if(an["id"].as<int>() == aid)
+						{
+							auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+							if(!channel)	//don't crash on bad IDs or missing filters
+								break;
+							size_t stream = 0;
+							if(an["stream"])
+								stream = an["stream"].as<int>();
+							auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+							group->AddArea(area);
+
+							//Add any overlays
+							auto overlays = an["overlays"];
+							for(auto jt : overlays)
+							{
+								auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+								stream = 0;
+								if(jt.second["stream"])
+									stream = jt.second["stream"].as<int>();
+								if(filter)
+									area->AddStream(StreamDescriptor(filter, stream));
+							}
+
+							//FIXME: This borks on some v1 files that are mislabeled as v0
+							//For now, ignore persistence settings on all v0/v1 files
+							/*
+							if (version == 0)
+								area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+							else
+								area->SetPersistenceEnabled(an["persistence"].as<bool>());
+							*/
+
+							break;
+						}
+					}
 				}
 
-				//FIXME: This borks on some v1 files that are mislabeled as v0
-				//For now, ignore persistence settings on all v0/v1 files
-				/*
-				if (version == 0)
-					area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+				//post refactor, area nodes are named
 				else
-					area->SetPersistenceEnabled(an["persistence"].as<bool>());
-				*/
+				{
+					auto an = areas[string("area") + to_string(aid)];
+
+					auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+					if(!channel)	//don't crash on bad IDs or missing filters
+						continue;
+					size_t stream = 0;
+					if(an["stream"])
+						stream = an["stream"].as<int>();
+					auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+					group->AddArea(area);
+
+					//Add any overlays
+					auto overlays = an["overlays"];
+					for(auto jt : overlays)
+					{
+						auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+						stream = 0;
+						if(jt.second["stream"])
+							stream = jt.second["stream"].as<int>();
+						if(filter)
+							area->AddStream(StreamDescriptor(filter, stream));
+					}
+
+					//area->SetPersistenceEnabled(an["persistence"].as<bool>());
+				}
 			}
 
 			//ngscopeclient has a single list of streams
 			else
 			{
+				auto an = areas[string("area") + to_string(aid)];
+
 				shared_ptr<WaveformArea> area;
 
 				auto streams = an["streams"];
