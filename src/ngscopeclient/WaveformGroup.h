@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -121,6 +121,10 @@ public:
 	///@brief gets the waveform areas in this group
 	const std::vector< std::shared_ptr<WaveformArea> >& GetWaveformAreas()
 	{ return m_areas; }
+
+	//Serialization
+	bool LoadConfiguration(const YAML::Node& node);
+	YAML::Node SerializeConfiguration(IDTable& table);
 
 protected:
 	void RenderTimeline(float width, float height);

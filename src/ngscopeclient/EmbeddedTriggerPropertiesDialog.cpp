@@ -36,7 +36,7 @@ using namespace std;
 // Construction / destruction
 
 EmbeddedTriggerPropertiesDialog::EmbeddedTriggerPropertiesDialog(Oscilloscope* scope)
-	: EmbeddableDialog("Trigger", ImVec2(300, 400), true)
+	: EmbeddableDialog("Trigger", string("Trigger properties: ") + scope->m_nickname, ImVec2(300, 400), true)
 	, m_scope(scope)
 {
 	m_page = make_unique<TriggerPropertiesPage>(scope);

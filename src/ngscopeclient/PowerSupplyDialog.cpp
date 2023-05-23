@@ -43,7 +43,10 @@ using namespace std::chrono_literals;
 // Construction / destruction
 
 PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSupplyState> state, Session* session)
-	: Dialog(string("Power Supply: ") + psu->m_nickname, ImVec2(500, 400))
+	: Dialog(
+		string("Power Supply: ") + psu->m_nickname,
+		string("Power Supply: ") + psu->m_nickname,
+		ImVec2(500, 400))
 	, m_session(session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
 	, m_tstart(GetTime())

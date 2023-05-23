@@ -40,7 +40,7 @@
 class EmbeddableDialog : public Dialog
 {
 public:
-	EmbeddableDialog(const std::string& name, ImVec2 size, bool graphEditorMode = false);
+	EmbeddableDialog(const std::string& name, const std::string& id, ImVec2 size, bool graphEditorMode = false);
 	virtual ~EmbeddableDialog();
 
 protected:

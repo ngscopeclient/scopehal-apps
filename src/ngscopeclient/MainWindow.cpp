@@ -33,8 +33,10 @@
 	@brief Implementation of MainWindow
  */
 #include "ngscopeclient.h"
+#include "ngscopeclient-version.h"
 #include "MainWindow.h"
 #include "PreferenceTypes.h"
+#include "FileSystem.h"
 
 #include <iostream>
 #include <fstream>
@@ -58,12 +60,27 @@
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
 #include "MeasurementsDialog.h"
+#include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "PersistenceSettingsDialog.h"
+#include "PreferenceDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#include <sys/stat.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#endif
+
 
 using namespace std;
 
@@ -74,9 +91,9 @@ extern Event g_rerenderRequestedEvent;
 
 MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 #ifdef _DEBUG
-	: VulkanWindow("ngscopeclient [DEBUG BUILD]", queue)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " [DEBUG BUILD]", queue)
 #else
-	: VulkanWindow("ngscopeclient", queue)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION, queue)
 #endif
 	, m_showDemo(false)
 	, m_showPlot(false)
@@ -92,6 +109,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_toneMapTime(0)
 {
 	LoadRecentInstrumentList();
+	LoadRecentFileList();
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -225,81 +243,90 @@ shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /
 	return *m_waveformGroups.begin();
 }
 
-void MainWindow::OnScopeAdded(Oscilloscope* scope)
+/**
+	@brief Handles creation of a new oscilloscope
+
+	@param scope		The scope to add
+	@param createViews	True if we should add waveform areas for each enabled channel
+ */
+void MainWindow::OnScopeAdded(Oscilloscope* scope, bool createViews)
 {
 	LogTrace("Oscilloscope \"%s\" added\n", scope->m_nickname.c_str());
 	LogIndenter li;
 
-	//Add areas to it
-	//For now, one area per enabled channel
-	vector<StreamDescriptor> streams;
-
-	//Headless scope? Pick every channel.
-	if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
+	if(createViews)
 	{
-		LogTrace("Headless scope, enabling every analog channel\n");
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
-		{
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
-				continue;
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-			{
-				if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
-					streams.push_back(StreamDescriptor(chan, j));
-			}
-		}
+		//Add areas to it
+		//For now, one area per enabled channel
+		vector<StreamDescriptor> streams;
 
-		//Handle pure logic analyzers
-		if(streams.empty())
+		//Headless scope? Pick every channel.
+		if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
 		{
-			LogTrace("No analog channels found. Must be a logic analyzer. Enabling every digital channel\n");
-
+			LogTrace("Headless scope, enabling every analog channel\n");
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
 			{
 				auto chan = scope->GetOscilloscopeChannel(i);
 				if(!chan)
-				continue;
+					continue;
 				for(size_t j=0; j<chan->GetStreamCount(); j++)
 				{
-					if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
+					if(chan->GetType(j) == Stream::STREAM_TYPE_ANALOG)
 						streams.push_back(StreamDescriptor(chan, j));
 				}
 			}
-		}
-	}
 
-	//Use whatever was enabled when we connected
-	else
-	{
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
+			//Handle pure logic analyzers
+			if(streams.empty())
+			{
+				LogTrace("No analog channels found. Must be a logic analyzer. Enabling every digital channel\n");
+
+				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					auto chan = scope->GetOscilloscopeChannel(i);
+					if(!chan)
+					continue;
+					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					{
+						if(chan->GetType(j) == Stream::STREAM_TYPE_DIGITAL)
+							streams.push_back(StreamDescriptor(chan, j));
+					}
+				}
+			}
+		}
+
+		//Use whatever was enabled when we connected
+		else
 		{
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
-				continue;
-			if(!chan->IsEnabled())
-				continue;
+			for(size_t i=0; i<scope->GetChannelCount(); i++)
+			{
+				auto chan = scope->GetOscilloscopeChannel(i);
+				if(!chan)
+					continue;
+				if(!chan->IsEnabled())
+					continue;
 
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-				streams.push_back(StreamDescriptor(chan, j));
+				for(size_t j=0; j<chan->GetStreamCount(); j++)
+					streams.push_back(StreamDescriptor(chan, j));
+			}
+			LogTrace("%zu streams were active when we connected\n", streams.size());
+
+			//No streams? Grab the first one.
+			//TODO: can we always assume that the first channel is an oscilloscope channel?
+			if(streams.empty())
+			{
+				LogTrace("Enabling first channel\n");
+				streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
+			}
 		}
-		LogTrace("%zu streams were active when we connected\n", streams.size());
 
-		//No streams? Grab the first one.
-		//TODO: can we always assume that the first channel is an oscilloscope channel?
-		if(streams.empty())
+		//Add waveform areas for the streams
+		for(auto s : streams)
 		{
-			LogTrace("Enabling first channel\n");
-			streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
+			auto group = GetBestGroupForWaveform(s);
+			auto area = make_shared<WaveformArea>(s, group, this);
+			group->AddArea(area);
 		}
-	}
-
-	//Add waveform areas for the streams
-	for(auto s : streams)
-	{
-		auto group = GetBestGroupForWaveform(s);
-		auto area = make_shared<WaveformArea>(s, group, this);
-		group->AddArea(area);
 	}
 
 	//Refresh any dialogs that depend on it
@@ -1058,7 +1085,6 @@ SCPITransport* MainWindow::MakeTransport(const string& trans, const string& args
  */
 void MainWindow::ShowErrorPopup(const string& title, const string& msg)
 {
-	ImGui::OpenPopup(title.c_str());
 	m_errorPopupTitle = title;
 	m_errorPopupMessage = msg;
 }
@@ -1068,12 +1094,19 @@ void MainWindow::ShowErrorPopup(const string& title, const string& msg)
  */
 void MainWindow::RenderErrorPopup()
 {
+	if(!m_errorPopupTitle.empty())
+		ImGui::OpenPopup(m_errorPopupTitle.c_str());
+
 	if(ImGui::BeginPopupModal(m_errorPopupTitle.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::TextUnformatted(m_errorPopupMessage.c_str());
 		ImGui::Separator();
 		if(ImGui::Button("OK"))
+		{
+			m_errorPopupMessage = "";
+			m_errorPopupTitle = "";
 			ImGui::CloseCurrentPopup();
+		}
 		ImGui::EndPopup();
 	}
 }
@@ -1482,6 +1515,10 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		{
 			//If we get here, all good
 			m_sessionFileName = sessionPath;
+			m_sessionDataDir = datadir;
+
+			m_recentFiles[sessionPath] = time(nullptr);
+			SaveRecentFileList();
 		}
 
 		//Loading failed, clean up any half-loaded stuff
@@ -1492,11 +1529,15 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 	}
 	catch(const YAML::BadFile& ex)
 	{
+		LogTrace("yaml badfile\n");
+
 		ShowErrorPopup("Cannot open file", string("Unable to open the file \"") + sessionPath + "\"!");
 		return;
 	}
 	catch(const YAML::Exception& ex)
 	{
+		LogTrace("yaml exception\n");
+
 		ShowErrorPopup(
 			"File loading error",
 			string("Could not load the file \"") + sessionPath + "\"!\n\n" +
@@ -1523,33 +1564,284 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
  */
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
-	//TODO: actual load logic
-	//reference old code from glscopeclient below:
+	if(!m_session.LoadFromYaml(node, dataDir, online))
+	{
+		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state
+		CloseSession();
+		return false;
+	}
+
+	//Load ImGui configuration
+	LogTrace("Loading ImGui configuration\n");
+	string ipath = dataDir + "/imgui.ini";
+	ImGui::LoadIniSettingsFromDisk(ipath.c_str());
+
 	/*
-		//Load various sections of the file
-		IDTable table;
-		LoadInstruments(node["instruments"], reconnect, table);
-		LoadDecodes(node["decodes"], table);
-		LoadUIConfiguration(node["ui_config"], table);
-
-		//Create history windows for all of our scopes
-		for(auto scope : m_scopes)
-		{
-			auto hist = new HistoryWindow(this, scope);
-			hist->hide();
-			m_historyWindows[scope] = hist;
-		}
-
-		//Re-title the window for the new scope
-		SetTitle();
-
-		LoadWaveformData(filename, table);
+	//Save imgui_node_editor settings
+	ofstream outfs(dataDir + "/filtergraph.json");
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Failed to save filter graph configuration",
+			"Unable to open filtergraph.json for writing");
+		return false;
+	}
+	outfs << m_graphEditorConfigBlob;
+	outfs.close();
 	*/
 
-	ShowErrorPopup(
-		"Unimplemented",
-		"Session file loading is not finished, sorry!");
-	return false;
+	LogTrace("Load completed successfully\n");
+	return true;
+}
+
+bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table)
+{
+	LogTrace("Loading UI configuration\n");
+	LogIndenter li;
+
+	//ignore window width/height from legacy file format, imgui now handles that
+
+	//Waveform groups
+	auto groups = node["groups"];
+	auto areas = node["areas"];
+	for(auto it : groups)
+	{
+		//Create the group
+		auto gn = it.second;
+		auto gname = gn["name"].as<string>();
+		LogTrace("Creating group %s\n", gname.c_str());
+		auto group = make_shared<WaveformGroup>(this, gname);
+		m_waveformGroups.push_back(group);
+
+		//Legacy file with no imgui config? auto dock the group next render
+		if(version < 2)
+			m_newWaveformGroups.push_back(group);
+
+		if(!group->LoadConfiguration(gn))
+		{
+			LogTrace("group loading failed\n");
+			return false;
+		}
+
+		//Waveform areas
+		auto gareas = gn["areas"];
+		for(auto at : gareas)
+		{
+			//Load the area here (rather than by parsing the areas node as in glscopeclient)
+			//since ngscopeclient requires areas to be part of a group
+			auto aid = at.second["id"].as<int>();
+			LogTrace("Waveform area %d\n", aid);
+
+			if(version < 2)
+			{
+				//glscopeclient pre yaml-cpp refactor doesn't have named areas, need to bruteforce search for ID match
+				if(version == 0)
+				{
+					for(auto kt : areas)
+					{
+						auto an = kt.second;
+						if(an["id"].as<int>() == aid)
+						{
+							auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+							if(!channel)	//don't crash on bad IDs or missing filters
+								break;
+							size_t stream = 0;
+							if(an["stream"])
+								stream = an["stream"].as<int>();
+							auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+							group->AddArea(area);
+
+							//Add any overlays
+							auto overlays = an["overlays"];
+							for(auto jt : overlays)
+							{
+								auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+								stream = 0;
+								if(jt.second["stream"])
+									stream = jt.second["stream"].as<int>();
+								if(filter)
+									area->AddStream(StreamDescriptor(filter, stream));
+							}
+
+							//FIXME: This borks on some v1 files that are mislabeled as v0
+							//For now, ignore persistence settings on all v0/v1 files
+							/*
+							if (version == 0)
+								area->SetPersistenceEnabled(an["persistence"].as<int>() == 1);
+							else
+								area->SetPersistenceEnabled(an["persistence"].as<bool>());
+							*/
+
+							break;
+						}
+					}
+				}
+
+				//post refactor, area nodes are named
+				else
+				{
+					auto an = areas[string("area") + to_string(aid)];
+
+					auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+					if(!channel)	//don't crash on bad IDs or missing filters
+						continue;
+					size_t stream = 0;
+					if(an["stream"])
+						stream = an["stream"].as<int>();
+					auto area = make_shared<WaveformArea>(StreamDescriptor(channel, stream), group, this);
+					group->AddArea(area);
+
+					//Add any overlays
+					auto overlays = an["overlays"];
+					for(auto jt : overlays)
+					{
+						auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+						stream = 0;
+						if(jt.second["stream"])
+							stream = jt.second["stream"].as<int>();
+						if(filter)
+							area->AddStream(StreamDescriptor(filter, stream));
+					}
+
+					//area->SetPersistenceEnabled(an["persistence"].as<bool>());
+				}
+			}
+
+			//ngscopeclient has a single list of streams
+			else
+			{
+				auto an = areas[string("area") + to_string(aid)];
+
+				shared_ptr<WaveformArea> area;
+
+				auto streams = an["streams"];
+				for(auto jt : streams)
+				{
+					auto chan = static_cast<OscilloscopeChannel*>(table[jt.second["channel"].as<int>()]);
+					auto stream = jt.second["stream"].as<int>();
+					auto persist = jt.second["persistence"].as<bool>();
+					auto ramp = jt.second["colorRamp"].as<string>();
+					if(chan)
+					{
+						//Make the waveform area if needed
+						if(!area)
+						{
+							area = make_shared<WaveformArea>(StreamDescriptor(chan, stream), group, this);
+							area->RemoveStream(0);
+						}
+
+						area->AddStream(StreamDescriptor(chan, stream), persist, ramp);
+					}
+				}
+
+				group->AddArea(area);
+			}
+		}
+	}
+
+	//Markers
+	auto markers = node["markers"];
+	if(markers)
+	{
+		for(auto it : markers)
+		{
+			auto inode = it.second;
+			TimePoint timestamp(inode["timestamp"].as<int64_t>(), inode["time_fsec"].as<int64_t>());
+			for(auto jt : inode["markers"])
+				m_session.AddMarker(Marker(timestamp, jt.second["offset"].as<int64_t>(), jt.second["name"].as<string>()));
+		}
+	}
+
+	//ignore splitter configuration from legacy format as imgui now handles that
+
+	auto dialogs = node["dialogs"];
+	if(dialogs)
+	{
+		if(!LoadDialogs(dialogs, table))
+			return false;
+	}
+
+	LogTrace("ui config loaded\n");
+	return true;
+}
+
+/**
+	@brief Load dialog configuration
+ */
+bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
+{
+	//TODO: all of the other dialog types
+
+	auto meters = node["meters"];
+	if(meters)
+	{
+		for(auto it : meters)
+		{
+			auto meter = static_cast<SCPIMultimeter*>(table[it.second.as<int>()]);
+			m_session.AddMultimeterDialog(meter);
+		}
+	}
+
+	//Single-instance dialogs
+
+	auto log = node["logviewer"];
+	if(log && log.as<bool>())
+	{
+		m_logViewerDialog = make_shared<LogViewerDialog>(this);
+		AddDialog(m_logViewerDialog);
+	}
+
+	auto metrics = node["metrics"];
+	if(metrics && metrics.as<bool>())
+	{
+		m_metricsDialog = make_shared<MetricsDialog>(&m_session);
+		AddDialog(m_metricsDialog);
+	}
+
+	auto pref = node["preferences"];
+	if(pref && pref.as<bool>())
+	{
+		m_preferenceDialog = make_shared<PreferenceDialog>(m_session.GetPreferences());
+		AddDialog(m_preferenceDialog);
+	}
+
+	auto hist = node["history"];
+	if(hist && hist.as<bool>())
+	{
+		m_historyDialog = make_shared<HistoryDialog>(m_session.GetHistory(), m_session, *this);
+		AddDialog(m_historyDialog);
+	}
+
+	auto time = node["timebase"];
+	if(time && time.as<bool>())
+		ShowTimebaseProperties();
+
+	auto trig = node["trigger"];
+	if(trig && trig.as<bool>())
+		ShowTriggerProperties();
+
+	auto persist = node["persistence"];
+	if(persist && persist.as<bool>())
+	{
+		m_persistenceDialog = make_shared<PersistenceSettingsDialog>(*this);
+		AddDialog(m_persistenceDialog);
+	}
+
+	auto graph = node["filtergraph"];
+	if(graph && graph.as<bool>())
+	{
+		m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
+		AddDialog(m_graphEditor);
+	}
+
+	auto measure = node["measurements"];
+	if(measure && measure.as<bool>())
+	{
+		m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+		AddDialog(m_measurementsDialog);
+	}
+
+	return true;
 }
 
 /**
@@ -1560,42 +1852,44 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 	//Stop the trigger so we don't have data races if a waveform comes in mid-save
 	m_session.StopTrigger();
 
+	//Saving the file conflicts with all other waveform data operations
+	lock_guard<shared_mutex> lock(m_session.GetWaveformDataMutex());
+
 	//Get the data directory for the session
 	string base = sessionPath.substr(0, sessionPath.length() - strlen(".scopesession"));
 	string datadir = base + "_data";
 	LogDebug("Saving session file \"%s\" (data directory %s)\n", sessionPath.c_str(), datadir.c_str());
 
+	//Serialize the session
 	YAML::Node node{};
+	if(!SaveSessionToYaml(node, datadir))
+		return;
 
-	//Serialization successful
-	if(SaveSessionToYaml(node, datadir))
+	//Write the generated YAML to disk
+	ofstream outfs(sessionPath);
+	if(!outfs)
 	{
-		ofstream outfs(sessionPath);
-		if(!outfs)
-		{
-			ShowErrorPopup(
-				"Cannot open file",
-				string("Failed to open output session file \"") + sessionPath + "\" for writing");
-			return;
-		}
-
-		outfs << node;
-		outfs.close();
-
-		if(!outfs)
-		{
-			ShowErrorPopup(
-				"Write failed",
-				string("Failed to write session file \"") + sessionPath + "\"");
-		}
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output session file \"") + sessionPath + "\" for writing");
+		return;
 	}
 
-	//Serialization failed
-	else
+	outfs << node;
+	outfs.close();
+
+	if(!outfs)
 	{
-		//Do not print any error message; SaveSessionFromYaml() is responsible for calling ShowErrorPopup()
-		//if something goes wrong there.
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write session file \"") + sessionPath + "\"");
 	}
+
+	//Add to recent files list
+	m_sessionFileName = sessionPath;
+	m_sessionDataDir = datadir;
+	m_recentFiles[sessionPath] = time(nullptr);
+	SaveRecentFileList();
 }
 
 /**
@@ -1608,11 +1902,359 @@ void MainWindow::DoSaveFile(const string& sessionPath)
  */
 bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 {
-	ShowErrorPopup(
-		"Unimplemented",
-		"Session serialization is not finished, sorry!");
+	if(!SetupDataDirectory(dataDir))
+		return false;
 
-	//DEBUG: return true even though "unimplemented" is technically a failure
-	//so we can test the rest of the file write code path
+	IDTable table;
+
+	/*
+		version unspecified (treated as version 0): original string concatenation based glscopeclient impl
+		version 1: yaml-cpp glscopeclient
+		version 2: initial ngscopeclient
+	 */
+	node["version"] = 2;
+
+	//Save the session state
+	node["metadata"]  = m_session.SerializeMetadata();
+	node["instruments"] = m_session.SerializeInstrumentConfiguration(table);
+	if(!Filter::GetAllInstances().empty())
+		node["decodes"] = m_session.SerializeFilterConfiguration(table);
+
+	//Save UI widgets
+	node["ui_config"] = SerializeUIConfiguration(table);
+
+	//TODO: waveform data
+	if(!m_session.SerializeWaveforms(table, dataDir))
+		return false;
+
+	//Save ImGui configuration
+	string ipath = dataDir + "/imgui.ini";
+	ImGui::SaveIniSettingsToDisk(ipath.c_str());
+
+	//Save imgui_node_editor settings
+	ofstream outfs(dataDir + "/filtergraph.json");
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Failed to save filter graph configuration",
+			"Unable to open filtergraph.json for writing");
+		return false;
+	}
+	outfs << m_graphEditorConfigBlob;
+	outfs.close();
+
 	return true;
 }
+
+/**
+	@brief Make sure the data directory exists
+ */
+bool MainWindow::SetupDataDirectory(const string& dataDir)
+{
+	//See if the directory exists
+	bool dir_exists = false;
+
+#ifndef _WIN32
+	int hfile = open(dataDir.c_str(), O_RDONLY);
+	if(hfile >= 0)
+	{
+		//It exists as a file. Reopen and check if it's a directory
+		::close(hfile);
+		hfile = open(dataDir.c_str(), O_RDONLY | O_DIRECTORY);
+
+		//If this open works, it's a directory.
+		if(hfile >= 0)
+		{
+			::close(hfile);
+			dir_exists = true;
+		}
+
+		//Data dir exists, but it's something else! Error out
+		else
+		{
+			ShowErrorPopup(
+				"Cannot save session",
+				string("The requested data directory ") + dataDir + " already exists, but is not a directory!");
+			return false;
+		}
+	}
+#else
+	auto fileType = GetFileAttributes(dataDir.c_str());
+
+	// Check if any file exists at this path
+	if(fileType != INVALID_FILE_ATTRIBUTES)
+	{
+		if(fileType & FILE_ATTRIBUTE_DIRECTORY)
+		{
+			// directory exists
+			dir_exists = true;
+		}
+		else
+		{
+			// Its some other file
+			ShowErrorPopup(
+				"Cannot save session",
+				string("The requested data directory ") + dataDir + " already exists, but is not a directory!");
+			return false;
+		}
+	}
+#endif
+
+	//Create the directory we're saving to (if needed)
+	if(!dir_exists)
+	{
+#ifdef _WIN32
+		auto result = mkdir(dataDir.c_str());
+#else
+		auto result = mkdir(dataDir.c_str(), 0755);
+#endif
+
+		if(0 != result)
+		{
+			ShowErrorPopup(
+				"Failed to save session",
+				string("The data directory ") + dataDir + " could not be created!");
+			return false;
+		}
+	}
+
+	//Remove any existing waveform data
+	char cwd[PATH_MAX];
+	getcwd(cwd, PATH_MAX);
+
+	chdir(dataDir.c_str());
+	const auto directories = ::Glob("scope_*", true);
+	for(const auto& directory: directories)
+		::RemoveDirectory(directory);
+
+	chdir(cwd);
+
+	return true;
+}
+
+/**
+	@brief Serialize waveform areas etc to a YAML::Node
+ */
+YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
+{
+	YAML::Node node;
+
+	//don't write legacy "window" section
+
+	//Waveform areas are hierarchical internally, but written as separate area and group headings
+	YAML::Node areas;
+	YAML::Node groups;
+	for(auto group : m_waveformGroups)
+	{
+		int gid = table.emplace(group.get());
+
+		auto& wareas = group->GetWaveformAreas();
+		for(auto area : wareas)
+		{
+			YAML::Node areaNode;
+			int id = table.emplace(area.get());
+			areaNode["id"] = id;
+
+			//Legacy glscopeclient format had one "channel" and zero or more "overlays".
+			//Now we just have a single "streams" array
+			YAML::Node streamNode;
+			for(size_t i=0; i<area->GetStreamCount(); i++)
+				streamNode["stream" + to_string(i)] = area->GetDisplayedChannel(i)->Serialize(table);
+
+			areaNode["streams"] = streamNode;
+			areas["area" + to_string(id)] = areaNode;
+		}
+
+		//Add the group once we've put everything in it
+		//(need IDs defined for all of the areas inside said group)
+		groups["group" + to_string(gid)] = group->SerializeConfiguration(table);
+	}
+
+	node["areas"] = areas;
+	node["groups"] = groups;
+
+	//don't write legacy "splitters" section
+
+	//TODO: save which dialogs are open so we can recreate properties dialogs etc
+
+	//TODO: need to save/restore mapping of node editor IDs to pointers to ensure they remain stable
+
+	node["markers"] = m_session.SerializeMarkers();
+
+	//Serialize dialogs
+	node["dialogs"] = SerializeDialogs(table);
+
+	return node;
+}
+
+/**
+	@brief Serializes the list of open dialogs
+ */
+YAML::Node MainWindow::SerializeDialogs(IDTable& table)
+{
+	YAML::Node node;
+
+	//Meter dialogs
+	if(!m_meterDialogs.empty())
+	{
+		YAML::Node mnode;
+
+		for(auto it : m_meterDialogs)
+		{
+			auto meter = it.first;
+			mnode[meter->m_nickname] = table.emplace(meter);
+		}
+
+		node["meters"] = mnode;
+	}
+
+	//TODO: generator dialogs
+	//TODO: rf generator dialogs
+	//TODO: SCPI console
+	//TODO: Channel properties
+	//TODO: protocol analyzers
+
+	/*
+	///@brief Map of multimeters to meter control dialogs
+	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
+
+	///@brief Map of generators to generator control dialogs
+	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
+
+	///@brief Map of RF generators to generator control dialogs
+	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
+
+	///@brief Map of instruments to SCPI console dialogs
+	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
+
+	///@brief Map of channels to properties dialogs
+	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
+
+	///@brief Map of filters to analyzer dialogs
+	std::map<PacketDecoder*, std::shared_ptr<ProtocolAnalyzerDialog> > m_protocolAnalyzerDialogs;
+
+	*/
+
+	//Logfile viewer has no separate settings
+	if(m_logViewerDialog)
+		node["logviewer"] = true;
+
+	//Metrics dialog has no separate settings
+	if(m_metricsDialog)
+		node["metrics"] = true;
+
+	//Preferences dialog has no separate settings
+	if(m_preferenceDialog)
+		node["preferences"] = true;
+
+	//History
+	if(m_historyDialog)
+		node["history"] = true;
+
+	//Timebase
+	if(m_timebaseDialog)
+		node["timebase"] = true;
+
+	//Trigger
+	if(m_triggerDialog)
+		node["trigger"] = true;
+
+	//Persistence settings
+	if(m_persistenceDialog)
+		node["persistence"] = true;
+
+	//Graph editor
+	if(m_graphEditor)
+		node["filtergraph"] = true;
+
+	//Measurements
+	if(m_measurementsDialog)
+		node["measurements"] = true;
+
+	return node;
+}
+
+void MainWindow::SaveRecentFileList()
+{
+	//Make a reverse mapping
+	std::map<time_t, vector<string> > reverseMap;
+	for(auto it : m_recentFiles)
+		reverseMap[it.second].push_back(it.first);
+
+	//Deduplicate timestamps
+	set<time_t> timestampsDeduplicated;
+	for(auto it : m_recentFiles)
+		timestampsDeduplicated.emplace(it.second);
+
+	//Sort the list by most recent
+	vector<time_t> timestamps;
+	for(auto t : timestampsDeduplicated)
+		timestamps.push_back(t);
+	std::sort(timestamps.rbegin(), timestamps.rend());
+
+	//Add new ones
+	int nleft = m_session.GetPreferences().GetInt("Files.max_recent_files");
+
+	//Generate the output data
+	YAML::Node node{};
+	int j = 0;
+	for(auto t : timestamps)
+	{
+		auto paths = reverseMap[t];
+		for(auto fpath : paths)
+		{
+			YAML::Node child;
+			child["path"] = fpath;
+			child["timestamp"] = t;
+
+			node[string("file") + to_string(j)] = child;
+			j++;
+		}
+
+		nleft --;
+		if(nleft == 0)
+			break;
+	}
+
+	//Save to file
+	auto fname = m_session.GetPreferences().GetConfigDirectory() + "/recentfiles.yml";
+	ofstream outfs(fname);
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open recent-files file \"") + fname + "\" for writing");
+		return;
+	}
+	outfs << node;
+	outfs.close();
+}
+
+void MainWindow::LoadRecentFileList()
+{
+	try
+	{
+		auto docs = YAML::LoadAllFromFile(m_session.GetPreferences().GetConfigDirectory() + "/recentfiles.yml");
+		if(docs.empty())
+			return;
+		auto node = docs[0];
+
+		for(auto it : node)
+		{
+			auto inst = it.second;
+			m_recentFiles[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+		}
+	}
+	catch(const YAML::BadFile& ex)
+	{
+		LogDebug("Unable to open recently used files list (bad file)\n");
+		return;
+	}
+	catch(const YAML::ParserException& ex)
+	{
+		LogDebug("Unable to open recently used files list (parser exception)\n");
+		return;
+	}
+
+}
+

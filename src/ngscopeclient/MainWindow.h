@@ -42,6 +42,7 @@
 #include "VulkanWindow.h"
 #include "WaveformGroup.h"
 
+#include "FilterGraphEditor.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
@@ -102,7 +103,7 @@ public:
 	void AddDialog(std::shared_ptr<Dialog> dlg);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
 
-	void OnScopeAdded(Oscilloscope* scope);
+	void OnScopeAdded(Oscilloscope* scope, bool createViews);
 
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
@@ -309,7 +310,10 @@ protected:
 	std::shared_ptr<Dialog> m_persistenceDialog;
 
 	///@brief Filter graph editor
-	std::shared_ptr<Dialog> m_graphEditor;
+	std::shared_ptr<FilterGraphEditor> m_graphEditor;
+
+	///@brief Config blob for filter graph editor
+	std::string m_graphEditorConfigBlob;
 
 	///@brief Measurements dialog
 	std::shared_ptr<MeasurementsDialog> m_measurementsDialog;
@@ -350,9 +354,21 @@ protected:
 	void OnOpenFile(bool online);
 	void DoOpenFile(const std::string& sessionPath, bool online);
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
+public:
+	bool LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table);
+
+	void OnGraphEditorConfigModified(const std::string& blob)
+	{ m_graphEditorConfigBlob = blob; }
+
+protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
+	bool SetupDataDirectory(const std::string& dataDir);
+	YAML::Node SerializeUIConfiguration(IDTable& table);
+	YAML::Node SerializeDialogs(IDTable& table);
+	bool LoadDialogs(const YAML::Node& node, IDTable& table);
+
 	void RenderFileBrowser();
 
 	enum
@@ -366,6 +382,15 @@ protected:
 
 	///@brief Current session file path
 	std::string m_sessionFileName;
+
+	///@brief Current session data directory
+	std::string m_sessionDataDir;
+
+public:
+	std::string GetDataDir()
+	{ return m_sessionDataDir; }
+
+protected:
 
 	///@brief True if the pending file is to be opened online
 	bool m_openOnline;
@@ -383,6 +408,14 @@ protected:
 	void LoadRecentInstrumentList();
 	void SaveRecentInstrumentList();
 
+	/**
+		@brief List of recently used files
+	 */
+	std::map<std::string, time_t> m_recentFiles;
+
+	void LoadRecentFileList();
+	void SaveRecentFileList();
+
 public:
 	void AddToRecentInstrumentList(SCPIInstrument* inst);
 
@@ -395,8 +428,10 @@ protected:
 	std::string m_errorPopupMessage;
 
 	void RenderErrorPopup();
+public:
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
+protected:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Graphics items
 

@@ -133,7 +133,10 @@ RFGeneratorDialog::RFGeneratorDialog(
 	SCPIRFSignalGenerator* generator,
 	shared_ptr<RFSignalGeneratorState> state,
 	Session* session)
-	: Dialog(string("RF Generator: ") + generator->m_nickname, ImVec2(400, 350))
+	: Dialog(
+		string("RF Generator: ") + generator->m_nickname,
+		string("RF Generator: ") + generator->m_nickname,
+		ImVec2(400, 350))
 	, m_session(session)
 	, m_state(state)
 	, m_generator(generator)

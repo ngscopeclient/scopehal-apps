@@ -25,7 +25,9 @@ jobs:
           yaml-cpp \
           gtkmm3 \
           glew \
-          glfw
+          glfw \
+          catch2 \
+          libomp
 
     - name: Clone and Build FFTS Library
       run: |
@@ -37,18 +39,6 @@ jobs:
           -DENABLE_SHARED=ON \
           ..
         make -j4
-        sudo make install
-        popd
-
-    - name: Clone and Build Catch2 Library
-      run: |
-        git clone https://github.com/catchorg/Catch2 /tmp/catch2
-        pushd /tmp/catch2
-        git checkout v2.13.5
-        mkdir build
-        cd build
-        cmake ..
-        make -j 4
         sudo make install
         popd
 
@@ -69,8 +59,9 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
-          ninja
+        ninja
 
     - name: Run Tests
       if: ${{ false }} # Temporary disable Run Tests

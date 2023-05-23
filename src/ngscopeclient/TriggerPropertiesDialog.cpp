@@ -200,7 +200,7 @@ void TriggerPropertiesPage::FindAllStreams(vector<StreamDescriptor>& streams)
 // Construction / destruction
 
 TriggerPropertiesDialog::TriggerPropertiesDialog(Session* session)
-	: Dialog("Trigger", ImVec2(300, 400))
+	: Dialog("Trigger", "Trigger", ImVec2(300, 400))
 	, m_session(session)
 {
 	Refresh();
@@ -250,7 +250,7 @@ void TriggerPropertiesDialog::Refresh()
  */
 bool TriggerPropertiesDialog::DoRender()
 {
-	float width = 10 * ImGui::GetFontSize();
+	//float width = 10 * ImGui::GetFontSize();
 
 	for(size_t i=0; i<m_pages.size(); i++)
 	{

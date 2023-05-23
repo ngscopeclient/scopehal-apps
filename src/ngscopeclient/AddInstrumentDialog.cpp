@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
-	: Dialog(title, ImVec2(600, 150))
+	: Dialog(title, "AddInstrument", ImVec2(600, 150))
 	, m_session(session)
 	, m_nickname(nickname)
 	, m_selectedDriver(0)

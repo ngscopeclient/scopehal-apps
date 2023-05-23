@@ -35,8 +35,8 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-EmbeddableDialog::EmbeddableDialog(const string& name, ImVec2 size, bool graphEditorMode)
-	: Dialog(name, size)
+EmbeddableDialog::EmbeddableDialog(const string& name, const string& id, ImVec2 size, bool graphEditorMode)
+	: Dialog(name, id, size)
 	, m_graphEditorMode(graphEditorMode)
 {
 

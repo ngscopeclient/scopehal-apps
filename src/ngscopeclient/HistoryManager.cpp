@@ -133,7 +133,20 @@ HistoryManager::~HistoryManager()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // History processing
 
-void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
+/**
+	@brief Adds new data to the history
+
+	@param scopes		The instruments to add
+	@param deleteOld	True to delete old data that rolled off the end of the history buffer
+						Set false when loading waveforms from a sessio
+	@param pin			True to pin into history
+	@param nick			Nickname
+ */
+void HistoryManager::AddHistory(
+	const vector<Oscilloscope*>& scopes,
+	bool deleteOld,
+	bool pin,
+	string nick)
 {
 	bool foundTimestamp = false;
 	TimePoint tp(0,0);
@@ -169,7 +182,8 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 	auto pt = make_shared<HistoryPoint>();
 	m_history.push_back(pt);
 	pt->m_time = tp;
-	pt->m_pinned = false;
+	pt->m_pinned = pin;
+	pt->m_nickname = nick;
 
 	//Add waveforms
 	for(auto scope : scopes)
@@ -190,29 +204,32 @@ void HistoryManager::AddHistory(const vector<Oscilloscope*>& scopes)
 
 	//TODO: check history size in MB/GB etc
 	//TODO: convert older stuff to disk, free GPU memory, etc?
-	while(m_history.size() > (size_t) m_maxDepth)
+	if(deleteOld)
 	{
-		bool deletedSomething = false;
-
-		//Delete first un-pinned entry
-		for(auto it = m_history.begin(); it != m_history.end(); it++)
+		while(m_history.size() > (size_t) m_maxDepth)
 		{
-			auto& point = (*it);
-			if(point->m_pinned)
-				continue;
-			if(!m_session.GetMarkers(point->m_time).empty())
-				continue;
+			bool deletedSomething = false;
 
-			m_session.RemoveMarkers(point->m_time);
-			m_session.RemovePackets(point->m_time);
-			m_history.erase(it);
-			deletedSomething = true;
-			break;
+			//Delete first un-pinned entry
+			for(auto it = m_history.begin(); it != m_history.end(); it++)
+			{
+				auto& point = (*it);
+				if(point->m_pinned)
+					continue;
+				if(!m_session.GetMarkers(point->m_time).empty())
+					continue;
+
+				m_session.RemoveMarkers(point->m_time);
+				m_session.RemovePackets(point->m_time);
+				m_history.erase(it);
+				deletedSomething = true;
+				break;
+			}
+
+			//If nothing deleted, all remaining items are pinned. Stop.
+			if(!deletedSomething)
+				break;
 		}
-
-		//If nothing deleted, all remaining items are pinned. Stop.
-		if(!deletedSomething)
-			break;
 	}
 }
 

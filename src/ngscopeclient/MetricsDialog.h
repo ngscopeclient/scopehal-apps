@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -32,8 +32,8 @@
 	@author Andrew D. Zonenberg
 	@brief Declaration of ChannelPropertiesDialog
  */
-#ifndef ChannelPropertiesDialog_h
-#define ChannelPropertiesDialog_h
+#ifndef MetricsDialog_h
+#define MetricsDialog_h
 
 #include "Dialog.h"
 

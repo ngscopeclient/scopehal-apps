@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 MeasurementsDialog::MeasurementsDialog(Session& session)
-	: Dialog("Measurements", ImVec2(300, 400))
+	: Dialog("Measurements", "Measurements", ImVec2(300, 400))
 	, m_session(session)
 {
 

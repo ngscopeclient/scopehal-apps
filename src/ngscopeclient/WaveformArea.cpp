@@ -228,6 +228,21 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		m_indexBuffer.resize(x);
 }
 
+/**
+	@brief Serializes the configuration for this channel
+ */
+YAML::Node DisplayedChannel::Serialize(IDTable& table) const
+{
+	YAML::Node node;
+
+	node["persistence"] = m_persistenceEnabled;
+	node["channel"] = table[m_stream.m_channel];
+	node["stream"] = m_stream.m_stream;
+	node["colorRamp"] = m_colorRamp;
+
+	return node;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -264,9 +279,12 @@ WaveformArea::~WaveformArea()
 /**
 	@brief Adds a new stream to this plot
  */
-void WaveformArea::AddStream(StreamDescriptor desc)
+void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const string& ramp)
 {
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>(desc));
+	auto chan = make_shared<DisplayedChannel>(desc);
+	chan->SetPersistenceEnabled(persistence);
+	chan->m_colorRamp = ramp;
+	m_displayedChannels.push_back(chan);
 }
 
 /**
@@ -1762,6 +1780,7 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	vmid -= zero_offset;
 
 	//Calculate grid positions
+	size_t igrid = 0;
 	for(float dv=0; ; dv += selected_step)
 	{
 		float vp = vmid + dv;
@@ -1781,7 +1800,9 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 		else
 			gridmap[vp] = yt;
 
-		if(gridmap.size() > 50)
+		//avoid infinite loop if grid settings are borked (zero range etc)
+		igrid ++;
+		if(igrid > 50)
 			break;
 
 		//Stop if we're off the edge
@@ -2403,6 +2424,9 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 
 			auto area = make_shared<WaveformArea>(sdrag, m_group, m_parent);
 			m_group->AddArea(area);
+
+			//Remove the stream from the originating waveform area
+			desc->first->RemoveStream(desc->second);
 		}
 
 		ImGui::EndDragDropTarget();

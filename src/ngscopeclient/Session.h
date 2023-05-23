@@ -126,6 +126,7 @@ public:
 	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session)
 		: m_meter(meter)
 		, m_shuttingDown(false)
+		, m_state(state)
 	{
 		MultimeterThreadArgs args(meter, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(MultimeterThread, args);
@@ -150,6 +151,9 @@ public:
 
 	///@brief Thread for polling the meter
 	std::unique_ptr<std::thread> m_thread;
+
+	///@brief State object
+	std::shared_ptr<MultimeterState> m_state;
 };
 
 /**
@@ -221,13 +225,23 @@ public:
 	void Clear();
 	void ClearBackgroundThreads();
 
+	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
+	YAML::Node SerializeInstrumentConfiguration(IDTable& table);
+	YAML::Node SerializeMetadata();
+	YAML::Node SerializeFilterConfiguration(IDTable& table);
+	YAML::Node SerializeMarkers();
+	bool SerializeWaveforms(IDTable& table, const std::string& dataDir);
+	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
+	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
+
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddLoad(SCPILoad* generator);
 	void RemoveLoad(SCPILoad* generator);
-	void AddMultimeter(SCPIMultimeter* meter);
+	void AddMultimeter(SCPIMultimeter* meter, bool createDialog = true);
+	void AddMultimeterDialog(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
-	void AddOscilloscope(Oscilloscope* scope);
+	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
@@ -326,6 +340,28 @@ public:
 
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
+
+	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
+	SCPITransport* CreateTransportForNode(const YAML::Node& node);
+	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
+	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadMultimeter(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
+	bool LoadWaveformData(int version, const std::string& dataDir, IDTable& table);
+	bool LoadWaveformDataForScope(
+		int version,
+		const YAML::Node& node,
+		Oscilloscope* scope,
+		const std::string& dataDir,
+		IDTable& table);
+	void DoLoadWaveformDataForScope(
+		int channel_index,
+		int stream,
+		Oscilloscope* scope,
+		std::string datadir,
+		int scope_id,
+		int waveform_id,
+		std::string format);
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

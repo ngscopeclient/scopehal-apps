@@ -42,7 +42,10 @@ using namespace std;
 // Construction / destruction
 
 LoadDialog::LoadDialog(SCPILoad* load, shared_ptr<LoadState> state, Session* session)
-	: Dialog(string("Load: ") + load->m_nickname, ImVec2(500, 400))
+	: Dialog(
+		string("Load: ") + load->m_nickname,
+		string("Load: ") + load->m_nickname,
+		ImVec2(500, 400))
 	, m_session(session)
 	, m_tstart(GetTime())
 	, m_load(load)

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -387,6 +387,10 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	//TODO: support units for frequency domain channels etc?
 	//TODO: early out if eye pattern
 	if(m_xAxisUnit != Unit(Unit::UNIT_FS))
+		return;
+
+	//Don't crash if we have no areas
+	if(m_areas.empty())
 		return;
 
 	auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
@@ -1005,4 +1009,91 @@ void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration, Str
 		m_xAxisCursorPositions[0] = timestamp;
 
 	ClearPersistence();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+bool WaveformGroup::LoadConfiguration(const YAML::Node& node)
+{
+	//Scale if needed
+	bool timestamps_are_ps = true;
+	if(node["timebaseResolution"])
+	{
+		if(node["timebaseResolution"].as<string>() == "fs")
+			timestamps_are_ps = false;
+	}
+
+	m_pixelsPerXUnit = node["pixelsPerXUnit"].as<float>();
+	m_xAxisOffset = node["xAxisOffset"].as<long long>();
+
+	//Default to no cursors
+	m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+
+	//Cursor config
+	//Y axis cursor configs from legacy file format are ignored
+	string cursor = node["cursorConfig"].as<string>();
+	if(cursor == "none")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_NONE;
+	else if(cursor == "x_single")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_SINGLE;
+	else if(cursor == "x_dual")
+		m_xAxisCursorMode = WaveformGroup::X_CURSOR_DUAL;
+	/*
+	else if(cursor == "y_single")
+		m_cursorConfig = WaveformGroup::CURSOR_Y_SINGLE;
+	else if(cursor == "y_dual")
+		m_cursorConfig = WaveformGroup::CURSOR_Y_DUAL;
+	*/
+	m_xAxisCursorPositions[0] = node["xcursor0"].as<long long>();
+	m_xAxisCursorPositions[1] = node["xcursor1"].as<long long>();
+	/*
+	m_yCursorPos[0] = node["ycursor0"].as<float>();
+	m_yCursorPos[1] = node["ycursor1"].as<float>();
+	*/
+
+	if(timestamps_are_ps)
+	{
+		m_pixelsPerXUnit /= 1000;
+		m_xAxisOffset *= 1000;
+		m_xAxisCursorPositions[0] *= 1000;
+		m_xAxisCursorPositions[1] *= 1000;
+	}
+
+	return true;
+}
+
+YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
+{
+	YAML::Node node;
+	node["timebaseResolution"] = "fs";
+	node["pixelsPerXUnit"] = m_pixelsPerXUnit;
+	node["xAxisOffset"] = m_xAxisOffset;
+	node["name"] = m_title;
+
+	switch(m_xAxisCursorMode)
+	{
+		case WaveformGroup::X_CURSOR_SINGLE:
+			node["cursorConfig"] = "x_single";
+			break;
+
+		case WaveformGroup::X_CURSOR_DUAL:
+			node["cursorConfig"] = "x_dual";
+			break;
+
+		case WaveformGroup::X_CURSOR_NONE:
+		default:
+			node["cursorConfig"] = "none";
+	}
+
+	node["xcursor0"] = m_xAxisCursorPositions[0];
+	node["xcursor1"] = m_xAxisCursorPositions[1];
+
+	for(size_t i=0; i<m_areas.size(); i++)
+	{
+		auto id = table[m_areas[i].get()];
+		node["areas"][string("area") + to_string(id)]["id"] = id;
+	}
+
+	return node;
 }

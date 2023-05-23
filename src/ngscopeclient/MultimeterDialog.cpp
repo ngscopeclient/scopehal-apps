@@ -42,7 +42,10 @@ using namespace std;
 // Construction / destruction
 
 MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterState> state, Session* session)
-	: Dialog(string("Multimeter: ") + meter->m_nickname, ImVec2(500, 400))
+	: Dialog(
+		string("Multimeter: ") + meter->m_nickname,
+		string("Multimeter: ") + meter->m_nickname,
+		ImVec2(500, 400))
 	, m_session(session)
 	, m_tstart(GetTime())
 	, m_meter(meter)
