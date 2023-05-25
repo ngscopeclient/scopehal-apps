@@ -699,7 +699,11 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 
 	//Mark the waveform as resized
 	if(channel->UpdateSize(size, m_parent))
+	{
 		m_parent->SetNeedRender();
+		if(data != stream.GetData())
+			return;
+	}
 
 	//Render the tone mapped output (if we have it)
 	auto tex = channel->GetTexture();
