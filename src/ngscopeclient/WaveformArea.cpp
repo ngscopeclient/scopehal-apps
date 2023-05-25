@@ -1895,7 +1895,12 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		if(m_mouseOverTriggerArrow)
 			ImGui::TextUnformatted("Drag arrow to adjust trigger level.");
 		else
-			ImGui::TextUnformatted("Click and drag to adjust offset.\nUse mouse wheel to adjust scale.");
+		{
+			ImGui::TextUnformatted(
+				"Click and drag to adjust offset.\n"
+				"Middle click to autofit range and offset to current waveform.\n"
+				"Use mouse wheel to adjust scale.");
+		}
 
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
