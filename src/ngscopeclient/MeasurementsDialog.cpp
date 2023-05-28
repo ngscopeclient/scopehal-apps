@@ -91,6 +91,8 @@ bool MeasurementsDialog::DoRender()
 		//TODO: statistics
 		ImGui::TableHeadersRow();
 
+		//TODO: double click value opens properties dialog
+
 		for(size_t i=0; i<m_streams.size(); i++)
 		{
 			auto s = m_streams[i];

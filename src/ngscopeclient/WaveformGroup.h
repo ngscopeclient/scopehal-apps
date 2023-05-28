@@ -118,9 +118,12 @@ public:
 	float GetSpacing()
 	{ return ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight(); }
 
-	///@brief gets the waveform areas in this group
-	const std::vector< std::shared_ptr<WaveformArea> >& GetWaveformAreas()
-	{ return m_areas; }
+	///@brief Gets an atomic snapshot of the waveform areas in this group
+	std::vector< std::shared_ptr<WaveformArea> > GetWaveformAreas()
+	{
+		std::lock_guard<std::mutex> lock(m_areaMutex);
+		return m_areas;
+	}
 
 	//Serialization
 	bool LoadConfiguration(const YAML::Node& node);
@@ -169,6 +172,9 @@ protected:
 
 	///@brief The set of waveform areas within this group
 	std::vector< std::shared_ptr<WaveformArea> > m_areas;
+
+	//Mutex for controlling access to m_areas
+	std::mutex m_areaMutex;
 
 	///@brief Description of item being dragged, if any
 	DragState m_dragState;

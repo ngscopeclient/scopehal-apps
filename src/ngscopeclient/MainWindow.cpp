@@ -1327,7 +1327,7 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 			for(auto g : m_waveformGroups)
 			{
 				//Try each area within the group
-				auto& areas = g->GetWaveformAreas();
+				auto areas = g->GetWaveformAreas();
 				for(auto a : areas)
 				{
 					if(!a->IsCompatible(stream))
@@ -1352,7 +1352,7 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 	for(auto g : m_waveformGroups)
 	{
 		//Try each area within the group
-		auto& areas = g->GetWaveformAreas();
+		auto areas = g->GetWaveformAreas();
 		for(auto a : areas)
 		{
 			if(a->IsCompatible(stream))
@@ -2048,7 +2048,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 	{
 		int gid = table.emplace(group.get());
 
-		auto& wareas = group->GetWaveformAreas();
+		auto wareas = group->GetWaveformAreas();
 		for(auto area : wareas)
 		{
 			YAML::Node areaNode;

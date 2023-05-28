@@ -69,6 +69,8 @@ WaveformGroup::~WaveformGroup()
 
 void WaveformGroup::Clear()
 {
+	lock_guard<mutex> lock(m_areaMutex);
+
 	LogTrace("Destroying areas\n");
 	LogIndenter li;
 
@@ -82,11 +84,14 @@ void WaveformGroup::Clear()
 
 void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 {
-	//If this is our first area, adopt its X axis unit as our own
-	if(m_areas.empty())
-		m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		//If this is our first area, adopt its X axis unit as our own
+		if(m_areas.empty())
+			m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
 
-	m_areas.push_back(area);
+		m_areas.push_back(area);
+	}
 
 	m_parent->RefreshTimebasePropertiesDialog();
 }
@@ -96,7 +101,8 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
  */
 bool WaveformGroup::IsChannelBeingDragged()
 {
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
 	{
 		if(a->IsChannelBeingDragged())
 			return true;
@@ -109,7 +115,8 @@ bool WaveformGroup::IsChannelBeingDragged()
  */
 StreamDescriptor WaveformGroup::GetChannelBeingDragged()
 {
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
 	{
 		auto stream = a->GetChannelBeingDragged();
 		if(stream)
@@ -129,13 +136,16 @@ StreamDescriptor WaveformGroup::GetChannelBeingDragged()
  */
 void WaveformGroup::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 {
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+
+	for(auto a : areas)
 		a->ToneMapAllWaveforms(cmdbuf);
 }
 
 void WaveformGroup::ReferenceWaveformTextures()
 {
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
 		a->ReferenceWaveformTextures();
 }
 
@@ -146,12 +156,15 @@ void WaveformGroup::RenderWaveformTextures(
 {
 	bool clearThisGroupOnly = m_clearPersistence.exchange(false);
 
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
 		a->RenderWaveformTextures(cmdbuf, channels, clearThisGroupOnly || clearPersistence);
 }
 
 bool WaveformGroup::Render()
 {
+	auto areas = GetWaveformAreas();
+
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
 	if(!ImGui::Begin(m_title.c_str(), &open))
@@ -169,12 +182,12 @@ bool WaveformGroup::Render()
 	float plotWidth = clientArea.x - yAxisWidthSpaced;
 
 	//Update X axis unit
-	if(!m_areas.empty())
+	if(!areas.empty())
 	{
-		m_xAxisUnit = m_areas[0]->GetStream(0).GetXAxisUnits();
+		m_xAxisUnit = areas[0]->GetStream(0).GetXAxisUnits();
 
 		//Autoscale eye patterns
-		auto firstStream = m_areas[0]->GetFirstAnalogOrEyeStream();
+		auto firstStream = areas[0]->GetFirstAnalogOrEyeStream();
 		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
 		{
 			auto eye = dynamic_cast<EyeWaveform*>(firstStream.GetData());
@@ -203,9 +216,9 @@ bool WaveformGroup::Render()
 	//TODO: waveform areas full of protocol or digital decodes should be fixed size while analog will fill the gap?
 	//Anything we closed is removed from the list THIS frame, so we stop rendering to them etc
 	//but not actually destroyed until next frame
-	for(size_t i=0; i<m_areas.size(); i++)
+	for(size_t i=0; i<areas.size(); i++)
 	{
-		if(!m_areas[i]->Render(i, m_areas.size(), clientArea))
+		if(!areas[i]->Render(i, areas.size(), clientArea))
 			m_areasToClose.push_back(i);
 	}
 	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
@@ -214,7 +227,7 @@ bool WaveformGroup::Render()
 		m_parent->RefreshTimebasePropertiesDialog();
 
 	//If we no longer have any areas in the group, close the group
-	if(m_areas.empty())
+	if(areas.empty())
 		open = false;
 
 	//Render cursors over everything else
@@ -233,6 +246,8 @@ bool WaveformGroup::Render()
  */
 void WaveformGroup::DoCursorReadouts()
 {
+	auto areas = GetWaveformAreas();
+
 	bool hasSecondCursor = (m_xAxisCursorMode == X_CURSOR_DUAL);
 
 	string name = string("Cursors (") + m_title + ")";
@@ -265,7 +280,7 @@ void WaveformGroup::DoCursorReadouts()
 			ImGui::TableHeadersRow();
 
 			//Readout for each channel in all of our waveform areas
-			for(auto a : m_areas)
+			for(auto a : areas)
 			{
 				for(size_t i=0; i<a->GetStreamCount(); i++)
 				{
@@ -697,7 +712,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			//Find beginning and end of all waveforms in the group
 			int64_t start = INT64_MAX;
 			int64_t end = -INT64_MAX;
-			for(auto a : m_areas)
+			auto areas = GetWaveformAreas();
+			for(auto a : areas)
 			{
 				for(size_t i=0; i<a->GetStreamCount(); i++)
 				{
@@ -839,10 +855,12 @@ void WaveformGroup::RenderTimeline(float width, float height)
  */
 void WaveformGroup::OnMouseWheel(float delta)
 {
+	auto areas = GetWaveformAreas();
+
 	//Do not allow changing zoom on eye patterns
-	if(!m_areas.empty())
+	if(!areas.empty())
 	{
-		auto firstStream = m_areas[0]->GetFirstAnalogOrEyeStream();
+		auto firstStream = areas[0]->GetFirstAnalogOrEyeStream();
 		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
 			return;
 	}
@@ -916,7 +934,8 @@ void WaveformGroup::ClearPersistence()
  */
 void WaveformGroup::ClearPersistenceOfChannel(OscilloscopeChannel* chan)
 {
-	for(auto a : m_areas)
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
 		a->ClearPersistenceOfChannel(chan);
 }
 
@@ -972,8 +991,10 @@ void WaveformGroup::NavigateToTimestamp(int64_t timestamp, int64_t duration, Str
 	//Check if target is in one of our areas
 	if(target)
 	{
+		auto areas = GetWaveformAreas();
+
 		bool found = false;
-		for(auto& a : m_areas)
+		for(auto& a : areas)
 		{
 			if(a->IsStreamBeingDisplayed(target))
 			{
@@ -1065,6 +1086,8 @@ bool WaveformGroup::LoadConfiguration(const YAML::Node& node)
 
 YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 {
+	auto areas = GetWaveformAreas();
+
 	YAML::Node node;
 	node["timebaseResolution"] = "fs";
 	node["pixelsPerXUnit"] = m_pixelsPerXUnit;
@@ -1089,9 +1112,9 @@ YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 	node["xcursor0"] = m_xAxisCursorPositions[0];
 	node["xcursor1"] = m_xAxisCursorPositions[1];
 
-	for(size_t i=0; i<m_areas.size(); i++)
+	for(size_t i=0; i<areas.size(); i++)
 	{
-		auto id = table[m_areas[i].get()];
+		auto id = table[areas[i].get()];
 		node["areas"][string("area") + to_string(id)]["id"] = id;
 	}
 
