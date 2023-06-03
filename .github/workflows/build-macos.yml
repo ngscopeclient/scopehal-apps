@@ -22,7 +22,6 @@ jobs:
         brew upgrade
         brew install \
           ninja \
-          libomp \
           libsigc++@2 \
           yaml-cpp \
           gtkmm3 \
