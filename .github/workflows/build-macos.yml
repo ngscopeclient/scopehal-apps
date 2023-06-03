@@ -44,15 +44,17 @@ jobs:
         popd
 
     - name: Install Vulkan SDK
-      uses: humbletim/install-vulkan-sdk@v1.2.0
+      uses: humbletim/install-vulkan-sdk@v1.1.0
       with:
-        vulkan-query-version: 1.3.204.0
-        vulkan-components: Vulkan-Headers, Vulkan-Loader
-        vulkan-use-cache: true
+        version: 1.3.224.1
+        cache: true
 
     - name: Build
       run: |
         export PATH=$(brew --prefix llvm@14)/bin:$PATH
+        export DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH
+        export VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json
+        export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
         export CC=clang
         export CXX=clang++
         mkdir build
