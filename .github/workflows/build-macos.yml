@@ -63,6 +63,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
+          -DBUILD_TESTING=OFF
           -DCMAKE_CXX_FLAGS=-Wno-inconsistent-missing-override \
           -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
