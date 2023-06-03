@@ -12,12 +12,13 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
 
     - name: Install Dependencies
       run: |
+        brew update
         brew install \
           ninja \
           libomp \
@@ -59,6 +60,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
+          -DCMAKE_CXX_FLAGS="-Wno-inconsistent-missing-override"\
           -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
         ninja
