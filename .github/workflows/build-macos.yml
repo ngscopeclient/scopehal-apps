@@ -19,6 +19,7 @@ jobs:
     - name: Install Dependencies
       run: |
         brew update
+        brew upgrade
         brew install \
           ninja \
           libomp \
@@ -60,7 +61,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
-          -DCMAKE_CXX_FLAGS="-Wno-inconsistent-missing-override"\
+          -DCMAKE_CXX_FLAGS=-Wno-inconsistent-missing-override \
           -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
         ninja
