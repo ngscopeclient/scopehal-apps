@@ -64,7 +64,6 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
           -DBUILD_TESTING=OFF \
-          -DCMAKE_CXX_FLAGS=-Wno-inconsistent-missing-override \
           -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
         ninja
@@ -76,7 +75,7 @@ jobs:
         ninja test
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-macos
         path: |
@@ -90,7 +89,7 @@ jobs:
 
     - name: Upload Documentation
       if: ${{ false }} # a LaTeX toolchain for macOS takes a while to install, so skip for now
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
