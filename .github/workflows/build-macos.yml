@@ -12,15 +12,16 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: recursive
 
     - name: Install Dependencies
       run: |
+        brew update
+        brew upgrade
         brew install \
           ninja \
-          libomp \
           libsigc++@2 \
           yaml-cpp \
           gtkmm3 \
@@ -51,6 +52,9 @@ jobs:
     - name: Build
       run: |
         export PATH=$(brew --prefix llvm@14)/bin:$PATH
+        export DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH
+        export VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json
+        export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
         export CC=clang
         export CXX=clang++
         mkdir build
@@ -59,6 +63,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
+          -DBUILD_TESTING=OFF \
           -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
           ..
         ninja
@@ -70,7 +75,7 @@ jobs:
         ninja test
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-macos
         path: |
@@ -84,7 +89,7 @@ jobs:
 
     - name: Upload Documentation
       if: ${{ false }} # a LaTeX toolchain for macOS takes a while to install, so skip for now
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-manual
         path: build/doc/glscopeclient-manual.pdf
