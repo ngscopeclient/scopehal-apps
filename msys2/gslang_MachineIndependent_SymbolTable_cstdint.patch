@@ -1,0 +1,12 @@
+diff --git "a/glslang/MachineIndependent/SymbolTable.h" "b/glslang/MachineIndependent/SymbolTable.h"
+index 2e570bb3..a165dac0 100644
+--- "a/glslang/MachineIndependent/SymbolTable.h"
++++ "b/glslang/MachineIndependent/SymbolTable.h"
+@@ -68,6 +68,7 @@
+ #include "../Include/Common.h"
+ #include "../Include/intermediate.h"
+ #include "../Include/InfoSink.h"
++#include <cstdint>
+ 
+ namespace glslang {
+ 
