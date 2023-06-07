@@ -114,8 +114,8 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		if(g_partialRefilterRequestedEvent.Peek())
 		{
 			LogTrace("WaveformThread: re-running partial filter graph and re-rendering\n");
-			session->RefreshDirtyFilters();
-			RenderAllWaveforms(cmdbuf, session, queue);
+			if(session->RefreshDirtyFilters())
+				RenderAllWaveforms(cmdbuf, session, queue);
 			g_refilterDoneEvent.Signal();
 			continue;
 		}

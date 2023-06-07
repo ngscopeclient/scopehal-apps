@@ -214,7 +214,7 @@ public:
 	void RefreshAllFilters();
 	void RefreshAllFiltersNonblocking();
 	void RefreshDirtyFiltersNonblocking();
-	void RefreshDirtyFilters();
+	bool RefreshDirtyFilters();
 
 	void MarkChannelDirty(InstrumentChannel* chan);
 

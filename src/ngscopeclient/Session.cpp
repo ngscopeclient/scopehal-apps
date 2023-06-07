@@ -1899,9 +1899,17 @@ void Session::RefreshAllFiltersNonblocking()
 
 /**
 	@brief Queues a request to refresh dirty filters the next time we poll stuff
+
+	Avoid waking up the waveform thread if we have no dirty filters, though.
  */
 void Session::RefreshDirtyFiltersNonblocking()
 {
+	{
+		lock_guard<mutex> lock(m_dirtyChannelsMutex);
+		if(m_dirtyChannels.empty())
+			return;
+	}
+
 	g_partialRefilterRequestedEvent.Signal();
 }
 
@@ -1954,15 +1962,17 @@ void Session::RefreshAllFilters()
 
 /**
 	@brief Refresh dirty filters (and anything in their downstream influence cone)
+
+	@return True if at least one filter was refreshed, false if nothing was dirty
  */
-void Session::RefreshDirtyFilters()
+bool Session::RefreshDirtyFilters()
 {
 	set<FlowGraphNode*> nodesToUpdate;
 
 	{
 		lock_guard<mutex> lock(m_dirtyChannelsMutex);
 		if(m_dirtyChannels.empty())
-			return;
+			return false;
 
 		//Start with all nodes
 		auto nodes = GetAllGraphNodes();
@@ -1978,7 +1988,7 @@ void Session::RefreshDirtyFilters()
 		m_dirtyChannels.clear();
 	}
 	if(nodesToUpdate.empty())
-		return;
+		return false;
 
 	//Refresh the dirty filters only
 	double tstart = GetTime();
@@ -1997,6 +2007,8 @@ void Session::RefreshDirtyFilters()
 	LogTrace("TODO: refresh statistics\n");
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+
+	return true;
 }
 
 /**
