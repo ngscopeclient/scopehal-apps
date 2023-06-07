@@ -18,8 +18,6 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        brew update
-        brew upgrade
         brew install \
           ninja \
           libsigc++@2 \
@@ -27,8 +25,7 @@ jobs:
           gtkmm3 \
           glew \
           glfw \
-          catch2 \
-          libomp
+          catch2
 
     - name: Clone and Build FFTS Library
       run: |
