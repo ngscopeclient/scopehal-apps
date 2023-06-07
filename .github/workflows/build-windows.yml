@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  VULKAN_SDK_VERSION: 1.3.250.0
+
 jobs:
 
   Windows:
@@ -39,16 +42,16 @@ jobs:
       uses: actions/cache@v3
       with:
         path: D:/a/_temp/msys64/home/runneradmin/glslang
-        key: ${{ runner.os }}-glslang-1.3.224.1
+        key: ${{ runner.os }}-glslang-${{ env.VULKAN_SDK_VERSION }}
 
-    - name: Build glslang tags/sdk-1.3.224.1
+    - name: Build glslang tags/sdk-${{ env.VULKAN_SDK_VERSION }}
       if: steps.cache-glslang.outputs.cache-hit != 'true'
       run: |
-        # Windows mingw64 glslang build (as it is not fully integrated in VulkanSDK-1.3.224.1 for Windows and built with Visual Studio 2017)
+        # Windows mingw64 glslang build (as it is not fully integrated in VulkanSDK for Windows)
         cd ~
         git clone https://github.com/KhronosGroup/glslang.git
         cd glslang
-        git checkout tags/sdk-1.3.224.1
+        git checkout tags/sdk-${{ env.VULKAN_SDK_VERSION }}
         git clone https://github.com/google/googletest.git External/googletest
         cd External/googletest
         git checkout 0c400f67fcf305869c5fb113dd296eca266c9725
@@ -64,18 +67,18 @@ jobs:
 
     - name: Install Vulkan SDK
       run: |
-        wget https://sdk.lunarg.com/sdk/download/1.3.224.1/windows/VulkanSDK-1.3.224.1-Installer.exe
-        ./VulkanSDK-1.3.224.1-Installer.exe --accept-licenses --default-answer --confirm-command install
-        echo "/c/VulkanSDK/1.3.224.1/Bin" >> $GITHUB_PATH
-        rm -f VulkanSDK-1.3.224.1-Installer.exe
+        wget https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/windows/VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe
+        ./VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe --accept-licenses --default-answer --confirm-command install
+        echo "/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}/Bin" >> $GITHUB_PATH
+        rm -f VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe
 
     - name: Setup Paths and Env for all steps
       run: |
         rm -f ~/.bash_profile
         
-        echo "PATH=/c/VulkanSDK/1.3.224.1/Bin:\$PATH" >> ~/.bash_profile
-        echo "export VK_SDK_PATH=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
-        echo "export VULKAN_SDK=/c/VulkanSDK/1.3.224.1" >> ~/.bash_profile
+        echo "PATH=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}/Bin:\$PATH" >> ~/.bash_profile
+        echo "export VK_SDK_PATH=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}" >> ~/.bash_profile
+        echo "export VULKAN_SDK=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}" >> ~/.bash_profile
         echo "export GLSLANG_BUILD_PATH=~/glslang/build/install" >> ~/.bash_profile
 
     - name: Build
