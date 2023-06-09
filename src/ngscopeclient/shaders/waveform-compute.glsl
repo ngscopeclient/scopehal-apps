@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -343,13 +343,13 @@ void main()
 					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
 					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
 				}
-
-				//Check if we're at the end of the pixel
-				if(right.x > gl_GlobalInvocationID.x + 1)
-					g_done = true;
 			}
 			else
 				g_updating[gl_LocalInvocationID.y] = false;
+
+			//Check if we're at the end of the pixel
+			if(right.x > gl_GlobalInvocationID.x + 1)
+				g_done = true;
 		}
 
 		else
