@@ -147,23 +147,40 @@ add_dependencies(glscopeclient
 	icons
 )
 
-# Windows portable zip/MSI installer build
+# glscopeclient Windows portable zip/MSI installer build
 if(WIXPATH AND WIN32)
+	# Run the command to get /mingw64/bin full path using where gcc
+	execute_process(
+		COMMAND where gcc
+		RESULT_VARIABLE GCC_RESULT
+		OUTPUT_VARIABLE GCC_OUTPUT
+		ERROR_QUIET
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	# Check the result of the command
+	if(NOT GCC_RESULT EQUAL 0)
+		message(FATAL_ERROR "gcc not found!")
+	endif()
+	# Get the directory path from gcc output which corresponds to full path related to /mingw64/bin
+	get_filename_component(MINGW64_BIN_PATH ${GCC_OUTPUT} DIRECTORY)
+	# Print the path (optional)
+	message("MINGW64_BIN_PATH: ${MINGW64_BIN_PATH}")
+
 	add_custom_target(
-		dist_windows_x64
-		COMMENT "Creating dist/windows_x64..."
+		glscopeclient_dist_windows_x64
+		COMMENT "Creating dist/glscopeclient_windows_x64..."
 		DEPENDS glscopeclient
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/dist/windows_x64/gradients
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/gradients
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/windows_x64/shaders
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/shaders
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/dist/windows_x64/styles
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/styles ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/styles
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/dist/windows_x64/icons
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/icons ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/icons
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
-				${CMAKE_SOURCE_DIR}/src/glscopeclient/masks ${CMAKE_BINARY_DIR}/dist/windows_x64/masks
+				${CMAKE_SOURCE_DIR}/src/glscopeclient/masks ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/masks
 		COMMAND ${CMAKE_COMMAND} -E copy
 				${CMAKE_SOURCE_DIR}/src/LICENSE
 				${CMAKE_BINARY_DIR}/lib/graphwidget/libgraphwidget.dll
@@ -171,37 +188,39 @@ if(WIXPATH AND WIN32)
 				${CMAKE_BINARY_DIR}/lib/scopehal/libscopehal.dll
 				${CMAKE_BINARY_DIR}/lib/scopeprotocols/libscopeprotocols.dll
 				${CMAKE_BINARY_DIR}/src/glscopeclient/glscopeclient.exe
-				${CMAKE_BINARY_DIR}/dist/windows_x64
-		COMMAND bash -c \"cp -R ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/windows_x64\"
-		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/windows_x64\"
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/lib
-		COMMAND bash -c \"cp -R /mingw64/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/dist/windows_x64/lib\"
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons
-		COMMAND bash -c \"cp -R /mingw64/share/icons/hicolor ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons\"
-		COMMAND bash -c \"cp -R /mingw64/share/icons/Adwaita ${CMAKE_BINARY_DIR}/dist/windows_x64/share/icons\"
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0
-		COMMAND bash -c \"cp -R /mingw64/share/glib-2.0/schemas ${CMAKE_BINARY_DIR}/dist/windows_x64/share/glib-2.0\"
-		COMMAND bash -c \"cd ${CMAKE_BINARY_DIR}/dist/windows_x64 && glib-compile-schemas ./share/glib-2.0/schemas\"
-		COMMAND bash -c \"ldd ${CMAKE_BINARY_DIR}/dist/windows_x64/glscopeclient.exe | grep '\/mingw64\/bin\/.*dll' -o  | xargs -I{} cp /mingw64/bin/gdbus.exe \\\"{}\\\" ${CMAKE_BINARY_DIR}/dist/windows_x64\")
+				${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64
+		COMMAND bash -c \"cp -R ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64\"
+		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64\"
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/lib
+		COMMAND bash -c \"cp -R /mingw64/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/lib\"
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/share/icons
+		COMMAND bash -c \"cp -R /mingw64/share/icons/hicolor ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/share/icons\"
+		COMMAND bash -c \"cp -R /mingw64/share/icons/Adwaita ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/share/icons\"
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/share/glib-2.0
+		COMMAND bash -c \"cp -R /mingw64/share/glib-2.0/schemas ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/share/glib-2.0\"
+		COMMAND bash -c \"cd ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64 && glib-compile-schemas ./share/glib-2.0/schemas\"
+		COMMAND bash -c \"cp /mingw64/bin/gdbus.exe ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64\"
+		COMMAND bash -c \"wget https://github.com/bvernoux/mingw-bundledlls/releases/download/v0.2.4/mingw-bundledlls-0.2.4-1-x86_64.pkg.tar.zst && pacman -U --noconfirm mingw-bundledlls-*.pkg.tar.zst && rm -f mingw-bundledlls-*.pkg.tar.zst\"
+		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/graphwidget\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64/glscopeclient.exe --copy\")
 
 	add_custom_target(
-		portable_zip_windows_x64 ALL
-		COMMENT "Creating portable zip from dist/windows_x64..."
-		DEPENDS dist_windows_x64
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist/windows_x64
+		glscopeclient_portable_zip_windows_x64 ALL
+		COMMENT "Creating portable zip from dist/glscopeclient_dist_windows_x64..."
+		DEPENDS glscopeclient_dist_windows_x64
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist/glscopeclient_windows_x64
 		COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64-portable.zip" --format=zip -- .)
 
 	configure_file(wix/glscopeclient.wxs.in ${CMAKE_BINARY_DIR}/glscopeclient.wxs)
 	add_custom_target(
-		msi_windows_x64 ALL
-		COMMENT "Creating Windows x64 MSI..."
-		DEPENDS dist_windows_x64
+		glscopeclient_msi_windows_x64 ALL
+		COMMENT "Creating glscopeclient Windows x64 MSI..."
+		DEPENDS glscopeclient_dist_windows_x64
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/glscopeclient/wix/LICENSE.rtf ${CMAKE_BINARY_DIR}
-		COMMAND ${WIXPATH}/heat dir dist/windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out glscopeclient-files.wxs
+		COMMAND ${WIXPATH}/heat dir dist/glscopeclient_windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out glscopeclient-files.wxs
 		COMMAND ${WIXPATH}/candle -nologo glscopeclient-files.wxs -arch x64 -out glscopeclient-files.wixobj
 		COMMAND ${WIXPATH}/candle -nologo glscopeclient.wxs -arch x64 -out glscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
-		COMMAND ${WIXPATH}/light -nologo glscopeclient-files.wixobj glscopeclient.wixobj -b dist/windows_x64 -out dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
+		COMMAND ${WIXPATH}/light -nologo glscopeclient-files.wixobj glscopeclient.wixobj -b dist/glscopeclient_windows_x64 -out dist/glscopeclient-${GLSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
 else()
 	message("Skipping MSI package build; define WIXPATH to enable")
 endif()

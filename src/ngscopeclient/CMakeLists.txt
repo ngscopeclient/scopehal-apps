@@ -173,3 +173,86 @@ target_link_libraries(ngscopeclient
 	${SIGCXX_LIBRARIES}
 	)
 
+# ngscopeclient Windows portable zip/MSI installer build
+if(WIXPATH AND WIN32)
+	# Run the command to get /mingw64/bin full path using where gcc
+	execute_process(
+		COMMAND where gcc
+		RESULT_VARIABLE GCC_RESULT
+		OUTPUT_VARIABLE GCC_OUTPUT
+		ERROR_QUIET
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	# Check the result of the command
+	if(NOT GCC_RESULT EQUAL 0)
+		message(FATAL_ERROR "gcc not found!")
+	endif()
+	# Get the directory path from gcc output which corresponds to full path related to /mingw64/bin
+	get_filename_component(MINGW64_BIN_PATH ${GCC_OUTPUT} DIRECTORY)
+	# Print the path (optional)
+	message("MINGW64_BIN_PATH: ${MINGW64_BIN_PATH}")
+	add_custom_target(
+		ngscopeclient_dist_windows_x64
+		COMMENT "Creating dist/ngscopeclient_windows_x64..."
+		DEPENDS ngscopeclient
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/fonts
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/icons
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/masks
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/shaders
+
+		COMMAND ${CMAKE_COMMAND} -E copy
+				${CMAKE_SOURCE_DIR}/src/LICENSE
+				${CMAKE_BINARY_DIR}/lib/graphwidget/libgraphwidget.dll
+				${CMAKE_BINARY_DIR}/lib/log/liblog.dll
+				${CMAKE_BINARY_DIR}/lib/scopeexports/libscopeexports.dll
+				${CMAKE_BINARY_DIR}/lib/scopehal/libscopehal.dll
+				${CMAKE_BINARY_DIR}/lib/scopeprotocols/libscopeprotocols.dll
+				${CMAKE_BINARY_DIR}/src/ngscopeclient/ngscopeclient.exe
+				${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64
+		COMMAND bash -c \"cp -R ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64\"
+		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64\"
+		COMMAND bash -c \"wget https://github.com/bvernoux/mingw-bundledlls/releases/download/v0.2.4/mingw-bundledlls-0.2.4-1-x86_64.pkg.tar.zst && pacman -U --noconfirm mingw-bundledlls-*.pkg.tar.zst && rm -f mingw-bundledlls-*.pkg.tar.zst\"
+		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/graphwidget\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/ngscopeclient.exe --copy\")
+
+	add_custom_target(
+		ngscopeclient_portable_zip_windows_x64 ALL
+		COMMENT "Creating portable zip from dist/ngscopeclient_dist_windows_x64..."
+		DEPENDS ngscopeclient_dist_windows_x64
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64
+		COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/dist/ngscopeclient-${NGSCOPECLIENT_VERSION}-windows-x64-portable.zip" --format=zip -- .)
+
+	configure_file(wix/ngscopeclient.wxs.in ${CMAKE_BINARY_DIR}/ngscopeclient.wxs)
+	add_custom_target(
+		msi_windows_x64_ng ALL
+		COMMENT "Creating ngscopeclient Windows x64 MSI..."
+		DEPENDS ngscopeclient_dist_windows_x64
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/ngscopeclient/wix/LICENSE.rtf ${CMAKE_BINARY_DIR}
+		COMMAND ${WIXPATH}/heat dir dist/ngscopeclient_windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out ngscopeclient-files.wxs
+		COMMAND ${WIXPATH}/candle -nologo ngscopeclient-files.wxs -arch x64 -out ngscopeclient-files.wixobj
+		COMMAND ${WIXPATH}/candle -nologo ngscopeclient.wxs -arch x64 -out ngscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
+		COMMAND ${WIXPATH}/light -nologo ngscopeclient-files.wixobj ngscopeclient.wixobj -b dist/ngscopeclient_windows_x64 -out dist/ngscopeclient-${NGSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
+else()
+	message("Skipping MSI package build; define WIXPATH to enable")
+endif()
+
+###############################################################################
+# Installation
+
+install(TARGETS ngscopeclient RUNTIME)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
+	DESTINATION share/ngscopeclient)
+
+install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
+	DESTINATION share/applications)
