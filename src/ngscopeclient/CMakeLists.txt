@@ -217,7 +217,10 @@ if(WIXPATH AND WIN32)
 		COMMAND bash -c \"cp -R ${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64\"
 		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64\"
 		COMMAND bash -c \"wget https://github.com/bvernoux/mingw-bundledlls/releases/download/v0.2.4/mingw-bundledlls-0.2.4-1-x86_64.pkg.tar.zst && pacman -U --noconfirm mingw-bundledlls-*.pkg.tar.zst && rm -f mingw-bundledlls-*.pkg.tar.zst\"
-		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/graphwidget\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/ngscopeclient.exe --copy\")
+		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/graphwidget\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/ngscopeclient.exe --copy\"
+
+		COMMAND bash -c \"cp -r ./src/ngscopeclient/shaders/*.{spv,glsl} ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/shaders/\"
+		COMMAND bash -c \"cp -r ./lib/scopeprotocols/shaders/*.{spv,glsl} ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/shaders/\")
 
 	add_custom_target(
 		ngscopeclient_portable_zip_windows_x64 ALL

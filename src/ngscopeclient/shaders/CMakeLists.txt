@@ -15,7 +15,7 @@ function(add_compute_shaders target)
 			COMMENT "Compile shader ${base}"
 			COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} -g -o ${outfile})
 
-		install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
+		install(FILES ${outfile} DESTINATION share/ngscopeclient/shaders)
 
 	endforeach()
 
@@ -71,7 +71,7 @@ function(add_render_shader_variants target)
 			COMMENT "Compile ${outfile} with ${options}"
 			COMMAND ${Vulkan_GLSLC_EXECUTABLE} --target-env=vulkan1.0 -c ${CMAKE_CURRENT_SOURCE_DIR}/${source} ${options} -g -o ${outfile})
 
-			install(FILES ${outfile} DESTINATION share/glscopeclient/shaders)
+			install(FILES ${outfile} DESTINATION share/ngscopeclient/shaders)
 
 	endforeach()
 
