@@ -147,6 +147,21 @@ add_dependencies(glscopeclient
 	icons
 )
 
+###############################################################################
+# Installation
+install(TARGETS glscopeclient RUNTIME)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles
+	DESTINATION share/glscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons
+	DESTINATION share/glscopeclient)
+
+install(FILES ${CMAKE_SOURCE_DIR}/src/glscopeclient/glscopeclient.desktop
+	DESTINATION share/applications)
+
 # glscopeclient Windows portable zip/MSI installer build
 if(WIXPATH AND WIN32)
 	# Run the command to get /mingw64/bin full path using where gcc
@@ -227,19 +242,3 @@ if(WIXPATH AND WIN32)
 else()
 	message("Skipping MSI package build; define WIXPATH to enable")
 endif()
-
-###############################################################################
-# Installation
-
-install(TARGETS glscopeclient RUNTIME)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/gradients
-	DESTINATION share/glscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/shaders
-	DESTINATION share/glscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/styles
-	DESTINATION share/glscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/glscopeclient/icons
-	DESTINATION share/glscopeclient)
-
-install(FILES ${CMAKE_SOURCE_DIR}/src/glscopeclient/glscopeclient.desktop
-	DESTINATION share/applications)

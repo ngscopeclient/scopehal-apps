@@ -173,6 +173,21 @@ target_link_libraries(ngscopeclient
 	${SIGCXX_LIBRARIES}
 	)
 
+###############################################################################
+# Installation
+install(TARGETS ngscopeclient RUNTIME)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks
+	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
+	DESTINATION share/ngscopeclient)
+
+install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
+	DESTINATION share/applications)
+
 # ngscopeclient Windows portable zip/MSI installer build
 if(WIXPATH AND WIN32)
 	# Run the command to get /mingw64/bin full path using where gcc
@@ -244,18 +259,3 @@ else()
 	message("Skipping MSI package build; define WIXPATH to enable")
 endif()
 
-###############################################################################
-# Installation
-
-install(TARGETS ngscopeclient RUNTIME)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts
-	DESTINATION share/ngscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons
-	DESTINATION share/ngscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks
-	DESTINATION share/ngscopeclient)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
-	DESTINATION share/ngscopeclient)
-
-install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
-	DESTINATION share/applications)
