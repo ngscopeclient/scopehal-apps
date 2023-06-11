@@ -240,6 +240,10 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	if(!LoadWaveformData(version, dataDir, table))
 		return false;
 
+	//If we have no waveform data (filter-only session) create a WaveformThread to do rendering
+	if(m_history.empty())
+		StartWaveformThreadIfNeeded();
+
 	return true;
 }
 

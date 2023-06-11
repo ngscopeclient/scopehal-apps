@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -78,6 +78,12 @@ public:
 		bool deleteOld = true,
 		bool pin = false,
 		std::string nick = "");
+
+	/**
+		@brief Returns true if we have no historical waveform data whatsoever
+	 */
+	bool empty()
+	{ return m_history.empty(); }
 
 	void SetMaxToCurrentDepth()
 	{ m_maxDepth = m_history.size(); }
