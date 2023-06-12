@@ -1473,6 +1473,12 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	bool clearPersistence
 	)
 {
+	if(m_height < 0)
+	{
+		LogWarning("WaveformArea has negative height, cannot render\n");
+		return;
+	}
+
 	auto stream = channel->GetStream();
 	auto data = stream.GetData();
 
