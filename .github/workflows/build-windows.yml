@@ -98,14 +98,26 @@ jobs:
         name: glscopeclient-windows
         path: msys2/*.zst
 
-    - name: Upload Artifacts (portable zip)
+    - name: Upload Artifacts (glscopeclient portable zip)
       uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-windows-portable
-        path: build/dist/windows_x64
+        path: build/dist/glscopeclient*.zip
 
-    - name: Upload Artifacts (MSI)
+    - name: Upload Artifacts (glscopeclient MSI)
       uses: actions/upload-artifact@v3
       with:
         name: glscopeclient-windows.msi
-        path: build/dist/*.msi
+        path: build/dist/glscopeclient*.msi
+
+    - name: Upload Artifacts (ngscopeclient portable zip)
+      uses: actions/upload-artifact@v3
+      with:
+        name: ngscopeclient-windows-portable
+        path: build/dist/ngscopeclient*.zip
+
+    - name: Upload Artifacts (ngscopeclient MSI)
+      uses: actions/upload-artifact@v3
+      with:
+        name: ngscopeclient-windows.msi
+        path: build/dist/ngscopeclient*.msi
