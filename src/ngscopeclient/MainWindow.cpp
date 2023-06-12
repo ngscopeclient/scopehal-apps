@@ -1564,6 +1564,14 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
  */
 bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
+	//Load imgui_node_editor settings first (before creating the session)
+	ifstream ifs(dataDir + "/filtergraph.json");
+	if(ifs)
+	{
+		ifs >> m_graphEditorConfigBlob;
+		ifs.close();
+	}
+
 	if(!m_session.LoadFromYaml(node, dataDir, online))
 	{
 		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state
@@ -1575,20 +1583,6 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 	LogTrace("Loading ImGui configuration\n");
 	string ipath = dataDir + "/imgui.ini";
 	ImGui::LoadIniSettingsFromDisk(ipath.c_str());
-
-	/*
-	//Save imgui_node_editor settings
-	ofstream outfs(dataDir + "/filtergraph.json");
-	if(!outfs)
-	{
-		ShowErrorPopup(
-			"Failed to save filter graph configuration",
-			"Unable to open filtergraph.json for writing");
-		return false;
-	}
-	outfs << m_graphEditorConfigBlob;
-	outfs.close();
-	*/
 
 	LogTrace("Load completed successfully\n");
 	return true;

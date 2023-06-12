@@ -174,6 +174,8 @@ protected:
 		size_t size,
 		ax::NodeEditor::SaveReasonFlags flags,
 		void* pThis);
+
+	static size_t LoadSettingsCallback(char* data, void* pThis);
 };
 
 #endif

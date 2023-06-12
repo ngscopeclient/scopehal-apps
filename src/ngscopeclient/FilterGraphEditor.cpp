@@ -59,6 +59,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	, m_nextID(1)
 {
 	m_config.SaveSettings = &FilterGraphEditor::SaveSettingsCallback;
+	m_config.LoadSettings = &FilterGraphEditor::LoadSettingsCallback;
 	m_config.UserPointer = this;
 
 	m_config.SettingsFile = "";
@@ -1298,4 +1299,26 @@ bool FilterGraphEditor::SaveSettingsCallback(
 	auto ed = reinterpret_cast<FilterGraphEditor*>(pThis);
 	ed->m_parent->OnGraphEditorConfigModified(std::string(data, size));
 	return true;
+}
+
+/**
+	@param data		Buffer to write data into
+	@param pThis	Pointer to the FilterGraphEditor object
+
+	This function is called twice, once with a null data argument to get the required size, then again
+	with a valid pointer to store the data. The size must not change between the two invocations.
+
+	@return Number of bytes required for data
+ */
+size_t FilterGraphEditor::LoadSettingsCallback(
+	char* data,
+	void* pThis)
+{
+	auto ed = reinterpret_cast<FilterGraphEditor*>(pThis);
+	const string& blob = ed->m_parent->GetGraphEditorConfigBlob();
+
+	if(data != nullptr)
+		memcpy(data, blob.c_str(), blob.length());
+
+	return blob.length();
 }

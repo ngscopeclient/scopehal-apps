@@ -360,6 +360,9 @@ public:
 	void OnGraphEditorConfigModified(const std::string& blob)
 	{ m_graphEditorConfigBlob = blob; }
 
+	const std::string& GetGraphEditorConfigBlob()
+	{ return m_graphEditorConfigBlob; }
+
 protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
