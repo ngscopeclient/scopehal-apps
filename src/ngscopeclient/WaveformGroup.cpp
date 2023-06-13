@@ -451,26 +451,29 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	ImGui::EndChild();
 
 	auto mouse = ImGui::GetMousePos();
-	for(auto& m : markers)
+	if(!IsMouseOverButtonInWaveformArea())
 	{
-		//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
-		//So we have to do all of our interaction processing inside the top level window
-		//TODO: this is basically DoCursor(), can we de-duplicate this code?
-		float xpos = round(XAxisUnitsToXPosition(m.m_offset));
-		float searchRadius = 0.25 * ImGui::GetFontSize();
-
-		//Check if the mouse hit us
-		if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+		for(auto& m : markers)
 		{
-			if( fabs(mouse.x - xpos) < searchRadius)
-			{
-				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+			//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+			//So we have to do all of our interaction processing inside the top level window
+			//TODO: this is basically DoCursor(), can we de-duplicate this code?
+			float xpos = round(XAxisUnitsToXPosition(m.m_offset));
+			float searchRadius = 0.25 * ImGui::GetFontSize();
 
-				//Start dragging if clicked
-				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			//Check if the mouse hit us
+			if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+			{
+				if( fabs(mouse.x - xpos) < searchRadius)
 				{
-					m_dragState = DRAG_STATE_MARKER;
-					m_dragMarker = &m;
+					ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+					//Start dragging if clicked
+					if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+					{
+						m_dragState = DRAG_STATE_MARKER;
+						m_dragMarker = &m;
+					}
 				}
 			}
 		}
@@ -483,6 +486,20 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 			m_dragState = DRAG_STATE_NONE;
 		m_dragMarker->m_offset = XPositionToXAxisUnits(mouse.x);
 	}
+}
+
+/**
+	@brief Returns true if the mouse is over a channel button or similar UI element in a WaveformArea
+ */
+bool WaveformGroup::IsMouseOverButtonInWaveformArea()
+{
+	for(auto& p : m_areas)
+	{
+		if(p->IsMouseOverButtonAtEndOfRender())
+			return true;
+	}
+
+	return false;
 }
 
 /**
@@ -579,7 +596,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
 	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
 		(m_dragState == DRAG_STATE_NONE) &&
-		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!IsMouseOverButtonInWaveformArea())
 	{
 		auto xpos = ImGui::GetMousePos().x;
 
@@ -623,7 +641,7 @@ void WaveformGroup::DoCursor(int iCursor, DragState state)
 
 	//Check if the mouse hit us
 	auto mouse = ImGui::GetMousePos();
-	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !IsMouseOverButtonInWaveformArea())
 	{
 		if( fabs(mouse.x - xpos) < searchRadius)
 		{

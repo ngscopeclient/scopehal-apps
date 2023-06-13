@@ -135,6 +135,8 @@ protected:
 	void RenderMarkers(ImVec2 pos, ImVec2 size);
 	void DoCursorReadouts();
 
+	bool IsMouseOverButtonInWaveformArea();
+
 	enum DragState
 	{
 		DRAG_STATE_NONE,

@@ -481,6 +481,14 @@ public:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
 
+	/**
+		@brief Returns true if the mouse is over a button, rather than the plot area
+
+		Only valid after rendering is complete before start of the next render cycle
+	 */
+	bool IsMouseOverButtonAtEndOfRender()
+	{ return m_mouseOverButton; }
+
 protected:
 	///@brief Cached plot width (excluding Y axis)
 	float m_width;
@@ -564,6 +572,9 @@ protected:
 	ImVec2 m_dragPeakAnchorOffset;
 
 	ImVec2 ClosestPointOnLineSegment(ImVec2 lineA, ImVec2 lineB, ImVec2 pt);
+
+	///@brief True if the mouse cursor is over a channel button
+	bool m_mouseOverButton;
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;

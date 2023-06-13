@@ -264,6 +264,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_lastRightClickOffset(0)
 	, m_channelButtonHeight(0)
 	, m_dragPeakLabel(nullptr)
+	, m_mouseOverButton(false)
 {
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
 }
@@ -418,6 +419,8 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
+	m_mouseOverButton = false;
+
 	m_lastDragState = m_dragState;
 	if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		OnMouseUp();
@@ -2569,6 +2572,9 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	ImGui::PopStyleColor(4);
 	m_channelButtonHeight = (ImGui::GetCursorScreenPos().y - ystart) - (ImGui::GetStyle().ItemSpacing.y);
 	chan->SetYButtonPos(ImGui::GetCursorPosY());
+
+	if(ImGui::IsItemHovered())
+		m_mouseOverButton = true;
 
 	if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 	{
