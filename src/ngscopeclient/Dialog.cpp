@@ -207,7 +207,7 @@ void Dialog::HelpMarker(const string& header, const vector<string>& bullets)
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(header.c_str());
 		for(auto s : bullets)
-			ImGui::BulletText(s.c_str());
+			ImGui::BulletText("%s", s.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
