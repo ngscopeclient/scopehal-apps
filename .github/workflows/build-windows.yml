@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VULKAN_SDK_VERSION: 1.3.250.0
+  VULKAN_SDK_VERSION: 1.3.250.1
 
 jobs:
 
