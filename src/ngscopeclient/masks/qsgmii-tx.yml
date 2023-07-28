@@ -1,0 +1,45 @@
+protocol:
+    name:       QSGMII Driver
+    reference:  QSGMII Specification figure 8
+displaylimits:
+    ymin:       -500
+    ymax:        500
+units:
+    xscale:     ui
+    yscale:     mv
+mask:
+    - points:
+        -   x:   -0.35
+            y:    0
+        -   x:   -0.1
+            y:  -200
+        -   x:    0.1
+            y:  -200
+        -   x:    0.35
+            y:    0
+        -   x:    0.1
+            y:   200
+        -   x:   -0.1
+            y:   200
+
+    - points:
+        -   x:   -2
+            y: -450
+        -   x:    2
+            y: -450
+        -   x:    2
+            y: -500
+        -   x:   -2
+            y: -500
+
+    - points:
+        -   x:   -2
+            y:  450
+        -   x:    2
+            y:  450
+        -   x:    2
+            y:  500
+        -   x:   -2
+            y:  500
+conditions:
+    hitrate: 5.0e-5
