@@ -28,9 +28,9 @@ mask:
         -   x:    2
             y: -450
         -   x:    2
-            y: -500
+            y: -800
         -   x:   -2
-            y: -500
+            y: -800
 
     - points:
         -   x:   -2
@@ -38,8 +38,8 @@ mask:
         -   x:    2
             y:  450
         -   x:    2
-            y:  500
+            y:  800
         -   x:   -2
-            y:  500
+            y:  800
 conditions:
-    hitrate: 5.0e-5
+    hitrate: 1e-6
