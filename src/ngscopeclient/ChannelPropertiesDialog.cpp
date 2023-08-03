@@ -46,6 +46,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
 	: EmbeddableDialog(chan->GetHwname(), string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400), graphEditorMode)
 	, m_channel(chan)
 {
+	m_channel->AddRef();
+
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
 
@@ -184,6 +186,7 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
 {
+	m_channel->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
