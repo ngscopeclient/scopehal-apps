@@ -129,8 +129,12 @@ public:
 	bool LoadConfiguration(const YAML::Node& node);
 	YAML::Node SerializeConfiguration(IDTable& table);
 
+	bool IsDraggingTrigger()
+	{ return m_dragState == DRAG_STATE_TRIGGER; }
+
 protected:
 	void RenderTimeline(float width, float height);
+	void RenderTriggerPositionArrows(ImVec2 pos, float height);
 	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
 	void RenderMarkers(ImVec2 pos, ImVec2 size);
 	void DoCursorReadouts();
@@ -143,7 +147,8 @@ protected:
 		DRAG_STATE_TIMELINE,
 		DRAG_STATE_X_CURSOR0,
 		DRAG_STATE_X_CURSOR1,
-		DRAG_STATE_MARKER
+		DRAG_STATE_MARKER,
+		DRAG_STATE_TRIGGER
 	};
 
 	void DoCursor(int iCursor, DragState state);
@@ -195,6 +200,12 @@ protected:
 
 	///@brief True if clearing persistence
 	std::atomic<bool> m_clearPersistence;
+
+	///@brief True if mouse is over a trigger arrow
+	bool m_mouseOverTriggerArrow;
+
+	///@brief The scope whose trigger being dragged when in DRAG_STATE_TRIGGER
+	Oscilloscope* m_scopeTriggerDuringDrag;
 
 public:
 

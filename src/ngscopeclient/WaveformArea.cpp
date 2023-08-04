@@ -1996,6 +1996,19 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 		for(float dx = 0; (dx + dashSize) < size.x; dx += 2*dashSize)
 			draw_list->AddLine(ImVec2(start.x + dx, y), ImVec2(start.x + dx + dashSize, y), triggerColor);
 	}
+
+	//See if the waveform group is dragging a trigger
+	auto mouse = ImGui::GetMousePos();
+	if(m_group->IsDraggingTrigger())
+	{
+		auto color = m_parent->GetSession().GetPreferences().GetColor("Appearance.Timeline.axis_color");
+		draw_list->AddLine(
+			ImVec2(mouse.x, start.y),
+			ImVec2(mouse.x, start.y + size.y),
+			color,
+			1);
+	}
+
 }
 
 /**

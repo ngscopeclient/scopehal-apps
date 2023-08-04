@@ -56,6 +56,8 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_dragMarker(nullptr)
 	, m_tLastMouseMove(GetTime())
 	, m_timelineHeight(0)
+	, m_mouseOverTriggerArrow(false)
+	, m_scopeTriggerDuringDrag(nullptr)
 	, m_xAxisCursorMode(X_CURSOR_NONE)
 {
 	m_xAxisCursorPositions[0] = 0;
@@ -691,21 +693,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	if( (mouseDelta.x != 0) || (mouseDelta.y != 0) )
 		m_tLastMouseMove = tnow;
 
-	//Help tooltip
-	//Only show if mouse has been still for 250ms
-	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) && (tnow - m_tLastMouseMove > 0.25) )
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-		ImGui::TextUnformatted(
-			"Click and drag to scroll the timeline.\n"
-			"Use mouse wheel to zoom.\n"
-			"Middle click to zoom to fit the entire waveform.\n"
-			"Double-click to open timebase properties.");
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-
 	ImGui::SetItemUsingMouseWheel();
 	if(ImGui::IsItemHovered())
 	{
@@ -865,7 +852,107 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			m_xAxisUnit.PrettyPrint(t).c_str());
 	}
 
+	RenderTriggerPositionArrows(pos, height);
+
+	//Help tooltip
+	//Only show if mouse has been still for 250ms
+	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) &&
+		(tnow - m_tLastMouseMove > 0.25) &&
+		(m_dragState == DRAG_STATE_NONE)
+		)
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+
+		if(m_mouseOverTriggerArrow)
+		{
+			ImGui::TextUnformatted("Click and drag to move trigger position\n");
+		}
+		else
+		{
+			ImGui::TextUnformatted(
+				"Click and drag to scroll the timeline.\n"
+				"Use mouse wheel to zoom.\n"
+				"Middle click to zoom to fit the entire waveform.\n"
+				"Double-click to open timebase properties.");
+		}
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
 	ImGui::EndChild();
+}
+
+/**
+	@brief Draws an arrow for each scope's trigger position
+ */
+void WaveformGroup::RenderTriggerPositionArrows(ImVec2 pos, float height)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	float arrowsize = ImGui::GetFontSize() * 0.6;
+	float caparrowsize = ImGui::GetFontSize() * 1;
+
+	auto mouse = ImGui::GetMousePos();
+
+	//Make a list of all scope triggers
+	float ybot = pos.y + height;
+	auto scopes = m_parent->GetSession().GetScopes();
+	m_mouseOverTriggerArrow = false;
+	for(auto scope : scopes)
+	{
+		auto trig = scope->GetTrigger();
+		if(!trig)
+			continue;
+		auto din = trig->GetInput(0);
+		if(!din)
+			continue;
+
+		//Get the timestamp of the trigger
+		auto off = scope->GetTriggerOffset();
+		auto xpos = XAxisUnitsToXPosition(off);
+
+		//Check if the mouse is within the expanded hitbox
+		float exleft = xpos - caparrowsize/2;
+		float exright = xpos + caparrowsize/2;
+		float extop = ybot - caparrowsize;
+		if( (mouse.x >= exleft) && (mouse.x <= exright) && (mouse.y >= extop) && (mouse.y <= ybot) )
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+			m_mouseOverTriggerArrow = true;
+
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				LogTrace("Start dragging trigger position\n");
+				m_scopeTriggerDuringDrag = scope;
+				m_dragState = DRAG_STATE_TRIGGER;
+			}
+		}
+
+		//If actively dragging the trigger, show the arrow at the current mouse position
+		if(m_dragState == DRAG_STATE_TRIGGER)
+			xpos = mouse.x;
+
+		//Draw the arrow
+		auto color = ColorFromString(din.m_channel->m_displaycolor);
+		float aleft = xpos - arrowsize/2;
+		float aright = xpos + arrowsize/2;
+		draw_list->AddTriangleFilled(
+			ImVec2(aleft, ybot - arrowsize),
+			ImVec2(aright, ybot - arrowsize),
+			ImVec2(xpos, ybot),
+			color);
+	}
+
+	//Check for end of drag
+	if(m_dragState == DRAG_STATE_TRIGGER)
+	{
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			m_scopeTriggerDuringDrag->SetTriggerOffset(XPositionToXAxisUnits(mouse.x));
+			m_dragState = DRAG_STATE_NONE;
+		}
+	}
 }
 
 /**

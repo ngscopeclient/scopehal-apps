@@ -152,64 +152,6 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Icon color")
 				.Description("Color for math block icons"));
 
-		/*
-			graph.AddPreference(
-				Preference::Color("background_color", ColorFromString("#101010"))
-				.Label("Background color")
-				.Description("Color for the background of the filter graph editor"));
-			graph.AddPreference(
-				Preference::Color("node_color", ColorFromString("#404040"))
-				.Label("Node color")
-				.Description("Color for node background"));
-			graph.AddPreference(
-				Preference::Color("node_title_text_color", ColorFromString("#000000"))
-				.Label("Node title text color")
-				.Description("Color for node title"));
-			graph.AddPreference(
-				Preference::Color("node_text_color", ColorFromString("#ffffff"))
-				.Label("Node text color")
-				.Description("Color for node text"));
-			graph.AddPreference(
-				Preference::Color("outline_color", ColorFromString("#009900"))
-				.Label("Outline color")
-				.Description("Color for node outlines"));
-			graph.AddPreference(
-				Preference::Font("node_name_font", "sans bold 12")
-				.Label("Node name font")
-				.Description("Font used for graph node title"));
-			graph.AddPreference(
-				Preference::Font("port_font", "sans 10")
-				.Label("Port font")
-				.Description("Font used for port names"));
-			graph.AddPreference(
-				Preference::Font("param_font", "sans 10")
-				.Label("Parameter font")
-				.Description("Font used for parameters"));
-			graph.AddPreference(
-				Preference::Color("analog_port_color", ColorFromString("#000080"))
-				.Label("Analog port color")
-				.Description("Color for analog node ports"));
-			graph.AddPreference(
-				Preference::Color("digital_port_color", ColorFromString("#800080"))
-				.Label("Digital port color")
-				.Description("Color for digital node ports"));
-			graph.AddPreference(
-				Preference::Color("complex_port_color", ColorFromString("#808000"))
-				.Label("Complex port color")
-				.Description("Color for complex node ports"));
-			graph.AddPreference(
-				Preference::Color("line_color", ColorFromString("#c0c0c0"))
-				.Label("Line color")
-				.Description("Color for lines between nodes"));
-			graph.AddPreference(
-				Preference::Color("line_highlight_color", ColorFromString("#ff8000"))
-				.Label("Highlighted line color")
-				.Description("Color for highlighted lines between nodes"));
-			graph.AddPreference(
-				Preference::Color("disabled_port_color", ColorFromString("#404040"))
-				.Label("Disabled port color")
-				.Description("Color for ports which cannot be selected in the current mode"));
-		*/
 		auto& general = appearance.AddCategory("General");
 			general.AddPreference(
 				Preference::Enum("theme", THEME_DARK)
@@ -325,6 +267,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("text_color", ColorFromString("#ffffff"))
 				.Label("Text color")
 				.Description("Color for text labels on the X axis"));
+			timeline.AddPreference(
+				Preference::Color("trigger_bar_color", ColorFromString("#ffffff40"))
+				.Label("Trigger bar color")
+				.Description("Color for the vertical position line shown when dragging a trigger"));
 			timeline.AddPreference(
 				Preference::Font("x_axis_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 15))
 				.Label("X axis font")
