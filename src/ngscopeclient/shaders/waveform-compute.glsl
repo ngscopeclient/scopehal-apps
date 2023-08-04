@@ -54,6 +54,7 @@ shared float g_workingBuffer[MAX_HEIGHT];
 //Min/max for the current sample
 shared int g_blockmin[ROWS_PER_BLOCK];
 shared int g_blockmax[ROWS_PER_BLOCK];
+shared float g_alpha[ROWS_PER_BLOCK];
 shared bool g_done;
 shared bool g_updating[ROWS_PER_BLOCK];
 
@@ -342,6 +343,25 @@ void main()
 					//Sort Y coordinates from min to max
 					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
 					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
+
+					//Intensity grading based on length of segment to more accurately simulate CRT dwell time
+					//(see https://github.com/glscopeclient/scopehal-apps/issues/600)
+					/*
+					#if defined(ANALOG_PATH) && !defined(NO_INTERPOLATION)
+						float dy = abs(right.y - left.y);
+						float dx = right.x - left.x;
+						float tracelen = sqrt(dy*dy + dx*dx);
+
+						float alphascale = 5 / (tracelen*tracelen);
+
+						if(alphascale > 1)
+							alphascale = 1;
+						if(alphascale < 0.01)
+							alphascale = 0.01;
+
+						g_alpha[gl_LocalInvocationID.y] = alpha * alphascale;
+					#endif
+					*/
 				}
 			}
 			else
@@ -371,12 +391,14 @@ void main()
 				//Parallel fill
 				int ymin = g_blockmin[y];
 				int len = g_blockmax[y] - ymin;
-				for(uint y=gl_LocalInvocationID.y; y <= len; y += ROWS_PER_BLOCK)
+				for(uint nthread=gl_LocalInvocationID.y; nthread <= len; nthread += ROWS_PER_BLOCK)
 				{
 					#ifdef HISTOGRAM_PATH
-						g_workingBuffer[ymin + y] = alpha;
+						g_workingBuffer[ymin + nthread] = alpha;
+					/*#elif defined(ANALOG_PATH) && !defined(NO_INTERPOLATION)
+						g_workingBuffer[ymin + nthread] += g_alpha[y];*/
 					#else
-						g_workingBuffer[ymin + y] += alpha;
+						g_workingBuffer[ymin + nthread] += alpha;
 					#endif
 				}
 			}

@@ -38,6 +38,7 @@
 #include "FilterPropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Session.h"
+#include "../scopehal/CDRTrigger.h"
 
 using namespace std;
 
@@ -47,6 +48,8 @@ using namespace std;
 TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 	: m_scope(scope)
 	, m_committedLevel(0)
+	, m_cdrLockState(false)
+	, m_tLastCdrPoll(0)
 {
 	auto trig = m_scope->GetTrigger();
 	if(!trig)
@@ -156,6 +159,54 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 			//TODO: if we have a secondary level, do that
 
 			EndSection(graphEditorMode);
+		}
+
+		auto cdrtrig = dynamic_cast<CDRTrigger*>(trig);
+		if(cdrtrig)
+		{
+			if(StartSection("CDR", graphEditorMode))
+			{
+				//Show bit rate
+				if(FilterPropertiesDialog::DoParameter(trig->GetParameter("Bit Rate"), "Bit Rate", m_paramTempValues))
+					updated = true;
+
+				//Show autobaud button
+				if(cdrtrig->IsAutomaticBitRateCalculationAvailable())
+				{
+					ImGui::SameLine();
+					if(ImGui::Button("Auto"))
+					{
+						cdrtrig->CalculateBitRate();
+
+						//pull updated bit rate etc from hardware
+						m_paramTempValues.clear();
+					}
+				}
+
+				//Show lock status, but limit polling rate to 1 Hz
+				double now = GetTime();
+				bool locked = m_cdrLockState;
+				if( (now - m_tLastCdrPoll) > 1)
+				{
+					locked = cdrtrig->IsCDRLocked();
+					m_tLastCdrPoll = now;
+				}
+
+				ImGui::BeginDisabled();
+				ImGui::Checkbox("PLL Lock", &locked);
+				ImGui::EndDisabled();
+
+				if(locked != m_cdrLockState)
+				{
+					//pull updated bit rate etc from hardware if we just re-locked
+					if(locked)
+						m_paramTempValues.clear();
+
+					m_cdrLockState = locked;
+				}
+
+				EndSection(graphEditorMode);
+			}
 		}
 
 		if(StartSection("Parameters", graphEditorMode))

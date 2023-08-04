@@ -364,7 +364,127 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 			}
 			break;
 
-		//TODO: TYPE_8B10B_PATTERN
+		case FilterParameter::TYPE_8B10B_PATTERN:
+			{
+				auto pattern = param.Get8B10BPattern();
+				bool changed = false;
+
+				//ktype
+				vector<string> types;
+				types.push_back("K");
+				types.push_back("D");
+				types.push_back("*");
+
+				//first section
+				vector<string> first;
+				for(int i=0; i<32; i++)
+					first.push_back(to_string(i));
+
+				//second section
+				vector<string> second;
+				for(int i=0; i<7; i++)
+					second.push_back(to_string(i));
+
+				//list of k characters
+				vector<string> knames;
+				vector<uint8_t> kvals;
+				knames.push_back("23.7"); kvals.push_back(0xf7);
+				knames.push_back("27.7"); kvals.push_back(0xfb);
+				knames.push_back("28.0"); kvals.push_back(0x1c);
+				knames.push_back("28.1"); kvals.push_back(0x3c);
+				knames.push_back("28.2"); kvals.push_back(0x5c);
+				knames.push_back("28.3"); kvals.push_back(0x7c);
+				knames.push_back("28.4"); kvals.push_back(0x9c);
+				knames.push_back("28.5"); kvals.push_back(0xbc);
+				knames.push_back("28.6"); kvals.push_back(0xdc);
+				knames.push_back("28.7"); kvals.push_back(0xfc);
+				knames.push_back("29.7"); kvals.push_back(0xfd);
+				knames.push_back("30.7"); kvals.push_back(0xfe);
+
+				vector<string> disps;
+				disps.push_back("+");
+				disps.push_back("-");
+				disps.push_back("*");
+
+				for(size_t i=0; i<pattern.size(); i++)
+				{
+					string snum = to_string(i);
+
+					//Control vs data type dropdown
+					int ntype = pattern[i].ktype;
+					ImGui::SetNextItemWidth(3 * ImGui::GetFontSize());
+					if(Dialog::Combo(string("##ktype") + snum, types, ntype))
+					{
+						pattern[i].ktype = (T8B10BSymbol::type_t)ntype;
+						changed = true;
+					}
+
+					//K type has a fixed list
+					if(ntype == T8B10BSymbol::KSYMBOL)
+					{
+						int nkval = 0;
+						for(size_t k=0; k<kvals.size(); k++)
+						{
+							if(pattern[i].value == kvals[k])
+							{
+								nkval = k;
+								break;
+							}
+						}
+
+						ImGui::SameLine();
+						ImGui::SetNextItemWidth(5 * ImGui::GetFontSize());
+						if(Dialog::Combo(string("##kctrl") + snum, knames, nkval))
+						{
+							pattern[i].value = kvals[nkval];
+							changed = true;
+						}
+					}
+
+					//D types have the full dropdown
+					else
+					{
+						int ncode5 = pattern[i].value & 0x1f;
+						int ncode3 = pattern[i].value >> 5;
+
+						ImGui::SameLine();
+						ImGui::SetNextItemWidth(3 * ImGui::GetFontSize());
+						if(Dialog::Combo(string("##code5") + snum, first, ncode5))
+						{
+							pattern[i].value = (ncode3 << 5) | ncode5;
+							changed = true;
+						}
+
+						ImGui::SameLine();
+						ImGui::Text(".");
+
+						ImGui::SameLine();
+						ImGui::SetNextItemWidth(3 * ImGui::GetFontSize());
+						if(Dialog::Combo(string("##code3") + snum, second, ncode3))
+						{
+							pattern[i].value = (ncode3 << 5) | ncode5;
+							changed = true;
+						}
+					}
+
+					//Disparity
+					int ndisp = pattern[i].disparity;
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(2 * ImGui::GetFontSize());
+					if(Dialog::Combo(string("##disp") + snum, disps, ndisp))
+					{
+						pattern[i].disparity = (T8B10BSymbol::disparity_t) ndisp;
+						changed = true;
+					}
+
+				}
+
+				if(changed)
+					param.Set8B10BPattern(pattern);
+
+				return changed;
+			}
+			break;
 
 		default:
 			ImGui::Text("Parameter %s is unimplemented type", name.c_str());

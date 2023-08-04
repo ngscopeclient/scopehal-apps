@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -56,6 +56,9 @@ protected:
 	std::string m_triggerLevel;
 
 	std::map<std::string, std::string> m_paramTempValues;
+
+	bool m_cdrLockState;
+	double m_tLastCdrPoll;
 };
 
 class TriggerPropertiesDialog : public Dialog
