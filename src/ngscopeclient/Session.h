@@ -242,6 +242,8 @@ public:
 	void AddMultimeterDialog(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
+	void AddVNA(SCPIVNA* vna, bool createViews = true)
+	{ AddOscilloscope(vna, createViews); }
 	void AddPowerSupply(SCPIPowerSupply* psu);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);

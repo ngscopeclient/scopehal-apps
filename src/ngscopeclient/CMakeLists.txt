@@ -65,6 +65,7 @@ add_executable(ngscopeclient
 	AddPowerSupplyDialog.cpp
 	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
+	AddVNADialog.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
 	EmbeddableDialog.cpp

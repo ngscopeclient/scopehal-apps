@@ -220,6 +220,9 @@ protected:
 				void AddRFGeneratorMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
+				void AddVNAMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddChannelsMenu();
 				void AddImportMenu();
 				void AddGenerateMenu();
