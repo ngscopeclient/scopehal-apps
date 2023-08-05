@@ -54,6 +54,19 @@ public:
 	std::vector<std::string> m_depthNames;
 	int m_depth;
 
+	//Frequency domain controls
+	std::string m_centerText;
+	double m_center;
+
+	std::string m_spanText;
+	double m_span;
+
+	std::string m_startText;
+	double m_start;
+
+	std::string m_endText;
+	double m_end;
+
 	bool m_interleaving;
 };
 

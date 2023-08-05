@@ -79,6 +79,19 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 		if(m_depths[i] == depth)
 			m_depth = i;
 	}
+
+	Unit hz(Unit::UNIT_HZ);
+	m_span = scope->GetSpan();
+	m_spanText = hz.PrettyPrint(m_span);
+
+	//TODO: some instruments have per channel center freq, how to handle this?
+	m_center = scope->GetCenterFrequency(0);
+	m_centerText = hz.PrettyPrint(m_center);
+
+	m_start = m_center - m_span/2;
+	m_startText = hz.PrettyPrint(m_start);
+	m_end = m_center + m_span/2;
+	m_endText = hz.PrettyPrint(m_end);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -135,7 +148,6 @@ bool TimebasePropertiesDialog::DoRender()
 			//Time domain configuration
 			if(scope->HasTimebaseControls())
 			{
-
 				//Sample rate
 				ImGui::SetNextItemWidth(width);
 				if(Combo("Sample rate", p->m_rateNames, p->m_rate))
@@ -176,7 +188,69 @@ bool TimebasePropertiesDialog::DoRender()
 			//Frequency domain configuration
 			if(scope->HasFrequencyControls())
 			{
-				//TODO
+				//No sample rate
+
+				//Memory depth
+				ImGui::SetNextItemWidth(width);
+				if(Combo("Points", p->m_depthNames, p->m_depth))
+					scope->SetSampleDepth(p->m_depths[p->m_depth]);
+				HelpMarker("Number of points in the sweep");
+
+				//Frequency
+				bool changed = false;
+				Unit hz(Unit::UNIT_HZ);
+
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithImplicitApply("Start", p->m_startText, p->m_start, hz))
+				{
+					double mid = (p->m_start + p->m_end) / 2;
+					double span = (p->m_end - p->m_start);
+					scope->SetCenterFrequency(0, mid);
+					scope->SetSpan(span);
+					changed = true;
+				}
+				HelpMarker("Start of the frequency sweep");
+
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithImplicitApply("Center", p->m_centerText, p->m_center, hz))
+				{
+					scope->SetCenterFrequency(0, p->m_center);
+					changed = true;
+				}
+				HelpMarker("Midpoint of the frequency sweep");
+
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithImplicitApply("Span", p->m_spanText, p->m_span, hz))
+				{
+					scope->SetSpan(p->m_span);
+					changed = true;
+				}
+				HelpMarker("Width of the frequency sweep");
+
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithImplicitApply("End", p->m_endText, p->m_end, hz))
+				{
+					double mid = (p->m_start + p->m_end) / 2;
+					double span = (p->m_end - p->m_start);
+					scope->SetCenterFrequency(0, mid);
+					scope->SetSpan(span);
+					changed = true;
+				}
+				HelpMarker("End of the frequency sweep");
+
+				//Update everything if one setting is changed
+				if(changed)
+				{
+					p->m_span = scope->GetSpan();
+					p->m_center = scope->GetCenterFrequency(0);
+					p->m_start = p->m_center - p->m_span/2;
+					p->m_end = p->m_center + p->m_span/2;
+
+					p->m_spanText = hz.PrettyPrint(p->m_span);
+					p->m_centerText = hz.PrettyPrint(p->m_center);
+					p->m_startText = hz.PrettyPrint(p->m_start);
+					p->m_endText = hz.PrettyPrint(p->m_end);
+				}
 			}
 
 			ImGui::PopID();
