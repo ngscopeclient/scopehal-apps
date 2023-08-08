@@ -104,9 +104,9 @@ bool PowerSupplyDialog::DoRender()
 	}
 
 	//Top level settings
-	if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
+	if(m_psu->SupportsMasterOutputSwitching())
 	{
-		if(m_psu->SupportsMasterOutputSwitching())
+		if(ImGui::CollapsingHeader("Global", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			if(ImGui::Checkbox("Output Enable", &m_masterEnable))
 				m_psu->SetMasterPowerEnable(m_masterEnable);
