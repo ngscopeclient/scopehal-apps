@@ -100,6 +100,7 @@ bool FilterGraphEditor::DoRender()
 	{
 		//Channels
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		auto psu = dynamic_cast<PowerSupply*>(inst);
 		for(size_t i=0; i<inst->GetChannelCount(); i++)
 		{
 			auto chan = inst->GetChannel(i);
@@ -113,6 +114,17 @@ bool FilterGraphEditor::DoRender()
 					if(!scope->CanEnableChannel(i))
 						continue;
 					if(!scope->IsChannelEnabled(i))
+						continue;
+				}
+			}
+
+			//Exclude power supply channels that lack voltage/current controls
+			//TODO: still allow filter graph control of on/off?
+			if(psu)
+			{
+				if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU)
+				{
+					if(!psu->SupportsVoltageCurrentControl(i))
 						continue;
 				}
 			}

@@ -204,93 +204,101 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		}
 
 		//Advanced features (not available with all PSUs)
-		if(ImGui::TreeNode("Advanced"))
+		bool ocp = m_psu->SupportsOvercurrentShutdown();
+		bool ss = m_psu->SupportsSoftStart();
+		if(ocp || ss)
 		{
-			if(m_psu->SupportsOvercurrentShutdown())
+			if(ImGui::TreeNode("Advanced"))
 			{
-				if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
-					m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
-				HelpMarker(
-					"When enabled, the channel will shut down on overcurrent rather than switching to constant current mode.\n"
-					"\n"
-					"Once the overcurrent shutdown has been activated, the channel must be disabled and re-enabled to "
-					"restore power to the load.");
+				if(ocp)
+				{
+					if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
+						m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
+					HelpMarker(
+						"When enabled, the channel will shut down on overcurrent rather than switching to constant current mode.\n"
+						"\n"
+						"Once the overcurrent shutdown has been activated, the channel must be disabled and re-enabled to "
+						"restore power to the load.");
+				}
+
+				if(ss)
+				{
+					if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
+						m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
+
+					HelpMarker(
+						"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
+						"capacitive loads.\n");
+				}
+
+				ImGui::TreePop();
 			}
-
-			if(m_psu->SupportsSoftStart())
-			{
-				if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
-					m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
-
-				HelpMarker(
-					"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
-					"capacitive loads.\n");
-			}
-
-			ImGui::TreePop();
 		}
 
-		//Set points for channels
-		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-		if(ImGui::TreeNode("Set Points"))
+		if(m_psu->SupportsVoltageCurrentControl(i))
 		{
-			ImGui::SetNextItemWidth(valueWidth);
-			if(UnitInputWithExplicitApply(
-				"Voltage", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_committedSetVoltage, volts))
+			//Set points for channels
+			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+			if(ImGui::TreeNode("Set Points"))
 			{
-				m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetVoltage);
-			}
-			HelpMarker("Target voltage to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
-
-			ImGui::SetNextItemWidth(valueWidth);
-			if(UnitInputWithExplicitApply(
-				"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
-			{
-				m_psu->SetPowerCurrent(i, m_channelUIState[i].m_committedSetCurrent);
-			}
-			HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
-
-			ImGui::TreePop();
-		}
-
-		//Actual values of channels
-		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-		if(ImGui::TreeNode("Measured"))
-		{
-			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
-				auto svolts = volts.PrettyPrint(v);
-				ImGui::InputText("Voltage###VMeasured", &svolts);
-			ImGui::EndDisabled();
+				if(UnitInputWithExplicitApply(
+					"Voltage", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_committedSetVoltage, volts))
+				{
+					m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetVoltage);
+				}
+				HelpMarker("Target voltage to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
-			if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
-			{
-				ImGui::SameLine();
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
-				ImGui::TextUnformatted("CV");
-				ImGui::PopStyleColor();
-				Tooltip("Channel is operating in constant-voltage mode");
-			}
-			HelpMarker("Measured voltage being output by the supply");
-
-			ImGui::BeginDisabled();
 				ImGui::SetNextItemWidth(valueWidth);
-				auto scurr = amps.PrettyPrint(a);
-				ImGui::InputText("Current###IMeasured", &scurr);
-			ImGui::EndDisabled();
+				if(UnitInputWithExplicitApply(
+					"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
+				{
+					m_psu->SetPowerCurrent(i, m_channelUIState[i].m_committedSetCurrent);
+				}
+				HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
-			if(cc && m_channelUIState[i].m_outputEnabled && !shdn)
-			{
-				ImGui::SameLine();
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-				ImGui::TextUnformatted("CC");
-				Tooltip("Channel is operating in constant-current mode");
-				ImGui::PopStyleColor();
+				ImGui::TreePop();
 			}
 
-			HelpMarker("Measured current being output by the supply");
+			//Actual values of channels
+			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
+			if(ImGui::TreeNode("Measured"))
+			{
+				ImGui::BeginDisabled();
+					ImGui::SetNextItemWidth(valueWidth);
+					auto svolts = volts.PrettyPrint(v);
+					ImGui::InputText("Voltage###VMeasured", &svolts);
+				ImGui::EndDisabled();
 
-			ImGui::TreePop();
+				if(!cc && m_channelUIState[i].m_outputEnabled && !shdn)
+				{
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 1, 0, 1));
+					ImGui::TextUnformatted("CV");
+					ImGui::PopStyleColor();
+					Tooltip("Channel is operating in constant-voltage mode");
+				}
+				HelpMarker("Measured voltage being output by the supply");
+
+				ImGui::BeginDisabled();
+					ImGui::SetNextItemWidth(valueWidth);
+					auto scurr = amps.PrettyPrint(a);
+					ImGui::InputText("Current###IMeasured", &scurr);
+				ImGui::EndDisabled();
+
+				if(cc && m_channelUIState[i].m_outputEnabled && !shdn)
+				{
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+					ImGui::TextUnformatted("CC");
+					Tooltip("Channel is operating in constant-current mode");
+					ImGui::PopStyleColor();
+				}
+
+				HelpMarker("Measured current being output by the supply");
+
+				ImGui::TreePop();
+			}
 		}
 
 		ImGui::PopID();
