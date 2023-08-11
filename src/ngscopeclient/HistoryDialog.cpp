@@ -270,6 +270,9 @@ bool HistoryDialog::DoRender()
 				deletedSelection = true;
 
 			//Delete the selected row
+			//(manual delete applies even if we have markers or a pin)
+			m_session.RemoveMarkers((*itDelete)->m_time);
+			m_session.RemovePackets((*itDelete)->m_time);
 			m_mgr.m_history.erase(itDelete);
 
 			if(deletedSelection)
