@@ -1766,6 +1766,19 @@ bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
 {
 	//TODO: all of the other dialog types
 
+	auto analyzers = node["analyzers"];
+	if(analyzers)
+	{
+		for(auto it : analyzers)
+		{
+			auto pd = static_cast<PacketDecoder*>(table[it.second.as<int>()]);
+
+			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+			m_protocolAnalyzerDialogs[pd] = dlg;
+			AddDialog(dlg);
+		}
+	}
+
 	auto meters = node["meters"];
 	if(meters)
 	{
@@ -2106,7 +2119,21 @@ YAML::Node MainWindow::SerializeDialogs(IDTable& table)
 	//TODO: rf generator dialogs
 	//TODO: SCPI console
 	//TODO: Channel properties
-	//TODO: protocol analyzers
+
+	//Protocol analyzers
+	if(!m_protocolAnalyzerDialogs.empty())
+	{
+		YAML::Node anode;
+
+		for(auto it : m_protocolAnalyzerDialogs)
+		{
+			auto proto = it.first;
+			anode[proto->GetDisplayName()] = table.emplace(proto);
+		}
+
+		node["analyzers"] = anode;
+	}
+
 
 	/*
 	///@brief Map of multimeters to meter control dialogs
@@ -2123,9 +2150,6 @@ YAML::Node MainWindow::SerializeDialogs(IDTable& table)
 
 	///@brief Map of channels to properties dialogs
 	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
-
-	///@brief Map of filters to analyzer dialogs
-	std::map<PacketDecoder*, std::shared_ptr<ProtocolAnalyzerDialog> > m_protocolAnalyzerDialogs;
 
 	*/
 
