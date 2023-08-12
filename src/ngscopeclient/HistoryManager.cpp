@@ -134,6 +134,34 @@ HistoryManager::~HistoryManager()
 // History processing
 
 /**
+	@brief Loads an empty history (no data) to the current session
+
+	This is normally called after the user manually deletes the last waveform in history.
+ */
+void HistoryManager::LoadEmptyHistoryToSession(Session& session)
+{
+	//We don't want to keep capturing if we're trying to look at a historical waveform. That would be a bit silly.
+	session.StopTrigger();
+
+	//Set all channels' data to null
+	auto scopes = session.GetScopes();
+	for(auto scope : scopes)
+	{
+		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		{
+			auto chan = scope->GetOscilloscopeChannel(i);
+			if(!chan)
+				continue;
+			for(size_t j=0; j<chan->GetStreamCount(); j++)
+			{
+				chan->Detach(j);
+				chan->SetData(nullptr, j);
+			}
+		}
+	}
+}
+
+/**
 	@brief Adds new data to the history
 
 	@param scopes		The instruments to add

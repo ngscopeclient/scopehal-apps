@@ -266,7 +266,7 @@ bool HistoryDialog::DoRender()
 		{
 			//Deleting selected row? Select the last row (if we have one)
 			bool deletedSelection = false;
-			if( (*itDelete == m_selectedPoint) && (m_mgr.m_history.size() > 1) )
+			if(*itDelete == m_selectedPoint)
 				deletedSelection = true;
 
 			//Delete the selected row
@@ -278,7 +278,10 @@ bool HistoryDialog::DoRender()
 			if(deletedSelection)
 			{
 				m_selectionChanged = true;
-				m_selectedPoint = *m_mgr.m_history.rbegin();
+				if(m_mgr.m_history.empty())
+					m_selectedPoint = nullptr;
+				else
+					m_selectedPoint = *m_mgr.m_history.rbegin();
 			}
 		}
 
@@ -301,6 +304,8 @@ void HistoryDialog::LoadHistoryFromSelection(Session& session)
 {
 	if(m_selectedPoint)
 		m_selectedPoint->LoadHistoryToSession(session);
+	else
+		m_mgr.LoadEmptyHistoryToSession(session);
 }
 
 /**

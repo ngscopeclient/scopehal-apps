@@ -336,6 +336,14 @@ bool Session::LoadWaveformDataForScope(
 		if(wfm["label"])
 			label = wfm["label"].as<string>();
 
+		//If we already have historical data from this timestamp, warn and drop the duplicate data
+		auto hist = m_history.GetHistory(time);
+		if(hist && (hist->m_history.find(scope) != hist->m_history.end()))
+		{
+			LogWarning("Session contains duplicate data for time %ld.%ld, discarding\n", time.first, time.second);
+			continue;
+		}
+
 		//Set up channel metadata first (serialized)
 		auto chans = wfm["channels"];
 		vector<pair<int, int>> channels;	//pair<channel, stream>

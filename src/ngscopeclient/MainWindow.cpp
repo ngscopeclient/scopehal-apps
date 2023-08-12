@@ -498,8 +498,11 @@ void MainWindow::RenderUI()
 		m_historyDialog->LoadHistoryFromSelection(m_session);
 
 		auto t = m_historyDialog->GetSelectedPoint();
-		for(auto it : m_protocolAnalyzerDialogs)
-			it.second->OnWaveformLoaded(t);
+		if(t != TimePoint(0,0))
+		{
+			for(auto it : m_protocolAnalyzerDialogs)
+				it.second->OnWaveformLoaded(t);
+		}
 
 		m_session.RefreshAllFiltersNonblocking();
 		m_needRender = true;

@@ -79,6 +79,8 @@ public:
 		bool pin = false,
 		std::string nick = "");
 
+	void LoadEmptyHistoryToSession(Session& session);
+
 	/**
 		@brief Returns true if we have no historical waveform data whatsoever
 	 */
