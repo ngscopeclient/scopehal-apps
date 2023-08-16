@@ -226,11 +226,11 @@ public:
 	void ClearBackgroundThreads();
 
 	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
-	YAML::Node SerializeInstrumentConfiguration(IDTable& table);
+	YAML::Node SerializeInstrumentConfiguration();
 	YAML::Node SerializeMetadata();
-	YAML::Node SerializeFilterConfiguration(IDTable& table);
+	YAML::Node SerializeFilterConfiguration();
 	YAML::Node SerializeMarkers();
-	bool SerializeWaveforms(IDTable& table, const std::string& dataDir);
+	bool SerializeWaveforms(const std::string& dataDir);
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
@@ -340,22 +340,26 @@ public:
 	std::mutex& GetRasterizedWaveformMutex()
 	{ return m_rasterizedWaveformMutex; }
 
+	/**
+		@brief ID mapping used for serialization
+	 */
+	IDTable m_idtable;
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
-	bool LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table);
+	bool LoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);
 	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
-	bool LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table);
-	bool LoadMultimeter(int version, const YAML::Node& node, bool online, IDTable& table);
-	bool LoadFilters(int version, const YAML::Node& node, IDTable& table);
-	bool LoadWaveformData(int version, const std::string& dataDir, IDTable& table);
+	bool LoadOscilloscope(int version, const YAML::Node& node, bool online);
+	bool LoadMultimeter(int version, const YAML::Node& node, bool online);
+	bool LoadFilters(int version, const YAML::Node& node);
+	bool LoadWaveformData(int version, const std::string& dataDir);
 	bool LoadWaveformDataForScope(
 		int version,
 		const YAML::Node& node,
 		Oscilloscope* scope,
-		const std::string& dataDir,
-		IDTable& table);
+		const std::string& dataDir);
 	void DoLoadWaveformDataForScope(
 		int channel_index,
 		int stream,

@@ -358,7 +358,7 @@ protected:
 	void DoOpenFile(const std::string& sessionPath, bool online);
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 public:
-	bool LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table);
+	bool LoadUIConfiguration(int version, const YAML::Node& node);
 
 	void OnGraphEditorConfigModified(const std::string& blob)
 	{ m_graphEditorConfigBlob = blob; }
@@ -371,9 +371,9 @@ protected:
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
 	bool SetupDataDirectory(const std::string& dataDir);
-	YAML::Node SerializeUIConfiguration(IDTable& table);
-	YAML::Node SerializeDialogs(IDTable& table);
-	bool LoadDialogs(const YAML::Node& node, IDTable& table);
+	YAML::Node SerializeUIConfiguration();
+	YAML::Node SerializeDialogs();
+	bool LoadDialogs(const YAML::Node& node);
 
 	void RenderFileBrowser();
 

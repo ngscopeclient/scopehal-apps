@@ -190,6 +190,9 @@ void Session::Clear()
 	for(auto f : filters)
 		LogWarning("Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
 
+	//Remove any existing IDs
+	m_idtable.clear();
+
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScopeFreeRun = false;
@@ -230,14 +233,13 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		version = 0;
 	}
 
-	IDTable table;
-	if(!LoadInstruments(version, node["instruments"], online, table))
+	if(!LoadInstruments(version, node["instruments"], online))
 		return false;
-	if(!LoadFilters(version, node["decodes"], table))
+	if(!LoadFilters(version, node["decodes"]))
 		return false;
-	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"], table))
+	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"]))
 		return false;
-	if(!LoadWaveformData(version, dataDir, table))
+	if(!LoadWaveformData(version, dataDir))
 		return false;
 
 	//If we have no waveform data (filter-only session) create a WaveformThread to do rendering,
@@ -252,7 +254,7 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 }
 
 //TODO: this should run in a background thread or something to keep the UI responsive
-bool Session::LoadWaveformData(int version, const string& dataDir, IDTable& table)
+bool Session::LoadWaveformData(int version, const string& dataDir)
 {
 	LogTrace("Loading waveform data\n");
 
@@ -260,13 +262,13 @@ bool Session::LoadWaveformData(int version, const string& dataDir, IDTable& tabl
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		int id = table[scope];
+		int id = m_idtable[scope];
 
 		char tmp[512];
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
-		if(!LoadWaveformDataForScope(version, docs[0], scope, dataDir, table))
+		if(!LoadWaveformDataForScope(version, docs[0], scope, dataDir))
 		{
 			LogTrace("Waveform data loading failed\n");
 			return false;
@@ -285,8 +287,7 @@ bool Session::LoadWaveformDataForScope(
 	int version,
 	const YAML::Node& node,
 	Oscilloscope* scope,
-	const std::string& dataDir,
-	IDTable& table)
+	const std::string& dataDir)
 {
 	LogTrace("Loading waveform data for scope \"%s\"\n", scope->m_nickname.c_str());
 	LogIndenter li;
@@ -296,7 +297,7 @@ bool Session::LoadWaveformDataForScope(
 
 	//auto window = m_historyWindows[scope];
 	auto wavenode = node["waveforms"];
-	int scope_id = table[scope];
+	int scope_id = m_idtable[scope];
 
 	//Clear out any old waveforms the instrument may have
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -606,7 +607,7 @@ void Session::DoLoadWaveformDataForScope(
 	#endif
 }
 
-bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, IDTable& table)
+bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
 {
 	LogTrace("Loading saved instruments\n");
 	LogIndenter li;
@@ -630,14 +631,14 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool online, 
 		//(if no type specified, assume scope for backward compat)
 		if(!inst["type"].IsDefined() || (inst["type"].as<string>() == "oscilloscope") )
 		{
-			if(!LoadOscilloscope(version, inst, online, table))
+			if(!LoadOscilloscope(version, inst, online))
 				return false;
 		}
 
 		//Check other types
 		else if(inst["type"].as<string>() == "multimeter")
 		{
-			if(!LoadMultimeter(version, inst, online, table))
+			if(!LoadMultimeter(version, inst, online))
 				return false;
 		}
 
@@ -703,7 +704,7 @@ bool Session::VerifyInstrument(const YAML::Node& node, Instrument* inst)
 	return true;
 }
 
-bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online, IDTable& table)
+bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 {
 	Oscilloscope* scope = nullptr;
 
@@ -755,10 +756,10 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online,
 
 	//All good. Add to our list of scopes etc
 	AddOscilloscope(scope, false);
-	table.emplace(node["id"].as<int>(), scope);
+	m_idtable.emplace(node["id"].as<uint32_t>(), scope);
 
 	//Configure the scope
-	scope->LoadConfiguration(version, node, table);
+	scope->LoadConfiguration(version, node, m_idtable);
 
 	//Load trigger deskew
 	if(node["triggerdeskew"])
@@ -767,7 +768,7 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online,
 	return true;
 }
 
-bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online, IDTable& table)
+bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online)
 {
 	SCPIMultimeter* meter = nullptr;
 
@@ -820,14 +821,14 @@ bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online, I
 
 	//Make any config settings to the instrument from our preference settings, then add it and we're good to go
 	//ApplyPreferences(meter);
-	table.emplace(node["meterid"].as<int>(), meter);
-	meter->LoadConfiguration(version, node, table);
+	m_idtable.emplace(node["meterid"].as<uint32_t>(), meter);
+	meter->LoadConfiguration(version, node, m_idtable);
 	AddMultimeter(meter, false);
 
 	return true;
 }
 
-bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& table)
+bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
 {
 	//No protocol decodes? Skip this section
 	if(!node)
@@ -849,12 +850,12 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 			continue;
 		}
 
-		table.emplace(dnode["id"].as<int>(), filter);
+		m_idtable.emplace(dnode["id"].as<uint32_t>(), filter);
 
 		//Load parameters during the first pass.
 		//Parameters can't have dependencies on other channels etc.
 		//More importantly, parameters may change bus width etc
-		filter->LoadParameters(dnode, table);
+		filter->LoadParameters(dnode, m_idtable);
 
 		//Create protocol analyzers
 		auto pd = dynamic_cast<PacketDecoder*>(filter);
@@ -876,9 +877,9 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-		auto filter = static_cast<Filter*>(table[dnode["id"].as<int>()]);
+		auto filter = static_cast<Filter*>(m_idtable[dnode["id"].as<uint32_t>()]);
 		if(filter)
-			filter->LoadInputs(dnode, table);
+			filter->LoadInputs(dnode, m_idtable);
 	}
 
 	return true;
@@ -887,14 +888,14 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node, IDTable& tabl
 /**
 	@brief Serialize the configuration for all oscilloscopes
  */
-YAML::Node Session::SerializeInstrumentConfiguration(IDTable& table)
+YAML::Node Session::SerializeInstrumentConfiguration()
 {
 	YAML::Node node;
 
 	auto instruments = GetInstruments();
 	for(auto inst : instruments)
 	{
-		auto config = inst->SerializeConfiguration(table);
+		auto config = inst->SerializeConfiguration(m_idtable);
 
 		//Save type fields so we know how to recreate the instrument
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
@@ -920,14 +921,14 @@ YAML::Node Session::SerializeInstrumentConfiguration(IDTable& table)
 /**
 	@brief Serialize the configuration for all protocol decoders
  */
-YAML::Node Session::SerializeFilterConfiguration(IDTable& table)
+YAML::Node Session::SerializeFilterConfiguration()
 {
 	YAML::Node node;
 
 	auto set = Filter::GetAllInstances();
 	for(auto d : set)
 	{
-		YAML::Node filterNode = d->SerializeConfiguration(table);
+		YAML::Node filterNode = d->SerializeConfiguration(m_idtable);
 		node["filter" + filterNode["id"].as<string>()] = filterNode;
 	}
 
@@ -998,7 +999,7 @@ YAML::Node Session::SerializeMarkers()
 	return node;
 }
 
-bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
+bool Session::SerializeWaveforms(const string& dataDir)
 {
 	//Metadata nodes for each scope
 	std::map<Oscilloscope*, YAML::Node> metadataNodes;
@@ -1019,7 +1020,7 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 			auto& hist = it.second;
 
 			//Make the directory for the scope if needed
-			string scopedir = dataDir + "/scope_" + to_string(table[scope]) + "_waveforms";
+			string scopedir = dataDir + "/scope_" + to_string(m_idtable[scope]) + "_waveforms";
 			#ifdef _WIN32
 				mkdir(scopedir.c_str());
 			#else
@@ -1097,7 +1098,7 @@ bool Session::SerializeWaveforms(IDTable& table, const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		string fname = dataDir + "/scope_" + to_string(table[scope]) + "_metadata.yml";
+		string fname = dataDir + "/scope_" + to_string(m_idtable[scope]) + "_metadata.yml";
 
 		ofstream outfs(fname);
 		if(!outfs)

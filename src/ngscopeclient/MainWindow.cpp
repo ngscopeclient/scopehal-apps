@@ -1594,7 +1594,7 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 	return true;
 }
 
-bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTable& table)
+bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 {
 	LogTrace("Loading UI configuration\n");
 	LogIndenter li;
@@ -1642,7 +1642,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 						auto an = kt.second;
 						if(an["id"].as<int>() == aid)
 						{
-							auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+							auto channel = static_cast<OscilloscopeChannel*>(m_session.m_idtable[an["channel"].as<int>()]);
 							if(!channel)	//don't crash on bad IDs or missing filters
 								break;
 							size_t stream = 0;
@@ -1655,7 +1655,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 							auto overlays = an["overlays"];
 							for(auto jt : overlays)
 							{
-								auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+								auto filter = static_cast<Filter*>(m_session.m_idtable[jt.second["id"].as<int>()]);
 								stream = 0;
 								if(jt.second["stream"])
 									stream = jt.second["stream"].as<int>();
@@ -1682,7 +1682,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 				{
 					auto an = areas[string("area") + to_string(aid)];
 
-					auto channel = static_cast<OscilloscopeChannel*>(table[an["channel"].as<int>()]);
+					auto channel = static_cast<OscilloscopeChannel*>(m_session.m_idtable[an["channel"].as<int>()]);
 					if(!channel)	//don't crash on bad IDs or missing filters
 						continue;
 					size_t stream = 0;
@@ -1695,7 +1695,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 					auto overlays = an["overlays"];
 					for(auto jt : overlays)
 					{
-						auto filter = static_cast<Filter*>(table[jt.second["id"].as<int>()]);
+						auto filter = static_cast<Filter*>(m_session.m_idtable[jt.second["id"].as<int>()]);
 						stream = 0;
 						if(jt.second["stream"])
 							stream = jt.second["stream"].as<int>();
@@ -1717,7 +1717,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 				auto streams = an["streams"];
 				for(auto jt : streams)
 				{
-					auto chan = static_cast<OscilloscopeChannel*>(table[jt.second["channel"].as<int>()]);
+					auto chan = static_cast<OscilloscopeChannel*>(m_session.m_idtable[jt.second["channel"].as<int>()]);
 					auto stream = jt.second["stream"].as<int>();
 					auto persist = jt.second["persistence"].as<bool>();
 					auto ramp = jt.second["colorRamp"].as<string>();
@@ -1757,7 +1757,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 	auto dialogs = node["dialogs"];
 	if(dialogs)
 	{
-		if(!LoadDialogs(dialogs, table))
+		if(!LoadDialogs(dialogs))
 			return false;
 	}
 
@@ -1768,7 +1768,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node, IDTabl
 /**
 	@brief Load dialog configuration
  */
-bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
+bool MainWindow::LoadDialogs(const YAML::Node& node)
 {
 	//TODO: all of the other dialog types
 
@@ -1777,7 +1777,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
 	{
 		for(auto it : analyzers)
 		{
-			auto pd = static_cast<PacketDecoder*>(table[it.second.as<int>()]);
+			auto pd = static_cast<PacketDecoder*>(m_session.m_idtable[it.second.as<int>()]);
 
 			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
 			m_protocolAnalyzerDialogs[pd] = dlg;
@@ -1790,7 +1790,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node, IDTable& table)
 	{
 		for(auto it : meters)
 		{
-			auto meter = static_cast<SCPIMultimeter*>(table[it.second.as<int>()]);
+			auto meter = static_cast<SCPIMultimeter*>(m_session.m_idtable[it.second.as<int>()]);
 			m_session.AddMultimeterDialog(meter);
 		}
 	}
@@ -1918,8 +1918,6 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	if(!SetupDataDirectory(dataDir))
 		return false;
 
-	IDTable table;
-
 	/*
 		version unspecified (treated as version 0): original string concatenation based glscopeclient impl
 		version 1: yaml-cpp glscopeclient
@@ -1929,15 +1927,15 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 
 	//Save the session state
 	node["metadata"]  = m_session.SerializeMetadata();
-	node["instruments"] = m_session.SerializeInstrumentConfiguration(table);
+	node["instruments"] = m_session.SerializeInstrumentConfiguration();
 	if(!Filter::GetAllInstances().empty())
-		node["decodes"] = m_session.SerializeFilterConfiguration(table);
+		node["decodes"] = m_session.SerializeFilterConfiguration();
 
 	//Save UI widgets
-	node["ui_config"] = SerializeUIConfiguration(table);
+	node["ui_config"] = SerializeUIConfiguration();
 
 	//TODO: waveform data
-	if(!m_session.SerializeWaveforms(table, dataDir))
+	if(!m_session.SerializeWaveforms(dataDir))
 		return false;
 
 	//Save ImGui configuration
@@ -2048,7 +2046,7 @@ bool MainWindow::SetupDataDirectory(const string& dataDir)
 /**
 	@brief Serialize waveform areas etc to a YAML::Node
  */
-YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
+YAML::Node MainWindow::SerializeUIConfiguration()
 {
 	YAML::Node node;
 
@@ -2059,20 +2057,20 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 	YAML::Node groups;
 	for(auto group : m_waveformGroups)
 	{
-		int gid = table.emplace(group.get());
+		int gid = m_session.m_idtable.emplace(group.get());
 
 		auto wareas = group->GetWaveformAreas();
 		for(auto area : wareas)
 		{
 			YAML::Node areaNode;
-			int id = table.emplace(area.get());
+			int id = m_session.m_idtable.emplace(area.get());
 			areaNode["id"] = id;
 
 			//Legacy glscopeclient format had one "channel" and zero or more "overlays".
 			//Now we just have a single "streams" array
 			YAML::Node streamNode;
 			for(size_t i=0; i<area->GetStreamCount(); i++)
-				streamNode["stream" + to_string(i)] = area->GetDisplayedChannel(i)->Serialize(table);
+				streamNode["stream" + to_string(i)] = area->GetDisplayedChannel(i)->Serialize(m_session.m_idtable);
 
 			areaNode["streams"] = streamNode;
 			areas["area" + to_string(id)] = areaNode;
@@ -2080,7 +2078,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 
 		//Add the group once we've put everything in it
 		//(need IDs defined for all of the areas inside said group)
-		groups["group" + to_string(gid)] = group->SerializeConfiguration(table);
+		groups["group" + to_string(gid)] = group->SerializeConfiguration(m_session.m_idtable);
 	}
 
 	node["areas"] = areas;
@@ -2095,7 +2093,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 	node["markers"] = m_session.SerializeMarkers();
 
 	//Serialize dialogs
-	node["dialogs"] = SerializeDialogs(table);
+	node["dialogs"] = SerializeDialogs();
 
 	return node;
 }
@@ -2103,7 +2101,7 @@ YAML::Node MainWindow::SerializeUIConfiguration(IDTable& table)
 /**
 	@brief Serializes the list of open dialogs
  */
-YAML::Node MainWindow::SerializeDialogs(IDTable& table)
+YAML::Node MainWindow::SerializeDialogs()
 {
 	YAML::Node node;
 
@@ -2115,7 +2113,7 @@ YAML::Node MainWindow::SerializeDialogs(IDTable& table)
 		for(auto it : m_meterDialogs)
 		{
 			auto meter = it.first;
-			mnode[meter->m_nickname] = table.emplace(meter);
+			mnode[meter->m_nickname] = m_session.m_idtable.emplace(meter);
 		}
 
 		node["meters"] = mnode;
@@ -2134,7 +2132,7 @@ YAML::Node MainWindow::SerializeDialogs(IDTable& table)
 		for(auto it : m_protocolAnalyzerDialogs)
 		{
 			auto proto = it.first;
-			anode[proto->GetDisplayName()] = table.emplace(proto);
+			anode[proto->GetDisplayName()] = m_session.m_idtable.emplace(proto);
 		}
 
 		node["analyzers"] = anode;
