@@ -1106,10 +1106,10 @@ void FilterGraphEditor::HandleNodeProperties()
 	{
 		m_selectedProperties = id;
 
-		auto trig = m_triggerIDMap[id];
-		auto channel = m_channelIDMap[id];
-		auto o = dynamic_cast<OscilloscopeChannel*>(channel);
-		auto f = dynamic_cast<Filter*>(channel);
+		auto node = static_cast<FlowGraphNode*>(m_session.m_idtable[(uintptr_t)id]);
+		auto trig = dynamic_cast<Trigger*>(node);
+		auto o = dynamic_cast<OscilloscopeChannel*>(node);
+		auto f = dynamic_cast<Filter*>(o);
 
 		//Make the properties window
 		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
@@ -1234,29 +1234,21 @@ void FilterGraphEditor::DoAddMenu()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ID allocation
 
-ax::NodeEditor::NodeId FilterGraphEditor::GetID(InstrumentChannel* chan)
+/**
+	@brief Allocate an ID, avoiding collisions with the session IDTable
+ */
+uintptr_t FilterGraphEditor::AllocateID()
 {
-	//If it's in the table already, just return the ID
-	if(m_channelIDMap.HasEntry(chan))
-		return m_channelIDMap[chan];
+	//Get next ID, if it's in use try the next one
+	uintptr_t id = m_nextID;
+	while(m_session.m_idtable.HasID(id))
+		id++;
 
-	//Not in the table, allocate an ID
-	int id = m_nextID;
-	m_nextID ++;
-	m_channelIDMap.emplace(chan, id);
-	return id;
-}
+	//Reserve the ID in the session table so nobody else will try to use it
+	m_session.m_idtable.ReserveID(id);
 
-ax::NodeEditor::NodeId FilterGraphEditor::GetID(Trigger* trig)
-{
-	//If it's in the table already, just return the ID
-	if(m_triggerIDMap.HasEntry(trig))
-		return m_triggerIDMap[trig];
-
-	//Not in the table, allocate an ID
-	int id = m_nextID;
-	m_nextID ++;
-	m_triggerIDMap.emplace(trig, id);
+	//We now have an ID that is not in the table, so continue from there
+	m_nextID = id + 1;
 	return id;
 }
 
@@ -1267,8 +1259,7 @@ ax::NodeEditor::PinId FilterGraphEditor::GetID(StreamDescriptor stream)
 		return m_streamIDMap[stream];
 
 	//Not in the table, allocate an ID
-	int id = m_nextID;
-	m_nextID ++;
+	auto id = AllocateID();
 	m_streamIDMap.emplace(stream, id);
 	return id;
 }
@@ -1280,8 +1271,7 @@ ax::NodeEditor::PinId FilterGraphEditor::GetID(pair<FlowGraphNode*, size_t> inpu
 		return m_inputIDMap[input];
 
 	//Not in the table, allocate an ID
-	int id = m_nextID;
-	m_nextID ++;
+	auto id = AllocateID();
 	m_inputIDMap.emplace(input, id);
 	return id;
 }
@@ -1293,8 +1283,7 @@ ax::NodeEditor::LinkId FilterGraphEditor::GetID(pair<ax::NodeEditor::PinId, ax::
 		return m_linkMap[link];
 
 	//Not in the table, allocate an ID
-	int id = m_nextID;
-	m_nextID ++;
+	auto id = AllocateID();
 	m_linkMap.emplace(link, id);
 	return id;
 }

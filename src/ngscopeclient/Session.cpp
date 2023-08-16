@@ -756,7 +756,7 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 
 	//All good. Add to our list of scopes etc
 	AddOscilloscope(scope, false);
-	m_idtable.emplace(node["id"].as<uint32_t>(), scope);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), scope);
 
 	//Configure the scope
 	scope->LoadConfiguration(version, node, m_idtable);
@@ -821,7 +821,7 @@ bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online)
 
 	//Make any config settings to the instrument from our preference settings, then add it and we're good to go
 	//ApplyPreferences(meter);
-	m_idtable.emplace(node["meterid"].as<uint32_t>(), meter);
+	m_idtable.emplace(node["meterid"].as<uintptr_t>(), meter);
 	meter->LoadConfiguration(version, node, m_idtable);
 	AddMultimeter(meter, false);
 
@@ -850,7 +850,7 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
 			continue;
 		}
 
-		m_idtable.emplace(dnode["id"].as<uint32_t>(), filter);
+		m_idtable.emplace(dnode["id"].as<uintptr_t>(), filter);
 
 		//Load parameters during the first pass.
 		//Parameters can't have dependencies on other channels etc.
@@ -877,7 +877,7 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-		auto filter = static_cast<Filter*>(m_idtable[dnode["id"].as<uint32_t>()]);
+		auto filter = static_cast<Filter*>(m_idtable[dnode["id"].as<uintptr_t>()]);
 		if(filter)
 			filter->LoadInputs(dnode, m_idtable);
 	}

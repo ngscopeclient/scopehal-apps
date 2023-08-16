@@ -108,20 +108,6 @@ protected:
 	///@brief Context containing current state of the graph editor
 	ax::NodeEditor::EditorContext* m_context;
 
-	///@brief Map of channels / filters to IDs
-	Bijection<
-		InstrumentChannel*,
-		ax::NodeEditor::NodeId,
-		std::less<InstrumentChannel*>,
-		lessID<ax::NodeEditor::NodeId> > m_channelIDMap;
-
-	///@brief Map of triggers to IDs
-	Bijection<
-		Trigger*,
-		ax::NodeEditor::NodeId,
-		std::less<Trigger*>,
-		lessID<ax::NodeEditor::NodeId> > m_triggerIDMap;
-
 	///@brief Map of streams to output port IDs
 	Bijection<
 		StreamDescriptor,
@@ -143,11 +129,16 @@ protected:
 		lessIDPair,
 		lessID<ax::NodeEditor::LinkId> > m_linkMap;
 
-	///@brief Next ID to be allocated
+	///@brief Next link/port ID to be allocated
 	int m_nextID;
 
-	ax::NodeEditor::NodeId GetID(InstrumentChannel* chan);
-	ax::NodeEditor::NodeId GetID(Trigger* trig);
+	ax::NodeEditor::NodeId GetID(InstrumentChannel* chan)
+	{ return m_session.m_idtable.emplace(chan); }
+
+	ax::NodeEditor::NodeId GetID(Trigger* trig)
+	{ return m_session.m_idtable.emplace(trig); }
+
+	uintptr_t AllocateID();
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
 	ax::NodeEditor::PinId GetID(std::pair<FlowGraphNode*, size_t> input);
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
