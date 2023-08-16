@@ -143,6 +143,9 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	LoadToolbarIcons();
 	LoadGradients();
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
+
+	//Don't move windows when dragging in the body, only the title bar
+	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
 }
 
 MainWindow::~MainWindow()
