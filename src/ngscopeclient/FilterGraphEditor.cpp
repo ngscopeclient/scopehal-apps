@@ -38,6 +38,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
 #include "EmbeddedTriggerPropertiesDialog.h"
+#include "MeasurementsDialog.h"
 
 //Pull in a bunch of filters we have special icons for
 #include "../scopeprotocols/AddFilter.h"
@@ -678,6 +679,19 @@ void FilterGraphEditor::CreateChannelMenu()
  */
 void FilterGraphEditor::FilterMenu(StreamDescriptor stream)
 {
+	//See if the source stream is a scalar, if so offer to add a measurement
+	if(stream.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+	{
+		//Only offer to measure if not already being measured
+		auto dlg = m_parent->GetMeasurementsDialog(false);
+		if(!dlg || !dlg->HasStream(stream))
+		{
+			if(ImGui::MenuItem("Measure"))
+				m_parent->GetMeasurementsDialog(true)->AddStream(stream);
+			ImGui::Separator();
+		}
+	}
+
 	FilterSubmenu(stream, "Bus", Filter::CAT_BUS);
 	FilterSubmenu(stream, "Clocking", Filter::CAT_CLOCK);
 	FilterSubmenu(stream, "Export", Filter::CAT_EXPORT);

@@ -48,12 +48,26 @@ public:
 
 	void AddStream(StreamDescriptor stream);
 
+	const std::vector<StreamDescriptor>& GetStreams() const
+	{ return m_streams; }
+
+	bool HasStream(StreamDescriptor stream)
+	{ return (m_streamset.find(stream) != m_streamset.end()); }
+
 protected:
 	Session& m_session;
 
 	void RemoveStream(size_t i);
 
+	/**
+		@brief Ordered list of streams being displayed, in the order they should be drawn in the table
+	 */
 	std::vector<StreamDescriptor> m_streams;
+
+	/**
+		@brief Unordered list of streams being displayed, to quickly check if an item is in it
+	 */
+	std::set<StreamDescriptor> m_streamset;
 };
 
 #endif

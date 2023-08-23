@@ -1086,6 +1086,20 @@ SCPITransport* MainWindow::MakeTransport(const string& trans, const string& args
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dialog helpers
 
+shared_ptr<MeasurementsDialog> MainWindow::GetMeasurementsDialog(bool createIfNotExisting)
+{
+	if(m_measurementsDialog)
+		return m_measurementsDialog;
+	else if(createIfNotExisting)
+	{
+		m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+		AddDialog(m_measurementsDialog);
+		return m_measurementsDialog;
+	}
+	else
+		return nullptr;
+}
+
 /**
 	@brief Opens the error popup
  */

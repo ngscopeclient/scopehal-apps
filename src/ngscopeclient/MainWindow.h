@@ -188,6 +188,11 @@ public:
 	std::string GetEyeGradientFriendlyName(std::string internalName)
 	{ return m_eyeGradientFriendlyNames[internalName]; }
 
+	/**
+		@brief Return the measurements dialog, if we have one.
+	 */
+	std::shared_ptr<MeasurementsDialog> GetMeasurementsDialog(bool createIfNotExisting);
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 

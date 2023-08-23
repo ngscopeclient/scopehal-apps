@@ -132,6 +132,7 @@ bool MeasurementsDialog::DoRender()
 void MeasurementsDialog::RemoveStream(size_t i)
 {
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_streams[i].m_channel);
+	m_streamset.erase(ochan);
 	if(ochan)
 		ochan->Release();
 	m_streams.erase(m_streams.begin() + i);
@@ -142,8 +143,12 @@ void MeasurementsDialog::RemoveStream(size_t i)
 
 void MeasurementsDialog::AddStream(StreamDescriptor stream)
 {
-	//TODO: search for duplicates?
+	//Don't allow duplicates
+	if(HasStream(stream))
+		return;
+
 	m_streams.push_back(stream);
+	m_streamset.emplace(stream);
 
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
 	if(ochan)
