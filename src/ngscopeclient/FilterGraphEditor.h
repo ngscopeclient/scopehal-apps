@@ -90,7 +90,7 @@ protected:
 	void HandleOverlaps();
 	void ClearOldPropertiesDialogs();
 
-	void NodeIcon(InstrumentChannel* chan, ImVec2 iconpos, ImDrawList* list);
+	void NodeIcon(InstrumentChannel* chan, ImVec2 iconpos, ImVec2 iconsize, ImDrawList* list);
 
 	void FilterMenu(StreamDescriptor src);
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);

@@ -42,11 +42,12 @@
 
 //Pull in a bunch of filters we have special icons for
 #include "../scopeprotocols/AddFilter.h"
-#include "../scopeprotocols/SubtractFilter.h"
-#include "../scopeprotocols/MultiplyFilter.h"
-#include "../scopeprotocols/DivideFilter.h"
-#include "../scopeprotocols/ToneGeneratorFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
+#include "../scopeprotocols/DivideFilter.h"
+#include "../scopeprotocols/MultiplyFilter.h"
+#include "../scopeprotocols/SubtractFilter.h"
+#include "../scopeprotocols/ThresholdFilter.h"
+#include "../scopeprotocols/ToneGeneratorFilter.h"
 
 using namespace std;
 
@@ -65,6 +66,9 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	m_config.SettingsFile = "";
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
+
+	//Load icons for filters
+	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -891,7 +895,6 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
 	auto textfont = ImGui::GetFont();
-	auto iconfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_font");
 	float headerheight = headerfont->FontSize * 1.5;
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
@@ -911,8 +914,19 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
 
-	//Reserve space for the center icon
-	float iconwidth = iconfont->CalcTextSizeA(iconfont->FontSize, FLT_MAX, 0, "wwww").x;
+	//Format block type early, even though it's not drawn until later
+	//so that we know how much space to allocate
+	string blocktype;
+	auto f = dynamic_cast<Filter*>(channel);
+	if(f)
+		blocktype = f->GetProtocolDisplayName();
+	else
+		blocktype = "Hardware input ";
+	ImVec2 iconsize(ImGui::GetFontSize() * 6, ImGui::GetFontSize() * 3);
+	auto captionsize = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, blocktype.c_str());
+
+	//Reserve space for the center icon and node type caption
+	float iconwidth = max(iconsize.x, captionsize.x);
 
 	//Figure out how big the port text is
 	float iportmax = 1;
@@ -931,27 +945,21 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		onames.push_back(name);
 		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
 	}
-	float nodewidth = max(iportmax+oportmax+iconwidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
+	float colswidth = iportmax + oportmax + iconwidth;
+	float nodewidth = max(colswidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
+
+	//For really long node names, stretch icon column
+	float iconcolwidth = iconwidth;
+	if(headerSize.x > colswidth)
+		iconcolwidth = headerSize.x - (iportmax + oportmax);
 
 	//Reserve space for the node header
 	auto startpos = ImGui::GetCursorPos();
 	ImGui::Dummy(ImVec2(nodewidth, headerheight));
-	//auto nsize = ax::NodeEditor::GetNodeSize(id);
-
-	//Print the block type
-	ImGui::SetNextItemWidth(nodewidth);
-	string lines = "──────";
-	string blocktype = lines + " ";
-	auto f = dynamic_cast<Filter*>(channel);
-	if(f)
-		blocktype += f->GetProtocolDisplayName() + " " + lines;
-	else
-		blocktype += string("Hardware input ") + lines;
-	ImGui::TextUnformatted(blocktype.c_str());
 
 	//Table of inputs at left and outputs at right
 	//TODO: this should move up to base class or something?
-	static ImGuiTableFlags flags = 0;
+	static ImGuiTableFlags flags = /*ImGuiTableFlags_Borders*/ 0;
 	StreamDescriptor hoveredStream(nullptr, 0);
 	auto bodystart = ImGui::GetCursorPos();
 	ImVec2 iconpos(1, 1);
@@ -959,8 +967,9 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	{
 		size_t maxports = max(channel->GetInputCount(), channel->GetStreamCount());
 
-		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, iportmax+2);
-		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, oportmax+2);
+		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, iportmax + 2);
+		ImGui::TableSetupColumn("icon", ImGuiTableColumnFlags_WidthFixed, iconcolwidth + 2);
+		ImGui::TableSetupColumn("outputs", ImGuiTableColumnFlags_WidthFixed, oportmax + 2);
 
 		for(size_t i=0; i<maxports; i++)
 		{
@@ -982,7 +991,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 			ImGui::TableNextColumn();
 			if(i == 0)
 				iconpos = ImGui::GetCursorPos();
-			ImGui::Dummy(ImVec2(iconwidth, 1));
+			ImGui::Dummy(ImVec2(iconcolwidth, 1));
 
 			//Output ports
 			ImGui::TableNextColumn();
@@ -1004,9 +1013,9 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		ImGui::EndTable();
 	}
 
-	//Reserve space for icon if needed
+	//Reserve space for icon and caption if needed
 	float contentHeight = ImGui::GetCursorPos().y - bodystart.y;
-	float minHeight = iconfont->FontSize + 3*ImGui::GetStyle().ItemSpacing.y;
+	float minHeight = iconsize.y + 3*ImGui::GetStyle().ItemSpacing.y + ImGui::GetFontSize();
 	if(contentHeight < minHeight)
 		ImGui::Dummy(ImVec2(1, minHeight - contentHeight));
 
@@ -1050,8 +1059,21 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		headerText.c_str());
 
 	//Draw icon for filter blocks
-	auto icondelta = ImVec2(nodewidth/2 - iconwidth/3, iconpos.y - startpos.y);
-	NodeIcon(channel, pos + icondelta, bgList);
+	float iconshift = (iconcolwidth - iconwidth) / 2;
+	ImVec2 icondelta = (iconpos - startpos) + ImVec2(ImGui::GetStyle().ItemSpacing.x + iconshift, 0);
+	NodeIcon(channel, pos + icondelta, iconsize, bgList);
+
+	//Draw icon caption
+	auto textColor = prefs.GetColor("Appearance.Filter Graph.icon_color");
+	ImVec2 textpos =
+		pos + icondelta +
+		ImVec2(0, iconsize.y + ImGui::GetStyle().ItemSpacing.y*3);
+	bgList->AddText(
+		textfont,
+		textfont->FontSize,
+		textpos + ImVec2( (iconwidth - captionsize.x)/2, 0),
+		textColor,
+		blocktype.c_str());
 }
 
 /**
@@ -1060,14 +1082,30 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	TODO: would this make more sense as a virtual?
 	We don't want too much tight coupling between rendering and backend though.
  */
-void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImDrawList* list)
+void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 iconsize, ImDrawList* list)
 {
-	pos.x += ImGui::GetStyle().ItemSpacing.x;
-	pos.y += ImGui::GetStyle().ItemSpacing.y;
+	pos.y += ImGui::GetStyle().ItemSpacing.y*2;
 
 	auto& prefs = m_session.GetPreferences();
 	auto iconfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_font");
 	auto color = prefs.GetColor("Appearance.Filter Graph.icon_color");
+
+	//Some filters get graphical icons
+	//TODO: something less ugly than a big if-else cascade? hash map or something?
+	string iconname = "";
+	if(dynamic_cast<ThresholdFilter*>(chan))
+		iconname = "filter-threshold";
+
+	if(iconname != "")
+	{
+		list->AddImage(
+			m_parent->GetTextureManager()->GetTexture(iconname),
+			pos,
+			pos + iconsize );
+		return;
+	}
+
+	//If we get here, no graphical icon. Try font-based icons instead
 
 	//Default to no icon, then add icons for basic math blocks
 	string str = "";
