@@ -69,6 +69,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	//Load icons for filters
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -1093,7 +1094,13 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	//Some filters get graphical icons
 	//TODO: something less ugly than a big if-else cascade? hash map or something?
 	string iconname = "";
-	if(dynamic_cast<ThresholdFilter*>(chan))
+	if(dynamic_cast<Filter*>(chan) == nullptr)
+	{
+		//TODO: API to determine actual physical connector type
+		//For now default to BNC
+		iconname = "input-bnc";
+	}
+	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
 
 	if(iconname != "")
