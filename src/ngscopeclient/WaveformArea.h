@@ -434,6 +434,7 @@ protected:
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
+	void RenderEyePatternTooltip(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderEyeWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
@@ -479,6 +480,7 @@ protected:
 
 public:
 	StreamDescriptor GetFirstAnalogStream();
+	StreamDescriptor GetFirstEyeStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
 
 	/**

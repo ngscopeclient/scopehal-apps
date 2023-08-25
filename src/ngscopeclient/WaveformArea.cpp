@@ -334,6 +334,24 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 }
 
 /**
+	@brief Returns the first eye pattern displayed in this area.
+
+	If no eye patterns are visible, returns a null stream.
+ */
+StreamDescriptor WaveformArea::GetFirstEyeStream()
+{
+	for(auto chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+			return stream;
+	}
+
+	return StreamDescriptor(nullptr, 0);
+}
+
+
+/**
 	@brief Marks all of our waveform textures as being used this frame
  */
 void WaveformArea::ReferenceWaveformTextures()
@@ -419,8 +437,6 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
-	m_mouseOverButton = false;
-
 	m_lastDragState = m_dragState;
 	if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		OnMouseUp();
@@ -515,7 +531,11 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Make sure all channels have same vertical scale and warn if not
 		CheckForScaleMismatch(pos, csize);
 
+		//Tooltip for eye pattern
+		RenderEyePatternTooltip(pos, csize);
+
 		//Draw control widgets
+		m_mouseOverButton = false;
 		ImGui::SetCursorPos(ImGui::GetWindowContentRegionMin());
 		ImGui::BeginGroup();
 
@@ -525,6 +545,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		ImGui::EndGroup();
 		ImGui::SetItemAllowOverlap();
 	}
+	else
+		m_mouseOverButton = false;
 	ImGui::EndChild();
 
 	//Draw the vertical scale on the right side of the plot
@@ -2009,6 +2031,50 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 			1);
 	}
 
+}
+
+/**
+	@brief Draw the tooltip on an eye pattern
+ */
+void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
+{
+	//If no waveform or data, we can't get a BER
+	auto firstStream = GetFirstEyeStream();
+	if(!firstStream)
+		return;
+	auto eyedata = dynamic_cast<EyeWaveform*>(firstStream.GetData());
+	if(!eyedata)
+		return;
+	if(!eyedata->GetAccumData())
+		return;
+
+	//Rescale mouse position since raw integration buffer may not be the same resolution as the viewport
+	ImVec2 delta = ImGui::GetMousePos() - start;
+	delta.x *= eyedata->GetWidth() * 1.0 / size.x;
+	delta.y *= eyedata->GetHeight() * 1.0 / size.y;
+
+	//Bounds check rescaled coordinates
+	if( (delta.x < 0) || (delta.y < 0) || (delta.x >= eyedata->GetWidth()) || (delta.y >= eyedata->GetHeight()) )
+		return;
+
+	//Make sure we aren't doing anything else that would preclude display of the tooltip
+	//(e.g. dragging something or displaying a more important tooltip)
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone) && (m_dragState == DRAG_STATE_NONE) && !m_mouseOverButton )
+	{
+		//Calculate the BER at this point
+		//TODO: this currently assumes the midpoint of the waveform is the zero point,
+		//which is only true for NRZ waveforms (not PAM / MLT3)
+		auto ber = eyedata->GetBERAtPoint(delta.x, delta.y, eyedata->GetWidth() / 2, eyedata->GetHeight() / 2);
+
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+
+		Unit unit(Unit::UNIT_RATIO_SCI);
+		ImGui::Text("BER: %s", unit.PrettyPrint(ber).c_str());
+
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
 }
 
 /**
