@@ -2053,6 +2053,9 @@ void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
 	delta.x *= eyedata->GetWidth() * 1.0 / size.x;
 	delta.y *= eyedata->GetHeight() * 1.0 / size.y;
 
+	//Invert the Y axis coordinates to match row ordering
+	delta.y = eyedata->GetHeight() - 1 - delta.y;
+
 	//Bounds check rescaled coordinates
 	if( (delta.x < 0) || (delta.y < 0) || (delta.x >= eyedata->GetWidth()) || (delta.y >= eyedata->GetHeight()) )
 		return;
