@@ -68,6 +68,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
 
 	//Load icons for filters
+	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
@@ -1112,6 +1113,8 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 		else
 			iconname = "input-bnc";
 	}
+	else if(dynamic_cast<MultiplyFilter*>(chan))
+		iconname = "filter-multiply";
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
 
@@ -1132,8 +1135,6 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 		str = "+";
 	else if(dynamic_cast<SubtractFilter*>(chan))
 		str = "-";
-	else if(dynamic_cast<MultiplyFilter*>(chan))
-		str = "×";
 	else if(dynamic_cast<DivideFilter*>(chan))
 		str = "÷";
 	else if(dynamic_cast<ToneGeneratorFilter*>(chan))
