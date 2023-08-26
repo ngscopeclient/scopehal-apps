@@ -69,6 +69,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	//Load icons for filters
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 }
 
@@ -922,7 +923,13 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	if(f)
 		blocktype = f->GetProtocolDisplayName();
 	else
-		blocktype = "Hardware input ";
+	{
+		//see if input or output
+		if(dynamic_cast<PowerSupplyChannel*>(channel))
+			blocktype = "Hardware output";
+		else
+			blocktype = "Hardware input";
+	}
 	ImVec2 iconsize(ImGui::GetFontSize() * 6, ImGui::GetFontSize() * 3);
 	auto captionsize = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, blocktype.c_str());
 
@@ -1098,7 +1105,12 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	{
 		//TODO: API to determine actual physical connector type
 		//For now default to BNC
-		iconname = "input-bnc";
+		if(dynamic_cast<PowerSupplyChannel*>(chan))
+			iconname = "input-banana-dual";
+		else if(dynamic_cast<MultimeterChannel*>(chan))
+			iconname = "input-banana-dual";
+		else
+			iconname = "input-bnc";
 	}
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
