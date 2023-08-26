@@ -72,6 +72,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
+	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -881,6 +882,8 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 
 /**
 	@brief Make a node for a single channel, of any type
+
+	TODO: this seems to fail hard if we do not have at least one input OR output on the node. Why?
  */
 void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument* inst)
 {
@@ -927,6 +930,10 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	{
 		//see if input or output
 		if(dynamic_cast<PowerSupplyChannel*>(channel))
+			blocktype = "Hardware output";
+		else if(dynamic_cast<FunctionGeneratorChannel*>(channel))
+			blocktype = "Hardware output";
+		else if(dynamic_cast<BERTOutputChannel*>(channel))
 			blocktype = "Hardware output";
 		else
 			blocktype = "Hardware input";
@@ -1105,11 +1112,15 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	if(dynamic_cast<Filter*>(chan) == nullptr)
 	{
 		//TODO: API to determine actual physical connector type
-		//For now default to BNC
+		//For now default based on channel class
 		if(dynamic_cast<PowerSupplyChannel*>(chan))
 			iconname = "input-banana-dual";
 		else if(dynamic_cast<MultimeterChannel*>(chan))
 			iconname = "input-banana-dual";
+		else if(dynamic_cast<BERTInputChannel*>(chan))
+			iconname = "input-k-dual";
+		else if(dynamic_cast<BERTOutputChannel*>(chan))
+			iconname = "input-k-dual";
 		else
 			iconname = "input-bnc";
 	}

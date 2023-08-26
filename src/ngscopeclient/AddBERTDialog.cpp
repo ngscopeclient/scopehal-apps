@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddBERTDialog::AddBERTDialog(Session& session)
-	: AddInstrumentDialog("Add Function BERT", "funcgen", session)
+	: AddInstrumentDialog("Add BERT", "funcgen", session)
 {
 	SCPIBERT::EnumDrivers(m_drivers);
 }
