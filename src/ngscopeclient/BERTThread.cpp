@@ -26,131 +26,47 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of BERTThread
+ */
+#include "ngscopeclient.h"
+#include "pthread_compat.h"
+#include "Session.h"
+//#include "BERTChannel.h"
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+using namespace std;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
-
-#include <atomic>
-#include <shared_mutex>
-
-#include "BERTState.h"
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class RFSignalGeneratorThreadArgs
+void BERTThread(BERTThreadArgs args)
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+	pthread_setname_np_compat("BERTThread");
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
-};
+	auto bert = args.bert;
+	auto state = args.state;
+	while(!*args.shuttingDown)
+	{
+		//Flush any pending commands
+		bert->GetTransport()->FlushCommandQueue();
 
-class PowerSupplyThreadArgs
-{
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+		//Read stuff
+		bert->AcquireData();
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
-};
+		/*
+		//Poll status
+		for(size_t i=0; i<load->GetChannelCount(); i++)
+		{
+			auto lchan = dynamic_cast<BERTChannel*>(load->GetChannel(i));
 
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+			state->m_channelVoltage[i] = lchan->GetScalarValue(BERTChannel::STREAM_VOLTAGE_MEASURED);
+			state->m_channelCurrent[i] = lchan->GetScalarValue(BERTChannel::STREAM_CURRENT_MEASURED);
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
+			args.session->MarkChannelDirty(lchan);
+		}*/
+		state->m_firstUpdateDone = true;
 
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPILoad* load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
-
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIBERT* bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
-class Session;
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
-
-#endif
+		//Cap update rate to 20 Hz
+		this_thread::sleep_for(chrono::milliseconds(50));
+	}
+}

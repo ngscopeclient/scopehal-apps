@@ -37,6 +37,7 @@
 #include "Session.h"
 #include "../scopeprotocols/ExportFilter.h"
 #include "MainWindow.h"
+#include "BERTDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "LoadDialog.h"
 #include "MultimeterDialog.h"
@@ -1421,7 +1422,35 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 }
 
 /**
-	@brief Adds a Load to the session
+	@brief Adds a BERT to the session
+ */
+void Session::AddBERT(SCPIBERT* bert)
+{
+	m_modifiedSinceLastSave = true;
+
+	//Create shared BERT state
+	auto state = make_shared<BERTState>(bert->GetChannelCount());
+	m_berts[bert] = make_unique<BERTConnectionState>(bert, state, this);
+
+	//Add the dialog to view/control it
+	m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
+
+	m_mainWindow->AddToRecentInstrumentList(bert);
+}
+
+/**
+	@brief Removes a BERT from the session
+ */
+void Session::RemoveBERT(SCPIBERT* bert)
+{
+	m_modifiedSinceLastSave = true;
+
+	m_berts.erase(bert);
+	delete bert;
+}
+
+/**
+	@brief Adds a load to the session
  */
 void Session::AddLoad(SCPILoad* load)
 {
@@ -1438,7 +1467,7 @@ void Session::AddLoad(SCPILoad* load)
 }
 
 /**
-	@brief Removes a function generator from the session
+	@brief Removes a load from the session
  */
 void Session::RemoveLoad(SCPILoad* load)
 {

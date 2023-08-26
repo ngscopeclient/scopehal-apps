@@ -26,131 +26,48 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Declaration of BERTState
+ */
+#ifndef BERTState_h
+#define BERTState_h
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
-
-#include <atomic>
-#include <shared_mutex>
-
-#include "BERTState.h"
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class RFSignalGeneratorThreadArgs
+/**
+	@brief Current status of a load
+ */
+class BERTState
 {
 public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
+	BERTState(size_t /*n = 0*/)
+	{
+		/*
+		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
+		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
+		//m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
+		//m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
+
+		for(size_t i=0; i<n; i++)
+		{
+			m_channelVoltage[i] = 0;
+			m_channelCurrent[i] = 0;
+			//m_channelConstantCurrent[i] = false;
+			//m_channelFuseTripped[i] = false;
+		}*/
+
+		m_firstUpdateDone = false;
+	}
+	/*
+	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
+	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
+	//std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
+	//std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
+	*/
+
+	std::atomic<bool> m_firstUpdateDone;
 };
-
-class PowerSupplyThreadArgs
-{
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
-};
-
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
-
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPILoad* load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
-
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIBERT* bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
-class Session;
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 #endif

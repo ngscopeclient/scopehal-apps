@@ -58,6 +58,7 @@ add_executable(ngscopeclient
 
 	pthread_compat.cpp
 
+	AddBERTDialog.cpp
 	AddGeneratorDialog.cpp
 	AddInstrumentDialog.cpp
 	AddLoadDialog.cpp
@@ -66,6 +67,8 @@ add_executable(ngscopeclient
 	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
 	AddVNADialog.cpp
+	BERTDialog.cpp
+	BERTThread.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
 	EmbeddableDialog.cpp

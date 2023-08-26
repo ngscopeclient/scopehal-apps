@@ -26,131 +26,74 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of AddBERTDialog
+ */
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+#include "ngscopeclient.h"
+#include "AddBERTDialog.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
+using namespace std;
 
-#include <atomic>
-#include <shared_mutex>
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-#include "BERTState.h"
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class RFSignalGeneratorThreadArgs
+AddBERTDialog::AddBERTDialog(Session& session)
+	: AddInstrumentDialog("Add Function BERT", "funcgen", session)
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
-	{}
+	SCPIBERT::EnumDrivers(m_drivers);
+}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
-};
-
-class PowerSupplyThreadArgs
+AddBERTDialog::~AddBERTDialog()
 {
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+}
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
 
-class MultimeterThreadArgs
+/**
+	@brief Connects to a scope
+
+	@return True if successful
+ */
+bool AddBERTDialog::DoConnect()
 {
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
 
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+	//Create the generator
+	auto bert = SCPIBERT::CreateBERT(m_drivers[m_selectedDriver], transport);
+	if(bert == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create BERT driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
 
-	SCPILoad* load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created BERT\n");
 
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIBERT* bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
-class Session;
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
-
-#endif
+	bert->m_nickname = m_nickname;
+	m_session.AddBERT(bert);
+	return true;
+}

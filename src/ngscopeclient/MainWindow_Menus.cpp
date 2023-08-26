@@ -41,6 +41,7 @@
 #include "imgui_internal.h"
 
 //Dialogs
+#include "AddBERTDialog.h"
 #include "AddGeneratorDialog.h"
 #include "AddLoadDialog.h"
 #include "AddMultimeterDialog.h"
@@ -248,6 +249,7 @@ void MainWindow::AddMenu()
 			timestamps.push_back(t);
 		std::sort(timestamps.begin(), timestamps.end());
 
+		AddBERTMenu(timestamps, reverseMap);
 		AddLoadMenu(timestamps, reverseMap);
 		AddGeneratorMenu(timestamps, reverseMap);
 		AddMultimeterMenu(timestamps, reverseMap);
@@ -265,6 +267,80 @@ void MainWindow::AddMenu()
 		ImGui::EndMenu();
 	}
 }
+
+/**
+	@brief Run the Add | BERT menu
+ */
+void MainWindow::AddBERTMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("BERT"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddBERTDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known BERT drivers.
+		//Any recent instrument using one of these drivers is assumed to be a BERT.
+		vector<string> drivers;
+		SCPIBERT::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the BERT
+							auto bert = SCPIBERT::CreateBERT(drivername, transport);
+							if(bert == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create BERT driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created BERT\n");
+
+								bert->m_nickname = nick;
+								m_session.AddBERT(bert);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
 
 /**
 	@brief Run the Add | Load menu

@@ -50,6 +50,37 @@ extern std::atomic<int64_t> g_lastWaveformRenderTime;
 class Session;
 
 /**
+	@brief Internal state for a connection to a BERT
+ */
+class BERTConnectionState
+{
+public:
+	BERTConnectionState(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session)
+		: m_bert(bert)
+		, m_shuttingDown(false)
+	{
+		BERTThreadArgs args(bert, &m_shuttingDown, state, session);
+		m_thread = std::make_unique<std::thread>(BERTThread, args);
+	}
+
+	~BERTConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+	}
+
+	///@brief The BERT
+	SCPIBERT* m_bert;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the BERT
+	std::unique_ptr<std::thread> m_thread;
+};
+
+/**
 	@brief Internal state for a connection to an RF signal generator
  */
 class RFSignalGeneratorConnectionState
@@ -234,10 +265,12 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
+	void AddBERT(SCPIBERT* bert);
+	void RemoveBERT(SCPIBERT* bert);
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
-	void AddLoad(SCPILoad* generator);
-	void RemoveLoad(SCPILoad* generator);
+	void AddLoad(SCPILoad* load);
+	void RemoveLoad(SCPILoad* load);
 	void AddMultimeter(SCPIMultimeter* meter, bool createDialog = true);
 	void AddMultimeterDialog(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
@@ -404,6 +437,9 @@ protected:
 
 	///@brief RF generators we are currently connected to
 	std::map<SCPIRFSignalGenerator*, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
+
+	///@brief BERTs we are currently connected to
+	std::map<BERT*, std::unique_ptr<BERTConnectionState> > m_berts;
 
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;

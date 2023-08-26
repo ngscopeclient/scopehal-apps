@@ -26,131 +26,158 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Declaration of BERTDialog
+ */
+#ifndef BERTDialog_h
+#define BERTDialog_h
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+#include "Dialog.h"
+#include "Session.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
+#include <future>
 
-#include <atomic>
-#include <shared_mutex>
+/**
+	@brief UI state for a single load channel
 
-#include "BERTState.h"
-#include "RFSignalGeneratorState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class RFSignalGeneratorThreadArgs
+	Stores uncommitted values we haven't pushed to hardware, etc
+ */
+class BERTChannelUIState
 {
 public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
-	: gen(p)
-	, shuttingDown(s)
-	, state(st)
+	/*
+	bool m_loadEnabled;
+
+	int m_voltageRangeIndex;
+	std::vector<std::string> m_voltageRangeNames;
+
+	int m_currentRangeIndex;
+	std::vector<std::string> m_currentRangeNames;
+
+	BERT::BERTMode m_mode;
+
+	float m_committedSetPoint;
+	std::string m_setPoint;
+	*/
+	BERTChannelUIState()
+		:/* m_loadEnabled(false)
+		, m_voltageRangeIndex(0)
+		, m_currentRangeIndex(0)
+		, m_mode(BERT::MODE_CONSTANT_CURRENT)
+		, m_committedSetPoint(0)
+		, */m_chan(0)
+		, m_bert(nullptr)
 	{}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
+	BERTChannelUIState(SCPIBERT* bert, size_t chan)
+		:/* m_loadEnabled(load->GetBERTActive(chan))
+		, m_mode(load->GetBERTMode(chan))
+		,*/ m_chan(chan)
+		, m_bert(bert)
+	{
+		/*
+		//Voltage ranges
+		Unit volts(Unit::UNIT_VOLTS);
+		auto vranges = load->GetBERTVoltageRanges(chan);
+		for(auto v : vranges)
+			m_voltageRangeNames.push_back(volts.PrettyPrint(v));
+		m_voltageRangeIndex = load->GetBERTVoltageRange(chan);
+
+		//Current ranges
+		Unit amps(Unit::UNIT_AMPS);
+		auto iranges = load->GetBERTCurrentRanges(chan);
+		for(auto i : iranges)
+			m_currentRangeNames.push_back(amps.PrettyPrint(i));
+		m_currentRangeIndex = load->GetBERTCurrentRange(chan);
+
+		RefreshSetPoint();
+		*/
+	}
+
+	/**
+		@brief Pulls the set point from hardware
+	 */
+	/*
+	void RefreshSetPoint()
+	{
+		//can happen if we're a placeholder prior to completion of async init
+		if(m_load == nullptr)
+			return;
+
+		m_committedSetPoint = m_load->GetBERTSetPoint(m_chan);
+
+		//Mode
+		Unit volts(Unit::UNIT_VOLTS);
+		Unit amps(Unit::UNIT_AMPS);
+		Unit watts(Unit::UNIT_WATTS);
+		Unit ohms(Unit::UNIT_OHMS);
+		switch(m_mode)
+		{
+			case BERT::MODE_CONSTANT_CURRENT:
+				m_setPoint = amps.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case BERT::MODE_CONSTANT_VOLTAGE:
+				m_setPoint = volts.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case BERT::MODE_CONSTANT_POWER:
+				m_setPoint = watts.PrettyPrint(m_committedSetPoint);
+				break;
+
+			case BERT::MODE_CONSTANT_RESISTANCE:
+				m_setPoint = ohms.PrettyPrint(m_committedSetPoint);
+				break;
+
+			default:
+				break;
+		}
+	}
+	*/
+
+protected:
+	size_t m_chan;
+	BERT* m_bert;
 };
 
-class PowerSupplyThreadArgs
+
+class BERTDialog : public Dialog
 {
 public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+	BERTDialog(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session);
+	virtual ~BERTDialog();
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
+	virtual bool DoRender();
+
+	SCPIBERT* GetBERT()
+	{ return m_bert; }
+
+protected:
+
+	//void ChannelSettings(size_t channel);
+
+	///@brief Session handle so we can remove the load when closed
+	Session* m_session;
+
+	///@brief Timestamp of when we opened the dialog
+	double m_tstart;
+
+	///@brief The BERT we're controlling
+	SCPIBERT* m_bert;
+
+	///@brief Current channel stats, live updated
+	std::shared_ptr<BERTState> m_state;
+
+	///@brief Set of channel names
+	std::vector<std::string> m_channelNames;
+
+	///@brief Channel state for the UI
+	std::vector<BERTChannelUIState> m_channelUIState;
 };
 
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
-
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPILoad* load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
-
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIBERT* bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
-class Session;
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 #endif

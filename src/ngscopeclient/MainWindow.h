@@ -207,6 +207,9 @@ protected:
 				void FileRecentMenu();
 			void ViewMenu();
 			void AddMenu();
+				void AddBERTMenu(
+					std::vector<time_t>& timestamps,
+					std::map<time_t, std::vector<std::string> >& reverseMap);
 				void AddLoadMenu(
 					std::vector<time_t>& timestamps,
 					std::map<time_t, std::vector<std::string> >& reverseMap);
