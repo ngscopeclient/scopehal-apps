@@ -1548,6 +1548,12 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 	}
 	for(auto& it : m_rfgenerators)
 		insts.emplace(it.first);
+	for(auto& it : m_berts)
+	{
+		auto b = dynamic_cast<SCPIBERT*>(it.first);
+		if(b != nullptr)
+			insts.emplace(b);
+	}
 	for(auto gen : m_generators)
 		insts.emplace(gen);
 

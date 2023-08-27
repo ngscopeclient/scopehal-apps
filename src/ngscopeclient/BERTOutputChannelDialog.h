@@ -30,113 +30,45 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of BERTDialog
+	@brief Declaration of BERTOutputChannelDialog
  */
-#ifndef BERTDialog_h
-#define BERTDialog_h
+#ifndef BERTOutputChannelDialog_h
+#define BERTOutputChannelDialog_h
 
-#include "Dialog.h"
-#include "Session.h"
+#include "EmbeddableDialog.h"
 
-#include <future>
-
-/**
-	@brief UI state for a single BERT channel
-
-	Stores uncommitted values we haven't pushed to hardware, etc
- */
-class BERTChannelUIState
+class BERTOutputChannelDialog : public EmbeddableDialog
 {
 public:
+	BERTOutputChannelDialog(BERTOutputChannel* chan, bool graphEditorMode = false);
+	virtual ~BERTOutputChannelDialog();
+
+	virtual bool DoRender();
+
+	BERTOutputChannel* GetChannel()
+	{ return m_channel; }
+
+protected:
+	BERTOutputChannel* m_channel;
 
 	bool m_invert;
+	bool m_enable;
+
+	float m_precursor;
+	float m_postcursor;
 
 	int m_patternIndex;
 	std::vector<std::string> m_patternNames;
 	std::vector<BERT::Pattern> m_patternValues;
 
-	/*
-	int m_currentRangeIndex;
-	std::vector<std::string> m_currentRangeNames;
+	int m_driveIndex;
+	std::vector<std::string> m_driveNames;
+	std::vector<float> m_driveValues;
 
-	BERT::BERTMode m_mode;
+	std::string m_displayName;
+	std::string m_committedDisplayName;
 
-	float m_committedSetPoint;
-	std::string m_setPoint;
-	*/
-	BERTChannelUIState()
-		:/* m_loadEnabled(false)
-		, m_voltageRangeIndex(0)
-		, m_currentRangeIndex(0)
-		, m_mode(BERT::MODE_CONSTANT_CURRENT)
-		, m_committedSetPoint(0)
-		, */m_chan(0)
-		, m_bert(nullptr)
-	{}
-
-	BERTChannelUIState(SCPIBERT* bert, size_t chan)
-		:/* m_loadEnabled(load->GetBERTActive(chan))
-		, m_mode(load->GetBERTMode(chan))
-		,*/ m_chan(chan)
-		, m_bert(bert)
-	{
-		//See if the channel is a transmit channel
-		BERT::Pattern pat;
-		m_invert = m_bert->GetRxInvert(chan);
-		m_patternValues = m_bert->GetAvailableRxPatterns(chan);
-		pat = m_bert->GetRxPattern(chan);
-
-		//Fill list box
-		m_patternIndex = 0;
-		for(size_t i=0; i<m_patternValues.size(); i++)
-		{
-			auto p = m_patternValues[i];
-			m_patternNames.push_back(m_bert->GetPatternName(p));
-			if(p == pat)
-				m_patternIndex = i;
-		}
-	}
-
-protected:
-	size_t m_chan;
-	BERT* m_bert;
+	float m_color[3];
 };
-
-
-class BERTDialog : public Dialog
-{
-public:
-	BERTDialog(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session);
-	virtual ~BERTDialog();
-
-	virtual bool DoRender();
-
-	SCPIBERT* GetBERT()
-	{ return m_bert; }
-
-protected:
-
-	void RxChannelSettings(size_t channel);
-
-	///@brief Session handle so we can remove the load when closed
-	Session* m_session;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief The BERT we're controlling
-	SCPIBERT* m_bert;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<BERTState> m_state;
-
-	///@brief Set of channel names
-	std::vector<std::string> m_channelNames;
-
-	///@brief Channel state for the UI
-	std::vector<BERTChannelUIState> m_channelUIState;
-};
-
-
 
 #endif

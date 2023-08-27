@@ -51,27 +51,12 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	, m_bert(bert)
 	, m_state(state)
 {
-	//Inputs
-	for(size_t i=0; i<m_bert->GetChannelCount(); i++)
-		m_channelNames.push_back(m_bert->GetChannel(i)->GetDisplayName());
-
-	//Set up initial empty state
-	m_channelUIState.resize(m_bert->GetChannelCount());
-
-	/*
-	//Asynchronously load rest of the state
+	//Create UI state for each channel
 	for(size_t i=0; i<m_bert->GetChannelCount(); i++)
 	{
-		//Add placeholders for non-power channels
-		//TODO: can we avoid spawning a thread here pointlessly?
-		if( (m_bert->GetInstrumentTypesForChannel(i) & Instrument::INST_LOAD) == 0)
-			m_futureUIState.push_back(async(launch::async, [load, i]{ BERTChannelUIState dummy; return dummy; }));
-
-		//Actual power channels get async load
-		else
-			m_futureUIState.push_back(async(launch::async, [load, i]{ return BERTChannelUIState(load, i); }));
+		m_channelNames.push_back(m_bert->GetChannel(i)->GetDisplayName());
+		m_channelUIState.push_back(BERTChannelUIState(bert, i));
 	}
-	*/
 }
 
 BERTDialog::~BERTDialog()
@@ -106,198 +91,44 @@ bool BERTDialog::DoRender()
 
 		ImGui::EndDisabled();
 	}
-	/*
-	//Grab asynchronously loaded channel state if it's ready
-	if(m_futureUIState.size())
+
+	//Timebase settings
+	if(ImGui::CollapsingHeader("Timebase"))
 	{
-		bool allDone = true;
-		for(size_t i=0; i<m_futureUIState.size(); i++)
-		{
-			//Already loaded? No action needed
-			//if(m_channelUIState[i].m_setVoltage != "")
-			//	continue;
 
-			//Not ready? Keep waiting
-			if(m_futureUIState[i].wait_for(0s) != future_status::ready)
-			{
-				allDone = false;
-				continue;
-			}
-
-			//Ready, process it
-			m_channelUIState[i] = m_futureUIState[i].get();
-		}
-
-		if(allDone)
-			m_futureUIState.clear();
 	}
 
 	//Channel information
 	for(size_t i=0; i<m_bert->GetChannelCount(); i++)
 	{
 		//Skip non-load channels
-		if( (m_bert->GetInstrumentTypesForChannel(i) & Instrument::INST_LOAD) == 0)
+		if( (m_bert->GetInstrumentTypesForChannel(i) & Instrument::INST_BERT) == 0)
 			continue;
 
-		if(ImGui::CollapsingHeader(m_channelNames[i].c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		if(dynamic_cast<BERTInputChannel*>(m_bert->GetChannel(i)))
 		{
-			ImGui::PushID(m_channelNames[i].c_str());
-				ChannelSettings(i);
-			ImGui::PopID();
+			if(ImGui::CollapsingHeader(m_channelNames[i].c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::PushID(m_channelNames[i].c_str());
+					RxChannelSettings(i);
+				ImGui::PopID();
+			}
 		}
 	}
-	*/
 
 	return true;
 }
 
-/**
-	@brief Run settings for a single channel of the load
- */
-/*
-void BERTDialog::ChannelSettings(size_t channel)
+void BERTDialog::RxChannelSettings(size_t channel)
 {
+	auto& uistate = m_channelUIState[channel];
+
 	float valueWidth = 150;
-	Unit volts(Unit::UNIT_VOLTS);
-	Unit amps(Unit::UNIT_AMPS);
-	Unit watts(Unit::UNIT_WATTS);
-	Unit ohms(Unit::UNIT_OHMS);
+	ImGui::SetNextItemWidth(valueWidth);
+	if(Dialog::Combo("Pattern", uistate.m_patternNames, uistate.m_patternIndex))
+		m_bert->SetRxPattern(channel, uistate.m_patternValues[uistate.m_patternIndex]);
 
-	if(ImGui::Checkbox("BERT Enable", &m_channelUIState[channel].m_bertEnabled))
-		m_bert->SetBERTActive(channel, m_channelUIState[channel].m_bertEnabled);
-
-	ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-	if(ImGui::TreeNode("Configuration"))
-	{
-		ImGui::SetNextItemWidth(valueWidth);
-		if(Dialog::Combo("Voltage Range",
-			m_channelUIState[channel].m_voltageRangeNames,
-			m_channelUIState[channel].m_voltageRangeIndex))
-		{
-			m_bert->SetBERTVoltageRange(channel, m_channelUIState[channel].m_voltageRangeIndex);
-		}
-		HelpMarker("Maximum operating voltage for the load");
-
-		ImGui::SetNextItemWidth(valueWidth);
-		if(Dialog::Combo("Current Range",
-			m_channelUIState[channel].m_currentRangeNames,
-			m_channelUIState[channel].m_currentRangeIndex))
-		{
-			m_bert->SetBERTCurrentRange(channel, m_channelUIState[channel].m_currentRangeIndex);
-		}
-		HelpMarker("Maximum operating current for the load");
-
-		const char* modes[4] =
-		{
-			"Constant current",
-			"Constant voltage",
-			"Constant resistance",
-			"Constant power"
-		};
-
-		ImGui::SetNextItemWidth(valueWidth);
-		if(ImGui::Combo("Mode", (int*)&m_channelUIState[channel].m_mode, modes, 4))
-		{
-			//Turn the load off before changing mode, to avoid accidental overloading of the DUT
-			m_bert->SetBERTActive(channel, false);
-			m_channelUIState[channel].m_bertEnabled = false;
-
-			m_bert->SetBERTMode(channel, m_channelUIState[channel].m_mode);
-
-			//Refresh set point with hardware config for the new mode
-			m_channelUIState[channel].RefreshSetPoint();
-		}
-		HelpMarker("Operating mode for the control loop");
-
-		//Update set point text if it's been changed via the filter graph
-		if(m_channelUIState[channel].m_committedSetPoint != m_bert->GetBERTSetPoint(channel))
-			m_channelUIState[channel].RefreshSetPoint();
-
-		//Set point
-		ImGui::SetNextItemWidth(valueWidth);
-		bool applySetPoint = false;
-		switch(m_bert->GetBERTMode(channel))
-		{
-			case BERT::MODE_CONSTANT_CURRENT:
-				applySetPoint = UnitInputWithExplicitApply(
-					"Current",
-					m_channelUIState[channel].m_setPoint,
-					m_channelUIState[channel].m_committedSetPoint,
-					amps);
-				break;
-
-			case BERT::MODE_CONSTANT_VOLTAGE:
-				applySetPoint = UnitInputWithExplicitApply(
-					"Voltage",
-					m_channelUIState[channel].m_setPoint,
-					m_channelUIState[channel].m_committedSetPoint,
-					volts);
-				break;
-
-			case BERT::MODE_CONSTANT_RESISTANCE:
-				applySetPoint = UnitInputWithExplicitApply(
-					"Resistance",
-					m_channelUIState[channel].m_setPoint,
-					m_channelUIState[channel].m_committedSetPoint,
-					ohms);
-				break;
-
-			case BERT::MODE_CONSTANT_POWER:
-				applySetPoint = UnitInputWithExplicitApply(
-					"Power",
-					m_channelUIState[channel].m_setPoint,
-					m_channelUIState[channel].m_committedSetPoint,
-					watts);
-				break;
-
-			default:
-				break;
-		}
-		if(applySetPoint)
-			m_bert->SetBERTSetPoint(channel, m_channelUIState[channel].m_committedSetPoint);
-
-		HelpMarker("Set point for the load.\n\nChanges are not pushed to hardware until you click Apply.");
-
-		ImGui::TreePop();
-	}
-
-	//Actual values of channels
-	ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
-	if(ImGui::TreeNode("Measured"))
-	{
-		ImGui::BeginDisabled();
-			ImGui::SetNextItemWidth(valueWidth);
-			auto svolts = volts.PrettyPrint(m_state->m_channelVoltage[channel]);
-			ImGui::InputText("Voltage###VMeasured", &svolts);
-		ImGui::EndDisabled();
-
-		HelpMarker("Measured voltage being sunk by the load");
-
-		ImGui::BeginDisabled();
-			ImGui::SetNextItemWidth(valueWidth);
-			auto scurr = amps.PrettyPrint(m_state->m_channelCurrent[channel]);
-			ImGui::InputText("Current###IMeasured", &scurr);
-		ImGui::EndDisabled();
-
-		HelpMarker("Measured current being sunk by the load");
-
-		ImGui::BeginDisabled();
-			ImGui::SetNextItemWidth(valueWidth);
-			auto pcurr = watts.PrettyPrint(m_state->m_channelVoltage[channel] * m_state->m_channelCurrent[channel]);
-			ImGui::InputText("Power###PCalc", &pcurr);
-		ImGui::EndDisabled();
-
-		HelpMarker("Measured power being sunk by the load");
-
-		ImGui::BeginDisabled();
-			ImGui::SetNextItemWidth(valueWidth);
-			auto rcurr = ohms.PrettyPrint(m_state->m_channelVoltage[channel] / m_state->m_channelCurrent[channel]);
-			ImGui::InputText("Resistance###RCalc", &rcurr);
-		ImGui::EndDisabled();
-
-		HelpMarker("Equivalent resistance of the load");
-
-		ImGui::TreePop();
-	}
+	ImGui::SetNextItemWidth(valueWidth);
+	if(ImGui::Checkbox("Invert", &m_channelUIState[channel].m_invert))
+		m_bert->SetRxInvert(channel, m_channelUIState[channel].m_invert);
 }
-*/
