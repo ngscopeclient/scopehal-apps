@@ -894,6 +894,30 @@ void MainWindow::AddChannelsMenu()
 			}
 		}
 
+		//BERTs have channels as well
+		for(auto bert : m_session.GetBERTs())
+		{
+			if(ImGui::BeginMenu(bert->m_nickname.c_str()))
+			{
+				for(size_t i=0; i<bert->GetChannelCount(); i++)
+				{
+					auto chan = bert->GetChannel(i);
+					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					{
+						StreamDescriptor stream(chan, j);
+						if(ImGui::MenuItem(stream.GetName().c_str()))
+						{
+							auto group = GetBestGroupForWaveform(stream);
+							auto area = make_shared<WaveformArea>(stream, group, this);
+							group->AddArea(area);
+						}
+					}
+				}
+
+				ImGui::EndMenu();
+			}
+		}
+
 		auto filters = Filter::GetAllInstances();
 		for(auto f : filters)
 		{

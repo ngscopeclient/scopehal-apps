@@ -222,6 +222,30 @@ string MainWindow::NameNewWaveformGroup()
 }
 
 /**
+	@brief Makes sure we have at least one waveform area displaying a given stream
+ */
+void MainWindow::AddAreaForStreamIfNotAlreadyVisible(StreamDescriptor stream)
+{
+	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
+
+	//Check if we already have a waveform area displaying it
+	for(auto group : m_waveformGroups)
+	{
+		auto areas = group->GetWaveformAreas();
+		for(auto area : areas)
+		{
+			if(area->IsStreamBeingDisplayed(stream))
+				return;
+		}
+	}
+
+	//Not here yet. Add it
+	auto group = GetBestGroupForWaveform(stream);
+	auto area = make_shared<WaveformArea>(stream, group, this);
+	group->AddArea(area);
+}
+
+/**
 	@brief Figure out what group to use for a newly added stream, based on unit compatibility etc
  */
 shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /*stream*/)

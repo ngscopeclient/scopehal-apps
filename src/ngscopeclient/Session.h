@@ -58,6 +58,7 @@ public:
 	BERTConnectionState(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session)
 		: m_bert(bert)
 		, m_shuttingDown(false)
+		, m_state(state)
 	{
 		BERTThreadArgs args(bert, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(BERTThread, args);
@@ -78,6 +79,9 @@ public:
 
 	///@brief Thread for polling the BERT
 	std::unique_ptr<std::thread> m_thread;
+
+	//Our internal state
+	std::shared_ptr<BERTState> m_state;
 };
 
 /**
@@ -284,6 +288,15 @@ public:
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
 	/**
+		@brief Returns a pointer to the state for a BERT
+	 */
+	std::shared_ptr<BERTState> GetBERTState(BERT* bert)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_berts[bert]->m_state;
+	}
+
+	/**
 		@brief Returns a pointer to the existing packet manager for a protocol decode filter
 	 */
 	std::shared_ptr<PacketManager> GetPacketManager(PacketDecoder* filter)
@@ -328,6 +341,18 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_oscilloscopes;
+	}
+
+	/**
+		@brief Get the set of BERTs we're currently connected to
+	 */
+	const std::vector<BERT*> GetBERTs()
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		std::vector<BERT*> berts;
+		for(auto& it : m_berts)
+			berts.push_back(it.first);
+		return berts;
 	}
 
 	/**

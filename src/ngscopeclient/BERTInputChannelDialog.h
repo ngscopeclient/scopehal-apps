@@ -30,50 +30,40 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of BERTThread
+	@brief Declaration of BERTInputChannelDialog
  */
-#include "ngscopeclient.h"
-#include "pthread_compat.h"
-#include "Session.h"
-//#include "BERTChannel.h"
+#ifndef BERTInputChannelDialog_h
+#define BERTInputChannelDialog_h
 
-using namespace std;
+#include "EmbeddableDialog.h"
 
-void BERTThread(BERTThreadArgs args)
+class MainWindow;
+
+class BERTInputChannelDialog : public EmbeddableDialog
 {
-	pthread_setname_np_compat("BERTThread");
+public:
+	BERTInputChannelDialog(BERTInputChannel* chan, MainWindow* parent, bool graphEditorMode = false);
+	virtual ~BERTInputChannelDialog();
 
-	auto bert = args.bert;
-	auto state = args.state;
+	virtual bool DoRender();
 
-	//Flush pending commands from startup to the instrument
-	bert->GetTransport()->FlushCommandQueue();
+	BERTInputChannel* GetChannel()
+	{ return m_channel; }
 
-	while(!*args.shuttingDown)
-	{
-		//Flush any pending commands
-		bert->GetTransport()->FlushCommandQueue();
+protected:
+	BERTInputChannel* m_channel;
+	MainWindow* m_parent;
 
-		//Read stuff
-		bert->AcquireData();
+	bool m_invert;
 
-		//Check if we have any pending acquisition requests
-		for(size_t i=0; i<bert->GetChannelCount(); i++)
-		{
-			if(state->m_horzBathtubScanPending[i].exchange(false))
-			{
-				LogDebug("Horizontal bathtub scan requested for channel %zu\n", i);
-				bert->MeasureHBathtub(i);
+	int m_patternIndex;
+	std::vector<std::string> m_patternNames;
+	std::vector<BERT::Pattern> m_patternValues;
 
-				args.session->MarkChannelDirty(bert->GetChannel(i));
-				args.session->RefreshDirtyFiltersNonblocking();
-			}
-		}
+	std::string m_displayName;
+	std::string m_committedDisplayName;
 
-		state->m_firstUpdateDone = true;
+	float m_color[3];
+};
 
-		//Cap update rate to 2 Hz
-		//(we're mostly polling CDR lock state etc so there's no need for speed)
-		this_thread::sleep_for(chrono::milliseconds(500));
-	}
-}
+#endif

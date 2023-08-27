@@ -193,6 +193,8 @@ public:
 	 */
 	std::shared_ptr<MeasurementsDialog> GetMeasurementsDialog(bool createIfNotExisting);
 
+	void AddAreaForStreamIfNotAlreadyVisible(StreamDescriptor stream);
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 

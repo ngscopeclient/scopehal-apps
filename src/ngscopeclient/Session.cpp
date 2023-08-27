@@ -1436,6 +1436,8 @@ void Session::AddBERT(SCPIBERT* bert)
 	m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(bert);
+
+	StartWaveformThreadIfNeeded();
 }
 
 /**

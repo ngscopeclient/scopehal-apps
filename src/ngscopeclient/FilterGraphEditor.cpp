@@ -35,6 +35,7 @@
 #include "ngscopeclient.h"
 #include "FilterGraphEditor.h"
 #include "MainWindow.h"
+#include "BERTInputChannelDialog.h"
 #include "BERTOutputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
@@ -1195,6 +1196,7 @@ void FilterGraphEditor::HandleNodeProperties()
 		auto o = dynamic_cast<OscilloscopeChannel*>(node);
 		auto f = dynamic_cast<Filter*>(o);
 		auto bo = dynamic_cast<BERTOutputChannel*>(node);
+		auto bi = dynamic_cast<BERTInputChannel*>(node);
 
 		//Make the properties window
 		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
@@ -1203,10 +1205,14 @@ void FilterGraphEditor::HandleNodeProperties()
 				m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
 			else if(f)
 				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
-			else if(o)
-				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
 			else if(bo)
 				m_propertiesDialogs[id] = make_shared<BERTOutputChannelDialog>(bo, true);
+			else if(bi)
+				m_propertiesDialogs[id] = make_shared<BERTInputChannelDialog>(bi, m_parent, true);
+
+			//must be last since many other types are derived from OscilloscopeChannel
+			else if(o)
+				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
 			else
 				LogWarning("Don't know how to display properties of this node!\n");
 		}

@@ -51,12 +51,6 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	, m_bert(bert)
 	, m_state(state)
 {
-	//Create UI state for each channel
-	for(size_t i=0; i<m_bert->GetChannelCount(); i++)
-	{
-		m_channelNames.push_back(m_bert->GetChannel(i)->GetDisplayName());
-		m_channelUIState.push_back(BERTChannelUIState(bert, i));
-	}
 }
 
 BERTDialog::~BERTDialog()
@@ -98,37 +92,5 @@ bool BERTDialog::DoRender()
 
 	}
 
-	//Channel information
-	for(size_t i=0; i<m_bert->GetChannelCount(); i++)
-	{
-		//Skip non-load channels
-		if( (m_bert->GetInstrumentTypesForChannel(i) & Instrument::INST_BERT) == 0)
-			continue;
-
-		if(dynamic_cast<BERTInputChannel*>(m_bert->GetChannel(i)))
-		{
-			if(ImGui::CollapsingHeader(m_channelNames[i].c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				ImGui::PushID(m_channelNames[i].c_str());
-					RxChannelSettings(i);
-				ImGui::PopID();
-			}
-		}
-	}
-
 	return true;
-}
-
-void BERTDialog::RxChannelSettings(size_t channel)
-{
-	auto& uistate = m_channelUIState[channel];
-
-	float valueWidth = 150;
-	ImGui::SetNextItemWidth(valueWidth);
-	if(Dialog::Combo("Pattern", uistate.m_patternNames, uistate.m_patternIndex))
-		m_bert->SetRxPattern(channel, uistate.m_patternValues[uistate.m_patternIndex]);
-
-	ImGui::SetNextItemWidth(valueWidth);
-	if(ImGui::Checkbox("Invert", &m_channelUIState[channel].m_invert))
-		m_bert->SetRxInvert(channel, m_channelUIState[channel].m_invert);
 }

@@ -40,69 +40,6 @@
 
 #include <future>
 
-/**
-	@brief UI state for a single BERT channel
-
-	Stores uncommitted values we haven't pushed to hardware, etc
- */
-class BERTChannelUIState
-{
-public:
-
-	bool m_invert;
-
-	int m_patternIndex;
-	std::vector<std::string> m_patternNames;
-	std::vector<BERT::Pattern> m_patternValues;
-
-	/*
-	int m_currentRangeIndex;
-	std::vector<std::string> m_currentRangeNames;
-
-	BERT::BERTMode m_mode;
-
-	float m_committedSetPoint;
-	std::string m_setPoint;
-	*/
-	BERTChannelUIState()
-		:/* m_loadEnabled(false)
-		, m_voltageRangeIndex(0)
-		, m_currentRangeIndex(0)
-		, m_mode(BERT::MODE_CONSTANT_CURRENT)
-		, m_committedSetPoint(0)
-		, */m_chan(0)
-		, m_bert(nullptr)
-	{}
-
-	BERTChannelUIState(SCPIBERT* bert, size_t chan)
-		:/* m_loadEnabled(load->GetBERTActive(chan))
-		, m_mode(load->GetBERTMode(chan))
-		,*/ m_chan(chan)
-		, m_bert(bert)
-	{
-		//See if the channel is a transmit channel
-		BERT::Pattern pat;
-		m_invert = m_bert->GetRxInvert(chan);
-		m_patternValues = m_bert->GetAvailableRxPatterns(chan);
-		pat = m_bert->GetRxPattern(chan);
-
-		//Fill list box
-		m_patternIndex = 0;
-		for(size_t i=0; i<m_patternValues.size(); i++)
-		{
-			auto p = m_patternValues[i];
-			m_patternNames.push_back(m_bert->GetPatternName(p));
-			if(p == pat)
-				m_patternIndex = i;
-		}
-	}
-
-protected:
-	size_t m_chan;
-	BERT* m_bert;
-};
-
-
 class BERTDialog : public Dialog
 {
 public:
@@ -115,8 +52,6 @@ public:
 	{ return m_bert; }
 
 protected:
-
-	void RxChannelSettings(size_t channel);
 
 	///@brief Session handle so we can remove the load when closed
 	Session* m_session;
@@ -132,9 +67,6 @@ protected:
 
 	///@brief Set of channel names
 	std::vector<std::string> m_channelNames;
-
-	///@brief Channel state for the UI
-	std::vector<BERTChannelUIState> m_channelUIState;
 };
 
 

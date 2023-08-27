@@ -30,11 +30,12 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of BERTOutputChannelDialog
+	@brief Implementation of BERTInputChannelDialog
  */
 
 #include "ngscopeclient.h"
-#include "BERTOutputChannelDialog.h"
+#include "MainWindow.h"
+#include "BERTInputChannelDialog.h"
 #include <imgui_node_editor.h>
 
 using namespace std;
@@ -42,9 +43,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool graphEditorMode)
+BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindow* parent, bool graphEditorMode)
 	: EmbeddableDialog(chan->GetHwname(), string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400), graphEditorMode)
 	, m_channel(chan)
+	, m_parent(parent)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
@@ -56,12 +58,8 @@ BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool g
 	m_color[2] = ((color >> IM_COL32_B_SHIFT) & 0xff) / 255.0f;
 
 	m_invert = chan->GetInvert();
-	m_enable = chan->GetEnable();
 
-	m_precursor = chan->GetPreCursor();
-	m_postcursor = chan->GetPostCursor();
-
-	//Transmit pattern
+	//Receive pattern
 	BERT::Pattern pat = chan->GetPattern();
 	m_patternValues = chan->GetAvailablePatterns();
 	m_patternIndex = 0;
@@ -72,22 +70,9 @@ BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool g
 		if(p == pat)
 			m_patternIndex = i;
 	}
-
-	//Drive strength
-	float drive = chan->GetDriveStrength();
-	m_driveValues = chan->GetAvailableDriveStrengths();
-	m_driveIndex = 0;
-	Unit volts(Unit::UNIT_VOLTS);
-	for(size_t i=0; i<m_driveValues.size(); i++)
-	{
-		auto p = m_driveValues[i];
-		m_driveNames.push_back(volts.PrettyPrint(p));
-		if( fabs(p - drive) < 0.01)
-			m_driveIndex = i;
-	}
 }
 
-BERTOutputChannelDialog::~BERTOutputChannelDialog()
+BERTInputChannelDialog::~BERTInputChannelDialog()
 {
 }
 
@@ -100,7 +85,7 @@ BERTOutputChannelDialog::~BERTOutputChannelDialog()
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
-bool BERTOutputChannelDialog::DoRender()
+bool BERTInputChannelDialog::DoRender()
 {
 	//Flags for a header that should be open by default EXCEPT in the graph editor
 	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
@@ -153,33 +138,40 @@ bool BERTOutputChannelDialog::DoRender()
 		}
 	}
 
-	if(ImGui::CollapsingHeader("Pattern Generator", defaultOpenFlags))
+	if(ImGui::CollapsingHeader("Input Buffer", defaultOpenFlags))
+	{
+		ImGui::SetNextItemWidth(width);
+		if(ImGui::Checkbox("Invert", &m_invert))
+			m_channel->SetInvert(m_invert);
+	}
+
+	if(ImGui::CollapsingHeader("CDR", defaultOpenFlags))
+	{
+		ImGui::BeginDisabled();
+			auto lock = m_channel->GetCdrLockState();
+			ImGui::Checkbox("Lock", &lock);
+		ImGui::EndDisabled();
+	}
+
+	if(ImGui::CollapsingHeader("Pattern Checker", defaultOpenFlags))
 	{
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
 			m_channel->SetPattern(m_patternValues[m_patternIndex]);
 	}
 
-	if(ImGui::CollapsingHeader("PHY Control", defaultOpenFlags))
+	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
 	{
 		ImGui::SetNextItemWidth(width);
-		if(ImGui::Checkbox("Enable", &m_enable))
-			m_channel->Enable(m_enable);
+		if(ImGui::Button("Horz Bathtub"))
+		{
+			//Make sure we have a plot to see the data in
+			m_parent->AddAreaForStreamIfNotAlreadyVisible(m_channel->GetHBathtubStream());
 
-		ImGui::SetNextItemWidth(width);
-		if(ImGui::Checkbox("Invert", &m_invert))
-			m_channel->SetInvert(m_invert);
-
-		ImGui::SetNextItemWidth(width);
-		if(Dialog::Combo("Swing", m_driveNames, m_driveIndex))
-			m_channel->SetDriveStrength(m_driveValues[m_driveIndex]);
-
-		if(ImGui::SliderFloat("Pre-cursor", &m_precursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-			m_channel->SetPreCursor(m_precursor);
-
-		if(ImGui::SliderFloat("Post-cursor", &m_postcursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-			m_channel->SetPostCursor(m_postcursor);
-
+			//Request the bathtub measurement
+			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
+			state->m_horzBathtubScanPending[m_channel->GetIndex()] = true;
+		}
 	}
 
 	return true;
