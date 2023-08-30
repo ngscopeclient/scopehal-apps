@@ -62,8 +62,15 @@ void BERTThread(BERTThreadArgs args)
 		{
 			if(state->m_horzBathtubScanPending[i].exchange(false))
 			{
-				LogDebug("Horizontal bathtub scan requested for channel %zu\n", i);
 				bert->MeasureHBathtub(i);
+
+				args.session->MarkChannelDirty(bert->GetChannel(i));
+				args.session->RefreshDirtyFiltersNonblocking();
+			}
+
+			if(state->m_eyeScanPending[i].exchange(false))
+			{
+				bert->MeasureEye(i);
 
 				args.session->MarkChannelDirty(bert->GetChannel(i));
 				args.session->RefreshDirtyFiltersNonblocking();

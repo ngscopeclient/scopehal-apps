@@ -207,6 +207,9 @@ protected:
 	///@brief The scope whose trigger being dragged when in DRAG_STATE_TRIGGER
 	Oscilloscope* m_scopeTriggerDuringDrag;
 
+	///@brief True if we're displaying an eye pattern (fixed x axis scale)
+	bool m_displayingEye;
+
 public:
 
 	///@brief Type of X axis cursor we're displaying

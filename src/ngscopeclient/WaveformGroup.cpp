@@ -58,6 +58,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_timelineHeight(0)
 	, m_mouseOverTriggerArrow(false)
 	, m_scopeTriggerDuringDrag(nullptr)
+	, m_displayingEye(false)
 	, m_xAxisCursorMode(X_CURSOR_NONE)
 {
 	m_xAxisCursorPositions[0] = 0;
@@ -186,6 +187,7 @@ bool WaveformGroup::Render()
 	//Update X axis unit
 	if(!areas.empty())
 	{
+		m_displayingEye = false;
 		m_xAxisUnit = areas[0]->GetStream(0).GetXAxisUnits();
 
 		//Autoscale eye patterns
@@ -197,6 +199,7 @@ bool WaveformGroup::Render()
 			{
 				m_pixelsPerXUnit = plotWidth / (2*eye->GetUIWidth());
 				m_xAxisOffset = -PixelsToXAxisUnits(plotWidth/2);
+				m_displayingEye = true;
 			}
 		}
 	}
@@ -707,7 +710,10 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-			m_dragState = DRAG_STATE_TIMELINE;
+		{
+			if(!m_displayingEye)
+				m_dragState = DRAG_STATE_TIMELINE;
+		}
 
 		//Autoscale on middle mouse
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))

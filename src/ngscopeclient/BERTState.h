@@ -45,16 +45,19 @@ public:
 	BERTState(size_t n = 0)
 	{
 		m_horzBathtubScanPending = std::make_unique<std::atomic<bool>[] >(n);
+		m_eyeScanPending = std::make_unique<std::atomic<bool>[] >(n);
 
 		for(size_t i=0; i<n; i++)
 		{
 			m_horzBathtubScanPending[i] = false;
+			m_eyeScanPending[i] = false;
 		}
 
 		m_firstUpdateDone = false;
 	}
 
 	std::unique_ptr<std::atomic<bool>[]> m_horzBathtubScanPending;
+	std::unique_ptr<std::atomic<bool>[]> m_eyeScanPending;
 
 	std::atomic<bool> m_firstUpdateDone;
 };

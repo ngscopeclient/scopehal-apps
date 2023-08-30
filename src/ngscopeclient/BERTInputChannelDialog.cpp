@@ -172,6 +172,16 @@ bool BERTInputChannelDialog::DoRender()
 			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_horzBathtubScanPending[m_channel->GetIndex()] = true;
 		}
+
+		if(ImGui::Button("Eye"))
+		{
+			//Make sure we have a plot to see the data in
+			m_parent->AddAreaForStreamIfNotAlreadyVisible(m_channel->GetEyeStream());
+
+			//Request the eye measurement
+			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
+			state->m_eyeScanPending[m_channel->GetIndex()] = true;
+		}
 	}
 
 	return true;

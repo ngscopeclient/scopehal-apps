@@ -109,12 +109,14 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 		if( (x == 0) || (y == 0) )
 			return true;
 
-		//If this is an eye pattern, need to reallocate the texture
+		//If this is an eye pattern filter, need to reallocate the texture
 		//To avoid constantly destroying the integrated eye if we slightly resize stuff, round up to next power of 2
 		size_t roundedX = pow(2, ceil(log2(x)));
 		size_t roundedY = pow(2, ceil(log2(y)));
 		auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
 		auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
+		auto data = m_stream.GetData();
+		auto eyedata = dynamic_cast<EyeWaveform*>(data);
 		if(eye)
 		{
 			if( (eye->GetWidth() != roundedX) || (eye->GetHeight() != roundedY) )
@@ -128,6 +130,17 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 
 			x = roundedX;
 			y = roundedY;
+		}
+
+		//Eyes coming from BERTs, sampling scopes, etc cannot be reallocated
+		//TODO: what about if someone else makes their own filter that outputs eyes?
+		else if(m_stream.GetType() == Stream::STREAM_TYPE_EYE)
+		{
+			if(eyedata)
+			{
+				x = eyedata->GetWidth();
+				y = eyedata->GetHeight();
+			}
 		}
 
 		//Same deal for waterfalls
@@ -1958,7 +1971,13 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 	ImGui::EndChild();
 
-	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow)
+	//Don't allow drag processing if our first waveform is an eye
+	auto aestream = GetFirstAnalogOrEyeStream();
+	bool canDragYAxis = true;
+	if(aestream && (aestream.GetType() == Stream::STREAM_TYPE_EYE))
+		canDragYAxis = false;
+
+	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow && canDragYAxis)
 	{
 		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -3009,6 +3028,10 @@ void WaveformArea::OnMouseWheelPlotArea(float delta)
  */
 void WaveformArea::OnMouseWheelYAxis(float delta)
 {
+	auto stream = GetFirstEyeStream();
+	if(stream)
+		return;
+
 	if(delta > 0)
 	{
 		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();
