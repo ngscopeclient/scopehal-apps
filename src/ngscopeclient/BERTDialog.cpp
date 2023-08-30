@@ -120,7 +120,10 @@ bool BERTDialog::DoRender()
 			}
 
 			HelpMarker(to_string(m_bert->GetCustomPatternLength()) +
-				" -bit pattern sent by all channels in custom-pattern mode");
+				" -bit pattern sent by all channels in custom-pattern mode.\n"
+				"\n"
+				"Note that this includes the reference clock output on the ML4039, if\n"
+				"configured in SERDES mode.");
 		}
 	}
 
@@ -137,10 +140,17 @@ bool BERTDialog::DoRender()
 			m_txPattern = m_bert->GetGlobalCustomPattern();
 			m_txPatternText = to_string_hex(m_txPattern);
 		}
+		HelpMarker("Select which clock to output from the reference clock output port");
 
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
+		{
 			m_bert->SetDataRate(m_dataRates[m_dataRateIndex]);
+
+			//Reload refclk mux setting names
+			m_refclkNames = m_bert->GetRefclkOutMuxNames();
+		}
+		HelpMarker("PHY signaling rate for all transmit and receive ports");
 	}
 
 	return true;

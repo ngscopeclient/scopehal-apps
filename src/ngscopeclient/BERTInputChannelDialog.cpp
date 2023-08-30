@@ -143,6 +143,7 @@ bool BERTInputChannelDialog::DoRender()
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::Checkbox("Invert", &m_invert))
 			m_channel->SetInvert(m_invert);
+		HelpMarker("Inverts the polarity of the input");
 	}
 
 	if(ImGui::CollapsingHeader("CDR", defaultOpenFlags))
@@ -151,6 +152,9 @@ bool BERTInputChannelDialog::DoRender()
 			auto lock = m_channel->GetCdrLockState();
 			ImGui::Checkbox("Lock", &lock);
 		ImGui::EndDisabled();
+		HelpMarker(
+			"Indicates whether the clock recovery loop and PRBS checker are locked to incoming data.\n"
+			"If not locked, no measurements can be made.");
 	}
 
 	if(ImGui::CollapsingHeader("Pattern Checker", defaultOpenFlags))
@@ -158,6 +162,8 @@ bool BERTInputChannelDialog::DoRender()
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
 			m_channel->SetPattern(m_patternValues[m_patternIndex]);
+
+		HelpMarker("Expected PRBS pattern");
 	}
 
 	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
@@ -172,6 +178,7 @@ bool BERTInputChannelDialog::DoRender()
 			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_horzBathtubScanPending[m_channel->GetIndex()] = true;
 		}
+		HelpMarker("Acquire a single horizontal bathtub measurement");
 
 		if(ImGui::Button("Eye"))
 		{
@@ -182,6 +189,7 @@ bool BERTInputChannelDialog::DoRender()
 			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_eyeScanPending[m_channel->GetIndex()] = true;
 		}
+		HelpMarker("Acquire a single eye pattern measurement");
 	}
 
 	return true;

@@ -158,6 +158,11 @@ bool BERTOutputChannelDialog::DoRender()
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
 			m_channel->SetPattern(m_patternValues[m_patternIndex]);
+
+		if(!m_channel->GetBERT()->IsCustomPatternPerChannel())
+			HelpMarker("Pattern to drive out this port.\nNote that all ports in \"custom\" mode share a single pattern generator");
+		else
+			HelpMarker("Pattern to drive out this port.");
 	}
 
 	if(ImGui::CollapsingHeader("PHY Control", defaultOpenFlags))
@@ -165,20 +170,25 @@ bool BERTOutputChannelDialog::DoRender()
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::Checkbox("Enable", &m_enable))
 			m_channel->Enable(m_enable);
+		HelpMarker("Enable the output driver");
 
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::Checkbox("Invert", &m_invert))
 			m_channel->SetInvert(m_invert);
+		HelpMarker("Invert polarity of the output");
 
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Swing", m_driveNames, m_driveIndex))
 			m_channel->SetDriveStrength(m_driveValues[m_driveIndex]);
+		HelpMarker("Peak-to-peak swing of the output (with no emphasis)");
 
 		if(ImGui::SliderFloat("Pre-cursor", &m_precursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
 			m_channel->SetPreCursor(m_precursor);
+		HelpMarker("Pre-cursor FFE tap value");
 
 		if(ImGui::SliderFloat("Post-cursor", &m_postcursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
 			m_channel->SetPostCursor(m_postcursor);
+		HelpMarker("Post-cursor FFE tap value");
 
 	}
 
