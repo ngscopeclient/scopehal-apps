@@ -67,6 +67,19 @@ protected:
 
 	///@brief Set of channel names
 	std::vector<std::string> m_channelNames;
+
+	///@brief Custom transmit pattern
+	uint64_t m_txPattern;
+	std::string m_txPatternText;
+
+	///@brief Refclk output mux selector
+	int m_refclkIndex;
+	std::vector<std::string> m_refclkNames;
+
+	///@brief Data rate selector
+	int m_dataRateIndex;
+	std::vector<int64_t> m_dataRates;
+	std::vector<std::string> m_dataRateNames;
 };
 
 

@@ -51,6 +51,25 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	, m_bert(bert)
 	, m_state(state)
 {
+	m_txPattern = bert->GetGlobalCustomPattern();
+	m_txPatternText = to_string_hex(m_txPattern);
+
+	//Transmit pattern
+	m_refclkIndex = bert->GetRefclkOutMux();
+	m_refclkNames = bert->GetRefclkOutMuxNames();
+
+	auto currentRate = bert->GetDataRate();
+	m_dataRateIndex = 0;
+	m_dataRates = bert->GetAvailableDataRates();
+	Unit bps(Unit::UNIT_BITRATE);
+	for(size_t i=0; i<m_dataRates.size(); i++)
+	{
+		auto rate = m_dataRates[i];
+		if(rate == currentRate)
+			m_dataRateIndex = i;
+
+		m_dataRateNames.push_back(bps.PrettyPrint(rate));
+	}
 }
 
 BERTDialog::~BERTDialog()
@@ -63,6 +82,8 @@ BERTDialog::~BERTDialog()
 
 bool BERTDialog::DoRender()
 {
+	float width = 10 * ImGui::GetFontSize();
+
 	//Device information
 	if(ImGui::CollapsingHeader("Info"))
 	{
@@ -86,10 +107,40 @@ bool BERTDialog::DoRender()
 		ImGui::EndDisabled();
 	}
 
+	//Global pattern generator settings
+	if(!m_bert->IsCustomPatternPerChannel())
+	{
+		if(ImGui::CollapsingHeader("Pattern Generator"))
+		{
+			ImGui::SetNextItemWidth(width);
+			if(ImGui::InputText("Custom Pattern", &m_txPatternText))
+			{
+				sscanf(m_txPatternText.c_str(), "%lx", &m_txPattern);
+				m_bert->SetGlobalCustomPattern(m_txPattern);
+			}
+
+			HelpMarker(to_string(m_bert->GetCustomPatternLength()) +
+				" -bit pattern sent by all channels in custom-pattern mode");
+		}
+	}
+
 	//Timebase settings
 	if(ImGui::CollapsingHeader("Timebase"))
 	{
+		ImGui::SetNextItemWidth(width);
+		if(Dialog::Combo("Clock Out", m_refclkNames, m_refclkIndex))
+		{
+			m_bert->SetRefclkOutMux(m_refclkIndex);
 
+			//Need to refresh custom pattern here
+			//because ML4039 sets this to 0xaaaa if we select SERDES mode on clock out
+			m_txPattern = m_bert->GetGlobalCustomPattern();
+			m_txPatternText = to_string_hex(m_txPattern);
+		}
+
+		ImGui::SetNextItemWidth(width);
+		if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
+			m_bert->SetDataRate(m_dataRates[m_dataRateIndex]);
 	}
 
 	return true;
