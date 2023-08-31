@@ -80,6 +80,9 @@ protected:
 	int m_dataRateIndex;
 	std::vector<int64_t> m_dataRates;
 	std::vector<std::string> m_dataRateNames;
+
+	///@brief Calculated refclk out frequency
+	int64_t m_refclkFrequency;
 };
 
 

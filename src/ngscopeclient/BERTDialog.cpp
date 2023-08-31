@@ -70,6 +70,8 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 
 		m_dataRateNames.push_back(bps.PrettyPrint(rate));
 	}
+
+	m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 }
 
 BERTDialog::~BERTDialog()
@@ -117,6 +119,7 @@ bool BERTDialog::DoRender()
 			{
 				sscanf(m_txPatternText.c_str(), "%lx", &m_txPattern);
 				m_bert->SetGlobalCustomPattern(m_txPattern);
+				m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 			}
 
 			HelpMarker(to_string(m_bert->GetCustomPatternLength()) +
@@ -139,8 +142,18 @@ bool BERTDialog::DoRender()
 			//because ML4039 sets this to 0xaaaa if we select SERDES mode on clock out
 			m_txPattern = m_bert->GetGlobalCustomPattern();
 			m_txPatternText = to_string_hex(m_txPattern);
+
+			m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 		}
 		HelpMarker("Select which clock to output from the reference clock output port");
+
+		ImGui::SetNextItemWidth(width);
+		ImGui::BeginDisabled();
+		Unit hz(Unit::UNIT_HZ);
+		string srate = hz.PrettyPrint(m_refclkFrequency);
+		ImGui::InputText("Clock Out Frequency", &srate);
+		ImGui::EndDisabled();
+		HelpMarker("Calculated frequency of the reference clock output");
 
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
@@ -149,6 +162,7 @@ bool BERTDialog::DoRender()
 
 			//Reload refclk mux setting names
 			m_refclkNames = m_bert->GetRefclkOutMuxNames();
+			m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 		}
 		HelpMarker("PHY signaling rate for all transmit and receive ports");
 	}
