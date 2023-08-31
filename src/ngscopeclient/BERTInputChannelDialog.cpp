@@ -70,6 +70,13 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 		if(p == pat)
 			m_patternIndex = i;
 	}
+
+	//Receive CTLE config
+	m_ctleIndex = chan->GetCTLEGainStep();
+	auto steps = chan->GetCTLEGainSteps();
+	Unit db(Unit::UNIT_DB);
+	for(auto step : steps)
+		m_ctleNames.push_back(db.PrettyPrint(step));
 }
 
 BERTInputChannelDialog::~BERTInputChannelDialog()
@@ -138,12 +145,20 @@ bool BERTInputChannelDialog::DoRender()
 		}
 	}
 
-	if(ImGui::CollapsingHeader("Input Buffer", defaultOpenFlags))
+	if(ImGui::CollapsingHeader("Receiver", defaultOpenFlags))
 	{
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::Checkbox("Invert", &m_invert))
 			m_channel->SetInvert(m_invert);
 		HelpMarker("Inverts the polarity of the input");
+
+		if(m_channel->HasCTLE())
+		{
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("CTLE Gain", m_ctleNames, m_ctleIndex))
+				m_channel->SetCTLEGainStep(m_ctleIndex);
+			HelpMarker("Gain step for the continuous-time linear equalizer");
+		}
 	}
 
 	if(ImGui::CollapsingHeader("CDR", defaultOpenFlags))
@@ -162,7 +177,6 @@ bool BERTInputChannelDialog::DoRender()
 		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
 			m_channel->SetPattern(m_patternValues[m_patternIndex]);
-
 		HelpMarker("Expected PRBS pattern");
 	}
 

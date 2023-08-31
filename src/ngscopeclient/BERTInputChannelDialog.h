@@ -60,6 +60,9 @@ protected:
 	std::vector<std::string> m_patternNames;
 	std::vector<BERT::Pattern> m_patternValues;
 
+	int m_ctleIndex;
+	std::vector<std::string> m_ctleNames;
+
 	std::string m_displayName;
 	std::string m_committedDisplayName;
 
