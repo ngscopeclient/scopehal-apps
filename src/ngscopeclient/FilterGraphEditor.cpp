@@ -50,6 +50,7 @@
 #include "../scopeprotocols/SubtractFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
+#include "../scopeprotocols/UpsampleFilter.h"
 
 using namespace std;
 
@@ -72,6 +73,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	//Load icons for filters
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
@@ -1130,6 +1132,8 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 		iconname = "filter-multiply";
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
+	else if(dynamic_cast<UpsampleFilter*>(chan))
+		iconname = "filter-upsample";
 
 	if(iconname != "")
 	{
