@@ -72,6 +72,11 @@ protected:
 	uint64_t m_txPattern;
 	std::string m_txPatternText;
 
+	///@brief Integration length
+	uint64_t m_integrationLength;
+	float m_committedIntegrationLength;
+	std::string m_integrationLengthText;
+
 	///@brief Refclk output mux selector
 	int m_refclkIndex;
 	std::vector<std::string> m_refclkNames;

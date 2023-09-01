@@ -54,28 +54,21 @@ void BERTThread(BERTThreadArgs args)
 		//Flush any pending commands
 		bert->GetTransport()->FlushCommandQueue();
 
-		//Read stuff
+		//Read real time BER
 		bert->AcquireData();
 
 		//Check if we have any pending acquisition requests
 		for(size_t i=0; i<bert->GetChannelCount(); i++)
 		{
 			if(state->m_horzBathtubScanPending[i].exchange(false))
-			{
 				bert->MeasureHBathtub(i);
 
-				args.session->MarkChannelDirty(bert->GetChannel(i));
-				args.session->RefreshDirtyFiltersNonblocking();
-			}
-
 			if(state->m_eyeScanPending[i].exchange(false))
-			{
 				bert->MeasureEye(i);
 
-				args.session->MarkChannelDirty(bert->GetChannel(i));
-				args.session->RefreshDirtyFiltersNonblocking();
-			}
+			args.session->MarkChannelDirty(bert->GetChannel(i));
 		}
+		args.session->RefreshDirtyFiltersNonblocking();
 
 		state->m_firstUpdateDone = true;
 

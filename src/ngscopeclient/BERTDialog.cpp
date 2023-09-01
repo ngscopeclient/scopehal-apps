@@ -54,6 +54,11 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	m_txPattern = bert->GetGlobalCustomPattern();
 	m_txPatternText = to_string_hex(m_txPattern);
 
+	Unit sa(Unit::UNIT_SAMPLEDEPTH);
+	m_integrationLength = bert->GetBERIntegrationLength();
+	m_committedIntegrationLength = m_integrationLength;
+	m_integrationLengthText = sa.PrettyPrint(m_integrationLength);
+
 	//Transmit pattern
 	m_refclkIndex = bert->GetRefclkOutMux();
 	m_refclkNames = bert->GetRefclkOutMuxNames();
@@ -165,6 +170,23 @@ bool BERTDialog::DoRender()
 			m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 		}
 		HelpMarker("PHY signaling rate for all transmit and receive ports");
+
+		ImGui::SetNextItemWidth(width);
+		Unit sa(Unit::UNIT_SAMPLEDEPTH);
+		if(UnitInputWithImplicitApply(
+			"Integration Length",
+			m_integrationLengthText,
+			m_committedIntegrationLength,
+			sa))
+		{
+			m_integrationLength = m_committedIntegrationLength;
+			m_bert->SetBERIntegrationLength(m_integrationLength);
+		}
+		HelpMarker(
+			"Number of UIs to sample for each BER measurement.\n\n"
+			"Larger integration periods lead to slower update rates, but\n"
+			"give better resolution at low BER values."
+			);
 	}
 
 	return true;
