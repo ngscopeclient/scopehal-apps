@@ -77,6 +77,11 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	Unit db(Unit::UNIT_DB);
 	for(auto step : steps)
 		m_ctleNames.push_back(db.PrettyPrint(step));
+
+	//Rescale fs to ps for display
+	int64_t tmp;
+	chan->GetBERSamplingPoint(tmp, m_sampleY);
+	m_sampleX = tmp * 1e-3;
 }
 
 BERTInputChannelDialog::~BERTInputChannelDialog()
@@ -182,6 +187,19 @@ bool BERTInputChannelDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
 	{
+		float freq = m_channel->GetBERT()->GetDataRate();
+		float uiWidth = FS_PER_SECOND / (1000 * freq);
+
+		ImGui::SetNextItemWidth(width);
+		if(ImGui::SliderFloat("Sample X", &m_sampleX, -uiWidth/2, uiWidth/2))
+			m_channel->SetBERSamplingPoint(m_sampleX * 1e3, m_sampleY);
+		HelpMarker("Sampling time for BER measurements, in ps relative to center of UI");
+
+		ImGui::SetNextItemWidth(width);
+		if(ImGui::SliderFloat("Sample Y", &m_sampleY, -0.4, 0.4))
+			m_channel->SetBERSamplingPoint(m_sampleX * 1e3, m_sampleY);
+		HelpMarker("Sampling offset for BER measurements, in V relative to center of UI");
+
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::Button("Horz Bathtub"))
 		{

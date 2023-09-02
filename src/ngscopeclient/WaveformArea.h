@@ -432,7 +432,9 @@ protected:
 	void RenderGrid(ImVec2 start, ImVec2 size, std::map<float, float>& gridmap, float& vbot, float& vtop);
 	void RenderYAxis(ImVec2 size, std::map<float, float>& gridmap, float vbot, float vtop);
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
+	void RenderBERLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
+	void RenderBERSamplingPoint(ImVec2 start, ImVec2 size);
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderEyePatternTooltip(ImVec2 start, ImVec2 size);
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
@@ -517,6 +519,8 @@ protected:
 		DRAG_STATE_CHANNEL,
 		DRAG_STATE_Y_AXIS,
 		DRAG_STATE_TRIGGER_LEVEL,
+		DRAG_STATE_BER_LEVEL,
+		DRAG_STATE_BER_BOTH,
 		DRAG_STATE_PEAK_MARKER
 	} m_dragState;
 
@@ -549,11 +553,20 @@ protected:
 	///@brief True if mouse is over a trigger level arrow
 	bool m_mouseOverTriggerArrow;
 
+	///@brief True if mouse is over the BER sampling location
+	bool m_mouseOverBERTarget;
+
 	///@brief Current trigger level, if dragging
 	float m_triggerLevelDuringDrag;
 
+	///@brief Current X axis position during drag
+	int64_t m_xAxisPosDuringDrag;
+
 	///@brief The trigger we're configuring
 	Trigger* m_triggerDuringDrag;
+
+	///@brief The BERT channel we're configuring
+	BERTInputChannel* m_bertChannelDuringDrag;
 
 	///@brief Channels we're in the process of removing
 	std::vector<std::shared_ptr<DisplayedChannel> > m_channelsToRemove;

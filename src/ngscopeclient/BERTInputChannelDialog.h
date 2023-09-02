@@ -66,6 +66,9 @@ protected:
 	std::string m_displayName;
 	std::string m_committedDisplayName;
 
+	float m_sampleX;
+	float m_sampleY;
+
 	float m_color[3];
 };
 

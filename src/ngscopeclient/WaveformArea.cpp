@@ -272,8 +272,11 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_parent(parent)
 	, m_tLastMouseMove(GetTime())
 	, m_mouseOverTriggerArrow(false)
+	, m_mouseOverBERTarget(false)
 	, m_triggerLevelDuringDrag(0)
+	, m_xAxisPosDuringDrag(0)
 	, m_triggerDuringDrag(nullptr)
+	, m_bertChannelDuringDrag(nullptr)
 	, m_lastRightClickOffset(0)
 	, m_channelButtonHeight(0)
 	, m_dragPeakLabel(nullptr)
@@ -540,6 +543,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);
+		RenderBERSamplingPoint(pos, csize);
 
 		//Make sure all channels have same vertical scale and warn if not
 		CheckForScaleMismatch(pos, csize);
@@ -1925,6 +1929,9 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Trigger level arrow(s)
 	RenderTriggerLevelArrows(origin, size);
 
+	//BER level arrows (for BERT readout)
+	RenderBERLevelArrows(origin, size);
+
 	//Help tooltip
 	//Only show if mouse has been still for 1 sec
 	//(shorter delays interfere with dragging)
@@ -2028,7 +2035,7 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
 	//Draw dashed line at trigger level
-	if(m_dragState == DRAG_STATE_TRIGGER_LEVEL)
+	if( (m_dragState == DRAG_STATE_TRIGGER_LEVEL) || (m_dragState == DRAG_STATE_BER_LEVEL) )
 	{
 		ImU32 triggerColor = ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
 		float dashSize = ImGui::GetFontSize() * 0.5;
@@ -2050,6 +2057,76 @@ void WaveformArea::RenderCursors(ImVec2 start, ImVec2 size)
 			1);
 	}
 
+}
+
+/**
+	@brief Sampling point for BER
+ */
+void WaveformArea::RenderBERSamplingPoint(ImVec2 /*start*/, ImVec2 /*size*/)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	auto mouse = ImGui::GetMousePos();
+
+	m_mouseOverBERTarget = false;
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.GetType() != Stream::STREAM_TYPE_EYE)
+			continue;
+		auto ichan = dynamic_cast<BERTInputChannel*>(stream.m_channel);
+		if(!ichan)
+			continue;
+
+		int64_t dx;
+		float dy;
+		ichan->GetBERSamplingPoint(dx, dy);
+
+		float x = m_group->XAxisUnitsToXPosition(dx);
+		float y = YAxisUnitsToYPosition(dy);
+
+		float delta = ImGui::GetFontSize() * 0.5;
+		float weight = 3;
+
+		if(m_dragState == DRAG_STATE_BER_BOTH)
+		{
+			m_mouseOverBERTarget = true;
+			x = mouse.x;
+			y = mouse.y;
+		}
+
+		ImVec2 points[5] =
+		{
+			ImVec2(x-delta, y),
+			ImVec2(x, 		y+delta),
+			ImVec2(x+delta, y),
+			ImVec2(x, 		y-delta),
+			ImVec2(x-delta, y)
+		};
+
+		draw_list->AddPolyline(points, 5,  ColorFromString(stream.m_channel->m_displaycolor), 0, weight);
+
+		if(m_dragState != DRAG_STATE_BER_BOTH)
+		{
+			//Check mouse position
+			float left = points[0].x;
+			float right = points[2].x;
+			float top = points[1].y;
+			float bottom = points[3].y;
+			if( (mouse.x >= left) && (mouse.x <= right) && (mouse.y >= bottom) && (mouse.y <= top) )
+			{
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+				m_mouseOverBERTarget = true;
+
+				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					LogTrace("Start dragging BERT sampling [pomt\n");
+					m_dragState = DRAG_STATE_BER_BOTH;
+					m_bertChannelDuringDrag = ichan;
+				}
+			}
+		}
+	}
 }
 
 /**
@@ -2092,7 +2169,17 @@ void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 
 		Unit unit(Unit::UNIT_RATIO_SCI);
-		ImGui::Text("BER: %s", unit.PrettyPrint(ber).c_str());
+		Unit rtunit(Unit::UNIT_LOG_BER);
+
+		//If we are over a BER sampling marker for a BERT, do more
+		auto bchan = dynamic_cast<BERTInputChannel*>(firstStream.m_channel);
+		if(m_mouseOverBERTarget && bchan)
+		{
+			auto rtber = bchan->GetScalarValue(BERTInputChannel::STREAM_BER);
+			ImGui::Text("Realtime BER: %s\nEye BER: %s", rtunit.PrettyPrint(rtber).c_str(), unit.PrettyPrint(ber).c_str());
+		}
+		else
+			ImGui::Text("BER: %s", unit.PrettyPrint(ber).c_str());
 
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
@@ -2276,6 +2363,80 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 		//Handle dragging
 		if(m_dragState == DRAG_STATE_TRIGGER_LEVEL)
 			m_triggerLevelDuringDrag = YPositionToYAxisUnits(mouse.y);
+	}
+}
+
+/**
+	@brief Arrows pointing to BERT sampling level
+ */
+void WaveformArea::RenderBERLevelArrows(ImVec2 start, ImVec2 /*size*/)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	float arrowsize = ImGui::GetFontSize() * 0.6;
+	float caparrowsize = ImGui::GetFontSize() * 1;
+
+	//Make a list of BERT eye patterns we're displaying
+	set<BERTInputChannel*> channels;
+	for(auto c : m_displayedChannels)
+	{
+		auto stream = c->GetStream();
+		if(stream.GetType() != Stream::STREAM_TYPE_EYE)
+			continue;
+		auto ichan = dynamic_cast<BERTInputChannel*>(stream.m_channel);
+		if(!ichan)
+			continue;
+		channels.emplace(ichan);
+	}
+
+	//Display the arrow for each one
+	float arrowright = start.x + arrowsize;
+	float caparrowright = start.x + caparrowsize;
+	m_mouseOverTriggerArrow = false;
+	auto mouse = ImGui::GetMousePos();
+	for(auto chan : channels)
+	{
+		auto color = ColorFromString(chan->m_displaycolor);
+
+		int64_t dx;
+		float level;
+		chan->GetBERSamplingPoint(dx, level);
+
+		//Draw the arrow
+		//If currently dragging, show at mouse position rather than actual hardware trigger level
+		float y = YAxisUnitsToYPosition(level);
+		if( ( (m_dragState == DRAG_STATE_BER_LEVEL) || (m_dragState == DRAG_STATE_BER_BOTH) ) &&
+			(chan == m_bertChannelDuringDrag) )
+		{
+			y = mouse.y;
+		}
+		float arrowtop = y - arrowsize/2;
+		float arrowbot = y + arrowsize/2;
+		draw_list->AddTriangleFilled(
+			ImVec2(start.x, y), ImVec2(arrowright, arrowtop), ImVec2(arrowright, arrowbot), color);
+
+		//Check mouse position
+		//Use slightly expanded hitbox to make it easier to capture
+		float caparrowtop = y - caparrowsize/2;
+		float caparrowbot = y + caparrowsize/2;
+		if( (mouse.x >= start.x) && (mouse.x <= caparrowright) && (mouse.y >= caparrowtop) && (mouse.y <= caparrowbot) )
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+			m_mouseOverTriggerArrow = true;
+
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				LogTrace("Start dragging BERT sampling level\n");
+				m_dragState = DRAG_STATE_BER_LEVEL;
+				m_bertChannelDuringDrag = chan;
+			}
+		}
+
+		//Handle dragging
+		if( (m_dragState == DRAG_STATE_BER_LEVEL) || (m_dragState == DRAG_STATE_BER_BOTH) )
+			m_triggerLevelDuringDrag = YPositionToYAxisUnits(mouse.y);
+		if(m_dragState == DRAG_STATE_BER_BOTH)
+			m_xAxisPosDuringDrag = m_group->XPositionToXAxisUnits(mouse.x);
 	}
 }
 
@@ -2940,6 +3101,19 @@ void WaveformArea::OnMouseUp()
 			m_parent->SetNeedRender();
 			break;
 
+		case DRAG_STATE_BER_LEVEL:
+			{
+				float ignored;
+				int64_t dx;
+				m_bertChannelDuringDrag->GetBERSamplingPoint(dx, ignored);
+				m_bertChannelDuringDrag->SetBERSamplingPoint(dx, m_triggerLevelDuringDrag);
+			}
+			break;
+
+		case DRAG_STATE_BER_BOTH:
+			m_bertChannelDuringDrag->SetBERSamplingPoint(m_xAxisPosDuringDrag, m_triggerLevelDuringDrag);
+			break;
+
 		case DRAG_STATE_TRIGGER_LEVEL:
 			{
 				Unit volts(Unit::UNIT_VOLTS);
@@ -2983,6 +3157,11 @@ void WaveformArea::OnDragUpdate()
 
 				m_parent->SetNeedRender();
 			}
+			break;
+
+		case DRAG_STATE_BER_LEVEL:
+		case DRAG_STATE_BER_BOTH:
+			//TODO: push to hardware at a controlled rate (after each trigger?)
 			break;
 
 		case DRAG_STATE_TRIGGER_LEVEL:
@@ -3075,6 +3254,11 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 {
 	//Can't go anywhere in our group if the X unit is different (e.g. frequency vs time)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
+		return false;
+
+	//If our current view is an eye pattern, can't stack anything on it
+	auto estream = GetFirstEyeStream();
+	if(estream)
 		return false;
 
 	switch(desc.GetType())
