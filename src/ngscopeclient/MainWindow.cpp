@@ -53,6 +53,7 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "BERTInputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FileBrowser.h"
 #include "FilterPropertiesDialog.h"
@@ -987,7 +988,14 @@ void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 
 	//Dialog wasn't already open, create it
 	auto f = dynamic_cast<Filter*>(channel);
-	if(f)
+	auto bi = dynamic_cast<BERTInputChannel*>(channel);
+	if(bi)
+	{
+		auto dlg = make_shared<BERTInputChannelDialog>(bi, this);
+		m_channelPropertiesDialogs[channel] = dlg;
+		AddDialog(dlg);
+	}
+	else if(f)
 	{
 		auto dlg = make_shared<FilterPropertiesDialog>(f, this);
 		m_channelPropertiesDialogs[channel] = dlg;

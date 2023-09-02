@@ -2857,6 +2857,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	{
 		if(ochan)
 			m_parent->ShowChannelProperties(ochan);
+
 		//TODO: properties of non-scope channels?
 	}
 
