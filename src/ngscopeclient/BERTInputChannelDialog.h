@@ -45,12 +45,16 @@ public:
 	BERTInputChannelDialog(BERTInputChannel* chan, MainWindow* parent, bool graphEditorMode = false);
 	virtual ~BERTInputChannelDialog();
 
-	virtual bool DoRender();
+	virtual bool Render() override;
+	virtual bool DoRender() override;
 
 	BERTInputChannel* GetChannel()
 	{ return m_channel; }
 
+	void RunFileDialog();
+
 protected:
+
 	BERTInputChannel* m_channel;
 	MainWindow* m_parent;
 
@@ -66,10 +70,15 @@ protected:
 	std::string m_displayName;
 	std::string m_committedDisplayName;
 
+	std::string m_tempMaskFile;
+	std::string m_committedMaskFile;
+
 	float m_sampleX;
 	float m_sampleY;
 
 	float m_color[3];
+
+	std::shared_ptr<FileBrowser> m_fileDialog;
 };
 
 #endif

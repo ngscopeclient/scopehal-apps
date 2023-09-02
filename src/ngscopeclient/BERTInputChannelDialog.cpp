@@ -37,6 +37,7 @@
 #include "MainWindow.h"
 #include "BERTInputChannelDialog.h"
 #include <imgui_node_editor.h>
+#include "FileBrowser.h"
 
 using namespace std;
 
@@ -82,6 +83,9 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	int64_t tmp;
 	chan->GetBERSamplingPoint(tmp, m_sampleY);
 	m_sampleX = tmp * 1e-3;
+
+	m_tempMaskFile = chan->GetMaskFile();
+	m_committedMaskFile = m_tempMaskFile;
 }
 
 BERTInputChannelDialog::~BERTInputChannelDialog()
@@ -90,6 +94,31 @@ BERTInputChannelDialog::~BERTInputChannelDialog()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
+
+bool BERTInputChannelDialog::Render()
+{
+	RunFileDialog();
+	return Dialog::Render();
+}
+
+void BERTInputChannelDialog::RunFileDialog()
+{
+	//Run file browser dialog
+	if(m_fileDialog)
+	{
+		m_fileDialog->Render();
+
+		if(m_fileDialog->IsClosedOK())
+		{
+			m_committedMaskFile = m_fileDialog->GetFileName();
+			m_tempMaskFile = m_committedMaskFile;
+			m_channel->SetMaskFile(m_committedMaskFile);
+		}
+
+		if(m_fileDialog->IsClosed())
+			m_fileDialog = nullptr;
+	}
+}
 
 /**
 	@brief Renders the dialog and handles UI events
@@ -222,6 +251,32 @@ bool BERTInputChannelDialog::DoRender()
 			state->m_eyeScanPending[m_channel->GetIndex()] = true;
 		}
 		HelpMarker("Acquire a single eye pattern measurement");
+
+		//Input path
+		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
+		if(TextInputWithImplicitApply("###pathmask", m_tempMaskFile, m_committedMaskFile))
+			m_channel->SetMaskFile(m_committedMaskFile);
+
+		//Browser button
+		ImGui::SameLine();
+		if(ImGui::Button("...###maskbrowser"))
+		{
+			if(!m_fileDialog)
+			{
+				m_fileDialog = MakeFileBrowser(
+					m_parent,
+					m_committedMaskFile,
+					"Select File",
+					"YAML files (*.yml)",
+					"*.yml",
+					false);
+			}
+			else
+				LogTrace("file dialog is already open, ignoring additional button click\n");
+		}
+		ImGui::SameLine();
+		ImGui::TextUnformatted("Mask file");
+		HelpMarker("Mask data file for pass/fail testing");
 	}
 
 	return true;

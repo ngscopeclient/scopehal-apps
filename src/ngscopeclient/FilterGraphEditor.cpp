@@ -89,9 +89,13 @@ FilterGraphEditor::~FilterGraphEditor()
 bool FilterGraphEditor::Render()
 {
 	//If we have an open properties dialog with a file browser open, run it
-	auto dlg = dynamic_pointer_cast<FilterPropertiesDialog>(m_propertiesDialogs[m_selectedProperties]);
-	if(dlg)
-		dlg->RunFileDialog();
+	auto dlg = m_propertiesDialogs[m_selectedProperties];
+	auto fdlg = dynamic_pointer_cast<FilterPropertiesDialog>(dlg);
+	auto bdlg = dynamic_pointer_cast<BERTInputChannelDialog>(dlg);
+	if(fdlg)
+		fdlg->RunFileDialog();
+	else if(bdlg)
+		bdlg->RunFileDialog();
 
 	return Dialog::Render();
 }

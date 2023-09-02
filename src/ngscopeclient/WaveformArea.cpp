@@ -755,14 +755,15 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 	//Draw the mask (if there is one)
 	auto eye = dynamic_cast<EyePattern*>(stream.m_channel);
 	auto edata = dynamic_cast<EyeWaveform*>(data);
-	if(eye)
+	auto bichan = dynamic_cast<BERTInputChannel*>(stream.m_channel);
+	if(eye || bichan)
 	{
 		auto& prefs = m_parent->GetSession().GetPreferences();
 		auto color = prefs.GetColor("Appearance.Eye Patterns.mask_color");
 		auto borderpass = prefs.GetColor("Appearance.Eye Patterns.border_color_pass");
 		auto borderfailed = prefs.GetColor("Appearance.Eye Patterns.border_color_fail");
 
-		auto mask = eye->GetMask();
+		auto mask = eye ? eye->GetMask() : bichan->GetMask();
 		auto polygons = mask.GetPolygons();
 		bool relative = mask.IsTimebaseRelative();
 		bool failed = edata->GetMaskHitRate() > mask.GetAllowedHitRate();
