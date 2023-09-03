@@ -161,6 +161,23 @@ bool BERTDialog::DoRender()
 		HelpMarker("Calculated frequency of the reference clock output");
 
 		ImGui::SetNextItemWidth(width);
+		ImGui::BeginDisabled();
+		srate = hz.PrettyPrint(m_bert->GetRefclkInFrequency());
+		ImGui::InputText("Clock In Frequency", &srate);
+		ImGui::EndDisabled();
+		HelpMarker("Required frequency for external reference clock");
+
+		ImGui::SetNextItemWidth(width);
+		const char* items[2] =
+		{
+			"Internal",
+			"External"
+		};
+		int iext = m_bert->GetUseExternalRefclk() ? 1 : 0;
+		if(ImGui::Combo("Clock Source", &iext, items, 2))
+			m_bert->SetUseExternalRefclk(iext == 1);
+
+		ImGui::SetNextItemWidth(width);
 		if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
 		{
 			m_bert->SetDataRate(m_dataRates[m_dataRateIndex]);

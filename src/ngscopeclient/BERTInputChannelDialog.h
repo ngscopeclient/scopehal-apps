@@ -74,7 +74,9 @@ protected:
 	std::string m_committedMaskFile;
 
 	float m_sampleX;
+	float m_committedSampleX;
 	float m_sampleY;
+	float m_committedSampleY;
 
 	float m_color[3];
 

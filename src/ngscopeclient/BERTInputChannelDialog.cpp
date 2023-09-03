@@ -83,6 +83,8 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	int64_t tmp;
 	chan->GetBERSamplingPoint(tmp, m_sampleY);
 	m_sampleX = tmp * 1e-3;
+	m_committedSampleX = m_sampleX;
+	m_committedSampleY = m_sampleY;
 
 	m_tempMaskFile = chan->GetMaskFile();
 	m_committedMaskFile = m_tempMaskFile;
@@ -219,14 +221,32 @@ bool BERTInputChannelDialog::DoRender()
 		float freq = m_channel->GetBERT()->GetDataRate();
 		float uiWidth = FS_PER_SECOND / (1000 * freq);
 
+		//See if sampling point moved outside our dialog
+		//If so, move the sliders
+		int64_t tmpX;
+		float tmpY;
+		m_channel->GetBERSamplingPoint(tmpX, tmpY);
+		tmpX *= 1e-3;
+		if( (tmpX != m_committedSampleX) || (fabs(tmpY - m_committedSampleY) > 0.001) )
+		{
+			m_sampleX = m_committedSampleX = tmpX;
+			m_sampleY = m_committedSampleY = tmpY;
+		}
+
 		ImGui::SetNextItemWidth(width);
 		if(ImGui::SliderFloat("Sample X", &m_sampleX, -uiWidth/2, uiWidth/2))
+		{
 			m_channel->SetBERSamplingPoint(m_sampleX * 1e3, m_sampleY);
+			m_committedSampleX = m_sampleX;
+		}
 		HelpMarker("Sampling time for BER measurements, in ps relative to center of UI");
 
 		ImGui::SetNextItemWidth(width);
-		if(ImGui::SliderFloat("Sample Y", &m_sampleY, -0.4, 0.4))
+		if(ImGui::SliderFloat("Sample Y", &m_sampleY, -0.2, 0.2))
+		{
 			m_channel->SetBERSamplingPoint(m_sampleX * 1e3, m_sampleY);
+			m_committedSampleY = m_sampleY;
+		}
 		HelpMarker("Sampling offset for BER measurements, in V relative to center of UI");
 
 		ImGui::SetNextItemWidth(width);
