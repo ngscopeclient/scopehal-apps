@@ -71,7 +71,9 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
 
 	//Load icons for filters
+	m_parent->GetTextureManager()->LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
@@ -1157,8 +1159,12 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 				break;
 		}
 	}
+	else if(dynamic_cast<AddFilter*>(chan))
+		iconname = "filter-add";
 	else if(dynamic_cast<MultiplyFilter*>(chan))
 		iconname = "filter-multiply";
+	else if(dynamic_cast<SubtractFilter*>(chan))
+		iconname = "filter-subtract";
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
 	else if(dynamic_cast<UpsampleFilter*>(chan))
@@ -1177,11 +1183,7 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 
 	//Default to no icon, then add icons for basic math blocks
 	string str = "";
-	if(dynamic_cast<AddFilter*>(chan))
-		str = "+";
-	else if(dynamic_cast<SubtractFilter*>(chan))
-		str = "-";
-	else if(dynamic_cast<DivideFilter*>(chan))
+	if(dynamic_cast<DivideFilter*>(chan))
 		str = "÷";
 	else if(dynamic_cast<ToneGeneratorFilter*>(chan))
 		str = "∿";
