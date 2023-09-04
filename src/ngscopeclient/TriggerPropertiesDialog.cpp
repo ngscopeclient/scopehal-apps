@@ -239,7 +239,7 @@ void TriggerPropertiesPage::FindAllStreams(vector<StreamDescriptor>& streams)
 		auto chan = m_scope->GetOscilloscopeChannel(i);
 		if(!chan)
 			continue;
-		if(m_scope->CanEnableChannel(i))
+		if(m_scope->CanEnableChannel(i) || (chan == m_scope->GetExternalTrigger()) )
 		{
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				streams.push_back(StreamDescriptor(chan, j));
