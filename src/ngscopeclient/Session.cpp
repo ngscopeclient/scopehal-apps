@@ -303,7 +303,12 @@ bool Session::LoadWaveformDataForScope(
 	//Clear out any old waveforms the instrument may have
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
 	{
+		//Only delete waveforms from oscilloscope channels
+		//(this avoids crashing if the scope is a multi-function device with function generator etc)
 		auto chan = scope->GetOscilloscopeChannel(i);
+		if(!chan)
+			continue;
+
 		for(size_t j=0; j<chan->GetStreamCount(); j++)
 			chan->SetData(nullptr, j);
 	}
@@ -1598,7 +1603,8 @@ set<Instrument*> Session::GetInstruments()
  */
 void Session::ArmTrigger(TriggerType type)
 {
-	lock_guard<mutex> lock(m_scopeMutex);
+	LogTrace("Arming trigger\n");
+	LogIndenter li;
 
 	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
 	m_triggerOneShot = oneshot;
@@ -1627,6 +1633,9 @@ void Session::ArmTrigger(TriggerType type)
 	//In multi-scope mode, make sure all scopes are stopped with no pending waveforms
 	if(m_oscilloscopes.size() > 1)
 	{
+		lock_guard<shared_mutex> lock(m_waveformDataMutex);
+		lock_guard<mutex> lock2(m_scopeMutex);
+
 		for(ssize_t i=m_oscilloscopes.size()-1; i >= 0; i--)
 		{
 			if(m_oscilloscopes[i]->PeekTriggerArmed())
@@ -1640,11 +1649,16 @@ void Session::ArmTrigger(TriggerType type)
 		}
 	}
 
+	lock_guard<mutex> lock(m_scopeMutex);
+
 	for(ssize_t i=m_oscilloscopes.size()-1; i >= 0; i--)
 	{
 		//If we have >1 scope, all secondaries always use single trigger synced to the primary's trigger output
 		if(i > 0)
+		{
+			LogTrace("Starting trigger for secondary scope %zu\n", i);
 			m_oscilloscopes[i]->StartSingleTrigger();
+		}
 
 		else
 		{
@@ -1654,7 +1668,10 @@ void Session::ArmTrigger(TriggerType type)
 				//for single scope, use normal trigger
 				case TRIGGER_TYPE_NORMAL:
 					if(m_oscilloscopes.size() > 1)
+					{
+						LogTrace("Starting trigger for primary\n");
 						m_oscilloscopes[i]->StartSingleTrigger();
+					}
 					else
 						m_oscilloscopes[i]->Start();
 					break;
@@ -1695,11 +1712,14 @@ void Session::ArmTrigger(TriggerType type)
 					start = now;
 				}
 			}
+			LogTrace("Secondary is armed\n");
 
 			//Scope is armed. Clear any garbage in the pending queue
 			m_oscilloscopes[i]->ClearPendingWaveforms();
 		}
 	}
+
+	LogTrace("All instruments are armed\n");
 	m_tArm = GetTime();
 	m_triggerArmed = true;
 }
