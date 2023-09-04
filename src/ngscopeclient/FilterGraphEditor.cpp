@@ -77,6 +77,8 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
+	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
+	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -128,10 +130,18 @@ bool FilterGraphEditor::DoRender()
 			{
 				if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_OSCILLOSCOPE)
 				{
-					if(!scope->CanEnableChannel(i))
-						continue;
-					if(!scope->IsChannelEnabled(i))
-						continue;
+					//If it's a trigger channel, allow it even if it's not enabled
+					//TODO: only allow if currently selected
+					if(chan == scope->GetExternalTrigger())
+					{
+					}
+					else
+					{
+						if(!scope->CanEnableChannel(i))
+							continue;
+						if(!scope->IsChannelEnabled(i))
+							continue;
+					}
 				}
 			}
 
@@ -937,12 +947,14 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	else
 	{
 		//see if input or output
-		if(dynamic_cast<PowerSupplyChannel*>(channel))
+		if( (dynamic_cast<PowerSupplyChannel*>(channel)) ||
+			(dynamic_cast<FunctionGeneratorChannel*>(channel)) ||
+			(dynamic_cast<RFSignalGeneratorChannel*>(channel)) ||
+			(dynamic_cast<BERTOutputChannel*>(channel))
+			)
+		{
 			blocktype = "Hardware output";
-		else if(dynamic_cast<FunctionGeneratorChannel*>(channel))
-			blocktype = "Hardware output";
-		else if(dynamic_cast<BERTOutputChannel*>(channel))
-			blocktype = "Hardware output";
+		}
 		else
 			blocktype = "Hardware input";
 	}
@@ -1119,18 +1131,31 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	string iconname = "";
 	if(dynamic_cast<Filter*>(chan) == nullptr)
 	{
-		//TODO: API to determine actual physical connector type
-		//For now default based on channel class
-		if(dynamic_cast<PowerSupplyChannel*>(chan))
-			iconname = "input-banana-dual";
-		else if(dynamic_cast<MultimeterChannel*>(chan))
-			iconname = "input-banana-dual";
-		else if(dynamic_cast<BERTInputChannel*>(chan))
-			iconname = "input-k-dual";
-		else if(dynamic_cast<BERTOutputChannel*>(chan))
-			iconname = "input-k-dual";
-		else
-			iconname = "input-bnc";
+		switch(chan->GetPhysicalConnector())
+		{
+			case InstrumentChannel::CONNECTOR_BANANA_DUAL:
+				iconname = "input-banana-dual";
+				break;
+
+			case InstrumentChannel::CONNECTOR_K_DUAL:
+				iconname = "input-k-dual";
+				break;
+			case InstrumentChannel::CONNECTOR_K:
+				iconname = "input-k";
+				break;
+			case InstrumentChannel::CONNECTOR_SMA:
+				iconname = "input-sma";
+				break;
+
+			//TODO: make icons for these
+			case InstrumentChannel::CONNECTOR_BMA:
+			case InstrumentChannel::CONNECTOR_N:
+
+			case InstrumentChannel::CONNECTOR_BNC:
+			default:
+				iconname = "input-bnc";
+				break;
+		}
 	}
 	else if(dynamic_cast<MultiplyFilter*>(chan))
 		iconname = "filter-multiply";
