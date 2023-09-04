@@ -45,7 +45,9 @@
 //Pull in a bunch of filters we have special icons for
 #include "../scopeprotocols/AddFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
+#include "../scopeprotocols/ClockRecoveryFilter.h"
 #include "../scopeprotocols/DivideFilter.h"
+#include "../scopeprotocols/EyePattern.h"
 #include "../scopeprotocols/MultiplyFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
@@ -72,6 +74,8 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	//Load icons for filters
 	m_parent->GetTextureManager()->LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
@@ -1161,6 +1165,10 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	}
 	else if(dynamic_cast<AddFilter*>(chan))
 		iconname = "filter-add";
+	else if(dynamic_cast<ClockRecoveryFilter*>(chan))
+		iconname = "filter-cdrpll";
+	else if(dynamic_cast<EyePattern*>(chan))
+		iconname = "filter-eyepattern";
 	else if(dynamic_cast<MultiplyFilter*>(chan))
 		iconname = "filter-multiply";
 	else if(dynamic_cast<SubtractFilter*>(chan))
