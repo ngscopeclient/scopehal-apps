@@ -51,6 +51,10 @@ RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* gene
 	, m_committedSweepStopLevel(generator->GetSweepStopLevel(channel))
 	, m_committedSweepDwellTime(generator->GetSweepDwellTime(channel))
 	, m_committedSweepPoints(generator->GetSweepPoints(channel))
+	, m_analogModEnabled(generator->GetAnalogModulationEnable(channel))
+	, m_fmEnabled(generator->GetAnalogFMEnable(channel))
+	, m_committedFmDeviation(generator->GetAnalogFMDeviation(channel))
+	, m_committedFmFrequency(generator->GetAnalogFMFrequency(channel))
 	{
 		Unit dbm(Unit::UNIT_DBM);
 		Unit hz(Unit::UNIT_HZ);
@@ -63,6 +67,8 @@ RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* gene
 		m_sweepStartLevel = dbm.PrettyPrint(m_committedSweepStartLevel);
 		m_sweepStopLevel = dbm.PrettyPrint(m_committedSweepStopLevel);
 		m_sweepDwellTime = fs.PrettyPrint(m_committedSweepDwellTime);
+		m_fmDeviation = hz.PrettyPrint(m_committedFmDeviation);
+		m_fmFrequency = hz.PrettyPrint(m_committedFmFrequency);
 
 		m_sweepPoints = m_committedSweepPoints;
 
@@ -124,6 +130,18 @@ RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* gene
 			m_sweepDirection = 1;
 		else
 			m_sweepDirection = 0;
+
+		//FM waveform shape
+		m_fmWaveShapes = generator->GetAnalogFMWaveShapes();
+		m_fmWaveShape = 0;
+		auto shape = generator->GetAnalogFMWaveShape(channel);
+		for(size_t i=0; i<m_fmWaveShapes.size(); i++)
+		{
+			if(m_fmWaveShapes[i] == shape)
+				m_fmWaveShape = i;
+
+			m_fmWaveShapeNames.push_back(FunctionGenerator::GetNameOfShape(m_fmWaveShapes[i]));
+		}
 	}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -342,9 +360,62 @@ void RFGeneratorDialog::DoChannel(size_t i)
 			}
 		}
 
-		if(ImGui::TreeNode("Analog Modulation"))
+		if(m_generator->IsAnalogModulationAvailable(i))
 		{
-			ImGui::TreePop();
+			if(ImGui::TreeNode("Analog Modulation"))
+			{
+				if(ImGui::Checkbox("Modulation Enable", &m_uiState[i].m_analogModEnabled))
+					m_generator->SetAnalogModulationEnable(i, m_uiState[i].m_analogModEnabled);
+				HelpMarker("Turn analog modulation on or off");
+
+				if(!m_uiState[i].m_analogModEnabled)
+					ImGui::BeginDisabled();
+
+				if(ImGui::TreeNode("AM"))
+				{
+					ImGui::TreePop();
+				}
+				if(ImGui::TreeNode("FM"))
+				{
+					if(ImGui::Checkbox("FM Enable", &m_uiState[i].m_fmEnabled))
+						m_generator->SetAnalogFMEnable(i, m_uiState[i].m_fmEnabled);
+					HelpMarker("Turn analog frequency modulation on or off");
+
+					if(!m_uiState[i].m_fmEnabled)
+						ImGui::BeginDisabled();
+
+					ImGui::SetNextItemWidth(valueWidth);
+					if(Combo("Waveform", m_uiState[i].m_fmWaveShapeNames, m_uiState[i].m_fmWaveShape))
+						m_generator->SetAnalogFMWaveShape(i, m_uiState[i].m_fmWaveShapes[m_uiState[i].m_fmWaveShape]);
+					HelpMarker("Shape of the baseband modulation waveform");
+
+					ImGui::SetNextItemWidth(valueWidth);
+					if(UnitInputWithImplicitApply("Deviation",
+						m_uiState[i].m_fmDeviation, m_uiState[i].m_committedFmDeviation, hz))
+					{
+						m_generator->SetAnalogFMDeviation(i, m_uiState[i].m_committedFmDeviation);
+					}
+					HelpMarker("Modulation depth for analog FM");
+
+					ImGui::SetNextItemWidth(valueWidth);
+					if(UnitInputWithImplicitApply("Frequency",
+						m_uiState[i].m_fmFrequency, m_uiState[i].m_committedFmFrequency, hz))
+					{
+						m_generator->SetAnalogFMFrequency(i, m_uiState[i].m_committedFmFrequency);
+					}
+					HelpMarker("Baseband frequency for analog FM");
+
+					if(!m_uiState[i].m_fmEnabled)
+						ImGui::EndDisabled();
+
+					ImGui::TreePop();
+				}
+
+				if(!m_uiState[i].m_analogModEnabled)
+					ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
 		}
 
 		if(m_generator->IsVectorModulationAvailable(i))

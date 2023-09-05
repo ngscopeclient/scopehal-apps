@@ -88,6 +88,20 @@ public:
 	std::vector<RFSignalGenerator::SweepDirection> m_sweepDirections;
 	std::vector<std::string> m_sweepDirectionNames;
 
+	bool m_analogModEnabled;
+
+	bool m_fmEnabled;
+
+	int m_fmWaveShape;
+	std::vector<FunctionGenerator::WaveShape> m_fmWaveShapes;
+	std::vector<std::string> m_fmWaveShapeNames;
+
+	std::string m_fmDeviation;
+	float m_committedFmDeviation;
+
+	std::string m_fmFrequency;
+	float m_committedFmFrequency;
+
 	RFGeneratorChannelUIState();
 
 	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel);
