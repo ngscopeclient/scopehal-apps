@@ -6,7 +6,7 @@ Applications for libscopehal
 
 ## Installation
 
-Refer to the "getting started" chapter of [the manual](https://www.antikernel.net/temp/glscopeclient-manual.pdf).
+Refer to the "getting started" chapter of [the manual](https://www.antikernel.net/temp/ngscopeclient-manual.pdf).
 
 ## Special comments
 
