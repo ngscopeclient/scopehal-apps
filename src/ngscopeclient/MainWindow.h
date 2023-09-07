@@ -43,6 +43,7 @@
 #include "WaveformGroup.h"
 
 #include "FilterGraphEditor.h"
+#include "ManageInstrumentsDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
@@ -111,6 +112,7 @@ public:
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 	void ShowTimebaseProperties();
 	void ShowTriggerProperties();
+	void ShowManageInstruments();
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
@@ -318,6 +320,9 @@ protected:
 
 	///@brief Trigger properties
 	std::shared_ptr<TriggerPropertiesDialog> m_triggerDialog;
+
+	///@brief Manage instruments
+	std::shared_ptr<ManageInstrumentsDialog> m_manageInstrumentsDialog;
 
 	///@brief Persistence settings
 	std::shared_ptr<Dialog> m_persistenceDialog;

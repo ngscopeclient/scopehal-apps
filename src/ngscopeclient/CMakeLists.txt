@@ -89,6 +89,7 @@ add_executable(ngscopeclient
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp
+	ManageInstrumentsDialog.cpp
 	MeasurementsDialog.cpp
 	MetricsDialog.cpp
 	MultimeterDialog.cpp

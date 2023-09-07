@@ -60,6 +60,7 @@
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
+#include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
@@ -192,6 +193,7 @@ void MainWindow::CloseSession()
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
+	m_manageInstrumentsDialog = nullptr;
 	m_graphEditor = nullptr;
 	m_fileBrowser = nullptr;
 	m_measurementsDialog = nullptr;
@@ -964,6 +966,15 @@ void MainWindow::ShowTimebaseProperties()
 
 	m_timebaseDialog = make_shared<TimebasePropertiesDialog>(&m_session);
 	AddDialog(m_timebaseDialog);
+}
+
+void MainWindow::ShowManageInstruments()
+{
+	if(m_manageInstrumentsDialog != nullptr)
+		return;
+
+	m_manageInstrumentsDialog = make_shared<ManageInstrumentsDialog>(m_session);
+	AddDialog(m_manageInstrumentsDialog);
 }
 
 void MainWindow::ShowTriggerProperties()

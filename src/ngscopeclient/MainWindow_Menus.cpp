@@ -53,6 +53,7 @@
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
+#include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
@@ -1016,6 +1017,14 @@ void MainWindow::SetupMenu()
 {
 	if(ImGui::BeginMenu("Setup"))
 	{
+		bool manageVisible = (m_manageInstrumentsDialog != nullptr);
+		if(manageVisible)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Manage Instruments..."))
+			ShowManageInstruments();
+		if(manageVisible)
+			ImGui::EndDisabled();
+
 		bool timebaseVisible = (m_timebaseDialog != nullptr);
 		if(timebaseVisible)
 			ImGui::BeginDisabled();
@@ -1031,6 +1040,8 @@ void MainWindow::SetupMenu()
 			ShowTriggerProperties();
 		if(triggerVisible)
 			ImGui::EndDisabled();
+
+		ImGui::Separator();
 
 		bool prefsVisible = (m_preferenceDialog != nullptr);
 		if(prefsVisible)
