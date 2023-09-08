@@ -185,6 +185,9 @@ void Session::Clear()
 	m_meters.clear();
 	m_scopeDeskewCal.clear();
 
+	//Remove all trigger groups
+	m_triggerGroups.clear();
+
 	//We SHOULD not have any filters at this point.
 	//But there have been reports that some stick around. If this happens, print an error message.
 	filters = Filter::GetAllInstances();
@@ -1284,6 +1287,34 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Trigger group management
+
+/**
+	@brief Remove trigger groups with no instruments in them
+
+	Removes a maximum of one group per invocation.
+ */
+void Session::GarbageCollectTriggerGroups()
+{
+	for(size_t i=0; i<m_triggerGroups.size(); i++)
+	{
+		if(m_triggerGroups[i]->empty())
+		{
+			m_triggerGroups.erase(m_triggerGroups.begin() + i);
+			return;
+		}
+	}
+}
+
+/**
+	@brief Creates a new trigger group containing only the selected scope
+ */
+void Session::MakeNewTriggerGroup(Oscilloscope* scope)
+{
+	m_triggerGroups.push_back(make_unique<TriggerGroup>(scope));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
 
 void Session::ApplyPreferences(Oscilloscope* scope)
@@ -1325,6 +1356,9 @@ void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
 	m_mainWindow->OnScopeAdded(scope, createViews);
+
+	//By default, make a new trigger group for each scope
+	MakeNewTriggerGroup(scope);
 
 	StartWaveformThreadIfNeeded();
 }

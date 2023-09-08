@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,43 +30,40 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ManageInstrumentsDialog
+	@brief Declaration of TriggerGroup
  */
-#ifndef ManageInstrumentsDialog_h
-#define ManageInstrumentsDialog_h
+#ifndef TriggerGroup_h
+#define TriggerGroup_h
 
-#include "Dialog.h"
-#include "Session.h"
+/**
+	@brief A trigger group is a set of oscilloscopes that all trigger in lock-step
 
-class ManageInstrumentsDialog : public Dialog
+	One instrument, designated "primary", is used as the trigger reference for all other scopes in the group
+	("secondaries").
+
+	Mandatory external connection:
+		Trigger out of primary to trigger in of each secondary
+		Cable lengths need not be matched, the dewskew wizard will measure and calibrate out the trigger path delay
+
+	Strongly recommended external connection:
+		Common reference clock supplied to all instruments in the group
+		If instruments do not share a common clock, drift will worsen with increasing capture depth
+ */
+class TriggerGroup
 {
 public:
-	ManageInstrumentsDialog(Session& session);
-	virtual ~ManageInstrumentsDialog();
+	TriggerGroup(Oscilloscope* primary);
+	virtual ~TriggerGroup();
 
-	virtual bool DoRender();
+	void RemoveScope(Oscilloscope* scope);
 
-protected:
-	void RowForNewGroup();
+	void MakePrimary(Oscilloscope* scope);
 
-	void TriggerGroupsTable();
-	void AllInstrumentsTable();
+	bool empty()
+	{ return (m_secondaries.empty() ) && (m_primary == nullptr); }
 
-	Session& m_session;
-
-	SCPIInstrument* m_selection;
-};
-
-class TriggerGroupDragDescriptor
-{
-public:
-	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope)
-		: m_group(group)
-		, m_scope(scope)
-	{}
-
-	TriggerGroup* m_group;
-	SCPIOscilloscope* m_scope;
+	Oscilloscope* m_primary;
+	std::vector<Oscilloscope*> m_secondaries;
 };
 
 #endif

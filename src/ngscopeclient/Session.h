@@ -44,6 +44,7 @@ class DisplayedChannel;
 #include "PacketManager.h"
 #include "PreferenceManager.h"
 #include "Marker.h"
+#include "TriggerGroup.h"
 
 extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
@@ -403,6 +404,13 @@ public:
 	 */
 	IDTable m_idtable;
 
+	const std::vector<std::unique_ptr<TriggerGroup> >& GetTriggerGroups()
+	{ return m_triggerGroups; }
+
+	void GarbageCollectTriggerGroups();
+
+	void MakeNewTriggerGroup(Oscilloscope* scope);
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
@@ -468,6 +476,9 @@ protected:
 
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;
+
+	///@brief Trigger groups for syncing oscilloscopes
+	std::vector<std::unique_ptr<TriggerGroup> > m_triggerGroups;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

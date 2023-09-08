@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,46 +27,67 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
+#include "ngscopeclient.h"
+#include "TriggerGroup.h"
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+TriggerGroup::TriggerGroup(Oscilloscope* primary)
+	: m_primary(primary)
+{
+}
+
+TriggerGroup::~TriggerGroup()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Instrument management
+
 /**
-	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of ManageInstrumentsDialog
+	@brief Make a scope (which must currently be a secondary) the primary
  */
-#ifndef ManageInstrumentsDialog_h
-#define ManageInstrumentsDialog_h
-
-#include "Dialog.h"
-#include "Session.h"
-
-class ManageInstrumentsDialog : public Dialog
+void TriggerGroup::MakePrimary(Oscilloscope* scope)
 {
-public:
-	ManageInstrumentsDialog(Session& session);
-	virtual ~ManageInstrumentsDialog();
+	m_secondaries.push_back(m_primary);
+	m_primary = scope;
 
-	virtual bool DoRender();
+	//Remove the scope from the secondary
+	for(size_t i=0; i<m_secondaries.size(); i++)
+	{
+		if(m_secondaries[i] == scope)
+		{
+			m_secondaries.erase(m_secondaries.begin() + i);
+			return;
+		}
+	}
+}
 
-protected:
-	void RowForNewGroup();
-
-	void TriggerGroupsTable();
-	void AllInstrumentsTable();
-
-	Session& m_session;
-
-	SCPIInstrument* m_selection;
-};
-
-class TriggerGroupDragDescriptor
+void TriggerGroup::RemoveScope(Oscilloscope* scope)
 {
-public:
-	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope)
-		: m_group(group)
-		, m_scope(scope)
-	{}
+	if(m_primary == scope)
+	{
+		//If we have any secondaries, promote the first secondary to primary
+		if(!m_secondaries.empty())
+		{
+			m_primary = m_secondaries[0];
+			m_secondaries.erase(m_secondaries.begin());
+		}
+		else
+			m_primary = nullptr;
+	}
 
-	TriggerGroup* m_group;
-	SCPIOscilloscope* m_scope;
-};
+	//Remove from the secondary list
+	for(size_t i=0; i<m_secondaries.size(); i++)
+	{
+		if(m_secondaries[i] == scope)
+		{
+			m_secondaries.erase(m_secondaries.begin() + i);
+			return;
+		}
+	}
+}
 
-#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Triggering
