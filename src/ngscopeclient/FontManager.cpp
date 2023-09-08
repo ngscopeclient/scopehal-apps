@@ -97,8 +97,11 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	builder.BuildRanges(&ranges);
 
 	//Load the fonts
+	ImFontConfig config;
+	config.PixelSnapH = true;
+	config.OversampleH = 1;
 	for(auto f : fonts)
-		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), f.second * contentScale, nullptr, ranges.Data);
+		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), round(f.second * contentScale), &config, ranges.Data);
 
 	//Done loading fonts, build the texture
 	atlas->Flags = ImFontAtlasFlags_NoMouseCursors;
