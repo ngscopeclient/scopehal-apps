@@ -79,7 +79,6 @@ bool HistoryPoint::IsInUse()
 {
 	for(auto it : m_history)
 	{
-		auto scope = it.first;
 		auto hist = it.second;
 		for(auto jt : hist)
 		{
