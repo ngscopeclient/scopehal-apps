@@ -676,29 +676,148 @@ void MainWindow::LoadGradient(const string& friendlyName, const string& internal
 	m_eyeGradients.push_back(internalName);
 }
 
+bool MainWindow::DropdownButton(const char* id, float height)
+{
+	auto pos = ImGui::GetCursorPos();
+	auto buttonheight = ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y;
+	pos.y += (height - buttonheight);
+	ImGui::SetCursorPos(pos);
+	return ImGui::ArrowButton(id, ImGuiDir_Down);
+}
+
+void MainWindow::TriggerStartDropdown(float buttonsize)
+{
+	if(DropdownButton("trigger-start-dropdown", buttonsize))
+		ImGui::OpenPopup("TriggerStartMenu");
+	if(ImGui::BeginPopup("TriggerStartMenu"))
+	{
+		//Start trigger for only a specific group
+		auto& groups = m_session.GetTriggerGroups();
+		for(auto g : groups)
+		{
+			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+				g->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
+		}
+
+		//Start trigger for all groups
+		if(ImGui::MenuItem("All"))
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
+
+		ImGui::EndPopup();
+	}
+}
+
+void MainWindow::TriggerSingleDropdown(float buttonsize)
+{
+	if(DropdownButton("trigger-single-dropdown", buttonsize))
+		ImGui::OpenPopup("TriggerSingleMenu");
+	if(ImGui::BeginPopup("TriggerSingleMenu"))
+	{
+		//Start trigger for only a specific group
+		auto& groups = m_session.GetTriggerGroups();
+		for(auto g : groups)
+		{
+			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+				g->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
+		}
+
+		//Start trigger for all groups
+		if(ImGui::MenuItem("All"))
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
+
+		ImGui::EndPopup();
+	}
+}
+
+void MainWindow::TriggerForceDropdown(float buttonsize)
+{
+	if(DropdownButton("trigger-force-dropdown", buttonsize))
+		ImGui::OpenPopup("TriggerForceMenu");
+	if(ImGui::BeginPopup("TriggerForceMenu"))
+	{
+		//Start trigger for only a specific group
+		auto& groups = m_session.GetTriggerGroups();
+		for(auto g : groups)
+		{
+			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+				g->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
+		}
+
+		//Start trigger for all groups
+		if(ImGui::MenuItem("All"))
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_FORCED);
+
+		ImGui::EndPopup();
+	}
+}
+
+void MainWindow::TriggerStopDropdown(float buttonsize)
+{
+	if(DropdownButton("trigger-stop-dropdown", buttonsize))
+		ImGui::OpenPopup("TriggerStopMenu");
+	if(ImGui::BeginPopup("TriggerStopMenu"))
+	{
+		//Start trigger for only a specific group
+		auto& groups = m_session.GetTriggerGroups();
+		for(auto g : groups)
+		{
+			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+				g->Stop();
+		}
+
+		//Stop trigger for all groups
+		if(ImGui::MenuItem("All"))
+			m_session.StopTrigger();
+
+		ImGui::EndPopup();
+	}
+}
+
 void MainWindow::ToolbarButtons()
 {
 	ImVec2 buttonsize(m_toolbarIconSize, m_toolbarIconSize);
+
+	bool multigroup = (m_session.GetTriggerGroups().size() > 1);
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
 	Dialog::Tooltip("Arm the trigger in normal mode");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerStartDropdown(buttonsize.y);
+	}
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
 	Dialog::Tooltip("Arm the trigger in one-shot mode");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerSingleDropdown(buttonsize.y);
+	}
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_FORCED);
 	Dialog::Tooltip("Acquire a waveform immediately, ignoring the trigger condition");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerForceDropdown(buttonsize.y);
+	}
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-stop", GetTexture("trigger-stop"), buttonsize))
 		m_session.StopTrigger();
 	Dialog::Tooltip("Stop acquiring waveforms");
+	if(multigroup)
+	{
+		ImGui::SameLine(0.0, 0.0);
+		TriggerStopDropdown(buttonsize.y);
+	}
 
 	//History selector
 	bool hasHist = (m_historyDialog != nullptr);

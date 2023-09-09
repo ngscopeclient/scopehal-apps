@@ -249,6 +249,10 @@ protected:
 		void Toolbar();
 			void LoadToolbarIcons();
 			void ToolbarButtons();
+				void TriggerStartDropdown(float buttonsize);
+				void TriggerSingleDropdown(float buttonsize);
+				void TriggerForceDropdown(float buttonsize);
+				void TriggerStopDropdown(float buttonsize);
 		void DockingArea();
 
 	void LoadGradients();
@@ -475,6 +479,8 @@ protected:
 
 	///@brief Command buffer used during rendering operations
 	std::unique_ptr<vk::raii::CommandBuffer> m_cmdBuffer;
+
+	bool DropdownButton(const char* id, float height);
 
 public:
 
