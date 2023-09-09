@@ -38,7 +38,8 @@
 enum FileBrowserType
 {
 	BROWSER_IMGUI,
-	BROWSER_NATIVE
+	BROWSER_NATIVE,
+	BROWSER_KDIALOG
 };
 
 enum GuiTheme

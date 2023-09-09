@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,80 +30,54 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of FileBrowser
+	@brief Declaration of KDialogFileBrowser
  */
-#include "ngscopeclient.h"
+#ifndef KDialogFileBrowser_h
+#define KDialogFileBrowser_h
+
+#ifdef __linux__
+
 #include "FileBrowser.h"
-#include "MainWindow.h"
-#include "IGFDFileBrowser.h"
-#include "KDialogFileBrowser.h"
-#include "NFDFileBrowser.h"
-#include "PreferenceTypes.h"
-
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-FileBrowser::FileBrowser()
-{
-}
-
-FileBrowser::~FileBrowser()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Factory methods
+#include <nfd.h>
+#include <future>
 
 /**
-	@brief Helper function to create the correct FileBrowser based on user preferences
+	@brief File browser backed by external "kdialog" command
  */
-shared_ptr<FileBrowser> MakeFileBrowser(
-	MainWindow* wnd,
-	const string& initialPath,
-	const string& title,
-	const string& filterName,
-	const string& filterMask,
-	bool saveDialog)
+class KDialogFileBrowser : public FileBrowser
 {
-	auto pref = wnd->GetSession().GetPreferences().GetEnumRaw(
-		"Appearance.File Browser.dialogmode");
+public:
+	KDialogFileBrowser(
+		const std::string& initialPath,
+		const std::string& title,
+		const std::string& filterName,
+		const std::string& filterMask,
+		bool saveDialog
+		);
+	virtual ~KDialogFileBrowser();
 
-#ifdef __APPLE__     // only the imgui file dialog works. NFDFileBrowser crashes on MacOS due to threading issues
-	pref = BROWSER_IMGUI;
+	virtual void Render();
+	virtual bool IsClosed();
+	virtual bool IsClosedOK();
+	virtual std::string GetFileName();
+
+protected:
+	std::optional<std::string> ThreadProc();
+
+	std::string m_initialPath;
+	std::string m_title;
+	std::string m_filterName;
+	std::string m_filterMask;
+	bool m_saveDialog;
+
+	std::future<std::optional<std::string> > m_future;
+
+	std::optional<std::string> GetCachedResult();
+
+	bool m_cachedResultValid;
+	std::optional<std::string> m_cachedResult;
+};
+
 #endif
 
-	//Fullscreen mode overrides preferences and forces use of imgui browser
-	if( (pref == BROWSER_IMGUI) || wnd->IsFullscreen() )
-	{
-		return make_shared<IGFDFileBrowser>(
-			initialPath,
-			title,
-			"FileChooser",
-			filterName,
-			filterMask,
-			saveDialog);
-	}
-	else
-	{
-		#ifdef __linux__
-		if(pref == BROWSER_KDIALOG)
-		{
-			return make_shared<KDialogFileBrowser>(
-				initialPath,
-				title,
-				filterName,
-				filterMask,
-				saveDialog);
-		}
-		#endif
-
-		return make_shared<NFDFileBrowser>(
-			initialPath,
-			title,
-			filterName,
-			filterMask,
-			saveDialog);
-	}
-}
+#endif

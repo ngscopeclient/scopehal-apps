@@ -84,6 +84,7 @@ add_executable(ngscopeclient
 	HistoryDialog.cpp
 	HistoryManager.cpp
 	IGFDFileBrowser.cpp
+	KDialogFileBrowser.cpp
 	LoadDialog.cpp
 	LoadThread.cpp
 	LogViewerDialog.cpp

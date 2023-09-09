@@ -124,6 +124,7 @@ void PreferenceManager::InitializeDefaults()
 						)
 					.EnumValue("ImGui", BROWSER_IMGUI)
 					.EnumValue("Native", BROWSER_NATIVE)
+					.EnumValue("KDialog", BROWSER_KDIALOG)
 				);
 
 		auto& graph = appearance.AddCategory("Filter Graph");

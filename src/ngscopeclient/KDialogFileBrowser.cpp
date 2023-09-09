@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -27,83 +27,117 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
+#ifdef __linux__
+
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of FileBrowser
+	@brief Implementation of KDialogFileBrowser
  */
 #include "ngscopeclient.h"
-#include "FileBrowser.h"
-#include "MainWindow.h"
-#include "IGFDFileBrowser.h"
 #include "KDialogFileBrowser.h"
-#include "NFDFileBrowser.h"
-#include "PreferenceTypes.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-FileBrowser::FileBrowser()
-{
-}
-
-FileBrowser::~FileBrowser()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Factory methods
-
-/**
-	@brief Helper function to create the correct FileBrowser based on user preferences
- */
-shared_ptr<FileBrowser> MakeFileBrowser(
-	MainWindow* wnd,
+KDialogFileBrowser::KDialogFileBrowser(
 	const string& initialPath,
 	const string& title,
 	const string& filterName,
 	const string& filterMask,
-	bool saveDialog)
+	bool saveDialog
+	)
+	: m_initialPath(initialPath)
+	, m_title(title)
+	, m_filterName(filterName)
+	, m_filterMask(filterMask)
+	, m_saveDialog(saveDialog)
+	, m_cachedResultValid(false)
 {
-	auto pref = wnd->GetSession().GetPreferences().GetEnumRaw(
-		"Appearance.File Browser.dialogmode");
+	//Trim off filter name
+	size_t iparen = m_filterName.find('(');
+	if(iparen != string::npos)
+		m_filterName = m_filterName.substr(0, iparen);
 
-#ifdef __APPLE__     // only the imgui file dialog works. NFDFileBrowser crashes on MacOS due to threading issues
-	pref = BROWSER_IMGUI;
-#endif
+	m_filterMask = filterMask.substr(2);
 
-	//Fullscreen mode overrides preferences and forces use of imgui browser
-	if( (pref == BROWSER_IMGUI) || wnd->IsFullscreen() )
-	{
-		return make_shared<IGFDFileBrowser>(
-			initialPath,
-			title,
-			"FileChooser",
-			filterName,
-			filterMask,
-			saveDialog);
-	}
-	else
-	{
-		#ifdef __linux__
-		if(pref == BROWSER_KDIALOG)
-		{
-			return make_shared<KDialogFileBrowser>(
-				initialPath,
-				title,
-				filterName,
-				filterMask,
-				saveDialog);
-		}
-		#endif
-
-		return make_shared<NFDFileBrowser>(
-			initialPath,
-			title,
-			filterName,
-			filterMask,
-			saveDialog);
-	}
+	m_future = async(launch::async, [this]{return ThreadProc(); } );
 }
+
+KDialogFileBrowser::~KDialogFileBrowser()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI handlers
+
+optional<string> KDialogFileBrowser::GetCachedResult()
+{
+	if(!m_cachedResultValid)
+	{
+		m_cachedResult = m_future.get();
+		m_cachedResultValid = true;
+	}
+
+	return m_cachedResult;
+}
+
+void KDialogFileBrowser::Render()
+{
+	//no action needed
+}
+
+bool KDialogFileBrowser::IsClosed()
+{
+	if(m_cachedResultValid)
+		return true;
+
+	return (m_future.wait_for(0s) == future_status::ready);
+}
+
+bool KDialogFileBrowser::IsClosedOK()
+{
+	if(IsClosed())
+		return GetCachedResult().has_value();
+	else
+		return false;
+}
+
+string KDialogFileBrowser::GetFileName()
+{
+	if(IsClosedOK())
+		return GetCachedResult().value();
+	else
+		return "";
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Thread functions
+
+optional<string> KDialogFileBrowser::ThreadProc()
+{
+	string cmd = "XDG_CURRENT_DESKTOP=kde kdialog ";
+	if(m_saveDialog)
+		cmd += "--getsavefilename ";
+	else
+		cmd += "--getopenfilename ";
+	cmd += string(" --title \"") + m_title + "\" ";
+	cmd += string("\"") + m_initialPath + "\" ";
+	cmd += string("\"") + m_filterName + "(*." + m_filterMask + ")\" ";
+	LogDebug("Final command: %s\n", cmd.c_str());
+	FILE* fp = popen(cmd.c_str(), "r");
+
+	char tmp[1024] = {0};
+	if(!fgets(tmp, sizeof(tmp), fp))
+	{
+		pclose(fp);
+		return {};
+	}
+
+	pclose(fp);
+	return Trim(tmp);
+}
+
+#endif
