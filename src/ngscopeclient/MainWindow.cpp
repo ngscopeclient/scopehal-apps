@@ -692,7 +692,7 @@ void MainWindow::TriggerStartDropdown(float buttonsize)
 	if(ImGui::BeginPopup("TriggerStartMenu"))
 	{
 		//Start trigger for only a specific group
-		auto& groups = m_session.GetTriggerGroups();
+		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
 			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
@@ -714,7 +714,7 @@ void MainWindow::TriggerSingleDropdown(float buttonsize)
 	if(ImGui::BeginPopup("TriggerSingleMenu"))
 	{
 		//Start trigger for only a specific group
-		auto& groups = m_session.GetTriggerGroups();
+		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
 			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
@@ -736,7 +736,7 @@ void MainWindow::TriggerForceDropdown(float buttonsize)
 	if(ImGui::BeginPopup("TriggerForceMenu"))
 	{
 		//Start trigger for only a specific group
-		auto& groups = m_session.GetTriggerGroups();
+		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
 			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
@@ -758,7 +758,7 @@ void MainWindow::TriggerStopDropdown(float buttonsize)
 	if(ImGui::BeginPopup("TriggerStopMenu"))
 	{
 		//Start trigger for only a specific group
-		auto& groups = m_session.GetTriggerGroups();
+		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
 			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))

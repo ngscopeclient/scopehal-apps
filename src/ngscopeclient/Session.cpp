@@ -1298,6 +1298,8 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
  */
 void Session::GarbageCollectTriggerGroups()
 {
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+
 	for(size_t i=0; i<m_triggerGroups.size(); i++)
 	{
 		if(m_triggerGroups[i]->empty())
@@ -1313,6 +1315,7 @@ void Session::GarbageCollectTriggerGroups()
  */
 void Session::MakeNewTriggerGroup(Oscilloscope* scope)
 {
+	lock_guard<mutex> lock(m_triggerGroupMutex);
 	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
 }
 
@@ -1666,8 +1669,11 @@ void Session::ArmTrigger(TriggerGroup::TriggerType type)
 
 	//Arm each trigger group
 	//TODO: support partial arming (some groups but not others)
-	for(auto& group : m_triggerGroups)
-		group->Arm(type);
+	{
+		lock_guard<mutex> lock(m_triggerGroupMutex);
+		for(auto& group : m_triggerGroups)
+			group->Arm(type);
+	}
 
 	LogTrace("All instruments are armed\n");
 	m_tArm = GetTime();
@@ -1682,6 +1688,7 @@ void Session::StopTrigger()
 	m_triggerArmed = false;
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
+	lock_guard<mutex> lock2(m_triggerGroupMutex);
 	for(auto& group : m_triggerGroups)
 		group->Stop();
 }
@@ -1708,6 +1715,7 @@ bool Session::CheckForPendingWaveforms()
 		return m_triggerArmed;
 
 	//Return true if any group has fully triggered
+	lock_guard<mutex> lock2(m_triggerGroupMutex);
 	for(auto& group : m_triggerGroups)
 	{
 		if(group->CheckForPendingWaveforms())
@@ -1730,6 +1738,7 @@ void Session::DownloadWaveforms()
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 	lock_guard<mutex> lock2(m_scopeMutex);
+	lock_guard<mutex> lock3(m_triggerGroupMutex);
 
 	//Get the data from each  trigger group
 	for(auto group : m_triggerGroups)
@@ -1741,7 +1750,7 @@ void Session::DownloadWaveforms()
 
 		//This scope has recently triggered and should be added to history
 		{
-			lock_guard<mutex> lock3(m_recentlyTriggeredScopeMutex);
+			lock_guard<mutex> lock4(m_recentlyTriggeredScopeMutex);
 			m_recentlyTriggeredScopes.emplace(group->m_primary);
 			m_recentlyTriggeredGroups.emplace(group);
 			for(auto scope : group->m_secondaries)

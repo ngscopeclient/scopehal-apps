@@ -397,8 +397,11 @@ public:
 	 */
 	IDTable m_idtable;
 
-	const std::vector<std::shared_ptr<TriggerGroup> >& GetTriggerGroups()
-	{ return m_triggerGroups; }
+	std::vector<std::shared_ptr<TriggerGroup> > GetTriggerGroups()
+	{
+		std::lock_guard<std::mutex> lock(m_triggerGroupMutex);
+		return m_triggerGroups;
+	}
 
 	void GarbageCollectTriggerGroups();
 
@@ -469,6 +472,9 @@ protected:
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;
+
+	///@brief Mutex controlling access to m_triggerGroups
+	std::mutex m_triggerGroupMutex;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

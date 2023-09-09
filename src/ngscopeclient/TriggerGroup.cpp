@@ -67,6 +67,21 @@ void TriggerGroup::MakePrimary(Oscilloscope* scope)
 			return;
 		}
 	}
+
+	//Turn on the trig-out port for the new primary
+	m_primary->EnableTriggerOutput();
+}
+
+/**
+	@brief Adds a secondary scope to this group
+ */
+void TriggerGroup::AddSecondary(Oscilloscope* scope)
+{
+	//Turn on the trig-out port for the primary if we didn't have any secondaries before
+	if(m_secondaries.empty())
+		m_primary->EnableTriggerOutput();
+
+	m_secondaries.push_back(scope);
 }
 
 void TriggerGroup::RemoveScope(Oscilloscope* scope)

@@ -66,6 +66,7 @@ public:
 	void RemoveScope(Oscilloscope* scope);
 
 	void MakePrimary(Oscilloscope* scope);
+	void AddSecondary(Oscilloscope* scope);
 
 	void Arm(TriggerType type);
 	void Stop();

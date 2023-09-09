@@ -77,12 +77,12 @@ bool ManageInstrumentsDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Trigger Groups", ImGuiTreeNodeFlags_DefaultOpen) && (scopes.size() != 0))
 	{
-		ImGui::TextUnformatted(
+		HelpMarker(
 			"All instruments in a trigger group are synchronized and trigger in lock-step.\n"
 			"The root instrument of a trigger group must have a trigger-out port.\n"
-			"All instruments in a trigger group should be connected to a common reference clock to avoid skew");
+			"All instruments in a trigger group should be connected to a common reference clock to avoid skew.");
 
-		if(ImGui::BeginTable("groups", 7, flags))
+		if(ImGui::BeginTable("groups", 5, flags))
 		{
 			TriggerGroupsTable();
 			ImGui::EndTable();
@@ -111,13 +111,12 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 6*width);
 	ImGui::TableSetupColumn("Make", ImGuiTableColumnFlags_WidthFixed, 9*width);
 	ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthFixed, 15*width);
-	ImGui::TableSetupColumn("Transport", ImGuiTableColumnFlags_WidthFixed, 4*width);
-	ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthFixed, 25*width);
 	ImGui::TableSetupColumn("Serial", ImGuiTableColumnFlags_WidthFixed, 8*width);
+	ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 8*width);
 	ImGui::TableHeadersRow();
 
-	auto& groups = m_session.GetTriggerGroups();
-	for(auto& group : groups)
+	auto groups = m_session.GetTriggerGroups();
+	for(auto group : groups)
 	{
 		//If we get here, we just deleted the last scope in the group
 		//but it won't be GC'd until the end of the frame
@@ -158,13 +157,13 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 			{
 				auto desc = reinterpret_cast<TriggerGroupDragDescriptor*>(payload->Data);
 
+				//Stop the trigger if rearranging trigger groups
+				m_session.StopTrigger();
+
 				//Dropping from a different group
 				if(desc->m_group != group.get())
 				{
-					//Add it as a secondary of us
-					group->m_secondaries.push_back(desc->m_scope);
-
-					//Remove from the existing group
+					group->AddSecondary(desc->m_scope);
 					desc->m_group->RemoveScope(desc->m_scope);
 				}
 
@@ -193,10 +192,6 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		if(ImGui::TableSetColumnIndex(2))
 			ImGui::TextUnformatted(firstScope->GetName().c_str());
 		if(ImGui::TableSetColumnIndex(3))
-			ImGui::TextUnformatted(firstScope->GetTransportName().c_str());
-		if(ImGui::TableSetColumnIndex(4))
-			ImGui::TextUnformatted(firstScope->GetTransportConnectionString().c_str());
-		if(ImGui::TableSetColumnIndex(5))
 			ImGui::TextUnformatted(firstScope->GetSerial().c_str());
 
 		//then put all other scopes under it
@@ -233,11 +228,11 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				if(ImGui::TableSetColumnIndex(2))
 					ImGui::TextUnformatted(scope->GetName().c_str());
 				if(ImGui::TableSetColumnIndex(3))
-					ImGui::TextUnformatted(scope->GetTransportName().c_str());
-				if(ImGui::TableSetColumnIndex(4))
-					ImGui::TextUnformatted(scope->GetTransportConnectionString().c_str());
-				if(ImGui::TableSetColumnIndex(5))
 					ImGui::TextUnformatted(scope->GetSerial().c_str());
+				if(ImGui::TableSetColumnIndex(4))
+				{
+					ImGui::Button("Deskew");
+				}
 				ImGui::PopID();
 			}
 		}
