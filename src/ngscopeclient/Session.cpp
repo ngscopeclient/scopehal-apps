@@ -79,7 +79,6 @@ Session::Session(MainWindow* wnd)
 	, m_tPrimaryTrigger(0)
 	, m_triggerArmed(false)
 	, m_triggerOneShot(false)
-	, m_multiScopeFreeRun(false)
 	, m_lastFilterGraphExecTime(0)
 	, m_history(*this)
 	, m_nextMarkerNum(1)
@@ -183,10 +182,11 @@ void Session::Clear()
 	m_loads.clear();
 	m_rfgenerators.clear();
 	m_meters.clear();
-	m_scopeDeskewCal.clear();
 
 	//Remove all trigger groups
 	m_triggerGroups.clear();
+	m_recentlyTriggeredScopes.clear();
+	m_recentlyTriggeredGroups.clear();
 
 	//We SHOULD not have any filters at this point.
 	//But there have been reports that some stick around. If this happens, print an error message.
@@ -199,7 +199,6 @@ void Session::Clear()
 
 	//Reset state
 	m_triggerOneShot = false;
-	m_multiScopeFreeRun = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -771,8 +770,9 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 	scope->LoadConfiguration(version, node, m_idtable);
 
 	//Load trigger deskew
-	if(node["triggerdeskew"])
-		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+	//TODO: need to serialize trigger groups
+	//if(node["triggerdeskew"])
+	//	m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
 
 	return true;
 }
@@ -911,8 +911,8 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
 		if(scope)
 		{
-			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
-				config["triggerdeskew"] = m_scopeDeskewCal[scope];
+			//if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
+			//	config["triggerdeskew"] = m_scopeDeskewCal[scope];
 			config["type"] = "oscilloscope";
 		}
 		else if(meter)
@@ -1311,7 +1311,7 @@ void Session::GarbageCollectTriggerGroups()
  */
 void Session::MakeNewTriggerGroup(Oscilloscope* scope)
 {
-	m_triggerGroups.push_back(make_unique<TriggerGroup>(scope));
+	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1357,8 +1357,9 @@ void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
 	m_mainWindow->OnScopeAdded(scope, createViews);
 
-	//By default, make a new trigger group for each scope
-	MakeNewTriggerGroup(scope);
+	//Make a new trigger group (if the scope is online)
+	if(!scope->IsOffline())
+		MakeNewTriggerGroup(scope);
 
 	StartWaveformThreadIfNeeded();
 }
@@ -1633,14 +1634,14 @@ set<Instrument*> Session::GetInstruments()
 // Trigger control
 
 /**
-	@brief Arms the trigger on all scopes
+	@brief Arms the trigger for all trigger groups
  */
-void Session::ArmTrigger(TriggerType type)
+void Session::ArmTrigger(TriggerGroup::TriggerType type)
 {
 	LogTrace("Arming trigger\n");
 	LogIndenter li;
 
-	bool oneshot = (type == TRIGGER_TYPE_FORCED) || (type == TRIGGER_TYPE_SINGLE);
+	bool oneshot = (type == TriggerGroup::TRIGGER_TYPE_FORCED) || (type == TriggerGroup::TRIGGER_TYPE_SINGLE);
 	m_triggerOneShot = oneshot;
 
 	if(!HasOnlineScopes())
@@ -1650,6 +1651,8 @@ void Session::ArmTrigger(TriggerType type)
 		return;
 	}
 
+	m_tPrimaryTrigger = -1;
+
 	/*
 		If we have multiple scopes, always use single trigger to keep them synced.
 		Multi-trigger can lead to race conditions and dropped triggers if we're still downloading a secondary
@@ -1658,100 +1661,11 @@ void Session::ArmTrigger(TriggerType type)
 		Also, order of arming is critical. Secondaries must be completely armed before the primary (instrument 0) to
 		ensure that the primary doesn't trigger until the secondaries are ready for the event.
 	*/
-	m_tPrimaryTrigger = -1;
-	if(!oneshot && (m_oscilloscopes.size() > 1) )
-		m_multiScopeFreeRun = true;
-	else
-		m_multiScopeFreeRun = false;
 
-	//In multi-scope mode, make sure all scopes are stopped with no pending waveforms
-	if(m_oscilloscopes.size() > 1)
-	{
-		lock_guard<shared_mutex> lock(m_waveformDataMutex);
-		lock_guard<mutex> lock2(m_scopeMutex);
-
-		for(ssize_t i=m_oscilloscopes.size()-1; i >= 0; i--)
-		{
-			if(m_oscilloscopes[i]->PeekTriggerArmed())
-				m_oscilloscopes[i]->Stop();
-
-			if(m_oscilloscopes[i]->HasPendingWaveforms())
-			{
-				LogWarning("Scope %s had pending waveforms before arming\n", m_oscilloscopes[i]->m_nickname.c_str());
-				m_oscilloscopes[i]->ClearPendingWaveforms();
-			}
-		}
-	}
-
-	lock_guard<mutex> lock(m_scopeMutex);
-
-	for(ssize_t i=m_oscilloscopes.size()-1; i >= 0; i--)
-	{
-		//If we have >1 scope, all secondaries always use single trigger synced to the primary's trigger output
-		if(i > 0)
-		{
-			LogTrace("Starting trigger for secondary scope %zu\n", i);
-			m_oscilloscopes[i]->StartSingleTrigger();
-		}
-
-		else
-		{
-			switch(type)
-			{
-				//Normal trigger: all scopes lock-step for multi scope
-				//for single scope, use normal trigger
-				case TRIGGER_TYPE_NORMAL:
-					if(m_oscilloscopes.size() > 1)
-					{
-						LogTrace("Starting trigger for primary\n");
-						m_oscilloscopes[i]->StartSingleTrigger();
-					}
-					else
-						m_oscilloscopes[i]->Start();
-					break;
-
-				case TRIGGER_TYPE_AUTO:
-					LogError("ArmTrigger(TRIGGER_TYPE_AUTO) not implemented\n");
-					break;
-
-				case TRIGGER_TYPE_SINGLE:
-					m_oscilloscopes[i]->StartSingleTrigger();
-					break;
-
-				case TRIGGER_TYPE_FORCED:
-					m_oscilloscopes[i]->ForceTrigger();
-					break;
-
-
-				default:
-					break;
-			}
-		}
-
-		//If we have multiple scopes, ping the secondaries to make sure the arm command went through
-		if(i != 0)
-		{
-			double start = GetTime();
-
-			while(!m_oscilloscopes[i]->PeekTriggerArmed())
-			{
-				//After 3 sec of no activity, time out
-				//(must be longer than the default 2 sec socket timeout)
-				double now = GetTime();
-				if( (now - start) > 3)
-				{
-					LogWarning("Timeout waiting for scope %s to arm\n",  m_oscilloscopes[i]->m_nickname.c_str());
-					m_oscilloscopes[i]->Stop();
-					m_oscilloscopes[i]->StartSingleTrigger();
-					start = now;
-				}
-			}
-			LogTrace("Secondary is armed\n");
-
-			//Scope is armed. Clear any garbage in the pending queue
-			m_oscilloscopes[i]->ClearPendingWaveforms();
-		}
-	}
+	//Arm each trigger group
+	//TODO: support partial arming (some groups but not others)
+	for(auto& group : m_triggerGroups)
+		group->Arm(type);
 
 	LogTrace("All instruments are armed\n");
 	m_tArm = GetTime();
@@ -1763,16 +1677,11 @@ void Session::ArmTrigger(TriggerType type)
  */
 void Session::StopTrigger()
 {
-	m_multiScopeFreeRun = false;
 	m_triggerArmed = false;
 
-	for(auto scope : m_oscilloscopes)
-	{
-		scope->Stop();
-
-		//Clear out any pending data (the user doesn't want it, and we don't want stale stuff hanging around)
-		scope->ClearPendingWaveforms();
-	}
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
+	for(auto& group : m_triggerGroups)
+		group->Stop();
 }
 
 /**
@@ -1792,56 +1701,19 @@ bool Session::CheckForPendingWaveforms()
 {
 	lock_guard<mutex> lock(m_scopeMutex);
 
-	//No online scopes to poll? Re-run the filter graph
+	//No online scopes to poll? Re-run the filter graph if we're armed
 	if(!HasOnlineScopes())
 		return m_triggerArmed;
 
-	//Wait for every online scope to have triggered
-	for(auto scope : m_oscilloscopes)
+	//Return true if any group has fully triggered
+	for(auto& group : m_triggerGroups)
 	{
-		if(scope->IsOffline())
-			continue;
-		if(!scope->HasPendingWaveforms())
-			return false;
+		if(group->CheckForPendingWaveforms())
+			return true;
 	}
 
-	//Keep track of when the primary instrument triggers.
-	if(m_multiScopeFreeRun)
-	{
-		//See when the primary triggered
-		if( (m_tPrimaryTrigger < 0) && m_oscilloscopes[0]->HasPendingWaveforms() )
-			m_tPrimaryTrigger = GetTime();
-
-		//All instruments should trigger within 1 sec (arbitrary threshold) of the primary.
-		//If it's been longer than that, something went wrong. Discard all pending data and re-arm the trigger.
-		double twait = GetTime() - m_tPrimaryTrigger;
-		if( (m_tPrimaryTrigger > 0) && ( twait > 1 ) )
-		{
-			LogWarning("Timed out waiting for one or more secondary instruments to trigger (%.2f ms). Resetting...\n",
-				twait*1000);
-
-			//Cancel any pending triggers
-			StopTrigger();
-
-			//Discard all pending waveform data
-			for(auto scope : m_oscilloscopes)
-			{
-				//Don't touch anything offline
-				if(scope->IsOffline())
-					continue;
-
-				scope->IDPing();
-				scope->ClearPendingWaveforms();
-			}
-
-			//Re-arm the trigger and get back to polling
-			ArmTrigger(TRIGGER_TYPE_NORMAL);
-			return false;
-		}
-	}
-
-	//If we get here, we had waveforms on all instruments
-	return true;
+	//Nothing ready
+	return false;
 }
 
 /**
@@ -1857,88 +1729,27 @@ void Session::DownloadWaveforms()
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 	lock_guard<mutex> lock2(m_scopeMutex);
 
-	//Process the waveform data from each instrument
-	for(auto scope : m_oscilloscopes)
+	//Get the data from each  trigger group
+	for(auto group : m_triggerGroups)
 	{
-		//Don't touch anything offline
-		if(scope->IsOffline())
+		if(!group->CheckForPendingWaveforms())
 			continue;
 
-		//Detach old waveforms since they're now owned by history manager
-		for(size_t i=0; i<scope->GetChannelCount(); i++)
+		group->DownloadWaveforms();
+
+		//This scope has recently triggered and should be added to history
 		{
-			auto chan = scope->GetOscilloscopeChannel(i);
-			if(!chan)
-
-				continue;
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-				chan->Detach(j);
+			lock_guard<mutex> lock3(m_recentlyTriggeredScopeMutex);
+			m_recentlyTriggeredScopes.emplace(group->m_primary);
+			m_recentlyTriggeredGroups.emplace(group);
+			for(auto scope : group->m_secondaries)
+				m_recentlyTriggeredScopes.emplace(scope);
 		}
-
-		//Download the data
-		scope->PopPendingWaveform();
 	}
 
 	//If we're in offline one-shot mode, disarm the trigger
-	if( (m_oscilloscopes.empty()) && m_triggerOneShot)
+	if( m_triggerGroups.empty() && m_triggerOneShot)
 		m_triggerArmed = false;
-
-	//In multi-scope mode, retcon the timestamps of secondary scopes' waveforms so they line up with the primary.
-	if(m_oscilloscopes.size() > 1)
-	{
-		LogTrace("Multi scope: patching timestamps\n");
-		LogIndenter li;
-
-		//Get the timestamp of the primary scope's first waveform
-		bool hit = false;
-		time_t timeSec = 0;
-		int64_t timeFs  = 0;
-		auto prim = m_oscilloscopes[0];
-		for(size_t i=0; i<prim->GetChannelCount(); i++)
-		{
-			auto chan = prim->GetOscilloscopeChannel(i);
-			if(!chan)
-				continue;
-			for(size_t j=0; j<chan->GetStreamCount(); j++)
-			{
-				auto data = chan->GetData(j);
-				if(data != nullptr)
-				{
-					timeSec = data->m_startTimestamp;
-					timeFs = data->m_startFemtoseconds;
-					hit = true;
-					break;
-				}
-			}
-			if(hit)
-				break;
-		}
-
-		//Patch all secondary scopes
-		for(size_t i=1; i<m_oscilloscopes.size(); i++)
-		{
-			auto sec = m_oscilloscopes[i];
-
-			for(size_t j=0; j<sec->GetChannelCount(); j++)
-			{
-				auto chan = sec->GetOscilloscopeChannel(j);
-				if(!chan)
-					continue;
-				for(size_t k=0; k<chan->GetStreamCount(); k++)
-				{
-					auto data = chan->GetData(k);
-					if(data == nullptr)
-						continue;
-
-					auto skew = m_scopeDeskewCal[sec];
-
-					data->m_startTimestamp = timeSec;
-					data->m_startFemtoseconds = timeFs;
-					data->m_triggerPhase -= skew;
-				}
-			}
-		}
-	}
 }
 
 /**
@@ -1959,9 +1770,18 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		LogTrace("Waveform is ready\n");
 
 		//Add to history
-		auto scopes = GetScopes();
+		vector<Oscilloscope*> scopes;
+		set<shared_ptr<TriggerGroup>> groups;
 		{
 			shared_lock<shared_mutex> lock2(m_waveformDataMutex);
+			lock_guard<mutex> lock(m_recentlyTriggeredScopeMutex);
+			for(auto scope : m_recentlyTriggeredScopes)
+				scopes.push_back(scope);
+			m_recentlyTriggeredScopes.clear();
+
+			groups = m_recentlyTriggeredGroups;
+			m_recentlyTriggeredGroups.clear();
+
 			m_history.AddHistory(scopes);
 		}
 
@@ -1974,8 +1794,8 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		g_waveformProcessedEvent.Signal();
 
 		//In multi-scope free-run mode, re-arm every instrument's trigger after we've processed all data
-		if(m_multiScopeFreeRun)
-			ArmTrigger(TRIGGER_TYPE_NORMAL);
+		for(auto group : groups)
+			group->RearmIfMultiScope();
 	}
 
 	//If a re-render operation completed, tone map everything again

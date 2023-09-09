@@ -52,18 +52,43 @@
 class TriggerGroup
 {
 public:
-	TriggerGroup(Oscilloscope* primary);
+	enum TriggerType
+	{
+		TRIGGER_TYPE_SINGLE,
+		TRIGGER_TYPE_FORCED,
+		TRIGGER_TYPE_AUTO,
+		TRIGGER_TYPE_NORMAL
+	};
+
+	TriggerGroup(Oscilloscope* primary, Session* session);
 	virtual ~TriggerGroup();
 
 	void RemoveScope(Oscilloscope* scope);
 
 	void MakePrimary(Oscilloscope* scope);
 
+	void Arm(TriggerType type);
+	void Stop();
+	bool CheckForPendingWaveforms();
+	void DownloadWaveforms();
+	void RearmIfMultiScope();
+
 	bool empty()
 	{ return (m_secondaries.empty() ) && (m_primary == nullptr); }
 
 	Oscilloscope* m_primary;
 	std::vector<Oscilloscope*> m_secondaries;
+
+protected:
+	void DetachAllWaveforms(Oscilloscope* scope);
+
+	Session* m_session;
+
+	///@brief True if we have multiple scopes and are in normal trigger mode
+	bool m_multiScopeFreeRun;
+
+	///@brief Deskew correction coefficients for multi-scope
+	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
 };
 
 #endif

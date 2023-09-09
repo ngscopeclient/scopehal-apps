@@ -235,14 +235,7 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
-	enum TriggerType
-	{
-		TRIGGER_TYPE_SINGLE,
-		TRIGGER_TYPE_FORCED,
-		TRIGGER_TYPE_AUTO,
-		TRIGGER_TYPE_NORMAL
-	};
-	void ArmTrigger(TriggerType type);
+	void ArmTrigger(TriggerGroup::TriggerType type);
 	void StopTrigger();
 	bool HasOnlineScopes();
 	void DownloadWaveforms();
@@ -404,7 +397,7 @@ public:
 	 */
 	IDTable m_idtable;
 
-	const std::vector<std::unique_ptr<TriggerGroup> >& GetTriggerGroups()
+	const std::vector<std::shared_ptr<TriggerGroup> >& GetTriggerGroups()
 	{ return m_triggerGroups; }
 
 	void GarbageCollectTriggerGroups();
@@ -456,9 +449,6 @@ protected:
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<Oscilloscope*> m_oscilloscopes;
 
-	///@brief Deskew correction coefficients for multi-scope
-	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
-
 	///@brief Power supplies we are currently connected to
 	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
 
@@ -478,13 +468,22 @@ protected:
 	std::vector<SCPIFunctionGenerator*> m_generators;
 
 	///@brief Trigger groups for syncing oscilloscopes
-	std::vector<std::unique_ptr<TriggerGroup> > m_triggerGroups;
+	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;
 
 	///@brief Processing thread for waveform data
 	std::unique_ptr<std::thread> m_waveformThread;
+
+	///@brief Scopes whose data is currently being processed for history
+	std::set<Oscilloscope*> m_recentlyTriggeredScopes;
+
+	///@brief Groups whose data is currently being processed
+	std::set<std::shared_ptr<TriggerGroup>> m_recentlyTriggeredGroups;
+
+	///@brief Mutex to synchronize access to m_recentlyTriggeredScopes
+	std::mutex m_recentlyTriggeredScopeMutex;
 
 	///@brief Time we last armed the global trigger
 	double m_tArm;
@@ -497,9 +496,6 @@ protected:
 
 	///@brief If true, trigger is currently armed in single-shot mode
 	bool m_triggerOneShot;
-
-	///@brief True if we have multiple scopes and are in normal trigger mode
-	bool m_multiScopeFreeRun;
 
 	///@brief Context for filter graph evaluation
 	FilterGraphExecutor m_graphExecutor;

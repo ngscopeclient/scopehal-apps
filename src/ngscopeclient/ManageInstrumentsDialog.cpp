@@ -145,7 +145,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 			ImGui::TextUnformatted(
 				"Drag to the root of a trigger group to add this instrument to the group.\n"
 				"Drag to an ungrouped instrument to create a new group under it.\n"
-				"Drag an instrment to the root of its current group to make it the primary.\n");
+				"Drag an instrument to the root of its current group to make it the primary.\n");
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}

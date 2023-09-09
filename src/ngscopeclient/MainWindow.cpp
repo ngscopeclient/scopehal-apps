@@ -682,17 +682,17 @@ void MainWindow::ToolbarButtons()
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
-		m_session.ArmTrigger(Session::TRIGGER_TYPE_NORMAL);
+		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
 	Dialog::Tooltip("Arm the trigger in normal mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
-		m_session.ArmTrigger(Session::TRIGGER_TYPE_SINGLE);
+		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
 	Dialog::Tooltip("Arm the trigger in one-shot mode");
 
 	ImGui::SameLine(0.0, 0.0);
 	if(ImGui::ImageButton("trigger-force", GetTexture("trigger-force"), buttonsize))
-		m_session.ArmTrigger(Session::TRIGGER_TYPE_FORCED);
+		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_FORCED);
 	Dialog::Tooltip("Acquire a waveform immediately, ignoring the trigger condition");
 
 	ImGui::SameLine(0.0, 0.0);
