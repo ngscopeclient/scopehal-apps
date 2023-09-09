@@ -139,9 +139,11 @@ void Session::Clear()
 	LogTrace("Clearing session\n");
 	LogIndenter li;
 
-	lock_guard<shared_mutex> lock(m_waveformDataMutex);
-
+	//This includes its own mutex lock on waveform data
+	//and can't happen after we hold the lock
 	ClearBackgroundThreads();
+
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 
 	//HACK: for now, export filters keep an open reference to themselves to avoid memory leaks
 	//Free this refererence now.
