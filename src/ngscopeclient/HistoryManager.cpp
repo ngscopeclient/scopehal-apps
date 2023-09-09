@@ -73,6 +73,28 @@ HistoryPoint::~HistoryPoint()
 }
 
 /**
+	@brief Returns true if at least one waveform in this history point is currently loaded into a scope
+ */
+bool HistoryPoint::IsInUse()
+{
+	for(auto it : m_history)
+	{
+		auto scope = it.first;
+		auto hist = it.second;
+		for(auto jt : hist)
+		{
+			auto wfm = jt.second;
+
+			//Check if this waveform is currently attached to the scope
+			if( (jt.first.GetData() == wfm) && (wfm != nullptr ) )
+				return true;
+		}
+	}
+
+	return false;
+}
+
+/**
 	@brief Update all instruments in the specified session with our saved historical data
  */
 void HistoryPoint::LoadHistoryToSession(Session& session)
@@ -245,6 +267,11 @@ void HistoryManager::AddHistory(
 				if(point->m_pinned)
 					continue;
 				if(!m_session.GetMarkers(point->m_time).empty())
+					continue;
+
+				//With multiple trigger groups at different rates, we might have the most recent trigger for a scope
+				//roll to the start of the history queue. Don't delete that!!
+				if(point->IsInUse())
 					continue;
 
 				m_session.RemoveMarkers(point->m_time);

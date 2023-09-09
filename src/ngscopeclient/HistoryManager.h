@@ -49,6 +49,8 @@ public:
 	HistoryPoint();
 	~HistoryPoint();
 
+	bool IsInUse();
+
 	///@brief Timestamp of the point
 	TimePoint m_time;
 
