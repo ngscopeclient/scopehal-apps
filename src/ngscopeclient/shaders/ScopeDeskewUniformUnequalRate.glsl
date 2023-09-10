@@ -41,7 +41,7 @@
 //for now, no fallback for no-int64
 #extension GL_ARB_gpu_shader_int64 : require
 
-layout(local_size_x=32, local_size_y=1, local_size_z=1) in;
+layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
 
 //Global configuration for the run
 layout(std430, push_constant) uniform constants
@@ -52,6 +52,7 @@ layout(std430, push_constant) uniform constants
 	int64_t trigPhaseDelta;
 
 	int		startingDelta;
+	int		numDeltas;
 
 	int		priLen;
 	int		secLen;
@@ -76,6 +77,9 @@ layout(std430, binding=2) buffer secondary
 
 void main()
 {
+	if(gl_GlobalInvocationID.x >= numDeltas)
+		return;
+
 	//Convert delta from samples of the primary waveform to femtoseconds
 	int d = int(gl_GlobalInvocationID.x) + startingDelta;
 	int64_t deltaFs = (priTimescale * int64_t(d)) + trigPhaseDelta;

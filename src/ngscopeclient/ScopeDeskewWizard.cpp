@@ -47,7 +47,8 @@ UniformUnequalCrossCorrelateArgs::UniformUnequalCrossCorrelateArgs(
 	: priTimescale(ppri->m_timescale)
 	, secTimescale(psec->m_timescale)
 	, trigPhaseDelta(ppri->m_triggerPhase - psec->m_triggerPhase)
-	, startingDelta(delta)
+	, startingDelta(-delta)
+	, numDeltas(delta*2)
 	, priLen(ppri->size())
 	, secLen(psec->size())
 {
@@ -1003,7 +1004,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 
 	m_cmdBuf.begin({});
 
-	UniformUnequalCrossCorrelateArgs args(ppri, psec, -m_maxSkewSamples);
+	UniformUnequalCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);

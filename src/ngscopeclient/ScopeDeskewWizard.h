@@ -49,6 +49,8 @@ public:
 	int64_t trigPhaseDelta;
 
 	int32_t startingDelta;
+	int32_t numDeltas;
+
 	int32_t priLen;
 	int32_t secLen;
 };
