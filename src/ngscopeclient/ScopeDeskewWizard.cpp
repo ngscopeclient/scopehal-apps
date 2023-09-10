@@ -46,11 +46,10 @@ UniformUnequalCrossCorrelateArgs::UniformUnequalCrossCorrelateArgs(
 	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec, int64_t delta)
 	: priTimescale(ppri->m_timescale)
 	, secTimescale(psec->m_timescale)
-	, priTrigPhase(ppri->m_triggerPhase)
-	, secTrigPhase(psec->m_triggerPhase)
+	, trigPhaseDelta(ppri->m_triggerPhase - psec->m_triggerPhase)
+	, startingDelta(delta)
 	, priLen(ppri->size())
 	, secLen(psec->size())
-	, startingDelta(delta)
 {
 }
 

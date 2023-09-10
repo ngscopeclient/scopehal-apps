@@ -41,14 +41,7 @@
 //for now, no fallback for no-int64
 #extension GL_ARB_gpu_shader_int64 : require
 
-//Each block handles one correlation
-#define ROWS_PER_BLOCK 1
-
-//Min/max for the current sample
-shared double g_partialSum[ROWS_PER_BLOCK];
-shared int64_t g_partialSamples[ROWS_PER_BLOCK];
-
-layout(local_size_x=32, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
+layout(local_size_x=32, local_size_y=1, local_size_z=1) in;
 
 //Global configuration for the run
 layout(std430, push_constant) uniform constants
@@ -56,13 +49,12 @@ layout(std430, push_constant) uniform constants
 	int64_t priTimescale;
 	int64_t secTimescale;
 
-	int64_t priTrigPhase;
-	int64_t secTrigPhase;
+	int64_t trigPhaseDelta;
 
-	int64_t priLen;
-	int64_t secLen;
+	int		startingDelta;
 
-	int64_t startingDelta;
+	int		priLen;
+	int		secLen;
 };
 
 //The output data
@@ -85,15 +77,14 @@ layout(std430, binding=2) buffer secondary
 void main()
 {
 	//Convert delta from samples of the primary waveform to femtoseconds
-	int64_t trigPhaseDelta = priTrigPhase - secTrigPhase;
-	int64_t d = int64_t(gl_GlobalInvocationID.x) + startingDelta;
-	int64_t deltaFs = (priTimescale * d) + trigPhaseDelta;
+	int d = int(gl_GlobalInvocationID.x) + startingDelta;
+	int64_t deltaFs = (priTimescale * int64_t(d)) + trigPhaseDelta;
 
 	//Loop over samples in the primary waveform, then correlate to secondary samples
-	int64_t samplesProcessed = 0;
+	int samplesProcessed = 0;
 	int isecondary = 0;
-	double partialSum = 0;
-	for(int64_t i=int64_t(gl_LocalInvocationID.y); i<priLen; i += ROWS_PER_BLOCK)
+	double sum = 0;
+	for(int i=0; i<priLen; i++)
 	{
 		//Target timestamp in the secondary waveform
 		int64_t target = i * priTimescale + deltaFs;
@@ -120,27 +111,10 @@ void main()
 			break;
 
 		//Do the actual cross-correlation
-		partialSum += priSamples[int(i)] * secSamples[isecondary];
+		sum += priSamples[i] * secSamples[isecondary];
 		samplesProcessed ++;
 	}
 
-	//Output results from this thread
-	g_partialSum[gl_LocalInvocationID.y] = partialSum;
-	g_partialSamples[gl_LocalInvocationID.y] = samplesProcessed;
-
-	//Block until all threads for this correlation have finished
-	barrier();
-	memoryBarrierShared();
-
-	//Sum the results from all threads in the block
-	double finalSum = 0;
-	int64_t finalSamples = 0;
-	for(int i=0; i<ROWS_PER_BLOCK; i++)
-	{
-		finalSum += g_partialSum[i];
-		finalSamples += g_partialSamples[i];
-	}
-
 	//Output the final correlation
-	corrOut[gl_GlobalInvocationID.x] = finalSum / finalSamples;
+	corrOut[gl_GlobalInvocationID.x] = sum / samplesProcessed;
 }

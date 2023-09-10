@@ -46,13 +46,11 @@ public:
 	int64_t priTimescale;
 	int64_t secTimescale;
 
-	int64_t priTrigPhase;
-	int64_t secTrigPhase;
+	int64_t trigPhaseDelta;
 
-	int64_t priLen;
-	int64_t secLen;
-
-	int64_t startingDelta;
+	int32_t startingDelta;
+	int32_t priLen;
+	int32_t secLen;
 };
 
 class ScopeDeskewWizard : public Dialog
