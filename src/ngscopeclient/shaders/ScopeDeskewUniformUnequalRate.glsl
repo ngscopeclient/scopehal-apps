@@ -41,7 +41,9 @@
 //for now, no fallback for no-int64
 #extension GL_ARB_gpu_shader_int64 : require
 
-layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
+#define X_BLOCK_SIZE 64
+
+layout(local_size_x=X_BLOCK_SIZE, local_size_y=1, local_size_z=1) in;
 
 //Global configuration for the run
 layout(std430, push_constant) uniform constants
@@ -75,6 +77,8 @@ layout(std430, binding=2) buffer secondary
 	float secSamples[];
 };
 
+shared float priSampleCache[X_BLOCK_SIZE];
+
 void main()
 {
 	if(gl_GlobalInvocationID.x >= numDeltas)
@@ -88,35 +92,40 @@ void main()
 	int samplesProcessed = 0;
 	int isecondary = 0;
 	double sum = 0;
-	for(int i=0; i<priLen; i++)
+	for(int i=0; i<priLen; i += X_BLOCK_SIZE)
 	{
-		//Target timestamp in the secondary waveform
-		int64_t target = i * priTimescale + deltaFs;
+		//Prefetch primary samples in parallel
+		if( (i+gl_LocalInvocationID.x) < priLen)
+			priSampleCache[gl_LocalInvocationID.x] = priSamples[i+gl_LocalInvocationID.x];
+		barrier();
 
-		//If off the start of the waveform, skip it
-		if(target < 0)
-			continue;
-
-		//Skip secondary samples if the current secondary sample ends before the primary sample starts
-		//TODO: optimize this
-		bool done = false;
-		while( ((isecondary + 1) *	secTimescale) < target)
+		for(int j=0; j<X_BLOCK_SIZE; j++)
 		{
-			isecondary ++;
-
-			//If off the end of the waveform, stop
-			if(isecondary >= secLen)
-			{
-				done = true;
+			//Make sure we're not going off the end of the primary
+			int index = i+j;
+			if(index >= priLen)
 				break;
-			}
-		}
-		if(done)
-			break;
 
-		//Do the actual cross-correlation
-		sum += priSamples[i] * secSamples[isecondary];
-		samplesProcessed ++;
+			//Target timestamp in the secondary waveform
+			int64_t target = index * priTimescale + deltaFs;
+
+			//If off the start of the waveform, skip it
+			if(target < 0)
+				continue;
+
+			//Skip secondary samples if the current secondary sample ends before the primary sample starts
+			//TODO: optimize this
+			while( ( ((isecondary + 1) *	secTimescale) < target) && (isecondary < secLen) )
+				isecondary ++;
+			if(isecondary >= secLen)
+				break;
+
+			memoryBarrierShared();
+
+			//Do the actual cross-correlation
+			sum += priSampleCache[j] * secSamples[isecondary];
+			samplesProcessed ++;
+		}
 	}
 
 	//Output the final correlation

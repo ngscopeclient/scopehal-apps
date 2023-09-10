@@ -1014,6 +1014,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_queue->SubmitAndBlock(m_cmdBuf);
 
 	//Crunch results
+	corrOut.PrepareForCpuAccess();
 	int64_t bestOffset = 0;
 	double bestCorr = 0;
 	for(int64_t i=0; i<2*m_maxSkewSamples; i++)
