@@ -90,14 +90,15 @@ void main()
 
 	//Loop over samples in the primary waveform, then correlate to secondary samples
 	int samplesProcessed = 0;
-	int isecondary = 0;
 	double sum = 0;
+	int isecondary = 0;
 	for(int i=0; i<priLen; i += X_BLOCK_SIZE)
 	{
 		//Prefetch primary samples in parallel
 		if( (i+gl_LocalInvocationID.x) < priLen)
 			priSampleCache[gl_LocalInvocationID.x] = priSamples[i+gl_LocalInvocationID.x];
 		barrier();
+		memoryBarrierShared();
 
 		for(int j=0; j<X_BLOCK_SIZE; j++)
 		{
@@ -107,20 +108,17 @@ void main()
 				break;
 
 			//Target timestamp in the secondary waveform
-			int64_t target = index * priTimescale + deltaFs;
+			int64_t target = (index * priTimescale + deltaFs) - secTimescale;
 
 			//If off the start of the waveform, skip it
 			if(target < 0)
 				continue;
 
 			//Skip secondary samples if the current secondary sample ends before the primary sample starts
-			//TODO: optimize this
-			while( ( ((isecondary + 1) *	secTimescale) < target) && (isecondary < secLen) )
+			while( (isecondary *	secTimescale) < target)
 				isecondary ++;
 			if(isecondary >= secLen)
 				break;
-
-			memoryBarrierShared();
 
 			//Do the actual cross-correlation
 			sum += priSampleCache[j] * secSamples[isecondary];

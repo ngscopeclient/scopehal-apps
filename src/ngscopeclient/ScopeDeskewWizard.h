@@ -122,6 +122,9 @@ protected:
 
 	//Vulkan compute pipelines
 	std::shared_ptr<ComputePipeline> m_uniformUnequalRatePipeline;
+
+	//Output correlation data
+	AcceleratorBuffer<double> m_corrOut;
 };
 
 #endif

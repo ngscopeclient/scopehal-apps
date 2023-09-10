@@ -86,6 +86,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 			m_queue->m_family ))
 	, m_cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice,
 		vk::CommandBufferAllocateInfo(*m_pool, vk::CommandBufferLevel::ePrimary, 1)).front()))
+	, m_corrOut("corrOut")
 {
 	m_uniformUnequalRatePipeline = make_shared<ComputePipeline>(
 		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformUnequalCrossCorrelateArgs));
@@ -105,6 +106,9 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 				"ScopeDeskewWizard.cmdbuf"));
 	}
 
+	m_corrOut.SetCpuAccessHint(AcceleratorBuffer<double>::HINT_LIKELY);
+	m_corrOut.SetGpuAccessHint(AcceleratorBuffer<double>::HINT_UNLIKELY);
+	m_corrOut.resize(2*m_maxSkewSamples);
 }
 
 ScopeDeskewWizard::~ScopeDeskewWizard()
@@ -553,8 +557,14 @@ void ScopeDeskewWizard::StartCorrelation()
 	LogTrace("Best correlation = %f (delta = %ld / %s)\n",
 		m_bestCorrelation, m_bestCorrelationOffset, fs.PrettyPrint(skew).c_str());
 
-	m_correlations.push_back(m_bestCorrelation);
-	m_skews.push_back(skew);
+	//If we got a correlation of zero (TODO: why would this be?) then retry
+	if(m_bestCorrelation < 1e-8)
+		m_measureCycle --;
+	else
+	{
+		m_correlations.push_back(m_bestCorrelation);
+		m_skews.push_back(skew);
+	}
 
 	/*m_averageSkews.push_back(skew);
 
@@ -712,87 +722,6 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateGeneric()
 	}
 }
 
-#if defined(__x86_64__) && !defined(__clang__)
-__attribute__((target("avx512f")))
-void ScopeSyncWizard::DoProcessWaveformDensePackedDoubleRateAVX512F()
-{
-	size_t len = m_primaryWaveform->size();
-	size_t slen = m_secondaryWaveform->size();
-
-	//Number of samples actually being processed
-	//(in this application it's OK to truncate w/o a scalar implementation at the end)
-	size_t len_rounded = len - (len % 32);
-	size_t slen_rounded = slen - (slen % 32);
-
-	std::mutex cmutex;
-
-	int64_t phaseshift = (m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase)
-		/ m_primaryWaveform->m_timescale;
-
-	m_primaryWaveform->PrepareForCpuAccess();
-	m_secondaryWaveform->PrepareForCpuAccess();
-	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
-	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
-
-	#pragma omp parallel for
-	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
-	{
-		//Shift by relative trigger phase
-		int64_t delta = d + phaseshift;
-
-		size_t end = 2*(slen_rounded - delta);
-		end = min(end, len_rounded);
-
-		//Loop over samples in the primary waveform
-		ssize_t samplesProcessed = 0;
-		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		__m512i perm0 = _mm512_set_epi32(7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0);
-		__m512i perm1 = _mm512_set_epi32(15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8);
-		for(size_t i=0; i<end; i+= 32)
-		{
-			//If off the start of the waveform, skip it
-			if(((int64_t)i + delta) < 0)
-				continue;
-
-			//Primary waveform is easy
-			__m512 pri1 = _mm512_loadu_ps(ppri + i);
-			__m512 pri2 = _mm512_loadu_ps(ppri + i + 16);
-
-			uint64_t utarget = ((i  + delta) / 2);
-
-			//Secondary waveform is more work since we have to shuffle the samples
-			__m512 sec = _mm512_loadu_ps(psec + utarget);
-			__m512 sec1 = _mm512_permutexvar_ps(perm0, sec);
-			__m512 sec2 = _mm512_permutexvar_ps(perm1, sec);
-
-			//Do the actual cross-correlation
-			vcorrelation = _mm512_fmadd_ps(pri1, sec1, vcorrelation);
-			vcorrelation = _mm512_fmadd_ps(pri2, sec2, vcorrelation);
-
-			samplesProcessed += 32;
-		}
-
-		//Horizontal add the output
-		//(outside the inner loop, no need to bother vectorizing this)
-		float vec[16];
-		_mm512_storeu_ps(vec, vcorrelation);
-		float correlation = 0;
-		for(int i=0; i<16; i++)
-			correlation += vec[i];
-
-		float normalizedCorrelation = correlation / samplesProcessed;
-
-		//Update correlation
-		lock_guard<mutex> lock(cmutex);
-		if(normalizedCorrelation > m_bestCorrelation)
-		{
-			m_bestCorrelation = normalizedCorrelation;
-			m_bestCorrelationOffset = d;
-		}
-	}
-}
-#endif // __x86_64__ && !__clang__
-
 void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 {
 	int64_t len = m_primaryWaveform->size();
@@ -846,76 +775,6 @@ void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateGeneric()
 		}
 	}
 }
-
-#if defined(__x86_64__) && !defined(__clang__)
-__attribute__((target("avx512f")))
-void ScopeSyncWizard::DoProcessWaveformDensePackedEqualRateAVX512F()
-{
-	size_t len = m_primaryWaveform->size();
-	size_t slen = m_secondaryWaveform->size();
-
-	//Number of samples actually being processed
-	//(in this application it's OK to truncate w/o a scalar implementation at the end)
-	size_t len_rounded = len - (len % 16);
-	size_t slen_rounded = slen - (slen % 16);
-
-	std::mutex cmutex;
-
-	int64_t phaseshift =
-		(m_primaryWaveform->m_triggerPhase - m_secondaryWaveform->m_triggerPhase) /
-		m_primaryWaveform->m_timescale;
-
-	m_primaryWaveform->PrepareForCpuAccess();
-	m_secondaryWaveform->PrepareForCpuAccess();
-	float* ppri = dynamic_cast<UniformAnalogWaveform*>(m_primaryWaveform)->m_samples.GetCpuPointer();
-	float* psec = dynamic_cast<UniformAnalogWaveform*>(m_secondaryWaveform)->m_samples.GetCpuPointer();
-
-	#pragma omp parallel for
-	for(int64_t d = -m_maxSkewSamples; d < m_maxSkewSamples; d ++)
-	{
-		//Shift by relative trigger phase
-		int64_t delta = d + phaseshift;
-
-		size_t end = slen_rounded - delta;
-		end = min(end, len_rounded);
-
-		//Loop over samples in the primary waveform
-		ssize_t samplesProcessed = 0;
-		__m512 vcorrelation = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		for(size_t i=0; i<end; i += 16)
-		{
-			//If off the start of the waveform, skip it
-			if((int64_t)i + delta < 0)
-				continue;
-
-			samplesProcessed += 16;
-
-			//Do the actual cross-correlation
-			__m512 pri = _mm512_loadu_ps(ppri + i);
-			__m512 sec = _mm512_loadu_ps(psec + i + delta);
-			vcorrelation = _mm512_fmadd_ps(pri, sec, vcorrelation);
-		}
-
-		//Horizontal add the output
-		//(outside the inner loop, no need to bother vectorizing this)
-		float vec[16];
-		_mm512_storeu_ps(vec, vcorrelation);
-		float correlation = 0;
-		for(int i=0; i<16; i++)
-			correlation += vec[i];
-
-		float normalizedCorrelation = correlation / samplesProcessed;
-
-		//Update correlation
-		lock_guard<mutex> lock(cmutex);
-		if(normalizedCorrelation > m_bestCorrelation)
-		{
-			m_bestCorrelation = normalizedCorrelation;
-			m_bestCorrelationOffset = d;
-		}
-	}
-}
-#endif // __x86_64__ && !__clang__
 */
 void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRate(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
 {
@@ -992,36 +851,32 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
 {
 	auto start = GetTime();
-	ppri->PrepareForGpuAccess();
-	psec->PrepareForGpuAccess();
-
-	//Output buffer uses pinned memory
-	AcceleratorBuffer<double> corrOut("corrOut");
-	corrOut.SetCpuAccessHint(AcceleratorBuffer<double>::HINT_LIKELY);
-	corrOut.SetGpuAccessHint(AcceleratorBuffer<double>::HINT_UNLIKELY);
-	corrOut.resize(2*m_maxSkewSamples);
-	corrOut.PrepareForGpuAccess();
 
 	m_cmdBuf.begin({});
 
+	ppri->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	psec->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
+
 	UniformUnequalCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
-	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, corrOut, m_cmdBuf, true);
+	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 32));
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
+	m_corrOut.PrepareForCpuAccess();	//todo make this part of the same queue
 
 	//Crunch results
-	corrOut.PrepareForCpuAccess();
 	int64_t bestOffset = 0;
 	double bestCorr = 0;
 	for(int64_t i=0; i<2*m_maxSkewSamples; i++)
 	{
-		if(corrOut[i] > bestCorr)
+		auto f = m_corrOut[i];
+		if(f > bestCorr)
 		{
-			bestCorr = corrOut[i];
+			bestCorr = f;
 			bestOffset = i - m_maxSkewSamples;
 		}
 	}
