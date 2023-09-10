@@ -167,6 +167,10 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Default font")
 				.Description("Font used for most GUI elements"));
 			general.AddPreference(
+				Preference::Font("title_font", FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 16))
+				.Label("Title font")
+				.Description("Font used for headings in reports or wizards"));
+			general.AddPreference(
 				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
 				.Label("Console font")
 				.Description("Font used for SCPI console and log viewer"));

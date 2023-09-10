@@ -69,6 +69,7 @@
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
+#include "ScopeDeskewWizard.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
@@ -1087,12 +1088,17 @@ void MainWindow::ShowTimebaseProperties()
 	AddDialog(m_timebaseDialog);
 }
 
+void MainWindow::ShowSyncWizard(shared_ptr<TriggerGroup> group, Oscilloscope* secondary)
+{
+	AddDialog(make_shared<ScopeDeskewWizard>(group, secondary, this, m_session));
+}
+
 void MainWindow::ShowManageInstruments()
 {
 	if(m_manageInstrumentsDialog != nullptr)
 		return;
 
-	m_manageInstrumentsDialog = make_shared<ManageInstrumentsDialog>(m_session);
+	m_manageInstrumentsDialog = make_shared<ManageInstrumentsDialog>(m_session, this);
 	AddDialog(m_manageInstrumentsDialog);
 }
 

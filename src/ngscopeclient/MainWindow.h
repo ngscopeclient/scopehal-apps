@@ -113,6 +113,7 @@ public:
 	void ShowTimebaseProperties();
 	void ShowTriggerProperties();
 	void ShowManageInstruments();
+	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, Oscilloscope* secondary);
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();

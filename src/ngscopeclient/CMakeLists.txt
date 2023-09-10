@@ -108,6 +108,7 @@ add_executable(ngscopeclient
 	ProtocolAnalyzerDialog.cpp
 	RFGeneratorDialog.cpp
 	RFSignalGeneratorThread.cpp
+	ScopeDeskewWizard.cpp
 	ScopeThread.cpp
 	SCPIConsoleDialog.cpp
 	Session.cpp

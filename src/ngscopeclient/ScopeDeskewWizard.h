@@ -30,44 +30,58 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ManageInstrumentsDialog
+	@brief Declaration of ScopeDeskewWizard
  */
-#ifndef ManageInstrumentsDialog_h
-#define ManageInstrumentsDialog_h
+#ifndef ScopeDeskewWizard_h
+#define ScopeDeskewWizard_h
 
 #include "Dialog.h"
 #include "Session.h"
 
-class ManageInstrumentsDialog : public Dialog
+class ScopeDeskewWizard : public Dialog
 {
 public:
-	ManageInstrumentsDialog(Session& session, MainWindow* parent);
-	virtual ~ManageInstrumentsDialog();
+	ScopeDeskewWizard(
+		std::shared_ptr<TriggerGroup> group,
+		Oscilloscope* secondary,
+		MainWindow* parent,
+		Session& session);
+	virtual ~ScopeDeskewWizard();
 
 	virtual bool DoRender();
 
 protected:
-	void RowForNewGroup();
+	void DoMainProcessingFlow();
+	void ChannelSelector(const char* name, Oscilloscope* scope, StreamDescriptor& stream);
 
-	void TriggerGroupsTable();
-	void AllInstrumentsTable();
+	enum state_t
+	{
+		STATE_WELCOME_1,
+		STATE_WELCOME_2,
+		STATE_WELCOME_3,
+		STATE_WELCOME_4,
+		STATE_WELCOME_5,
+		STATE_ACQUIRE,
+		STATE_CORRELATE,
+		STATE_DONE
+	} m_state;
 
-	Session& m_session;
+	std::shared_ptr<TriggerGroup> m_group;
+	Oscilloscope* m_secondary;
+
 	MainWindow* m_parent;
+	Session& m_session;
 
-	SCPIInstrument* m_selection;
-};
+	bool m_useExtRefPrimary;
+	bool m_useExtRefSecondary;
 
-class TriggerGroupDragDescriptor
-{
-public:
-	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope)
-		: m_group(group)
-		, m_scope(scope)
-	{}
+	int m_measureCycle;
 
-	TriggerGroup* m_group;
-	SCPIOscilloscope* m_scope;
+	time_t m_lastTriggerTimestamp;
+	int64_t m_lastTriggerFs;
+
+	StreamDescriptor m_primaryStream;
+	StreamDescriptor m_secondaryStream;
 };
 
 #endif

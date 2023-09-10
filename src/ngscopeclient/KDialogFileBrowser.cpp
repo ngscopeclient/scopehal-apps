@@ -126,7 +126,7 @@ optional<string> KDialogFileBrowser::ThreadProc()
 	cmd += string(" --title \"") + m_title + "\" ";
 	cmd += string("\"") + m_initialPath + "\" ";
 	cmd += string("\"") + m_filterName + "(*." + m_filterMask + ")\" ";
-	LogDebug("Final command: %s\n", cmd.c_str());
+	LogTrace("Final command: %s\n", cmd.c_str());
 	FILE* fp = popen(cmd.c_str(), "r");
 
 	char tmp[1024] = {0};

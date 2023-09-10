@@ -35,15 +35,17 @@
 
 #include "ngscopeclient.h"
 #include "ManageInstrumentsDialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ManageInstrumentsDialog::ManageInstrumentsDialog(Session& session)
+ManageInstrumentsDialog::ManageInstrumentsDialog(Session& session, MainWindow* parent)
 	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1000, 300))
 	, m_session(session)
+	, m_parent(parent)
 	, m_selection(nullptr)
 {
 }
@@ -231,7 +233,8 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 					ImGui::TextUnformatted(scope->GetSerial().c_str());
 				if(ImGui::TableSetColumnIndex(4))
 				{
-					ImGui::Button("Deskew");
+					if(ImGui::Button("Deskew"))
+						m_parent->ShowSyncWizard(group, scope);
 				}
 				ImGui::PopID();
 			}

@@ -53,7 +53,6 @@
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LogViewerDialog.h"
-#include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
