@@ -29,20 +29,30 @@
 
 /**
 	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of ScopeDeskewWizard
+	@brief Waveform rendering shader
  */
-#ifndef ScopeDeskewWizard_h
-#define ScopeDeskewWizard_h
 
-#include "Dialog.h"
-#include "Session.h"
+#version 430
+#pragma shader_stage(compute)
 
-class UniformUnequalCrossCorrelateArgs
+#extension GL_ARB_compute_shader : require
+#extension GL_ARB_shader_storage_buffer_object : require
+
+//for now, no fallback for no-int64
+#extension GL_ARB_gpu_shader_int64 : require
+
+//Each block handles one correlation
+#define ROWS_PER_BLOCK 32
+
+//Min/max for the current sample
+shared double g_partialSum[ROWS_PER_BLOCK];
+shared int64_t g_partialSamples[ROWS_PER_BLOCK];
+
+layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
+
+//Global configuration for the run
+layout(std430, push_constant) uniform constants
 {
-public:
-	UniformUnequalCrossCorrelateArgs(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec, int64_t delta);
-
 	int64_t priTimescale;
 	int64_t secTimescale;
 
@@ -55,73 +65,82 @@ public:
 	int64_t startingDelta;
 };
 
-class ScopeDeskewWizard : public Dialog
+//The output data
+layout(std430, binding=0) buffer corr
 {
-public:
-	ScopeDeskewWizard(
-		std::shared_ptr<TriggerGroup> group,
-		Oscilloscope* secondary,
-		MainWindow* parent,
-		Session& session);
-	virtual ~ScopeDeskewWizard();
-
-	virtual bool DoRender();
-
-protected:
-	void DoMainProcessingFlow();
-	void StartCorrelation();
-	void DoProcessWaveformUniformUnequalRate(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec);
-	void DoProcessWaveformUniformUnequalRateVulkan(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec);
-	void DoProcessWaveformSparse(SparseAnalogWaveform* ppri, SparseAnalogWaveform* psec);
-	void ChannelSelector(const char* name, Oscilloscope* scope, StreamDescriptor& stream);
-
-	enum state_t
-	{
-		STATE_WELCOME_1,
-		STATE_WELCOME_2,
-		STATE_WELCOME_3,
-		STATE_WELCOME_4,
-		STATE_WELCOME_5,
-		STATE_ACQUIRE,
-		STATE_CORRELATE,
-		STATE_DONE
-	} m_state;
-
-	std::shared_ptr<TriggerGroup> m_group;
-	Oscilloscope* m_secondary;
-
-	MainWindow* m_parent;
-	Session& m_session;
-
-	bool m_useExtRefPrimary;
-	bool m_useExtRefSecondary;
-
-	int m_measureCycle;
-
-	time_t m_lastTriggerTimestamp;
-	int64_t m_lastTriggerFs;
-
-	StreamDescriptor m_primaryStream;
-	StreamDescriptor m_secondaryStream;
-
-	//Combined measurements from all waveforms to date
-	std::vector<double> m_correlations;
-	std::vector<int64_t> m_skews;
-
-	//Best results found from the current waveform
-	double m_bestCorrelation;
-	int64_t m_bestCorrelationOffset;
-
-	//Maximum number of samples offset to consider
-	int64_t m_maxSkewSamples;
-
-	//Vulkan processing queues etc
-	std::shared_ptr<QueueHandle> m_queue;
-	vk::raii::CommandPool m_pool;
-	vk::raii::CommandBuffer m_cmdBuf;
-
-	//Vulkan compute pipelines
-	std::shared_ptr<ComputePipeline> m_uniformUnequalRatePipeline;
+	double[] corrOut;
 };
 
-#endif
+//Input sample data
+layout(std430, binding=1) buffer primary
+{
+	float priSamples[];
+};
+
+layout(std430, binding=2) buffer secondary
+{
+	float secSamples[];
+};
+
+void main()
+{
+	//Convert delta from samples of the primary waveform to femtoseconds
+	int64_t trigPhaseDelta = priTrigPhase - secTrigPhase;
+	int64_t d = int64_t(gl_GlobalInvocationID.x) + startingDelta;
+	int64_t deltaFs = (priTimescale * d) + trigPhaseDelta;
+
+	//Loop over samples in the primary waveform, then correlate to secondary samples
+	int64_t samplesProcessed = 0;
+	int isecondary = 0;
+	double partialSum = 0;
+	for(int64_t i=int64_t(gl_LocalInvocationID.y); i<priLen; i += ROWS_PER_BLOCK)
+	{
+		//Target timestamp in the secondary waveform
+		int64_t target = i * priTimescale + deltaFs;
+
+		//If off the start of the waveform, skip it
+		if(target < 0)
+			continue;
+
+		//Skip secondary samples if the current secondary sample ends before the primary sample starts
+		//TODO: optimize this
+		bool done = false;
+		while( ((isecondary + 1) *	secTimescale) < target)
+		{
+			isecondary ++;
+
+			//If off the end of the waveform, stop
+			if(isecondary >= secLen)
+			{
+				done = true;
+				break;
+			}
+		}
+		if(done)
+			break;
+
+		//Do the actual cross-correlation
+		partialSum += priSamples[int(i)] * secSamples[isecondary];
+		samplesProcessed ++;
+	}
+
+	//Output results from this thread
+	g_partialSum[gl_LocalInvocationID.y] = partialSum;
+	g_partialSamples[gl_LocalInvocationID.y] = samplesProcessed;
+
+	//Block until all threads for this correlation have finished
+	barrier();
+	memoryBarrierShared();
+
+	//Sum the results from all threads in the block
+	double finalSum = 0;
+	int64_t finalSamples = 0;
+	for(int i=0; i<ROWS_PER_BLOCK; i++)
+	{
+		finalSum += g_partialSum[i];
+		finalSamples += g_partialSamples[i];
+	}
+
+	//Output the final correlation
+	corrOut[gl_GlobalInvocationID.x] = finalSum / finalSamples;
+}
