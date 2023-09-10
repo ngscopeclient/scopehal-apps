@@ -42,13 +42,13 @@
 #extension GL_ARB_gpu_shader_int64 : require
 
 //Each block handles one correlation
-#define ROWS_PER_BLOCK 32
+#define ROWS_PER_BLOCK 1
 
 //Min/max for the current sample
 shared double g_partialSum[ROWS_PER_BLOCK];
 shared int64_t g_partialSamples[ROWS_PER_BLOCK];
 
-layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
+layout(local_size_x=32, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
 
 //Global configuration for the run
 layout(std430, push_constant) uniform constants

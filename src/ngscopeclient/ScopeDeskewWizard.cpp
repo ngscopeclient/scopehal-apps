@@ -530,9 +530,9 @@ void ScopeDeskewWizard::StartCorrelation()
 		//Unequal sample rates, more math needed
 		else*/
 		{
-			/*if(g_hasShaderInt64 && g_hasShaderFloat64)
+			if(g_hasShaderInt64 && g_hasShaderFloat64)
 				DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
-			else*/
+			else
 				DoProcessWaveformUniformUnequalRate(upri, usec);
 		}
 	}
@@ -1008,7 +1008,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
-	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, 2*m_maxSkewSamples);
+	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 32));
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
@@ -1028,6 +1028,6 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_bestCorrelation = bestCorr;
 	m_bestCorrelationOffset = bestOffset;
 
-	dt = GetTime() - start;
+	auto dt = GetTime() - start;
 	LogTrace("GPU correlation evaluated in %.3f sec\n", dt);
 }
