@@ -957,7 +957,7 @@ YAML::Node Session::SerializeMetadata()
 {
 	YAML::Node node;
 	node["appver"] = "ngscopeclient " NGSCOPECLIENT_VERSION;
-	node["appdate"] = __DATE__ __TIME__;
+	node["appdate"] = __DATE__ " " __TIME__;
 
 	//Format timestamp
 	time_t now = time(nullptr);
