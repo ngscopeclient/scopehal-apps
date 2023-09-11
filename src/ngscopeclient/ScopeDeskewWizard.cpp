@@ -554,11 +554,13 @@ void ScopeDeskewWizard::StartCorrelation()
 		*/
 
 		//Primary 4x rate of secondary?
-		else if((upri->m_timescale * 4) == usec->m_timescale)
+		//FIXME: this optimized shader seems to be giving erroneous results ~1ns offset from the true peak
+		//unsure if implementation or algorithm bug, but disable it for now
+		/*else if((upri->m_timescale * 4) == usec->m_timescale)
 			DoProcessWaveformUniform4xRateVulkan(upri, usec);
 
 		//Unequal sample rates, more math needed
-		else
+		else*/
 			DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
 	}
 
