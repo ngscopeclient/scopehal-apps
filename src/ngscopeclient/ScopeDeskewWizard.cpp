@@ -92,6 +92,9 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	m_uniformUnequalRatePipeline = make_shared<ComputePipeline>(
 		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
 
+	m_uniformEqualRatePipeline = make_shared<ComputePipeline>(
+		"shaders/ScopeDeskewUniformEqualRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
+
 	m_uniform4xRatePipeline = make_shared<ComputePipeline>(
 		"shaders/ScopeDeskewUniform4xRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
 
@@ -543,11 +546,10 @@ void ScopeDeskewWizard::StartCorrelation()
 		if(!m_gpuCorrelationAvailable)
 			DoProcessWaveformUniformUnequalRate(upri, usec);
 
-		/*
 		//If sample rates are equal we can simplify things a lot
-		if(m_primaryWaveform->m_timescale == m_secondaryWaveform->m_timescale)
-			DoProcessWaveformDensePackedEqualRateGeneric();
-
+		else if(upri->m_timescale == usec->m_timescale)
+			DoProcessWaveformUniformEqualRateVulkan(upri, usec);
+		/*
 		//Also special-case 2:1 sample rate ratio (primary 2x speed of secondary)
 		else if((m_primaryWaveform->m_timescale * 2) == m_secondaryWaveform->m_timescale)
 			DoProcessWaveformDensePackedDoubleRateGeneric();
@@ -557,10 +559,10 @@ void ScopeDeskewWizard::StartCorrelation()
 		//FIXME: this optimized shader seems to be giving erroneous results ~1ns offset from the true peak
 		//unsure if implementation or algorithm bug, but disable it for now
 		/*else if((upri->m_timescale * 4) == usec->m_timescale)
-			DoProcessWaveformUniform4xRateVulkan(upri, usec);
+			DoProcessWaveformUniform4xRateVulkan(upri, usec);*/
 
 		//Unequal sample rates, more math needed
-		else*/
+		else
 			DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
 	}
 
@@ -883,6 +885,36 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
+
+	m_cmdBuf.end();
+	m_queue->SubmitAndBlock(m_cmdBuf);
+
+	PostprocessVulkanCorrelation();
+
+	auto dt = GetTime() - start;
+	LogTrace("GPU correlation evaluated in %.3f sec\n", dt);
+}
+
+void ScopeDeskewWizard::DoProcessWaveformUniformEqualRateVulkan(
+	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
+{
+	auto start = GetTime();
+
+	m_cmdBuf.reset();
+	m_cmdBuf.begin({});
+
+	ppri->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	psec->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
+
+	//sync in case transfer happened in another thread
+	AcceleratorBuffer<float>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
+
+	UniformCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
+	m_uniformEqualRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
+	m_uniformEqualRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
+	m_uniformEqualRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
+	m_uniformEqualRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);

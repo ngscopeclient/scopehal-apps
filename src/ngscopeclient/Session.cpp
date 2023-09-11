@@ -1321,6 +1321,64 @@ void Session::MakeNewTriggerGroup(Oscilloscope* scope)
 	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
 }
 
+/**
+	@brief Check if a scope is the primary of a group containing at least one other scope
+ */
+bool Session::IsPrimaryOfMultiScopeGroup(Oscilloscope* scope)
+{
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+	for(auto group : m_triggerGroups)
+	{
+		if( (group->m_primary == scope) && !group->m_secondaries.empty())
+			return true;
+	}
+	return false;
+}
+
+/**
+	@brief Check if a scope is a secondary within a multiscope group
+ */
+bool Session::IsSecondaryOfMultiScopeGroup(Oscilloscope* scope)
+{
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+	for(auto group : m_triggerGroups)
+	{
+		//if primary we can't also be a secondary so stop looking
+		if(group->m_primary == scope)
+			return false;
+
+		for(auto sec : group->m_secondaries)
+		{
+			if(sec == scope)
+				return true;
+		}
+	}
+	return false;
+}
+
+/**
+	@brief Gets the trigger group that contains a specified scope
+ */
+shared_ptr<TriggerGroup> Session::GetTriggerGroupForScope(Oscilloscope* scope)
+{
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+	for(auto group : m_triggerGroups)
+	{
+		if(group->m_primary == scope)
+			return group;
+
+		for(auto sec : group->m_secondaries)
+		{
+			if(sec == scope)
+				return group;
+		}
+	}
+
+	//should never get here
+	LogError("Scope is not part of a trigger group!\n");
+	return nullptr;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
 

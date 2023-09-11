@@ -674,8 +674,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 {
 	ImGui::BeginChild("timeline", ImVec2(width, height));
 
-	//TODO: handle mouse wheel on the timeline
-
 	auto list = ImGui::GetWindowDrawList();
 
 	//Style settings
@@ -916,6 +914,12 @@ void WaveformGroup::RenderTriggerPositionArrows(ImVec2 pos, float height)
 
 		//Get the timestamp of the trigger
 		auto off = scope->GetTriggerOffset();
+
+		//If we have a skew calibration offset for this scope, display the virtual trigger there instead
+		int64_t skewCal = m_parent->GetSession().GetDeskew(scope);
+		if(skewCal != 0)
+			off = -skewCal;
+
 		auto xpos = XAxisUnitsToXPosition(off);
 
 		//Check if the mouse is within the expanded hitbox
@@ -955,7 +959,51 @@ void WaveformGroup::RenderTriggerPositionArrows(ImVec2 pos, float height)
 	{
 		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			m_scopeTriggerDuringDrag->SetTriggerOffset(XPositionToXAxisUnits(mouse.x));
+			auto newTriggerPos = XPositionToXAxisUnits(mouse.x);
+			Unit fs(Unit::UNIT_FS);
+
+			//Primary of a multiscope group? Might have to realign secondaries since trigger can snap
+			//rather than moving with sample-level resolution
+			auto& sess = m_parent->GetSession();
+			if(sess.IsPrimaryOfMultiScopeGroup(m_scopeTriggerDuringDrag))
+			{
+				int64_t oldoff = m_scopeTriggerDuringDrag->GetTriggerOffset();
+				m_scopeTriggerDuringDrag->SetTriggerOffset(newTriggerPos);
+				int64_t newoff = m_scopeTriggerDuringDrag->GetTriggerOffset();
+				int64_t delta = newoff - oldoff;
+
+				//Adjust skew calibration of each secondary in the group
+				auto group = sess.GetTriggerGroupForScope(m_scopeTriggerDuringDrag);
+				for(auto sec : group->m_secondaries)
+					sess.SetDeskew(sec, sess.GetDeskew(sec) - delta);
+			}
+
+			//Secondary of a multiscope group? Shift trigger position, account for deltas
+			else if(sess.IsSecondaryOfMultiScopeGroup(m_scopeTriggerDuringDrag))
+			{
+				//Figure out how much we moved: mouse position minus rendered trigger position
+				int64_t renderedTriggerPos = -sess.GetDeskew(m_scopeTriggerDuringDrag);
+				int64_t triggerShift = renderedTriggerPos - newTriggerPos;
+				LogTrace("Trigger was dragged by %s\n", fs.PrettyPrint(triggerShift).c_str());
+
+				//Attempt to move the trigger by that much
+				int64_t oldoff = m_scopeTriggerDuringDrag->GetTriggerOffset();
+				int64_t targetTriggerPos = m_scopeTriggerDuringDrag->GetTriggerOffset() + triggerShift;
+				m_scopeTriggerDuringDrag->SetTriggerOffset(targetTriggerPos);
+
+				//Figure out how much we actually moved
+				int64_t newoff = m_scopeTriggerDuringDrag->GetTriggerOffset();
+				int64_t delta = newoff - oldoff;
+				LogTrace("Trigger actually moved by %s\n", fs.PrettyPrint(delta).c_str());
+
+				//Update the deskew coefficient by the remainder
+				sess.SetDeskew(m_scopeTriggerDuringDrag, sess.GetDeskew(m_scopeTriggerDuringDrag) + delta);
+			}
+
+			//Normal mode, just move the trigger
+			else
+				m_scopeTriggerDuringDrag->SetTriggerOffset(newTriggerPos);
+
 			m_dragState = DRAG_STATE_NONE;
 		}
 	}

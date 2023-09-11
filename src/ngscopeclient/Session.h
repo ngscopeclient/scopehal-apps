@@ -416,6 +416,11 @@ public:
 	void SetDeskew(Oscilloscope* scope, int64_t skew)
 	{ m_scopeDeskewCal[scope] = skew; }
 
+	bool IsPrimaryOfMultiScopeGroup(Oscilloscope* scope);
+	bool IsSecondaryOfMultiScopeGroup(Oscilloscope* scope);
+
+	std::shared_ptr<TriggerGroup> GetTriggerGroupForScope(Oscilloscope* scope);
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 

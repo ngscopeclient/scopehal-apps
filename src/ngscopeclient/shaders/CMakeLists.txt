@@ -32,6 +32,7 @@ add_compute_shaders(
 		EyeToneMap.glsl
 		ScopeDeskewUniform4xRate.glsl
 		ScopeDeskewUniformUnequalRate.glsl
+		ScopeDeskewUniformEqualRate.glsl
 		WaveformToneMap.glsl
 	)
 
