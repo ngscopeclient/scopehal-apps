@@ -81,6 +81,7 @@ Session::Session(MainWindow* wnd)
 	, m_triggerOneShot(false)
 	, m_lastFilterGraphExecTime(0)
 	, m_history(*this)
+	, m_multiScope(false)
 	, m_nextMarkerNum(1)
 {
 	CreateReferenceFilters();
@@ -202,6 +203,7 @@ void Session::Clear()
 
 	//Reset state
 	m_triggerOneShot = false;
+	m_multiScope = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1367,6 +1369,9 @@ void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 		MakeNewTriggerGroup(scope);
 
 	StartWaveformThreadIfNeeded();
+
+	if(m_oscilloscopes.size() > 1)
+		m_multiScope = true;
 }
 
 /**

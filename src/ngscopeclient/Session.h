@@ -281,6 +281,9 @@ public:
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
+	bool IsMultiScope()
+	{ return m_multiScope; }
+
 	/**
 		@brief Returns a pointer to the state for a BERT
 	 */
@@ -535,6 +538,9 @@ protected:
 
 	///@brief Mutex for controlling access to rasterized waveforms
 	std::mutex m_rasterizedWaveformMutex;
+
+	///@brief True if we have >1 oscilloscope
+	bool m_multiScope;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Markers

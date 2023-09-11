@@ -840,7 +840,9 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	//Get node info
 	auto pos = ax::NodeEditor::GetNodePosition(id);
 	auto size = ax::NodeEditor::GetNodeSize(id);
-	string headerText = trig->GetScope()->m_nickname + ": " + trig->GetTriggerDisplayName();
+	string headerText = trig->GetTriggerDisplayName();
+	if(m_session.IsMultiScope())
+		headerText = trig->GetScope()->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is and reserve space for it
 	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
@@ -937,8 +939,8 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto size = ax::NodeEditor::GetNodeSize(id);
 	string headerText = channel->GetDisplayName();
 
-	//If NOT an oscilloscope channel: scope by instrument name
-	if(!ochan && inst)
+	//If NOT an oscilloscope channel, or if a multi-scope session: scope by instrument name
+	if( (!ochan && inst) || (ochan && ochan->GetScope() && m_session.IsMultiScope()) )
 		headerText = inst->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is

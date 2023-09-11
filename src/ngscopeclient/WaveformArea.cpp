@@ -2815,6 +2815,16 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto edata = dynamic_cast<EyeWaveform*>(data);
 	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
 
+	//Qualify name by scope if we have multiple scopes in the session
+	auto fqname = chan->GetName();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(rchan);
+	if(ochan)
+	{
+		auto scope = ochan->GetScope();
+		if( (scope != nullptr) && m_parent->GetSession().IsMultiScope())
+			fqname = scope->m_nickname + ":" + fqname;
+	}
+
 	//Foreground color is used to determine background color and hovered/active colors
 	float bgmul = 0.2;
 	float hmul = 0.4;
@@ -2831,7 +2841,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	ImGui::PushStyleColor(ImGuiCol_Button, bcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hcolor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, acolor);
-		ImGui::Button(chan->GetName().c_str());
+		ImGui::Button(fqname.c_str());
 	ImGui::PopStyleColor(4);
 	m_channelButtonHeight = (ImGui::GetCursorScreenPos().y - ystart) - (ImGui::GetStyle().ItemSpacing.y);
 	chan->SetYButtonPos(ImGui::GetCursorPosY());
@@ -2848,12 +2858,11 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		ImGui::SetDragDropPayload("Waveform", &desc, sizeof(desc));
 
 		//Preview of what we're dragging
-		ImGui::Text("Drag %s", chan->GetName().c_str());
+		ImGui::Text("Drag %s", fqname.c_str());
 
 		ImGui::EndDragDropSource();
 	}
 
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(rchan);
 	if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 	{
 		if(ochan)
@@ -2885,7 +2894,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 				if(echan && !echan->GetMask().empty())
 				{
 					char tmp[128];
-					auto hitrate = edata->GetMaskHitRate();
+		 			auto hitrate = edata->GetMaskHitRate();
 					snprintf(tmp, sizeof(tmp), "Mask hit rate: %.2e ", hitrate);
 					tooltip += tmp;
 
