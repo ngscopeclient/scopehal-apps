@@ -30,6 +30,7 @@ add_compute_shaders(
 	ngcomputeshaders
 	SOURCES
 		EyeToneMap.glsl
+		ScopeDeskewUniform4xRate.glsl
 		ScopeDeskewUniformUnequalRate.glsl
 		WaveformToneMap.glsl
 	)

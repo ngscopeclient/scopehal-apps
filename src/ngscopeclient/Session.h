@@ -407,6 +407,12 @@ public:
 
 	void MakeNewTriggerGroup(Oscilloscope* scope);
 
+	int64_t GetDeskew(Oscilloscope* scope)
+	{ return m_scopeDeskewCal[scope]; }
+
+	void SetDeskew(Oscilloscope* scope, int64_t skew)
+	{ m_scopeDeskewCal[scope] = skew; }
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
@@ -430,6 +436,9 @@ protected:
 		int scope_id,
 		int waveform_id,
 		std::string format);
+
+	///@brief Deskew correction coefficients for multi-scope
+	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;

@@ -84,7 +84,7 @@ bool ManageInstrumentsDialog::DoRender()
 			"The root instrument of a trigger group must have a trigger-out port.\n"
 			"All instruments in a trigger group should be connected to a common reference clock to avoid skew.");
 
-		if(ImGui::BeginTable("groups", 5, flags))
+		if(ImGui::BeginTable("groups", 6, flags))
 		{
 			TriggerGroupsTable();
 			ImGui::EndTable();
@@ -114,8 +114,11 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 	ImGui::TableSetupColumn("Make", ImGuiTableColumnFlags_WidthFixed, 9*width);
 	ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthFixed, 15*width);
 	ImGui::TableSetupColumn("Serial", ImGuiTableColumnFlags_WidthFixed, 8*width);
+	ImGui::TableSetupColumn("Skew", ImGuiTableColumnFlags_WidthFixed, 8*width);
 	ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 8*width);
 	ImGui::TableHeadersRow();
+
+	Unit fs(Unit::UNIT_FS);
 
 	auto groups = m_session.GetTriggerGroups();
 	for(auto group : groups)
@@ -232,6 +235,8 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				if(ImGui::TableSetColumnIndex(3))
 					ImGui::TextUnformatted(scope->GetSerial().c_str());
 				if(ImGui::TableSetColumnIndex(4))
+					ImGui::TextUnformatted(fs.PrettyPrint(m_session.GetDeskew(scope)).c_str());
+				if(ImGui::TableSetColumnIndex(5))
 				{
 					if(ImGui::Button("Deskew"))
 						m_parent->ShowSyncWizard(group, scope);

@@ -87,9 +87,6 @@ protected:
 
 	///@brief True if we have multiple scopes and are in normal trigger mode
 	bool m_multiScopeFreeRun;
-
-	///@brief Deskew correction coefficients for multi-scope
-	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
 };
 
 #endif

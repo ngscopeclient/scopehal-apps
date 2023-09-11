@@ -184,6 +184,7 @@ void Session::Clear()
 	m_loads.clear();
 	m_rfgenerators.clear();
 	m_meters.clear();
+	m_scopeDeskewCal.clear();
 
 	//Remove all trigger groups
 	m_triggerGroups.clear();
@@ -772,9 +773,8 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 	scope->LoadConfiguration(version, node, m_idtable);
 
 	//Load trigger deskew
-	//TODO: need to serialize trigger groups
-	//if(node["triggerdeskew"])
-	//	m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+	if(node["triggerdeskew"])
+		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
 
 	return true;
 }
@@ -913,8 +913,8 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
 		if(scope)
 		{
-			//if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
-			//	config["triggerdeskew"] = m_scopeDeskewCal[scope];
+			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
+				config["triggerdeskew"] = m_scopeDeskewCal[scope];
 			config["type"] = "oscilloscope";
 		}
 		else if(meter)

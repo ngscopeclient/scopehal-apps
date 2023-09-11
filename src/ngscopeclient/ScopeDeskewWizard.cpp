@@ -42,7 +42,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Argument objects
 
-UniformUnequalCrossCorrelateArgs::UniformUnequalCrossCorrelateArgs(
+UniformCrossCorrelateArgs::UniformCrossCorrelateArgs(
 	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec, int64_t delta)
 	: priTimescale(ppri->m_timescale)
 	, secTimescale(psec->m_timescale)
@@ -79,6 +79,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	, m_bestCorrelation(0)
 	, m_bestCorrelationOffset(0)
 	, m_maxSkewSamples(30000)
+	, m_medianSkew(0)
 	, m_queue(g_vkQueueManager->GetComputeQueue("ScopeDeskewWizard.queue"))
 	, m_pool(*g_vkComputeDevice,
 		vk::CommandPoolCreateInfo(
@@ -89,7 +90,10 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	, m_corrOut("corrOut")
 {
 	m_uniformUnequalRatePipeline = make_shared<ComputePipeline>(
-		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformUnequalCrossCorrelateArgs));
+		"shaders/ScopeDeskewUniformUnequalRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
+
+	m_uniform4xRatePipeline = make_shared<ComputePipeline>(
+		"shaders/ScopeDeskewUniform4xRate.spv", 3, sizeof(UniformCrossCorrelateArgs));
 
 	if(g_hasDebugUtils)
 	{
@@ -111,6 +115,9 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	m_corrOut.resize(2*m_maxSkewSamples);
 
 	m_gpuCorrelationAvailable = g_hasShaderInt64 && g_hasShaderFloat64;
+
+	//Clear out any existing skew calibration
+	m_session.SetDeskew(m_secondary, 0);
 }
 
 ScopeDeskewWizard::~ScopeDeskewWizard()
@@ -128,6 +135,9 @@ ScopeDeskewWizard::~ScopeDeskewWizard()
  */
 bool ScopeDeskewWizard::DoRender()
 {
+	if(m_state == STATE_CLOSE)
+		return false;
+
 	switch(m_state)
 	{
 		case STATE_WELCOME_1:
@@ -481,6 +491,11 @@ void ScopeDeskewWizard::DoMainProcessingFlow()
 				//Done with acquisition?
 				if(m_measureCycle >= nWaveforms)
 				{
+					//Calculate median skew
+					//(this assumes 10 total acquisitions)
+					sort(m_skews.begin(), m_skews.end());
+					m_medianSkew = (m_skews[4] + m_skews[5]) / 2;
+
 					m_state = STATE_DONE;
 					return;
 				}
@@ -490,6 +505,20 @@ void ScopeDeskewWizard::DoMainProcessingFlow()
 				m_group->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
 				m_state = STATE_ACQUIRE;
 			}
+			break;
+
+		case STATE_DONE:
+			{
+				Unit fs(Unit::UNIT_FS);
+				ImGui::TextWrapped("Calculated skew: %s", fs.PrettyPrint(m_medianSkew).c_str());
+
+				if(ImGui::Button("Apply"))
+				{
+					m_session.SetDeskew(m_secondary, m_medianSkew);
+					m_state = STATE_CLOSE;
+				}
+			}
+			break;
 
 		default:
 			break;
@@ -510,37 +539,27 @@ void ScopeDeskewWizard::StartCorrelation()
 	//Optimized path (if both waveforms are dense packed)
 	if(upri && usec)
 	{
+		//Fall back to software implementation
+		if(!m_gpuCorrelationAvailable)
+			DoProcessWaveformUniformUnequalRate(upri, usec);
+
 		/*
 		//If sample rates are equal we can simplify things a lot
 		if(m_primaryWaveform->m_timescale == m_secondaryWaveform->m_timescale)
-		{
-			#if defined(__x86_64__) && !defined(__clang__)
-			if(g_hasAvx512F)
-				DoProcessWaveformDensePackedEqualRateAVX512F();
-			else
-			#endif
-				DoProcessWaveformDensePackedEqualRateGeneric();
-		}
+			DoProcessWaveformDensePackedEqualRateGeneric();
 
 		//Also special-case 2:1 sample rate ratio (primary 2x speed of secondary)
 		else if((m_primaryWaveform->m_timescale * 2) == m_secondaryWaveform->m_timescale)
-		{
-			#if defined(__x86_64__) && !defined(__clang__)
-			if(g_hasAvx512F)
-				DoProcessWaveformDensePackedDoubleRateAVX512F();
-			else
-			#endif
-				DoProcessWaveformDensePackedDoubleRateGeneric();
-		}
+			DoProcessWaveformDensePackedDoubleRateGeneric();
+		*/
+
+		//Primary 4x rate of secondary?
+		else if((upri->m_timescale * 4) == usec->m_timescale)
+			DoProcessWaveformUniform4xRateVulkan(upri, usec);
 
 		//Unequal sample rates, more math needed
-		else*/
-		{
-			if(m_gpuCorrelationAvailable)
-				DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
-			else
-				DoProcessWaveformUniformUnequalRate(upri, usec);
-		}
+		else
+			DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
 	}
 
 	//Fallback path (if at least one waveform is not dense packed)
@@ -567,43 +586,6 @@ void ScopeDeskewWizard::StartCorrelation()
 		m_correlations.push_back(m_bestCorrelation);
 		m_skews.push_back(skew);
 	}
-
-	/*m_averageSkews.push_back(skew);
-
-	//Do we have additional averages to collect?
-	if(m_averageSkews.size() < m_numAverages)
-	{
-		char tmp[128];
-		snprintf(
-			tmp,
-			sizeof(tmp),
-			"Acquire skew reference waveform (%zu/%zu)",
-			m_averageSkews.size()+1,
-			m_numAverages);
-		m_activeSecondaryPage->m_progressBar.set_text(tmp);
-
-		RequestWaveform();
-		return false;
-	}
-
-	//Last iteration
-	else
-	{
-		set_page_complete(m_activeSecondaryPage->m_grid);
-		m_activeSecondaryPage->m_progressBar.set_fraction(1);
-		m_activeSecondaryPage->m_progressBar.set_text("Done");
-
-		//Calculate median skew
-		sort(m_averageSkews.begin(), m_averageSkews.end());
-		skew = (m_averageSkews[4] + m_averageSkews[5]) / 2;
-
-		//Figure out where we want the secondary to go
-		LogTrace("Median skew: %s\n", fs.PrettyPrint(skew).c_str());
-		m_parent->m_scopeDeskewCal[scope] = skew;
-
-		next_page();
-	}
-	*/
 }
 
 void ScopeDeskewWizard::DoProcessWaveformSparse(SparseAnalogWaveform* ppri, SparseAnalogWaveform* psec)
@@ -849,6 +831,36 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRate(UniformAnalogWavefor
 	LogTrace("Correlation evaluated in %.3f sec\n", dt);
 }
 
+void ScopeDeskewWizard::DoProcessWaveformUniform4xRateVulkan(
+	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
+{
+	auto start = GetTime();
+
+	m_cmdBuf.reset();
+	m_cmdBuf.begin({});
+
+	ppri->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	psec->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
+	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
+
+	//sync in case transfer happened in another thread
+	AcceleratorBuffer<double>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
+
+	UniformCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
+	m_uniform4xRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
+	m_uniform4xRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
+	m_uniform4xRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
+	m_uniform4xRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
+
+	m_cmdBuf.end();
+	m_queue->SubmitAndBlock(m_cmdBuf);
+
+	PostprocessVulkanCorrelation();
+
+	auto dt = GetTime() - start;
+	LogTrace("GPU correlation evaluated in %.3f sec\n", dt);
+}
+
 void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec)
 {
@@ -861,7 +873,10 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	psec->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
 	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
 
-	UniformUnequalCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
+	//sync in case transfer happened in another thread
+	AcceleratorBuffer<double>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
+
+	UniformCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);

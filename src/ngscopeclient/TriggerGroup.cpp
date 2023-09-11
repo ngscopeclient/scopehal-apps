@@ -345,11 +345,9 @@ void TriggerGroup::DownloadWaveforms()
 				if(data == nullptr)
 					continue;
 
-				auto skew = m_scopeDeskewCal[scope];
-
 				data->m_startTimestamp = timeSec;
 				data->m_startFemtoseconds = timeFs;
-				data->m_triggerPhase -= skew;
+				data->m_triggerPhase -= m_session->GetDeskew(scope);
 			}
 		}
 	}
