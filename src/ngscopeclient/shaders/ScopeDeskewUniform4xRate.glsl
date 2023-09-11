@@ -63,7 +63,7 @@ layout(std430, push_constant) uniform constants
 //The output data
 layout(std430, binding=0) buffer corr
 {
-	double[] corrOut;
+	float[] corrOut;
 };
 
 //Input sample data
@@ -91,7 +91,7 @@ void main()
 
 	//Loop over samples in the primary waveform, then correlate to secondary samples
 	int samplesProcessed = 0;
-	double sum = 0;
+	float sum = 0;
 	for(int i=0; i<priLen; i += X_BLOCK_SIZE)
 	{
 		//Prefetch primary samples in parallel

@@ -110,11 +110,11 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 				"ScopeDeskewWizard.cmdbuf"));
 	}
 
-	m_corrOut.SetCpuAccessHint(AcceleratorBuffer<double>::HINT_LIKELY);
-	m_corrOut.SetGpuAccessHint(AcceleratorBuffer<double>::HINT_UNLIKELY);
+	m_corrOut.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
+	m_corrOut.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_UNLIKELY);
 	m_corrOut.resize(2*m_maxSkewSamples);
 
-	m_gpuCorrelationAvailable = g_hasShaderInt64 && g_hasShaderFloat64;
+	m_gpuCorrelationAvailable = g_hasShaderInt64;
 
 	//Clear out any existing skew calibration
 	m_session.SetDeskew(m_secondary, 0);
@@ -844,7 +844,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniform4xRateVulkan(
 	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
 
 	//sync in case transfer happened in another thread
-	AcceleratorBuffer<double>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
+	AcceleratorBuffer<float>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
 
 	UniformCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
 	m_uniform4xRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
@@ -874,7 +874,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_corrOut.PrepareForGpuAccessNonblocking(true, m_cmdBuf);
 
 	//sync in case transfer happened in another thread
-	AcceleratorBuffer<double>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
+	AcceleratorBuffer<float>::HostToDeviceTransferMemoryBarrier(m_cmdBuf);
 
 	UniformCrossCorrelateArgs args(ppri, psec, m_maxSkewSamples);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);

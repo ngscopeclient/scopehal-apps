@@ -108,11 +108,11 @@ protected:
 	StreamDescriptor m_secondaryStream;
 
 	//Combined measurements from all waveforms to date
-	std::vector<double> m_correlations;
+	std::vector<float> m_correlations;
 	std::vector<int64_t> m_skews;
 
 	//Best results found from the current waveform
-	double m_bestCorrelation;
+	float m_bestCorrelation;
 	int64_t m_bestCorrelationOffset;
 
 	bool m_gpuCorrelationAvailable;
@@ -133,7 +133,7 @@ protected:
 	std::shared_ptr<ComputePipeline> m_uniformUnequalRatePipeline;
 
 	//Output correlation data
-	AcceleratorBuffer<double> m_corrOut;
+	AcceleratorBuffer<float> m_corrOut;
 };
 
 #endif
