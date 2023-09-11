@@ -72,6 +72,7 @@ protected:
 	void StartCorrelation();
 	void DoProcessWaveformUniformUnequalRate(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec);
 	void DoProcessWaveformUniformUnequalRateVulkan(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec);
+	void PostprocessVulkanCorrelation();
 	void DoProcessWaveformSparse(SparseAnalogWaveform* ppri, SparseAnalogWaveform* psec);
 	void ChannelSelector(const char* name, Oscilloscope* scope, StreamDescriptor& stream);
 
@@ -111,6 +112,8 @@ protected:
 	//Best results found from the current waveform
 	double m_bestCorrelation;
 	int64_t m_bestCorrelationOffset;
+
+	bool m_gpuCorrelationAvailable;
 
 	//Maximum number of samples offset to consider
 	int64_t m_maxSkewSamples;

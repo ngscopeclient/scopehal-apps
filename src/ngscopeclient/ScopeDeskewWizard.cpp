@@ -109,6 +109,8 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	m_corrOut.SetCpuAccessHint(AcceleratorBuffer<double>::HINT_LIKELY);
 	m_corrOut.SetGpuAccessHint(AcceleratorBuffer<double>::HINT_UNLIKELY);
 	m_corrOut.resize(2*m_maxSkewSamples);
+
+	m_gpuCorrelationAvailable = g_hasShaderInt64 && g_hasShaderFloat64;
 }
 
 ScopeDeskewWizard::~ScopeDeskewWizard()
@@ -534,7 +536,7 @@ void ScopeDeskewWizard::StartCorrelation()
 		//Unequal sample rates, more math needed
 		else*/
 		{
-			if(g_hasShaderInt64 && g_hasShaderFloat64)
+			if(m_gpuCorrelationAvailable)
 				DoProcessWaveformUniformUnequalRateVulkan(upri, usec);
 			else
 				DoProcessWaveformUniformUnequalRate(upri, usec);
@@ -852,6 +854,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 {
 	auto start = GetTime();
 
+	m_cmdBuf.reset();
 	m_cmdBuf.begin({});
 
 	ppri->m_samples.PrepareForGpuAccessNonblocking(false, m_cmdBuf);
@@ -862,10 +865,19 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
-	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 32));
+	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
+
+	PostprocessVulkanCorrelation();
+
+	auto dt = GetTime() - start;
+	LogTrace("GPU correlation evaluated in %.3f sec\n", dt);
+}
+
+void ScopeDeskewWizard::PostprocessVulkanCorrelation()
+{
 	m_corrOut.PrepareForCpuAccess();	//todo make this part of the same queue
 
 	//Crunch results
@@ -883,7 +895,4 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 
 	m_bestCorrelation = bestCorr;
 	m_bestCorrelationOffset = bestOffset;
-
-	auto dt = GetTime() - start;
-	LogTrace("GPU correlation evaluated in %.3f sec\n", dt);
 }
