@@ -1986,6 +1986,13 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_logViewerDialog);
 	}
 
+	auto manageinst = node["manageinst"];
+	if(manageinst && manageinst.as<bool>())
+	{
+		m_manageInstrumentsDialog = make_shared<ManageInstrumentsDialog>(m_session, this);
+		AddDialog(m_manageInstrumentsDialog);
+	}
+
 	auto metrics = node["metrics"];
 	if(metrics && metrics.as<bool>())
 	{
@@ -2110,6 +2117,7 @@ bool MainWindow::SaveSessionToYaml(YAML::Node& node, const string& dataDir)
 	//Save the session state
 	node["metadata"]  = m_session.SerializeMetadata();
 	node["instruments"] = m_session.SerializeInstrumentConfiguration();
+	node["triggergroups"]  = m_session.SerializeTriggerGroups();
 	if(!Filter::GetAllInstances().empty())
 		node["decodes"] = m_session.SerializeFilterConfiguration();
 
@@ -2338,6 +2346,10 @@ YAML::Node MainWindow::SerializeDialogs()
 	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
 
 	*/
+
+	//Manage instruments dialog has no separate settings
+	if(m_manageInstrumentsDialog)
+		node["manageinst"] = true;
 
 	//Logfile viewer has no separate settings
 	if(m_logViewerDialog)

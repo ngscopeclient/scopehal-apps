@@ -257,6 +257,8 @@ public:
 	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	YAML::Node SerializeInstrumentConfiguration();
 	YAML::Node SerializeMetadata();
+	YAML::Node SerializeTriggerGroups();
+	bool LoadTriggerGroups(const YAML::Node& node);
 	YAML::Node SerializeFilterConfiguration();
 	YAML::Node SerializeMarkers();
 	bool SerializeWaveforms(const std::string& dataDir);

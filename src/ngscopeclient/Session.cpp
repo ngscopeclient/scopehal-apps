@@ -247,6 +247,8 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		return false;
 	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"]))
 		return false;
+	if(!LoadTriggerGroups(node["triggergroups"]))
+		return false;
 	if(!LoadWaveformData(version, dataDir))
 		return false;
 
@@ -781,6 +783,43 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 	return true;
 }
 
+bool Session::LoadTriggerGroups(const YAML::Node& node)
+{
+	//No trigger groups node? Older session file, use default config (one group per scope)
+	if(!node)
+		return true;
+
+	LogTrace("Loading trigger groups\n");
+
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+
+	//Clear out any existing trigger groups
+	m_triggerGroups.clear();
+
+	for(auto it : node)
+	{
+		auto gnode = it.second;
+
+		LogTrace("Loading trigger group %s\n", it.first.as<string>().c_str());
+
+		//Load the primary
+		auto scope = reinterpret_cast<Oscilloscope*>(m_idtable[gnode["primary"].as<int64_t>()]);
+		auto group = make_shared<TriggerGroup>(scope, this);
+
+		//Add secondaries
+		auto snode = gnode["secondaries"];
+		for(auto jt : snode)
+		{
+			scope = reinterpret_cast<Oscilloscope*>(m_idtable[jt.second.as<int64_t>()]);
+			group->m_secondaries.push_back(scope);
+		}
+
+		m_triggerGroups.push_back(group);
+	}
+
+	return true;
+}
+
 bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online)
 {
 	SCPIMultimeter* meter = nullptr;
@@ -972,6 +1011,30 @@ YAML::Node Session::SerializeMetadata()
 	strftime(stime, sizeof(stime), "%X", &ltime);
 	strftime(sdate, sizeof(sdate), "%Y-%m-%d", &ltime);
 	node["created"] = string(sdate) + " " + string(stime);
+
+	return node;
+}
+
+YAML::Node Session::SerializeTriggerGroups()
+{
+	YAML::Node node;
+
+	lock_guard<mutex> lock(m_triggerGroupMutex);
+	for(auto group : m_triggerGroups)
+	{
+		auto gid = m_idtable[group.get()];
+
+		//Make a node for the group
+		YAML::Node gnode;
+		gnode["primary"] = m_idtable[group->m_primary];
+
+		YAML::Node secnode;
+		for(size_t i=0; i<group->m_secondaries.size(); i++)
+			secnode[string("sec") + to_string(i)] = m_idtable[group->m_secondaries[i]];
+
+		gnode["secondaries"] = secnode;
+		node[string("group") + to_string(gid)] = gnode;
+	}
 
 	return node;
 }
