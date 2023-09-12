@@ -61,18 +61,18 @@ layout(std430, push_constant) uniform constants
 };
 
 //The output data
-layout(std430, binding=0) buffer corr
+layout(std430, binding=0) restrict writeonly buffer corr
 {
 	float[] corrOut;
 };
 
 //Input sample data
-layout(std430, binding=1) buffer primary
+layout(std430, binding=1) restrict readonly buffer primary
 {
 	float priSamples[];
 };
 
-layout(std430, binding=2) buffer secondary
+layout(std430, binding=2) restrict readonly buffer secondary
 {
 	float secSamples[];
 };
