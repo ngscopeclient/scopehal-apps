@@ -59,6 +59,10 @@ TriggerPropertiesPage::TriggerPropertiesPage(Oscilloscope* scope)
 
 	m_committedLevel = trig->GetLevel();
 	m_triggerLevel = volts.PrettyPrint(m_committedLevel);
+
+	Unit fs(Unit::UNIT_FS);
+	m_committedTriggerOffset = scope->GetTriggerOffset();
+	m_triggerOffset = fs.PrettyPrint(m_committedTriggerOffset);
 }
 
 /**
@@ -96,6 +100,35 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 	bool updated = false;
 	if(trig->GetInputCount() != 0)
 	{
+		if(StartSection("Position", graphEditorMode))
+		{
+			//Check if trigger offset changed outside the dialog
+			Unit fs(Unit::UNIT_FS);
+			float off = m_scope->GetTriggerOffset();
+			if(m_committedTriggerOffset != off)
+			{
+				m_committedTriggerOffset = off;
+				m_triggerOffset = fs.PrettyPrint(off);
+			}
+
+			//Actual trigger position
+			if(Dialog::UnitInputWithImplicitApply(
+				"Delay",
+				m_triggerOffset,
+				m_committedTriggerOffset,
+				fs))
+			{
+				m_scope->SetTriggerOffset(off);
+			}
+
+			Dialog::HelpMarker(
+				"Time offset from the nominal zero-time point of the waveform to the trigger point.\n\n"
+				""
+				);
+
+			EndSection(graphEditorMode);
+		}
+
 		if(StartSection("Inputs", graphEditorMode))
 		{
 			//TODO: cache some of this?

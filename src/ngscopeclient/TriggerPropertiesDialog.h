@@ -55,6 +55,10 @@ protected:
 	float m_committedLevel = 0;
 	std::string m_triggerLevel;
 
+	//TODO: we are losing some precision here vs internal representation
+	float m_committedTriggerOffset = 0;
+	std::string m_triggerOffset;
+
 	std::map<std::string, std::string> m_paramTempValues;
 
 	bool m_cdrLockState;
