@@ -43,27 +43,60 @@ layout(std430, push_constant) uniform constants
 {
 	uint width;
 	uint height;
+	uint outwidth;
+	uint outheight;
+	uint offset_samples;
+	float xscale;
 };
 
 layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
 
 void main()
 {
-	if(gl_GlobalInvocationID.x >= width)
+	if(gl_GlobalInvocationID.x >= outwidth)
 		return;
-	if(gl_GlobalInvocationID.y >= height)
+	if(gl_GlobalInvocationID.y >= outheight)
 		return;
 
-	//Intensity graded grayscale input
-	uint npixel = gl_GlobalInvocationID.y*width + gl_GlobalInvocationID.x;
-	float pixval = pixels[npixel];
+	//Move the entire output display down if needed, so topmost (newest) row is always visible
+	uint yreal = gl_GlobalInvocationID.y + (height - outheight);
 
-	//Look it up in the gradient texture
-	float clamped = min(pixval, 0.99);
-	clamped += 0.5 / 255.0;
-	vec4 colorOut = texture(colorRamp, vec2(clamped, 0.5));
+	//Figure out which input pixel(s) contribute to this output pixel
+	uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
+	uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
+
+	//Cap number of FFT bins per pixel if really zoomed out
+	uint maxbins = 16;
+	if( (iend - istart) > maxbins)
+		iend = istart + maxbins;
+
+	float clampedValue = 0;
+
+	//If out of bounds, nothing to do
+	if( (iend < 0) || (istart >= width) )
+	{
+	}
+
+	else
+	{
+		istart = max(0, istart);
+		iend = max(0, iend);
+
+		istart = min(width-1, istart);
+		iend = min(width-1, iend);
+
+		//Intensity graded grayscale input
+		//Highest value of the input is our output (this keeps peaks from fading away as we zoom out)
+		float pixval = 0;
+		for(uint i=istart; i <= iend; i++)
+			pixval = max(pixval, pixels[yreal*width + i]);
+
+		//Clamp to texture bounds
+		clampedValue = min(pixval, 0.99);
+	}
 
 	//Write final output
+	vec4 colorOut = texture(colorRamp, vec2(clampedValue + (0.5 / 255.0), 0.5));
 	imageStore(
 		outputTex,
 		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),

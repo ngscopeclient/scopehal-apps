@@ -154,8 +154,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 				waterfall->Refresh();
 			}
 
-			x = roundedX;
-			y = roundedY;
+			//Rendered image should be the actual plot size
 		}
 
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
@@ -1458,8 +1457,11 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 				break;
 
 			case Stream::STREAM_TYPE_WATERFALL:
+				ToneMapWaterfallWaveform(chan, cmdbuf);
+				break;
+
 			case Stream::STREAM_TYPE_EYE:
-				ToneMapDensityFunctionWaveform(chan, cmdbuf);
+				ToneMapEyeWaveform(chan, cmdbuf);
 				break;
 
 			//no tone mapping required
@@ -1725,9 +1727,72 @@ void WaveformArea::ToneMapAnalogOrDigitalWaveform(shared_ptr<DisplayedChannel> c
 }
 
 /**
-	@brief Tone maps a density function waveform by converting the internal fp32 buffer to RGBA
+	@brief Tone maps a density function waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
  */
-void WaveformArea::ToneMapDensityFunctionWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+{
+	auto tex = channel->GetTexture();
+	if(tex == nullptr)
+		return;
+
+	auto data = dynamic_cast<DensityFunctionWaveform*>(channel->GetStream().GetData());
+	if(data == nullptr)
+		return;
+
+	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
+	auto width = data->GetWidth();
+	auto height = data->GetHeight();
+	if( (width == 0) || (height == 0) )
+		return;
+
+	//Run the actual compute shader
+	auto pipe = channel->GetToneMapPipeline();
+	const auto& texmgr = m_parent->GetTextureManager();
+	pipe->BindBufferNonblocking(0, data->GetOutData(), cmdbuf);
+	pipe->BindStorageImage(
+		1,
+		**texmgr->GetSampler(),
+		tex->GetView(),
+		vk::ImageLayout::eGeneral);
+	pipe->BindSampledImage(
+		2,
+		**texmgr->GetSampler(),
+		texmgr->GetView(channel->m_colorRamp),
+		vk::ImageLayout::eShaderReadOnlyOptimal);
+
+	int64_t offset = m_group->GetXAxisOffset();
+	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
+
+	double pixelsPerX = m_group->GetPixelsPerXUnit();
+	double xscale = data->m_timescale * pixelsPerX;
+
+	WaterfallToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale );
+	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(m_width, 64), m_height);
+
+	//Add a barrier before we read from the fragment shader
+	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+	vk::ImageMemoryBarrier barrier(
+		vk::AccessFlagBits::eShaderWrite,
+		vk::AccessFlagBits::eShaderRead,
+		vk::ImageLayout::eGeneral,
+		vk::ImageLayout::eGeneral,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		tex->GetImage(),
+		range);
+	cmdbuf.pipelineBarrier(
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::PipelineStageFlagBits::eFragmentShader,
+			{},
+			{},
+			{},
+			barrier);
+}
+
+/**
+	@brief Tone maps an eye waveform by converting the internal fp32 buffer to RGBA
+ */
+void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
 	auto tex = channel->GetTexture();
 	if(tex == nullptr)

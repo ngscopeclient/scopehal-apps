@@ -75,13 +75,21 @@ public:
 class WaterfallToneMapArgs
 {
 public:
-	WaterfallToneMapArgs(uint32_t w, uint32_t h)
+	WaterfallToneMapArgs(uint32_t w, uint32_t h, uint32_t outwidth, uint32_t outheight, uint32_t o, float x)
 	: m_width(w)
 	, m_height(h)
+	, m_outwidth(outwidth)
+	, m_outheight(outheight)
+	, m_offsetSamples(o)
+	, m_xscale(x)
 	{}
 
 	uint32_t m_width;
 	uint32_t m_height;
+	uint32_t m_outwidth;
+	uint32_t m_outheight;
+	uint32_t m_offsetSamples;
+	float m_xscale;
 };
 
 struct ConfigPushConstants
@@ -465,7 +473,8 @@ protected:
 		ImU32 color);
 	void MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop);
 	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
-	void ToneMapDensityFunctionWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogOrDigitalWaveform(
 		std::shared_ptr<DisplayedChannel> channel,
 		vk::raii::CommandBuffer& cmdbuf,
