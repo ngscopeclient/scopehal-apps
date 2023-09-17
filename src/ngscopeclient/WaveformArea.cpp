@@ -97,7 +97,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 
 	@param newSize	New size of WaveformArea
 
-	@return true if size has changed, false otherwose
+	@return true if size has changed, false otherwise
  */
 bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 {
@@ -151,7 +151,11 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			if(waterfall->GetHeight() != roundedY)
 			{
 				waterfall->SetHeight(roundedY);
-				waterfall->Refresh();
+
+				FilterGraphExecutor ex;
+				set<FlowGraphNode*> nodesToUpdate;
+				nodesToUpdate.emplace(waterfall);
+				ex.RunBlocking(nodesToUpdate);
 			}
 
 			//Rendered image should be the actual plot size
