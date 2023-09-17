@@ -66,7 +66,7 @@ void main()
 	uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
 
 	//Cap number of FFT bins per pixel if really zoomed out
-	uint maxbins = 16;
+	uint maxbins = 8;
 	if( (iend - istart) > maxbins)
 		iend = istart + maxbins;
 
