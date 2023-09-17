@@ -77,9 +77,13 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	{
 		case Stream::STREAM_TYPE_EYE:
 		case Stream::STREAM_TYPE_SPECTROGRAM:
+			m_toneMapPipe = make_shared<ComputePipeline>(
+				"shaders/EyeToneMap.spv", 1, sizeof(EyeToneMapArgs), 1, 1);
+			break;
+
 		case Stream::STREAM_TYPE_WATERFALL:
 			m_toneMapPipe = make_shared<ComputePipeline>(
-				"shaders/EyeToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1, 1);
+				"shaders/WaterfallToneMap.spv", 1, sizeof(WaterfallToneMapArgs), 1, 1);
 			break;
 
 		default:
@@ -123,8 +127,6 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			{
 				eye->SetWidth(roundedX);
 				eye->SetHeight(roundedY);
-
-				//TODO: do we really want to do this every resize? might be better to set a deferred flag to refresh?
 				eye->Refresh();
 			}
 
@@ -143,15 +145,12 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			}
 		}
 
-		//Same deal for waterfalls
+		//Waterfalls only care about height
 		else if(waterfall)
 		{
-			if( (waterfall->GetWidth() != roundedX) || (waterfall->GetHeight() != roundedY) )
+			if(waterfall->GetHeight() != roundedY)
 			{
-				waterfall->SetWidth(roundedX);
 				waterfall->SetHeight(roundedY);
-
-				//TODO: do we really want to do this every resize? might be better to set a deferred flag to refresh?
 				waterfall->Refresh();
 			}
 
@@ -724,7 +723,25 @@ void WaveformArea::RenderAnalogWaveform(shared_ptr<DisplayedChannel> channel, Im
  */
 void WaveformArea::RenderWaterfallWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
 {
-	RenderEyeWaveform(channel, start, size);
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Mark the waveform as resized
+	if(channel->UpdateSize(size, m_parent))
+	{
+		m_parent->SetNeedRender();
+		if(data != stream.GetData())
+			return;
+	}
+
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
 }
 
 /**

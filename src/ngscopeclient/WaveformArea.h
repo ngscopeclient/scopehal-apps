@@ -72,6 +72,18 @@ public:
 	uint32_t m_height;
 };
 
+class WaterfallToneMapArgs
+{
+public:
+	WaterfallToneMapArgs(uint32_t w, uint32_t h)
+	: m_width(w)
+	, m_height(h)
+	{}
+
+	uint32_t m_width;
+	uint32_t m_height;
+};
+
 struct ConfigPushConstants
 {
 	int64_t innerXoff;
