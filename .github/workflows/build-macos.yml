@@ -74,13 +74,11 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: glscopeclient-macos
+        name: ngscopeclient-macos
         path: |
-          build/src/glscopeclient/glscopeclient
-          build/src/glscopeclient/gradients/*
-          build/src/glscopeclient/shaders/*
-          build/src/glscopeclient/styles/*
-          build/lib/graphwidget/libgraphwidget.dylib
+          build/src/ngscopeclient/ngscopeclient
+          build/src/ngscopeclient/icons/*
+          build/src/ngscopeclient/shaders/*
           build/lib/scopehal/libscopehal.dylib
           build/lib/scopeprotocols/libscopeprotocols.dylib
 
@@ -88,5 +86,5 @@ jobs:
       if: ${{ false }} # a LaTeX toolchain for macOS takes a while to install, so skip for now
       uses: actions/upload-artifact@v3
       with:
-        name: glscopeclient-manual
-        path: build/doc/glscopeclient-manual.pdf
+        name: ngscopeclient-manual
+        path: build/doc/ngscopeclient-manual.pdf
