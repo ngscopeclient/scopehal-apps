@@ -235,7 +235,6 @@ if(WIXPATH AND WIN32)
 
 		COMMAND ${CMAKE_COMMAND} -E copy
 				${CMAKE_SOURCE_DIR}/src/LICENSE
-				${CMAKE_BINARY_DIR}/lib/graphwidget/libgraphwidget.dll
 				${CMAKE_BINARY_DIR}/lib/log/liblog.dll
 				${CMAKE_BINARY_DIR}/lib/scopeexports/libscopeexports.dll
 				${CMAKE_BINARY_DIR}/lib/scopehal/libscopehal.dll
@@ -244,7 +243,7 @@ if(WIXPATH AND WIN32)
 				${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64
 		COMMAND bash -c \"cp -R /mingw64/share/licenses ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64\"
 		COMMAND bash -c \"wget https://github.com/bvernoux/mingw-bundledlls/releases/download/v0.2.4/mingw-bundledlls-0.2.4-1-x86_64.pkg.tar.zst && pacman -U --noconfirm mingw-bundledlls-*.pkg.tar.zst && rm -f mingw-bundledlls-*.pkg.tar.zst\"
-		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/graphwidget\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/ngscopeclient.exe --copy\")
+		COMMAND bash -c \"export MINGW_BUNDLEDLLS_SEARCH_PATH='${MINGW64_BIN_PATH}\;../../lib/log\;../../lib/scopeexports\;../../lib/scopehal\;../../lib/scopeprotocols\;../../lib/xptools' && mingw-bundledlls ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/ngscopeclient.exe --copy\")
 
 	add_custom_target(
 		ngscopeclient_portable_zip_windows_x64 ALL
