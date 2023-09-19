@@ -76,7 +76,6 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 	switch(m_stream.GetType())
 	{
 		case Stream::STREAM_TYPE_EYE:
-		case Stream::STREAM_TYPE_SPECTROGRAM:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/EyeToneMap.spv", 1, sizeof(EyeToneMapArgs), 1, 1);
 			break;
@@ -84,6 +83,11 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		case Stream::STREAM_TYPE_WATERFALL:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/WaterfallToneMap.spv", 1, sizeof(WaterfallToneMapArgs), 1, 1);
+			break;
+
+		case Stream::STREAM_TYPE_SPECTROGRAM:
+			m_toneMapPipe = make_shared<ComputePipeline>(
+				"shaders/SpectrogramToneMap.spv", 1, sizeof(SpectrogramToneMapArgs), 1, 1);
 			break;
 
 		default:
@@ -1827,7 +1831,7 @@ void WaveformArea::ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> ch
 }
 
 /**
-	@brief Tone maps a density function waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
+	@brief Tone maps a spectrogram waveform by converting the internal fp32 buffer to RGBA and cropping/scaling
  */
 void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
 {
@@ -1866,8 +1870,13 @@ void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> 
 	double pixelsPerX = m_group->GetPixelsPerXUnit();
 	double xscale = data->m_timescale * pixelsPerX;
 
-	WaterfallToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale );
+	SpectrogramToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale );
 	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(m_width, 64), m_height);
+
+	LogDebug("offset_samples = %ld\n", offset_samples);
+	LogDebug("xscale = %f\n", xscale);
+	LogDebug("w/h = %zu, %zu\n", width, height);
+	LogDebug("m_w/m_h = %f, %f\n", m_width, m_height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);

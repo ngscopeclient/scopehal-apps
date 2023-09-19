@@ -33,6 +33,7 @@ add_compute_shaders(
 		ScopeDeskewUniform4xRate.glsl
 		ScopeDeskewUniformUnequalRate.glsl
 		ScopeDeskewUniformEqualRate.glsl
+		SpectrogramToneMap.glsl
 		WaterfallToneMap.glsl
 		WaveformToneMap.glsl
 	)
