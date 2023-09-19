@@ -37,6 +37,7 @@
 #include "MainWindow.h"
 #include "../../scopehal/TwoLevelTrigger.h"
 #include "../../scopeprotocols/EyePattern.h"
+#include "../../scopeprotocols/SpectrogramFilter.h"
 #include "../../scopeprotocols/Waterfall.h"
 #include "../../scopehal/DensityFunctionWaveform.h"
 
@@ -337,9 +338,11 @@ StreamDescriptor WaveformArea::GetFirstAnalogStream()
 }
 
 /**
-	@brief Returns the first analog stream or eye pattern displayed in this area.
+	@brief Returns the first analog, spectrogram or eye pattern stream displayed in this area.
 
-	If no analog waveforms or eye patterns are visible, returns a null stream.
+	TODO: this really means "has a useful Y axis"
+
+	If no suitable waveforms returns a null stream.
  */
 StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 {
@@ -347,6 +350,8 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 	{
 		auto stream = chan->GetStream();
 		if(stream.GetType() == Stream::STREAM_TYPE_ANALOG)
+			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
 			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
 			return stream;
@@ -1839,7 +1844,7 @@ void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> 
 	if(tex == nullptr)
 		return;
 
-	auto data = dynamic_cast<DensityFunctionWaveform*>(channel->GetStream().GetData());
+	auto data = dynamic_cast<SpectrogramWaveform*>(channel->GetStream().GetData());
 	if(data == nullptr)
 		return;
 
@@ -1867,16 +1872,18 @@ void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> 
 	int64_t offset = m_group->GetXAxisOffset();
 	int64_t offset_samples = (offset - data->m_triggerPhase) / data->m_timescale;
 
-	double pixelsPerX = m_group->GetPixelsPerXUnit();
-	double xscale = data->m_timescale * pixelsPerX;
+	//Invert X (and Y) scales because multiply in the shader is faster than divide
+	double xscale = 1.0 / (data->m_timescale * m_group->GetPixelsPerXUnit());
 
-	SpectrogramToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale );
+	//Rescale Y offset to screen pixels
+	//Note that we actually care about offset from our *bottom*, but GetOffset() returns offset from our *midpoint*
+	int32_t yoff = YAxisUnitsToPixels(-channel->GetStream().GetOffset()) - m_height/2;
+
+	//Rescale Y to "spectrogram bins per pixel" vs "Hz per pixel"
+	float yscale = 1.0 / (m_pixelsPerYAxisUnit * data->GetBinSize());
+
+	SpectrogramToneMapArgs args(width, height, m_width, m_height, offset_samples, xscale, yoff, yscale);
 	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(m_width, 64), m_height);
-
-	LogDebug("offset_samples = %ld\n", offset_samples);
-	LogDebug("xscale = %f\n", xscale);
-	LogDebug("w/h = %zu, %zu\n", width, height);
-	LogDebug("m_w/m_h = %f, %f\n", m_width, m_height);
 
 	//Add a barrier before we read from the fragment shader
 	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);

@@ -95,21 +95,26 @@ public:
 class SpectrogramToneMapArgs
 {
 public:
-	SpectrogramToneMapArgs(uint32_t w, uint32_t h, uint32_t outwidth, uint32_t outheight, uint32_t o, float x)
+	SpectrogramToneMapArgs(uint32_t w, uint32_t h, uint32_t outwidth, uint32_t outheight, uint32_t xo,
+		float x, int32_t yo, float y)
 	: m_width(w)
 	, m_height(h)
 	, m_outwidth(outwidth)
 	, m_outheight(outheight)
-	, m_offsetSamples(o)
+	, m_xoff(xo)
 	, m_xscale(x)
+	, m_yoff(yo)
+	, m_yscale(y)
 	{}
 
 	uint32_t m_width;
 	uint32_t m_height;
 	uint32_t m_outwidth;
 	uint32_t m_outheight;
-	uint32_t m_offsetSamples;
+	uint32_t m_xoff;
 	float m_xscale;
+	int32_t m_yoff;
+	float m_yscale;
 };
 
 struct ConfigPushConstants

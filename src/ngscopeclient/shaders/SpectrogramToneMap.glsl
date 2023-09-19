@@ -45,8 +45,10 @@ layout(std430, push_constant) uniform constants
 	uint height;
 	uint outwidth;
 	uint outheight;
-	uint offset_samples;
+	uint xoff;
 	float xscale;
+	uint yoff;
+	float yscale;
 };
 
 layout(local_size_x=64, local_size_y=1, local_size_z=1) in;
@@ -58,38 +60,51 @@ void main()
 	if(gl_GlobalInvocationID.y >= outheight)
 		return;
 
-	//Move the entire output display down if needed, so topmost (newest) row is always visible
-	uint yreal = gl_GlobalInvocationID.y + (height - outheight);
-
 	//Figure out which input pixel(s) contribute to this output pixel
-	uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
-	uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
+	uint xstart = uint(floor(gl_GlobalInvocationID.x * xscale)) + xoff;
+	uint xend = uint(floor((gl_GlobalInvocationID.x + 1) * xscale)) + xoff;
 
-	//Cap number of FFT bins per pixel if really zoomed out
-	uint maxbins = 256;
-	if( (iend - istart) > maxbins)
-		iend = istart + maxbins;
+	uint ystart = uint(floor((gl_GlobalInvocationID.y + yoff) * yscale));
+	uint yend = uint(floor(((gl_GlobalInvocationID.y + yoff) + 1) * yscale));
+
+	//Cap number of input values per pixel if really zoomed out
+	uint xmaxbins = 256;
+	if( (xend - xstart) > xmaxbins)
+		xend = xstart + xmaxbins;
+
+	uint ymaxbins = 256;
+	if( (yend - ystart) > ymaxbins)
+		yend = ystart + ymaxbins;
 
 	float clampedValue = 0;
 
 	//If out of bounds, nothing to do
-	if( (iend < 0) || (istart >= width) )
+	if( (xend < 0) || (xstart >= width) || (ystart < 0) || (yend >= height) )
 	{
 	}
 
 	else
 	{
-		istart = max(0, istart);
-		iend = max(0, iend);
+		//Clamp coordinates
+		xstart = max(0, xstart);
+		xend = max(0, xend);
+		xstart = min(width-1, xstart);
+		xend = min(width-1, xend);
 
-		istart = min(width-1, istart);
-		iend = min(width-1, iend);
+		ystart = max(0, ystart);
+		yend = max(0, yend);
+		ystart = min(height-1, ystart);
+		yend = min(height-1, yend);
 
 		//Intensity graded grayscale input
 		//Highest value of the input is our output (this keeps peaks from fading away as we zoom out)
 		float pixval = 0;
-		for(uint i=istart; i <= iend; i++)
-			pixval = max(pixval, pixels[yreal*width + i]);
+		for(uint y=ystart; y <= yend; y++)
+		{
+			uint base = ystart*width;
+			for(uint x=xstart; x <= xend; x++)
+				pixval = max(pixval, pixels[base+x]);
+		}
 
 		//Clamp to texture bounds
 		clampedValue = min(pixval, 0.99);
