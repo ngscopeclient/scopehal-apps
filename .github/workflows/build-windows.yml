@@ -90,7 +90,6 @@ jobs:
       shell: msys2 {0}
       run: |
         pacman -U --noconfirm msys2/*.zst
-        glscopeclient --help
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
