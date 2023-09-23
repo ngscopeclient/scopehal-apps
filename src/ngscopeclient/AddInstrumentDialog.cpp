@@ -42,7 +42,7 @@ using namespace std;
 // Construction / destruction
 
 AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
-	: Dialog(title, "AddInstrument", ImVec2(600, 150))
+	: Dialog(title, string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 150))
 	, m_session(session)
 	, m_nickname(nickname)
 	, m_selectedDriver(0)
