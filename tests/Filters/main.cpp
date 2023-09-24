@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 	ScopeProtocolStaticInit();
 
 	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/glscopeclient/");
+	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
 
 	//Initialize the RNG
 	g_rng.seed(0);
