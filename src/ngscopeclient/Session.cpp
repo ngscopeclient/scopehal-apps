@@ -2019,11 +2019,6 @@ void Session::RefreshAllFilters()
 		UpdatePacketManagers(nodes);
 	}
 
-	//Update statistic displays after the filter graph update is complete
-	//for(auto g : m_waveformGroups)
-	//	g->RefreshMeasurements();
-	LogTrace("TODO: refresh statistics\n");
-
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
 }
 
@@ -2067,11 +2062,6 @@ bool Session::RefreshDirtyFilters()
 		m_graphExecutor.RunBlocking(nodesToUpdate);
 		UpdatePacketManagers(nodesToUpdate);
 	}
-
-	//Update statistic displays after the filter graph update is complete
-	//for(auto g : m_waveformGroups)
-	//	g->RefreshMeasurements();
-	LogTrace("TODO: refresh statistics\n");
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
 

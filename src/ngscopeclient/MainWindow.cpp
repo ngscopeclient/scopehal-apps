@@ -851,7 +851,7 @@ void MainWindow::ToolbarButtons()
 		ClearPersistence();
 		m_session.ClearSweeps();
 	}
-	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated statistics");
+	Dialog::Tooltip("Clear waveform persistence, eye patterns, and accumulated filter block state");
 
 	//Fullscreen toggle
 	ImGui::SameLine(0.0, 0.0);

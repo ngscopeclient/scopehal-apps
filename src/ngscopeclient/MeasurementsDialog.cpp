@@ -80,7 +80,7 @@ bool MeasurementsDialog::DoRender()
 
 	float width = ImGui::GetFontSize();
 
-	int ncols = 2;	//TODO: add statistics
+	int ncols = 2;
 	bool deleteRow = false;
 	size_t rowToDelete = 0;
 	if(ImGui::BeginTable("table", ncols, flags))
@@ -88,7 +88,6 @@ bool MeasurementsDialog::DoRender()
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 15*width);
 		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 10*width);
-		//TODO: statistics
 		ImGui::TableHeadersRow();
 
 		//TODO: double click value opens properties dialog
