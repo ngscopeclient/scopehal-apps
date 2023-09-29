@@ -46,6 +46,7 @@
 using namespace std;
 
 void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub);
+void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb);
 
 TEST_CASE("Filter_Subtract")
 {
@@ -67,16 +68,14 @@ TEST_CASE("Filter_Subtract")
 	const size_t depth = 10000000;
 	UniformAnalogWaveform ua;
 	UniformAnalogWaveform ub;
+	UniformAnalogWaveform ubase;
+	ubase.Resize(depth);
 
 	//Set up filter configuration
 	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
 	g_scope->GetOscilloscopeChannel(1)->SetData(&ub, 0);
 	filter->SetInput("IN+", g_scope->GetOscilloscopeChannel(0));
 	filter->SetInput("IN-", g_scope->GetOscilloscopeChannel(1));
-
-	#ifdef __x86_64__
-		bool reallyHasAvx2 = g_hasAvx2;
-	#endif
 
 	const size_t niter = 5;
 	for(size_t i=0; i<niter; i++)
@@ -94,55 +93,52 @@ TEST_CASE("Filter_Subtract")
 			ua.PrepareForGpuAccess();
 			ub.PrepareForGpuAccess();
 
-			g_gpuFilterEnabled = false;
-			#ifdef __x86_64__
-				g_hasAvx2 = false;
-			#endif
-
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU with no AVX
+			//Baseline on the CPU
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			SubtractCpu(&ubase, &ua, &ub);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
+			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
-			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+			VerifySubtractionResult(&ua, &ub, &ubase);
 
-			#ifdef __x86_64__
-				//Try again with AVX
-				if(reallyHasAvx2)
-				{
-					g_hasAvx2 = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					double dt = GetTime() - start;
-					LogVerbose("CPU (AVX2):   %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-					VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
-				}
-			#endif /* __x86_64__ */
-
-			//Try again on the GPU
-			g_gpuFilterEnabled = true;
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU:          %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
 		}
 	}
 
-	#ifdef __x86_64__
-		g_hasAvx2 = reallyHasAvx2;
-	#endif
-
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 	g_scope->GetOscilloscopeChannel(1)->Detach(0);
 
 	filter->Release();
+}
+
+void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb)
+{
+	REQUIRE(pout != nullptr);
+	REQUIRE(pa != nullptr);
+	REQUIRE(pb != nullptr);
+	REQUIRE(pout->size() == pa->size());
+	REQUIRE(pa->size() == pb->size());
+
+	pout->PrepareForCpuAccess();
+	pa->PrepareForCpuAccess();
+	pb->PrepareForCpuAccess();
+
+	float* out = pout->m_samples.GetCpuPointer();
+
+	size_t len = pa->size();
+
+	for(size_t i=0; i<len; i++)
+		out[i] = pa->m_samples[i] - pb->m_samples[i];
+
+	pout->MarkModifiedFromCpu();
 }
 
 void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub)
