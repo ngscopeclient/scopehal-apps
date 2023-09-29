@@ -90,6 +90,8 @@ MultimeterDialog::~MultimeterDialog()
 
 bool MultimeterDialog::DoRender()
 {
+	float valueWidth = 10 * ImGui::GetFontSize();
+
 	//Device information
 	if(ImGui::CollapsingHeader("Info"))
 	{
@@ -103,11 +105,22 @@ bool MultimeterDialog::DoRender()
 			auto tname = transport->GetName();
 			auto tstring = transport->GetConnectionString();
 
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Make", &vendor[0], vendor.size());
+
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Model", &name[0], name.size());
+
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Serial", &serial[0], serial.size());
+
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Driver", &driver[0], driver.size());
+
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Transport", &tname[0], tname.size());
+
+			ImGui::SetNextItemWidth(valueWidth);
 			ImGui::InputText("Path", &tstring[0], tstring.size());
 
 		ImGui::EndDisabled();
@@ -119,7 +132,6 @@ bool MultimeterDialog::DoRender()
 	bool firstUpdateDone = m_state->m_firstUpdateDone.load();
 	bool hasSecondary = m_meter->GetSecondaryMeterMode() != Multimeter::NONE;
 
-	float valueWidth = 100;
 	auto primaryMode = m_meter->ModeToText(m_meter->GetMeterMode());
 	auto secondaryMode = m_meter->ModeToText(m_meter->GetSecondaryMeterMode());
 
@@ -132,6 +144,7 @@ bool MultimeterDialog::DoRender()
 		//Channel selector (hide if we have only one channel)
 		if(m_meter->GetChannelCount() > 1)
 		{
+			ImGui::SetNextItemWidth(valueWidth);
 			if(Combo("Channel", m_channelNames, m_selectedChannel))
 				m_meter->SetCurrentMeterChannel(m_selectedChannel);
 
@@ -139,6 +152,7 @@ bool MultimeterDialog::DoRender()
 		}
 
 		//Primary operating mode selector
+		ImGui::SetNextItemWidth(valueWidth);
 		if(Combo("Mode", m_primaryModeNames, m_primaryModeSelector))
 			OnPrimaryModeChanged();
 		HelpMarker("Select the type of measurement to make.");
@@ -146,6 +160,7 @@ bool MultimeterDialog::DoRender()
 		//Secondary operating mode selector
 		if(m_secondaryModeNames.empty())
 			ImGui::BeginDisabled();
+		ImGui::SetNextItemWidth(valueWidth);
 		if(Combo("Secondary Mode", m_secondaryModeNames, m_secondaryModeSelector))
 			m_meter->SetSecondaryMeterMode(m_secondaryModes[m_secondaryModeSelector]);
 		if(m_secondaryModeNames.empty())
