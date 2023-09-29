@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for Subtract filter
+	@brief Unit test for Add filter
  */
 #ifdef _CATCH2_V3
 #include <catch2/catch_all.hpp>
@@ -45,17 +45,17 @@
 
 using namespace std;
 
-void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub);
-void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb);
+void VerifyAdditionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* padd);
+void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb);
 
-TEST_CASE("Filter_Subtract")
+TEST_CASE("Filter_Add")
 {
-	auto filter = dynamic_cast<SubtractFilter*>(Filter::CreateFilter("Subtract", "#ffffff"));
+	auto filter = dynamic_cast<AddFilter*>(Filter::CreateFilter("Add", "#ffffff"));
 	REQUIRE(filter != NULL);
 	filter->AddRef();
 
 	//Create a queue and command buffer
-	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_Subtract.queue"));
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_Add.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queue->m_family );
@@ -74,8 +74,8 @@ TEST_CASE("Filter_Subtract")
 	//Set up filter configuration
 	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
 	g_scope->GetOscilloscopeChannel(1)->SetData(&ub, 0);
-	filter->SetInput("IN+", g_scope->GetOscilloscopeChannel(0));
-	filter->SetInput("IN-", g_scope->GetOscilloscopeChannel(1));
+	filter->SetInput("a", g_scope->GetOscilloscopeChannel(0));
+	filter->SetInput("b", g_scope->GetOscilloscopeChannel(1));
 
 	const size_t niter = 5;
 	for(size_t i=0; i<niter; i++)
@@ -98,18 +98,18 @@ TEST_CASE("Filter_Subtract")
 
 			//Baseline on the CPU
 			double start = GetTime();
-			SubtractCpu(&ubase, &ua, &ub);
+			AddCpu(&ubase, &ua, &ub);
 			double tbase = GetTime() - start;
 			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
 
-			VerifySubtractionResult(&ua, &ub, &ubase);
+			VerifyAdditionResult(&ua, &ub, &ubase);
 
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
 			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
-			VerifySubtractionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
+			VerifyAdditionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
 		}
 	}
 
@@ -119,7 +119,7 @@ TEST_CASE("Filter_Subtract")
 	filter->Release();
 }
 
-void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb)
+void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb)
 {
 	REQUIRE(pout != nullptr);
 	REQUIRE(pa != nullptr);
@@ -136,25 +136,25 @@ void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, Uniform
 	size_t len = pa->size();
 
 	for(size_t i=0; i<len; i++)
-		out[i] = pa->m_samples[i] - pb->m_samples[i];
+		out[i] = pa->m_samples[i] + pb->m_samples[i];
 
 	pout->MarkModifiedFromCpu();
 }
 
-void VerifySubtractionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* psub)
+void VerifyAdditionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* padd)
 {
-	REQUIRE(psub != nullptr);
-	REQUIRE(psub->size() == min(pa->size(), pb->size()) );
+	REQUIRE(padd != nullptr);
+	REQUIRE(padd->size() == min(pa->size(), pb->size()) );
 
 	pa->PrepareForCpuAccess();
 	pb->PrepareForCpuAccess();
-	psub->PrepareForCpuAccess();
+	padd->PrepareForCpuAccess();
 
-	size_t len = psub->size();
+	size_t len = padd->size();
 
 	for(size_t i=0; i<len; i++)
 	{
-		float expected = pa->m_samples[i] - pb->m_samples[i];
-		REQUIRE(fabs(psub->m_samples[i] - expected) < 1e-6);
+		float expected = pa->m_samples[i] + pb->m_samples[i];
+		REQUIRE(fabs(padd->m_samples[i] - expected) < 1e-6);
 	}
 }
