@@ -1,6 +1,7 @@
 add_executable(Filters
 	main.cpp
 
+	Filter_Add.cpp
 	Filter_DeEmbed.cpp
 	Filter_FIR.cpp
 	Filter_FFT.cpp
