@@ -1431,6 +1431,10 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 	//If it's a scalar, add to the measurements dialog (creating it if necessary)
 	if(stream.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
 	{
+		//Don't add infrequently used values by default
+		if(stream.GetFlags() & Stream::STREAM_INFREQUENTLY_USED)
+			return;
+
 		LogTrace("It's a scalar, adding to measurements\n");
 		if(m_measurementsDialog == nullptr)
 		{
