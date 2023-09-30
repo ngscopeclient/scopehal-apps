@@ -2183,7 +2183,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	if(aestream && (aestream.GetType() == Stream::STREAM_TYPE_EYE))
 		canDragYAxis = false;
 
-	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow && canDragYAxis)
+	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow && canDragYAxis && (m_dragState == DRAG_STATE_NONE))
 	{
 		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
