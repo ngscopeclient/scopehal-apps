@@ -33,6 +33,8 @@ jobs:
           liblxi-dev \
           texlive \
           texlive-fonts-extra \
+          texlive-extra-utils \
+          dvipng \
           libglew-dev \
           libvulkan-dev \
           glslang-dev \
