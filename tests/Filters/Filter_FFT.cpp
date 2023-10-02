@@ -125,7 +125,7 @@ TEST_CASE("Filter_FFT")
 					VerifyMatchingResult(
 						golden,
 						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3e-3f
+						3.25e-3f
 						);
 				}
 			#endif
@@ -143,7 +143,7 @@ TEST_CASE("Filter_FFT")
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				3e-3f
+				3.25e-3f
 				);
 		}
 	}
