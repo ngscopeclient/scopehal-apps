@@ -103,6 +103,8 @@ void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin, flo
 	wfm->MarkModifiedFromCpu();
 
 	wfm->m_revision ++;
+	if(wfm->m_timescale == 0)
+		wfm->m_timescale = 1000;
 }
 
 void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance)
@@ -120,7 +122,7 @@ void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<fl
 
 		if( (delta >= tolerance) && firstFail)
 		{
-			LogError("first fail at i=%zu\n", i);
+			LogError("first fail at i=%zu (delta=%f, tolerance=%f)\n", i, delta, tolerance);
 			firstFail = false;
 		}
 
