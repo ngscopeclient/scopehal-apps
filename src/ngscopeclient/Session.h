@@ -254,6 +254,7 @@ public:
 	void Clear();
 	void ClearBackgroundThreads();
 
+	bool PreLoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	bool LoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	YAML::Node SerializeInstrumentConfiguration();
 	YAML::Node SerializeMetadata();
@@ -427,6 +428,7 @@ protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
 	bool LoadInstruments(int version, const YAML::Node& node, bool online);
+	bool PreLoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);
 	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
 	bool LoadOscilloscope(int version, const YAML::Node& node, bool online);
@@ -446,6 +448,9 @@ protected:
 		int scope_id,
 		int waveform_id,
 		std::string format);
+
+	///@brief Version of the file being loaded
+	int m_fileLoadVersion;
 
 	///@brief Deskew correction coefficients for multi-scope
 	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;

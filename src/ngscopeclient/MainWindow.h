@@ -376,6 +376,7 @@ protected:
 
 	void OnOpenFile(bool online);
 	void DoOpenFile(const std::string& sessionPath, bool online);
+	bool PreLoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 	bool LoadSessionFromYaml(const YAML::Node& node, const std::string& dataDir, bool online);
 public:
 	bool LoadUIConfiguration(int version, const YAML::Node& node);
@@ -405,6 +406,12 @@ protected:
 
 	///@brief Browser for pending file loads
 	std::shared_ptr<FileBrowser> m_fileBrowser;
+
+	///@brief YAML structure for file we're currently loading
+	std::vector<YAML::Node> m_fileBeingLoaded;
+
+	///@brief True if we're actively loading a file
+	bool m_fileLoadInProgress;
 
 	///@brief Current session file path
 	std::string m_sessionFileName;

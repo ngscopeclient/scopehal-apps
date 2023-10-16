@@ -106,6 +106,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_persistenceDecay(0.8)
 	, m_session(this)
 	, m_sessionClosing(false)
+	, m_fileLoadInProgress(false)
 	, m_openOnline(false)
 	, m_texmgr(queue)
 	, m_needRender(false)
@@ -1691,33 +1692,50 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 	try
 	{
 		//Load all YAML
-		auto docs = YAML::LoadAllFromFile(sessionPath);
-		if(docs.size() != 1)
+		m_fileBeingLoaded = YAML::LoadAllFromFile(sessionPath);
+		if(m_fileBeingLoaded.size() != 1)
 		{
 			ShowErrorPopup(
 				"File loading error",
 				string("Could not load the file \"") + sessionPath + "\"!\n\n" +
 				"The file may not be in .scopesession format, or may have been corrupted.\n\n" +
-				"YAML parsing successfuul, but expected one document and found " + to_string(docs.size()) + " instead.");
+				"YAML parsing successful, but expected one document and found " + to_string(m_fileBeingLoaded.size()) + " instead.");
 			return;
 		}
 
-		//Run the actual load
-		if(LoadSessionFromYaml(docs[0], datadir, online))
-		{
-			//If we get here, all good
-			m_sessionFileName = sessionPath;
-			m_sessionDataDir = datadir;
+		//Save file path immediately
+		m_sessionFileName = sessionPath;
+		m_sessionDataDir = datadir;
 
-			m_recentFiles[sessionPath] = time(nullptr);
-			SaveRecentFileList();
-		}
+		//Run preload first, error out if this fails
+		if(!PreLoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, online))
+			m_fileLoadInProgress = false;
 
-		//Loading failed, clean up any half-loaded stuff
-		//Do not print any error message; LoadSessionFromYaml() is responsible for calling ShowErrorPopup()
-		//if something goes wrong there.
+		//Preload successful
 		else
-			CloseSession();
+		{
+			//Preload completed with no warnings, or loading offline? Commit now
+			//if(!online)
+			if(true)
+			{
+				if(LoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, online))
+				{
+					m_recentFiles[sessionPath] = time(nullptr);
+					SaveRecentFileList();
+				}
+
+				//Loading failed, clean up any half-loaded stuff
+				//Do not print any error message; LoadSessionFromYaml() is responsible for calling ShowErrorPopup()
+				//if something goes wrong there.
+				else
+					CloseSession();
+			}
+
+			//Preload generated warnings, pop up confirmation dialog
+			else
+				m_fileLoadInProgress = true;
+
+		}
 	}
 	catch(const YAML::BadFile& ex)
 	{
@@ -1741,20 +1759,15 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 }
 
 /**
-	@brief Deserialize a YAML::Node (and associated data directory) to the current session
+	@brief Sanity check a YAML::Node (and associated data directory) to the current session without fully loading
 
 	@param node		Root YAML node of the file
 	@param dataDir	Path to the _data directory associated with the session
 	@param online	True if we should reconnect to instruments
 
-	TODO: do we want some kind of popup to warn about reconfiguring instruments into potentially dangerous states?
-	Examples include:
-	* changing V/div significantly on a scope channel
-	* enabling output of a signal generator or power supply
-
 	@return			True if successful, false on error
  */
-bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
+bool MainWindow::PreLoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
 {
 	//Load imgui_node_editor settings first (before creating the session)
 	ifstream ifs(dataDir + "/filtergraph.json");
@@ -1764,6 +1777,29 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 		ifs.close();
 	}
 
+	if(!m_session.PreLoadFromYaml(node, dataDir, online))
+	{
+		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state
+		CloseSession();
+		return false;
+	}
+
+	return true;
+}
+
+/**
+	@brief Deserialize a YAML::Node (and associated data directory) to the current session
+
+	You must call PreLoadSessionFromYaml before calling this function.
+
+	@param node		Root YAML node of the file
+	@param dataDir	Path to the _data directory associated with the session
+	@param online	True if we should reconnect to instruments
+
+	@return			True if successful, false on error
+ */
+bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataDir, bool online)
+{
 	if(!m_session.LoadFromYaml(node, dataDir, online))
 	{
 		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state

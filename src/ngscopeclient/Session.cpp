@@ -72,7 +72,8 @@ using namespace std;
 // Construction / destruction
 
 Session::Session(MainWindow* wnd)
-	: m_mainWindow(wnd)
+	: m_fileLoadVersion(0)
+	, m_mainWindow(wnd)
 	, m_shuttingDown(false)
 	, m_modifiedSinceLastSave(false)
 	, m_tArm(0)
@@ -210,16 +211,44 @@ void Session::Clear()
 // Scopesession management
 
 /**
-	@brief Deserialize a YAML::Node (and associated data directory) to the current session
+	@brief Perform partial loading and check for potentially dangerous configurations
 
 	@param node		Root YAML node of the file
 	@param dataDir	Path to the _data directory associated with the session
 	@param online	True if we should reconnect to instruments
 
-	TODO: do we want some kind of popup to warn about reconfiguring instruments into potentially dangerous states?
-	Examples include:
-	* changing V/div significantly on a scope channel
-	* enabling output of a signal generator or power supply
+	@return			True if successful, false on error
+ */
+bool Session::PreLoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online)
+{
+	LogTrace("Preloading saved session from YAML node\n");
+	LogIndenter li;
+
+	//Figure out file version
+	if (node["version"].IsDefined())
+	{
+		m_fileLoadVersion = node["version"].as<int>();
+		LogTrace("File format version %d\n", m_fileLoadVersion);
+	}
+	else
+	{
+		LogTrace("No file format version specified, assuming version 0\n");
+		m_fileLoadVersion = 0;
+	}
+
+	//Preload our instruments
+	if(!PreLoadInstruments(m_fileLoadVersion, node["instruments"], online))
+		return false;
+
+	return true;
+}
+
+/**
+	@brief Deserialize a YAML::Node (and associated data directory) to the current session
+
+	@param node		Root YAML node of the file
+	@param dataDir	Path to the _data directory associated with the session
+	@param online	True if we should reconnect to instruments
 
 	@return			True if successful, false on error
  */
@@ -228,28 +257,15 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	LogTrace("Loading saved session from YAML node\n");
 	LogIndenter li;
 
-	//Figure out file version
-	int version;
-	if (node["version"].IsDefined())
-	{
-		version = node["version"].as<int>();
-		LogTrace("File format version %d\n", version);
-	}
-	else
-	{
-		LogTrace("No file format version specified, assuming version 0\n");
-		version = 0;
-	}
-
-	if(!LoadInstruments(version, node["instruments"], online))
+	if(!LoadInstruments(m_fileLoadVersion, node["instruments"], online))
 		return false;
-	if(!LoadFilters(version, node["decodes"]))
+	if(!LoadFilters(m_fileLoadVersion, node["decodes"]))
 		return false;
-	if(!m_mainWindow->LoadUIConfiguration(version, node["ui_config"]))
+	if(!m_mainWindow->LoadUIConfiguration(m_fileLoadVersion, node["ui_config"]))
 		return false;
 	if(!LoadTriggerGroups(node["triggergroups"]))
 		return false;
-	if(!LoadWaveformData(version, dataDir))
+	if(!LoadWaveformData(m_fileLoadVersion, dataDir))
 		return false;
 
 	//If we have no waveform data (filter-only session) create a WaveformThread to do rendering,
@@ -278,6 +294,10 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
+		//Nothing there? No waveforms at all, skip loading
+		if(docs.empty())
+			return true;
+
 		if(!LoadWaveformDataForScope(version, docs[0], scope, dataDir))
 		{
 			LogTrace("Waveform data loading failed\n");
@@ -305,8 +325,12 @@ bool Session::LoadWaveformDataForScope(
 	TimePoint time(0, 0);
 	TimePoint newest(0, 0);
 
-	//auto window = m_historyWindows[scope];
 	auto wavenode = node["waveforms"];
+	if(!wavenode)
+	{
+		//No waveforms
+		return true;
+	}
 	int scope_id = m_idtable[scope];
 
 	//Clear out any old waveforms the instrument may have
@@ -620,6 +644,14 @@ void Session::DoLoadWaveformDataForScope(
 		munmap(buf, len);
 		::close(fd);
 	#endif
+}
+
+bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool online)
+{
+	LogTrace("Preloading saved instruments\n");
+	LogIndenter li;
+
+	return true;
 }
 
 bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
