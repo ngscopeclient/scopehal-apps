@@ -460,7 +460,11 @@ protected:
 	std::string m_errorPopupTitle;
 	std::string m_errorPopupMessage;
 
+	bool m_showingLoadWarnings;
+	bool m_loadConfirmationChecked;
+
 	void RenderErrorPopup();
+	void RenderLoadWarningPopup();
 public:
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 

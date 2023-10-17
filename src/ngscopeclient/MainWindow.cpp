@@ -108,6 +108,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_sessionClosing(false)
 	, m_fileLoadInProgress(false)
 	, m_openOnline(false)
+	, m_showingLoadWarnings(false)
+	, m_loadConfirmationChecked(false)
 	, m_texmgr(queue)
 	, m_needRender(false)
 	, m_toneMapTime(0)
@@ -566,6 +568,7 @@ void MainWindow::RenderUI()
 
 	//Handle error messages
 	RenderErrorPopup();
+	RenderLoadWarningPopup();
 
 	if(m_needRender)
 		g_rerenderRequestedEvent.Signal();
@@ -1301,6 +1304,134 @@ void MainWindow::RenderErrorPopup()
 }
 
 /**
+	@brief Popup message when loading a file that might not match the current hardware setup
+ */
+void MainWindow::RenderLoadWarningPopup()
+{
+	static ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		//ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
+
+	float width = ImGui::GetFontSize();
+	float warningSize = ImGui::GetFontSize() * 3;
+
+	const char* title = "WARNING: Potential for hardware damage!";
+
+	if(m_showingLoadWarnings)
+		ImGui::OpenPopup(title);
+
+	if(ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::PushTextWrapPos(40*width);
+
+		ImGui::Image(
+			GetTextureManager()->GetTexture("warning"),
+			ImVec2(warningSize, warningSize));
+		ImGui::SameLine();
+		ImGui::TextUnformatted(
+			"Some of the instrument settings in the session you are loading do not match "
+			"the current hardware configuration, and if set incorrectly could potentially "
+			"damage the instrument and/or DUT."
+			);
+
+		ImGui::PopTextWrapPos();
+
+		ImGui::NewLine();
+
+		//TODO: actual table here
+		if(ImGui::BeginTable("table", 5, flags))
+		{
+			//Header row
+			ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+			ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 5*width);
+			ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
+			ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
+			ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
+			ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 20*width);
+			ImGui::TableHeadersRow();
+
+			//Actual list of warnings
+			auto& warnings = m_session.GetWarnings();
+			for(auto it : warnings.m_warnings)
+			{
+				ImGui::PushID(it.first);
+
+				for(auto w : it.second.m_messages)
+				{
+					ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+					ImGui::TableSetColumnIndex(0);
+					ImGui::TextUnformatted(it.first->m_nickname.c_str());
+
+					ImGui::TableSetColumnIndex(1);
+					ImGui::TextUnformatted(w.m_object.c_str());
+
+					ImGui::TableSetColumnIndex(2);
+					ImGui::TextUnformatted(w.m_existingValue.c_str());
+
+					ImGui::TableSetColumnIndex(3);
+					ImGui::TextUnformatted(w.m_proposedValue.c_str());
+
+					ImGui::TableSetColumnIndex(4);
+					ImGui::TextUnformatted(w.m_messageText.c_str());
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndTable();
+		}
+
+		ImGui::NewLine();
+		ImGui::Separator();
+
+		ImGui::Checkbox("I have reviewed the settings to be applied and confirmed they will not cause damage.",
+			&m_loadConfirmationChecked);
+
+		if(ImGui::Button("Abort"))
+		{
+			CloseSession();
+			m_showingLoadWarnings = false;
+			m_fileLoadInProgress = false;
+
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+
+		if(!m_loadConfirmationChecked)
+			ImGui::BeginDisabled();
+
+		if(ImGui::Button("Proceed"))
+		{
+			//Continue with the load
+			//always loading online if we are warning, offline loads can't warn)
+			if(LoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, true))
+			{
+				m_recentFiles[m_sessionFileName] = time(nullptr);
+				SaveRecentFileList();
+			}
+			else
+				CloseSession();
+
+			m_showingLoadWarnings = false;
+			m_fileLoadInProgress = false;
+
+			ImGui::CloseCurrentPopup();
+		}
+
+		if(!m_loadConfirmationChecked)
+			ImGui::EndDisabled();
+
+		ImGui::EndPopup();
+	}
+}
+
+/**
 	@brief Closes the function generator dialog, if we have one
  */
 void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
@@ -1715,8 +1846,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		else
 		{
 			//Preload completed with no warnings, or loading offline? Commit now
-			//if(!online)
-			if(true)
+			if(!online || m_session.GetWarnings().empty())
 			{
 				if(LoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, online))
 				{
@@ -1733,8 +1863,11 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 
 			//Preload generated warnings, pop up confirmation dialog
 			else
+			{
 				m_fileLoadInProgress = true;
-
+				m_showingLoadWarnings = true;
+				m_loadConfirmationChecked = false;
+			}
 		}
 	}
 	catch(const YAML::BadFile& ex)

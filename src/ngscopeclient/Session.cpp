@@ -219,7 +219,7 @@ void Session::Clear()
 
 	@return			True if successful, false on error
  */
-bool Session::PreLoadFromYaml(const YAML::Node& node, const std::string& dataDir, bool online)
+bool Session::PreLoadFromYaml(const YAML::Node& node, const std::string& /*dataDir*/, bool online)
 {
 	LogTrace("Preloading saved session from YAML node\n");
 	LogIndenter li;
@@ -651,13 +651,7 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 	LogTrace("Preloading saved instruments\n");
 	LogIndenter li;
 
-	return true;
-}
-
-bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
-{
-	LogTrace("Loading saved instruments\n");
-	LogIndenter li;
+	m_warnings.clear();
 
 	if(!node)
 	{
@@ -666,6 +660,46 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
 			"The session file is invalid because there is no \"instruments\" section.");
 		return false;
 	}
+
+	//Load each instrument
+	for(auto it : node)
+	{
+		auto inst = it.second;
+		auto nick = inst["nick"].as<string>();
+		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
+
+		//See if it's a scope
+		//(if no type specified, assume scope for backward compat)
+		if(!inst["type"].IsDefined() || (inst["type"].as<string>() == "oscilloscope") )
+		{
+			if(!PreLoadOscilloscope(version, inst, online))
+				return false;
+		}
+		/*
+		//Check other types
+		else if(inst["type"].as<string>() == "multimeter")
+		{
+			if(!LoadMultimeter(version, inst, online))
+				return false;
+		}
+
+		//Unknown instrument type - too new file format?
+		else
+		{
+			m_mainWindow->ShowErrorPopup(
+				"File load error",
+				string("Instrument ") + nick.c_str() + " is of unknown type " + inst["type"].as<string>());
+			return false;
+		}*/
+	}
+
+	return true;
+}
+
+bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
+{
+	LogTrace("Loading saved instruments\n");
+	LogIndenter li;
 
 	//Load each instrument
 	for(auto it : node)
@@ -751,8 +785,9 @@ bool Session::VerifyInstrument(const YAML::Node& node, Instrument* inst)
 	return true;
 }
 
-bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
+bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool online)
 {
+	//Create the instrument
 	Oscilloscope* scope = nullptr;
 
 	auto transtype = node["transport"].as<string>();
@@ -805,13 +840,20 @@ bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool online)
 	AddOscilloscope(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), scope);
 
-	//Configure the scope
-	scope->LoadConfiguration(version, node, m_idtable);
-
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
 
+	//Run the preload
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool /*online*/)
+{
+	auto scope = reinterpret_cast<Oscilloscope*>(m_idtable[node["id"].as<uintptr_t>()]);
+	scope->LoadConfiguration(version, node, m_idtable);
 	return true;
 }
 
