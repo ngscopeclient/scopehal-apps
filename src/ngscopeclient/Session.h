@@ -434,8 +434,8 @@ protected:
 	bool PreLoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);
 	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
-	bool LoadOscilloscope(int version, const YAML::Node& node, bool online);
 	bool PreLoadOscilloscope(int version, const YAML::Node& node, bool online);
+	bool PreLoadPowerSupply(int version, const YAML::Node& node, bool online);
 	bool LoadMultimeter(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
 	bool LoadWaveformData(int version, const std::string& dataDir);

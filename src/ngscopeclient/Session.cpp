@@ -675,6 +675,11 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadOscilloscope(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "psu")
+		{
+			if(!PreLoadPowerSupply(version, inst, online))
+				return false;
+		}
 		/*
 		//Check other types
 		else if(inst["type"].as<string>() == "multimeter")
@@ -696,7 +701,7 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 	return true;
 }
 
-bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
+bool Session::LoadInstruments(int version, const YAML::Node& node, bool /*online*/)
 {
 	LogTrace("Loading saved instruments\n");
 	LogIndenter li;
@@ -708,29 +713,8 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool online)
 		auto nick = inst["nick"].as<string>();
 		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
 
-		//See if it's a scope
-		//(if no type specified, assume scope for backward compat)
-		if(!inst["type"].IsDefined() || (inst["type"].as<string>() == "oscilloscope") )
-		{
-			if(!LoadOscilloscope(version, inst, online))
-				return false;
-		}
-
-		//Check other types
-		else if(inst["type"].as<string>() == "multimeter")
-		{
-			if(!LoadMultimeter(version, inst, online))
-				return false;
-		}
-
-		//Unknown instrument type - too new file format?
-		else
-		{
-			m_mainWindow->ShowErrorPopup(
-				"File load error",
-				string("Instrument ") + nick.c_str() + " is of unknown type " + inst["type"].as<string>());
-			return false;
-		}
+		reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()])->LoadConfiguration(
+			version, inst, m_idtable);
 	}
 
 	return true;
@@ -838,7 +822,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 
 	//All good. Add to our list of scopes etc
 	AddOscilloscope(scope, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), scope);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope);
 
 	//Load trigger deskew
 	if(node["triggerdeskew"])
@@ -850,10 +834,68 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	return true;
 }
 
-bool Session::LoadOscilloscope(int version, const YAML::Node& node, bool /*online*/)
+bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool online)
 {
-	auto scope = reinterpret_cast<Oscilloscope*>(m_idtable[node["id"].as<uintptr_t>()]);
-	scope->LoadConfiguration(version, node, m_idtable);
+	//Create the instrument
+	SCPIPowerSupply* psu = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demo") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				psu = SCPIPowerSupply::CreatePowerSupply(driver, transport);
+				if(!VerifyInstrument(node, psu))
+				{
+					delete psu;
+					psu = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!psu)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of power supplies not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(psu);
+
+	//All good. Add to our list of scopes etc
+	AddPowerSupply(psu);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu);
+
+	//Run the preload
+	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	return true;
 }
 
@@ -1026,6 +1068,7 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		//Save type fields so we know how to recreate the instrument
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
+		auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
 		if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
@@ -1033,10 +1076,9 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			config["type"] = "oscilloscope";
 		}
 		else if(meter)
-		{
 			config["type"] = "multimeter";
-			config["id"] = config["meterid"].as<int>();
-		}
+		else if(psu)
+			config["type"] = "psu";
 
 		node["inst" + config["id"].as<string>()] = config;
 	}
