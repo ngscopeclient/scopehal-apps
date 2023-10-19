@@ -288,9 +288,9 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		int id = m_idtable[scope];
+		int id = m_idtable[(Instrument*)scope];
 
-		char tmp[512];
+		char tmp[512] = {0};
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
 		auto docs = YAML::LoadAllFromFile(tmp);
 
@@ -331,7 +331,7 @@ bool Session::LoadWaveformDataForScope(
 		//No waveforms
 		return true;
 	}
-	int scope_id = m_idtable[scope];
+	int scope_id = m_idtable[(Instrument*)scope];
 
 	//Clear out any old waveforms the instrument may have
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -919,14 +919,16 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		LogTrace("Loading trigger group %s\n", it.first.as<string>().c_str());
 
 		//Load the primary
-		auto scope = reinterpret_cast<Oscilloscope*>(m_idtable[gnode["primary"].as<int64_t>()]);
+		auto scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
+			m_idtable[gnode["primary"].as<int64_t>()]));
 		auto group = make_shared<TriggerGroup>(scope, this);
 
 		//Add secondaries
 		auto snode = gnode["secondaries"];
 		for(auto jt : snode)
 		{
-			scope = reinterpret_cast<Oscilloscope*>(m_idtable[jt.second.as<int64_t>()]);
+			scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
+				m_idtable[jt.second.as<int64_t>()]));
 			group->m_secondaries.push_back(scope);
 		}
 
@@ -1142,11 +1144,11 @@ YAML::Node Session::SerializeTriggerGroups()
 
 		//Make a node for the group
 		YAML::Node gnode;
-		gnode["primary"] = m_idtable[group->m_primary];
+		gnode["primary"] = m_idtable[(Instrument*)group->m_primary];
 
 		YAML::Node secnode;
 		for(size_t i=0; i<group->m_secondaries.size(); i++)
-			secnode[string("sec") + to_string(i)] = m_idtable[group->m_secondaries[i]];
+			secnode[string("sec") + to_string(i)] = m_idtable[(Instrument*)group->m_secondaries[i]];
 
 		gnode["secondaries"] = secnode;
 		node[string("group") + to_string(gid)] = gnode;
@@ -1212,7 +1214,7 @@ bool Session::SerializeWaveforms(const string& dataDir)
 			auto& hist = it.second;
 
 			//Make the directory for the scope if needed
-			string scopedir = dataDir + "/scope_" + to_string(m_idtable[scope]) + "_waveforms";
+			string scopedir = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope]) + "_waveforms";
 			#ifdef _WIN32
 				mkdir(scopedir.c_str());
 			#else
@@ -1290,7 +1292,7 @@ bool Session::SerializeWaveforms(const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		string fname = dataDir + "/scope_" + to_string(m_idtable[scope]) + "_metadata.yml";
+		string fname = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope]) + "_metadata.yml";
 
 		ofstream outfs(fname);
 		if(!outfs)
