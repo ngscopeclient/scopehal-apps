@@ -713,8 +713,11 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool /*online
 		auto nick = inst["nick"].as<string>();
 		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
 
-		reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()])->LoadConfiguration(
-			version, inst, m_idtable);
+		auto pinst = reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()]);
+		if(!pinst)
+			continue;
+
+		pinst->LoadConfiguration(version, inst, m_idtable);
 	}
 
 	return true;

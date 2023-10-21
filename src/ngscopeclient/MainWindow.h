@@ -279,6 +279,9 @@ protected:
 	///@brief Map of multimeters to meter control dialogs
 	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
 
+	///@brief Map of PSUs to power supply control dialogs
+	std::map<SCPIPowerSupply*, std::shared_ptr<Dialog> > m_psuDialogs;
+
 	///@brief Map of generators to generator control dialogs
 	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
 

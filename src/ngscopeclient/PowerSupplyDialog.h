@@ -89,8 +89,14 @@ public:
 
 	virtual bool DoRender();
 
+	void RefreshFromHardware();
+
+	SCPIPowerSupply* GetPSU()
+	{ return m_psu; }
+
 protected:
 	void ChannelSettings(int i, float v, float a, float etime);
+	void AsyncLoadState();
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;

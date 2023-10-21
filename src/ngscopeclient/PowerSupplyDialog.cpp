@@ -53,10 +53,32 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 	, m_psu(psu)
 	, m_state(state)
 {
-	//Set up initial empty state
+	AsyncLoadState();
+}
+
+PowerSupplyDialog::~PowerSupplyDialog()
+{
+	m_session->RemovePowerSupply(m_psu);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
+void PowerSupplyDialog::RefreshFromHardware()
+{
+	//pull settings again
+	AsyncLoadState();
+}
+
+void PowerSupplyDialog::AsyncLoadState()
+{
+	//Clear existing state (if any) and allocate space for new state
+	m_channelUIState.clear();
 	m_channelUIState.resize(m_psu->GetChannelCount());
 
-	//Asynchronously load rest of the state
+	//Do the async load
+	m_futureUIState.clear();
+	SCPIPowerSupply* psu = m_psu;
 	for(size_t i=0; i<m_psu->GetChannelCount(); i++)
 	{
 		//Add placeholders for non-power channels
@@ -69,14 +91,6 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 			m_futureUIState.push_back(async(launch::async, [psu, i]{ return PowerSupplyChannelUIState(psu, i); }));
 	}
 }
-
-PowerSupplyDialog::~PowerSupplyDialog()
-{
-	m_session->RemovePowerSupply(m_psu);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Rendering
 
 bool PowerSupplyDialog::DoRender()
 {

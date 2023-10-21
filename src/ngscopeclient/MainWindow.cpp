@@ -65,6 +65,7 @@
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "PersistenceSettingsDialog.h"
+#include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
@@ -202,6 +203,7 @@ void MainWindow::CloseSession()
 	m_fileBrowser = nullptr;
 	m_measurementsDialog = nullptr;
 	m_meterDialogs.clear();
+	m_psuDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
@@ -879,6 +881,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
 	if(meterDlg)
 		m_meterDialogs.erase(meterDlg->GetMeter());
+
+	auto psuDlg = dynamic_pointer_cast<PowerSupplyDialog>(dlg);
+	if(psuDlg)
+		m_psuDialogs.erase(psuDlg->GetPSU());
 
 	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
 	if(genDlg)
@@ -1940,6 +1946,14 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 		return false;
 	}
 
+	//Update all of our instrument dialogs as needed
+	for(auto it : m_psuDialogs)
+	{
+		auto dlg = dynamic_pointer_cast<PowerSupplyDialog>(it.second);
+		if(dlg)
+			dlg->RefreshFromHardware();
+	}
+
 	//Load ImGui configuration
 	LogTrace("Loading ImGui configuration\n");
 	string ipath = dataDir + "/imgui.ini";
@@ -2482,6 +2496,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		node["meters"] = mnode;
 	}
 
+	//TODO: psu dialogs
 	//TODO: generator dialogs
 	//TODO: rf generator dialogs
 	//TODO: SCPI console

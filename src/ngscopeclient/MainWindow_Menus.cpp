@@ -57,6 +57,7 @@
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "PersistenceSettingsDialog.h"
+#include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
@@ -74,6 +75,10 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto mdlg = dynamic_cast<MultimeterDialog*>(dlg.get());
 	if(mdlg != nullptr)
 		m_meterDialogs[mdlg->GetMeter()] = dlg;
+
+	auto pdlg = dynamic_cast<PowerSupplyDialog*>(dlg.get());
+	if(pdlg != nullptr)
+		m_psuDialogs[pdlg->GetPSU()] = dlg;
 
 	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
 	if(fdlg != nullptr)
