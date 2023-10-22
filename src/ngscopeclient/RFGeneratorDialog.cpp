@@ -218,7 +218,7 @@ void RFGeneratorDialog::DoChannel(size_t i)
 	if( (m_generator->GetInstrumentTypesForChannel(i) & Instrument::INST_RF_GEN) == 0)
 		return;
 
-	auto chname = m_generator->GetChannelName(i);
+	auto chname = m_generator->GetChannel(i)->GetDisplayName();
 
 	float valueWidth = 10 * ImGui::GetFontSize();
 

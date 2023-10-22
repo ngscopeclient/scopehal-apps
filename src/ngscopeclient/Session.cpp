@@ -1070,16 +1070,28 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 	{
 		auto config = inst->SerializeConfiguration(m_idtable);
 
-		//Save type fields so we know how to recreate the instrument
+		/*
+			Save type fields so we know how to recreate the instrument
+
+			Precedence rules:
+			* Scopes have highest precedence: any combo instrument is a scope that has some ancillary functions
+			* RF gens with baseband function generators are primarily RF gens
+		 */
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
 		auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
+		auto rfgen = dynamic_cast<SCPIRFSignalGenerator*>(inst);
+		auto funcgen = dynamic_cast<SCPIFunctionGenerator*>(inst);
 		if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
 				config["triggerdeskew"] = m_scopeDeskewCal[scope];
 			config["type"] = "oscilloscope";
 		}
+		else if(rfgen)
+			config["type"] = "rfgen";
+		else if(funcgen)
+			config["type"] = "funcgen";
 		else if(meter)
 			config["type"] = "multimeter";
 		else if(psu)
