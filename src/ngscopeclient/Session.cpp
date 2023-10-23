@@ -680,6 +680,16 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadPowerSupply(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "rfgen")
+		{
+			if(!PreLoadRFSignalGenerator(version, inst, online))
+				return false;
+		}
+		else if(inst["type"].as<string>() == "funcgen")
+		{
+			if(!PreLoadFunctionGenerator(version, inst, online))
+				return false;
+		}
 		/*
 		//Check other types
 		else if(inst["type"].as<string>() == "multimeter")
@@ -847,7 +857,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 
 	if(online)
 	{
-		if( (transtype == "null") && (driver != "demo") )
+		if( (transtype == "null") && (driver != "demopsu") )
 		{
 			m_mainWindow->ShowErrorPopup(
 				"Unable to reconnect",
@@ -898,6 +908,136 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 
 	//Run the preload
 	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPIRFSignalGenerator* gen = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if(transtype == "null")
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				gen = SCPIRFSignalGenerator::CreateRFSignalGenerator(driver, transport);
+				if(!VerifyInstrument(node, gen))
+				{
+					delete gen;
+					gen = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!gen)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of RF generators not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(gen);
+
+	//All good. Add to our list of generators etc
+	AddRFGenerator(gen);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen);
+
+	//Run the preload
+	gen->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPIFunctionGenerator* gen = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if(transtype == "null")
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				gen = SCPIFunctionGenerator::CreateFunctionGenerator(driver, transport);
+				if(!VerifyInstrument(node, gen))
+				{
+					delete gen;
+					gen = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!gen)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of function generators not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(gen);
+
+	//All good. Add to our list of generators etc
+	AddFunctionGenerator(gen);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen);
+
+	//Run the preload
+	gen->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
