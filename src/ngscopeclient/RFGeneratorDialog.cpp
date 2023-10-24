@@ -164,8 +164,7 @@ RFGeneratorDialog::RFGeneratorDialog(
 
 	double start = GetTime();
 
-	for(size_t i=0; i<m_generator->GetChannelCount(); i++)
-		m_uiState.push_back(RFGeneratorChannelUIState(m_generator, i));
+	RefreshFromHardware();
 
 	LogDebug("Intial UI state loaded in %.2f ms\n", (GetTime() - start) * 1000);
 }
@@ -173,6 +172,14 @@ RFGeneratorDialog::RFGeneratorDialog(
 RFGeneratorDialog::~RFGeneratorDialog()
 {
 	m_session->RemoveRFGenerator(m_generator);
+}
+
+void RFGeneratorDialog::RefreshFromHardware()
+{
+	m_uiState.clear();
+
+	for(size_t i=0; i<m_generator->GetChannelCount(); i++)
+		m_uiState.push_back(RFGeneratorChannelUIState(m_generator, i));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

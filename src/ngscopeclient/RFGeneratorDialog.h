@@ -52,7 +52,7 @@ public:
 	float m_committedOffset;
 
 	std::string m_frequency;
-	float m_committedFrequency;
+	double m_committedFrequency;
 
 	std::string m_sweepStart;
 	float m_committedSweepStart;
@@ -115,10 +115,13 @@ public:
 
 	virtual bool DoRender();
 
+	void RefreshFromHardware();
+
 	SCPIRFSignalGenerator* GetGenerator()
 	{ return m_generator; }
 
 protected:
+
 	void DoChannel(size_t i);
 
 	///@brief Session handle so we can remove the PSU when closed

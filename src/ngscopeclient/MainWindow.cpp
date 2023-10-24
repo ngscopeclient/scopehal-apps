@@ -1949,9 +1949,15 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 	//Update all of our instrument dialogs as needed
 	for(auto it : m_psuDialogs)
 	{
-		auto dlg = dynamic_pointer_cast<PowerSupplyDialog>(it.second);
-		if(dlg)
-			dlg->RefreshFromHardware();
+		auto pdlg = dynamic_pointer_cast<PowerSupplyDialog>(it.second);
+		if(pdlg)
+			pdlg->RefreshFromHardware();
+	}
+	for(auto it : m_rfgeneratorDialogs)
+	{
+		auto rdlg = dynamic_pointer_cast<RFGeneratorDialog>(it.second);
+		if(rdlg)
+			rdlg->RefreshFromHardware();
 	}
 
 	//Load ImGui configuration
