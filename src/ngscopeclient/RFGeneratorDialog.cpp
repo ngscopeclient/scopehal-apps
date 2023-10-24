@@ -149,14 +149,12 @@ RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* gene
 
 RFGeneratorDialog::RFGeneratorDialog(
 	SCPIRFSignalGenerator* generator,
-	shared_ptr<RFSignalGeneratorState> state,
 	Session* session)
 	: Dialog(
 		string("RF Generator: ") + generator->m_nickname,
 		string("RF Generator: ") + generator->m_nickname,
 		ImVec2(400, 350))
 	, m_session(session)
-	, m_state(state)
 	, m_generator(generator)
 {
 	Unit hz(Unit::UNIT_HZ);
@@ -224,6 +222,9 @@ void RFGeneratorDialog::DoChannel(size_t i)
 	//Skip any other channels (baseband AWG outputs, etc)
 	if( (m_generator->GetInstrumentTypesForChannel(i) & Instrument::INST_RF_GEN) == 0)
 		return;
+	auto chan = dynamic_cast<RFSignalGeneratorChannel*>(m_generator->GetChannel(i));
+	if(!chan)
+		return;
 
 	auto chname = m_generator->GetChannel(i)->GetDisplayName();
 
@@ -241,13 +242,8 @@ void RFGeneratorDialog::DoChannel(size_t i)
 			m_generator->SetChannelOutputEnable(i, m_uiState[i].m_outputEnabled);
 		HelpMarker("Turns the RF signal from this channel on or off");
 
-		string f;
-		string p;
-		if(m_state->m_firstUpdateDone)
-		{
-			f = hz.PrettyPrint(m_state->m_channelFrequency[i]);
-			p = dbm.PrettyPrint(m_state->m_channelLevel[i]);
-		}
+		string f = hz.PrettyPrint(chan->GetFrequency());
+		string p = dbm.PrettyPrint(chan->GetLevel());
 
 		bool sweepingPower = m_uiState[i].m_sweepType >= 2;
 		bool sweepingFrequency = (m_uiState[i].m_sweepType == 1) || (m_uiState[i].m_sweepType == 3);

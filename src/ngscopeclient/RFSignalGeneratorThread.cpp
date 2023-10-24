@@ -33,6 +33,7 @@
 	@brief Implementation of RFSignalGeneratorThread
  */
 #include "ngscopeclient.h"
+#include "Session.h"
 #include "pthread_compat.h"
 
 using namespace std;
@@ -42,19 +43,22 @@ void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args)
 	pthread_setname_np_compat("RFGenThread");
 
 	auto gen = args.gen;
-	auto state = args.state;
+	auto nchans = gen->GetChannelCount();
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
 		gen->GetTransport()->FlushCommandQueue();
+		gen->AcquireData();
 
-		//Poll status
-		for(size_t i=0; i<gen->GetChannelCount(); i++)
+		for(size_t i=0; i<nchans; i++)
 		{
-			state->m_channelLevel[i] = gen->GetChannelOutputPower(i);
-			state->m_channelFrequency[i] = gen->GetChannelCenterFrequency(i);
+			//Skip non-rfgen channels
+			auto pchan = dynamic_cast<RFSignalGeneratorChannel*>(gen->GetChannel(i));
+			if(!pchan)
+				continue;
+
+			args.session->MarkChannelDirty(pchan);
 		}
-		state->m_firstUpdateDone = true;
 
 		//Cap update rate to 20 Hz
 		this_thread::sleep_for(chrono::milliseconds(50));

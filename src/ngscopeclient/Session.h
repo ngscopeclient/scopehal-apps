@@ -91,11 +91,11 @@ public:
 class RFSignalGeneratorConnectionState
 {
 public:
-	RFSignalGeneratorConnectionState(SCPIRFSignalGenerator* gen, std::shared_ptr<RFSignalGeneratorState> state)
+	RFSignalGeneratorConnectionState(SCPIRFSignalGenerator* gen, Session* session)
 		: m_gen(gen)
 		, m_shuttingDown(false)
 	{
-		RFSignalGeneratorThreadArgs args(gen, &m_shuttingDown, state);
+		RFSignalGeneratorThreadArgs args(gen, &m_shuttingDown, session);
 		m_thread = std::make_unique<std::thread>(RFSignalGeneratorThread, args);
 	}
 

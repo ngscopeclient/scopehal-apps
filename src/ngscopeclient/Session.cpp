@@ -1930,11 +1930,8 @@ void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
 {
 	m_modifiedSinceLastSave = true;
 
-	//Create shared meter state
-	auto state = make_shared<RFSignalGeneratorState>(generator->GetChannelCount());
-	m_rfgenerators[generator] = make_unique<RFSignalGeneratorConnectionState>(generator, state);
-
-	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, state, this));
+	m_rfgenerators[generator] = make_unique<RFSignalGeneratorConnectionState>(generator, this);
+	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
 
 	m_mainWindow->AddToRecentInstrumentList(generator);
 }

@@ -110,7 +110,7 @@ public:
 class RFGeneratorDialog : public Dialog
 {
 public:
-	RFGeneratorDialog(SCPIRFSignalGenerator* generator, std::shared_ptr<RFSignalGeneratorState> state, Session* session);
+	RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session);
 	virtual ~RFGeneratorDialog();
 
 	virtual bool DoRender();
@@ -126,9 +126,6 @@ protected:
 
 	///@brief Session handle so we can remove the PSU when closed
 	Session* m_session;
-
-	///@brief Live updating frequency values from our sweep
-	std::shared_ptr<RFSignalGeneratorState> m_state;
 
 	///@brief The generator we're controlling
 	SCPIRFSignalGenerator* m_generator;

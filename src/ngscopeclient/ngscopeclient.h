@@ -49,7 +49,6 @@
 #include <shared_mutex>
 
 #include "BERTState.h"
-#include "RFSignalGeneratorState.h"
 #include "PowerSupplyState.h"
 #include "MultimeterState.h"
 #include "LoadState.h"
@@ -61,15 +60,15 @@ class Session;
 class RFSignalGeneratorThreadArgs
 {
 public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, std::shared_ptr<RFSignalGeneratorState> st)
+	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, Session* sess)
 	: gen(p)
 	, shuttingDown(s)
-	, state(st)
+	, session(sess)
 	{}
 
 	SCPIRFSignalGenerator* gen;
 	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<RFSignalGeneratorState> state;
+	Session* session;
 };
 
 class PowerSupplyThreadArgs
