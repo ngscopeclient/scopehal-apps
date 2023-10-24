@@ -145,11 +145,22 @@ add_custom_target(
 add_dependencies(ngprotoshaders
 	protocolshaders)
 
+get_target_property(SPIRV_SHADERS2 halshaders SOURCES)
+
+add_custom_target(
+	nghalshaders
+	COMMENT "Copying scopehal shaders..."
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPIRV_SHADERS2} ${CMAKE_BINARY_DIR}/src/ngscopeclient/shaders
+	)
+add_dependencies(nghalshaders
+	halshaders)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
 	ngrendershaders
 	ngprotoshaders
+	nghalshaders
 	)
 
 add_subdirectory(shaders)
