@@ -261,6 +261,8 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		return false;
 	if(!LoadFilters(m_fileLoadVersion, node["decodes"]))
 		return false;
+	if(!LoadInstrumentInputs(m_fileLoadVersion, node["instruments"]))
+		return false;
 	if(!m_mainWindow->LoadUIConfiguration(m_fileLoadVersion, node["ui_config"]))
 		return false;
 	if(!LoadTriggerGroups(node["triggergroups"]))
@@ -1193,6 +1195,38 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
 		auto filter = static_cast<Filter*>(m_idtable[dnode["id"].as<uintptr_t>()]);
 		if(filter)
 			filter->LoadInputs(dnode, m_idtable);
+	}
+
+	return true;
+}
+
+bool Session::LoadInstrumentInputs(int /*version*/, const YAML::Node& node)
+{
+	//Nothing to do? Skip this section
+	if(!node)
+		return true;
+
+	//Check each instrument in the file and see if we have inputs that need to be hooked up
+	//Load each instrument
+	for(auto it : node)
+	{
+		auto inst = it.second;
+		auto nick = inst["nick"].as<string>();
+		LogTrace("Loading additional inputs for instrument \"%s\"\n", nick.c_str());
+
+		auto pinst = reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()]);
+		if(!pinst)
+			continue;
+
+		for(size_t i=0; i<pinst->GetChannelCount(); i++)
+		{
+			auto chan = pinst->GetChannel(i);
+			auto key = "ch" + to_string(i);
+			auto channelNode = inst["channels"][key];
+
+			if(channelNode)
+				chan->LoadInputs(channelNode, m_idtable);
+		}
 	}
 
 	return true;

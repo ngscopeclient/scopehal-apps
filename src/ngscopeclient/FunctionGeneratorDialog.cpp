@@ -171,6 +171,15 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 
 	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		//Check for updates (value changed instrument side since last commit)
+		//TODO: move to background thread? or just rely on clientside caching to make it fast?
+		auto freq = m_generator->GetFunctionChannelFrequency(i);
+		if(freq != m_uiState[i].m_committedFrequency)
+		{
+			m_uiState[i].m_committedFrequency = freq;
+			m_uiState[i].m_frequency = hz.PrettyPrint(freq);
+		}
+
 		ImGui::PushID(chname.c_str());
 
 		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))

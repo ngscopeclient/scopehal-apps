@@ -440,6 +440,7 @@ protected:
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
 	bool LoadMultimeter(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
+	bool LoadInstrumentInputs(int version, const YAML::Node& node);
 	bool LoadWaveformData(int version, const std::string& dataDir);
 	bool LoadWaveformDataForScope(
 		int version,

@@ -1348,7 +1348,6 @@ void MainWindow::RenderLoadWarningPopup()
 
 		ImGui::NewLine();
 
-		//TODO: actual table here
 		if(ImGui::BeginTable("table", 5, flags))
 		{
 			//Header row
@@ -1357,7 +1356,7 @@ void MainWindow::RenderLoadWarningPopup()
 			ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
 			ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
 			ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 20*width);
+			ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 40*width);
 			ImGui::TableHeadersRow();
 
 			//Actual list of warnings
@@ -2170,6 +2169,17 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		}
 	}
 
+	auto generators = node["generators"];
+	if(generators)
+	{
+		for(auto it : generators)
+		{
+			auto gen = dynamic_cast<SCPIFunctionGenerator*>(
+				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			AddDialog(make_shared<FunctionGeneratorDialog>(gen, &m_session));
+		}
+	}
+
 	//Single-instance dialogs
 
 	auto log = node["logviewer"];
@@ -2503,7 +2513,20 @@ YAML::Node MainWindow::SerializeDialogs()
 	}
 
 	//TODO: psu dialogs
-	//TODO: generator dialogs
+
+	if(!m_generatorDialogs.empty())
+	{
+		YAML::Node gnode;
+
+		for(auto it : m_generatorDialogs)
+		{
+			auto gen = it.first;
+			gnode[gen->m_nickname] = m_session.m_idtable.emplace((Instrument*)gen);
+		}
+		node["generators"] = gnode;
+	}
+
+
 	//TODO: rf generator dialogs
 	//TODO: SCPI console
 	//TODO: Channel properties
