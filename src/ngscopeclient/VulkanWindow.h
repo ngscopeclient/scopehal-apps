@@ -89,6 +89,15 @@ protected:
 	///@brief Set true if we have to handle a resize event
 	bool m_resizeEventPending;
 
+	///@brief Set true if a resize was requested by software (i.e. we need to resize to m_pendingWidth / m_pendingHeight)
+	bool m_softwareResizeRequested;
+
+	///@brief Requested width for software resize
+	int m_pendingWidth;
+
+	///@brief Requested height for software resize
+	int m_pendingHeight;
+
 	///@brief Frame command pool
 	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
 

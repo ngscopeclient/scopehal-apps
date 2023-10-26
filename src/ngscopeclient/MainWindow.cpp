@@ -1973,7 +1973,16 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 	LogTrace("Loading UI configuration\n");
 	LogIndenter li;
 
-	//ignore window width/height from legacy file format, imgui now handles that
+	//imgui does NOT handle window height/width of the top level, only child windows
+	auto window = node["window"];
+	if(window)
+	{
+		m_pendingWidth = window["width"].as<int>();
+		m_pendingHeight = window["height"].as<int>();
+		m_softwareResizeRequested = true;
+
+		//TODO: allow restoring fullscreen state
+	}
 
 	//Waveform groups
 	auto groups = node["groups"];
@@ -2443,7 +2452,14 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 {
 	YAML::Node node;
 
-	//don't write legacy "window" section
+	//Write new version 2 "window" section with size, since imgui does *not* save the size of the top level window
+	YAML::Node window;
+	window["height"] = m_height;
+	window["width"] = m_width;
+	window["fullscreen"] = m_fullscreen;
+	window["winwidth"] = m_windowedWidth;
+	window["winheight"] = m_windowedHeight;
+	node["window"] = window;
 
 	//Waveform areas are hierarchical internally, but written as separate area and group headings
 	YAML::Node areas;
@@ -2478,10 +2494,6 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 	node["groups"] = groups;
 
 	//don't write legacy "splitters" section
-
-	//TODO: save which dialogs are open so we can recreate properties dialogs etc
-
-	//TODO: need to save/restore mapping of node editor IDs to pointers to ensure they remain stable
 
 	node["markers"] = m_session.SerializeMarkers();
 

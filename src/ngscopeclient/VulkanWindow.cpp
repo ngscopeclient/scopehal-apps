@@ -59,6 +59,9 @@ void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
 VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
+	, m_softwareResizeRequested(false)
+	, m_pendingWidth(0)
+	, m_pendingHeight(0)
 	, m_semaphoreIndex(0)
 	, m_frameIndex(0)
 	, m_lastFrameIndex(0)
@@ -415,6 +418,18 @@ float VulkanWindow::GetContentScale()
 
 void VulkanWindow::Render()
 {
+	if(m_softwareResizeRequested)
+	{
+		m_softwareResizeRequested = false;
+		LogTrace("Software window resize to (%d, %d)\n", m_pendingWidth, m_pendingHeight);
+
+		//can't resize the window during any other vulkan activity
+		lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
+		g_vkComputeDevice->waitIdle();
+		glfwSetWindowSize(m_window, m_pendingWidth, m_pendingHeight);
+		return;
+	}
+
 	//If we're re-rendering after the window size changed, fix up the framebuffer before we worry about anything else
 	if(m_resizeEventPending)
 	{
