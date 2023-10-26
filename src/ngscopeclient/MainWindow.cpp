@@ -1977,11 +1977,17 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 	auto window = node["window"];
 	if(window)
 	{
-		m_pendingWidth = window["width"].as<int>();
-		m_pendingHeight = window["height"].as<int>();
-		m_softwareResizeRequested = true;
+		//if fullscreening ignore width/height in file
+		//as our monitor resolution may be different
+		if(window["fullscreen"] && window["fullscreen"].as<bool>())
+			SetFullscreen(true);
 
-		//TODO: allow restoring fullscreen state
+		else
+		{
+			m_pendingWidth = window["width"].as<int>();
+			m_pendingHeight = window["height"].as<int>();
+			m_softwareResizeRequested = true;
+		}
 	}
 
 	//Waveform groups
@@ -2457,10 +2463,6 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 	window["height"] = m_height;
 	window["width"] = m_width;
 	window["fullscreen"] = m_fullscreen;
-	window["winwidth"] = m_windowedWidth;
-	window["winheight"] = m_windowedHeight;
-	window["winx"] = m_windowedX;
-	window["winy"] = m_windowedY;
 	node["window"] = window;
 
 	//Waveform areas are hierarchical internally, but written as separate area and group headings
