@@ -589,14 +589,36 @@ void VulkanWindow::SetFullscreen(bool fullscreen)
 	if(m_fullscreen)
 	{
 		LogTrace("Entering fullscreen mode\n");
+		LogIndenter li;
 
 		m_windowedWidth = m_width;
 		m_windowedHeight = m_height;
 		glfwGetWindowPos(m_window, &m_windowedX, &m_windowedY);
+		LogTrace("Our window is at (%d, %d)\n", m_windowedX, m_windowedY);
 
-		//TODO: figure out which monitor we are currently on and fullscreen to it
-		//(may not be the primary)
-		glfwSetWindowMonitor(m_window, glfwGetPrimaryMonitor(), 0, 0, 3840, 2160, GLFW_DONT_CARE);
+		//Find the centroid of our window
+		int centerX = m_windowedX + m_width/2;
+		int centerY = m_windowedY + m_height/2;
+
+		//Which monitor are we on?
+		int count;
+		auto monitors = glfwGetMonitors(&count);
+		for(int i=0; i<count; i++)
+		{
+			int xpos, ypos;
+			glfwGetMonitorPos(monitors[i], &xpos, &ypos);
+			auto mode = glfwGetVideoMode(monitors[i]);
+			LogTrace("Monitor %d is at (%d, %d), (%d x %d)\n", i, xpos, ypos, mode->width, mode->height);
+			LogIndenter li2;
+
+			if( (centerX >= xpos) && (centerY >= ypos) &&
+				(centerX < (xpos + mode->width)) && (centerY < (ypos + mode->height)) )
+			{
+				LogTrace("We are on this monitor\n");
+				glfwSetWindowMonitor(m_window, monitors[i], 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+				break;
+			}
+		}
 	}
 
 	else

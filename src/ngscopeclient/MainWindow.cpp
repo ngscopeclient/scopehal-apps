@@ -2459,6 +2459,8 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 	window["fullscreen"] = m_fullscreen;
 	window["winwidth"] = m_windowedWidth;
 	window["winheight"] = m_windowedHeight;
+	window["winx"] = m_windowedX;
+	window["winy"] = m_windowedY;
 	node["window"] = window;
 
 	//Waveform areas are hierarchical internally, but written as separate area and group headings
