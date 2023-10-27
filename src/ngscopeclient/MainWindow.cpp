@@ -2150,6 +2150,33 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			return false;
 	}
 
+	//Measurements
+	auto measurements = node["measurements"];
+	if(measurements)
+	{
+		//Make the measurements dialog
+		if(!m_measurementsDialog)
+		{
+			m_measurementsDialog = make_shared<MeasurementsDialog>(m_session);
+			AddDialog(m_measurementsDialog);
+		}
+
+		int index;
+		int stream;
+		for(auto m : measurements)
+		{
+			auto sin = m.as<string>();
+			if(2 != sscanf(sin.c_str(), "%d/%d", &index, &stream))
+			{
+				index = atoi(sin.c_str());
+				stream = 0;
+			}
+
+			m_measurementsDialog->AddStream(
+				StreamDescriptor(static_cast<OscilloscopeChannel*>(m_session.m_idtable[index]), stream));
+		}
+	}
+
 	LogTrace("ui config loaded\n");
 	return true;
 }
@@ -2503,6 +2530,18 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 
 	//Serialize dialogs
 	node["dialogs"] = SerializeDialogs();
+
+	//Serialize measurements
+	if(m_measurementsDialog)
+	{
+		auto measurements = m_measurementsDialog->GetStreams();
+
+		YAML::Node mnode;
+		for(auto stream : measurements)
+			mnode.push_back(to_string(m_session.m_idtable.emplace(stream.m_channel)) + "/" + to_string(stream.m_stream));
+
+		node["measurements"] = mnode;
+	}
 
 	return node;
 }
