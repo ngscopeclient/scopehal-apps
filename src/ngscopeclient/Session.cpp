@@ -692,11 +692,9 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadFunctionGenerator(version, inst, online))
 				return false;
 		}
-		/*
-		//Check other types
 		else if(inst["type"].as<string>() == "multimeter")
 		{
-			if(!LoadMultimeter(version, inst, online))
+			if(!PreLoadMultimeter(version, inst, online))
 				return false;
 		}
 
@@ -707,7 +705,7 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 				"File load error",
 				string("Instrument ") + nick.c_str() + " is of unknown type " + inst["type"].as<string>());
 			return false;
-		}*/
+		}
 	}
 
 	return true;
@@ -845,6 +843,71 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 
 	//Run the preload
 	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPIMultimeter* meter = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demometer") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				meter = SCPIMultimeter::CreateMultimeter(driver, transport);
+				if(!VerifyInstrument(node, meter))
+				{
+					delete meter;
+					meter = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!meter)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of multimeters not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(meter);
+
+	//All good. Add to our list of meters etc
+	AddMultimeter(meter, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)meter);
+
+	//Run the preload
+	meter->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1079,66 +1142,6 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 
 		m_triggerGroups.push_back(group);
 	}
-
-	return true;
-}
-
-bool Session::LoadMultimeter(int version, const YAML::Node& node, bool online)
-{
-	SCPIMultimeter* meter = nullptr;
-
-	auto transtype = node["transport"].as<string>();
-	auto driver = node["driver"].as<string>();
-
-	if(online)
-	{
-		if(transtype == "null" /*&& (driver != "demo")*/ )
-		{
-			m_mainWindow->ShowErrorPopup(
-				"Unable to reconnect",
-				"The session file does not contain any connection information.\n\n"
-				"Loading in offline mode.");
-		}
-
-		else
-		{
-			//Create the meter
-			auto transport = CreateTransportForNode(node);
-			if(transport)
-			{
-				meter = SCPIMultimeter::CreateMultimeter(driver, transport);
-				if(!VerifyInstrument(node, meter))
-				{
-					delete meter;
-					meter = nullptr;
-				}
-			}
-		}
-	}
-
-	if(!meter)
-	{
-		/*
-		//Create the mock scope
-		scope = new MockOscilloscope(
-			node["name"].as<string>(),
-			node["vendor"].as<string>(),
-			node["serial"].as<string>(),
-			transtype,
-			driver,
-			node["args"].as<string>()
-			);
-		*/
-
-		//placeholder: there's no MockMultimeter yet
-		return true;
-	}
-
-	//Make any config settings to the instrument from our preference settings, then add it and we're good to go
-	//ApplyPreferences(meter);
-	m_idtable.emplace(node["meterid"].as<uintptr_t>(), meter);
-	meter->LoadConfiguration(version, node, m_idtable);
-	AddMultimeter(meter, false);
 
 	return true;
 }

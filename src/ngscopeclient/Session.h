@@ -438,7 +438,7 @@ protected:
 	bool PreLoadPowerSupply(int version, const YAML::Node& node, bool online);
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
-	bool LoadMultimeter(int version, const YAML::Node& node, bool online);
+	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
 	bool LoadInstrumentInputs(int version, const YAML::Node& node);
 	bool LoadWaveformData(int version, const std::string& dataDir);

@@ -2206,8 +2206,15 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : meters)
 		{
-			auto meter = static_cast<SCPIMultimeter*>(m_session.m_idtable[it.second.as<int>()]);
-			m_session.AddMultimeterDialog(meter);
+			auto meter = dynamic_cast<SCPIMultimeter*>(
+				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			if(meter)
+				m_session.AddMultimeterDialog(meter);
+			else
+			{
+				ShowErrorPopup("Invalid meter", "Multimeter could not be loaded");
+				return false;
+			}
 		}
 	}
 
@@ -2218,7 +2225,14 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		{
 			auto gen = dynamic_cast<SCPIFunctionGenerator*>(
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
-			AddDialog(make_shared<FunctionGeneratorDialog>(gen, &m_session));
+
+			if(gen)
+				AddDialog(make_shared<FunctionGeneratorDialog>(gen, &m_session));
+			else
+			{
+				ShowErrorPopup("Invalid function generator", "Function generator could not be loaded");
+				return false;
+			}
 		}
 	}
 
@@ -2561,7 +2575,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_meterDialogs)
 		{
 			auto meter = it.first;
-			mnode[meter->m_nickname] = m_session.m_idtable.emplace(meter);
+			mnode[meter->m_nickname] = m_session.m_idtable.emplace((Instrument*)meter);
 		}
 
 		node["meters"] = mnode;
@@ -2602,9 +2616,6 @@ YAML::Node MainWindow::SerializeDialogs()
 
 
 	/*
-	///@brief Map of multimeters to meter control dialogs
-	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
-
 	///@brief Map of generators to generator control dialogs
 	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
 
