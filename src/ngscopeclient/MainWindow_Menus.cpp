@@ -52,6 +52,7 @@
 #include "FilterGraphEditor.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
+#include "LoadDialog.h"
 #include "LogViewerDialog.h"
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
@@ -87,6 +88,10 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto rdlg = dynamic_cast<RFGeneratorDialog*>(dlg.get());
 	if(rdlg != nullptr)
 		m_rfgeneratorDialogs[rdlg->GetGenerator()] = dlg;
+
+	auto ldlg = dynamic_cast<LoadDialog*>(dlg.get());
+	if(ldlg != nullptr)
+		m_loadDialogs[ldlg->GetLoad()] = dlg;
 }
 
 /**

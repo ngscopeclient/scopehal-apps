@@ -59,6 +59,7 @@
 #include "FilterPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
+#include "LoadDialog.h"
 #include "LogViewerDialog.h"
 #include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
@@ -207,6 +208,7 @@ void MainWindow::CloseSession()
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
 	m_rfgeneratorDialogs.clear();
+	m_loadDialogs.clear();
 	m_dialogs.clear();
 	m_protocolAnalyzerDialogs.clear();
 	m_scpiConsoleDialogs.clear();
@@ -893,6 +895,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	auto loadDlg = dynamic_pointer_cast<LoadDialog>(dlg);
+	if(loadDlg)
+		m_loadDialogs.erase(loadDlg->GetLoad());
 
 	auto conDlg = dynamic_pointer_cast<SCPIConsoleDialog>(dlg);
 	if(conDlg)
@@ -1958,6 +1964,12 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 		if(rdlg)
 			rdlg->RefreshFromHardware();
 	}
+	for(auto it : m_loadDialogs)
+	{
+		auto ldlg = dynamic_pointer_cast<LoadDialog>(it.second);
+		if(ldlg)
+			ldlg->RefreshFromHardware();
+	}
 
 	//Load ImGui configuration
 	LogTrace("Loading ImGui configuration\n");
@@ -2231,6 +2243,24 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 			else
 			{
 				ShowErrorPopup("Invalid function generator", "Function generator could not be loaded");
+				return false;
+			}
+		}
+	}
+
+	auto loads = node["loads"];
+	if(loads)
+	{
+		for(auto it : loads)
+		{
+			auto load = dynamic_cast<SCPILoad*>(
+				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+
+			if(load)
+				AddDialog(make_shared<LoadDialog>(load, m_session.GetLoadState(load), &m_session));
+			else
+			{
+				ShowErrorPopup("Invalid load", "Load could not be loaded");
 				return false;
 			}
 		}
@@ -2583,6 +2613,18 @@ YAML::Node MainWindow::SerializeDialogs()
 
 	//TODO: psu dialogs
 
+	if(!m_loadDialogs.empty())
+	{
+		YAML::Node gnode;
+
+		for(auto it : m_loadDialogs)
+		{
+			auto load = it.first;
+			gnode[load->m_nickname] = m_session.m_idtable.emplace((Instrument*)load);
+		}
+		node["loads"] = gnode;
+	}
+
 	if(!m_generatorDialogs.empty())
 	{
 		YAML::Node gnode;
@@ -2616,8 +2658,6 @@ YAML::Node MainWindow::SerializeDialogs()
 
 
 	/*
-	///@brief Map of generators to generator control dialogs
-	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
 
 	///@brief Map of RF generators to generator control dialogs
 	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;

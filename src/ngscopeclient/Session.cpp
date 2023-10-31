@@ -697,6 +697,11 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadMultimeter(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "load")
+		{
+			if(!PreLoadLoad(version, inst, online))
+				return false;
+		}
 
 		//Unknown instrument type - too new file format?
 		else
@@ -843,6 +848,71 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 
 	//Run the preload
 	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPILoad* load = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demoload") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				load = SCPILoad::CreateLoad(driver, transport);
+				if(!VerifyInstrument(node, load))
+				{
+					delete load;
+					load = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!load)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of multiloads not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(load);
+
+	//All good. Add to our list of loads etc
+	AddLoad(load, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)load);
+
+	//Run the preload
+	load->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1259,6 +1329,7 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
 		auto rfgen = dynamic_cast<SCPIRFSignalGenerator*>(inst);
 		auto funcgen = dynamic_cast<SCPIFunctionGenerator*>(inst);
+		auto load = dynamic_cast<SCPILoad*>(inst);
 		if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
@@ -1273,6 +1344,8 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			config["type"] = "multimeter";
 		else if(psu)
 			config["type"] = "psu";
+		else if(load)
+			config["type"] = "load";
 
 		node["inst" + config["id"].as<string>()] = config;
 	}
@@ -1935,7 +2008,7 @@ void Session::RemoveBERT(SCPIBERT* bert)
 /**
 	@brief Adds a load to the session
  */
-void Session::AddLoad(SCPILoad* load)
+void Session::AddLoad(SCPILoad* load, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -1944,7 +2017,8 @@ void Session::AddLoad(SCPILoad* load)
 	m_loads[load] = make_unique<LoadConnectionState>(load, state, this);
 
 	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<LoadDialog>(load, state, this));
+	if(createDialog)
+		m_mainWindow->AddDialog(make_shared<LoadDialog>(load, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(load);
 }

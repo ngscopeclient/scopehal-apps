@@ -201,6 +201,7 @@ public:
 	LoadConnectionState(SCPILoad* load, std::shared_ptr<LoadState> state, Session* session)
 		: m_load(load)
 		, m_shuttingDown(false)
+		, m_state(state)
 	{
 		LoadThreadArgs args(load, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(LoadThread, args);
@@ -221,6 +222,9 @@ public:
 
 	///@brief Thread for polling the load
 	std::unique_ptr<std::thread> m_thread;
+
+	//State object
+	std::shared_ptr<LoadState> m_state;
 };
 
 /**
@@ -270,7 +274,7 @@ public:
 	void RemoveBERT(SCPIBERT* bert);
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
-	void AddLoad(SCPILoad* load);
+	void AddLoad(SCPILoad* load, bool createDialog = true);
 	void RemoveLoad(SCPILoad* load);
 	void AddMultimeter(SCPIMultimeter* meter, bool createDialog = true);
 	void AddMultimeterDialog(SCPIMultimeter* meter);
@@ -427,6 +431,16 @@ public:
 	const ConfigWarningList& GetWarnings()
 	{ return m_warnings; }
 
+	///@brief Get the state for a load
+	std::shared_ptr<LoadState> GetLoadState(Load* load)
+	{
+		auto it = m_loads.find(load);
+		if(it != m_loads.end())
+			return it->second->m_state;
+		else
+			return nullptr;
+	}
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
@@ -439,6 +453,7 @@ protected:
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
+	bool PreLoadLoad(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
 	bool LoadInstrumentInputs(int version, const YAML::Node& node);
 	bool LoadWaveformData(int version, const std::string& dataDir);

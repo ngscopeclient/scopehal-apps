@@ -288,6 +288,9 @@ protected:
 	///@brief Map of RF generators to generator control dialogs
 	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
 
+	///@brief Map of loads to control dialogs
+	std::map<SCPILoad*, std::shared_ptr<Dialog> > m_loadDialogs;
+
 	///@brief Map of instruments to SCPI console dialogs
 	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
 

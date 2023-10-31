@@ -55,10 +55,24 @@ LoadDialog::LoadDialog(SCPILoad* load, shared_ptr<LoadState> state, Session* ses
 	for(size_t i=0; i<m_load->GetChannelCount(); i++)
 		m_channelNames.push_back(m_load->GetChannel(i)->GetDisplayName());
 
-	//Set up initial empty state
+	RefreshFromHardware();
+}
+
+LoadDialog::~LoadDialog()
+{
+	m_session->RemoveLoad(m_load);
+}
+
+void LoadDialog::RefreshFromHardware()
+{
+	m_channelUIState.clear();
+	m_futureUIState.clear();
+
+	//Set up initial empty UI state
 	m_channelUIState.resize(m_load->GetChannelCount());
 
 	//Asynchronously load rest of the state
+	auto load = m_load;
 	for(size_t i=0; i<m_load->GetChannelCount(); i++)
 	{
 		//Add placeholders for non-power channels
@@ -70,11 +84,6 @@ LoadDialog::LoadDialog(SCPILoad* load, shared_ptr<LoadState> state, Session* ses
 		else
 			m_futureUIState.push_back(async(launch::async, [load, i]{ return LoadChannelUIState(load, i); }));
 	}
-}
-
-LoadDialog::~LoadDialog()
-{
-	m_session->RemoveLoad(m_load);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

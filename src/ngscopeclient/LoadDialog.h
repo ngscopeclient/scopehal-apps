@@ -150,6 +150,8 @@ public:
 	SCPILoad* GetLoad()
 	{ return m_load; }
 
+	void RefreshFromHardware();
+
 protected:
 	void ChannelSettings(size_t channel);
 
