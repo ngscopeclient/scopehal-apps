@@ -51,22 +51,33 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	, m_bert(bert)
 	, m_state(state)
 {
-	m_txPattern = bert->GetGlobalCustomPattern();
+	RefreshFromHardware();
+}
+
+BERTDialog::~BERTDialog()
+{
+	m_session->RemoveBERT(m_bert);
+}
+
+void BERTDialog::RefreshFromHardware()
+{
+	m_txPattern = m_bert->GetGlobalCustomPattern();
 	m_txPatternText = to_string_hex(m_txPattern);
 
 	Unit sa(Unit::UNIT_SAMPLEDEPTH);
-	m_integrationLength = bert->GetBERIntegrationLength();
+	m_integrationLength = m_bert->GetBERIntegrationLength();
 	m_committedIntegrationLength = m_integrationLength;
 	m_integrationLengthText = sa.PrettyPrint(m_integrationLength);
 
 	//Transmit pattern
-	m_refclkIndex = bert->GetRefclkOutMux();
-	m_refclkNames = bert->GetRefclkOutMuxNames();
+	m_refclkIndex = m_bert->GetRefclkOutMux();
+	m_refclkNames = m_bert->GetRefclkOutMuxNames();
 
-	auto currentRate = bert->GetDataRate();
+	auto currentRate = m_bert->GetDataRate();
 	m_dataRateIndex = 0;
-	m_dataRates = bert->GetAvailableDataRates();
+	m_dataRates = m_bert->GetAvailableDataRates();
 	Unit bps(Unit::UNIT_BITRATE);
+	m_dataRateNames.clear();
 	for(size_t i=0; i<m_dataRates.size(); i++)
 	{
 		auto rate = m_dataRates[i];
@@ -77,11 +88,6 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 	}
 
 	m_refclkFrequency = m_bert->GetRefclkOutFrequency();
-}
-
-BERTDialog::~BERTDialog()
-{
-	m_session->RemoveBERT(m_bert);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

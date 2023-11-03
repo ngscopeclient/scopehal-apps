@@ -53,6 +53,7 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "BERTDialog.h"
 #include "BERTInputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FileBrowser.h"
@@ -207,6 +208,7 @@ void MainWindow::CloseSession()
 	m_psuDialogs.clear();
 	m_channelPropertiesDialogs.clear();
 	m_generatorDialogs.clear();
+	m_bertDialogs.clear();
 	m_rfgeneratorDialogs.clear();
 	m_loadDialogs.clear();
 	m_dialogs.clear();
@@ -895,6 +897,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 	if(rgenDlg)
 		m_rfgeneratorDialogs.erase(rgenDlg->GetGenerator());
+
+	auto bertDlg = dynamic_pointer_cast<BERTDialog>(dlg);
+	if(bertDlg)
+		m_bertDialogs.erase(bertDlg->GetBERT());
 
 	auto loadDlg = dynamic_pointer_cast<LoadDialog>(dlg);
 	if(loadDlg)
@@ -1964,6 +1970,12 @@ bool MainWindow::LoadSessionFromYaml(const YAML::Node& node, const string& dataD
 		if(rdlg)
 			rdlg->RefreshFromHardware();
 	}
+	for(auto it : m_bertDialogs)
+	{
+		auto bdlg = dynamic_pointer_cast<BERTDialog>(it.second);
+		if(bdlg)
+			bdlg->RefreshFromHardware();
+	}
 	for(auto it : m_loadDialogs)
 	{
 		auto ldlg = dynamic_pointer_cast<LoadDialog>(it.second);
@@ -2133,9 +2145,18 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 
 						area->AddStream(StreamDescriptor(chan, stream), persist, ramp);
 					}
+					else
+					{
+						LogWarning("channel %d not found in area %d\n",
+							jt.second["channel"].as<int>(),
+							aid);
+					}
 				}
 
-				group->AddArea(area);
+				if(!area)
+					LogWarning("no waveform area created for area %d\n", aid);
+				else
+					group->AddArea(area);
 			}
 		}
 	}
@@ -2243,6 +2264,24 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 			else
 			{
 				ShowErrorPopup("Invalid function generator", "Function generator could not be loaded");
+				return false;
+			}
+		}
+	}
+
+	auto berts = node["berts"];
+	if(berts)
+	{
+		for(auto it : berts)
+		{
+			auto bert = dynamic_cast<SCPIBERT*>(
+				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+
+			if(bert)
+				AddDialog(make_shared<BERTDialog>(bert, m_session.GetBERTState(bert), &m_session));
+			else
+			{
+				ShowErrorPopup("Invalid BERT", "BERT could not be loaded");
 				return false;
 			}
 		}
@@ -2635,6 +2674,18 @@ YAML::Node MainWindow::SerializeDialogs()
 			gnode[gen->m_nickname] = m_session.m_idtable.emplace((Instrument*)gen);
 		}
 		node["generators"] = gnode;
+	}
+
+	if(!m_bertDialogs.empty())
+	{
+		YAML::Node gnode;
+
+		for(auto it : m_bertDialogs)
+		{
+			auto bert = it.first;
+			gnode[bert->m_nickname] = m_session.m_idtable.emplace((Instrument*)bert);
+		}
+		node["berts"] = gnode;
 	}
 
 

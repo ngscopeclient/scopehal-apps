@@ -702,6 +702,11 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadLoad(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "bert")
+		{
+			if(!PreLoadBERT(version, inst, online))
+				return false;
+		}
 
 		//Unknown instrument type - too new file format?
 		else
@@ -913,6 +918,71 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 
 	//Run the preload
 	load->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPIBERT* bert = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if(transtype == "null")
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the BERT
+			auto transport = CreateTransportForNode(node);
+
+			if(transport)
+			{
+				bert = SCPIBERT::CreateBERT(driver, transport);
+				if(!VerifyInstrument(node, bert))
+				{
+					delete bert;
+					bert = nullptr;
+				}
+			}
+		}
+	}
+
+	if(!bert)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of BERTs not implemented yet");
+		return false;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(bert);
+
+	//All good. Add to our list of berts etc
+	AddBERT(bert, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)bert);
+
+	//Run the preload
+	bert->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1330,6 +1400,7 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto rfgen = dynamic_cast<SCPIRFSignalGenerator*>(inst);
 		auto funcgen = dynamic_cast<SCPIFunctionGenerator*>(inst);
 		auto load = dynamic_cast<SCPILoad*>(inst);
+		auto bert = dynamic_cast<SCPIBERT*>(inst);
 		if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
@@ -1346,6 +1417,8 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			config["type"] = "psu";
 		else if(load)
 			config["type"] = "load";
+		else if(bert)
+			config["type"] = "bert";
 
 		node["inst" + config["id"].as<string>()] = config;
 	}
@@ -1978,7 +2051,7 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 /**
 	@brief Adds a BERT to the session
  */
-void Session::AddBERT(SCPIBERT* bert)
+void Session::AddBERT(SCPIBERT* bert, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -1987,7 +2060,8 @@ void Session::AddBERT(SCPIBERT* bert)
 	m_berts[bert] = make_unique<BERTConnectionState>(bert, state, this);
 
 	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
+	if(createDialog)
+		m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(bert);
 

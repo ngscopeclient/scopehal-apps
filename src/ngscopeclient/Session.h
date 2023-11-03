@@ -270,7 +270,7 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
-	void AddBERT(SCPIBERT* bert);
+	void AddBERT(SCPIBERT* bert, bool createDialog = true);
 	void RemoveBERT(SCPIBERT* bert);
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
@@ -453,6 +453,7 @@ protected:
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
+	bool PreLoadBERT(int version, const YAML::Node& node, bool online);
 	bool PreLoadLoad(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
 	bool LoadInstrumentInputs(int version, const YAML::Node& node);

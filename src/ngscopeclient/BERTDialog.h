@@ -51,6 +51,8 @@ public:
 	SCPIBERT* GetBERT()
 	{ return m_bert; }
 
+	void RefreshFromHardware();
+
 protected:
 
 	///@brief Session handle so we can remove the load when closed

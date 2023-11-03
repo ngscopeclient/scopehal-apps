@@ -49,6 +49,7 @@
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "AddVNADialog.h"
+#include "BERTDialog.h"
 #include "FilterGraphEditor.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
@@ -80,6 +81,10 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto pdlg = dynamic_cast<PowerSupplyDialog*>(dlg.get());
 	if(pdlg != nullptr)
 		m_psuDialogs[pdlg->GetPSU()] = dlg;
+
+	auto bdlg = dynamic_cast<BERTDialog*>(dlg.get());
+	if(bdlg != nullptr)
+		m_bertDialogs[bdlg->GetBERT()] = dlg;
 
 	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
 	if(fdlg != nullptr)
