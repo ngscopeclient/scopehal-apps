@@ -286,6 +286,19 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 {
 	LogTrace("Loading waveform data\n");
 
+	//Load filter waveforms *before* scope data
+	//(we don't want any filters to be updated from nonexistent inputs and change state prior to getting output loaded)
+	string fname = dataDir + "/filter_metadata.yml";
+	FILE* fp = fopen(fname.c_str(), "r");
+	if(fp)
+	{
+		fclose(fp);
+
+		auto docs = YAML::LoadAllFromFile(fname);
+		if(!LoadWaveformDataForFilters(version, docs[0], dataDir))
+			return false;
+	}
+
 	//Load data for each scope
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
@@ -308,6 +321,84 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 	}
 
 	m_history.SetMaxToCurrentDepth();
+
+	return true;
+}
+
+/**
+	@brief Loads waveform data for filters that need to be preserved
+ */
+bool Session::LoadWaveformDataForFilters(
+		int /*version*/,		//ignored for now, always 2 since older formats don't support filter waveforms
+		const YAML::Node& node,
+		const string& dataDir)
+{
+	auto waveforms = node["waveforms"];
+	if(!waveforms)
+		return true;
+
+	string filtdir = dataDir + "/filter_waveforms";
+
+	for(auto it : waveforms)
+	{
+		auto ftag = it.second;
+		auto id = ftag["id"].as<intptr_t>();
+
+		auto timestamp = ftag["timestamp"].as<int64_t>();
+		auto time_fsec = ftag["time_fsec"].as<int64_t>();
+
+		string datdir = filtdir + "/filter_" + to_string(id);
+
+		auto f = static_cast<OscilloscopeChannel*>(m_idtable[id]);
+		for(size_t i=0; i<f->GetStreamCount(); i++)
+		{
+			auto stag = ftag["streams"][string("s") + to_string(i)];
+			if(!stag)
+				continue;
+
+			auto fmt = stag["format"].as<string>();
+			bool dense = (fmt == "densev1");
+
+			//TODO: we need to encode a digital path in the YAML once MemoryFilter has digital channel support
+			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
+
+			WaveformBase* cap = NULL;
+			SparseAnalogWaveform* sacap = NULL;
+			UniformAnalogWaveform* uacap = NULL;
+			//SparseDigitalWaveform* sdcap = NULL;
+			//UniformDigitalWaveform* udcap = NULL;
+			if(f->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+			{
+				if(dense)
+					cap = uacap = new UniformAnalogWaveform;
+				else
+					cap = sacap = new SparseAnalogWaveform;
+			}
+			else
+			{
+				LogError("unknown stream type loading waveform\n");
+				/*
+				if(dense)
+					cap = udcap = new UniformDigitalWaveform;
+				else
+					cap = sdcap = new SparseDigitalWaveform;
+				*/
+			}
+
+			//Channel waveform metadata
+			cap->m_timescale = stag["timescale"].as<int64_t>();
+			cap->m_startTimestamp = timestamp;
+			cap->m_startFemtoseconds = time_fsec;
+			cap->m_triggerPhase = stag["trigphase"].as<long long>();
+			cap->m_flags = stag["flags"].as<int>();
+			f->SetData(cap, i);
+
+			//Actually load the waveform
+			LogDebug("loading stream\n");
+			string fname = datdir + "/stream" + to_string(i) + ".bin";
+			DoLoadWaveformDataForStream(f, i, fmt, fname);
+		}
+	}
 
 	return true;
 }
@@ -448,16 +539,35 @@ bool Session::LoadWaveformDataForScope(
 
 		//Actually load the data for each channel
 		size_t nchans = channels.size();
+		char tmp[512];
 		for(size_t i=0; i<nchans; i++)
 		{
-			DoLoadWaveformDataForScope(
-				channels[i].first,
-				channels[i].second,
-				scope,
-				dataDir,
-				scope_id,
-				waveform_id,
-				formats[i]);
+			auto nchan = channels[i].first;
+			auto nstream = channels[i].second;
+
+			if(nstream == 0)
+			{
+				snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
+					dataDir.c_str(),
+					scope_id,
+					waveform_id,
+					nchan);
+			}
+			else
+			{
+				snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%d.bin",
+					dataDir.c_str(),
+					scope_id,
+					waveform_id,
+					nchan,
+					nstream);
+			}
+
+			DoLoadWaveformDataForStream(
+				scope->GetOscilloscopeChannel(nchan),
+				nstream,
+				formats[i],
+				tmp);
 		}
 
 		vector<Oscilloscope*> temp;
@@ -471,18 +581,13 @@ bool Session::LoadWaveformDataForScope(
 	return true;
 }
 
-void Session::DoLoadWaveformDataForScope(
-	int channel_index,
+void Session::DoLoadWaveformDataForStream(
+	OscilloscopeChannel* chan,
 	int stream,
-	Oscilloscope* scope,
-	string datadir,
-	int scope_id,
-	int waveform_id,
-	string format
+	string format,
+	string fname
 	)
 {
-	auto chan = scope->GetOscilloscopeChannel(channel_index);
-
 	auto cap = chan->GetData(stream);
 	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
 	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);
@@ -491,35 +596,15 @@ void Session::DoLoadWaveformDataForScope(
 
 	cap->PrepareForCpuAccess();
 
-	//Load the actual sample data
-	char tmp[512];
-	if(stream == 0)
-	{
-		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d.bin",
-			datadir.c_str(),
-			scope_id,
-			waveform_id,
-			channel_index);
-	}
-	else
-	{
-		snprintf(tmp, sizeof(tmp), "%s/scope_%d_waveforms/waveform_%d/channel_%d_stream%d.bin",
-			datadir.c_str(),
-			scope_id,
-			waveform_id,
-			channel_index,
-			stream);
-	}
-
 	//Load samples into memory
 	unsigned char* buf = NULL;
 
 	//Windows: use generic file reads for now
 	#ifdef _WIN32
-		FILE* fp = fopen(tmp, "rb");
+		FILE* fp = fopen(fname.c_str(), "rb");
 		if(!fp)
 		{
-			LogError("couldn't open %s\n", tmp);
+			LogError("couldn't open %s\n", fname.c_str());
 			return;
 		}
 
@@ -546,10 +631,10 @@ void Session::DoLoadWaveformDataForScope(
 
 	//On POSIX, just memory map the file
 	#else
-		int fd = open(tmp, O_RDONLY);
+		int fd = open(fname.c_str(), O_RDONLY);
 		if(fd < 0)
 		{
-			LogError("couldn't open %s\n", tmp);
+			LogError("couldn't open %s\n", fname.c_str());
 			return;
 		}
 		size_t len = lseek(fd, 0, SEEK_END);
@@ -634,7 +719,7 @@ void Session::DoLoadWaveformDataForScope(
 	else
 	{
 		LogError(
-			"Unknown waveform format \"%s\", perhaps this file was created by a newer version of glscopeclient?\n",
+			"Unknown waveform format \"%s\", perhaps this file was created by a newer version of ngscopeclient?\n",
 			format.c_str());
 	}
 
@@ -1639,7 +1724,90 @@ bool Session::SerializeWaveforms(const string& dataDir)
 		outfs.close();
 	}
 
-	//TODO: how/when do we serialize data from filters that have cached state (eye patterns, memories, etc)?
+	//Make directory for filters
+	string filtdir = dataDir + "/filter_waveforms";
+	#ifdef _WIN32
+		mkdir(filtdir.c_str());
+	#else
+		mkdir(filtdir.c_str(), 0755);
+	#endif
+
+	//Find filters that need to be serialized
+	YAML::Node filterNode;
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		//If it's not being persisted, drop it
+		if(!f->ShouldPersistWaveform())
+			continue;
+
+		//Make directory for this filter
+		auto nfilter = m_idtable.emplace(f);
+		string datdir = filtdir + "/filter_" + to_string(nfilter);
+		#ifdef _WIN32
+			mkdir(datdir.c_str());
+		#else
+			mkdir(datdir.c_str(), 0755);
+		#endif
+
+		//There's no history timestamp so use timestamp of the first stream's waveform
+		//If no first stream what do we do?
+		auto wref = f->GetData(0);
+		if(!wref)
+		{
+			LogWarning("Don't know how to save filters without a slot 0 waveform\n");
+			continue;
+		}
+
+		//Format metadata for this waveform
+		//No labels etc because we're not in history
+		YAML::Node mnode;
+		mnode["timestamp"] = wref->m_startTimestamp;
+		mnode["time_fsec"] = wref->m_startFemtoseconds;
+		mnode["id"] = nfilter;
+
+		for(size_t j=0; j<f->GetStreamCount(); j++)
+		{
+			StreamDescriptor stream(f, j);
+			auto data = stream.GetData();
+			if(data == nullptr)
+				continue;
+
+			//Got valid data, save the configuration for the channel
+			YAML::Node chnode;
+			chnode["stream"] = j;
+			chnode["timescale"] = data->m_timescale;
+			chnode["trigphase"] = data->m_triggerPhase;
+			chnode["flags"] = (int)data->m_flags;
+			//don't serialize revision
+
+			//Save the actual waveform data
+			string datapath = datdir + "/stream" + to_string(j) + ".bin";
+			auto sparse = dynamic_cast<SparseWaveformBase*>(data);
+			auto uniform = dynamic_cast<UniformWaveformBase*>(data);
+			if(sparse)
+			{
+				chnode["format"] = "sparsev1";
+				SerializeSparseWaveform(sparse, datapath);
+			}
+			else
+			{
+				chnode["format"] = "densev1";
+				SerializeUniformWaveform(uniform, datapath);
+			}
+
+			mnode["streams"][string("s") + to_string(j)] = chnode;
+		}
+
+		filterNode["waveforms"][string("filt") + to_string(nfilter)] = mnode;
+	}
+
+	string fname = dataDir + "/filter_metadata.yml";
+	ofstream outfs(fname);
+	if(!outfs)
+		return false;
+	outfs << filterNode;
+	outfs.close();
 
 	return true;
 }

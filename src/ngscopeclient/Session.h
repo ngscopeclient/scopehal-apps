@@ -463,14 +463,15 @@ protected:
 		const YAML::Node& node,
 		Oscilloscope* scope,
 		const std::string& dataDir);
-	void DoLoadWaveformDataForScope(
-		int channel_index,
+	bool LoadWaveformDataForFilters(
+		int version,
+		const YAML::Node& node,
+		const std::string& dataDir);
+	void DoLoadWaveformDataForStream(
+		OscilloscopeChannel* chan,
 		int stream,
-		Oscilloscope* scope,
-		std::string datadir,
-		int scope_id,
-		int waveform_id,
-		std::string format);
+		std::string format,
+		std::string fname);
 
 	///@brief Version of the file being loaded
 	int m_fileLoadVersion;
