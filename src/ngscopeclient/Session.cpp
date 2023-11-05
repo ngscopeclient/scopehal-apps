@@ -1351,18 +1351,34 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 
 		LogTrace("Loading trigger group %s\n", it.first.as<string>().c_str());
 
-		//Load the primary
-		auto scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
-			m_idtable[gnode["primary"].as<int64_t>()]));
-		auto group = make_shared<TriggerGroup>(scope, this);
-
-		//Add secondaries
-		auto snode = gnode["secondaries"];
-		for(auto jt : snode)
+		//Load scopes
+		auto pri = gnode["primary"];
+		shared_ptr<TriggerGroup> group;
+		if(pri)
 		{
-			scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
-				m_idtable[jt.second.as<int64_t>()]));
-			group->m_secondaries.push_back(scope);
+			auto scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
+				m_idtable[pri.as<int64_t>()]));
+			group = make_shared<TriggerGroup>(scope, this);
+
+			//Add secondaries
+			auto snode = gnode["secondaries"];
+			for(auto jt : snode)
+			{
+				scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
+					m_idtable[jt.second.as<int64_t>()]));
+				group->m_secondaries.push_back(scope);
+			}
+		}
+
+		//Load filters
+		auto filters = gnode["filters"];
+		if(filters)
+		{
+			if(!group)
+				group = make_shared<TriggerGroup>(nullptr, this);
+
+			for(auto fid : filters)
+				group->m_filters.push_back(reinterpret_cast<PausableFilter*>(m_idtable[fid.as<int64_t>()]));
 		}
 
 		m_triggerGroups.push_back(group);
@@ -1599,19 +1615,31 @@ YAML::Node Session::SerializeTriggerGroups()
 	YAML::Node node;
 
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
+	LogTrace("Serializing trigger groups (%zu total)\n", m_triggerGroups.size());
+	LogIndenter li;
 	for(auto group : m_triggerGroups)
 	{
-		auto gid = m_idtable[group.get()];
+		auto gid = m_idtable.emplace(group.get());
 
 		//Make a node for the group
 		YAML::Node gnode;
-		gnode["primary"] = m_idtable[(Instrument*)group->m_primary];
 
+		//Primary
+		if(group->m_primary)
+			gnode["primary"] = m_idtable[(Instrument*)group->m_primary];
+
+		//Secondaries
 		YAML::Node secnode;
 		for(size_t i=0; i<group->m_secondaries.size(); i++)
 			secnode[string("sec") + to_string(i)] = m_idtable[(Instrument*)group->m_secondaries[i]];
-
 		gnode["secondaries"] = secnode;
+
+		//Filters
+		YAML::Node fnode;
+		for(size_t i=0; i<group->m_filters.size(); i++)
+			fnode.push_back(m_idtable[group->m_filters[i]]);
+		gnode["filters"] = fnode;
+
 		node[string("group") + to_string(gid)] = gnode;
 	}
 
