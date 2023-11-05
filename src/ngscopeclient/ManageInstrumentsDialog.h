@@ -61,13 +61,15 @@ protected:
 class TriggerGroupDragDescriptor
 {
 public:
-	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope)
+	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope, PausableFilter* f)
 		: m_group(group)
 		, m_scope(scope)
+		, m_filter(f)
 	{}
 
 	TriggerGroup* m_group;
 	SCPIOscilloscope* m_scope;
+	PausableFilter* m_filter;
 };
 
 #endif

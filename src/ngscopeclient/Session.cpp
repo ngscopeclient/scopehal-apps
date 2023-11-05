@@ -2047,6 +2047,14 @@ void Session::MakeNewTriggerGroup(Oscilloscope* scope)
 	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
 }
 
+void Session::MakeNewTriggerGroup(PausableFilter* filter)
+{
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
+	auto group = make_shared<TriggerGroup>(nullptr, this);
+	group->AddFilter(filter);
+	m_triggerGroups.push_back(group);
+}
+
 /**
 	@brief Check if a scope is the primary of a group containing at least one other scope
  */

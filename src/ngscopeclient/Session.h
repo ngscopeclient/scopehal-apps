@@ -416,6 +416,7 @@ public:
 	void GarbageCollectTriggerGroups();
 
 	void MakeNewTriggerGroup(Oscilloscope* scope);
+	void MakeNewTriggerGroup(PausableFilter* filter);
 
 	int64_t GetDeskew(Oscilloscope* scope)
 	{ return m_scopeDeskewCal[scope]; }

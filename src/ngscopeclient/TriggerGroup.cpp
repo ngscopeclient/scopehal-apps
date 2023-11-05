@@ -77,6 +77,14 @@ void TriggerGroup::MakePrimary(Oscilloscope* scope)
  */
 void TriggerGroup::AddSecondary(Oscilloscope* scope)
 {
+	//If we do not have a primary, we're probably a filter-only group
+	//Make the new scope the primary instead
+	if(!m_primary)
+	{
+		m_primary = scope;
+		return;
+	}
+
 	//Turn on the trig-out port for the primary if we didn't have any secondaries before
 	if(m_secondaries.empty())
 		m_primary->EnableTriggerOutput();
@@ -104,6 +112,18 @@ void TriggerGroup::RemoveScope(Oscilloscope* scope)
 		if(m_secondaries[i] == scope)
 		{
 			m_secondaries.erase(m_secondaries.begin() + i);
+			return;
+		}
+	}
+}
+
+void TriggerGroup::RemoveFilter(PausableFilter* f)
+{
+	for(size_t i=0; i<m_filters.size(); i++)
+	{
+		if(m_filters[i] == f)
+		{
+			m_filters.erase(m_filters.begin() + i);
 			return;
 		}
 	}
@@ -232,6 +252,16 @@ void TriggerGroup::Arm(TriggerType type)
 		else
 			f->Run();
 	}
+}
+
+string TriggerGroup::GetDescription()
+{
+	if(m_primary)
+		return m_primary->m_nickname;
+	else if(!m_filters.empty())
+		return m_filters[0]->GetDisplayName();
+	else
+		return "(empty)";
 }
 
 /**

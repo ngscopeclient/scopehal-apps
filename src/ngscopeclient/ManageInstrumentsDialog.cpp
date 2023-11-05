@@ -141,7 +141,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 
 			//Display the node for the root of the trigger group
 			rootOpen = ImGui::TreeNodeEx(
-				"Filters",
+				group->GetDescription().c_str(),
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
 		}
 
@@ -158,7 +158,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 
 			//Display the node for the root of the trigger group
 			rootOpen = ImGui::TreeNodeEx(
-				firstScope->m_nickname.c_str(),
+				group->GetDescription().c_str(),
 				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
 		}
 
@@ -189,13 +189,25 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				//Dropping from a different group
 				if(desc->m_group != group.get())
 				{
-					group->AddSecondary(desc->m_scope);
-					desc->m_group->RemoveScope(desc->m_scope);
+					if(desc->m_scope)
+					{
+						group->AddSecondary(desc->m_scope);
+						desc->m_group->RemoveScope(desc->m_scope);
+					}
+					else
+					{
+						group->AddFilter(desc->m_filter);
+						desc->m_group->RemoveFilter(desc->m_filter);
+					}
 				}
 
 				//Drop from a child of this group
 				else
-					group->MakePrimary(desc->m_scope);
+				{
+					if(desc->m_scope)
+						group->MakePrimary(desc->m_scope);
+					//no hierarchy for filters so do nothing
+				}
 			}
 
 			ImGui::EndDragDropTarget();
@@ -204,7 +216,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		//Allow dragging
 		if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
-			TriggerGroupDragDescriptor desc(group.get(), firstScope);
+			TriggerGroupDragDescriptor desc(group.get(), firstScope, nullptr);
 			ImGui::SetDragDropPayload(
 				"TriggerGroup",
 				&desc,
@@ -243,7 +255,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				//Allow dragging
 				if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 				{
-					TriggerGroupDragDescriptor desc(group.get(), scope);
+					TriggerGroupDragDescriptor desc(group.get(), scope, nullptr);
 					ImGui::SetDragDropPayload(
 						"TriggerGroup",
 						&desc,
@@ -283,7 +295,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				//Allow dragging
 				if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 				{
-					TriggerGroupDragDescriptor desc(group.get(), nullptr);	//FIXME
+					TriggerGroupDragDescriptor desc(group.get(), nullptr, f);
 					ImGui::SetDragDropPayload(
 						"TriggerGroup",
 						&desc,
@@ -321,11 +333,22 @@ void ManageInstrumentsDialog::RowForNewGroup()
 		{
 			auto desc = reinterpret_cast<TriggerGroupDragDescriptor*>(payload->Data);
 
-			//Make it primary of the new group
-			m_session.MakeNewTriggerGroup(desc->m_scope);
+			//Are we dragging a scope?
+			if(desc->m_scope)
+			{
+				//Make it primary of the new group
+				m_session.MakeNewTriggerGroup(desc->m_scope);
 
-			//Remove from the existing group
-			desc->m_group->RemoveScope(desc->m_scope);
+				//Remove from the existing group
+				desc->m_group->RemoveScope(desc->m_scope);
+			}
+
+			//Or is it a filter?
+			else if(desc->m_filter)
+			{
+				m_session.MakeNewTriggerGroup(desc->m_filter);
+				desc->m_group->RemoveFilter(desc->m_filter);
+			}
 		}
 
 		ImGui::EndDragDropTarget();

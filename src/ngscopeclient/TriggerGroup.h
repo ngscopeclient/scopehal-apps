@@ -66,6 +66,7 @@ public:
 	virtual ~TriggerGroup();
 
 	void RemoveScope(Oscilloscope* scope);
+	void RemoveFilter(PausableFilter* f);
 
 	void MakePrimary(Oscilloscope* scope);
 	void AddSecondary(Oscilloscope* scope);
@@ -87,6 +88,8 @@ public:
 	std::vector<Oscilloscope*> m_secondaries;
 
 	std::vector<PausableFilter*> m_filters;
+
+	std::string GetDescription();
 
 protected:
 	void DetachAllWaveforms(Oscilloscope* scope);
