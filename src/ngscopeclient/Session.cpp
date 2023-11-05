@@ -1340,7 +1340,7 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 
 	LogTrace("Loading trigger groups\n");
 
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 
 	//Clear out any existing trigger groups
 	m_triggerGroups.clear();
@@ -1368,7 +1368,45 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		m_triggerGroups.push_back(group);
 	}
 
+	//Check all pausable filters and see if they are in a group
+	//(if not, add them to one)
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+	{
+		//Skip if not a pausable filter, or not in the group
+		auto pf = dynamic_cast<PausableFilter*>(f);
+		if(!pf)
+			continue;
+		if(GetTriggerGroupForFilter(pf))
+			continue;
+
+		//If we get here we have an orphaned filter not in a group
+		//Add the filter to the trend group by default
+		GetTrendFilterGroup()->AddFilter(pf);
+	}
+
 	return true;
+}
+
+shared_ptr<TriggerGroup> Session::GetTrendFilterGroup()
+{
+	//Make sure the group is only trend filters (if it exists)
+	if(m_trendTriggerGroup != nullptr)
+	{
+		if(m_trendTriggerGroup->HasScopes())
+			m_trendTriggerGroup = nullptr;
+		else
+			return m_trendTriggerGroup;
+	}
+
+	//We don't have a group yet, make it
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
+	m_trendTriggerGroup = make_shared<TriggerGroup>(nullptr, this);
+	m_triggerGroups.push_back(m_trendTriggerGroup);
+
+	LogTrace("Making trend filter group\n");
+
+	return m_trendTriggerGroup;
 }
 
 bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
@@ -1560,7 +1598,7 @@ YAML::Node Session::SerializeTriggerGroups()
 {
 	YAML::Node node;
 
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
 	{
 		auto gid = m_idtable[group.get()];
@@ -1987,12 +2025,13 @@ bool Session::SerializeUniformWaveform(UniformWaveformBase* wfm, const string& p
  */
 void Session::GarbageCollectTriggerGroups()
 {
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 
 	for(size_t i=0; i<m_triggerGroups.size(); i++)
 	{
 		if(m_triggerGroups[i]->empty())
 		{
+			LogTrace("Garbage collecting trigger group\n");
 			m_triggerGroups.erase(m_triggerGroups.begin() + i);
 			return;
 		}
@@ -2004,7 +2043,7 @@ void Session::GarbageCollectTriggerGroups()
  */
 void Session::MakeNewTriggerGroup(Oscilloscope* scope)
 {
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
 }
 
@@ -2013,7 +2052,7 @@ void Session::MakeNewTriggerGroup(Oscilloscope* scope)
  */
 bool Session::IsPrimaryOfMultiScopeGroup(Oscilloscope* scope)
 {
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
 	{
 		if( (group->m_primary == scope) && !group->m_secondaries.empty())
@@ -2027,7 +2066,7 @@ bool Session::IsPrimaryOfMultiScopeGroup(Oscilloscope* scope)
  */
 bool Session::IsSecondaryOfMultiScopeGroup(Oscilloscope* scope)
 {
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
 	{
 		//if primary we can't also be a secondary so stop looking
@@ -2048,7 +2087,7 @@ bool Session::IsSecondaryOfMultiScopeGroup(Oscilloscope* scope)
  */
 shared_ptr<TriggerGroup> Session::GetTriggerGroupForScope(Oscilloscope* scope)
 {
-	lock_guard<mutex> lock(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
 	{
 		if(group->m_primary == scope)
@@ -2063,6 +2102,24 @@ shared_ptr<TriggerGroup> Session::GetTriggerGroupForScope(Oscilloscope* scope)
 
 	//should never get here
 	LogError("Scope is not part of a trigger group!\n");
+	return nullptr;
+}
+
+/**
+	@brief Gets the trigger group that contains a specified filter
+ */
+shared_ptr<TriggerGroup> Session::GetTriggerGroupForFilter(PausableFilter* filter)
+{
+	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
+	for(auto group : m_triggerGroups)
+	{
+		for(auto f : group->m_filters)
+		{
+			if(f == filter)
+				return group;
+		}
+	}
+
 	return nullptr;
 }
 
@@ -2419,7 +2476,7 @@ void Session::ArmTrigger(TriggerGroup::TriggerType type)
 	//Arm each trigger group
 	//TODO: support partial arming (some groups but not others)
 	{
-		lock_guard<mutex> lock(m_triggerGroupMutex);
+		lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 		for(auto& group : m_triggerGroups)
 			group->Arm(type);
 	}
@@ -2437,7 +2494,7 @@ void Session::StopTrigger()
 	m_triggerArmed = false;
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
-	lock_guard<mutex> lock2(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock2(m_triggerGroupMutex);
 	for(auto& group : m_triggerGroups)
 		group->Stop();
 }
@@ -2464,7 +2521,7 @@ bool Session::CheckForPendingWaveforms()
 		return m_triggerArmed;
 
 	//Return true if any group has fully triggered
-	lock_guard<mutex> lock2(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock2(m_triggerGroupMutex);
 	for(auto& group : m_triggerGroups)
 	{
 		if(group->CheckForPendingWaveforms())
@@ -2487,7 +2544,7 @@ void Session::DownloadWaveforms()
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 	lock_guard<mutex> lock2(m_scopeMutex);
-	lock_guard<mutex> lock3(m_triggerGroupMutex);
+	lock_guard<recursive_mutex> lock3(m_triggerGroupMutex);
 
 	//Get the data from each  trigger group
 	for(auto group : m_triggerGroups)

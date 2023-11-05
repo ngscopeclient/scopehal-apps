@@ -110,7 +110,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 {
 	float width = ImGui::GetFontSize();
 	ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 6*width);
+	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 12*width);
 	ImGui::TableSetupColumn("Make", ImGuiTableColumnFlags_WidthFixed, 9*width);
 	ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthFixed, 15*width);
 	ImGui::TableSetupColumn("Serial", ImGuiTableColumnFlags_WidthFixed, 8*width);
@@ -128,18 +128,39 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		if(group->empty())
 			continue;
 
-		auto firstScope = dynamic_cast<SCPIOscilloscope*>(group->m_primary);
-		if(!firstScope)
-			LogFatal("don't know what to do with non-SCPI oscilloscopes\n");
+		//If we have no scopes but are not empty, we're a trend-only group
+		//Show a dummy root node
+		bool rootOpen = false;
+		SCPIOscilloscope* firstScope = nullptr;
 
-		ImGui::PushID(firstScope);
-		ImGui::TableNextRow(ImGuiTableRowFlags_None);
-		ImGui::TableSetColumnIndex(0);
+		if(!group->HasScopes())
+		{
+			ImGui::PushID(this);
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+			ImGui::TableSetColumnIndex(0);
 
-		//Display the node for the root of the trigger group
-		bool rootOpen = ImGui::TreeNodeEx(
-			firstScope->m_nickname.c_str(),
-			ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+			//Display the node for the root of the trigger group
+			rootOpen = ImGui::TreeNodeEx(
+				"Filters",
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+		}
+
+		//Normal root node
+		else
+		{
+			firstScope = dynamic_cast<SCPIOscilloscope*>(group->m_primary);
+			if(!firstScope)
+				LogFatal("group has secondary but no primary, shouldn't be possible\n");
+
+			ImGui::PushID(firstScope);
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+			ImGui::TableSetColumnIndex(0);
+
+			//Display the node for the root of the trigger group
+			rootOpen = ImGui::TreeNodeEx(
+				firstScope->m_nickname.c_str(),
+				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+		}
 
 		//Help tooltip
 		if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -192,14 +213,17 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 			ImGui::EndDragDropSource();
 		}
 
-		if(ImGui::TableSetColumnIndex(1))
-			ImGui::TextUnformatted(firstScope->GetVendor().c_str());
-		if(ImGui::TableSetColumnIndex(2))
-			ImGui::TextUnformatted(firstScope->GetName().c_str());
-		if(ImGui::TableSetColumnIndex(3))
-			ImGui::TextUnformatted(firstScope->GetSerial().c_str());
+		if(firstScope)
+		{
+			if(ImGui::TableSetColumnIndex(1))
+				ImGui::TextUnformatted(firstScope->GetVendor().c_str());
+			if(ImGui::TableSetColumnIndex(2))
+				ImGui::TextUnformatted(firstScope->GetName().c_str());
+			if(ImGui::TableSetColumnIndex(3))
+				ImGui::TextUnformatted(firstScope->GetSerial().c_str());
+		}
 
-		//then put all other scopes under it
+		//then put all other nodes under it
 		if(rootOpen)
 		{
 			for(size_t i=0; i<group->m_secondaries.size(); i++)
@@ -241,6 +265,33 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 					if(ImGui::Button("Deskew"))
 						m_parent->ShowSyncWizard(group, scope);
 				}
+				ImGui::PopID();
+			}
+
+			for(size_t i=0; i<group->m_filters.size(); i++)
+			{
+				auto f = group->m_filters[i];
+
+				ImGui::PushID(f);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TreeNodeEx(
+					f->GetDisplayName().c_str(),
+					ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen |
+						ImGuiTreeNodeFlags_SpanFullWidth);
+
+				//Allow dragging
+				if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+				{
+					TriggerGroupDragDescriptor desc(group.get(), nullptr);	//FIXME
+					ImGui::SetDragDropPayload(
+						"TriggerGroup",
+						&desc,
+						sizeof(desc));
+					ImGui::TextUnformatted(f->GetDisplayName().c_str());
+					ImGui::EndDragDropSource();
+				}
+
 				ImGui::PopID();
 			}
 		}

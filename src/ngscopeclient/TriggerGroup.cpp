@@ -109,6 +109,11 @@ void TriggerGroup::RemoveScope(Oscilloscope* scope)
 	}
 }
 
+void TriggerGroup::AddFilter(PausableFilter* f)
+{
+	m_filters.push_back(f);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Triggering
 
@@ -117,7 +122,10 @@ void TriggerGroup::RemoveScope(Oscilloscope* scope)
  */
 void TriggerGroup::Arm(TriggerType type)
 {
-	LogTrace("Arming trigger for group %s\n", m_primary->m_nickname.c_str());
+	if(m_primary)
+		LogTrace("Arming trigger for group %s\n", m_primary->m_nickname.c_str());
+	else
+		LogTrace("Arming trigger for filter group\n");
 	LogIndenter li;
 
 	bool oneshot = (type == TriggerGroup::TRIGGER_TYPE_FORCED) || (type == TriggerGroup::TRIGGER_TYPE_SINGLE);
@@ -184,33 +192,45 @@ void TriggerGroup::Arm(TriggerType type)
 
 	//Start the primary normally
 	//But if we have secondaries, do a single trigger so it doesn't re-arm before we've set up the secondaries
-	switch(type)
+	if(m_primary)
 	{
-		case TriggerGroup::TRIGGER_TYPE_NORMAL:
-			if(!m_secondaries.empty())
-			{
-				LogTrace("Starting trigger for primary\n");
+		switch(type)
+		{
+			case TriggerGroup::TRIGGER_TYPE_NORMAL:
+				if(!m_secondaries.empty())
+				{
+					LogTrace("Starting trigger for primary\n");
+					m_primary->StartSingleTrigger();
+				}
+				else
+					m_primary->Start();
+				break;
+
+			case TriggerGroup::TRIGGER_TYPE_AUTO:
+				LogError("ArmTrigger(TRIGGER_TYPE_AUTO) not implemented\n");
+				break;
+
+			case TriggerGroup::TRIGGER_TYPE_SINGLE:
 				m_primary->StartSingleTrigger();
-			}
-			else
-				m_primary->Start();
-			break;
+				break;
 
-		case TriggerGroup::TRIGGER_TYPE_AUTO:
-			LogError("ArmTrigger(TRIGGER_TYPE_AUTO) not implemented\n");
-			break;
-
-		case TriggerGroup::TRIGGER_TYPE_SINGLE:
-			m_primary->StartSingleTrigger();
-			break;
-
-		case TriggerGroup::TRIGGER_TYPE_FORCED:
-			m_primary->ForceTrigger();
-			break;
+			case TriggerGroup::TRIGGER_TYPE_FORCED:
+				m_primary->ForceTrigger();
+				break;
 
 
-		default:
-			break;
+			default:
+				break;
+		}
+	}
+
+	//Start our filters
+	for(auto f : m_filters)
+	{
+		if(type == TriggerGroup::TRIGGER_TYPE_SINGLE)
+			f->Single();
+		else
+			f->Run();
 	}
 }
 
@@ -223,14 +243,20 @@ void TriggerGroup::Stop()
 {
 	m_multiScopeFreeRun = false;
 
-	m_primary->Stop();
-	m_primary->ClearPendingWaveforms();
+	if(m_primary)
+	{
+		m_primary->Stop();
+		m_primary->ClearPendingWaveforms();
+	}
 
 	for(auto scope : m_secondaries)
 	{
 		scope->Stop();
 		scope->ClearPendingWaveforms();
 	}
+
+	for(auto f : m_filters)
+		f->Stop();
 }
 
 /**
@@ -238,6 +264,9 @@ void TriggerGroup::Stop()
  */
 bool TriggerGroup::CheckForPendingWaveforms()
 {
+	if(!m_primary)
+		return false;
+
 	//Make sure we have pending waveforms on everything
 	if(!m_primary->HasPendingWaveforms())
 		return false;

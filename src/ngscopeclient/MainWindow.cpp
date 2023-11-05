@@ -706,8 +706,16 @@ void MainWindow::TriggerStartDropdown(float buttonsize)
 		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
-			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
+			if(g->m_primary)
+			{
+				if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
+			}
+			else
+			{
+				if(ImGui::MenuItem("Filters"))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
+			}
 		}
 
 		//Start trigger for all groups
@@ -728,8 +736,16 @@ void MainWindow::TriggerSingleDropdown(float buttonsize)
 		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
-			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
+			if(g->m_primary)
+			{
+				if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
+			}
+			else
+			{
+				if(ImGui::MenuItem("Filters"))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
+			}
 		}
 
 		//Start trigger for all groups
@@ -750,8 +766,16 @@ void MainWindow::TriggerForceDropdown(float buttonsize)
 		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
-			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
+			if(g->m_primary)
+			{
+				if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
+			}
+			else
+			{
+				if(ImGui::MenuItem("Filters"))
+					g->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
+			}
 		}
 
 		//Start trigger for all groups
@@ -772,8 +796,16 @@ void MainWindow::TriggerStopDropdown(float buttonsize)
 		auto groups = m_session.GetTriggerGroups();
 		for(auto g : groups)
 		{
-			if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
-				g->Stop();
+			if(g->m_primary)
+			{
+				if(ImGui::MenuItem(g->m_primary->m_nickname.c_str()))
+					g->Stop();
+			}
+			else
+			{
+				if(ImGui::MenuItem("Filters"))
+					g->Stop();
+			}
 		}
 
 		//Stop trigger for all groups

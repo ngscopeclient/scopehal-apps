@@ -409,7 +409,7 @@ public:
 
 	std::vector<std::shared_ptr<TriggerGroup> > GetTriggerGroups()
 	{
-		std::lock_guard<std::mutex> lock(m_triggerGroupMutex);
+		std::lock_guard<std::recursive_mutex> lock(m_triggerGroupMutex);
 		return m_triggerGroups;
 	}
 
@@ -427,6 +427,7 @@ public:
 	bool IsSecondaryOfMultiScopeGroup(Oscilloscope* scope);
 
 	std::shared_ptr<TriggerGroup> GetTriggerGroupForScope(Oscilloscope* scope);
+	std::shared_ptr<TriggerGroup> GetTriggerGroupForFilter(PausableFilter* filter);
 
 	const ConfigWarningList& GetWarnings()
 	{ return m_warnings; }
@@ -440,6 +441,8 @@ public:
 		else
 			return nullptr;
 	}
+
+	std::shared_ptr<TriggerGroup> GetTrendFilterGroup();
 
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
@@ -524,8 +527,11 @@ protected:
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;
 
+	///@brief Trigger group dedicated to trend filters
+	std::shared_ptr<TriggerGroup> m_trendTriggerGroup;
+
 	///@brief Mutex controlling access to m_triggerGroups
-	std::mutex m_triggerGroupMutex;
+	std::recursive_mutex m_triggerGroupMutex;
 
 	///@brief Processing threads for polling and processing scope waveforms
 	std::vector< std::unique_ptr<std::thread> > m_threads;

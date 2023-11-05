@@ -35,6 +35,8 @@
 #ifndef TriggerGroup_h
 #define TriggerGroup_h
 
+#include "../../lib/scopehal/PausableFilter.h"
+
 /**
 	@brief A trigger group is a set of oscilloscopes that all trigger in lock-step
 
@@ -67,6 +69,7 @@ public:
 
 	void MakePrimary(Oscilloscope* scope);
 	void AddSecondary(Oscilloscope* scope);
+	void AddFilter(PausableFilter* f);
 
 	void Arm(TriggerType type);
 	void Stop();
@@ -75,10 +78,15 @@ public:
 	void RearmIfMultiScope();
 
 	bool empty()
-	{ return (m_secondaries.empty() ) && (m_primary == nullptr); }
+	{ return m_secondaries.empty() && (m_primary == nullptr) && m_filters.empty(); }
+
+	bool HasScopes()
+	{ return !m_secondaries.empty() || (m_primary != nullptr); }
 
 	Oscilloscope* m_primary;
 	std::vector<Oscilloscope*> m_secondaries;
+
+	std::vector<PausableFilter*> m_filters;
 
 protected:
 	void DetachAllWaveforms(Oscilloscope* scope);

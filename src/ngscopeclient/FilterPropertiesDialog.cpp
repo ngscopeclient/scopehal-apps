@@ -253,8 +253,8 @@ bool FilterPropertiesDialog::DoRender()
 				if(ImGui::Button(a.c_str()))
 				{
 					//Assume that the action requires the filter to get re-rendered
-					ap->PerformAction(a);
-					reconfigured = true;
+					if(ap->PerformAction(a))
+						reconfigured = true;
 				}
 			}
 		}
