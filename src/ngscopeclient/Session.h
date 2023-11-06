@@ -239,8 +239,8 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
-	void ArmTrigger(TriggerGroup::TriggerType type);
-	void StopTrigger();
+	void ArmTrigger(TriggerGroup::TriggerType type, bool all=false);
+	void StopTrigger(bool all=false);
 	bool HasOnlineScopes();
 	void DownloadWaveforms();
 	bool CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf);

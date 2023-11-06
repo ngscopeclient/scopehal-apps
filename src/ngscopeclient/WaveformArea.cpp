@@ -48,9 +48,10 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DisplayedChannel
 
-DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
+DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 		: m_colorRamp("eye-gradient-viridis")
 		, m_stream(stream)
+		, m_session(session)
 		, m_rasterizedWaveform("DisplayedChannel.m_rasterizedWaveform")
 		, m_indexBuffer("DisplayedChannel.m_indexBuffer")
 		, m_rasterizedX(0)
@@ -94,6 +95,24 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream)
 		default:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/WaveformToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1);
+	}
+}
+
+DisplayedChannel::~DisplayedChannel()
+{
+	auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
+	if(schan)
+	{
+		//Remove pausable filters from trigger group when they're deleted
+		//TODO: potential race condition here?
+		auto pf = dynamic_cast<PausableFilter*>(schan);
+		if(pf && (pf->GetRefCount() == 1))
+		{
+			LogTrace("Deleting last copy of pausable filter, removing from trigger group\n");
+			m_session.GetTriggerGroupForFilter(pf)->RemoveFilter(pf);
+		}
+
+		schan->Release();
 	}
 }
 
@@ -289,7 +308,7 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_dragPeakLabel(nullptr)
 	, m_mouseOverButton(false)
 {
-	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream));
+	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream, m_parent->GetSession()));
 }
 
 WaveformArea::~WaveformArea()
@@ -305,7 +324,7 @@ WaveformArea::~WaveformArea()
  */
 void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const string& ramp)
 {
-	auto chan = make_shared<DisplayedChannel>(desc);
+	auto chan = make_shared<DisplayedChannel>(desc, m_parent->GetSession());
 	chan->SetPersistenceEnabled(persistence);
 	chan->m_colorRamp = ramp;
 	m_displayedChannels.push_back(chan);

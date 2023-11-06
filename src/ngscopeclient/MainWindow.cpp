@@ -696,23 +696,77 @@ bool MainWindow::DropdownButton(const char* id, float height)
 	return ImGui::ArrowButton(id, ImGuiDir_Down);
 }
 
+void MainWindow::DoTriggerDropdown(const char* action, shared_ptr<TriggerGroup>& group, bool& all)
+{
+	all = false;
+
+	ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit |
+		ImGuiTableFlags_NoKeepColumnsVisible;
+
+	if(ImGui::BeginTable("groups", 3, flags))
+	{
+		float width = ImGui::GetFontSize();
+		ImGui::TableSetupColumn("Default", ImGuiTableColumnFlags_WidthFixed, 4*width);
+		ImGui::TableSetupColumn("Group", ImGuiTableColumnFlags_WidthFixed, 12*width);
+		ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 8*width);
+		ImGui::TableHeadersRow();
+
+		auto groups = m_session.GetTriggerGroups();
+		for(auto g : groups)
+		{
+			ImGui::PushID(g.get());
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+			//Default checkbox
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Checkbox("###default", &g->m_default);
+
+			//Group name
+			ImGui::TableSetColumnIndex(1);
+			ImGui::TextUnformatted(g->GetDescription().c_str());
+
+			//Action buttons
+			ImGui::TableSetColumnIndex(2);
+			if(ImGui::Button(action))
+				group = g;
+
+			ImGui::PopID();
+		}
+
+		ImGui::PushID("all");
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
+		ImGui::TableSetColumnIndex(1);
+		ImGui::TextUnformatted("All");
+
+		//Action buttons
+		ImGui::TableSetColumnIndex(2);
+		if(ImGui::Button(action))
+			all = true;
+		ImGui::PopID();
+
+		ImGui::EndTable();
+	}
+}
+
 void MainWindow::TriggerStartDropdown(float buttonsize)
 {
 	if(DropdownButton("trigger-start-dropdown", buttonsize))
 		ImGui::OpenPopup("TriggerStartMenu");
 	if(ImGui::BeginPopup("TriggerStartMenu"))
 	{
-		//Start trigger for only a specific group
-		auto groups = m_session.GetTriggerGroups();
-		for(auto g : groups)
-		{
-			if(ImGui::MenuItem(g->GetDescription().c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
-		}
+		bool all = false;
+		shared_ptr<TriggerGroup> group;
+		DoTriggerDropdown("Start", group, all);
 
-		//Start trigger for all groups
-		if(ImGui::MenuItem("All"))
-			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
+		if(group)
+			group->Arm(TriggerGroup::TRIGGER_TYPE_NORMAL);
+		if(all)
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL, true);
 
 		ImGui::EndPopup();
 	}
@@ -724,17 +778,17 @@ void MainWindow::TriggerSingleDropdown(float buttonsize)
 		ImGui::OpenPopup("TriggerSingleMenu");
 	if(ImGui::BeginPopup("TriggerSingleMenu"))
 	{
+		bool all = false;
+		shared_ptr<TriggerGroup> group;
+		DoTriggerDropdown("Single", group, all);
+
 		//Start trigger for only a specific group
-		auto groups = m_session.GetTriggerGroups();
-		for(auto g : groups)
-		{
-			if(ImGui::MenuItem(g->GetDescription().c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
-		}
+		if(group)
+			group->Arm(TriggerGroup::TRIGGER_TYPE_SINGLE);
 
 		//Start trigger for all groups
-		if(ImGui::MenuItem("All"))
-			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
+		if(all)
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE, true);
 
 		ImGui::EndPopup();
 	}
@@ -746,17 +800,17 @@ void MainWindow::TriggerForceDropdown(float buttonsize)
 		ImGui::OpenPopup("TriggerForceMenu");
 	if(ImGui::BeginPopup("TriggerForceMenu"))
 	{
+		bool all = false;
+		shared_ptr<TriggerGroup> group;
+		DoTriggerDropdown("Force", group, all);
+
 		//Start trigger for only a specific group
-		auto groups = m_session.GetTriggerGroups();
-		for(auto g : groups)
-		{
-			if(ImGui::MenuItem(g->GetDescription().c_str()))
-				g->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
-		}
+		if(group)
+			group->Arm(TriggerGroup::TRIGGER_TYPE_FORCED);
 
 		//Start trigger for all groups
-		if(ImGui::MenuItem("All"))
-			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_FORCED);
+		if(all)
+			m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_FORCED, true);
 
 		ImGui::EndPopup();
 	}
@@ -768,17 +822,17 @@ void MainWindow::TriggerStopDropdown(float buttonsize)
 		ImGui::OpenPopup("TriggerStopMenu");
 	if(ImGui::BeginPopup("TriggerStopMenu"))
 	{
+		bool all = false;
+		shared_ptr<TriggerGroup> group;
+		DoTriggerDropdown("Stop", group, all);
+
 		//Start trigger for only a specific group
-		auto groups = m_session.GetTriggerGroups();
-		for(auto g : groups)
-		{
-			if(ImGui::MenuItem(g->GetDescription().c_str()))
-				g->Stop();
-		}
+		if(group)
+			group->Stop();
 
 		//Stop trigger for all groups
-		if(ImGui::MenuItem("All"))
-			m_session.StopTrigger();
+		if(all)
+			m_session.StopTrigger(true);
 
 		ImGui::EndPopup();
 	}
@@ -1560,6 +1614,11 @@ Filter* MainWindow::CreateFilter(
 		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}
+
+	//If the filter is pausable, add to the default trigger group for that
+	auto pf = dynamic_cast<PausableFilter*>(f);
+	if(pf)
+		m_session.GetTrendFilterGroup()->AddFilter(pf);
 
 	return f;
 }
@@ -2650,7 +2709,17 @@ YAML::Node MainWindow::SerializeDialogs()
 		node["meters"] = mnode;
 	}
 
-	//TODO: psu dialogs
+	if(!m_psuDialogs.empty())
+	{
+		YAML::Node gnode;
+
+		for(auto it : m_psuDialogs)
+		{
+			auto psu = it.first;
+			gnode[psu->m_nickname] = m_session.m_idtable.emplace((Instrument*)psu);
+		}
+		node["psus"] = gnode;
+	}
 
 	if(!m_loadDialogs.empty())
 	{

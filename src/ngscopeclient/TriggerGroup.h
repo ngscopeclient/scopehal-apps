@@ -91,6 +91,9 @@ public:
 
 	std::string GetDescription();
 
+	///@brief True if we should be activated when the start/stop toolbar button is clicked
+	bool m_default;
+
 protected:
 	void DetachAllWaveforms(Oscilloscope* scope);
 

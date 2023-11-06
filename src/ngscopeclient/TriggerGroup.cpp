@@ -38,6 +38,7 @@ using namespace std;
 
 TriggerGroup::TriggerGroup(Oscilloscope* primary, Session* session)
 	: m_primary(primary)
+	, m_default(true)
 	, m_session(session)
 	, m_multiScopeFreeRun(false)
 {

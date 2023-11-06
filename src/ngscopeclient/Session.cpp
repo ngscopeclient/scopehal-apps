@@ -394,7 +394,6 @@ bool Session::LoadWaveformDataForFilters(
 			f->SetData(cap, i);
 
 			//Actually load the waveform
-			LogDebug("loading stream\n");
 			string fname = datdir + "/stream" + to_string(i) + ".bin";
 			DoLoadWaveformDataForStream(f, i, fmt, fname);
 		}
@@ -1382,6 +1381,16 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		}
 
 		m_triggerGroups.push_back(group);
+
+		//See if it's default enabled
+		auto dnode = gnode["default"];
+		if(dnode)
+			group->m_default = dnode.as<bool>();
+
+		//Older file without the default flag
+		//Make all non-filter groups default
+		else
+			group->m_default = group->HasScopes();
 	}
 
 	//Check all pausable filters and see if they are in a group
@@ -1641,6 +1650,8 @@ YAML::Node Session::SerializeTriggerGroups()
 		gnode["filters"] = fnode;
 
 		node[string("group") + to_string(gid)] = gnode;
+
+		gnode["default"] = group->m_default;
 	}
 
 	return node;
@@ -2482,8 +2493,12 @@ set<Instrument*> Session::GetInstruments()
 
 /**
 	@brief Arms the trigger for all trigger groups
+
+	@param type		Type of trigger to start
+	@param all		If true, arm all groups in the sesison.
+					If false, only stop groups with the "default" flag set
  */
-void Session::ArmTrigger(TriggerGroup::TriggerType type)
+void Session::ArmTrigger(TriggerGroup::TriggerType type, bool all)
 {
 	LogTrace("Arming trigger\n");
 	LogIndenter li;
@@ -2509,12 +2524,14 @@ void Session::ArmTrigger(TriggerGroup::TriggerType type)
 		ensure that the primary doesn't trigger until the secondaries are ready for the event.
 	*/
 
-	//Arm each trigger group
-	//TODO: support partial arming (some groups but not others)
+	//Arm each trigger group (if it's defaulted)
 	{
 		lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 		for(auto& group : m_triggerGroups)
-			group->Arm(type);
+		{
+			if(group->m_default || all)
+				group->Arm(type);
+		}
 	}
 
 	LogTrace("All instruments are armed\n");
@@ -2523,16 +2540,22 @@ void Session::ArmTrigger(TriggerGroup::TriggerType type)
 }
 
 /**
-	@brief Stop the trigger on all scopes
+	@brief Stop the trigger for the session
+
+	@param all		If true, stop all groups in the sesison.
+					If false, only stop groups with the "default" flag set
  */
-void Session::StopTrigger()
+void Session::StopTrigger(bool all)
 {
 	m_triggerArmed = false;
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 	lock_guard<recursive_mutex> lock2(m_triggerGroupMutex);
 	for(auto& group : m_triggerGroups)
-		group->Stop();
+	{
+		if(group->m_default || all)
+			group->Stop();
+	}
 }
 
 /**

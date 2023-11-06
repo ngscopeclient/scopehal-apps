@@ -174,14 +174,9 @@ struct PeakLabel
 class DisplayedChannel
 {
 public:
-	DisplayedChannel(StreamDescriptor stream);
+	DisplayedChannel(StreamDescriptor stream, Session& session);
 
-	~DisplayedChannel()
-	{
-		auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
-		if(schan)
-			schan->Release();
-	}
+	~DisplayedChannel();
 
 	YAML::Node Serialize(IDTable& table) const;
 
@@ -374,6 +369,9 @@ public:
 
 protected:
 	StreamDescriptor m_stream;
+
+	///@brief Parent session object
+	Session& m_session;
 
 	///@brief Buffer storing our rasterized waveform, prior to tone mapping
 	AcceleratorBuffer<float> m_rasterizedWaveform;
