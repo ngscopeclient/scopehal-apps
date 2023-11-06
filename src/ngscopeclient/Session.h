@@ -128,6 +128,7 @@ public:
 	PowerSupplyConnectionState(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session)
 		: m_psu(psu)
 		, m_shuttingDown(false)
+		, m_state(state)
 	{
 		PowerSupplyThreadArgs args(psu, &m_shuttingDown, state, session);
 		m_thread = std::make_unique<std::thread>(PowerSupplyThread, args);
@@ -151,6 +152,9 @@ public:
 
 	///@brief Thread for polling the PSU
 	std::unique_ptr<std::thread> m_thread;
+
+	///@brief State object
+	std::shared_ptr<PowerSupplyState> m_state;
 };
 
 /**
@@ -282,7 +286,7 @@ public:
 	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
 	void AddVNA(SCPIVNA* vna, bool createViews = true)
 	{ AddOscilloscope(vna, createViews); }
-	void AddPowerSupply(SCPIPowerSupply* psu);
+	void AddPowerSupply(SCPIPowerSupply* psu, bool createDialog = true);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
@@ -298,6 +302,15 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_berts[bert]->m_state;
+	}
+
+	/**
+		@brief Returns a pointer to the state for a power supply
+	 */
+	std::shared_ptr<PowerSupplyState> GetPSUState(SCPIPowerSupply* psu)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_psus[psu]->m_state;
 	}
 
 	/**

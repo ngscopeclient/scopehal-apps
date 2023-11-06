@@ -1082,6 +1082,7 @@ void MainWindow::WindowMenu()
 		WindowAnalyzerMenu();
 		WindowGeneratorMenu();
 		WindowMultimeterMenu();
+		WindowPSUMenu();
 		WindowSCPIConsoleMenu();
 
 		bool hasLogViewer = m_logViewerDialog != nullptr;
@@ -1208,6 +1209,36 @@ void MainWindow::WindowGeneratorMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(generator->m_nickname.c_str()))
 				m_session.AddFunctionGenerator(generator);
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Window | Power Supply menu
+
+	This menu is used for controlling a power supply that is already open in the session but has had the dialog closed.
+ */
+void MainWindow::WindowPSUMenu()
+{
+	if(ImGui::BeginMenu("Power Supply"))
+	{
+		auto insts = m_session.GetSCPIInstruments();
+		for(auto inst : insts)
+		{
+			//Skip anything that's not a PSU
+			if( (inst->GetInstrumentTypes() & Instrument::INST_PSU) == 0)
+				continue;
+
+			//Do we already have a dialog open for it? If so, don't make another
+			auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
+			if(m_psuDialogs.find(psu) != m_psuDialogs.end())
+				continue;
+
+			//Add it to the menu
+			if(ImGui::MenuItem(psu->m_nickname.c_str()))
+				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
 		}
 
 		ImGui::EndMenu();

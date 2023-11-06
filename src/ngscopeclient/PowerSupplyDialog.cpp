@@ -58,7 +58,6 @@ PowerSupplyDialog::PowerSupplyDialog(SCPIPowerSupply* psu, shared_ptr<PowerSuppl
 
 PowerSupplyDialog::~PowerSupplyDialog()
 {
-	m_session->RemovePowerSupply(m_psu);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

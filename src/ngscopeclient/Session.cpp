@@ -1192,7 +1192,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 	//ApplyPreferences(psu);
 
 	//All good. Add to our list of scopes etc
-	AddPowerSupply(psu);
+	AddPowerSupply(psu, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu);
 
 	//Run the preload
@@ -2226,7 +2226,7 @@ void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 /**
 	@brief Adds a power supply to the session
  */
-void Session::AddPowerSupply(SCPIPowerSupply* psu)
+void Session::AddPowerSupply(SCPIPowerSupply* psu, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2235,7 +2235,8 @@ void Session::AddPowerSupply(SCPIPowerSupply* psu)
 	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state, this);
 
 	//Add the dialog to view/control it
-	m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+	if(createDialog)
+		m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
 
 	m_mainWindow->AddToRecentInstrumentList(psu);
 }

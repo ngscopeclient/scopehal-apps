@@ -2328,6 +2328,24 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		}
 	}
 
+	auto psus = node["psus"];
+	if(psus)
+	{
+		for(auto it : psus)
+		{
+			auto psu = dynamic_cast<SCPIPowerSupply*>(
+				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+
+			if(psu)
+				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
+			else
+			{
+				ShowErrorPopup("Invalid PSU", "PSU could not be loaded");
+				return false;
+			}
+		}
+	}
+
 	auto berts = node["berts"];
 	if(berts)
 	{
