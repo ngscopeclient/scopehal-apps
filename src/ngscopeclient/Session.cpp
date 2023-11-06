@@ -1424,9 +1424,24 @@ shared_ptr<TriggerGroup> Session::GetTrendFilterGroup()
 			return m_trendTriggerGroup;
 	}
 
+	//See if there is an existing filter-only group we can claim as the trend group
+	else
+	{
+		lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
+		for(auto g : m_triggerGroups)
+		{
+			if(!g->HasScopes() && !g->empty())
+			{
+				m_trendTriggerGroup = g;
+				return m_trendTriggerGroup;
+			}
+		}
+	}
+
 	//We don't have a group yet, make it
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	m_trendTriggerGroup = make_shared<TriggerGroup>(nullptr, this);
+	m_trendTriggerGroup->m_default = false;
 	m_triggerGroups.push_back(m_trendTriggerGroup);
 
 	LogTrace("Making trend filter group\n");
@@ -2090,6 +2105,7 @@ void Session::MakeNewTriggerGroup(PausableFilter* filter)
 {
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	auto group = make_shared<TriggerGroup>(nullptr, this);
+	group->m_default = false;
 	group->AddFilter(filter);
 	m_triggerGroups.push_back(group);
 }
