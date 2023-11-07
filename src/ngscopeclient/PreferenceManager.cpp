@@ -160,8 +160,9 @@ void PreferenceManager::LoadPreferences()
 	try
 	{
 		LogTrace("Loading preferences from %s\n", m_filePath.c_str());
-		auto doc = YAML::LoadAllFromFile(m_filePath)[0];
-		this->m_treeRoot.FromYAML(doc);
+		auto docs = YAML::LoadAllFromFile(m_filePath);
+		if(docs.size())
+			this->m_treeRoot.FromYAML(docs[0]);
 	}
 	catch(const exception& ex)
 	{
