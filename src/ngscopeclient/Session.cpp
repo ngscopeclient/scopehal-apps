@@ -295,8 +295,11 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 		fclose(fp);
 
 		auto docs = YAML::LoadAllFromFile(fname);
-		if(!LoadWaveformDataForFilters(version, docs[0], dataDir))
-			return false;
+		if(docs.size())
+		{
+			if(!LoadWaveformDataForFilters(version, docs[0], dataDir))
+				return false;
+		}
 	}
 
 	//Load data for each scope
@@ -333,6 +336,8 @@ bool Session::LoadWaveformDataForFilters(
 		const YAML::Node& node,
 		const string& dataDir)
 {
+	if(!node)
+		return true;
 	auto waveforms = node["waveforms"];
 	if(!waveforms)
 		return true;
