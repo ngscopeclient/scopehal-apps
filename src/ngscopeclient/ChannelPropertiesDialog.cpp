@@ -182,6 +182,8 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 	//Probe type
 	m_probe = scope->GetProbeName(nchan);
 	m_canAutoZero = scope->CanAutoZero(nchan);
+	m_canDegauss = scope->CanDegauss(nchan);
+	m_shouldDegauss = scope->ShouldDegauss(nchan);
 }
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
@@ -419,6 +421,20 @@ bool ChannelPropertiesDialog::DoRender()
 				HelpMarker(
 					"Click to automatically zero offset of active probe.\n\n"
 					"Check probe documentation to see whether input signal must be removed before zeroing."
+					);
+			}
+
+			//If the probe supports degaussing, show a button for it
+			if(m_canDegauss)
+			{
+				string caption = "Degauss";
+				if(m_shouldDegauss)
+					caption += "*";
+				if(ImGui::Button(caption.c_str()))
+					m_channel->Degauss();
+				HelpMarker(
+					"Click to automatically degauss current probe.\n\n"
+					"Check probe documentation to see whether input signal must be removed before degaussing."
 					);
 			}
 		}

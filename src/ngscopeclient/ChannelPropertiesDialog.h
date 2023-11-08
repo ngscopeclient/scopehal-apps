@@ -85,6 +85,8 @@ protected:
 
 	std::string m_probe;
 	bool m_canAutoZero;
+	bool m_canDegauss;
+	bool m_shouldDegauss;
 };
 
 #endif
