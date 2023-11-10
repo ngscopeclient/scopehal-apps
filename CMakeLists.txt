@@ -162,7 +162,6 @@ endif()
 # Example code and other utilities, don't build on non-POSIX yet
 if(NOT WIN32)
 	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/curvetrace")
-	add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/scopevna")
 	#add_subdirectory("${PROJECT_SOURCE_DIR}/src/examples/usbcsv")
 endif()
 
