@@ -259,7 +259,7 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 				int i = pref.GetInt();
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
 				if(ImGui::InputInt(label.c_str(), &i))
-					pref.SetReal(i);
+					pref.SetInt(i);
 			}
 			break;
 
