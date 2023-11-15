@@ -505,6 +505,7 @@ protected:
 	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
 	bool PreLoadBERT(int version, const YAML::Node& node, bool online);
 	bool PreLoadLoad(int version, const YAML::Node& node, bool online);
+	bool PreLoadMisc(int version, const YAML::Node& node, bool online);
 	bool LoadFilters(int version, const YAML::Node& node);
 	bool LoadInstrumentInputs(int version, const YAML::Node& node);
 	bool LoadWaveformData(int version, const std::string& dataDir);
