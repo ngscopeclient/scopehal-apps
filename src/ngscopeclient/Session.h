@@ -86,6 +86,38 @@ public:
 };
 
 /**
+	@brief Internal state for a connection to a MiscInstrument
+ */
+class MiscInstrumentConnectionState
+{
+public:
+	MiscInstrumentConnectionState(SCPIMiscInstrument* inst, Session* session)
+		: m_inst(inst)
+		, m_shuttingDown(false)
+	{
+		MiscInstrumentThreadArgs args(inst, &m_shuttingDown, session);
+		m_thread = std::make_unique<std::thread>(MiscInstrumentThread, args);
+	}
+
+	~MiscInstrumentConnectionState()
+	{
+		//Terminate the thread
+		m_shuttingDown = true;
+		m_thread->join();
+		delete m_inst;
+	}
+
+	///@brief The MiscInstrument
+	SCPIMiscInstrument* m_inst;
+
+	///@brief Termination flag for shutting down the polling thread
+	std::atomic<bool> m_shuttingDown;
+
+	///@brief Thread for polling the MiscInstrument
+	std::unique_ptr<std::thread> m_thread;
+};
+
+/**
 	@brief Internal state for a connection to an RF signal generator
  */
 class RFSignalGeneratorConnectionState
@@ -276,6 +308,7 @@ public:
 
 	void AddBERT(SCPIBERT* bert, bool createDialog = true);
 	void RemoveBERT(SCPIBERT* bert);
+	void AddMiscInstrument(SCPIMiscInstrument* inst);
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
 	void AddLoad(SCPILoad* load, bool createDialog = true);
@@ -537,6 +570,9 @@ protected:
 
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;
+
+	///@brief Miscellaneous instruments we are currently connected to
+	std::map<SCPIMiscInstrument*, std::unique_ptr<MiscInstrumentConnectionState> > m_misc;
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;

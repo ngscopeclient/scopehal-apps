@@ -181,11 +181,16 @@ void Session::Clear()
 		}
 		delete scope;
 	}
+
 	m_oscilloscopes.clear();
 	m_psus.clear();
 	m_loads.clear();
 	m_rfgenerators.clear();
+	m_misc.clear();
 	m_meters.clear();
+	m_berts.clear();
+	m_misc.clear();
+	m_generators.clear();
 	m_scopeDeskewCal.clear();
 
 	//Remove all trigger groups
@@ -2322,6 +2327,19 @@ void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
 }
 
 /**
+	@brief Adds a miscellaneous instrument
+ */
+void Session::AddMiscInstrument(SCPIMiscInstrument* inst)
+{
+	m_modifiedSinceLastSave = true;
+
+	m_mainWindow->AddToRecentInstrumentList(inst);
+	m_misc[inst] = make_unique<MiscInstrumentConnectionState>(inst, this);
+
+	StartWaveformThreadIfNeeded();
+}
+
+/**
 	@brief Removes a function generator from the session
  */
 void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
@@ -2478,6 +2496,8 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 	}
 	for(auto gen : m_generators)
 		insts.emplace(gen);
+	for(auto& it : m_misc)
+		insts.emplace(it.first);
 
 	return insts;
 }
@@ -2506,6 +2526,8 @@ set<Instrument*> Session::GetInstruments()
 		insts.emplace(it.first);
 	for(auto gen : m_generators)
 		insts.emplace(gen);
+	for(auto& it : m_misc)
+		insts.emplace(it.first);
 
 	return insts;
 }

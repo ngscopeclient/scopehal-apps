@@ -44,6 +44,7 @@
 #include "AddBERTDialog.h"
 #include "AddGeneratorDialog.h"
 #include "AddLoadDialog.h"
+#include "AddMiscDialog.h"
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
@@ -267,6 +268,7 @@ void MainWindow::AddMenu()
 		AddBERTMenu(timestamps, reverseMap);
 		AddLoadMenu(timestamps, reverseMap);
 		AddGeneratorMenu(timestamps, reverseMap);
+		AddMiscMenu(timestamps, reverseMap);
 		AddMultimeterMenu(timestamps, reverseMap);
 		AddOscilloscopeMenu(timestamps, reverseMap);
 		AddPowerSupplyMenu(timestamps, reverseMap);
@@ -492,6 +494,78 @@ void MainWindow::AddGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector
 
 								gen->m_nickname = nick;
 								m_session.AddFunctionGenerator(gen);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | Misc menu
+ */
+void MainWindow::AddMiscMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("Misc"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddMiscDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known miscellaneous drivers..
+		vector<string> drivers;
+		SCPIMiscInstrument::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the instrument
+							auto inst = SCPIMiscInstrument::CreateInstrument(drivername, transport);
+							if(inst == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create instrument driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created misc instrument\n");
+
+								inst->m_nickname = nick;
+								m_session.AddMiscInstrument(inst);
 							}
 						}
 					}

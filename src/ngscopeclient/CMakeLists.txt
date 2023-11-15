@@ -62,6 +62,7 @@ add_executable(ngscopeclient
 	AddGeneratorDialog.cpp
 	AddInstrumentDialog.cpp
 	AddLoadDialog.cpp
+	AddMiscDialog.cpp
 	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp
 	AddRFGeneratorDialog.cpp
@@ -93,6 +94,7 @@ add_executable(ngscopeclient
 	ManageInstrumentsDialog.cpp
 	MeasurementsDialog.cpp
 	MetricsDialog.cpp
+	MiscInstrumentThread.cpp
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
 	NFDFileBrowser.cpp

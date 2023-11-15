@@ -26,146 +26,74 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
 
-#include "../scopehal/scopehal.h"
+/**
+	@file
+	@author Andrew D. Zonenberg
+	@brief Implementation of AddMiscDialog
+ */
 
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
+#include "ngscopeclient.h"
+#include "AddMiscDialog.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-declarations"
-#include <implot.h>
-#pragma GCC diagnostic pop
+using namespace std;
 
-#include <atomic>
-#include <shared_mutex>
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
 
-#include "BERTState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class MiscInstrumentThreadArgs
+AddMiscDialog::AddMiscDialog(Session& session)
+	: AddInstrumentDialog("Add Function Misc", "funcinst", session)
 {
-public:
-	MiscInstrumentThreadArgs(SCPIMiscInstrument* p, std::atomic<bool>* s, Session* sess)
-	: inst(p)
-	, shuttingDown(s)
-	, session(sess)
-	{}
+	SCPIMiscInstrument::EnumDrivers(m_drivers);
+}
 
-	SCPIMiscInstrument* inst;
-	std::atomic<bool>* shuttingDown;
-	Session* session;
-};
-
-class RFSignalGeneratorThreadArgs
+AddMiscDialog::~AddMiscDialog()
 {
-public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, Session* sess)
-	: gen(p)
-	, shuttingDown(s)
-	, session(sess)
-	{}
+}
 
-	SCPIRFSignalGenerator* gen;
-	std::atomic<bool>* shuttingDown;
-	Session* session;
-};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
 
-class PowerSupplyThreadArgs
+/**
+	@brief Connects to a scope
+
+	@return True if successful
+ */
+bool AddMiscDialog::DoConnect()
 {
-public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
+	}
 
-	SCPIPowerSupply* psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
-};
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
 
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
+	//Create the instrument
+	auto inst = SCPIMiscInstrument::CreateInstrument(m_drivers[m_selectedDriver], transport);
+	if(inst == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create misc instrument driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
 
-	SCPIMultimeter* meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created misc instrument\n");
 
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPILoad* load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
-
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	SCPIBERT* bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
-class Session;
-
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
-void MiscInstrumentThread(MiscInstrumentThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-ImU32 ColorFromString(const std::string& str, unsigned int alpha = 255);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
-
-#endif
+	inst->m_nickname = m_nickname;
+	m_session.AddMiscInstrument(inst);
+	return true;
+}
