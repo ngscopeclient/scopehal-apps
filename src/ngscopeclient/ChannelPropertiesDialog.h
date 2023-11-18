@@ -79,6 +79,8 @@ protected:
 	std::vector<std::string> m_modeNames;
 	int m_mode;
 
+	int m_navg;
+
 	float m_color[3];
 
 	bool m_inverted;
@@ -87,6 +89,7 @@ protected:
 	bool m_canAutoZero;
 	bool m_canDegauss;
 	bool m_shouldDegauss;
+	bool m_canAverage;
 };
 
 #endif

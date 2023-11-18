@@ -85,6 +85,7 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
 	else
 	{
 		m_committedAttenuation = 1;
+		m_navg = 1;
 		m_attenuation = "";
 	}
 }
@@ -184,6 +185,11 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 	m_canAutoZero = scope->CanAutoZero(nchan);
 	m_canDegauss = scope->CanDegauss(nchan);
 	m_shouldDegauss = scope->ShouldDegauss(nchan);
+	m_canAverage = scope->CanAverage(nchan);
+
+	//Averaging
+	if(m_canAverage)
+		m_navg = scope->GetNumAverages(nchan);
 }
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
@@ -411,6 +417,17 @@ bool ChannelPropertiesDialog::DoRender()
 					"When checked, input value is multiplied by -1.\n\n"
 					"For a differential probe, this is equivalent to swapping the positive and negative inputs."
 					);
+			}
+
+			//If the channel supports averaging, show a spin button for it
+			if(scope->CanAverage(index))
+			{
+				if(ImGui::InputInt("Averaging", &m_navg))
+					scope->SetNumAverages(index, m_navg);
+
+				HelpMarker(
+					"Reduce noise for repetitive signals by averaging\n"
+					"multiple consecutive acquisitions");
 			}
 
 			//If the probe supports auto zeroing, show a button for it
