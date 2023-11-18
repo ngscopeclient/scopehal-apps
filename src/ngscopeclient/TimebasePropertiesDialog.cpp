@@ -92,6 +92,8 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 	m_startText = hz.PrettyPrint(m_start);
 	m_end = m_center + m_span/2;
 	m_endText = hz.PrettyPrint(m_end);
+
+	m_samplingMode = scope->GetSamplingMode();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,6 +139,8 @@ bool TimebasePropertiesDialog::DoRender()
 {
 	float width = 10 * ImGui::GetFontSize();
 
+	bool needRefresh = false;
+
 	for(auto& p : m_pages)
 	{
 		auto scope = p->m_scope;
@@ -181,6 +185,28 @@ bool TimebasePropertiesDialog::DoRender()
 						"Some instruments do not have an explicit interleaving switch, but available sample rates "
 						"may vary depending on which channels are active."
 						);
+				}
+
+				//Show sampling mode iff both are available
+				if(
+					scope->IsSamplingModeAvailable(Oscilloscope::REAL_TIME) &&
+					scope->IsSamplingModeAvailable(Oscilloscope::EQUIVALENT_TIME) )
+				{
+					static const char* items[]=
+					{
+						"Real time",
+						"Equivalent time"
+					};
+					ImGui::SetNextItemWidth(width);
+					if(ImGui::Combo("Sampling mode", &p->m_samplingMode, items, 2))
+					{
+						if(p->m_samplingMode == Oscilloscope::REAL_TIME)
+							scope->SetSamplingMode(Oscilloscope::REAL_TIME);
+						else
+							scope->SetSamplingMode(Oscilloscope::EQUIVALENT_TIME);
+
+						needRefresh = true;
+					}
 				}
 
 			}
@@ -256,6 +282,9 @@ bool TimebasePropertiesDialog::DoRender()
 			ImGui::PopID();
 		}
 	}
+
+	if(needRefresh)
+		Refresh();
 
 	return true;
 }

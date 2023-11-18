@@ -54,6 +54,10 @@ public:
 	std::vector<std::string> m_depthNames;
 	int m_depth;
 
+	//Sampling mode
+	//(only valid if both RT and equivalent are available)
+	int m_samplingMode;
+
 	//Frequency domain controls
 	std::string m_centerText;
 	double m_center;
