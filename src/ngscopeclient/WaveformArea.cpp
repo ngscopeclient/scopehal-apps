@@ -3365,6 +3365,14 @@ void WaveformArea::OnMouseUp()
 
 void WaveformArea::OnDragUpdate()
 {
+	//If mouse is not currently down, but we're still dragging, synthesize a mouse up event
+	//(this seems to be needed to fix inter-tab dragging)
+	if(!ImGui::IsMouseDown(ImGuiButtonFlags_MouseButtonLeft))
+	{
+		OnMouseUp();
+		return;
+	}
+
 	switch(m_dragState)
 	{
 		case DRAG_STATE_Y_AXIS:
