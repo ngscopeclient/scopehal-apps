@@ -914,7 +914,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 			//Create the scope
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				scope = Oscilloscope::CreateOscilloscope(driver, transport);
 				if(!VerifyInstrument(node, scope))
@@ -922,6 +922,15 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 					delete scope;
 					scope = nullptr;
 				}
+			}
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to oscilloscope at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -979,7 +988,7 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				load = SCPILoad::CreateLoad(driver, transport);
 				if(!VerifyInstrument(node, load))
@@ -987,6 +996,16 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 					delete load;
 					load = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to load at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1044,7 +1063,7 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				misc = SCPIMiscInstrument::CreateInstrument(driver, transport);
 				if(!VerifyInstrument(node, misc))
@@ -1052,6 +1071,16 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 					delete misc;
 					misc = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to miscellaneous instrument at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1109,7 +1138,7 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 			//Create the BERT
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				bert = SCPIBERT::CreateBERT(driver, transport);
 				if(!VerifyInstrument(node, bert))
@@ -1117,6 +1146,16 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 					delete bert;
 					bert = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to BERT at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1174,7 +1213,7 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				meter = SCPIMultimeter::CreateMultimeter(driver, transport);
 				if(!VerifyInstrument(node, meter))
@@ -1182,6 +1221,16 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 					delete meter;
 					meter = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to multimeter at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1239,7 +1288,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				psu = SCPIPowerSupply::CreatePowerSupply(driver, transport);
 				if(!VerifyInstrument(node, psu))
@@ -1247,6 +1296,16 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 					delete psu;
 					psu = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to power supply at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1304,7 +1363,7 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				gen = SCPIRFSignalGenerator::CreateRFSignalGenerator(driver, transport);
 				if(!VerifyInstrument(node, gen))
@@ -1312,6 +1371,16 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 					delete gen;
 					gen = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to RF signal generator at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
@@ -1369,7 +1438,7 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 			//Create the PSU
 			auto transport = CreateTransportForNode(node);
 
-			if(transport)
+			if(transport && transport->IsConnected())
 			{
 				gen = SCPIFunctionGenerator::CreateFunctionGenerator(driver, transport);
 				if(!VerifyInstrument(node, gen))
@@ -1377,6 +1446,16 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 					delete gen;
 					gen = nullptr;
 				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to function generator at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
 			}
 		}
 	}
