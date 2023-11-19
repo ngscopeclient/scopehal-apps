@@ -84,6 +84,9 @@ public:
 	bool HasScopes()
 	{ return !m_secondaries.empty() || (m_primary != nullptr); }
 
+	bool HasSecondaries()
+	{ return !m_secondaries.empty(); }
+
 	Oscilloscope* m_primary;
 	std::vector<Oscilloscope*> m_secondaries;
 

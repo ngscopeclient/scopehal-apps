@@ -34,6 +34,7 @@
  */
 
 #include "ngscopeclient.h"
+#include "../scopehal/MockOscilloscope.h"
 #include "ManageInstrumentsDialog.h"
 #include "MainWindow.h"
 
@@ -131,7 +132,9 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		//If we have no scopes but are not empty, we're a trend-only group
 		//Show a dummy root node
 		bool rootOpen = false;
+		bool rootIsMock = false;
 		SCPIOscilloscope* firstScope = nullptr;
+		MockOscilloscope* mockScope = nullptr;
 
 		if(!group->HasScopes())
 		{
@@ -148,18 +151,36 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		//Normal root node
 		else
 		{
+			//If the first scope is a mock scope, show it differently
 			firstScope = dynamic_cast<SCPIOscilloscope*>(group->m_primary);
-			if(!firstScope)
+			mockScope = dynamic_cast<MockOscilloscope*>(group->m_primary);
+
+			if(mockScope)
+			{
+				ImGui::PushID(mockScope);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
+
+				//Display the node for the root of the trigger group
+				rootOpen = ImGui::TreeNodeEx(
+					group->GetDescription().c_str(),
+					ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+
+				rootIsMock = true;
+			}
+			else if(!firstScope)
 				LogFatal("group has secondary but no primary, shouldn't be possible\n");
+			else
+			{
+				ImGui::PushID(firstScope);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
 
-			ImGui::PushID(firstScope);
-			ImGui::TableNextRow(ImGuiTableRowFlags_None);
-			ImGui::TableSetColumnIndex(0);
-
-			//Display the node for the root of the trigger group
-			rootOpen = ImGui::TreeNodeEx(
-				group->GetDescription().c_str(),
-				ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+				//Display the node for the root of the trigger group
+				rootOpen = ImGui::TreeNodeEx(
+					group->GetDescription().c_str(),
+					ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen );
+			}
 		}
 
 		//Help tooltip
@@ -175,54 +196,57 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 			ImGui::EndTooltip();
 		}
 
-		//Allow dropping
-		if(ImGui::BeginDragDropTarget())
+		if(!rootIsMock)
 		{
-			auto payload = ImGui::AcceptDragDropPayload("TriggerGroup", 0);
-			if( (payload != nullptr) && (payload->DataSize == sizeof(TriggerGroupDragDescriptor)) )
+			//Allow dropping
+			if(ImGui::BeginDragDropTarget())
 			{
-				auto desc = reinterpret_cast<TriggerGroupDragDescriptor*>(payload->Data);
-
-				//Stop the trigger if rearranging trigger groups
-				m_session.StopTrigger();
-
-				//Dropping from a different group
-				if(desc->m_group != group.get())
+				auto payload = ImGui::AcceptDragDropPayload("TriggerGroup", 0);
+				if( (payload != nullptr) && (payload->DataSize == sizeof(TriggerGroupDragDescriptor)) )
 				{
-					if(desc->m_scope)
+					auto desc = reinterpret_cast<TriggerGroupDragDescriptor*>(payload->Data);
+
+					//Stop the trigger if rearranging trigger groups
+					m_session.StopTrigger();
+
+					//Dropping from a different group
+					if(desc->m_group != group.get())
 					{
-						group->AddSecondary(desc->m_scope);
-						desc->m_group->RemoveScope(desc->m_scope);
+						if(desc->m_scope)
+						{
+							group->AddSecondary(desc->m_scope);
+							desc->m_group->RemoveScope(desc->m_scope);
+						}
+						else
+						{
+							group->AddFilter(desc->m_filter);
+							desc->m_group->RemoveFilter(desc->m_filter);
+						}
 					}
+
+					//Drop from a child of this group
 					else
 					{
-						group->AddFilter(desc->m_filter);
-						desc->m_group->RemoveFilter(desc->m_filter);
+						if(desc->m_scope)
+							group->MakePrimary(desc->m_scope);
+						//no hierarchy for filters so do nothing
 					}
 				}
 
-				//Drop from a child of this group
-				else
-				{
-					if(desc->m_scope)
-						group->MakePrimary(desc->m_scope);
-					//no hierarchy for filters so do nothing
-				}
+				ImGui::EndDragDropTarget();
 			}
 
-			ImGui::EndDragDropTarget();
-		}
-
-		//Allow dragging
-		if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
-		{
-			TriggerGroupDragDescriptor desc(group.get(), firstScope, nullptr);
-			ImGui::SetDragDropPayload(
-				"TriggerGroup",
-				&desc,
-				sizeof(desc));
-			ImGui::TextUnformatted(firstScope->m_nickname.c_str());
-			ImGui::EndDragDropSource();
+			//Allow dragging
+			if(ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+			{
+				TriggerGroupDragDescriptor desc(group.get(), firstScope, nullptr);
+				ImGui::SetDragDropPayload(
+					"TriggerGroup",
+					&desc,
+					sizeof(desc));
+				ImGui::TextUnformatted(firstScope->m_nickname.c_str());
+				ImGui::EndDragDropSource();
+			}
 		}
 
 		if(firstScope)
@@ -233,6 +257,16 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				ImGui::TextUnformatted(firstScope->GetName().c_str());
 			if(ImGui::TableSetColumnIndex(3))
 				ImGui::TextUnformatted(firstScope->GetSerial().c_str());
+		}
+
+		else if(mockScope)
+		{
+			if(ImGui::TableSetColumnIndex(1))
+				ImGui::TextUnformatted(mockScope->GetVendor().c_str());
+			if(ImGui::TableSetColumnIndex(2))
+				ImGui::TextUnformatted(mockScope->GetName().c_str());
+			if(ImGui::TableSetColumnIndex(3))
+				ImGui::TextUnformatted(mockScope->GetSerial().c_str());
 		}
 
 		//then put all other nodes under it
@@ -359,7 +393,7 @@ void ManageInstrumentsDialog::RowForNewGroup()
 
 void ManageInstrumentsDialog::AllInstrumentsTable()
 {
-	auto insts = m_session.GetSCPIInstruments();
+	auto insts = m_session.GetInstruments();
 	float width = ImGui::GetFontSize();
 	ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 6*width);
@@ -384,7 +418,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 				ImVec2(0, 0)))
 		{
-			m_selection = inst;
+			m_selection = dynamic_cast<SCPIInstrument*>(inst);
 			rowIsSelected = true;
 		}
 		if(ImGui::TableSetColumnIndex(1))
@@ -400,6 +434,9 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 		if(ImGui::TableSetColumnIndex(6))
 		{
 			string types = "";
+
+			if(dynamic_cast<MockOscilloscope*>(inst) != nullptr)
+				types += "offline ";
 
 			if(itype & Instrument::INST_OSCILLOSCOPE)
 				types += "oscilloscope ";
