@@ -1,12 +1,16 @@
 # scopehal-apps
 
+https://www.ngscopeclient.org
+
 Applications for libscopehal
 
 [C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
 
 ## Installation
 
-Refer to the "getting started" chapter of [the manual](https://www.antikernel.net/temp/ngscopeclient-manual.pdf).
+Refer to the "getting started" chapter of the User manual
+* [User manual GettingStarted (HTML)](https://www.ngscopeclient.org/manual/GettingStarted.html)
+* [User manual (PDF)](https://www.ngscopeclient.org/downloads/ngscopeclient-manual.pdf)
 
 ## Special comments
 
