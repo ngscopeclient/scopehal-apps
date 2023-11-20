@@ -987,6 +987,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_graphEditor = nullptr;
 	if(m_measurementsDialog == dlg)
 		m_measurementsDialog = nullptr;
+	if(m_manageInstrumentsDialog == dlg)
+		m_manageInstrumentsDialog = nullptr;
 
 	//Remove the general list
 	m_dialogs.erase(dlg);
