@@ -1023,8 +1023,8 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of loads not implemented yet");
-		return false;
+		LogError("offline loading of loads not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1098,8 +1098,8 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of misc instruments not implemented yet");
-		return false;
+		LogError("offline loading of misc instruments not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1173,8 +1173,8 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of BERTs not implemented yet");
-		return false;
+		LogError("offline loading of BERTs not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1248,8 +1248,8 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of multimeters not implemented yet");
-		return false;
+		LogError("offline loading of multimeters not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1323,8 +1323,8 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of power supplies not implemented yet");
-		return false;
+		LogError("offline loading of power supplies not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1398,8 +1398,8 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of RF generators not implemented yet");
-		return false;
+		LogError("offline loading of RF generators not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
@@ -1473,8 +1473,8 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 			node["args"].as<string>()
 			);
 		*/
-		LogError("offline loading of function generators not implemented yet");
-		return false;
+		LogError("offline loading of function generators not implemented yet\n");
+		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings

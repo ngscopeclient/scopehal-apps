@@ -2306,8 +2306,8 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				m_session.AddMultimeterDialog(meter);
 			else
 			{
-				ShowErrorPopup("Invalid meter", "Multimeter could not be loaded");
-				return false;
+				ShowErrorPopup("Invalid meter", "Multimeter dialog references nonexistent instrument");
+				continue;
 			}
 		}
 	}
@@ -2324,8 +2324,8 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				AddDialog(make_shared<FunctionGeneratorDialog>(gen, &m_session));
 			else
 			{
-				ShowErrorPopup("Invalid function generator", "Function generator could not be loaded");
-				return false;
+				ShowErrorPopup("Invalid function generator", "Function generator dialog references nonexistent instrument");
+				continue;
 			}
 		}
 	}
@@ -2342,8 +2342,8 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
 			else
 			{
-				ShowErrorPopup("Invalid PSU", "PSU could not be loaded");
-				return false;
+				ShowErrorPopup("Invalid PSU", "PSU dialog references nonexistent instrument");
+				continue;
 			}
 		}
 	}
@@ -2360,8 +2360,8 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				AddDialog(make_shared<BERTDialog>(bert, m_session.GetBERTState(bert), &m_session));
 			else
 			{
-				ShowErrorPopup("Invalid BERT", "BERT could not be loaded");
-				return false;
+				ShowErrorPopup("Invalid BERT", "BERT dialog references nonexistent instrument");
+				continue;
 			}
 		}
 	}
@@ -2378,8 +2378,8 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				AddDialog(make_shared<LoadDialog>(load, m_session.GetLoadState(load), &m_session));
 			else
 			{
-				ShowErrorPopup("Invalid load", "Load could not be loaded");
-				return false;
+				ShowErrorPopup("Invalid load", "Load dialog references nonexistent instrument");
+				continue;
 			}
 		}
 	}
