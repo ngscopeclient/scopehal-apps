@@ -975,10 +975,14 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
+	if(m_metricsDialog == dlg)
+		m_metricsDialog = nullptr;
 	if(m_timebaseDialog == dlg)
 		m_timebaseDialog = nullptr;
 	if(m_triggerDialog == dlg)
 		m_triggerDialog = nullptr;
+	if(m_historyDialog == dlg)
+		m_historyDialog = nullptr;
 	if(m_preferenceDialog == dlg)
 		m_preferenceDialog = nullptr;
 	if(m_persistenceDialog == dlg)
