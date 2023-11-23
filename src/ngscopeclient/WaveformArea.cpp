@@ -484,8 +484,6 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
 	m_lastDragState = m_dragState;
-	if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-		OnMouseUp();
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
 
@@ -3366,8 +3364,7 @@ void WaveformArea::OnMouseUp()
 void WaveformArea::OnDragUpdate()
 {
 	//If mouse is not currently down, but we're still dragging, synthesize a mouse up event
-	//(this seems to be needed to fix inter-tab dragging)
-	if(!ImGui::IsMouseDown(ImGuiButtonFlags_MouseButtonLeft))
+	if(!ImGui::IsMouseDown(ImGuiMouseButton_Left))
 	{
 		OnMouseUp();
 		return;
