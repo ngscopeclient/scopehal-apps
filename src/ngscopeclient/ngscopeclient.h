@@ -167,5 +167,6 @@ void RightJustifiedText(const std::string& str);
 extern std::shared_mutex g_vulkanActivityMutex;
 
 bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
+bool RectContains(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 #endif

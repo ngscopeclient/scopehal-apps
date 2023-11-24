@@ -247,3 +247,28 @@ bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB)
 	//If we get here, they overlap
 	return true;
 }
+
+/**
+	@brief Check if a rectangle is completely within the other one
+
+	A is outer, B is inner
+ */
+bool RectContains(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB)
+{
+	//Top left of B must be in A
+	ImVec2 brA (posA.x + sizeA.x, posA.y + sizeA.y);
+	if( (posB.x < posA.x) || (posB.x >= brA.x) )
+		return false;
+	if( (posB.y < posA.y) || (posB.y >= brA.y) )
+		return false;
+
+	//Bottom right of B must be in A
+	ImVec2 brB (posB.x + sizeB.x, posB.y + sizeB.y);
+	if( (brB.x < posA.x) || (brB.x >= brA.x) )
+		return false;
+	if( (brB.y < posA.y) || (brB.y >= brA.y) )
+		return false;
+
+	//Contianed if we get here
+	return true;
+}

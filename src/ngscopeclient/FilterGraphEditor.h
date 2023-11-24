@@ -85,6 +85,8 @@ public:
 	virtual bool DoRender();
 
 protected:
+	std::map<Instrument*, std::vector<InstrumentChannel*> > GetAllChannels();
+
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);

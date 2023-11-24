@@ -115,24 +115,17 @@ bool FilterGraphEditor::Render()
 }
 
 /**
-	@brief Renders the dialog and handles UI events
-
-	@return		True if we should continue showing the dialog
-				False if it's been closed
+	@brief Get a list of all channels that we are displaying nodes for
  */
-bool FilterGraphEditor::DoRender()
+map<Instrument*, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels()
 {
-	ax::NodeEditor::SetCurrentEditor(m_context);
-	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
+	map<Instrument*, vector<InstrumentChannel*> > ret;
 
-	//Make nodes for all groups
-	for(auto it : m_groups)
-		DoNodeForGroup(it.first);
-
-	//Make nodes for all instrument channels
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
+		vector<InstrumentChannel*> chans;
+
 		//Channels
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
 		auto psu = dynamic_cast<PowerSupply*>(inst);
@@ -172,9 +165,43 @@ bool FilterGraphEditor::DoRender()
 				}
 			}
 
-			//All good, we want to show the node
-			DoNodeForChannel(chan, inst);
+			chans.push_back(chan);
 		}
+
+		ret[inst] = chans;
+	}
+
+	return ret;
+}
+
+/**
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool FilterGraphEditor::DoRender()
+{
+	ax::NodeEditor::SetCurrentEditor(m_context);
+	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
+
+	//Make nodes for all groups
+	for(auto it : m_groups)
+		DoNodeForGroup(it.first);
+
+	//Make nodes for all instrument channels
+	auto chans = GetAllChannels();
+	for(auto it : chans)
+	{
+		for(auto chan : it.second)
+			DoNodeForChannel(chan, it.first);
+	}
+
+	//Make nodes for all triggers
+	auto insts = m_session.GetInstruments();
+	for(auto inst : insts)
+	{
+		auto scope = dynamic_cast<Oscilloscope*>(inst);
 
 		//Triggers (for now, only scopes have these)
 		if(scope)
@@ -274,23 +301,29 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 	ax::NodeEditor::PopStyleColor();
 
 	//Find which nodes we contain
-	LogDebug("Group %s contains:\n", group->m_name.c_str(), groupedNodes.size());
-	LogIndenter li;
+	//LogDebug("Group %s contains:\n", group->m_name.c_str());
+	//LogIndenter li;
 
-	/*
-	//Need to use internal APIs for this since not in public API yet
-	vector<ax::NodeEditor::Detail::Node*> groupedNodes;
-	auto groupnode = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->FindNode(gid);
-	if(groupnode)
-		groupnode->GetGroupedNodes(groupedNodes);
+	auto gpos = ax::NodeEditor::GetNodePosition(gid);
+	auto gsz = ax::NodeEditor::GetNodeSize(gid);
 
-	LogDebug("Group %s contains %zu nodes:\n", group->m_name.c_str(), groupedNodes.size());
-	LogIndenter li;
-	for(auto n : groupedNodes)
+	//Check for instrument channels
+	auto chans = GetAllChannels();
+	for(auto it : chans)
 	{
-		//TODO: figure out which is which
+		for(auto chan : it.second)
+		{
+			auto id = GetID(chan);
+
+			auto pos = ax::NodeEditor::GetNodePosition(id);
+			auto sz = ax::NodeEditor::GetNodeSize(id);
+
+			if(!RectContains(gpos, gsz, pos, sz))
+				continue;
+
+			//LogDebug("%s.%s\n", it.first->m_nickname.c_str(), chan->GetDisplayName().c_str());
+		}
 	}
-	*/
 }
 
 /**
