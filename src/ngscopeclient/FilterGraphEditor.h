@@ -41,6 +41,7 @@
 class EmbeddableDialog;
 
 #include <imgui_node_editor.h>
+#include <imgui_node_editor_internal.h>
 
 template<class T>
 class lessID
@@ -68,6 +69,12 @@ public:
 	}
 };
 
+class FilterGraphGroup
+{
+public:
+	std::string m_name;
+};
+
 class FilterGraphEditor : public Dialog
 {
 public:
@@ -79,6 +86,7 @@ public:
 
 protected:
 	void OutputPortTooltip(StreamDescriptor stream);
+	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
@@ -138,6 +146,9 @@ protected:
 	ax::NodeEditor::NodeId GetID(Trigger* trig)
 	{ return m_session.m_idtable.emplace(trig); }
 
+	ax::NodeEditor::NodeId GetID(std::shared_ptr<FilterGraphGroup> group)
+	{ return m_session.m_idtable.emplace(group.get()); }
+
 	uintptr_t AllocateID();
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
 	ax::NodeEditor::PinId GetID(std::pair<FlowGraphNode*, size_t> input);
@@ -159,6 +170,17 @@ protected:
 
 	///@brief Input we're considering hooking a new channel up to
 	std::pair<FlowGraphNode*, int> m_createInput;
+
+	///@brief Groups
+	Bijection<
+		std::shared_ptr<FilterGraphGroup>,
+		ax::NodeEditor::NodeId,
+		std::less< std::shared_ptr<FilterGraphGroup> >,
+		lessID<ax::NodeEditor::NodeId>
+		 > m_groups;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Serialization
 
 	static bool SaveSettingsCallback(
 		const char* data,

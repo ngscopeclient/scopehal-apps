@@ -85,6 +85,12 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
+
+	//DEBUG: make a group
+	auto group = make_shared<FilterGraphGroup>();
+	auto id = GetID(group);
+	group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
+	m_groups.emplace(group, id);
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -118,6 +124,10 @@ bool FilterGraphEditor::DoRender()
 {
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
+
+	//Make nodes for all groups
+	for(auto it : m_groups)
+		DoNodeForGroup(it.first);
 
 	//Make nodes for all instrument channels
 	auto insts = m_session.GetInstruments();
@@ -247,6 +257,42 @@ bool FilterGraphEditor::DoRender()
 	return true;
 }
 
+void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
+{
+	auto gid = m_groups[group];
+
+	ImVec2 initialsize(320, 240);
+
+	//Make the node for the group
+	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_NodeBg, ImColor(255, 255, 255, 64));
+	ax::NodeEditor::BeginNode(gid);
+	ImGui::PushID(gid.AsPointer());
+	ImGui::TextUnformatted(group->m_name.c_str());
+	ax::NodeEditor::Group(initialsize);
+	ImGui::PopID();
+	ax::NodeEditor::EndNode();
+	ax::NodeEditor::PopStyleColor();
+
+	//Find which nodes we contain
+	LogDebug("Group %s contains:\n", group->m_name.c_str(), groupedNodes.size());
+	LogIndenter li;
+
+	/*
+	//Need to use internal APIs for this since not in public API yet
+	vector<ax::NodeEditor::Detail::Node*> groupedNodes;
+	auto groupnode = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->FindNode(gid);
+	if(groupnode)
+		groupnode->GetGroupedNodes(groupedNodes);
+
+	LogDebug("Group %s contains %zu nodes:\n", group->m_name.c_str(), groupedNodes.size());
+	LogIndenter li;
+	for(auto n : groupedNodes)
+	{
+		//TODO: figure out which is which
+	}
+	*/
+}
+
 /**
 	@brief Delete old properties dialogs for no-longer-extant nodes
  */
@@ -364,6 +410,12 @@ void FilterGraphEditor::HandleOverlaps()
 			auto nodeB = nodes[j];
 			auto posB = ax::NodeEditor::GetNodePosition(nodeB);
 			auto sizeB = ax::NodeEditor::GetNodeSize(nodeB);
+
+			//Groups are allowed to overlap non-group nodes - but not each other
+			bool groupA = m_groups.HasEntry(nodeA);
+			bool groupB = m_groups.HasEntry(nodeB);
+			if( (groupA && !groupB) || (!groupA && groupB) )
+				continue;
 
 			//If no overlap, no action required
 			if(!RectIntersect(posA, sizeA, posB, sizeB))
