@@ -133,6 +133,16 @@ void Session::ClearBackgroundThreads()
 	m_shuttingDown = false;
 }
 
+void Session::FlushConfigCache()
+{
+	LogTrace("Flushing cache\n");
+	LogIndenter li;
+
+	lock_guard<mutex> lock(m_scopeMutex);
+	for(auto scope : m_oscilloscopes)
+		scope->FlushConfigCache();
+}
+
 /**
 	@brief Clears all session state and returns the object to an empty state
  */

@@ -87,10 +87,12 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
 
 	//DEBUG: make a group
+	/*
 	auto group = make_shared<FilterGraphGroup>();
 	auto id = GetID(group);
 	group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
 	m_groups.emplace(group, id);
+	*/
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -265,10 +267,13 @@ bool FilterGraphEditor::DoRender()
 	HandleNodeProperties();
 	HandleBackgroundContextMenu();
 
+	ax::NodeEditor::End();
+
 	//Look for and avoid overlaps
+	//Must be after End() call which draws node boundaries, so everything is consistent.
+	//If we don't do that, node content and frames can get one frame out of sync
 	HandleOverlaps();
 
-	ax::NodeEditor::End();
 	ax::NodeEditor::SetCurrentEditor(nullptr);
 
 	//If any filters were reconfigured, dispatch events accordingly
@@ -416,16 +421,14 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
  */
 void FilterGraphEditor::HandleOverlaps()
 {
-	//Early out: if left mouse button is down we are probably dragging an item
-	//Do nothing
-	if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
-		return;
-
 	//Get all of the node IDs
 	int nnodes = ax::NodeEditor::GetNodeCount();
 	vector<ax::NodeEditor::NodeId> nodes;
 	nodes.resize(nnodes);
 	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+
+	LogDebug("FilterGraphEditor::HandleOverlaps (%d nodes)\n", nnodes);
+	LogIndenter li;
 
 	//Loop over all nodes and find potential collisions
 	for(int i=0; i<nnodes; i++)
@@ -433,6 +436,9 @@ void FilterGraphEditor::HandleOverlaps()
 		auto nodeA = nodes[i];
 		auto posA = ax::NodeEditor::GetNodePosition(nodeA);
 		auto sizeA = ax::NodeEditor::GetNodeSize(nodeA);
+
+		bool groupA = m_groups.HasEntry(nodeA);
+		bool selA = ax::NodeEditor::IsNodeSelected(nodeA);
 
 		for(int j=0; j<nnodes; j++)
 		{
@@ -444,11 +450,32 @@ void FilterGraphEditor::HandleOverlaps()
 			auto posB = ax::NodeEditor::GetNodePosition(nodeB);
 			auto sizeB = ax::NodeEditor::GetNodeSize(nodeB);
 
-			//Groups are allowed to overlap non-group nodes - but not each other
-			bool groupA = m_groups.HasEntry(nodeA);
 			bool groupB = m_groups.HasEntry(nodeB);
-			if( (groupA && !groupB) || (!groupA && groupB) )
+			bool selB = ax::NodeEditor::IsNodeSelected(nodeB);
+
+			//If node B is selected, don't move it (but it can push other stuff)
+			if(selB)
 				continue;
+
+			//Check for node-group collisions
+			//Node-node is normal code path, group-group also repels
+			if( (groupA && !groupB) || (!groupA && groupB) )
+			{
+				//If neither is selected, don't repel (once a node is in a group, it should stay there)
+				if(!selA && !selB)
+					continue;
+
+				LogDebug("potential node-group repel\n");
+
+				/*
+				//If dragging a group, it should push away nodes.
+				//But nodes can be dragged into groups
+				if(groupA && IsNodeSelected(nodeA))
+					continue;
+				if(groupB && IsNodeSelected(nodeB))
+					continue;
+				*/
+			}
 
 			//If no overlap, no action required
 			if(!RectIntersect(posA, sizeA, posB, sizeB))

@@ -284,6 +284,7 @@ public:
 	void RefreshAllFiltersNonblocking();
 	void RefreshDirtyFiltersNonblocking();
 	bool RefreshDirtyFilters();
+	void FlushConfigCache();
 
 	void MarkChannelDirty(InstrumentChannel* chan);
 
