@@ -513,26 +513,45 @@ void FilterGraphEditor::HandleOverlaps()
 
 			//Shift both nodes away from each other
 			//If magnitude is ~zero (nodes are at exactly the same position), arbitrarily move second one down or right at random
+			ImVec2 shift(0, 0);
 			if(mag < 1e-2f)
 			{
-				if(rand() & 10)
-					posB.x ++;
+				if(rand() & 1)
+					shift.x = 1;
 				else
-					posB.y ++;
+					shift.y = 1;
 			}
 
 			else
 			{
 				float distance = 10;
 				float scale = distance / mag;
-				posB.x += scale * dx;
-				posB.y += scale * dy;
+				shift.x = scale * dx;
+				shift.y = scale * dy;
 			}
 
-			//TODO: take paths into account?
+			//If node B is a group, we need to move all nodes inside it by the same amount we moved the group
+			if(groupB)
+			{
+				for(int k=0; k<nnodes; k++)
+				{
+					auto nid = nodes[k];
+					auto posNode = ax::NodeEditor::GetNodePosition(nid);
+					auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+
+					//Don't move ourself again
+					if(k == j)
+						continue;
+
+					if(!RectContains(posB, sizeB, posNode, sizeNode))
+						continue;
+
+					ax::NodeEditor::SetNodePosition(nid, posNode + shift);
+				}
+			}
 
 			//Set the new node position
-			ax::NodeEditor::SetNodePosition(nodeB, posB);
+			ax::NodeEditor::SetNodePosition(nodeB, posB + shift);
 		}
 	}
 }
