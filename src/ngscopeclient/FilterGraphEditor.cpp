@@ -85,14 +85,6 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-
-	//DEBUG: make a group
-	/*
-	auto group = make_shared<FilterGraphGroup>();
-	auto id = GetID(group);
-	group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
-	m_groups.emplace(group, id);
-	*/
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -427,8 +419,12 @@ void FilterGraphEditor::HandleOverlaps()
 	nodes.resize(nnodes);
 	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
 
-	LogDebug("FilterGraphEditor::HandleOverlaps (%d nodes)\n", nnodes);
-	LogIndenter li;
+	//Need to use internal APIs to figure out if we're dragging the current node
+	//in order to properly implement collision detection
+	auto action = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->GetCurrentAction();
+	ax::NodeEditor::Detail::DragAction* drag = nullptr;
+	if(action)
+		drag = action->AsDrag();
 
 	//Loop over all nodes and find potential collisions
 	for(int i=0; i<nnodes; i++)
@@ -438,7 +434,7 @@ void FilterGraphEditor::HandleOverlaps()
 		auto sizeA = ax::NodeEditor::GetNodeSize(nodeA);
 
 		bool groupA = m_groups.HasEntry(nodeA);
-		bool selA = ax::NodeEditor::IsNodeSelected(nodeA);
+		//bool selA = ax::NodeEditor::IsNodeSelected(nodeA);
 
 		for(int j=0; j<nnodes; j++)
 		{
@@ -461,20 +457,48 @@ void FilterGraphEditor::HandleOverlaps()
 			//Node-node is normal code path, group-group also repels
 			if( (groupA && !groupB) || (!groupA && groupB) )
 			{
-				//If neither is selected, don't repel (once a node is in a group, it should stay there)
-				if(!selA && !selB)
+				auto nid = groupA ? nodeB : nodeA;
+				auto gid = groupA ? nodeA : nodeB;
+
+				auto posNode = ax::NodeEditor::GetNodePosition(nid);
+				auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+
+				auto posGroup = ax::NodeEditor::GetNodePosition(gid);
+				auto sizeGroup = ax::NodeEditor::GetNodeSize(gid);
+
+				//If node is completely INSIDE the group, don't repel
+				if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
 					continue;
 
-				LogDebug("potential node-group repel\n");
+				//Check if we're dragging the group
+				//bool draggingGroup = false;
+				bool draggingNode = false;
+				if(drag)
+				{
+					for(auto o : drag->m_Objects)
+					{
+						auto n = o->AsNode();
+						if(!n)
+							continue;
 
-				/*
-				//If dragging a group, it should push away nodes.
-				//But nodes can be dragged into groups
-				if(groupA && IsNodeSelected(nodeA))
+						if(n->m_ID == gid)
+						{
+							//draggingGroup = true;
+							break;
+						}
+						if(n->m_ID == nid)
+						{
+							draggingNode = true;
+							break;
+						}
+					}
+				}
+
+				//If dragging group, we should push nodes away
+
+				//But if dragging the node, allow it to go into the group
+				if(draggingNode)
 					continue;
-				if(groupB && IsNodeSelected(nodeB))
-					continue;
-				*/
 			}
 
 			//If no overlap, no action required
@@ -1478,6 +1502,16 @@ void FilterGraphEditor::DoAddMenu()
 		}
 
 		ImGui::EndMenu();
+	}
+
+	ImGui::Separator();
+
+	if(ImGui::MenuItem("New Group"))
+	{
+		auto group = make_shared<FilterGraphGroup>();
+		auto id = GetID(group);
+		group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
+		m_groups.emplace(group, id);
 	}
 }
 
