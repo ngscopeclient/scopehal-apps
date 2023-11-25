@@ -901,7 +901,10 @@ void MainWindow::ToolbarButtons()
 	//Refresh scope settings
 	ImGui::SameLine();
 	if(ImGui::ImageButton("refresh-settings", GetTexture("refresh-settings"), buttonsize))
+	{
 		m_session.FlushConfigCache();
+		ClearPersistence();
+	}
 	Dialog::Tooltip(
 		"Flush PC-side cached instrument state and reload configuration from the instrument.\n\n"
 		"This will cause a brief slowdown of the application, but can be used to re-sync when\n"
