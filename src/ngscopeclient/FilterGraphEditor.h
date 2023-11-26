@@ -86,6 +86,9 @@ public:
 	///@brief ID of the dummy node for output ports
 	ax::NodeEditor::NodeId m_outputId;
 
+	///@brief ID of the dummy node for input ports
+	ax::NodeEditor::NodeId m_inputId;
+
 	///@brief List of nodes we contain (by ID)
 	std::set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > m_children;
 
@@ -115,6 +118,27 @@ public:
 		ax::NodeEditor::LinkId,
 		std::less<StreamDescriptor>,
 		lessID<ax::NodeEditor::LinkId> > m_hierOutputLinkMap;
+
+	///@brief Map of streams to hierarchial input port IDs
+	Bijection<
+		std::pair<FlowGraphNode*, int>,
+		ax::NodeEditor::PinId,
+		std::less< std::pair<FlowGraphNode*, int> >,
+		lessID<ax::NodeEditor::PinId> > m_hierInputMap;
+
+	///@brief Map of streams to hierarchial input port internal-facing port IDs
+	Bijection<
+		std::pair<FlowGraphNode*, int>,
+		ax::NodeEditor::PinId,
+		std::less< std::pair<FlowGraphNode*, int> >,
+		lessID<ax::NodeEditor::PinId> > m_hierInputInternalMap;
+
+	///@brief Map of streams to internal link IDs
+	Bijection<
+		std::pair<FlowGraphNode*, int>,
+		ax::NodeEditor::LinkId,
+		std::less< std::pair<FlowGraphNode*, int> >,
+		lessID<ax::NodeEditor::LinkId> > m_hierInputLinkMap;
 
 	void RefreshChildren();
 	void RefreshLinks();
@@ -147,6 +171,7 @@ protected:
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForGroupOutputs(std::shared_ptr<FilterGraphGroup> group);
+	void DoNodeForGroupInputs(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
@@ -220,6 +245,7 @@ protected:
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
 
 	ax::NodeEditor::PinId GetSourcePinForLink(StreamDescriptor source, FlowGraphNode* sink);
+	ax::NodeEditor::PinId GetSinkPinForLink(StreamDescriptor source, std::pair<FlowGraphNode*, int> sink);
 
 	///@brief Source stream of the newly created filter
 	StreamDescriptor m_newFilterSourceStream;

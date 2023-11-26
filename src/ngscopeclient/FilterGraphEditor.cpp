@@ -63,6 +63,7 @@ FilterGraphGroup::FilterGraphGroup(FilterGraphEditor& ed)
 	: m_parent(ed)
 {
 	m_outputId = ed.AllocateID();
+	m_inputId = ed.AllocateID();
 }
 
 /**
@@ -91,12 +92,15 @@ void FilterGraphGroup::RefreshChildren()
 }
 
 /**
-	@brief Refreshes the list of links from this group to the outside world
+	@brief Refreshes the list of links between this group and the outside world
  */
 void FilterGraphGroup::RefreshLinks()
 {
-	//Make a list of all links that we currently have to the outside world
-	set<StreamDescriptor> links;
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Outbound links
+
+	//Make a list of all outlinks that we currently have to the outside world
+	set<StreamDescriptor> outlinks;
 	for(auto it : m_parent.m_linkMap)
 	{
 		auto link = it.first;
@@ -109,7 +113,7 @@ void FilterGraphGroup::RefreshLinks()
 
 		//Look up the stream for the source node and mark it as used
 		auto stream = m_parent.m_streamIDMap[link.first];
-		links.emplace(stream);
+		outlinks.emplace(stream);
 
 		//Add to the list of hierarchical output ports if it's not there already
 		if(!m_hierOutputMap.HasEntry(stream))
@@ -119,16 +123,55 @@ void FilterGraphGroup::RefreshLinks()
 	}
 
 	//Remove any links that are no longer in use
-	vector<StreamDescriptor> garbage;
+	vector<StreamDescriptor> outgarbage;
 	for(auto it : m_hierOutputMap)
 	{
-		if(links.find(it.first) == links.end())
-			garbage.push_back(it.first);
+		if(outlinks.find(it.first) == outlinks.end())
+			outgarbage.push_back(it.first);
 	}
-	for(auto stream : garbage)
+	for(auto stream : outgarbage)
 	{
 		m_hierOutputMap.erase(stream);
 		m_hierOutputInternalMap.erase(stream);
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Inbound links
+
+	//Make a list of all inlinks that we currently have to the outside world
+	set< pair<FlowGraphNode*, int> > inlinks;
+	for(auto it : m_parent.m_linkMap)
+	{
+		auto link = it.first;
+
+		//We only care about source pins OUTSIDE this group, going to sink pins IN this group
+		if(m_childSourcePins.find(link.first) != m_childSourcePins.end())
+			continue;
+		if(m_childSinkPins.find(link.second) == m_childSinkPins.end())
+			continue;
+
+		//Look up the stream for the sink node and mark it as used
+		auto input = m_parent.m_inputIDMap[link.second];
+		inlinks.emplace(input);
+
+		//Add to the list of hierarchical input ports if it's not there already
+		if(!m_hierInputMap.HasEntry(input))
+			m_hierInputMap.emplace(input, m_parent.AllocateID());
+		if(!m_hierInputInternalMap.HasEntry(input))
+			m_hierInputInternalMap.emplace(input, m_parent.AllocateID());
+	}
+
+	//Remove any links that are no longer in use
+	vector< pair<FlowGraphNode*, int> > ingarbage;
+	for(auto it : m_hierInputMap)
+	{
+		if(inlinks.find(it.first) == inlinks.end())
+			ingarbage.push_back(it.first);
+	}
+	for(auto stream : ingarbage)
+	{
+		m_hierInputMap.erase(stream);
+		m_hierInputInternalMap.erase(stream);
 	}
 }
 
@@ -314,13 +357,39 @@ ax::NodeEditor::PinId FilterGraphEditor::GetSourcePinForLink(StreamDescriptor so
 			return m_streamIDMap[source];
 	}
 
-	//Source is in a group, sink is not. Use the hierarchical port
+	//Source is in a group, sink is not in the same group. Use the hierarchical port
 	else if(srcGroup->m_hierOutputMap.HasEntry(source))
 		return srcGroup->m_hierOutputMap[source];
 
 	//If we get here, the hierarchical port might have just been created this frame.
 	//Use the original port temporarily
 	return m_streamIDMap[source];
+}
+
+/**
+	@brief Gets the sink pin we should use for drawing a connection
+
+	Note that this may not be the literal sink if we're sinking to a hierarchical port
+ */
+ax::NodeEditor::PinId FilterGraphEditor::GetSinkPinForLink(StreamDescriptor source, pair<FlowGraphNode*, int> sink)
+{
+	//Sink not in a group? Use actual source
+	if(!m_nodeGroupMap.HasEntry(sink.first))
+		return m_inputIDMap[sink];
+
+	//Sink in same group as source? Use actual sink
+	auto sinkGroup = m_nodeGroupMap[sink.first];
+	if(m_nodeGroupMap.HasEntry(source.m_channel))
+	{
+		if(sinkGroup == m_nodeGroupMap[source.m_channel])
+			return m_inputIDMap[sink];
+	}
+
+	//Sink is in a group, source is not in the same group. Use the hierarchical port
+	else if(sinkGroup->m_hierInputMap.HasEntry(sink))
+		return sinkGroup->m_hierInputMap[sink];
+
+	return m_inputIDMap[sink];
 }
 
 /**
@@ -384,7 +453,7 @@ bool FilterGraphEditor::DoRender()
 			if(stream)
 			{
 				auto srcid = GetSourcePinForLink(stream, f);
-				auto dstid = GetID(pair<FlowGraphNode*, size_t>(f, i));
+				auto dstid = GetSinkPinForLink(stream, pair<FlowGraphNode*, size_t>(f, i));
 				auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 				ax::NodeEditor::Link(linkid, srcid, dstid);
 			}
@@ -526,8 +595,114 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 	//Find which of our source pins have edges to other groups
 	group->RefreshLinks();
 
-	//Groups cannot directly have ports, so make a dummy child node for the output ports
+	//Groups cannot directly have ports, so make a dummy child node for the hierarchical ports
 	DoNodeForGroupOutputs(group);
+	DoNodeForGroupInputs(group);
+}
+
+void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
+{
+	//Find parent group
+	auto gid = m_groups[group];
+	auto gpos = ax::NodeEditor::GetNodePosition(gid);
+
+	//Figure out how big the port text is
+	auto textfont = ImGui::GetFont();
+	float oportmax = 1;
+	float iportmax = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, "‣").x;
+	vector<string> onames;
+	for(auto it : group->m_hierInputMap)
+	{
+		auto sink = it.first;
+
+		//TODO refactor into function
+		string sinkname = "(unimplemented)";
+		auto chan = dynamic_cast<InstrumentChannel*>(sink.first);
+		auto trig = dynamic_cast<Trigger*>(sink.first);
+		if(chan)
+			sinkname = chan->GetDisplayName();
+		else if(trig)
+			sinkname = trig->GetScope()->m_nickname;
+
+		auto name = sinkname + " ‣";
+		onames.push_back(name);
+		oportmax = max(oportmax,
+			textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x +
+			textfont->FontSize * 2);
+	}
+	float nodewidth = oportmax + iportmax + 1*ImGui::GetStyle().ItemSpacing.x;
+
+	//Set size/position
+	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	float headerheight = headerfont->FontSize * 1.5;
+	auto gborder = ax::NodeEditor::GetStyle().GroupBorderWidth;
+	auto gpad = ax::NodeEditor::GetStyle().NodePadding.x;
+	ImVec2 pos(
+		gpos.x + gborder + gpad,
+		gpos.y + headerheight + gborder);
+	ax::NodeEditor::SetNodePosition(group->m_inputId, pos);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_NodeRounding, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_NodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_HoveredNodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_SelectedNodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_NodeBg, ImColor(0, 0, 0, 0));
+	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_HovNodeBorder, ImColor(0, 0, 0, 0));
+	ax::NodeEditor::BeginNode(group->m_inputId);
+	ImGui::PushID(group->m_inputId.AsPointer());
+
+	//Get node info
+	pos = ax::NodeEditor::GetNodePosition(group->m_inputId);
+
+	//Table of input ports
+	if(ImGui::BeginTable("Ports", 2, 0, ImVec2(nodewidth, 0 ) ) )
+	{
+		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, iportmax + 2);
+		ImGui::TableSetupColumn("outputs", ImGuiTableColumnFlags_WidthFixed, oportmax + 2);
+
+		for(auto it : group->m_hierInputMap)
+		{
+			ImGui::TableNextRow();
+
+			auto sink = it.first;
+			auto sid = it.second;
+
+			if(sink.first == nullptr)
+			{
+				LogWarning("null sink\n");
+				continue;
+			}
+
+			//Input side (path from external node to hierarchical port)
+			ImGui::TableNextColumn();
+			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Input);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+				ImGui::TextUnformatted("‣");
+			ax::NodeEditor::EndPin();
+
+			//TODO refactor into function
+			string sinkname = "(unimplemented)";
+			auto chan = dynamic_cast<InstrumentChannel*>(sink.first);
+			auto trig = dynamic_cast<Trigger*>(sink.first);
+			if(chan)
+				sinkname = chan->GetDisplayName();
+			else if(trig)
+				sinkname = trig->GetScope()->m_nickname;
+
+			//Output side (path from hierarchical port to internal node)
+			ImGui::TableNextColumn();
+			ax::NodeEditor::BeginPin(group->m_hierInputInternalMap[sink], ax::NodeEditor::PinKind::Output);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
+				RightJustifiedText(sinkname + "." + sink.first->GetInputName(sink.second) + " ‣");
+			ax::NodeEditor::EndPin();
+		}
+		ImGui::EndTable();
+
+	}
+
+	ImGui::PopID();
+	ax::NodeEditor::EndNode();
+	ax::NodeEditor::PopStyleColor(2);
+	ax::NodeEditor::PopStyleVar(4);
 }
 
 void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group)
@@ -575,7 +750,6 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 	pos = ax::NodeEditor::GetNodePosition(group->m_outputId);
 
 	//Table of output ports
-	//Must be a table to use RightJustifiedText() even though we only have one column of layout
 	StreamDescriptor hoveredStream(nullptr, 0);
 
 	if(ImGui::BeginTable("Ports", 2, 0, ImVec2(nodewidth, 0 ) ) )
@@ -646,6 +820,26 @@ void FilterGraphEditor::DoInternalLinksForGroup(shared_ptr<FilterGraphGroup> gro
 		{
 			lid = AllocateID();
 			group->m_hierOutputLinkMap.emplace(fromstream, lid);
+		}
+
+		ax::NodeEditor::Link(lid, fromPin, toPin);
+	}
+
+	//And then again for the inputs
+	for(auto it : group->m_hierInputInternalMap)
+	{
+		auto toport = it.first;
+
+		auto toPin = GetID(toport);
+		auto fromPin = it.second;
+
+		ax::NodeEditor::LinkId lid;
+		if(group->m_hierInputLinkMap.HasEntry(toport))
+			lid = group->m_hierInputLinkMap[toport];
+		else
+		{
+			lid = AllocateID();
+			group->m_hierInputLinkMap.emplace(toport, lid);
 		}
 
 		ax::NodeEditor::Link(lid, fromPin, toPin);
@@ -799,9 +993,11 @@ void FilterGraphEditor::HandleOverlaps()
 				if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
 					continue;
 
-				//If node is the group's output, don't repel
+				//If node is the group's hierarchical port node, don't repel
 				auto group = m_groups[gid];
 				if(nid == group->m_outputId)
+					continue;
+				if(nid == group->m_inputId)
 					continue;
 
 				//Check if we're dragging the group
@@ -876,7 +1072,7 @@ void FilterGraphEditor::HandleOverlaps()
 }
 
 /**
-	@brief
+	@brief Gets the actual source/sink pin given a pin which might be a hierarchical port
  */
 ax::NodeEditor::PinId FilterGraphEditor::CanonicalizePin(ax::NodeEditor::PinId port)
 {
@@ -888,7 +1084,9 @@ ax::NodeEditor::PinId FilterGraphEditor::CanonicalizePin(ax::NodeEditor::PinId p
 		if(group->m_hierOutputMap.HasEntry(port))
 			return m_streamIDMap[group->m_hierOutputMap[port]];
 
-		//TODO: check for hierarchical inputs
+		//Check for hierarchical inputs
+		if(group->m_hierInputMap.HasEntry(port))
+			return m_inputIDMap[group->m_hierInputMap[port]];
 	}
 
 	return port;
