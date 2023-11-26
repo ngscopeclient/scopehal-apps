@@ -195,6 +195,9 @@ protected:
 		lessIDPair,
 		lessID<ax::NodeEditor::LinkId> > m_linkMap;
 
+	///@brief Map of signal sources to the group the source node is in (if there is one)
+	Bijection<FlowGraphNode*, std::shared_ptr<FilterGraphGroup> > m_nodeGroupMap;
+
 	///@brief Next link/port ID to be allocated
 	uintptr_t m_nextID;
 
@@ -213,6 +216,8 @@ protected:
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
 	ax::NodeEditor::PinId GetID(std::pair<FlowGraphNode*, size_t> input);
 	ax::NodeEditor::LinkId GetID(std::pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId> link);
+
+	ax::NodeEditor::PinId GetSourcePinForLink(StreamDescriptor source, FlowGraphNode* sink);
 
 	///@brief Source stream of the newly created filter
 	StreamDescriptor m_newFilterSourceStream;

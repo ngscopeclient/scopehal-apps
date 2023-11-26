@@ -286,6 +286,34 @@ vector<FlowGraphNode*> FilterGraphEditor::GetAllNodes()
 }
 
 /**
+	@brief Gets the source pin we should use for drawing a connection
+
+	Note that this may not be the literal source if we're sourcing from a hierarchical port
+ */
+ax::NodeEditor::PinId FilterGraphEditor::GetSourcePinForLink(StreamDescriptor source, FlowGraphNode* sink)
+{
+	//Source not in a group? Just use the actual source
+	if(!m_nodeGroupMap.HasEntry(source.m_channel))
+		return m_streamIDMap[source];
+
+	//Sink in same group as source? Use the actual source
+	auto srcGroup = m_nodeGroupMap[source.m_channel];
+	if(m_nodeGroupMap.HasEntry(sink))
+	{
+		if(srcGroup == m_nodeGroupMap[sink])
+			return m_streamIDMap[source];
+	}
+
+	//Source is in a group, sink is not. Use the hierarchical port
+	else if(srcGroup->m_hierOutputMap.HasEntry(source))
+		return srcGroup->m_hierOutputMap[source];
+
+	//If we get here, the hierarchical port might have just been created this frame.
+	//Use the original port temporarily
+	return m_streamIDMap[source];
+}
+
+/**
 	@brief Renders the dialog and handles UI events
 
 	@return		True if we should continue showing the dialog
@@ -345,7 +373,7 @@ bool FilterGraphEditor::DoRender()
 			auto stream = f->GetInput(i);
 			if(stream)
 			{
-				auto srcid = GetID(stream);
+				auto srcid = GetSourcePinForLink(stream, f);
 				auto dstid = GetID(pair<FlowGraphNode*, size_t>(f, i));
 				auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 				ax::NodeEditor::Link(linkid, srcid, dstid);
@@ -365,7 +393,7 @@ bool FilterGraphEditor::DoRender()
 				auto stream = trig->GetInput(i);
 				if(stream)
 				{
-					auto srcid = GetID(stream);
+					auto srcid = GetSourcePinForLink(stream, trig);
 					auto dstid = GetID(pair<FlowGraphNode*, size_t>(trig, i));
 					auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
 					ax::NodeEditor::Link(linkid, srcid, dstid);
@@ -428,6 +456,8 @@ ax::NodeEditor::NodeId FilterGraphEditor::GetID(FlowGraphNode* node)
  */
 void FilterGraphEditor::RefreshGroupPorts()
 {
+	m_nodeGroupMap.clear();
+
 	for(auto it : m_groups)
 	{
 		auto group = it.first;
@@ -445,7 +475,9 @@ void FilterGraphEditor::RefreshGroupPorts()
 			if(group->m_children.find(id) == group->m_children.end())
 				continue;
 
-			//Only instrment channels can source signals
+			m_nodeGroupMap.emplace(node, group);
+
+			//Only instrument channels can source signals
 			if(chan)
 			{
 				for(size_t i=0; i<chan->GetStreamCount(); i++)
