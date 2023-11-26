@@ -69,15 +69,22 @@ public:
 	}
 };
 
+class FilterGraphEditor;
+
 class FilterGraphGroup
 {
 public:
+
+	FilterGraphGroup(FilterGraphEditor& ed);
 
 	///@brief Display name of the group
 	std::string m_name;
 
 	///@brief ID of the group
 	ax::NodeEditor::NodeId m_id;
+
+	///@brief ID of the dummy node for output ports
+	ax::NodeEditor::NodeId m_outputId;
 
 	///@brief List of nodes we contain (by ID)
 	std::set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > m_children;
@@ -88,8 +95,33 @@ public:
 	///@brief List of input pins we contain on our child nodes
 	std::set<ax::NodeEditor::PinId, lessID<ax::NodeEditor::PinId> > m_childSinkPins;
 
+	///@brief Map of streams to hierarchial output port IDs
+	Bijection<
+		StreamDescriptor,
+		ax::NodeEditor::PinId,
+		std::less<StreamDescriptor>,
+		lessID<ax::NodeEditor::PinId> > m_hierOutputMap;
+
+	///@brief Map of streams to hierarchial output port internal-facing port IDs
+	Bijection<
+		StreamDescriptor,
+		ax::NodeEditor::PinId,
+		std::less<StreamDescriptor>,
+		lessID<ax::NodeEditor::PinId> > m_hierOutputInternalMap;
+
+	///@brief Map of streams to internal link IDs
+	Bijection<
+		StreamDescriptor,
+		ax::NodeEditor::LinkId,
+		std::less<StreamDescriptor>,
+		lessID<ax::NodeEditor::LinkId> > m_hierOutputLinkMap;
+
 	void RefreshChildren();
+	void RefreshLinks();
 	void MoveBy(ImVec2 displacement);
+
+protected:
+	FilterGraphEditor& m_parent;
 };
 
 class FilterGraphEditor : public Dialog
@@ -102,6 +134,8 @@ public:
 	virtual bool DoRender();
 
 protected:
+	friend class FilterGraphGroup;
+
 	std::map<Instrument*, std::vector<InstrumentChannel*> > GetAllChannels();
 	std::vector<FlowGraphNode*> GetAllNodes();
 
@@ -109,6 +143,8 @@ protected:
 
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
+	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);
+	void DoNodeForGroupOutputs(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
@@ -160,7 +196,7 @@ protected:
 		lessID<ax::NodeEditor::LinkId> > m_linkMap;
 
 	///@brief Next link/port ID to be allocated
-	int m_nextID;
+	uintptr_t m_nextID;
 
 	ax::NodeEditor::NodeId GetID(FlowGraphNode* node);
 

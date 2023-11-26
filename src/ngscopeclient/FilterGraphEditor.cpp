@@ -59,6 +59,12 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FilterGraphGroup
 
+FilterGraphGroup::FilterGraphGroup(FilterGraphEditor& ed)
+	: m_parent(ed)
+{
+	m_outputId = ed.AllocateID();
+}
+
 /**
 	@brief Refreshes the list of child nodes within this node
  */
@@ -82,7 +88,38 @@ void FilterGraphGroup::RefreshChildren()
 		if(RectContains(pos, size, posNode, sizeNode))
 			m_children.emplace(nid);
 	}
+}
 
+/**
+	@brief Refreshes the list of links from this group to the outside world
+ */
+void FilterGraphGroup::RefreshLinks()
+{
+	//Make a list of all links that we currently have to the outside world
+	set<StreamDescriptor> links;
+
+	for(auto it : m_parent.m_linkMap)
+	{
+		auto link = it.first;
+
+		//We only care about source pins IN this group, going to sink pins OUTSIDE this group
+		if(m_childSourcePins.find(link.first) == m_childSourcePins.end())
+			continue;
+		if(m_childSinkPins.find(link.second) != m_childSinkPins.end())
+			continue;
+
+		//Look up the stream for the source node and mark it as used
+		auto stream = m_parent.m_streamIDMap[link.first];
+		links.emplace(stream);
+
+		//Add to the list of hierarchical output ports if it's not there already
+		if(!m_hierOutputMap.HasEntry(stream))
+			m_hierOutputMap.emplace(stream, m_parent.AllocateID());
+		if(!m_hierOutputInternalMap.HasEntry(stream))
+			m_hierOutputInternalMap.emplace(stream, m_parent.AllocateID());
+	}
+
+	//TODO: remove any links that are no longer in use
 }
 
 /**
@@ -296,6 +333,10 @@ bool FilterGraphEditor::DoRender()
 	//All nodes
 	auto nodes = m_session.GetAllGraphNodes();
 
+	//Add links within groups
+	for(auto it : m_groups)
+		DoInternalLinksForGroup(it.first);
+
 	//Add links from each input to the stream it's fed by
 	for(auto f : nodes)
 	{
@@ -440,25 +481,166 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 	ax::NodeEditor::EndNode();
 	ax::NodeEditor::PopStyleColor();
 
-	auto gpos = ax::NodeEditor::GetNodePosition(gid);
-	auto gsz = ax::NodeEditor::GetNodeSize(gid);
-
 	//Find which of our source pins have edges to other groups
-	LogDebug("Group %s has edges to other groups from:\n", group->m_name.c_str());
-	LogIndenter li;
-	for(auto it : m_linkMap)
+	group->RefreshLinks();
+
+	//Groups cannot directly have ports, so make a dummy child node for the output ports
+	DoNodeForGroupOutputs(group);
+
+	//auto gpos = ax::NodeEditor::GetNodePosition(gid);
+	//auto gsz = ax::NodeEditor::GetNodeSize(gid);
+}
+
+void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group)
+{
+	//TODO: make preference for this
+	auto titlecolor = ColorFromString("#808080");
+	auto& prefs = m_session.GetPreferences();
+	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
+	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	auto textfont = ImGui::GetFont();
+	float headerheight = headerfont->FontSize * 1.5;
+	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
+	ax::NodeEditor::BeginNode(group->m_outputId);
+	ImGui::PushID(group->m_outputId.AsPointer());
+
+	string headerText = "Outputs";
+
+	//Get node info
+	auto pos = ax::NodeEditor::GetNodePosition(group->m_outputId);
+	auto size = ax::NodeEditor::GetNodeSize(group->m_outputId);
+
+	//Figure out how big the header text is
+	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+
+	//Figure out how big the port text is
+	float oportmax = 1;
+	float iportmax = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, "‣").x;
+	vector<string> onames;
+	for(auto it : group->m_hierOutputMap)
 	{
-		auto link = it.first;
+		auto stream = it.first;
 
-		//We only care about source pins IN this group, going to sink pins OUTSIDE this group
-		if(group->m_childSourcePins.find(link.first) == group->m_childSourcePins.end())
-			continue;
-		if(group->m_childSinkPins.find(link.second) != group->m_childSinkPins.end())
-			continue;
+		auto name = stream.GetName() + " ‣";
+		onames.push_back(name);
+		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+	}
+	float colswidth = oportmax + iportmax;
+	float nodewidth = max(colswidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
 
-		//Look up the stream for the source node and print it
-		auto stream = m_streamIDMap[link.first];
-		LogDebug("%s\n", stream.GetName().c_str());
+	//Reserve space for the node header
+	//auto startpos = ImGui::GetCursorPos();
+	ImGui::Dummy(ImVec2(nodewidth, headerheight));
+
+	//Table of output ports
+	//Must be a table to use RightJustifiedText() even though we only have one column of layout
+	StreamDescriptor hoveredStream(nullptr, 0);
+	auto bodystart = ImGui::GetCursorPos();
+
+	if(ImGui::BeginTable("Ports", 2, 0, ImVec2(nodewidth, 0 ) ) )
+	{
+		ImGui::TableSetupColumn("inputs", ImGuiTableColumnFlags_WidthFixed, iportmax + 2);
+		ImGui::TableSetupColumn("outputs", ImGuiTableColumnFlags_WidthFixed, oportmax + 2);
+
+		for(auto it : group->m_hierOutputMap)
+		{
+			ImGui::TableNextRow();
+
+			auto stream = it.first;
+			auto sid = it.second;
+
+			//Input side (path from internal node to hierarchical port)
+			ImGui::TableNextColumn();
+			ax::NodeEditor::BeginPin(group->m_hierOutputInternalMap[stream], ax::NodeEditor::PinKind::Input);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(0, 0.5));
+				ImGui::TextUnformatted("‣");
+			ax::NodeEditor::EndPin();
+
+			//Output side (path from hierarchical port to external node)
+			ImGui::TableNextColumn();
+			ax::NodeEditor::BeginPin(sid, ax::NodeEditor::PinKind::Output);
+				ax::NodeEditor::PinPivotAlignment(ImVec2(1, 0.5));
+				RightJustifiedText(stream.GetName() + " ‣");
+			ax::NodeEditor::EndPin();
+
+			if(sid == ax::NodeEditor::GetHoveredPin())
+				hoveredStream = stream;
+		}
+
+		ImGui::EndTable();
+	}
+
+	//Reserve space for icon and caption if needed
+	float contentHeight = ImGui::GetCursorPos().y - bodystart.y;
+	float minHeight = 3*ImGui::GetStyle().ItemSpacing.y + ImGui::GetFontSize();
+	if(contentHeight < minHeight)
+		ImGui::Dummy(ImVec2(1, minHeight - contentHeight));
+
+	/*
+	//Tooltip on hovered output port
+	if(hoveredStream)
+	{
+		//TODO: input port
+
+		//Output port
+		ax::NodeEditor::Suspend();
+			OutputPortTooltip(hoveredStream);
+		ax::NodeEditor::Resume();
+	}
+
+	//Tooltip on hovered node
+	else if(id == ax::NodeEditor::GetHoveredNode())
+	{
+		ax::NodeEditor::Suspend();
+			ImGui::BeginTooltip();
+				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
+			ImGui::EndTooltip();
+		ax::NodeEditor::Resume();
+	}
+	*/
+
+	ImGui::PopID();
+	ax::NodeEditor::EndNode();
+
+	//Draw header after the node is done
+	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(group->m_outputId);
+	bgList->AddRectFilled(
+		ImVec2(pos.x + 1, pos.y + 1),
+		ImVec2(pos.x + size.x - 1, pos.y + headerheight - 1),
+		titlecolor,
+		rounding,
+		ImDrawFlags_RoundCornersTop);
+	bgList->AddText(
+		headerfont,
+		headerfont->FontSize,
+		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
+		headercolor,
+		headerText.c_str());
+}
+
+/**
+	@brief Handle links between nodes in a group and the hierarchical ports
+ */
+void FilterGraphEditor::DoInternalLinksForGroup(shared_ptr<FilterGraphGroup> group)
+{
+	//Add links from node outputs to the hierarchical port node
+	for(auto it : group->m_hierOutputInternalMap)
+	{
+		auto fromstream = it.first;
+
+		auto fromPin = GetID(fromstream);
+		auto toPin = it.second;
+
+		ax::NodeEditor::LinkId lid;
+		if(group->m_hierOutputLinkMap.HasEntry(fromstream))
+			lid = group->m_hierOutputLinkMap[fromstream];
+		else
+		{
+			lid = AllocateID();
+			group->m_hierOutputLinkMap.emplace(fromstream, lid);
+		}
+
+		ax::NodeEditor::Link(lid, fromPin, toPin);
 	}
 }
 
@@ -1651,7 +1833,7 @@ void FilterGraphEditor::DoAddMenu()
 
 	if(ImGui::MenuItem("New Group"))
 	{
-		auto group = make_shared<FilterGraphGroup>();
+		auto group = make_shared<FilterGraphGroup>(*this);
 		auto id = GetID(group);
 		group->m_id = id;
 		group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
