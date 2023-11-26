@@ -213,6 +213,42 @@ map<Instrument*, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels(
 }
 
 /**
+	@brief Get a list of all objects we're displaying nodes for (channels, filters, triggers, etc)
+ */
+vector<FlowGraphNode*> FilterGraphEditor::GetAllNodes()
+{
+	vector<FlowGraphNode*> ret;
+
+	//Channels
+	auto chans = GetAllChannels();
+	for(auto it : chans)
+	{
+		for(auto node : it.second)
+			ret.push_back(node);
+	}
+
+	//Triggers
+	auto insts = m_session.GetInstruments();
+	for(auto inst : insts)
+	{
+		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		if(scope)
+		{
+			auto trig = scope->GetTrigger();
+			if(trig)
+				ret.push_back(trig);
+		}
+	}
+
+	//Filters
+	auto filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		ret.push_back(f);
+
+	return ret;
+}
+
+/**
 	@brief Renders the dialog and handles UI events
 
 	@return		True if we should continue showing the dialog
@@ -224,6 +260,7 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
 	//Make nodes for all groups
+	RefreshGroupPorts();
 	for(auto it : m_groups)
 		DoNodeForGroup(it.first);
 
@@ -329,6 +366,64 @@ bool FilterGraphEditor::DoRender()
 	return true;
 }
 
+/**
+	@brief Gets the ID for an arbitrary node
+ */
+ax::NodeEditor::NodeId FilterGraphEditor::GetID(FlowGraphNode* node)
+{
+	auto chan = dynamic_cast<InstrumentChannel*>(node);
+	if(chan)
+		return GetID(chan);
+
+	auto trig = dynamic_cast<Trigger*>(node);
+	if(trig)
+		return GetID(trig);
+
+	return m_session.m_idtable.emplace(node);
+}
+
+/**
+	@brief Figure out which source/sink ports are within each group
+ */
+void FilterGraphEditor::RefreshGroupPorts()
+{
+	for(auto it : m_groups)
+	{
+		auto group = it.first;
+
+		group->m_childSourcePins.clear();
+		group->m_childSinkPins.clear();
+
+		auto nodes = GetAllNodes();
+		for(auto node : nodes)
+		{
+			auto id = GetID(node);
+			auto chan = dynamic_cast<InstrumentChannel*>(node);
+
+			//Skip anything outside our group
+			if(group->m_children.find(id) == group->m_children.end())
+				continue;
+
+			//Only instrment channels can source signals
+			if(chan)
+			{
+				for(size_t i=0; i<chan->GetStreamCount(); i++)
+				{
+					StreamDescriptor stream(chan, i);
+					group->m_childSourcePins.emplace(GetID(stream));
+				}
+			}
+
+			//All flow graph nodes can sink signals
+			for(size_t i=0; i<node->GetInputCount(); i++)
+			{
+				pair<FlowGraphNode*, int> indesc(node, i);
+				group->m_childSinkPins.emplace(GetID(indesc));
+			}
+		}
+	}
+}
+
 void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 {
 	auto gid = m_groups[group];
@@ -345,29 +440,25 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 	ax::NodeEditor::EndNode();
 	ax::NodeEditor::PopStyleColor();
 
-	//Find which nodes we contain
-	//LogDebug("Group %s contains:\n", group->m_name.c_str());
-	//LogIndenter li;
-
 	auto gpos = ax::NodeEditor::GetNodePosition(gid);
 	auto gsz = ax::NodeEditor::GetNodeSize(gid);
 
-	//Check for instrument channels
-	auto chans = GetAllChannels();
-	for(auto it : chans)
+	//Find which of our source pins have edges to other groups
+	LogDebug("Group %s has edges to other groups from:\n", group->m_name.c_str());
+	LogIndenter li;
+	for(auto it : m_linkMap)
 	{
-		for(auto chan : it.second)
-		{
-			auto id = GetID(chan);
+		auto link = it.first;
 
-			auto pos = ax::NodeEditor::GetNodePosition(id);
-			auto sz = ax::NodeEditor::GetNodeSize(id);
+		//We only care about source pins IN this group, going to sink pins OUTSIDE this group
+		if(group->m_childSourcePins.find(link.first) == group->m_childSourcePins.end())
+			continue;
+		if(group->m_childSinkPins.find(link.second) != group->m_childSinkPins.end())
+			continue;
 
-			if(!RectContains(gpos, gsz, pos, sz))
-				continue;
-
-			//LogDebug("%s.%s\n", it.first->m_nickname.c_str(), chan->GetDisplayName().c_str());
-		}
+		//Look up the stream for the source node and print it
+		auto stream = m_streamIDMap[link.first];
+		LogDebug("%s\n", stream.GetName().c_str());
 	}
 }
 

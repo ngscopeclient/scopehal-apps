@@ -82,6 +82,12 @@ public:
 	///@brief List of nodes we contain (by ID)
 	std::set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > m_children;
 
+	///@brief List of output pins we contain on our child nodes
+	std::set<ax::NodeEditor::PinId, lessID<ax::NodeEditor::PinId> > m_childSourcePins;
+
+	///@brief List of input pins we contain on our child nodes
+	std::set<ax::NodeEditor::PinId, lessID<ax::NodeEditor::PinId> > m_childSinkPins;
+
 	void RefreshChildren();
 	void MoveBy(ImVec2 displacement);
 };
@@ -97,6 +103,9 @@ public:
 
 protected:
 	std::map<Instrument*, std::vector<InstrumentChannel*> > GetAllChannels();
+	std::vector<FlowGraphNode*> GetAllNodes();
+
+	void RefreshGroupPorts();
 
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
@@ -152,6 +161,8 @@ protected:
 
 	///@brief Next link/port ID to be allocated
 	int m_nextID;
+
+	ax::NodeEditor::NodeId GetID(FlowGraphNode* node);
 
 	ax::NodeEditor::NodeId GetID(InstrumentChannel* chan)
 	{ return m_session.m_idtable.emplace(chan); }
