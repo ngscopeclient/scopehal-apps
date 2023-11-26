@@ -141,6 +141,8 @@ protected:
 
 	void RefreshGroupPorts();
 
+	ax::NodeEditor::PinId CanonicalizePin(ax::NodeEditor::PinId port);
+
 	void OutputPortTooltip(StreamDescriptor stream);
 	void DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);

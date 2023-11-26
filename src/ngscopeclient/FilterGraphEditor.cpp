@@ -567,6 +567,7 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_HoveredNodeBorderWidth, 0);
 	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_SelectedNodeBorderWidth, 0);
 	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_NodeBg, ImColor(0, 0, 0, 0));
+	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_HovNodeBorder, ImColor(0, 0, 0, 0));
 	ax::NodeEditor::BeginNode(group->m_outputId);
 	ImGui::PushID(group->m_outputId.AsPointer());
 
@@ -610,22 +611,18 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 		ImGui::EndTable();
 	}
 
-	/*
 	//Tooltip on hovered output port
 	if(hoveredStream)
 	{
-		//TODO: input port
-
 		//Output port
 		ax::NodeEditor::Suspend();
 			OutputPortTooltip(hoveredStream);
 		ax::NodeEditor::Resume();
 	}
-	*/
 
 	ImGui::PopID();
 	ax::NodeEditor::EndNode();
-	ax::NodeEditor::PopStyleColor();
+	ax::NodeEditor::PopStyleColor(2);
 	ax::NodeEditor::PopStyleVar(4);
 }
 
@@ -879,6 +876,25 @@ void FilterGraphEditor::HandleOverlaps()
 }
 
 /**
+	@brief
+ */
+ax::NodeEditor::PinId FilterGraphEditor::CanonicalizePin(ax::NodeEditor::PinId port)
+{
+	for(auto it : m_groups)
+	{
+		auto group = it.first;
+
+		//Check for hierarchical outputs
+		if(group->m_hierOutputMap.HasEntry(port))
+			return m_streamIDMap[group->m_hierOutputMap[port]];
+
+		//TODO: check for hierarchical inputs
+	}
+
+	return port;
+}
+
+/**
 	@brief Handle requests to create a new link
  */
 void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
@@ -896,6 +912,10 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 			//If both IDs are valid, consider making the path
 			if(startId && endId)
 			{
+				//If start or end pin ID are hierarchical ports, re-map to the actual source port
+				startId = CanonicalizePin(startId);
+				endId = CanonicalizePin(endId);
+
 				//Link creation code doesn't know start vs dest
 				//If we started from the input, swap the pins
 				if(m_inputIDMap.HasEntry(startId))
@@ -978,6 +998,8 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 
 		if(ax::NodeEditor::QueryNewNode(&startId) && startId)
 		{
+			startId = CanonicalizePin(startId);
+
 			//Dragging from node output - create new filter from that
 			if(m_streamIDMap.HasEntry(startId))
 			{
