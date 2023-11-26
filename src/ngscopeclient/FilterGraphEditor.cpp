@@ -97,7 +97,6 @@ void FilterGraphGroup::RefreshLinks()
 {
 	//Make a list of all links that we currently have to the outside world
 	set<StreamDescriptor> links;
-
 	for(auto it : m_parent.m_linkMap)
 	{
 		auto link = it.first;
@@ -119,7 +118,18 @@ void FilterGraphGroup::RefreshLinks()
 			m_hierOutputInternalMap.emplace(stream, m_parent.AllocateID());
 	}
 
-	//TODO: remove any links that are no longer in use
+	//Remove any links that are no longer in use
+	vector<StreamDescriptor> garbage;
+	for(auto it : m_hierOutputMap)
+	{
+		if(links.find(it.first) == links.end())
+			garbage.push_back(it.first);
+	}
+	for(auto stream : garbage)
+	{
+		m_hierOutputMap.erase(stream);
+		m_hierOutputInternalMap.erase(stream);
+	}
 }
 
 /**
