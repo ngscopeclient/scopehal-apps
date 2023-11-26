@@ -72,7 +72,18 @@ public:
 class FilterGraphGroup
 {
 public:
+
+	///@brief Display name of the group
 	std::string m_name;
+
+	///@brief ID of the group
+	ax::NodeEditor::NodeId m_id;
+
+	///@brief List of nodes we contain (by ID)
+	std::set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > m_children;
+
+	void RefreshChildren();
+	void MoveBy(ImVec2 displacement);
 };
 
 class FilterGraphEditor : public Dialog

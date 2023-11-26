@@ -57,6 +57,50 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FilterGraphGroup
+
+/**
+	@brief Refreshes the list of child nodes within this node
+ */
+void FilterGraphGroup::RefreshChildren()
+{
+	//Get all of the node IDs
+	int nnodes = ax::NodeEditor::GetNodeCount();
+	vector<ax::NodeEditor::NodeId> nodes;
+	nodes.resize(nnodes);
+	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+
+	//Check to see which are within us
+	auto pos = ax::NodeEditor::GetNodePosition(m_id);
+	auto size = ax::NodeEditor::GetNodeSize(m_id);
+	m_children.clear();
+	for(auto nid : nodes)
+	{
+		auto posNode = ax::NodeEditor::GetNodePosition(nid);
+		auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+
+		if(RectContains(pos, size, posNode, sizeNode))
+			m_children.emplace(nid);
+	}
+
+}
+
+/**
+	@brief Moves this node and all of its child nodes
+ */
+void FilterGraphGroup::MoveBy(ImVec2 displacement)
+{
+	auto pos = ax::NodeEditor::GetNodePosition(m_id);
+	ax::NodeEditor::SetNodePosition(m_id, pos + displacement);
+
+	for(auto nid : m_children)
+	{
+		auto cpos = ax::NodeEditor::GetNodePosition(nid);
+		ax::NodeEditor::SetNodePosition(nid, cpos + displacement);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
 FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
@@ -260,6 +304,10 @@ bool FilterGraphEditor::DoRender()
 	HandleBackgroundContextMenu();
 
 	ax::NodeEditor::End();
+
+	//Refresh all of our groups to have up-to-date child contents
+	for(auto it : m_groups)
+		it.first->RefreshChildren();
 
 	//Look for and avoid overlaps
 	//Must be after End() call which draws node boundaries, so everything is consistent.
@@ -532,26 +580,11 @@ void FilterGraphEditor::HandleOverlaps()
 
 			//If node B is a group, we need to move all nodes inside it by the same amount we moved the group
 			if(groupB)
-			{
-				for(int k=0; k<nnodes; k++)
-				{
-					auto nid = nodes[k];
-					auto posNode = ax::NodeEditor::GetNodePosition(nid);
-					auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+				m_groups[nodeB]->MoveBy(shift);
 
-					//Don't move ourself again
-					if(k == j)
-						continue;
-
-					if(!RectContains(posB, sizeB, posNode, sizeNode))
-						continue;
-
-					ax::NodeEditor::SetNodePosition(nid, posNode + shift);
-				}
-			}
-
-			//Set the new node position
-			ax::NodeEditor::SetNodePosition(nodeB, posB + shift);
+			//Otherwise just move the node
+			else
+				ax::NodeEditor::SetNodePosition(nodeB, posB + shift);
 		}
 	}
 }
@@ -1529,6 +1562,7 @@ void FilterGraphEditor::DoAddMenu()
 	{
 		auto group = make_shared<FilterGraphGroup>();
 		auto id = GetID(group);
+		group->m_id = id;
 		group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
 		m_groups.emplace(group, id);
 	}
