@@ -528,34 +528,17 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 
 	//Groups cannot directly have ports, so make a dummy child node for the output ports
 	DoNodeForGroupOutputs(group);
-
-	//auto gpos = ax::NodeEditor::GetNodePosition(gid);
-	//auto gsz = ax::NodeEditor::GetNodeSize(gid);
 }
 
 void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group)
 {
-	//TODO: make preference for this
-	auto titlecolor = ColorFromString("#808080");
-	auto& prefs = m_session.GetPreferences();
-	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
-	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	auto textfont = ImGui::GetFont();
-	float headerheight = headerfont->FontSize * 1.5;
-	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
-	ax::NodeEditor::BeginNode(group->m_outputId);
-	ImGui::PushID(group->m_outputId.AsPointer());
-
-	string headerText = "Outputs";
-
-	//Get node info
-	auto pos = ax::NodeEditor::GetNodePosition(group->m_outputId);
-	auto size = ax::NodeEditor::GetNodeSize(group->m_outputId);
-
-	//Figure out how big the header text is
-	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+	//Get dimensions of the parent group node
+	auto gid = m_groups[group];
+	auto gpos = ax::NodeEditor::GetNodePosition(gid);
+	auto gsz = ax::NodeEditor::GetNodeSize(gid);
 
 	//Figure out how big the port text is
+	auto textfont = ImGui::GetFont();
 	float oportmax = 1;
 	float iportmax = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, "‣").x;
 	vector<string> onames;
@@ -567,17 +550,32 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 		onames.push_back(name);
 		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
 	}
-	float colswidth = oportmax + iportmax;
-	float nodewidth = max(colswidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
+	float nodewidth = oportmax + iportmax + 3*ImGui::GetStyle().ItemSpacing.x;
 
-	//Reserve space for the node header
-	//auto startpos = ImGui::GetCursorPos();
-	ImGui::Dummy(ImVec2(nodewidth, headerheight));
+	//Set size/position
+	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	float headerheight = headerfont->FontSize * 1.5;
+	auto gborder = ax::NodeEditor::GetStyle().GroupBorderWidth;
+	auto gpad = ax::NodeEditor::GetStyle().NodePadding.x;
+	ImVec2 pos(
+		gpos.x + gsz.x - nodewidth - (gborder + gpad*3),
+		gpos.y + headerheight + gborder);
+	ax::NodeEditor::SetNodePosition(group->m_outputId, pos);
+
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_NodeRounding, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_NodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_HoveredNodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleVar(ax::NodeEditor::StyleVar_SelectedNodeBorderWidth, 0);
+	ax::NodeEditor::PushStyleColor(ax::NodeEditor::StyleColor_NodeBg, ImColor(0, 0, 0, 0));
+	ax::NodeEditor::BeginNode(group->m_outputId);
+	ImGui::PushID(group->m_outputId.AsPointer());
+
+	//Get node info
+	pos = ax::NodeEditor::GetNodePosition(group->m_outputId);
 
 	//Table of output ports
 	//Must be a table to use RightJustifiedText() even though we only have one column of layout
 	StreamDescriptor hoveredStream(nullptr, 0);
-	auto bodystart = ImGui::GetCursorPos();
 
 	if(ImGui::BeginTable("Ports", 2, 0, ImVec2(nodewidth, 0 ) ) )
 	{
@@ -612,12 +610,6 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 		ImGui::EndTable();
 	}
 
-	//Reserve space for icon and caption if needed
-	float contentHeight = ImGui::GetCursorPos().y - bodystart.y;
-	float minHeight = 3*ImGui::GetStyle().ItemSpacing.y + ImGui::GetFontSize();
-	if(contentHeight < minHeight)
-		ImGui::Dummy(ImVec2(1, minHeight - contentHeight));
-
 	/*
 	//Tooltip on hovered output port
 	if(hoveredStream)
@@ -629,35 +621,12 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 			OutputPortTooltip(hoveredStream);
 		ax::NodeEditor::Resume();
 	}
-
-	//Tooltip on hovered node
-	else if(id == ax::NodeEditor::GetHoveredNode())
-	{
-		ax::NodeEditor::Suspend();
-			ImGui::BeginTooltip();
-				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
-			ImGui::EndTooltip();
-		ax::NodeEditor::Resume();
-	}
 	*/
 
 	ImGui::PopID();
 	ax::NodeEditor::EndNode();
-
-	//Draw header after the node is done
-	auto bgList = ax::NodeEditor::GetNodeBackgroundDrawList(group->m_outputId);
-	bgList->AddRectFilled(
-		ImVec2(pos.x + 1, pos.y + 1),
-		ImVec2(pos.x + size.x - 1, pos.y + headerheight - 1),
-		titlecolor,
-		rounding,
-		ImDrawFlags_RoundCornersTop);
-	bgList->AddText(
-		headerfont,
-		headerfont->FontSize,
-		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
-		headercolor,
-		headerText.c_str());
+	ax::NodeEditor::PopStyleColor();
+	ax::NodeEditor::PopStyleVar(4);
 }
 
 /**
@@ -831,6 +800,11 @@ void FilterGraphEditor::HandleOverlaps()
 
 				//If node is completely INSIDE the group, don't repel
 				if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
+					continue;
+
+				//If node is the group's output, don't repel
+				auto group = m_groups[gid];
+				if(nid == group->m_outputId)
 					continue;
 
 				//Check if we're dragging the group
