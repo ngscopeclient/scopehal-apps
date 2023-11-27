@@ -1580,6 +1580,23 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 				fReconfigure = dynamic_cast<Filter*>(inputPort.first);
 			}
 		}
+
+		ax::NodeEditor::NodeId nid;
+		while(ax::NodeEditor::QueryDeletedNode(&nid))
+		{
+			//See if it's a group
+			if(m_groups.HasEntry(nid))
+			{
+				if(ax::NodeEditor::AcceptDeletedItem())
+					m_groups.erase(nid);
+			}
+
+			else
+			{
+				//TODO: allow deletion of filters/channels
+				ax::NodeEditor::RejectDeletedItem();
+			}
+		}
 	}
 	ax::NodeEditor::EndDelete();
 
