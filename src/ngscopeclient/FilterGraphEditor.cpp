@@ -106,13 +106,17 @@ void FilterGraphGroup::RefreshLinks()
 		auto link = it.first;
 
 		//We only care about source pins IN this group, going to sink pins OUTSIDE this group
-		if(m_childSourcePins.find(link.first) == m_childSourcePins.end())
+		auto from = m_parent.CanonicalizePin(link.first);
+		auto to = m_parent.CanonicalizePin(link.second);
+		if(m_childSourcePins.find(from) == m_childSourcePins.end())
 			continue;
-		if(m_childSinkPins.find(link.second) != m_childSinkPins.end())
+		if(m_childSinkPins.find(to) != m_childSinkPins.end())
 			continue;
 
 		//Look up the stream for the source node and mark it as used
-		auto stream = m_parent.m_streamIDMap[link.first];
+		auto stream = m_parent.m_streamIDMap[from];
+		if(!m_parent.m_streamIDMap.HasEntry(from))
+			continue;
 		outlinks.emplace(stream);
 
 		//Add to the list of hierarchical output ports if it's not there already
@@ -138,6 +142,8 @@ void FilterGraphGroup::RefreshLinks()
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Inbound links
 
+	//TODO: why is this treating paths within the group as inlinks?
+
 	//Make a list of all inlinks that we currently have to the outside world
 	set< pair<FlowGraphNode*, int> > inlinks;
 	for(auto it : m_parent.m_linkMap)
@@ -145,13 +151,17 @@ void FilterGraphGroup::RefreshLinks()
 		auto link = it.first;
 
 		//We only care about source pins OUTSIDE this group, going to sink pins IN this group
-		if(m_childSourcePins.find(link.first) != m_childSourcePins.end())
+		auto from = m_parent.CanonicalizePin(link.first);
+		auto to = m_parent.CanonicalizePin(link.second);
+		if(m_childSourcePins.find(from) != m_childSourcePins.end())
 			continue;
-		if(m_childSinkPins.find(link.second) == m_childSinkPins.end())
+		if(m_childSinkPins.find(to) == m_childSinkPins.end())
 			continue;
 
 		//Look up the stream for the sink node and mark it as used
-		auto input = m_parent.m_inputIDMap[link.second];
+		if(!m_parent.m_inputIDMap.HasEntry(to))
+			continue;
+		auto input = m_parent.m_inputIDMap[to];
 		inlinks.emplace(input);
 
 		//Add to the list of hierarchical input ports if it's not there already
@@ -358,7 +368,7 @@ ax::NodeEditor::PinId FilterGraphEditor::GetSourcePinForLink(StreamDescriptor so
 	}
 
 	//Source is in a group, sink is not in the same group. Use the hierarchical port
-	else if(srcGroup->m_hierOutputMap.HasEntry(source))
+	if(srcGroup->m_hierOutputMap.HasEntry(source))
 		return srcGroup->m_hierOutputMap[source];
 
 	//If we get here, the hierarchical port might have just been created this frame.
@@ -386,9 +396,11 @@ ax::NodeEditor::PinId FilterGraphEditor::GetSinkPinForLink(StreamDescriptor sour
 	}
 
 	//Sink is in a group, source is not in the same group. Use the hierarchical port
-	else if(sinkGroup->m_hierInputMap.HasEntry(sink))
+	if(sinkGroup->m_hierInputMap.HasEntry(sink))
 		return sinkGroup->m_hierInputMap[sink];
 
+	//If we get here, the hierarchical port might have just been created this frame.
+	//Use the original port temporarily
 	return m_inputIDMap[sink];
 }
 
@@ -445,6 +457,7 @@ bool FilterGraphEditor::DoRender()
 		DoInternalLinksForGroup(it.first);
 
 	//Add links from each input to the stream it's fed by
+	set<ax::NodeEditor::LinkId, lessID<ax::NodeEditor::LinkId> > freshLinks;
 	for(auto f : nodes)
 	{
 		for(size_t i=0; i<f->GetInputCount(); i++)
@@ -455,6 +468,7 @@ bool FilterGraphEditor::DoRender()
 				auto srcid = GetSourcePinForLink(stream, f);
 				auto dstid = GetSinkPinForLink(stream, pair<FlowGraphNode*, size_t>(f, i));
 				auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
+				freshLinks.emplace(linkid);
 				ax::NodeEditor::Link(linkid, srcid, dstid);
 			}
 		}
@@ -475,11 +489,22 @@ bool FilterGraphEditor::DoRender()
 					auto srcid = GetSourcePinForLink(stream, trig);
 					auto dstid = GetID(pair<FlowGraphNode*, size_t>(trig, i));
 					auto linkid = GetID(pair<ax::NodeEditor::PinId, ax::NodeEditor::PinId>(srcid, dstid));
+					freshLinks.emplace(linkid);
 					ax::NodeEditor::Link(linkid, srcid, dstid);
 				}
 			}
 		}
 	}
+
+	//Purge any stale entries in our link map
+	set<ax::NodeEditor::LinkId, lessID<ax::NodeEditor::LinkId> > staleLinks;
+	for(auto it : m_linkMap)
+	{
+		if(freshLinks.find(it.second) == freshLinks.end())
+			staleLinks.emplace(it.second);
+	}
+	for(auto lid : staleLinks)
+		m_linkMap.erase(lid);
 
 	//Handle other user input
 	Filter* fReconfigure = nullptr;
@@ -1498,13 +1523,21 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 		ax::NodeEditor::LinkId lid;
 		while(ax::NodeEditor::QueryDeletedLink(&lid))
 		{
+			//Handle deletion of normal paths
+			if(!m_linkMap.HasEntry(lid))
+			{
+				ax::NodeEditor::RejectDeletedItem();
+				continue;
+			}
+
 			//All paths are deleteable for now
 			if(ax::NodeEditor::AcceptDeletedItem())
 			{
 				//All paths are from stream to input port
 				//so second ID in the link should be the input, which is now connected to nothing
 				auto pins = m_linkMap[lid];
-				auto inputPort = m_inputIDMap[pins.second];
+				m_linkMap.erase(pins);
+				auto inputPort = m_inputIDMap[CanonicalizePin(pins.second)];
 				inputPort.first->SetInput(inputPort.second, StreamDescriptor(nullptr, 0), true);
 
 				fReconfigure = dynamic_cast<Filter*>(inputPort.first);
