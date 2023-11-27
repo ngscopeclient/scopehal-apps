@@ -2110,6 +2110,7 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 
 	//Run the popup
 	ax::NodeEditor::Suspend();
+	m_createMousePos = ImGui::GetMousePos();
 	if(ImGui::BeginPopup("Add Menu"))
 	{
 		DoAddMenu();
@@ -2192,6 +2193,13 @@ void FilterGraphEditor::DoAddMenu()
 		auto id = GetID(group);
 		group->m_id = id;
 		group->m_name = string("Group ") + to_string((intptr_t)id.AsPointer());
+
+		//Get relative mouse position
+		auto mousePos = ax::NodeEditor::ScreenToCanvas(m_createMousePos);
+
+		//Assign initial positions
+		ax::NodeEditor::SetNodePosition(id, mousePos);
+
 		m_groups.emplace(group, id);
 	}
 }
