@@ -229,6 +229,19 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
+
+	//Load groups from parent, if we have any
+	//Start by reserving groups so they don't get reused by anything else
+	auto groups = parent->GetGraphEditorGroups();
+	for(auto it : groups)
+		m_session.m_idtable.ReserveID(it.first);
+	for(auto it : groups)
+	{
+		auto group = make_shared<FilterGraphGroup>(*this);
+		group->m_id = it.first;
+		group->m_name = it.second;
+		m_groups.emplace(group, group->m_id);
+	}
 }
 
 FilterGraphEditor::~FilterGraphEditor()
@@ -982,7 +995,6 @@ void FilterGraphEditor::HandleOverlaps()
 		auto sizeA = ax::NodeEditor::GetNodeSize(nodeA);
 
 		bool groupA = m_groups.HasEntry(nodeA);
-		//bool selA = ax::NodeEditor::IsNodeSelected(nodeA);
 
 		for(int j=0; j<nnodes; j++)
 		{
@@ -2275,4 +2287,15 @@ size_t FilterGraphEditor::LoadSettingsCallback(
 		memcpy(data, blob.c_str(), blob.length());
 
 	return blob.length();
+}
+
+/**
+	@brief Return a list of group IDs and names
+ */
+map<uintptr_t, string> FilterGraphEditor::GetGroupIDs()
+{
+	map<uintptr_t, string> ret;
+	for(auto it : m_groups)
+		ret[reinterpret_cast<uintptr_t>(it.second.AsPointer())] = it.first->m_name;
+	return ret;
 }

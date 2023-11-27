@@ -202,6 +202,8 @@ void MainWindow::CloseSession()
 	m_persistenceDialog = nullptr;
 	m_manageInstrumentsDialog = nullptr;
 	m_graphEditor = nullptr;
+	m_graphEditorConfigBlob = "";
+	m_graphEditorGroups.clear();
 	m_fileBrowser = nullptr;
 	m_measurementsDialog = nullptr;
 	m_meterDialogs.clear();
@@ -991,7 +993,10 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	if(m_persistenceDialog == dlg)
 		m_persistenceDialog = nullptr;
 	if(m_graphEditor == dlg)
+	{
+		m_graphEditorGroups = m_graphEditor->GetGroupIDs();
 		m_graphEditor = nullptr;
+	}
 	if(m_measurementsDialog == dlg)
 		m_measurementsDialog = nullptr;
 	if(m_manageInstrumentsDialog == dlg)
@@ -2443,6 +2448,14 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_persistenceDialog);
 	}
 
+	//Load graph config before graph editor
+	auto graphGroups = node["graphgroups"];
+	if(graphGroups)
+	{
+		for(auto it : graphGroups)
+			m_graphEditorGroups[it.first.as<uintptr_t>()] = it.second.as<string>();
+	}
+
 	auto graph = node["filtergraph"];
 	if(graph && graph.as<bool>())
 	{
@@ -2856,6 +2869,17 @@ YAML::Node MainWindow::SerializeDialogs()
 	//Measurements
 	if(m_measurementsDialog)
 		node["measurements"] = true;
+
+	//Filter graph groups
+	YAML::Node ggroups;
+	if(m_graphEditor)
+		m_graphEditorGroups = m_graphEditor->GetGroupIDs();
+	if(!m_graphEditorGroups.empty())
+	{
+		for(auto it : m_graphEditorGroups)
+			ggroups[it.first] = it.second;
+		node["graphgroups"] = ggroups;
+	}
 
 	return node;
 }

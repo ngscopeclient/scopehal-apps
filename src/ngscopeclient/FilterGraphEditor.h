@@ -157,6 +157,8 @@ public:
 	virtual bool Render();
 	virtual bool DoRender();
 
+	std::map<uintptr_t, std::string> GetGroupIDs();
+
 protected:
 	friend class FilterGraphGroup;
 

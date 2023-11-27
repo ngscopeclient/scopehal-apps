@@ -198,6 +198,12 @@ public:
 
 	void AddAreaForStreamIfNotAlreadyVisible(StreamDescriptor stream);
 
+	/**
+		@brief Returns the groups we have configured for our graph editor
+	 */
+	std::map<uintptr_t, std::string> GetGraphEditorGroups()
+	{ return m_graphEditorGroups; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -351,6 +357,9 @@ protected:
 
 	///@brief Config blob for filter graph editor
 	std::string m_graphEditorConfigBlob;
+
+	///@brief Group IDs and names for the graph editor
+	std::map<uintptr_t, std::string> m_graphEditorGroups;
 
 	///@brief Measurements dialog
 	std::shared_ptr<MeasurementsDialog> m_measurementsDialog;
