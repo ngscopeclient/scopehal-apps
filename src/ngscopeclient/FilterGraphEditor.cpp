@@ -1533,15 +1533,42 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 		ax::NodeEditor::LinkId lid;
 		while(ax::NodeEditor::QueryDeletedLink(&lid))
 		{
-			//Handle deletion of normal paths
+			//Handle deletion of special paths
 			if(!m_linkMap.HasEntry(lid))
 			{
-				ax::NodeEditor::RejectDeletedItem();
-				continue;
+				//It's probably an internal path within a group
+				//For now, bruteforce groups: this is infrequent and probably not worth the hassle
+				//of maintaining an index for
+				for(auto it : m_groups)
+				{
+					auto group = it.first;
+
+					if(group->m_hierOutputLinkMap.HasEntry(lid))
+					{
+						//For now, reject it
+						//TODO: disconnect every sink we're driving? or allow deletion if single sink?
+
+						ax::NodeEditor::RejectDeletedItem();
+					}
+
+					//Handle hierarchical inputs
+					else if(group->m_hierInputLinkMap.HasEntry(lid))
+					{
+						if(ax::NodeEditor::AcceptDeletedItem())
+						{
+							auto sink = group->m_hierInputLinkMap[lid];
+							group->m_hierInputLinkMap.erase(lid);
+
+							sink.first->SetInput(sink.second, StreamDescriptor(nullptr, 0), true);
+							fReconfigure = dynamic_cast<Filter*>(sink.first);
+							break;
+						}
+					}
+				}
 			}
 
 			//All paths are deleteable for now
-			if(ax::NodeEditor::AcceptDeletedItem())
+			else if(ax::NodeEditor::AcceptDeletedItem())
 			{
 				//All paths are from stream to input port
 				//so second ID in the link should be the input, which is now connected to nothing
