@@ -1976,45 +1976,65 @@ void FilterGraphEditor::HandleNodeProperties()
 	{
 		m_selectedProperties = id;
 
-		auto node = static_cast<FlowGraphNode*>(m_session.m_idtable[(uintptr_t)id]);
-		auto trig = dynamic_cast<Trigger*>(node);
-		auto o = dynamic_cast<OscilloscopeChannel*>(node);
-		auto f = dynamic_cast<Filter*>(o);
-		auto bo = dynamic_cast<BERTOutputChannel*>(node);
-		auto bi = dynamic_cast<BERTInputChannel*>(node);
-
-		//Make the properties window
-		if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
+		//See if we're right clicking on a group or a node
+		if(m_groups.HasEntry(id))
 		{
-			if(trig)
-				m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
-			else if(f)
-				m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
-			else if(bo)
-				m_propertiesDialogs[id] = make_shared<BERTOutputChannelDialog>(bo, true);
-			else if(bi)
-				m_propertiesDialogs[id] = make_shared<BERTInputChannelDialog>(bi, m_parent, true);
-
-			//must be last since many other types are derived from OscilloscopeChannel
-			else if(o)
-				m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
-			else
-				LogWarning("Don't know how to display properties of this node!\n");
+			ax::NodeEditor::Suspend();
+				ImGui::OpenPopup("Group Properties");
+			ax::NodeEditor::Resume();
 		}
 
-		//Create the popup
-		ax::NodeEditor::Suspend();
-			ImGui::OpenPopup("Node Properties");
-		ax::NodeEditor::Resume();
+		else
+		{
+			auto node = static_cast<FlowGraphNode*>(m_session.m_idtable[(uintptr_t)id]);
+			auto trig = dynamic_cast<Trigger*>(node);
+			auto o = dynamic_cast<OscilloscopeChannel*>(node);
+			auto f = dynamic_cast<Filter*>(o);
+			auto bo = dynamic_cast<BERTOutputChannel*>(node);
+			auto bi = dynamic_cast<BERTInputChannel*>(node);
+
+			//Make the properties window
+			if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
+			{
+				if(trig)
+					m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
+				else if(f)
+					m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
+				else if(bo)
+					m_propertiesDialogs[id] = make_shared<BERTOutputChannelDialog>(bo, true);
+				else if(bi)
+					m_propertiesDialogs[id] = make_shared<BERTInputChannelDialog>(bi, m_parent, true);
+
+				//must be last since many other types are derived from OscilloscopeChannel
+				else if(o)
+					m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
+				else
+					LogWarning("Don't know how to display properties of this node!\n");
+			}
+
+			//Create the popup
+			ax::NodeEditor::Suspend();
+				ImGui::OpenPopup("Node Properties");
+			ax::NodeEditor::Resume();
+		}
 	}
 
-	//Run the popup
+	//Run the properties dialogs
 	ax::NodeEditor::Suspend();
 	if(ImGui::BeginPopup("Node Properties"))
 	{
 		auto dlg = m_propertiesDialogs[m_selectedProperties];
 		if(dlg)
 			dlg->RenderAsChild();
+		ImGui::EndPopup();
+	}
+	if(ImGui::BeginPopup("Group Properties"))
+	{
+		if(m_groups.HasEntry(m_selectedProperties))
+		{
+			auto group = m_groups[m_selectedProperties];
+			ImGui::InputText("Name", &group->m_name);
+		}
 		ImGui::EndPopup();
 	}
 	ax::NodeEditor::Resume();
