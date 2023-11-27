@@ -1112,6 +1112,16 @@ ax::NodeEditor::PinId FilterGraphEditor::CanonicalizePin(ax::NodeEditor::PinId p
 		//Check for hierarchical inputs
 		if(group->m_hierInputMap.HasEntry(port))
 			return m_inputIDMap[group->m_hierInputMap[port]];
+
+		//Check for input-facing side of hierarchical inputs
+		if(group->m_hierInputInternalMap.HasEntry(port))
+		{
+			//Figure out what's driving it
+			auto input = group->m_hierInputInternalMap[port];
+			auto stream = input.first->GetInput(input.second);
+			if(stream)
+				return CanonicalizePin(GetID(stream));
+		}
 	}
 
 	return port;
