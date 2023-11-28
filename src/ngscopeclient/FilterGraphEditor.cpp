@@ -45,13 +45,21 @@
 //Pull in a bunch of filters we have special icons for
 #include "../scopeprotocols/AddFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
+#include "../scopeprotocols/AverageFilter.h"
+#include "../scopeprotocols/BaseMeasurement.h"
 #include "../scopeprotocols/ClockRecoveryFilter.h"
 #include "../scopeprotocols/DivideFilter.h"
 #include "../scopeprotocols/EyePattern.h"
+#include "../scopeprotocols/FallMeasurement.h"
+#include "../scopeprotocols/MaximumFilter.h"
+#include "../scopeprotocols/MinimumFilter.h"
 #include "../scopeprotocols/MultiplyFilter.h"
+#include "../scopeprotocols/RiseMeasurement.h"
 #include "../scopeprotocols/SubtractFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
+#include "../scopeprotocols/TopMeasurement.h"
+#include "../scopeprotocols/TrendFilter.h"
 #include "../scopeprotocols/UpsampleFilter.h"
 
 using namespace std;
@@ -218,11 +226,20 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	//Load icons for filters
 	m_parent->GetTextureManager()->LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
@@ -1963,16 +1980,34 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	}
 	else if(dynamic_cast<AddFilter*>(chan))
 		iconname = "filter-add";
+	else if(dynamic_cast<AverageFilter*>(chan))
+		iconname = "filter-average";
+	else if(dynamic_cast<BaseMeasurement*>(chan))
+		iconname = "filter-base";
 	else if(dynamic_cast<ClockRecoveryFilter*>(chan))
 		iconname = "filter-cdrpll";
+	else if(dynamic_cast<DivideFilter*>(chan))
+		iconname = "filter-divide";
 	else if(dynamic_cast<EyePattern*>(chan))
 		iconname = "filter-eyepattern";
+	else if(dynamic_cast<FallMeasurement*>(chan))
+		iconname = "filter-fall";
+	else if(dynamic_cast<MaximumFilter*>(chan))
+		iconname = "filter-max";
+	else if(dynamic_cast<MinimumFilter*>(chan))
+		iconname = "filter-min";
 	else if(dynamic_cast<MultiplyFilter*>(chan))
 		iconname = "filter-multiply";
+	else if(dynamic_cast<RiseMeasurement*>(chan))
+		iconname = "filter-rise";
 	else if(dynamic_cast<SubtractFilter*>(chan))
 		iconname = "filter-subtract";
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
+	else if(dynamic_cast<TopMeasurement*>(chan))
+		iconname = "filter-top";
+	else if(dynamic_cast<TrendFilter*>(chan))
+		iconname = "filter-trend";
 	else if(dynamic_cast<UpsampleFilter*>(chan))
 		iconname = "filter-upsample";
 
@@ -1989,9 +2024,7 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 
 	//Default to no icon, then add icons for basic math blocks
 	string str = "";
-	if(dynamic_cast<DivideFilter*>(chan))
-		str = "÷";
-	else if(dynamic_cast<ToneGeneratorFilter*>(chan))
+	if(dynamic_cast<ToneGeneratorFilter*>(chan))
 		str = "∿";
 	else if(dynamic_cast<AreaMeasurement*>(chan))
 		str = "∫";
