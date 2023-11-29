@@ -57,6 +57,9 @@ public:
 		std::vector<std::shared_ptr<DisplayedChannel> >& channels,
 		bool clearPersistence);
 
+	const std::string GetID()
+	{ return m_title + "###" + m_id; }
+
 	const std::string& GetTitle()
 	{ return m_title; }
 
@@ -173,6 +176,9 @@ protected:
 
 	///@brief Display title of the group
 	std::string m_title;
+
+	///@brief Internal ImGui ID of the group
+	std::string m_id;
 
 	///@brief X axis unit
 	Unit m_xAxisUnit;

@@ -51,6 +51,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_pixelsPerXUnit(0.00005)
 	, m_xAxisOffset(0)
 	, m_title(title)
+	, m_id(title)
 	, m_xAxisUnit(Unit::UNIT_FS)
 	, m_dragState(DRAG_STATE_NONE)
 	, m_dragMarker(nullptr)
@@ -170,11 +171,27 @@ bool WaveformGroup::Render()
 
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(m_title.c_str(), &open))
+	if(!ImGui::Begin(GetID().c_str(), &open))
 	{
 		//tabbed out, don't draw anything until we're back in the foreground
 		ImGui::End();
 		return true;
+	}
+
+	//Check for right click on the title bar
+	//see https://github.com/ocornut/imgui/issues/316
+	//(for now, it doesn't work if the window is docked)
+	if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+	{
+		auto rect = ImGui::GetCurrentWindow()->TitleBarRect();
+		if(ImGui::IsMouseHoveringRect(rect.Min, rect.Max, false))
+			ImGui::OpenPopup("Rename Group");
+	}
+
+	if(ImGui::BeginPopup("Rename Group"))
+	{
+		ImGui::InputText("Name", &m_title);
+		ImGui::EndPopup();
 	}
 
 	auto pos = ImGui::GetCursorScreenPos();
@@ -243,6 +260,7 @@ bool WaveformGroup::Render()
 	RenderMarkers(pos, plotSize);
 
 	ImGui::End();
+
 	return open;
 }
 
@@ -1232,6 +1250,10 @@ bool WaveformGroup::LoadConfiguration(const YAML::Node& node)
 	m_yCursorPos[1] = node["ycursor1"].as<float>();
 	*/
 
+	auto inode = node["id"];
+	if(inode)
+		m_id = inode.as<string>();
+
 	if(timestamps_are_ps)
 	{
 		m_pixelsPerXUnit /= 1000;
@@ -1252,6 +1274,7 @@ YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 	node["pixelsPerXUnit"] = m_pixelsPerXUnit;
 	node["xAxisOffset"] = m_xAxisOffset;
 	node["name"] = m_title;
+	node["id"] = m_id;
 
 	switch(m_xAxisCursorMode)
 	{
