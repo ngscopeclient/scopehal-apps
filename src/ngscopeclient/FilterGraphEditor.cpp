@@ -1899,7 +1899,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 	//Reserve space for icon and caption if needed
 	float contentHeight = ImGui::GetCursorPos().y - bodystart.y;
-	float minHeight = iconsize.y + 3*ImGui::GetStyle().ItemSpacing.y + ImGui::GetFontSize();
+	float minHeight = iconsize.y + 3*ImGui::GetStyle().ItemSpacing.y + textfont->FontSize;
 	if(contentHeight < minHeight)
 		ImGui::Dummy(ImVec2(1, minHeight - contentHeight));
 
