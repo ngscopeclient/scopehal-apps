@@ -1766,7 +1766,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto color = ColorFromString(displaycolor);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	auto textfont = ImGui::GetFont();
+	auto textfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_font");
 	float headerheight = headerfont->FontSize * 1.5;
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
