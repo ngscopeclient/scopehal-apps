@@ -1608,8 +1608,8 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	auto data = stream.GetData();
 
 	//Prepare the memory so we can rasterize it
-	//If no data, set to 0x0 pixels and return
-	if(data == nullptr)
+	//If no data (or an empty buffer with no samples), set to 0x0 pixels and return
+	if( (data == nullptr) || data->empty() )
 	{
 		channel->PrepareToRasterize(0, 0);
 		return;
