@@ -1766,7 +1766,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto color = ColorFromString(displaycolor);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	auto textfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_font");
+	auto textfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_caption_font");
 	float headerheight = headerfont->FontSize * 1.5;
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
@@ -1948,7 +1948,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	NodeIcon(channel, pos + icondelta, iconsize, bgList);
 
 	//Draw icon caption
-	auto textColor = prefs.GetColor("Appearance.Filter Graph.icon_color");
+	auto textColor = prefs.GetColor("Appearance.Filter Graph.icon_caption_color");
 	ImVec2 textpos =
 		pos + icondelta +
 		ImVec2(0, iconsize.y + ImGui::GetStyle().ItemSpacing.y*3);
