@@ -144,14 +144,6 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("invalid_link_color", ColorFromString("#ff0000"))
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
-			graph.AddPreference(
-				Preference::Font("icon_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 40))
-				.Label("Icon font")
-				.Description("Font for math block icons"));
-			graph.AddPreference(
-				Preference::Color("icon_color", ColorFromString("#ffffff"))
-				.Label("Icon color")
-				.Description("Color for math block icons"));
 
 		auto& general = appearance.AddCategory("General");
 			general.AddPreference(

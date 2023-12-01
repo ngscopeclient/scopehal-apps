@@ -1970,10 +1970,6 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 {
 	pos.y += ImGui::GetStyle().ItemSpacing.y*2;
 
-	auto& prefs = m_session.GetPreferences();
-	auto iconfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_font");
-	auto color = prefs.GetColor("Appearance.Filter Graph.icon_color");
-
 	//Some filters get graphical icons
 	//TODO: something less ugly than a big if-else cascade? hash map or something?
 	string iconname = "";
