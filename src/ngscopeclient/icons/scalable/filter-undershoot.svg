@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="128"
+   height="64"
+   viewBox="0 0 33.866666 16.933333"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="marker12"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="0.40000001"
+       markerHeight="0.40000001"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path12" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Triangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="0.40000001"
+       markerHeight="0.40000001"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+  </defs>
+  <g
+     id="layer1">
+    <path
+       style="fill:none;stroke:#00b9f2;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="m 0.30956249,11.628239 4.76255411,1.16e-4 9.7e-6,-9.583631 2.3812451,3.2603711 H 14.597122 V 14.88861 l 2.38125,-3.260371 h 7.14375 V 2.044724 l 2.381249,3.2603711 h 7.143691"
+       id="path3" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-opacity:1"
+       d="M 0.30956249,11.631867 H 33.647062"
+       id="path4" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-opacity:1"
+       d="m 0.264583,15.978979 h 33.3375"
+       id="path4-3" />
+    <path
+       style="fill:none;stroke:#ffea00;stroke-width:0.79375;stroke-linecap:butt;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker12);marker-end:url(#Triangle)"
+       d="M 31.624913,12.849555 V 14.70137"
+       id="path1" />
+  </g>
+</svg>

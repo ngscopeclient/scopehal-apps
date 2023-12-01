@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="128"
+   height="64"
+   viewBox="0 0 33.866666 16.933333"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="marker6"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="0.4"
+       markerHeight="0.4"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path6" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="Triangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="0.4"
+       markerHeight="0.4"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+  </defs>
+  <g
+     id="layer1">
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.6431362,8.4838556 V 1.2702261"
+       id="path1" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 26.136555,8.4681737 V 1.4740895"
+       id="path4" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833333;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.26458354,8.4666667 H 33.602083"
+       id="path2" />
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;fill:#ffea00;fill-opacity:1;stroke:#ffea00;stroke-width:0.529167;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       x="25.212324"
+       y="15.430895"
+       id="text6"><tspan
+         id="tspan6"
+         style="font-size:7.05556px;fill:#ffea00;fill-opacity:1;stroke-width:0.529167;stroke-dasharray:none"
+         x="25.212324"
+         y="15.430895">Δt</tspan></text>
+    <path
+       style="fill:none;fill-opacity:1;stroke:#00b9f2;stroke-width:1.05833333;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M -0.808109 13.046 C -0.206954 12.0731 0.3942 10.9349 0.995354 9.74899 C 1.59651 8.56313 2.19766 7.33154 2.79882 6.18201 C 3.39997 5.03248 4.00113 3.96722 4.60228 3.09604 C 5.20344 2.22487 5.80459 1.55021 6.40574 1.14081 C 7.0069 0.731411 7.60805 0.589404 8.20921 0.727976 C 8.81036 0.866548 9.41152 1.28709 10.0127 1.94446 C 10.6138 2.60182 11.215 3.49637 11.8161 4.53413 C 12.4173 5.57189 13.0184 6.7521 13.6196 7.95177 C 14.2208 9.15143 14.8219 10.3688 15.4231 11.4778 C 16.0242 12.5868 16.6254 13.5851 17.2265 14.3699 C 17.8277 15.1547 18.4288 15.7237 19.03 16.0191 C 19.6311 16.3145 20.2323 16.3344 20.8334 16.0782 C 21.4346 15.822 22.0358 15.2886 22.6369 14.5348 C 23.2381 13.7809 23.8392 12.8065 24.4404 11.7137 C 25.0415 10.6209 25.6427 9.41074 26.2438 8.20908 C 26.845 7.00742 27.4461 5.81618 28.0473 4.75865 C 28.6485 3.70112 29.2496 2.77966 29.8508 2.08891 C 30.4519 1.39816 31.0531 0.940489 31.6542 0.761955 C 32.2554 0.583421 32.8565 0.68589 33.4577 1.05716"
+       title="sin(x)*2"
+       id="path7" />
+    <path
+       style="fill:none;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle);marker-end:url(#marker6)"
+       d="m 3.0121508,3.340224 21.8412712,0"
+       id="path5" />
+  </g>
+</svg>

@@ -13,7 +13,7 @@
      id="defs1">
     <marker
        style="overflow:visible"
-       id="marker1"
+       id="marker4"
        refX="0"
        refY="0"
        orient="auto-start-reverse"
@@ -25,7 +25,7 @@
          transform="scale(0.5)"
          style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
          d="M 5.77,0 -2.88,5 V -5 Z"
-         id="path1" />
+         id="path4" />
     </marker>
     <marker
        style="overflow:visible"
@@ -48,23 +48,19 @@
      id="layer1">
     <path
        style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="m 10.603834,-0.0118673 0.02644,16.9440533"
+       d="M 10.583333,1.0583321 V 6.8791628"
        id="path2" />
     <path
        style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M 23.303834,-0.00561242 23.330274,16.945201"
+       d="M 23.283333,1.0583321 V 6.8791628"
        id="path2-6" />
     <path
-       style="fill:none;stroke:#ffea00;stroke-width:1.058;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle)"
-       d="m 24.897089,15.302497 h 4.897897"
-       id="path12" />
-    <path
-       style="fill:none;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker1)"
-       d="M 9.2316139,15.302904 H 4.3337179"
-       id="path12-2" />
-    <path
        style="fill:none;stroke:#00b9f2;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M -0.00366813,3.3120311 H 10.617054 l 12.7,8.9888109 h 10.553281"
-       id="path13" />
+       d="M 0.52916667,13.07235 H 10.583333 V 4.7625002 h 12.7 V 13.385986 H 33.3375"
+       id="path1" />
+    <path
+       style="fill:none;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle);marker-end:url(#marker4)"
+       d="M 22.048616,2.3899055 H 11.918171"
+       id="path3" />
   </g>
 </svg>

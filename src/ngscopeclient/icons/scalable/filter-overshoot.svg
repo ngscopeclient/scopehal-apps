@@ -13,7 +13,7 @@
      id="defs1">
     <marker
        style="overflow:visible"
-       id="marker1"
+       id="marker12"
        refX="0"
        refY="0"
        orient="auto-start-reverse"
@@ -25,7 +25,7 @@
          transform="scale(0.5)"
          style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
          d="M 5.77,0 -2.88,5 V -5 Z"
-         id="path1" />
+         id="path12" />
     </marker>
     <marker
        style="overflow:visible"
@@ -47,24 +47,20 @@
   <g
      id="layer1">
     <path
-       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="m 10.603834,-0.0118673 0.02644,16.9440533"
-       id="path2" />
-    <path
-       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M 23.303834,-0.00561242 23.330274,16.945201"
-       id="path2-6" />
-    <path
-       style="fill:none;stroke:#ffea00;stroke-width:1.058;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle)"
-       d="m 24.897089,15.302497 h 4.897897"
-       id="path12" />
-    <path
-       style="fill:none;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker1)"
-       d="M 9.2316139,15.302904 H 4.3337179"
-       id="path12-2" />
-    <path
        style="fill:none;stroke:#00b9f2;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M -0.00366813,3.3120311 H 10.617054 l 12.7,8.9888109 h 10.553281"
-       id="path13" />
+       d="m 0.30956249,11.628239 4.76255411,1.16e-4 9.7e-6,-9.583631 2.3812451,3.2603711 H 14.597122 V 14.88861 l 2.38125,-3.260371 h 7.14375 V 2.044724 l 2.381249,3.2603711 h 7.143691"
+       id="path3" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-opacity:1"
+       d="M 0.30956249,5.3040431 H 33.647062"
+       id="path4" />
+    <path
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-opacity:1"
+       d="M 0.26458345,0.95154492 33.602083,0.95144002"
+       id="path4-5" />
+    <path
+       style="fill:none;stroke:#ffea00;stroke-width:0.79375;stroke-linecap:butt;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker12);marker-end:url(#Triangle)"
+       d="M 31.625,2.1955645 V 4.047379"
+       id="path1" />
   </g>
 </svg>

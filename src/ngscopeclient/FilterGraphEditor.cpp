@@ -43,23 +43,35 @@
 #include "MeasurementsDialog.h"
 
 //Pull in a bunch of filters we have special icons for
+#include "../scopeprotocols/ACCoupleFilter.h"
+#include "../scopeprotocols/ACRMSFilter.h"
 #include "../scopeprotocols/AddFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
 #include "../scopeprotocols/AverageFilter.h"
 #include "../scopeprotocols/BaseMeasurement.h"
+#include "../scopeprotocols/ClipFilter.h"
 #include "../scopeprotocols/ClockRecoveryFilter.h"
+#include "../scopeprotocols/DeskewFilter.h"
 #include "../scopeprotocols/DivideFilter.h"
+#include "../scopeprotocols/DownsampleFilter.h"
+#include "../scopeprotocols/DutyCycleMeasurement.h"
 #include "../scopeprotocols/EyePattern.h"
 #include "../scopeprotocols/FallMeasurement.h"
+#include "../scopeprotocols/FrequencyMeasurement.h"
 #include "../scopeprotocols/MaximumFilter.h"
 #include "../scopeprotocols/MinimumFilter.h"
 #include "../scopeprotocols/MultiplyFilter.h"
+#include "../scopeprotocols/OvershootMeasurement.h"
+#include "../scopeprotocols/PeriodMeasurement.h"
+#include "../scopeprotocols/PulseWidthMeasurement.h"
 #include "../scopeprotocols/RiseMeasurement.h"
+#include "../scopeprotocols/StepGeneratorFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
 #include "../scopeprotocols/TopMeasurement.h"
 #include "../scopeprotocols/TrendFilter.h"
+#include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
 
 using namespace std;
@@ -225,27 +237,42 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
 
 	//Load icons for filters
+	m_parent->GetTextureManager()->LoadTexture("filter-ac-couple", FindDataFile("icons/filters/filter-ac-couple.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-ac-rms", FindDataFile("icons/filters/filter-ac-rms.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-duty-cycle", FindDataFile("icons/filters/filter-duty-cycle.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
+	
 
 	//Load groups from parent, if we have any
 	//Start by reserving groups so they don't get reused by anything else
@@ -1978,36 +2005,64 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 				break;
 		}
 	}
+	else if(dynamic_cast<ACCoupleFilter*>(chan))
+		iconname = "filter-ac-couple";
+	else if(dynamic_cast<ACRMSFilter*>(chan))
+		iconname = "filter-ac-rms";
 	else if(dynamic_cast<AddFilter*>(chan))
 		iconname = "filter-add";
+	else if(dynamic_cast<AreaMeasurement*>(chan))
+		iconname = "filter-area-under-curve";
 	else if(dynamic_cast<AverageFilter*>(chan))
 		iconname = "filter-average";
 	else if(dynamic_cast<BaseMeasurement*>(chan))
 		iconname = "filter-base";
+	else if(dynamic_cast<ClipFilter*>(chan))
+		iconname = "filter-clip";
 	else if(dynamic_cast<ClockRecoveryFilter*>(chan))
 		iconname = "filter-cdrpll";
+	else if(dynamic_cast<DeskewFilter*>(chan))
+		iconname = "filter-deskew";
 	else if(dynamic_cast<DivideFilter*>(chan))
 		iconname = "filter-divide";
+	else if(dynamic_cast<DownsampleFilter*>(chan))
+		iconname = "filter-downsample";
+	else if(dynamic_cast<DutyCycleMeasurement*>(chan))
+		iconname = "filter-duty-cycle";
 	else if(dynamic_cast<EyePattern*>(chan))
 		iconname = "filter-eyepattern";
 	else if(dynamic_cast<FallMeasurement*>(chan))
 		iconname = "filter-fall";
+	else if(dynamic_cast<FrequencyMeasurement*>(chan))
+		iconname = "filter-frequency";
 	else if(dynamic_cast<MaximumFilter*>(chan))
 		iconname = "filter-max";
 	else if(dynamic_cast<MinimumFilter*>(chan))
 		iconname = "filter-min";
 	else if(dynamic_cast<MultiplyFilter*>(chan))
 		iconname = "filter-multiply";
+	else if(dynamic_cast<PeriodMeasurement*>(chan))
+		iconname = "filter-period";
+	else if(dynamic_cast<PulseWidthMeasurement*>(chan))
+		iconname = "filter-pulse-width";
 	else if(dynamic_cast<RiseMeasurement*>(chan))
 		iconname = "filter-rise";
+	else if(dynamic_cast<StepGeneratorFilter*>(chan))
+		iconname = "filter-step";
 	else if(dynamic_cast<SubtractFilter*>(chan))
 		iconname = "filter-subtract";
 	else if(dynamic_cast<ThresholdFilter*>(chan))
 		iconname = "filter-threshold";
+	else if(dynamic_cast<ToneGeneratorFilter*>(chan))
+		iconname = "filter-sine";
 	else if(dynamic_cast<TopMeasurement*>(chan))
 		iconname = "filter-top";
 	else if(dynamic_cast<TrendFilter*>(chan))
 		iconname = "filter-trend";
+	else if(dynamic_cast<OvershootMeasurement*>(chan))
+		iconname = "filter-overshoot";
+	else if(dynamic_cast<UndershootMeasurement*>(chan))
+		iconname = "filter-undershoot";
 	else if(dynamic_cast<UpsampleFilter*>(chan))
 		iconname = "filter-upsample";
 
@@ -2020,38 +2075,7 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 		return;
 	}
 
-	//If we get here, no graphical icon. Try font-based icons instead
-
-	//Default to no icon, then add icons for basic math blocks
-	string str = "";
-	if(dynamic_cast<ToneGeneratorFilter*>(chan))
-		str = "∿";
-	else if(dynamic_cast<AreaMeasurement*>(chan))
-		str = "∫";
-
-	//Do nothing if no icon
-	if(str.empty())
-		return;
-
-	//Calculate text size so we can draw the icon
-	auto size = iconfont->CalcTextSizeA(iconfont->FontSize, FLT_MAX, 0, str.c_str());
-	auto radius = max(size.x, size.y)/2 + ImGui::GetStyle().ItemSpacing.x;
-
-	//Actually draw it
-	ImVec2 circlepos = pos + ImVec2(radius, radius);
-	ImVec2 textpos = circlepos - size/2;
-	list->AddText(
-		iconfont,
-		iconfont->FontSize,
-		textpos,
-		color,
-		str.c_str());
-
-	//Draw boundary circle
-	list->AddCircle(
-		circlepos,
-		radius,
-		color);
+	//If we get here, no graphical icon.
 }
 
 /**

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="128"
+   height="64"
+   viewBox="0 0 33.866666 16.933333"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <path
+       style="fill:none;stroke:#00b9f2;stroke-width:1.3664;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="m 1.9769648,6.8820973 c 0.9145247,-6.05806899 1.7170615,-6.46882545 2.3831739,0 2.8120035,15.5653427 4.9787545,3.8932207 7.3297863,0 0.52112,-0.9028241 1.104802,-0.6358457 1.708213,0 0.54555,0.6855621 0.810093,0.2565771 1.118103,0 2.58181,-9.8610527 2.860609,-0.7596889 4.192886,0 0.400742,0.2647578 0.737457,0.148719 1.055987,0 2.849971,-3.9010576 2.799133,-2.4669956 3.882301,0 0.901575,3.2875077 2.011895,5.7166427 4.223945,0 1.074228,-2.1624602 2.103053,-4.7930186 4.061444,0"
+       id="path1" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:#ffea00;stroke-width:1.05833005;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.6309076,8.1859014 C 2.68153,8.0555116 3.6745404,8.2131816 4.6418137,8.4995369 6.6559284,8.8945612 8.622836,8.919721 11.039989,8.2486281 13.769414,7.055195 15.462086,5.2397098 17.406802,3.5754508 c 0.658815,-0.5361941 4.144332,2.7996866 6.304085,3.512724 0.905578,0.2548756 4.122063,-1.8011567 6.366812,-2.8854518 0.254236,-0.1379094 1.027156,0.2428647 2.78348,1.6070429"
+       id="path10" />
+    <circle
+       id="path7"
+       style="fill:#ec008c;fill-opacity:1;stroke:none;stroke-width:0.160038;stroke-dasharray:none"
+       cx="4.6643944"
+       cy="8.5023947"
+       r="0.96022785" />
+    <circle
+       id="circle7"
+       style="fill:#ec008c;fill-opacity:1;stroke:none;stroke-width:0.160038;stroke-dasharray:none"
+       cx="11.014395"
+       cy="8.1585531"
+       r="0.96022785" />
+    <circle
+       id="circle8"
+       style="fill:#ec008c;fill-opacity:1;stroke:none;stroke-width:0.160038;stroke-dasharray:none"
+       cx="17.364395"
+       cy="3.5802314"
+       r="0.96022785" />
+    <circle
+       id="circle9"
+       style="fill:#ec008c;fill-opacity:1;stroke:none;stroke-width:0.160038;stroke-dasharray:none"
+       cx="30.064394"
+       cy="4.2702212"
+       r="0.96022785" />
+    <circle
+       id="circle10"
+       style="fill:#ec008c;fill-opacity:1;stroke:none;stroke-width:0.160038;stroke-dasharray:none"
+       cx="23.714394"
+       cy="7.026207"
+       r="0.96022785" />
+  </g>
+</svg>
