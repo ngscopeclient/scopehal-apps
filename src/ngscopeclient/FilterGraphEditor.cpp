@@ -44,7 +44,7 @@
 
 //Pull in a bunch of filters we have special icons for
 #include "../scopeprotocols/ACCoupleFilter.h"
-#include "../scopeprotocols/ACRMSFilter.h"
+#include "../scopeprotocols/ACRMSMeasurement.h"
 #include "../scopeprotocols/AddFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
 #include "../scopeprotocols/AverageFilter.h"
@@ -272,7 +272,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-	
+
 
 	//Load groups from parent, if we have any
 	//Start by reserving groups so they don't get reused by anything else
@@ -2007,7 +2007,7 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	}
 	else if(dynamic_cast<ACCoupleFilter*>(chan))
 		iconname = "filter-ac-couple";
-	else if(dynamic_cast<ACRMSFilter*>(chan))
+	else if(dynamic_cast<ACRMSMeasurement*>(chan))
 		iconname = "filter-ac-rms";
 	else if(dynamic_cast<AddFilter*>(chan))
 		iconname = "filter-add";
