@@ -233,7 +233,12 @@ string MainWindow::NameNewWaveformGroup()
 {
 	//TODO: avoid colliding, check if name is in use and skip if so
 	int id = (m_nextWaveformGroup ++);
-	return string("Waveform Group ") + to_string(id);
+	auto nextid = string("Waveform Group ") + to_string(id);
+
+	if(ImGui::FindWindowByName(nextid.c_str()) != nullptr)
+		LogWarning("new group named %s already exists\n", nextid.c_str());
+
+	return nextid;
 }
 
 /**
@@ -1041,7 +1046,7 @@ void MainWindow::DockingArea()
 		for(auto& request : m_splitRequests)
 		{
 			//Get the window for the group
-			auto window = ImGui::FindWindowByName(request.m_group->GetTitle().c_str());
+			auto window = ImGui::FindWindowByName(request.m_group->GetID().c_str());
 			if(!window)
 			{
 				//Not sure if this is possible? Haven't seen it yet
@@ -1069,7 +1074,7 @@ void MainWindow::DockingArea()
 				lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 				m_waveformGroups.push_back(group);
 			}
-			ImGui::DockBuilderDockWindow(group->GetTitle().c_str(), node->ID);
+			ImGui::DockBuilderDockWindow(group->GetID().c_str(), node->ID);
 
 			//Add a new waveform area for our stream to the new group
 			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
@@ -1114,7 +1119,7 @@ void MainWindow::DockingArea()
 
 		//Dock new waveform groups by default
 		for(auto& g : m_newWaveformGroups)
-			ImGui::DockBuilderDockWindow(g->GetTitle().c_str(), node->ID);
+			ImGui::DockBuilderDockWindow(g->GetID().c_str(), node->ID);
 
 		//Finish up
 		ImGui::DockBuilderFinish(dockspace_id);
