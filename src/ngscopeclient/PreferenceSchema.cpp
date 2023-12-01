@@ -145,7 +145,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
 			graph.AddPreference(
-				Preference::Font("icon_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 40))
+				Preference::Font("icon_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
 				.Label("Icon font")
 				.Description("Font for math block icons"));
 			graph.AddPreference(
