@@ -273,9 +273,41 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
 
+	//Fill out map of filter class types to icon names
+	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 		= "filter-ac-couple";
+	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 		= "filter-ac-rms";
+	m_filterIconMap[type_index(typeid(AddFilter))] 				= "filter-add";
+	m_filterIconMap[type_index(typeid(AreaMeasurement))] 		= "filter-area-under-curve";
+	m_filterIconMap[type_index(typeid(AverageFilter))] 			= "filter-average";
+	m_filterIconMap[type_index(typeid(BaseMeasurement))] 		= "filter-base";
+	m_filterIconMap[type_index(typeid(ClipFilter))] 			= "filter-clip";
+	m_filterIconMap[type_index(typeid(ClockRecoveryFilter))]	= "filter-cdrpll";
+	m_filterIconMap[type_index(typeid(DeskewFilter))] 			= "filter-deskew";
+	m_filterIconMap[type_index(typeid(DivideFilter))] 			= "filter-divide";
+	m_filterIconMap[type_index(typeid(DownsampleFilter))] 		= "filter-downsample";
+	m_filterIconMap[type_index(typeid(DutyCycleMeasurement))] 	= "filter-duty-cycle";
+	m_filterIconMap[type_index(typeid(EyePattern))] 			= "filter-eyepattern";
+	m_filterIconMap[type_index(typeid(FallMeasurement))] 		= "filter-fall";
+	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 	= "filter-frequency";
+	m_filterIconMap[type_index(typeid(MaximumFilter))] 			= "filter-max";
+	m_filterIconMap[type_index(typeid(MinimumFilter))] 			= "filter-min";
+	m_filterIconMap[type_index(typeid(MultiplyFilter))] 		= "filter-multiply";
+	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 		= "filter-period";
+	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 	= "filter-pulse-width";
+	m_filterIconMap[type_index(typeid(RiseMeasurement))] 		= "filter-rise";
+	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 	= "filter-step";
+	m_filterIconMap[type_index(typeid(SubtractFilter))] 		= "filter-subtract";
+	m_filterIconMap[type_index(typeid(ThresholdFilter))] 		= "filter-threshold";
+	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 	= "filter-sine";
+	m_filterIconMap[type_index(typeid(TopMeasurement))] 		= "filter-top";
+	m_filterIconMap[type_index(typeid(TrendFilter))] 			= "filter-trend";
+	m_filterIconMap[type_index(typeid(TopMeasurement))] 		= "filter-top";
+	m_filterIconMap[type_index(typeid(OvershootMeasurement))]	= "filter-overshoot";
+	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 	= "filter-undershoot";
+	m_filterIconMap[type_index(typeid(UpsampleFilter))] 		= "filter-upsample";
 
 	//Load groups from parent, if we have any
-	//Start by reserving groups so they don't get reused by anything else
+	//Start by reserving group IDs so they don't get reused by anything else
 	auto groups = parent->GetGraphEditorGroups();
 	for(auto it : groups)
 		m_session.m_idtable.ReserveID(it.first);
@@ -1962,16 +1994,12 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 /**
 	@brief Draws an icon showing the function of a node
-
-	TODO: would this make more sense as a virtual?
-	We don't want too much tight coupling between rendering and backend though.
  */
 void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 iconsize, ImDrawList* list)
 {
 	pos.y += ImGui::GetStyle().ItemSpacing.y*2;
 
-	//Some filters get graphical icons
-	//TODO: something less ugly than a big if-else cascade? hash map or something?
+	//Not a filter? Check connector type
 	string iconname = "";
 	if(dynamic_cast<Filter*>(chan) == nullptr)
 	{
@@ -2001,66 +2029,14 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 				break;
 		}
 	}
-	else if(dynamic_cast<ACCoupleFilter*>(chan))
-		iconname = "filter-ac-couple";
-	else if(dynamic_cast<ACRMSMeasurement*>(chan))
-		iconname = "filter-ac-rms";
-	else if(dynamic_cast<AddFilter*>(chan))
-		iconname = "filter-add";
-	else if(dynamic_cast<AreaMeasurement*>(chan))
-		iconname = "filter-area-under-curve";
-	else if(dynamic_cast<AverageFilter*>(chan))
-		iconname = "filter-average";
-	else if(dynamic_cast<BaseMeasurement*>(chan))
-		iconname = "filter-base";
-	else if(dynamic_cast<ClipFilter*>(chan))
-		iconname = "filter-clip";
-	else if(dynamic_cast<ClockRecoveryFilter*>(chan))
-		iconname = "filter-cdrpll";
-	else if(dynamic_cast<DeskewFilter*>(chan))
-		iconname = "filter-deskew";
-	else if(dynamic_cast<DivideFilter*>(chan))
-		iconname = "filter-divide";
-	else if(dynamic_cast<DownsampleFilter*>(chan))
-		iconname = "filter-downsample";
-	else if(dynamic_cast<DutyCycleMeasurement*>(chan))
-		iconname = "filter-duty-cycle";
-	else if(dynamic_cast<EyePattern*>(chan))
-		iconname = "filter-eyepattern";
-	else if(dynamic_cast<FallMeasurement*>(chan))
-		iconname = "filter-fall";
-	else if(dynamic_cast<FrequencyMeasurement*>(chan))
-		iconname = "filter-frequency";
-	else if(dynamic_cast<MaximumFilter*>(chan))
-		iconname = "filter-max";
-	else if(dynamic_cast<MinimumFilter*>(chan))
-		iconname = "filter-min";
-	else if(dynamic_cast<MultiplyFilter*>(chan))
-		iconname = "filter-multiply";
-	else if(dynamic_cast<PeriodMeasurement*>(chan))
-		iconname = "filter-period";
-	else if(dynamic_cast<PulseWidthMeasurement*>(chan))
-		iconname = "filter-pulse-width";
-	else if(dynamic_cast<RiseMeasurement*>(chan))
-		iconname = "filter-rise";
-	else if(dynamic_cast<StepGeneratorFilter*>(chan))
-		iconname = "filter-step";
-	else if(dynamic_cast<SubtractFilter*>(chan))
-		iconname = "filter-subtract";
-	else if(dynamic_cast<ThresholdFilter*>(chan))
-		iconname = "filter-threshold";
-	else if(dynamic_cast<ToneGeneratorFilter*>(chan))
-		iconname = "filter-sine";
-	else if(dynamic_cast<TopMeasurement*>(chan))
-		iconname = "filter-top";
-	else if(dynamic_cast<TrendFilter*>(chan))
-		iconname = "filter-trend";
-	else if(dynamic_cast<OvershootMeasurement*>(chan))
-		iconname = "filter-overshoot";
-	else if(dynamic_cast<UndershootMeasurement*>(chan))
-		iconname = "filter-undershoot";
-	else if(dynamic_cast<UpsampleFilter*>(chan))
-		iconname = "filter-upsample";
+
+	//It's a filter, check if we have an icon for it
+	else
+	{
+		auto it = m_filterIconMap.find(typeid(*chan));
+		if(it != m_filterIconMap.end())
+			iconname = it->second;
+	}
 
 	if(iconname != "")
 	{

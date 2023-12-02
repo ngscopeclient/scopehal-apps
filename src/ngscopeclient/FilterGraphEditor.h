@@ -43,6 +43,9 @@ class EmbeddableDialog;
 #include <imgui_node_editor.h>
 #include <imgui_node_editor_internal.h>
 
+#include <typeinfo>
+#include <typeindex>
+
 template<class T>
 class lessID
 {
@@ -273,6 +276,9 @@ protected:
 		std::less< std::shared_ptr<FilterGraphGroup> >,
 		lessID<ax::NodeEditor::NodeId>
 		 > m_groups;
+
+	///@brief Map of filter types to class names
+	std::map<std::type_index, std::string> m_filterIconMap;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Serialization
