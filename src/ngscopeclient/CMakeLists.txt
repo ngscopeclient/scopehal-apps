@@ -67,6 +67,7 @@ add_executable(ngscopeclient
 	AddPowerSupplyDialog.cpp
 	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
+	AddSpectrometerDialog.cpp
 	AddVNADialog.cpp
 	BERTDialog.cpp
 	BERTInputChannelDialog.cpp

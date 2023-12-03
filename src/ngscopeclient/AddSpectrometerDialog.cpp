@@ -30,24 +30,24 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddVNADialog
+	@brief Implementation of AddSpectrometerDialog
  */
 
 #include "ngscopeclient.h"
-#include "AddVNADialog.h"
+#include "AddSpectrometerDialog.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddVNADialog::AddVNADialog(Session& session)
-	: AddInstrumentDialog("Add VNA", "VNA", session)
+AddSpectrometerDialog::AddSpectrometerDialog(Session& session)
+	: AddInstrumentDialog("Add Spectrometer", "Spectrometer", session)
 {
-	SCPIVNA::EnumDrivers(m_drivers);
+	SCPISpectrometer::EnumDrivers(m_drivers);
 }
 
-AddVNADialog::~AddVNADialog()
+AddSpectrometerDialog::~AddSpectrometerDialog()
 {
 }
 
@@ -59,7 +59,7 @@ AddVNADialog::~AddVNADialog()
 
 	@return True if successful
  */
-bool AddVNADialog::DoConnect()
+bool AddSpectrometerDialog::DoConnect()
 {
 	//Create the transport
 	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
@@ -79,21 +79,21 @@ bool AddVNADialog::DoConnect()
 		return false;
 	}
 
-	//Create the vna
-	auto vna = SCPIVNA::CreateVNA(m_drivers[m_selectedDriver], transport);
-	if(vna == nullptr)
+	//Create the spec
+	auto spec = SCPISpectrometer::CreateSpectrometer(m_drivers[m_selectedDriver], transport);
+	if(spec == nullptr)
 	{
 		ShowErrorPopup(
 			"Driver error",
-			"Failed to create VNA driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+			"Failed to create spectrometer driver of type \"" + m_drivers[m_selectedDriver] + "\"");
 		delete transport;
 		return false;
 	}
 
 	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created VNA\n");
+	LogDebug("FIXME: apply PreferenceManager settings to newly created spectrometer\n");
 
-	vna->m_nickname = m_nickname;
-	m_session.AddVNA(vna);
+	spec->m_nickname = m_nickname;
+	m_session.AddSpectrometer(spec);
 	return true;
 }

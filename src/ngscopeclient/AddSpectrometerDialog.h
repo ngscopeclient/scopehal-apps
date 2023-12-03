@@ -30,70 +30,21 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of AddVNADialog
+	@brief Declaration of AddSpectrometerDialog
  */
+#ifndef AddSpectrometerDialog_h
+#define AddSpectrometerDialog_h
 
-#include "ngscopeclient.h"
-#include "AddVNADialog.h"
+#include "AddInstrumentDialog.h"
 
-using namespace std;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Construction / destruction
-
-AddVNADialog::AddVNADialog(Session& session)
-	: AddInstrumentDialog("Add VNA", "VNA", session)
+class AddSpectrometerDialog : public AddInstrumentDialog
 {
-	SCPIVNA::EnumDrivers(m_drivers);
-}
+public:
+	AddSpectrometerDialog(Session& session);
+	virtual ~AddSpectrometerDialog();
 
-AddVNADialog::~AddVNADialog()
-{
-}
+protected:
+	virtual bool DoConnect();
+};
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-/**
-	@brief Connects to a scope
-
-	@return True if successful
- */
-bool AddVNADialog::DoConnect()
-{
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
-	//Create the vna
-	auto vna = SCPIVNA::CreateVNA(m_drivers[m_selectedDriver], transport);
-	if(vna == nullptr)
-	{
-		ShowErrorPopup(
-			"Driver error",
-			"Failed to create VNA driver of type \"" + m_drivers[m_selectedDriver] + "\"");
-		delete transport;
-		return false;
-	}
-
-	//TODO: apply preferences
-	LogDebug("FIXME: apply PreferenceManager settings to newly created VNA\n");
-
-	vna->m_nickname = m_nickname;
-	m_session.AddVNA(vna);
-	return true;
-}
+#endif
