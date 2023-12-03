@@ -573,8 +573,6 @@ protected:
 	///@brief The stream currently being dragged (invalid if m_dragState != DRAG_STATE_CHANNEL)
 	StreamDescriptor m_dragStream;
 
-	DragState m_lastDragState;
-
 	void OnMouseWheelPlotArea(float delta);
 	void OnMouseWheelYAxis(float delta);
 	void OnMouseUp();

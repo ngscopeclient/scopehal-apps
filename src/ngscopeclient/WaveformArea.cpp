@@ -293,7 +293,6 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_pixelsPerYAxisUnit(1)
 	, m_yAxisUnit(stream.GetYAxisUnits())
 	, m_dragState(DRAG_STATE_NONE)
-	, m_lastDragState(DRAG_STATE_NONE)
 	, m_group(group)
 	, m_parent(parent)
 	, m_tLastMouseMove(GetTime())
@@ -335,6 +334,15 @@ void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const stri
  */
 void WaveformArea::RemoveStream(size_t i)
 {
+	//See if we're dragging the stream being removed (i.e. we just dropped it somewhere).
+	//If so, immediately stop all drag activity.
+	//This normally happens in Render() but if we're in an off-screen tab, it might be indefinitely delayed
+	//until we re-activate that tab and we want the drag/drop overlays to disappear immediately
+	//(https://github.com/ngscopeclient/scopehal-apps/issues/651)
+	auto stream = m_displayedChannels[i]->GetStream();
+	if( (m_dragState == DRAG_STATE_CHANNEL) && (stream == m_dragStream) )
+		m_dragState = DRAG_STATE_NONE;
+
 	m_channelsToRemove.push_back(m_displayedChannels[i]);
 	m_displayedChannels.erase(m_displayedChannels.begin() + i);
 }
@@ -456,13 +464,11 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
 // GUI widget rendering
 
 /**
-	@brief Returns true if a channel was being dragged at the start of this frame
-
-	(including if the mouse button was released this frame)
+	@brief Returns true if a channel is currently being dragged
  */
 bool WaveformArea::IsChannelBeingDragged()
 {
-	return (m_dragState == DRAG_STATE_CHANNEL) || (m_lastDragState == DRAG_STATE_CHANNEL);
+	return (m_dragState == DRAG_STATE_CHANNEL);
 }
 
 /**
@@ -483,7 +489,6 @@ StreamDescriptor WaveformArea::GetChannelBeingDragged()
  */
 bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 {
-	m_lastDragState = m_dragState;
 	if(m_dragState != DRAG_STATE_NONE)
 		OnDragUpdate();
 
@@ -2820,6 +2825,8 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	//Reject streams not compatible with this plot
 	//TODO: display nice error message
 	auto stream = m_parent->GetChannelBeingDragged();
+	if(!stream)
+		return;
 	if(!IsCompatible(stream))
 		return;
 
@@ -2896,6 +2903,8 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 	//Reject streams not compatible with this group
 	//TODO: display nice error message
 	auto stream = m_parent->GetChannelBeingDragged();
+	if(!stream)
+		return;
 	if(stream.GetXAxisUnits() != m_group->GetXAxisUnit())
 		return;
 
