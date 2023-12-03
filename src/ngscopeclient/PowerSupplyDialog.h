@@ -54,9 +54,11 @@ public:
 
 	std::string m_setVoltage;
 	std::string m_setCurrent;
+	std::string m_setSSRamp;
 
 	float m_committedSetVoltage;
 	float m_committedSetCurrent;
+	float m_committedSSRamp;
 
 	PowerSupplyChannelUIState()
 		: m_outputEnabled(false)
@@ -65,6 +67,7 @@ public:
 		, m_setCurrent("")
 		, m_committedSetVoltage(0)
 		, m_committedSetCurrent(0)
+		, m_committedSSRamp(0)
 	{}
 
 	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
@@ -73,11 +76,14 @@ public:
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
 		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
 		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
+		, m_committedSSRamp(psu->GetSoftStartRampTime(chan))
 	{
 		Unit volts(Unit::UNIT_VOLTS);
 		Unit amps(Unit::UNIT_AMPS);
+		Unit fs(Unit::UNIT_FS);
 		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
 		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
+		m_setSSRamp = fs.PrettyPrint(m_committedSSRamp);
 	}
 };
 

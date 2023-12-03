@@ -187,6 +187,7 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit amps(Unit::UNIT_AMPS);
+	Unit fs(Unit::UNIT_FS);
 
 	if(ImGui::CollapsingHeader(chname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -241,7 +242,20 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 
 					HelpMarker(
 						"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
-						"capacitive loads.\n");
+						"capacitive loads.");
+
+					ImGui::SetNextItemWidth(valueWidth);
+					if(UnitInputWithExplicitApply(
+						"Ramp time", m_channelUIState[i].m_setSSRamp, m_channelUIState[i].m_committedSSRamp, fs))
+					{
+						m_psu->SetSoftStartRampTime(i, m_channelUIState[i].m_committedSSRamp);
+					}
+					HelpMarker(
+						"Transition time between off and on state when using soft start\n\n"
+						"Changes are not pushed to hardware until you click Apply.\n\n"
+						"CAUTION: Some instruments (e.g. R&S HMC804x) will turn off the output\n"
+						"when changing the ramp time."
+						);
 				}
 
 				ImGui::TreePop();
