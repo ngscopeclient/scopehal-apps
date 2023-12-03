@@ -1552,11 +1552,7 @@ void MainWindow::UpdateFonts()
 	ImGui::GetIO().FontDefault = m_fontmgr.GetFont(prefs.GetFont("Appearance.General.default_font"));
 
 	//Download imgui fonts
-	m_cmdBuffer->begin({});
-	ImGui_ImplVulkan_CreateFontsTexture(**m_cmdBuffer);
-	m_cmdBuffer->end();
-	m_renderQueue->SubmitAndBlock(*m_cmdBuffer);
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	ImGui_ImplVulkan_CreateFontsTexture();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
