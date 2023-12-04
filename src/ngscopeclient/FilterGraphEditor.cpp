@@ -2132,6 +2132,9 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 void FilterGraphEditor::RenderForceVector(ImDrawList* list, ImVec2 pos, ImVec2 size, ImVec2 vec)
 {
+	//uncomment to enable this for debugging
+	return;
+
 	float width = 2;
 
 	ImVec2 center = pos + size/2;
