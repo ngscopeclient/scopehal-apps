@@ -1179,6 +1179,55 @@ void FilterGraphEditor::ApplyNodeForces(
 		else
 			ax::NodeEditor::SetNodePosition(nodes[i], positions[i] + f);
 	}
+
+	//Map of node IDs being dragged
+	set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId>> dragNodes;
+	for(size_t i=0; i<nodes.size(); i++)
+	{
+		if(dragging[i])
+			dragNodes.emplace(nodes[i]);
+	}
+
+	//Second pass: Find nodes that WERE in a group, but are no longer fully inside it
+	//and enlarge the group to encompass them.
+	//TODO: also find nodes that got pushed into a group here
+	for(auto it : m_nodeGroupMap)
+	{
+		auto nid = GetID(it.first);
+		auto gid = m_groups[it.second];
+
+		//If node is being dragged, stop: we don't want to expand the group if we're intentionally trying to leave
+		if(dragNodes.find(nid) != dragNodes.end())
+			continue;
+
+		auto posNode = ax::NodeEditor::GetNodePosition(nid);
+		auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+
+		auto posGroup = ax::NodeEditor::GetNodePosition(gid);
+
+		auto gnode = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->FindNode(gid);
+		auto sizeGroup = gnode->m_GroupBounds.Max - gnode->m_GroupBounds.Min;
+
+		//Still in the group? All good
+		if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
+			continue;
+
+		//If we get here, the node got pushed out of the group.
+		//We need to resize the group to encompass it.
+		auto brNode = posNode + sizeNode;
+		auto brGroup = posGroup + sizeGroup;
+		posGroup.x = min(posGroup.x, posNode.x);
+		posGroup.y = min(posGroup.y, posNode.y);
+		brGroup.x = max(brGroup.x, brNode.x);
+		brGroup.y = max(brGroup.y, brNode.y);
+		sizeGroup = brGroup - posGroup;
+
+		//TODO: add a bit of padding so nodes can't go all the way to the outer border of the group?
+
+		//Apply the changes
+		ax::NodeEditor::SetNodePosition(gid, posGroup);
+		ax::NodeEditor::SetGroupSize(gid, sizeGroup);
+	}
 }
 
 /**
