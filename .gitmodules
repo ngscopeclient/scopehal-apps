@@ -6,7 +6,7 @@
 	url = ../scopehal-docs.git
 [submodule "src/imgui"]
 	path = src/imgui
-	url = https://github.com/ocornut/imgui
+	url = ../imgui.git
 [submodule "src/implot"]
 	path = src/implot
 	url = ../implot.git
