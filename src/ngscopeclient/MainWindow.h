@@ -355,6 +355,9 @@ protected:
 	///@brief Persistence settings
 	std::shared_ptr<Dialog> m_persistenceDialog;
 
+	///@brief Lab notes
+	std::shared_ptr<Dialog> m_notesDialog;
+
 	///@brief Filter graph editor
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;
 

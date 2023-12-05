@@ -66,6 +66,7 @@
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
@@ -206,6 +207,7 @@ void MainWindow::CloseSession()
 	m_graphEditorGroups.clear();
 	m_fileBrowser = nullptr;
 	m_measurementsDialog = nullptr;
+	m_notesDialog = nullptr;
 	m_meterDialogs.clear();
 	m_psuDialogs.clear();
 	m_channelPropertiesDialogs.clear();
@@ -997,6 +999,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_preferenceDialog = nullptr;
 	if(m_persistenceDialog == dlg)
 		m_persistenceDialog = nullptr;
+	if(m_notesDialog == dlg)
+		m_notesDialog = nullptr;
 	if(m_graphEditor == dlg)
 	{
 		m_graphEditorGroups = m_graphEditor->GetGroupIDs();

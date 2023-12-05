@@ -19,3 +19,6 @@
 [submodule "src/nativefiledialog-extended"]
 	path = src/nativefiledialog-extended
 	url = https://github.com/btzy/nativefiledialog-extended
+[submodule "src/imgui_markdown"]
+	path = src/imgui_markdown
+	url = https://github.com/juliettef/imgui_markdown

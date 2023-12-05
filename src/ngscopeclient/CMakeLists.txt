@@ -99,6 +99,7 @@ add_executable(ngscopeclient
 	MultimeterDialog.cpp
 	MultimeterThread.cpp
 	NFDFileBrowser.cpp
+	NotesDialog.cpp
 	PacketManager.cpp
 	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
