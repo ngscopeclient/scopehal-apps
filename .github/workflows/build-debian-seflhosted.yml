@@ -1,0 +1,119 @@
+name: Build-ubuntu
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  VULKAN_SDK_VERSION: 1.3.250.1
+
+jobs:
+
+  Linux:
+    runs-on: [self-hosted, linux, x64, gpu]
+
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install \
+          build-essential \
+          cmake \
+          pkg-config \
+          libglm-dev \
+          libgtkmm-3.0-dev \
+          libsigc++-2.0-dev \
+          libyaml-cpp-dev \
+          liblxi-dev \
+          texlive \
+          texlive-fonts-extra \
+          texlive-extra-utils \
+          dvipng \
+          libglew-dev \
+          libvulkan-dev \
+          glslang-dev \
+          libglfw3-dev
+
+    - name: Clone and Build FFTS Library
+      run: |
+        git clone https://github.com/anthonix/ffts.git /tmp/ffts
+        pushd /tmp/ffts
+        mkdir build
+        cd build
+        cmake \
+          -DENABLE_SHARED=ON \
+          ..
+        make -j4
+        sudo make install
+        popd
+
+    - name: Clone and Build Catch2 Library
+      run: |
+        git clone https://github.com/catchorg/Catch2 /tmp/catch2
+        pushd /tmp/catch2
+        git checkout v2.13.5
+        mkdir build
+        cd build
+        cmake ..
+        make -j 4
+        sudo make install
+        popd
+
+    - name: Install Vulkan SDK
+      run: |
+        pushd ~
+        mkdir vulkan
+        cd vulkan
+        wget https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/linux/vulkansdk-linux-x86_64-${{ env.VULKAN_SDK_VERSION }}.tar.gz
+        tar xf vulkansdk-linux-x86_64-${{ env.VULKAN_SDK_VERSION }}.tar.gz
+        export VULKAN_SDK=~/vulkan/${{ env.VULKAN_SDK_VERSION }}/x86_64
+        sudo cp -r $VULKAN_SDK/include/vulkan/ /usr/local/include/
+        sudo cp -P $VULKAN_SDK/lib/libvulkan.so* /usr/local/lib/
+        sudo cp $VULKAN_SDK/lib/libVkLayer_*.so /usr/local/lib/
+        sudo mkdir -p /usr/local/share/vulkan/explicit_layer.d
+        sudo cp $VULKAN_SDK/etc/vulkan/explicit_layer.d/VkLayer_*.json /usr/local/share/vulkan/explicit_layer.d
+        sudo ldconfig
+        popd
+
+    - name: Build
+      run: |
+        export VULKAN_SDK=~/vulkan/${{ env.VULKAN_SDK_VERSION }}/x86_64
+        export PATH=$VULKAN_SDK/bin:$PATH
+        export LD_LIBRARY_PATH=$VULKAN_SDK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+        export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
+        mkdir build
+        cd build
+        cmake \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_DOCS=ON \
+          ..
+        make -j4
+
+    - name: Run Tests
+      if: ${{ false }} # Temporary disable Run Tests
+      run: |
+        cd build
+        make test
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ngscopeclient-linux
+        path: |
+          build/src/ngscopeclient/ngscopeclient
+          build/src/ngscopeclient/icons/*
+          build/src/ngscopeclient/shaders/*
+          build/lib/scopehal/libscopehal.so
+          build/lib/scopeprotocols/libscopeprotocols.so
+
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: ngscopeclient-manual
+        path: build/doc/ngscopeclient-manual.pdf
