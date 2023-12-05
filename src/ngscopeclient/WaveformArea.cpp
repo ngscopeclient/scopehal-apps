@@ -477,9 +477,9 @@ bool WaveformArea::IsChannelBeingDragged()
 StreamDescriptor WaveformArea::GetChannelBeingDragged()
 {
 	if(IsChannelBeingDragged())
-		return StreamDescriptor(nullptr, 0);
-	else
 		return m_dragStream;
+	else
+		return StreamDescriptor(nullptr, 0);
 }
 
 /**
