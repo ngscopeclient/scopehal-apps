@@ -185,7 +185,23 @@ protected:
 	void HandleBackgroundContextMenu();
 	void DoAddMenu();
 	bool IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst);
+
 	void HandleOverlaps();
+	void CalculateNodeForces(
+		const std::vector<ax::NodeEditor::NodeId>& nodes,
+		const std::vector<bool>& isgroup,
+		const std::vector<bool>& dragging,
+		const std::vector<bool>& nocollide,
+		const std::vector<ImVec2>& positions,
+		const std::vector<ImVec2>& sizes,
+		std::vector<ImVec2>& forces);
+	void ApplyNodeForces(
+		const std::vector<ax::NodeEditor::NodeId>& nodes,
+		const std::vector<bool>& isgroup,
+		const std::vector<bool>& dragging,
+		const std::vector<ImVec2>& positions,
+		std::vector<ImVec2>& forces);
+
 	void ClearOldPropertiesDialogs();
 
 	void NodeIcon(InstrumentChannel* chan, ImVec2 iconpos, ImVec2 iconsize, ImDrawList* list);
@@ -194,7 +210,7 @@ protected:
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
 	void CreateChannelMenu();
 
-	///@brief Session being manipuulated
+	///@brief Session being manipulated
 	Session& m_session;
 
 	///@brief Top level window
@@ -279,6 +295,16 @@ protected:
 
 	///@brief Map of filter types to class names
 	std::map<std::type_index, std::string> m_filterIconMap;
+
+	//DEBUG: forces for display
+	std::map<
+		ax::NodeEditor::NodeId,
+		ImVec2,
+		lessID<ax::NodeEditor::NodeId>
+		> m_nodeForces;
+
+	//DEBUG: render vector for force
+	void RenderForceVector(ImDrawList* list, ImVec2 pos, ImVec2 size, ImVec2 vec);
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Serialization

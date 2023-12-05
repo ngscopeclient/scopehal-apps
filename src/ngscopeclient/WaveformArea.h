@@ -563,6 +563,7 @@ protected:
 	{
 		DRAG_STATE_NONE,
 		DRAG_STATE_CHANNEL,
+		DRAG_STATE_CHANNEL_LAST,
 		DRAG_STATE_Y_AXIS,
 		DRAG_STATE_TRIGGER_LEVEL,
 		DRAG_STATE_BER_LEVEL,
@@ -572,8 +573,6 @@ protected:
 
 	///@brief The stream currently being dragged (invalid if m_dragState != DRAG_STATE_CHANNEL)
 	StreamDescriptor m_dragStream;
-
-	DragState m_lastDragState;
 
 	void OnMouseWheelPlotArea(float delta);
 	void OnMouseWheelYAxis(float delta);

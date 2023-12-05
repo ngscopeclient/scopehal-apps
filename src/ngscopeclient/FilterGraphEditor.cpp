@@ -712,6 +712,16 @@ void FilterGraphEditor::DoNodeForGroup(std::shared_ptr<FilterGraphGroup> group)
 	//Groups cannot directly have ports, so make a dummy child node for the hierarchical ports
 	DoNodeForGroupOutputs(group);
 	DoNodeForGroupInputs(group);
+
+	//Draw the force vector
+	if(ImGui::IsKeyDown(ImGuiKey_Q))
+	{
+		RenderForceVector(
+			ax::NodeEditor::GetNodeBackgroundDrawList(gid),
+			ax::NodeEditor::GetNodePosition(gid),
+			ax::NodeEditor::GetNodeSize(gid),
+			m_nodeForces[gid]);
+	}
 }
 
 void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
@@ -1046,48 +1056,37 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 }
 
 /**
-	@brief Find nodes that are intersecting, and apply forces to avoid collisions
+	@brief Calculates the forces applied to each node in the graph based on interaction physics
  */
-void FilterGraphEditor::HandleOverlaps()
+void FilterGraphEditor::CalculateNodeForces(
+	const vector<ax::NodeEditor::NodeId>& nodes,
+	const vector<bool>& isgroup,
+	const vector<bool>& dragging,
+	const vector<bool>& nocollide,
+	const vector<ImVec2>& positions,
+	const vector<ImVec2>& sizes,
+	vector<ImVec2>& forces)
 {
-	//Get all of the node IDs
-	int nnodes = ax::NodeEditor::GetNodeCount();
-	vector<ax::NodeEditor::NodeId> nodes;
-	nodes.resize(nnodes);
-	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
-
-	//Need to use internal APIs to figure out if we're dragging the current node
-	//in order to properly implement collision detection
-	auto action = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->GetCurrentAction();
-	ax::NodeEditor::Detail::DragAction* drag = nullptr;
-	if(action)
-		drag = action->AsDrag();
-
 	//Loop over all nodes and find potential collisions
-	for(int i=0; i<nnodes; i++)
+	for(size_t i=0; i<nodes.size(); i++)
 	{
+		if(nocollide[i])
+			continue;
+
 		auto nodeA = nodes[i];
-		auto posA = ax::NodeEditor::GetNodePosition(nodeA);
-		auto sizeA = ax::NodeEditor::GetNodeSize(nodeA);
+		auto posA = positions[i];
+		auto sizeA = sizes[i];
+		bool groupA = isgroup[i];
 
-		bool groupA = m_groups.HasEntry(nodeA);
-
-		for(int j=0; j<nnodes; j++)
+		for(size_t j=i+1; j<nodes.size(); j++)
 		{
-			//Don't check for self intersection
-			if(i == j)
+			if(nocollide[j])
 				continue;
 
 			auto nodeB = nodes[j];
-			auto posB = ax::NodeEditor::GetNodePosition(nodeB);
-			auto sizeB = ax::NodeEditor::GetNodeSize(nodeB);
-
-			bool groupB = m_groups.HasEntry(nodeB);
-			bool selB = ax::NodeEditor::IsNodeSelected(nodeB);
-
-			//If node B is selected, don't move it (but it can push other stuff)
-			if(selB)
-				continue;
+			auto posB = positions[j];
+			auto sizeB = sizes[j];
+			bool groupB = isgroup[j];
 
 			//Check for node-group collisions
 			//Node-node is normal code path, group-group also repels
@@ -1106,41 +1105,9 @@ void FilterGraphEditor::HandleOverlaps()
 				if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
 					continue;
 
-				//If node is the group's hierarchical port node, don't repel
-				auto group = m_groups[gid];
-				if(nid == group->m_outputId)
-					continue;
-				if(nid == group->m_inputId)
-					continue;
-
-				//Check if we're dragging the group
-				//bool draggingGroup = false;
-				bool draggingNode = false;
-				if(drag)
-				{
-					for(auto o : drag->m_Objects)
-					{
-						auto n = o->AsNode();
-						if(!n)
-							continue;
-
-						if(n->m_ID == gid)
-						{
-							//draggingGroup = true;
-							break;
-						}
-						if(n->m_ID == nid)
-						{
-							draggingNode = true;
-							break;
-						}
-					}
-				}
-
 				//If dragging group, we should push nodes away
-
 				//But if dragging the node, allow it to go into the group
-				if(draggingNode)
+				if( (dragging[i] && !groupA) || (dragging[j] && !groupB) )
 					continue;
 			}
 
@@ -1153,35 +1120,202 @@ void FilterGraphEditor::HandleOverlaps()
 			float dx = posB.x - posA.x;
 			float dy = posB.y - posA.y;
 			float mag = sqrt(dx*dx + dy*dy);
+			ImVec2 force;
+			if(mag > 1e-2)
+				force = ImVec2(dx / mag, dy / mag);
 
-			//Shift both nodes away from each other
-			//If magnitude is ~zero (nodes are at exactly the same position), arbitrarily move second one down or right at random
-			ImVec2 shift(0, 0);
-			if(mag < 1e-2f)
-			{
-				if(rand() & 1)
-					shift.x = 1;
-				else
-					shift.y = 1;
-			}
-
+			//If nodes are exactly on top of each other apply a force in a random direction
 			else
 			{
-				float distance = 10;
-				float scale = distance / mag;
-				shift.x = scale * dx;
-				shift.y = scale * dy;
+				float theta = fmodf(rand() * 1e-3f, 2*M_PI);
+				force = ImVec2(sin(theta), cos(theta));
 			}
 
-			//If node B is a group, we need to move all nodes inside it by the same amount we moved the group
-			if(groupB)
-				m_groups[nodeB]->MoveBy(shift);
-
-			//Otherwise just move the node
-			else
-				ax::NodeEditor::SetNodePosition(nodeB, posB + shift);
+			//Add this to the existing force vector
+			forces[i] -= force;
+			forces[j] += force;
 		}
 	}
+}
+
+/**
+	@brief Once forces are calculated, actually move the nodes (unless being dragged)
+ */
+void FilterGraphEditor::ApplyNodeForces(
+	const vector<ax::NodeEditor::NodeId>& nodes,
+	const vector<bool>& isgroup,
+	const vector<bool>& dragging,
+	const vector<ImVec2>& positions,
+	vector<ImVec2>& forces)
+{
+	//Don't actually apply the forces
+	if(ImGui::IsKeyDown(ImGuiKey_Q))
+		return;
+
+	//needs to be high enough that we can have force components >1 in both axes
+	//since imgui-node-editor seems to round to pixel coordinates
+	float velocityScale = 5;
+
+	for(size_t i=0; i<nodes.size(); i++)
+	{
+		//If dragging, node is immovable - ignore the force
+		if(dragging[i])
+			continue;
+
+		//Otherwise, normalize the summed force vector and scale by fixed velocity.
+		//If force is substantially zero then there's nothing overlapping, so don't move
+		auto f = forces[i];
+		auto mag = sqrt(f.x*f.x + f.y*f.y);
+		if(mag < 1e-2)
+			continue;
+
+		f = f * velocityScale / mag;
+
+		//If node B is a group, we need to move all nodes inside it by the same amount we moved the group
+		if(isgroup[i])
+			m_groups[nodes[i]]->MoveBy(f);
+
+		//Otherwise just move the node
+		else
+			ax::NodeEditor::SetNodePosition(nodes[i], positions[i] + f);
+	}
+
+	//Map of node IDs being dragged
+	set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId>> dragNodes;
+	for(size_t i=0; i<nodes.size(); i++)
+	{
+		if(dragging[i])
+			dragNodes.emplace(nodes[i]);
+	}
+
+	//Second pass: Find nodes that WERE in a group, but are no longer fully inside it
+	//and enlarge the group to encompass them.
+	//TODO: also find nodes that got pushed into a group here
+	for(auto it : m_nodeGroupMap)
+	{
+		auto nid = GetID(it.first);
+		auto gid = m_groups[it.second];
+
+		//If node is being dragged, stop: we don't want to expand the group if we're intentionally trying to leave
+		if(dragNodes.find(nid) != dragNodes.end())
+			continue;
+
+		auto posNode = ax::NodeEditor::GetNodePosition(nid);
+		auto sizeNode = ax::NodeEditor::GetNodeSize(nid);
+
+		auto posGroup = ax::NodeEditor::GetNodePosition(gid);
+
+		auto gnode = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->FindNode(gid);
+		auto sizeGroup = gnode->m_GroupBounds.Max - gnode->m_GroupBounds.Min;
+
+		//Still in the group? All good
+		if(RectContains(posGroup, sizeGroup, posNode, sizeNode))
+			continue;
+
+		//If we get here, the node got pushed out of the group.
+		//We need to resize the group to encompass it.
+		auto brNode = posNode + sizeNode;
+		auto brGroup = posGroup + sizeGroup;
+		posGroup.x = min(posGroup.x, posNode.x);
+		posGroup.y = min(posGroup.y, posNode.y);
+		brGroup.x = max(brGroup.x, brNode.x);
+		brGroup.y = max(brGroup.y, brNode.y);
+		sizeGroup = brGroup - posGroup;
+
+		//TODO: add a bit of padding so nodes can't go all the way to the outer border of the group?
+
+		//Apply the changes
+		ax::NodeEditor::SetNodePosition(gid, posGroup);
+		ax::NodeEditor::SetGroupSize(gid, sizeGroup);
+	}
+}
+
+/**
+	@brief Find nodes that are intersecting, and apply forces to resolve collisions
+ */
+void FilterGraphEditor::HandleOverlaps()
+{
+	//Get all of the node IDs
+	int nnodes = ax::NodeEditor::GetNodeCount();
+	vector<ax::NodeEditor::NodeId> nodes;
+	nodes.resize(nnodes);
+	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+
+	//Default all nodes to having zero force on them
+	vector<ImVec2> forces;
+	forces.resize(nnodes);
+
+	//Get starting positions of each node and figure out if it's a group or normal node
+	vector<ImVec2> positions;
+	vector<ImVec2> sizes;
+	vector<bool> isgroup;
+	positions.resize(nnodes);
+	sizes.resize(nnodes);
+	isgroup.resize(nnodes);
+	for(int i=0; i<nnodes; i++)
+	{
+		positions[i] = ax::NodeEditor::GetNodePosition(nodes[i]);
+		sizes[i] = ax::NodeEditor::GetNodeSize(nodes[i]);
+		isgroup[i] = m_groups.HasEntry(nodes[i]);
+	}
+
+	//Find nodes which should not have collision detection applied to them
+	//(e.g. virtual nodes for group input/output regions)
+	vector<bool> nocollide;
+	nocollide.resize(nnodes);
+	for(int i=0; i<nnodes; i++)
+	{
+		auto nid = nodes[i];
+		for(auto it : m_groups)
+		{
+			if( (nid == it.first->m_inputId) || (nid == it.first->m_outputId) )
+			{
+				nocollide[i] = true;
+				break;
+			}
+		}
+	}
+
+	//Figure out if each node is being dragged or not
+	//Need to use internal APIs since this isn't in the public API (annoying)
+	vector<bool> dragging;
+	dragging.resize(nnodes);
+	auto action = reinterpret_cast<ax::NodeEditor::Detail::EditorContext*>(m_context)->GetCurrentAction();
+	if(action)
+	{
+		auto drag = action->AsDrag();
+		if(drag)
+		{
+			for(int i=0; i<nnodes; i++)
+			{
+				for(auto o : drag->m_Objects)
+				{
+					auto n = o->AsNode();
+					if(!n)
+						continue;
+
+					if(n->m_ID == nodes[i])
+					{
+						dragging[i] = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	//Calculate forces from interaction physics
+	CalculateNodeForces(nodes, isgroup, dragging, nocollide, positions, sizes, forces);
+
+	//DEBUG: save the forces
+	m_nodeForces.clear();
+	for(int i=0; i<nnodes; i++)
+		m_nodeForces[nodes[i]] = forces[i];
+
+	//Apply the forces to move the nodes
+	//For now, no persistent velocities
+	//(modeling a very sticky/high friction surface where things stop immediately when force is removed)
+	ApplyNodeForces(nodes, isgroup, dragging, positions, forces);
 }
 
 /**
@@ -1974,6 +2108,10 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		headercolor,
 		headerText.c_str());
 
+	//Draw the force vector
+	if(ImGui::IsKeyDown(ImGuiKey_Q))
+		RenderForceVector(bgList, pos, size, m_nodeForces[id]);
+
 	//Draw icon for filter blocks
 	float iconshift = (iconcolwidth - iconwidth) / 2;
 	ImVec2 icondelta = (iconpos - startpos) + ImVec2(ImGui::GetStyle().ItemSpacing.x + iconshift, 0);
@@ -1990,6 +2128,30 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		textpos + ImVec2( (iconwidth - captionsize.x)/2, 0),
 		textColor,
 		blocktype.c_str());
+}
+
+void FilterGraphEditor::RenderForceVector(ImDrawList* list, ImVec2 pos, ImVec2 size, ImVec2 vec)
+{
+	//uncomment to enable this for debugging
+	return;
+
+	float width = 2;
+
+	ImVec2 center = pos + size/2;
+
+	//Origin point
+	list->AddCircleFilled(
+		center,
+		4,
+		ColorFromString("#0000ff", 255));
+
+	//Main line
+	auto endpos = center+(25*vec);
+	list->AddLine(
+		center,
+		endpos,
+		ColorFromString("#00ff00", 255),
+		width);
 }
 
 /**

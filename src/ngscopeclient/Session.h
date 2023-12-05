@@ -318,6 +318,8 @@ public:
 	void AddMultimeterDialog(SCPIMultimeter* meter);
 	void RemoveMultimeter(SCPIMultimeter* meter);
 	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
+	void AddSpectrometer(SCPISpectrometer* spec, bool createViews = true)
+	{ AddOscilloscope(spec, createViews); }
 	void AddVNA(SCPIVNA* vna, bool createViews = true)
 	{ AddOscilloscope(vna, createViews); }
 	void AddPowerSupply(SCPIPowerSupply* psu, bool createDialog = true);

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  VULKAN_SDK_VERSION: 1.3.250.1
+  VULKAN_SDK_VERSION: 1.3.268.0
 
 jobs:
 
@@ -51,7 +51,7 @@ jobs:
         cd ~
         git clone https://github.com/KhronosGroup/glslang.git
         cd glslang
-        git checkout tags/sdk-${{ env.VULKAN_SDK_VERSION }}
+        git checkout tags/vulkan-sdk-${{ env.VULKAN_SDK_VERSION }}
         git clone https://github.com/google/googletest.git External/googletest
         cd External/googletest
         git checkout 0c400f67fcf305869c5fb113dd296eca266c9725

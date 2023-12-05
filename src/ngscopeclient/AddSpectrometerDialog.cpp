@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -30,100 +30,70 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of PowerSupplyDialog
+	@brief Implementation of AddSpectrometerDialog
  */
-#ifndef PowerSupplyDialog_h
-#define PowerSupplyDialog_h
 
-#include "Dialog.h"
-#include "Session.h"
+#include "ngscopeclient.h"
+#include "AddSpectrometerDialog.h"
 
-#include <future>
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+AddSpectrometerDialog::AddSpectrometerDialog(Session& session)
+	: AddInstrumentDialog("Add Spectrometer", "Spectrometer", session)
+{
+	SCPISpectrometer::EnumDrivers(m_drivers);
+}
+
+AddSpectrometerDialog::~AddSpectrometerDialog()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers
 
 /**
-	@brief UI state for a single power supply channel
+	@brief Connects to a scope
 
-	Stores uncommitted values we haven't pushed to hardware, trends of previous values, etc
+	@return True if successful
  */
-class PowerSupplyChannelUIState
+bool AddSpectrometerDialog::DoConnect()
 {
-public:
-	bool m_outputEnabled;
-	bool m_overcurrentShutdownEnabled;
-	bool m_softStartEnabled;
-
-	std::string m_setVoltage;
-	std::string m_setCurrent;
-	std::string m_setSSRamp;
-
-	float m_committedSetVoltage;
-	float m_committedSetCurrent;
-	float m_committedSSRamp;
-
-	PowerSupplyChannelUIState()
-		: m_outputEnabled(false)
-		, m_overcurrentShutdownEnabled(false)
-		, m_setVoltage("")
-		, m_setCurrent("")
-		, m_committedSetVoltage(0)
-		, m_committedSetCurrent(0)
-		, m_committedSSRamp(0)
-	{}
-
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
-		: m_outputEnabled(psu->GetPowerChannelActive(chan))
-		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
-		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
-		, m_committedSetVoltage(psu->GetPowerVoltageNominal(chan))
-		, m_committedSetCurrent(psu->GetPowerCurrentNominal(chan))
-		, m_committedSSRamp(psu->GetSoftStartRampTime(chan))
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
 	{
-		Unit volts(Unit::UNIT_VOLTS);
-		Unit amps(Unit::UNIT_AMPS);
-		Unit fs(Unit::UNIT_FS);
-		m_setVoltage = volts.PrettyPrint(m_committedSetVoltage);
-		m_setCurrent = amps.PrettyPrint(m_committedSetCurrent);
-		m_setSSRamp = fs.PrettyPrint(m_committedSSRamp);
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return false;
 	}
-};
 
-class PowerSupplyDialog : public Dialog
-{
-public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
-	virtual ~PowerSupplyDialog();
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return false;
+	}
 
-	virtual bool DoRender();
+	//Create the spec
+	auto spec = SCPISpectrometer::CreateSpectrometer(m_drivers[m_selectedDriver], transport);
+	if(spec == nullptr)
+	{
+		ShowErrorPopup(
+			"Driver error",
+			"Failed to create spectrometer driver of type \"" + m_drivers[m_selectedDriver] + "\"");
+		delete transport;
+		return false;
+	}
 
-	void RefreshFromHardware();
+	//TODO: apply preferences
+	LogDebug("FIXME: apply PreferenceManager settings to newly created spectrometer\n");
 
-	SCPIPowerSupply* GetPSU()
-	{ return m_psu; }
-
-protected:
-	void ChannelSettings(int i, float v, float a, float etime);
-	void AsyncLoadState();
-
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
-	//@brief Global power enable (if we have one)
-	bool m_masterEnable;
-
-	///@brief Timestamp of when we opened the dialog
-	double m_tstart;
-
-	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
-
-	///@brief Current channel stats, live updated
-	std::shared_ptr<PowerSupplyState> m_state;
-
-	//Future channel state during loading
-	std::vector<std::future<PowerSupplyChannelUIState> > m_futureUIState;
-
-	///@brief Channel state for the UI
-	std::vector<PowerSupplyChannelUIState> m_channelUIState;
-};
-
-#endif
+	spec->m_nickname = m_nickname;
+	m_session.AddSpectrometer(spec);
+	return true;
+}
