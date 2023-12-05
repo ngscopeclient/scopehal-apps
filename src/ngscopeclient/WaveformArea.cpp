@@ -468,7 +468,7 @@ float WaveformArea::PickStepSize(float volts_per_half_span, int min_steps, int m
  */
 bool WaveformArea::IsChannelBeingDragged()
 {
-	return (m_dragState == DRAG_STATE_CHANNEL);
+	return (m_dragState == DRAG_STATE_CHANNEL) || (m_dragState == DRAG_STATE_CHANNEL_LAST);
 }
 
 /**
@@ -476,7 +476,7 @@ bool WaveformArea::IsChannelBeingDragged()
  */
 StreamDescriptor WaveformArea::GetChannelBeingDragged()
 {
-	if(!IsChannelBeingDragged())
+	if(IsChannelBeingDragged())
 		return StreamDescriptor(nullptr, 0);
 	else
 		return m_dragStream;
@@ -3362,6 +3362,11 @@ void WaveformArea::OnMouseUp()
 		case DRAG_STATE_PEAK_MARKER:
 			m_dragPeakLabel = nullptr;
 			break;
+
+		//stay in sorta-dragging state until end of this frame
+		case DRAG_STATE_CHANNEL:
+			m_dragState = DRAG_STATE_CHANNEL_LAST;
+			return;
 
 		default:
 			break;
