@@ -37,15 +37,26 @@
 
 #include "Dialog.h"
 
+class MainWindow;
+
 class NotesDialog : public Dialog
 {
 public:
-	NotesDialog();
+	NotesDialog(MainWindow* parent);
 	virtual ~NotesDialog();
 
 	virtual bool DoRender() override;
 
 protected:
+	std::string m_setupNotes;
+	std::string m_generalNotes;
+
+	void MarkdownEditor(std::string& str);
+
+	void SetupNotes();
+	void GeneralNotes();
+
+	MainWindow* m_parent;
 };
 
 #endif

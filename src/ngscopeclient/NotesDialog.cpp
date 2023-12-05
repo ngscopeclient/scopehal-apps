@@ -35,16 +35,22 @@
 
 #include "ngscopeclient.h"
 #include "NotesDialog.h"
+#include "MainWindow.h"
+#include "../imgui_markdown/imgui_markdown.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-NotesDialog::NotesDialog()
-	: Dialog("Lab Notes", "Lab Notes", ImVec2(300, 400))
+NotesDialog::NotesDialog(MainWindow* parent)
+	: Dialog("Lab Notes", "Lab Notes", ImVec2(800, 400))
+	, m_parent(parent)
 {
-
+	m_setupNotes =
+		"# H1 text\n"
+		"Foobar here\n"
+		"*bold text*";
 }
 
 NotesDialog::~NotesDialog()
@@ -62,7 +68,81 @@ NotesDialog::~NotesDialog()
  */
 bool NotesDialog::DoRender()
 {
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+	if (ImGui::BeginTabBar("NotesFile", tab_bar_flags))
+	{
+		if (ImGui::BeginTabItem("Setup Notes"))
+		{
+			SetupNotes();
+			ImGui::EndTabItem();
+		}
 
+		if (ImGui::BeginTabItem("General Notes"))
+		{
+			GeneralNotes();
+			ImGui::EndTabItem();
+		}
+
+		ImGui::EndTabBar();
+	}
 
 	return true;
+}
+
+void NotesDialog::SetupNotes()
+{
+	ImGui::TextWrapped(
+		"Describe your experimental setup in sufficient detail that you could verify it's wired correctly. "
+		"Limited Markdown syntax is supported.\n\n"
+		"These notes will be displayed when re-loading the session so you can confirm all instrument channels "
+		"are connected correctly before making any changes to hardware configuration."
+		);
+
+	MarkdownEditor(m_setupNotes);
+}
+
+void NotesDialog::GeneralNotes()
+{
+}
+
+/**
+	@brief Displays a split view with a Markdown editor and viewer
+ */
+void NotesDialog::MarkdownEditor(string& str)
+{
+	ImGui::MarkdownConfig mdConfig
+	{
+		nullptr,	//linkCallback
+		nullptr,	//tooltipCallback
+		nullptr,	//imageCallback
+		"",			//linkIcon (not used)
+		{
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_1_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_2_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_3_font"), false }
+		},
+		nullptr		//userData
+	};
+
+	//Table with one col for live view and one for editor
+	static ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_SizingStretchSame;
+	if(ImGui::BeginTable("setupnotes", 2, flags, ImGui::GetContentRegionAvail() ))
+	{
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+		//Editor
+		ImGui::TableSetColumnIndex(0);
+		ImGui::InputTextMultiline("###Setup Notes", &str, ImGui::GetContentRegionAvail());
+
+		//Render the markdown
+		ImGui::TableSetColumnIndex(1);
+		ImGui::Markdown( str.c_str(), str.length(), mdConfig );
+
+		ImGui::EndTable();
+	}
 }

@@ -1254,7 +1254,7 @@ void MainWindow::WindowMenu()
 
 		if(ImGui::MenuItem("Lab Notes"))
 		{
-			m_notesDialog = make_shared<NotesDialog>();
+			m_notesDialog = make_shared<NotesDialog>(this);
 			AddDialog(m_notesDialog);
 		}
 
