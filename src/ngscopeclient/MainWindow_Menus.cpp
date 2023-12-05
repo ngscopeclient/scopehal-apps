@@ -1235,19 +1235,6 @@ void MainWindow::WindowMenu()
 		WindowPSUMenu();
 		WindowSCPIConsoleMenu();
 
-		bool hasLogViewer = m_logViewerDialog != nullptr;
-		if(hasLogViewer)
-			ImGui::BeginDisabled();
-
-		if(ImGui::MenuItem("Log Viewer"))
-		{
-			m_logViewerDialog = make_shared<LogViewerDialog>(this);
-			AddDialog(m_logViewerDialog);
-		}
-
-		if(hasLogViewer)
-			ImGui::EndDisabled();
-
 		bool hasLabNotes = m_notesDialog != nullptr;
 		if(hasLabNotes)
 			ImGui::BeginDisabled();
@@ -1259,6 +1246,19 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasLabNotes)
+			ImGui::EndDisabled();
+
+		bool hasLogViewer = m_logViewerDialog != nullptr;
+		if(hasLogViewer)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Log Viewer"))
+		{
+			m_logViewerDialog = make_shared<LogViewerDialog>(this);
+			AddDialog(m_logViewerDialog);
+		}
+
+		if(hasLogViewer)
 			ImGui::EndDisabled();
 
 		bool hasMeasurements = m_measurementsDialog != nullptr;

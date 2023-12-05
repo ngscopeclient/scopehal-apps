@@ -420,6 +420,8 @@ protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
+	void SaveLabNotes(const std::string& dataDir);
+	void LoadLabNotes(const std::string& dataDir);
 	bool SetupDataDirectory(const std::string& dataDir);
 	YAML::Node SerializeUIConfiguration();
 	YAML::Node SerializeDialogs();

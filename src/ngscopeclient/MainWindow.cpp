@@ -2005,6 +2005,9 @@ bool MainWindow::PreLoadSessionFromYaml(const YAML::Node& node, const string& da
 		ifs.close();
 	}
 
+	//Load lab notes
+	LoadLabNotes(dataDir);
+
 	if(!m_session.PreLoadFromYaml(node, dataDir, online))
 	{
 		//If loading fails, clean up any incomplete half-loaded stuff that might be in a bad state
@@ -2519,12 +2522,108 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 			string("Failed to write session file \"") + sessionPath + "\"");
 	}
 
+	//Save the lab notes
+	SaveLabNotes(datadir);
+
 	//Add to recent files list
 	m_sessionFileName = sessionPath;
 	m_sessionDataDir = datadir;
 	m_recentFiles[sessionPath] = time(nullptr);
 	SaveRecentFileList();
 }
+
+/**
+	@brief Saves the lab notes to Markdown files in the data directory
+ */
+void MainWindow::SaveLabNotes(const string& dataDir)
+{
+	//Lab notes
+	auto setupfile = dataDir + "/setup.md";
+	ofstream setupfs(setupfile);
+	if(!setupfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output markdown file \"") + setupfile + "\" for writing");
+		return;
+	}
+
+	setupfs << m_session.m_setupNotes;
+	setupfs.close();
+
+	if(!setupfs)
+	{
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write markdown file \"") + setupfile + "\"");
+	}
+
+	//General notes
+	auto genfile = dataDir + "/labnotes.md";
+	ofstream genfs(genfile);
+	if(!genfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output markdown file \"") + genfile + "\" for writing");
+		return;
+	}
+
+	genfs << m_session.m_generalNotes;
+	genfs.close();
+
+	if(!genfs)
+	{
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write markdown file \"") + genfile + "\"");
+	}
+}
+
+/**
+	@brief Loads the lab notes from Markdown files in the data directory
+ */
+void MainWindow::LoadLabNotes(const string& dataDir)
+{
+	//Lab notes
+	auto setupfile = dataDir + "/setup.md";
+	FILE* fp = fopen(setupfile.c_str(), "r");
+	if(fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		size_t len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		auto buf = new char[len+1];
+		fread(buf, 1, len, fp);
+		buf[len] = 0;
+
+		m_session.m_setupNotes = buf;
+
+		delete[] buf;
+		fclose(fp);
+	}
+
+	//General notes
+	auto genfile = dataDir + "/labnotes.md";
+	fp = fopen(genfile.c_str(), "r");
+	if(fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		size_t len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		auto buf = new char[len+1];
+		fread(buf, 1, len, fp);
+		buf[len] = 0;
+
+		m_session.m_generalNotes = buf;
+
+		delete[] buf;
+		fclose(fp);
+	}
+}
+
 
 /**
 	@brief Serialize the current session to a YAML::Node

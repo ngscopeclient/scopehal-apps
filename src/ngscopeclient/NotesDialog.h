@@ -48,9 +48,6 @@ public:
 	virtual bool DoRender() override;
 
 protected:
-	std::string m_setupNotes;
-	std::string m_generalNotes;
-
 	void MarkdownEditor(std::string& str);
 
 	void SetupNotes();

@@ -47,10 +47,6 @@ NotesDialog::NotesDialog(MainWindow* parent)
 	: Dialog("Lab Notes", "Lab Notes", ImVec2(800, 400))
 	, m_parent(parent)
 {
-	m_setupNotes =
-		"# H1 text\n"
-		"Foobar here\n"
-		"*bold text*";
 }
 
 NotesDialog::~NotesDialog()
@@ -98,11 +94,16 @@ void NotesDialog::SetupNotes()
 		"are connected correctly before making any changes to hardware configuration."
 		);
 
-	MarkdownEditor(m_setupNotes);
+	MarkdownEditor(m_parent->GetSession().m_setupNotes);
 }
 
 void NotesDialog::GeneralNotes()
 {
+	ImGui::TextWrapped(
+		"Take notes on your testing here. Limited Markdown syntax is supported."
+		);
+
+	MarkdownEditor(m_parent->GetSession().m_generalNotes);
 }
 
 /**

@@ -456,6 +456,16 @@ public:
 	 */
 	IDTable m_idtable;
 
+	/**
+		@brief Session notes
+	 */
+	std::string m_generalNotes;
+
+	/**
+		@brief Session notes about the experimental setup
+	 */
+	std::string m_setupNotes;
+
 	std::vector<std::shared_ptr<TriggerGroup> > GetTriggerGroups()
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_triggerGroupMutex);
