@@ -47,7 +47,7 @@ endif()
 
 # Package detection
 find_package(PkgConfig)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
 if(NOT APPLE_SILICON)
 	find_package(FFTS)

@@ -12,7 +12,7 @@ groups=("${MINGW_PACKAGE_PREFIX}-eda")
 depends=(
   "${MINGW_PACKAGE_PREFIX}-glm"
   "${MINGW_PACKAGE_PREFIX}-libsigc++"
-  "${MINGW_PACKAGE_PREFIX}-gtkmm3"
+  "${MINGW_PACKAGE_PREFIX}-cairomm-1.16"
   "${MINGW_PACKAGE_PREFIX}-yaml-cpp"
   "${MINGW_PACKAGE_PREFIX}-glew"
   "${MINGW_PACKAGE_PREFIX}-ffts"

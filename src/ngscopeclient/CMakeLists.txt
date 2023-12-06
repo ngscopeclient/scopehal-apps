@@ -21,7 +21,7 @@ configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 include_directories(
 	SYSTEM
 	${SIGCXX_INCLUDE_DIRS}
-	${GTKMM_INCLUDE_DIRS}
+	${CAIROMM_INCLUDE_DIRS}
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
@@ -29,7 +29,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/
 	${CMAKE_CURRENT_SOURCE_DIR}/../nativefiledialog-extended/src/include/
 	)
-link_directories(${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
+link_directories(${CAIROMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 find_package(glfw3 REQUIRED)
 find_package(PNG REQUIRED)
 
@@ -138,9 +138,7 @@ add_custom_target(
 	COMMENT "Copying icons..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/src/ngscopeclient/icons)
 
-
 get_target_property(SPIRV_SHADERS protocolshaders SOURCES)
-
 add_custom_target(
 	ngprotoshaders
 	COMMENT "Copying protocol shaders..."
@@ -150,7 +148,6 @@ add_dependencies(ngprotoshaders
 	protocolshaders)
 
 get_target_property(SPIRV_SHADERS2 halshaders SOURCES)
-
 add_custom_target(
 	nghalshaders
 	COMMENT "Copying scopehal shaders..."
