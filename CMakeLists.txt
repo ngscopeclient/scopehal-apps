@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-project(glscopeclient)
+project(ngscopeclient)
 
 include(CTest)
 
@@ -98,7 +98,7 @@ endif()
 
 # Configure and enable OpenMP
 if(NOT OpenMP_CXX_FOUND)
-	message(FATAL_ERROR "glscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
+	message(FATAL_ERROR "ngscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
@@ -136,13 +136,10 @@ if(ANALYZE)
 endif()
 
 # Main project code
-#add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
-add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeexports")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
-#add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
@@ -170,4 +167,3 @@ set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET xptools PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET scopeprotocols PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET scopeexports PROPERTY POSITION_INDEPENDENT_CODE ON)

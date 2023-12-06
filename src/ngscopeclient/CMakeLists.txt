@@ -189,7 +189,6 @@ endif()
 target_link_libraries(ngscopeclient
 	scopehal
 	scopeprotocols
-	scopeexports
 	nfd
 	glfw
 	PNG::PNG
@@ -251,7 +250,6 @@ if(WIXPATH AND WIN32)
 		COMMAND ${CMAKE_COMMAND} -E copy
 				${CMAKE_SOURCE_DIR}/src/LICENSE
 				${CMAKE_BINARY_DIR}/lib/log/liblog.dll
-				${CMAKE_BINARY_DIR}/lib/scopeexports/libscopeexports.dll
 				${CMAKE_BINARY_DIR}/lib/scopehal/libscopehal.dll
 				${CMAKE_BINARY_DIR}/lib/scopeprotocols/libscopeprotocols.dll
 				${CMAKE_BINARY_DIR}/src/ngscopeclient/ngscopeclient.exe
