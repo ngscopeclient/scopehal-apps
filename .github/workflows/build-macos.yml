@@ -22,7 +22,7 @@ jobs:
           ninja \
           libsigc++@2 \
           yaml-cpp \
-          cairomm \
+          cairomm@1.14 \
           glew \
           glfw \
           catch2
