@@ -77,6 +77,8 @@
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
+#include "../imgui_markdown/imgui_markdown.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
@@ -1423,67 +1425,101 @@ void MainWindow::RenderLoadWarningPopup()
 	{
 		ImGui::PushTextWrapPos(40*width);
 
-		ImGui::Image(
-			GetTextureManager()->GetTexture("warning"),
-			ImVec2(warningSize, warningSize));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(
-			"Some of the instrument settings in the session you are loading do not match "
-			"the current hardware configuration, and if set incorrectly could potentially "
-			"damage the instrument and/or DUT."
-			);
-
-		ImGui::PopTextWrapPos();
-
-		ImGui::NewLine();
-
-		if(ImGui::BeginTable("table", 5, flags))
+		//Show lab notes
+		if(!m_session.m_setupNotes.empty())
 		{
-			//Header row
-			ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-			ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
-			ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 40*width);
-			ImGui::TableHeadersRow();
+			ImGui::TextUnformatted(
+				"Please review your lab notes and confirm that the experimental setup matches your previous session."
+				);
 
-			//Actual list of warnings
-			auto& warnings = m_session.GetWarnings();
-			for(auto it : warnings.m_warnings)
+			ImGui::MarkdownConfig mdConfig
 			{
-				ImGui::PushID(it.first);
-
-				for(auto w : it.second.m_messages)
+				nullptr,	//linkCallback
+				nullptr,	//tooltipCallback
+				nullptr,	//imageCallback
+				"",			//linkIcon (not used)
 				{
-					ImGui::TableNextRow(ImGuiTableRowFlags_None);
+					{ GetFontPref("Appearance.Markdown.heading_1_font"), true },
+					{ GetFontPref("Appearance.Markdown.heading_2_font"), true },
+					{ GetFontPref("Appearance.Markdown.heading_3_font"), false }
+				},
+				nullptr		//userData
+			};
 
-					ImGui::TableSetColumnIndex(0);
-					ImGui::TextUnformatted(it.first->m_nickname.c_str());
+			if (ImGui::BeginChild("labnotes",
+					ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 10),
+					ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+			{
+				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), mdConfig );
+				ImGui::EndChild();
+			}
+		}
 
-					ImGui::TableSetColumnIndex(1);
-					ImGui::TextUnformatted(w.m_object.c_str());
+		//If we have config warnings, show them
+		auto& warnings = m_session.GetWarnings();
+		if(!warnings.m_warnings.empty())
+		{
+			ImGui::Image(
+				GetTextureManager()->GetTexture("warning"),
+				ImVec2(warningSize, warningSize));
+			ImGui::SameLine();
+			ImGui::TextUnformatted(
+				"Some of the instrument settings in the session you are loading do not match "
+				"the current hardware configuration, and if set incorrectly could potentially "
+				"damage the instrument and/or DUT."
+				);
 
-					ImGui::TableSetColumnIndex(2);
-					ImGui::TextUnformatted(w.m_existingValue.c_str());
+			ImGui::PopTextWrapPos();
 
-					ImGui::TableSetColumnIndex(3);
-					ImGui::TextUnformatted(w.m_proposedValue.c_str());
+			ImGui::NewLine();
 
-					ImGui::TableSetColumnIndex(4);
-					ImGui::TextUnformatted(w.m_messageText.c_str());
+			if(ImGui::BeginTable("table", 5, flags))
+			{
+				//Header row
+				ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+				ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
+				ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 40*width);
+				ImGui::TableHeadersRow();
+
+				//Actual list of warnings
+				for(auto it : warnings.m_warnings)
+				{
+					ImGui::PushID(it.first);
+
+					for(auto w : it.second.m_messages)
+					{
+						ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+						ImGui::TableSetColumnIndex(0);
+						ImGui::TextUnformatted(it.first->m_nickname.c_str());
+
+						ImGui::TableSetColumnIndex(1);
+						ImGui::TextUnformatted(w.m_object.c_str());
+
+						ImGui::TableSetColumnIndex(2);
+						ImGui::TextUnformatted(w.m_existingValue.c_str());
+
+						ImGui::TableSetColumnIndex(3);
+						ImGui::TextUnformatted(w.m_proposedValue.c_str());
+
+						ImGui::TableSetColumnIndex(4);
+						ImGui::TextUnformatted(w.m_messageText.c_str());
+					}
+
+					ImGui::PopID();
 				}
 
-				ImGui::PopID();
+				ImGui::EndTable();
 			}
-
-			ImGui::EndTable();
 		}
 
 		ImGui::NewLine();
 		ImGui::Separator();
 
-		ImGui::Checkbox("I have reviewed the settings to be applied and confirmed they will not cause damage.",
+		ImGui::Checkbox("I have reviewed the instrument configuration and confirmed it will not cause damage.",
 			&m_loadConfirmationChecked);
 
 		if(ImGui::Button("Abort"))
@@ -1941,7 +1977,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		else
 		{
 			//Preload completed with no warnings, or loading offline? Commit now
-			if(!online || m_session.GetWarnings().empty())
+			if(!online || (m_session.GetWarnings().empty() && m_session.m_setupNotes.empty()) )
 			{
 				if(LoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, online))
 				{
