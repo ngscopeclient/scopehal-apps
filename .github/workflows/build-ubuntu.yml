@@ -27,6 +27,7 @@ jobs:
           cmake \
           pkg-config \
           libglm-dev \
+          libgtk-3-dev \
           libcairomm-1.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \

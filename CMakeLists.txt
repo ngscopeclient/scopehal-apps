@@ -46,9 +46,13 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 endif()
 
 # Package detection
+# (we still use gtk on Linux for the file browser dialog in "native" mode)
 find_package(PkgConfig)
 pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
+if(LINUX)
+	pkg_check_modules(GTK REQUIRED gtk+-3.0)
+endif()
 if(NOT APPLE_SILICON)
 	find_package(FFTS)
 endif()
