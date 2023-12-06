@@ -3408,6 +3408,8 @@ void WaveformArea::OnMouseUp()
 					m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
 					m_triggerDuringDrag->GetScope()->PushTrigger();
 				}
+
+				m_parent->RefreshTriggerPropertiesDialog();
 			}
 			break;
 
@@ -3437,6 +3439,8 @@ void WaveformArea::OnMouseUp()
 						tlt->GetScope()->PushTrigger();
 					}
 				}
+
+				m_parent->RefreshTriggerPropertiesDialog();
 			}
 			break;
 
