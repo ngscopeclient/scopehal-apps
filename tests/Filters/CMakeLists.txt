@@ -13,8 +13,8 @@ add_executable(Filters
 
 catch_discover_tests(Filters)
 
-include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
-target_link_directories(Filters PUBLIC ${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
+include_directories(${CAIROMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
+target_link_directories(Filters PUBLIC ${CAIROMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 
 ###############################################################################
 #Linker settings

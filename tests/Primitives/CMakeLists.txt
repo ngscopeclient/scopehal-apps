@@ -9,8 +9,8 @@ add_executable(Primitives
 
 catch_discover_tests(Primitives)
 
-include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
-target_link_directories(Primitives PUBLIC ${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
+include_directories(${CAIROMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
+target_link_directories(Primitives PUBLIC ${CAIROMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 
 ###############################################################################
 #Linker settings
