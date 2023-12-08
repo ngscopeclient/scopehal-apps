@@ -277,11 +277,12 @@ VulkanWindow::~VulkanWindow()
 	m_swapchain = nullptr;
 	m_surface = nullptr;
 	glfwDestroyWindow(m_window);
-	m_imguiDescriptorPool = nullptr;
 
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(m_context);
+
+	m_imguiDescriptorPool = nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
