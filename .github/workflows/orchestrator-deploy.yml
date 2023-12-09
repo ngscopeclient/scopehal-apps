@@ -11,7 +11,8 @@ jobs:
     runs-on: [self-hosted, orchestrator]
     steps:
     - name: Cycle VMs
-      with:
+      shell: bash
+      env:
         XOA_URL: ${{ secrets.XOA_URL }}
         XOA_USER: ${{ secrets.XOA_USER }}
         XOA_PASSWORD: ${{ secrets.XOA_PASSWORD }}
