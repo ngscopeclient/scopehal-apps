@@ -71,6 +71,10 @@ public:
 	std::string m_endText;
 	double m_end;
 
+	//Spectrometer controls
+	std::string m_integrationText;
+	double m_integrationTime;
+
 	bool m_interleaving;
 };
 

@@ -36,6 +36,7 @@
 #include "ngscopeclient.h"
 #include "TimebasePropertiesDialog.h"
 #include "Session.h"
+#include "../scopehal/SCPISpectrometer.h"
 
 using namespace std;
 
@@ -94,6 +95,16 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 	m_endText = hz.PrettyPrint(m_end);
 
 	m_samplingMode = scope->GetSamplingMode();
+
+	auto spec = dynamic_cast<SCPISpectrometer*>(scope);
+	if(spec)
+	{
+		Unit fs(Unit::UNIT_FS);
+		m_integrationTime = spec->GetIntegrationTime();
+		m_integrationText = fs.PrettyPrint(m_integrationTime);
+	}
+	else
+		m_integrationTime = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +155,7 @@ bool TimebasePropertiesDialog::DoRender()
 	for(auto& p : m_pages)
 	{
 		auto scope = p->m_scope;
+		auto spec = dynamic_cast<SCPISpectrometer*>(p->m_scope);
 
 		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -277,6 +289,17 @@ bool TimebasePropertiesDialog::DoRender()
 					p->m_startText = hz.PrettyPrint(p->m_start);
 					p->m_endText = hz.PrettyPrint(p->m_end);
 				}
+			}
+
+			//Spectrometer controls
+			if(spec)
+			{
+				ImGui::SetNextItemWidth(width);
+
+				Unit fs(Unit::UNIT_FS);
+				if(UnitInputWithImplicitApply("Integration time", p->m_integrationText, p->m_integrationTime, fs))
+					spec->SetIntegrationTime(p->m_integrationTime);
+				HelpMarker("Spectrometer integration / exposure time");
 			}
 
 			ImGui::PopID();
