@@ -1,0 +1,19 @@
+name: orchestrator-deploy
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  Linux:
+    runs-on: [self-hosted, orchestrator]
+
+    steps:
+    - name: Cycle VMs
+      run: |
+        pushd ~
+        ruby ./main.rb
+        ruby ./linux.rb
+        terraform apply # --auto-approve -- not while testing
