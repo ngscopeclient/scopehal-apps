@@ -133,4 +133,4 @@ jobs:
         pushd ~
         ruby ./main.rb
         ruby ./linux.rb
-        terraform apply # --auto-approve -- not while testing
+        terraform apply --auto-approve
