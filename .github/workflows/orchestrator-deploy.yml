@@ -20,4 +20,4 @@ jobs:
         pushd ~
         ruby ./main.rb
         ruby ./linux.rb
-        XOA_URL=$XOA_URL XOA_USER=$XOA_USER XOA_PASSWORD=$XOA_PASSWORD terraform apply # --auto-approve -- not while testing
+        terraform apply # --auto-approve -- not while testing
