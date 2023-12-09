@@ -155,6 +155,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	LoadToolbarIcons();
 	LoadGradients();
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
+	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
+		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;

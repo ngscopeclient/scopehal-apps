@@ -2003,6 +2003,17 @@ void WaveformArea::RenderBackgroundGradient(ImVec2 start, ImVec2 size)
 		color_top,
 		color_bottom,
 		color_bottom);
+
+	//TODO: add preference or per-area setting for this
+	//For now, always draw if X axis units are distance/wavelength
+	if(m_group->GetXAxisUnit() == Unit::UNIT_PM)
+	{
+		//Visible spectrum texture covers 380 - 750 nm
+		draw_list->AddImage(
+			m_parent->GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm"),
+			ImVec2(m_group->XAxisUnitsToXPosition(380000), start.y),
+			ImVec2(m_group->XAxisUnitsToXPosition(750000), start.y + size.y));
+	}
 }
 
 /**

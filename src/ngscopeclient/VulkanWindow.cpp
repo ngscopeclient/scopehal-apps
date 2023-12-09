@@ -316,9 +316,7 @@ bool VulkanWindow::UpdateFramebuffer()
 	const VkFormat requestSurfaceImageFormat[] =
 	{
 		VK_FORMAT_B8G8R8A8_UNORM,
-		VK_FORMAT_R8G8B8A8_UNORM,
-		VK_FORMAT_B8G8R8_UNORM,
-		VK_FORMAT_R8G8B8_UNORM
+		VK_FORMAT_R8G8B8A8_UNORM
 	};
 	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	auto format = ImGui_ImplVulkanH_SelectSurfaceFormat(
