@@ -10,7 +10,7 @@ env:
 
 jobs:
 
-  Linux:
+  debian:
     runs-on: [self-hosted, linux, x64, gpu]
 
     steps:
@@ -117,3 +117,20 @@ jobs:
       with:
         name: ngscopeclient-manual
         path: build/doc/ngscopeclient-manual.pdf
+
+  cycle-debian-vm:
+    runs-on: [self-hosted, orchestrator]
+    needs: [debian]
+    if: ${{ always() }}
+    steps:
+    - name: Cycle vm
+      shell: bash
+      env:
+        XOA_URL: ${{ secrets.XOA_URL }}
+        XOA_USER: ${{ secrets.XOA_USER }}
+        XOA_PASSWORD: ${{ secrets.XOA_PASSWORD }}
+      run: |
+        pushd ~
+        ruby ./main.rb
+        ruby ./linux.rb
+        terraform apply # --auto-approve -- not while testing
