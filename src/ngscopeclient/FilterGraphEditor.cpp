@@ -1810,7 +1810,21 @@ void FilterGraphEditor::HandleLinkDeletionRequests(Filter*& fReconfigure)
 			if(m_groups.HasEntry(nid))
 			{
 				if(ax::NodeEditor::AcceptDeletedItem())
+				{
+					auto group = m_groups[nid];
+
+					//Remove other references to the group
+					set<FlowGraphNode*> nodesToUngroup;
+					for(auto it : m_nodeGroupMap)
+					{
+						if(it.second == group)
+							nodesToUngroup.emplace(it.first);
+					}
+					for(auto n : nodesToUngroup)
+						m_nodeGroupMap.erase(n);
+
 					m_groups.erase(nid);
+				}
 			}
 
 			else

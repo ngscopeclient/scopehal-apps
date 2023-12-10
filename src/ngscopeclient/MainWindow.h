@@ -355,6 +355,9 @@ protected:
 	///@brief Persistence settings
 	std::shared_ptr<Dialog> m_persistenceDialog;
 
+	///@brief Lab notes
+	std::shared_ptr<Dialog> m_notesDialog;
+
 	///@brief Filter graph editor
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;
 
@@ -385,6 +388,9 @@ protected:
 
 	///@brief Persistence decay factor
 	float m_persistenceDecay;
+
+	///@brief Pending requests to display a channel in a waveform area (from CreateFilter())
+	std::set< std::pair<OscilloscopeChannel*, WaveformArea*> > m_pendingChannelDisplayRequests;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
@@ -417,6 +423,8 @@ protected:
 	void OnSaveAs();
 	void DoSaveFile(const std::string& sessionPath);
 	bool SaveSessionToYaml(YAML::Node& node, const std::string& dataDir);
+	void SaveLabNotes(const std::string& dataDir);
+	void LoadLabNotes(const std::string& dataDir);
 	bool SetupDataDirectory(const std::string& dataDir);
 	YAML::Node SerializeUIConfiguration();
 	YAML::Node SerializeDialogs();

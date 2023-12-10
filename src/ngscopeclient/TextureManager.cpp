@@ -118,7 +118,7 @@ Texture::Texture(
 		{},
 		*m_image,
 		vk::ImageViewType::e2D,
-		vk::Format::eR8G8B8A8Srgb,
+		vk::Format::eR8G8B8A8Unorm,
 		{},
 		vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
@@ -392,8 +392,10 @@ void TextureManager::LoadTexture(
 		fclose(fp);
 		return;
 	}
+	int bytesPerComponent = 1;
+	int bytesPerPixel = 4*bytesPerComponent;
 	LogTrace("Image is %d x %d pixels, RGBA8888\n", width, height);
-	VkDeviceSize size = width * height * 4;
+	VkDeviceSize size = width * height * bytesPerPixel;
 
 	//Allocate temporary staging buffer
 	vk::BufferCreateInfo bufinfo({}, size, vk::BufferUsageFlagBits::eTransferSrc);
@@ -426,7 +428,7 @@ void TextureManager::LoadTexture(
 	stagingBuf.bindMemory(*physMem, 0);
 
 	//Fill the mapped buffer with image data from the PNG
-	size_t rowSize = width * 4;
+	size_t rowSize = width * bytesPerPixel;
 	for(int y=0; y<height; y++)
 		memcpy(mappedPtr + (y*rowSize), rowPtrs[y], rowSize);
 	physMem.unmapMemory();
@@ -435,7 +437,7 @@ void TextureManager::LoadTexture(
 	vk::ImageCreateInfo imageInfo(
 		{},
 		vk::ImageType::e2D,
-		vk::Format::eR8G8B8A8Srgb,
+		vk::Format::eR8G8B8A8Unorm,
 		vk::Extent3D(width, height, 1),
 		1,
 		1,

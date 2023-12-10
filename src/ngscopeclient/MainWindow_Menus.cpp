@@ -60,6 +60,7 @@
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
@@ -1233,6 +1234,19 @@ void MainWindow::WindowMenu()
 		WindowMultimeterMenu();
 		WindowPSUMenu();
 		WindowSCPIConsoleMenu();
+
+		bool hasLabNotes = m_notesDialog != nullptr;
+		if(hasLabNotes)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Lab Notes"))
+		{
+			m_notesDialog = make_shared<NotesDialog>(this);
+			AddDialog(m_notesDialog);
+		}
+
+		if(hasLabNotes)
+			ImGui::EndDisabled();
 
 		bool hasLogViewer = m_logViewerDialog != nullptr;
 		if(hasLogViewer)

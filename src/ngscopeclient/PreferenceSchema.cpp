@@ -209,6 +209,23 @@ void PreferenceManager::InitializeDefaults()
 					.Label("Y axis font")
 					.Description("Font used for Y axis text"));
 
+		auto& markdown = appearance.AddCategory("Markdown");
+
+			markdown.AddPreference(
+				Preference::Font("heading_1_font", FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 20))
+					.Label("Heading 1 font")
+					.Description("Font used for level 1 headings in Markdown"));
+
+			markdown.AddPreference(
+				Preference::Font("heading_2_font", FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 16))
+					.Label("Heading 2 font")
+					.Description("Font used for level 2 headings in Markdown"));
+
+			markdown.AddPreference(
+				Preference::Font("heading_3_font", FontDescription(FindDataFile("fonts/DejaVuSans-Bold.ttf"), 14))
+					.Label("Heading 3 font")
+					.Description("Font used for level 3 headings in Markdown"));
+
 		auto& peaks = appearance.AddCategory("Peaks");
 			/*peaks.AddPreference(
 				Preference::Color("peak_outline_color", ColorFromString("#009900"))

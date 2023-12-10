@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-project(glscopeclient)
+project(ngscopeclient)
 
 include(CTest)
 
@@ -46,9 +46,13 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 endif()
 
 # Package detection
+# (we still use gtk on Linux for the file browser dialog in "native" mode)
 find_package(PkgConfig)
-pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
+pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
 pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
+if(LINUX)
+	pkg_check_modules(GTK REQUIRED gtk+-3.0)
+endif()
 if(NOT APPLE_SILICON)
 	find_package(FFTS)
 endif()
@@ -98,7 +102,7 @@ endif()
 
 # Configure and enable OpenMP
 if(NOT OpenMP_CXX_FOUND)
-	message(FATAL_ERROR "glscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
+	message(FATAL_ERROR "ngscopeclient requires OpenMP but your C++ compiler does not appear to support it.")
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
@@ -136,13 +140,10 @@ if(ANALYZE)
 endif()
 
 # Main project code
-#add_subdirectory("${PROJECT_SOURCE_DIR}/lib/graphwidget")
-add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeexports")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopehal")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
-#add_subdirectory("${PROJECT_SOURCE_DIR}/src/glscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
@@ -170,4 +171,3 @@ set_property(TARGET scopehal PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET log PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET xptools PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET scopeprotocols PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET scopeexports PROPERTY POSITION_INDEPENDENT_CODE ON)

@@ -80,6 +80,7 @@ Session::Session(MainWindow* wnd)
 	, m_tPrimaryTrigger(0)
 	, m_triggerArmed(false)
 	, m_triggerOneShot(false)
+	, m_graphExecutor(/*8*/1)
 	, m_lastFilterGraphExecTime(0)
 	, m_history(*this)
 	, m_multiScope(false)
@@ -2988,6 +2989,14 @@ bool Session::RefreshDirtyFilters()
 		for(auto f : nodes)
 		{
 			if(f->IsDownstreamOf(m_dirtyChannels))
+				nodesToUpdate.emplace(f);
+		}
+
+		//The filter itself needs to be updated too
+		for(auto node : m_dirtyChannels)
+		{
+			auto f = dynamic_cast<Filter*>(node);
+			if(f)
 				nodesToUpdate.emplace(f);
 		}
 

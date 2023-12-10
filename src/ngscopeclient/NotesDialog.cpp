@@ -30,33 +30,27 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of MeasurementsDialog
+	@brief Implementation of NotesDialog
  */
 
 #include "ngscopeclient.h"
-#include "MeasurementsDialog.h"
+#include "NotesDialog.h"
+#include "MainWindow.h"
+#include "../imgui_markdown/imgui_markdown.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MeasurementsDialog::MeasurementsDialog(Session& session)
-	: Dialog("Measurements", "Measurements", ImVec2(300, 400))
-	, m_session(session)
+NotesDialog::NotesDialog(MainWindow* parent)
+	: Dialog("Lab Notes", "Lab Notes", ImVec2(800, 400))
+	, m_parent(parent)
 {
-
 }
 
-MeasurementsDialog::~MeasurementsDialog()
+NotesDialog::~NotesDialog()
 {
-	for(auto s : m_streams)
-	{
-		auto ochan = dynamic_cast<OscilloscopeChannel*>(s.m_channel);
-		if(ochan)
-			ochan->Release();
-	}
-	m_streams.clear();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,88 +62,88 @@ MeasurementsDialog::~MeasurementsDialog()
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
-bool MeasurementsDialog::DoRender()
+bool NotesDialog::DoRender()
 {
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+	if (ImGui::BeginTabBar("NotesFile", tab_bar_flags))
+	{
+		if (ImGui::BeginTabItem("Setup Notes"))
+		{
+			SetupNotes();
+			ImGui::EndTabItem();
+		}
+
+		if (ImGui::BeginTabItem("General Notes"))
+		{
+			GeneralNotes();
+			ImGui::EndTabItem();
+		}
+
+		ImGui::EndTabBar();
+	}
+
+	return true;
+}
+
+void NotesDialog::SetupNotes()
+{
+	ImGui::TextWrapped(
+		"Describe your experimental setup in sufficient detail that you could verify it's wired correctly. "
+		"Limited Markdown syntax is supported.\n\n"
+		"These notes will be displayed when re-loading the session so you can confirm all instrument channels "
+		"are connected correctly before making any changes to hardware configuration."
+		);
+
+	MarkdownEditor(m_parent->GetSession().m_setupNotes);
+}
+
+void NotesDialog::GeneralNotes()
+{
+	ImGui::TextWrapped(
+		"Take notes on your testing here. Limited Markdown syntax is supported."
+		);
+
+	MarkdownEditor(m_parent->GetSession().m_generalNotes);
+}
+
+/**
+	@brief Displays a split view with a Markdown editor and viewer
+ */
+void NotesDialog::MarkdownEditor(string& str)
+{
+	ImGui::MarkdownConfig mdConfig
+	{
+		nullptr,	//linkCallback
+		nullptr,	//tooltipCallback
+		nullptr,	//imageCallback
+		"",			//linkIcon (not used)
+		{
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_1_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_2_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_3_font"), false }
+		},
+		nullptr		//userData
+	};
+
+	//Table with one col for live view and one for editor
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
 		ImGuiTableFlags_BordersV |
 		ImGuiTableFlags_ScrollY |
-		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_SizingFixedFit;
-
-	float width = ImGui::GetFontSize();
-
-	int ncols = 2;
-	bool deleteRow = false;
-	size_t rowToDelete = 0;
-	if(ImGui::BeginTable("table", ncols, flags))
+		ImGuiTableFlags_SizingStretchSame;
+	if(ImGui::BeginTable("setupnotes", 2, flags, ImGui::GetContentRegionAvail() ))
 	{
-		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 15*width);
-		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 10*width);
-		ImGui::TableHeadersRow();
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
-		//TODO: double click value opens properties dialog
+		//Editor
+		ImGui::TableSetColumnIndex(0);
+		ImGui::InputTextMultiline("###Setup Notes", &str, ImGui::GetContentRegionAvail());
 
-		for(size_t i=0; i<m_streams.size(); i++)
-		{
-			auto s = m_streams[i];
-			auto name = s.GetName();
-			ImGui::TableNextRow(ImGuiTableRowFlags_None);
-			ImGui::PushID(name.c_str());
-
-			ImGui::TableSetColumnIndex(0);
-			ImGui::Selectable(name.c_str(), false);
-			if(ImGui::BeginPopupContextItem())
-			{
-				if(ImGui::MenuItem("Delete"))
-				{
-					deleteRow = true;
-					rowToDelete = i;
-				}
-
-				ImGui::EndPopup();
-			}
-
-			ImGui::TableSetColumnIndex(1);
-			auto value = s.GetYAxisUnits().PrettyPrint(s.GetScalarValue());
-			ImGui::TextUnformatted(value.c_str());
-
-			ImGui::PopID();
-		}
+		//Render the markdown
+		ImGui::TableSetColumnIndex(1);
+		ImGui::Markdown( str.c_str(), str.length(), mdConfig );
 
 		ImGui::EndTable();
 	}
-
-	if(deleteRow)
-		RemoveStream(rowToDelete);
-
-	return true;
-}
-
-void MeasurementsDialog::RemoveStream(size_t i)
-{
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_streams[i].m_channel);
-	m_streamset.erase(ochan);
-	if(ochan)
-		ochan->Release();
-	m_streams.erase(m_streams.begin() + i);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// UI event handlers
-
-void MeasurementsDialog::AddStream(StreamDescriptor stream)
-{
-	//Don't allow duplicates
-	if(HasStream(stream))
-		return;
-
-	m_streams.push_back(stream);
-	m_streamset.emplace(stream);
-
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
-	if(ochan)
-		ochan->AddRef();
 }

@@ -66,6 +66,7 @@
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
+#include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
 #include "PreferenceDialog.h"
@@ -75,6 +76,8 @@
 #include "ScopeDeskewWizard.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
+
+#include "../imgui_markdown/imgui_markdown.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -152,6 +155,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	LoadToolbarIcons();
 	LoadGradients();
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
+	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
+		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
@@ -189,6 +194,7 @@ void MainWindow::CloseSession()
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
 	m_groupsToClose.clear();
+	m_pendingChannelDisplayRequests.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
@@ -206,6 +212,7 @@ void MainWindow::CloseSession()
 	m_graphEditorGroups.clear();
 	m_fileBrowser = nullptr;
 	m_measurementsDialog = nullptr;
+	m_notesDialog = nullptr;
 	m_meterDialogs.clear();
 	m_psuDialogs.clear();
 	m_channelPropertiesDialogs.clear();
@@ -526,6 +533,23 @@ void MainWindow::RenderUI()
 		}
 		for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
 			m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
+	}
+
+	//Now that we are not holding the render mutex anymore, it's safe to have the session refresh newly created filters
+	if(!m_pendingChannelDisplayRequests.empty())
+	{
+		//Re-run the filter graph so we have an initial waveform to look at
+		//(This needs to be blocking so that we know the output data format when spawning the viewports)
+		m_session.RefreshDirtyFilters();
+
+		for(auto it : m_pendingChannelDisplayRequests)
+		{
+			auto f = it.first;
+			for(size_t i=0; i<f->GetStreamCount(); i++)
+				FindAreaForStream(it.second, StreamDescriptor(f, i));
+		}
+
+		m_pendingChannelDisplayRequests.clear();
 	}
 
 	//Dialog boxes
@@ -997,6 +1021,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_preferenceDialog = nullptr;
 	if(m_persistenceDialog == dlg)
 		m_persistenceDialog = nullptr;
+	if(m_notesDialog == dlg)
+		m_notesDialog = nullptr;
 	if(m_graphEditor == dlg)
 	{
 		m_graphEditorGroups = m_graphEditor->GetGroupIDs();
@@ -1419,67 +1445,101 @@ void MainWindow::RenderLoadWarningPopup()
 	{
 		ImGui::PushTextWrapPos(40*width);
 
-		ImGui::Image(
-			GetTextureManager()->GetTexture("warning"),
-			ImVec2(warningSize, warningSize));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(
-			"Some of the instrument settings in the session you are loading do not match "
-			"the current hardware configuration, and if set incorrectly could potentially "
-			"damage the instrument and/or DUT."
-			);
-
-		ImGui::PopTextWrapPos();
-
-		ImGui::NewLine();
-
-		if(ImGui::BeginTable("table", 5, flags))
+		//Show lab notes
+		if(!m_session.m_setupNotes.empty())
 		{
-			//Header row
-			ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-			ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
-			ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
-			ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 40*width);
-			ImGui::TableHeadersRow();
+			ImGui::TextUnformatted(
+				"Please review your lab notes and confirm that the experimental setup matches your previous session."
+				);
 
-			//Actual list of warnings
-			auto& warnings = m_session.GetWarnings();
-			for(auto it : warnings.m_warnings)
+			ImGui::MarkdownConfig mdConfig
 			{
-				ImGui::PushID(it.first);
-
-				for(auto w : it.second.m_messages)
+				nullptr,	//linkCallback
+				nullptr,	//tooltipCallback
+				nullptr,	//imageCallback
+				"",			//linkIcon (not used)
 				{
-					ImGui::TableNextRow(ImGuiTableRowFlags_None);
+					{ GetFontPref("Appearance.Markdown.heading_1_font"), true },
+					{ GetFontPref("Appearance.Markdown.heading_2_font"), true },
+					{ GetFontPref("Appearance.Markdown.heading_3_font"), false }
+				},
+				nullptr		//userData
+			};
 
-					ImGui::TableSetColumnIndex(0);
-					ImGui::TextUnformatted(it.first->m_nickname.c_str());
+			if (ImGui::BeginChild("labnotes",
+					ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 10),
+					ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+			{
+				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), mdConfig );
+				ImGui::EndChild();
+			}
+		}
 
-					ImGui::TableSetColumnIndex(1);
-					ImGui::TextUnformatted(w.m_object.c_str());
+		//If we have config warnings, show them
+		auto& warnings = m_session.GetWarnings();
+		if(!warnings.m_warnings.empty())
+		{
+			ImGui::Image(
+				GetTextureManager()->GetTexture("warning"),
+				ImVec2(warningSize, warningSize));
+			ImGui::SameLine();
+			ImGui::TextUnformatted(
+				"Some of the instrument settings in the session you are loading do not match "
+				"the current hardware configuration, and if set incorrectly could potentially "
+				"damage the instrument and/or DUT."
+				);
 
-					ImGui::TableSetColumnIndex(2);
-					ImGui::TextUnformatted(w.m_existingValue.c_str());
+			ImGui::PopTextWrapPos();
 
-					ImGui::TableSetColumnIndex(3);
-					ImGui::TextUnformatted(w.m_proposedValue.c_str());
+			ImGui::NewLine();
 
-					ImGui::TableSetColumnIndex(4);
-					ImGui::TextUnformatted(w.m_messageText.c_str());
+			if(ImGui::BeginTable("table", 5, flags))
+			{
+				//Header row
+				ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+				ImGui::TableSetupColumn("Instrument", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 12*width);
+				ImGui::TableSetupColumn("Hardware", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Session file", ImGuiTableColumnFlags_WidthFixed, 5*width);
+				ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 40*width);
+				ImGui::TableHeadersRow();
+
+				//Actual list of warnings
+				for(auto it : warnings.m_warnings)
+				{
+					ImGui::PushID(it.first);
+
+					for(auto w : it.second.m_messages)
+					{
+						ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+						ImGui::TableSetColumnIndex(0);
+						ImGui::TextUnformatted(it.first->m_nickname.c_str());
+
+						ImGui::TableSetColumnIndex(1);
+						ImGui::TextUnformatted(w.m_object.c_str());
+
+						ImGui::TableSetColumnIndex(2);
+						ImGui::TextUnformatted(w.m_existingValue.c_str());
+
+						ImGui::TableSetColumnIndex(3);
+						ImGui::TextUnformatted(w.m_proposedValue.c_str());
+
+						ImGui::TableSetColumnIndex(4);
+						ImGui::TextUnformatted(w.m_messageText.c_str());
+					}
+
+					ImGui::PopID();
 				}
 
-				ImGui::PopID();
+				ImGui::EndTable();
 			}
-
-			ImGui::EndTable();
 		}
 
 		ImGui::NewLine();
 		ImGui::Separator();
 
-		ImGui::Checkbox("I have reviewed the settings to be applied and confirmed they will not cause damage.",
+		ImGui::Checkbox("I have reviewed the instrument configuration and confirmed it will not cause damage.",
 			&m_loadConfirmationChecked);
 
 		if(ImGui::Button("Abort"))
@@ -1589,14 +1649,11 @@ Filter* MainWindow::CreateFilter(
 	//Give it an initial name, may change later
 	f->SetDefaultName();
 
-	//Re-run the filter graph so we have an initial waveform to look at
-	m_session.RefreshAllFiltersNonblocking();
-
 	//Find a home for each of its streams
 	if(addToArea)
 	{
-		for(size_t i=0; i<f->GetStreamCount(); i++)
-			FindAreaForStream(area, StreamDescriptor(f, i));
+		m_session.MarkChannelDirty(f);
+		m_pendingChannelDisplayRequests.emplace(pair<OscilloscopeChannel*, WaveformArea*>(f, area));
 	}
 
 	//Not adding waveforms to plots, but still check for scalar values and add to measurements view
@@ -1937,7 +1994,7 @@ void MainWindow::DoOpenFile(const string& sessionPath, bool online)
 		else
 		{
 			//Preload completed with no warnings, or loading offline? Commit now
-			if(!online || m_session.GetWarnings().empty())
+			if(!online || (m_session.GetWarnings().empty() && m_session.m_setupNotes.empty()) )
 			{
 				if(LoadSessionFromYaml(m_fileBeingLoaded[0], m_sessionDataDir, online))
 				{
@@ -2000,6 +2057,9 @@ bool MainWindow::PreLoadSessionFromYaml(const YAML::Node& node, const string& da
 		ifs >> m_graphEditorConfigBlob;
 		ifs.close();
 	}
+
+	//Load lab notes
+	LoadLabNotes(dataDir);
 
 	if(!m_session.PreLoadFromYaml(node, dataDir, online))
 	{
@@ -2515,12 +2575,108 @@ void MainWindow::DoSaveFile(const string& sessionPath)
 			string("Failed to write session file \"") + sessionPath + "\"");
 	}
 
+	//Save the lab notes
+	SaveLabNotes(datadir);
+
 	//Add to recent files list
 	m_sessionFileName = sessionPath;
 	m_sessionDataDir = datadir;
 	m_recentFiles[sessionPath] = time(nullptr);
 	SaveRecentFileList();
 }
+
+/**
+	@brief Saves the lab notes to Markdown files in the data directory
+ */
+void MainWindow::SaveLabNotes(const string& dataDir)
+{
+	//Lab notes
+	auto setupfile = dataDir + "/setup.md";
+	ofstream setupfs(setupfile);
+	if(!setupfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output markdown file \"") + setupfile + "\" for writing");
+		return;
+	}
+
+	setupfs << m_session.m_setupNotes;
+	setupfs.close();
+
+	if(!setupfs)
+	{
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write markdown file \"") + setupfile + "\"");
+	}
+
+	//General notes
+	auto genfile = dataDir + "/labnotes.md";
+	ofstream genfs(genfile);
+	if(!genfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open output markdown file \"") + genfile + "\" for writing");
+		return;
+	}
+
+	genfs << m_session.m_generalNotes;
+	genfs.close();
+
+	if(!genfs)
+	{
+		ShowErrorPopup(
+			"Write failed",
+			string("Failed to write markdown file \"") + genfile + "\"");
+	}
+}
+
+/**
+	@brief Loads the lab notes from Markdown files in the data directory
+ */
+void MainWindow::LoadLabNotes(const string& dataDir)
+{
+	//Lab notes
+	auto setupfile = dataDir + "/setup.md";
+	FILE* fp = fopen(setupfile.c_str(), "r");
+	if(fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		size_t len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		auto buf = new char[len+1];
+		fread(buf, 1, len, fp);
+		buf[len] = 0;
+
+		m_session.m_setupNotes = buf;
+
+		delete[] buf;
+		fclose(fp);
+	}
+
+	//General notes
+	auto genfile = dataDir + "/labnotes.md";
+	fp = fopen(genfile.c_str(), "r");
+	if(fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		size_t len = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		auto buf = new char[len+1];
+		fread(buf, 1, len, fp);
+		buf[len] = 0;
+
+		m_session.m_generalNotes = buf;
+
+		delete[] buf;
+		fclose(fp);
+	}
+}
+
 
 /**
 	@brief Serialize the current session to a YAML::Node

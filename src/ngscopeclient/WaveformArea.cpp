@@ -2003,6 +2003,17 @@ void WaveformArea::RenderBackgroundGradient(ImVec2 start, ImVec2 size)
 		color_top,
 		color_bottom,
 		color_bottom);
+
+	//TODO: add preference or per-area setting for this
+	//For now, always draw if X axis units are distance/wavelength
+	if(m_group->GetXAxisUnit() == Unit::UNIT_PM)
+	{
+		//Visible spectrum texture covers 380 - 750 nm
+		draw_list->AddImage(
+			m_parent->GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm"),
+			ImVec2(m_group->XAxisUnitsToXPosition(380000), start.y),
+			ImVec2(m_group->XAxisUnitsToXPosition(750000), start.y + size.y));
+	}
 }
 
 /**
@@ -2576,13 +2587,41 @@ void WaveformArea::RenderTriggerLevelArrows(ImVec2 start, ImVec2 /*size*/)
 			}
 		}
 
-		//TODO: second level
+		//Second level
 		auto sl = dynamic_cast<TwoLevelTrigger*>(trig);
 		if(sl)
-			LogWarning("Two-level triggers not implemented\n");
+		{
+			//Draw the arrow
+			//If currently dragging, show at mouse position rather than actual hardware trigger level
+			level = sl->GetLowerBound();
+			y = YAxisUnitsToYPosition(level);
+			if( (m_dragState == DRAG_STATE_TRIGGER_SECONDARY_LEVEL) && (trig == m_triggerDuringDrag) )
+				y = mouse.y;
+			arrowtop = y - arrowsize/2;
+			arrowbot = y + arrowsize/2;
+			draw_list->AddTriangleFilled(
+				ImVec2(start.x, y), ImVec2(arrowright, arrowtop), ImVec2(arrowright, arrowbot), color);
+
+			//Check mouse position
+			//Use slightly expanded hitbox to make it easier to capture
+			caparrowtop = y - caparrowsize/2;
+			caparrowbot = y + caparrowsize/2;
+			if( (mouse.x >= start.x) && (mouse.x <= caparrowright) && (mouse.y >= caparrowtop) && (mouse.y <= caparrowbot) )
+			{
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+				m_mouseOverTriggerArrow = true;
+
+				if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					LogTrace("Start dragging secondary trigger level\n");
+					m_dragState = DRAG_STATE_TRIGGER_SECONDARY_LEVEL;
+					m_triggerDuringDrag = trig;
+				}
+			}
+		}
 
 		//Handle dragging
-		if(m_dragState == DRAG_STATE_TRIGGER_LEVEL)
+		if( (m_dragState == DRAG_STATE_TRIGGER_LEVEL) || (m_dragState == DRAG_STATE_TRIGGER_SECONDARY_LEVEL) )
 			m_triggerLevelDuringDrag = YPositionToYAxisUnits(mouse.y);
 	}
 }
@@ -3354,8 +3393,65 @@ void WaveformArea::OnMouseUp()
 				Unit volts(Unit::UNIT_VOLTS);
 				LogTrace("End dragging trigger level (at %s)\n", volts.PrettyPrint(m_triggerLevelDuringDrag).c_str());
 
-				m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
-				m_triggerDuringDrag->GetScope()->PushTrigger();
+				//If two-level trigger, make sure we have the levels in the right order
+				auto tlt = dynamic_cast<TwoLevelTrigger*>(m_triggerDuringDrag);
+				if(tlt)
+				{
+					//We're dragging the primary level, which should always be higher than the secondary
+					auto sec = tlt->GetLowerBound();
+					if(m_triggerLevelDuringDrag >= sec)
+					{
+						tlt->SetUpperBound(m_triggerLevelDuringDrag);
+						tlt->GetScope()->PushTrigger();
+					}
+
+					//But if we dragged past the secondary level, invert (otherwise we'll never trigger)
+					else
+					{
+						tlt->SetUpperBound(sec);
+						tlt->SetLowerBound(m_triggerLevelDuringDrag);
+						tlt->GetScope()->PushTrigger();
+					}
+				}
+
+				else
+				{
+					m_triggerDuringDrag->SetLevel(m_triggerLevelDuringDrag);
+					m_triggerDuringDrag->GetScope()->PushTrigger();
+				}
+
+				m_parent->RefreshTriggerPropertiesDialog();
+			}
+			break;
+
+		case DRAG_STATE_TRIGGER_SECONDARY_LEVEL:
+			{
+				Unit volts(Unit::UNIT_VOLTS);
+				LogTrace("End dragging secondary trigger level (at %s)\n",
+					volts.PrettyPrint(m_triggerLevelDuringDrag).c_str());
+
+				//If two-level trigger, make sure we have the levels in the right order
+				auto tlt = dynamic_cast<TwoLevelTrigger*>(m_triggerDuringDrag);
+				if(tlt)
+				{
+					//We're dragging the secondary level, which should always be lower than the secondary
+					auto prim = tlt->GetUpperBound();
+					if(m_triggerLevelDuringDrag < prim)
+					{
+						tlt->SetLowerBound(m_triggerLevelDuringDrag);
+						tlt->GetScope()->PushTrigger();
+					}
+
+					//But if we dragged past the secondary level, invert (otherwise we'll never trigger)
+					else
+					{
+						tlt->SetUpperBound(m_triggerLevelDuringDrag);
+						tlt->SetLowerBound(prim);
+						tlt->GetScope()->PushTrigger();
+					}
+				}
+
+				m_parent->RefreshTriggerPropertiesDialog();
 			}
 			break;
 

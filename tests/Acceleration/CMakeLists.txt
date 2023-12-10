@@ -6,8 +6,8 @@ add_executable(Acceleration
 
 catch_discover_tests(Acceleration)
 
-include_directories(${GTKMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
-target_link_directories(Acceleration PUBLIC ${GTKMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
+include_directories(${CAIROMM_INCLUDE_DIRS} ${SIGCXX_INCLUDE_DIRS})
+target_link_directories(Acceleration PUBLIC ${CAIROMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
 
 ###############################################################################
 #Linker settings
