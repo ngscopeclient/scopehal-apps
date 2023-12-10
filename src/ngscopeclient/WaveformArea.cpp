@@ -969,6 +969,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 				channel->m_peakLabels[i].m_peakXpos = x;
 				channel->m_peakLabels[i].m_peakYpos = p.m_y;
 				channel->m_peakLabels[i].m_peakAlpha = 255;
+				channel->m_peakLabels[i].m_fwhm = p.m_fwhm;
 				break;
 			}
 		}
@@ -982,6 +983,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			npeak.m_labelXpos = x - m_group->PixelsToXAxisUnits(5 * ImGui::GetFontSize());
 			npeak.m_peakXpos = x;
 			npeak.m_peakYpos = p.m_y;
+			npeak.m_fwhm = p.m_fwhm;
 
 			//Initial Y position is above the peak if in the bottom half, otherwise below
 			if(p.m_y > stream.GetOffset())
@@ -1016,8 +1018,9 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 
 		//Figure out text size
 		string str =
-			stream.GetXAxisUnits().PrettyPrint(label.m_peakXpos) + "\n" +
-			stream.GetYAxisUnits().PrettyPrint(label.m_peakYpos);
+			"X = " + stream.GetXAxisUnits().PrettyPrint(label.m_peakXpos) + "\n" +
+			"Y = " + stream.GetYAxisUnits().PrettyPrint(label.m_peakYpos) + "\n" +
+			"FWHM = " + stream.GetXAxisUnits().PrettyPrint(label.m_fwhm);
 		auto textSizePixels = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str.c_str());
 
 		//Create rectangle for box around centroid

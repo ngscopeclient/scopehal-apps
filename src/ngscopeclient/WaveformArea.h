@@ -166,6 +166,9 @@ struct PeakLabel
 		Negative = invisible for several frames (eventually will be garbage collected)
 	 */
 	int m_peakAlpha;
+
+	///@brief Calculated FWHM of the peak
+	float m_fwhm;
 };
 
 /**
