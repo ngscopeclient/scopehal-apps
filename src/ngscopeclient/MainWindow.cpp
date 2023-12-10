@@ -194,6 +194,7 @@ void MainWindow::CloseSession()
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
 	m_groupsToClose.clear();
+	m_pendingChannelDisplayRequests.clear();
 
 	//Clear any open dialogs before destroying the session.
 	//This ensures that we have a nice well defined shutdown order.
@@ -532,6 +533,23 @@ void MainWindow::RenderUI()
 		}
 		for(ssize_t i = static_cast<ssize_t>(m_groupsToClose.size())-1; i >= 0; i--)
 			m_waveformGroups.erase(m_waveformGroups.begin() + m_groupsToClose[i]);
+	}
+
+	//Now that we are not holding the render mutex anymore, it's safe to have the session refresh newly created filters
+	if(!m_pendingChannelDisplayRequests.empty())
+	{
+		//Re-run the filter graph so we have an initial waveform to look at
+		//(This needs to be blocking so that we know the output data format when spawning the viewports)
+		m_session.RefreshDirtyFilters();
+
+		for(auto it : m_pendingChannelDisplayRequests)
+		{
+			auto f = it.first;
+			for(size_t i=0; i<f->GetStreamCount(); i++)
+				FindAreaForStream(it.second, StreamDescriptor(f, i));
+		}
+
+		m_pendingChannelDisplayRequests.clear();
 	}
 
 	//Dialog boxes
@@ -1631,14 +1649,11 @@ Filter* MainWindow::CreateFilter(
 	//Give it an initial name, may change later
 	f->SetDefaultName();
 
-	//Re-run the filter graph so we have an initial waveform to look at
-	m_session.RefreshAllFiltersNonblocking();
-
 	//Find a home for each of its streams
 	if(addToArea)
 	{
-		for(size_t i=0; i<f->GetStreamCount(); i++)
-			FindAreaForStream(area, StreamDescriptor(f, i));
+		m_session.MarkChannelDirty(f);
+		m_pendingChannelDisplayRequests.emplace(pair<OscilloscopeChannel*, WaveformArea*>(f, area));
 	}
 
 	//Not adding waveforms to plots, but still check for scalar values and add to measurements view

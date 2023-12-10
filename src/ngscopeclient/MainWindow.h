@@ -389,6 +389,9 @@ protected:
 	///@brief Persistence decay factor
 	float m_persistenceDecay;
 
+	///@brief Pending requests to display a channel in a waveform area (from CreateFilter())
+	std::set< std::pair<OscilloscopeChannel*, WaveformArea*> > m_pendingChannelDisplayRequests;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
 
