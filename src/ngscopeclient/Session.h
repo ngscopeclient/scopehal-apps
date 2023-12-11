@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -516,6 +516,7 @@ protected:
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
+	bool PreLoadSpectrometer(int version, const YAML::Node& node, bool online);
 	bool PreLoadBERT(int version, const YAML::Node& node, bool online);
 	bool PreLoadLoad(int version, const YAML::Node& node, bool online);
 	bool PreLoadMisc(int version, const YAML::Node& node, bool online);

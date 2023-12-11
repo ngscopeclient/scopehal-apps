@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -802,6 +802,11 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadMultimeter(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "spectrometer")
+		{
+			if(!PreLoadSpectrometer(version, inst, online))
+				return false;
+		}
 		else if(inst["type"].as<string>() == "load")
 		{
 			if(!PreLoadLoad(version, inst, online))
@@ -1197,6 +1202,81 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 
 	//Run the preload
 	bert->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPISpectrometer* spec = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demospec") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport && transport->IsConnected())
+			{
+				spec = SCPISpectrometer::CreateSpectrometer(driver, transport);
+				if(!VerifyInstrument(node, spec))
+				{
+					delete spec;
+					spec = nullptr;
+				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to spectrometer at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
+			}
+		}
+	}
+
+	if(!spec)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of spectrometers not implemented yet\n");
+		return true;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(spec);
+
+	//All good. Add to our list of specs etc
+	AddSpectrometer(spec, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)spec);
+
+	//Run the preload
+	spec->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1724,9 +1804,13 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			Save type fields so we know how to recreate the instrument
 
 			Precedence rules:
-			* Scopes have highest precedence: any combo instrument is a scope that has some ancillary functions
+			* Scope-derived instruments are highest precedence: these will probably eventually be refactored
+			  as they're not actually "real" scopes but for now we have to check for them first
+			* Scopes otherwise have high precedence: any combo instrument is a scope that has some ancillary functions
 			* RF gens with baseband function generators are primarily RF gens
 		 */
+		auto spec = dynamic_cast<SCPISpectrometer*>(inst);
+		auto vna = dynamic_cast<SCPIVNA*>(inst);
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
 		auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
@@ -1735,7 +1819,11 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto load = dynamic_cast<SCPILoad*>(inst);
 		auto bert = dynamic_cast<SCPIBERT*>(inst);
 		auto misc = dynamic_cast<SCPIMiscInstrument*>(inst);
-		if(scope)
+		if(spec)
+			config["type"] = "spectrometer";
+		else if(vna)
+			config["type"] = "vna";
+		else if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
 				config["triggerdeskew"] = m_scopeDeskewCal[scope];
