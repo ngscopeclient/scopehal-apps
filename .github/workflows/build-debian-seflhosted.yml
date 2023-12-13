@@ -131,6 +131,4 @@ jobs:
         XOA_PASSWORD: ${{ secrets.XOA_PASSWORD }}
       run: |
         pushd ~
-        ruby ./main.rb
-        ruby ./linux.rb
-        terraform apply --auto-approve
+        ./cycle-debian.sh
