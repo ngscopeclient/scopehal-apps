@@ -371,6 +371,8 @@ bool Session::LoadWaveformDataForFilters(
 		string datdir = filtdir + "/filter_" + to_string(id);
 
 		auto f = static_cast<OscilloscopeChannel*>(m_idtable[id]);
+		if(!f)
+			continue;
 		for(size_t i=0; i<f->GetStreamCount(); i++)
 		{
 			auto stag = ftag["streams"][string("s") + to_string(i)];

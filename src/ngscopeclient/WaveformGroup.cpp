@@ -275,7 +275,7 @@ void WaveformGroup::DoCursorReadouts()
 
 	string name = string("Cursors (") + m_title + ")";
 	float width = ImGui::GetFontSize();
-	ImGui::SetNextWindowSize(ImVec2(38*width, 15*width), ImGuiCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(45*width, 15*width), ImGuiCond_Appearing);
 	if(ImGui::Begin(name.c_str(), nullptr, ImGuiWindowFlags_NoCollapse))
 	{
 		static ImGuiTableFlags flags =
@@ -287,11 +287,12 @@ void WaveformGroup::DoCursorReadouts()
 		//Add columns for second cursor if enabled
 		int ncols = 2;
 		if(hasSecondCursor)
-			ncols += 2;
+			ncols += 3;
 
 		if(ImGui::BeginTable("cursors", ncols, flags))
 		{
 			//Header row
+			//TODO: only show in-band power column if units match up?
 			ImGui::TableSetupScrollFreeze(0, 1); 	//Header row does not scroll
 			ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 10*width);
 			ImGui::TableSetupColumn("Value 1", ImGuiTableColumnFlags_WidthFixed, 8*width);
@@ -299,6 +300,7 @@ void WaveformGroup::DoCursorReadouts()
 			{
 				ImGui::TableSetupColumn("Value 2", ImGuiTableColumnFlags_WidthFixed, 8*width);
 				ImGui::TableSetupColumn("Delta", ImGuiTableColumnFlags_WidthFixed, 8*width);
+				ImGui::TableSetupColumn("Band", ImGuiTableColumnFlags_WidthFixed, 8*width);
 			}
 			ImGui::TableHeadersRow();
 
@@ -404,6 +406,34 @@ void WaveformGroup::DoCursorReadouts()
 						//Delta
 						ImGui::TableSetColumnIndex(3);
 						RightJustifiedText(svd);
+
+						//In-band power
+						Unit punit(Unit::UNIT_COUNTS);
+						bool ok = true;
+						switch(stream.GetYAxisUnits().GetType())
+						{
+							case Unit::UNIT_DBM:
+								punit = Unit(Unit::UNIT_DBM);
+								break;
+
+							case Unit::UNIT_W_M2_NM:
+								punit = Unit(Unit::UNIT_W_M2);
+								break;
+
+							default:
+								ok = false;
+						}
+
+						if(ok)
+						{
+							auto power = GetInBandPower(
+								data,
+								stream.GetYAxisUnits(),
+								m_xAxisCursorPositions[0],
+								m_xAxisCursorPositions[1]);
+							ImGui::TableSetColumnIndex(4);
+							RightJustifiedText(punit.PrettyPrint(power));
+						}
 					}
 
 					ImGui::PopID();
@@ -414,6 +444,52 @@ void WaveformGroup::DoCursorReadouts()
 		}
 	}
 	ImGui::End();
+}
+
+/**
+	@brief Calculates the in-band power between two frequencies
+ */
+float WaveformGroup::GetInBandPower(WaveformBase* wfm, Unit yunit, int64_t t1, int64_t t2)
+{
+	auto swfm = dynamic_cast<SparseAnalogWaveform*>(wfm);
+	auto uwfm = dynamic_cast<UniformAnalogWaveform*>(wfm);
+
+	//Make sure we have data
+	if(!swfm && !uwfm)
+		return 0;
+	if(!wfm->size())
+		return 0;
+
+	//Get the samples and start/end indexex
+	auto& samples = swfm ? swfm->m_samples : uwfm->m_samples;
+	bool err1;
+	bool err2;
+	auto ileft = GetIndexNearestAtOrBeforeTimestamp(wfm, t1, err1);
+	auto iright = GetIndexNearestAtOrBeforeTimestamp(wfm, t2, err2);
+	if(err1)
+		ileft = 0;
+	if(err2)
+		iright = wfm->size() - 1;
+
+	//Sum the in-band power
+	//Note that if it's in dBm we have to go to linear units and back
+	bool is_log = (yunit == Unit::UNIT_DBM);
+	bool is_irradiance = (yunit == Unit::UNIT_W_M2_NM);
+	float total = 0;
+	for(size_t i=ileft; i <= iright; i++)
+	{
+		float f = samples[i];
+		if(is_log)
+			total += pow(10, (f - 30) / 10);	//assume
+		else if(is_irradiance)
+			total += f * GetDurationScaled(swfm, uwfm, i) * 1e-3;	//scale by pm to nm
+		else
+			total += f;
+	}
+	if(is_log)
+		total = 10 * log10(total) + 30;
+
+	return total;
 }
 
 /**

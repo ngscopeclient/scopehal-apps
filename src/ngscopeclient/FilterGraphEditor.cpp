@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -1686,6 +1686,7 @@ void FilterGraphEditor::FilterMenu(StreamDescriptor stream)
 	FilterSubmenu(stream, "Measurement", Filter::CAT_MEASUREMENT);
 	FilterSubmenu(stream, "Memory", Filter::CAT_MEMORY);
 	FilterSubmenu(stream, "Miscellaneous", Filter::CAT_MISC);
+	FilterSubmenu(stream, "Optical", Filter::CAT_OPTICAL);
 	FilterSubmenu(stream, "Power", Filter::CAT_POWER);
 	FilterSubmenu(stream, "RF", Filter::CAT_RF);
 	FilterSubmenu(stream, "Serial", Filter::CAT_SERIAL);

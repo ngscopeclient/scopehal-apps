@@ -3274,6 +3274,7 @@ void WaveformArea::FilterMenu(shared_ptr<DisplayedChannel> chan)
 	FilterSubmenu(chan, "Measurement", Filter::CAT_MEASUREMENT);
 	FilterSubmenu(chan, "Memory", Filter::CAT_MEMORY);
 	FilterSubmenu(chan, "Miscellaneous", Filter::CAT_MISC);
+	FilterSubmenu(chan, "Optical", Filter::CAT_OPTICAL);
 	FilterSubmenu(chan, "Power", Filter::CAT_POWER);
 	FilterSubmenu(chan, "RF", Filter::CAT_RF);
 	FilterSubmenu(chan, "Serial", Filter::CAT_SERIAL);

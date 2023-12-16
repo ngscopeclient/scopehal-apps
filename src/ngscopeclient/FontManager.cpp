@@ -90,6 +90,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	builder.AddChar(L'√');
 	builder.AddChar(L'∫');
 	builder.AddChar(L'∿');
+	builder.AddChar(L'²');	//U+00B2 superscript two
 	builder.AddChar(L'─');	//U+2500 box drawings light horizontal
 
 	//Build the range of glyphs we're using for the font

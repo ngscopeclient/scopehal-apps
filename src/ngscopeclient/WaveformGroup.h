@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -141,6 +141,8 @@ protected:
 	void RenderXAxisCursors(ImVec2 pos, ImVec2 size);
 	void RenderMarkers(ImVec2 pos, ImVec2 size);
 	void DoCursorReadouts();
+
+	float GetInBandPower(WaveformBase* wfm, Unit yunit, int64_t t1, int64_t t2);
 
 	bool IsMouseOverButtonInWaveformArea();
 
