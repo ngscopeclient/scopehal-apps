@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,6 +41,7 @@
 #include "imgui_internal.h"
 
 //Dialogs
+#include "AboutDialog.h"
 #include "AddBERTDialog.h"
 #include "AddGeneratorDialog.h"
 #include "AddLoadDialog.h"
@@ -1496,6 +1497,9 @@ void MainWindow::HelpMenu()
 {
 	if(ImGui::BeginMenu("Help"))
 	{
+		if(ImGui::MenuItem("About..."))
+			AddDialog(make_shared<AboutDialog>(this));
+
 		ImGui::EndMenu();
 	}
 }

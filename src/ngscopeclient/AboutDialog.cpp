@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,34 +30,89 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Implementation of AboutDialog
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
 
-#include "Dialog.h"
-#include "Session.h"
+#include "ngscopeclient.h"
+#include "AboutDialog.h"
+#include "MainWindow.h"
+#include <ngscopeclient-version.h>
+#include "../imgui_markdown/imgui_markdown.h"
 
-class AddInstrumentDialog : public Dialog
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+AboutDialog::AboutDialog(MainWindow* parent)
+	: Dialog("About ngscopeclient", to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 400))
+	, m_parent(parent)
 {
-public:
-	AddInstrumentDialog(const std::string& title, const std::string& nickname, Session& session);
-	virtual ~AddInstrumentDialog();
+}
 
-	virtual bool DoRender();
+AboutDialog::~AboutDialog()
+{
+}
 
-protected:
-	virtual bool DoConnect()=0;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	Session& m_session;
+/**
+	@brief Renders the dialog and handles UI events
 
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
-};
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool AboutDialog::DoRender()
+{
+	ImGui::MarkdownConfig mdConfig
+	{
+		nullptr,	//linkCallback
+		nullptr,	//tooltipCallback
+		nullptr,	//imageCallback
+		"",			//linkIcon (not used)
+		{
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_1_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_2_font"), true },
+			{ m_parent->GetFontPref("Appearance.Markdown.heading_3_font"), false }
+		},
+		nullptr		//userData
+	};
 
-#endif
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+	if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+	{
+		if(ImGui::BeginTabItem("Versions"))
+		{
+			string str =
+				string("  * ngscopeclient ") + NGSCOPECLIENT_VERSION + "\n" +
+				"  * libscopehal " + ScopehalGetVersion() + "\n" +
+				"  * Dear ImGui " + IMGUI_VERSION + "\n"
+				"  * Vulkan SDK " + to_string(VK_HEADER_VERSION) + "\n"
+				;
+			ImGui::Markdown( str.c_str(), str.length(), mdConfig );
+
+			ImGui::EndTabItem();
+		}
+
+		if(ImGui::BeginTabItem("Licenses"))
+		{
+			string str =
+				"This is free software: you are free to change and redistribute it.\n"
+				"There is NO WARRANTY, to the extent permitted by law.\n"
+				"\n"
+				"ngscopeclient and libscopehal are released under 3-clause BSD license.\n"
+				"TODO: add full dependency list and individual licenses here";
+			ImGui::Markdown( str.c_str(), str.length(), mdConfig );
+
+			ImGui::EndTabItem();
+		}
+
+		ImGui::EndTabBar();
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers

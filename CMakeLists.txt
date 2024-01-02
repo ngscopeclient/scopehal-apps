@@ -45,6 +45,9 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 	set(APPLE_SILICON TRUE)
 endif()
 
+# Git is used for git-describe based version generation if we have it
+find_package(Git)
+
 # Package detection
 # (we still use gtk on Linux for the file browser dialog in "native" mode)
 find_package(PkgConfig)

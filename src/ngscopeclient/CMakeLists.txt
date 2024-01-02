@@ -1,9 +1,6 @@
 # Vulkan is required for compute shaders used in rendering
 find_package(Vulkan REQUIRED)
 
-# Git is used for git-describe based version generation if we have it
-find_package(Git)
-
 #Set up versioning (with a dummy string for now if Git isn't present)
 if(Git_FOUND)
 	execute_process(
@@ -58,6 +55,7 @@ add_executable(ngscopeclient
 
 	pthread_compat.cpp
 
+	AboutDialog.cpp
 	AddBERTDialog.cpp
 	AddGeneratorDialog.cpp
 	AddInstrumentDialog.cpp

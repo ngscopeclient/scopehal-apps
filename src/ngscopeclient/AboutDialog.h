@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,34 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Declaration of AboutDialog
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
+#ifndef AboutDialog_h
+#define AboutDialog_h
 
 #include "Dialog.h"
-#include "Session.h"
 
-class AddInstrumentDialog : public Dialog
+class MainWindow;
+
+class AboutDialog : public Dialog
 {
 public:
-	AddInstrumentDialog(const std::string& title, const std::string& nickname, Session& session);
-	virtual ~AddInstrumentDialog();
+	AboutDialog(MainWindow* parent);
+	virtual ~AboutDialog();
 
 	virtual bool DoRender();
 
 protected:
-	virtual bool DoConnect()=0;
-
-	Session& m_session;
-
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
+	MainWindow* m_parent;
 };
 
 #endif
