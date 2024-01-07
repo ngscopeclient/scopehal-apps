@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -98,12 +98,20 @@ extern Event g_rerenderRequestedEvent;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
-#ifdef _DEBUG
-	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " [DEBUG BUILD]", queue)
+#ifdef __SANITIZE_ADDRESS__
+#define SAN_SUFFIX "[ASAN] "
 #else
-	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION, queue)
+#define SAN_SUFFIX ""
 #endif
+
+#ifdef _DEBUG
+#define DBG_SUFFIX "[DEBUG BUILD] "
+#else
+#define DBG_SUFFIX ""
+#endif
+
+MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue)
 	, m_showDemo(false)
 	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
@@ -238,14 +246,36 @@ void MainWindow::CloseSession()
 
 string MainWindow::NameNewWaveformGroup()
 {
-	//TODO: avoid colliding, check if name is in use and skip if so
-	int id = (m_nextWaveformGroup ++);
-	auto nextid = string("Waveform Group ") + to_string(id);
+	LogTrace("Naming new waveform group\n");
+	LogIndenter li;
 
-	if(ImGui::FindWindowByName(nextid.c_str()) != nullptr)
-		LogWarning("new group named %s already exists\n", nextid.c_str());
+	int maxretries = 50;
+	for(int retry=0; retry<maxretries; retry++)
+	{
+		//Avoid colliding, check if name is in use and skip if so
+		int id = (m_nextWaveformGroup ++);
+		auto nextid = string("Waveform Group ") + to_string(id);
+		LogTrace("Candidate ID is %s\n", nextid.c_str());
 
-	return nextid;
+		//This is ugly but we dont currently have an index for this.
+		//Very unlikely we'll ever have enough waveform groups for this to take a perceptible amount of time.
+		bool collision = false;
+		for(auto g : m_waveformGroups)
+		{
+			if(g->GetRawID() == nextid)
+			{
+				LogTrace("ID is in use (by %s), trying again\n", g->GetID().c_str());
+				collision = true;
+				break;
+			}
+		}
+
+		if(!collision)
+			return nextid;
+	}
+
+	LogError("Failed to name new waveform group (tried %d IDs)\n", maxretries);
+	return "";
 }
 
 /**
@@ -1067,10 +1097,15 @@ void MainWindow::DockingArea()
 	//Handle splitting of existing waveform groups
 	if(!m_splitRequests.empty())
 	{
-		LogTrace("Processing split request\n");
+		LogTrace("Processing split requests\n");
+		LogIndenter li;
 
 		for(auto& request : m_splitRequests)
 		{
+			LogTrace("Requested split of group %s with direction %d\n",
+				request.m_group->GetTitle().c_str(), request.m_direction);
+			LogIndenter li2;
+
 			//Get the window for the group
 			auto window = ImGui::FindWindowByName(request.m_group->GetID().c_str());
 			if(!window)
@@ -1087,15 +1122,18 @@ void MainWindow::DockingArea()
 			}
 
 			auto dockid = window->DockId;
+			LogTrace("DockID = %x\n", dockid);
 
 			//Split the existing node
 			ImGuiID idA;
 			ImGuiID idB;
 			ImGui::DockBuilderSplitNode(dockid, request.m_direction, 0.5, &idA, &idB);
+			LogTrace("Split the node into %x and %x\n", idA, idB);
 			auto node = ImGui::DockBuilderGetNode(idA);
 
 			//Create a new waveform group and dock it into the new space
 			auto group = make_shared<WaveformGroup>(this, NameNewWaveformGroup());
+			LogTrace("Spawned new waveform group %s\n", group->GetID().c_str());
 			{
 				lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
 				m_waveformGroups.push_back(group);
@@ -1103,6 +1141,9 @@ void MainWindow::DockingArea()
 			ImGui::DockBuilderDockWindow(group->GetID().c_str(), node->ID);
 
 			//Add a new waveform area for our stream to the new group
+			LogTrace("Making new area for %s in %s\n",
+				request.m_stream.GetName().c_str(),
+				group->GetID().c_str());
 			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
 			group->AddArea(area);
 		}
@@ -2157,6 +2198,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 		auto gn = it.second;
 		auto gname = gn["name"].as<string>();
 		LogTrace("Creating group %s\n", gname.c_str());
+		LogIndenter li2;
 		auto group = make_shared<WaveformGroup>(this, gname);
 		m_waveformGroups.push_back(group);
 
@@ -2169,6 +2211,8 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			LogTrace("group loading failed\n");
 			return false;
 		}
+		else
+			LogTrace("Group ID is %s\n", group->GetID().c_str());
 
 		//Waveform areas
 		auto gareas = gn["areas"];
