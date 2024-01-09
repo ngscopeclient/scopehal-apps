@@ -71,7 +71,7 @@ jobs:
         pushd ~
         mkdir vulkan
         cd vulkan
-        wget https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/linux/vulkansdk-linux-x86_64-${{ env.VULKAN_SDK_VERSION }}.tar.gz
+        wget https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/linux/vulkansdk-linux-x86_64-${{ env.VULKAN_SDK_VERSION }}.tar.xz
         tar xf vulkansdk-linux-x86_64-${{ env.VULKAN_SDK_VERSION }}.tar.xz
         export VULKAN_SDK=~/vulkan/${{ env.VULKAN_SDK_VERSION }}/x86_64
         sudo cp -r $VULKAN_SDK/include/vulkan/ /usr/local/include/
