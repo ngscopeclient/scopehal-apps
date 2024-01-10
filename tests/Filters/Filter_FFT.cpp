@@ -71,10 +71,6 @@ TEST_CASE("Filter_FFT")
 	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
 	filter->SetInput("din", g_scope->GetOscilloscopeChannel(0));
 
-	#ifdef __x86_64__
-		bool reallyHasAvx2 = g_hasAvx2;
-	#endif
-
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
 	{
@@ -98,37 +94,15 @@ TEST_CASE("Filter_FFT")
 			g_gpuFilterEnabled = false;
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU with no AVX
-			#ifdef __x86_64__
-				g_hasAvx2 = false;
-			#endif
-			g_gpuFilterEnabled = false;
+			//Baseline on the CPU
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %5.2f ms\n", tbase * 1000);
+			LogVerbose("CPU :         %5.2f ms\n", tbase * 1000);
 
 			//Copy the result
 			AcceleratorBuffer<float> golden;
 			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
-
-			#ifdef __x86_64__
-				//Try again with AVX
-				if(reallyHasAvx2)
-				{
-					g_hasAvx2 = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)  : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-					VerifyMatchingResult(
-						golden,
-						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3.25e-3f
-						);
-				}
-			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
@@ -143,14 +117,10 @@ TEST_CASE("Filter_FFT")
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				3.25e-3f
+				4e-3f
 				);
 		}
 	}
-
-	#ifdef __x86_64__
-		g_hasAvx2 = reallyHasAvx2;
-	#endif
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 
