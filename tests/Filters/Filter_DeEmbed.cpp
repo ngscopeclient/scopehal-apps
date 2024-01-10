@@ -43,6 +43,9 @@
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
+//TODO: switch to FFTW since test case is OK to be GPL
+#include <ffts.h>
+
 using namespace std;
 
 TEST_CASE("Filter_DeEmbed")
@@ -97,37 +100,86 @@ TEST_CASE("Filter_DeEmbed")
 			FillRandomWaveform(&uang, depth, -180, 180);
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = false;
+			//Also compute some temporaries we rely on
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU with no AVX
-			g_gpuFilterEnabled = false;
+			//Allocate FFTS plan
+			//TODO: switch to FFTW
+			auto npoints = filter->test_GetNumPoints();
+			auto nouts = filter->test_GetOutLen();
+			ffts_plan_t* forwardPlan = ffts_init_1d_real(npoints, FFTS_FORWARD);
+			ffts_plan_t* reversePlan = ffts_init_1d_real(npoints, FFTS_BACKWARD);
+
+			//Allocate output buffers
+			auto& forwardIn = filter->test_GetCachedInputBuffer();
+			auto& sines = filter->test_GetResampledSines();
+			auto& cosines = filter->test_GetResampledCosines();
+			AcceleratorBuffer<float> forwardOut;
+			AcceleratorBuffer<float> reverseOut;
+			AcceleratorBuffer<float> golden;
+			forwardOut.resize(2*nouts);
+			reverseOut.resize(npoints);
+			golden.resize(nouts);
+
+			//Baseline on the CPU
+			//We're only going to check correctness of the inner loop for now, so reuse the calculated S-parameters
+			//and padded input buffer
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
+			forwardIn.PrepareForCpuAccess();
+			forwardOut.PrepareForCpuAccess();
+			reverseOut.PrepareForCpuAccess();
+			golden.PrepareForCpuAccess();
+			sines.PrepareForCpuAccess();
+			cosines.PrepareForCpuAccess();
+
+			//Do the forward FFT
+			ffts_execute(forwardPlan, forwardIn.GetCpuPointer(), forwardOut.GetCpuPointer());
+
+			//Apply the interpolated S-parameters
+			for(size_t j=0; j<nouts; j++)
+			{
+				float sinval = sines[j];
+				float cosval = cosines[j];
+
+				//Uncorrected complex value
+				float real_orig = forwardOut[j*2 + 0];
+				float imag_orig = forwardOut[j*2 + 1];
+
+				//Amplitude correction
+				forwardOut[j*2 + 0] = real_orig*cosval - imag_orig*sinval;
+				forwardOut[j*2 + 1] = real_orig*sinval + imag_orig*cosval;
+			}
+
+			//Calculate the inverse FFT
+			ffts_execute(reversePlan, &forwardOut[0], &reverseOut[0]);
+
+			//Copy waveform data after rescaling
+			float scale = 1.0f / npoints;
+			auto istart = filter->test_GetIstart();
+			for(size_t j=0; j<nouts; j++)
+				golden[j] = reverseOut[j+istart] * scale;
+
+			golden.MarkModifiedFromCpu();
+
 			double tbase = GetTime() - start;
 			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
 
-			REQUIRE(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)) != nullptr);
-
-			//Copy the result
-			AcceleratorBuffer<float> golden;
-			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
-
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
-
-			//Try again on the GPU, this time for score
+			//Run the real filter for score
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
 			LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
+			REQUIRE(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)) != nullptr);
 			VerifyMatchingResult(
 				golden,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
 				1e-2f
 				);
+
+			//Clean up
+			ffts_free(forwardPlan);
+			ffts_free(reversePlan);
 		}
 	}
 
