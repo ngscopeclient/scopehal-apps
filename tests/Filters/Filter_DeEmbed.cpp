@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for Upsample filter
+	@brief Unit test for DeEmbed filter
  */
 #ifdef _CATCH2_V3
 #include <catch2/catch_all.hpp>
@@ -83,10 +83,6 @@ TEST_CASE("Filter_DeEmbed")
 	filter->SetInput("mag", g_scope->GetOscilloscopeChannel(2));
 	filter->SetInput("angle", g_scope->GetOscilloscopeChannel(3));
 
-#ifdef __x86_64__
-	bool reallyHasAvx2 = g_hasAvx2;
-#endif
-
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
 	{
@@ -105,9 +101,6 @@ TEST_CASE("Filter_DeEmbed")
 			filter->Refresh(cmdbuf, queue);
 
 			//Baseline on the CPU with no AVX
-			#ifdef __x86_64__
-				g_hasAvx2 = false;
-			#endif
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
@@ -119,24 +112,6 @@ TEST_CASE("Filter_DeEmbed")
 			//Copy the result
 			AcceleratorBuffer<float> golden;
 			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
-
-			#ifdef __x86_64__
-				//Try again with AVX
-				if(reallyHasAvx2)
-				{
-					g_hasAvx2 = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)    : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-					VerifyMatchingResult(
-						golden,
-						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						1e-2f
-						);
-				}
-			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
@@ -155,10 +130,6 @@ TEST_CASE("Filter_DeEmbed")
 				);
 		}
 	}
-
-	#ifdef __x86_64__
-		g_hasAvx2 = reallyHasAvx2;
-	#endif
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 	g_scope->GetOscilloscopeChannel(2)->Detach(0);
