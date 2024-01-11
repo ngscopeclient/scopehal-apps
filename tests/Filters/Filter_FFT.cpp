@@ -45,6 +45,16 @@
 
 using namespace std;
 
+void NormalizeOutputLog(AcceleratorBuffer<float>& outbuf, AcceleratorBuffer<float>& data, size_t nouts, float scale);
+void NormalizeOutputLinear(AcceleratorBuffer<float>& outbuf, AcceleratorBuffer<float>& data, size_t nouts, float scale);
+
+//Window function helpers
+void ApplyWindow(const float* data, size_t len, float* out, FFTFilter::WindowFunction func);
+void HannWindow(const float* data, size_t len, float* out);
+void HammingWindow(const float* data, size_t len, float* out);
+void CosineSumWindow(const float* data, size_t len, float* out, float alpha0);
+void BlackmanHarrisWindow(const float* data, size_t len, float* out);
+
 TEST_CASE("Filter_FFT")
 {
 	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
@@ -84,29 +94,92 @@ TEST_CASE("Filter_FFT")
 
 			//Set window function for the filter
 			//(there are 4 supported window functions so this will test all of them)
-			filter->SetWindowFunction(static_cast<FFTFilter::WindowFunction>(i % 4));
+			auto window = static_cast<FFTFilter::WindowFunction>(i % 4);
+			filter->SetWindowFunction(window);
 
 			//Make sure data is in the right spot (don't count this towards execution time)
 			ua.PrepareForGpuAccess();
 			ua.PrepareForCpuAccess();
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = false;
+			//Also precompute some sizes we need for the test code
 			filter->Refresh(cmdbuf, queue);
+
+			//Output buffer
+			auto npoints = filter->test_GetNumPoints();
+			auto nouts = filter->test_GetNumOuts();
+			auto plan = ffts_init_1d_real(npoints, FFTS_FORWARD);
+			UniformAnalogWaveform golden;
+			golden.Resize(nouts);
+			AcceleratorBuffer<float> inbuf;
+			inbuf.resize(npoints);
+			AcceleratorBuffer<float> outbuf;
+			outbuf.resize(2*nouts);
+
+			//Calculate output scale
+			float scale = sqrt(2) / npoints;
+			switch(window)
+			{
+				case FFTFilter::WINDOW_HAMMING:
+					scale *= 1.862;
+					break;
+
+				case FFTFilter::WINDOW_HANN:
+					scale *= 2.013;
+					break;
+
+				case FFTFilter::WINDOW_BLACKMAN_HARRIS:
+					scale *= 2.805;
+					break;
+
+				//unit
+				case FFTFilter::WINDOW_RECTANGULAR:
+				default:
+					break;
+			}
 
 			//Baseline on the CPU
 			double start = GetTime();
-			filter->Refresh(cmdbuf, queue);
-			double tbase = GetTime() - start;
-			LogVerbose("CPU :         %5.2f ms\n", tbase * 1000);
+			ua.PrepareForCpuAccess();
+			inbuf.PrepareForCpuAccess();
+			golden.PrepareForCpuAccess();
+			outbuf.PrepareForCpuAccess();
 
-			//Copy the result
-			AcceleratorBuffer<float> golden;
-			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+			//TODO: test log_output=false case
+			bool log_output = true;
 
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			g_gpuFilterEnabled = true;
-			filter->Refresh(cmdbuf, queue);
+			//Copy the input with windowing
+			ApplyWindow(
+				ua.m_samples.GetCpuPointer(),
+				npoints,
+				inbuf.GetCpuPointer(),
+				window);
+
+			//Calculate the FFT
+			ffts_execute(plan, &inbuf[0], &outbuf[0]);
+
+			//Normalize magnitudes
+			if(log_output)
+				NormalizeOutputLog(outbuf, golden.m_samples, nouts, scale);
+			else
+				NormalizeOutputLinear(outbuf, golden.m_samples, nouts, scale);
+
+			golden.m_samples.MarkModifiedFromCpu();
+
+			double tfft = GetTime() - start;
+			LogVerbose("CPU :         %5.2f ms\n", tfft * 1000);
+
+			//Peak search to keep time fair vs GPU filter
+			start = GetTime();
+			PeakDetector det;
+			det.FindPeaks(&golden, 10, 500000);
+			double tpeak = GetTime() - start;
+			LogVerbose("Peak search : %5.2f ms\n", tpeak * 1000);
+
+			double tbase = tpeak + tfft;
+
+			//Clean up
+			ffts_free(plan);
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
@@ -115,7 +188,7 @@ TEST_CASE("Filter_FFT")
 			LogVerbose("GPU         : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifyMatchingResult(
-				golden,
+				golden.m_samples,
 				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
 				4e-3f
 				);
@@ -125,4 +198,108 @@ TEST_CASE("Filter_FFT")
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 
 	filter->Release();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Normalization
+
+/**
+	@brief Normalize FFT output and convert to dBm (unoptimized C++ implementation)
+ */
+void NormalizeOutputLog(AcceleratorBuffer<float>& outbuf, AcceleratorBuffer<float>& data, size_t nouts, float scale)
+{
+	//assume constant 50 ohms for now
+	const float impedance = 50;
+	const float sscale = scale*scale / impedance;
+	for(size_t i=0; i<nouts; i++)
+	{
+		float real = outbuf[i*2];
+		float imag = outbuf[i*2 + 1];
+
+		float vsq = real*real + imag*imag;
+
+		//Convert to dBm
+		data[i] = (10 * log10(vsq * sscale) + 30);
+	}
+}
+
+/**
+	@brief Normalize FFT output and output in native Y-axis units (unoptimized C++ implementation)
+ */
+void NormalizeOutputLinear(AcceleratorBuffer<float>& outbuf, AcceleratorBuffer<float>& data, size_t nouts, float scale)
+{
+	for(size_t i=0; i<nouts; i++)
+	{
+		float real = outbuf[i*2];
+		float imag = outbuf[i*2 + 1];
+
+		data[i] = sqrtf(real*real + imag*imag) * scale;
+	}
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Window functions
+
+void ApplyWindow(const float* data, size_t len, float* out, FFTFilter::WindowFunction func)
+{
+	switch(func)
+	{
+		case FFTFilter::WINDOW_BLACKMAN_HARRIS:
+			return BlackmanHarrisWindow(data, len, out);
+
+		case FFTFilter::WINDOW_HANN:
+			return HannWindow(data, len, out);
+
+		case FFTFilter::WINDOW_HAMMING:
+			return HammingWindow(data, len, out);
+
+		case FFTFilter::WINDOW_RECTANGULAR:
+		default:
+			memcpy(out, data, len * sizeof(float));
+	}
+}
+
+void CosineSumWindow(const float* data, size_t len, float* out, float alpha0)
+{
+	float alpha1 = 1 - alpha0;
+	float scale = 2.0f * (float)M_PI / len;
+
+	float* aligned_data = (float*)__builtin_assume_aligned(data, 32);
+	float* aligned_out = (float*)__builtin_assume_aligned(out, 32);
+	for(size_t i=0; i<len; i++)
+	{
+		float w = alpha0 - alpha1*cosf(i*scale);
+		aligned_out[i] = w * aligned_data[i];
+	}
+}
+
+void BlackmanHarrisWindow(const float* data, size_t len, float* out)
+{
+	float alpha0 = 0.35875;
+	float alpha1 = 0.48829;
+	float alpha2 = 0.14128;
+	float alpha3 = 0.01168;
+	float scale = 2 *(float)M_PI / len;
+
+	for(size_t i=0; i<len; i++)
+	{
+		float num = i * scale;
+		float w =
+			alpha0 -
+			alpha1 * cosf(num) +
+			alpha2 * cosf(2*num) -
+			alpha3 * cosf(6*num);
+		out[i] = w * data[i];
+	}
+}
+
+void HannWindow(const float* data, size_t len, float* out)
+{
+	CosineSumWindow(data, len, out, 0.5);
+}
+
+void HammingWindow(const float* data, size_t len, float* out)
+{
+	CosineSumWindow(data, len, out, 25.0f / 46);
 }
