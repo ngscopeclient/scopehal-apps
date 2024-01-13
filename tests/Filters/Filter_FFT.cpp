@@ -43,6 +43,9 @@
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
+//TODO: switch to FFTW since test case is OK to be GPL
+#ifndef _APPLE_SILICON
+
 using namespace std;
 
 void NormalizeOutputLog(AcceleratorBuffer<float>& outbuf, AcceleratorBuffer<float>& data, size_t nouts, float scale);
@@ -303,3 +306,5 @@ void HammingWindow(const float* data, size_t len, float* out)
 {
 	CosineSumWindow(data, len, out, 25.0f / 46);
 }
+
+#endif
