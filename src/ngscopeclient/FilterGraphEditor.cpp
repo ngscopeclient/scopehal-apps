@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -258,7 +258,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-bandwith", FindDataFile("icons/filters/filter-bandwith.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-bandwidth", FindDataFile("icons/filters/filter-bandwidth.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-burst-width", FindDataFile("icons/filters/filter-burst-width.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
@@ -297,14 +297,14 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-	
+
 	//Fill out map of filter class types to icon names
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 		= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 		= "filter-ac-rms";
 	m_filterIconMap[type_index(typeid(AddFilter))] 				= "filter-add";
 	m_filterIconMap[type_index(typeid(AreaMeasurement))] 		= "filter-area-under-curve";
 	m_filterIconMap[type_index(typeid(AverageFilter))] 			= "filter-average";
-	m_filterIconMap[type_index(typeid(BandwidthMeasurement))] 	= "filter-bandwith";
+	m_filterIconMap[type_index(typeid(BandwidthMeasurement))] 	= "filter-bandwidth";
 	m_filterIconMap[type_index(typeid(BaseMeasurement))] 		= "filter-base";
 	m_filterIconMap[type_index(typeid(BurstWidthMeasurement))] 	= "filter-burst-width";
 	m_filterIconMap[type_index(typeid(ClipFilter))] 			= "filter-clip";
