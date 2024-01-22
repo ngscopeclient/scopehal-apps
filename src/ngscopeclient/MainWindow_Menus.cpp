@@ -50,6 +50,7 @@
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
+#include "AddSDRDialog.h"
 #include "AddSpectrometerDialog.h"
 #include "AddVNADialog.h"
 #include "BERTDialog.h"
@@ -276,6 +277,7 @@ void MainWindow::AddMenu()
 		AddOscilloscopeMenu(timestamps, reverseMap);
 		AddPowerSupplyMenu(timestamps, reverseMap);
 		AddRFGeneratorMenu(timestamps, reverseMap);
+		AddSDRMenu(timestamps, reverseMap);
 		AddSpectrometerMenu(timestamps, reverseMap);
 		AddVNAMenu(timestamps, reverseMap);
 
@@ -863,6 +865,79 @@ void MainWindow::AddRFGeneratorMenu(vector<time_t>& timestamps, map<time_t, vect
 
 								gen->m_nickname = nick;
 								m_session.AddRFGenerator(gen);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		ImGui::EndMenu();
+	}
+}
+
+/**
+	@brief Run the Add | SDR menu
+ */
+void MainWindow::AddSDRMenu(vector<time_t>& timestamps, map<time_t, vector<string> >& reverseMap)
+{
+	if(ImGui::BeginMenu("SDR"))
+	{
+		if(ImGui::MenuItem("Connect..."))
+			m_dialogs.emplace(make_shared<AddSDRDialog>(m_session));
+		ImGui::Separator();
+
+		//Find all known function generator drivers.
+		//Any recent instrument using one of these drivers is assumed to be a generator.
+		vector<string> drivers;
+		SCPISDR::EnumDrivers(drivers);
+		set<string> driverset;
+		for(auto s : drivers)
+			driverset.emplace(s);
+
+		//Recent instruments
+		for(int i=timestamps.size()-1; i>=0; i--)
+		{
+			auto t = timestamps[i];
+			auto cstrings = reverseMap[t];
+			for(auto cstring : cstrings)
+			{
+				auto fields = explode(cstring, ':');
+				if(fields.size() < 4)
+					continue;
+
+				auto nick = fields[0];
+				auto drivername = fields[1];
+				auto transname = fields[2];
+
+				if(driverset.find(drivername) != driverset.end())
+				{
+					if(ImGui::MenuItem(nick.c_str()))
+					{
+						auto path = fields[3];
+						for(size_t j=4; j<fields.size(); j++)
+							path = path + ":" + fields[j];
+
+						auto transport = MakeTransport(transname, path);
+						if(transport != nullptr)
+						{
+							//Create the scope
+							auto sdr = SCPISDR::CreateSDR(drivername, transport);
+							if(sdr == nullptr)
+							{
+								ShowErrorPopup(
+									"Driver error",
+									"Failed to create SDR driver of type \"" + drivername + "\"");
+								delete transport;
+							}
+
+							else
+							{
+								//TODO: apply preferences
+								LogDebug("FIXME: apply PreferenceManager settings to newly created SDR\n");
+
+								sdr->m_nickname = nick;
+								m_session.AddSDR(sdr);
 							}
 						}
 					}
