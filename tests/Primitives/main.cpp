@@ -45,24 +45,36 @@ using namespace std;
 
 mt19937 g_rng;
 
+// Global initialization
+class testRunListener : public Catch::EventListenerBase {
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testRunStarting(Catch::TestRunInfo const&) override {
+		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+
+		if(!VulkanInit())
+			exit(1);
+		TransportStaticInit();
+		DriverStaticInit();
+		InitializePlugins();
+
+		//Add search path
+		g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
+
+		//Initialize the RNG
+		g_rng.seed(0);
+	}
+
+    void testRunEnded(Catch::TestRunStats const& testRunStats) override {
+		ScopehalStaticCleanup();
+	}
+};
+CATCH_REGISTER_LISTENER(testRunListener)
+
 int main(int argc, char* argv[])
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
 	//Run the actual test, then clean up and return
 	int ret = Catch::Session().run(argc, argv);
-	ScopehalStaticCleanup();
 	return ret;
 }
