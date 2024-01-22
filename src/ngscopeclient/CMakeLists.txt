@@ -1,5 +1,10 @@
-# Vulkan is required for compute shaders used in rendering
-find_package(Vulkan REQUIRED)
+# At the moment, this is meant to be built as part of scopehal-apps.
+# Standalone build/install is a potential long-term goal.
+#If there is interest in a standalone build, please reach out. 
+
+# Vulkan is required for compute shaders used in rendering, but is pulled in from the top level CMakeLists.
+
+find_package(PNG REQUIRED)
 
 #Set up versioning (with a dummy string for now if Git isn't present)
 if(Git_FOUND)
@@ -11,24 +16,8 @@ if(Git_FOUND)
 else()
 	set(NGSCOPECLIENT_VERSION "unknown")
 endif()
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 
-#Set up include paths
-include_directories(
-	SYSTEM
-	${SIGCXX_INCLUDE_DIRS}
-	${CAIROMM_INCLUDE_DIRS}
-	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
-	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
-	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
-	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/
-	${CMAKE_CURRENT_SOURCE_DIR}/../nativefiledialog-extended/src/include/
-	)
-link_directories(${CAIROMM_LIBRARY_DIRS} ${SIGCXX_LIBRARY_DIRS})
-find_package(glfw3 REQUIRED)
-find_package(PNG REQUIRED)
+configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 
 # use custom config for imguifiledialog
 add_compile_definitions(CUSTOM_IMGUIFILEDIALOG_CONFIG="../ngscopeclient/IGFDConfig.h")
@@ -181,18 +170,34 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 endif()
 
 ###############################################################################
+#Set up include paths
+target_include_directories(ngscopeclient
+	PRIVATE
+	${CMAKE_CURRENT_BINARY_DIR}
+	SYSTEM
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
+	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/
+	${CMAKE_CURRENT_SOURCE_DIR}/../nativefiledialog-extended/src/include/
+	)
+
 #Linker settings
 target_link_libraries(ngscopeclient
 	scopehal
 	scopeprotocols
 	nfd
-	glfw
 	PNG::PNG
-	cairomm-1.0
-	cairo
-	${SIGCXX_LIBRARIES}
 	)
 
+#Needed to run from tree without install because Windows does not support RPATH and will otherwise not be able to find DLLs
+if(WIN32)
+add_custom_command(TARGET ngscopeclient POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:ngscopeclient> $<TARGET_FILE_DIR:ngscopeclient>
+	COMMAND_EXPAND_LISTS
+	)
+endif()
 ###############################################################################
 # Installation
 install(TARGETS ngscopeclient RUNTIME)
@@ -272,7 +277,7 @@ if(WIXPATH AND WIN32)
 		COMMAND ${WIXPATH}/candle -nologo ngscopeclient-files.wxs -arch x64 -out ngscopeclient-files.wixobj
 		COMMAND ${WIXPATH}/candle -nologo ngscopeclient.wxs -arch x64 -out ngscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
 		COMMAND ${WIXPATH}/light -nologo ngscopeclient-files.wixobj ngscopeclient.wixobj -b dist/ngscopeclient_windows_x64 -out dist/ngscopeclient-${NGSCOPECLIENT_VERSION}-windows-x64.msi -ext WixUIExtension -ext WixUtilExtension)
-else()
+elseif(WIN32)
 	message("Skipping MSI package build; define WIXPATH to enable")
 endif()
 
