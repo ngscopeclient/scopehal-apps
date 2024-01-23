@@ -1766,11 +1766,11 @@ void MainWindow::FindAreaForStream(WaveformArea* area, StreamDescriptor stream)
 		return;
 	}
 
-	//If it's an eye pattern, it automatically gets a new group
+	//If it's an eye pattern or spectrogram, it automatically gets a new group
 	bool makeNewGroup = false;
-	if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+	if( (stream.GetType() == Stream::STREAM_TYPE_EYE) || (stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM) )
 	{
-		LogTrace("It's an eye pattern, automatic new group\n");
+		LogTrace("It's an eye pattern or spectrogram, automatic new group\n");
 		makeNewGroup = true;
 	}
 

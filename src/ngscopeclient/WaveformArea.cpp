@@ -392,12 +392,33 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 
 	If no eye patterns are visible, returns a null stream.
  */
+StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
+{
+	for(auto chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+			return stream;
+	}
+
+	return StreamDescriptor(nullptr, 0);
+}
+
+/**
+	@brief Returns the first density plot displayed in this area.
+
+	If none are visible, returns a null stream.
+ */
 StreamDescriptor WaveformArea::GetFirstEyeStream()
 {
 	for(auto chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
+			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_WATERFALL)
 			return stream;
 	}
 
@@ -3607,8 +3628,8 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
 		return false;
 
-	//If our current view is an eye pattern, can't stack anything on it
-	auto estream = GetFirstEyeStream();
+	//If our current view is a density function, can't stack anything on it
+	auto estream = GetFirstDensityFunctionStream();
 	if(estream)
 		return false;
 

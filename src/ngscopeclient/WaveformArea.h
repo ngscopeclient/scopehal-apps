@@ -532,6 +532,7 @@ protected:
 public:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstEyeStream();
+	StreamDescriptor GetFirstDensityFunctionStream();
 	StreamDescriptor GetFirstAnalogOrEyeStream();
 
 	/**

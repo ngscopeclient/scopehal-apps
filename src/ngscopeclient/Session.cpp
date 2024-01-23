@@ -3042,9 +3042,14 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		}
 
 		//Tone-map all of our waveforms
-		//(does not need waveform data locked since it only works on *rendered* data)
+		//Generally does not need waveform data locked since it only works on *rendered* data...
+		//but density functions like spectrogram are an exception as those don't have a render step.
+		//TODO: should we "snapshot" the waveform into a render buffer or something to avoid this sync point?
 		hadNewWaveforms = true;
-		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+		{
+			lock_guard<shared_mutex> lock(m_waveformDataMutex);
+			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+		}
 
 		//Release the waveform processing thread
 		g_waveformProcessedEvent.Signal();
