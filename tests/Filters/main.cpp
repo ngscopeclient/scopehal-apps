@@ -38,6 +38,7 @@
 #include <catch2/catch_all.hpp>
 #else
 #include <catch2/catch.hpp>
+#define EventListenerBase TestEventListenerBase
 #endif
 #include "Filters.h"
 
