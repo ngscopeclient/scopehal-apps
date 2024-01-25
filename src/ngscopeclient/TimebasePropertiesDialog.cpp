@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -228,11 +228,14 @@ bool TimebasePropertiesDialog::DoRender()
 			{
 				//No sample rate
 
-				//Memory depth
-				ImGui::SetNextItemWidth(width);
-				if(Combo("Points", p->m_depthNames, p->m_depth))
-					scope->SetSampleDepth(p->m_depths[p->m_depth]);
-				HelpMarker("Number of points in the sweep");
+				//Memory depth (but don't duplicate if we also have time domain controls, like for a SDR/RTSA)
+				if(!scope->HasTimebaseControls())
+				{
+					ImGui::SetNextItemWidth(width);
+					if(Combo("Points", p->m_depthNames, p->m_depth))
+						scope->SetSampleDepth(p->m_depths[p->m_depth]);
+					HelpMarker("Number of points in the sweep");
+				}
 
 				//Frequency
 				bool changed = false;

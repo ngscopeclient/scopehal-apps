@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* libscopehal v0.1                                                                                                     *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,67 +30,21 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for Blackman-Harris window
+	@brief Declaration of AddSDRDialog
  */
-#ifdef _CATCH2_V3
-#include <catch2/catch_all.hpp>
-#else
-#include <catch2/catch.hpp>
-#endif
+#ifndef AddSDRDialog_h
+#define AddSDRDialog_h
 
-#include "../../lib/scopehal/scopehal.h"
-#include "../../lib/scopehal/TestWaveformSource.h"
-#include "../../lib/scopeprotocols/scopeprotocols.h"
-#include "Primitives.h"
+#include "AddInstrumentDialog.h"
 
-using namespace std;
-
-#ifdef __x86_64__
-
-TEST_CASE("Primitive_BlackmanHarrisWindow")
+class AddSDRDialog : public AddInstrumentDialog
 {
-	const size_t wavelen = 1000000;
+public:
+	AddSDRDialog(Session& session);
+	virtual ~AddSDRDialog();
 
-	const size_t niter = 8;
-	for(size_t i=0; i<niter; i++)
-	{
-		SECTION(string("Iteration ") + to_string(i))
-		{
-			LogVerbose("Iteration %zu\n", i);
-			LogIndenter li;
-
-			//Generate random input waveform
-			auto rdist = uniform_real_distribution<float>(-1, 1);
-			vector<float> din;
-			din.resize(wavelen);
-			for(size_t j=0; j<wavelen; j++)
-				din[j] = rdist(g_rng);
-
-			//Run the normal version
-			vector<float> dout_normal;
-			dout_normal.resize(wavelen);
-			double start = GetTime();
-			FFTFilter::BlackmanHarrisWindow(&din[0], wavelen, &dout_normal[0]);
-			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX): %.2f ms\n", tbase * 1000);
-
-			//Run the AVX version and compare results
-			if(g_hasAvx2)
-			{
-				vector<float> dout_avx2;
-				dout_avx2.resize(wavelen);
-
-				start = GetTime();
-				FFTFilter::BlackmanHarrisWindowAVX2(&din[0], wavelen, &dout_avx2[0]);
-				double dt = GetTime() - start;
-				LogVerbose("CPU (AVX2)  : %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-				for(size_t j=0; j<wavelen; j++)
-					REQUIRE(fabs(dout_normal[j] - dout_avx2[j]) < 1e-5f);
-			}
-
-		}
-	}
-}
+protected:
+	virtual bool DoConnect();
+};
 
 #endif

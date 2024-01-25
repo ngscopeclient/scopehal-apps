@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -324,6 +324,8 @@ public:
 	{ AddOscilloscope(vna, createViews); }
 	void AddPowerSupply(SCPIPowerSupply* psu, bool createDialog = true);
 	void RemovePowerSupply(SCPIPowerSupply* psu);
+	void AddSDR(SCPISDR* sdr, bool createViews = true)
+	{ AddOscilloscope(sdr, createViews); }
 	void AddRFGenerator(SCPIRFSignalGenerator* generator);
 	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
@@ -517,6 +519,7 @@ protected:
 	bool PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online);
 	bool PreLoadMultimeter(int version, const YAML::Node& node, bool online);
 	bool PreLoadSpectrometer(int version, const YAML::Node& node, bool online);
+	bool PreLoadSDR(int version, const YAML::Node& node, bool online);
 	bool PreLoadBERT(int version, const YAML::Node& node, bool online);
 	bool PreLoadLoad(int version, const YAML::Node& node, bool online);
 	bool PreLoadMisc(int version, const YAML::Node& node, bool online);

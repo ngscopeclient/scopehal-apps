@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -392,12 +392,33 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 
 	If no eye patterns are visible, returns a null stream.
  */
+StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
+{
+	for(auto chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+			return stream;
+	}
+
+	return StreamDescriptor(nullptr, 0);
+}
+
+/**
+	@brief Returns the first density plot displayed in this area.
+
+	If none are visible, returns a null stream.
+ */
 StreamDescriptor WaveformArea::GetFirstEyeStream()
 {
 	for(auto chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
+			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
+			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_WATERFALL)
 			return stream;
 	}
 
@@ -690,6 +711,7 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 	for(auto& chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
+
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
@@ -1903,6 +1925,9 @@ void WaveformArea::ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> 
 	//Rescale Y offset to screen pixels
 	//Note that we actually care about offset from our *bottom*, but GetOffset() returns offset from our *midpoint*
 	int32_t yoff = YAxisUnitsToPixels(-channel->GetStream().GetOffset()) - m_height/2;
+
+	//Spectrograms aren't necessarily centered at zero so there's an extra offset based on our center frequency
+	yoff -= YAxisUnitsToPixels(data->GetBottomEdgeFrequency());
 
 	//Rescale Y to "spectrogram bins per pixel" vs "Hz per pixel"
 	float yscale = 1.0 / (m_pixelsPerYAxisUnit * data->GetBinSize());
@@ -3603,8 +3628,8 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
 		return false;
 
-	//If our current view is an eye pattern, can't stack anything on it
-	auto estream = GetFirstEyeStream();
+	//If our current view is a density function, can't stack anything on it
+	auto estream = GetFirstDensityFunctionStream();
 	if(estream)
 		return false;
 

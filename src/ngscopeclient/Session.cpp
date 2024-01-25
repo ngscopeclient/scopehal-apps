@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -809,6 +809,11 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadSpectrometer(version, inst, online))
 				return false;
 		}
+		else if(inst["type"].as<string>() == "sdr")
+		{
+			if(!PreLoadSDR(version, inst, online))
+				return false;
+		}
 		else if(inst["type"].as<string>() == "load")
 		{
 			if(!PreLoadLoad(version, inst, online))
@@ -1204,6 +1209,81 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 
 	//Run the preload
 	bert->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	SCPISDR* sdr = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demospec") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the PSU
+			auto transport = CreateTransportForNode(node);
+
+			if(transport && transport->IsConnected())
+			{
+				sdr = SCPISDR::CreateSDR(driver, transport);
+				if(!VerifyInstrument(node, sdr))
+				{
+					delete sdr;
+					sdr = nullptr;
+				}
+			}
+
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to SDR at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
+			}
+		}
+	}
+
+	if(!sdr)
+	{
+		/*
+		//Create the mock scope
+		scope = new MockOscilloscope(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+		*/
+		LogError("offline loading of SDRs not implemented yet\n");
+		return true;
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	//ApplyPreferences(sdr);
+
+	//All good. Add to our list of specs etc
+	AddSDR(sdr, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)sdr);
+
+	//Run the preload
+	sdr->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1812,6 +1892,7 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			* RF gens with baseband function generators are primarily RF gens
 		 */
 		auto spec = dynamic_cast<SCPISpectrometer*>(inst);
+		auto sdr = dynamic_cast<SCPISDR*>(inst);
 		auto vna = dynamic_cast<SCPIVNA*>(inst);
 		auto scope = dynamic_cast<Oscilloscope*>(inst);
 		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
@@ -1823,6 +1904,8 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 		auto misc = dynamic_cast<SCPIMiscInstrument*>(inst);
 		if(spec)
 			config["type"] = "spectrometer";
+		else if(sdr)
+			config["type"] = "sdr";
 		else if(vna)
 			config["type"] = "vna";
 		else if(scope)
@@ -2959,9 +3042,14 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		}
 
 		//Tone-map all of our waveforms
-		//(does not need waveform data locked since it only works on *rendered* data)
+		//Generally does not need waveform data locked since it only works on *rendered* data...
+		//but density functions like spectrogram are an exception as those don't have a render step.
+		//TODO: should we "snapshot" the waveform into a render buffer or something to avoid this sync point?
 		hadNewWaveforms = true;
-		m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+		{
+			lock_guard<shared_mutex> lock(m_waveformDataMutex);
+			m_mainWindow->ToneMapAllWaveforms(cmdbuf);
+		}
 
 		//Release the waveform processing thread
 		g_waveformProcessedEvent.Signal();
