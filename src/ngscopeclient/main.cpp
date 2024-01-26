@@ -151,51 +151,6 @@ void Relaunch(int argc, char* argv[])
 #endif
 
 /**
-	@brief Converts a hex color code plus externally supplied default alpha value into a color
-
-	Supported formats:
-		#RRGGBB
-		#RRGGBBAA
-		#RRRRGGGGBBBB
- */
-ImU32 ColorFromString(const string& str, unsigned int alpha)
-{
-	if(str[0] != '#')
-	{
-		LogWarning("Malformed color string \"%s\"\n", str.c_str());
-		return ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
-	}
-
-	unsigned int r = 0;
-	unsigned int g = 0;
-	unsigned int b = 0;
-
-	//Normal HTML color code
-	if(str.length() == 7)
-		sscanf(str.c_str(), "#%02x%02x%02x", &r, &g, &b);
-
-	//HTML color code plus alpha
-	else if(str.length() == 9)
-		sscanf(str.c_str(), "#%02x%02x%02x%02x", &r, &g, &b, &alpha);
-
-	//legacy GTK 16 bit format
-	else if(str.length() == 13)
-	{
-		sscanf(str.c_str(), "#%04x%04x%04x", &r, &g, &b);
-		r >>= 8;
-		g >>= 8;
-		b >>= 8;
-	}
-	else
-	{
-		LogWarning("Malformed color string \"%s\"\n", str.c_str());
-		return ImGui::ColorConvertFloat4ToU32(ImVec4(1, 1, 1, 1));
-	}
-
-	return (b << IM_COL32_B_SHIFT) | (g << IM_COL32_G_SHIFT) | (r << IM_COL32_R_SHIFT) | (alpha << IM_COL32_A_SHIFT);
-}
-
-/**
 	@brief Helper function for right justified text in a table
  */
 void RightJustifiedText(const string& str)

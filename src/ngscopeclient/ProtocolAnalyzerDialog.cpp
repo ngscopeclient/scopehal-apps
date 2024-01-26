@@ -186,6 +186,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 			auto& wpackets = packets[wavetime];
 			for(auto pack : wpackets)
 			{
+				pack->RefreshColors();
+
 				//Instead of using packet pointer as identifier (can change if filter graph re-runs for
 				//unrelated reasons), use timestamp instead.
 				ImGui::PushID(pack->m_offset);
@@ -193,8 +195,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 				//Set up colors for the packet
-				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(pack->m_displayBackgroundColor));
-				ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(pack->m_displayForegroundColor));
+				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, pack->m_displayBackgroundColorPacked);
+				ImGui::PushStyleColor(ImGuiCol_Text, pack->m_displayForegroundColorPacked);
 
 				//See if we have child packets
 				auto children = m_mgr->GetFilteredChildPackets(pack);
