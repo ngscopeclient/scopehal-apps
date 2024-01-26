@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -79,7 +79,7 @@ void main()
 	float clampedValue = 0;
 
 	//If out of bounds, nothing to do
-	if( (xend < 0) || (xstart >= width) || (ystart < 0) || (yend >= height) )
+	if( (xend < 0) || (xstart >= width) || (yend < 0) || (ystart >= height) )
 	{
 	}
 
