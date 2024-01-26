@@ -1257,6 +1257,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 	auto data = dynamic_cast<SparseWaveformBase*>(stream.GetData());
 	if(data == nullptr)
 		return;
+	data->CacheColors();
 
 	auto list = ImGui::GetWindowDrawList();
 
@@ -1297,7 +1298,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 			break;
 
 		double cellwidth = xe - xs;
-		auto color = ColorFromString(data->GetColor(i));
+		auto color = data->GetColorCached(i);
 		if(cellwidth < 2)
 		{
 			//This sample is really skinny. There's no text to render so don't waste time with that.
@@ -1315,7 +1316,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 				if(cellxs > xs+2)
 					break;
 
-				auto c = ColorFromString(data->GetColor(j));
+				auto c = data->GetColorCached(j);
 
 				sum_red += (c >> IM_COL32_R_SHIFT) & 0xff;
 				sum_green += (c >> IM_COL32_G_SHIFT) & 0xff;
