@@ -2079,6 +2079,12 @@ void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& grid
 	//Special case a few scenarios
 	if(stream.GetYAxisUnits() == Unit::UNIT_LOG_BER)
 		selected_step = 2;
+	if(stream.GetYAxisUnits() == Unit::UNIT_HEXNUM)
+	{
+		//round to next power of two
+		selected_step = pow(2, round(log2(selected_step)));
+	}
+
 
 	float bottom_edge = (ybot - theight/2);
 	float top_edge = (ytop + theight/2);
@@ -3107,7 +3113,10 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
 
 	//Qualify name by scope if we have multiple scopes in the session
+	//If name is an empty string, change it to a space so imgui doesn't bork
 	auto fqname = chan->GetName();
+	if(fqname.empty())
+		fqname = ' ';
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(rchan);
 	if(ochan)
 	{
