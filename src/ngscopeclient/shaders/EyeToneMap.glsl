@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,9 +61,13 @@ void main()
 	//Look it up in the gradient texture
 	float clamped = min(pixval, 0.99);
 	clamped += 0.5 / 255.0;
-	vec4 colorOut = texture(colorRamp, vec2(clamped, 0.5));
 
 	//Write final output
+	vec4 colorOut;
+	if(clamped <= 0)
+		colorOut = vec4(0,0,0,0);
+	else
+		colorOut = texture(colorRamp, vec2(clamped, 0.5));
 	imageStore(
 		outputTex,
 		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),

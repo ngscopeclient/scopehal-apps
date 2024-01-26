@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -96,7 +96,11 @@ void main()
 	}
 
 	//Write final output
-	vec4 colorOut = texture(colorRamp, vec2(clampedValue + (0.5 / 255.0), 0.5));
+	vec4 colorOut;
+	if(clampedValue <= 0)
+		colorOut = vec4(0,0,0,0);
+	else
+		colorOut = texture(colorRamp, vec2(clampedValue + (0.5 / 255.0), 0.5));
 	imageStore(
 		outputTex,
 		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),
