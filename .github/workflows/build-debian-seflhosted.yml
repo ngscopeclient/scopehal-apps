@@ -96,7 +96,7 @@ jobs:
         make -j 32
 
     - name: Run Tests
-      if: ${{ false }} # Temporary disable Run Tests
+      if: ${{ true }} # Temporary re-enabled Run Tests
       run: |
         cd build
         make test
