@@ -49,7 +49,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 {
 	TestWaveformSource source(g_rng);
 	auto filter = dynamic_cast<FrequencyMeasurement*>(Filter::CreateFilter("Frequency", "#ffffff"));
-	REQUIRE(filter != NULL);
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	const size_t niter = 25;
@@ -85,7 +85,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 
 			//Get the output data
 			auto data = dynamic_cast<SparseAnalogWaveform*>(filter->GetData(0));
-			REQUIRE(data != NULL);
+			REQUIRE(data != nullptr);
 
 			//Counts for each array must be consistent
 			REQUIRE(data->size() == data->m_durations.size());

@@ -61,7 +61,7 @@ void BlackmanHarrisWindow(const float* data, size_t len, float* out);
 TEST_CASE("Filter_FFT")
 {
 	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
-	REQUIRE(filter != NULL);
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	//Create a queue and command buffer
