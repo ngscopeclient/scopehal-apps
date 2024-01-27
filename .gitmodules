@@ -6,13 +6,13 @@
 	url = ../scopehal-docs.git
 [submodule "src/imgui"]
 	path = src/imgui
-	url = ../imgui.git
+	url = https://github.com/ngscopeclient/imgui.git
 [submodule "src/implot"]
 	path = src/implot
-	url = ../implot.git
+	url = https://github.com/ngscopeclient/implot.git
 [submodule "src/imgui-node-editor"]
 	path = src/imgui-node-editor
-	url = ../imgui-node-editor.git
+	url = https://github.com/ngscopeclient/imgui-node-editor.git
 [submodule "src/ImGuiFileDialog"]
 	path = src/ImGuiFileDialog
 	url = https://github.com/aiekick/ImGuiFileDialog

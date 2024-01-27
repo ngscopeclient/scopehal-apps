@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.20)
 include_directories(cmake) #WORKAROUND needed for find_package(Vulkan) for Vulkan SDK
 
+#WORKAROUND: Vulkan SDK is incompatible with MinGW due to C++ linkage
+
+
 # Check for Vulkan SDK env var and prepend it to CMAKE_PREFIX_PATH if set to prefer Vulkan SDK packages if available
- if(DEFINED ENV{VULKAN_SDK})
- 	message("Detected and using VULKAN_SDK at $ENV{VULKAN_SDK}")
- 	cmake_path(CONVERT "$ENV{VULKAN_SDK}" TO_CMAKE_PATH_LIST VULKAN_SDK_PATH NORMALIZE)
- 	list(PREPEND CMAKE_PREFIX_PATH ${VULKAN_SDK_PATH})
- endif()
+if(DEFINED ENV{VULKAN_SDK})
+	if(WIN32 AND (NOT MSVC))
+		message(WARNING "Detected VULKAN_SDK at $ENV{VULKAN_SDK}.")
+		message(WARNING "Compiling and linking against the Vulkan SDK is not supported with MSYS. The build system"
+			      "will ignore the SDK and you will need to have the Vulkan packages installed from the MSYS repositories.")
+	else()
+		message("Detected and using VULKAN_SDK at $ENV{VULKAN_SDK}")
+		cmake_path(CONVERT "$ENV{VULKAN_SDK}" TO_CMAKE_PATH_LIST VULKAN_SDK_PATH NORMALIZE)
+		list(PREPEND CMAKE_PREFIX_PATH ${VULKAN_SDK_PATH})
+	endif()
+endif()
 
 project(ngscopeclient)
 

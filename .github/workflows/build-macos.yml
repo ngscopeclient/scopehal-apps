@@ -12,79 +12,96 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v3
+    - name: Check Out Code
+      uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 0
+
+    - name: Use CCache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ github.job }}-${{ runner.os }}
+        max-size: "1500M"
+
 
     - name: Install Dependencies
       run: |
         brew install \
-          ninja \
-          libsigc++@2 \
-          yaml-cpp \
+          pkg-config \
           cairomm@1.14 \
-          glew \
+          libsigc++@2 \
           glfw \
-          catch2
+          cmake \
+          yaml-cpp \
+          catch2 \
+          libomp \
+          vulkan-headers \
+          vulkan-loader \
+          spirv-tools \
+          glslang \
+          shaderc \
+          molten-vk \
+          ninja
+
+    - name: Cache FFTS
+      uses: actions/cache@v4
+      with:
+        path: ~/ffts-prefix
+        key: ${{ runner.os }}-ffts-prefix
+
 
     - name: Clone and Build FFTS Library
       run: |
-        git clone https://github.com/anthonix/ffts.git /tmp/ffts
-        pushd /tmp/ffts
+        [[ -d ~/ffts-prefix ]] && exit 0
+        cd
+        git clone https://github.com/anthonix/ffts.git
+        cd ffts
         mkdir build
         cd build
         cmake \
           -DENABLE_SHARED=ON \
+          -DCMAKE_INSTALL_PREFIX=$HOME/ffts-prefix \
+          -DCMAKE_INSTALL_RPATH=$HOME/ffts-prefix/lib \
+          -DCMAKE_MACOSX_RPATH=ON \
+          -GNinja \
           ..
-        make -j4
-        sudo make install
-        popd
+        ninja
+        sudo ninja install
 
-    - name: Install Vulkan SDK
-      uses: humbletim/install-vulkan-sdk@v1.1.1
-      with:
-        version: 1.3.268.1
-        cache: true
-
-    - name: Build
+    - name: Configure
       run: |
-        export PATH=$(brew --prefix llvm@14)/bin:$PATH
-        export DYLD_LIBRARY_PATH=$VULKAN_SDK/lib:$DYLD_LIBRARY_PATH
-        export VK_ICD_FILENAMES=$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json
-        export VK_LAYER_PATH=$VULKAN_SDK/etc/vulkan/explicit_layer.d
-        export CC=clang
-        export CXX=clang++
+        export CMAKE_C_COMPILER_LAUNCHER=ccache
+        export CMAKE_CXX_COMPILER_LAUNCHER=ccache
         mkdir build
         cd build
         cmake \
+          -DDISABLE_PCH=ON \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
-          -DBUILD_TESTING=OFF \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix libomp)" \
+          -DBUILD_TESTING=ON \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix)/opt/libomp;$HOME/ffts-prefix" \
           ..
+
+    - name: Build
+      run: |
+        cd build
         ninja
 
     - name: Run Tests
-      if: ${{ false }} # Temporary disable Run Tests
+      if: ${{ false }} # Metal is not available on GH macOS runners
       run: |
         cd build
         ninja test
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: ngscopeclient-macos
+        name: ngscopeclient-${{ runner.os }}-${{ github.job }}
         path: |
           build/src/ngscopeclient/ngscopeclient
           build/src/ngscopeclient/icons/*
           build/src/ngscopeclient/shaders/*
           build/lib/scopehal/libscopehal.dylib
           build/lib/scopeprotocols/libscopeprotocols.dylib
-
-    - name: Upload Documentation
-      if: ${{ false }} # a LaTeX toolchain for macOS takes a while to install, so skip for now
-      uses: actions/upload-artifact@v3
-      with:
-        name: ngscopeclient-manual
-        path: build/doc/ngscopeclient-manual.pdf
