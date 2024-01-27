@@ -47,11 +47,13 @@ using namespace std;
 mt19937 g_rng;
 
 // Global initialization
-class testRunListener : public Catch::EventListenerBase {
+class testRunListener : public Catch::EventListenerBase
+{
 public:
     using Catch::EventListenerBase::EventListenerBase;
 
-    void testRunStarting(Catch::TestRunInfo const&) override {
+    void testRunStarting(Catch::TestRunInfo const&) override
+    {
 		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 		if(!VulkanInit())
@@ -67,7 +69,8 @@ public:
 		g_rng.seed(0);
 	}
 
-    void testRunEnded(Catch::TestRunStats const& testRunStats) override {
+    void testRunEnded(Catch::TestRunStats const& testRunStats) override
+    {
 		ScopehalStaticCleanup();
 	}
 };

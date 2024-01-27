@@ -48,11 +48,13 @@ minstd_rand g_rng;
 MockOscilloscope* g_scope;
 
 // Global initialization
-class testRunListener : public Catch::EventListenerBase {
+class testRunListener : public Catch::EventListenerBase
+{
 public:
     using Catch::EventListenerBase::EventListenerBase;
 
-    void testRunStarting(Catch::TestRunInfo const&) override {
+    void testRunStarting(Catch::TestRunInfo const&) override
+    {
 		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 		if(!VulkanInit())
@@ -83,7 +85,8 @@ public:
 	}
 
 	//Clean up after the scope goes out of scope (pun not intended)
-	void testRunEnded(Catch::TestRunStats const& testRunStats) override {
+	void testRunEnded(Catch::TestRunStats const& testRunStats) override
+	{
 		delete g_scope;
 		ScopehalStaticCleanup();
 	}
