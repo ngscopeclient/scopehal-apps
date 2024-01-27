@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -62,6 +62,149 @@ PacketManager::~PacketManager()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Waveform data processing
+
+void PacketManager::RefreshRows()
+{
+	LogTrace("Refreshing rows\n");
+	LogIndenter li;
+
+	//Clear all existing row state
+	m_rows.clear();
+
+	lock_guard<mutex> lock(m_mutex);
+
+	//Make a list of waveform timestamps and make sure we display them in order
+	vector<TimePoint> times;
+	for(auto& it : m_filteredPackets)
+		times.push_back(it.first);
+	std::sort(times.begin(), times.end());
+
+	//Process packets from each waveform
+	for(auto wavetime : times)
+	{
+		auto& wpackets = m_filteredPackets[wavetime];
+		for(auto pack : wpackets)
+		{
+			//See if we have child packets
+			auto children = m_filteredChildPackets[pack];
+			bool hasChildren = !children.empty();
+
+			//Add an entry for the top level
+
+			/*
+			//Timestamp (and row selection logic)
+			ImGui::TableSetColumnIndex(0);
+			bool open = false;
+			if(hasChildren)
+			{
+				open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+				if(open)
+					ImGui::TreePop();
+				ImGui::SameLine();
+			}
+			bool rowIsSelected = (m_selectedPacket == pack);
+			TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
+			if(ImGui::Selectable(
+				packtime.PrettyPrint().c_str(),
+				rowIsSelected,
+				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+				ImVec2(0, 0)))
+			{
+				m_selectedPacket = pack;
+				rowIsSelected = true;
+
+				//See if a new waveform was selected
+				if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
+					m_waveformChanged = true;
+				m_lastSelectedWaveform = wavetime;
+
+				m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
+
+			}
+
+			//Update scroll position if requested
+			if(rowIsSelected && m_needToScrollToSelectedPacket)
+			{
+				m_needToScrollToSelectedPacket = false;
+				ImGui::SetScrollHereY();
+			}
+
+			//Headers
+			for(size_t i=0; i<cols.size(); i++)
+			{
+				if(ImGui::TableSetColumnIndex(i+1))
+					ImGui::TextUnformatted(pack->m_headers[cols[i]].c_str());
+			}
+
+			//Data column
+			if(m_filter->GetShowDataColumn())
+				DoDataColumn(datacol, pack, dataFont);
+
+			//Child nodes for merged packets
+			if(open)
+			{
+				ImGui::TreePush("##tree");
+
+				for(auto child : children)
+				{
+					//Instead of using packet pointer as identifier (can change if filter graph re-runs for
+					//unrelated reasons), use timestamp instead.
+					ImGui::PushID(child->m_offset);
+
+					ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+					//Set up colors for the packet
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(child->m_displayBackgroundColor));
+					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(child->m_displayForegroundColor));
+
+					bool childIsSelected = (m_selectedPacket == child);
+
+					ImGui::TableSetColumnIndex(0);
+					TimePoint ctime(wavetime.GetSec(), wavetime.GetFs() + child->m_offset);
+					if(ImGui::Selectable(
+						ctime.PrettyPrint().c_str(),
+						childIsSelected,
+						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+						ImVec2(0, 0)))
+					{
+						m_selectedPacket = child;
+						childIsSelected = true;
+
+						//See if a new waveform was selected
+						if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
+							m_waveformChanged = true;
+						m_lastSelectedWaveform = wavetime;
+
+						m_parent.NavigateToTimestamp(child->m_offset, child->m_len, StreamDescriptor(m_filter, 0));
+					}
+
+					//Update scroll position if requested
+					if(rowIsSelected && m_needToScrollToSelectedPacket)
+					{
+						m_needToScrollToSelectedPacket = false;
+						ImGui::SetScrollHereY();
+					}
+
+					//Headers
+					for(size_t i=0; i<cols.size(); i++)
+					{
+						if(ImGui::TableSetColumnIndex(i+1))
+							ImGui::TextUnformatted(child->m_headers[cols[i]].c_str());
+					}
+
+					//Data column
+					if(m_filter->GetShowDataColumn())
+						DoDataColumn(datacol, child, dataFont);
+
+					ImGui::PopStyleColor();
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+			*/
+		}
+	}
+}
 
 /**
 	@brief Handle newly arrived waveform data (may be a change to parameters or a freshly arrived waveform)
@@ -155,6 +298,10 @@ void PacketManager::FilterPackets()
 	{
 		m_filteredPackets = m_packets;
 		m_filteredChildPackets = m_childPackets;
+
+		//but still refresh the set of rows being displayed
+		RefreshRows();
+
 		return;
 	}
 
@@ -194,6 +341,9 @@ void PacketManager::FilterPackets()
 			}
 		}
 	}
+
+	//Refresh the set of rows being displayed
+	RefreshRows();
 }
 
 /**

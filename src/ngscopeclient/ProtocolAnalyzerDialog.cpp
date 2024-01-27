@@ -123,33 +123,25 @@ bool ProtocolAnalyzerDialog::DoRender()
 	ImGui::SetNextItemWidth(boxwidth - ImGui::CalcTextSize("Filter").x - ImGui::GetStyle().ItemSpacing.x);
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, bgcolor);
 	ImGui::InputText("Filter", &m_filterExpression);
+	bool updated = !ImGui::IsItemActive();
 	bool filterDirty = (m_committedFilterExpression != m_filterExpression);
 	ImGui::PopStyleColor();
-	if(!ImGui::IsItemActive() && filterDirty)
-	{
-		m_committedFilterExpression = m_filterExpression;
-
-		//No filter expression? Nothing to do
-		if(m_filterExpression == "")
-			m_mgr->SetDisplayFilter(nullptr);
-
-		else
-		{
-			//Parse the expression. Apply only if valid
-			//If not valid, keep old filter active
-			ifilter = 0;
-			auto pfilter = make_shared<ProtocolDisplayFilter>(m_filterExpression, ifilter);
-			if(pfilter->Validate(cols))
-				m_mgr->SetDisplayFilter(pfilter);
-		}
-	}
 
 	//Output format for data column
+	//If this is changed force a refresh
+	bool forceRefresh = false;
 	if(m_filter->GetShowDataColumn())
 	{
 		ImGui::SetNextItemWidth(10 * width);
-		ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0");
+		if(ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0"))
+			forceRefresh = true;
 	}
+
+	//TODO: refresh after detecting columns resized, or is that not necessary?
+	//TODO: refresh after detecting tree node expanded/shrunk
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// culling redo start
 
 	m_firstDataBlockOfFrame = true;
 	if(ImGui::BeginTable("table", ncols, flags))
@@ -208,6 +200,14 @@ bool ProtocolAnalyzerDialog::DoRender()
 				if(hasChildren)
 				{
 					open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+
+					if(m_lastChildOpen[pack] != open)
+					{
+						m_lastChildOpen[pack] = open;
+						LogTrace("tree node opened or closed, forcing refresh\n");
+						forceRefresh = true;
+					}
+
 					if(open)
 						ImGui::TreePop();
 					ImGui::SameLine();
@@ -248,7 +248,10 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 				//Data column
 				if(m_filter->GetShowDataColumn())
-					DoDataColumn(datacol, pack, dataFont);
+				{
+					if(DoDataColumn(datacol, pack, dataFont))
+						forceRefresh = true;
+				}
 
 				//Child nodes for merged packets
 				if(open)
@@ -304,7 +307,10 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 						//Data column
 						if(m_filter->GetShowDataColumn())
-							DoDataColumn(datacol, child, dataFont);
+						{
+							if(DoDataColumn(datacol, child, dataFont))
+								forceRefresh = true;
+						}
 
 						ImGui::PopStyleColor();
 						ImGui::PopID();
@@ -322,14 +328,44 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 		ImGui::EndTable();
 	}
+
+	//culling redo end
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//Apply filter expressions
+	if( (updated && filterDirty) || forceRefresh)
+	{
+		if(!forceRefresh)
+			m_committedFilterExpression = m_filterExpression;
+
+		//No filter expression? Nothing to do
+		if(m_filterExpression == "")
+			m_mgr->SetDisplayFilter(nullptr);
+		else
+		{
+			//Parse the expression. Apply only if valid
+			//If not valid, keep old filter active
+			ifilter = 0;
+			auto pfilter = make_shared<ProtocolDisplayFilter>(m_filterExpression, ifilter);
+			if(pfilter->Validate(cols))
+				m_mgr->SetDisplayFilter(pfilter);
+		}
+
+		//TODO: remove entries in m_lastChildOpen and m_lastDataOpen for anything we don't have anymore
+	}
+
 	return true;
 }
 
 /**
 	@brief Handles the "data" column for packets
+
+	@return true if we need to refresh cached row heights because we opened/closed a tree
  */
-void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dataFont)
+bool ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dataFont)
 {
+	bool forceRefresh = false;
+
 	if(ImGui::TableSetColumnIndex(datacol))
 	{
 		//When drawing the first cell, figure out dimensions for subsequent stuff
@@ -370,7 +406,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			}
 
 			if(m_bytesPerLine <= 0)
-				return;
+				return forceRefresh;
 		}
 
 		string firstLine;
@@ -389,6 +425,14 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 			if(bytes.size() > m_bytesPerLine)
 			{
 				open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
+
+				if(m_lastDataOpen[pack] != open)
+				{
+					m_lastDataOpen[pack] = open;
+					LogTrace("data node opened or closed, forcing refresh\n");
+					forceRefresh = true;
+				}
+
 				ImGui::SameLine();
 			}
 		}
@@ -492,6 +536,8 @@ void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dat
 		ImGui::PopFont();
 		m_firstDataBlockOfFrame = false;
 	}
+
+	return forceRefresh;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
