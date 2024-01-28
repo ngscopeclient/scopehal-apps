@@ -239,6 +239,9 @@ void main()
 	if(gl_LocalInvocationID.y == 0)
 		g_done = false;
 
+	barrier();
+	memoryBarrierShared();
+
 	#ifdef DENSE_PACK
 		uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
 		uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
