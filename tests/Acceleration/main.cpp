@@ -38,6 +38,7 @@
 #include <catch2/catch_all.hpp>
 #else
 #include <catch2/catch.hpp>
+#define EventListenerBase TestEventListenerBase
 #endif
 #include "Acceleration.h"
 
@@ -45,24 +46,37 @@ using namespace std;
 
 mt19937 g_rng;
 
+class testRunListener : public Catch::EventListenerBase
+{
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+	// Global initialization
+    void testRunStarting(Catch::TestRunInfo const&) override
+    {
+		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+
+		if(!VulkanInit(true))
+			exit(1);
+		TransportStaticInit();
+		DriverStaticInit();
+		InitializePlugins();
+
+		//Initialize the RNG
+		g_rng.seed(0);
+	}
+
+	//Clean up after the scope goes out of scope (pun not intended)
+    void testRunEnded(Catch::TestRunStats const& testRunStats) override
+    {
+		ScopehalStaticCleanup();
+	}
+};
+CATCH_REGISTER_LISTENER(testRunListener)
+
+
 int main(int argc, char* argv[])
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
-
-	//Global scopehal initialization
-	if(!VulkanInit())
-		return 1;
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-
-	//Initialize the RNG
-	g_rng.seed(0);
-
 	//Run the actual test
-	int ret = Catch::Session().run(argc, argv);
-
-	//Clean up and return test results
-	ScopehalStaticCleanup();
-	return ret;
+	return Catch::Session().run(argc, argv);
 }

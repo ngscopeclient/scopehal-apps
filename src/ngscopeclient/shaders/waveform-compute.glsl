@@ -236,21 +236,26 @@ void main()
 	}
 
 	//Setup for main loop
+	bool l_done = false;
+
 	if(gl_LocalInvocationID.y == 0)
 		g_done = false;
+
+	barrier();
+	memoryBarrierShared();
 
 	#ifdef DENSE_PACK
 		uint istart = uint(floor(gl_GlobalInvocationID.x / xscale)) + offset_samples;
 		uint iend = uint(floor((gl_GlobalInvocationID.x + 1) / xscale)) + offset_samples;
 		if(iend <= 0)
-			g_done = true;
+			l_done = true;
 	#else
 		uint istart = xind[gl_GlobalInvocationID.x];
 		if( (gl_GlobalInvocationID.x + 1) < windowWidth)
 		{
 			uint iend = xind[gl_GlobalInvocationID.x + 1];
 			if(iend <= 0)
-				g_done = true;
+				l_done = true;
 		}
 	#endif
 	uint i = istart + gl_GlobalInvocationID.y;
@@ -369,16 +374,19 @@ void main()
 
 			//Check if we're at the end of the pixel
 			if(right.x > gl_GlobalInvocationID.x + 1)
-				g_done = true;
+				l_done = true;
 		}
 
 		else
 		{
-			g_done = true;
+			l_done = true;
 			g_updating[gl_LocalInvocationID.y] = false;
 		}
 
 		i += ROWS_PER_BLOCK;
+
+		if (l_done)
+			g_done = true;
 
 		//Only update if we need to
 		for(int y = 0; y<ROWS_PER_BLOCK; y++)

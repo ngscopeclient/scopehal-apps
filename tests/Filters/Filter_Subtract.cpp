@@ -51,7 +51,7 @@ void SubtractCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, Uniform
 TEST_CASE("Filter_Subtract")
 {
 	auto filter = dynamic_cast<SubtractFilter*>(Filter::CreateFilter("Subtract", "#ffffff"));
-	REQUIRE(filter != NULL);
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	//Create a queue and command buffer

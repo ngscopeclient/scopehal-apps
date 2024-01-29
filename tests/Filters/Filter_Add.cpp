@@ -51,7 +51,7 @@ void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalo
 TEST_CASE("Filter_Add")
 {
 	auto filter = dynamic_cast<AddFilter*>(Filter::CreateFilter("Add", "#ffffff"));
-	REQUIRE(filter != NULL);
+	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
 	//Create a queue and command buffer

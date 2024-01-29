@@ -96,12 +96,13 @@ jobs:
         make -j 32
 
     - name: Run Tests
-      if: ${{ false }} # Temporary disable Run Tests
+      if: ${{ true }} # Temporary re-enabled Run Tests
       run: |
         cd build
         make test
 
     - name: Upload Artifacts
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: ngscopeclient-linux
@@ -117,6 +118,13 @@ jobs:
       with:
         name: ngscopeclient-manual
         path: build/doc/ngscopeclient-manual.pdf
+
+    - name: Upload Test Log
+      if: ${{ always() }} 
+      uses: actions/upload-artifact@v3
+      with:
+        name: ngscopeclient-test_log
+        path: build/Testing/Temporary/LastTest.log
 
   cycle-debian-vm:
     runs-on: [self-hosted, orchestrator]

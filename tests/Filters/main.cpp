@@ -38,6 +38,7 @@
 #include <catch2/catch_all.hpp>
 #else
 #include <catch2/catch.hpp>
+#define EventListenerBase TestEventListenerBase
 #endif
 #include "Filters.h"
 
@@ -46,45 +47,55 @@ using namespace std;
 minstd_rand g_rng;
 MockOscilloscope* g_scope;
 
-int main(int argc, char* argv[])
+// Global initialization
+class testRunListener : public Catch::EventListenerBase
 {
-	g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
+public:
+    using Catch::EventListenerBase::EventListenerBase;
 
-	//Global scopehal initialization
-	VulkanInit();
-	TransportStaticInit();
-	DriverStaticInit();
-	InitializePlugins();
-	ScopeProtocolStaticInit();
+    void testRunStarting(Catch::TestRunInfo const&) override
+    {
+		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
-	//Add search path
-	g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
+		if(!VulkanInit(true))
+			exit(1);
+		TransportStaticInit();
+		DriverStaticInit();
+		InitializePlugins();
+		ScopeProtocolStaticInit();
 
-	//Initialize the RNG
-	g_rng.seed(0);
+		//Add search path
+		g_searchPaths.push_back(GetDirOfCurrentExecutable() + "/../../src/ngscopeclient/");
 
-	int ret;
-	{
+		//Initialize the RNG
+		g_rng.seed(0);
+
 		//Create some fake scope channels
-		MockOscilloscope scope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		g_scope = new MockOscilloscope("Test Scope", "Antikernel Labs", "12345", "null", "mock", "");
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "CH1", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "CH2", "#ffffffff", Unit(Unit::UNIT_FS), Unit(Unit::UNIT_VOLTS)));
 
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
-		scope.AddChannel(new OscilloscopeChannel(
-			&scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
-		g_scope = &scope;
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "Mag", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DB)));
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
 
-		//Run the actual test
-		ret = Catch::Session().run(argc, argv);
 	}
 
-	//Clean up and return after the scope goes out of scope (pun not intended)
-	ScopehalStaticCleanup();
-	return ret;
+	//Clean up after the scope goes out of scope (pun not intended)
+	void testRunEnded(Catch::TestRunStats const& testRunStats) override
+	{
+		delete g_scope;
+		ScopehalStaticCleanup();
+	}
+};
+CATCH_REGISTER_LISTENER(testRunListener)
+
+int main(int argc, char* argv[])
+{
+	return Catch::Session().run(argc, argv);
 }
 
 /**
