@@ -51,6 +51,13 @@ public:
 	, m_packet(nullptr)
 	{}
 
+	RowData(TimePoint t, Packet* p)
+	: m_height(0)
+	, m_totalHeight(0)
+	, m_stamp(t)
+	, m_packet(p)
+	{}
+
 	///@brief Height of this row
 	double m_height;
 
@@ -158,6 +165,15 @@ public:
 
 	void FilterPackets();
 
+	bool IsChildOpen(Packet* pack)
+	{ return m_lastChildOpen[pack]; }
+
+	void SetChildOpen(Packet* pack, bool open)
+	{ m_lastChildOpen[pack] = open; }
+
+	std::vector<RowData>& GetRows()
+	{ return m_rows; }
+
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);
 
@@ -190,6 +206,9 @@ protected:
 
 	///@brief The set of rows that are to be displayed, based on current tree expansion and filter state
 	std::vector<RowData> m_rows;
+
+	///@brief Map of packets to child-open flags from last frame
+	std::map<Packet*, bool> m_lastChildOpen;
 };
 
 #endif

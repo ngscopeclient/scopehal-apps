@@ -68,10 +68,10 @@ void PacketManager::RefreshRows()
 	LogTrace("Refreshing rows\n");
 	LogIndenter li;
 
+	lock_guard<mutex> lock(m_mutex);
+
 	//Clear all existing row state
 	m_rows.clear();
-
-	lock_guard<mutex> lock(m_mutex);
 
 	//Make a list of waveform timestamps and make sure we display them in order
 	vector<TimePoint> times;
@@ -80,6 +80,9 @@ void PacketManager::RefreshRows()
 	std::sort(times.begin(), times.end());
 
 	//Process packets from each waveform
+	double totalHeight = 0;
+	double lineheight = ImGui::CalcTextSize("dummy text").y;
+	double padding = ImGui::GetStyle().CellPadding.y;
 	for(auto wavetime : times)
 	{
 		auto& wpackets = m_filteredPackets[wavetime];
@@ -87,121 +90,49 @@ void PacketManager::RefreshRows()
 		{
 			//See if we have child packets
 			auto children = m_filteredChildPackets[pack];
-			bool hasChildren = !children.empty();
 
 			//Add an entry for the top level
+			RowData dat(wavetime, pack);
 
-			/*
-			//Timestamp (and row selection logic)
-			ImGui::TableSetColumnIndex(0);
-			bool open = false;
-			if(hasChildren)
+			//Calculate row height
+			double height = padding*2 + lineheight;
+
+			//TODO: add extra height for expanded data fields
+			//if(m_filter->GetShowDataColumn())
+			//	DoDataColumn(datacol, pack, dataFont);
+
+			//Integrate heights
+			dat.m_height = height;
+			totalHeight += height;
+			dat.m_totalHeight = totalHeight;
+			LogTrace("Top level row %zu has height %.0f pix, cum %.0f pix\n", m_rows.size() + 1, height, totalHeight);
+
+			//Save this row
+			m_rows.push_back(dat);
+
+			if(IsChildOpen(pack))
 			{
-				open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
-				if(open)
-					ImGui::TreePop();
-				ImGui::SameLine();
-			}
-			bool rowIsSelected = (m_selectedPacket == pack);
-			TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
-			if(ImGui::Selectable(
-				packtime.PrettyPrint().c_str(),
-				rowIsSelected,
-				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-				ImVec2(0, 0)))
-			{
-				m_selectedPacket = pack;
-				rowIsSelected = true;
-
-				//See if a new waveform was selected
-				if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
-					m_waveformChanged = true;
-				m_lastSelectedWaveform = wavetime;
-
-				m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
-
-			}
-
-			//Update scroll position if requested
-			if(rowIsSelected && m_needToScrollToSelectedPacket)
-			{
-				m_needToScrollToSelectedPacket = false;
-				ImGui::SetScrollHereY();
-			}
-
-			//Headers
-			for(size_t i=0; i<cols.size(); i++)
-			{
-				if(ImGui::TableSetColumnIndex(i+1))
-					ImGui::TextUnformatted(pack->m_headers[cols[i]].c_str());
-			}
-
-			//Data column
-			if(m_filter->GetShowDataColumn())
-				DoDataColumn(datacol, pack, dataFont);
-
-			//Child nodes for merged packets
-			if(open)
-			{
-				ImGui::TreePush("##tree");
-
+				LogDebug("children of packet are open\n");
 				for(auto child : children)
 				{
-					//Instead of using packet pointer as identifier (can change if filter graph re-runs for
-					//unrelated reasons), use timestamp instead.
-					ImGui::PushID(child->m_offset);
+					//Add an entry for the top level
+					RowData cdat(wavetime, child);
 
-					ImGui::TableNextRow(ImGuiTableRowFlags_None);
+					//Calculate row height
+					height = padding*2 + lineheight;
 
-					//Set up colors for the packet
-					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(child->m_displayBackgroundColor));
-					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(child->m_displayForegroundColor));
+					//TODO: add extra height for expanded data fields
 
-					bool childIsSelected = (m_selectedPacket == child);
+					//Integrate heights
+					cdat.m_height = height;
+					totalHeight += height;
+					cdat.m_totalHeight = totalHeight;
+					LogTrace("Child row %zu has height %.0f pix, cum %.0f pix\n", m_rows.size() + 1, height, totalHeight);
 
-					ImGui::TableSetColumnIndex(0);
-					TimePoint ctime(wavetime.GetSec(), wavetime.GetFs() + child->m_offset);
-					if(ImGui::Selectable(
-						ctime.PrettyPrint().c_str(),
-						childIsSelected,
-						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-						ImVec2(0, 0)))
-					{
-						m_selectedPacket = child;
-						childIsSelected = true;
-
-						//See if a new waveform was selected
-						if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
-							m_waveformChanged = true;
-						m_lastSelectedWaveform = wavetime;
-
-						m_parent.NavigateToTimestamp(child->m_offset, child->m_len, StreamDescriptor(m_filter, 0));
-					}
-
-					//Update scroll position if requested
-					if(rowIsSelected && m_needToScrollToSelectedPacket)
-					{
-						m_needToScrollToSelectedPacket = false;
-						ImGui::SetScrollHereY();
-					}
-
-					//Headers
-					for(size_t i=0; i<cols.size(); i++)
-					{
-						if(ImGui::TableSetColumnIndex(i+1))
-							ImGui::TextUnformatted(child->m_headers[cols[i]].c_str());
-					}
-
-					//Data column
-					if(m_filter->GetShowDataColumn())
-						DoDataColumn(datacol, child, dataFont);
-
-					ImGui::PopStyleColor();
-					ImGui::PopID();
+					//Save this row
+					m_rows.push_back(cdat);
 				}
-				ImGui::TreePop();
 			}
-			*/
 		}
 	}
 }
@@ -221,6 +152,9 @@ void PacketManager::Update()
 	WaveformCacheKey key(data);
 	if(key == m_cachekey)
 		return;
+
+	LogTrace("Updating\n");
+	LogIndenter li;
 
 	//If we get here, waveform changed. Update cache key
 	m_cachekey = key;
@@ -373,6 +307,7 @@ void PacketManager::RemoveChildHistoryFrom(Packet* pack)
 		delete p;
 	m_childPackets.erase(pack);
 	m_filteredChildPackets.erase(pack);
+	m_lastChildOpen.erase(pack);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -475,7 +410,7 @@ bool ProtocolDisplayFilter::Match(const Packet* pack)
 		return Evaluate(pack) != "0";
 }
 
-std::string ProtocolDisplayFilter::Evaluate(const Packet* pack)
+string ProtocolDisplayFilter::Evaluate(const Packet* pack)
 {
 	//Calling code checks for validity so no need to verify here
 
