@@ -392,7 +392,7 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
 
 	If no eye patterns are visible, returns a null stream.
  */
-StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
+StreamDescriptor WaveformArea::GetFirstEyeStream()
 {
 	for(auto chan : m_displayedChannels)
 	{
@@ -409,7 +409,7 @@ StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
 
 	If none are visible, returns a null stream.
  */
-StreamDescriptor WaveformArea::GetFirstEyeStream()
+StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
 {
 	for(auto chan : m_displayedChannels)
 	{
@@ -533,6 +533,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	ImGui::PushID(to_string(iArea).c_str());
 
 	float totalHeightAvailable = floor(clientArea.y - ImGui::GetFrameHeightWithSpacing());
+	totalHeightAvailable -= 5;	//fudge factor, need to figure out root cause
 	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
 	float unspacedHeightPerArea = floor(heightPerArea - spacing);
@@ -3589,6 +3590,7 @@ void WaveformArea::OnMouseWheelPlotArea(float delta)
  */
 void WaveformArea::OnMouseWheelYAxis(float delta)
 {
+	//Cannot zoom eye patterns
 	auto stream = GetFirstEyeStream();
 	if(stream)
 		return;
