@@ -36,12 +36,14 @@
 #ifndef Preference_h
 #define Preference_h
 
+#include <algorithm>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <type_traits>
 #include <cstdint>
 #include <set>
+#include <vector>
 
 #include <imgui.h>
 

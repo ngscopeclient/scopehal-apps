@@ -35,6 +35,8 @@
 #ifndef FontManager_h
 #define FontManager_h
 
+#include <map>
+
 class PreferenceCategory;
 
 //pair of (font file, size)
