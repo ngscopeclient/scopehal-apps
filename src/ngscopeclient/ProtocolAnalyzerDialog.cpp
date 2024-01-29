@@ -249,7 +249,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 				}
 
-				//Update scroll position if requested
+				//Update scroll position if requested (only works if selected packet passes filter and is on screen)
 				if(rowIsSelected && m_needToScrollToSelectedPacket)
 				{
 					m_needToScrollToSelectedPacket = false;
@@ -285,6 +285,21 @@ bool ProtocolAnalyzerDialog::DoRender()
 				ImGui::PopID();
 				ImGui::PopID();
 			}
+		}
+
+		if(m_needToScrollToSelectedPacket)
+		{
+			//Go through our visible rows to find the closest packet
+			//(may not be the selected one we're just trying to scroll to that general area)
+			const auto sit = std::lower_bound(
+				rows.begin(),
+				rows.end(),
+				m_selectedPacket->m_offset,
+				[](const RowData& data, double f) { return f > data.m_packet->m_offset; });
+			auto& row = *sit;
+			ImGui::SetScrollY(row.m_totalHeight);
+
+			m_needToScrollToSelectedPacket = false;
 		}
 
 		ImGui::EndTable();
