@@ -91,7 +91,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 	float width = ImGui::GetFontSize();
 
 	auto cols = m_filter->GetHeaders();
-	//TODO: hide certain headers like length and ascii?
 
 	//Figure out channel setup
 	//Default is timestamp plus all headers, add optional other channels as needed
@@ -123,37 +122,28 @@ bool ProtocolAnalyzerDialog::DoRender()
 	ImGui::SetNextItemWidth(boxwidth - ImGui::CalcTextSize("Filter").x - ImGui::GetStyle().ItemSpacing.x);
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, bgcolor);
 	ImGui::InputText("Filter", &m_filterExpression);
+	bool updated = !ImGui::IsItemActive();
 	bool filterDirty = (m_committedFilterExpression != m_filterExpression);
 	ImGui::PopStyleColor();
-	if(!ImGui::IsItemActive() && filterDirty)
-	{
-		m_committedFilterExpression = m_filterExpression;
-
-		//No filter expression? Nothing to do
-		if(m_filterExpression == "")
-			m_mgr->SetDisplayFilter(nullptr);
-
-		else
-		{
-			//Parse the expression. Apply only if valid
-			//If not valid, keep old filter active
-			ifilter = 0;
-			auto pfilter = make_shared<ProtocolDisplayFilter>(m_filterExpression, ifilter);
-			if(pfilter->Validate(cols))
-				m_mgr->SetDisplayFilter(pfilter);
-		}
-	}
 
 	//Output format for data column
+	//If this is changed force a refresh
+	bool forceRefresh = false;
 	if(m_filter->GetShowDataColumn())
 	{
 		ImGui::SetNextItemWidth(10 * width);
-		ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0");
+		if(ImGui::Combo("Data Format", (int*)&m_dataFormat, "Hex\0ASCII\0Hexdump\0"))
+			forceRefresh = true;
 	}
 
 	m_firstDataBlockOfFrame = true;
 	if(ImGui::BeginTable("table", ncols, flags))
 	{
+		//Do an update cycle to make sure any recently acquired packets are captured
+		m_mgr->Update();
+
+		lock_guard lock(m_mgr->GetMutex());
+
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
 		for(auto c : cols)
@@ -164,28 +154,42 @@ bool ProtocolAnalyzerDialog::DoRender()
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
 
-		//Do an update cycle to make sure any recently acquired packets are captured
-		m_mgr->Update();
+		auto& rows = m_mgr->GetRows();
 
-		lock_guard lock(m_mgr->GetMutex());
-		auto packets = m_mgr->GetFilteredPackets();
+		ImGuiListClipper clipper;
+		clipper.Begin((int)rows.back().m_totalHeight, 1.0f);
 
-		//Make a list of waveform timestamps and make sure we display them in order
-		vector<TimePoint> times;
-		for(auto& it : packets)
-			times.push_back(it.first);
-		std::sort(times.begin(), times.end());
+		//see https://github.com/ocornut/imgui/issues/6042
+		// hacky way to disable clipper.Step() submitting a range for an offscreen row that has focus
+		ImGuiContext& g = *ImGui::GetCurrentContext();
+		ImGuiID navId = g.NavId;
+		g.NavId = 0;
 
-		//Process packets from each waveform
-		for(auto wavetime : times)
+		//TODO: add some kind of marker to indicate gaps between waveforms (if we have >1)?
+		//(need to make sure this works with culling etc)
+
+		//Go through the rows and render them, culling anything offscreen
+		while(clipper.Step())
 		{
-			//TODO: add some kind of marker to indicate gaps between waveforms (if we have >1)?
-			ImGui::PushID(wavetime.first);
-			ImGui::PushID(wavetime.second);
+			double minY = (double)clipper.DisplayStart;
+			double maxY = (double)clipper.DisplayEnd;
 
-			auto& wpackets = packets[wavetime];
-			for(auto pack : wpackets)
+			const auto sit = std::lower_bound(
+				rows.begin(),
+				rows.end(),
+				minY,
+				[](const RowData& data, double f) { return f > data.m_totalHeight; });
+			size_t istart = sit - rows.begin();
+
+			for (size_t i = istart; i < rows.size() && (!i || maxY > rows[i - 1].m_totalHeight); i++)
 			{
+				auto& row = rows[i];
+
+				ImGui::PushID(row.m_stamp.first);
+				ImGui::PushID(row.m_stamp.second);
+
+				//Make sure we have the packed colors cached
+				auto pack = row.m_packet;
 				pack->RefreshColors();
 
 				//Instead of using packet pointer as identifier (can change if filter graph re-runs for
@@ -202,18 +206,31 @@ bool ProtocolAnalyzerDialog::DoRender()
 				auto children = m_mgr->GetFilteredChildPackets(pack);
 				bool hasChildren = !children.empty();
 
+				float rowStart = rows[i].m_totalHeight - rows[i].m_height;
+				bool firstRow = (i == istart);
+
 				//Timestamp (and row selection logic)
 				ImGui::TableSetColumnIndex(0);
+				if(firstRow)
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 				bool open = false;
 				if(hasChildren)
 				{
 					open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_OpenOnArrow);
+
+					if(m_mgr->IsChildOpen(pack) != open)
+					{
+						m_mgr->SetChildOpen(pack, open);
+						LogTrace("tree node opened or closed, forcing refresh\n");
+						forceRefresh = true;
+					}
+
 					if(open)
 						ImGui::TreePop();
 					ImGui::SameLine();
 				}
 				bool rowIsSelected = (m_selectedPacket == pack);
-				TimePoint packtime(wavetime.GetSec(), wavetime.GetFs() + pack->m_offset);
+				TimePoint packtime(row.m_stamp.GetSec(), row.m_stamp.GetFs() + pack->m_offset);
 				if(ImGui::Selectable(
 					packtime.PrettyPrint().c_str(),
 					rowIsSelected,
@@ -224,9 +241,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 					rowIsSelected = true;
 
 					//See if a new waveform was selected
-					if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
+					if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != row.m_stamp) )
 						m_waveformChanged = true;
-					m_lastSelectedWaveform = wavetime;
+					m_lastSelectedWaveform = row.m_stamp;
 
 					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
 
@@ -240,257 +257,244 @@ bool ProtocolAnalyzerDialog::DoRender()
 				}
 
 				//Headers
-				for(size_t i=0; i<cols.size(); i++)
+				for(size_t j=0; j<cols.size(); j++)
 				{
-					if(ImGui::TableSetColumnIndex(i+1))
-						ImGui::TextUnformatted(pack->m_headers[cols[i]].c_str());
+					if(ImGui::TableSetColumnIndex(j+1))
+					{
+						if(firstRow)
+							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+
+						ImGui::TextUnformatted(pack->m_headers[cols[j]].c_str());
+					}
 				}
 
 				//Data column
 				if(m_filter->GetShowDataColumn())
-					DoDataColumn(datacol, pack, dataFont);
-
-				//Child nodes for merged packets
-				if(open)
 				{
-					ImGui::TreePush("##tree");
-
-					for(auto child : children)
+					if(ImGui::TableSetColumnIndex(datacol))
 					{
-						//Instead of using packet pointer as identifier (can change if filter graph re-runs for
-						//unrelated reasons), use timestamp instead.
-						ImGui::PushID(child->m_offset);
+						if(firstRow)
+							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-						ImGui::TableNextRow(ImGuiTableRowFlags_None);
-
-						//Set up colors for the packet
-						ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ColorFromString(child->m_displayBackgroundColor));
-						ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(child->m_displayForegroundColor));
-
-						bool childIsSelected = (m_selectedPacket == child);
-
-						ImGui::TableSetColumnIndex(0);
-						TimePoint ctime(wavetime.GetSec(), wavetime.GetFs() + child->m_offset);
-						if(ImGui::Selectable(
-							ctime.PrettyPrint().c_str(),
-							childIsSelected,
-							ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
-							ImVec2(0, 0)))
-						{
-							m_selectedPacket = child;
-							childIsSelected = true;
-
-							//See if a new waveform was selected
-							if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != wavetime) )
-								m_waveformChanged = true;
-							m_lastSelectedWaveform = wavetime;
-
-							m_parent.NavigateToTimestamp(child->m_offset, child->m_len, StreamDescriptor(m_filter, 0));
-						}
-
-						//Update scroll position if requested
-						if(rowIsSelected && m_needToScrollToSelectedPacket)
-						{
-							m_needToScrollToSelectedPacket = false;
-							ImGui::SetScrollHereY();
-						}
-
-						//Headers
-						for(size_t i=0; i<cols.size(); i++)
-						{
-							if(ImGui::TableSetColumnIndex(i+1))
-								ImGui::TextUnformatted(child->m_headers[cols[i]].c_str());
-						}
-
-						//Data column
-						if(m_filter->GetShowDataColumn())
-							DoDataColumn(datacol, child, dataFont);
-
-						ImGui::PopStyleColor();
-						ImGui::PopID();
+						DoDataColumn(pack, dataFont, rows, i);
 					}
-					ImGui::TreePop();
 				}
 
 				ImGui::PopStyleColor();
 				ImGui::PopID();
+				ImGui::PopID();
+				ImGui::PopID();
 			}
-
-			ImGui::PopID();
-			ImGui::PopID();
 		}
 
 		ImGui::EndTable();
+
+		g.NavId = navId;
 	}
+
+	//Apply filter expressions
+	if( (updated && filterDirty) || forceRefresh)
+	{
+		if(!forceRefresh)
+			m_committedFilterExpression = m_filterExpression;
+
+		//No filter expression? Nothing to do
+		if(m_filterExpression == "")
+			m_mgr->SetDisplayFilter(nullptr);
+		else
+		{
+			//Parse the expression. Apply only if valid
+			//If not valid, keep old filter active
+			ifilter = 0;
+			auto pfilter = make_shared<ProtocolDisplayFilter>(m_filterExpression, ifilter);
+			if(pfilter->Validate(cols))
+				m_mgr->SetDisplayFilter(pfilter);
+		}
+	}
+
 	return true;
 }
 
 /**
 	@brief Handles the "data" column for packets
  */
-void ProtocolAnalyzerDialog::DoDataColumn(int datacol, Packet* pack, ImFont* dataFont)
+void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector<RowData>& rows, size_t nrow)
 {
-	if(ImGui::TableSetColumnIndex(datacol))
+	//When drawing the first cell, figure out dimensions for subsequent stuff
+	if(m_firstDataBlockOfFrame)
 	{
-		//When drawing the first cell, figure out dimensions for subsequent stuff
-		if(m_firstDataBlockOfFrame)
+		//Available space (after subtracting tree button)
+		auto xsize = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().IndentSpacing;
+
+		//Figure out how many characters of text we can fit in the data region
+		//This assumes data font is fixed width, may break if user chooses variable width.
+		//But hex dumps with variable width will look horrible anyway so that's probably not a problem?
+		auto fontwidth = dataFont->CalcTextSizeA(dataFont->FontSize, FLT_MAX, -1, "W").x;
+		size_t charsPerLine = floor(xsize / fontwidth);
+
+		//TODO: use 2-nibble address if packet has <256 bytes of data
+
+		//Number of characters available for displaying data (address column doesn't count)
+		size_t dataCharsPerLine = charsPerLine - 5;
+
+		switch(m_dataFormat)
 		{
-			//Available space (after subtracting tree button)
-			auto xsize = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().IndentSpacing;
+			//Ascii is trivial: data bytes map 1:1 to characters
+			case FORMAT_ASCII:
+				m_bytesPerLine = dataCharsPerLine;
+				break;
 
-			//Figure out how many characters of text we can fit in the data region
-			//This assumes data font is fixed width, may break if user chooses variable width.
-			//But hex dumps with variable width will look horrible anyway so that's probably not a problem?
-			auto fontwidth = dataFont->CalcTextSizeA(dataFont->FontSize, FLT_MAX, -1, "W").x;
-			size_t charsPerLine = floor(xsize / fontwidth);
+			//Hex needs three chars (2 hex + space)
+			//TODO: last char doesn't need the space
+			case FORMAT_HEX:
+				m_bytesPerLine = dataCharsPerLine / 3;
+				break;
 
-			//TODO: use 2-nibble address if packet has <256 bytes of data
-
-			//Number of characters available for displaying data (address column doesn't count)
-			size_t dataCharsPerLine = charsPerLine - 5;
-
-			switch(m_dataFormat)
-			{
-				//Ascii is trivial: data bytes map 1:1 to characters
-				case FORMAT_ASCII:
-					m_bytesPerLine = dataCharsPerLine;
-					break;
-
-				//Hex needs three chars (2 hex + space)
-				//TODO: last char doesn't need the space
-				case FORMAT_HEX:
-					m_bytesPerLine = dataCharsPerLine / 3;
-					break;
-
-				//Hexdump needs a fixed 3 spaces between the hex and the ascii parts.
-				//Then we need 3 for each hex and one for each ascii.
-				case FORMAT_HEXDUMP:
-					m_bytesPerLine = (dataCharsPerLine - 3) / 4;
-					break;
-			}
-
-			if(m_bytesPerLine <= 0)
-				return;
+			//Hexdump needs a fixed 3 spaces between the hex and the ascii parts.
+			//Then we need 3 for each hex and one for each ascii.
+			case FORMAT_HEXDUMP:
+				m_bytesPerLine = (dataCharsPerLine - 3) / 4;
+				break;
 		}
 
-		string firstLine;
+		if(m_bytesPerLine <= 0)
+			return;
+	}
 
-		auto& bytes = pack->m_data;
+	string firstLine;
 
-		string lineHex;
-		string lineAscii;
+	auto& bytes = pack->m_data;
 
-		//Create the tree node early - before we've even rendered any data - so we know the open / closed state
-		ImGui::PushFont(dataFont);
-		bool open = false;
-		if(!bytes.empty())
+	string lineHex;
+	string lineAscii;
+
+	//Create the tree node early - before we've even rendered any data - so we know the open / closed state
+	ImGui::PushFont(dataFont);
+	bool open = false;
+	if(!bytes.empty())
+	{
+		//If we have more than one line worth of data, show the tree
+		if(bytes.size() > m_bytesPerLine)
 		{
-			//If we have more than one line worth of data, show the tree
-			if(bytes.size() > m_bytesPerLine)
+			open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
+			ImGui::SameLine();
+		}
+	}
+
+	//Format the data
+	string data;
+	char tmp[32];
+	for(size_t i=0; i<bytes.size(); i++)
+	{
+		//Address block
+		if( (i % m_bytesPerLine) == 0)
+		{
+			//Is this the first block of an open tree view? Show address
+			if(open)
 			{
-				open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
-				ImGui::SameLine();
+				snprintf(tmp, sizeof(tmp), "%04zx ", i);
+				data += tmp;
 			}
+
+			//Tree closed or single line: don't show the 0000 which can be confused with data
+			else
+				data += "     ";
 		}
 
-		//Format the data
-		string data;
-		char tmp[32];
-		for(size_t i=0; i<bytes.size(); i++)
+		switch(m_dataFormat)
 		{
-			//Address block
-			if( (i % m_bytesPerLine) == 0)
-			{
-				//Is this the first block of an open tree view? Show address
-				if(open)
-				{
-					snprintf(tmp, sizeof(tmp), "%04zx ", i);
-					data += tmp;
-				}
+			case FORMAT_HEX:
+				snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
+				data += tmp;
+				break;
 
-				//Tree closed or single line: don't show the 0000 which can be confused with data
+			case FORMAT_ASCII:
+				if(isprint(bytes[i]) || (bytes[i] == ' '))
+					data += bytes[i];
 				else
-					data += "     ";
-			}
+					data += '.';
+				break;
 
-			switch(m_dataFormat)
-			{
-				case FORMAT_HEX:
-					snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
-					data += tmp;
-					break;
+			case FORMAT_HEXDUMP:
 
-				case FORMAT_ASCII:
-					if(isprint(bytes[i]) || (bytes[i] == ' '))
-						data += bytes[i];
-					else
-						data += '.';
-					break;
+				//hex dump
+				snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
+				lineHex += tmp;
 
-				case FORMAT_HEXDUMP:
-
-					//hex dump
-					snprintf(tmp, sizeof(tmp), "%02x ", bytes[i]);
-					lineHex += tmp;
-
-					//ascii
-					if(isprint(bytes[i]) || (bytes[i] == ' '))
-						lineAscii += bytes[i];
-					else
-						lineAscii += '.';
-					break;
-			}
-
-			if( (i % m_bytesPerLine) == m_bytesPerLine-1)
-			{
-				//Special processing for hex dump
-				if(m_dataFormat == FORMAT_HEXDUMP)
-				{
-					data += lineHex + "   " + lineAscii;
-					lineHex = "";
-					lineAscii = "";
-				}
-
-				if(firstLine.empty())
-				{
-					firstLine = data;
-					data = "";
-				}
+				//ascii
+				if(isprint(bytes[i]) || (bytes[i] == ' '))
+					lineAscii += bytes[i];
 				else
-					data += "\n";
-			}
+					lineAscii += '.';
+				break;
 		}
 
-		//Handle data less than one line in size
-		if(firstLine.empty() && !data.empty())
+		if( (i % m_bytesPerLine) == m_bytesPerLine-1)
 		{
-			firstLine = data;
-			data = "";
-		}
-
-		if(m_dataFormat == FORMAT_HEXDUMP)
-		{
-			//process last partial line at end
-			if(!lineHex.empty())
+			//Special processing for hex dump
+			if(m_dataFormat == FORMAT_HEXDUMP)
 			{
-				while(lineHex.length() < 3*m_bytesPerLine)
-					lineHex += ' ';
-
 				data += lineHex + "   " + lineAscii;
+				lineHex = "";
+				lineAscii = "";
 			}
+
+			if(firstLine.empty())
+			{
+				firstLine = data;
+				data = "";
+			}
+			else
+				data += "\n";
 		}
+	}
 
-		ImGui::TextUnformatted(firstLine.c_str());
+	//Handle data less than one line in size
+	if(firstLine.empty() && !data.empty())
+	{
+		firstLine = data;
+		data = "";
+	}
 
-		//Multiple lines? Only show if open
-		if(open)
+	if(m_dataFormat == FORMAT_HEXDUMP)
+	{
+		//process last partial line at end
+		if(!lineHex.empty())
 		{
-			ImGui::TextUnformatted(data.c_str());
-			ImGui::TreePop();
-		}
+			while(lineHex.length() < 3*m_bytesPerLine)
+				lineHex += ' ';
 
-		ImGui::PopFont();
-		m_firstDataBlockOfFrame = false;
+			data += lineHex + "   " + lineAscii;
+		}
+	}
+
+	ImGui::TextUnformatted(firstLine.c_str());
+
+	//Multiple lines? Only show if open
+	if(open)
+	{
+		ImGui::TextUnformatted(data.c_str());
+		ImGui::TreePop();
+	}
+
+	ImGui::PopFont();
+	m_firstDataBlockOfFrame = false;
+
+	//Recompute height of THIS cell and apply changes if we've expanded
+	double padding = ImGui::GetStyle().CellPadding.y;
+	double height = padding*2 + ImGui::CalcTextSize(firstLine.c_str()).y;
+	if(open)
+		height += ImGui::CalcTextSize(data.c_str()).y;
+	double oldheight = rows[nrow].m_height;
+	double delta = height - oldheight;
+	if(abs(delta) > 0.001)
+	{
+		//Apply the changed height
+		rows[nrow].m_height = height;
+
+		//Move every impacted row up or down as appropriate
+		for(size_t i=nrow; i<rows.size(); i++)
+			rows[i].m_totalHeight += delta;
 	}
 }
 

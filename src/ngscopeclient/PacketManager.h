@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -37,6 +37,39 @@
 
 #include "../../lib/scopehal/PacketDecoder.h"
 #include "Marker.h"
+
+/**
+	@brief Context data for a single row (used for culling)
+ */
+class RowData
+{
+public:
+	RowData()
+	: m_height(0)
+	, m_totalHeight(0)
+	, m_stamp(0, 0)
+	, m_packet(nullptr)
+	{}
+
+	RowData(TimePoint t, Packet* p)
+	: m_height(0)
+	, m_totalHeight(0)
+	, m_stamp(t)
+	, m_packet(p)
+	{}
+
+	///@brief Height of this row
+	double m_height;
+
+	///@brief Total height of the entire list up to this point
+	double m_totalHeight;
+
+	///@brief Timestamp of the waveform this packet came from
+	TimePoint m_stamp;
+
+	///@brief The packet in this row
+	Packet* m_packet;
+};
 
 class ProtocolDisplayFilter;
 
@@ -132,6 +165,15 @@ public:
 
 	void FilterPackets();
 
+	bool IsChildOpen(Packet* pack)
+	{ return m_lastChildOpen[pack]; }
+
+	void SetChildOpen(Packet* pack, bool open)
+	{ m_lastChildOpen[pack] = open; }
+
+	std::vector<RowData>& GetRows()
+	{ return m_rows; }
+
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);
 
@@ -158,6 +200,15 @@ protected:
 
 	///@brief Current filter expression
 	std::shared_ptr<ProtocolDisplayFilter> m_filterExpression;
+
+	///@brief Update the list of rows being displayed
+	void RefreshRows();
+
+	///@brief The set of rows that are to be displayed, based on current tree expansion and filter state
+	std::vector<RowData> m_rows;
+
+	///@brief Map of packets to child-open flags from last frame
+	std::map<Packet*, bool> m_lastChildOpen;
 };
 
 #endif

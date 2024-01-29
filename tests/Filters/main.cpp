@@ -57,7 +57,7 @@ public:
     {
 		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
-		if(!VulkanInit())
+		if(!VulkanInit(true))
 			exit(1);
 		TransportStaticInit();
 		DriverStaticInit();

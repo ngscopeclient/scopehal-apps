@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -63,6 +63,70 @@ PacketManager::~PacketManager()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Waveform data processing
 
+void PacketManager::RefreshRows()
+{
+	LogTrace("Refreshing rows\n");
+
+	lock_guard<mutex> lock(m_mutex);
+
+	//Clear all existing row state
+	m_rows.clear();
+
+	//Make a list of waveform timestamps and make sure we display them in order
+	vector<TimePoint> times;
+	for(auto& it : m_filteredPackets)
+		times.push_back(it.first);
+	std::sort(times.begin(), times.end());
+
+	//Process packets from each waveform
+	double totalHeight = 0;
+	double lineheight = ImGui::CalcTextSize("dummy text").y;
+	double padding = ImGui::GetStyle().CellPadding.y;
+	for(auto wavetime : times)
+	{
+		auto& wpackets = m_filteredPackets[wavetime];
+		for(auto pack : wpackets)
+		{
+			//See if we have child packets
+			auto children = m_filteredChildPackets[pack];
+
+			//Add an entry for the top level
+			RowData dat(wavetime, pack);
+
+			//Calculate row height
+			double height = padding*2 + lineheight;
+
+			//Integrate heights
+			dat.m_height = height;
+			totalHeight += height;
+			dat.m_totalHeight = totalHeight;
+
+			//Save this row
+			m_rows.push_back(dat);
+
+			if(IsChildOpen(pack))
+			{
+				for(auto child : children)
+				{
+					//Add an entry for the top level
+					RowData cdat(wavetime, child);
+
+					//Calculate row height
+					height = padding*2 + lineheight;
+
+					//Integrate heights
+					cdat.m_height = height;
+					totalHeight += height;
+					cdat.m_totalHeight = totalHeight;
+
+					//Save this row
+					m_rows.push_back(cdat);
+				}
+			}
+		}
+	}
+}
+
 /**
 	@brief Handle newly arrived waveform data (may be a change to parameters or a freshly arrived waveform)
  */
@@ -78,6 +142,8 @@ void PacketManager::Update()
 	WaveformCacheKey key(data);
 	if(key == m_cachekey)
 		return;
+
+	LogTrace("Updating\n");
 
 	//If we get here, waveform changed. Update cache key
 	m_cachekey = key;
@@ -155,6 +221,10 @@ void PacketManager::FilterPackets()
 	{
 		m_filteredPackets = m_packets;
 		m_filteredChildPackets = m_childPackets;
+
+		//but still refresh the set of rows being displayed
+		RefreshRows();
+
 		return;
 	}
 
@@ -194,6 +264,9 @@ void PacketManager::FilterPackets()
 			}
 		}
 	}
+
+	//Refresh the set of rows being displayed
+	RefreshRows();
 }
 
 /**
@@ -223,6 +296,7 @@ void PacketManager::RemoveChildHistoryFrom(Packet* pack)
 		delete p;
 	m_childPackets.erase(pack);
 	m_filteredChildPackets.erase(pack);
+	m_lastChildOpen.erase(pack);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -325,7 +399,7 @@ bool ProtocolDisplayFilter::Match(const Packet* pack)
 		return Evaluate(pack) != "0";
 }
 
-std::string ProtocolDisplayFilter::Evaluate(const Packet* pack)
+string ProtocolDisplayFilter::Evaluate(const Packet* pack)
 {
 	//Calling code checks for validity so no need to verify here
 
