@@ -66,7 +66,6 @@ PacketManager::~PacketManager()
 void PacketManager::RefreshRows()
 {
 	LogTrace("Refreshing rows\n");
-	LogIndenter li;
 
 	lock_guard<mutex> lock(m_mutex);
 
@@ -97,22 +96,16 @@ void PacketManager::RefreshRows()
 			//Calculate row height
 			double height = padding*2 + lineheight;
 
-			//TODO: add extra height for expanded data fields
-			//if(m_filter->GetShowDataColumn())
-			//	DoDataColumn(datacol, pack, dataFont);
-
 			//Integrate heights
 			dat.m_height = height;
 			totalHeight += height;
 			dat.m_totalHeight = totalHeight;
-			LogTrace("Top level row %zu has height %.0f pix, cum %.0f pix\n", m_rows.size() + 1, height, totalHeight);
 
 			//Save this row
 			m_rows.push_back(dat);
 
 			if(IsChildOpen(pack))
 			{
-				LogDebug("children of packet are open\n");
 				for(auto child : children)
 				{
 					//Add an entry for the top level
@@ -121,13 +114,10 @@ void PacketManager::RefreshRows()
 					//Calculate row height
 					height = padding*2 + lineheight;
 
-					//TODO: add extra height for expanded data fields
-
 					//Integrate heights
 					cdat.m_height = height;
 					totalHeight += height;
 					cdat.m_totalHeight = totalHeight;
-					LogTrace("Child row %zu has height %.0f pix, cum %.0f pix\n", m_rows.size() + 1, height, totalHeight);
 
 					//Save this row
 					m_rows.push_back(cdat);
@@ -154,7 +144,6 @@ void PacketManager::Update()
 		return;
 
 	LogTrace("Updating\n");
-	LogIndenter li;
 
 	//If we get here, waveform changed. Update cache key
 	m_cachekey = key;

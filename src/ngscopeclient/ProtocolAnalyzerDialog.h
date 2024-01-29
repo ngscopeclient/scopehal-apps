@@ -105,7 +105,7 @@ protected:
 	///@brief True if the selected packet should be scrolled to
 	bool m_needToScrollToSelectedPacket;
 
-	bool DoDataColumn(Packet* pack, ImFont* dataFont);
+	void DoDataColumn(Packet* pack, ImFont* dataFont, std::vector<RowData>& rows, size_t nrow);
 
 	///@brief True the first time DoDataColumn() is called in a given frame
 	bool m_firstDataBlockOfFrame;
@@ -118,12 +118,6 @@ protected:
 
 	///@brief Filter expression we're actually using
 	std::string m_committedFilterExpression;
-
-	///@brief Map of packets to data-open flags
-	std::map<Packet*, bool> m_lastDataOpen;
-
-	///@brief true if we need to recompute filters and such because a new waveform showed up
-	bool m_refreshNextFrame;
 };
 
 #endif

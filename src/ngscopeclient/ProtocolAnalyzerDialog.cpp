@@ -91,7 +91,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 	float width = ImGui::GetFontSize();
 
 	auto cols = m_filter->GetHeaders();
-	//TODO: hide certain headers like length and ascii?
 
 	//Figure out channel setup
 	//Default is timestamp plus all headers, add optional other channels as needed
@@ -277,8 +276,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 						if(firstRow)
 							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-						if(DoDataColumn(pack, dataFont))
-							forceRefresh = true;
+						DoDataColumn(pack, dataFont, rows, i);
 					}
 				}
 
@@ -290,13 +288,12 @@ bool ProtocolAnalyzerDialog::DoRender()
 		}
 
 		ImGui::EndTable();
+
+		g.NavId = navId;
 	}
 
-	//culling redo end
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	//Apply filter expressions
-	if( (updated && filterDirty) || forceRefresh || m_refreshNextFrame)
+	if( (updated && filterDirty) || forceRefresh)
 	{
 		if(!forceRefresh)
 			m_committedFilterExpression = m_filterExpression;
@@ -313,8 +310,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 			if(pfilter->Validate(cols))
 				m_mgr->SetDisplayFilter(pfilter);
 		}
-
-		//TODO: remove entries in m_lastDataOpen for anything we don't have anymore
 	}
 
 	return true;
@@ -322,13 +317,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 /**
 	@brief Handles the "data" column for packets
-
-	@return true if we need to refresh cached row heights because we opened/closed a tree
  */
-bool ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont)
+void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector<RowData>& rows, size_t nrow)
 {
-	bool forceRefresh = false;
-
 	//When drawing the first cell, figure out dimensions for subsequent stuff
 	if(m_firstDataBlockOfFrame)
 	{
@@ -367,7 +358,7 @@ bool ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont)
 		}
 
 		if(m_bytesPerLine <= 0)
-			return forceRefresh;
+			return;
 	}
 
 	string firstLine;
@@ -386,14 +377,6 @@ bool ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont)
 		if(bytes.size() > m_bytesPerLine)
 		{
 			open = ImGui::TreeNodeEx("##data", ImGuiTreeNodeFlags_OpenOnArrow);
-
-			if(m_lastDataOpen[pack] != open)
-			{
-				m_lastDataOpen[pack] = open;
-				LogTrace("data node opened or closed, forcing refresh\n");
-				forceRefresh = true;
-			}
-
 			ImGui::SameLine();
 		}
 	}
@@ -497,7 +480,22 @@ bool ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont)
 	ImGui::PopFont();
 	m_firstDataBlockOfFrame = false;
 
-	return forceRefresh;
+	//Recompute height of THIS cell and apply changes if we've expanded
+	double padding = ImGui::GetStyle().CellPadding.y;
+	double height = padding*2 + ImGui::CalcTextSize(firstLine.c_str()).y;
+	if(open)
+		height += ImGui::CalcTextSize(data.c_str()).y;
+	double oldheight = rows[nrow].m_height;
+	double delta = height - oldheight;
+	if(abs(delta) > 0.001)
+	{
+		//Apply the changed height
+		rows[nrow].m_height = height;
+
+		//Move every impacted row up or down as appropriate
+		for(size_t i=nrow; i<rows.size(); i++)
+			rows[i].m_totalHeight += delta;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
