@@ -129,7 +129,7 @@ jobs:
   cycle-debian-vm:
     runs-on: [self-hosted, orchestrator]
     needs: [debian]
-    if: ${{ always() }}
+    if: ${{ false }}
     steps:
     - name: Cycle vm
       shell: bash
