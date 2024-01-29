@@ -136,14 +136,15 @@ bool ProtocolAnalyzerDialog::DoRender()
 			forceRefresh = true;
 	}
 
+	//Do an update cycle to make sure any recently acquired packets are captured
+	m_mgr->Update();
+
+	lock_guard lock(m_mgr->GetMutex());
+	auto& rows = m_mgr->GetRows();
+
 	m_firstDataBlockOfFrame = true;
-	if(ImGui::BeginTable("table", ncols, flags))
+	if(!rows.empty() && ImGui::BeginTable("table", ncols, flags))
 	{
-		//Do an update cycle to make sure any recently acquired packets are captured
-		m_mgr->Update();
-
-		lock_guard lock(m_mgr->GetMutex());
-
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
 		for(auto c : cols)
@@ -153,8 +154,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 		if(m_filter->GetShowImageColumn())
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
-
-		auto& rows = m_mgr->GetRows();
 
 		ImGuiListClipper clipper;
 		clipper.Begin((int)rows.back().m_totalHeight, 1.0f);
