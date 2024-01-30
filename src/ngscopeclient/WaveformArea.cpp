@@ -3640,10 +3640,17 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	if(m_group->GetXAxisUnit() != desc.GetXAxisUnits())
 		return false;
 
-	//If our current view is a density function, can't stack anything on it
+	//If our current view is a density function, most stacking is disallowed
 	auto estream = GetFirstDensityFunctionStream();
 	if(estream)
+	{
+		//Allow protocol overlays on spectrograms
+		if( (estream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM) && (desc.GetType() == Stream::STREAM_TYPE_PROTOCOL) )
+			return true;
+
+		//anything else is a no go
 		return false;
+	}
 
 	switch(desc.GetType())
 	{
