@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -153,6 +153,25 @@ HistoryManager::~HistoryManager()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // History processing
+
+/**
+	@brief Returns true if we have no historical waveform data whatsoever (markers are allowed)
+ */
+bool HistoryManager::empty()
+{
+	if(m_history.empty())
+		return true;
+
+	for(auto pt : m_history)
+	{
+		//Any waveforms? Not empty
+		if(!pt->m_history.empty())
+			return false;
+	}
+
+	//Nothing
+	return true;
+}
 
 /**
 	@brief Loads an empty history (no data) to the current session

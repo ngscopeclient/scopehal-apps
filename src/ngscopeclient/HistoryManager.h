@@ -84,11 +84,7 @@ public:
 
 	void LoadEmptyHistoryToSession(Session& session);
 
-	/**
-		@brief Returns true if we have no historical waveform data whatsoever
-	 */
-	bool empty()
-	{ return m_history.empty(); }
+	bool empty();
 
 	void SetMaxToCurrentDepth()
 	{ m_maxDepth = m_history.size(); }
