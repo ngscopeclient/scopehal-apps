@@ -67,7 +67,7 @@ void PacketManager::RefreshRows()
 {
 	LogTrace("Refreshing rows\n");
 
-	lock_guard<mutex> lock(m_mutex);
+	lock_guard<recursive_mutex> lock(m_mutex);
 
 	//Clear all existing row state
 	m_rows.clear();
@@ -154,7 +154,7 @@ void PacketManager::Update()
 	//Copy the new packets and detach them so the filter doesn't delete them.
 	//Do the merging now
 	{
-		lock_guard<mutex> lock(m_mutex);
+		lock_guard<recursive_mutex> lock(m_mutex);
 
 		auto& outpackets = m_packets[time];
 		outpackets.clear();
@@ -274,7 +274,7 @@ void PacketManager::FilterPackets()
  */
 void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 {
-	lock_guard<mutex> lock(m_mutex);
+	lock_guard<recursive_mutex> lock(m_mutex);
 
 	auto& packets = m_packets[timestamp];
 	for(auto p : packets)

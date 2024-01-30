@@ -139,7 +139,7 @@ public:
 	void Update();
 	void RemoveHistoryFrom(TimePoint timestamp);
 
-	std::mutex& GetMutex()
+	std::recursive_mutex& GetMutex()
 	{ return m_mutex; }
 
 	const std::map<TimePoint, std::vector<Packet*> >& GetPackets()
@@ -178,7 +178,7 @@ protected:
 	void RemoveChildHistoryFrom(Packet* pack);
 
 	///@brief Mutex controlling access to m_packets
-	std::mutex m_mutex;
+	std::recursive_mutex m_mutex;
 
 	///@brief The filter we're managing
 	PacketDecoder* m_filter;

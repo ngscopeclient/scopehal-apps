@@ -139,7 +139,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 	//Do an update cycle to make sure any recently acquired packets are captured
 	m_mgr->Update();
 
-	lock_guard lock(m_mgr->GetMutex());
+	lock_guard<recursive_mutex> lock(m_mgr->GetMutex());
 	auto& rows = m_mgr->GetRows();
 
 	m_firstDataBlockOfFrame = true;
