@@ -223,6 +223,34 @@ void Session::Clear()
 	m_multiScope = false;
 }
 
+vector<TimePoint> Session::GetMarkerTimes()
+{
+	vector<TimePoint> ret;
+	for(auto it : m_markers)
+		ret.push_back(it.first);
+	sort(ret.begin(), ret.end(), less<TimePoint>() );
+	return ret;
+}
+
+void Session::AddMarker(Marker m)
+{
+	//If we don't have history, add a dummy entry
+	if(!m_history.HasHistory(m.m_timestamp))
+	{
+		vector<Oscilloscope*> empty;
+		m_history.AddHistory(
+			empty,
+			false,
+			true,
+			"",
+			m.m_timestamp);
+	}
+
+	//Add the marker
+	m_markers[m.m_timestamp].push_back(m);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scopesession management
 

@@ -1,6 +1,6 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
 * Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
@@ -195,7 +195,8 @@ void HistoryManager::AddHistory(
 	const vector<Oscilloscope*>& scopes,
 	bool deleteOld,
 	bool pin,
-	string nick)
+	string nick,
+	TimePoint refTimeIfNoWaveforms)
 {
 	bool foundTimestamp = false;
 	TimePoint tp(0,0);
@@ -223,9 +224,9 @@ void HistoryManager::AddHistory(
 	}
 
 	//If we get here, there were no waveforms anywhere!
-	//Nothing for us to do
+	//Use supplied ref point (e.g. for import filters)
 	if(!foundTimestamp)
-		return;
+		tp = refTimeIfNoWaveforms;
 
 	//All good. Generate a new history point and add it
 	auto pt = make_shared<HistoryPoint>();
@@ -310,4 +311,18 @@ shared_ptr<HistoryPoint> HistoryManager::GetHistory(TimePoint t)
 	}
 
 	return nullptr;
+}
+
+/**
+	@brief Checks if we have a history point for a specific timestamp
+ */
+bool HistoryManager::HasHistory(TimePoint t)
+{
+	for(auto it : m_history)
+	{
+		if(it->m_time == t)
+			return true;
+	}
+
+	return false;
 }

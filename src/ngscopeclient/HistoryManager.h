@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -79,7 +79,8 @@ public:
 		const std::vector<Oscilloscope*>& scopes,
 		bool deleteOld = true,
 		bool pin = false,
-		std::string nick = "");
+		std::string nick = "",
+		TimePoint refTimeIfNoWaveforms = TimePoint(0, 0));
 
 	void LoadEmptyHistoryToSession(Session& session);
 
@@ -93,6 +94,8 @@ public:
 	{ m_maxDepth = m_history.size(); }
 
 	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
+
+	bool HasHistory(TimePoint t);
 
 	TimePoint GetMostRecentPoint();
 

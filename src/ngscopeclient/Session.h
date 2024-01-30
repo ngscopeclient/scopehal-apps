@@ -440,8 +440,7 @@ public:
 	/**
 		@brief Adds a marker
 	 */
-	void AddMarker(Marker m)
-	{ m_markers[m.m_timestamp].push_back(m); }
+	void AddMarker(Marker m);
 
 	void StartWaveformThreadIfNeeded();
 
@@ -686,6 +685,11 @@ public:
 	 */
 	std::vector<Marker>& GetMarkers(TimePoint t)
 	{ return m_markers[t]; }
+
+	/**
+		@brief Get a list of timestamps for markers
+	 */
+	std::vector<TimePoint> GetMarkerTimes();
 
 	/**
 		@brief Deletes markers for a waveform timestamp
