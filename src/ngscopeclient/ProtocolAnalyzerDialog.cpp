@@ -308,7 +308,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				m_selectedPacket->m_offset,
 				[](const RowData& data, double f) { return f > data.m_packet->m_offset; });
 			auto& row = *sit;
-			ImGui::SetScrollY(row.m_totalHeight);
+			ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + row.m_totalHeight);
 
 			m_needToScrollToSelectedPacket = false;
 		}
