@@ -2404,9 +2404,23 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : analyzers)
 		{
-			auto pd = static_cast<PacketDecoder*>(m_session.m_idtable[it.second.as<int>()]);
+			//The node can be one of two things: an ID with no filter expression (older file format)
+			//or a node with children for ID and filter (newer). Handle both.
+			intptr_t id;
+			string filt;
+			if(it.second.IsScalar())
+				id = it.second.as<int>();
+
+			else
+			{
+				id = it.second["id"].as<int>();
+				filt = it.second["filter"].as<string>();
+			}
+
+			auto pd = static_cast<PacketDecoder*>(m_session.m_idtable[id]);
 
 			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+			dlg->SetFilterExpression(filt);
 			m_protocolAnalyzerDialogs[pd] = dlg;
 			AddDialog(dlg);
 		}
@@ -3011,7 +3025,15 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_protocolAnalyzerDialogs)
 		{
 			auto proto = it.first;
-			anode[proto->GetDisplayName()] = m_session.m_idtable.emplace(proto);
+			auto dlg = it.second;
+
+			auto id = m_session.m_idtable.emplace(proto);
+
+			YAML::Node dnode;
+			dnode["id"] = id;
+			dnode["filter"] = dlg->GetFilterExpression();
+
+			anode[proto->GetDisplayName()] = dnode;
 		}
 
 		node["analyzers"] = anode;

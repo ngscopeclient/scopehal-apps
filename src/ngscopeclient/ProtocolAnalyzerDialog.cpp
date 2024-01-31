@@ -72,6 +72,18 @@ ProtocolAnalyzerDialog::~ProtocolAnalyzerDialog()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+void ProtocolAnalyzerDialog::SetFilterExpression(const string& f)
+{
+	m_filterExpression = f;
+	m_committedFilterExpression = f;
+
+	auto cols = m_filter->GetHeaders();
+	size_t ifilter = 0;
+	auto pfilter = make_shared<ProtocolDisplayFilter>(f, ifilter);
+	if(pfilter->Validate(cols))
+		m_mgr->SetDisplayFilter(pfilter);
+}
+
 /**
 	@brief Renders the dialog and handles UI events
 

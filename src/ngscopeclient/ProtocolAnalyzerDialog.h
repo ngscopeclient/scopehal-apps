@@ -79,6 +79,11 @@ public:
 
 	void OnCursorMoved(int64_t offset);
 
+	std::string GetFilterExpression()
+	{ return m_filterExpression; }
+
+	void SetFilterExpression(const std::string& f);
+
 protected:
 	PacketDecoder* m_filter;
 	std::shared_ptr<PacketManager> m_mgr;
