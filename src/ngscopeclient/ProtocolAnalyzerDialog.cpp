@@ -180,6 +180,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 		//(need to make sure this works with culling etc)
 
 		//Go through the rows and render them, culling anything offscreen
+		bool visibleRowSelected = false;
 		while(clipper.Step())
 		{
 			double minY = (double)clipper.DisplayStart;
@@ -250,6 +251,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				{
 					m_selectedPacket = pack;
 					rowIsSelected = true;
+					visibleRowSelected = true;
 
 					//See if a new waveform was selected
 					if( (m_lastSelectedWaveform != TimePoint(0, 0)) && (m_lastSelectedWaveform != row.m_stamp) )
@@ -258,13 +260,6 @@ bool ProtocolAnalyzerDialog::DoRender()
 
 					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
 
-				}
-
-				//Update scroll position if requested (only works if selected packet passes filter and is on screen)
-				if(rowIsSelected && m_needToScrollToSelectedPacket)
-				{
-					m_needToScrollToSelectedPacket = false;
-					ImGui::SetScrollHereY();
 				}
 
 				//Headers
@@ -298,7 +293,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 			}
 		}
 
-		if(m_needToScrollToSelectedPacket)
+		//Only scroll if requested packet is off screen
+		if(m_needToScrollToSelectedPacket && !visibleRowSelected)
 		{
 			//Go through our visible rows to find the closest packet
 			//(may not be the selected one we're just trying to scroll to that general area)
