@@ -3654,9 +3654,14 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 	switch(desc.GetType())
 	{
-		//All density plots must be in their own views and cannot stack
-		case Stream::STREAM_TYPE_EYE:
+		//Allow stacking protocol overlays on spectrograms
 		case Stream::STREAM_TYPE_SPECTROGRAM:
+			if( (GetFirstAnalogStream() == nullptr) && (GetFirstDensityFunctionStream() == nullptr) )
+				return true;
+			break;
+
+		//All other density plots must be in their own views and cannot stack
+		case Stream::STREAM_TYPE_EYE:
 		case Stream::STREAM_TYPE_WATERFALL:
 			return false;
 
