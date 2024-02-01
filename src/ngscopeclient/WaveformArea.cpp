@@ -3649,9 +3649,12 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 	auto estream = GetFirstDensityFunctionStream();
 	if(estream)
 	{
-		//Allow protocol overlays on spectrograms
-		if( (estream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM) && (desc.GetType() == Stream::STREAM_TYPE_PROTOCOL) )
-			return true;
+		//Allow protocol and digital overlays on spectrograms
+		if(estream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
+		{
+			if( (desc.GetType() == Stream::STREAM_TYPE_PROTOCOL) || (desc.GetType() == Stream::STREAM_TYPE_DIGITAL) )
+				return true;
+		}
 
 		//anything else is a no go
 		return false;
