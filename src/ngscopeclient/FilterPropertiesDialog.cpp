@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -284,7 +284,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 					tempValues[name] = param.GetUnit().PrettyPrint(nval);
 
 				//Input path
-				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
 				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
 				{
 					param.SetFloatVal(nval);
@@ -296,14 +296,12 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 		case FilterParameter::TYPE_INT:
 			{
 				//If we don't have a temporary value, make one
-				//TODO: can we figure out how to preserve full int64 precision end to end here?
-				//For now, use a double to get as close as we can
-				double nval = param.GetIntVal();
+				int64_t nval = param.GetIntVal();
 				if(tempValues.find(name) == tempValues.end())
-					tempValues[name] = param.GetUnit().PrettyPrint(nval);
+					tempValues[name] = param.GetUnit().PrettyPrintInt64(nval);
 
 				//Input path
-				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
 				if(Dialog::UnitInputWithImplicitApply(name.c_str(), tempValues[name], nval, param.GetUnit()))
 				{
 					param.SetIntVal(nval);
@@ -331,7 +329,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 					tempValues[name] = s;
 
 				//Input path
-				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
 				if(Dialog::TextInputWithImplicitApply(name.c_str(), tempValues[name], s))
 				{
 					param.SetStringVal(s);

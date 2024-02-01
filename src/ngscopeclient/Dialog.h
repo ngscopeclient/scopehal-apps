@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,6 +61,11 @@ public:
 		const std::string& label,
 		std::string& currentValue,
 		double& committedValue,
+		Unit unit);
+	static bool UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		int64_t& committedValue,
 		Unit unit);
 	static bool TextInputWithImplicitApply(
 		const std::string& label,

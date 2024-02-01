@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -344,6 +344,43 @@ bool Dialog::UnitInputWithImplicitApply(
 	{
 		committedValue = unit.ParseString(currentValue);
 		currentValue = unit.PrettyPrint(committedValue);
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	@brief Input box for an integer value with an associated unit
+
+	@param label			Text label
+	@param currentValue		Current text box content
+	@param committedValue	Most recently applied value
+	@param unit				The unit for the input
+
+	@return	True when focus is lost or user presses enter
+ */
+bool Dialog::UnitInputWithImplicitApply(
+		const std::string& label,
+		std::string& currentValue,
+		int64_t& committedValue,
+		Unit unit)
+{
+	bool dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
+
+	ImGui::InputText(label.c_str(), &currentValue);
+
+	if(!ImGui::IsItemActive() && dirty )
+	{
+		//Float path if the user input a decimal value like "3.5G"
+		if(currentValue.find(".") != string::npos)
+			committedValue = unit.ParseString(currentValue);
+
+		//Integer path otherwise for full precision
+		else
+			committedValue = unit.ParseStringInt64(currentValue);
+
+		currentValue = unit.PrettyPrintInt64(committedValue);
 		return true;
 	}
 
