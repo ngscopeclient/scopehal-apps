@@ -253,9 +253,17 @@ void Session::AddMarker(Marker m)
 
 /**
 	@brief Called when a marker is added, removed, or modified
+
+	TODO: hint as to what marker and what was changed?
  */
 void Session::OnMarkerChanged()
 {
+	//Sort our markers by timestamp
+	auto times = GetMarkerTimes();
+	for(auto t : times)
+		sort(m_markers[t].begin(), m_markers[t].end());
+
+	//Update the protocol analyzer views that might be displaying it
 	lock_guard lock(m_packetMgrMutex);
 	for(auto it : m_packetmgrs)
 		it.second->OnMarkerChanged();
@@ -323,6 +331,8 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 		return false;
 	if(!LoadWaveformData(m_fileLoadVersion, dataDir))
 		return false;
+
+	OnMarkerChanged();
 
 	//If we have no waveform data (filter-only session) create a WaveformThread to do rendering,
 	//then refresh the filter graph

@@ -97,7 +97,8 @@ void PacketManager::RefreshRows()
 		for(auto pack : wpackets)
 		{
 			//Add marker before this packet if needed
-			if( (imarker < markers.size()) &&
+			//(loop because we might have two or more markers between packets)
+			while( (imarker < markers.size()) &&
 				(markers[imarker].m_offset >= lastoff) &&
 				(markers[imarker].m_offset < pack->m_offset) )
 			{
@@ -106,6 +107,7 @@ void PacketManager::RefreshRows()
 				totalHeight += row.m_height;
 				row.m_totalHeight = totalHeight;
 				m_rows.push_back(row);
+
 				imarker ++;
 			}
 

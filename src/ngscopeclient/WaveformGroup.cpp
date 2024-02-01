@@ -570,8 +570,14 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 					//Start dragging if clicked
 					if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 					{
-						m_dragState = DRAG_STATE_MARKER;
-						m_dragMarker = &m;
+						if(m_dragState == DRAG_STATE_NONE)
+						{
+							LogTrace("starting to drag marker %s\n", m.m_name.c_str());
+							m_dragState = DRAG_STATE_MARKER;
+							m_dragMarker = &m;
+						}
+						else
+							LogTrace("ignoring click on marker because m_dragState = %d\n", m_dragState);
 					}
 				}
 			}
@@ -582,13 +588,34 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	if(m_dragState == DRAG_STATE_MARKER)
 	{
 		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			LogTrace("done dragging marker %s\n", m_dragMarker->m_name.c_str());
 			m_dragState = DRAG_STATE_NONE;
+		}
+
 		auto newpos = XPositionToXAxisUnits(mouse.x);
 		if(m_dragMarker->m_offset != newpos)
 		{
+			auto name = m_dragMarker->m_name;
+
 			m_dragMarker->m_offset = newpos;
 			m_parent->GetSession().OnMarkerChanged();
+
+			//Find the marker again
+			//This is needed because OnMarkerChanged() sorts the list of markers
+			//which can potentially invalidate our pointer
+			for(auto& m : markers)
+			{
+				if(m.m_name == name)
+				{
+					m_dragMarker = &m;
+					break;
+				}
+			}
 		}
+
+		if(m_dragState == DRAG_STATE_NONE)
+			m_dragMarker = nullptr;
 	}
 }
 
@@ -613,7 +640,12 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 {
 	//No cursors? Nothing to do
 	if(m_xAxisCursorMode == X_CURSOR_NONE)
+	{
+		//Exit cursor drag state if we no longer have a cursor to drag
+		if( (m_dragState == DRAG_STATE_X_CURSOR0) || (m_dragState == DRAG_STATE_X_CURSOR1) )
+			m_dragState = DRAG_STATE_NONE;
 		return;
+	}
 
 	//Create a child window for all of our drawing
 	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
@@ -686,6 +718,10 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				cursor1_color,
 				str.c_str());
 		}
+
+		//not dragging if we no longer have a second cursor
+		else if(m_dragState == DRAG_STATE_X_CURSOR1)
+			m_dragState = DRAG_STATE_NONE;
 
 		//TODO: text for value readouts, in-band power, etc
 	}

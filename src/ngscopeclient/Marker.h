@@ -89,6 +89,18 @@ public:
 
 	///@brief Display name of the marker
 	std::string m_name;
+
+	///@brief Helper for sorting
+	bool operator<(const Marker& rhs)
+	{
+		if(m_timestamp < rhs.m_timestamp)
+			return true;
+		if(m_timestamp > rhs.m_timestamp)
+			return false;
+		if(m_offset < rhs.m_offset)
+			return true;
+		return false;
+	}
 };
 
 #endif
