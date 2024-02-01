@@ -505,6 +505,8 @@ public:
 
 	std::shared_ptr<TriggerGroup> GetTrendFilterGroup();
 
+	void OnMarkerChanged();
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 

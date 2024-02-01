@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -583,7 +583,12 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	{
 		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			m_dragState = DRAG_STATE_NONE;
-		m_dragMarker->m_offset = XPositionToXAxisUnits(mouse.x);
+		auto newpos = XPositionToXAxisUnits(mouse.x);
+		if(m_dragMarker->m_offset != newpos)
+		{
+			m_dragMarker->m_offset = newpos;
+			m_parent->GetSession().OnMarkerChanged();
+		}
 	}
 }
 

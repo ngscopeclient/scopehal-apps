@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -248,8 +248,18 @@ void Session::AddMarker(Marker m)
 
 	//Add the marker
 	m_markers[m.m_timestamp].push_back(m);
+	OnMarkerChanged();
 }
 
+/**
+	@brief Called when a marker is added, removed, or modified
+ */
+void Session::OnMarkerChanged()
+{
+	lock_guard lock(m_packetMgrMutex);
+	for(auto it : m_packetmgrs)
+		it.second->OnMarkerChanged();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Scopesession management

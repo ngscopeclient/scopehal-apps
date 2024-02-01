@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -188,6 +188,8 @@ public:
 
 	std::vector<RowData>& GetRows()
 	{ return m_rows; }
+
+	void OnMarkerChanged();
 
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);

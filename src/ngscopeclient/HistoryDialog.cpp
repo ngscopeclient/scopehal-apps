@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -246,14 +246,18 @@ bool HistoryDialog::DoRender()
 
 					//Nickname box
 					ImGui::TableSetColumnIndex(2);
-					ImGui::InputText("###nick", &m.m_name);
+					if(ImGui::InputText("###nick", &m.m_name))
+						m_parent.GetSession().OnMarkerChanged();
 
 					ImGui::PopID();
 				}
 
 				//Execute deletion after drawing the rest of the list
 				if(deletingMarker)
+				{
 					markers.erase(markers.begin() + markerToDelete);
+					m_parent.GetSession().OnMarkerChanged();
+				}
 
 				ImGui::TreePop();
 			}
