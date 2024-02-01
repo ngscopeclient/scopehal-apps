@@ -34,14 +34,16 @@
  */
 #include "ngscopeclient.h"
 #include "PacketManager.h"
+#include "Session.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-PacketManager::PacketManager(PacketDecoder* pd)
-	: m_filter(pd)
+PacketManager::PacketManager(PacketDecoder* pd, Session& session)
+	: m_session(session)
+	, m_filter(pd)
 {
 
 }
@@ -78,20 +80,42 @@ void PacketManager::RefreshRows()
 		times.push_back(it.first);
 	std::sort(times.begin(), times.end());
 
-	//Process packets from each waveform
 	double totalHeight = 0;
 	double lineheight = ImGui::CalcTextSize("dummy text").y;
 	double padding = ImGui::GetStyle().CellPadding.y;
+
+	//Process packets from each waveform
 	for(auto wavetime : times)
 	{
 		auto& wpackets = m_filteredPackets[wavetime];
+
+		//Get markers for this waveform, if any
+		auto& markers = m_session.GetMarkers(wavetime);
+		LogDebug("Refreshing: %zu markers\n", markers.size());
+		size_t imarker = 0;
+		int64_t lastoff = 0;
+
 		for(auto pack : wpackets)
 		{
+			//Add marker before this packet if needed
+			if( (imarker < markers.size()) &&
+				(markers[imarker].m_offset >= lastoff) &&
+				(markers[imarker].m_offset < pack->m_offset) )
+			{
+				RowData row(wavetime, markers[imarker]);
+				row.m_height = padding*2 + lineheight;
+				totalHeight += row.m_height;
+				row.m_totalHeight = totalHeight;
+				m_rows.push_back(row);
+				imarker ++;
+			}
+
 			//See if we have child packets
 			auto children = m_filteredChildPackets[pack];
 
 			//Add an entry for the top level
 			RowData dat(wavetime, pack);
+			lastoff = pack->m_offset;
 
 			//Calculate row height
 			double height = padding*2 + lineheight;

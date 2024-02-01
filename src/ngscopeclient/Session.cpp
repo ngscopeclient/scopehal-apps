@@ -3286,7 +3286,7 @@ shared_ptr<PacketManager> Session::AddPacketFilter(PacketDecoder* filter)
 	LogTrace("Adding packet manager for %s\n", filter->GetDisplayName().c_str());
 
 	lock_guard<mutex> lock(m_packetMgrMutex);
-	shared_ptr<PacketManager> ret = make_shared<PacketManager>(filter);
+	shared_ptr<PacketManager> ret = make_shared<PacketManager>(filter, *this);
 	m_packetmgrs[filter] = ret;
 	return ret;
 }

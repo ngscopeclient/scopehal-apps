@@ -38,6 +38,8 @@
 #include "../../lib/scopehal/PacketDecoder.h"
 #include "Marker.h"
 
+class Session;
+
 /**
 	@brief Context data for a single row (used for culling)
  */
@@ -49,6 +51,7 @@ public:
 	, m_totalHeight(0)
 	, m_stamp(0, 0)
 	, m_packet(nullptr)
+	, m_marker(TimePoint(0,0), 0, "")
 	{}
 
 	RowData(TimePoint t, Packet* p)
@@ -56,6 +59,15 @@ public:
 	, m_totalHeight(0)
 	, m_stamp(t)
 	, m_packet(p)
+	, m_marker(t, 0, "")
+	{}
+
+	RowData(TimePoint t, Marker m)
+	: m_height(0)
+	, m_totalHeight(0)
+	, m_stamp(t)
+	, m_packet(nullptr)
+	, m_marker(m)
 	{}
 
 	///@brief Height of this row
@@ -67,8 +79,11 @@ public:
 	///@brief Timestamp of the waveform this packet came from
 	TimePoint m_stamp;
 
-	///@brief The packet in this row
+	///@brief The packet in this row (null if m_marker is valid)
 	Packet* m_packet;
+
+	///@brief The marker in this row (ignored if m_packet is valid)
+	Marker m_marker;
 };
 
 class ProtocolDisplayFilter;
@@ -133,7 +148,7 @@ protected:
 class PacketManager
 {
 public:
-	PacketManager(PacketDecoder* pd);
+	PacketManager(PacketDecoder* pd, Session& session);
 	virtual ~PacketManager();
 
 	void Update();
@@ -176,6 +191,9 @@ public:
 
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);
+
+	///@brief Parent session object
+	Session& m_session;
 
 	///@brief Mutex controlling access to m_packets
 	std::recursive_mutex m_mutex;

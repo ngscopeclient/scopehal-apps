@@ -115,6 +115,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 	//TODO: integrate length natively vs having to make the filter calculate it??
 
 	auto dataFont = m_parent.GetFontPref("Appearance.Protocol Analyzer.data_font");
+	auto& prefs = m_parent.GetSession().GetPreferences();
 
 	//Figure out color for filter expression
 	ImU32 bgcolor;
@@ -200,23 +201,44 @@ bool ProtocolAnalyzerDialog::DoRender()
 				ImGui::PushID(row.m_stamp.first);
 				ImGui::PushID(row.m_stamp.second);
 
-				//Make sure we have the packed colors cached
+				//Is it a packet?
 				auto pack = row.m_packet;
-				pack->RefreshColors();
+
+				//Make sure we have the packed colors cached
+				if(pack)
+					pack->RefreshColors();
 
 				//Instead of using packet pointer as identifier (can change if filter graph re-runs for
 				//unrelated reasons), use timestamp instead.
-				ImGui::PushID(pack->m_offset);
+				if(pack)
+					ImGui::PushID(pack->m_offset);
+				else
+				{
+					ImGui::PushID(row.m_marker.m_offset);
+					ImGui::PushID("Marker");
+				}
 
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 				//Set up colors for the packet
-				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, pack->m_displayBackgroundColorPacked);
-				ImGui::PushStyleColor(ImGuiCol_Text, pack->m_displayForegroundColorPacked);
+				if(pack)
+				{
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, pack->m_displayBackgroundColorPacked);
+					ImGui::PushStyleColor(ImGuiCol_Text, pack->m_displayForegroundColorPacked);
+				}
+				else
+				{
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, prefs.GetColor("Appearance.Graphs.bottom_color"));
+					ImGui::PushStyleColor(ImGuiCol_Text, prefs.GetColor("Appearance.Cursors.marker_color"));
+				}
 
 				//See if we have child packets
-				auto children = m_mgr->GetFilteredChildPackets(pack);
-				bool hasChildren = !children.empty();
+				bool hasChildren = false;
+				if(pack)
+				{
+					auto children = m_mgr->GetFilteredChildPackets(pack);
+					hasChildren = !children.empty();
+				}
 
 				float rowStart = rows[i].m_totalHeight - rows[i].m_height;
 				bool firstRow = (i == istart);
@@ -241,8 +263,20 @@ bool ProtocolAnalyzerDialog::DoRender()
 						ImGui::TreePop();
 					ImGui::SameLine();
 				}
-				bool rowIsSelected = (m_selectedPacket == pack);
-				TimePoint packtime(row.m_stamp.GetSec(), row.m_stamp.GetFs() + pack->m_offset);
+
+				//TODO allow selection of marker
+				int64_t offset = 0;
+				int64_t len = 0;
+				if(pack)
+				{
+					offset = pack->m_offset;
+					len = pack->m_len;
+				}
+				else
+					offset = row.m_marker.m_offset;
+				bool rowIsSelected = pack && (m_selectedPacket == pack);
+				TimePoint packtime(row.m_stamp.GetSec(), row.m_stamp.GetFs() + offset);
+
 				if(ImGui::Selectable(
 					packtime.PrettyPrint().c_str(),
 					rowIsSelected,
@@ -258,35 +292,54 @@ bool ProtocolAnalyzerDialog::DoRender()
 						m_waveformChanged = true;
 					m_lastSelectedWaveform = row.m_stamp;
 
-					m_parent.NavigateToTimestamp(pack->m_offset, pack->m_len, StreamDescriptor(m_filter, 0));
-
+					m_parent.NavigateToTimestamp(offset, len, StreamDescriptor(m_filter, 0));
 				}
 
-				//Headers
-				for(size_t j=0; j<cols.size(); j++)
+				if(pack)
 				{
-					if(ImGui::TableSetColumnIndex(j+1))
+					//Headers
+					for(size_t j=0; j<cols.size(); j++)
 					{
-						if(firstRow)
-							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+						if(ImGui::TableSetColumnIndex(j+1))
+						{
+							if(firstRow)
+								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-						ImGui::TextUnformatted(pack->m_headers[cols[j]].c_str());
+							ImGui::TextUnformatted(pack->m_headers[cols[j]].c_str());
+						}
+					}
+
+					//Data column
+					if(m_filter->GetShowDataColumn())
+					{
+						if(ImGui::TableSetColumnIndex(datacol))
+						{
+							if(firstRow)
+								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+
+							DoDataColumn(pack, dataFont, rows, i);
+						}
 					}
 				}
 
-				//Data column
-				if(m_filter->GetShowDataColumn())
+				//Marker name
+				else
 				{
-					if(ImGui::TableSetColumnIndex(datacol))
+					//TODO: which column to use for marker text??)
+					if(m_filter->GetShowDataColumn())
 					{
-						if(firstRow)
-							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
-
-						DoDataColumn(pack, dataFont, rows, i);
+						if(ImGui::TableSetColumnIndex(datacol))
+						{
+							if(firstRow)
+								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+							ImGui::TextUnformatted(row.m_marker.m_name.c_str());
+						}
 					}
 				}
 
 				ImGui::PopStyleColor();
+				if(!pack)
+					ImGui::PopID();
 				ImGui::PopID();
 				ImGui::PopID();
 				ImGui::PopID();
@@ -302,7 +355,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 				rows.begin(),
 				rows.end(),
 				m_selectedPacket->m_offset,
-				[](const RowData& data, double f) { return f > data.m_packet->m_offset; });
+				[](const RowData& data, double f)
+					{ return f > (data.m_packet? data.m_packet->m_offset : data.m_marker.m_offset); });
 			auto& row = *sit;
 			ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + row.m_totalHeight);
 
