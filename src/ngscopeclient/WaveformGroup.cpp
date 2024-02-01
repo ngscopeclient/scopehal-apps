@@ -831,14 +831,26 @@ void WaveformGroup::RenderTimeline(float width, float height)
 						continue;
 					auto sdata = dynamic_cast<SparseWaveformBase*>(data);
 					auto udata = dynamic_cast<UniformWaveformBase*>(data);
+					auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
 
-					int64_t wstart = GetOffsetScaled(sdata, udata, 0);
-					int64_t wend =
-						GetOffsetScaled(sdata, udata, data->size()-1) +
-						GetDurationScaled(sdata, udata, data->size()-1);
+					//Regular waveform
+					if(sdata || udata)
+					{
+						int64_t wstart = GetOffsetScaled(sdata, udata, 0);
+						int64_t wend =
+							GetOffsetScaled(sdata, udata, data->size()-1) +
+							GetDurationScaled(sdata, udata, data->size()-1);
 
-					start = min(start, wstart);
-					end = max(end, wend);
+						start = min(start, wstart);
+						end = max(end, wend);
+					}
+
+					//Density plot
+					else if(ddata)
+					{
+						start = 0;
+						end = ddata->GetWidth() * ddata->m_timescale;
+					}
 				}
 			}
 			int64_t sigwidth = end - start;
