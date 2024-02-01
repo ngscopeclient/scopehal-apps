@@ -139,6 +139,33 @@ bool ProtocolAnalyzerDialog::DoRender()
 	bool filterDirty = (m_committedFilterExpression != m_filterExpression);
 	ImGui::PopStyleColor();
 
+	//Display tooltip for filter state
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+	{
+		size_t itotal = 0;
+		size_t idisplayed = 0;
+		{
+			lock_guard<recursive_mutex> lock(m_mgr->GetMutex());
+
+			auto& packets = m_mgr->GetPackets();
+			for(auto it : packets)
+				itotal += it.second.size();
+
+			auto& filt = m_mgr->GetFilteredPackets();
+			for(auto it : filt)
+				idisplayed += it.second.size();
+		}
+		char stmp[128];
+		snprintf(stmp, sizeof(stmp), "%zu / %zu packets displayed (%.2f %%)\n",
+			idisplayed, itotal, idisplayed * 100.0 / itotal);
+
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+		ImGui::TextUnformatted(stmp);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
 	//Output format for data column
 	//If this is changed force a refresh
 	bool forceRefresh = false;
