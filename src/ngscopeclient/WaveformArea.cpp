@@ -367,11 +367,11 @@ StreamDescriptor WaveformArea::GetFirstAnalogStream()
 /**
 	@brief Returns the first analog, spectrogram or eye pattern stream displayed in this area.
 
-	TODO: this really means "has a useful Y axis"
+	(this really means "has a useful Y axis")
 
 	If no suitable waveforms returns a null stream.
  */
-StreamDescriptor WaveformArea::GetFirstAnalogOrEyeStream()
+StreamDescriptor WaveformArea::GetFirstAnalogOrDensityStream()
 {
 	for(auto chan : m_displayedChannels)
 	{
@@ -540,7 +540,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
-	auto first = GetFirstAnalogOrEyeStream();
+	auto first = GetFirstAnalogOrDensityStream();
 	if(first)
 	{
 		//Don't touch scale if we're dragging, since the dragged value is newer than the hardware value
@@ -2055,7 +2055,7 @@ void WaveformArea::RenderBackgroundGradient(ImVec2 start, ImVec2 size)
 void WaveformArea::RenderGrid(ImVec2 start, ImVec2 size, map<float, float>& gridmap, float& vbot, float& vtop)
 {
 	//Early out if we're not displaying any analog waveforms
-	auto stream = GetFirstAnalogOrEyeStream();
+	auto stream = GetFirstAnalogOrDensityStream();
 	if(!stream)
 		return;
 
@@ -2250,7 +2250,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	ImGui::EndChild();
 
 	//Don't allow drag processing if our first waveform is an eye
-	auto aestream = GetFirstAnalogOrEyeStream();
+	auto aestream = GetFirstAnalogOrDensityStream();
 	bool canDragYAxis = true;
 	if(aestream && (aestream.GetType() == Stream::STREAM_TYPE_EYE))
 		canDragYAxis = false;
@@ -2463,7 +2463,7 @@ void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
 void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 {
 	//No analog streams? No mismatch possible
-	auto firstStream = GetFirstAnalogOrEyeStream();
+	auto firstStream = GetFirstAnalogOrDensityStream();
 	if(!firstStream)
 		return;
 
@@ -3598,9 +3598,11 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 	if(stream)
 		return;
 
+	stream = GetFirstAnalogOrDensityStream();
+
 	if(delta > 0)
 	{
-		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();
+		auto range = stream.GetVoltageRange();
 		range *= pow(0.9, delta);
 
 		for(size_t i=0; i<m_displayedChannels.size(); i++)
@@ -3608,7 +3610,7 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 	}
 	else
 	{
-		auto range = m_displayedChannels[0]->GetStream().GetVoltageRange();
+		auto range = stream.GetVoltageRange();
 		range /= pow(0.9, -delta);
 
 		for(size_t i=0; i<m_displayedChannels.size(); i++)

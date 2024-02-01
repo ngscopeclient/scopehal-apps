@@ -208,7 +208,7 @@ bool WaveformGroup::Render()
 		m_xAxisUnit = areas[0]->GetStream(0).GetXAxisUnits();
 
 		//Autoscale eye patterns
-		auto firstStream = areas[0]->GetFirstAnalogOrEyeStream();
+		auto firstStream = areas[0]->GetFirstAnalogOrDensityStream();
 		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
 		{
 			auto eye = dynamic_cast<EyeWaveform*>(firstStream.GetData());
@@ -1130,7 +1130,7 @@ void WaveformGroup::OnMouseWheel(float delta)
 	//Do not allow changing zoom on eye patterns
 	if(!areas.empty())
 	{
-		auto firstStream = areas[0]->GetFirstAnalogOrEyeStream();
+		auto firstStream = areas[0]->GetFirstAnalogOrDensityStream();
 		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
 			return;
 	}

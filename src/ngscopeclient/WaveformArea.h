@@ -533,7 +533,7 @@ public:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstEyeStream();
 	StreamDescriptor GetFirstDensityFunctionStream();
-	StreamDescriptor GetFirstAnalogOrEyeStream();
+	StreamDescriptor GetFirstAnalogOrDensityStream();
 
 	/**
 		@brief Returns true if the mouse is over a button, rather than the plot area
