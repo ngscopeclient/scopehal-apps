@@ -101,7 +101,7 @@ void main()
 		float pixval = 0;
 		for(uint y=ystart; y <= yend; y++)
 		{
-			uint base = ystart*width;
+			uint base = y*width;
 			for(uint x=xstart; x <= xend; x++)
 				pixval = max(pixval, pixels[base+x]);
 		}
