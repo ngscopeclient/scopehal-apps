@@ -91,7 +91,7 @@ public:
 	std::string m_name;
 
 	///@brief Helper for sorting
-	bool operator<(const Marker& rhs)
+	bool operator<(const Marker& rhs) const
 	{
 		if(m_timestamp < rhs.m_timestamp)
 			return true;
