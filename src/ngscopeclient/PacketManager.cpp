@@ -316,6 +316,9 @@ void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 	m_packets.erase(timestamp);
 
 	m_filteredPackets.erase(timestamp);
+
+	//update the list of displayed rows so we don't have anything left pointing to stale packets
+	RefreshRows();
 }
 
 void PacketManager::RemoveChildHistoryFrom(Packet* pack)
