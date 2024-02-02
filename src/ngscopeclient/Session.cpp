@@ -203,6 +203,7 @@ void Session::Clear()
 	m_misc.clear();
 	m_generators.clear();
 	m_scopeDeskewCal.clear();
+	m_markers.clear();
 
 	//Remove all trigger groups
 	m_triggerGroups.clear();
