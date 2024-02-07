@@ -572,12 +572,29 @@ bool Session::LoadWaveformDataForScope(
 			bool dense = (format == "densev1");
 
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
-			WaveformBase* cap = NULL;
-			SparseAnalogWaveform* sacap = NULL;
-			UniformAnalogWaveform* uacap = NULL;
-			SparseDigitalWaveform* sdcap = NULL;
-			UniformDigitalWaveform* udcap = NULL;
-			if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
+			WaveformBase* cap = nullptr;
+			SparseAnalogWaveform* sacap = nullptr;
+			UniformAnalogWaveform* uacap = nullptr;
+			SparseDigitalWaveform* sdcap = nullptr;
+			UniformDigitalWaveform* udcap = nullptr;
+			CANWaveform* sccap = nullptr;
+
+			//if datatype is specified, use that
+			if( (format == "sparsev1") && ch["datatype"] )
+			{
+				auto dtype = ch["datatype"].as<string>();
+				if(dtype == "analog")
+					cap = sacap = new SparseAnalogWaveform;
+				else if(dtype == "digital")
+					cap = sdcap = new SparseDigitalWaveform;
+				else if(dtype == "can")
+					cap = sccap = new CANWaveform;
+				else
+					LogError("Unrecognized sparsev1 datatype %s\n", dtype.c_str());
+			}
+
+			//if not guess based on stream type
+			else if(chan->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 			{
 				if(dense)
 					cap = uacap = new UniformAnalogWaveform;
@@ -664,6 +681,7 @@ void Session::DoLoadWaveformDataForStream(
 	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);
 	auto sdcap = dynamic_cast<SparseDigitalWaveform*>(cap);
 	auto udcap = dynamic_cast<UniformDigitalWaveform*>(cap);
+	auto ccap = dynamic_cast<CANWaveform*>(cap);
 
 	cap->PrepareForCpuAccess();
 
@@ -719,8 +737,10 @@ void Session::DoLoadWaveformDataForStream(
 		size_t samplesize = 2*sizeof(int64_t);
 		if(sacap)
 			samplesize += sizeof(float);
-		else
+		else if(sdcap)
 			samplesize += sizeof(bool);
+		else if(ccap)
+			samplesize += 2*sizeof(int32_t);
 		size_t nsamples = len / samplesize;
 		cap->Resize(nsamples);
 
@@ -745,11 +765,21 @@ void Session::DoLoadWaveformDataForStream(
 				sacap->m_durations[j] = stime[1];
 			}
 
-			else
+			else if(sdcap)
 			{
 				sdcap->m_samples[j] = *reinterpret_cast<bool*>(buf+offset);
 				sdcap->m_offsets[j] = stime[0];
 				sdcap->m_durations[j] = stime[1];
+			}
+
+			//CAN capture
+			else if(ccap)
+			{
+				uint32_t* p = reinterpret_cast<uint32_t*>(buf+offset);
+
+				ccap->m_samples[j] = CANSymbol((CANSymbol::stype)p[1], p[0]);
+				ccap->m_offsets[j] = stime[0];
+				ccap->m_durations[j] = stime[1];
 			}
 		}
 
@@ -2181,6 +2211,15 @@ bool Session::SerializeWaveforms(const string& dataDir)
 					{
 						chnode["format"] = "sparsev1";
 						SerializeSparseWaveform(sparse, datapath);
+
+						//Save type if it's a protocol waveform
+						//so if we do an offline load, we know what type of waveform to make
+						if(dynamic_cast<SparseAnalogWaveform*>(sparse) != nullptr)
+							chnode["datatype"] = "analog";
+						else if(dynamic_cast<SparseDigitalWaveform*>(sparse) != nullptr)
+							chnode["datatype"] = "digital";
+						else if(dynamic_cast<CANWaveform*>(sparse) != nullptr)
+							chnode["datatype"] = "can";
 					}
 					else
 					{
@@ -2319,6 +2358,7 @@ bool Session::SerializeSparseWaveform(SparseWaveformBase* wfm, const string& pat
 	wfm->PrepareForCpuAccess();
 	auto achan = dynamic_cast<SparseAnalogWaveform*>(wfm);
 	auto dchan = dynamic_cast<SparseDigitalWaveform*>(wfm);
+	auto cchan = dynamic_cast<CANWaveform*>(wfm);
 	size_t len = wfm->size();
 
 	//Analog channels
@@ -2387,6 +2427,41 @@ bool Session::SerializeSparseWaveform(SparseWaveformBase* wfm, const string& pat
 			{
 				LogError("file write error\n");
 				fclose(fp);
+			}
+		}
+	}
+	else if(cchan)
+	{
+		#pragma pack(push, 1)
+		class csample_t
+		{
+		public:
+			int64_t off;
+			int64_t dur;
+			uint32_t data;
+			uint32_t type;
+
+			csample_t(int64_t o=0, int64_t d=0, CANSymbol s = CANSymbol())
+			: off(o), dur(d), data(s.m_data), type(s.m_stype)
+			{}
+		};
+		#pragma pack(pop)
+
+		//Copy sample data
+		vector<csample_t,	AlignedAllocator<csample_t, 64 > > samples;
+		samples.reserve(len);
+		for(size_t i=0; i<len; i++)
+			samples.push_back(csample_t(cchan->m_offsets[i], cchan->m_durations[i], cchan->m_samples[i]));
+
+		//Write it
+		for(size_t i=0; i<len; i+= samples_per_block)
+		{
+			size_t blocklen = min(len-i, samples_per_block);
+			if(blocklen != fwrite(&samples[i], sizeof(csample_t), blocklen, fp))
+			{
+				LogError("file write error\n");
+				fclose(fp);
+				return false;
 			}
 		}
 	}
