@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -354,7 +354,8 @@ bool TriggerGroup::CheckForPendingWaveforms()
 void TriggerGroup::DownloadWaveforms()
 {
 	//Grab the data from the primary
-	DetachAllWaveforms(m_primary);
+	if(!m_primary->IsAppendingToWaveform())
+		DetachAllWaveforms(m_primary);
 	m_primary->PopPendingWaveform();
 
 	//All good if we're a single-scope trigger group.
@@ -391,7 +392,8 @@ void TriggerGroup::DownloadWaveforms()
 	//Grab the data from secondaries and retcon the timestamps so they match the primary's trigger
 	for(auto scope : m_secondaries)
 	{
-		DetachAllWaveforms(scope);
+		if(!scope->IsAppendingToWaveform())
+			DetachAllWaveforms(scope);
 		scope->PopPendingWaveform();
 
 		for(size_t j=0; j<scope->GetChannelCount(); j++)

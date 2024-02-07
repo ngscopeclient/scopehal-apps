@@ -247,6 +247,11 @@ void HistoryManager::AddHistory(
 	if(!foundTimestamp)
 		tp = refTimeIfNoWaveforms;
 
+	//If we already have a history point for the same exact timestamp, do nothing
+	//Either a bug or we're in append mode
+	if(HasHistory(tp))
+		return;
+
 	//All good. Generate a new history point and add it
 	auto pt = make_shared<HistoryPoint>();
 	m_history.push_back(pt);
