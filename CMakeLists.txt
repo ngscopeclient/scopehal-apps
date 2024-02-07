@@ -49,10 +49,46 @@ endif()
 find_package(Git)
 
 # Package detection
-# (we still use gtk on Linux for the file browser dialog in "native" mode)
-find_package(PkgConfig)
-pkg_check_modules(CAIROMM REQUIRED cairomm-1.0)
-pkg_check_modules(SIGCXX REQUIRED sigc++-2.0)
+
+find_package(PkgConfig MODULE REQUIRED)
+
+# yaml-cpp is used in scopehal and ngscopeclient
+find_package(yaml-cpp REQUIRED)
+#WORKAROUND Needed for Debian Bullseye, which does not provide a yaml-cpp::yaml-cpp target
+if(NOT TARGET yaml-cpp::yaml-cpp)
+	find_library(YAML_CPP_LIBRARIES_FILES NAMES ${YAML_CPP_LIBRARIES})
+	if(YAML_CPP_LIBRARIES_FILES MATCHES ".so$")
+		add_library(yaml-cpp::yaml-cpp SHARED IMPORTED)
+	elseif(YAML_CPP_LIBRARIES_FILES MATCHES ".a$")
+		add_library(yaml-cpp::yaml-cpp STATIC IMPORTED)
+	else()
+		message(FATAL_ERROR "Unexpected partially-installed yaml-cpp, is it installed correctly?")
+	endif()
+	set_property(TARGET yaml-cpp::yaml-cpp PROPERTY IMPORTED_LOCATION ${YAML_CPP_LIBRARIES_FILES})
+	#WORKAROUND The cmake file for yaml-cpp on debian bullseye is broken and provides a wrong YAML_CPP_INCLUDE_DIR
+	find_path(YAML_CPP_INCLUDEFILES_DIR yaml-cpp/yaml.h REQUIRED)
+	cmake_path(GET YAML_CPP_INCLUDEFILES_DIR PARENT_PATH YAML_CPP_INCLUDE_DIR)
+	set_property(TARGET yaml-cpp::yaml-cpp PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${YAML_CPP_INCLUDEFILES_DIR})
+endif()
+
+pkg_check_modules(SIGCXX sigc++-3.0) # look for latest version first
+if(NOT SIGCXX_FOUND)
+	pkg_check_modules(SIGCXX sigc++-2.0) # look for older version too
+endif()
+if(NOT SIGCXX_FOUND)
+	message(FATAL_ERROR "Unable to find any version of sigc++; this is required to build ngscopeclient.")
+endif()
+
+# cairomm is used by EyeMask
+pkg_check_modules(CAIROMM cairomm-1.16) # look for latest version first
+if(NOT CAIROMM_FOUND)
+	pkg_check_modules(CAIROMM cairomm-1.0) # look for older version too
+endif()
+if(NOT CAIROMM_FOUND)
+	message(FATAL_ERROR "Unable to find any version of cairomm; this is required to build ngscopeclient.")
+endif()
+
+# We still use gtk on Linux for the file browser dialog in "native" mode)
 if(LINUX)
 	pkg_check_modules(GTK REQUIRED gtk+-3.0)
 endif()
