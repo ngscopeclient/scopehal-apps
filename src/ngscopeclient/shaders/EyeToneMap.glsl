@@ -60,14 +60,16 @@ void main()
 
 	//Look it up in the gradient texture
 	float clamped = min(pixval, 0.99);
-	clamped += 0.5 / 255.0;
 
 	//Write final output
 	vec4 colorOut;
 	if(clamped <= 0)
 		colorOut = vec4(0,0,0,0);
 	else
+	{
+		clamped += 0.5 / 255.0;
 		colorOut = texture(colorRamp, vec2(clamped, 0.5));
+	}
 	imageStore(
 		outputTex,
 		ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y),
