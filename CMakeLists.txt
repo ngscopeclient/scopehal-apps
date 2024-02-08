@@ -55,7 +55,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(SANITIZE)
-	add_compile_options(-fsanitize=memory -fsanitize=thread -fsanitize=address -fsanitize=undefined -fsanitize=cfi -flto)
+	add_compile_options(-fsanitize=address -fsanitize=undefined)
+	add_link_options(-fsanitize=address -fsanitize=undefined)
 endif()
 
 if(WIN32)
