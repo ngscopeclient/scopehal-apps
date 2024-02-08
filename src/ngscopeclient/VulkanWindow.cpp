@@ -181,17 +181,15 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	// Apply DPI scaling now that glfw initialized
 	// WORKAROUND
 	float scale = GetContentScale();
+	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
 
 	#ifdef __APPLE__
 	ImFontConfig cfg;
 	cfg.SizePixels = 13.0f * scale;
 	io.Fonts->AddFontDefault(&cfg);
 	io.FontGlobalScale = 1.0f / scale;
-	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
 
 	#else
-	float scale = GetContentScale();
-	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
 	ImGui::GetStyle().ScaleAllSizes(scale);
 
 	#endif
