@@ -8,7 +8,7 @@ include_directories(cmake) #WORKAROUND needed for find_package(Vulkan) for Vulka
 if(DEFINED ENV{VULKAN_SDK})
 	if(WIN32 AND (NOT MSVC))
 		message(WARNING "Detected VULKAN_SDK at $ENV{VULKAN_SDK}.")
-		message(WARNING "Compiling and linking against the Vulkan SDK is not supported with MSYS. The build system"
+		message(WARNING "Compiling and linking against the Vulkan SDK is not supported with MSYS. The build system "
 			      "will ignore the SDK and you will need to have the Vulkan packages installed from the MSYS repositories.")
 	else()
 		message("Detected and using VULKAN_SDK at $ENV{VULKAN_SDK}")
@@ -35,15 +35,19 @@ if(DISABLE_PCH)
 	set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
 endif()
 
-# Compiler flags
-add_compile_options(-Wall -Wextra -Wuninitialized)
-add_compile_options(-Wshadow -Wpedantic -Wcast-align -Wwrite-strings)
-add_compile_options(-Wmissing-declarations -Wvla)
+# Compiler warnings for GCC/Clang
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	add_compile_options(-Wall -Wextra -Wuninitialized)
+	add_compile_options(-Wshadow -Wpedantic -Wcast-align -Wwrite-strings)
+	add_compile_options(-Wmissing-declarations -Wvla)
+    add_compile_options(-Werror -Wno-error=deprecated-declarations -Wno-error=unused-parameter -Wno-error=unused-variable -Wno-error=unused-result)
+endif()
 
-# Compiler warnings
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  add_compile_options(-Wpointer-sign -Wno-gnu-zero-variadic-macro-arguments -Wno-unknown-warning-option)
+# Compiler warnings specific to GCC or Clang
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+	add_compile_options(-Woverloaded-virtual=1)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Woverloaded-virtual -Wpointer-sign -Wno-gnu-zero-variadic-macro-arguments -Wno-unknown-warning-option)
 endif()
 add_compile_options(-g -mtune=native)
 add_compile_options("$<$<CONFIG:RELEASE>:-O3>")
