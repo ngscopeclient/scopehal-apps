@@ -140,6 +140,17 @@ private:
 		FontDescription
 	>::type;
 
+private:
+	std::string m_identifier;
+	std::string m_label;
+	std::string m_description;
+	PreferenceType m_type;
+	PreferenceValue m_value;
+	bool m_isVisible{true};
+	Unit m_unit{Unit::UNIT_COUNTS};
+	bool m_hasValue{false};
+	EnumMapping m_mapping;
+
 public:
 	Preference(PreferenceType type, std::string identifier)
 		: m_identifier{std::move(identifier)}, m_type{type}
@@ -220,6 +231,7 @@ public:
 	template< typename E >
 	static impl::PreferenceBuilder Enum(std::string identifier, E defaultValue);
 
+
 private:
 	void SetMapping(EnumMapping mapping);
 
@@ -245,23 +257,15 @@ private:
 	}
 
 	void MoveFrom(Preference& other);
-
-private:
-	std::string m_identifier;
-	std::string m_label;
-	std::string m_description;
-	PreferenceType m_type;
-	PreferenceValue m_value;
-	bool m_isVisible{true};
-	Unit m_unit{Unit::UNIT_COUNTS};
-	bool m_hasValue{false};
-	EnumMapping m_mapping;
 };
 
 namespace impl
 {
 	class PreferenceBuilder
 	{
+		protected:
+			Preference m_pref;
+
 		public:
 			PreferenceBuilder(Preference&& pref);
 
@@ -278,9 +282,6 @@ namespace impl
 				this->m_pref.m_mapping.AddEnumMember<E>(name, value);
 				return std::move(*this);
 			}
-
-		protected:
-			Preference m_pref;
 	};
 }
 

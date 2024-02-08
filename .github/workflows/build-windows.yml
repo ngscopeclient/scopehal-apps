@@ -6,10 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  VULKAN_SDK_VERSION: 1.3.268.0
+  VULKAN_SDK_VERSION: 1.3.275.0
 
 jobs:
-
   Windows:
     runs-on: windows-latest
 
@@ -17,12 +16,15 @@ jobs:
       run:
         shell: msys2 {0}
 
+    strategy:
+      matrix:
+        include:
+          - { sys: mingw64, env: x86_64 }
+          - { sys: ucrt64,  env: ucrt-x86_64 }
+          - { sys: clang64, env: clang-x86_64 }
+
     steps:
-
-    - run: git config --global core.autocrlf input
-      shell: bash
-
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
         fetch-depth: 0
@@ -30,81 +32,58 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
-        msystem: MINGW64
-        install: |
+        msystem: ${{matrix.sys}}
+        install: >-
           git
           wget
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-toolchain
-
-    - name: Cache glslang
-      id: cache-glslang
-      uses: actions/cache@v3
-      with:
-        path: D:/a/_temp/msys64/home/runneradmin/glslang
-        key: ${{ runner.os }}-glslang-${{ env.VULKAN_SDK_VERSION }}
-
-    - name: Build glslang tags/sdk-${{ env.VULKAN_SDK_VERSION }}
-      if: steps.cache-glslang.outputs.cache-hit != 'true'
-      run: |
-        # Windows mingw64 glslang build (as it is not fully integrated in VulkanSDK for Windows)
-        cd ~
-        git clone https://github.com/KhronosGroup/glslang.git
-        cd glslang
-        git checkout tags/vulkan-sdk-${{ env.VULKAN_SDK_VERSION }}
-        git clone https://github.com/google/googletest.git External/googletest
-        cd External/googletest
-        git checkout 0c400f67fcf305869c5fb113dd296eca266c9725
-        cd ../..
-        ./update_glslang_sources.py
-
-        SOURCE_DIR=~/glslang
-        BUILD_DIR=$SOURCE_DIR/build
-        mkdir -p $BUILD_DIR
-        cd $BUILD_DIR
-        cmake -DCMAKE_BUILD_TYPE=Release -G"MinGW Makefiles" $SOURCE_DIR -DCMAKE_INSTALL_PREFIX="$(pwd)/install"
-        cmake --build . --config Release --target install
-
-    - name: Install Vulkan SDK
-      run: |
-        wget https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/windows/VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe
-        ./VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe --accept-licenses --default-answer --confirm-command install
-        echo "/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}/Bin" >> $GITHUB_PATH
-        rm -f VulkanSDK-${{ env.VULKAN_SDK_VERSION }}-Installer.exe
-
-    - name: Setup Paths and Env for all steps
-      run: |
-        rm -f ~/.bash_profile
-
-        echo "PATH=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}/Bin:\$PATH" >> ~/.bash_profile
-        echo "export VK_SDK_PATH=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}" >> ~/.bash_profile
-        echo "export VULKAN_SDK=/c/VulkanSDK/${{ env.VULKAN_SDK_VERSION }}" >> ~/.bash_profile
-        echo "export GLSLANG_BUILD_PATH=~/glslang/build/install" >> ~/.bash_profile
+        pacboy: >-
+          cmake:p
+          toolchain:p
+          libsigc++:p
+          cairomm:p
+          yaml-cpp:p
+          glfw:p
+          catch:p
+          vulkan-headers:p
+          vulkan-loader:p
+          shaderc:p
+          glslang:p
+          spirv-tools:p
+          ffts:p
 
     - name: Build
       run: |
-        cd msys2
-        MINGW_ARCH=mingw64 makepkg-mingw --noconfirm --noprogressbar -sCLf
+        mkdir build
+        cd build
+        cmake .. -GNinja
+        ninja
 
     - name: Test
+      if: ${{ false }}
       shell: msys2 {0}
       run: |
-        pacman -U --noconfirm msys2/*.zst
+        ninja test
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: glscopeclient-windows
-        path: msys2/*.zst
+        name: glscopeclient-build-windows-${{ runner.os }}-${{ matrix.env }}-${{ github.job }}
+        path: build
 
-    - name: Upload Artifacts (ngscopeclient portable zip)
-      uses: actions/upload-artifact@v3
-      with:
-        name: ngscopeclient-windows-portable
-        path: build/dist/ngscopeclient*.zip
+    # - name: Upload Artifacts
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: glscopeclient-windows-${{ runner.os }}-${{ github.job }}
+    #     path: msys2/*.zst
 
-    - name: Upload Artifacts (ngscopeclient MSI)
-      uses: actions/upload-artifact@v3
-      with:
-        name: ngscopeclient-windows.msi
-        path: build/dist/ngscopeclient*.msi
+    # - name: Upload Artifacts (ngscopeclient portable zip)
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
+    #     path: build/dist/ngscopeclient*.zip
+
+    # - name: Upload Artifacts (ngscopeclient MSI)
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
+    #     path: build/dist/ngscopeclient*.msi
