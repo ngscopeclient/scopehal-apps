@@ -43,11 +43,13 @@
 #include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
-#include <fstream>
 
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "../scopeprotocols/EyePattern.h"
+
+#include <fstream>
+#include <cinttypes>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -544,7 +546,7 @@ bool Session::LoadWaveformDataForScope(
 		auto hist = m_history.GetHistory(time);
 		if(hist && (hist->m_history.find(scope) != hist->m_history.end()))
 		{
-			LogWarning("Session contains duplicate data for time %ld.%ld, discarding\n", time.first, time.second);
+			LogWarning("Session contains duplicate data for time %ld.%" PRId64 ", discarding\n", time.first, time.second);
 			continue;
 		}
 

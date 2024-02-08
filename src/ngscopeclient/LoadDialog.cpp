@@ -78,7 +78,7 @@ void LoadDialog::RefreshFromHardware()
 		//Add placeholders for non-power channels
 		//TODO: can we avoid spawning a thread here pointlessly?
 		if( (m_load->GetInstrumentTypesForChannel(i) & Instrument::INST_LOAD) == 0)
-			m_futureUIState.push_back(async(launch::async, [load, i]{ LoadChannelUIState dummy; return dummy; }));
+			m_futureUIState.push_back(async(launch::async, [/*load, i*/]{ LoadChannelUIState dummy; return dummy; }));
 
 		//Actual power channels get async load
 		else

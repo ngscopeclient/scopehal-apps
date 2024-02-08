@@ -300,7 +300,7 @@ TextureManager::TextureManager(shared_ptr<QueueHandle> queue)
 
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
 	m_cmdBuf = make_unique<vk::raii::CommandBuffer>(
-		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+		std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 }
 
 TextureManager::~TextureManager()

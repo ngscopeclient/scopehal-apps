@@ -174,9 +174,12 @@ endif()
 target_include_directories(ngscopeclient
 	PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}
-	SYSTEM
+	)
+target_include_directories(ngscopeclient
+	SYSTEM PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui/misc/cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../imgui_markdown
 	${CMAKE_CURRENT_SOURCE_DIR}/../implot/
 	${CMAKE_CURRENT_SOURCE_DIR}/../imgui-node-editor/
 	${CMAKE_CURRENT_SOURCE_DIR}/../ImGuiFileDialog/

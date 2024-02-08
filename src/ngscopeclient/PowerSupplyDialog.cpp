@@ -83,7 +83,7 @@ void PowerSupplyDialog::AsyncLoadState()
 		//Add placeholders for non-power channels
 		//TODO: can we avoid spawning a thread here pointlessly?
 		if( (m_psu->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU) == 0)
-			m_futureUIState.push_back(async(launch::async, [psu, i]{ PowerSupplyChannelUIState dummy; return dummy; }));
+			m_futureUIState.push_back(async(launch::async, [/*psu, i*/]{ PowerSupplyChannelUIState dummy; return dummy; }));
 
 		//Actual power channels get async load
 		else

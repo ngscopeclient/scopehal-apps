@@ -557,8 +557,8 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	//Settings calculated by RenderGrid() then reused in RenderYAxis()
 	map<float, float> gridmap;
-	float vbot;
-	float vtop;
+	float vbot = 0.0f;
+	float vtop = 0.0f;
 
 	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - yAxisWidthSpaced, unspacedHeightPerArea)))
 	{
@@ -2782,7 +2782,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 		CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
 	//Only show split in bottom (or top?) area
-	if( (iArea == (numAreas-1)) /*|| (iArea == 0)*/ )
+	if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
 		CenterRightDropArea(ImVec2(leftOfMiddle + widthOfMiddle/2, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);

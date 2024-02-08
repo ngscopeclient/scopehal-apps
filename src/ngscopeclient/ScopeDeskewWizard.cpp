@@ -37,6 +37,8 @@
 #include "ScopeDeskewWizard.h"
 #include "MainWindow.h"
 
+#include <cinttypes>
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,7 +87,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 		vk::CommandPoolCreateInfo(
 			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 			m_queue->m_family ))
-	, m_cmdBuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice,
+	, m_cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice,
 		vk::CommandBufferAllocateInfo(*m_pool, vk::CommandBufferLevel::ePrimary, 1)).front()))
 	, m_corrOut("corrOut")
 {
@@ -579,7 +581,7 @@ void ScopeDeskewWizard::StartCorrelation()
 	//Collect the skew from this round
 	int64_t skew = m_bestCorrelationOffset * pri->m_timescale;
 	Unit fs(Unit::UNIT_FS);
-	LogTrace("Best correlation = %f (delta = %ld / %s)\n",
+	LogTrace("Bxest correlation = %f (delta = %" PRId64 " / %s)\n",
 		m_bestCorrelation, m_bestCorrelationOffset, fs.PrettyPrint(skew).c_str());
 
 	//If we got a correlation of zero (TODO: why would this be?) then retry

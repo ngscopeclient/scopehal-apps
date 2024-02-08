@@ -63,7 +63,7 @@ TEST_CASE("Filter_DeEmbed")
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	//Create an empty input waveform
 	const size_t depth = 1000000;

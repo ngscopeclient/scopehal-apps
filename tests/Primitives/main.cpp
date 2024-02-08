@@ -69,7 +69,7 @@ public:
 		g_rng.seed(0);
 	}
 
-    void testRunEnded(Catch::TestRunStats const& testRunStats) override
+    void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
     {
 		ScopehalStaticCleanup();
 	}

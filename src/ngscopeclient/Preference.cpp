@@ -43,7 +43,7 @@ using namespace std;
 namespace impl
 {
 	PreferenceBuilder::PreferenceBuilder(Preference&& pref)
-		: m_pref{move(pref)}
+		: m_pref{std::move(pref)}
 	{
 
 	}
@@ -51,30 +51,30 @@ namespace impl
 	PreferenceBuilder PreferenceBuilder::Invisible() &&
 	{
 		this->m_pref.m_isVisible = false;
-		return move(*this);
+		return std::move(*this);
 	}
 
 	PreferenceBuilder PreferenceBuilder::Label(std::string label) &&
 	{
 		this->m_pref.m_label = std::move(label);
-		return move(*this);
+		return std::move(*this);
 	}
 
 	PreferenceBuilder PreferenceBuilder::Description(std::string description) &&
 	{
 		this->m_pref.m_description = std::move(description);
-		return move(*this);
+		return std::move(*this);
 	}
 
 	PreferenceBuilder PreferenceBuilder::Unit(Unit::UnitType type) &&
 	{
 		this->m_pref.m_unit = ::Unit{ type };
-		return move(*this);
+		return std::move(*this);
 	}
 
 	Preference PreferenceBuilder::Build() &&
 	{
-		return move(this->m_pref);
+		return std::move(this->m_pref);
 	}
 }
 
@@ -261,13 +261,13 @@ string Preference::ToString() const
 void Preference::MoveFrom(Preference& other)
 {
 	m_type = other.m_type;
-	m_identifier = move(other.m_identifier);
-	m_description = move(other.m_description);
-	m_label = move(other.m_label);
-	m_isVisible = move(other.m_isVisible);
-	m_unit = move(other.m_unit);
-	m_hasValue = move(other.m_hasValue);
-	m_mapping = move(other.m_mapping);
+	m_identifier = std::move(other.m_identifier);
+	m_description = std::move(other.m_description);
+	m_label = std::move(other.m_label);
+	m_isVisible = std::move(other.m_isVisible);
+	m_unit = std::move(other.m_unit);
+	m_hasValue = std::move(other.m_hasValue);
+	m_mapping = std::move(other.m_mapping);
 
 	if(m_hasValue)
 	{
@@ -282,20 +282,20 @@ void Preference::MoveFrom(Preference& other)
 				break;
 
 			case PreferenceType::String:
-				Construct<string>(move(other.GetValueRaw<string>()));
+				Construct<string>(other.GetValueRaw<string>());
 				break;
 
 			case PreferenceType::Font:
-				Construct<FontDescription>(move(other.GetFont()));
+				Construct<FontDescription>(other.GetFont());
 				break;
 
 			case PreferenceType::Color:
-				Construct<impl::Color>(move(other.GetValueRaw<impl::Color>()));
+				Construct<impl::Color>(other.GetValueRaw<impl::Color>());
 				break;
 
 			case PreferenceType::Enum:
 			case PreferenceType::Int:
-				Construct<std::int64_t>(move(other.GetValueRaw<std::int64_t>()));
+				Construct<std::int64_t>(other.GetValueRaw<std::int64_t>());
 				break;
 
 			default:
@@ -355,7 +355,7 @@ void Preference::SetEnumRaw(std::int64_t value)
 void Preference::SetString(string value)
 {
 	CleanUp();
-	Construct<string>(move(value));
+	Construct<string>(value);
 }
 
 void Preference::SetColor(const ImU32& color)
@@ -370,7 +370,7 @@ void Preference::SetColor(const ImU32& color)
 		static_cast<uint8_t>((color >> IM_COL32_A_SHIFT) & 0xff)
 	};
 
-	Construct<impl::Color>(move(clr));
+	Construct<impl::Color>(clr);
 }
 
 void Preference::SetColorRaw(const impl::Color& color)
@@ -444,7 +444,7 @@ impl::PreferenceBuilder Preference::EnumRaw(std::string identifier, std::int64_t
 impl::PreferenceBuilder Preference::Font(std::string identifier, FontDescription defaultValue)
 {
 	Preference pref(PreferenceType::Font, std::move(identifier));
-	pref.Construct<FontDescription>(std::move(defaultValue));
+	pref.Construct<FontDescription>(defaultValue);
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }

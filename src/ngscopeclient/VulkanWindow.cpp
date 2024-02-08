@@ -153,7 +153,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		m_renderCompleteSemaphores.push_back(make_unique<vk::raii::Semaphore>(*g_vkComputeDevice, sinfo));
 		m_fences.push_back(make_unique<vk::raii::Fence>(*g_vkComputeDevice, finfo));
 		m_cmdBuffers.push_back(make_unique<vk::raii::CommandBuffer>(
-			move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front())));
+			std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front())));
 	}
 
 	//Initialize ImGui
@@ -335,7 +335,7 @@ bool VulkanWindow::UpdateFramebuffer()
 	vk::Format surfaceFormat = static_cast<vk::Format>(format.format);
 
 	//Save old swapchain
-	unique_ptr<vk::raii::SwapchainKHR> oldSwapchain = move(m_swapchain);
+	unique_ptr<vk::raii::SwapchainKHR> oldSwapchain = std::move(m_swapchain);
 
 	//Makw the swapchain
 	vk::SwapchainKHR oldSwapchainIfValid = {};

@@ -67,7 +67,7 @@ public:
 	}
 
 	//Clean up after the scope goes out of scope (pun not intended)
-    void testRunEnded(Catch::TestRunStats const& testRunStats) override
+    void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
     {
 		ScopehalStaticCleanup();
 	}

@@ -77,7 +77,7 @@
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
-#include "../imgui_markdown/imgui_markdown.h"
+#include <imgui_markdown.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -139,7 +139,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, 1);
 	m_cmdBuffer = make_unique<vk::raii::CommandBuffer>(
-		move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+		std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	if(g_hasDebugUtils)
 	{

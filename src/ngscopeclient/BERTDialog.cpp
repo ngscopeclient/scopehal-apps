@@ -36,6 +36,8 @@
 #include "ngscopeclient.h"
 #include "BERTDialog.h"
 
+#include <cinttypes>
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -128,7 +130,7 @@ bool BERTDialog::DoRender()
 			ImGui::SetNextItemWidth(width);
 			if(ImGui::InputText("Custom Pattern", &m_txPatternText))
 			{
-				sscanf(m_txPatternText.c_str(), "%lx", &m_txPattern);
+				sscanf(m_txPatternText.c_str(), "%" PRIx64, &m_txPattern);
 				m_bert->SetGlobalCustomPattern(m_txPattern);
 				m_refclkFrequency = m_bert->GetRefclkOutFrequency();
 			}

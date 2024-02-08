@@ -61,7 +61,7 @@ namespace internal
 	}
 
 	PreferencePath::PreferencePath(vector<string> segments)
-		: m_segments{ move(segments) }
+		: m_segments{ std::move(segments) }
 	{
 
 	}
@@ -69,7 +69,7 @@ namespace internal
 	PreferencePath PreferencePath::NextLevel() const
 	{
 		vector<string> newSegments{ next(this->m_segments.begin()), this->m_segments.end() };
-		return PreferencePath{ move(newSegments) };
+		return PreferencePath{ std::move(newSegments) };
 	}
 
 	size_t PreferencePath::GetLength() const
@@ -122,7 +122,7 @@ namespace internal
 	}
 
 	PreferenceHolder::PreferenceHolder(Preference pref)
-		: PreferenceTreeNodeBase(PreferenceTreeNodeType::Preference, pref.GetIdentifier()), m_pref{ move(pref) }
+		: PreferenceTreeNodeBase(PreferenceTreeNodeType::Preference, pref.GetIdentifier()), m_pref{ std::move(pref) }
 	{
 
 	}
@@ -327,7 +327,7 @@ void PreferenceCategory::FromYAML(const YAML::Node& node)
 }
 
 PreferenceCategory::PreferenceCategory(string identifier)
-	: PreferenceTreeNodeBase(PreferenceTreeNodeType::Category, move(identifier))
+	: PreferenceTreeNodeBase(PreferenceTreeNodeType::Category, std::move(identifier))
 {
 
 }
@@ -344,8 +344,8 @@ void PreferenceCategory::AddPreference(Preference pref)
 		throw runtime_error("Preference category already contains child with given name");
 
 	const auto identifier = pref.GetIdentifier();
-	unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new internal::PreferenceHolder{ move(pref) } };
-	this->m_children[identifier] = move(ptr);
+	unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new internal::PreferenceHolder{ std::move(pref) } };
+	this->m_children[identifier] = std::move(ptr);
 	this->m_ordering.push_back(identifier);
 }
 
@@ -360,7 +360,7 @@ PreferenceCategory& PreferenceCategory::AddCategory(string identifier)
 		throw runtime_error("Preference category already contains child with given name");
 
 	unique_ptr<internal::PreferenceTreeNodeBase> ptr{ new PreferenceCategory{ identifier } };
-	this->m_children[identifier] = move(ptr);
+	this->m_children[identifier] = std::move(ptr);
 	this->m_ordering.push_back(identifier);
 
 	return *static_cast<PreferenceCategory*>(this->m_children[identifier].get());
