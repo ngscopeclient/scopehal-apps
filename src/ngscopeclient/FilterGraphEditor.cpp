@@ -770,7 +770,7 @@ void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
 	//Figure out how big the port text is
 	auto textfont = ImGui::GetFont();
 	float oportmax = 1;
-	float iportmax = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, "‣").x;
+	float iportmax = textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, "‣").x;
 	vector<string> onames;
 	for(auto it : group->m_hierInputMap)
 	{
@@ -788,14 +788,15 @@ void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
 		auto name = sinkname + " ‣";
 		onames.push_back(name);
 		oportmax = max(oportmax,
-			textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x +
-			textfont->FontSize * 2);
+			textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, name.c_str()).x +
+			ImGui::GetFontSize() * 2);
 	}
 	float nodewidth = oportmax + iportmax + 1*ImGui::GetStyle().ItemSpacing.x;
 
 	//Set size/position
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	float headerheight = headerfont->FontSize * 1.5;
+	auto headerfontsize = headerfont->FontSize * ImGui::GetIO().FontGlobalScale;
+	float headerheight = headerfontsize * 1.5;
 	auto gborder = ax::NodeEditor::GetStyle().GroupBorderWidth;
 	auto gpad = ax::NodeEditor::GetStyle().NodePadding.x;
 	ImVec2 pos(
@@ -876,7 +877,7 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 	//Figure out how big the port text is
 	auto textfont = ImGui::GetFont();
 	float oportmax = 1;
-	float iportmax = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, "‣").x;
+	float iportmax = textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, "‣").x;
 	vector<string> onames;
 	for(auto it : group->m_hierOutputMap)
 	{
@@ -884,13 +885,14 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 
 		auto name = stream.GetName() + " ‣";
 		onames.push_back(name);
-		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+		oportmax = max(oportmax, textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, name.c_str()).x);
 	}
 	float nodewidth = oportmax + iportmax + 3*ImGui::GetStyle().ItemSpacing.x;
 
 	//Set size/position
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	float headerheight = headerfont->FontSize * 1.5;
+	auto headerfontsize = headerfont->FontSize * ImGui::GetIO().FontGlobalScale;
+	float headerheight = headerfontsize * 1.5;
 	auto gborder = ax::NodeEditor::GetStyle().GroupBorderWidth;
 	auto gpad = ax::NodeEditor::GetStyle().NodePadding.x;
 	ImVec2 pos(
@@ -1889,7 +1891,8 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	auto id = GetID(trig);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
-	float headerheight = headerfont->FontSize * 1.5;
+	auto headerfontsize = headerfont->FontSize * ImGui::GetIO().FontGlobalScale;
+	float headerheight = headerfontsize * 1.5;
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
 	ax::NodeEditor::BeginNode(id);
@@ -1903,7 +1906,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 		headerText = trig->GetScope()->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is and reserve space for it
-	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+	auto headerSize = headerfont->CalcTextSizeA(headerfontsize, FLT_MAX, 0, headerText.c_str());
 	float nodewidth = max(15*tsize, headerSize.x);
 	ImGui::Dummy(ImVec2(nodewidth, headerheight));
 
@@ -1958,8 +1961,8 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 		ImDrawFlags_RoundCornersTop);
 	bgList->AddText(
 		headerfont,
-		headerfont->FontSize,
-		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
+		headerfontsize,
+		ImVec2(pos.x + headerfontsize*0.5, pos.y + headerfontsize*0.25),
 		headercolor,
 		headerText.c_str());
 }
@@ -1984,8 +1987,10 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	auto color = ColorFromString(displaycolor);
 	auto headercolor = prefs.GetColor("Appearance.Filter Graph.header_text_color");
 	auto headerfont = m_parent->GetFontPref("Appearance.Filter Graph.header_font");
+	auto headerfontsize = headerfont->FontSize * ImGui::GetIO().FontGlobalScale;
 	auto textfont = m_parent->GetFontPref("Appearance.Filter Graph.icon_caption_font");
-	float headerheight = headerfont->FontSize * 1.5;
+	auto textfontsize = textfont->FontSize * ImGui::GetIO().FontGlobalScale;
+	float headerheight = headerfontsize * 1.5;
 	float rounding = ax::NodeEditor::GetStyle().NodeRounding;
 
 	auto id = GetID(channel);
@@ -2002,7 +2007,8 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		headerText = inst->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is
-	auto headerSize = headerfont->CalcTextSizeA(headerfont->FontSize, FLT_MAX, 0, headerText.c_str());
+	auto headerSize = headerfont->CalcTextSizeA(headerfontsize, FLT_MAX, 0, headerText.c_str());
+
 
 	//Format block type early, even though it's not drawn until later
 	//so that we know how much space to allocate
@@ -2025,7 +2031,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 			blocktype = "Hardware input";
 	}
 	ImVec2 iconsize(ImGui::GetFontSize() * 6, ImGui::GetFontSize() * 3);
-	auto captionsize = textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, blocktype.c_str());
+	auto captionsize = textfont->CalcTextSizeA(textfontsize, FLT_MAX, 0, blocktype.c_str());
 
 	//Reserve space for the center icon and node type caption
 	float iconwidth = max(iconsize.x, captionsize.x);
@@ -2039,13 +2045,13 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 	{
 		auto name = string("‣ ") + channel->GetInputName(i);
 		inames.push_back(name);
-		iportmax = max(iportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+		iportmax = max(iportmax, textfont->CalcTextSizeA(textfontsize, FLT_MAX, 0, name.c_str()).x);
 	}
 	for(size_t i=0; i<channel->GetStreamCount(); i++)
 	{
 		auto name = channel->GetStreamName(i) + " ‣";
 		onames.push_back(name);
-		oportmax = max(oportmax, textfont->CalcTextSizeA(textfont->FontSize, FLT_MAX, 0, name.c_str()).x);
+		oportmax = max(oportmax, textfont->CalcTextSizeA(textfontsize, FLT_MAX, 0, name.c_str()).x);
 	}
 	float colswidth = iportmax + oportmax + iconwidth;
 	float nodewidth = max(colswidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
@@ -2117,7 +2123,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 
 	//Reserve space for icon and caption if needed
 	float contentHeight = ImGui::GetCursorPos().y - bodystart.y;
-	float minHeight = iconsize.y + 3*ImGui::GetStyle().ItemSpacing.y + textfont->FontSize;
+	float minHeight = iconsize.y + 3*ImGui::GetStyle().ItemSpacing.y + textfontsize;
 	if(contentHeight < minHeight)
 		ImGui::Dummy(ImVec2(1, minHeight - contentHeight));
 
@@ -2155,8 +2161,8 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		ImDrawFlags_RoundCornersTop);
 	bgList->AddText(
 		headerfont,
-		headerfont->FontSize,
-		ImVec2(pos.x + headerfont->FontSize*0.5, pos.y + headerfont->FontSize*0.25),
+		headerfontsize,
+		ImVec2(pos.x + headerfontsize*0.5, pos.y + headerfontsize*0.25),
 		headercolor,
 		headerText.c_str());
 
@@ -2176,7 +2182,7 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		ImVec2(0, iconsize.y + ImGui::GetStyle().ItemSpacing.y*3);
 	bgList->AddText(
 		textfont,
-		textfont->FontSize,
+		textfontsize,
 		textpos + ImVec2( (iconwidth - captionsize.x)/2, 0),
 		textColor,
 		blocktype.c_str());

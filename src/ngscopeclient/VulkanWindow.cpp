@@ -180,8 +180,15 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 
 	// Apply DPI scaling now that glfw initialized
 	float scale = GetContentScale();
+
 	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
+
+	//WORKAROUND: handle HiDPI correctly on macOS.
+#ifdef __APPLE__
+	io.FontGlobalScale = 1.0f / scale;
+#else
 	ImGui::GetStyle().ScaleAllSizes(scale);
+#endif
 
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();

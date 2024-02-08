@@ -1034,6 +1034,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 
 	//Draw the peaks and update X/Y size for collision detection
 	auto font = m_parent->GetFontPref("Appearance.Peaks.label_font");
+	auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	auto textColor = prefs.GetColor("Appearance.Peaks.peak_text_color");
 	auto mousePos = ImGui::GetMousePos();
@@ -1047,7 +1048,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			"X = " + stream.GetXAxisUnits().PrettyPrint(label.m_peakXpos) + "\n" +
 			"Y = " + stream.GetYAxisUnits().PrettyPrint(label.m_peakYpos) + "\n" +
 			"FWHM = " + stream.GetXAxisUnits().PrettyPrint(label.m_fwhm);
-		auto textSizePixels = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str.c_str());
+		auto textSizePixels = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str.c_str());
 
 		//Create rectangle for box around centroid
 		float padding = 2;
@@ -1142,7 +1143,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 		//Draw text
 		list->AddText(
 			font,
-			font->FontSize,
+			fontSize,
 			ImVec2(labelLeft + padding, labelTop + padding),
 			textColor,
 			str.c_str());
@@ -1395,7 +1396,8 @@ void WaveformArea::RenderComplexSignal(
 	if(available_width > 15)
 	{
 		auto font = m_parent->GetFontPref("Appearance.Decodes.protocol_font");
-		auto textsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str.c_str());
+		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
+		auto textsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str.c_str());
 
 		//Minimum width (if outline ends up being smaller than this, just fill)
 		float min_width = 40;
@@ -1471,7 +1473,7 @@ void WaveformArea::RenderComplexSignal(
 					else
 						str_render = "..." + str.substr(str.length() - len - 1);
 
-					textsize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0, str_render.c_str());
+					textsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str_render.c_str());
 					if(textsize.x < available_width)
 					{
 						//Re-center text in available space
@@ -1490,7 +1492,7 @@ void WaveformArea::RenderComplexSignal(
 
 			drew_text = true;
 			ImU32 textcolor = 0xffffffff;	//TODO: figure out color based on theme or something
-			list->AddText(font, font->FontSize, ImVec2(xp, ymid-textsize.y/2), textcolor, str_render.c_str());
+			list->AddText(font, fontSize, ImVec2(xp, ymid-textsize.y/2), textcolor, str_render.c_str());
 		}
 	}
 
@@ -2182,7 +2184,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Style settings
 	auto font = m_parent->GetFontPref("Appearance.Graphs.y_axis_font");
 	auto& prefs = m_parent->GetSession().GetPreferences();
-	float theight = font->FontSize;
+	float theight = font->FontSize * ImGui::GetIO().FontGlobalScale;
 	auto textColor = prefs.GetColor("Appearance.Graphs.y_axis_text_color");
 
 	//Reserve an empty area we're going to draw into
