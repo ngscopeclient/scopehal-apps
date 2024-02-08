@@ -199,25 +199,25 @@ void Texture::SetName(const string& name)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eDescriptorSet,
-				reinterpret_cast<int64_t>(m_texture),
+				reinterpret_cast<uint64_t>(m_texture),
 				texName.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eImage,
-				reinterpret_cast<int64_t>(static_cast<VkImage>(*m_image)),
+				reinterpret_cast<uint64_t>(static_cast<VkImage>(*m_image)),
 				imageName.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eImageView,
-				reinterpret_cast<int64_t>(static_cast<VkImageView>(**m_view)),
+				reinterpret_cast<uint64_t>(static_cast<VkImageView>(**m_view)),
 				viewName.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eDeviceMemory,
-				reinterpret_cast<int64_t>(static_cast<VkDeviceMemory>(**m_deviceMemory)),
+				reinterpret_cast<uint64_t>(static_cast<VkDeviceMemory>(**m_deviceMemory)),
 				memName.c_str()));
 	}
 }

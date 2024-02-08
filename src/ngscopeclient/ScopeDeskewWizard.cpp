@@ -105,7 +105,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(*m_pool)),
+				reinterpret_cast<uint64_t>(static_cast<VkCommandPool>(*m_pool)),
 				"ScopeDeskewWizard.pool"));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
@@ -803,7 +803,7 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRate(UniformAnalogWavefor
 
 			//Skip secondary samples if the current secondary sample ends before the primary sample starts
 			bool done = false;
-			while( ((isecondary + 1) *	psec->m_timescale) < utarget)
+			while( static_cast<uint64_t>((isecondary + 1) *	psec->m_timescale) < utarget)
 			{
 				isecondary ++;
 

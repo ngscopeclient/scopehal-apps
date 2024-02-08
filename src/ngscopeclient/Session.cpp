@@ -546,7 +546,7 @@ bool Session::LoadWaveformDataForScope(
 		auto hist = m_history.GetHistory(time);
 		if(hist && (hist->m_history.find(scope) != hist->m_history.end()))
 		{
-			LogWarning("Session contains duplicate data for time %ld.%" PRId64 ", discarding\n", time.first, time.second);
+			LogWarning("Session contains duplicate data for time %" PRId64 ".%" PRId64 ", discarding\n", static_cast<int64_t>(time.first), time.second);
 			continue;
 		}
 

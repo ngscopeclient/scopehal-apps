@@ -82,14 +82,14 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
-#include <sys/stat.h>
 #else
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
 
+#include <sys/stat.h>
+#include <cinttypes>
 
 using namespace std;
 
@@ -146,7 +146,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				reinterpret_cast<uint64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
 				"MainWindow.m_cmdPool"));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
@@ -1322,7 +1322,7 @@ void MainWindow::LoadRecentInstrumentList()
 		for(auto it : node)
 		{
 			auto inst = it.second;
-			m_recentInstruments[inst["path"].as<string>()] = inst["timestamp"].as<long long>();
+			m_recentInstruments[inst["path"].as<string>()] = inst["timestamp"].as<int64_t>();
 		}
 	}
 	catch(const YAML::BadFile& ex)
@@ -1345,7 +1345,7 @@ void MainWindow::SaveRecentInstrumentList()
 		auto nick = it.first.substr(0, it.first.find(":"));
 		fprintf(fp, "%s:\n", nick.c_str());
 		fprintf(fp, "    path: \"%s\"\n", it.first.c_str());
-		fprintf(fp, "    timestamp: %ld\n", it.second);
+		fprintf(fp, "    timestamp: %" PRId64 "\n", static_cast<int64_t>(it.second));
 	}
 
 	fclose(fp);

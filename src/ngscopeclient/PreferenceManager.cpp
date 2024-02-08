@@ -27,6 +27,9 @@
 *                                                                                                                      *
 ***********************************************************************************************************************/
 
+#include "ngscopeclient.h"
+#include "PreferenceManager.h"
+
 #include <fstream>
 #include <stdexcept>
 
@@ -38,9 +41,6 @@
 #include <sys/stat.h>
 #include <wordexp.h>
 #endif
-
-#include "ngscopeclient.h"
-#include "PreferenceManager.h"
 
 using namespace std;
 

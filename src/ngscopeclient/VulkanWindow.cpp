@@ -32,6 +32,7 @@
 	@author Andrew D. Zonenberg
 	@brief Implementation of VulkanWindow
  */
+
 #include "ngscopeclient.h"
 #include "TextureManager.h"
 #include "VulkanWindow.h"
@@ -212,7 +213,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eDescriptorPool,
-				reinterpret_cast<int64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
+				reinterpret_cast<uint64_t>(static_cast<VkDescriptorPool>(**m_imguiDescriptorPool)),
 				poolName.c_str()));
 
 		//Workaround for Mesa bug, see https://gitlab.freedesktop.org/mesa/mesa/-/issues/8596
@@ -226,14 +227,14 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 				vk::DebugUtilsObjectNameInfoEXT(
 					vk::ObjectType::eSurfaceKHR,
-					reinterpret_cast<int64_t>(static_cast<VkSurfaceKHR>(**m_surface)),
+					reinterpret_cast<uint64_t>(static_cast<VkSurfaceKHR>(**m_surface)),
 					surfName.c_str()));
 		}
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
+				reinterpret_cast<uint64_t>(static_cast<VkCommandPool>(**m_cmdPool)),
 				rpName.c_str()));
 
 		for(size_t i=0; i<m_backBuffers.size(); i++)
@@ -246,25 +247,25 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 				vk::DebugUtilsObjectNameInfoEXT(
 					vk::ObjectType::eSemaphore,
-					reinterpret_cast<int64_t>(static_cast<VkSemaphore>(**m_imageAcquiredSemaphores[i])),
+					reinterpret_cast<uint64_t>(static_cast<VkSemaphore>(**m_imageAcquiredSemaphores[i])),
 					iaName.c_str()));
 
 			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 				vk::DebugUtilsObjectNameInfoEXT(
 					vk::ObjectType::eSemaphore,
-					reinterpret_cast<int64_t>(static_cast<VkSemaphore>(**m_renderCompleteSemaphores[i])),
+					reinterpret_cast<uint64_t>(static_cast<VkSemaphore>(**m_renderCompleteSemaphores[i])),
 					rcName.c_str()));
 
 			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 				vk::DebugUtilsObjectNameInfoEXT(
 					vk::ObjectType::eFence,
-					reinterpret_cast<int64_t>(static_cast<VkFence>(**m_fences[i])),
+					reinterpret_cast<uint64_t>(static_cast<VkFence>(**m_fences[i])),
 					fName.c_str()));
 
 			g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 				vk::DebugUtilsObjectNameInfoEXT(
 					vk::ObjectType::eCommandBuffer,
-					reinterpret_cast<int64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffers[i])),
+					reinterpret_cast<uint64_t>(static_cast<VkCommandBuffer>(**m_cmdBuffers[i])),
 					cbName.c_str()));
 		}
 	}

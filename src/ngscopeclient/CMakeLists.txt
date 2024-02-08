@@ -194,6 +194,14 @@ target_link_libraries(ngscopeclient
 	PNG::PNG
 	)
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	target_compile_definitions(ngscopeclient
+		PRIVATE
+		ImTextureID=ImU64
+		VULKAN_HPP_TYPESAFE_CONVERSION=1
+	)
+endif()
+
 #Needed to run from tree without install because Windows does not support RPATH and will otherwise not be able to find DLLs
 if(WIN32)
 add_custom_command(TARGET ngscopeclient POST_BUILD

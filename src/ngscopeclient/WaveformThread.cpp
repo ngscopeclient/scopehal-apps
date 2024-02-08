@@ -86,7 +86,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(*pool)),
+				reinterpret_cast<uint64_t>(static_cast<VkCommandPool>(*pool)),
 				poolname.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
