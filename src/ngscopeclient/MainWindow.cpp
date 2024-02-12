@@ -1644,16 +1644,17 @@ void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
 void MainWindow::UpdateFonts()
 {
 	//Check for any changes to font preferences and rebuild the atlas if so
-	//Early out if nothing changed
+	//Skip rebuilding atlas if nothing changed
 	auto& prefs = GetSession().GetPreferences();
-	if(!m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
-		return;
+	if(m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
+	{
+		//Download imgui fonts
+		ImGui_ImplVulkan_CreateFontsTexture();
+	}
 
-	//Set the default font
+	//Set the default font. Needs to be done regardless of atlas rebuild as it may already be loaded
+	//e.g. in case the user is already using it for another pref
 	ImGui::GetIO().FontDefault = m_fontmgr.GetFont(prefs.GetFont("Appearance.General.default_font"));
-
-	//Download imgui fonts
-	ImGui_ImplVulkan_CreateFontsTexture();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
