@@ -36,7 +36,7 @@
 #include "ngscopeclient.h"
 #include "NotesDialog.h"
 #include "MainWindow.h"
-#include "../imgui_markdown/imgui_markdown.h"
+#include <imgui_markdown.h>
 
 using namespace std;
 

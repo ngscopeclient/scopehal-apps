@@ -75,7 +75,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
-	vk::raii::CommandBuffer cmdbuf(move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	if(g_hasDebugUtils)
 	{
@@ -86,7 +86,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eCommandPool,
-				reinterpret_cast<int64_t>(static_cast<VkCommandPool>(*pool)),
+				reinterpret_cast<uint64_t>(static_cast<VkCommandPool>(*pool)),
 				poolname.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
