@@ -307,9 +307,15 @@ bool HistoryDialog::DoRender()
 void HistoryDialog::LoadHistoryFromSelection(Session& session)
 {
 	if(m_selectedPoint)
+	{
+		LogTrace("Valid point selected\n");
 		m_selectedPoint->LoadHistoryToSession(session);
+	}
 	else
+	{
+		LogTrace("Empty point selected\n");
 		m_mgr.LoadEmptyHistoryToSession(session);
+	}
 }
 
 /**
@@ -326,6 +332,7 @@ void HistoryDialog::UpdateSelectionToLatest()
  */
 void HistoryDialog::SelectTimestamp(TimePoint t)
 {
+	LogTrace("Selecting timestamp %s\n", t.PrettyPrint().c_str());
 	m_selectedPoint = m_mgr.GetHistory(t);
 }
 

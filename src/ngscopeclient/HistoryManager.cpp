@@ -98,18 +98,25 @@ bool HistoryPoint::IsInUse()
  */
 void HistoryPoint::LoadHistoryToSession(Session& session)
 {
+	LogTrace("Loading history from time %s to session\n", m_time.PrettyPrint().c_str());
+	LogIndenter li;
+
 	//We don't want to keep capturing if we're trying to look at a historical waveform. That would be a bit silly.
 	session.StopTrigger();
 
 	//Go over each scope in the session and load the relevant history
 	//We do this rather than just looping over the scopes in the history so that we can handle missing data.
 	auto scopes = session.GetScopes();
+	LogTrace("We have %zu scopes, this point has data for %zu of them\n", scopes.size(), m_history.size());
 	for(auto scope : scopes)
 	{
+		LogIndenter li2;
+
 		//Scope is not in history! Must have been added recently
 		//Set all channels' data to null
 		if(m_history.find(scope) == m_history.end() )
 		{
+			LogTrace("Scope %s is not in history\n", scope->m_nickname.c_str());
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
 			{
 				auto chan = scope->GetOscilloscopeChannel(i);
@@ -126,11 +133,17 @@ void HistoryPoint::LoadHistoryToSession(Session& session)
 		//Scope is in history. Load our saved waveform data
 		else
 		{
-			LogTrace("Loading saved history\n");
+			LogTrace("Loading saved history for %s\n", scope->m_nickname.c_str());
+			LogIndenter li3;
 			auto hist = m_history[scope];
+			LogTrace("History point has data for %zu streams\n", hist.size());
 			for(auto it : hist)
 			{
 				auto stream = it.first;
+
+				if(it.second == nullptr)
+					LogTrace("Channel %s data is null\n", stream.GetName().c_str());
+
 				stream.m_channel->Detach(stream.m_stream);
 				stream.m_channel->SetData(it.second, stream.m_stream);
 			}
