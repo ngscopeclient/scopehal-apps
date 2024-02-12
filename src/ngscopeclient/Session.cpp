@@ -335,6 +335,19 @@ bool Session::LoadFromYaml(const YAML::Node& node, const string& dataDir, bool o
 	if(!LoadWaveformData(m_fileLoadVersion, dataDir))
 		return false;
 
+	//Markers
+	auto markers = node["ui_config"]["markers"];
+	if(markers)
+	{
+		for(auto it : markers)
+		{
+			auto inode = it.second;
+			TimePoint timestamp(inode["timestamp"].as<int64_t>(), inode["time_fsec"].as<int64_t>());
+			for(auto jt : inode["markers"])
+				AddMarker(Marker(timestamp, jt.second["offset"].as<int64_t>(), jt.second["name"].as<string>()));
+		}
+	}
+
 	OnMarkerChanged();
 
 	//If we have no waveform data (filter-only session) create a WaveformThread to do rendering,
@@ -541,6 +554,8 @@ bool Session::LoadWaveformDataForScope(
 		string label;
 		if(wfm["label"])
 			label = wfm["label"].as<string>();
+
+		LogTrace("Loading waveform data at time %s\n", time.PrettyPrint().c_str());
 
 		//If we already have historical data from this timestamp, warn and drop the duplicate data
 		auto hist = m_history.GetHistory(time);

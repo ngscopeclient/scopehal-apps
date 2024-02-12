@@ -2339,19 +2339,6 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 		}
 	}
 
-	//Markers
-	auto markers = node["markers"];
-	if(markers)
-	{
-		for(auto it : markers)
-		{
-			auto inode = it.second;
-			TimePoint timestamp(inode["timestamp"].as<int64_t>(), inode["time_fsec"].as<int64_t>());
-			for(auto jt : inode["markers"])
-				m_session.AddMarker(Marker(timestamp, jt.second["offset"].as<int64_t>(), jt.second["name"].as<string>()));
-		}
-	}
-
 	//ignore splitter configuration from legacy format as imgui now handles that
 
 	auto dialogs = node["dialogs"];
