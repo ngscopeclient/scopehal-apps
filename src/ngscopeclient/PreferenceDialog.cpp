@@ -38,6 +38,8 @@
 #include "PreferenceManager.h"
 #include "../../lib/scopehal/FileSystem.h"
 
+#include <regex>
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,12 +53,23 @@ PreferenceDialog::PreferenceDialog(PreferenceManager& prefs)
 	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSansMono.ttf"));
 	m_fontPaths.push_back(FindDataFile("fonts/DejaVuSans-Bold.ttf"));
 
-	#ifdef _WIN32
-		FindFontFiles("C:\\Windows\\Fonts");
-	#else
-		//TODO: is this appropriate for MacOS too? other places to check?
-		FindFontFiles("/usr/share/fonts");
-	#endif
+#ifdef _WIN32
+	FindFontFiles("C:\\Windows\\Fonts");
+#elif __APPLE__
+	FindFontFiles("/System/Library/Fonts");
+	FindFontFiles("/Library/Fonts");
+	FindFontFiles("~/Library/Fonts");
+#else
+	FindFontFiles("/usr/share/fonts");
+	FindFontFiles("/usr/local/share/fonts");
+	FindFontFiles("~/.local/share/fonts");
+#endif
+
+	sort(begin(m_fontPaths), end(m_fontPaths), [](string &a, string &b) {
+		auto f1 = BaseName(a);
+		auto f2 = BaseName(b);
+		return lexicographical_compare(f1.begin(),f1.end(),f2.begin(),f2.end());
+	});
 
 	//Get short names for each file
 	for(size_t i=0; i<m_fontPaths.size(); i++)
@@ -80,10 +93,13 @@ PreferenceDialog::~PreferenceDialog()
 void PreferenceDialog::FindFontFiles(const string& path)
 {
 	auto files = Glob(path + "/*", false);
-	for(auto f : files)
+	regex fontfile_regex(R"(.[oOtT][tT][cCfF])");
+	for(string f : files)
 	{
-		if( (f.find(".ttf") != string::npos) || (f.find(".TTF") != string::npos) )
+		if(regex_search(f, fontfile_regex))
+		{
 			m_fontPaths.push_back(f);
+		}
 
 		else if(f.find(".") == string::npos)
 			FindFontFiles(f);
