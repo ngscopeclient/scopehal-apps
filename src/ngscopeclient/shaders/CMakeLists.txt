@@ -29,6 +29,7 @@ endfunction()
 add_compute_shaders(
 	ngcomputeshaders
 	SOURCES
+		ConstellationToneMap.glsl
 		EyeToneMap.glsl
 		ScopeDeskewUniform4xRate.glsl
 		ScopeDeskewUniformUnequalRate.glsl

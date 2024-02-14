@@ -36,6 +36,7 @@
 #include "WaveformArea.h"
 #include "MainWindow.h"
 #include "../../scopehal/TwoLevelTrigger.h"
+#include "../../scopeprotocols/ConstellationFilter.h"
 #include "../../scopeprotocols/EyePattern.h"
 #include "../../scopeprotocols/SpectrogramFilter.h"
 #include "../../scopeprotocols/Waterfall.h"
@@ -80,6 +81,11 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 		case Stream::STREAM_TYPE_EYE:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/EyeToneMap.spv", 1, sizeof(EyeToneMapArgs), 1, 1);
+			break;
+
+		case Stream::STREAM_TYPE_CONSTELLATION:
+			m_toneMapPipe = make_shared<ComputePipeline>(
+				"shaders/ConstellationToneMap.spv", 1, sizeof(ConstellationToneMapArgs), 1, 1);
 			break;
 
 		case Stream::STREAM_TYPE_WATERFALL:
@@ -142,6 +148,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 		size_t roundedX = pow(2, ceil(log2(x)));
 		size_t roundedY = pow(2, ceil(log2(y)));
 		auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
+		auto constellation = dynamic_cast<ConstellationFilter*>(m_stream.m_channel);
 		auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
 		auto data = m_stream.GetData();
 		auto eyedata = dynamic_cast<EyeWaveform*>(data);
@@ -183,6 +190,23 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			}
 
 			//Rendered image should be the actual plot size
+		}
+
+		else if(constellation)
+		{
+			if( (constellation->GetWidth() != roundedX) || (constellation->GetHeight() != roundedY) )
+			{
+				constellation->SetWidth(roundedX);
+				constellation->SetHeight(roundedY);
+
+				FilterGraphExecutor ex;
+				set<FlowGraphNode*> nodesToUpdate;
+				nodesToUpdate.emplace(constellation);
+				ex.RunBlocking(nodesToUpdate);
+			}
+
+			x = roundedX;
+			y = roundedY;
 		}
 
 		LogTrace("Displayed channel resized (to %zu x %zu), reallocating texture\n", x, y);
@@ -382,6 +406,8 @@ StreamDescriptor WaveformArea::GetFirstAnalogOrDensityStream()
 			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
 			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_CONSTELLATION)
+			return stream;
 	}
 
 	return StreamDescriptor(nullptr, 0);
@@ -405,6 +431,23 @@ StreamDescriptor WaveformArea::GetFirstEyeStream()
 }
 
 /**
+	@brief Returns the first constellation diagram displayed in this area.
+
+	If no constellation diagrams are visible, returns a null stream.
+ */
+StreamDescriptor WaveformArea::GetFirstConstellationStream()
+{
+	for(auto chan : m_displayedChannels)
+	{
+		auto stream = chan->GetStream();
+		if(stream.GetType() == Stream::STREAM_TYPE_CONSTELLATION)
+			return stream;
+	}
+
+	return StreamDescriptor(nullptr, 0);
+}
+
+/**
 	@brief Returns the first density plot displayed in this area.
 
 	If none are visible, returns a null stream.
@@ -416,6 +459,8 @@ StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
 		auto stream = chan->GetStream();
 		if(stream.GetType() == Stream::STREAM_TYPE_EYE)
 			return stream;
+		if(stream.GetType() == Stream::STREAM_TYPE_CONSTELLATION)
+			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_SPECTROGRAM)
 			return stream;
 		if(stream.GetType() == Stream::STREAM_TYPE_WATERFALL)
@@ -424,7 +469,6 @@ StreamDescriptor WaveformArea::GetFirstDensityFunctionStream()
 
 	return StreamDescriptor(nullptr, 0);
 }
-
 
 /**
 	@brief Marks all of our waveform textures as being used this frame
@@ -726,6 +770,10 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				RenderEyeWaveform(chan, start, size);
 				break;
 
+			case Stream::STREAM_TYPE_CONSTELLATION:
+				RenderConstellationWaveform(chan, start, size);
+				break;
+
 			case Stream::STREAM_TYPE_WATERFALL:
 				RenderWaterfallWaveform(chan, start, size);
 				break;
@@ -904,6 +952,34 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 				list->AddPolyline(&points[0], points.size(), borderpass, 0, 1);
 		}
 	}
+}
+
+/**
+	@brief Renders a single constellation diagram
+ */
+void WaveformArea::RenderConstellationWaveform(shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size)
+{
+	auto stream = channel->GetStream();
+	auto data = stream.GetData();
+	if(data == nullptr)
+		return;
+
+	auto list = ImGui::GetWindowDrawList();
+
+	//Mark the waveform as resized
+	if(channel->UpdateSize(size, m_parent))
+	{
+		m_parent->SetNeedRender();
+		if(data != stream.GetData())
+			return;
+	}
+
+	//Render the tone mapped output (if we have it)
+	auto tex = channel->GetTexture();
+	if(tex != nullptr)
+		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
+
+	//TODO: draw nominal point locations
 }
 
 /**
@@ -1563,6 +1639,10 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 				ToneMapEyeWaveform(chan, cmdbuf);
 				break;
 
+			case Stream::STREAM_TYPE_CONSTELLATION:
+				ToneMapConstellationWaveform(chan, cmdbuf);
+				break;
+
 			//no tone mapping required
 			case Stream::STREAM_TYPE_PROTOCOL:
 				break;
@@ -1610,6 +1690,7 @@ void WaveformArea::RenderWaveformTextures(
 
 			//no background rendering required, we do everything in Refresh()
 			case Stream::STREAM_TYPE_EYE:
+			case Stream::STREAM_TYPE_CONSTELLATION:
 			case Stream::STREAM_TYPE_WATERFALL:
 			case Stream::STREAM_TYPE_SPECTROGRAM:
 				break;
@@ -2020,6 +2101,63 @@ void WaveformArea::ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel,
 }
 
 /**
+	@brief Tone maps a constellation waveform by converting the internal fp32 buffer to RGBA
+ */
+void WaveformArea::ToneMapConstellationWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf)
+{
+	auto tex = channel->GetTexture();
+	if(tex == nullptr)
+		return;
+
+	auto data = dynamic_cast<DensityFunctionWaveform*>(channel->GetStream().GetData());
+	if(data == nullptr)
+		return;
+
+	//Nothing to draw? Early out if we haven't processed the window resize yet or there's no data
+	auto width = data->GetWidth();
+	auto height = data->GetHeight();
+	if( (width == 0) || (height == 0) )
+		return;
+
+	//Run the actual compute shader
+	auto pipe = channel->GetToneMapPipeline();
+	const auto& texmgr = m_parent->GetTextureManager();
+	pipe->BindBufferNonblocking(0, data->GetOutData(), cmdbuf);
+	pipe->BindStorageImage(
+		1,
+		**texmgr->GetSampler(),
+		tex->GetView(),
+		vk::ImageLayout::eGeneral);
+	pipe->BindSampledImage(
+		2,
+		**texmgr->GetSampler(),
+		texmgr->GetView(channel->m_colorRamp),
+		vk::ImageLayout::eShaderReadOnlyOptimal);
+
+	ConstellationToneMapArgs args(width, height);
+	pipe->Dispatch(cmdbuf, args, GetComputeBlockCount(width, 64), height);
+
+	//Add a barrier before we read from the fragment shader
+	vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+	vk::ImageMemoryBarrier barrier(
+		vk::AccessFlagBits::eShaderWrite,
+		vk::AccessFlagBits::eShaderRead,
+		vk::ImageLayout::eGeneral,
+		vk::ImageLayout::eGeneral,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		tex->GetImage(),
+		range);
+	cmdbuf.pipelineBarrier(
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::PipelineStageFlagBits::eFragmentShader,
+			{},
+			{},
+			{},
+			barrier);
+}
+
+/**
 	@brief Renders the background of the main plot area
 
 	For now, simple gray gradient.
@@ -2251,10 +2389,12 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 	ImGui::EndChild();
 
-	//Don't allow drag processing if our first waveform is an eye
+	//Don't allow drag processing if our first waveform is an eye or constellation
 	auto aestream = GetFirstAnalogOrDensityStream();
 	bool canDragYAxis = true;
 	if(aestream && (aestream.GetType() == Stream::STREAM_TYPE_EYE))
+		canDragYAxis = false;
+	if(aestream && (aestream.GetType() == Stream::STREAM_TYPE_CONSTELLATION))
 		canDragYAxis = false;
 
 	if(ImGui::IsItemHovered() && !m_mouseOverTriggerArrow && canDragYAxis && (m_dragState == DRAG_STATE_NONE))
@@ -3599,6 +3739,9 @@ void WaveformArea::OnMouseWheelYAxis(float delta)
 	auto stream = GetFirstEyeStream();
 	if(stream)
 		return;
+	stream = GetFirstConstellationStream();
+	if(stream)
+		return;
 
 	stream = GetFirstAnalogOrDensityStream();
 
@@ -3672,6 +3815,7 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 		//All other density plots must be in their own views and cannot stack
 		case Stream::STREAM_TYPE_EYE:
+		case Stream::STREAM_TYPE_CONSTELLATION:
 		case Stream::STREAM_TYPE_WATERFALL:
 			return false;
 

@@ -72,6 +72,18 @@ public:
 	uint32_t m_height;
 };
 
+class ConstellationToneMapArgs
+{
+public:
+	ConstellationToneMapArgs(uint32_t w, uint32_t h)
+	: m_width(w)
+	, m_height(h)
+	{}
+
+	uint32_t m_width;
+	uint32_t m_height;
+};
+
 class WaterfallToneMapArgs
 {
 public:
@@ -486,6 +498,7 @@ protected:
 	void RenderWaveforms(ImVec2 start, ImVec2 size);
 	void RenderAnalogWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderEyeWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
+	void RenderConstellationWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderSpectrogramWaveform(std::shared_ptr<DisplayedChannel> channel, ImVec2 start, ImVec2 size);
 	void RenderSpectrumPeaks(ImDrawList* list, std::shared_ptr<DisplayedChannel> channel);
@@ -501,6 +514,7 @@ protected:
 	void MakePathSignalBody(ImDrawList* list, float xstart, float xend, float ybot, float ymid, float ytop);
 	void ToneMapAnalogOrDigitalWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void ToneMapEyeWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
+	void ToneMapConstellationWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void ToneMapWaterfallWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void ToneMapSpectrogramWaveform(std::shared_ptr<DisplayedChannel> channel, vk::raii::CommandBuffer& cmdbuf);
 	void RasterizeAnalogOrDigitalWaveform(
@@ -532,6 +546,7 @@ protected:
 public:
 	StreamDescriptor GetFirstAnalogStream();
 	StreamDescriptor GetFirstEyeStream();
+	StreamDescriptor GetFirstConstellationStream();
 	StreamDescriptor GetFirstDensityFunctionStream();
 	StreamDescriptor GetFirstAnalogOrDensityStream();
 

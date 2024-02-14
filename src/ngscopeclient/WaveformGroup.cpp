@@ -38,6 +38,7 @@
 #include "imgui_internal.h"
 
 #include "../../scopeprotocols/EyePattern.h"
+#include "../../scopeprotocols/ConstellationFilter.h"
 
 using namespace std;
 
@@ -209,6 +210,7 @@ bool WaveformGroup::Render()
 
 		//Autoscale eye patterns
 		auto firstStream = areas[0]->GetFirstAnalogOrDensityStream();
+
 		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_EYE))
 		{
 			auto eye = dynamic_cast<EyeWaveform*>(firstStream.GetData());
@@ -218,6 +220,15 @@ bool WaveformGroup::Render()
 				m_xAxisOffset = -PixelsToXAxisUnits(plotWidth/2);
 				m_displayingEye = true;
 			}
+		}
+
+		if(firstStream && (firstStream.GetType() == Stream::STREAM_TYPE_CONSTELLATION))
+		{
+			//voltage range is in V, but x axis is in uV because it needs t obe integers
+			auto vrange = firstStream.GetVoltageRange();
+			m_pixelsPerXUnit = plotWidth / (1e6 * vrange);
+			m_xAxisOffset = -PixelsToXAxisUnits(plotWidth/2);
+			m_displayingEye = true;
 		}
 	}
 
@@ -364,6 +375,7 @@ void WaveformGroup::DoCursorReadouts()
 						case Stream::STREAM_TYPE_TRIGGER:
 						case Stream::STREAM_TYPE_UNDEFINED:
 						case Stream::STREAM_TYPE_ANALOG_SCALAR:
+						case Stream::STREAM_TYPE_CONSTELLATION:
 							sv1 = "";
 							sv2 = "";
 							svd = "";
