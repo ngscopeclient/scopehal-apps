@@ -572,7 +572,12 @@ bool FilterGraphEditor::DoRender()
 	//Filters
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
+	{
 		DoNodeForChannel(f, nullptr);
+
+		//Add a reference to the channel so even if we remove the last user of it this frame, it won't be deleted until we're ready
+		f->AddRef();
+	}
 	ClearOldPropertiesDialogs();
 
 	//All nodes
@@ -661,6 +666,11 @@ bool FilterGraphEditor::DoRender()
 
 		m_parent->OnFilterReconfigured(fReconfigure);
 	}
+
+	//Remove our temporary ref on filters we're rendering
+	//This may cause some to be deleted
+	for(auto f : filters)
+		f->Release();
 
 	return true;
 }
