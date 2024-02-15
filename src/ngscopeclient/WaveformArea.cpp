@@ -3257,6 +3257,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto rchan = stream.m_channel;
 	auto data = stream.GetData();
 	auto edata = dynamic_cast<EyeWaveform*>(data);
+	auto cdata = dynamic_cast<ConstellationWaveform*>(data);
 	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
 
 	//Qualify name by scope if we have multiple scopes in the session
@@ -3350,6 +3351,11 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 					else
 						tooltip += "(FAIL)";
 				}
+			}
+			else if(cdata)
+			{
+				Unit ui(Unit::UNIT_UI);
+				tooltip += ui.PrettyPrint(cdata->GetTotalSymbols()) + "\n";
 			}
 			else
 			{
