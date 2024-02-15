@@ -613,6 +613,8 @@ void ProtocolAnalyzerDialog::OnCursorMoved(int64_t offset)
 	if(m_lastSelectedWaveform == TimePoint(0, 0))
 	{
 		auto data = m_filter->GetData(0);
+		if(!data)
+			return;
 		m_lastSelectedWaveform = TimePoint(data->m_startTimestamp, data->m_startFemtoseconds);
 	}
 
