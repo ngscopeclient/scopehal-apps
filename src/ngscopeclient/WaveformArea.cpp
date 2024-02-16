@@ -979,7 +979,28 @@ void WaveformArea::RenderConstellationWaveform(shared_ptr<DisplayedChannel> chan
 	if(tex != nullptr)
 		list->AddImage(tex->GetTexture(), start, ImVec2(start.x+size.x, start.y+size.y), ImVec2(0, 1), ImVec2(1, 0) );
 
-	//TODO: draw nominal point locations
+	//Draw nominal point locations
+	auto cfilt = dynamic_cast<ConstellationFilter*>(stream.m_channel);
+	if(cfilt)
+	{
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto& points = cfilt->GetNominalPoints();
+
+		auto color = prefs.GetColor("Appearance.Constellations.point_color");
+
+		//TODO: dynamic size?
+		float pointsize = ImGui::GetFontSize() * 0.5;
+
+		for(auto p : points)
+		{
+			list->AddCircle(
+				ImVec2( m_group->XAxisUnitsToXPosition(p.m_xval),  YAxisUnitsToYPosition(p.m_yval) ),
+				pointsize,
+				color,
+				0,
+				2);
+		}
+	}
 }
 
 /**
@@ -3356,6 +3377,13 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 			{
 				Unit ui(Unit::UNIT_UI);
 				tooltip += ui.PrettyPrint(cdata->GetTotalSymbols()) + "\n";
+
+				Unit v(Unit::UNIT_VOLTS);
+				Unit pct(Unit::UNIT_PERCENT);
+				StreamDescriptor evmRaw(stream.m_channel, 1);
+				StreamDescriptor evmNorm(stream.m_channel, 2);
+				tooltip += string("EVM: ") + v.PrettyPrint(evmRaw.GetScalarValue()) +
+					" (" + pct.PrettyPrint(evmNorm.GetScalarValue()) + ")";
 			}
 			else
 			{

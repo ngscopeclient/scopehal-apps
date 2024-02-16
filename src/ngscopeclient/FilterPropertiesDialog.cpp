@@ -516,6 +516,9 @@ void FilterPropertiesDialog::OnReconfigured(Filter* f, size_t oldStreamCount)
 		for(size_t i=oldStreamCount; i < newStreamCount; i++)
 			m_parent->FindAreaForStream(nullptr, StreamDescriptor(m_channel, i));
 	}
+
+	//Regenerate our temporary values since parameters might have been changed
+	m_paramTempValues.clear();
 }
 
 /**
