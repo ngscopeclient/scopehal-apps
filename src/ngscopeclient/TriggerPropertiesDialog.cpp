@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -354,11 +354,13 @@ bool TriggerPropertiesDialog::DoRender()
 				//Save the level and inputs of the old trigger so we can reuse it
 				auto oldTrig = scope->GetTrigger();
 				float level = 0;
-				if(oldTrig)
-					level = oldTrig->GetLevel();
 				vector<StreamDescriptor> inputs;
-				for(size_t j=0; j<oldTrig->GetInputCount(); j++)
-					inputs.push_back(oldTrig->GetInput(j));
+				if(oldTrig)
+				{
+					level = oldTrig->GetLevel();
+					for(size_t j=0; j<oldTrig->GetInputCount(); j++)
+						inputs.push_back(oldTrig->GetInput(j));
+				}
 
 				//Create the new trigger
 				auto newTrig = Trigger::CreateTrigger(types[m_triggerTypeIndexes[i]], scope);
