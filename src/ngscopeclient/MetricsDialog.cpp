@@ -274,8 +274,7 @@ bool MetricsDialog::DoRender()
 
 				HelpMarker(
 					"Amount of GPU-side RAM available for use by ngscopeclient.\n\n"
-					"This is your total video RAM minus memory which is in use by the OS or other applications.\n"
-					"For unified-memory systems, this is normally the same as your pinned memory budget."
+					"This is your total video RAM minus memory which is in use by the OS or other applications."
 					);
 
 				ImGui::BeginDisabled();
