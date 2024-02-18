@@ -146,6 +146,9 @@ protected:
 		std::vector<VkImage> m_backBuffers;
 	#endif
 
+	///@brief The minimum image count for the backbuffer allowed by this GPU
+	int m_minImageCount;
+
 	///@brief Current window width
 	int m_width;
 
@@ -172,6 +175,7 @@ protected:
 
 	///@brief Textures used this frame
 	std::vector< std::set<std::shared_ptr<Texture> > > m_texturesUsedThisFrame;
+
 };
 
 #endif

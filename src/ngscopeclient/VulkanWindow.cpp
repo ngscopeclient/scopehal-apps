@@ -40,7 +40,7 @@
 
 using namespace std;
 
-#define IMAGE_COUNT 2
+#define PREFERRED_IMAGE_COUNT 2
 
 static void Mutexed_ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport);
 static void Mutexed_ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport);
@@ -167,7 +167,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.Subpass = 0;
-	info.MinImageCount = IMAGE_COUNT;
+	info.MinImageCount = m_minImageCount;
 	info.ImageCount = m_backBuffers.size();
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	//HERE BE DRAGONS:
@@ -321,6 +321,21 @@ bool VulkanWindow::UpdateFramebuffer()
 		return false;
 	}
 
+	m_minImageCount = caps.minImageCount;
+	int imageCount;
+	if(caps.minImageCount > PREFERRED_IMAGE_COUNT)
+	{
+		imageCount = caps.minImageCount;
+	}
+	else if((caps.maxImageCount != 0) && (caps.maxImageCount  < PREFERRED_IMAGE_COUNT))
+	{
+		imageCount = caps.maxImageCount;
+	}
+	else
+	{
+		imageCount = PREFERRED_IMAGE_COUNT;
+	}
+
 	const VkFormat requestSurfaceImageFormat[] =
 	{
 		VK_FORMAT_B8G8R8A8_UNORM,
@@ -345,7 +360,7 @@ bool VulkanWindow::UpdateFramebuffer()
 	vk::SwapchainCreateInfoKHR chainInfo(
 		{},
 		**m_surface,
-		IMAGE_COUNT,
+		imageCount,
 		surfaceFormat,
 		static_cast<vk::ColorSpaceKHR>(format.colorSpace),
 		vk::Extent2D(m_width, m_height),
