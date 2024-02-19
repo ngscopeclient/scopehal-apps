@@ -177,6 +177,7 @@ bool FilterPropertiesDialog::DoRender()
 				}
 
 				//The actual combo box
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10);
 				if(Combo(f->GetInputName(i).c_str(), names, sel))
 				{
 					f->SetInput(i, matchingInputs[sel]);
@@ -354,6 +355,7 @@ bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, ma
 					}
 				}
 
+				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
 				if(Dialog::Combo(name.c_str(), enumValues, nsel))
 				{
 					param.ParseString(enumValues[nsel]);
