@@ -173,48 +173,105 @@ TEST_CASE("Buffers_CpuGpu")
 
 		FillAndVerifyBuffer(buf, 5);
 
-		//At this point, the buffer is on the CPU, and there is a stale buffer on the GPU with no content
-		//We modified by calling push_back so the GPU buffer should already be marked stale.
-		REQUIRE(!buf.IsCpuBufferStale());
-		REQUIRE(buf.IsGpuBufferStale());
-		REQUIRE(!buf.IsSingleSharedBuffer());
-		REQUIRE(buf.HasCpuBuffer());
-		REQUIRE(buf.HasGpuBuffer());
+
+		if(g_vulkanDeviceHasUnifiedMemory)
+		{
+			//On a system with unified memory:
+			//At this point, the buffer is on the CPU, and there is no GPU buffer
+			REQUIRE(!buf.IsCpuBufferStale());
+			REQUIRE(buf.IsSingleSharedBuffer());
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(!buf.HasGpuBuffer());
+		}
+		else
+		{
+			//On a system without unified memory:
+			//At this point, the buffer is on the CPU, and there is a stale buffer on the GPU with no content
+			//We modified by calling push_back so the GPU buffer should already be marked stale.
+			REQUIRE(!buf.IsCpuBufferStale());
+			REQUIRE(buf.IsGpuBufferStale());
+			REQUIRE(!buf.IsSingleSharedBuffer());
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(buf.HasGpuBuffer());
+		}
 
 		//Prepare for GPU-side access by copying the buffer to the GPU.
 		//At this point we should be fully up to date
+		//On a system with unified memory, this should be a no-op:
 		buf.PrepareForGpuAccess();
 
 		REQUIRE(buf.HasCpuBuffer());
-		REQUIRE(buf.HasGpuBuffer());
 		REQUIRE(!buf.IsCpuBufferStale());
-		REQUIRE(!buf.IsGpuBufferStale());
+		if(!g_vulkanDeviceHasUnifiedMemory)
+		{
+			REQUIRE(buf.HasGpuBuffer());
+			REQUIRE(!buf.IsGpuBufferStale());
+		}
+		else
+		{
+			REQUIRE(!buf.HasGpuBuffer());
+			REQUIRE(buf.IsSingleSharedBuffer());
+		}
 
 		//Now, mark the CPU side buffer as never being used so we can free it and have a GPU-only buffer
+		//(unless the system has unified memory, in which case this should be a no-op)
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_NEVER, true);
 
-		REQUIRE(!buf.HasCpuBuffer());
-		REQUIRE(buf.HasGpuBuffer());
-		REQUIRE(!buf.IsGpuBufferStale());
+		if(!g_vulkanDeviceHasUnifiedMemory)
+		{
+			REQUIRE(!buf.HasCpuBuffer());
+			REQUIRE(buf.HasGpuBuffer());
+			REQUIRE(!buf.IsGpuBufferStale());
+		}
+		else
+		{
+			REQUIRE(buf.HasCpuBuffer());
+			REQUIRE(!buf.HasGpuBuffer());
+			REQUIRE(buf.IsSingleSharedBuffer());
+			REQUIRE(!buf.IsCpuBufferStale());
+		}
 
 		//Make a copy of the GPU-only buffer
 		AcceleratorBuffer<int32_t> buf2;
 		buf2.CopyFrom(buf);
-		REQUIRE(!buf2.HasCpuBuffer());
-		REQUIRE(buf2.HasGpuBuffer());
-		REQUIRE(!buf2.IsGpuBufferStale());
 
+		if(!g_vulkanDeviceHasUnifiedMemory)
+		{
+			REQUIRE(!buf2.HasCpuBuffer());
+			REQUIRE(buf2.HasGpuBuffer());
+			REQUIRE(!buf2.IsGpuBufferStale());
+		}
+		else
+		{
+			//If the system has unified memory, this should still be a CPU buffer
+			REQUIRE(buf2.HasCpuBuffer());
+			REQUIRE(!buf2.HasGpuBuffer());
+			REQUIRE(buf2.IsSingleSharedBuffer());
+			REQUIRE(!buf2.IsCpuBufferStale());
+		}
 		//Give it a CPU-capable hint so we can see it, then verify
 		buf2.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY, true);
 		VerifyBuffer(buf2, 5);
 
 		//Mark the CPU-side buffer as being frequently used again, but don't copy data over to it.
-		//We should now have a CPU-side buffer, but it should be stale (while the GPU-side buffer is current)
+		//If the platform does not have unified memory, we should now have a CPU-side buffer,
+		//but it should be stale (while the GPU-side buffer is current)
+		//If we have unified memory, then the buffer will have not changed and will be current
+		//as there is only ever a "CPU-side" buffer
 		buf.SetCpuAccessHint(AcceleratorBuffer<int32_t>::HINT_LIKELY, true);
 
-		REQUIRE(buf.HasGpuBuffer());
-		REQUIRE(buf.IsCpuBufferStale());
-		REQUIRE(!buf.IsGpuBufferStale());
+		if(!g_vulkanDeviceHasUnifiedMemory)
+		{
+			REQUIRE(buf.HasGpuBuffer());
+			REQUIRE(buf.IsCpuBufferStale());
+			REQUIRE(!buf.IsGpuBufferStale());
+		}
+		else
+		{
+			REQUIRE(!buf.HasGpuBuffer());
+			REQUIRE(!buf.IsCpuBufferStale());
+			REQUIRE(buf.IsSingleSharedBuffer());
+		}
 
 		//Verify the CPU-side buffer
 		VerifyBuffer(buf, 5);
