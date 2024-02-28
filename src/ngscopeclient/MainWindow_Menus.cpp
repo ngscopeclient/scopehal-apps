@@ -1123,11 +1123,7 @@ void MainWindow::AddChannelsMenu()
 
 						StreamDescriptor stream(chan, j);
 						if(ImGui::MenuItem(stream.GetName().c_str()))
-						{
-							auto group = GetBestGroupForWaveform(stream);
-							auto area = make_shared<WaveformArea>(stream, group, this);
-							group->AddArea(area);
-						}
+							FindAreaForStream(nullptr, stream);
 					}
 				}
 
@@ -1147,11 +1143,7 @@ void MainWindow::AddChannelsMenu()
 					{
 						StreamDescriptor stream(chan, j);
 						if(ImGui::MenuItem(stream.GetName().c_str()))
-						{
-							auto group = GetBestGroupForWaveform(stream);
-							auto area = make_shared<WaveformArea>(stream, group, this);
-							group->AddArea(area);
-						}
+							FindAreaForStream(nullptr, stream);
 					}
 				}
 
@@ -1166,11 +1158,7 @@ void MainWindow::AddChannelsMenu()
 			{
 				StreamDescriptor stream(f, j);
 				if(ImGui::MenuItem(stream.GetName().c_str()))
-				{
-					auto group = GetBestGroupForWaveform(stream);
-					auto area = make_shared<WaveformArea>(stream, group, this);
-					group->AddArea(area);
-				}
+					FindAreaForStream(nullptr, stream);
 			}
 		}
 
