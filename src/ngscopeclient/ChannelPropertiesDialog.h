@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,6 +61,12 @@ protected:
 
 	std::vector<std::string> m_range;
 	std::vector<float> m_committedRange;
+
+	std::string m_threshold;
+	float m_committedThreshold;
+
+	std::string m_hysteresis;
+	float m_committedHysteresis;
 
 	std::string m_attenuation;
 	float m_committedAttenuation;

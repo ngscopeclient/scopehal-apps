@@ -74,14 +74,25 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
 		m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 	}
 
-	//Hardware acquisition settings if this is a scope channel
-	auto scope = m_channel->GetScope();
+	//Digital channel settings
+	auto scope = chan->GetScope();
 	if(scope)
 	{
-		auto nchan = m_channel->GetIndex();
-
-		RefreshInputSettings(scope, nchan);
+		m_committedHysteresis = scope->GetDigitalHysteresis(m_channel->GetIndex());
+		m_committedThreshold = scope->GetDigitalThreshold(m_channel->GetIndex());
 	}
+	else
+	{
+		m_committedHysteresis = 0;
+		m_committedThreshold = 0;
+	}
+	auto yunit = m_channel->GetYAxisUnits(0);
+	m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
+	m_threshold = yunit.PrettyPrint(m_committedThreshold);
+
+	//Hardware acquisition settings if this is a scope channel
+	if(scope)
+		RefreshInputSettings(scope, m_channel->GetIndex());
 	else
 	{
 		m_committedAttenuation = 1;
@@ -325,47 +336,104 @@ bool ChannelPropertiesDialog::DoRender()
 			ImGui::EndDisabled();
 			HelpMarker("Type of probe connected to the instrument input");
 
-			//Attenuation
-			Unit counts(Unit::UNIT_COUNTS);
-			ImGui::SetNextItemWidth(width);
-			if(m_probe != "")	//cannot change attenuation on active probes
-				ImGui::BeginDisabled();
-			if(UnitInputWithImplicitApply("Attenuation", m_attenuation, m_committedAttenuation, counts))
-			{
-				scope->SetChannelAttenuation(index, m_committedAttenuation);
+			//See if the channel is digital (first stream digital)
+			bool isDigital = (m_channel->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
 
-				//Update offset and range when attenuation is changed
-				for(size_t i = 0; i<nstreams; i++)
+			//Digital
+			if(isDigital)
+			{
+				auto yunit = m_channel->GetYAxisUnits(0);
+
+				if(scope->IsDigitalThresholdConfigurable())
 				{
-					auto unit = m_channel->GetYAxisUnits(i);
+					ImGui::SetNextItemWidth(width);
+					if(UnitInputWithImplicitApply("Threshold", m_threshold, m_committedThreshold, yunit))
+					{
+						scope->SetDigitalThreshold(index, m_committedThreshold);
 
-					m_committedOffset[i] = m_channel->GetOffset(i);
-					m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
-
-					m_committedRange[i] = m_channel->GetVoltageRange(i);
-					m_range[i] = unit.PrettyPrint(m_committedRange[i]);
+						//refresh in case scope driver changed the value
+						m_committedThreshold = scope->GetDigitalThreshold(index);
+						m_threshold = yunit.PrettyPrint(m_committedThreshold);
+					}
+					HelpMarker("Switching threshold for the digital input buffer");
 				}
-			}
-			if(m_probe != "")
-				ImGui::EndDisabled();
-			HelpMarker("Attenuation setting for the probe (for example, 10 for a 10:1 probe)");
 
-			//Only show coupling box if the instrument has configurable coupling
-			if( (m_couplings.size() > 1) && (m_probe == "") )
-			{
-				ImGui::SetNextItemWidth(width);
-				if(Combo("Coupling", m_couplingNames, m_coupling))
-					m_channel->SetCoupling(m_couplings[m_coupling]);
-				HelpMarker("Coupling configuration for the input");
+				if(scope->IsDigitalHysteresisConfigurable())
+				{
+					ImGui::SetNextItemWidth(width);
+					if(UnitInputWithImplicitApply("Hysteresis", m_hysteresis, m_committedHysteresis, yunit))
+					{
+						scope->SetDigitalHysteresis(index, m_committedHysteresis);
+
+						//refresh in case scope driver changed the value
+						m_committedHysteresis = scope->GetDigitalHysteresis(index);
+						m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
+					}
+					HelpMarker("Hysteresis for the digital input buffer");
+				}
+
+				//TODO: when value is changed, refresh any dialogs that might be open showing other channels
+				//from the same digital bank
+
+				auto bank = scope->GetDigitalBank(index);
+				if(bank.size() > 1)
+				{
+					ImGui::Text("Changing input buffer settings will also affect the following channels:");
+					for(auto c : bank)
+					{
+						if(c == m_channel)
+							continue;
+						ImGui::BulletText("%s", c->GetDisplayName().c_str());
+					}
+				}
+
 			}
 
-			//Bandwidth limiters (only show if more than one value available)
-			if(m_bwlNames.size() > 1)
+			//Analog
+			else
 			{
+				//Attenuation
+				Unit counts(Unit::UNIT_COUNTS);
 				ImGui::SetNextItemWidth(width);
-				if(Combo("Bandwidth", m_bwlNames, m_bwl))
-					m_channel->SetBandwidthLimit(m_bwlValues[m_bwl]);
-				HelpMarker("Hardware bandwidth limiter setting");
+				if(m_probe != "")	//cannot change attenuation on active probes
+					ImGui::BeginDisabled();
+				if(UnitInputWithImplicitApply("Attenuation", m_attenuation, m_committedAttenuation, counts))
+				{
+					scope->SetChannelAttenuation(index, m_committedAttenuation);
+
+					//Update offset and range when attenuation is changed
+					for(size_t i = 0; i<nstreams; i++)
+					{
+						auto unit = m_channel->GetYAxisUnits(i);
+
+						m_committedOffset[i] = m_channel->GetOffset(i);
+						m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
+
+						m_committedRange[i] = m_channel->GetVoltageRange(i);
+						m_range[i] = unit.PrettyPrint(m_committedRange[i]);
+					}
+				}
+				if(m_probe != "")
+					ImGui::EndDisabled();
+				HelpMarker("Attenuation setting for the probe (for example, 10 for a 10:1 probe)");
+
+				//Only show coupling box if the instrument has configurable coupling
+				if( (m_couplings.size() > 1) && (m_probe == "") )
+				{
+					ImGui::SetNextItemWidth(width);
+					if(Combo("Coupling", m_couplingNames, m_coupling))
+						m_channel->SetCoupling(m_couplings[m_coupling]);
+					HelpMarker("Coupling configuration for the input");
+				}
+
+				//Bandwidth limiters (only show if more than one value available)
+				if(m_bwlNames.size() > 1)
+				{
+					ImGui::SetNextItemWidth(width);
+					if(Combo("Bandwidth", m_bwlNames, m_bwl))
+						m_channel->SetBandwidthLimit(m_bwlValues[m_bwl]);
+					HelpMarker("Hardware bandwidth limiter setting");
+				}
 			}
 
 			//If there's an input mux, show a combo box for it
@@ -384,7 +452,7 @@ bool ChannelPropertiesDialog::DoRender()
 			}
 
 			//If the scope has configurable ADC modes, show dropdown for that
-			if(scope->IsADCModeConfigurable())
+			if(!isDigital && scope->IsADCModeConfigurable())
 			{
 				bool nomodes = m_modeNames.size() <= 1;
 				if(nomodes)
@@ -419,8 +487,9 @@ bool ChannelPropertiesDialog::DoRender()
 					);
 			}
 
+
 			//If the channel supports averaging, show a spin button for it
-			if(scope->CanAverage(index))
+			if(!isDigital && scope->CanAverage(index))
 			{
 				if(ImGui::InputInt("Averaging", &m_navg))
 					scope->SetNumAverages(index, m_navg);
@@ -442,7 +511,7 @@ bool ChannelPropertiesDialog::DoRender()
 			}
 
 			//If the probe supports degaussing, show a button for it
-			if(m_canDegauss)
+			if(!isDigital && m_canDegauss)
 			{
 				string caption = "Degauss";
 				if(m_shouldDegauss)
@@ -484,33 +553,37 @@ bool ChannelPropertiesDialog::DoRender()
 		if(nstreams > 1)
 			streamname = m_channel->GetStreamName(i);
 
-		if(ImGui::CollapsingHeader(streamname.c_str()))
+		//Only show if analog channel
+		if(m_channel->GetType(i) == Stream::STREAM_TYPE_ANALOG)
 		{
-			auto unit = m_channel->GetYAxisUnits(i);
-
-			//If no change to offset in dialog, update our input value when we change offset outside the dialog
-			auto off = m_channel->GetOffset(i);
-			auto soff = unit.PrettyPrint(m_committedOffset[i]);
-			if( (m_committedOffset[i] != off) && (soff == m_offset[i]) )
+			if(ImGui::CollapsingHeader(streamname.c_str()))
 			{
-				m_offset[i] = unit.PrettyPrint(off);
-				m_committedOffset[i] = off;
-			}
-			ImGui::SetNextItemWidth(width);
-			if(UnitInputWithExplicitApply("Offset", m_offset[i], m_committedOffset[i], unit))
-				m_channel->SetOffset(m_committedOffset[i], i);
+				auto unit = m_channel->GetYAxisUnits(i);
 
-			//Same for range
-			auto range = m_channel->GetVoltageRange(i);
-			auto srange = unit.PrettyPrint(m_committedRange[i]);
-			if( (m_committedRange[i] != range) && (srange == m_range[i]) )
-			{
-				m_range[i] = unit.PrettyPrint(range);
-				m_committedRange[i] = range;
+				//If no change to offset in dialog, update our input value when we change offset outside the dialog
+				auto off = m_channel->GetOffset(i);
+				auto soff = unit.PrettyPrint(m_committedOffset[i]);
+				if( (m_committedOffset[i] != off) && (soff == m_offset[i]) )
+				{
+					m_offset[i] = unit.PrettyPrint(off);
+					m_committedOffset[i] = off;
+				}
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithExplicitApply("Offset", m_offset[i], m_committedOffset[i], unit))
+					m_channel->SetOffset(m_committedOffset[i], i);
+
+				//Same for range
+				auto range = m_channel->GetVoltageRange(i);
+				auto srange = unit.PrettyPrint(m_committedRange[i]);
+				if( (m_committedRange[i] != range) && (srange == m_range[i]) )
+				{
+					m_range[i] = unit.PrettyPrint(range);
+					m_committedRange[i] = range;
+				}
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
+					m_channel->SetVoltageRange(m_committedRange[i], i);
 			}
-			ImGui::SetNextItemWidth(width);
-			if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
-				m_channel->SetVoltageRange(m_committedRange[i], i);
 		}
 	}
 
