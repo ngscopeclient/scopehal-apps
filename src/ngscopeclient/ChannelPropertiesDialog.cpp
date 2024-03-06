@@ -86,9 +86,12 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
 		m_committedHysteresis = 0;
 		m_committedThreshold = 0;
 	}
-	auto yunit = m_channel->GetYAxisUnits(0);
-	m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
-	m_threshold = yunit.PrettyPrint(m_committedThreshold);
+	if(nstreams > 0)
+	{
+		auto yunit = m_channel->GetYAxisUnits(0);
+		m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
+		m_threshold = yunit.PrettyPrint(m_committedThreshold);
+	}
 
 	//Hardware acquisition settings if this is a scope channel
 	if(scope)
