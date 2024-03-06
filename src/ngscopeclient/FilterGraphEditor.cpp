@@ -2032,11 +2032,14 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument*
 		if( (dynamic_cast<PowerSupplyChannel*>(channel)) ||
 			(dynamic_cast<FunctionGeneratorChannel*>(channel)) ||
 			(dynamic_cast<RFSignalGeneratorChannel*>(channel)) ||
+			(dynamic_cast<DigitalOutputChannel*>(channel)) ||
 			(dynamic_cast<BERTOutputChannel*>(channel))
 			)
 		{
 			blocktype = "Hardware output";
 		}
+		else if(dynamic_cast<DigitalIOChannel*>(channel))
+			blocktype = "Hardware I/O";
 		else
 			blocktype = "Hardware input";
 	}
