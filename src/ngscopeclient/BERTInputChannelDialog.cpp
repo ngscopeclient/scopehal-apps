@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -78,6 +78,19 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	Unit db(Unit::UNIT_DB);
 	for(auto step : steps)
 		m_ctleNames.push_back(db.PrettyPrint(step));
+
+	//Scan depth
+	int64_t depth = chan->GetScanDepth();
+	m_scanValues = chan->GetScanDepths();
+	m_scanIndex = 0;
+	Unit sd(Unit::UNIT_SAMPLEDEPTH);
+	for(size_t i=0; i<m_scanValues.size(); i++)
+	{
+		m_scanNames.push_back(sd.PrettyPrint(m_scanValues[i]));
+
+		if(m_scanValues[i] <= depth)
+			m_scanIndex = i;
+	}
 
 	//Rescale fs to ps for display
 	int64_t tmp;
@@ -220,6 +233,16 @@ bool BERTInputChannelDialog::DoRender()
 	{
 		float freq = m_channel->GetBERT()->GetDataRate();
 		float uiWidth = FS_PER_SECOND / (1000 * freq);
+
+		if(m_channel->GetBERT()->HasConfigurableScanDepth())
+		{
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("Integration Depth", m_scanNames, m_scanIndex))
+				m_channel->SetScanDepth(m_scanValues[m_scanIndex]);
+			HelpMarker(
+				"Maximum number of UIs to integrate at each point in the scan.\n"
+				"Higher values give better accuracy at lower BER values, but increase scan time.");
+		}
 
 		//See if sampling point moved outside our dialog
 		//If so, move the sliders

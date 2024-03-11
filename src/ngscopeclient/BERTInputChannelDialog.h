@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -63,6 +63,10 @@ protected:
 	int m_patternIndex;
 	std::vector<std::string> m_patternNames;
 	std::vector<BERT::Pattern> m_patternValues;
+
+	int m_scanIndex;
+	std::vector<std::string> m_scanNames;
+	std::vector<int64_t> m_scanValues;
 
 	int m_ctleIndex;
 	std::vector<std::string> m_ctleNames;

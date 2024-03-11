@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -72,8 +72,8 @@ void BERTThread(BERTThreadArgs args)
 
 		state->m_firstUpdateDone = true;
 
-		//Cap update rate to 2 Hz
+		//Cap update rate to 10 Hz
 		//(we're mostly polling CDR lock state etc so there's no need for speed)
-		this_thread::sleep_for(chrono::milliseconds(500));
+		this_thread::sleep_for(chrono::milliseconds(100));
 	}
 }
