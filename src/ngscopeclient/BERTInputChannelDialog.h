@@ -82,6 +82,11 @@ protected:
 	float m_sampleY;
 	float m_committedSampleY;
 
+	///@brief Data rate selector
+	int m_dataRateIndex;
+	std::vector<int64_t> m_dataRates;
+	std::vector<std::string> m_dataRateNames;
+
 	float m_color[3];
 
 	std::shared_ptr<FileBrowser> m_fileDialog;

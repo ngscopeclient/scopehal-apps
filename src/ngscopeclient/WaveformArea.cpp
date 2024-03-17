@@ -134,6 +134,21 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 	size_t x = newSize.x;
 	size_t y = newSize.y;
 
+	//Special processing needed for eyes coming from BERTs or sampling scopes
+	//These can change size on their own even if the window isn't resized
+	auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
+	auto constellation = dynamic_cast<ConstellationFilter*>(m_stream.m_channel);
+	auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
+	auto data = m_stream.GetData();
+	auto eyedata = dynamic_cast<EyeWaveform*>(data);
+	if( (m_stream.GetType() == Stream::STREAM_TYPE_EYE) && eyedata && !eye)
+	{
+		x = eyedata->GetWidth();
+		y = eyedata->GetHeight();
+		if( (m_cachedX != x) || (m_cachedY != y) )
+			LogTrace("Hardware eye resolution changed, processing resize\n");
+	}
+
 	if( (m_cachedX != x) || (m_cachedY != y) )
 	{
 		m_cachedX = x;
@@ -147,11 +162,6 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 		//To avoid constantly destroying the integrated eye if we slightly resize stuff, round up to next power of 2
 		size_t roundedX = pow(2, ceil(log2(x)));
 		size_t roundedY = pow(2, ceil(log2(y)));
-		auto eye = dynamic_cast<EyePattern*>(m_stream.m_channel);
-		auto constellation = dynamic_cast<ConstellationFilter*>(m_stream.m_channel);
-		auto waterfall = dynamic_cast<Waterfall*>(m_stream.m_channel);
-		auto data = m_stream.GetData();
-		auto eyedata = dynamic_cast<EyeWaveform*>(data);
 		if(eye)
 		{
 			if( (eye->GetWidth() != roundedX) || (eye->GetHeight() != roundedY) )

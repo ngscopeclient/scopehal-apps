@@ -101,6 +101,21 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 
 	m_tempMaskFile = chan->GetMaskFile();
 	m_committedMaskFile = m_tempMaskFile;
+
+	//Data rate
+	auto currentRate = chan->GetDataRate();
+	m_dataRateIndex = 0;
+	m_dataRates = chan->GetBERT()->GetAvailableDataRates();
+	Unit bps(Unit::UNIT_BITRATE);
+	m_dataRateNames.clear();
+	for(size_t i=0; i<m_dataRates.size(); i++)
+	{
+		auto rate = m_dataRates[i];
+		if(rate == currentRate)
+			m_dataRateIndex = i;
+
+		m_dataRateNames.push_back(bps.PrettyPrint(rate));
+	}
 }
 
 BERTInputChannelDialog::~BERTInputChannelDialog()
@@ -227,6 +242,17 @@ bool BERTInputChannelDialog::DoRender()
 		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
 			m_channel->SetPattern(m_patternValues[m_patternIndex]);
 		HelpMarker("Expected PRBS pattern");
+	}
+
+	if(m_channel->GetBERT()->IsDataRatePerChannel())
+	{
+		if(ImGui::CollapsingHeader("Timebase", defaultOpenFlags))
+		{
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
+				m_channel->SetDataRate(m_dataRates[m_dataRateIndex]);
+			HelpMarker("PHY signaling rate for this transmit port");
+		}
 	}
 
 	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
