@@ -733,7 +733,9 @@ void MainWindow::LoadGradients()
 	LoadGradient("Ironbow", "eye-gradient-ironbow");
 	LoadGradient("KRain", "eye-gradient-krain");
 	LoadGradient("Rainbow", "eye-gradient-rainbow");
+	LoadGradient("Reverse Grayscale", "eye-gradient-reverse-grayscale");
 	LoadGradient("Reverse Rainbow", "eye-gradient-reverse-rainbow");
+	LoadGradient("Reverse Viridis", "eye-gradient-reverse-viridis");
 	LoadGradient("Viridis", "eye-gradient-viridis");
 }
 
