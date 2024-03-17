@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -84,6 +84,21 @@ BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool g
 		m_driveNames.push_back(volts.PrettyPrint(p));
 		if( fabs(p - drive) < 0.01)
 			m_driveIndex = i;
+	}
+
+	//Data rate
+	auto currentRate = chan->GetDataRate();
+	m_dataRateIndex = 0;
+	m_dataRates = chan->GetBERT()->GetAvailableDataRates();
+	Unit bps(Unit::UNIT_BITRATE);
+	m_dataRateNames.clear();
+	for(size_t i=0; i<m_dataRates.size(); i++)
+	{
+		auto rate = m_dataRates[i];
+		if(rate == currentRate)
+			m_dataRateIndex = i;
+
+		m_dataRateNames.push_back(bps.PrettyPrint(rate));
 	}
 }
 
@@ -190,6 +205,17 @@ bool BERTOutputChannelDialog::DoRender()
 			m_channel->SetPostCursor(m_postcursor);
 		HelpMarker("Post-cursor FFE tap value");
 
+	}
+
+	if(m_channel->GetBERT()->IsDataRatePerChannel())
+	{
+		if(ImGui::CollapsingHeader("Timebase", defaultOpenFlags))
+		{
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
+				m_channel->SetDataRate(m_dataRates[m_dataRateIndex]);
+			HelpMarker("PHY signaling rate for this transmit port");
+		}
 	}
 
 	return true;

@@ -231,7 +231,7 @@ bool BERTInputChannelDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
 	{
-		float freq = m_channel->GetBERT()->GetDataRate();
+		float freq = m_channel->GetDataRate();
 		float uiWidth = FS_PER_SECOND / (1000 * freq);
 
 		if(m_channel->GetBERT()->HasConfigurableScanDepth())

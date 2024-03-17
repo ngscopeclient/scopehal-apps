@@ -75,7 +75,8 @@ void BERTDialog::RefreshFromHardware()
 	m_refclkIndex = m_bert->GetRefclkOutMux();
 	m_refclkNames = m_bert->GetRefclkOutMuxNames();
 
-	auto currentRate = m_bert->GetDataRate();
+	//Data rate
+	auto currentRate = m_bert->GetDataRate(0);
 	m_dataRateIndex = 0;
 	m_dataRates = m_bert->GetAvailableDataRates();
 	Unit bps(Unit::UNIT_BITRATE);
@@ -146,55 +147,65 @@ bool BERTDialog::DoRender()
 	//Timebase settings
 	if(ImGui::CollapsingHeader("Timebase"))
 	{
-		ImGui::SetNextItemWidth(width);
-		if(Dialog::Combo("Clock Out", m_refclkNames, m_refclkIndex))
-		{
-			m_bert->SetRefclkOutMux(m_refclkIndex);
-
-			//Need to refresh custom pattern here
-			//because ML4039 sets this to 0xaaaa if we select SERDES mode on clock out
-			m_txPattern = m_bert->GetGlobalCustomPattern();
-			m_txPatternText = to_string_hex(m_txPattern);
-
-			m_refclkFrequency = m_bert->GetRefclkOutFrequency();
-		}
-		HelpMarker("Select which clock to output from the reference clock output port");
-
-		ImGui::SetNextItemWidth(width);
-		ImGui::BeginDisabled();
 		Unit hz(Unit::UNIT_HZ);
-		string srate = hz.PrettyPrint(m_refclkFrequency);
-		ImGui::InputText("Clock Out Frequency", &srate);
-		ImGui::EndDisabled();
-		HelpMarker("Calculated frequency of the reference clock output");
 
-		ImGui::SetNextItemWidth(width);
-		ImGui::BeginDisabled();
-		srate = hz.PrettyPrint(m_bert->GetRefclkInFrequency());
-		ImGui::InputText("Clock In Frequency", &srate);
-		ImGui::EndDisabled();
-		HelpMarker("Required frequency for external reference clock");
-
-		ImGui::SetNextItemWidth(width);
-		const char* items[2] =
+		if(m_bert->HasRefclkOut())
 		{
-			"Internal",
-			"External"
-		};
-		int iext = m_bert->GetUseExternalRefclk() ? 1 : 0;
-		if(ImGui::Combo("Clock Source", &iext, items, 2))
-			m_bert->SetUseExternalRefclk(iext == 1);
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("Clock Out", m_refclkNames, m_refclkIndex))
+			{
+				m_bert->SetRefclkOutMux(m_refclkIndex);
 
-		ImGui::SetNextItemWidth(width);
-		if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
-		{
-			m_bert->SetDataRate(m_dataRates[m_dataRateIndex]);
+				//Need to refresh custom pattern here
+				//because ML4039 sets this to 0xaaaa if we select SERDES mode on clock out
+				m_txPattern = m_bert->GetGlobalCustomPattern();
+				m_txPatternText = to_string_hex(m_txPattern);
 
-			//Reload refclk mux setting names
-			m_refclkNames = m_bert->GetRefclkOutMuxNames();
-			m_refclkFrequency = m_bert->GetRefclkOutFrequency();
+				m_refclkFrequency = m_bert->GetRefclkOutFrequency();
+			}
+			HelpMarker("Select which clock to output from the reference clock output port");
+
+			ImGui::SetNextItemWidth(width);
+			ImGui::BeginDisabled();
+			string srate = hz.PrettyPrint(m_refclkFrequency);
+			ImGui::InputText("Clock Out Frequency", &srate);
+			ImGui::EndDisabled();
+			HelpMarker("Calculated frequency of the reference clock output");
 		}
-		HelpMarker("PHY signaling rate for all transmit and receive ports");
+
+		if(m_bert->HasRefclkIn())
+		{
+			ImGui::SetNextItemWidth(width);
+			ImGui::BeginDisabled();
+			auto srate = hz.PrettyPrint(m_bert->GetRefclkInFrequency());
+			ImGui::InputText("Clock In Frequency", &srate);
+			ImGui::EndDisabled();
+			HelpMarker("Required frequency for external reference clock");
+
+			ImGui::SetNextItemWidth(width);
+			const char* items[2] =
+			{
+				"Internal",
+				"External"
+			};
+			int iext = m_bert->GetUseExternalRefclk() ? 1 : 0;
+			if(ImGui::Combo("Clock Source", &iext, items, 2))
+				m_bert->SetUseExternalRefclk(iext == 1);
+		}
+
+		if(!m_bert->IsDataRatePerChannel())
+		{
+			ImGui::SetNextItemWidth(width);
+			if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
+			{
+				m_bert->SetDataRate(0, m_dataRates[m_dataRateIndex]);
+
+				//Reload refclk mux setting names
+				m_refclkNames = m_bert->GetRefclkOutMuxNames();
+				m_refclkFrequency = m_bert->GetRefclkOutFrequency();
+			}
+			HelpMarker("PHY signaling rate for all transmit and receive ports");
+		}
 
 		ImGui::SetNextItemWidth(width);
 		Unit sa(Unit::UNIT_SAMPLEDEPTH);
