@@ -95,12 +95,31 @@ bool MeasurementsDialog::DoRender()
 		for(size_t i=0; i<m_streams.size(); i++)
 		{
 			auto s = m_streams[i];
-			auto name = s.GetName();
+			auto name = string(s.GetName());
+
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
-			ImGui::PushID(name.c_str());
+			ImGui::PushID(s.m_channel);
 
 			ImGui::TableSetColumnIndex(0);
-			ImGui::Selectable(name.c_str(), false);
+
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+			if(ImGui::InputText("", &name))
+			{
+				if (name == "")
+				{
+					if (auto f = dynamic_cast<Filter*>(s.m_channel))
+						f->UseDefaultName(true);
+				}
+				else
+				{
+					if (auto f = dynamic_cast<Filter*>(s.m_channel))
+						f->UseDefaultName(true);
+
+					s.m_channel->SetDisplayName(name);
+				}
+			}
+			ImGui::PopStyleColor();
+
 			if(ImGui::BeginPopupContextItem())
 			{
 				if(ImGui::MenuItem("Delete"))
