@@ -13,8 +13,8 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "ngscopeclient";
     repo = "scopehal-apps";
-    rev = "b58983056b0b6a628c97e6fbf57be3cc010717d4";
-    hash = "sha256-PYl5qx6dGBfsDOGuQP7kPEh71skR3HPpX7YCVa+uhiY=";
+    rev = "33c7cddc344f2a7a337b8a3987e16e29f5dd4d0b";
+    hash = "sha256-kingCorT42tacCrnNEjRRjRREm9g+ju1Zab4xHBFmiI=";
     fetchSubmodules = true;
   };
 
