@@ -168,6 +168,13 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+
+	//Update preference settings for viewport mode
+	auto viewportMode = m_session.GetPreferences().GetEnumRaw("Appearance.Windowing.viewport_mode");
+	if(viewportMode == VIEWPORT_ENABLE)
+		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	else
+		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 }
 
 MainWindow::~MainWindow()

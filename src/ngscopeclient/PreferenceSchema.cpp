@@ -320,12 +320,24 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Persistence decay rate (0 = none, 1 = infinite)")
 				.Description("Decay rate for persistence waveforms. ")
 				.Unit(Unit::UNIT_COUNTS));
-
-		auto& windows = appearance.AddCategory("Windows");
+		*/
+		auto& windows = appearance.AddCategory("Windowing");
 			windows.AddPreference(
-				Preference::Color("trigger_bar_color", ColorFromString("#ffffff"))
-				.Label("Trigger bar color")
-				.Description("Color for the dotted line shown when dragging a trigger"));*/
+				Preference::Enum("viewport_mode", VIEWPORT_ENABLE)
+					.Label("Viewport Mode")
+					.Description(
+						"Specifies whether the GUI library is allowed to create multiple top level windows,\n"
+						"or if all child windows (menus, dialogs, tooltips, etc) are forced to stay within the\n"
+						"boundaries of the application window.\n"
+						"\n"
+						"The default is multi-window, but if you are having problems with a Linux tiling\n"
+						"window manager, you may have a better experience using single-window mode.\n"
+						"\n"
+						"Changes to this setting will not take effect until ngscopeclient is restarted."
+						)
+					.EnumValue("Multi window", VIEWPORT_ENABLE)
+					.EnumValue("Single window", VIEWPORT_DISABLE)
+				);
 
 	auto& drivers = this->m_treeRoot.AddCategory("Drivers");
 		auto& lecroy = drivers.AddCategory("Teledyne LeCroy");
