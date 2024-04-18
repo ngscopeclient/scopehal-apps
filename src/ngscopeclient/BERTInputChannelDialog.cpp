@@ -308,6 +308,16 @@ bool BERTInputChannelDialog::DoRender()
 			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_horzBathtubScanPending[m_channel->GetIndex()] = true;
 		}
+
+		Unit fs(Unit::UNIT_FS);
+		ImGui::SameLine();
+
+		//Scan progress or estimated run time
+		if(m_channel->IsHBathtubScanInProgress())
+			ImGui::ProgressBar(m_channel->GetScanProgress(), ImVec2(2*width, 0));
+		else
+			ImGui::Text("Estimated %s", fs.PrettyPrint(m_channel->GetExpectedBathtubCaptureTime(), 5).c_str());
+
 		HelpMarker("Acquire a single horizontal bathtub measurement");
 
 		if(ImGui::Button("Eye"))
@@ -319,6 +329,13 @@ bool BERTInputChannelDialog::DoRender()
 			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_eyeScanPending[m_channel->GetIndex()] = true;
 		}
+		ImGui::SameLine();
+
+		//Scan progress or estimated run time
+		if(m_channel->IsEyeScanInProgress())
+			ImGui::ProgressBar(m_channel->GetScanProgress(), ImVec2(2*width, 0));
+		else
+			ImGui::Text("Estimated %s", fs.PrettyPrint(m_channel->GetExpectedEyeCaptureTime(), 5).c_str());
 		HelpMarker("Acquire a single eye pattern measurement");
 
 		//Input path
