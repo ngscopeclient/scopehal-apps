@@ -43,7 +43,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* session)
+BERTDialog::BERTDialog(shared_ptr<SCPIBERT> bert, shared_ptr<BERTState> state, Session* session)
 	: Dialog(
 		string("BERT: ") + bert->m_nickname,
 		string("BERT: ") + bert->m_nickname,
@@ -58,7 +58,6 @@ BERTDialog::BERTDialog(SCPIBERT* bert, shared_ptr<BERTState> state, Session* ses
 
 BERTDialog::~BERTDialog()
 {
-	m_session->RemoveBERT(m_bert);
 }
 
 void BERTDialog::RefreshFromHardware()

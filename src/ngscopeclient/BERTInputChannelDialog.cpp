@@ -59,6 +59,7 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	m_color[2] = ((color >> IM_COL32_B_SHIFT) & 0xff) / 255.0f;
 
 	m_invert = chan->GetInvert();
+	auto bert = chan->GetBERT().lock();
 
 	//Receive pattern
 	BERT::Pattern pat = chan->GetPattern();
@@ -67,7 +68,7 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	for(size_t i=0; i<m_patternValues.size(); i++)
 	{
 		auto p = m_patternValues[i];
-		m_patternNames.push_back(chan->GetBERT()->GetPatternName(p));
+		m_patternNames.push_back(bert->GetPatternName(p));
 		if(p == pat)
 			m_patternIndex = i;
 	}
@@ -105,7 +106,7 @@ BERTInputChannelDialog::BERTInputChannelDialog(BERTInputChannel* chan, MainWindo
 	//Data rate
 	auto currentRate = chan->GetDataRate();
 	m_dataRateIndex = 0;
-	m_dataRates = chan->GetBERT()->GetAvailableDataRates();
+	m_dataRates = bert->GetAvailableDataRates();
 	Unit bps(Unit::UNIT_BITRATE);
 	m_dataRateNames.clear();
 	for(size_t i=0; i<m_dataRates.size(); i++)
@@ -163,27 +164,25 @@ bool BERTInputChannelDialog::DoRender()
 
 	float width = 10 * ImGui::GetFontSize();
 
-	auto bert = m_channel->GetBERT();
+	auto bert = m_channel->GetBERT().lock();
+	if(!bert)
+		return false;
 	if(ImGui::CollapsingHeader("Info"))
 	{
-		//Scope info
-		if(bert)
-		{
-			auto nickname = bert->m_nickname;
-			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
+		auto nickname = bert->m_nickname;
+		auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Instrument", &nickname);
-			ImGui::EndDisabled();
-			HelpMarker("The instrument this channel was measured by");
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Instrument", &nickname);
+		ImGui::EndDisabled();
+		HelpMarker("The instrument this channel was measured by");
 
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Channel", &index);
-			ImGui::EndDisabled();
-			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
-		}
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Hardware Channel", &index);
+		ImGui::EndDisabled();
+		HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 	}
 
 	//All channels have display settings
@@ -244,7 +243,7 @@ bool BERTInputChannelDialog::DoRender()
 		HelpMarker("Expected PRBS pattern");
 	}
 
-	if(m_channel->GetBERT()->IsDataRatePerChannel())
+	if(bert->IsDataRatePerChannel())
 	{
 		if(ImGui::CollapsingHeader("Timebase", defaultOpenFlags))
 		{
@@ -257,10 +256,12 @@ bool BERTInputChannelDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("Measurements", defaultOpenFlags))
 	{
+		auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT().lock());
+
 		float freq = m_channel->GetDataRate();
 		float uiWidth = FS_PER_SECOND / (1000 * freq);
 
-		if(m_channel->GetBERT()->HasConfigurableScanDepth())
+		if(bert->HasConfigurableScanDepth())
 		{
 			ImGui::SetNextItemWidth(width);
 			if(Dialog::Combo("Integration Depth", m_scanNames, m_scanIndex))
@@ -305,7 +306,6 @@ bool BERTInputChannelDialog::DoRender()
 			m_parent->AddAreaForStreamIfNotAlreadyVisible(m_channel->GetHBathtubStream());
 
 			//Request the bathtub measurement
-			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_horzBathtubScanPending[m_channel->GetIndex()] = true;
 		}
 
@@ -326,7 +326,6 @@ bool BERTInputChannelDialog::DoRender()
 			m_parent->AddAreaForStreamIfNotAlreadyVisible(m_channel->GetEyeStream());
 
 			//Request the eye measurement
-			auto state = m_parent->GetSession().GetBERTState(m_channel->GetBERT());
 			state->m_eyeScanPending[m_channel->GetIndex()] = true;
 		}
 		ImGui::SameLine();

@@ -56,7 +56,7 @@ class Session;
 class BERTConnectionState
 {
 public:
-	BERTConnectionState(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session)
+	BERTConnectionState(std::shared_ptr<SCPIBERT> bert, std::shared_ptr<BERTState> state, Session* session)
 		: m_bert(bert)
 		, m_shuttingDown(false)
 		, m_state(state)
@@ -73,7 +73,7 @@ public:
 	}
 
 	///@brief The BERT
-	SCPIBERT* m_bert;
+	std::shared_ptr<SCPIBERT> m_bert;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -307,8 +307,8 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
-	void AddBERT(SCPIBERT* bert, bool createDialog = true);
-	void RemoveBERT(SCPIBERT* bert);
+	void AddBERT(std::shared_ptr<SCPIBERT> bert, bool createDialog = true);
+	void RemoveBERT(std::shared_ptr<SCPIBERT> bert);
 	void AddMiscInstrument(SCPIMiscInstrument* inst);
 	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
 	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
@@ -336,7 +336,7 @@ public:
 	/**
 		@brief Returns a pointer to the state for a BERT
 	 */
-	std::shared_ptr<BERTState> GetBERTState(BERT* bert)
+	std::shared_ptr<BERTState> GetBERTState(std::shared_ptr<BERT> bert)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_berts[bert]->m_state;
@@ -401,10 +401,10 @@ public:
 	/**
 		@brief Get the set of BERTs we're currently connected to
 	 */
-	const std::vector<BERT*> GetBERTs()
+	const std::vector<std::shared_ptr<BERT> > GetBERTs()
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		std::vector<BERT*> berts;
+		std::vector<std::shared_ptr<BERT> > berts;
 		for(auto& it : m_berts)
 			berts.push_back(it.first);
 		return berts;
@@ -585,7 +585,7 @@ protected:
 	std::map<SCPIRFSignalGenerator*, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
 
 	///@brief BERTs we are currently connected to
-	std::map<BERT*, std::unique_ptr<BERTConnectionState> > m_berts;
+	std::map<std::shared_ptr<BERT>, std::unique_ptr<BERTConnectionState> > m_berts;
 
 	///@brief Function generators we are currently connected to
 	std::vector<SCPIFunctionGenerator*> m_generators;

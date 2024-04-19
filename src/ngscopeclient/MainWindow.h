@@ -303,7 +303,7 @@ protected:
 	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
 
 	///@brief Map of BERTs to BERT control dialogs
-	std::map<SCPIBERT*, std::shared_ptr<Dialog> > m_bertDialogs;
+	std::map<std::shared_ptr<SCPIBERT>, std::shared_ptr<Dialog> > m_bertDialogs;
 
 	///@brief Map of RF generators to generator control dialogs
 	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;

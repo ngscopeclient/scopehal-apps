@@ -43,12 +43,12 @@
 class BERTDialog : public Dialog
 {
 public:
-	BERTDialog(SCPIBERT* bert, std::shared_ptr<BERTState> state, Session* session);
+	BERTDialog(std::shared_ptr<SCPIBERT> bert, std::shared_ptr<BERTState> state, Session* session);
 	virtual ~BERTDialog();
 
 	virtual bool DoRender();
 
-	SCPIBERT* GetBERT()
+	std::shared_ptr<SCPIBERT> GetBERT()
 	{ return m_bert; }
 
 	void RefreshFromHardware();
@@ -62,7 +62,7 @@ protected:
 	double m_tstart;
 
 	///@brief The BERT we're controlling
-	SCPIBERT* m_bert;
+	std::shared_ptr<SCPIBERT> m_bert;
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<BERTState> m_state;

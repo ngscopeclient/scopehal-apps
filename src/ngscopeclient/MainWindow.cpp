@@ -2485,7 +2485,10 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 
 			if(bert)
-				AddDialog(make_shared<BERTDialog>(bert, m_session.GetBERTState(bert), &m_session));
+			{
+				auto sbert = bert->shared_from_this();
+				AddDialog(make_shared<BERTDialog>(sbert, m_session.GetBERTState(sbert), &m_session));
+			}
 			else
 			{
 				ShowErrorPopup("Invalid BERT", "BERT dialog references nonexistent instrument");
@@ -3004,7 +3007,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_bertDialogs)
 		{
 			auto bert = it.first;
-			gnode[bert->m_nickname] = m_session.m_idtable.emplace((Instrument*)bert);
+			gnode[bert->m_nickname] = m_session.m_idtable.emplace((Instrument*)bert.get());
 		}
 		node["berts"] = gnode;
 	}

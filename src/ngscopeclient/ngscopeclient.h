@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -136,14 +136,14 @@ public:
 class BERTThreadArgs
 {
 public:
-	BERTThreadArgs(SCPIBERT* b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
+	BERTThreadArgs(std::shared_ptr<SCPIBERT> b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
 	: bert(b)
 	, shuttingDown(s)
 	, state(st)
 	, session(sess)
 	{}
 
-	SCPIBERT* bert;
+	std::shared_ptr<SCPIBERT> bert;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<BERTState> state;
 	Session* session;

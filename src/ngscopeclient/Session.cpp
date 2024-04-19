@@ -1237,7 +1237,7 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIBERT* bert = nullptr;
+	shared_ptr<SCPIBERT> bert = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1260,11 +1260,8 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 			if(transport && transport->IsConnected())
 			{
 				bert = SCPIBERT::CreateBERT(driver, transport);
-				if(!VerifyInstrument(node, bert))
-				{
-					delete bert;
+				if(!VerifyInstrument(node, bert.get()))
 					bert = nullptr;
-				}
 			}
 
 			else
@@ -1301,7 +1298,7 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 
 	//All good. Add to our list of berts etc
 	AddBERT(bert, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)bert);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)bert.get());
 
 	//Run the preload
 	bert->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -2840,7 +2837,7 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 /**
 	@brief Adds a BERT to the session
  */
-void Session::AddBERT(SCPIBERT* bert, bool createDialog)
+void Session::AddBERT(shared_ptr<SCPIBERT> bert, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2852,7 +2849,7 @@ void Session::AddBERT(SCPIBERT* bert, bool createDialog)
 	if(createDialog)
 		m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
 
-	m_mainWindow->AddToRecentInstrumentList(bert);
+	m_mainWindow->AddToRecentInstrumentList(bert.get());
 
 	StartWaveformThreadIfNeeded();
 }
@@ -2860,12 +2857,11 @@ void Session::AddBERT(SCPIBERT* bert, bool createDialog)
 /**
 	@brief Removes a BERT from the session
  */
-void Session::RemoveBERT(SCPIBERT* bert)
+void Session::RemoveBERT(shared_ptr<SCPIBERT> bert)
 {
 	m_modifiedSinceLastSave = true;
 
 	m_berts.erase(bert);
-	delete bert;
 }
 
 /**
@@ -2967,7 +2963,7 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
 	{
-		auto b = dynamic_cast<SCPIBERT*>(it.first);
+		SCPIBERT* b = dynamic_cast<SCPIBERT*>(it.first.get());
 		if(b != nullptr)
 			insts.emplace(b);
 	}
@@ -2994,7 +2990,7 @@ set<Instrument*> Session::GetInstruments()
 	for(auto& it : m_psus)
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
-		insts.emplace(it.first);
+		insts.emplace(it.first.get());
 	for(auto& it : m_meters)
 		insts.emplace(it.first);
 	for(auto& it : m_loads)
