@@ -1,6 +1,6 @@
 # At the moment, this is meant to be built as part of scopehal-apps.
 # Standalone build/install is a potential long-term goal.
-#If there is interest in a standalone build, please reach out. 
+#If there is interest in a standalone build, please reach out.
 
 # Vulkan is required for compute shaders used in rendering, but is pulled in from the top level CMakeLists.
 
@@ -63,6 +63,7 @@ add_executable(ngscopeclient
 	BERTThread.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	DigitalOutputChannelDialog.cpp
 	EmbeddableDialog.cpp
 	EmbeddedTriggerPropertiesDialog.cpp
 	FileBrowser.cpp

@@ -37,6 +37,7 @@
 #include "MainWindow.h"
 #include "BERTInputChannelDialog.h"
 #include "BERTOutputChannelDialog.h"
+#include "DigitalOutputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
 #include "EmbeddedTriggerPropertiesDialog.h"
@@ -2310,6 +2311,7 @@ void FilterGraphEditor::HandleNodeProperties()
 			auto f = dynamic_cast<Filter*>(o);
 			auto bo = dynamic_cast<BERTOutputChannel*>(node);
 			auto bi = dynamic_cast<BERTInputChannel*>(node);
+			auto dio = dynamic_cast<DigitalOutputChannel*>(node);
 
 			//Make the properties window
 			if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
@@ -2322,6 +2324,8 @@ void FilterGraphEditor::HandleNodeProperties()
 					m_propertiesDialogs[id] = make_shared<BERTOutputChannelDialog>(bo, true);
 				else if(bi)
 					m_propertiesDialogs[id] = make_shared<BERTInputChannelDialog>(bi, m_parent, true);
+				else if(dio)
+					m_propertiesDialogs[id] = make_shared<DigitalOutputChannelDialog>(dio, m_parent, true);
 
 				//must be last since many other types are derived from OscilloscopeChannel
 				else if(o)
