@@ -976,7 +976,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	double tstart = round(m_xAxisOffset / grad_xunits_rounded) * grad_xunits_rounded;
 
 	//Print tick marks and labels
-	for(double t = tstart; t < (tstart + width_xunits + grad_xunits_rounded); t += grad_xunits_rounded)
+	for(double t = tstart - grad_xunits_rounded; t < (tstart + width_xunits + grad_xunits_rounded); t += grad_xunits_rounded)
 	{
 		double x = (t - m_xAxisOffset) * xscale;
 
