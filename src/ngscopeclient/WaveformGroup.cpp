@@ -172,7 +172,7 @@ bool WaveformGroup::Render()
 
 	bool open = true;
 	ImGui::SetNextWindowSize(ImVec2(320, 240), ImGuiCond_Appearing);
-	if(!ImGui::Begin(GetID().c_str(), &open))
+	if(!ImGui::Begin(GetID().c_str(), &open, ImGuiWindowFlags_NoScrollWithMouse))
 	{
 		//tabbed out, don't draw anything until we're back in the foreground
 		ImGui::End();
@@ -1287,6 +1287,15 @@ void WaveformGroup::OnZoomOutHorizontal(int64_t target, float step)
 	//Change the zoom
 	m_pixelsPerXUnit /= step;
 	m_xAxisOffset = target - (delta*step);
+
+	ClearPersistence();
+}
+
+void WaveformGroup::OnPanHorizontal(float step)
+{
+	//TODO: Clamp to bounds of all waveforms in the group
+
+	m_xAxisOffset -=  PixelsToXAxisUnits(step * 100);
 
 	ClearPersistence();
 }

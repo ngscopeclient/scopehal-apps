@@ -638,12 +638,14 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		//Draw actual waveforms (and protocol decode overlays)
 		RenderWaveforms(pos, csize);
 
-		ImGui::SetItemUsingMouseWheel();
+		ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+		ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelX);
 		if(ImGui::IsItemHovered())
 		{
 			auto wheel = ImGui::GetIO().MouseWheel;
-			if(wheel != 0)
-				OnMouseWheelPlotArea(wheel);
+			auto wheel_h = ImGui::GetIO().MouseWheelH;
+			if((wheel != 0) || (wheel_h != 0))
+				OnMouseWheelPlotArea(wheel, wheel_h);
 
 			//Overlays / targets for drag-and-drop
 			if(m_parent->IsChannelBeingDragged())
@@ -3760,18 +3762,28 @@ void WaveformArea::OnDragUpdate()
 
 /**
 	@brief Handles a mouse wheel scroll step on the plot area
+	@param delta Vertical scroll steps
+	@param delta_h Horizontal scroll steps
  */
-void WaveformArea::OnMouseWheelPlotArea(float delta)
+void WaveformArea::OnMouseWheelPlotArea(float delta, float delta_h)
 {
-	//TODO: if shift is held, scroll horizontally
+	if (ImGui::IsKeyDown(ImGuiMod_Shift))
+	{
+		delta_h += delta;
+		delta = 0;
+	}
 
 	int64_t target = m_group->XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);
 
 	//Zoom in
 	if(delta > 0)
 		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
-	else
+	else if (delta < 0)
 		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
+
+	//Pan horizontally
+	if (delta_h != 0)
+		m_group->OnPanHorizontal(delta_h);
 }
 
 /**

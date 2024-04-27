@@ -70,6 +70,7 @@ public:
 
 	void OnZoomInHorizontal(int64_t target, float step);
 	void OnZoomOutHorizontal(int64_t target, float step);
+	void OnPanHorizontal(float step);
 	void NavigateToTimestamp(
 		int64_t timestamp,
 		int64_t duration = 0,
