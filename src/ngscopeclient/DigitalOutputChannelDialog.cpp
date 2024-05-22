@@ -96,6 +96,7 @@ bool DigitalOutputChannelDialog::DoRender()
 	if(ImGui::CollapsingHeader("Info"))
 	{
 		auto nickname = inst->m_nickname;
+		auto hwname = m_channel->GetHwname();
 		auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
 		ImGui::BeginDisabled();
@@ -109,6 +110,12 @@ bool DigitalOutputChannelDialog::DoRender()
 			ImGui::InputText("Hardware Channel", &index);
 		ImGui::EndDisabled();
 		HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
+
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Hardware Name", &hwname);
+		ImGui::EndDisabled();
+		HelpMarker("Hardware name for the channel (as used in the instrument API)");
 	}
 
 	//All channels have display settings

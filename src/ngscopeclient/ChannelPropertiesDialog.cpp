@@ -237,6 +237,7 @@ bool ChannelPropertiesDialog::DoRender()
 		if(scope)
 		{
 			auto nickname = scope->m_nickname;
+			auto hwname = m_channel->GetHwname();
 			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
 			ImGui::BeginDisabled();
@@ -250,6 +251,12 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::InputText("Hardware Channel", &index);
 			ImGui::EndDisabled();
 			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
+
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Hardware Name", &hwname);
+			ImGui::EndDisabled();
+			HelpMarker("Hardware name for the channel (as used in the instrument API)");
 		}
 
 		//Filter info

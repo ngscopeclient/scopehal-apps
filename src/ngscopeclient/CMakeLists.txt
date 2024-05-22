@@ -63,6 +63,8 @@ add_executable(ngscopeclient
 	BERTThread.cpp
 	ChannelPropertiesDialog.cpp
 	Dialog.cpp
+	DigitalInputChannelDialog.cpp
+	DigitalIOChannelDialog.cpp
 	DigitalOutputChannelDialog.cpp
 	EmbeddableDialog.cpp
 	EmbeddedTriggerPropertiesDialog.cpp

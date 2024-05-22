@@ -37,6 +37,8 @@
 #include "MainWindow.h"
 #include "BERTInputChannelDialog.h"
 #include "BERTOutputChannelDialog.h"
+#include "DigitalInputChannelDialog.h"
+#include "DigitalIOChannelDialog.h"
 #include "DigitalOutputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"
 #include "FilterPropertiesDialog.h"
@@ -2311,7 +2313,9 @@ void FilterGraphEditor::HandleNodeProperties()
 			auto f = dynamic_cast<Filter*>(o);
 			auto bo = dynamic_cast<BERTOutputChannel*>(node);
 			auto bi = dynamic_cast<BERTInputChannel*>(node);
-			auto dio = dynamic_cast<DigitalOutputChannel*>(node);
+			auto doc = dynamic_cast<DigitalOutputChannel*>(node);
+			auto dic = dynamic_cast<DigitalInputChannel*>(node);
+			auto dio = dynamic_cast<DigitalIOChannel*>(node);
 
 			//Make the properties window
 			if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
@@ -2325,7 +2329,11 @@ void FilterGraphEditor::HandleNodeProperties()
 				else if(bi)
 					m_propertiesDialogs[id] = make_shared<BERTInputChannelDialog>(bi, m_parent, true);
 				else if(dio)
-					m_propertiesDialogs[id] = make_shared<DigitalOutputChannelDialog>(dio, m_parent, true);
+					m_propertiesDialogs[id] = make_shared<DigitalIOChannelDialog>(dio, m_parent, true);
+				else if(doc)
+					m_propertiesDialogs[id] = make_shared<DigitalOutputChannelDialog>(doc, m_parent, true);
+				else if(dic)
+					m_propertiesDialogs[id] = make_shared<DigitalInputChannelDialog>(dic, m_parent, true);
 
 				//must be last since many other types are derived from OscilloscopeChannel
 				else if(o)

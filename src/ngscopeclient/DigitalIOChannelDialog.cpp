@@ -30,21 +30,28 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of BERTOutputChannelDialog
+	@brief Implementation of DigitalIOChannelDialog
  */
 
 #include "ngscopeclient.h"
-#include "BERTOutputChannelDialog.h"
+#include "MainWindow.h"
+#include "DigitalIOChannelDialog.h"
 #include <imgui_node_editor.h>
+#include "../scopehal/BufferedSwitchMatrixIOChannel.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool graphEditorMode)
+DigitalIOChannelDialog::DigitalIOChannelDialog(DigitalIOChannel* chan, MainWindow* parent, bool graphEditorMode)
 	: EmbeddableDialog(chan->GetHwname(), string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400), graphEditorMode)
 	, m_channel(chan)
+	, m_parent(parent)
+	, m_threshold("")
+	, m_committedThreshold(0)
+	, m_drive("")
+	, m_committedDrive(0)
 {
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
@@ -55,54 +62,24 @@ BERTOutputChannelDialog::BERTOutputChannelDialog(BERTOutputChannel* chan, bool g
 	m_color[1] = ((color >> IM_COL32_G_SHIFT) & 0xff) / 255.0f;
 	m_color[2] = ((color >> IM_COL32_B_SHIFT) & 0xff) / 255.0f;
 
-	m_invert = chan->GetInvert();
-	m_enable = chan->GetEnable();
-
-	m_precursor = chan->GetPreCursor();
-	m_postcursor = chan->GetPostCursor();
-
-	//Transmit pattern
-	BERT::Pattern pat = chan->GetPattern();
-	m_patternValues = chan->GetAvailablePatterns();
-	m_patternIndex = 0;
-	for(size_t i=0; i<m_patternValues.size(); i++)
+	auto bsi = dynamic_cast<BufferedSwitchMatrixIOChannel*>(m_channel);
+	if(bsi)
 	{
-		auto p = m_patternValues[i];
-		m_patternNames.push_back(chan->GetBERT()->GetPatternName(p));
-		if(p == pat)
-			m_patternIndex = i;
-	}
+		if(bsi->MuxHasConfigurableThreshold())
+		{
+			m_committedThreshold = bsi->GetMuxInputThreshold();
+			m_threshold = Unit(Unit::UNIT_VOLTS).PrettyPrint(m_committedThreshold);
+		}
 
-	//Drive strength
-	float drive = chan->GetDriveStrength();
-	m_driveValues = chan->GetAvailableDriveStrengths();
-	m_driveIndex = 0;
-	Unit volts(Unit::UNIT_VOLTS);
-	for(size_t i=0; i<m_driveValues.size(); i++)
-	{
-		auto p = m_driveValues[i];
-		m_driveNames.push_back(volts.PrettyPrint(p));
-		if( fabs(p - drive) < 0.01)
-			m_driveIndex = i;
-	}
-
-	//Data rate
-	auto currentRate = chan->GetDataRate();
-	m_dataRateIndex = 0;
-	m_dataRates = chan->GetBERT()->GetAvailableDataRates();
-	Unit bps(Unit::UNIT_BITRATE);
-	m_dataRateNames.clear();
-	for(size_t i=0; i<m_dataRates.size(); i++)
-	{
-		auto rate = m_dataRates[i];
-		if(rate == currentRate)
-			m_dataRateIndex = i;
-
-		m_dataRateNames.push_back(bps.PrettyPrint(rate));
+		if(bsi->MuxHasConfigurableDrive())
+		{
+			m_committedDrive = bsi->GetMuxOutputDrive();
+			m_drive = Unit(Unit::UNIT_VOLTS).PrettyPrint(m_committedDrive);
+		}
 	}
 }
 
-BERTOutputChannelDialog::~BERTOutputChannelDialog()
+DigitalIOChannelDialog::~DigitalIOChannelDialog()
 {
 }
 
@@ -115,41 +92,41 @@ BERTOutputChannelDialog::~BERTOutputChannelDialog()
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
-bool BERTOutputChannelDialog::DoRender()
+bool DigitalIOChannelDialog::DoRender()
 {
 	//Flags for a header that should be open by default EXCEPT in the graph editor
 	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
 
 	float width = 10 * ImGui::GetFontSize();
 
-	auto bert = m_channel->GetBERT();
+	auto bsi = dynamic_cast<BufferedSwitchMatrixIOChannel*>(m_channel);
+	auto inst = m_channel->GetInstrument();
+	if(!inst)
+		return true;
+
 	if(ImGui::CollapsingHeader("Info"))
 	{
-		//Scope info
-		if(bert)
-		{
-			auto nickname = bert->m_nickname;
-			auto hwname = m_channel->GetHwname();
-			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
+		auto nickname = inst->m_nickname;
+		auto hwname = m_channel->GetHwname();
+		auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Instrument", &nickname);
-			ImGui::EndDisabled();
-			HelpMarker("The instrument this channel was measured by");
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Instrument", &nickname);
+		ImGui::EndDisabled();
+		HelpMarker("The instrument this channel was measured by");
 
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Channel", &index);
-			ImGui::EndDisabled();
-			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Hardware Channel", &index);
+		ImGui::EndDisabled();
+		HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Name", &hwname);
-			ImGui::EndDisabled();
-			HelpMarker("Hardware name for the channel (as used in the instrument API)");
-		}
+		ImGui::BeginDisabled();
+			ImGui::SetNextItemWidth(width);
+			ImGui::InputText("Hardware Name", &hwname);
+		ImGui::EndDisabled();
+		HelpMarker("Hardware name for the channel (as used in the instrument API)");
 	}
 
 	//All channels have display settings
@@ -175,53 +152,29 @@ bool BERTOutputChannelDialog::DoRender()
 		}
 	}
 
-	if(ImGui::CollapsingHeader("Pattern Generator", defaultOpenFlags))
+	//Buffered channels have input voltage selector, if available
+	if(bsi && bsi->MuxHasConfigurableThreshold())
 	{
-		ImGui::SetNextItemWidth(width);
-		if(Dialog::Combo("Pattern", m_patternNames, m_patternIndex))
-			m_channel->SetPattern(m_patternValues[m_patternIndex]);
-
-		if(!m_channel->GetBERT()->IsCustomPatternPerChannel())
-			HelpMarker("Pattern to drive out this port.\nNote that all ports in \"custom\" mode share a single pattern generator");
-		else
-			HelpMarker("Pattern to drive out this port.");
-	}
-
-	if(ImGui::CollapsingHeader("PHY Control", defaultOpenFlags))
-	{
-		ImGui::SetNextItemWidth(width);
-		if(ImGui::Checkbox("Enable", &m_enable))
-			m_channel->Enable(m_enable);
-		HelpMarker("Enable the output driver");
-
-		ImGui::SetNextItemWidth(width);
-		if(ImGui::Checkbox("Invert", &m_invert))
-			m_channel->SetInvert(m_invert);
-		HelpMarker("Invert polarity of the output");
-
-		ImGui::SetNextItemWidth(width);
-		if(Dialog::Combo("Swing", m_driveNames, m_driveIndex))
-			m_channel->SetDriveStrength(m_driveValues[m_driveIndex]);
-		HelpMarker("Peak-to-peak swing of the output (with no emphasis)");
-
-		if(ImGui::SliderFloat("Pre-cursor", &m_precursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-			m_channel->SetPreCursor(m_precursor);
-		HelpMarker("Pre-cursor FFE tap value");
-
-		if(ImGui::SliderFloat("Post-cursor", &m_postcursor, 0.0, 1.0, "%.2f", ImGuiSliderFlags_AlwaysClamp))
-			m_channel->SetPostCursor(m_postcursor);
-		HelpMarker("Post-cursor FFE tap value");
-
-	}
-
-	if(m_channel->GetBERT()->IsDataRatePerChannel())
-	{
-		if(ImGui::CollapsingHeader("Timebase", defaultOpenFlags))
+		if(ImGui::CollapsingHeader("Input buffer", defaultOpenFlags))
 		{
 			ImGui::SetNextItemWidth(width);
-			if(Dialog::Combo("Data Rate", m_dataRateNames, m_dataRateIndex))
-				m_channel->SetDataRate(m_dataRates[m_dataRateIndex]);
-			HelpMarker("PHY signaling rate for this transmit port");
+			if(UnitInputWithImplicitApply("Threshold", m_threshold, m_committedThreshold, Unit(Unit::UNIT_VOLTS)))
+				bsi->SetMuxInputThreshold(m_committedThreshold);
+
+			HelpMarker("Nominal threshold level of the input driver\n");
+		}
+	}
+
+	//Buffered channels have output voltage selector, if available
+	if(bsi && bsi->MuxHasConfigurableDrive())
+	{
+		if(ImGui::CollapsingHeader("Output buffer", defaultOpenFlags))
+		{
+			ImGui::SetNextItemWidth(width);
+			if(UnitInputWithExplicitApply("Level", m_drive, m_committedDrive, Unit(Unit::UNIT_VOLTS)))
+				bsi->SetMuxOutputDrive(m_committedDrive);
+
+			HelpMarker("Nominal VCC level of the output driver\n");
 		}
 	}
 
