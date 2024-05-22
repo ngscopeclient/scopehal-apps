@@ -170,13 +170,15 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	info.MinImageCount = m_minImageCount;
 	info.ImageCount = m_backBuffers.size();
 	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	info.RenderPass = **m_renderPass;
+
 	//HERE BE DRAGONS:
 	// We're handing imgui a VkQueue here without holding the lock.
 	// This is only safe as long as we hold the QueueLock during any imgui rendering!!
 	{
 		QueueLock lock(m_renderQueue);
 		info.Queue = **lock;
-		ImGui_ImplVulkan_Init(&info, **m_renderPass);
+		ImGui_ImplVulkan_Init(&info);
 	}
 
 	// Apply DPI scaling now that glfw initialized
