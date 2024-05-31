@@ -100,7 +100,8 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	//Load the fonts
 	ImFontConfig config;
 	config.PixelSnapH = true;
-	config.OversampleH = 1;
+	config.OversampleH = 5;
+	config.OversampleV = 5;
 	for(auto f : fonts)
 	{
 		float scaledsize = round(max(1.0f, f.second) * contentScale);
