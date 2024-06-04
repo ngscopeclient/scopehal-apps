@@ -61,8 +61,9 @@ public:
 		, m_shuttingDown(false)
 		, m_state(state)
 	{
-		BERTThreadArgs args(bert, &m_shuttingDown, state, session);
-		m_thread = std::make_unique<std::thread>(BERTThread, args);
+		InstrumentThreadArgs args(bert, &m_shuttingDown, session);
+		args.bertstate = state;
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~BERTConnectionState()

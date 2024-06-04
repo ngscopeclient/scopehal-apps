@@ -73,6 +73,7 @@ public:
 	//Additional per-instrument-type state we can add
 	std::shared_ptr<LoadState> loadstate;
 	std::shared_ptr<MultimeterState> meterstate;
+	std::shared_ptr<BERTState> bertstate;
 };
 
 class MiscInstrumentThreadArgs
@@ -123,22 +124,6 @@ public:
 	Session* session;
 };
 
-class BERTThreadArgs
-{
-public:
-	BERTThreadArgs(std::shared_ptr<SCPIBERT> b, std::atomic<bool>* s, std::shared_ptr<BERTState> st, Session* sess)
-	: bert(b)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPIBERT> bert;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<BERTState> state;
-	Session* session;
-};
-
 class Session;
 
 class ScopeThreadArgs
@@ -157,7 +142,6 @@ void InstrumentThread(InstrumentThreadArgs args);
 
 void ScopeThread(ScopeThreadArgs args);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
-void BERTThread(BERTThreadArgs args);
 void MiscInstrumentThread(MiscInstrumentThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);

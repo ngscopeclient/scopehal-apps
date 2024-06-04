@@ -48,20 +48,24 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 	//Extract type-specified fields
 	auto load = dynamic_pointer_cast<Load>(inst);
+	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
+	auto bertstate = args.bertstate;
 
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
 		inst->GetTransport()->FlushCommandQueue();
 
+		//Acquire data (if applicable)
+		if(true)
+			inst->AcquireData();
+
+		//Populate scalar channel and do other instrument-specific processing
 		if(load)
 		{
-			//Read stuff
-			load->AcquireData();
-
 			//Poll status
 			for(size_t i=0; i<load->GetChannelCount(); i++)
 			{
@@ -74,12 +78,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 			}
 			loadstate->m_firstUpdateDone = true;
 		}
-
 		if(meter)
 		{
-			//Acquire scalar values from hardware
-			meter->AcquireData();
-
 			//Poll status
 			auto chan = dynamic_cast<MultimeterChannel*>(meter->GetChannel(meter->GetCurrentMeterChannel()));
 			if(chan)
@@ -91,5 +91,45 @@ void InstrumentThread(InstrumentThreadArgs args)
 				session->MarkChannelDirty(chan);
 			}
 		}
+
+		if(bert)
+		{
+			//Check if we have any pending acquisition requests
+			for(size_t i=0; i<bert->GetChannelCount(); i++)
+			{
+				if(bertstate->m_horzBathtubScanPending[i].exchange(false))
+				{
+					Unit fs(Unit::UNIT_FS);
+					auto expected = bert->GetExpectedBathtubCaptureTime(i);
+					LogTrace("Starting bathtub scan, expecting to take %s\n", fs.PrettyPrint(expected).c_str());
+
+					double start = GetTime();
+					bert->MeasureHBathtub(i);
+					double dt = (GetTime() - start) * FS_PER_SECOND;
+
+					LogTrace("Scan actually took %s\n", fs.PrettyPrint(dt).c_str());
+				}
+
+				if(bertstate->m_eyeScanPending[i].exchange(false))
+				{
+					Unit fs(Unit::UNIT_FS);
+					auto expected = bert->GetExpectedEyeCaptureTime(i);
+					LogTrace("Starting eye scan, expecting to take %s\n", fs.PrettyPrint(expected).c_str());
+
+					double start = GetTime();
+					bert->MeasureEye(i);
+					double dt = (GetTime() - start) * FS_PER_SECOND;
+
+					LogTrace("Scan actually took %s\n", fs.PrettyPrint(dt).c_str());
+				}
+
+				session->MarkChannelDirty(bert->GetChannel(i));
+			}
+
+			bertstate->m_firstUpdateDone = true;
+		}
+
+		//TODO: does this make sense to do in the instrument thread?
+		session->RefreshDirtyFiltersNonblocking();
 	}
 }

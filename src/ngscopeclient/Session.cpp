@@ -2958,7 +2958,7 @@ set<shared_ptr<Instrument>> Session::GetInstruments()
 	for(auto& it : m_psus)
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
-		insts.emplace(it.first.get());
+		insts.emplace(it.first);
 	for(auto& it : m_meters)
 		insts.emplace(it.first);
 	for(auto& it : m_loads)
