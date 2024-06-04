@@ -192,7 +192,6 @@ void Session::Clear()
 			for(size_t j=0; j<chan->GetStreamCount(); j++)
 				chan->Detach(j);
 		}
-		delete scope;
 	}
 
 	m_oscilloscopes.clear();
@@ -240,7 +239,7 @@ void Session::AddMarker(Marker m)
 	//If we don't have history, add a dummy entry
 	if(!m_history.HasHistory(m.m_timestamp))
 	{
-		vector<Oscilloscope*> empty;
+		vector<shared_ptr<Oscilloscope>> empty;
 		m_history.AddHistory(
 			empty,
 			false,
@@ -386,7 +385,7 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		int id = m_idtable[(Instrument*)scope];
+		int id = m_idtable[(Instrument*)scope.get()];
 
 		char tmp[512] = {0};
 		snprintf(tmp, sizeof(tmp), "%s/scope_%d_metadata.yml", dataDir.c_str(), id);
@@ -495,7 +494,7 @@ bool Session::LoadWaveformDataForFilters(
 bool Session::LoadWaveformDataForScope(
 	int version,
 	const YAML::Node& node,
-	Oscilloscope* scope,
+	shared_ptr<Oscilloscope> scope,
 	const std::string& dataDir)
 {
 	LogTrace("Loading waveform data for scope \"%s\"\n", scope->m_nickname.c_str());
@@ -510,7 +509,7 @@ bool Session::LoadWaveformDataForScope(
 		//No waveforms
 		return true;
 	}
-	int scope_id = m_idtable[(Instrument*)scope];
+	int scope_id = m_idtable[(Instrument*)scope.get()];
 
 	//Clear out any old waveforms the instrument may have
 	for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -675,7 +674,7 @@ bool Session::LoadWaveformDataForScope(
 				tmp);
 		}
 
-		vector<Oscilloscope*> temp;
+		vector<shared_ptr<Oscilloscope>> temp;
 		temp.push_back(scope);
 		m_history.AddHistory(temp, false, pinned, label);
 
@@ -978,7 +977,7 @@ SCPITransport* Session::CreateTransportForNode(const YAML::Node& node)
 	return transport;
 }
 
-bool Session::VerifyInstrument(const YAML::Node& node, Instrument* inst)
+bool Session::VerifyInstrument(const YAML::Node& node, shared_ptr<Instrument> inst)
 {
 	//Sanity check make/model/serial. If mismatch, stop
 	//TODO: preference to enforce serial match?
@@ -1013,7 +1012,7 @@ bool Session::VerifyInstrument(const YAML::Node& node, Instrument* inst)
 bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	Oscilloscope* scope = nullptr;
+	shared_ptr<Oscilloscope> scope = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1037,10 +1036,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 			{
 				scope = Oscilloscope::CreateOscilloscope(driver, transport);
 				if(!VerifyInstrument(node, scope))
-				{
-					delete scope;
 					scope = nullptr;
-				}
 			}
 			else
 			{
@@ -1057,7 +1053,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	if(!scope)
 	{
 		//Create the mock scope
-		scope = new MockOscilloscope(
+		scope = make_shared<MockOscilloscope>(
 			node["name"].as<string>(),
 			node["vendor"].as<string>(),
 			node["serial"].as<string>(),
@@ -1072,7 +1068,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 
 	//All good. Add to our list of scopes etc
 	AddOscilloscope(scope, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
 
 	//Load trigger deskew
 	if(node["triggerdeskew"])
@@ -1087,7 +1083,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPILoad* load = nullptr;
+	shared_ptr<SCPILoad> load = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1111,10 +1107,7 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 			{
 				load = SCPILoad::CreateLoad(driver, transport);
 				if(!VerifyInstrument(node, load))
-				{
-					delete load;
 					load = nullptr;
-				}
 			}
 
 			else
@@ -1151,7 +1144,7 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 
 	//All good. Add to our list of loads etc
 	AddLoad(load, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)load);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)load.get());
 
 	//Run the preload
 	load->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1162,7 +1155,7 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIMiscInstrument* misc = nullptr;
+	shared_ptr<SCPIMiscInstrument> misc = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1186,10 +1179,7 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 			{
 				misc = SCPIMiscInstrument::CreateInstrument(driver, transport);
 				if(!VerifyInstrument(node, misc))
-				{
-					delete misc;
 					misc = nullptr;
-				}
 			}
 
 			else
@@ -1226,7 +1216,7 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 
 	//All good. Add to our list of loads etc
 	AddMiscInstrument(misc);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)misc);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)misc.get());
 
 	//Run the preload
 	misc->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1260,7 +1250,7 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 			if(transport && transport->IsConnected())
 			{
 				bert = SCPIBERT::CreateBERT(driver, transport);
-				if(!VerifyInstrument(node, bert.get()))
+				if(!VerifyInstrument(node, bert))
 					bert = nullptr;
 			}
 
@@ -1309,7 +1299,7 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPISDR* sdr = nullptr;
+	shared_ptr<SCPISDR> sdr = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1333,10 +1323,7 @@ bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
 			{
 				sdr = SCPISDR::CreateSDR(driver, transport);
 				if(!VerifyInstrument(node, sdr))
-				{
-					delete sdr;
 					sdr = nullptr;
-				}
 			}
 
 			else
@@ -1373,7 +1360,7 @@ bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
 
 	//All good. Add to our list of specs etc
 	AddSDR(sdr, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)sdr);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)sdr.get());
 
 	//Run the preload
 	sdr->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1384,7 +1371,7 @@ bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
 bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPISpectrometer* spec = nullptr;
+	shared_ptr<SCPISpectrometer> spec = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1408,10 +1395,7 @@ bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool onli
 			{
 				spec = SCPISpectrometer::CreateSpectrometer(driver, transport);
 				if(!VerifyInstrument(node, spec))
-				{
-					delete spec;
 					spec = nullptr;
-				}
 			}
 
 			else
@@ -1448,7 +1432,7 @@ bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool onli
 
 	//All good. Add to our list of specs etc
 	AddSpectrometer(spec, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)spec);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)spec.get());
 
 	//Run the preload
 	spec->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1459,7 +1443,7 @@ bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool onli
 bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIMultimeter* meter = nullptr;
+	shared_ptr<SCPIMultimeter> meter = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1483,10 +1467,7 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 			{
 				meter = SCPIMultimeter::CreateMultimeter(driver, transport);
 				if(!VerifyInstrument(node, meter))
-				{
-					delete meter;
 					meter = nullptr;
-				}
 			}
 
 			else
@@ -1523,7 +1504,7 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 
 	//All good. Add to our list of meters etc
 	AddMultimeter(meter, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)meter);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)meter.get());
 
 	//Run the preload
 	meter->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1534,7 +1515,7 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIPowerSupply* psu = nullptr;
+	shared_ptr<SCPIPowerSupply> psu = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1558,10 +1539,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 			{
 				psu = SCPIPowerSupply::CreatePowerSupply(driver, transport);
 				if(!VerifyInstrument(node, psu))
-				{
-					delete psu;
 					psu = nullptr;
-				}
 			}
 
 			else
@@ -1598,7 +1576,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 
 	//All good. Add to our list of scopes etc
 	AddPowerSupply(psu, false);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu.get());
 
 	//Run the preload
 	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1609,7 +1587,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIRFSignalGenerator* gen = nullptr;
+	shared_ptr<SCPIRFSignalGenerator> gen = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1633,10 +1611,7 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 			{
 				gen = SCPIRFSignalGenerator::CreateRFSignalGenerator(driver, transport);
 				if(!VerifyInstrument(node, gen))
-				{
-					delete gen;
 					gen = nullptr;
-				}
 			}
 
 			else
@@ -1673,7 +1648,7 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 
 	//All good. Add to our list of generators etc
 	AddRFGenerator(gen);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen.get());
 
 	//Run the preload
 	gen->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1684,7 +1659,7 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool online)
 {
 	//Create the instrument
-	SCPIFunctionGenerator* gen = nullptr;
+	shared_ptr<SCPIFunctionGenerator> gen = nullptr;
 
 	auto transtype = node["transport"].as<string>();
 	auto driver = node["driver"].as<string>();
@@ -1708,10 +1683,7 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 			{
 				gen = SCPIFunctionGenerator::CreateFunctionGenerator(driver, transport);
 				if(!VerifyInstrument(node, gen))
-				{
-					delete gen;
 					gen = nullptr;
-				}
 			}
 
 			else
@@ -1748,7 +1720,7 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 
 	//All good. Add to our list of generators etc
 	AddFunctionGenerator(gen);
-	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen.get());
 
 	//Run the preload
 	gen->PreLoadConfiguration(version, node, m_idtable, m_warnings);
@@ -1782,7 +1754,8 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		{
 			auto scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
 				m_idtable[pri.as<int64_t>()]));
-			group = make_shared<TriggerGroup>(scope, this);
+			auto sscope = scope->shared_from_this();
+			group = make_shared<TriggerGroup>(sscope, this);
 
 			//Add secondaries
 			auto snode = gnode["secondaries"];
@@ -1790,7 +1763,8 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 			{
 				scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
 					m_idtable[jt.second.as<int64_t>()]));
-				group->m_secondaries.push_back(scope);
+				sscope = scope->shared_from_this();
+				group->m_secondaries.push_back(sscope);
 			}
 		}
 
@@ -1984,17 +1958,17 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 			* Scopes otherwise have high precedence: any combo instrument is a scope that has some ancillary functions
 			* RF gens with baseband function generators are primarily RF gens
 		 */
-		auto spec = dynamic_cast<SCPISpectrometer*>(inst);
-		auto sdr = dynamic_cast<SCPISDR*>(inst);
-		auto vna = dynamic_cast<SCPIVNA*>(inst);
-		auto scope = dynamic_cast<Oscilloscope*>(inst);
-		auto meter = dynamic_cast<SCPIMultimeter*>(inst);
-		auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
-		auto rfgen = dynamic_cast<SCPIRFSignalGenerator*>(inst);
-		auto funcgen = dynamic_cast<SCPIFunctionGenerator*>(inst);
-		auto load = dynamic_cast<SCPILoad*>(inst);
-		auto bert = dynamic_cast<SCPIBERT*>(inst);
-		auto misc = dynamic_cast<SCPIMiscInstrument*>(inst);
+		auto spec = dynamic_pointer_cast<SCPISpectrometer>(inst);
+		auto sdr = dynamic_pointer_cast<SCPISDR>(inst);
+		auto vna = dynamic_pointer_cast<SCPIVNA>(inst);
+		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
+		auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+		auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+		auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
+		auto funcgen = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
+		auto load = dynamic_pointer_cast<SCPILoad>(inst);
+		auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
+		auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
 		if(spec)
 			config["type"] = "spectrometer";
 		else if(sdr)
@@ -2089,12 +2063,12 @@ YAML::Node Session::SerializeTriggerGroups()
 
 		//Primary
 		if(group->m_primary)
-			gnode["primary"] = m_idtable[(Instrument*)group->m_primary];
+			gnode["primary"] = m_idtable[(Instrument*)group->m_primary.get()];
 
 		//Secondaries
 		YAML::Node secnode;
 		for(size_t i=0; i<group->m_secondaries.size(); i++)
-			secnode[string("sec") + to_string(i)] = m_idtable[(Instrument*)group->m_secondaries[i]];
+			secnode[string("sec") + to_string(i)] = m_idtable[(Instrument*)group->m_secondaries[i].get()];
 		gnode["secondaries"] = secnode;
 
 		//Filters
@@ -2150,7 +2124,7 @@ YAML::Node Session::SerializeMarkers()
 bool Session::SerializeWaveforms(const string& dataDir)
 {
 	//Metadata nodes for each scope
-	std::map<Oscilloscope*, YAML::Node> metadataNodes;
+	std::map<std::shared_ptr<Oscilloscope>, YAML::Node> metadataNodes;
 
 	//Serialize data from each history point
 	size_t numwfm = 0;
@@ -2168,7 +2142,7 @@ bool Session::SerializeWaveforms(const string& dataDir)
 			auto& hist = it.second;
 
 			//Make the directory for the scope if needed
-			string scopedir = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope]) + "_waveforms";
+			string scopedir = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope.get()]) + "_waveforms";
 			#ifdef _WIN32
 				mkdir(scopedir.c_str());
 			#else
@@ -2255,7 +2229,7 @@ bool Session::SerializeWaveforms(const string& dataDir)
 	for(size_t i=0; i<m_oscilloscopes.size(); i++)
 	{
 		auto scope = m_oscilloscopes[i];
-		string fname = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope]) + "_metadata.yml";
+		string fname = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope.get()]) + "_metadata.yml";
 
 		ofstream outfs(fname);
 		if(!outfs)
@@ -2579,7 +2553,7 @@ void Session::GarbageCollectTriggerGroups()
 /**
 	@brief Creates a new trigger group containing only the selected scope
  */
-void Session::MakeNewTriggerGroup(Oscilloscope* scope)
+void Session::MakeNewTriggerGroup(shared_ptr<Oscilloscope> scope)
 {
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	m_triggerGroups.push_back(make_shared<TriggerGroup>(scope, this));
@@ -2597,7 +2571,7 @@ void Session::MakeNewTriggerGroup(PausableFilter* filter)
 /**
 	@brief Check if a scope is the primary of a group containing at least one other scope
  */
-bool Session::IsPrimaryOfMultiScopeGroup(Oscilloscope* scope)
+bool Session::IsPrimaryOfMultiScopeGroup(shared_ptr<Oscilloscope> scope)
 {
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
@@ -2611,7 +2585,7 @@ bool Session::IsPrimaryOfMultiScopeGroup(Oscilloscope* scope)
 /**
 	@brief Check if a scope is a secondary within a multiscope group
  */
-bool Session::IsSecondaryOfMultiScopeGroup(Oscilloscope* scope)
+bool Session::IsSecondaryOfMultiScopeGroup(shared_ptr<Oscilloscope> scope)
 {
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
@@ -2632,7 +2606,7 @@ bool Session::IsSecondaryOfMultiScopeGroup(Oscilloscope* scope)
 /**
 	@brief Gets the trigger group that contains a specified scope
  */
-shared_ptr<TriggerGroup> Session::GetTriggerGroupForScope(Oscilloscope* scope)
+shared_ptr<TriggerGroup> Session::GetTriggerGroupForScope(shared_ptr<Oscilloscope> scope)
 {
 	lock_guard<recursive_mutex> lock(m_triggerGroupMutex);
 	for(auto group : m_triggerGroups)
@@ -2673,10 +2647,10 @@ shared_ptr<TriggerGroup> Session::GetTriggerGroupForFilter(PausableFilter* filte
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Instrument management
 
-void Session::ApplyPreferences(Oscilloscope* scope)
+void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 {
 	//Apply driver-specific preference settings
-	auto lecroy = dynamic_cast<LeCroyOscilloscope*>(scope);
+	auto lecroy = dynamic_pointer_cast<LeCroyOscilloscope>(scope);
 	if(lecroy)
 	{
 		if(m_preferences.GetBool("Drivers.Teledyne LeCroy.force_16bit"))
@@ -2701,16 +2675,16 @@ void Session::StartWaveformThreadIfNeeded()
 	@param scope		The scope to add
 	@param createViews	True if we should add waveform areas for each enabled channel
  */
-void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
+void Session::AddOscilloscope(shared_ptr<Oscilloscope> scope, bool createViews)
 {
 	lock_guard<mutex> lock(m_scopeMutex);
 
 	m_modifiedSinceLastSave = true;
 	m_oscilloscopes.push_back(scope);
 
-	m_threads.push_back(make_unique<thread>(ScopeThread, scope, &m_shuttingDown));
+	m_threads.push_back(make_unique<thread>(ScopeThread, ScopeThreadArgs(scope, &m_shuttingDown)));
 
-	m_mainWindow->AddToRecentInstrumentList(dynamic_cast<SCPIOscilloscope*>(scope));
+	m_mainWindow->AddToRecentInstrumentList(dynamic_pointer_cast<SCPIOscilloscope>(scope));
 	m_mainWindow->OnScopeAdded(scope, createViews);
 
 	//Make a new trigger group (if the scope is online)
@@ -2726,7 +2700,7 @@ void Session::AddOscilloscope(Oscilloscope* scope, bool createViews)
 /**
 	@brief Adds a power supply to the session
  */
-void Session::AddPowerSupply(SCPIPowerSupply* psu, bool createDialog)
+void Session::AddPowerSupply(shared_ptr<SCPIPowerSupply> psu, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2744,7 +2718,7 @@ void Session::AddPowerSupply(SCPIPowerSupply* psu, bool createDialog)
 /**
 	@brief Removes a power supply from the session
  */
-void Session::RemovePowerSupply(SCPIPowerSupply* psu)
+void Session::RemovePowerSupply(shared_ptr<SCPIPowerSupply> psu)
 {
 	m_modifiedSinceLastSave = true;
 	m_psus.erase(psu);
@@ -2753,7 +2727,7 @@ void Session::RemovePowerSupply(SCPIPowerSupply* psu)
 /**
 	@brief Adds a multimeter to the session
  */
-void Session::AddMultimeter(SCPIMultimeter* meter, bool createDialog)
+void Session::AddMultimeter(shared_ptr<SCPIMultimeter> meter, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2773,7 +2747,7 @@ void Session::AddMultimeter(SCPIMultimeter* meter, bool createDialog)
 
 	Low level helper, intended to be only used by file loading
  */
-void Session::AddMultimeterDialog(SCPIMultimeter* meter)
+void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter]->m_state, this));
 }
@@ -2781,7 +2755,7 @@ void Session::AddMultimeterDialog(SCPIMultimeter* meter)
 /**
 	@brief Removes a multimeter from the session
  */
-void Session::RemoveMultimeter(SCPIMultimeter* meter)
+void Session::RemoveMultimeter(shared_ptr<SCPIMultimeter> meter)
 {
 	m_modifiedSinceLastSave = true;
 	m_meters.erase(meter);
@@ -2790,7 +2764,7 @@ void Session::RemoveMultimeter(SCPIMultimeter* meter)
 /**
 	@brief Adds a function generator to the session
  */
-void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
+void Session::AddFunctionGenerator(shared_ptr<SCPIFunctionGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2803,7 +2777,7 @@ void Session::AddFunctionGenerator(SCPIFunctionGenerator* generator)
 /**
 	@brief Adds a miscellaneous instrument
  */
-void Session::AddMiscInstrument(SCPIMiscInstrument* inst)
+void Session::AddMiscInstrument(shared_ptr<SCPIMiscInstrument> inst)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2816,7 +2790,7 @@ void Session::AddMiscInstrument(SCPIMiscInstrument* inst)
 /**
 	@brief Removes a function generator from the session
  */
-void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
+void Session::RemoveFunctionGenerator(shared_ptr<SCPIFunctionGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2828,10 +2802,6 @@ void Session::RemoveFunctionGenerator(SCPIFunctionGenerator* generator)
 			break;
 		}
 	}
-
-	//Free it iff it's not part of an oscilloscope or RF signal generator
-	if( (dynamic_cast<Oscilloscope*>(generator) == nullptr) && (dynamic_cast<RFSignalGenerator*>(generator) == nullptr) )
-		delete generator;
 }
 
 /**
@@ -2849,7 +2819,7 @@ void Session::AddBERT(shared_ptr<SCPIBERT> bert, bool createDialog)
 	if(createDialog)
 		m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
 
-	m_mainWindow->AddToRecentInstrumentList(bert.get());
+	m_mainWindow->AddToRecentInstrumentList(bert);
 
 	StartWaveformThreadIfNeeded();
 }
@@ -2867,7 +2837,7 @@ void Session::RemoveBERT(shared_ptr<SCPIBERT> bert)
 /**
 	@brief Adds a load to the session
  */
-void Session::AddLoad(SCPILoad* load, bool createDialog)
+void Session::AddLoad(shared_ptr<SCPILoad> load, bool createDialog)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2885,18 +2855,16 @@ void Session::AddLoad(SCPILoad* load, bool createDialog)
 /**
 	@brief Removes a load from the session
  */
-void Session::RemoveLoad(SCPILoad* load)
+void Session::RemoveLoad(shared_ptr<SCPILoad> load)
 {
 	m_modifiedSinceLastSave = true;
-
 	m_loads.erase(load);
-	delete load;
 }
 
 /**
 	@brief Adds an RF signal generator to the session
  */
-void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
+void Session::AddRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
 
@@ -2909,13 +2877,13 @@ void Session::AddRFGenerator(SCPIRFSignalGenerator* generator)
 /**
 	@brief Removes an RF signal from the session
  */
-void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
+void Session::RemoveRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
 
 	//If the generator is also a function generator, delete that too
 	//FIXME: This is not the best UX. Would be best to ref count and delete when both are closed
-	auto func = dynamic_cast<SCPIFunctionGenerator*>(generator);
+	auto func = dynamic_pointer_cast<SCPIFunctionGenerator>(generator);
 	if(func != nullptr)
 	{
 		RemoveFunctionGenerator(func);
@@ -2930,32 +2898,32 @@ void Session::RemoveRFGenerator(SCPIRFSignalGenerator* generator)
 
 	Multi-type instruments are only counted once.
  */
-set<SCPIInstrument*> Session::GetSCPIInstruments()
+set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 {
 	lock_guard<mutex> lock(m_scopeMutex);
 
-	set<SCPIInstrument*> insts;
+	set<shared_ptr<SCPIInstrument>> insts;
 	for(auto& scope : m_oscilloscopes)
 	{
-		auto s = dynamic_cast<SCPIInstrument*>(scope);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(scope);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
 	for(auto& it : m_psus)
 	{
-		auto s = dynamic_cast<SCPIInstrument*>(it.first);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
 	for(auto& it : m_meters)
 	{
-		auto s = dynamic_cast<SCPIInstrument*>(it.first);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
 	for(auto& it : m_loads)
 	{
-		auto s = dynamic_cast<SCPIInstrument*>(it.first);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
@@ -2963,11 +2931,11 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
 	{
-		SCPIBERT* b = dynamic_cast<SCPIBERT*>(it.first.get());
+		auto b = dynamic_pointer_cast<SCPIBERT>(it.first);
 		if(b != nullptr)
 			insts.emplace(b);
 	}
-	for(auto gen : m_generators)
+	for(auto& gen : m_generators)
 		insts.emplace(gen);
 	for(auto& it : m_misc)
 		insts.emplace(it.first);
@@ -2980,11 +2948,11 @@ set<SCPIInstrument*> Session::GetSCPIInstruments()
 
 	Multi-type instruments are only counted once.
  */
-set<Instrument*> Session::GetInstruments()
+set<shared_ptr<Instrument>> Session::GetInstruments()
 {
 	lock_guard<mutex> lock(m_scopeMutex);
 
-	set<Instrument*> insts;
+	set<shared_ptr<Instrument>> insts;
 	for(auto& scope : m_oscilloscopes)
 		insts.emplace(scope);
 	for(auto& it : m_psus)
@@ -2997,7 +2965,7 @@ set<Instrument*> Session::GetInstruments()
 		insts.emplace(it.first);
 	for(auto& it : m_rfgenerators)
 		insts.emplace(it.first);
-	for(auto gen : m_generators)
+	for(auto& gen : m_generators)
 		insts.emplace(gen);
 	for(auto& it : m_misc)
 		insts.emplace(it.first);
@@ -3163,7 +3131,7 @@ bool Session::CheckForWaveforms(vk::raii::CommandBuffer& cmdbuf)
 		LogTrace("Waveform is ready\n");
 
 		//Add to history
-		vector<Oscilloscope*> scopes;
+		vector<shared_ptr<Oscilloscope>> scopes;
 		set<shared_ptr<TriggerGroup>> groups;
 		{
 			shared_lock<shared_mutex> lock2(m_waveformDataMutex);

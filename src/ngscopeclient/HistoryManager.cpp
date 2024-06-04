@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -224,7 +224,7 @@ void HistoryManager::LoadEmptyHistoryToSession(Session& session)
 	@param nick			Nickname
  */
 void HistoryManager::AddHistory(
-	const vector<Oscilloscope*>& scopes,
+	const vector<shared_ptr<Oscilloscope>>& scopes,
 	bool deleteOld,
 	bool pin,
 	string nick,

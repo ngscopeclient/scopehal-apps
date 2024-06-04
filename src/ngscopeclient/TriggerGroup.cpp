@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -36,7 +36,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-TriggerGroup::TriggerGroup(Oscilloscope* primary, Session* session)
+TriggerGroup::TriggerGroup(shared_ptr<Oscilloscope> primary, Session* session)
 	: m_primary(primary)
 	, m_default(true)
 	, m_session(session)
@@ -54,7 +54,7 @@ TriggerGroup::~TriggerGroup()
 /**
 	@brief Make a scope (which must currently be a secondary) the primary
  */
-void TriggerGroup::MakePrimary(Oscilloscope* scope)
+void TriggerGroup::MakePrimary(shared_ptr<Oscilloscope> scope)
 {
 	m_secondaries.push_back(m_primary);
 	m_primary = scope;
@@ -76,7 +76,7 @@ void TriggerGroup::MakePrimary(Oscilloscope* scope)
 /**
 	@brief Adds a secondary scope to this group
  */
-void TriggerGroup::AddSecondary(Oscilloscope* scope)
+void TriggerGroup::AddSecondary(shared_ptr<Oscilloscope> scope)
 {
 	//If we do not have a primary, we're probably a filter-only group
 	//Make the new scope the primary instead
@@ -93,7 +93,7 @@ void TriggerGroup::AddSecondary(Oscilloscope* scope)
 	m_secondaries.push_back(scope);
 }
 
-void TriggerGroup::RemoveScope(Oscilloscope* scope)
+void TriggerGroup::RemoveScope(shared_ptr<Oscilloscope> scope)
 {
 	if(m_primary == scope)
 	{
@@ -415,7 +415,7 @@ void TriggerGroup::DownloadWaveforms()
 	}
 }
 
-void TriggerGroup::DetachAllWaveforms(Oscilloscope* scope)
+void TriggerGroup::DetachAllWaveforms(shared_ptr<Oscilloscope> scope)
 {
 	//Detach old waveforms since they're now owned by history manager
 	for(size_t i=0; i<scope->GetChannelCount(); i++)

@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -55,20 +55,20 @@ protected:
 	Session& m_session;
 	MainWindow* m_parent;
 
-	SCPIInstrument* m_selection;
+	std::shared_ptr<SCPIInstrument> m_selection;
 };
 
 class TriggerGroupDragDescriptor
 {
 public:
-	TriggerGroupDragDescriptor(TriggerGroup* group, SCPIOscilloscope* scope, PausableFilter* f)
+	TriggerGroupDragDescriptor(TriggerGroup* group, std::shared_ptr<SCPIOscilloscope> scope, PausableFilter* f)
 		: m_group(group)
 		, m_scope(scope)
 		, m_filter(f)
 	{}
 
 	TriggerGroup* m_group;
-	SCPIOscilloscope* m_scope;
+	std::shared_ptr<SCPIOscilloscope> m_scope;
 	PausableFilter* m_filter;
 };
 

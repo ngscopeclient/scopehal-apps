@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -60,13 +60,13 @@ class Session;
 class MiscInstrumentThreadArgs
 {
 public:
-	MiscInstrumentThreadArgs(SCPIMiscInstrument* p, std::atomic<bool>* s, Session* sess)
+	MiscInstrumentThreadArgs(std::shared_ptr<SCPIMiscInstrument> p, std::atomic<bool>* s, Session* sess)
 	: inst(p)
 	, shuttingDown(s)
 	, session(sess)
 	{}
 
-	SCPIMiscInstrument* inst;
+	std::shared_ptr<SCPIMiscInstrument> inst;
 	std::atomic<bool>* shuttingDown;
 	Session* session;
 };
@@ -74,13 +74,13 @@ public:
 class RFSignalGeneratorThreadArgs
 {
 public:
-	RFSignalGeneratorThreadArgs(SCPIRFSignalGenerator* p, std::atomic<bool>* s, Session* sess)
+	RFSignalGeneratorThreadArgs(std::shared_ptr<SCPIRFSignalGenerator> p, std::atomic<bool>* s, Session* sess)
 	: gen(p)
 	, shuttingDown(s)
 	, session(sess)
 	{}
 
-	SCPIRFSignalGenerator* gen;
+	std::shared_ptr<SCPIRFSignalGenerator> gen;
 	std::atomic<bool>* shuttingDown;
 	Session* session;
 };
@@ -88,14 +88,18 @@ public:
 class PowerSupplyThreadArgs
 {
 public:
-	PowerSupplyThreadArgs(SCPIPowerSupply* p, std::atomic<bool>* s, std::shared_ptr<PowerSupplyState> st, Session* sess)
+	PowerSupplyThreadArgs(
+		std::shared_ptr<SCPIPowerSupply> p,
+		std::atomic<bool>* s,
+		std::shared_ptr<PowerSupplyState> st,
+		Session* sess)
 	: psu(p)
 	, shuttingDown(s)
 	, state(st)
 	, session(sess)
 	{}
 
-	SCPIPowerSupply* psu;
+	std::shared_ptr<SCPIPowerSupply> psu;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<PowerSupplyState> state;
 	Session* session;
@@ -104,14 +108,18 @@ public:
 class MultimeterThreadArgs
 {
 public:
-	MultimeterThreadArgs(SCPIMultimeter* m, std::atomic<bool>* s, std::shared_ptr<MultimeterState> st, Session* sess)
+	MultimeterThreadArgs(
+		std::shared_ptr<SCPIMultimeter> m,
+		std::atomic<bool>* s,
+		std::shared_ptr<MultimeterState> st,
+		Session* sess)
 	: meter(m)
 	, shuttingDown(s)
 	, state(st)
 	, session(sess)
 	{}
 
-	SCPIMultimeter* meter;
+	std::shared_ptr<SCPIMultimeter> meter;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<MultimeterState> state;
 	Session* session;
@@ -120,14 +128,18 @@ public:
 class LoadThreadArgs
 {
 public:
-	LoadThreadArgs(SCPILoad* m, std::atomic<bool>* s, std::shared_ptr<LoadState> st, Session* sess)
+	LoadThreadArgs(
+		std::shared_ptr<SCPILoad> m,
+		std::atomic<bool>* s,
+		std::shared_ptr<LoadState> st,
+		Session* sess)
 	: load(m)
 	, shuttingDown(s)
 	, state(st)
 	, session(sess)
 	{}
 
-	SCPILoad* load;
+	std::shared_ptr<SCPILoad> load;
 	std::atomic<bool>* shuttingDown;
 	std::shared_ptr<LoadState> state;
 	Session* session;
@@ -151,7 +163,19 @@ public:
 
 class Session;
 
-void ScopeThread(Oscilloscope* scope, std::atomic<bool>* shuttingDown);
+class ScopeThreadArgs
+{
+public:
+	ScopeThreadArgs(std::shared_ptr<Oscilloscope> b, std::atomic<bool>* s)
+	: scope(b)
+	, shuttingDown(s)
+	{}
+
+	std::shared_ptr<Oscilloscope> scope;
+	std::atomic<bool>* shuttingDown;
+};
+
+void ScopeThread(ScopeThreadArgs args);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
 void BERTThread(BERTThreadArgs args);
 void LoadThread(LoadThreadArgs args);

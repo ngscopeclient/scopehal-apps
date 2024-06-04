@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -384,9 +384,9 @@ bool FilterGraphEditor::Render()
 /**
 	@brief Get a list of all channels that we are displaying nodes for
  */
-map<Instrument*, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels()
+map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels()
 {
-	map<Instrument*, vector<InstrumentChannel*> > ret;
+	map<shared_ptr<Instrument>, vector<InstrumentChannel*> > ret;
 
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
@@ -394,8 +394,8 @@ map<Instrument*, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels(
 		vector<InstrumentChannel*> chans;
 
 		//Channels
-		auto scope = dynamic_cast<Oscilloscope*>(inst);
-		auto psu = dynamic_cast<PowerSupply*>(inst);
+		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
+		auto psu = dynamic_pointer_cast<PowerSupply>(inst);
 		for(size_t i=0; i<inst->GetChannelCount(); i++)
 		{
 			auto chan = inst->GetChannel(i);
@@ -460,7 +460,7 @@ vector<FlowGraphNode*> FilterGraphEditor::GetAllNodes()
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
-		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 		if(scope)
 		{
 			auto trig = scope->GetTrigger();
@@ -561,7 +561,7 @@ bool FilterGraphEditor::DoRender()
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
-		auto scope = dynamic_cast<Oscilloscope*>(inst);
+		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 
 		//Triggers (for now, only scopes have these)
 		if(scope)
@@ -1985,7 +1985,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 
 	TODO: this seems to fail hard if we do not have at least one input OR output on the node. Why?
  */
-void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, Instrument* inst)
+void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<Instrument> inst)
 {
 	//If the channel has no color, make it neutral gray
 	//(this is often true for e.g. external trigger)
@@ -2321,7 +2321,10 @@ void FilterGraphEditor::HandleNodeProperties()
 			if(m_propertiesDialogs.find(id) == m_propertiesDialogs.end())
 			{
 				if(trig)
-					m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(trig->GetScope());
+				{
+					auto strig = trig->GetScope()->shared_from_this();
+					m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(strig);
+				}
 				else if(f)
 					m_propertiesDialogs[id] = make_shared<FilterPropertiesDialog>(f, m_parent, true);
 				else if(bo)

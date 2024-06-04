@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,7 +43,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TimebasePropertiesPage
 
-TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
+TimebasePropertiesPage::TimebasePropertiesPage(shared_ptr<Oscilloscope> scope)
 	: m_scope(scope)
 {
 	//Interleaving flag
@@ -96,7 +96,7 @@ TimebasePropertiesPage::TimebasePropertiesPage(Oscilloscope* scope)
 
 	m_samplingMode = scope->GetSamplingMode();
 
-	auto spec = dynamic_cast<SCPISpectrometer*>(scope);
+	auto spec = dynamic_pointer_cast<SCPISpectrometer>(scope);
 	if(spec)
 	{
 		Unit fs(Unit::UNIT_FS);
@@ -155,7 +155,7 @@ bool TimebasePropertiesDialog::DoRender()
 	for(auto& p : m_pages)
 	{
 		auto scope = p->m_scope;
-		auto spec = dynamic_cast<SCPISpectrometer*>(p->m_scope);
+		auto spec = dynamic_pointer_cast<SCPISpectrometer>(p->m_scope);
 
 		if(ImGui::CollapsingHeader(scope->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 		{

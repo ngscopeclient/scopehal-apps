@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,7 +41,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterState> state, Session* session)
+MultimeterDialog::MultimeterDialog(shared_ptr<SCPIMultimeter> meter, shared_ptr<MultimeterState> state, Session* session)
 	: Dialog(
 		string("Multimeter: ") + meter->m_nickname,
 		string("Multimeter: ") + meter->m_nickname,
@@ -82,7 +82,6 @@ MultimeterDialog::MultimeterDialog(SCPIMultimeter* meter, shared_ptr<MultimeterS
 MultimeterDialog::~MultimeterDialog()
 {
 	m_meter->StopMeter();
-	m_session->RemoveMultimeter(m_meter);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

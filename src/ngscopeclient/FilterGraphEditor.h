@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -165,7 +165,7 @@ public:
 protected:
 	friend class FilterGraphGroup;
 
-	std::map<Instrument*, std::vector<InstrumentChannel*> > GetAllChannels();
+	std::map<std::shared_ptr<Instrument>, std::vector<InstrumentChannel*> > GetAllChannels();
 	std::vector<FlowGraphNode*> GetAllNodes();
 
 	void RefreshGroupPorts();
@@ -177,7 +177,7 @@ protected:
 	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForGroupOutputs(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForGroupInputs(std::shared_ptr<FilterGraphGroup> group);
-	void DoNodeForChannel(InstrumentChannel* channel, Instrument* inst);
+	void DoNodeForChannel(InstrumentChannel* channel, std::shared_ptr<Instrument> inst);
 	void DoNodeForTrigger(Trigger* trig);
 	void HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);

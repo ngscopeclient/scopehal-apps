@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,7 +41,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-FunctionGeneratorDialog::FunctionGeneratorDialog(SCPIFunctionGenerator* generator, Session* session)
+FunctionGeneratorDialog::FunctionGeneratorDialog(shared_ptr<SCPIFunctionGenerator> generator, Session* session)
 	: Dialog(
 		string("Function Generator: ") + generator->m_nickname,
 		string("Function Generator: ") + generator->m_nickname,
@@ -270,6 +270,6 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 	}
 
 	//Push config for dedicated generators
-	if(dynamic_cast<Oscilloscope*>(m_generator) == nullptr)
+	if(dynamic_pointer_cast<Oscilloscope>(m_generator) == nullptr)
 		m_generator->GetTransport()->FlushCommandQueue();
 }

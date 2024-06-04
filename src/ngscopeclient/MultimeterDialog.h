@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,12 +41,12 @@
 class MultimeterDialog : public Dialog
 {
 public:
-	MultimeterDialog(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session);
+	MultimeterDialog(std::shared_ptr<SCPIMultimeter> meter, std::shared_ptr<MultimeterState> state, Session* session);
 	virtual ~MultimeterDialog();
 
 	virtual bool DoRender();
 
-	SCPIMultimeter* GetMeter()
+	std::shared_ptr<SCPIMultimeter> GetMeter()
 	{ return m_meter; }
 
 protected:
@@ -60,7 +60,7 @@ protected:
 	double m_tstart;
 
 	///@brief The meter we're controlling
-	SCPIMultimeter* m_meter;
+	std::shared_ptr<SCPIMultimeter> m_meter;
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<MultimeterState> m_state;

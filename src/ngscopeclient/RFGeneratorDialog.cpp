@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -41,7 +41,7 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // RFGeneratorChannelUIState
 
-RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel)
+RFGeneratorChannelUIState::RFGeneratorChannelUIState(shared_ptr<SCPIRFSignalGenerator> generator, int channel)
 	: m_outputEnabled(generator->GetChannelOutputEnable(channel))
 	, m_committedLevel(generator->GetChannelOutputPower(channel))
 	, m_committedFrequency(generator->GetChannelCenterFrequency(channel))
@@ -148,7 +148,7 @@ RFGeneratorChannelUIState::RFGeneratorChannelUIState(SCPIRFSignalGenerator* gene
 // Construction / destruction
 
 RFGeneratorDialog::RFGeneratorDialog(
-	SCPIRFSignalGenerator* generator,
+	shared_ptr<SCPIRFSignalGenerator> generator,
 	Session* session)
 	: Dialog(
 		string("RF Generator: ") + generator->m_nickname,

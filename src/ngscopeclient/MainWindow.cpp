@@ -340,7 +340,7 @@ shared_ptr<WaveformGroup> MainWindow::GetBestGroupForWaveform(StreamDescriptor /
 	@param scope		The scope to add
 	@param createViews	True if we should add waveform areas for each enabled channel
  */
-void MainWindow::OnScopeAdded(Oscilloscope* scope, bool createViews)
+void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 {
 	LogTrace("Oscilloscope \"%s\" added\n", scope->m_nickname.c_str());
 	LogIndenter li;
@@ -352,7 +352,7 @@ void MainWindow::OnScopeAdded(Oscilloscope* scope, bool createViews)
 		vector<StreamDescriptor> streams;
 
 		//Headless scope? Pick every channel.
-		if( (dynamic_cast<RemoteBridgeOscilloscope*>(scope)) || (dynamic_cast<DemoOscilloscope*>(scope)) )
+		if( (dynamic_pointer_cast<RemoteBridgeOscilloscope>(scope)) || (dynamic_pointer_cast<DemoOscilloscope>(scope)) )
 		{
 			LogTrace("Headless scope, enabling every analog channel\n");
 			for(size_t i=0; i<scope->GetChannelCount(); i++)
@@ -1259,7 +1259,7 @@ void MainWindow::ShowTimebaseProperties()
 	AddDialog(m_timebaseDialog);
 }
 
-void MainWindow::ShowSyncWizard(shared_ptr<TriggerGroup> group, Oscilloscope* secondary)
+void MainWindow::ShowSyncWizard(shared_ptr<TriggerGroup> group, shared_ptr<Oscilloscope> secondary)
 {
 	AddDialog(make_shared<ScopeDeskewWizard>(group, secondary, this, m_session));
 }
@@ -1360,7 +1360,7 @@ void MainWindow::SaveRecentInstrumentList()
 	fclose(fp);
 }
 
-void MainWindow::AddToRecentInstrumentList(SCPIInstrument* inst)
+void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 {
 	if(inst == nullptr)
 		return;
@@ -1634,7 +1634,7 @@ void MainWindow::RenderLoadWarningPopup()
 /**
 	@brief Closes the function generator dialog, if we have one
  */
-void MainWindow::RemoveFunctionGenerator(SCPIFunctionGenerator* gen)
+void MainWindow::RemoveFunctionGenerator(shared_ptr<SCPIFunctionGenerator> gen)
 {
 	auto it = m_generatorDialogs.find(gen);
 	if(it != m_generatorDialogs.end())
@@ -2431,7 +2431,10 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 			auto meter = dynamic_cast<SCPIMultimeter*>(
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 			if(meter)
-				m_session.AddMultimeterDialog(meter);
+			{
+				auto smeter = meter->shared_from_this();
+				m_session.AddMultimeterDialog(smeter);
+			}
 			else
 			{
 				ShowErrorPopup("Invalid meter", "Multimeter dialog references nonexistent instrument");
@@ -2449,7 +2452,10 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 
 			if(gen)
-				AddDialog(make_shared<FunctionGeneratorDialog>(gen, &m_session));
+			{
+				auto sgen = gen->shared_from_this();
+				AddDialog(make_shared<FunctionGeneratorDialog>(sgen, &m_session));
+			}
 			else
 			{
 				ShowErrorPopup("Invalid function generator", "Function generator dialog references nonexistent instrument");
@@ -2467,7 +2473,10 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 
 			if(psu)
-				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
+			{
+				auto spsu = psu->shared_from_this();
+				AddDialog(make_shared<PowerSupplyDialog>(spsu, m_session.GetPSUState(spsu), &m_session));
+			}
 			else
 			{
 				ShowErrorPopup("Invalid PSU", "PSU dialog references nonexistent instrument");
@@ -2506,7 +2515,10 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 
 			if(load)
-				AddDialog(make_shared<LoadDialog>(load, m_session.GetLoadState(load), &m_session));
+			{
+				auto sload = load->shared_from_this();
+				AddDialog(make_shared<LoadDialog>(sload, m_session.GetLoadState(sload), &m_session));
+			}
 			else
 			{
 				ShowErrorPopup("Invalid load", "Load dialog references nonexistent instrument");
@@ -2958,7 +2970,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_meterDialogs)
 		{
 			auto meter = it.first;
-			mnode[meter->m_nickname] = m_session.m_idtable.emplace((Instrument*)meter);
+			mnode[meter->m_nickname] = m_session.m_idtable.emplace((Instrument*)meter.get());
 		}
 
 		node["meters"] = mnode;
@@ -2971,7 +2983,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_psuDialogs)
 		{
 			auto psu = it.first;
-			gnode[psu->m_nickname] = m_session.m_idtable.emplace((Instrument*)psu);
+			gnode[psu->m_nickname] = m_session.m_idtable.emplace((Instrument*)psu.get());
 		}
 		node["psus"] = gnode;
 	}
@@ -2983,7 +2995,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_loadDialogs)
 		{
 			auto load = it.first;
-			gnode[load->m_nickname] = m_session.m_idtable.emplace((Instrument*)load);
+			gnode[load->m_nickname] = m_session.m_idtable.emplace((Instrument*)load.get());
 		}
 		node["loads"] = gnode;
 	}
@@ -2995,7 +3007,7 @@ YAML::Node MainWindow::SerializeDialogs()
 		for(auto it : m_generatorDialogs)
 		{
 			auto gen = it.first;
-			gnode[gen->m_nickname] = m_session.m_idtable.emplace((Instrument*)gen);
+			gnode[gen->m_nickname] = m_session.m_idtable.emplace((Instrument*)gen.get());
 		}
 		node["generators"] = gnode;
 	}

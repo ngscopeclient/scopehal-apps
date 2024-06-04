@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -70,7 +70,7 @@ public:
 		, m_committedSSRamp(0)
 	{}
 
-	PowerSupplyChannelUIState(SCPIPowerSupply* psu, int chan)
+	PowerSupplyChannelUIState(std::shared_ptr<SCPIPowerSupply> psu, int chan)
 		: m_outputEnabled(psu->GetPowerChannelActive(chan))
 		, m_overcurrentShutdownEnabled(psu->GetPowerOvercurrentShutdownEnabled(chan))
 		, m_softStartEnabled(psu->IsSoftStartEnabled(chan))
@@ -90,14 +90,14 @@ public:
 class PowerSupplyDialog : public Dialog
 {
 public:
-	PowerSupplyDialog(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session);
+	PowerSupplyDialog(std::shared_ptr<SCPIPowerSupply> psu, std::shared_ptr<PowerSupplyState> state, Session* session);
 	virtual ~PowerSupplyDialog();
 
 	virtual bool DoRender();
 
 	void RefreshFromHardware();
 
-	SCPIPowerSupply* GetPSU()
+	std::shared_ptr<SCPIPowerSupply> GetPSU()
 	{ return m_psu; }
 
 protected:
@@ -114,7 +114,7 @@ protected:
 	double m_tstart;
 
 	///@brief The PSU we're controlling
-	SCPIPowerSupply* m_psu;
+	std::shared_ptr<SCPIPowerSupply> m_psu;
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<PowerSupplyState> m_state;

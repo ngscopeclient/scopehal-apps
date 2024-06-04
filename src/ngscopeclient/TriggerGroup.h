@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -62,14 +62,14 @@ public:
 		TRIGGER_TYPE_NORMAL
 	};
 
-	TriggerGroup(Oscilloscope* primary, Session* session);
+	TriggerGroup(std::shared_ptr<Oscilloscope> primary, Session* session);
 	virtual ~TriggerGroup();
 
-	void RemoveScope(Oscilloscope* scope);
+	void RemoveScope(std::shared_ptr<Oscilloscope> scope);
 	void RemoveFilter(PausableFilter* f);
 
-	void MakePrimary(Oscilloscope* scope);
-	void AddSecondary(Oscilloscope* scope);
+	void MakePrimary(std::shared_ptr<Oscilloscope> scope);
+	void AddSecondary(std::shared_ptr<Oscilloscope> scope);
 	void AddFilter(PausableFilter* f);
 
 	void Arm(TriggerType type);
@@ -87,8 +87,8 @@ public:
 	bool HasSecondaries()
 	{ return !m_secondaries.empty(); }
 
-	Oscilloscope* m_primary;
-	std::vector<Oscilloscope*> m_secondaries;
+	std::shared_ptr<Oscilloscope> m_primary;
+	std::vector<std::shared_ptr<Oscilloscope>> m_secondaries;
 
 	std::vector<PausableFilter*> m_filters;
 
@@ -98,7 +98,7 @@ public:
 	bool m_default;
 
 protected:
-	void DetachAllWaveforms(Oscilloscope* scope);
+	void DetachAllWaveforms(std::shared_ptr<Oscilloscope> scope);
 
 	Session* m_session;
 

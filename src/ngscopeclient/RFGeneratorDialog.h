@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -104,20 +104,20 @@ public:
 
 	RFGeneratorChannelUIState();
 
-	RFGeneratorChannelUIState(SCPIRFSignalGenerator* generator, int channel);
+	RFGeneratorChannelUIState(std::shared_ptr<SCPIRFSignalGenerator> generator, int channel);
 };
 
 class RFGeneratorDialog : public Dialog
 {
 public:
-	RFGeneratorDialog(SCPIRFSignalGenerator* generator, Session* session);
+	RFGeneratorDialog(std::shared_ptr<SCPIRFSignalGenerator> generator, Session* session);
 	virtual ~RFGeneratorDialog();
 
 	virtual bool DoRender();
 
 	void RefreshFromHardware();
 
-	SCPIRFSignalGenerator* GetGenerator()
+	std::shared_ptr<SCPIRFSignalGenerator> GetGenerator()
 	{ return m_generator; }
 
 protected:
@@ -128,7 +128,7 @@ protected:
 	Session* m_session;
 
 	///@brief The generator we're controlling
-	SCPIRFSignalGenerator* m_generator;
+	std::shared_ptr<SCPIRFSignalGenerator> m_generator;
 
 	///@brief UI state for each channel
 	std::vector<RFGeneratorChannelUIState> m_uiState;

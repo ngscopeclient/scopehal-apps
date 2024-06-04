@@ -1429,7 +1429,7 @@ void MainWindow::WindowGeneratorMenu()
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
-			auto generator = dynamic_cast<SCPIFunctionGenerator*>(inst);
+			auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
 			if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
 				continue;
 
@@ -1459,7 +1459,7 @@ void MainWindow::WindowPSUMenu()
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
-			auto psu = dynamic_cast<SCPIPowerSupply*>(inst);
+			auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 			if(m_psuDialogs.find(psu) != m_psuDialogs.end())
 				continue;
 
@@ -1487,7 +1487,7 @@ void MainWindow::WindowMultimeterMenu()
 				continue;
 
 			//Do we already have a dialog open for it? If so, don't make another
-			auto meter = dynamic_cast<SCPIMultimeter*>(scope);
+			auto meter = dynamic_pointer_cast<SCPIMultimeter>(scope);
 			if(m_meterDialogs.find(meter) != m_meterDialogs.end())
 				continue;
 

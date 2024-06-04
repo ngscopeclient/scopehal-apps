@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -46,7 +46,7 @@ class Trigger;
 class EmbeddedTriggerPropertiesDialog : public EmbeddableDialog
 {
 public:
-	EmbeddedTriggerPropertiesDialog(Oscilloscope* scope);
+	EmbeddedTriggerPropertiesDialog(std::shared_ptr<Oscilloscope> scope);
 	virtual ~EmbeddedTriggerPropertiesDialog();
 
 	virtual bool DoRender();
@@ -56,7 +56,7 @@ protected:
 
 	int m_triggerTypeIndex;
 
-	Oscilloscope* m_scope;
+	std::shared_ptr<Oscilloscope> m_scope;
 };
 
 #endif

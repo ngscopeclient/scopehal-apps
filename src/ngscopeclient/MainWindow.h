@@ -102,9 +102,9 @@ public:
 	virtual ~MainWindow();
 
 	void AddDialog(std::shared_ptr<Dialog> dlg);
-	void RemoveFunctionGenerator(SCPIFunctionGenerator* gen);
+	void RemoveFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> gen);
 
-	void OnScopeAdded(Oscilloscope* scope, bool createViews);
+	void OnScopeAdded(std::shared_ptr<Oscilloscope> scope, bool createViews);
 
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
@@ -113,7 +113,7 @@ public:
 	void ShowTimebaseProperties();
 	void ShowTriggerProperties();
 	void ShowManageInstruments();
-	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, Oscilloscope* secondary);
+	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, std::shared_ptr<Oscilloscope> secondary);
 
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
@@ -294,25 +294,25 @@ protected:
 	std::set< std::shared_ptr<Dialog> > m_dialogs;
 
 	///@brief Map of multimeters to meter control dialogs
-	std::map<SCPIMultimeter*, std::shared_ptr<Dialog> > m_meterDialogs;
+	std::map<std::shared_ptr<SCPIMultimeter>, std::shared_ptr<Dialog> > m_meterDialogs;
 
 	///@brief Map of PSUs to power supply control dialogs
-	std::map<SCPIPowerSupply*, std::shared_ptr<Dialog> > m_psuDialogs;
+	std::map<std::shared_ptr<SCPIPowerSupply>, std::shared_ptr<Dialog> > m_psuDialogs;
 
 	///@brief Map of generators to generator control dialogs
-	std::map<SCPIFunctionGenerator*, std::shared_ptr<Dialog> > m_generatorDialogs;
+	std::map<std::shared_ptr<SCPIFunctionGenerator>, std::shared_ptr<Dialog> > m_generatorDialogs;
 
 	///@brief Map of BERTs to BERT control dialogs
 	std::map<std::shared_ptr<SCPIBERT>, std::shared_ptr<Dialog> > m_bertDialogs;
 
 	///@brief Map of RF generators to generator control dialogs
-	std::map<SCPIRFSignalGenerator*, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
+	std::map<std::shared_ptr<SCPIRFSignalGenerator>, std::shared_ptr<Dialog> > m_rfgeneratorDialogs;
 
 	///@brief Map of loads to control dialogs
-	std::map<SCPILoad*, std::shared_ptr<Dialog> > m_loadDialogs;
+	std::map<std::shared_ptr<SCPILoad>, std::shared_ptr<Dialog> > m_loadDialogs;
 
 	///@brief Map of instruments to SCPI console dialogs
-	std::map<SCPIInstrument*, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
+	std::map<std::shared_ptr<SCPIInstrument>, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
 
 	///@brief Map of channels to properties dialogs
 	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
@@ -487,7 +487,7 @@ protected:
 	void SaveRecentFileList();
 
 public:
-	void AddToRecentInstrumentList(SCPIInstrument* inst);
+	void AddToRecentInstrumentList(std::shared_ptr<SCPIInstrument> inst);
 
 protected:
 

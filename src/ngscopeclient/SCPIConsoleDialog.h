@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -46,17 +46,17 @@ class MainWindow;
 class SCPIConsoleDialog : public Dialog
 {
 public:
-	SCPIConsoleDialog(MainWindow* parent, SCPIInstrument* inst);
+	SCPIConsoleDialog(MainWindow* parent, std::shared_ptr<SCPIInstrument> inst);
 	virtual ~SCPIConsoleDialog();
 
 	virtual bool DoRender();
 
-	SCPIInstrument* GetInstrument()
+	std::shared_ptr<SCPIInstrument> GetInstrument()
 	{ return m_inst; }
 
 protected:
 	MainWindow* m_parent;
-	SCPIInstrument* m_inst;
+	std::shared_ptr<SCPIInstrument> m_inst;
 
 	std::vector<std::string> m_output;
 

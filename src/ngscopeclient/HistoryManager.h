@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,7 +61,7 @@ public:
 	std::string m_nickname;
 
 	///@brief Waveform data
-	std::map<Oscilloscope*, WaveformHistory> m_history;
+	std::map<std::shared_ptr<Oscilloscope>, WaveformHistory> m_history;
 
 	void LoadHistoryToSession(Session& session);
 };
@@ -76,7 +76,7 @@ public:
 	~HistoryManager();
 
 	void AddHistory(
-		const std::vector<Oscilloscope*>& scopes,
+		const std::vector<std::shared_ptr<Oscilloscope>>& scopes,
 		bool deleteOld = true,
 		bool pin = false,
 		std::string nick = "",

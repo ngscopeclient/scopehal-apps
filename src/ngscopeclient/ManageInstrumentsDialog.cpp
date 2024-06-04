@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -133,8 +133,8 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		//Show a dummy root node
 		bool rootOpen = false;
 		bool rootIsMock = false;
-		SCPIOscilloscope* firstScope = nullptr;
-		MockOscilloscope* mockScope = nullptr;
+		shared_ptr<SCPIOscilloscope> firstScope = nullptr;
+		shared_ptr<MockOscilloscope> mockScope = nullptr;
 
 		if(!group->HasScopes())
 		{
@@ -152,12 +152,12 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		else
 		{
 			//If the first scope is a mock scope, show it differently
-			firstScope = dynamic_cast<SCPIOscilloscope*>(group->m_primary);
-			mockScope = dynamic_cast<MockOscilloscope*>(group->m_primary);
+			firstScope = dynamic_pointer_cast<SCPIOscilloscope>(group->m_primary);
+			mockScope = dynamic_pointer_cast<MockOscilloscope>(group->m_primary);
 
 			if(mockScope)
 			{
-				ImGui::PushID(mockScope);
+				ImGui::PushID(mockScope.get());
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 				ImGui::TableSetColumnIndex(0);
 
@@ -172,7 +172,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				LogFatal("group has secondary but no primary, shouldn't be possible\n");
 			else
 			{
-				ImGui::PushID(firstScope);
+				ImGui::PushID(firstScope.get());
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 				ImGui::TableSetColumnIndex(0);
 
@@ -274,11 +274,11 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 		{
 			for(size_t i=0; i<group->m_secondaries.size(); i++)
 			{
-				auto scope = dynamic_cast<SCPIOscilloscope*>(group->m_secondaries[i]);
+				auto scope = dynamic_pointer_cast<SCPIOscilloscope>(group->m_secondaries[i]);
 				if(!scope)
 					continue;
 
-				ImGui::PushID(scope);
+				ImGui::PushID(scope.get());
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 				ImGui::TableSetColumnIndex(0);
 				ImGui::TreeNodeEx(
@@ -409,7 +409,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 	{
 		auto itype = inst->GetInstrumentTypes();
 		bool rowIsSelected = (m_selection == inst);
-		ImGui::PushID(inst);
+		ImGui::PushID(inst.get());
 		ImGui::TableNextRow(ImGuiTableRowFlags_None);
 		ImGui::TableSetColumnIndex(0);
 		if(ImGui::Selectable(
@@ -418,7 +418,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 				ImVec2(0, 0)))
 		{
-			m_selection = dynamic_cast<SCPIInstrument*>(inst);
+			m_selection = dynamic_pointer_cast<SCPIInstrument>(inst);
 			rowIsSelected = true;
 		}
 		if(ImGui::TableSetColumnIndex(1))
@@ -435,7 +435,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 		{
 			string types = "";
 
-			if(dynamic_cast<MockOscilloscope*>(inst) != nullptr)
+			if(dynamic_pointer_cast<MockOscilloscope>(inst) != nullptr)
 				types += "offline ";
 
 			if(itype & Instrument::INST_OSCILLOSCOPE)

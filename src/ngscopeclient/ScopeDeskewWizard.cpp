@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -61,7 +61,7 @@ UniformCrossCorrelateArgs::UniformCrossCorrelateArgs(
 
 ScopeDeskewWizard::ScopeDeskewWizard(
 	shared_ptr<TriggerGroup> group,
-	Oscilloscope* secondary,
+	shared_ptr<Oscilloscope> secondary,
 	MainWindow* parent,
 	Session& session)
 	: Dialog(
@@ -305,7 +305,7 @@ bool ScopeDeskewWizard::DoRender()
 	return true;
 }
 
-void ScopeDeskewWizard::ChannelSelector(const char* name, Oscilloscope* scope, StreamDescriptor& stream)
+void ScopeDeskewWizard::ChannelSelector(const char* name, shared_ptr<Oscilloscope> scope, StreamDescriptor& stream)
 {
 	vector<StreamDescriptor> streams;
 	vector<string> names;

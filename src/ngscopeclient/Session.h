@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -91,7 +91,7 @@ public:
 class MiscInstrumentConnectionState
 {
 public:
-	MiscInstrumentConnectionState(SCPIMiscInstrument* inst, Session* session)
+	MiscInstrumentConnectionState(std::shared_ptr<SCPIMiscInstrument> inst, Session* session)
 		: m_inst(inst)
 		, m_shuttingDown(false)
 	{
@@ -104,11 +104,10 @@ public:
 		//Terminate the thread
 		m_shuttingDown = true;
 		m_thread->join();
-		delete m_inst;
 	}
 
 	///@brief The MiscInstrument
-	SCPIMiscInstrument* m_inst;
+	std::shared_ptr<SCPIMiscInstrument> m_inst;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -123,7 +122,7 @@ public:
 class RFSignalGeneratorConnectionState
 {
 public:
-	RFSignalGeneratorConnectionState(SCPIRFSignalGenerator* gen, Session* session)
+	RFSignalGeneratorConnectionState(std::shared_ptr<SCPIRFSignalGenerator> gen, Session* session)
 		: m_gen(gen)
 		, m_shuttingDown(false)
 	{
@@ -136,13 +135,10 @@ public:
 		//Terminate the thread
 		m_shuttingDown = true;
 		m_thread->join();
-
-		//Disconnect once the thread has terminated
-		delete m_gen;
 	}
 
 	///@brief The signal generator
-	SCPIRFSignalGenerator* m_gen;
+	std::shared_ptr<SCPIRFSignalGenerator> m_gen;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -157,7 +153,7 @@ public:
 class PowerSupplyConnectionState
 {
 public:
-	PowerSupplyConnectionState(SCPIPowerSupply* psu, std::shared_ptr<PowerSupplyState> state, Session* session)
+	PowerSupplyConnectionState(std::shared_ptr<SCPIPowerSupply> psu, std::shared_ptr<PowerSupplyState> state, Session* session)
 		: m_psu(psu)
 		, m_shuttingDown(false)
 		, m_state(state)
@@ -171,13 +167,10 @@ public:
 		//Terminate the thread
 		m_shuttingDown = true;
 		m_thread->join();
-
-		//Disconnect once the thread has terminated
-		delete m_psu;
 	}
 
 	///@brief The power supply
-	SCPIPowerSupply* m_psu;
+	std::shared_ptr<SCPIPowerSupply> m_psu;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -195,7 +188,10 @@ public:
 class MultimeterConnectionState
 {
 public:
-	MultimeterConnectionState(SCPIMultimeter* meter, std::shared_ptr<MultimeterState> state, Session* session)
+	MultimeterConnectionState(
+		std::shared_ptr<SCPIMultimeter> meter,
+		std::shared_ptr<MultimeterState> state,
+		Session* session)
 		: m_meter(meter)
 		, m_shuttingDown(false)
 		, m_state(state)
@@ -209,14 +205,10 @@ public:
 		//Terminate the thread
 		m_shuttingDown = true;
 		m_thread->join();
-
-		//Delete the meter once the thread has terminated unless it's also an oscilloscope
-		if(dynamic_cast<Oscilloscope*>(m_meter) == nullptr)
-			delete m_meter;
 	}
 
 	///@brief The meter
-	SCPIMultimeter* m_meter;
+	std::shared_ptr<SCPIMultimeter> m_meter;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -234,7 +226,7 @@ public:
 class LoadConnectionState
 {
 public:
-	LoadConnectionState(SCPILoad* load, std::shared_ptr<LoadState> state, Session* session)
+	LoadConnectionState(std::shared_ptr<SCPILoad> load, std::shared_ptr<LoadState> state, Session* session)
 		: m_load(load)
 		, m_shuttingDown(false)
 		, m_state(state)
@@ -251,7 +243,7 @@ public:
 	}
 
 	///@brief The load
-	SCPILoad* m_load;
+	std::shared_ptr<SCPILoad> m_load;
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
@@ -309,25 +301,25 @@ public:
 
 	void AddBERT(std::shared_ptr<SCPIBERT> bert, bool createDialog = true);
 	void RemoveBERT(std::shared_ptr<SCPIBERT> bert);
-	void AddMiscInstrument(SCPIMiscInstrument* inst);
-	void AddFunctionGenerator(SCPIFunctionGenerator* generator);
-	void RemoveFunctionGenerator(SCPIFunctionGenerator* generator);
-	void AddLoad(SCPILoad* load, bool createDialog = true);
-	void RemoveLoad(SCPILoad* load);
-	void AddMultimeter(SCPIMultimeter* meter, bool createDialog = true);
-	void AddMultimeterDialog(SCPIMultimeter* meter);
-	void RemoveMultimeter(SCPIMultimeter* meter);
-	void AddOscilloscope(Oscilloscope* scope, bool createViews = true);
-	void AddSpectrometer(SCPISpectrometer* spec, bool createViews = true)
+	void AddMiscInstrument(std::shared_ptr<SCPIMiscInstrument> inst);
+	void AddFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> generator);
+	void RemoveFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> generator);
+	void AddLoad(std::shared_ptr<SCPILoad> load, bool createDialog = true);
+	void RemoveLoad(std::shared_ptr<SCPILoad> load);
+	void AddMultimeter(std::shared_ptr<SCPIMultimeter> meter, bool createDialog = true);
+	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
+	void RemoveMultimeter(std::shared_ptr<SCPIMultimeter> meter);
+	void AddOscilloscope(std::shared_ptr<Oscilloscope> scope, bool createViews = true);
+	void AddSpectrometer(std::shared_ptr<SCPISpectrometer> spec, bool createViews = true)
 	{ AddOscilloscope(spec, createViews); }
-	void AddVNA(SCPIVNA* vna, bool createViews = true)
+	void AddVNA(std::shared_ptr<SCPIVNA> vna, bool createViews = true)
 	{ AddOscilloscope(vna, createViews); }
-	void AddPowerSupply(SCPIPowerSupply* psu, bool createDialog = true);
-	void RemovePowerSupply(SCPIPowerSupply* psu);
-	void AddSDR(SCPISDR* sdr, bool createViews = true)
+	void AddPowerSupply(std::shared_ptr<SCPIPowerSupply> psu, bool createDialog = true);
+	void RemovePowerSupply(std::shared_ptr<SCPIPowerSupply> psu);
+	void AddSDR(std::shared_ptr<SCPISDR> sdr, bool createViews = true)
 	{ AddOscilloscope(sdr, createViews); }
-	void AddRFGenerator(SCPIRFSignalGenerator* generator);
-	void RemoveRFGenerator(SCPIRFSignalGenerator* generator);
+	void AddRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
+	void RemoveRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
 	bool IsMultiScope()
@@ -345,7 +337,7 @@ public:
 	/**
 		@brief Returns a pointer to the state for a power supply
 	 */
-	std::shared_ptr<PowerSupplyState> GetPSUState(SCPIPowerSupply* psu)
+	std::shared_ptr<PowerSupplyState> GetPSUState(std::shared_ptr<SCPIPowerSupply> psu)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_psus[psu]->m_state;
@@ -360,7 +352,7 @@ public:
 		return m_packetmgrs[filter];
 	}
 
-	void ApplyPreferences(Oscilloscope* scope);
+	void ApplyPreferences(std::shared_ptr<Oscilloscope> scope);
 
 	size_t GetFilterCount();
 
@@ -392,7 +384,7 @@ public:
 	/**
 		@brief Get the set of scopes we're currently connected to
 	 */
-	const std::vector<Oscilloscope*> GetScopes()
+	const std::vector<std::shared_ptr<Oscilloscope>> GetScopes()
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_oscilloscopes;
@@ -413,12 +405,12 @@ public:
 	/**
 		@brief Gets the set of all SCPI instruments we're connect to (regardless of type)
 	 */
-	std::set<SCPIInstrument*> GetSCPIInstruments();
+	std::set<std::shared_ptr<SCPIInstrument>> GetSCPIInstruments();
 
 	/**
 		@brief Gets the set of all instruments we're connect to (regardless of type)
 	 */
-	std::set<Instrument*> GetInstruments();
+	std::set<std::shared_ptr<Instrument>> GetInstruments();
 
 	/**
 		@brief Check if we have data available from all of our scopes
@@ -475,26 +467,26 @@ public:
 
 	void GarbageCollectTriggerGroups();
 
-	void MakeNewTriggerGroup(Oscilloscope* scope);
+	void MakeNewTriggerGroup(std::shared_ptr<Oscilloscope> scope);
 	void MakeNewTriggerGroup(PausableFilter* filter);
 
-	int64_t GetDeskew(Oscilloscope* scope)
+	int64_t GetDeskew(std::shared_ptr<Oscilloscope> scope)
 	{ return m_scopeDeskewCal[scope]; }
 
-	void SetDeskew(Oscilloscope* scope, int64_t skew)
+	void SetDeskew(std::shared_ptr<Oscilloscope> scope, int64_t skew)
 	{ m_scopeDeskewCal[scope] = skew; }
 
-	bool IsPrimaryOfMultiScopeGroup(Oscilloscope* scope);
-	bool IsSecondaryOfMultiScopeGroup(Oscilloscope* scope);
+	bool IsPrimaryOfMultiScopeGroup(std::shared_ptr<Oscilloscope> scope);
+	bool IsSecondaryOfMultiScopeGroup(std::shared_ptr<Oscilloscope> scope);
 
-	std::shared_ptr<TriggerGroup> GetTriggerGroupForScope(Oscilloscope* scope);
+	std::shared_ptr<TriggerGroup> GetTriggerGroupForScope(std::shared_ptr<Oscilloscope> scope);
 	std::shared_ptr<TriggerGroup> GetTriggerGroupForFilter(PausableFilter* filter);
 
 	const ConfigWarningList& GetWarnings()
 	{ return m_warnings; }
 
 	///@brief Get the state for a load
-	std::shared_ptr<LoadState> GetLoadState(Load* load)
+	std::shared_ptr<LoadState> GetLoadState(std::shared_ptr<Load> load)
 	{
 		auto it = m_loads.find(load);
 		if(it != m_loads.end())
@@ -513,7 +505,7 @@ protected:
 	bool LoadInstruments(int version, const YAML::Node& node, bool online);
 	bool PreLoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);
-	bool VerifyInstrument(const YAML::Node& node, Instrument* inst);
+	bool VerifyInstrument(const YAML::Node& node, std::shared_ptr<Instrument> inst);
 	bool PreLoadOscilloscope(int version, const YAML::Node& node, bool online);
 	bool PreLoadPowerSupply(int version, const YAML::Node& node, bool online);
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);
@@ -530,7 +522,7 @@ protected:
 	bool LoadWaveformDataForScope(
 		int version,
 		const YAML::Node& node,
-		Oscilloscope* scope,
+		std::shared_ptr<Oscilloscope> scope,
 		const std::string& dataDir);
 	bool LoadWaveformDataForFilters(
 		int version,
@@ -549,7 +541,7 @@ protected:
 	ConfigWarningList m_warnings;
 
 	///@brief Deskew correction coefficients for multi-scope
-	std::map<Oscilloscope*, int64_t> m_scopeDeskewCal;
+	std::map<std::shared_ptr<Oscilloscope>, int64_t> m_scopeDeskewCal;
 
 	///@brief Mutex for controlling access to scope vectors
 	std::mutex m_scopeMutex;
@@ -570,28 +562,28 @@ protected:
 	bool m_modifiedSinceLastSave;
 
 	///@brief Oscilloscopes we are currently connected to
-	std::vector<Oscilloscope*> m_oscilloscopes;
+	std::vector<std::shared_ptr<Oscilloscope>> m_oscilloscopes;
 
 	///@brief Power supplies we are currently connected to
-	std::map<PowerSupply*, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
+	std::map<std::shared_ptr<PowerSupply>, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
 
 	///@brief Multimeters we are currently connected to
-	std::map<Multimeter*, std::unique_ptr<MultimeterConnectionState> > m_meters;
+	std::map<std::shared_ptr<Multimeter>, std::unique_ptr<MultimeterConnectionState> > m_meters;
 
 	///@brief Loads we are currently connected to
-	std::map<Load*, std::unique_ptr<LoadConnectionState> > m_loads;
+	std::map<std::shared_ptr<Load>, std::unique_ptr<LoadConnectionState> > m_loads;
 
 	///@brief RF generators we are currently connected to
-	std::map<SCPIRFSignalGenerator*, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
+	std::map<std::shared_ptr<SCPIRFSignalGenerator>, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
 
 	///@brief BERTs we are currently connected to
 	std::map<std::shared_ptr<BERT>, std::unique_ptr<BERTConnectionState> > m_berts;
 
 	///@brief Function generators we are currently connected to
-	std::vector<SCPIFunctionGenerator*> m_generators;
+	std::vector<std::shared_ptr<SCPIFunctionGenerator> > m_generators;
 
 	///@brief Miscellaneous instruments we are currently connected to
-	std::map<SCPIMiscInstrument*, std::unique_ptr<MiscInstrumentConnectionState> > m_misc;
+	std::map<std::shared_ptr<SCPIMiscInstrument>, std::unique_ptr<MiscInstrumentConnectionState> > m_misc;
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;
@@ -609,7 +601,7 @@ protected:
 	std::unique_ptr<std::thread> m_waveformThread;
 
 	///@brief Scopes whose data is currently being processed for history
-	std::set<Oscilloscope*> m_recentlyTriggeredScopes;
+	std::set<std::shared_ptr<Oscilloscope> > m_recentlyTriggeredScopes;
 
 	///@brief Groups whose data is currently being processed
 	std::set<std::shared_ptr<TriggerGroup>> m_recentlyTriggeredGroups;

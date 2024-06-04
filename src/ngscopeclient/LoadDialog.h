@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -71,7 +71,7 @@ public:
 		, m_load(nullptr)
 	{}
 
-	LoadChannelUIState(SCPILoad* load, size_t chan)
+	LoadChannelUIState(std::shared_ptr<SCPILoad> load, size_t chan)
 		: m_loadEnabled(load->GetLoadActive(chan))
 		, m_mode(load->GetLoadMode(chan))
 		, m_chan(chan)
@@ -135,19 +135,19 @@ public:
 
 protected:
 	size_t m_chan;
-	Load* m_load;
+	std::shared_ptr<Load> m_load;
 };
 
 
 class LoadDialog : public Dialog
 {
 public:
-	LoadDialog(SCPILoad* load, std::shared_ptr<LoadState> state, Session* session);
+	LoadDialog(std::shared_ptr<SCPILoad> load, std::shared_ptr<LoadState> state, Session* session);
 	virtual ~LoadDialog();
 
 	virtual bool DoRender();
 
-	SCPILoad* GetLoad()
+	std::shared_ptr<SCPILoad> GetLoad()
 	{ return m_load; }
 
 	void RefreshFromHardware();
@@ -162,7 +162,7 @@ protected:
 	double m_tstart;
 
 	///@brief The load we're controlling
-	SCPILoad* m_load;
+	std::shared_ptr<SCPILoad> m_load;
 
 	///@brief Current channel stats, live updated
 	std::shared_ptr<LoadState> m_state;

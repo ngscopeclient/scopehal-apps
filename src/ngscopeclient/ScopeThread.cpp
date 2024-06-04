@@ -37,21 +37,21 @@
 
 using namespace std;
 
-void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
+void ScopeThread(ScopeThreadArgs args)
 {
 	pthread_setname_np_compat("ScopeThread");
-	auto sscope = dynamic_cast<SCPIOscilloscope*>(scope);
+	auto sscope = dynamic_pointer_cast<SCPIOscilloscope>(args.scope);
 
-	LogTrace("Initializing %s\n", scope->m_nickname.c_str());
+	LogTrace("Initializing %s\n", args.scope->m_nickname.c_str());
 
-	while(!*shuttingDown)
+	while(!*args.shuttingDown)
 	{
 		//Push any pending queued commands
 		if(sscope)
 			sscope->GetTransport()->FlushCommandQueue();
 
 		//If the queue is too big, stop grabbing data
-		size_t npending = scope->GetPendingWaveformCount();
+		size_t npending = args.scope->GetPendingWaveformCount();
 		if(npending > 5)
 		{
 			LogTrace("Queue is too big, sleeping\n");
@@ -60,7 +60,7 @@ void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
 		}
 
 		//If trigger isn't armed, don't even bother polling for a while.
-		if(!scope->IsTriggerArmed())
+		if(!args.scope->IsTriggerArmed())
 		{
 			//LogTrace("Scope isn't armed, sleeping\n");
 			this_thread::sleep_for(chrono::milliseconds(5));
@@ -68,8 +68,8 @@ void ScopeThread(Oscilloscope* scope, atomic<bool>* shuttingDown)
 		}
 
 		//Grab data if it's ready
-		auto stat = scope->PollTrigger();
+		auto stat = args.scope->PollTrigger();
 		if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
-			scope->AcquireData();
+			args.scope->AcquireData();
 	}
 }

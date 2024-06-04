@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -60,7 +60,7 @@ class ScopeDeskewWizard : public Dialog
 public:
 	ScopeDeskewWizard(
 		std::shared_ptr<TriggerGroup> group,
-		Oscilloscope* secondary,
+		std::shared_ptr<Oscilloscope> secondary,
 		MainWindow* parent,
 		Session& session);
 	virtual ~ScopeDeskewWizard();
@@ -76,7 +76,7 @@ protected:
 	void DoProcessWaveformUniformEqualRateVulkan(UniformAnalogWaveform* ppri, UniformAnalogWaveform* psec);
 	void PostprocessVulkanCorrelation();
 	void DoProcessWaveformSparse(SparseAnalogWaveform* ppri, SparseAnalogWaveform* psec);
-	void ChannelSelector(const char* name, Oscilloscope* scope, StreamDescriptor& stream);
+	void ChannelSelector(const char* name, std::shared_ptr<Oscilloscope> scope, StreamDescriptor& stream);
 
 	enum state_t
 	{
@@ -92,7 +92,7 @@ protected:
 	} m_state;
 
 	std::shared_ptr<TriggerGroup> m_group;
-	Oscilloscope* m_secondary;
+	std::shared_ptr<Oscilloscope> m_secondary;
 
 	MainWindow* m_parent;
 	Session& m_session;
