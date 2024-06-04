@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of LoadThread
+	@brief Implementation of ScopeThread
  */
 #include "ngscopeclient.h"
 #include "pthread_compat.h"
@@ -39,33 +39,57 @@
 
 using namespace std;
 
-void LoadThread(LoadThreadArgs args)
+void InstrumentThread(InstrumentThreadArgs args)
 {
-	pthread_setname_np_compat("LoadThread");
+	pthread_setname_np_compat("InstrumentThread");
 
-	auto load = args.load;
-	auto state = args.state;
+	auto inst = args.inst;
+	auto session = args.session;
+
+	//Extract type-specified fields
+	auto load = dynamic_pointer_cast<Load>(inst);
+	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	auto loadstate = args.loadstate;
+	auto meterstate = args.meterstate;
+
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
-		load->GetTransport()->FlushCommandQueue();
+		inst->GetTransport()->FlushCommandQueue();
 
-		//Read stuff
-		load->AcquireData();
-
-		//Poll status
-		for(size_t i=0; i<load->GetChannelCount(); i++)
+		if(load)
 		{
-			auto lchan = dynamic_cast<LoadChannel*>(load->GetChannel(i));
+			//Read stuff
+			load->AcquireData();
 
-			state->m_channelVoltage[i] = lchan->GetScalarValue(LoadChannel::STREAM_VOLTAGE_MEASURED);
-			state->m_channelCurrent[i] = lchan->GetScalarValue(LoadChannel::STREAM_CURRENT_MEASURED);
+			//Poll status
+			for(size_t i=0; i<load->GetChannelCount(); i++)
+			{
+				auto lchan = dynamic_cast<LoadChannel*>(load->GetChannel(i));
 
-			args.session->MarkChannelDirty(lchan);
+				loadstate->m_channelVoltage[i] = lchan->GetScalarValue(LoadChannel::STREAM_VOLTAGE_MEASURED);
+				loadstate->m_channelCurrent[i] = lchan->GetScalarValue(LoadChannel::STREAM_CURRENT_MEASURED);
+
+				session->MarkChannelDirty(lchan);
+			}
+			loadstate->m_firstUpdateDone = true;
 		}
-		state->m_firstUpdateDone = true;
 
-		//Cap update rate to 20 Hz
-		this_thread::sleep_for(chrono::milliseconds(50));
+		if(meter)
+		{
+			//Acquire scalar values from hardware
+			meter->AcquireData();
+
+			//Poll status
+			auto chan = dynamic_cast<MultimeterChannel*>(meter->GetChannel(meter->GetCurrentMeterChannel()));
+			if(chan)
+			{
+				meterstate->m_primaryMeasurement = chan->GetPrimaryValue();
+				meterstate->m_secondaryMeasurement = chan->GetSecondaryValue();
+				meterstate->m_firstUpdateDone = true;
+
+				session->MarkChannelDirty(chan);
+			}
+		}
 	}
 }

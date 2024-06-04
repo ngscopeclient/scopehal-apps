@@ -196,8 +196,9 @@ public:
 		, m_shuttingDown(false)
 		, m_state(state)
 	{
-		MultimeterThreadArgs args(meter, &m_shuttingDown, state, session);
-		m_thread = std::make_unique<std::thread>(MultimeterThread, args);
+		InstrumentThreadArgs args(meter, &m_shuttingDown, session);
+		args.meterstate = state;
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~MultimeterConnectionState()
@@ -231,8 +232,9 @@ public:
 		, m_shuttingDown(false)
 		, m_state(state)
 	{
-		LoadThreadArgs args(load, &m_shuttingDown, state, session);
-		m_thread = std::make_unique<std::thread>(LoadThread, args);
+		InstrumentThreadArgs args(load, &m_shuttingDown, session);
+		args.loadstate = state;
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~LoadConnectionState()

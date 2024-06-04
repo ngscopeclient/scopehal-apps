@@ -57,6 +57,24 @@
 
 class Session;
 
+class InstrumentThreadArgs
+{
+public:
+	InstrumentThreadArgs(std::shared_ptr<SCPIInstrument> p, std::atomic<bool>* s, Session* sess)
+	: inst(p)
+	, shuttingDown(s)
+	, session(sess)
+	{}
+
+	std::shared_ptr<SCPIInstrument> inst;
+	std::atomic<bool>* shuttingDown;
+	Session* session;
+
+	//Additional per-instrument-type state we can add
+	std::shared_ptr<LoadState> loadstate;
+	std::shared_ptr<MultimeterState> meterstate;
+};
+
 class MiscInstrumentThreadArgs
 {
 public:
@@ -105,46 +123,6 @@ public:
 	Session* session;
 };
 
-class MultimeterThreadArgs
-{
-public:
-	MultimeterThreadArgs(
-		std::shared_ptr<SCPIMultimeter> m,
-		std::atomic<bool>* s,
-		std::shared_ptr<MultimeterState> st,
-		Session* sess)
-	: meter(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPIMultimeter> meter;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<MultimeterState> state;
-	Session* session;
-};
-
-class LoadThreadArgs
-{
-public:
-	LoadThreadArgs(
-		std::shared_ptr<SCPILoad> m,
-		std::atomic<bool>* s,
-		std::shared_ptr<LoadState> st,
-		Session* sess)
-	: load(m)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPILoad> load;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<LoadState> state;
-	Session* session;
-};
-
 class BERTThreadArgs
 {
 public:
@@ -175,12 +153,12 @@ public:
 	std::atomic<bool>* shuttingDown;
 };
 
+void InstrumentThread(InstrumentThreadArgs args);
+
 void ScopeThread(ScopeThreadArgs args);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
 void BERTThread(BERTThreadArgs args);
-void LoadThread(LoadThreadArgs args);
 void MiscInstrumentThread(MiscInstrumentThreadArgs args);
-void MultimeterThread(MultimeterThreadArgs args);
 void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 

@@ -77,9 +77,9 @@ add_executable(ngscopeclient
 	HistoryDialog.cpp
 	HistoryManager.cpp
 	IGFDFileBrowser.cpp
+	InstrumentThread.cpp
 	KDialogFileBrowser.cpp
 	LoadDialog.cpp
-	LoadThread.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
 	MainWindow_Menus.cpp
@@ -88,7 +88,6 @@ add_executable(ngscopeclient
 	MetricsDialog.cpp
 	MiscInstrumentThread.cpp
 	MultimeterDialog.cpp
-	MultimeterThread.cpp
 	NFDFileBrowser.cpp
 	NotesDialog.cpp
 	PacketManager.cpp
