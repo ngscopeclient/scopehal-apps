@@ -133,8 +133,6 @@ public:
 	{ AddOscilloscope(vna, createViews); }
 	void AddSDR(std::shared_ptr<SCPISDR> sdr, bool createViews = true)
 	{ AddOscilloscope(sdr, createViews); }
-	void AddRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
-	void RemoveRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
 	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);

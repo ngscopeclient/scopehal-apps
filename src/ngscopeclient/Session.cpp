@@ -1645,7 +1645,7 @@ bool Session::PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool
 	//ApplyPreferences(gen);
 
 	//All good. Add to our list of generators etc
-	AddRFGenerator(gen);
+	AddInstrument(gen);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen.get());
 
 	//Run the preload
@@ -2715,6 +2715,7 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
+	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
 	if(psu)
 	{
 		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
@@ -2756,6 +2757,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
 		if(bert)
 			m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, args.bertstate, this));
+		if(rfgen)
+			m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(rfgen, this));
 	}
 
 	m_mainWindow->AddToRecentInstrumentList(si);
@@ -2798,31 +2801,6 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
-}
-
-/**
-	@brief Adds an RF signal generator to the session
- */
-void Session::AddRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Run the thread
-	InstrumentThreadArgs args(generator, this);
-	m_instrumentStates[generator] = make_shared<InstrumentConnectionState>(args);
-
-	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
-
-	m_mainWindow->AddToRecentInstrumentList(generator);
-}
-
-/**
-	@brief Removes an RF signal from the session
- */
-void Session::RemoveRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
-{
-	m_modifiedSinceLastSave = true;
-	m_instrumentStates.erase(generator);
 }
 
 /**

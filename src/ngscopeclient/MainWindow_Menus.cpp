@@ -864,7 +864,7 @@ void MainWindow::AddRFGeneratorMenu(vector<time_t>& timestamps, map<time_t, vect
 								LogDebug("FIXME: apply PreferenceManager settings to newly created RF generator\n");
 
 								gen->m_nickname = nick;
-								m_session.AddRFGenerator(gen);
+								m_session.AddInstrument(gen);
 							}
 						}
 					}

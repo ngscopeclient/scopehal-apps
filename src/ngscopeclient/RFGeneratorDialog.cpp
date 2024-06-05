@@ -169,7 +169,6 @@ RFGeneratorDialog::RFGeneratorDialog(
 
 RFGeneratorDialog::~RFGeneratorDialog()
 {
-	m_session->RemoveRFGenerator(m_generator);
 }
 
 void RFGeneratorDialog::RefreshFromHardware()
