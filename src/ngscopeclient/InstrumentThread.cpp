@@ -50,6 +50,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 	auto load = dynamic_pointer_cast<Load>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
+	auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
 	auto bertstate = args.bertstate;
@@ -66,7 +68,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 		//Populate scalar channel and do other instrument-specific processing
 		if(load)
 		{
-			//Poll status
 			for(size_t i=0; i<load->GetChannelCount(); i++)
 			{
 				auto lchan = dynamic_cast<LoadChannel*>(load->GetChannel(i));
@@ -80,7 +81,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 		}
 		if(meter)
 		{
-			//Poll status
 			auto chan = dynamic_cast<MultimeterChannel*>(meter->GetChannel(meter->GetCurrentMeterChannel()));
 			if(chan)
 			{
@@ -91,7 +91,15 @@ void InstrumentThread(InstrumentThreadArgs args)
 				session->MarkChannelDirty(chan);
 			}
 		}
-
+		if(misc || rfgen || bert)
+		{
+			for(size_t i=0; i<inst->GetChannelCount(); i++)
+			{
+				auto chan = inst->GetChannel(i);
+				if(chan)
+					session->MarkChannelDirty(chan);
+			}
+		}
 		if(bert)
 		{
 			//Check if we have any pending acquisition requests
@@ -122,8 +130,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 					LogTrace("Scan actually took %s\n", fs.PrettyPrint(dt).c_str());
 				}
-
-				session->MarkChannelDirty(bert->GetChannel(i));
 			}
 
 			bertstate->m_firstUpdateDone = true;

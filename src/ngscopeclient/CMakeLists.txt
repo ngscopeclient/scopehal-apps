@@ -85,7 +85,6 @@ add_executable(ngscopeclient
 	ManageInstrumentsDialog.cpp
 	MeasurementsDialog.cpp
 	MetricsDialog.cpp
-	MiscInstrumentThread.cpp
 	MultimeterDialog.cpp
 	NFDFileBrowser.cpp
 	NotesDialog.cpp
@@ -100,7 +99,6 @@ add_executable(ngscopeclient
 	PreferenceTree.cpp
 	ProtocolAnalyzerDialog.cpp
 	RFGeneratorDialog.cpp
-	RFSignalGeneratorThread.cpp
 	ScopeDeskewWizard.cpp
 	ScopeThread.cpp
 	SCPIConsoleDialog.cpp

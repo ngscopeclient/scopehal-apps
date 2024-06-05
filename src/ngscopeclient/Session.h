@@ -96,8 +96,8 @@ public:
 		: m_inst(inst)
 		, m_shuttingDown(false)
 	{
-		MiscInstrumentThreadArgs args(inst, &m_shuttingDown, session);
-		m_thread = std::make_unique<std::thread>(MiscInstrumentThread, args);
+		InstrumentThreadArgs args(inst, &m_shuttingDown, session);
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~MiscInstrumentConnectionState()
@@ -127,8 +127,8 @@ public:
 		: m_gen(gen)
 		, m_shuttingDown(false)
 	{
-		RFSignalGeneratorThreadArgs args(gen, &m_shuttingDown, session);
-		m_thread = std::make_unique<std::thread>(RFSignalGeneratorThread, args);
+		InstrumentThreadArgs args(gen, &m_shuttingDown, session);
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~RFSignalGeneratorConnectionState()

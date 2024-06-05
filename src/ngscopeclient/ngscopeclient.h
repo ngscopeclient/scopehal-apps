@@ -76,34 +76,6 @@ public:
 	std::shared_ptr<BERTState> bertstate;
 };
 
-class MiscInstrumentThreadArgs
-{
-public:
-	MiscInstrumentThreadArgs(std::shared_ptr<SCPIMiscInstrument> p, std::atomic<bool>* s, Session* sess)
-	: inst(p)
-	, shuttingDown(s)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPIMiscInstrument> inst;
-	std::atomic<bool>* shuttingDown;
-	Session* session;
-};
-
-class RFSignalGeneratorThreadArgs
-{
-public:
-	RFSignalGeneratorThreadArgs(std::shared_ptr<SCPIRFSignalGenerator> p, std::atomic<bool>* s, Session* sess)
-	: gen(p)
-	, shuttingDown(s)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPIRFSignalGenerator> gen;
-	std::atomic<bool>* shuttingDown;
-	Session* session;
-};
-
 class PowerSupplyThreadArgs
 {
 public:
@@ -142,8 +114,6 @@ void InstrumentThread(InstrumentThreadArgs args);
 
 void ScopeThread(ScopeThreadArgs args);
 void PowerSupplyThread(PowerSupplyThreadArgs args);
-void MiscInstrumentThread(MiscInstrumentThreadArgs args);
-void RFSignalGeneratorThread(RFSignalGeneratorThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
 void RightJustifiedText(const std::string& str);
