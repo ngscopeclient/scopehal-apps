@@ -1285,7 +1285,7 @@ bool Session::PreLoadBERT(int version, const YAML::Node& node, bool online)
 	//ApplyPreferences(bert);
 
 	//All good. Add to our list of berts etc
-	AddBERT(bert, false);
+	AddInstrument(bert, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)bert.get());
 
 	//Run the preload
@@ -2714,6 +2714,7 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
+	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	if(psu)
 	{
 		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
@@ -2732,6 +2733,12 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		m_loads[load] = state;
 		args.loadstate = state;
 	}
+	if(bert)
+	{
+		auto state = make_shared<BERTState>(bert->GetChannelCount());
+		m_berts[bert] = state;
+		args.bertstate = state;
+	}
 
 	//Make the instrument thread
 	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
@@ -2747,6 +2754,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 			m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
 		if(load)
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
+		if(bert)
+			m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, args.bertstate, this));
 	}
 
 	m_mainWindow->AddToRecentInstrumentList(si);
@@ -2765,12 +2774,15 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
+	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	if(psu)
 		m_psus.erase(psu);
 	if(meter)
 		m_meters.erase(meter);
 	if(load)
 		m_loads.erase(load);
+	if(bert)
+		m_berts.erase(bert);
 
 	//TODO: find anything that might reference our channels and set those inputs to null
 
@@ -2786,42 +2798,6 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
-}
-
-/**
-	@brief Adds a BERT to the session
- */
-void Session::AddBERT(shared_ptr<SCPIBERT> bert, bool createDialog)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Create shared BERT state
-	auto state = make_shared<BERTState>(bert->GetChannelCount());
-	m_berts[bert] = state;
-
-	//Run the thread
-	InstrumentThreadArgs args(bert, this);
-	args.bertstate = state;
-	m_instrumentStates[bert] = make_shared<InstrumentConnectionState>(args);
-
-	//Add the dialog to view/control it
-	if(createDialog)
-		m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(bert);
-
-	StartWaveformThreadIfNeeded();
-}
-
-/**
-	@brief Removes a BERT from the session
- */
-void Session::RemoveBERT(shared_ptr<SCPIBERT> bert)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_berts.erase(bert);
-	m_instrumentStates.erase(bert);
 }
 
 /**

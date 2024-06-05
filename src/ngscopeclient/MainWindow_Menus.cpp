@@ -352,7 +352,7 @@ void MainWindow::AddBERTMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 								LogDebug("FIXME: apply PreferenceManager settings to newly created BERT\n");
 
 								bert->m_nickname = nick;
-								m_session.AddBERT(bert);
+								m_session.AddInstrument(bert);
 							}
 						}
 					}

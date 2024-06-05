@@ -125,8 +125,6 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
-	void AddBERT(std::shared_ptr<SCPIBERT> bert, bool createDialog = true);
-	void RemoveBERT(std::shared_ptr<SCPIBERT> bert);
 	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
 	void AddOscilloscope(std::shared_ptr<Oscilloscope> scope, bool createViews = true);
 	void AddSpectrometer(std::shared_ptr<SCPISpectrometer> spec, bool createViews = true)
