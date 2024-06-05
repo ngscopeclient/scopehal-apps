@@ -1213,7 +1213,7 @@ bool Session::PreLoadMisc(int version, const YAML::Node& node, bool online)
 	//ApplyPreferences(misc);
 
 	//All good. Add to our list of loads etc
-	AddMiscInstrument(misc);
+	AddInstrument(misc);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)misc.get());
 
 	//Run the preload
@@ -2750,6 +2750,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	}
 
 	m_mainWindow->AddToRecentInstrumentList(si);
+
+	StartWaveformThreadIfNeeded();
 }
 
 /**
@@ -2784,22 +2786,6 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
-}
-
-/**
-	@brief Adds a miscellaneous instrument
- */
-void Session::AddMiscInstrument(shared_ptr<SCPIMiscInstrument> inst)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_mainWindow->AddToRecentInstrumentList(inst);
-
-	//Run the thread
-	InstrumentThreadArgs args(inst, this);
-	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
-
-	StartWaveformThreadIfNeeded();
 }
 
 /**

@@ -571,7 +571,7 @@ void MainWindow::AddMiscMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 								LogDebug("FIXME: apply PreferenceManager settings to newly created misc instrument\n");
 
 								inst->m_nickname = nick;
-								m_session.AddMiscInstrument(inst);
+								m_session.AddInstrument(inst);
 							}
 						}
 					}

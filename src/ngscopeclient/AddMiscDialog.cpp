@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -94,6 +94,6 @@ bool AddMiscDialog::DoConnect()
 	LogDebug("FIXME: apply PreferenceManager settings to newly created misc instrument\n");
 
 	inst->m_nickname = m_nickname;
-	m_session.AddMiscInstrument(inst);
+	m_session.AddInstrument(inst);
 	return true;
 }

@@ -127,7 +127,6 @@ public:
 
 	void AddBERT(std::shared_ptr<SCPIBERT> bert, bool createDialog = true);
 	void RemoveBERT(std::shared_ptr<SCPIBERT> bert);
-	void AddMiscInstrument(std::shared_ptr<SCPIMiscInstrument> inst);
 	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
 	void AddOscilloscope(std::shared_ptr<Oscilloscope> scope, bool createViews = true);
 	void AddSpectrometer(std::shared_ptr<SCPISpectrometer> spec, bool createViews = true)
