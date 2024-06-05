@@ -48,24 +48,73 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 	//Extract type-specified fields
 	auto load = dynamic_pointer_cast<Load>(inst);
+	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
 	auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
+	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
 	auto bertstate = args.bertstate;
+	auto psustate = args.psustate;
 
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
 		inst->GetTransport()->FlushCommandQueue();
 
-		//Acquire data (if applicable)
-		if(true)
+		//Scope processing
+		if(scope)
+		{
+			//If the queue is too big, stop grabbing data
+			size_t npending = scope->GetPendingWaveformCount();
+			if(npending > 5)
+			{
+				LogTrace("Queue is too big, sleeping\n");
+				this_thread::sleep_for(chrono::milliseconds(5));
+			}
+
+			//If trigger isn't armed, don't even bother polling for a while.
+			else if(!scope->IsTriggerArmed())
+			{
+				//LogTrace("Scope isn't armed, sleeping\n");
+				this_thread::sleep_for(chrono::milliseconds(5));
+			}
+
+			//Grab data if it's ready
+			else
+			{
+				auto stat = scope->PollTrigger();
+				if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+					scope->AcquireData();
+			}
+		}
+
+		//Always acquire data from non-scope instruments
+		else
 			inst->AcquireData();
 
 		//Populate scalar channel and do other instrument-specific processing
+		if(psu)
+		{
+			//Poll status
+			for(size_t i=0; i<psu->GetChannelCount(); i++)
+			{
+				//Skip non-power channels
+				auto pchan = dynamic_cast<PowerSupplyChannel*>(psu->GetChannel(i));
+				if(!pchan)
+					continue;
+
+				psustate->m_channelVoltage[i] = pchan->GetVoltageMeasured();
+				psustate->m_channelCurrent[i] = pchan->GetCurrentMeasured();
+				psustate->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
+				psustate->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
+
+				session->MarkChannelDirty(pchan);
+			}
+			psustate->m_firstUpdateDone = true;
+		}
 		if(load)
 		{
 			for(size_t i=0; i<load->GetChannelCount(); i++)

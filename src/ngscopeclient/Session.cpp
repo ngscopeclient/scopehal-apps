@@ -2682,9 +2682,12 @@ void Session::AddOscilloscope(shared_ptr<Oscilloscope> scope, bool createViews)
 	m_modifiedSinceLastSave = true;
 	m_oscilloscopes.push_back(scope);
 
-	m_threads.push_back(make_unique<thread>(ScopeThread, ScopeThreadArgs(scope, &m_shuttingDown)));
-
-	m_mainWindow->AddToRecentInstrumentList(dynamic_pointer_cast<SCPIOscilloscope>(scope));
+	auto sscope = dynamic_pointer_cast<SCPIOscilloscope>(scope);
+	if(sscope)
+	{
+		m_threads.push_back(make_unique<thread>(InstrumentThread, InstrumentThreadArgs(sscope, &m_shuttingDown, this)));
+		m_mainWindow->AddToRecentInstrumentList(sscope);
+	}
 	m_mainWindow->OnScopeAdded(scope, createViews);
 
 	//Make a new trigger group (if the scope is online)

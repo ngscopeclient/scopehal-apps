@@ -74,46 +74,10 @@ public:
 	std::shared_ptr<LoadState> loadstate;
 	std::shared_ptr<MultimeterState> meterstate;
 	std::shared_ptr<BERTState> bertstate;
-};
-
-class PowerSupplyThreadArgs
-{
-public:
-	PowerSupplyThreadArgs(
-		std::shared_ptr<SCPIPowerSupply> p,
-		std::atomic<bool>* s,
-		std::shared_ptr<PowerSupplyState> st,
-		Session* sess)
-	: psu(p)
-	, shuttingDown(s)
-	, state(st)
-	, session(sess)
-	{}
-
-	std::shared_ptr<SCPIPowerSupply> psu;
-	std::atomic<bool>* shuttingDown;
-	std::shared_ptr<PowerSupplyState> state;
-	Session* session;
-};
-
-class Session;
-
-class ScopeThreadArgs
-{
-public:
-	ScopeThreadArgs(std::shared_ptr<Oscilloscope> b, std::atomic<bool>* s)
-	: scope(b)
-	, shuttingDown(s)
-	{}
-
-	std::shared_ptr<Oscilloscope> scope;
-	std::atomic<bool>* shuttingDown;
+	std::shared_ptr<PowerSupplyState> psustate;
 };
 
 void InstrumentThread(InstrumentThreadArgs args);
-
-void ScopeThread(ScopeThreadArgs args);
-void PowerSupplyThread(PowerSupplyThreadArgs args);
 void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
 
 void RightJustifiedText(const std::string& str);

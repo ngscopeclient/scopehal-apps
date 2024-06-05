@@ -91,7 +91,6 @@ add_executable(ngscopeclient
 	PacketManager.cpp
 	PersistenceSettingsDialog.cpp
 	PowerSupplyDialog.cpp
-	PowerSupplyThread.cpp
 	Preference.cpp
 	PreferenceDialog.cpp
 	PreferenceManager.cpp
@@ -100,7 +99,6 @@ add_executable(ngscopeclient
 	ProtocolAnalyzerDialog.cpp
 	RFGeneratorDialog.cpp
 	ScopeDeskewWizard.cpp
-	ScopeThread.cpp
 	SCPIConsoleDialog.cpp
 	Session.cpp
 	TextureManager.cpp

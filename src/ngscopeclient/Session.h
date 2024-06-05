@@ -159,8 +159,9 @@ public:
 		, m_shuttingDown(false)
 		, m_state(state)
 	{
-		PowerSupplyThreadArgs args(psu, &m_shuttingDown, state, session);
-		m_thread = std::make_unique<std::thread>(PowerSupplyThread, args);
+		InstrumentThreadArgs args(psu, &m_shuttingDown, session);
+		args.psustate = state;
+		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
 	~PowerSupplyConnectionState()
