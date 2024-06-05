@@ -186,5 +186,9 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 		//TODO: does this make sense to do in the instrument thread?
 		session->RefreshDirtyFiltersNonblocking();
+
+		//Rate limit to 100 Hz to avoid saturating CPU with polls
+		//(this also provides a yield point for the gui thread to get mutex ownership etc)
+		this_thread::sleep_for(chrono::milliseconds(10));
 	}
 }

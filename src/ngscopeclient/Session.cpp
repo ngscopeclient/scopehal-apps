@@ -1502,7 +1502,7 @@ bool Session::PreLoadMultimeter(int version, const YAML::Node& node, bool online
 	//ApplyPreferences(meter);
 
 	//All good. Add to our list of meters etc
-	AddMultimeter(meter, false);
+	AddInstrument(meter, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)meter.get());
 
 	//Run the preload
@@ -1574,7 +1574,7 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 	//ApplyPreferences(psu);
 
 	//All good. Add to our list of scopes etc
-	AddPowerSupply(psu, false);
+	AddInstrument(psu, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu.get());
 
 	//Run the preload
@@ -2701,58 +2701,65 @@ void Session::AddOscilloscope(shared_ptr<Oscilloscope> scope, bool createViews)
 }
 
 /**
-	@brief Adds a power supply to the session
+	@brief Adds a new instrument to the session
  */
-void Session::AddPowerSupply(shared_ptr<SCPIPowerSupply> psu, bool createDialog)
+void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 {
 	m_modifiedSinceLastSave = true;
 
-	//Create shared PSU state
-	auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
-	m_psus[psu] = state;
+	auto si = dynamic_pointer_cast<SCPIInstrument>(inst);
+	InstrumentThreadArgs args(si, this);
 
-	//Run the thread
-	InstrumentThreadArgs args(psu, this);
-	args.psustate = state;
-	m_instrumentStates[psu] = make_shared<InstrumentConnectionState>(args);
+	//Create shared state, if needed
+	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	if(psu)
+	{
+		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
+		m_psus[psu] = state;
+		args.psustate = state;
+	}
+	if(meter)
+	{
+		auto state = make_shared<MultimeterState>();
+		m_meters[meter] = state;
+		args.meterstate = state;
+	}
 
-	//Add the dialog to view/control it
-	if(createDialog)
-		m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, state, this));
+	//Make the instrument thread
+	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
-	m_mainWindow->AddToRecentInstrumentList(psu);
+	//Spawn dialogs/views if requested
+	if(createDialogs)
+	{
+		if(psu)
+			m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, args.psustate, this));
+		if(meter)
+			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
+	}
+
+	m_mainWindow->AddToRecentInstrumentList(si);
 }
 
 /**
-	@brief Removes a power supply from the session
+	@brief Removes an instrument from the session
  */
-void Session::RemovePowerSupply(shared_ptr<SCPIPowerSupply> psu)
-{
-	m_modifiedSinceLastSave = true;
-	m_psus.erase(psu);
-}
-
-/**
-	@brief Adds a multimeter to the session
- */
-void Session::AddMultimeter(shared_ptr<SCPIMultimeter> meter, bool createDialog)
+void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 {
 	m_modifiedSinceLastSave = true;
 
-	//Create shared meter state
-	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = state;
+	//Remove instrument-specific state
+	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	if(psu)
+		m_psus.erase(psu);
+	if(meter)
+		m_meters.erase(meter);
 
-	//Run the thread
-	InstrumentThreadArgs args(meter, this);
-	args.meterstate = state;
-	m_instrumentStates[meter] = make_shared<InstrumentConnectionState>(args);
+	//TODO: find anything that might reference our channels and set those inputs to null
 
-	//Add the dialog to view/control it
-	if(createDialog)
-		m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(meter);
+	//Clear worker threads etc
+	m_instrumentStates.erase(inst);
 }
 
 /**
@@ -2763,15 +2770,6 @@ void Session::AddMultimeter(shared_ptr<SCPIMultimeter> meter, bool createDialog)
 void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
 	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
-}
-
-/**
-	@brief Removes a multimeter from the session
- */
-void Session::RemoveMultimeter(shared_ptr<SCPIMultimeter> meter)
-{
-	m_modifiedSinceLastSave = true;
-	m_meters.erase(meter);
 }
 
 /**

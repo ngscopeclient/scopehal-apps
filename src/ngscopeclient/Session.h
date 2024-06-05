@@ -132,21 +132,20 @@ public:
 	void RemoveFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> generator);
 	void AddLoad(std::shared_ptr<SCPILoad> load, bool createDialog = true);
 	void RemoveLoad(std::shared_ptr<SCPILoad> load);
-	void AddMultimeter(std::shared_ptr<SCPIMultimeter> meter, bool createDialog = true);
 	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
-	void RemoveMultimeter(std::shared_ptr<SCPIMultimeter> meter);
 	void AddOscilloscope(std::shared_ptr<Oscilloscope> scope, bool createViews = true);
 	void AddSpectrometer(std::shared_ptr<SCPISpectrometer> spec, bool createViews = true)
 	{ AddOscilloscope(spec, createViews); }
 	void AddVNA(std::shared_ptr<SCPIVNA> vna, bool createViews = true)
 	{ AddOscilloscope(vna, createViews); }
-	void AddPowerSupply(std::shared_ptr<SCPIPowerSupply> psu, bool createDialog = true);
-	void RemovePowerSupply(std::shared_ptr<SCPIPowerSupply> psu);
 	void AddSDR(std::shared_ptr<SCPISDR> sdr, bool createViews = true)
 	{ AddOscilloscope(sdr, createViews); }
 	void AddRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
 	void RemoveRFGenerator(std::shared_ptr<SCPIRFSignalGenerator> generator);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
+
+	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);
+	void RemoveInstrument(std::shared_ptr<Instrument> inst);
 
 	bool IsMultiScope()
 	{ return m_multiScope; }

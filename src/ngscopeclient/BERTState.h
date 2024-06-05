@@ -36,7 +36,7 @@
 #define BERTState_h
 
 /**
-	@brief Current status of a load
+	@brief Current status of a BERT
  */
 class BERTState
 {

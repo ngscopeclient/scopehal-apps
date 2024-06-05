@@ -94,6 +94,6 @@ bool AddPowerSupplyDialog::DoConnect()
 	LogDebug("FIXME: apply PreferenceManager settings to newly created PSU\n");
 
 	psu->m_nickname = m_nickname;
-	m_session.AddPowerSupply(psu);
+	m_session.AddInstrument(psu);
 	return true;
 }

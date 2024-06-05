@@ -94,6 +94,6 @@ bool AddMultimeterDialog::DoConnect()
 	LogDebug("FIXME: apply PreferenceManager settings to newly created meter\n");
 
 	meter->m_nickname = m_nickname;
-	m_session.AddMultimeter(meter);
+	m_session.AddInstrument(meter);
 	return true;
 }

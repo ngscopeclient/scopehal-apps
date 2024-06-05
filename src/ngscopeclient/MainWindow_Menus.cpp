@@ -644,7 +644,7 @@ void MainWindow::AddMultimeterMenu(vector<time_t>& timestamps, map<time_t, vecto
 								LogDebug("FIXME: apply PreferenceManager settings to newly created meter\n");
 
 								meter->m_nickname = nick;
-								m_session.AddMultimeter(meter);
+								m_session.AddInstrument(meter);
 							}
 						}
 					}
@@ -791,7 +791,7 @@ void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vect
 								LogDebug("FIXME: apply PreferenceManager settings to newly created PSU\n");
 
 								psu->m_nickname = nick;
-								m_session.AddPowerSupply(psu);
+								m_session.AddInstrument(psu);
 							}
 						}
 					}
@@ -1493,7 +1493,7 @@ void MainWindow::WindowMultimeterMenu()
 
 			//Add it to the menu
 			if(ImGui::MenuItem(scope->m_nickname.c_str()))
-				m_session.AddMultimeter(meter);
+				m_session.AddInstrument(meter);
 		}
 
 		ImGui::EndMenu();
