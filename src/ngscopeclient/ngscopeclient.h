@@ -60,9 +60,8 @@ class Session;
 class InstrumentThreadArgs
 {
 public:
-	InstrumentThreadArgs(std::shared_ptr<SCPIInstrument> p, std::atomic<bool>* s, Session* sess)
+	InstrumentThreadArgs(std::shared_ptr<SCPIInstrument> p, Session* sess)
 	: inst(p)
-	, shuttingDown(s)
 	, session(sess)
 	{}
 

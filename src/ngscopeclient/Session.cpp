@@ -124,13 +124,14 @@ void Session::ClearBackgroundThreads()
 	g_rerenderDoneEvent.Clear();
 	g_waveformProcessedEvent.Signal();
 
+	//Shut down instrument threads
+	for(auto it : m_instrumentStates)
+		it.second->Close();
+
 	//Block until our processing threads exit
-	for(auto& t : m_threads)
-		t->join();
 	if(m_waveformThread)
 		m_waveformThread->join();
 	m_waveformThread = nullptr;
-	m_threads.clear();
 
 	//Clear shutdown flag in case we're reusing the session object
 	m_shuttingDown = false;
@@ -197,14 +198,12 @@ void Session::Clear()
 	m_oscilloscopes.clear();
 	m_psus.clear();
 	m_loads.clear();
-	m_rfgenerators.clear();
-	m_misc.clear();
 	m_meters.clear();
 	m_berts.clear();
-	m_misc.clear();
 	m_generators.clear();
 	m_scopeDeskewCal.clear();
 	m_markers.clear();
+	m_instrumentStates.clear();
 
 	//Remove all trigger groups
 	m_triggerGroups.clear();
@@ -2685,7 +2684,8 @@ void Session::AddOscilloscope(shared_ptr<Oscilloscope> scope, bool createViews)
 	auto sscope = dynamic_pointer_cast<SCPIOscilloscope>(scope);
 	if(sscope)
 	{
-		m_threads.push_back(make_unique<thread>(InstrumentThread, InstrumentThreadArgs(sscope, &m_shuttingDown, this)));
+		InstrumentThreadArgs args(sscope, this);
+		m_instrumentStates[sscope] = make_shared<InstrumentConnectionState>(args);
 		m_mainWindow->AddToRecentInstrumentList(sscope);
 	}
 	m_mainWindow->OnScopeAdded(scope, createViews);
@@ -2709,7 +2709,12 @@ void Session::AddPowerSupply(shared_ptr<SCPIPowerSupply> psu, bool createDialog)
 
 	//Create shared PSU state
 	auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
-	m_psus[psu] = make_unique<PowerSupplyConnectionState>(psu, state, this);
+	m_psus[psu] = state;
+
+	//Run the thread
+	InstrumentThreadArgs args(psu, this);
+	args.psustate = state;
+	m_instrumentStates[psu] = make_shared<InstrumentConnectionState>(args);
 
 	//Add the dialog to view/control it
 	if(createDialog)
@@ -2736,7 +2741,12 @@ void Session::AddMultimeter(shared_ptr<SCPIMultimeter> meter, bool createDialog)
 
 	//Create shared meter state
 	auto state = make_shared<MultimeterState>();
-	m_meters[meter] = make_unique<MultimeterConnectionState>(meter, state, this);
+	m_meters[meter] = state;
+
+	//Run the thread
+	InstrumentThreadArgs args(meter, this);
+	args.meterstate = state;
+	m_instrumentStates[meter] = make_shared<InstrumentConnectionState>(args);
 
 	//Add the dialog to view/control it
 	if(createDialog)
@@ -2752,7 +2762,7 @@ void Session::AddMultimeter(shared_ptr<SCPIMultimeter> meter, bool createDialog)
  */
 void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 {
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter]->m_state, this));
+	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
 }
 
 /**
@@ -2785,7 +2795,10 @@ void Session::AddMiscInstrument(shared_ptr<SCPIMiscInstrument> inst)
 	m_modifiedSinceLastSave = true;
 
 	m_mainWindow->AddToRecentInstrumentList(inst);
-	m_misc[inst] = make_unique<MiscInstrumentConnectionState>(inst, this);
+
+	//Run the thread
+	InstrumentThreadArgs args(inst, this);
+	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
 	StartWaveformThreadIfNeeded();
 }
@@ -2816,7 +2829,12 @@ void Session::AddBERT(shared_ptr<SCPIBERT> bert, bool createDialog)
 
 	//Create shared BERT state
 	auto state = make_shared<BERTState>(bert->GetChannelCount());
-	m_berts[bert] = make_unique<BERTConnectionState>(bert, state, this);
+	m_berts[bert] = state;
+
+	//Run the thread
+	InstrumentThreadArgs args(bert, this);
+	args.bertstate = state;
+	m_instrumentStates[bert] = make_shared<InstrumentConnectionState>(args);
 
 	//Add the dialog to view/control it
 	if(createDialog)
@@ -2835,6 +2853,7 @@ void Session::RemoveBERT(shared_ptr<SCPIBERT> bert)
 	m_modifiedSinceLastSave = true;
 
 	m_berts.erase(bert);
+	m_instrumentStates.erase(bert);
 }
 
 /**
@@ -2846,7 +2865,12 @@ void Session::AddLoad(shared_ptr<SCPILoad> load, bool createDialog)
 
 	//Create shared load state
 	auto state = make_shared<LoadState>(load->GetChannelCount());
-	m_loads[load] = make_unique<LoadConnectionState>(load, state, this);
+	m_loads[load] = state;
+
+	//Run the thread
+	InstrumentThreadArgs args(load, this);
+	args.loadstate = state;
+	m_instrumentStates[load] = make_shared<InstrumentConnectionState>(args);
 
 	//Add the dialog to view/control it
 	if(createDialog)
@@ -2862,6 +2886,7 @@ void Session::RemoveLoad(shared_ptr<SCPILoad> load)
 {
 	m_modifiedSinceLastSave = true;
 	m_loads.erase(load);
+	m_instrumentStates.erase(load);
 }
 
 /**
@@ -2871,7 +2896,10 @@ void Session::AddRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
 
-	m_rfgenerators[generator] = make_unique<RFSignalGeneratorConnectionState>(generator, this);
+	//Run the thread
+	InstrumentThreadArgs args(generator, this);
+	m_instrumentStates[generator] = make_shared<InstrumentConnectionState>(args);
+
 	m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(generator, this));
 
 	m_mainWindow->AddToRecentInstrumentList(generator);
@@ -2893,7 +2921,7 @@ void Session::RemoveRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 		m_mainWindow->RemoveFunctionGenerator(func);
 	}
 
-	m_rfgenerators.erase(generator);
+	m_instrumentStates.erase(generator);
 }
 
 /**
@@ -2906,6 +2934,12 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 	lock_guard<mutex> lock(m_scopeMutex);
 
 	set<shared_ptr<SCPIInstrument>> insts;
+	for(auto& it : m_instrumentStates)
+	{
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
+		if(s != nullptr)
+			insts.emplace(s);
+	}
 	for(auto& scope : m_oscilloscopes)
 	{
 		auto s = dynamic_pointer_cast<SCPIInstrument>(scope);
@@ -2930,8 +2964,6 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 		if(s != nullptr)
 			insts.emplace(s);
 	}
-	for(auto& it : m_rfgenerators)
-		insts.emplace(it.first);
 	for(auto& it : m_berts)
 	{
 		auto b = dynamic_pointer_cast<SCPIBERT>(it.first);
@@ -2940,8 +2972,6 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 	}
 	for(auto& gen : m_generators)
 		insts.emplace(gen);
-	for(auto& it : m_misc)
-		insts.emplace(it.first);
 
 	return insts;
 }
@@ -2966,12 +2996,10 @@ set<shared_ptr<Instrument>> Session::GetInstruments()
 		insts.emplace(it.first);
 	for(auto& it : m_loads)
 		insts.emplace(it.first);
-	for(auto& it : m_rfgenerators)
+	for(auto& it : m_instrumentStates)
 		insts.emplace(it.first);
 	for(auto& gen : m_generators)
 		insts.emplace(gen);
-	for(auto& it : m_misc)
-		insts.emplace(it.first);
 
 	return insts;
 }

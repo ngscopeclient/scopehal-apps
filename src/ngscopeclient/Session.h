@@ -50,213 +50,35 @@ extern std::atomic<int64_t> g_lastWaveformRenderTime;
 
 class Session;
 
-/**
-	@brief Internal state for a connection to a BERT
- */
-class BERTConnectionState
+class InstrumentConnectionState
 {
 public:
-	BERTConnectionState(std::shared_ptr<SCPIBERT> bert, std::shared_ptr<BERTState> state, Session* session)
-		: m_bert(bert)
-		, m_shuttingDown(false)
-		, m_state(state)
+	InstrumentConnectionState(InstrumentThreadArgs args)
 	{
-		InstrumentThreadArgs args(bert, &m_shuttingDown, session);
-		args.bertstate = state;
+		m_shuttingDown = false;
+		args.shuttingDown = &m_shuttingDown;
 		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 	}
 
-	~BERTConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
+	~InstrumentConnectionState()
+	{ Close(); }
 
-	///@brief The BERT
-	std::shared_ptr<SCPIBERT> m_bert;
+	void Close()
+	{
+		if(m_thread)
+		{
+			//Terminate the thread
+			m_shuttingDown = true;
+			m_thread->join();
+		}
+		m_thread = nullptr;
+	}
 
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
 
-	///@brief Thread for polling the BERT
+	///@brief Thread for polling the instrument
 	std::unique_ptr<std::thread> m_thread;
-
-	//Our internal state
-	std::shared_ptr<BERTState> m_state;
-};
-
-/**
-	@brief Internal state for a connection to a MiscInstrument
- */
-class MiscInstrumentConnectionState
-{
-public:
-	MiscInstrumentConnectionState(std::shared_ptr<SCPIMiscInstrument> inst, Session* session)
-		: m_inst(inst)
-		, m_shuttingDown(false)
-	{
-		InstrumentThreadArgs args(inst, &m_shuttingDown, session);
-		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-	}
-
-	~MiscInstrumentConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
-
-	///@brief The MiscInstrument
-	std::shared_ptr<SCPIMiscInstrument> m_inst;
-
-	///@brief Termination flag for shutting down the polling thread
-	std::atomic<bool> m_shuttingDown;
-
-	///@brief Thread for polling the MiscInstrument
-	std::unique_ptr<std::thread> m_thread;
-};
-
-/**
-	@brief Internal state for a connection to an RF signal generator
- */
-class RFSignalGeneratorConnectionState
-{
-public:
-	RFSignalGeneratorConnectionState(std::shared_ptr<SCPIRFSignalGenerator> gen, Session* session)
-		: m_gen(gen)
-		, m_shuttingDown(false)
-	{
-		InstrumentThreadArgs args(gen, &m_shuttingDown, session);
-		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-	}
-
-	~RFSignalGeneratorConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
-
-	///@brief The signal generator
-	std::shared_ptr<SCPIRFSignalGenerator> m_gen;
-
-	///@brief Termination flag for shutting down the polling thread
-	std::atomic<bool> m_shuttingDown;
-
-	///@brief Thread for polling the generator
-	std::unique_ptr<std::thread> m_thread;
-};
-
-/**
-	@brief Internal state for a connection to a PSU
- */
-class PowerSupplyConnectionState
-{
-public:
-	PowerSupplyConnectionState(std::shared_ptr<SCPIPowerSupply> psu, std::shared_ptr<PowerSupplyState> state, Session* session)
-		: m_psu(psu)
-		, m_shuttingDown(false)
-		, m_state(state)
-	{
-		InstrumentThreadArgs args(psu, &m_shuttingDown, session);
-		args.psustate = state;
-		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-	}
-
-	~PowerSupplyConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
-
-	///@brief The power supply
-	std::shared_ptr<SCPIPowerSupply> m_psu;
-
-	///@brief Termination flag for shutting down the polling thread
-	std::atomic<bool> m_shuttingDown;
-
-	///@brief Thread for polling the PSU
-	std::unique_ptr<std::thread> m_thread;
-
-	///@brief State object
-	std::shared_ptr<PowerSupplyState> m_state;
-};
-
-/**
-	@brief Internal state for a connection to a multimeter
- */
-class MultimeterConnectionState
-{
-public:
-	MultimeterConnectionState(
-		std::shared_ptr<SCPIMultimeter> meter,
-		std::shared_ptr<MultimeterState> state,
-		Session* session)
-		: m_meter(meter)
-		, m_shuttingDown(false)
-		, m_state(state)
-	{
-		InstrumentThreadArgs args(meter, &m_shuttingDown, session);
-		args.meterstate = state;
-		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-	}
-
-	~MultimeterConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
-
-	///@brief The meter
-	std::shared_ptr<SCPIMultimeter> m_meter;
-
-	///@brief Termination flag for shutting down the polling thread
-	std::atomic<bool> m_shuttingDown;
-
-	///@brief Thread for polling the meter
-	std::unique_ptr<std::thread> m_thread;
-
-	///@brief State object
-	std::shared_ptr<MultimeterState> m_state;
-};
-
-/**
-	@brief Internal state for a connection to a load
- */
-class LoadConnectionState
-{
-public:
-	LoadConnectionState(std::shared_ptr<SCPILoad> load, std::shared_ptr<LoadState> state, Session* session)
-		: m_load(load)
-		, m_shuttingDown(false)
-		, m_state(state)
-	{
-		InstrumentThreadArgs args(load, &m_shuttingDown, session);
-		args.loadstate = state;
-		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
-	}
-
-	~LoadConnectionState()
-	{
-		//Terminate the thread
-		m_shuttingDown = true;
-		m_thread->join();
-	}
-
-	///@brief The load
-	std::shared_ptr<SCPILoad> m_load;
-
-	///@brief Termination flag for shutting down the polling thread
-	std::atomic<bool> m_shuttingDown;
-
-	///@brief Thread for polling the load
-	std::unique_ptr<std::thread> m_thread;
-
-	//State object
-	std::shared_ptr<LoadState> m_state;
 };
 
 /**
@@ -335,7 +157,7 @@ public:
 	std::shared_ptr<BERTState> GetBERTState(std::shared_ptr<BERT> bert)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		return m_berts[bert]->m_state;
+		return m_berts[bert];
 	}
 
 	/**
@@ -344,7 +166,7 @@ public:
 	std::shared_ptr<PowerSupplyState> GetPSUState(std::shared_ptr<SCPIPowerSupply> psu)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		return m_psus[psu]->m_state;
+		return m_psus[psu];
 	}
 
 	/**
@@ -494,7 +316,7 @@ public:
 	{
 		auto it = m_loads.find(load);
 		if(it != m_loads.end())
-			return it->second->m_state;
+			return it->second;
 		else
 			return nullptr;
 	}
@@ -569,25 +391,19 @@ protected:
 	std::vector<std::shared_ptr<Oscilloscope>> m_oscilloscopes;
 
 	///@brief Power supplies we are currently connected to
-	std::map<std::shared_ptr<PowerSupply>, std::unique_ptr<PowerSupplyConnectionState> > m_psus;
+	std::map<std::shared_ptr<PowerSupply>, std::shared_ptr<PowerSupplyState> > m_psus;
 
 	///@brief Multimeters we are currently connected to
-	std::map<std::shared_ptr<Multimeter>, std::unique_ptr<MultimeterConnectionState> > m_meters;
+	std::map<std::shared_ptr<Multimeter>, std::shared_ptr<MultimeterState> > m_meters;
 
 	///@brief Loads we are currently connected to
-	std::map<std::shared_ptr<Load>, std::unique_ptr<LoadConnectionState> > m_loads;
-
-	///@brief RF generators we are currently connected to
-	std::map<std::shared_ptr<SCPIRFSignalGenerator>, std::unique_ptr<RFSignalGeneratorConnectionState> > m_rfgenerators;
+	std::map<std::shared_ptr<Load>, std::shared_ptr<LoadState> > m_loads;
 
 	///@brief BERTs we are currently connected to
-	std::map<std::shared_ptr<BERT>, std::unique_ptr<BERTConnectionState> > m_berts;
+	std::map<std::shared_ptr<BERT>, std::shared_ptr<BERTState> > m_berts;
 
 	///@brief Function generators we are currently connected to
 	std::vector<std::shared_ptr<SCPIFunctionGenerator> > m_generators;
-
-	///@brief Miscellaneous instruments we are currently connected to
-	std::map<std::shared_ptr<SCPIMiscInstrument>, std::unique_ptr<MiscInstrumentConnectionState> > m_misc;
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;
@@ -598,8 +414,8 @@ protected:
 	///@brief Mutex controlling access to m_triggerGroups
 	std::recursive_mutex m_triggerGroupMutex;
 
-	///@brief Processing threads for polling and processing scope waveforms
-	std::vector< std::unique_ptr<std::thread> > m_threads;
+	///@brief Worker threads and other bookkeeping metadata for instruments
+	std::map<std::shared_ptr<Instrument>, std::shared_ptr<InstrumentConnectionState> > m_instrumentStates;
 
 	///@brief Processing thread for waveform data
 	std::unique_ptr<std::thread> m_waveformThread;
