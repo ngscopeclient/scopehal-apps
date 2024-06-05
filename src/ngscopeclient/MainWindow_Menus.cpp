@@ -426,7 +426,7 @@ void MainWindow::AddLoadMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 								LogDebug("FIXME: apply PreferenceManager settings to newly created load\n");
 
 								load->m_nickname = nick;
-								m_session.AddLoad(load);
+								m_session.AddInstrument(load);
 							}
 						}
 					}
@@ -499,7 +499,7 @@ void MainWindow::AddGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector
 								LogDebug("FIXME: apply PreferenceManager settings to newly created generator\n");
 
 								gen->m_nickname = nick;
-								m_session.AddFunctionGenerator(gen);
+								m_session.AddInstrument(gen);
 							}
 						}
 					}
@@ -1435,7 +1435,7 @@ void MainWindow::WindowGeneratorMenu()
 
 			//Add it to the menu
 			if(ImGui::MenuItem(generator->m_nickname.c_str()))
-				m_session.AddFunctionGenerator(generator);
+				m_session.AddInstrument(generator);
 		}
 
 		ImGui::EndMenu();

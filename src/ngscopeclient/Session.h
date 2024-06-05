@@ -128,10 +128,6 @@ public:
 	void AddBERT(std::shared_ptr<SCPIBERT> bert, bool createDialog = true);
 	void RemoveBERT(std::shared_ptr<SCPIBERT> bert);
 	void AddMiscInstrument(std::shared_ptr<SCPIMiscInstrument> inst);
-	void AddFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> generator);
-	void RemoveFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> generator);
-	void AddLoad(std::shared_ptr<SCPILoad> load, bool createDialog = true);
-	void RemoveLoad(std::shared_ptr<SCPILoad> load);
 	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
 	void AddOscilloscope(std::shared_ptr<Oscilloscope> scope, bool createViews = true);
 	void AddSpectrometer(std::shared_ptr<SCPISpectrometer> spec, bool createViews = true)
@@ -400,9 +396,6 @@ protected:
 
 	///@brief BERTs we are currently connected to
 	std::map<std::shared_ptr<BERT>, std::shared_ptr<BERTState> > m_berts;
-
-	///@brief Function generators we are currently connected to
-	std::vector<std::shared_ptr<SCPIFunctionGenerator> > m_generators;
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;

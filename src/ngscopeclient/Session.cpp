@@ -200,7 +200,6 @@ void Session::Clear()
 	m_loads.clear();
 	m_meters.clear();
 	m_berts.clear();
-	m_generators.clear();
 	m_scopeDeskewCal.clear();
 	m_markers.clear();
 	m_instrumentStates.clear();
@@ -1142,7 +1141,7 @@ bool Session::PreLoadLoad(int version, const YAML::Node& node, bool online)
 	//ApplyPreferences(load);
 
 	//All good. Add to our list of loads etc
-	AddLoad(load, false);
+	AddInstrument(load, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)load.get());
 
 	//Run the preload
@@ -1718,7 +1717,7 @@ bool Session::PreLoadFunctionGenerator(int version, const YAML::Node& node, bool
 	//ApplyPreferences(gen);
 
 	//All good. Add to our list of generators etc
-	AddFunctionGenerator(gen);
+	AddInstrument(gen);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)gen.get());
 
 	//Run the preload
@@ -2713,6 +2712,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	//Create shared state, if needed
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
+	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	if(psu)
 	{
 		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
@@ -2725,6 +2726,12 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		m_meters[meter] = state;
 		args.meterstate = state;
 	}
+	if(load)
+	{
+		auto state = make_shared<LoadState>(load->GetChannelCount());
+		m_loads[load] = state;
+		args.loadstate = state;
+	}
 
 	//Make the instrument thread
 	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
@@ -2736,6 +2743,10 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 			m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, args.psustate, this));
 		if(meter)
 			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
+		if(generator)
+			m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
+		if(load)
+			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
 	}
 
 	m_mainWindow->AddToRecentInstrumentList(si);
@@ -2751,10 +2762,13 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 	//Remove instrument-specific state
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	if(psu)
 		m_psus.erase(psu);
 	if(meter)
 		m_meters.erase(meter);
+	if(load)
+		m_loads.erase(load);
 
 	//TODO: find anything that might reference our channels and set those inputs to null
 
@@ -2773,19 +2787,6 @@ void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
 }
 
 /**
-	@brief Adds a function generator to the session
- */
-void Session::AddFunctionGenerator(shared_ptr<SCPIFunctionGenerator> generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	m_generators.push_back(generator);
-	m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
-
-	m_mainWindow->AddToRecentInstrumentList(generator);
-}
-
-/**
 	@brief Adds a miscellaneous instrument
  */
 void Session::AddMiscInstrument(shared_ptr<SCPIMiscInstrument> inst)
@@ -2799,23 +2800,6 @@ void Session::AddMiscInstrument(shared_ptr<SCPIMiscInstrument> inst)
 	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
 	StartWaveformThreadIfNeeded();
-}
-
-/**
-	@brief Removes a function generator from the session
- */
-void Session::RemoveFunctionGenerator(shared_ptr<SCPIFunctionGenerator> generator)
-{
-	m_modifiedSinceLastSave = true;
-
-	for(size_t i=0; i<m_generators.size(); i++)
-	{
-		if(m_generators[i] == generator)
-		{
-			m_generators.erase(m_generators.begin() + i);
-			break;
-		}
-	}
 }
 
 /**
@@ -2855,39 +2839,6 @@ void Session::RemoveBERT(shared_ptr<SCPIBERT> bert)
 }
 
 /**
-	@brief Adds a load to the session
- */
-void Session::AddLoad(shared_ptr<SCPILoad> load, bool createDialog)
-{
-	m_modifiedSinceLastSave = true;
-
-	//Create shared load state
-	auto state = make_shared<LoadState>(load->GetChannelCount());
-	m_loads[load] = state;
-
-	//Run the thread
-	InstrumentThreadArgs args(load, this);
-	args.loadstate = state;
-	m_instrumentStates[load] = make_shared<InstrumentConnectionState>(args);
-
-	//Add the dialog to view/control it
-	if(createDialog)
-		m_mainWindow->AddDialog(make_shared<LoadDialog>(load, state, this));
-
-	m_mainWindow->AddToRecentInstrumentList(load);
-}
-
-/**
-	@brief Removes a load from the session
- */
-void Session::RemoveLoad(shared_ptr<SCPILoad> load)
-{
-	m_modifiedSinceLastSave = true;
-	m_loads.erase(load);
-	m_instrumentStates.erase(load);
-}
-
-/**
 	@brief Adds an RF signal generator to the session
  */
 void Session::AddRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
@@ -2909,16 +2860,6 @@ void Session::AddRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 void Session::RemoveRFGenerator(shared_ptr<SCPIRFSignalGenerator> generator)
 {
 	m_modifiedSinceLastSave = true;
-
-	//If the generator is also a function generator, delete that too
-	//FIXME: This is not the best UX. Would be best to ref count and delete when both are closed
-	auto func = dynamic_pointer_cast<SCPIFunctionGenerator>(generator);
-	if(func != nullptr)
-	{
-		RemoveFunctionGenerator(func);
-		m_mainWindow->RemoveFunctionGenerator(func);
-	}
-
 	m_instrumentStates.erase(generator);
 }
 
@@ -2968,8 +2909,6 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 		if(b != nullptr)
 			insts.emplace(b);
 	}
-	for(auto& gen : m_generators)
-		insts.emplace(gen);
 
 	return insts;
 }
@@ -2996,8 +2935,6 @@ set<shared_ptr<Instrument>> Session::GetInstruments()
 		insts.emplace(it.first);
 	for(auto& it : m_instrumentStates)
 		insts.emplace(it.first);
-	for(auto& gen : m_generators)
-		insts.emplace(gen);
 
 	return insts;
 }

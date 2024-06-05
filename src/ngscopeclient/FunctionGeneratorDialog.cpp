@@ -112,7 +112,6 @@ FunctionGeneratorDialog::FunctionGeneratorDialog(shared_ptr<SCPIFunctionGenerato
 
 FunctionGeneratorDialog::~FunctionGeneratorDialog()
 {
-	m_session->RemoveFunctionGenerator(m_generator);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
