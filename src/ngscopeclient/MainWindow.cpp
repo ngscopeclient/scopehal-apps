@@ -403,11 +403,32 @@ void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 			LogTrace("%zu streams were active when we connected\n", streams.size());
 
 			//No streams? Grab the first one.
-			//TODO: can we always assume that the first channel is an oscilloscope channel?
 			if(streams.empty())
 			{
-				LogTrace("Enabling first channel\n");
-				streams.push_back(StreamDescriptor(scope->GetOscilloscopeChannel(0), 0));
+				LogTrace("Enabling first available scope channel\n");
+
+				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					auto chan = scope->GetOscilloscopeChannel(i);
+					if(!chan)
+						continue;
+
+					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					{
+						StreamDescriptor s(chan, j);
+						auto stype = s.GetType();
+						if(stype == Stream::STREAM_TYPE_ANALOG_SCALAR)
+							continue;
+						if(s.GetFlags() & Stream::STREAM_INFREQUENTLY_USED)
+							continue;
+
+						streams.push_back(s);
+						break;
+					}
+
+					if(!streams.empty())
+						break;
+				}
 			}
 		}
 

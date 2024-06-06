@@ -89,6 +89,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 			}
 
 			//Grab data if it's ready
+			//TODO: how is this going to play with reading realtime BER from BERT+scope deviecs?
 			else
 			{
 				auto stat = scope->PollTrigger();
