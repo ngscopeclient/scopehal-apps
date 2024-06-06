@@ -2691,31 +2691,32 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
 	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
-	if(psu)
+	auto types = inst->GetInstrumentTypes();
+	if(psu && (types & Instrument::INST_PSU) )
 	{
 		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
 		m_psus[psu] = state;
 		args.psustate = state;
 	}
-	if(meter)
+	if(meter && (types & Instrument::INST_DMM) )
 	{
 		auto state = make_shared<MultimeterState>();
 		m_meters[meter] = state;
 		args.meterstate = state;
 	}
-	if(load)
+	if(load && (types & Instrument::INST_LOAD) )
 	{
 		auto state = make_shared<LoadState>(load->GetChannelCount());
 		m_loads[load] = state;
 		args.loadstate = state;
 	}
-	if(bert)
+	if(bert && (types & Instrument::INST_BERT) )
 	{
 		auto state = make_shared<BERTState>(bert->GetChannelCount());
 		m_berts[bert] = state;
 		args.bertstate = state;
 	}
-	if(scope)
+	if(scope && (types & Instrument::INST_OSCILLOSCOPE))
 	{
 		m_oscilloscopes.push_back(scope);
 		if(m_oscilloscopes.size() > 1)
@@ -2728,17 +2729,17 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	//Spawn dialogs/views if requested
 	if(createDialogs)
 	{
-		if(psu)
+		if(psu && (types & Instrument::INST_PSU) )
 			m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, args.psustate, this));
-		if(meter)
+		if(meter && (types & Instrument::INST_DMM) )
 			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
-		if(generator)
+		if(generator && (types & Instrument::INST_FUNCTION) )
 			m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
-		if(load)
+		if(load && (types & Instrument::INST_LOAD) )
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
-		if(bert)
+		if(bert && (types & Instrument::INST_BERT) )
 			m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, args.bertstate, this));
-		if(rfgen)
+		if(rfgen && (types & Instrument::INST_RF_GEN) )
 			m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(rfgen, this));
 	}
 	if(scope)
