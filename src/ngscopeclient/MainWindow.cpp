@@ -414,9 +414,29 @@ void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 		//Add waveform areas for the streams
 		for(auto s : streams)
 		{
-			auto group = GetBestGroupForWaveform(s);
-			auto area = make_shared<WaveformArea>(s, group, this);
-			group->AddArea(area);
+			//Skip scalar streams as those don't make sense to put in a plot
+			auto stype = s.GetType();
+			if(stype == Stream::STREAM_TYPE_ANALOG_SCALAR)
+				continue;
+
+			//Skip infrequently used streams
+			if(s.GetFlags() & Stream::STREAM_INFREQUENTLY_USED)
+				continue;
+
+			//If this is a digital stream, add to existing digital waveform areas if one can be found
+			if(stype == Stream::STREAM_TYPE_DIGITAL)
+			{
+				FindAreaForStream(nullptr, s);
+				continue;
+			}
+
+			//Analog streams get their own area by default
+			else
+			{
+				auto group = GetBestGroupForWaveform(s);
+				auto area = make_shared<WaveformArea>(s, group, this);
+				group->AddArea(area);
+			}
 		}
 	}
 
