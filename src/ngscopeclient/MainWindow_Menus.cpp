@@ -717,7 +717,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 							{
 								m_session.ApplyPreferences(scope);
 								scope->m_nickname = nick;
-								m_session.AddOscilloscope(scope);
+								m_session.AddInstrument(scope);
 							}
 						}
 					}
@@ -937,7 +937,7 @@ void MainWindow::AddSDRMenu(vector<time_t>& timestamps, map<time_t, vector<strin
 								LogDebug("FIXME: apply PreferenceManager settings to newly created SDR\n");
 
 								sdr->m_nickname = nick;
-								m_session.AddSDR(sdr);
+								m_session.AddInstrument(sdr);
 							}
 						}
 					}
@@ -1010,7 +1010,7 @@ void MainWindow::AddSpectrometerMenu(vector<time_t>& timestamps, map<time_t, vec
 								LogDebug("FIXME: apply PreferenceManager settings to newly created spectrometer\n");
 
 								spec->m_nickname = nick;
-								m_session.AddSpectrometer(spec);
+								m_session.AddInstrument(spec);
 							}
 						}
 					}
@@ -1083,7 +1083,7 @@ void MainWindow::AddVNAMenu(vector<time_t>& timestamps, map<time_t, vector<strin
 								LogDebug("FIXME: apply PreferenceManager settings to newly created VNA\n");
 
 								vna->m_nickname = nick;
-								m_session.AddVNA(vna);
+								m_session.AddInstrument(vna);
 							}
 						}
 					}

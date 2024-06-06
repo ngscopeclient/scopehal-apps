@@ -1065,7 +1065,7 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	ApplyPreferences(scope);
 
 	//All good. Add to our list of scopes etc
-	AddOscilloscope(scope, false);
+	AddInstrument(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
 
 	//Load trigger deskew
@@ -1357,7 +1357,7 @@ bool Session::PreLoadSDR(int version, const YAML::Node& node, bool online)
 	//ApplyPreferences(sdr);
 
 	//All good. Add to our list of specs etc
-	AddSDR(sdr, false);
+	AddInstrument(sdr, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)sdr.get());
 
 	//Run the preload
@@ -1429,7 +1429,7 @@ bool Session::PreLoadSpectrometer(int version, const YAML::Node& node, bool onli
 	//ApplyPreferences(spec);
 
 	//All good. Add to our list of specs etc
-	AddSpectrometer(spec, false);
+	AddInstrument(spec, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)spec.get());
 
 	//Run the preload
@@ -2668,43 +2668,17 @@ void Session::StartWaveformThreadIfNeeded()
 }
 
 /**
-	@brief Adds an oscilloscope to the session
-
-	@param scope		The scope to add
-	@param createViews	True if we should add waveform areas for each enabled channel
- */
-void Session::AddOscilloscope(shared_ptr<Oscilloscope> scope, bool createViews)
-{
-	lock_guard<mutex> lock(m_scopeMutex);
-
-	m_modifiedSinceLastSave = true;
-	m_oscilloscopes.push_back(scope);
-
-	auto sscope = dynamic_pointer_cast<SCPIOscilloscope>(scope);
-	if(sscope)
-	{
-		InstrumentThreadArgs args(sscope, this);
-		m_instrumentStates[sscope] = make_shared<InstrumentConnectionState>(args);
-		m_mainWindow->AddToRecentInstrumentList(sscope);
-	}
-	m_mainWindow->OnScopeAdded(scope, createViews);
-
-	//Make a new trigger group (if the scope is online)
-	if(!scope->IsOffline())
-		MakeNewTriggerGroup(scope);
-
-	StartWaveformThreadIfNeeded();
-
-	if(m_oscilloscopes.size() > 1)
-		m_multiScope = true;
-}
-
-/**
 	@brief Adds a new instrument to the session
+
+	@param inst				The instment to add
+	@param createDialogs	True if we should add waveform areas for each enabled channel
+							and/or dialogs if applicable
  */
 void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 {
 	m_modifiedSinceLastSave = true;
+
+	lock_guard<mutex> lock(m_scopeMutex);
 
 	auto si = dynamic_pointer_cast<SCPIInstrument>(inst);
 	InstrumentThreadArgs args(si, this);
@@ -2716,6 +2690,7 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
+	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 	if(psu)
 	{
 		auto state = make_shared<PowerSupplyState>(psu->GetChannelCount());
@@ -2740,6 +2715,12 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		m_berts[bert] = state;
 		args.bertstate = state;
 	}
+	if(scope)
+	{
+		m_oscilloscopes.push_back(scope);
+		if(m_oscilloscopes.size() > 1)
+			m_multiScope = true;
+	}
 
 	//Make the instrument thread
 	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
@@ -2759,6 +2740,12 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 			m_mainWindow->AddDialog(make_shared<BERTDialog>(bert, args.bertstate, this));
 		if(rfgen)
 			m_mainWindow->AddDialog(make_shared<RFGeneratorDialog>(rfgen, this));
+	}
+	if(scope)
+	{
+		m_mainWindow->OnScopeAdded(scope, createDialogs);
+		if(!scope->IsOffline())
+			MakeNewTriggerGroup(scope);
 	}
 
 	m_mainWindow->AddToRecentInstrumentList(si);

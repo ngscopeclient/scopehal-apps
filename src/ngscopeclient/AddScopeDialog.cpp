@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -93,7 +93,7 @@ bool AddScopeDialog::DoConnect()
 	m_session.ApplyPreferences(scope);
 
 	scope->m_nickname = m_nickname;
-	m_session.AddOscilloscope(scope);
+	m_session.AddInstrument(scope);
 
 	return true;
 }

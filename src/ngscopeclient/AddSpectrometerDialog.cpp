@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -94,6 +94,6 @@ bool AddSpectrometerDialog::DoConnect()
 	LogDebug("FIXME: apply PreferenceManager settings to newly created spectrometer\n");
 
 	spec->m_nickname = m_nickname;
-	m_session.AddSpectrometer(spec);
+	m_session.AddInstrument(spec);
 	return true;
 }
