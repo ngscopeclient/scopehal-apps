@@ -1750,18 +1750,16 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		shared_ptr<TriggerGroup> group;
 		if(pri)
 		{
-			auto scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
-				m_idtable[pri.as<int64_t>()]));
-			auto sscope = scope->shared_from_this();
+			auto inst = reinterpret_cast<Instrument*>(m_idtable[pri.as<int64_t>()]);
+			auto sscope = dynamic_pointer_cast<Oscilloscope>(inst->shared_from_this());
 			group = make_shared<TriggerGroup>(sscope, this);
 
 			//Add secondaries
 			auto snode = gnode["secondaries"];
 			for(auto jt : snode)
 			{
-				scope = dynamic_cast<Oscilloscope*>(reinterpret_cast<Instrument*>(
-					m_idtable[jt.second.as<int64_t>()]));
-				sscope = scope->shared_from_this();
+				inst = reinterpret_cast<Instrument*>(m_idtable[jt.second.as<int64_t>()]);
+				sscope = dynamic_pointer_cast<Oscilloscope>(inst->shared_from_this());
 				group->m_secondaries.push_back(sscope);
 			}
 		}
@@ -2724,7 +2722,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	}
 
 	//Make the instrument thread
-	m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
+	if(si)
+		m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
 	//Spawn dialogs/views if requested
 	if(createDialogs)

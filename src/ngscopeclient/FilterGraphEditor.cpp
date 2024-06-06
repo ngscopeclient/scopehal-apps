@@ -2322,7 +2322,7 @@ void FilterGraphEditor::HandleNodeProperties()
 			{
 				if(trig)
 				{
-					auto strig = trig->GetScope()->shared_from_this();
+					auto strig = dynamic_pointer_cast<SCPIOscilloscope>(trig->GetScope()->shared_from_this());
 					m_propertiesDialogs[id] = make_shared<EmbeddedTriggerPropertiesDialog>(strig);
 				}
 				else if(f)

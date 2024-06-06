@@ -44,6 +44,12 @@ void InstrumentThread(InstrumentThreadArgs args)
 	pthread_setname_np_compat("InstrumentThread");
 
 	auto inst = args.inst;
+	if(!inst)
+	{
+		LogError("InstrumentThread called with null instrument (bug)\n");
+		return;
+	}
+
 	auto session = args.session;
 
 	//Extract type-specified fields

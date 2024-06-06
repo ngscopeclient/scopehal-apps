@@ -2432,7 +2432,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
 			if(meter)
 			{
-				auto smeter = meter->shared_from_this();
+				auto smeter = dynamic_pointer_cast<SCPIMultimeter>(meter->shared_from_this());
 				m_session.AddMultimeterDialog(smeter);
 			}
 			else
@@ -2453,7 +2453,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			if(gen)
 			{
-				auto sgen = gen->shared_from_this();
+				auto sgen = dynamic_pointer_cast<SCPIFunctionGenerator>(gen->shared_from_this());
 				AddDialog(make_shared<FunctionGeneratorDialog>(sgen, &m_session));
 			}
 			else
@@ -2474,7 +2474,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			if(psu)
 			{
-				auto spsu = psu->shared_from_this();
+				auto spsu = dynamic_pointer_cast<SCPIPowerSupply>(psu->shared_from_this());
 				AddDialog(make_shared<PowerSupplyDialog>(spsu, m_session.GetPSUState(spsu), &m_session));
 			}
 			else
@@ -2495,7 +2495,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			if(bert)
 			{
-				auto sbert = bert->shared_from_this();
+				auto sbert = dynamic_pointer_cast<SCPIBERT>(bert->shared_from_this());
 				AddDialog(make_shared<BERTDialog>(sbert, m_session.GetBERTState(sbert), &m_session));
 			}
 			else
@@ -2516,7 +2516,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			if(load)
 			{
-				auto sload = load->shared_from_this();
+				auto sload = dynamic_pointer_cast<SCPILoad>(load->shared_from_this());
 				AddDialog(make_shared<LoadDialog>(sload, m_session.GetLoadState(sload), &m_session));
 			}
 			else
