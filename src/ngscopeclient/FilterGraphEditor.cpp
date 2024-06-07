@@ -56,6 +56,7 @@
 #include "../scopeprotocols/BurstWidthMeasurement.h"
 #include "../scopeprotocols/ClipFilter.h"
 #include "../scopeprotocols/ClockRecoveryFilter.h"
+#include "../scopeprotocols/ConstellationFilter.h"
 #include "../scopeprotocols/CSVExportFilter.h"
 #include "../scopeprotocols/CSVImportFilter.h"
 #include "../scopeprotocols/DeskewFilter.h"
@@ -63,7 +64,17 @@
 #include "../scopeprotocols/DownsampleFilter.h"
 #include "../scopeprotocols/DutyCycleMeasurement.h"
 #include "../scopeprotocols/EnvelopeFilter.h"
+#include "../scopeprotocols/Ethernet10BaseTDecoder.h"
+#include "../scopeprotocols/Ethernet10GBaseRDecoder.h"
 #include "../scopeprotocols/Ethernet64b66bDecoder.h"
+#include "../scopeprotocols/Ethernet100BaseT1Decoder.h"
+#include "../scopeprotocols/Ethernet100BaseT1LinkTrainingDecoder.h"
+#include "../scopeprotocols/Ethernet100BaseTXDecoder.h"
+#include "../scopeprotocols/Ethernet1000BaseXDecoder.h"
+#include "../scopeprotocols/EthernetGMIIDecoder.h"
+#include "../scopeprotocols/EthernetRGMIIDecoder.h"
+#include "../scopeprotocols/EthernetRMIIDecoder.h"
+#include "../scopeprotocols/EthernetSGMIIDecoder.h"
 #include "../scopeprotocols/EyePattern.h"
 #include "../scopeprotocols/FallMeasurement.h"
 #include "../scopeprotocols/FFTFilter.h"
@@ -71,6 +82,7 @@
 #include "../scopeprotocols/FullWidthHalfMax.h"
 #include "../scopeprotocols/HistogramFilter.h"
 #include "../scopeprotocols/IBM8b10bDecoder.h"
+#include "../scopeprotocols/InvertFilter.h"
 #include "../scopeprotocols/MaximumFilter.h"
 #include "../scopeprotocols/MemoryFilter.h"
 #include "../scopeprotocols/MinimumFilter.h"
@@ -78,6 +90,7 @@
 #include "../scopeprotocols/OvershootMeasurement.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
 #include "../scopeprotocols/PulseWidthMeasurement.h"
+#include "../scopeprotocols/QSGMIIDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
 #include "../scopeprotocols/StepGeneratorFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
@@ -88,6 +101,7 @@
 #include "../scopeprotocols/UARTDecoder.h"
 #include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
+
 
 
 using namespace std;
@@ -265,6 +279,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("filter-burst-width", FindDataFile("icons/filters/filter-burst-width.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-constellation", FindDataFile("icons/filters/filter-constellation.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-csv-export", FindDataFile("icons/filters/filter-csv-export.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-csv-import", FindDataFile("icons/filters/filter-csv-import.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
@@ -278,14 +293,17 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
@@ -300,52 +318,65 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-
+	
 	//Fill out map of filter class types to icon names
-	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 		= "filter-ac-couple";
-	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 		= "filter-ac-rms";
-	m_filterIconMap[type_index(typeid(AddFilter))] 				= "filter-add";
-	m_filterIconMap[type_index(typeid(AreaMeasurement))] 		= "filter-area-under-curve";
-	m_filterIconMap[type_index(typeid(AverageFilter))] 			= "filter-average";
-	m_filterIconMap[type_index(typeid(BandwidthMeasurement))] 	= "filter-bandwidth";
-	m_filterIconMap[type_index(typeid(BaseMeasurement))] 		= "filter-base";
-	m_filterIconMap[type_index(typeid(BurstWidthMeasurement))] 	= "filter-burst-width";
-	m_filterIconMap[type_index(typeid(ClipFilter))] 			= "filter-clip";
-	m_filterIconMap[type_index(typeid(ClockRecoveryFilter))]	= "filter-cdrpll";
-	m_filterIconMap[type_index(typeid(CSVExportFilter))] 		= "filter-csv-export";
-	m_filterIconMap[type_index(typeid(CSVImportFilter))] 		= "filter-csv-import";
-	m_filterIconMap[type_index(typeid(DeskewFilter))] 			= "filter-deskew";
-	m_filterIconMap[type_index(typeid(DivideFilter))] 			= "filter-divide";
-	m_filterIconMap[type_index(typeid(DownsampleFilter))] 		= "filter-downsample";
-	m_filterIconMap[type_index(typeid(DutyCycleMeasurement))] 	= "filter-duty-cycle";
-	m_filterIconMap[type_index(typeid(EnvelopeFilter))] 		= "filter-envelope";
-	m_filterIconMap[type_index(typeid(Ethernet64b66bDecoder))] 	= "filter-64b66bdecoder";
-	m_filterIconMap[type_index(typeid(EyePattern))] 			= "filter-eyepattern";
-	m_filterIconMap[type_index(typeid(FallMeasurement))] 		= "filter-fall";
-	m_filterIconMap[type_index(typeid(FFTFilter))] 				= "filter-fft";
-	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 	= "filter-frequency";
-	m_filterIconMap[type_index(typeid(FullWidthHalfMax))] 		= "filter-fwhm";
-	m_filterIconMap[type_index(typeid(HistogramFilter))] 		= "filter-histogram";
-	m_filterIconMap[type_index(typeid(IBM8b10bDecoder))] 		= "filter-8b10bdecoder";
-	m_filterIconMap[type_index(typeid(MaximumFilter))] 			= "filter-max";
-	m_filterIconMap[type_index(typeid(MemoryFilter))] 			= "filter-memory";
-	m_filterIconMap[type_index(typeid(MinimumFilter))] 			= "filter-min";
-	m_filterIconMap[type_index(typeid(MultiplyFilter))] 		= "filter-multiply";
-	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 		= "filter-period";
-	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 	= "filter-pulse-width";
-	m_filterIconMap[type_index(typeid(RiseMeasurement))] 		= "filter-rise";
-	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 	= "filter-step";
-	m_filterIconMap[type_index(typeid(SubtractFilter))] 		= "filter-subtract";
-	m_filterIconMap[type_index(typeid(ThresholdFilter))] 		= "filter-threshold";
-	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 	= "filter-sine";
-	m_filterIconMap[type_index(typeid(TopMeasurement))] 		= "filter-top";
-	m_filterIconMap[type_index(typeid(TrendFilter))] 			= "filter-trend";
-	m_filterIconMap[type_index(typeid(TopMeasurement))] 		= "filter-top";
-	m_filterIconMap[type_index(typeid(OvershootMeasurement))]	= "filter-overshoot";
-	m_filterIconMap[type_index(typeid(UARTDecoder))]	 		= "filter-uart";
-	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 	= "filter-undershoot";
-	m_filterIconMap[type_index(typeid(UpsampleFilter))] 		= "filter-upsample";
-
+	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
+	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
+	m_filterIconMap[type_index(typeid(AddFilter))] 								= "filter-add";
+	m_filterIconMap[type_index(typeid(AreaMeasurement))] 						= "filter-area-under-curve";
+	m_filterIconMap[type_index(typeid(AverageFilter))] 							= "filter-average";
+	m_filterIconMap[type_index(typeid(BandwidthMeasurement))] 					= "filter-bandwidth";
+	m_filterIconMap[type_index(typeid(BaseMeasurement))] 						= "filter-base";
+	m_filterIconMap[type_index(typeid(BurstWidthMeasurement))] 					= "filter-burst-width";
+	m_filterIconMap[type_index(typeid(ClipFilter))] 							= "filter-clip";
+	m_filterIconMap[type_index(typeid(ClockRecoveryFilter))]					= "filter-cdrpll";
+	m_filterIconMap[type_index(typeid(ConstellationFilter))] 					= "filter-constellation";
+	m_filterIconMap[type_index(typeid(CSVExportFilter))] 						= "filter-csv-export";
+	m_filterIconMap[type_index(typeid(CSVImportFilter))] 						= "filter-csv-import";
+	m_filterIconMap[type_index(typeid(DeskewFilter))] 							= "filter-deskew";
+	m_filterIconMap[type_index(typeid(DivideFilter))] 							= "filter-divide";
+	m_filterIconMap[type_index(typeid(DownsampleFilter))] 						= "filter-downsample";
+	m_filterIconMap[type_index(typeid(DutyCycleMeasurement))] 					= "filter-duty-cycle";
+	m_filterIconMap[type_index(typeid(EnvelopeFilter))] 						= "filter-envelope";
+	m_filterIconMap[type_index(typeid(Ethernet10BaseTDecoder))] 				= "filter-rj45";
+	m_filterIconMap[type_index(typeid(Ethernet10GBaseRDecoder))]				= "filter-lc";
+	m_filterIconMap[type_index(typeid(Ethernet64b66bDecoder))] 					= "filter-64b66bdecoder";
+	m_filterIconMap[type_index(typeid(Ethernet100BaseT1Decoder))]				= "filter-rj45";
+	m_filterIconMap[type_index(typeid(Ethernet100BaseT1LinkTrainingDecoder))]	= "filter-rj45";
+	m_filterIconMap[type_index(typeid(Ethernet100BaseTXDecoder))]				= "filter-rj45";
+	m_filterIconMap[type_index(typeid(Ethernet1000BaseXDecoder))]				= "filter-lc";
+	m_filterIconMap[type_index(typeid(EthernetGMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(EthernetRGMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(EthernetRMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(EthernetSGMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(EyePattern))] 							= "filter-eyepattern";
+	m_filterIconMap[type_index(typeid(FallMeasurement))] 						= "filter-fall";
+	m_filterIconMap[type_index(typeid(FFTFilter))] 								= "filter-fft";
+	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 					= "filter-frequency";
+	m_filterIconMap[type_index(typeid(FullWidthHalfMax))] 						= "filter-fwhm";
+	m_filterIconMap[type_index(typeid(HistogramFilter))] 						= "filter-histogram";
+	m_filterIconMap[type_index(typeid(IBM8b10bDecoder))] 						= "filter-8b10bdecoder";
+	m_filterIconMap[type_index(typeid(InvertFilter))] 							= "filter-invert";
+	m_filterIconMap[type_index(typeid(MaximumFilter))] 							= "filter-max";
+	m_filterIconMap[type_index(typeid(MemoryFilter))] 							= "filter-memory";
+	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
+	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
+	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
+	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
+	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
+	m_filterIconMap[type_index(typeid(RiseMeasurement))] 						= "filter-rise";
+	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 					= "filter-step";
+	m_filterIconMap[type_index(typeid(SubtractFilter))] 						= "filter-subtract";
+	m_filterIconMap[type_index(typeid(ThresholdFilter))] 						= "filter-threshold";
+	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 					= "filter-sine";
+	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
+	m_filterIconMap[type_index(typeid(TrendFilter))] 							= "filter-trend";
+	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
+	m_filterIconMap[type_index(typeid(OvershootMeasurement))]					= "filter-overshoot";
+	m_filterIconMap[type_index(typeid(UARTDecoder))]	 						= "filter-uart";
+	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
+	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
+	
 	//Load groups from parent, if we have any
 	//Start by reserving group IDs so they don't get reused by anything else
 	auto groups = parent->GetGraphEditorGroups();
