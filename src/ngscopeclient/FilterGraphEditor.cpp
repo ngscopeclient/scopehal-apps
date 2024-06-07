@@ -46,6 +46,7 @@
 #include "MeasurementsDialog.h"
 
 //Pull in a bunch of filters we have special icons for
+#include "../scopeprotocols/EthernetProtocolDecoder.h"
 #include "../scopeprotocols/ACCoupleFilter.h"
 #include "../scopeprotocols/ACRMSMeasurement.h"
 #include "../scopeprotocols/AddFilter.h"
@@ -318,7 +319,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-	
+
 	//Fill out map of filter class types to icon names
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
@@ -376,7 +377,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_filterIconMap[type_index(typeid(UARTDecoder))]	 						= "filter-uart";
 	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
 	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
-	
+
 	//Load groups from parent, if we have any
 	//Start by reserving group IDs so they don't get reused by anything else
 	auto groups = parent->GetGraphEditorGroups();
