@@ -1,4 +1,4 @@
-name: Build-macOS
+name: Build-macOS-arm
 
 on:
   push:
@@ -44,31 +44,6 @@ jobs:
           molten-vk \
           ninja
 
-    - name: Cache FFTS
-      uses: actions/cache@v4
-      with:
-        path: ~/ffts-prefix
-        key: ${{ runner.os }}-ffts-prefix
-
-
-    - name: Clone and Build FFTS Library
-      run: |
-        [[ -d ~/ffts-prefix ]] && exit 0
-        cd
-        git clone https://github.com/anthonix/ffts.git
-        cd ffts
-        mkdir build
-        cd build
-        cmake \
-          -DENABLE_SHARED=ON \
-          -DCMAKE_INSTALL_PREFIX=$HOME/ffts-prefix \
-          -DCMAKE_INSTALL_RPATH=$HOME/ffts-prefix/lib \
-          -DCMAKE_MACOSX_RPATH=ON \
-          -GNinja \
-          ..
-        ninja
-        sudo ninja install
-
     - name: Configure
       run: |
         export CMAKE_C_COMPILER_LAUNCHER=ccache
@@ -81,7 +56,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_DOCS=OFF \
           -DBUILD_TESTING=ON \
-          -DCMAKE_PREFIX_PATH="$(brew --prefix)/opt/libomp;$HOME/ffts-prefix" \
+          -DCMAKE_PREFIX_PATH="$(brew --prefix)/opt/libomp" \
           ..
 
     - name: Build
