@@ -49,9 +49,11 @@ public:
 	GLFWwindow* GetWindow()
 	{ return m_window; }
 
-	// Return a DPI 'scale' value where 1 ~= 96DPI
-	// Akin to uses of `get_pango_context()->get_resolution() / 96` in glscopeclient
-	float GetContentScale();
+	///@brief Scale factor for UI elements (icons, scrollbars, etc); typically an integer number.
+	float GetUIScale();
+
+	///@brief Scale factor for fonts, applied on top of UI scale factor; often a fractional number.
+	float GetFontScale();
 
 	virtual void Render();
 
