@@ -46,18 +46,12 @@
 #define MAX_HEIGHT		2048
 
 //Number of threads per column of pixels
-#define ROWS_PER_BLOCK	64
+#define ROWS_PER_BLOCK	128
 
 //Shared buffer for the local working buffer (8 kB)
 shared uint g_workingBuffer[MAX_HEIGHT];
 
-//Min/max for the current sample
-shared int g_blockmin[ROWS_PER_BLOCK];
-shared int g_blockmax[ROWS_PER_BLOCK];
-shared float g_alpha[ROWS_PER_BLOCK];
 shared bool g_done;
-shared bool g_updating[ROWS_PER_BLOCK];
-
 layout(local_size_x=1, local_size_y=ROWS_PER_BLOCK, local_size_z=1) in;
 
 //Global configuration for the run
@@ -255,6 +249,10 @@ void main()
 	//Main loop
 	while(true)
 	{
+		int blockmin = 0;
+		int blockmax = 0;
+		bool updating = false;
+
 		if(i < (memDepth - ADDTL_NEEDED_SAMPLES) )
 		{
 			//Fetch coordinates
@@ -324,13 +322,13 @@ void main()
 				if( ( (starty < 0) && (endy < 0) ) ||
 					( (starty >= windowHeight) && (endy >= windowHeight) ) )
 				{
-					g_updating[gl_LocalInvocationID.y] = false;
+					updating = false;
 				}
 
 				//Something is visible. Clip to window size in case anything is partially offscreen
 				else
 				{
-					g_updating[gl_LocalInvocationID.y] = true;
+					updating = true;
 
 					starty = min(starty, windowHeight - 1);
 					endy = min(endy, windowHeight - 1);
@@ -338,12 +336,12 @@ void main()
 					endy = max(endy, 0);
 
 					//Sort Y coordinates from min to max
-					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
-					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
+					blockmin = int(min(starty, endy));
+					blockmax = int(max(starty, endy));
 				}
 			}
 			else
-				g_updating[gl_LocalInvocationID.y] = false;
+				updating = false;
 
 			//Check if we're at the end of the pixel
 			if(right.x > gl_GlobalInvocationID.x + 1)
@@ -353,7 +351,7 @@ void main()
 		else
 		{
 			l_done = true;
-			g_updating[gl_LocalInvocationID.y] = false;
+			updating = false;
 		}
 
 		i += ROWS_PER_BLOCK;
@@ -362,11 +360,9 @@ void main()
 			g_done = true;
 
 		//integrate intensity graded output
-		if(g_updating[gl_LocalInvocationID.y])
+		if(updating)
 		{
-			int nmin = g_blockmin[gl_LocalInvocationID.y];
-			int nmax = g_blockmax[gl_LocalInvocationID.y];
-			for(int y=nmin; y<=nmax; y++)
+			for(int y=blockmin; y<=blockmax; y++)
 			{
 				#ifdef HISTOGRAM_PATH
 					atomicMax(g_workingBuffer[y], 1);
