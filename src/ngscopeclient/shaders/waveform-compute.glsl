@@ -361,25 +361,18 @@ void main()
 		if (l_done)
 			g_done = true;
 
-		//Only update if we need to
-		for(int y = 0; y<ROWS_PER_BLOCK; y++)
+		//integrate intensity graded output
+		if(g_updating[gl_LocalInvocationID.y])
 		{
-			barrier();
-			memoryBarrierShared();
-
-			if(g_updating[y])
+			int nmin = g_blockmin[gl_LocalInvocationID.y];
+			int nmax = g_blockmax[gl_LocalInvocationID.y];
+			for(int y=nmin; y<=nmax; y++)
 			{
-				//Parallel fill
-				int ymin = g_blockmin[y];
-				int len = g_blockmax[y] - ymin;
-				for(uint nthread=gl_LocalInvocationID.y; nthread <= len; nthread += ROWS_PER_BLOCK)
-				{
-					#ifdef HISTOGRAM_PATH
-						g_workingBuffer[ymin + nthread] = 1;
-					#else
-						g_workingBuffer[ymin + nthread] ++;
-					#endif
-				}
+				#ifdef HISTOGRAM_PATH
+					atomicMax(g_workingBuffer[y], 1);
+				#else
+					atomicAdd(g_workingBuffer[y], 1);
+				#endif
 			}
 		}
 
