@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,7 +49,7 @@
 #define ROWS_PER_BLOCK	64
 
 //Shared buffer for the local working buffer (8 kB)
-shared float g_workingBuffer[MAX_HEIGHT];
+shared uint g_workingBuffer[MAX_HEIGHT];
 
 //Min/max for the current sample
 shared int g_blockmin[ROWS_PER_BLOCK];
@@ -223,17 +223,9 @@ void main()
 	if(memDepth < (1 + ADDTL_NEEDED_SAMPLES))
 		return;
 
-	//Clear (or persistence load) working buffer
+	//Clear working buffer
 	for(uint y=gl_LocalInvocationID.y; y < windowHeight; y += ROWS_PER_BLOCK)
-	{
-		if(persistScale == 0)
-			g_workingBuffer[y] = 0;
-		else
-		{
-			g_workingBuffer[y] =
-				outval[(windowWidth * y) + gl_GlobalInvocationID.x] * persistScale;
-		}
-	}
+		g_workingBuffer[y] = 0;
 
 	//Setup for main loop
 	bool l_done = false;
@@ -348,25 +340,6 @@ void main()
 					//Sort Y coordinates from min to max
 					g_blockmin[gl_LocalInvocationID.y] = int(min(starty, endy));
 					g_blockmax[gl_LocalInvocationID.y] = int(max(starty, endy));
-
-					//Intensity grading based on length of segment to more accurately simulate CRT dwell time
-					//(see https://github.com/glscopeclient/scopehal-apps/issues/600)
-					/*
-					#if defined(ANALOG_PATH) && !defined(NO_INTERPOLATION)
-						float dy = abs(right.y - left.y);
-						float dx = right.x - left.x;
-						float tracelen = sqrt(dy*dy + dx*dx);
-
-						float alphascale = 5 / (tracelen*tracelen);
-
-						if(alphascale > 1)
-							alphascale = 1;
-						if(alphascale < 0.01)
-							alphascale = 0.01;
-
-						g_alpha[gl_LocalInvocationID.y] = alpha * alphascale;
-					#endif
-					*/
 				}
 			}
 			else
@@ -402,11 +375,9 @@ void main()
 				for(uint nthread=gl_LocalInvocationID.y; nthread <= len; nthread += ROWS_PER_BLOCK)
 				{
 					#ifdef HISTOGRAM_PATH
-						g_workingBuffer[ymin + nthread] = alpha;
-					/*#elif defined(ANALOG_PATH) && !defined(NO_INTERPOLATION)
-						g_workingBuffer[ymin + nthread] += g_alpha[y];*/
+						g_workingBuffer[ymin + nthread] = 1;
 					#else
-						g_workingBuffer[ymin + nthread] += alpha;
+						g_workingBuffer[ymin + nthread] ++;
 					#endif
 				}
 			}
@@ -419,9 +390,15 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	//Copy working buffer to float[] output
+	//Copy working buffer to float[] output and apply persistence if needed
 	for(uint y=gl_LocalInvocationID.y; y<windowHeight; y+= ROWS_PER_BLOCK)
 	{
-		outval[(windowWidth * y) + gl_GlobalInvocationID.x] = g_workingBuffer[y];
+		float fout = g_workingBuffer[y] * alpha;
+		uint npix = (windowWidth * y) + gl_GlobalInvocationID.x;
+
+		if(persistScale != 0)
+			fout += outval[npix] * persistScale;
+
+		outval[npix] = fout;
 	}
 }
