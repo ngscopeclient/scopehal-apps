@@ -2419,9 +2419,9 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 
 	//Run the popup
 	ax::NodeEditor::Suspend();
-	m_createMousePos = ImGui::GetMousePos();
 	if(ImGui::BeginPopup("Add Menu"))
 	{
+		m_createMousePos = ImGui::GetMousePos();
 		DoAddMenu();
 		ImGui::EndPopup();
 	}
