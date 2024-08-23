@@ -1260,7 +1260,7 @@ void MainWindow::DockingArea()
 		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode != nullptr)
 		{
-			LogTrace("Docking dialog\n");
+			LogTrace("Docking newly created dialogs under %08x\n", dockspace_id);
 
 			//Traverse down the top/left of the tree as long as such a node exists
 			auto node = topNode;
@@ -1268,7 +1268,10 @@ void MainWindow::DockingArea()
 				node = node->ChildNodes[0];
 
 			for(auto dock : m_dockRequests)
-				ImGui::DockBuilderDockWindow(dock.m_dlg->GetID().c_str(), node->ID);
+			{
+				LogTrace("Docking %s under %08x\n", dock.m_dlg->GetTitleAndID().c_str(), node->ID);
+				ImGui::DockBuilderDockWindow(dock.m_dlg->GetTitleAndID().c_str(), node->ID);
+			}
 			m_dockRequests.clear();
 
 			//Finish up

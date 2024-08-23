@@ -67,7 +67,6 @@ bool Dialog::Render()
 		return false;
 
 	string name = m_title + "###" + m_id;
-
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
 	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
 	{
