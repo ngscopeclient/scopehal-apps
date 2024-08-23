@@ -180,9 +180,8 @@ bool WaveformGroup::Render()
 	}
 
 	//Check for right click on the title bar
-	//see https://github.com/ocornut/imgui/issues/316
-	//(for now, it doesn't work if the window is docked)
-	if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+	//see https://github.com/ocornut/imgui/issues/7914
+	if(ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
 		auto rect = ImGui::GetCurrentWindow()->TitleBarRect();
 		if(ImGui::IsMouseHoveringRect(rect.Min, rect.Max, false))
