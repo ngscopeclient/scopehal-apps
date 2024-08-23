@@ -181,10 +181,7 @@ bool WaveformGroup::Render()
 
 	//Check for right click on the title bar
 	//see https://github.com/ocornut/imgui/issues/7914
-	if(ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-		ImGui::OpenPopup("Rename Group");
-
-	if(ImGui::BeginPopup("Rename Group"))
+	if(ImGui::BeginPopupContextItem())
 	{
 		ImGui::InputText("Name", &m_title);
 		ImGui::EndPopup();
