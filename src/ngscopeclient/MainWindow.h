@@ -93,6 +93,19 @@ public:
 };
 
 /**
+	@brief Pending request to dock a dialog as a top level tab (TODO other options)
+ */
+class DockDialogRequest
+{
+public:
+	DockDialogRequest(std::shared_ptr<Dialog> dlg)
+	: m_dlg(dlg)
+	{}
+
+	std::shared_ptr<Dialog> m_dlg;
+};
+
+/**
 	@brief Top level application window
  */
 class MainWindow : public VulkanWindow
@@ -378,6 +391,9 @@ protected:
 
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
+
+	///@brief Pending requests to dock dialogs
+	std::vector<DockDialogRequest> m_dockRequests;
 
 	///@brief Pending requests to close waveform groups
 	std::vector<size_t> m_groupsToClose;

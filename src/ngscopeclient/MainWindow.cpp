@@ -198,6 +198,13 @@ void MainWindow::InitializeDefaultSession()
 {
 	LogTrace("Initializing new session\n");
 	LogIndenter li;
+
+	//Spawn the graph editor
+	m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
+	AddDialog(m_graphEditor);
+
+	//Dock it
+	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
 }
 
 void MainWindow::CloseSession()
@@ -217,6 +224,7 @@ void MainWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
+	m_dockRequests.clear();
 	m_groupsToClose.clear();
 	m_pendingChannelDisplayRequests.clear();
 
@@ -1234,17 +1242,6 @@ void MainWindow::DockingArea()
 		while(node->ChildNodes[0])
 			node = node->ChildNodes[0];
 
-		//See if the node has children in it
-		if(!node->Windows.empty())
-		{
-			LogTrace("Windows already in node, splitting it\n");
-			ImGuiID idLeft;
-			ImGuiID idRight;
-
-			ImGui::DockBuilderSplitNode(node->ID, ImGuiDir_Up, 0.5, &idLeft, &idRight);
-			node = ImGui::DockBuilderGetNode(idLeft);
-		}
-
 		//Dock new waveform groups by default
 		for(auto& g : m_newWaveformGroups)
 			ImGui::DockBuilderDockWindow(g->GetID().c_str(), node->ID);
@@ -1254,6 +1251,29 @@ void MainWindow::DockingArea()
 
 		//Everything pending has been docked, no need to do anything with them in the future
 		m_newWaveformGroups.clear();
+	}
+
+	//Process dockable dialogs
+	else if(!m_dockRequests.empty())
+	{
+		//Find the top/leftmost leaf node in the docking tree
+		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
+		if(topNode != nullptr)
+		{
+			LogTrace("Docking dialog\n");
+
+			//Traverse down the top/left of the tree as long as such a node exists
+			auto node = topNode;
+			while(node->ChildNodes[0])
+				node = node->ChildNodes[0];
+
+			for(auto dock : m_dockRequests)
+				ImGui::DockBuilderDockWindow(dock.m_dlg->GetID().c_str(), node->ID);
+			m_dockRequests.clear();
+
+			//Finish up
+			ImGui::DockBuilderFinish(dockspace_id);
+		}
 	}
 
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);

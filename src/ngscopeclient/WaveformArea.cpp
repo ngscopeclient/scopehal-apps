@@ -3036,6 +3036,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 		case ImGuiDir_Down:
 			center.y = start.y + size.y - fillSizeY;
 			break;
+		default:
+			break;
 	}
 
 	//Draw background and outline

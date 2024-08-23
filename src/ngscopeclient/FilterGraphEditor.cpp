@@ -2432,9 +2432,11 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 	{
 		if(ax::NodeEditor::GetNodeCount() == 0)
 		{
-			ImGui::BeginTooltip();
+			if(ImGui::BeginItemTooltip())
+			{
 				ImGui::TextUnformatted("Right click to create a waveform\nor import data from a file");
-			ImGui::EndTooltip();
+				ImGui::EndTooltip();
+			}
 		}
 	}
 	ax::NodeEditor::Resume();

@@ -50,6 +50,9 @@ public:
 	void RenderAsChild();
 	virtual bool DoRender() =0;
 
+	const std::string& GetID()
+	{ return m_id; }
+
 	//TODO: this might be better off as a global method?
 	static bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
 	static bool UnitInputWithImplicitApply(
