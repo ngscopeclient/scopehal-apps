@@ -119,7 +119,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	, m_traceAlpha(0.75)
 	, m_persistenceDecay(0.8)
 	, m_session(this)
-	, m_sessionClosing(false)
+	, m_sessionClosing(true)	//reset a default session on the first frame after we start up
 	, m_fileLoadInProgress(false)
 	, m_openOnline(false)
 	, m_showingLoadWarnings(false)
@@ -190,6 +190,15 @@ MainWindow::~MainWindow()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Session termination
+
+/**
+	@brief Creates a new session initialized with some default windows
+ */
+void MainWindow::InitializeDefaultSession()
+{
+	LogTrace("Initializing new session\n");
+	LogIndenter li;
+}
 
 void MainWindow::CloseSession()
 {
@@ -479,6 +488,8 @@ void MainWindow::Render()
 			(*qlock).waitIdle();
 		}
 		CloseSession();
+
+		InitializeDefaultSession();
 	}
 
 	//Load all of our fonts
