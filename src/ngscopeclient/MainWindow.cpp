@@ -255,6 +255,7 @@ void MainWindow::CloseSession()
 	m_dialogs.clear();
 	m_protocolAnalyzerDialogs.clear();
 	m_scpiConsoleDialogs.clear();
+	m_workspaces.clear();
 
 	//Clear the actual session object once all views / dialogs having handles to scopes etc have been destroyed
 	m_session.Clear();
@@ -612,6 +613,18 @@ void MainWindow::RenderUI()
 
 	//Docking area to put all of the groups in
 	DockingArea();
+
+	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
+	//but after the main docking area, so they can be contained within it
+	//(workspaces aren't supposed to be nested so no worries about ordering)
+	set< shared_ptr<Workspace> > workspacesToClose;
+	for(auto& dlg : m_workspaces)
+	{
+		if(!dlg->Render())
+			workspacesToClose.emplace(dlg);
+	}
+	for(auto& dlg : workspacesToClose)
+		m_workspaces.erase(dlg);
 
 	//Waveform groups
 	{

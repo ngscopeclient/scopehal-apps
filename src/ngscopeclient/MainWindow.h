@@ -47,6 +47,7 @@
 #include "ProtocolAnalyzerDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
+#include "Workspace.h"
 
 #include "../scopehal/PacketDecoder.h"
 
@@ -303,6 +304,9 @@ protected:
 
 	///@brief Size position of the viewport minus the menu and toolbar
 	ImVec2 m_workSize;
+
+	///@brief Workspaces (can't be with other dialogs because they can contain other stuff)
+	std::set< std::shared_ptr<Workspace> > m_workspaces;
 
 	///@brief All dialogs and other pop-up UI elements
 	std::set< std::shared_ptr<Dialog> > m_dialogs;

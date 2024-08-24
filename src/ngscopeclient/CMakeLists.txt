@@ -109,6 +109,7 @@ add_executable(ngscopeclient
 	WaveformArea.cpp
 	WaveformGroup.cpp
 	WaveformThread.cpp
+	Workspace.cpp
 
 	main.cpp
 )

@@ -69,6 +69,7 @@
 #include "ProtocolAnalyzerDialog.h"
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
+#include "Workspace.h"
 
 using namespace std;
 
@@ -1372,6 +1373,9 @@ void MainWindow::WindowMenu()
 		}
 		if(hasGraphEditor)
 			ImGui::EndDisabled();
+
+		if(ImGui::MenuItem("New Workspace"))
+			m_workspaces.emplace(make_shared<Workspace>(m_session));
 
 		ImGui::EndMenu();
 	}
