@@ -41,7 +41,7 @@ public:
 	Workspace(const YAML::Node& node, Session& session);
 	Workspace(Session& session);
 
-	virtual bool Render();
+	bool Render();
 
 	YAML::Node Serialize();
 
