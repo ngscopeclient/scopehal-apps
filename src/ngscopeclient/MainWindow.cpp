@@ -2446,6 +2446,17 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			return false;
 	}
 
+	//Workspaces
+	auto workspaces = node["workspaces"];
+	if(workspaces)
+	{
+		LogTrace("Loading workspaces\n");
+		LogIndenter li2;
+
+		for(auto w : workspaces)
+			m_workspaces.emplace(make_shared<Workspace>(w, m_session));
+	}
+
 	//Measurements
 	auto measurements = node["measurements"];
 	if(measurements)
@@ -3027,6 +3038,17 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 
 	//Serialize dialogs
 	node["dialogs"] = SerializeDialogs();
+
+	//Serialize workspaces
+	if(!m_workspaces.empty())
+	{
+		YAML::Node wnode;
+
+		for(auto w : m_workspaces)
+			wnode.push_back(w->Serialize());
+
+		node["workspaces"] = wnode;
+	}
 
 	//Serialize measurements
 	if(m_measurementsDialog)

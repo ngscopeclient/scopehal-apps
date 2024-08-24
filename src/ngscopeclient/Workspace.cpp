@@ -42,12 +42,41 @@ using namespace std;
 // Construction / destruction
 
 Workspace::Workspace(Session& session)
-	: m_title("New Workspace")
+	: m_session(session)
+	, m_open(true)
+	, m_title("New Workspace")
 	, m_defaultSize(800, 600)
 {
 	//Assign a new stable ID from the session table
 	auto id = session.m_idtable.emplace(this);
 	m_id = string("Workspace ") + to_string(id);
+}
+
+Workspace::Workspace(const YAML::Node& node, Session& session)
+	: m_session(session)
+	, m_open(true)
+	, m_defaultSize(800, 600)
+{
+	//Reuse, and reserve, the stable ID
+	auto id = node["id"].as<uintptr_t>();
+	m_session.m_idtable.emplace(id, this);
+	m_id = string("Workspace ") + to_string(id);
+
+	m_title = node["title"].as<string>();
+
+	string tmp = m_title + "###" + m_id;
+	LogTrace("ID is %s\n", tmp.c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+YAML::Node Workspace::Serialize()
+{
+	YAML::Node ret;
+	ret["id"] = m_session.m_idtable[this];
+	ret["title"] = m_title;
+	return ret;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
