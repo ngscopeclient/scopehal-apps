@@ -42,7 +42,8 @@ using namespace std;
 // Construction / destruction
 
 Workspace::Workspace(Session& session)
-	: Dialog("New Workspace", "New Workspace", ImVec2(800, 600))
+	: m_title("New Workspace")
+	, m_defaultSize(800, 600)
 {
 	//Assign a new stable ID from the session table
 	auto id = session.m_idtable.emplace(this);
@@ -52,15 +53,34 @@ Workspace::Workspace(Session& session)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-bool Workspace::DoRender()
+bool Workspace::Render()
 {
+	//Closed, nothing to do
+	if(!m_open)
+		return false;
+
+	auto id = ImGui::GetID(m_id.c_str());
+
+	string name = m_title + "###" + m_id;
+	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
+	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
+	{
+		//If we get here, the window is tabbed out or the content area is otherwise not visible.
+		//Need to keep the dockspace node alive still, though!
+		ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_KeepAliveOnly, nullptr);
+
+		ImGui::End();
+		return true;
+	}
+
 	if(ImGui::BeginPopupContextItem())
 	{
 		ImGui::InputText("Name", &m_title);
 		ImGui::EndPopup();
 	}
 
-	ImGui::DockSpace(ImGui::GetID("Dock"), ImVec2(0.0f, 0.0f), 0, nullptr);
+	ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), 0, nullptr);
 
+	ImGui::End();
 	return true;
 }

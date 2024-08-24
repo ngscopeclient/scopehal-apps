@@ -614,18 +614,6 @@ void MainWindow::RenderUI()
 	//Docking area to put all of the groups in
 	DockingArea();
 
-	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
-	//but after the main docking area, so they can be contained within it
-	//(workspaces aren't supposed to be nested so no worries about ordering)
-	set< shared_ptr<Workspace> > workspacesToClose;
-	for(auto& dlg : m_workspaces)
-	{
-		if(!dlg->Render())
-			workspacesToClose.emplace(dlg);
-	}
-	for(auto& dlg : workspacesToClose)
-		m_workspaces.erase(dlg);
-
 	//Waveform groups
 	{
 		shared_lock<shared_mutex> lock(m_session.GetWaveformDataMutex());
@@ -1294,6 +1282,18 @@ void MainWindow::DockingArea()
 
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
 	ImGui::End();
+
+	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
+	//but after the main docking area, so they can be contained within it
+	//(workspaces aren't supposed to be nested so no worries about ordering)
+	set< shared_ptr<Workspace> > workspacesToClose;
+	for(auto& dlg : m_workspaces)
+	{
+		if(!dlg->Render())
+			workspacesToClose.emplace(dlg);
+	}
+	for(auto& dlg : workspacesToClose)
+		m_workspaces.erase(dlg);
 }
 
 /**

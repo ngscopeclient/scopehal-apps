@@ -35,15 +35,18 @@
 #ifndef Workspace_h
 #define Workspace_h
 
-#include "Dialog.h"
-
-class Workspace : public Dialog
+class Workspace
 {
 public:
 	Workspace(Session& session);
 
+	virtual bool Render();
+
 protected:
-	virtual bool DoRender();
+	bool m_open;
+	std::string m_id;
+	std::string m_title;
+	ImVec2 m_defaultSize;
 };
 
 #endif
