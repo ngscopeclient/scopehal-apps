@@ -179,7 +179,7 @@ protected:
 	void DoNodeForGroupInputs(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForChannel(InstrumentChannel* channel, std::shared_ptr<Instrument> inst);
 	void DoNodeForTrigger(Trigger* trig);
-	void HandleNodeProperties();
+	bool HandleNodeProperties();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	void HandleBackgroundContextMenu();

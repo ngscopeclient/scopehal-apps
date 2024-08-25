@@ -683,7 +683,7 @@ bool FilterGraphEditor::DoRender()
 	Filter* fReconfigure = nullptr;
 	HandleLinkCreationRequests(fReconfigure);
 	HandleLinkDeletionRequests(fReconfigure);
-	HandleNodeProperties();
+	bool triggerChanged = HandleNodeProperties();
 	HandleBackgroundContextMenu();
 
 	ax::NodeEditor::End();
@@ -695,7 +695,10 @@ bool FilterGraphEditor::DoRender()
 	//Look for and avoid overlaps
 	//Must be after End() call which draws node boundaries, so everything is consistent.
 	//If we don't do that, node content and frames can get one frame out of sync
-	HandleOverlaps();
+	//If we changed the type of a trigger, don't do this as we have stale metadata
+	//TODO: can we dynamically refresh m_nodeGroupMap and anything else impacted?
+	if(!triggerChanged)
+		HandleOverlaps();
 
 	ax::NodeEditor::SetCurrentEditor(nullptr);
 
@@ -2357,8 +2360,10 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 
 /**
 	@brief Open the properties window when a node is right clicked
+
+	@return True if a node type changed (for now, only triggers)
  */
-void FilterGraphEditor::HandleNodeProperties()
+bool FilterGraphEditor::HandleNodeProperties()
 {
 	//Look for context menu
 	ax::NodeEditor::NodeId id;
@@ -2421,13 +2426,33 @@ void FilterGraphEditor::HandleNodeProperties()
 		}
 	}
 
+	bool triggerChanged = false;
+
 	//Run the properties dialogs
 	ax::NodeEditor::Suspend();
 	if(ImGui::BeginPopup("Node Properties"))
 	{
 		auto dlg = m_propertiesDialogs[m_selectedProperties];
 		if(dlg)
-			dlg->RenderAsChild();
+		{
+			//Special handling for trigger properties dialog
+			auto prop = dynamic_pointer_cast<EmbeddedTriggerPropertiesDialog>(dlg);
+			if(prop)
+			{
+				auto scope = prop->GetScope();
+				auto oldTrigger = scope->GetTrigger();
+				dlg->RenderAsChild();
+				auto newTrigger = scope->GetTrigger();;
+
+				if(oldTrigger != newTrigger)
+				{
+					m_session.m_idtable.replace(oldTrigger, newTrigger);
+					triggerChanged = true;
+				}
+			}
+			else
+				dlg->RenderAsChild();
+		}
 		ImGui::EndPopup();
 	}
 	if(ImGui::BeginPopup("Group Properties"))
@@ -2440,6 +2465,8 @@ void FilterGraphEditor::HandleNodeProperties()
 		ImGui::EndPopup();
 	}
 	ax::NodeEditor::Resume();
+
+	return triggerChanged;
 }
 
 /**

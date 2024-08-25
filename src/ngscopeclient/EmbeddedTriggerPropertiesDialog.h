@@ -51,6 +51,9 @@ public:
 
 	virtual bool DoRender();
 
+	std::shared_ptr<Oscilloscope> GetScope()
+	{ return m_scope; }
+
 protected:
 	std::unique_ptr<TriggerPropertiesPage> m_page;
 
