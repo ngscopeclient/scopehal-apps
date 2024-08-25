@@ -3355,7 +3355,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	}
 
 	//Display channel information and help text in tooltip
-	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+	if(ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
 	{
 		string tooltip;
 		if(ochan)
