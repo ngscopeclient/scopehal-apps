@@ -2706,13 +2706,17 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 /**
 	@brief Actually save a file (may be triggered by file|save or file|save as)
  */
-void MainWindow::DoSaveFile(const string& sessionPath)
+void MainWindow::DoSaveFile(string sessionPath)
 {
 	//Stop the trigger so we don't have data races if a waveform comes in mid-save
 	m_session.StopTrigger();
 
 	//Saving the file conflicts with all other waveform data operations
 	lock_guard<shared_mutex> lock(m_session.GetWaveformDataMutex());
+
+	//If the filename does not end in .scopesession, add it
+	if(sessionPath.find(".scopesession") == string::npos)
+		sessionPath += ".scopesession";
 
 	//Get the data directory for the session
 	string base = sessionPath.substr(0, sessionPath.length() - strlen(".scopesession"));
