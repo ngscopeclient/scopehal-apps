@@ -78,6 +78,7 @@
 #include "../scopeprotocols/EthernetSGMIIDecoder.h"
 #include "../scopeprotocols/EyePattern.h"
 #include "../scopeprotocols/FallMeasurement.h"
+#include "../scopeprotocols/FIRFilter.h"
 #include "../scopeprotocols/FFTFilter.h"
 #include "../scopeprotocols/FrequencyMeasurement.h"
 #include "../scopeprotocols/FullWidthHalfMax.h"
@@ -88,6 +89,7 @@
 #include "../scopeprotocols/MemoryFilter.h"
 #include "../scopeprotocols/MinimumFilter.h"
 #include "../scopeprotocols/MultiplyFilter.h"
+#include "../scopeprotocols/NCOFilter.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
 #include "../scopeprotocols/PulseWidthMeasurement.h"
@@ -290,6 +292,10 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_parent->GetTextureManager()->LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-fir-highpass", FindDataFile("icons/filters/filter-fir-highpass.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-fir-lowpass", FindDataFile("icons/filters/filter-fir-lowpass.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-fir-bandpass", FindDataFile("icons/filters/filter-fir-bandpass.png"));
+	m_parent->GetTextureManager()->LoadTexture("filter-fir-notch", FindDataFile("icons/filters/filter-fir-notch.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-fft", FindDataFile("icons/filters/filter-fft.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
 	m_parent->GetTextureManager()->LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
@@ -362,6 +368,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_filterIconMap[type_index(typeid(MemoryFilter))] 							= "filter-memory";
 	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
+	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
@@ -2304,6 +2311,36 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 		auto it = m_filterIconMap.find(typeid(*chan));
 		if(it != m_filterIconMap.end())
 			iconname = it->second;
+
+		//Special case for a few filters whose icon changes with configuration
+		else
+		{
+			auto fir = dynamic_cast<FIRFilter*>(chan);
+			if(fir)
+			{
+				switch(fir->GetFilterType())
+				{
+					case FIRFilter::FILTER_TYPE_LOWPASS:
+						iconname = "filter-fir-lowpass";
+						break;
+
+					case FIRFilter::FILTER_TYPE_HIGHPASS:
+						iconname = "filter-fir-highpass";
+						break;
+
+					case FIRFilter::FILTER_TYPE_BANDPASS:
+						iconname = "filter-fir-bandpass";
+						break;
+
+					case FIRFilter::FILTER_TYPE_NOTCH:
+						iconname = "filter-fir-notch";
+						break;
+
+					default:
+						break;
+				}
+			}
+		}
 	}
 
 	if(iconname != "")
