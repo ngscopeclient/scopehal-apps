@@ -92,6 +92,10 @@ bool MeasurementsDialog::DoRender()
 
 		//TODO: double click value opens properties dialog
 
+		bool moving = false;
+		StreamDescriptor moveStream;
+		size_t moveDest = 0;
+
 		for(size_t i=0; i<m_streams.size(); i++)
 		{
 			auto s = m_streams[i];
@@ -100,7 +104,27 @@ bool MeasurementsDialog::DoRender()
 			ImGui::PushID(name.c_str());
 
 			ImGui::TableSetColumnIndex(0);
+
+			//Allow dragging of channel
 			ImGui::Selectable(name.c_str(), false);
+			if(ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+				ImGui::TextUnformatted(name.c_str());
+				ImGui::EndDragDropSource();
+			}
+			if(ImGui::BeginDragDropTarget())
+			{
+				auto payload = ImGui::AcceptDragDropPayload("Scalar");
+				if(payload && (payload->DataSize == sizeof(StreamDescriptor)))
+				{
+					moveStream = *reinterpret_cast<const StreamDescriptor*>(payload->Data);
+					moveDest = i;
+					moving = true;
+				}
+				ImGui::EndDragDropTarget();
+			}
+
 			if(ImGui::BeginPopupContextItem())
 			{
 				if(ImGui::MenuItem("Delete"))
@@ -117,6 +141,28 @@ bool MeasurementsDialog::DoRender()
 			ImGui::TextUnformatted(value.c_str());
 
 			ImGui::PopID();
+		}
+
+		//Handle moves
+		if(moving)
+		{
+			LogTrace("Moving a stream (to index %zu of %zu)\n", moveDest, m_streams.size());
+
+			//Remove the old stream
+			for(size_t i=0; i<m_streams.size(); i++)
+			{
+				if(m_streams[i] == moveStream)
+				{
+					LogTrace("Removing old stream (at %zu)\n", i);
+					m_streams.erase(m_streams.begin() + i);
+					break;
+				}
+			}
+
+			//Insert the stream at the target position
+			LogTrace("Inserting new stream (at %zu)\n", moveDest);
+			m_streamset.emplace(moveStream);
+			m_streams.insert(m_streams.begin() + moveDest, moveStream);
 		}
 
 		ImGui::EndTable();
