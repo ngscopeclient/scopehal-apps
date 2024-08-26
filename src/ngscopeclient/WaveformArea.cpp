@@ -648,8 +648,9 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 				OnMouseWheelPlotArea(wheel, wheel_h);
 		}
 
-		//Always check for drag/drop
-		DragDropOverlays(pos, csize, iArea, numAreas);
+		//Make targets for drag-and-drop
+		if(ImGui::GetDragDropPayload() != nullptr)
+			DragDropOverlays(pos, csize, iArea, numAreas);
 
 		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);

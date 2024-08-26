@@ -2627,6 +2627,13 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_metricsDialog);
 	}
 
+	auto sb = node["streambrowser"];
+	if(sb && sb.as<bool>())
+	{
+		m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+		AddDialog(m_streamBrowser);
+	}
+
 	auto pref = node["preferences"];
 	if(pref && pref.as<bool>())
 	{
@@ -3160,6 +3167,10 @@ YAML::Node MainWindow::SerializeDialogs()
 	//Manage instruments dialog has no separate settings
 	if(m_manageInstrumentsDialog)
 		node["manageinst"] = true;
+
+	//Stream browser has no separate settings
+	if(m_streamBrowser)
+		node["streambrowser"] = true;
 
 	//Logfile viewer has no separate settings
 	if(m_logViewerDialog)
