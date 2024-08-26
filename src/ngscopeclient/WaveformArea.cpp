@@ -2967,30 +2967,53 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
  */
 void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
 {
-	//FIXME
-	return;
-
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
 	//ImGui::Button(name.c_str(), size);
 	ImGui::SetItemAllowOverlap();
 
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	bool isStream = payload->IsDataType("Stream");
+	if(!isWaveform && !isStream)
+		return;
+
 	//Add drop target
+	StreamDescriptor stream;
+	bool hover = false;
 	if(ImGui::BeginDragDropTarget())
 	{
-		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
+		auto wpay = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(wpay)
 		{
-			LogTrace("splitting\n");
-
+			hover = true;
 			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
-			auto stream = desc->first->GetStream(desc->second);
+			stream = desc->first->GetStream(desc->second);
+
+			if(payload->IsDelivery())
+			{
+				LogTrace("splitting\n");
+
+				//Add request to split our current group, then remove from origin
+				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+				desc->first->RemoveStream(desc->second);
+			}
+		}
+
+		auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(spay)
+		{
+			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+			hover = true;
 
 			//Add request to split our current group
-			m_parent->QueueSplitGroup(m_group, splitDir, stream);
-
-			//Remove the stream from the originating waveform area
-			desc->first->RemoveStream(desc->second);
+			if(payload->IsDelivery())
+			{
+				LogTrace("splitting\n");
+				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+			}
 		}
 
 		ImGui::EndDragDropTarget();
@@ -3045,7 +3068,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	draw_list->AddRectFilled(
 		ImVec2(center.x - fillSizeX/2 - 0.5, center.y - fillSizeY/2 - 0.5),
 		ImVec2(center.x + fillSizeX/2 + 0.5, center.y + fillSizeY/2 + 0.5),
-		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		hover ? bgHovered : bgBase,
 		rounding);
 	draw_list->AddRect(
 		ImVec2(center.x - lineSizeX/2 - 0.5, center.y - lineSizeY/2 - 0.5),
