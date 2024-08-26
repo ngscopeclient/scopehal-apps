@@ -1298,7 +1298,6 @@ void MainWindow::WindowMenu()
 		WindowGeneratorMenu();
 		WindowMultimeterMenu();
 		WindowPSUMenu();
-		WindowSCPIConsoleMenu();
 
 		bool hasLabNotes = m_notesDialog != nullptr;
 		if(hasLabNotes)
@@ -1516,9 +1515,9 @@ void MainWindow::WindowMultimeterMenu()
 }
 
 /**
-	@brief Runs the Window | SCPI Console menu
+	@brief Runs the Debug | SCPI Console menu
  */
-void MainWindow::WindowSCPIConsoleMenu()
+void MainWindow::DebugSCPIConsoleMenu()
 {
 	if(ImGui::BeginMenu("SCPI Console"))
 	{
@@ -1548,6 +1547,8 @@ void MainWindow::DebugMenu()
 {
 	if(ImGui::BeginMenu("Debug"))
 	{
+		DebugSCPIConsoleMenu();
+
 		bool showDemo = m_showDemo;
 		if(showDemo)
 			ImGui::BeginDisabled();

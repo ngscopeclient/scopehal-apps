@@ -273,8 +273,8 @@ protected:
 				void WindowGeneratorMenu();
 				void WindowPSUMenu();
 				void WindowMultimeterMenu();
-				void WindowSCPIConsoleMenu();
 			void DebugMenu();
+				void DebugSCPIConsoleMenu();
 			void HelpMenu();
 		void Toolbar();
 			void LoadToolbarIcons();
