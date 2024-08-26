@@ -222,6 +222,12 @@ public:
 	std::set<std::shared_ptr<Instrument>> GetInstruments();
 
 	/**
+		@brief Get the number of instruments we're connected to (regardless of type)
+	 */
+	size_t GetInstrumentCount()
+	{ return GetInstruments().size(); }
+
+	/**
 		@brief Check if we have data available from all of our scopes
 	 */
 	bool CheckForPendingWaveforms();

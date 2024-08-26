@@ -177,7 +177,7 @@ protected:
 	void DoInternalLinksForGroup(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForGroupOutputs(std::shared_ptr<FilterGraphGroup> group);
 	void DoNodeForGroupInputs(std::shared_ptr<FilterGraphGroup> group);
-	void DoNodeForChannel(InstrumentChannel* channel, std::shared_ptr<Instrument> inst);
+	void DoNodeForChannel(InstrumentChannel* channel, std::shared_ptr<Instrument> inst, bool multiInst);
 	void DoNodeForTrigger(Trigger* trig);
 	bool HandleNodeProperties();
 	void HandleDoubleClicks();

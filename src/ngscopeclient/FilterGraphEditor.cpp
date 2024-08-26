@@ -589,11 +589,12 @@ bool FilterGraphEditor::DoRender()
 		DoNodeForGroup(it.first);
 
 	//Make nodes for all instrument channels
+	bool multiInst = (m_session.GetInstrumentCount() > 1);
 	auto chans = GetAllChannels();
 	for(auto it : chans)
 	{
 		for(auto chan : it.second)
-			DoNodeForChannel(chan, it.first);
+			DoNodeForChannel(chan, it.first, multiInst);
 	}
 
 	//Make nodes for all triggers
@@ -615,7 +616,7 @@ bool FilterGraphEditor::DoRender()
 	auto filters = Filter::GetAllInstances();
 	for(auto f : filters)
 	{
-		DoNodeForChannel(f, nullptr);
+		DoNodeForChannel(f, nullptr, false);
 
 		//Add a reference to the channel so even if we remove the last user of it this frame, it won't be deleted until we're ready
 		f->AddRef();
@@ -2028,7 +2029,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 
 	TODO: this seems to fail hard if we do not have at least one input OR output on the node. Why?
  */
-void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<Instrument> inst)
+void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<Instrument> inst, bool multiInst)
 {
 	//If the channel has no color, make it neutral gray
 	//(this is often true for e.g. external trigger)
@@ -2036,7 +2037,6 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<
 	if(displaycolor.empty())
 		displaycolor = "#808080";
 
-	auto ochan = dynamic_cast<OscilloscopeChannel*>(channel);
 	auto& prefs = m_session.GetPreferences();
 
 	//Get some configuration / style settings
@@ -2058,8 +2058,8 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<
 	auto size = ax::NodeEditor::GetNodeSize(id);
 	string headerText = channel->GetDisplayName();
 
-	//If NOT an oscilloscope channel, or if a multi-scope session: scope by instrument name
-	if( (!ochan && inst) || (ochan && ochan->GetScope() && m_session.IsMultiScope()) )
+	//If >1 instrument connected, scope by instrument name
+	if(multiInst)
 		headerText = inst->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is
