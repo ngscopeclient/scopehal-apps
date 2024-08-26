@@ -73,26 +73,12 @@ bool StreamBrowserDialog::DoRender()
 			{
 				auto chan = inst->GetChannel(i);
 
-				//Outputs with no streams
-				if(chan->GetStreamCount() == 0)
+				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+				//Single stream: drag the stream not the channel
+				bool singleStream = chan->GetStreamCount() == 1;
+				if(singleStream)
 				{
-					if(ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-						ImGui::TreePop();
-
-					if(ImGui::BeginDragDropSource())
-					{
-						ImGui::SetDragDropPayload("Channel", &chan, sizeof(chan));
-
-						ImGui::TextUnformatted(chan->GetDisplayName().c_str());
-						ImGui::EndDragDropSource();
-					}
-				}
-
-				else if(chan->GetStreamCount() == 1)
-				{
-					if(ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-						ImGui::TreePop();
-
 					StreamDescriptor s(chan, 0);
 					if(ImGui::BeginDragDropSource())
 					{
@@ -106,7 +92,16 @@ bool StreamBrowserDialog::DoRender()
 					}
 				}
 
-				else if(ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				//Drag source for the channel itself (if we have zero or >1 streams)
+				else if(ImGui::BeginDragDropSource())
+				{
+					ImGui::SetDragDropPayload("Channel", &chan, sizeof(chan));
+
+					ImGui::TextUnformatted(chan->GetDisplayName().c_str());
+					ImGui::EndDragDropSource();
+				}
+
+				if(open && !singleStream)
 				{
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
@@ -124,9 +119,10 @@ bool StreamBrowserDialog::DoRender()
 							ImGui::EndDragDropSource();
 						}
 					}
-
-					ImGui::TreePop();
 				}
+
+				if(open)
+					ImGui::TreePop();
 			}
 
 			ImGui::TreePop();
@@ -139,26 +135,12 @@ bool StreamBrowserDialog::DoRender()
 		auto filters = Filter::GetAllInstances();
 		for(auto f : filters)
 		{
-			//Sinks with no streams
-			if(f->GetStreamCount() == 0)
+			bool open = ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+			//Single stream: drag the stream not the channel
+			bool singleStream = f->GetStreamCount() == 1;
+			if(singleStream)
 			{
-				if(ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-					ImGui::TreePop();
-
-				if(ImGui::BeginDragDropSource())
-				{
-					ImGui::SetDragDropPayload("Channel", &f, sizeof(f));
-
-					ImGui::TextUnformatted(f->GetDisplayName().c_str());
-					ImGui::EndDragDropSource();
-				}
-			}
-
-			else if(f->GetStreamCount() == 1)
-			{
-				if(ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-					ImGui::TreePop();
-
 				StreamDescriptor s(f, 0);
 				if(ImGui::BeginDragDropSource())
 				{
@@ -172,7 +154,16 @@ bool StreamBrowserDialog::DoRender()
 				}
 			}
 
-			else if(ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			//Drag source for the channel itself (if we have zero or >1 streams)
+			else if(ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload("Channel", &f, sizeof(f));
+
+				ImGui::TextUnformatted(f->GetDisplayName().c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			if(open && !singleStream)
 			{
 				for(size_t j=0; j<f->GetStreamCount(); j++)
 				{
@@ -190,8 +181,6 @@ bool StreamBrowserDialog::DoRender()
 						ImGui::EndDragDropSource();
 					}
 				}
-
-				ImGui::TreePop();
 			}
 		}
 		ImGui::TreePop();
