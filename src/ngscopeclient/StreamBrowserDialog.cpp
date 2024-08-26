@@ -73,7 +73,22 @@ bool StreamBrowserDialog::DoRender()
 			{
 				auto chan = inst->GetChannel(i);
 
-				if(chan->GetStreamCount() == 1)
+				//Outputs with no streams
+				if(chan->GetStreamCount() == 0)
+				{
+					if(ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+						ImGui::TreePop();
+
+					if(ImGui::BeginDragDropSource())
+					{
+						ImGui::SetDragDropPayload("Channel", &chan, sizeof(chan));
+
+						ImGui::TextUnformatted(chan->GetDisplayName().c_str());
+						ImGui::EndDragDropSource();
+					}
+				}
+
+				else if(chan->GetStreamCount() == 1)
 				{
 					if(ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 						ImGui::TreePop();
@@ -124,7 +139,22 @@ bool StreamBrowserDialog::DoRender()
 		auto filters = Filter::GetAllInstances();
 		for(auto f : filters)
 		{
-			if(f->GetStreamCount() == 1)
+			//Sinks with no streams
+			if(f->GetStreamCount() == 0)
+			{
+				if(ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+					ImGui::TreePop();
+
+				if(ImGui::BeginDragDropSource())
+				{
+					ImGui::SetDragDropPayload("Channel", &f, sizeof(f));
+
+					ImGui::TextUnformatted(f->GetDisplayName().c_str());
+					ImGui::EndDragDropSource();
+				}
+			}
+
+			else if(f->GetStreamCount() == 1)
 			{
 				if(ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 					ImGui::TreePop();

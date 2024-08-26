@@ -597,10 +597,10 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
-	//Handle dropping a stream from the browser
-	auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+	//Handle dropping a stream or channel from the browser
 	ax::NodeEditor::NodeId newNode;
 	bool nodeAdded = false;
+	auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
 	if(spay)
 	{
 		if(spay->IsDelivery())
@@ -612,6 +612,21 @@ bool FilterGraphEditor::DoRender()
 
 			nodeAdded = true;
 			newNode = GetID(stream.m_channel);
+		}
+	}
+
+	auto schan = ImGui::AcceptDragDropPayload("Channel", ImGuiDragDropFlags_AcceptPeekOnly);
+	if(schan)
+	{
+		if(schan->IsDelivery())
+		{
+			auto chan = *reinterpret_cast<InstrumentChannel**>(schan->Data);
+			chan->m_visibilityMode = InstrumentChannel::VIS_SHOW;
+
+			//TODO: Make sure we don't already have a node for it
+
+			nodeAdded = true;
+			newNode = GetID(chan);
 		}
 	}
 
