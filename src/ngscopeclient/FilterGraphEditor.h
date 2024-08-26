@@ -180,6 +180,7 @@ protected:
 	void DoNodeForChannel(InstrumentChannel* channel, std::shared_ptr<Instrument> inst);
 	void DoNodeForTrigger(Trigger* trig);
 	bool HandleNodeProperties();
+	void HandleDoubleClicks();
 	void HandleLinkCreationRequests(Filter*& fReconfigure);
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	void HandleBackgroundContextMenu();

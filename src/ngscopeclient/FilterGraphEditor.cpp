@@ -683,6 +683,7 @@ bool FilterGraphEditor::DoRender()
 	Filter* fReconfigure = nullptr;
 	HandleLinkCreationRequests(fReconfigure);
 	HandleLinkDeletionRequests(fReconfigure);
+	HandleDoubleClicks();
 	bool triggerChanged = HandleNodeProperties();
 	HandleBackgroundContextMenu();
 
@@ -2064,7 +2065,6 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<
 	//Figure out how big the header text is
 	auto headerSize = headerfont->CalcTextSizeA(headerfontsize, FLT_MAX, 0, headerText.c_str());
 
-
 	//Format block type early, even though it's not drawn until later
 	//so that we know how much space to allocate
 	string blocktype;
@@ -2356,6 +2356,44 @@ void FilterGraphEditor::NodeIcon(InstrumentChannel* chan, ImVec2 pos, ImVec2 ico
 	}
 
 	//If we get here, no graphical icon.
+}
+
+/**
+	@brief Opens a persistent properties window when a node is double clicked
+ */
+void FilterGraphEditor::HandleDoubleClicks()
+{
+	auto id = ax::NodeEditor::GetDoubleClickedNode();
+	if(!id)
+		return;
+
+	//No properties page for groups
+	if(m_groups.HasEntry(id))
+		return;
+
+	//Spawn the appropriate dialog
+	auto node = static_cast<FlowGraphNode*>(m_session.m_idtable[(uintptr_t)id]);
+	auto trig = dynamic_cast<Trigger*>(node);
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(node);
+	auto bo = dynamic_cast<BERTOutputChannel*>(node);
+	auto doc = dynamic_cast<DigitalOutputChannel*>(node);
+	auto dic = dynamic_cast<DigitalInputChannel*>(node);
+	auto dio = dynamic_cast<DigitalIOChannel*>(node);
+	if(trig)
+		m_parent->ShowTriggerProperties();
+
+	//TODO: check if we already have a dialog for these types and avoid spawning a duplicate
+	else if(bo)
+		m_parent->AddDialog(make_shared<BERTOutputChannelDialog>(bo, true));
+	else if(dio)
+		m_parent->AddDialog(make_shared<DigitalIOChannelDialog>(dio, m_parent, true));
+	else if(doc)
+		m_parent->AddDialog(make_shared<DigitalOutputChannelDialog>(doc, m_parent, true));
+	else if(dic)
+		m_parent->AddDialog(make_shared<DigitalInputChannelDialog>(dic, m_parent, true));
+
+	else if(ochan)
+		m_parent->ShowChannelProperties(ochan);
 }
 
 /**
