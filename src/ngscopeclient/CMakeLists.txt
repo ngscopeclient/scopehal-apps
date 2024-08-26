@@ -61,6 +61,7 @@ add_executable(ngscopeclient
 	BERTInputChannelDialog.cpp
 	BERTOutputChannelDialog.cpp
 	ChannelPropertiesDialog.cpp
+	CreateFilterBrowser.cpp
 	Dialog.cpp
 	DigitalInputChannelDialog.cpp
 	DigitalIOChannelDialog.cpp

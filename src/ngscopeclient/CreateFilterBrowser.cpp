@@ -30,25 +30,27 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Implementation of StreamBrowserDialog
+	@brief Implementation of CreateFilterBrowser
  */
 
 #include "ngscopeclient.h"
-#include "StreamBrowserDialog.h"
+#include "CreateFilterBrowser.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-StreamBrowserDialog::StreamBrowserDialog(Session& session)
-	: Dialog("Stream Browser", "Stream Browser", ImVec2(300, 400))
+CreateFilterBrowser::CreateFilterBrowser(Session& session, MainWindow* parent)
+	: Dialog("Filter Palette", "Filter Palette", ImVec2(550, 400))
 	, m_session(session)
+	, m_parent(parent)
 {
 
 }
 
-StreamBrowserDialog::~StreamBrowserDialog()
+CreateFilterBrowser::~CreateFilterBrowser()
 {
 }
 
@@ -61,132 +63,94 @@ StreamBrowserDialog::~StreamBrowserDialog()
 	@return		True if we should continue showing the dialog
 				False if it's been closed
  */
-bool StreamBrowserDialog::DoRender()
+bool CreateFilterBrowser::DoRender()
 {
-	//Add all instruments
-	auto insts = m_session.GetInstruments();
-	for(auto inst : insts)
+	auto& refs = m_session.GetReferenceFilters();
+
+	//TODO: filtering by type
+	//TODO: string filtering
+
+	ImVec2 iconmargin(ImGui::GetFontSize(), ImGui::GetFontSize());
+
+	auto size = ImGui::GetFontSize() * 6;
+	ImVec2 buttonsize(size*2, size);
+	auto& style = ImGui::GetStyle();
+
+	float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+	for(auto it : refs)
 	{
-		if(ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		//Hackiness based on manual-wrapping example from the demo
+
+		//Placeholder for the button
+		auto pos = ImGui::GetCursorScreenPos();
+		ImGui::InvisibleButton(it.first.c_str(), buttonsize);
+
+		//Decide whether to wrap the button
+		float last_button_x2 = ImGui::GetItemRectMax().x;
+		float next_button_x2 = last_button_x2 + style.ItemSpacing.x + buttonsize.x;
+		if(next_button_x2 < window_visible_x2)
+			ImGui::SameLine();
+
+		//Figure out the icon to draw
+		auto icon = m_parent->GetIconForFilter(it.second);
+
+		//Draw the button
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		if(ImGui::IsItemHovered())
 		{
-			for(size_t i=0; i<inst->GetChannelCount(); i++)
-			{
-				auto chan = inst->GetChannel(i);
-
-				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-				//Single stream: drag the stream not the channel
-				bool singleStream = chan->GetStreamCount() == 1;
-				if(singleStream)
-				{
-					StreamDescriptor s(chan, 0);
-					if(ImGui::BeginDragDropSource())
-					{
-						if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-							ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-						else
-							ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-						ImGui::TextUnformatted(s.GetName().c_str());
-						ImGui::EndDragDropSource();
-					}
-				}
-
-				//Drag source for the channel itself (if we have zero or >1 streams)
-				else if(ImGui::BeginDragDropSource())
-				{
-					ImGui::SetDragDropPayload("Channel", &chan, sizeof(chan));
-
-					ImGui::TextUnformatted(chan->GetDisplayName().c_str());
-					ImGui::EndDragDropSource();
-				}
-
-				if(open && !singleStream)
-				{
-					for(size_t j=0; j<chan->GetStreamCount(); j++)
-					{
-						ImGui::Selectable(chan->GetStreamName(j).c_str());
-
-						StreamDescriptor s(chan, j);
-						if(ImGui::BeginDragDropSource())
-						{
-							if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-								ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-							else
-								ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-							ImGui::TextUnformatted(s.GetName().c_str());
-							ImGui::EndDragDropSource();
-						}
-					}
-				}
-
-				if(open)
-					ImGui::TreePop();
-			}
-
-			ImGui::TreePop();
+			draw_list->AddRectFilled(
+				pos,
+				pos + buttonsize,
+				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_ButtonHovered]));
 		}
-	}
-
-	//Add all filters
-	if(ImGui::TreeNodeEx("Filters", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		auto filters = Filter::GetAllInstances();
-		for(auto f : filters)
+		else
 		{
-			bool open = ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-			//Single stream: drag the stream not the channel
-			bool singleStream = f->GetStreamCount() == 1;
-			if(singleStream)
-			{
-				StreamDescriptor s(f, 0);
-				if(ImGui::BeginDragDropSource())
-				{
-					if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-						ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-					else
-						ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-					ImGui::TextUnformatted(s.GetName().c_str());
-					ImGui::EndDragDropSource();
-				}
-			}
-
-			//Drag source for the channel itself (if we have zero or >1 streams)
-			else if(ImGui::BeginDragDropSource())
-			{
-				ImGui::SetDragDropPayload("Channel", &f, sizeof(f));
-
-				ImGui::TextUnformatted(f->GetDisplayName().c_str());
-				ImGui::EndDragDropSource();
-			}
-
-			if(open && !singleStream)
-			{
-				for(size_t j=0; j<f->GetStreamCount(); j++)
-				{
-					ImGui::Selectable(f->GetStreamName(j).c_str());
-
-					StreamDescriptor s(f, j);
-					if(ImGui::BeginDragDropSource())
-					{
-						if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-							ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-						else
-							ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-						ImGui::TextUnformatted(s.GetName().c_str());
-						ImGui::EndDragDropSource();
-					}
-				}
-			}
-
-			if(open)
-				ImGui::TreePop();
+			draw_list->AddRectFilled(
+				pos,
+				pos + buttonsize,
+				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Button]));
 		}
-		ImGui::TreePop();
+		draw_list->AddRect(
+			pos,
+			pos + buttonsize,
+			ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Border]));
+
+		//Draw the icon
+		if(icon != "")
+		{
+			//Tweak space so we maintain 2:1 aspect ratio
+			auto tl = pos + iconmargin;
+			auto br = pos + buttonsize - iconmargin;
+
+			float dx = br.x - tl.x;
+			float dy = br.y - tl.y;
+
+			float actualWidth = 2*dy;
+			float extraSpace = dx - actualWidth;
+			tl.x += extraSpace / 2;
+			br.x -= extraSpace / 2;
+
+			draw_list->AddImage(m_parent->GetTexture(icon), tl, br);
+		}
+
+		//Truncate text to fit in the available space
+		string caption = it.first;
+		float textmargin = ImGui::GetFontSize();
+		float textSpace = buttonsize.x - textmargin*2;
+		while(true)
+		{
+			auto tsize = ImGui::CalcTextSize(caption.c_str());
+			if(tsize.x <= textSpace)
+				break;
+
+			caption.resize(caption.length() - 1);
+		}
+
+		//Draw the text
+		draw_list->AddText(
+			ImVec2(pos.x + textmargin, pos.y + size - (1.25 * ImGui::GetFontSize()) ),
+			ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Text]),
+			caption.c_str());
 	}
 
 	return true;

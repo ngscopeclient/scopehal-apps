@@ -569,8 +569,13 @@ public:
 	TextureManager* GetTextureManager()
 	{ return &m_texmgr; }
 
+	std::string GetIconForFilter(Filter* f);
+
 protected:
 	FontManager m_fontmgr;
+
+	///@brief Map of filter types to class names
+	std::map<std::type_index, std::string> m_filterIconMap;
 
 	void UpdateFonts();
 

@@ -294,9 +294,6 @@ protected:
 		lessID<ax::NodeEditor::NodeId>
 		 > m_groups;
 
-	///@brief Map of filter types to class names
-	std::map<std::type_index, std::string> m_filterIconMap;
-
 	//DEBUG: forces for display
 	std::map<
 		ax::NodeEditor::NodeId,
