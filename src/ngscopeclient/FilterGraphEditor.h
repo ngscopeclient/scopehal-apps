@@ -165,7 +165,7 @@ public:
 protected:
 	friend class FilterGraphGroup;
 
-	std::map<std::shared_ptr<Instrument>, std::vector<InstrumentChannel*> > GetAllChannels();
+	std::map<std::shared_ptr<Instrument>, std::vector<InstrumentChannel*> > GetAllVisibleChannels();
 	std::vector<FlowGraphNode*> GetAllNodes();
 
 	void RefreshGroupPorts();

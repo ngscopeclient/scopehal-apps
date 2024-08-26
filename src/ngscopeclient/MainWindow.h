@@ -129,9 +129,6 @@ public:
 	void ShowManageInstruments();
 	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, std::shared_ptr<Oscilloscope> secondary);
 
-	bool IsChannelBeingDragged();
-	StreamDescriptor GetChannelBeingDragged();
-
 	void OnCursorMoved(int64_t offset);
 
 	void NavigateToTimestamp(

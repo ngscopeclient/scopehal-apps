@@ -101,36 +101,6 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshTimebasePropertiesDialog();
 }
 
-/**
-	@brief Returns true if a channel is being dragged from any WaveformArea within the group
- */
-bool WaveformGroup::IsChannelBeingDragged()
-{
-	auto areas = GetWaveformAreas();
-	for(auto a : areas)
-	{
-		if(a->IsChannelBeingDragged())
-			return true;
-	}
-	return false;
-}
-
-/**
-	@brief Returns the channel being dragged, if one exists
- */
-StreamDescriptor WaveformGroup::GetChannelBeingDragged()
-{
-	auto areas = GetWaveformAreas();
-	for(auto a : areas)
-	{
-		auto stream = a->GetChannelBeingDragged();
-		if(stream)
-			return stream;
-	}
-	return StreamDescriptor(nullptr, 0);
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 

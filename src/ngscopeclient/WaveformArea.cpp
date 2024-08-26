@@ -646,11 +646,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 			auto wheel_h = ImGui::GetIO().MouseWheelH;
 			if((wheel != 0) || (wheel_h != 0))
 				OnMouseWheelPlotArea(wheel, wheel_h);
-
-			//Overlays / targets for drag-and-drop
-			if(m_parent->IsChannelBeingDragged())
-				DragDropOverlays(pos, csize, iArea, numAreas);
 		}
+
+		//Always check for drag/drop
+		DragDropOverlays(pos, csize, iArea, numAreas);
 
 		//Cursors have to be drawn over the waveform
 		RenderCursors(pos, csize);
@@ -2950,9 +2949,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 
 	float heightOfMiddle = bottomOfMiddle - topOfMiddle;
 
-	//Center drop area should only be displayed if we are not the source area of the drag
-	if(m_dragState == DRAG_STATE_NONE)
-		CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
+	CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
 	//Only show split in bottom (or top?) area
 	if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
@@ -2970,6 +2967,9 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
  */
 void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
 {
+	//FIXME
+	return;
+
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
 	//ImGui::Button(name.c_str(), size);
@@ -3077,38 +3077,76 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
  */
 void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 {
-	//Reject streams not compatible with this plot
-	//TODO: display nice error message
-	auto stream = m_parent->GetChannelBeingDragged();
-	if(!stream)
-		return;
-	if(!IsCompatible(stream))
-		return;
-
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
 	//ImGui::Button("center", size);
 	ImGui::SetItemAllowOverlap();
 
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	bool isStream = payload->IsDataType("Stream");
+	if(!isWaveform && !isStream)
+		return;
+
 	//Add drop target
+	StreamDescriptor stream;
+	bool ok = true;
+	bool hover = false;
 	if(ImGui::BeginDragDropTarget())
 	{
-		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
+		//Accept drag/drop payloads from another WaveformArea
+		auto wpay = ImGui::AcceptDragDropPayload("Waveform",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(wpay)
 		{
-			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
-			auto sdrag = desc->first->GetStream(desc->second);
+			hover = true;
 
-			//Add the new stream to us
-			//TODO: copy view settings from the DisplayedChannel over?
-			AddStream(sdrag);
+			auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+			stream = desc->first->GetStream(desc->second);
 
-			//Remove the stream from the originating waveform area
-			desc->first->RemoveStream(desc->second);
+			//Don't allow dropping in the same area
+			//Reject streams not compatible with this plot
+			//TODO: display nice error message
+			if( (desc->first == this) || !IsCompatible(stream))
+				ok = false;
+
+			else if(payload->IsDelivery())
+			{
+				LogDebug("accept center left\n");
+
+				//Add the new stream to us
+				//TODO: copy view settings from the DisplayedChannel over?
+				AddStream(stream);
+
+				//Remove the stream from the originating waveform area
+				desc->first->RemoveStream(desc->second);
+			}
+		}
+
+		//Accept drag/drop payloads from the stream browser
+		auto spay = ImGui::AcceptDragDropPayload("Stream",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(spay)
+		{
+			hover = true;
+			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+
+			//Reject streams not compatible with this plot
+			//TODO: display nice error message if not
+			if(!IsCompatible(stream))
+				ok = false;
+
+			else if(payload->IsDelivery())
+				AddStream(stream);
 		}
 
 		ImGui::EndDragDropTarget();
 	}
+
+	if(!ok)
+		return;
 
 	//Draw overlay target
 	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
@@ -3123,7 +3161,7 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	draw_list->AddRectFilled(
 		ImVec2(center.x - fillSize/2 - 0.5, center.y - fillSize/2 - 0.5),
 		ImVec2(center.x + fillSize/2 + 0.5, center.y + fillSize/2 + 0.5),
-		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		hover ? bgHovered : bgBase,
 		rounding);
 	draw_list->AddRect(
 		ImVec2(center.x - lineSize/2 - 0.5, center.y - lineSize/2 - 0.5),
@@ -3133,10 +3171,8 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 
 	//If trying to drop into the center marker, display warning if incompatible scales
 	//(new signal has significantly wider range) and not a filter
-	if(ImGui::IsItemHovered())
+	if(hover)
 	{
-		if(!stream)
-			return;
 		if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
 			return;
 		auto chan = stream.m_channel;
@@ -3155,33 +3191,54 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
  */
 void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 {
-	//Reject streams not compatible with this group
-	//TODO: display nice error message
-	auto stream = m_parent->GetChannelBeingDragged();
-	if(!stream)
-		return;
-	if(stream.GetXAxisUnits() != m_group->GetXAxisUnit())
-		return;
-
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("centersplit", size);
 	//ImGui::Button("center", size);
 	ImGui::SetItemAllowOverlap();
 
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	bool isStream = payload->IsDataType("Stream");
+	if(!isWaveform && !isStream)
+		return;
+
 	//Add drop target
+	StreamDescriptor stream;
+	bool hover = false;
 	if(ImGui::BeginDragDropTarget())
 	{
-		auto payload = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-		if( (payload != nullptr) && (payload->DataSize == sizeof(DragDescriptor)) )
+		auto wpay = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(wpay)
 		{
-			auto desc = reinterpret_cast<DragDescriptor*>(payload->Data);
-			auto sdrag = desc->first->GetStream(desc->second);
+			hover = true;
 
-			auto area = make_shared<WaveformArea>(sdrag, m_group, m_parent);
-			m_group->AddArea(area);
+			auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+			stream = desc->first->GetStream(desc->second);
 
-			//Remove the stream from the originating waveform area
-			desc->first->RemoveStream(desc->second);
+			if( (stream.GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
+				m_group->AddArea(area);
+
+				//Remove the stream from the originating waveform area
+				desc->first->RemoveStream(desc->second);
+			}
+		}
+
+		//Accept drag/drop payloads from the stream browser
+		auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(spay)
+		{
+			hover = true;
+			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+
+			if( (stream.GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
+				m_group->AddArea(area);
+			}
 		}
 
 		ImGui::EndDragDropTarget();
@@ -3202,7 +3259,7 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 	draw_list->AddRectFilled(
 		ImVec2(center.x - fillSize/2 - 0.5, center.y - fillSize/2 - 0.5),
 		ImVec2(center.x + fillSize/2 + 0.5, center.y + fillSize/2 + 0.5),
-		ImGui::IsItemHovered() ? bgHovered : bgBase,
+		hover ? bgHovered : bgBase,
 		rounding);
 	draw_list->AddRect(
 		ImVec2(center.x - lineSize/2 - 0.5, center.y - lineSize/2 - 0.5),
@@ -3215,12 +3272,6 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
 		lineColor,
 		rounding);
-
-	//Draw line to show split
-	/*draw_list->AddLine(
-		ImVec2(center.x - lineSize/2 - 0.5, center.y - 0.5),
-		ImVec2(center.x + lineSize/2 + 0.5, center.y - 0.5),
-		lineColor);*/
 }
 
 /**

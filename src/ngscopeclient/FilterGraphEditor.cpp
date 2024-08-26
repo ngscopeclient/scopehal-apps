@@ -423,7 +423,7 @@ bool FilterGraphEditor::Render()
 /**
 	@brief Get a list of all channels that we are displaying nodes for
  */
-map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetAllChannels()
+map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetAllVisibleChannels()
 {
 	map<shared_ptr<Instrument>, vector<InstrumentChannel*> > ret;
 
@@ -439,36 +439,50 @@ map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetA
 		{
 			auto chan = inst->GetChannel(i);
 
-			//Exclude scope channels that can't be, or are not, enabled
-			//TODO: should CanEnableChannel become an Instrument method?
-			if(scope)
+			//Channel visibility mode determines what we're showing
+			switch(chan->m_visibilityMode)
 			{
-				if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_OSCILLOSCOPE)
-				{
-					//If it's a trigger channel, allow it even if it's not enabled
-					//TODO: only allow if currently selected
-					if(chan == scope->GetExternalTrigger())
-					{
-					}
-					else
-					{
-						if(!scope->CanEnableChannel(i))
-							continue;
-						if(!scope->IsChannelEnabled(i))
-							continue;
-					}
-				}
-			}
+				case InstrumentChannel::VIS_HIDE:
+					continue;
 
-			//Exclude power supply channels that lack voltage/current controls
-			//TODO: still allow filter graph control of on/off?
-			if(psu)
-			{
-				if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU)
-				{
-					if(!psu->SupportsVoltageCurrentControl(i))
-						continue;
-				}
+				case InstrumentChannel::VIS_SHOW:
+					break;
+
+				case InstrumentChannel::VIS_AUTO:
+				default:
+
+					//Exclude scope channels that can't be, or are not, enabled
+					//TODO: should CanEnableChannel become an Instrument method?
+					if(scope)
+					{
+						if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_OSCILLOSCOPE)
+						{
+							//If it's a trigger channel, allow it even if it's not enabled
+							//TODO: only allow if currently selected
+							if(chan == scope->GetExternalTrigger())
+							{
+							}
+							else
+							{
+								if(!scope->CanEnableChannel(i))
+									continue;
+								if(!scope->IsChannelEnabled(i))
+									continue;
+							}
+						}
+					}
+
+					//Exclude power supply channels that lack voltage/current controls
+					//TODO: still allow filter graph control of on/off?
+					if(psu)
+					{
+						if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_PSU)
+						{
+							if(!psu->SupportsVoltageCurrentControl(i))
+								continue;
+						}
+					}
+					break;
 			}
 
 			chans.push_back(chan);
@@ -488,7 +502,7 @@ vector<FlowGraphNode*> FilterGraphEditor::GetAllNodes()
 	vector<FlowGraphNode*> ret;
 
 	//Channels
-	auto chans = GetAllChannels();
+	auto chans = GetAllVisibleChannels();
 	for(auto it : chans)
 	{
 		for(auto node : it.second)
@@ -590,7 +604,7 @@ bool FilterGraphEditor::DoRender()
 
 	//Make nodes for all instrument channels
 	bool multiInst = (m_session.GetInstrumentCount() > 1);
-	auto chans = GetAllChannels();
+	auto chans = GetAllVisibleChannels();
 	for(auto it : chans)
 	{
 		for(auto chan : it.second)

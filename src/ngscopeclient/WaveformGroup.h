@@ -116,9 +116,6 @@ public:
 
 	void ClearPersistence();
 
-	bool IsChannelBeingDragged();
-	StreamDescriptor GetChannelBeingDragged();
-
 	float GetYAxisWidth()
 	{ return 6 * ImGui::GetFontSize() * ImGui::GetWindowDpiScale(); }
 

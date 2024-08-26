@@ -74,6 +74,7 @@
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "ScopeDeskewWizard.h"
+#include "StreamBrowserDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
@@ -202,6 +203,9 @@ void MainWindow::InitializeDefaultSession()
 	//Spawn the graph editor
 	m_graphEditor = make_shared<FilterGraphEditor>(m_session, this);
 	AddDialog(m_graphEditor);
+
+	//Spawn the net browser (for now just as a popup)
+	AddDialog(make_shared<StreamBrowserDialog>(m_session));
 
 	//Dock it
 	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
@@ -1308,35 +1312,6 @@ void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDesc
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
-
-/**
-	@brief Returns true if a channel is being dragged from any WaveformArea within this window
- */
-bool MainWindow::IsChannelBeingDragged()
-{
-	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
-	for(auto group : m_waveformGroups)
-	{
-		if(group->IsChannelBeingDragged())
-			return true;
-	}
-	return false;
-}
-
-/**
-	@brief Returns the channel being dragged, if one exists
- */
-StreamDescriptor MainWindow::GetChannelBeingDragged()
-{
-	lock_guard<recursive_mutex> lock(m_waveformGroupsMutex);
-	for(auto group : m_waveformGroups)
-	{
-		auto stream = group->GetChannelBeingDragged();
-		if(stream)
-			return stream;
-	}
-	return StreamDescriptor(nullptr, 0);
-}
 
 void MainWindow::ShowTimebaseProperties()
 {

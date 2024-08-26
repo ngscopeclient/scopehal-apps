@@ -101,6 +101,7 @@ add_executable(ngscopeclient
 	ScopeDeskewWizard.cpp
 	SCPIConsoleDialog.cpp
 	Session.cpp
+	StreamBrowserDialog.cpp
 	TextureManager.cpp
 	TimebasePropertiesDialog.cpp
 	TriggerGroup.cpp
