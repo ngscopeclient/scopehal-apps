@@ -597,6 +597,24 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
+	//Handle dropping a stream from the browser
+	auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+	ax::NodeEditor::NodeId newNode;
+	bool nodeAdded = false;
+	if(spay)
+	{
+		if(spay->IsDelivery())
+		{
+			auto stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+			stream.m_channel->m_visibilityMode = InstrumentChannel::VIS_SHOW;
+
+			//TODO: Make sure we don't already have a node for it
+
+			nodeAdded = true;
+			newNode = GetID(stream.m_channel);
+		}
+	}
+
 	//Make nodes for all groups
 	RefreshGroupPorts();
 	for(auto it : m_groups)
@@ -610,6 +628,10 @@ bool FilterGraphEditor::DoRender()
 		for(auto chan : it.second)
 			DoNodeForChannel(chan, it.first, multiInst);
 	}
+
+	//Make a newly dragged node spawn at the mouse position
+	if(nodeAdded)
+		ax::NodeEditor::SetNodePosition(newNode, ImGui::GetMousePos());
 
 	//Make nodes for all triggers
 	auto insts = m_session.GetInstruments();
