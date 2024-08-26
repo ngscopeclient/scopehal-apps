@@ -95,7 +95,7 @@ bool StreamBrowserDialog::DoRender()
 				{
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
-						ImGui::TextUnformatted(chan->GetStreamName(j).c_str());
+						ImGui::Selectable(chan->GetStreamName(j).c_str());
 
 						StreamDescriptor s(chan, j);
 						if(ImGui::BeginDragDropSource())
@@ -146,7 +146,7 @@ bool StreamBrowserDialog::DoRender()
 			{
 				for(size_t j=0; j<f->GetStreamCount(); j++)
 				{
-					ImGui::TextUnformatted(f->GetStreamName(j).c_str());
+					ImGui::Selectable(f->GetStreamName(j).c_str());
 
 					StreamDescriptor s(f, j);
 					if(ImGui::BeginDragDropSource())
