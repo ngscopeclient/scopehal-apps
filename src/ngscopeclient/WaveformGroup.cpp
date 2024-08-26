@@ -831,6 +831,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			//Find beginning and end of all waveforms in the group
 			int64_t start = INT64_MAX;
 			int64_t end = -INT64_MAX;
+			bool dataFound = false;
 			auto areas = GetWaveformAreas();
 			for(auto a : areas)
 			{
@@ -847,6 +848,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 					//Regular waveform
 					if(sdata || udata)
 					{
+						dataFound = true;
+
 						int64_t wstart = GetOffsetScaled(sdata, udata, 0);
 						int64_t wend =
 							GetOffsetScaled(sdata, udata, data->size()-1) +
@@ -859,15 +862,17 @@ void WaveformGroup::RenderTimeline(float width, float height)
 					//Density plot
 					else if(ddata)
 					{
+						dataFound = true;
 						start = 0;
 						end = ddata->GetWidth() * ddata->m_timescale;
 					}
 				}
 			}
+
 			int64_t sigwidth = end - start;
 
 			//Don't divide by zero if no data!
-			if(sigwidth > 1)
+			if( dataFound && (sigwidth > 1) )
 			{
 				m_pixelsPerXUnit = width / sigwidth;
 				m_xAxisOffset = start;
