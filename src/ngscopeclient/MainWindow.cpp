@@ -74,7 +74,6 @@
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "ScopeDeskewWizard.h"
-#include "StreamBrowserDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
@@ -205,7 +204,8 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_graphEditor);
 
 	//Spawn the net browser (for now just as a popup)
-	AddDialog(make_shared<StreamBrowserDialog>(m_session));
+	m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+	AddDialog(m_streamBrowser);
 
 	//Dock it
 	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
@@ -239,6 +239,7 @@ void MainWindow::CloseSession()
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
 	m_triggerDialog = nullptr;
+	m_streamBrowser = nullptr;
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
@@ -1113,6 +1114,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 	//Handle single-instance dialogs
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
+	if(m_streamBrowser == dlg)
+		m_streamBrowser = nullptr;
 	if(m_metricsDialog == dlg)
 		m_metricsDialog = nullptr;
 	if(m_timebaseDialog == dlg)

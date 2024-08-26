@@ -1374,6 +1374,17 @@ void MainWindow::WindowMenu()
 		if(hasGraphEditor)
 			ImGui::EndDisabled();
 
+		bool hasStreamBrowser = m_streamBrowser != nullptr;
+		if(hasStreamBrowser)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Stream Browser"))
+		{
+			m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+			AddDialog(m_streamBrowser);
+		}
+		if(hasStreamBrowser)
+			ImGui::EndDisabled();
+
 		if(ImGui::MenuItem("New Workspace"))
 			m_workspaces.emplace(make_shared<Workspace>(m_session));
 

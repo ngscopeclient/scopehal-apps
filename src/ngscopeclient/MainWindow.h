@@ -45,6 +45,7 @@
 #include "FilterGraphEditor.h"
 #include "ManageInstrumentsDialog.h"
 #include "ProtocolAnalyzerDialog.h"
+#include "StreamBrowserDialog.h"
 #include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Workspace.h"
@@ -378,6 +379,9 @@ protected:
 
 	///@brief Filter graph editor
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;
+
+	///@brief Stream browser
+	std::shared_ptr<StreamBrowserDialog> m_streamBrowser;
 
 	///@brief Config blob for filter graph editor
 	std::string m_graphEditorConfigBlob;
