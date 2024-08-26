@@ -165,6 +165,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
 		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
+	LoadFilterIcons();
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
@@ -765,6 +766,69 @@ void MainWindow::Toolbar()
 	ImGui::SetCursorPosY(y);
 
 	ImGui::End();
+}
+
+/**
+	@brief Load icons for the filter graph
+ */
+void MainWindow::LoadFilterIcons()
+{
+	m_texmgr.LoadTexture("filter-64b66bdecoder", FindDataFile("icons/filters/filter-64b66bdecoder.png"));
+	m_texmgr.LoadTexture("filter-8b10bdecoder", FindDataFile("icons/filters/filter-8b10bdecoder.png"));
+	m_texmgr.LoadTexture("filter-ac-couple", FindDataFile("icons/filters/filter-ac-couple.png"));
+	m_texmgr.LoadTexture("filter-ac-rms", FindDataFile("icons/filters/filter-ac-rms.png"));
+	m_texmgr.LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
+	m_texmgr.LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
+	m_texmgr.LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
+	m_texmgr.LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
+	m_texmgr.LoadTexture("filter-bandwidth", FindDataFile("icons/filters/filter-bandwidth.png"));
+	m_texmgr.LoadTexture("filter-burst-width", FindDataFile("icons/filters/filter-burst-width.png"));
+	m_texmgr.LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
+	m_texmgr.LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
+	m_texmgr.LoadTexture("filter-constellation", FindDataFile("icons/filters/filter-constellation.png"));
+	m_texmgr.LoadTexture("filter-csv-export", FindDataFile("icons/filters/filter-csv-export.png"));
+	m_texmgr.LoadTexture("filter-csv-import", FindDataFile("icons/filters/filter-csv-import.png"));
+	m_texmgr.LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
+	m_texmgr.LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
+	m_texmgr.LoadTexture("filter-duty-cycle", FindDataFile("icons/filters/filter-duty-cycle.png"));
+	m_texmgr.LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
+	m_texmgr.LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
+	m_texmgr.LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
+	m_texmgr.LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
+	m_texmgr.LoadTexture("filter-fir-highpass", FindDataFile("icons/filters/filter-fir-highpass.png"));
+	m_texmgr.LoadTexture("filter-fir-lowpass", FindDataFile("icons/filters/filter-fir-lowpass.png"));
+	m_texmgr.LoadTexture("filter-fir-bandpass", FindDataFile("icons/filters/filter-fir-bandpass.png"));
+	m_texmgr.LoadTexture("filter-fir-notch", FindDataFile("icons/filters/filter-fir-notch.png"));
+	m_texmgr.LoadTexture("filter-fft", FindDataFile("icons/filters/filter-fft.png"));
+	m_texmgr.LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
+	m_texmgr.LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
+	m_texmgr.LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
+	m_texmgr.LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
+	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
+	m_texmgr.LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
+	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
+	m_texmgr.LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
+	m_texmgr.LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
+	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
+	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
+	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
+	m_texmgr.LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
+	m_texmgr.LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
+	m_texmgr.LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
+	m_texmgr.LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
+	m_texmgr.LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
+	m_texmgr.LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_texmgr.LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
+	m_texmgr.LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
+	m_texmgr.LoadTexture("filter-uart", FindDataFile("icons/filters/filter-uart.png"));
+	m_texmgr.LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
+	m_texmgr.LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
+	m_texmgr.LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
+	m_texmgr.LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
+	m_texmgr.LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
+	m_texmgr.LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
+	m_texmgr.LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
+
 }
 
 /**

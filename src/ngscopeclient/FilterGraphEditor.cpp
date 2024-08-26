@@ -269,63 +269,6 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	m_config.SettingsFile = "";
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
 
-	//Load icons for filters
-	m_parent->GetTextureManager()->LoadTexture("filter-64b66bdecoder", FindDataFile("icons/filters/filter-64b66bdecoder.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-8b10bdecoder", FindDataFile("icons/filters/filter-8b10bdecoder.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-ac-couple", FindDataFile("icons/filters/filter-ac-couple.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-ac-rms", FindDataFile("icons/filters/filter-ac-rms.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-bandwidth", FindDataFile("icons/filters/filter-bandwidth.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-burst-width", FindDataFile("icons/filters/filter-burst-width.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-constellation", FindDataFile("icons/filters/filter-constellation.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-csv-export", FindDataFile("icons/filters/filter-csv-export.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-csv-import", FindDataFile("icons/filters/filter-csv-import.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-duty-cycle", FindDataFile("icons/filters/filter-duty-cycle.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fir-highpass", FindDataFile("icons/filters/filter-fir-highpass.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fir-lowpass", FindDataFile("icons/filters/filter-fir-lowpass.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fir-bandpass", FindDataFile("icons/filters/filter-fir-bandpass.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fir-notch", FindDataFile("icons/filters/filter-fir-notch.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fft", FindDataFile("icons/filters/filter-fft.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-uart", FindDataFile("icons/filters/filter-uart.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
-	m_parent->GetTextureManager()->LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
-	m_parent->GetTextureManager()->LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
-	m_parent->GetTextureManager()->LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
-	m_parent->GetTextureManager()->LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
-	m_parent->GetTextureManager()->LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
-	m_parent->GetTextureManager()->LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
-
 	//Fill out map of filter class types to icon names
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
@@ -608,8 +551,6 @@ bool FilterGraphEditor::DoRender()
 			auto stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
 			stream.m_channel->m_visibilityMode = InstrumentChannel::VIS_SHOW;
 
-			//TODO: Make sure we don't already have a node for it
-
 			nodeAdded = true;
 			newNode = GetID(stream.m_channel);
 		}
@@ -622,8 +563,6 @@ bool FilterGraphEditor::DoRender()
 		{
 			auto chan = *reinterpret_cast<InstrumentChannel**>(schan->Data);
 			chan->m_visibilityMode = InstrumentChannel::VIS_SHOW;
-
-			//TODO: Make sure we don't already have a node for it
 
 			nodeAdded = true;
 			newNode = GetID(chan);

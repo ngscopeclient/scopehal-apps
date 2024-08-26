@@ -291,6 +291,8 @@ protected:
 	std::map<std::string, std::string> m_eyeGradientFriendlyNames;
 	std::vector<std::string> m_eyeGradients;
 
+	void LoadFilterIcons();
+
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
 
