@@ -56,7 +56,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 add_compile_options(-g -mtune=native)
 add_compile_options("$<$<CONFIG:RELEASE>:-O3>")
-add_compile_options("$<$<CONFIG:DEBUG>:-O0;-D_DEBUG>")
+add_compile_options("$<$<CONFIG:DEBUG>:-Og;-D_DEBUG>")
 
 # Needed for %zu/%zd on MSYS2, must be added here to avoid redefinition
 if(WIN32 AND (NOT MSVC))
