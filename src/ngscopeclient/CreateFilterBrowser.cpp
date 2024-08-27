@@ -120,7 +120,7 @@ bool CreateFilterBrowser::DoRender()
 	ImGui::InputText("Search", &m_searchString);
 
 	//Scroll area
-	//if(ImGui::BeginChild("Scroller", ImVec2(0, 0)))
+	if(ImGui::BeginChild("Scroller", ImVec2(0, 0)))
 	{
 		ImVec2 iconmargin(ImGui::GetFontSize(), ImGui::GetFontSize());
 
@@ -245,7 +245,7 @@ bool CreateFilterBrowser::DoRender()
 				caption.c_str());
 		}
 
-		//ImGui::EndChild();
+		ImGui::EndChild();
 	}
 
 	return true;
