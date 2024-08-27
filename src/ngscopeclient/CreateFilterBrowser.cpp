@@ -46,8 +46,52 @@ CreateFilterBrowser::CreateFilterBrowser(Session& session, MainWindow* parent)
 	: Dialog("Filter Palette", "Filter Palette", ImVec2(550, 400))
 	, m_session(session)
 	, m_parent(parent)
+	, m_selectedCategoryIndex(0)
 {
+	m_categoryNames.push_back("All");
+	m_categoryValues.push_back(Filter::CAT_COUNT);
 
+	m_categoryNames.push_back("Bus");
+	m_categoryValues.push_back(Filter::CAT_BUS);
+
+	m_categoryNames.push_back("Bus");
+	m_categoryValues.push_back(Filter::CAT_BUS);
+
+	m_categoryNames.push_back("Clocking");
+	m_categoryValues.push_back(Filter::CAT_CLOCK);
+
+	m_categoryNames.push_back("Export");
+	m_categoryValues.push_back(Filter::CAT_EXPORT);
+
+	m_categoryNames.push_back("Generation");
+	m_categoryValues.push_back(Filter::CAT_GENERATION);
+
+	m_categoryNames.push_back("Math");
+	m_categoryValues.push_back(Filter::CAT_MATH);
+
+	m_categoryNames.push_back("Measurement");
+	m_categoryValues.push_back(Filter::CAT_MEASUREMENT);
+
+	m_categoryNames.push_back("Memory");
+	m_categoryValues.push_back(Filter::CAT_MEMORY);
+
+	m_categoryNames.push_back("Miscellaneous");
+	m_categoryValues.push_back(Filter::CAT_MISC);
+
+	m_categoryNames.push_back("Optics");
+	m_categoryValues.push_back(Filter::CAT_OPTICAL);
+
+	m_categoryNames.push_back("Power");
+	m_categoryValues.push_back(Filter::CAT_POWER);
+
+	m_categoryNames.push_back("RF");
+	m_categoryValues.push_back(Filter::CAT_RF);
+
+	m_categoryNames.push_back("Serial");
+	m_categoryValues.push_back(Filter::CAT_SERIAL);
+
+	m_categoryNames.push_back("Signal Integrity");
+	m_categoryValues.push_back(Filter::CAT_ANALYSIS);
 }
 
 CreateFilterBrowser::~CreateFilterBrowser()
@@ -67,19 +111,42 @@ bool CreateFilterBrowser::DoRender()
 {
 	auto& refs = m_session.GetReferenceFilters();
 
-	//TODO: filtering by type
-	//TODO: string filtering
+	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
+	Combo("Category", m_categoryNames, m_selectedCategoryIndex);
+	auto cat = m_categoryValues[m_selectedCategoryIndex];
+
+	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
+	ImGui::InputText("Search", &m_searchString);
 
 	ImVec2 iconmargin(ImGui::GetFontSize(), ImGui::GetFontSize());
 
-	auto size = ImGui::GetFontSize() * 6;
+	auto size = ImGui::GetFontSize() * 5;
 	ImVec2 buttonsize(size*2, size);
 	auto& style = ImGui::GetStyle();
 
+	//Hackiness based on manual-wrapping example from the demo
 	float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
 	for(auto it : refs)
 	{
-		//Hackiness based on manual-wrapping example from the demo
+		//Filter by category
+		if( (cat != Filter::CAT_COUNT) && (cat != it.second->GetCategory()) )
+			continue;
+
+		//String filtering
+		if(m_searchString != "")
+		{
+			//Case insensitive comparison
+			string lowerSearch;
+			for(auto c : m_searchString)
+				lowerSearch += tolower(c);
+
+			string lowerName;
+			for(auto c : it.first)
+				lowerName += tolower(c);
+
+			if(lowerName.find(lowerSearch) == string::npos)
+				continue;
+		}
 
 		//Placeholder for the button
 		auto pos = ImGui::GetCursorScreenPos();

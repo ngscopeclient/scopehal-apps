@@ -125,6 +125,7 @@
 #include "../scopeprotocols/NCOFilter.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
+#include "../scopeprotocols/PCIe128b130bDecoder.h"
 #include "../scopeprotocols/PulseWidthMeasurement.h"
 #include "../scopeprotocols/QSGMIIDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
@@ -270,7 +271,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
-	//AddDialog(make_shared<CreateFilterBrowser>(m_session, this));
+	AddDialog(make_shared<CreateFilterBrowser>(m_session, this));
 
 	//Dock it
 	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
@@ -936,6 +937,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
+	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";

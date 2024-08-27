@@ -51,6 +51,11 @@ public:
 protected:
 	Session& m_session;
 	MainWindow* m_parent;
+
+	std::vector<std::string> m_categoryNames;
+	std::vector<Filter::Category> m_categoryValues;
+	int m_selectedCategoryIndex;
+	std::string m_searchString;
 };
 
 #endif
