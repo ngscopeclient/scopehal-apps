@@ -30,33 +30,80 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Workspace
+	@brief Implementation of FilterGraphWorkspace
  */
-#ifndef Workspace_h
-#define Workspace_h
+#include "ngscopeclient.h"
+#include "FilterGraphWorkspace.h"
+#include "FilterGraphEditor.h"
+#include "CreateFilterBrowser.h"
 
-class Workspace
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+FilterGraphWorkspace::FilterGraphWorkspace(
+	Session& session,
+	shared_ptr<FilterGraphEditor> graphEditor,
+	shared_ptr<CreateFilterBrowser> palette)
+	: Workspace(session)
+	, m_firstRun(true)
+	, m_graphEditor(graphEditor)
+	, m_palette(palette)
 {
-public:
-	Workspace(const YAML::Node& node, Session& session);
-	Workspace(Session& session);
-	virtual ~Workspace()
-	{}
+	m_title = "Filter Graph";
+}
 
-	virtual bool Render();
+bool FilterGraphWorkspace::Render()
+{
+	//Closed, nothing to do
+	if(!m_open)
+		return false;
 
-	YAML::Node Serialize();
+	auto dockspace_id = ImGui::GetID(m_id.c_str());
 
-	std::string GetTitleAndID()
-	{ return m_title + "###" + m_id; }
+	string name = m_title + "###" + m_id;
+	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
+	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
+	{
+		//If we get here, the window is tabbed out or the content area is otherwise not visible.
+		//Need to keep the dockspace node alive still, though!
+		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_KeepAliveOnly, nullptr);
 
-protected:
-	Session& m_session;
+		ImGui::End();
+		return true;
+	}
 
-	bool m_open;
-	std::string m_id;
-	std::string m_title;
-	ImVec2 m_defaultSize;
-};
+	if(ImGui::BeginPopupContextItem())
+	{
+		ImGui::InputText("Name", &m_title);
+		ImGui::EndPopup();
+	}
 
-#endif
+	//First run? special case
+	if(m_firstRun)
+	{
+		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
+		if(topNode)
+		{
+			//Split the top into two sub nodes
+			ImGuiID leftPanelID;
+			ImGuiID rightPanelID;
+			ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, 0.2, &rightPanelID, &leftPanelID);
+
+			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), leftPanelID);
+			ImGui::DockBuilderDockWindow(m_palette->GetTitleAndID().c_str(), rightPanelID);
+			ImGui::DockBuilderFinish(dockspace_id);
+
+			//Remove references in case user wants to close the dialogs later
+			m_graphEditor = nullptr;
+			m_palette = nullptr;
+			m_firstRun = false;
+		}
+	}
+
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), 0, nullptr);
+
+	ImGui::End();
+	return true;
+}

@@ -30,33 +30,36 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of Workspace
+	@brief Declaration of FilterGraphWorkspace
  */
-#ifndef Workspace_h
-#define Workspace_h
+#ifndef FilterGraphWorkspace_h
+#define FilterGraphWorkspace_h
 
-class Workspace
+#include "Workspace.h"
+class FilterGraphEditor;
+class CreateFilterBrowser;
+
+/**
+	@brief Helper class for building the default filter graph editor workspace
+ */
+class FilterGraphWorkspace : public Workspace
 {
 public:
-	Workspace(const YAML::Node& node, Session& session);
-	Workspace(Session& session);
-	virtual ~Workspace()
+	FilterGraphWorkspace(
+		Session& session,
+		std::shared_ptr<FilterGraphEditor> graphEditor,
+		std::shared_ptr<CreateFilterBrowser> palette
+		);
+	virtual ~FilterGraphWorkspace()
 	{}
 
-	virtual bool Render();
-
-	YAML::Node Serialize();
-
-	std::string GetTitleAndID()
-	{ return m_title + "###" + m_id; }
+	virtual bool Render() override;
 
 protected:
-	Session& m_session;
-
-	bool m_open;
-	std::string m_id;
-	std::string m_title;
-	ImVec2 m_defaultSize;
+	bool m_firstRun;
+	std::shared_ptr<FilterGraphEditor> m_graphEditor;
+	std::shared_ptr<CreateFilterBrowser> m_palette;
 };
 
 #endif
+

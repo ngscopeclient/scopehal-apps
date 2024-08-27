@@ -67,6 +67,7 @@ add_executable(ngscopeclient
 	EmbeddedTriggerPropertiesDialog.cpp
 	FileBrowser.cpp
 	FilterGraphEditor.cpp
+	FilterGraphWorkspace.cpp
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
 	FunctionGeneratorDialog.cpp

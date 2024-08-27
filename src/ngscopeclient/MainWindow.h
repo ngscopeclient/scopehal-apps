@@ -396,8 +396,8 @@ protected:
 	///@brief Pending requests to split waveform groups
 	std::vector<SplitGroupRequest> m_splitRequests;
 
-	///@brief Pending requests to dock dialogs
-	std::vector<DockDialogRequest> m_dockRequests;
+	///@brief Pending requests to dock initial stuff
+	std::shared_ptr<Workspace> m_initialWorkspaceDockRequest;
 
 	///@brief Pending requests to close waveform groups
 	std::vector<size_t> m_groupsToClose;

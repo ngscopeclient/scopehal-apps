@@ -58,6 +58,7 @@
 #include "ChannelPropertiesDialog.h"
 #include "CreateFilterBrowser.h"
 #include "FileBrowser.h"
+#include "FilterGraphWorkspace.h"
 #include "FilterPropertiesDialog.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
@@ -270,10 +271,16 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
-	AddDialog(make_shared<CreateFilterBrowser>(m_session, this));
+	//TODO make this stick around
+	auto palette = make_shared<CreateFilterBrowser>(m_session, this);
+	AddDialog(palette);
+
+	//Spawn a new workspace for the filter graph stuff
+	auto w = make_shared<FilterGraphWorkspace>(m_session, m_graphEditor, palette);
+	m_workspaces.emplace(w);
 
 	//Dock it
-	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
+	m_initialWorkspaceDockRequest = w;
 }
 
 void MainWindow::CloseSession()
@@ -293,7 +300,6 @@ void MainWindow::CloseSession()
 	m_waveformGroups.clear();
 	m_newWaveformGroups.clear();
 	m_splitRequests.clear();
-	m_dockRequests.clear();
 	m_groupsToClose.clear();
 	for(auto it : m_pendingChannelDisplayRequests)
 		it.first->Release();
@@ -311,6 +317,7 @@ void MainWindow::CloseSession()
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
 	m_manageInstrumentsDialog = nullptr;
+	m_initialWorkspaceDockRequest = nullptr;
 	m_graphEditor = nullptr;
 	m_graphEditorConfigBlob = "";
 	m_graphEditorGroups.clear();
@@ -1468,10 +1475,10 @@ void MainWindow::DockingArea()
 			return;
 		}
 
-		//Traverse down the top/left of the tree as long as such a node exists
+		//Traverse down the bottom/right of the tree as long as such a node exists
 		auto node = topNode;
-		while(node->ChildNodes[0])
-			node = node->ChildNodes[0];
+		while(node->ChildNodes[1])
+			node = node->ChildNodes[1];
 
 		//Dock new waveform groups by default
 		for(auto& g : m_newWaveformGroups)
@@ -1484,26 +1491,23 @@ void MainWindow::DockingArea()
 		m_newWaveformGroups.clear();
 	}
 
-	//Process dockable dialogs
-	else if(!m_dockRequests.empty())
+	//Handle initial docking of the first workspace
+	else if(m_initialWorkspaceDockRequest && m_streamBrowser)
 	{
-		//Find the top/leftmost leaf node in the docking tree
 		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode != nullptr)
 		{
-			LogTrace("Docking newly created dialogs under %08x\n", dockspace_id);
+			LogTrace("Docking initial workspace\n");
 
-			//Traverse down the top/left of the tree as long as such a node exists
-			auto node = topNode;
-			while(node->ChildNodes[0])
-				node = node->ChildNodes[0];
+			//Split the top into two sub nodes
+			ImGuiID leftPanelID;
+			ImGuiID rightPanelID;
+			ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, 0.9, &rightPanelID, &leftPanelID);
 
-			for(auto dock : m_dockRequests)
-			{
-				LogTrace("Docking %s under %08x\n", dock.m_dlg->GetTitleAndID().c_str(), node->ID);
-				ImGui::DockBuilderDockWindow(dock.m_dlg->GetTitleAndID().c_str(), node->ID);
-			}
-			m_dockRequests.clear();
+			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
+			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
+
+			m_initialWorkspaceDockRequest = nullptr;
 
 			//Finish up
 			ImGui::DockBuilderFinish(dockspace_id);
