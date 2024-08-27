@@ -296,9 +296,6 @@ protected:
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
 
-	///@brief Enable flag for implot demo window
-	bool m_showPlot;
-
 	///@brief Start position of the viewport minus the menu and toolbar
 	ImVec2 m_workPos;
 

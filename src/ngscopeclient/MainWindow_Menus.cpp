@@ -1557,14 +1557,6 @@ void MainWindow::DebugMenu()
 		if(showDemo)
 			ImGui::EndDisabled();
 
-		bool showPlot = m_showPlot;
-		if(showPlot)
-			ImGui::BeginDisabled();
-		if(ImGui::MenuItem("ImPlot Demo"))
-			m_showPlot = true;
-		if(showPlot)
-			ImGui::EndDisabled();
-
 		ImGui::EndMenu();
 	}
 }

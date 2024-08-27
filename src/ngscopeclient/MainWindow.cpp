@@ -175,7 +175,6 @@ extern Event g_rerenderRequestedEvent;
 MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue)
 	, m_showDemo(false)
-	, m_showPlot(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
 	, m_traceAlpha(0.75)
@@ -782,8 +781,6 @@ void MainWindow::RenderUI()
 	//DEBUG: draw the demo windows
 	if(m_showDemo)
 		ImGui::ShowDemoWindow(&m_showDemo);
-	if(m_showPlot)
-		ImPlot::ShowDemoWindow(&m_showPlot);
 }
 
 void MainWindow::Toolbar()
