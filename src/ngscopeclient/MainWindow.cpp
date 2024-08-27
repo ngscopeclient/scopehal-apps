@@ -295,6 +295,8 @@ void MainWindow::CloseSession()
 	m_splitRequests.clear();
 	m_dockRequests.clear();
 	m_groupsToClose.clear();
+	for(auto it : m_pendingChannelDisplayRequests)
+		it.first->Release();
 	m_pendingChannelDisplayRequests.clear();
 
 	//Clear any open dialogs before destroying the session.
@@ -715,6 +717,8 @@ void MainWindow::RenderUI()
 			auto f = it.first;
 			for(size_t i=0; i<f->GetStreamCount(); i++)
 				FindAreaForStream(it.second, StreamDescriptor(f, i));
+
+			f->Release();
 		}
 
 		m_pendingChannelDisplayRequests.clear();
@@ -1990,6 +1994,8 @@ Filter* MainWindow::CreateFilter(
 	{
 		m_session.MarkChannelDirty(f);
 		m_pendingChannelDisplayRequests.emplace(pair<OscilloscopeChannel*, WaveformArea*>(f, area));
+
+		f->AddRef();
 	}
 
 	//Not adding waveforms to plots, but still check for scalar values and add to measurements view

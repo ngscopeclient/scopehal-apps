@@ -111,6 +111,7 @@ bool CreateFilterBrowser::DoRender()
 {
 	auto& refs = m_session.GetReferenceFilters();
 
+	//Filter bars
 	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
 	Combo("Category", m_categoryNames, m_selectedCategoryIndex);
 	auto cat = m_categoryValues[m_selectedCategoryIndex];
@@ -118,106 +119,133 @@ bool CreateFilterBrowser::DoRender()
 	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
 	ImGui::InputText("Search", &m_searchString);
 
-	ImVec2 iconmargin(ImGui::GetFontSize(), ImGui::GetFontSize());
-
-	auto size = ImGui::GetFontSize() * 5;
-	ImVec2 buttonsize(size*2, size);
-	auto& style = ImGui::GetStyle();
-
-	//Hackiness based on manual-wrapping example from the demo
-	float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-	for(auto it : refs)
+	//Scroll area
+	//if(ImGui::BeginChild("Scroller", ImVec2(0, 0)))
 	{
-		//Filter by category
-		if( (cat != Filter::CAT_COUNT) && (cat != it.second->GetCategory()) )
-			continue;
+		ImVec2 iconmargin(ImGui::GetFontSize(), ImGui::GetFontSize());
 
-		//String filtering
-		if(m_searchString != "")
+		auto size = ImGui::GetFontSize() * 5;
+		ImVec2 buttonsize(size*2, size);
+		auto& style = ImGui::GetStyle();
+
+		//Hackiness based on manual-wrapping example from the demo
+		float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+		for(auto it : refs)
 		{
-			//Case insensitive comparison
-			string lowerSearch;
-			for(auto c : m_searchString)
-				lowerSearch += tolower(c);
-
-			string lowerName;
-			for(auto c : it.first)
-				lowerName += tolower(c);
-
-			if(lowerName.find(lowerSearch) == string::npos)
+			//Filter by category
+			if( (cat != Filter::CAT_COUNT) && (cat != it.second->GetCategory()) )
 				continue;
-		}
 
-		//Placeholder for the button
-		auto pos = ImGui::GetCursorScreenPos();
-		ImGui::InvisibleButton(it.first.c_str(), buttonsize);
+			//String filtering
+			if(m_searchString != "")
+			{
+				//Case insensitive comparison
+				string lowerSearch;
+				for(auto c : m_searchString)
+					lowerSearch += tolower(c);
 
-		//Decide whether to wrap the button
-		float last_button_x2 = ImGui::GetItemRectMax().x;
-		float next_button_x2 = last_button_x2 + style.ItemSpacing.x + buttonsize.x;
-		if(next_button_x2 < window_visible_x2)
-			ImGui::SameLine();
+				string lowerName;
+				for(auto c : it.first)
+					lowerName += tolower(c);
 
-		//Figure out the icon to draw
-		auto icon = m_parent->GetIconForFilter(it.second);
+				if(lowerName.find(lowerSearch) == string::npos)
+					continue;
+			}
 
-		//Draw the button
-		ImDrawList* draw_list = ImGui::GetWindowDrawList();
-		if(ImGui::IsItemHovered())
-		{
-			draw_list->AddRectFilled(
+			//Placeholder for the button
+			auto pos = ImGui::GetCursorScreenPos();
+			ImGui::InvisibleButton(it.first.c_str(), buttonsize);
+
+			//Tooltip for the button
+			if(ImGui::BeginItemTooltip())
+			{
+				string tip = it.first + "\n";
+				tip += "\n";
+				//TODO: filter-specific help text
+
+				tip += "Drag to filter graph to instantiate this block";
+
+				ImGui::TextUnformatted(tip.c_str());
+				ImGui::EndTooltip();
+			}
+
+			//Make it draggable
+			if(ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload("FilterType", it.first.c_str(), it.first.length());
+				ImGui::TextUnformatted(it.first.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			//Decide whether to wrap after this button
+			float last_button_x2 = ImGui::GetItemRectMax().x;
+			float next_button_x2 = last_button_x2 + style.ItemSpacing.x + buttonsize.x;
+			if(next_button_x2 < window_visible_x2)
+				ImGui::SameLine();
+
+			//Figure out the icon to draw
+			auto icon = m_parent->GetIconForFilter(it.second);
+
+			//Draw the button
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			if(ImGui::IsItemHovered())
+			{
+				draw_list->AddRectFilled(
+					pos,
+					pos + buttonsize,
+					ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_ButtonHovered]));
+			}
+			else
+			{
+				draw_list->AddRectFilled(
+					pos,
+					pos + buttonsize,
+					ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Button]));
+			}
+			draw_list->AddRect(
 				pos,
 				pos + buttonsize,
-				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_ButtonHovered]));
-		}
-		else
-		{
-			draw_list->AddRectFilled(
-				pos,
-				pos + buttonsize,
-				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Button]));
-		}
-		draw_list->AddRect(
-			pos,
-			pos + buttonsize,
-			ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Border]));
+				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Border]));
 
-		//Draw the icon
-		if(icon != "")
-		{
-			//Tweak space so we maintain 2:1 aspect ratio
-			auto tl = pos + iconmargin;
-			auto br = pos + buttonsize - iconmargin;
+			//Draw the icon
+			if(icon != "")
+			{
+				//Tweak space so we maintain 2:1 aspect ratio
+				auto tl = pos + iconmargin;
+				auto br = pos + buttonsize - iconmargin;
 
-			float dx = br.x - tl.x;
-			float dy = br.y - tl.y;
+				float dx = br.x - tl.x;
+				float dy = br.y - tl.y;
 
-			float actualWidth = 2*dy;
-			float extraSpace = dx - actualWidth;
-			tl.x += extraSpace / 2;
-			br.x -= extraSpace / 2;
+				float actualWidth = 2*dy;
+				float extraSpace = dx - actualWidth;
+				tl.x += extraSpace / 2;
+				br.x -= extraSpace / 2;
 
-			draw_list->AddImage(m_parent->GetTexture(icon), tl, br);
-		}
+				draw_list->AddImage(m_parent->GetTexture(icon), tl, br);
+			}
 
-		//Truncate text to fit in the available space
-		string caption = it.first;
-		float textmargin = ImGui::GetFontSize();
-		float textSpace = buttonsize.x - textmargin*2;
-		while(true)
-		{
-			auto tsize = ImGui::CalcTextSize(caption.c_str());
-			if(tsize.x <= textSpace)
-				break;
+			//Truncate text to fit in the available space
+			string caption = it.first;
+			float textmargin = ImGui::GetFontSize();
+			float textSpace = buttonsize.x - textmargin*2;
+			while(true)
+			{
+				auto tsize = ImGui::CalcTextSize(caption.c_str());
+				if(tsize.x <= textSpace)
+					break;
 
-			caption.resize(caption.length() - 1);
+				caption.resize(caption.length() - 1);
+			}
+
+			//Draw the text
+			draw_list->AddText(
+				ImVec2(pos.x + textmargin, pos.y + size - (1.25 * ImGui::GetFontSize()) ),
+				ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Text]),
+				caption.c_str());
 		}
 
-		//Draw the text
-		draw_list->AddText(
-			ImVec2(pos.x + textmargin, pos.y + size - (1.25 * ImGui::GetFontSize()) ),
-			ImGui::ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Text]),
-			caption.c_str());
+		//ImGui::EndChild();
 	}
 
 	return true;

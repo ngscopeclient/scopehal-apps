@@ -422,29 +422,51 @@ bool FilterGraphEditor::DoRender()
 	//Handle dropping a stream or channel from the browser
 	ax::NodeEditor::NodeId newNode;
 	bool nodeAdded = false;
-	auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
-	if(spay)
+	if(ImGui::GetDragDropPayload() != nullptr)
 	{
-		if(spay->IsDelivery())
+		auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(spay)
 		{
-			auto stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
-			stream.m_channel->m_visibilityMode = InstrumentChannel::VIS_SHOW;
+			if(spay->IsDelivery())
+			{
+				auto stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+				stream.m_channel->m_visibilityMode = InstrumentChannel::VIS_SHOW;
 
-			nodeAdded = true;
-			newNode = GetID(stream.m_channel);
+				nodeAdded = true;
+				newNode = GetID(stream.m_channel);
+			}
 		}
-	}
 
-	auto schan = ImGui::AcceptDragDropPayload("Channel", ImGuiDragDropFlags_AcceptPeekOnly);
-	if(schan)
-	{
-		if(schan->IsDelivery())
+		auto schan = ImGui::AcceptDragDropPayload("Channel", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(schan)
 		{
-			auto chan = *reinterpret_cast<InstrumentChannel**>(schan->Data);
-			chan->m_visibilityMode = InstrumentChannel::VIS_SHOW;
+			if(schan->IsDelivery())
+			{
+				auto chan = *reinterpret_cast<InstrumentChannel**>(schan->Data);
+				chan->m_visibilityMode = InstrumentChannel::VIS_SHOW;
 
-			nodeAdded = true;
-			newNode = GetID(chan);
+				nodeAdded = true;
+				newNode = GetID(chan);
+			}
+		}
+
+		//Handle dropping a filter type from the palette
+		auto ftype = ImGui::AcceptDragDropPayload("FilterType", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(ftype)
+		{
+			string fname((char*)ftype->Data, ftype->DataSize);
+			auto cat = m_session.GetReferenceFilter(fname)->GetCategory();
+
+			if(ftype->IsDelivery())
+			{
+				//Make the filter but don't spawn a properties dialog for it
+				//If measurement, don't add trends by default
+				StreamDescriptor emptyStream;
+				auto f = m_parent->CreateFilter(fname, nullptr, emptyStream, false, (cat != Filter::CAT_MEASUREMENT) );
+
+				nodeAdded = true;
+				newNode = GetID(f);
+			}
 		}
 	}
 
