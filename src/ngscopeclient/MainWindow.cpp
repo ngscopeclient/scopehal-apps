@@ -270,7 +270,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
-	AddDialog(make_shared<CreateFilterBrowser>(m_session, this));
+	//AddDialog(make_shared<CreateFilterBrowser>(m_session, this));
 
 	//Dock it
 	m_dockRequests.push_back(DockDialogRequest(m_graphEditor));
