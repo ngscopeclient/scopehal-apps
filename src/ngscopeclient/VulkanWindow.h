@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -169,9 +169,6 @@ protected:
 
 	///@brief Saved size before we went fullscreen
 	int m_windowedHeight;
-
-	///@brief implot context
-	ImPlotContext* m_plotContext;
 
 	///@brief Textures used this frame
 	std::vector< std::set<std::shared_ptr<Texture> > > m_texturesUsedThisFrame;

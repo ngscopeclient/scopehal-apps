@@ -202,8 +202,6 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	platform_io.Renderer_DestroyWindow = Mutexed_ImGui_ImplVulkan_DestroyWindow;
 	platform_io.Renderer_SetWindowSize = Mutexed_ImGui_ImplVulkan_SetWindowSize;
 
-	m_plotContext = ImPlot::CreateContext();
-
 	//Name a bunch of objects
 	if(g_hasDebugUtils)
 	{
@@ -282,7 +280,6 @@ VulkanWindow::~VulkanWindow()
 
 	m_texturesUsedThisFrame.clear();
 
-	ImPlot::DestroyContext(m_plotContext);
 	m_renderPass = nullptr;
 	m_swapchain = nullptr;
 	m_surface = nullptr;

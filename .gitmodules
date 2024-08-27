@@ -7,9 +7,6 @@
 [submodule "src/imgui"]
 	path = src/imgui
 	url = https://github.com/ngscopeclient/imgui.git
-[submodule "src/implot"]
-	path = src/implot
-	url = https://github.com/ngscopeclient/implot.git
 [submodule "src/imgui-node-editor"]
 	path = src/imgui-node-editor
 	url = https://github.com/ngscopeclient/imgui-node-editor.git
