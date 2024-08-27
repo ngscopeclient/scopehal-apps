@@ -165,6 +165,22 @@ bool MeasurementsDialog::DoRender()
 			m_streams.insert(m_streams.begin() + moveDest, moveStream);
 		}
 
+		//If we have no measurements, display a blank row usable as a drag/drop target
+		if(m_streams.empty())
+		{
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+			ImGui::TableSetColumnIndex(0);
+
+			ImGui::Text("(drag stream here)");
+			if(ImGui::BeginDragDropTarget())
+			{
+				auto payload = ImGui::AcceptDragDropPayload("Scalar");
+				if(payload && (payload->DataSize == sizeof(StreamDescriptor)))
+					AddStream(*reinterpret_cast<const StreamDescriptor*>(payload->Data));
+				ImGui::EndDragDropTarget();
+			}
+		}
+
 		ImGui::EndTable();
 	}
 
