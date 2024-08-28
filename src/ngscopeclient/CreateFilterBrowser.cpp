@@ -157,16 +157,20 @@ bool CreateFilterBrowser::DoRender()
 			ImGui::InvisibleButton(it.first.c_str(), buttonsize);
 
 			//Tooltip for the button
-			if(ImGui::BeginItemTooltip())
+			//Don't do a tooltip if the mouse is down (workaround for https://github.com/ocornut/imgui/issues/7922)
+			if(!ImGui::IsMouseDown(ImGuiMouseButton_Left))
 			{
-				string tip = it.first + "\n";
-				tip += "\n";
-				//TODO: filter-specific help text
+				if(ImGui::BeginItemTooltip())
+				{
+					string tip = it.first + "\n";
+					tip += "\n";
+					//TODO: filter-specific help text
 
-				tip += "Drag to filter graph to instantiate this block";
+					tip += "Drag to filter graph to instantiate this block";
 
-				ImGui::TextUnformatted(tip.c_str());
-				ImGui::EndTooltip();
+					ImGui::TextUnformatted(tip.c_str());
+					ImGui::EndTooltip();
+				}
 			}
 
 			//Make it draggable
