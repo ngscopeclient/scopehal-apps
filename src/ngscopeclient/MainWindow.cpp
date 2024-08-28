@@ -1402,8 +1402,10 @@ void MainWindow::DockingArea()
 	ImGui::PopStyleVar(3);
 
 	auto dockspace_id = ImGui::GetID("DockSpace");
+	auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 
 	//Handle splitting of existing waveform groups
+	bool dockChanged = true;
 	if(!m_splitRequests.empty())
 	{
 		LogTrace("Processing split requests\n");
@@ -1470,7 +1472,6 @@ void MainWindow::DockingArea()
 		LogTrace("Processing newly added waveform group\n");
 
 		//Find the top/leftmost leaf node in the docking tree
-		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode == nullptr)
 		{
 			LogError("Top dock node is null when adding new waveform group\n");
@@ -1496,7 +1497,6 @@ void MainWindow::DockingArea()
 	//Handle initial docking of the first workspace
 	else if(m_initialWorkspaceDockRequest && m_streamBrowser)
 	{
-		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode != nullptr)
 		{
 			LogTrace("Docking initial workspace\n");
@@ -1515,8 +1515,33 @@ void MainWindow::DockingArea()
 			ImGui::DockBuilderFinish(dockspace_id);
 		}
 	}
+	else
+		dockChanged = false;
+
+	topNode = ImGui::DockContextFindNodeByID(ImGui::GetCurrentContext(), dockspace_id);
 
 	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
+
+	//Add + button to tabs
+	if(!dockChanged && topNode)
+	{
+		/*
+		for(int i=0; i<2; i++)
+		{
+			auto node = topNode->ChildNodes[i];
+
+			if(ImGui::DockNodeBeginAmendTabBar(node))
+			{
+				if(ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
+				{
+					LogDebug("add\n");
+				}
+				ImGui::DockNodeEndAmendTabBar();
+			}
+		}
+		*/
+	}
+
 	ImGui::End();
 
 	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
