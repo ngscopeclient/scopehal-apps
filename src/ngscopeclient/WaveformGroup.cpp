@@ -157,6 +157,12 @@ bool WaveformGroup::Render()
 		ImGui::EndPopup();
 	}
 
+	if(ImGui::BeginItemTooltip())
+	{
+		ImGui::Text("Right click to rename this group");
+		ImGui::EndTooltip();
+	}
+
 	auto pos = ImGui::GetCursorScreenPos();
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
 	m_width = clientArea.x;

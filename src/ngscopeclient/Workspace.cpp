@@ -108,6 +108,12 @@ bool Workspace::Render()
 		ImGui::EndPopup();
 	}
 
+	if(ImGui::BeginItemTooltip())
+	{
+		ImGui::Text("Right click to rename this workspace");
+		ImGui::EndTooltip();
+	}
+
 	ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), 0, nullptr);
 
 	ImGui::End();
