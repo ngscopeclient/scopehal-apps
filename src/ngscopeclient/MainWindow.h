@@ -56,6 +56,7 @@ class MeasurementsDialog;
 class MultimeterDialog;
 class HistoryDialog;
 class FileBrowser;
+class CreateFilterBrowser;
 
 class SplitGroupRequest
 {
@@ -381,6 +382,9 @@ protected:
 
 	///@brief Stream browser
 	std::shared_ptr<StreamBrowserDialog> m_streamBrowser;
+
+	///@brief Filter palette
+	std::shared_ptr<CreateFilterBrowser> m_filterPalette;
 
 	///@brief Config blob for filter graph editor
 	std::string m_graphEditorConfigBlob;

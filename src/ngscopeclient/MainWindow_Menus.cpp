@@ -54,6 +54,7 @@
 #include "AddSpectrometerDialog.h"
 #include "AddVNADialog.h"
 #include "BERTDialog.h"
+#include "CreateFilterBrowser.h"
 #include "FilterGraphEditor.h"
 #include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
@@ -1382,6 +1383,17 @@ void MainWindow::WindowMenu()
 			AddDialog(m_streamBrowser);
 		}
 		if(hasStreamBrowser)
+			ImGui::EndDisabled();
+
+		bool hasFilterPalette = m_filterPalette != nullptr;
+		if(hasFilterPalette)
+			ImGui::BeginDisabled();
+		if(ImGui::MenuItem("Filter Palette"))
+		{
+			m_filterPalette = make_shared<CreateFilterBrowser>(m_session, this);
+			AddDialog(m_filterPalette);
+		}
+		if(hasFilterPalette)
 			ImGui::EndDisabled();
 
 		if(ImGui::MenuItem("New Workspace"))

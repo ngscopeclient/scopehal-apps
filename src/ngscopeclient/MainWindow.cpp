@@ -271,12 +271,11 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
-	//TODO make this stick around
-	auto palette = make_shared<CreateFilterBrowser>(m_session, this);
-	AddDialog(palette);
+	m_filterPalette = make_shared<CreateFilterBrowser>(m_session, this);
+	AddDialog(m_filterPalette);
 
 	//Spawn a new workspace for the filter graph stuff
-	auto w = make_shared<FilterGraphWorkspace>(m_session, m_graphEditor, palette);
+	auto w = make_shared<FilterGraphWorkspace>(m_session, m_graphEditor, m_filterPalette);
 	m_workspaces.emplace(w);
 
 	//Dock it
@@ -312,6 +311,7 @@ void MainWindow::CloseSession()
 	m_metricsDialog = nullptr;
 	m_timebaseDialog = nullptr;
 	m_triggerDialog = nullptr;
+	m_filterPalette = nullptr;
 	m_streamBrowser = nullptr;
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
@@ -1342,6 +1342,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_protocolAnalyzerDialogs.erase(protoDlg->GetFilter());
 
 	//Handle single-instance dialogs
+	if(m_filterPalette == dlg)
+		m_filterPalette = nullptr;
 	if(m_logViewerDialog == dlg)
 		m_logViewerDialog = nullptr;
 	if(m_streamBrowser == dlg)
@@ -2863,6 +2865,13 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_streamBrowser);
 	}
 
+	auto fp = node["filterpalette"];
+	if(fp && fp.as<bool>())
+	{
+		m_filterPalette = make_shared<CreateFilterBrowser>(m_session, this);
+		AddDialog(m_filterPalette);
+	}
+
 	auto pref = node["preferences"];
 	if(pref && pref.as<bool>())
 	{
@@ -3400,6 +3409,10 @@ YAML::Node MainWindow::SerializeDialogs()
 	//Stream browser has no separate settings
 	if(m_streamBrowser)
 		node["streambrowser"] = true;
+
+	//Filter palette has no separate settings
+	if(m_filterPalette)
+		node["filterpalette"] = true;
 
 	//Logfile viewer has no separate settings
 	if(m_logViewerDialog)
