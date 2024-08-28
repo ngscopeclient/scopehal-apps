@@ -112,11 +112,11 @@ bool CreateFilterBrowser::DoRender()
 	auto& refs = m_session.GetReferenceFilters();
 
 	//Filter bars
-	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
+	ImGui::SetNextItemWidth(8 * ImGui::GetFontSize());
 	Combo("Category", m_categoryNames, m_selectedCategoryIndex);
 	auto cat = m_categoryValues[m_selectedCategoryIndex];
 
-	ImGui::SetNextItemWidth(16 * ImGui::GetFontSize());
+	ImGui::SetNextItemWidth(8 * ImGui::GetFontSize());
 	ImGui::InputText("Search", &m_searchString);
 
 	//Scroll area
