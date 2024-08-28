@@ -279,11 +279,18 @@ map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetA
 					{
 						if(inst->GetInstrumentTypesForChannel(i) & Instrument::INST_OSCILLOSCOPE)
 						{
-							//If it's a trigger channel, allow it even if it's not enabled
-							//TODO: only allow if currently selected
+							//If it's a trigger channel, don't show it unless it's in use
 							if(chan == scope->GetExternalTrigger())
 							{
+								auto trig = scope->GetTrigger();
+								if(trig)
+								{
+									auto trigin = trig->GetInput(0);
+									if(trigin.m_channel != chan)
+										continue;
+								}
 							}
+
 							else
 							{
 								if(!scope->CanEnableChannel(i))
