@@ -47,6 +47,8 @@ public:
 	virtual bool DoRender() override;
 
 protected:
+	void DoItemTooltip();
+
 	Session& m_session;
 };
 

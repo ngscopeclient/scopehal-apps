@@ -90,6 +90,8 @@ bool StreamBrowserDialog::DoRender()
 						ImGui::TextUnformatted(s.GetName().c_str());
 						ImGui::EndDragDropSource();
 					}
+					else
+						DoItemTooltip();
 				}
 
 				//Drag source for the channel itself (if we have zero or >1 streams)
@@ -118,6 +120,8 @@ bool StreamBrowserDialog::DoRender()
 							ImGui::TextUnformatted(s.GetName().c_str());
 							ImGui::EndDragDropSource();
 						}
+						else
+							DoItemTooltip();
 					}
 				}
 
@@ -152,6 +156,8 @@ bool StreamBrowserDialog::DoRender()
 					ImGui::TextUnformatted(s.GetName().c_str());
 					ImGui::EndDragDropSource();
 				}
+				else
+					DoItemTooltip();
 			}
 
 			//Drag source for the channel itself (if we have zero or >1 streams)
@@ -180,6 +186,8 @@ bool StreamBrowserDialog::DoRender()
 						ImGui::TextUnformatted(s.GetName().c_str());
 						ImGui::EndDragDropSource();
 					}
+					else
+						DoItemTooltip();
 				}
 			}
 
@@ -190,4 +198,22 @@ bool StreamBrowserDialog::DoRender()
 	}
 
 	return true;
+}
+
+void StreamBrowserDialog::DoItemTooltip()
+{
+	//Tooltip for the button
+	//Don't do a tooltip if the mouse is down (workaround for https://github.com/ocornut/imgui/issues/7922)
+	if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		return;
+
+	if(ImGui::BeginItemTooltip())
+	{
+		ImGui::TextUnformatted(
+			"Drag to filter graph to create a node for this signal.\n"
+			"\n"
+			"Drag to a waveform view to add this signal to the plot."
+			);
+		ImGui::EndTooltip();
+	}
 }
