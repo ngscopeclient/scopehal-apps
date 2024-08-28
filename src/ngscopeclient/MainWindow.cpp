@@ -228,6 +228,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
 		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 	LoadFilterIcons();
+	LoadStatusBarIcons();
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
@@ -267,7 +268,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_graphEditor);
 
 	//Spawn the net browser
-	m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+	m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
@@ -842,6 +843,26 @@ void MainWindow::Toolbar()
 }
 
 /**
+	@brief Load icons for the status bar
+ */
+void MainWindow::LoadStatusBarIcons()
+{
+	m_texmgr.LoadTexture("mouse_lmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_lmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_lmb", FindDataFile("icons/contrib/blender/24x24/mouse_lmb.png"));
+	m_texmgr.LoadTexture("mouse_lmb_double", FindDataFile("icons/contrib/blender/24x24/mouse_lmb_double.png"));
+
+	m_texmgr.LoadTexture("mouse_mmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_mmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_mmb", FindDataFile("icons/contrib/blender/24x24/mouse_mmb.png"));
+
+	m_texmgr.LoadTexture("mouse_rmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_rmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_rmb", FindDataFile("icons/contrib/blender/24x24/mouse_rmb.png"));
+
+	m_texmgr.LoadTexture("mouse_move", FindDataFile("icons/contrib/blender/24x24/mouse_move.png"));
+
+	m_texmgr.LoadTexture("mouse_wheel", FindDataFile("icons/contrib/blender/24x24/mouse_wheel.png"));
+}
+
+/**
 	@brief Load icons for the filter graph
  */
 void MainWindow::LoadFilterIcons()
@@ -902,7 +923,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_texmgr.LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
 
-		//Fill out map of filter class types to icon names
+	//Fill out map of filter class types to icon names
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
 	m_filterIconMap[type_index(typeid(AddFilter))] 								= "filter-add";
@@ -1520,9 +1541,14 @@ void MainWindow::DockingArea()
 
 	topNode = ImGui::DockContextFindNodeByID(ImGui::GetCurrentContext(), dockspace_id);
 
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
+	//Allocate space for the status bar before doing anything else
+	auto avail = ImGui::GetContentRegionAvail();
+	auto statusBarHeight = ImGui::GetFontSize()*1.75 + 2*ImGui::GetStyle().FramePadding.y;
+	auto dockSpaceHeight = avail.y - statusBarHeight - ImGui::GetStyle().FramePadding.y;
 
-	//Add + button to tabs
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, dockSpaceHeight), /*dockspace_flags*/0, /*window_class*/nullptr);
+
+	//WIP: Add + button to tabs
 	if(!dockChanged && topNode)
 	{
 		/*
@@ -1542,6 +1568,10 @@ void MainWindow::DockingArea()
 		*/
 	}
 
+	//Draw the status bar
+	//TODO: add menu item to show/hide
+	StatusBar(statusBarHeight);
+
 	ImGui::End();
 
 	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
@@ -1555,6 +1585,25 @@ void MainWindow::DockingArea()
 	}
 	for(auto& dlg : workspacesToClose)
 		m_workspaces.erase(dlg);
+}
+
+void MainWindow::StatusBar(float height)
+{
+	ImGui::Separator();
+
+	float iconHeight = height - 2*ImGui::GetStyle().FramePadding.y;
+	ImVec2 iconSize(iconHeight, iconHeight);
+
+	for(auto it : m_statusHelp)
+	{
+		ImGui::Image(GetTexture(it.first), iconSize);
+		ImGui::SameLine();
+		ImGui::Text(it.second.c_str());
+		ImGui::SameLine();
+	}
+
+	//Delete status bar contents so we can draw new stuff next frame
+	m_statusHelp.clear();
 }
 
 /**
@@ -2886,7 +2935,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	auto sb = node["streambrowser"];
 	if(sb && sb.as<bool>())
 	{
-		m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+		m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 		AddDialog(m_streamBrowser);
 	}
 

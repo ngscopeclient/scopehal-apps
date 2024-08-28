@@ -1379,7 +1379,7 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("Stream Browser"))
 		{
-			m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+			m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 			AddDialog(m_streamBrowser);
 		}
 		if(hasStreamBrowser)

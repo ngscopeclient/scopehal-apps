@@ -600,6 +600,15 @@ bool FilterGraphEditor::DoRender()
 	if(!triggerChanged)
 		HandleOverlaps();
 
+	//Add top level help text if there's nothing else
+	if(!ax::NodeEditor::GetHoveredNode() && !ax::NodeEditor::GetHoveredLink())
+	{
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Select multiple");
+		m_parent->AddStatusHelp("mouse_wheel", "Zoom");
+		m_parent->AddStatusHelp("mouse_rmb", "Create group or filter");
+		m_parent->AddStatusHelp("mouse_rmb_drag", "Pan");
+	}
+
 	ax::NodeEditor::SetCurrentEditor(nullptr);
 
 	//If any filters were reconfigured, dispatch events accordingly
@@ -1045,8 +1054,9 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				ImGui::TextUnformatted("Unknown channel type");
 				break;
 		}
-		ImGui::TextUnformatted("Drag from this port to create a connection.");
 	ImGui::EndTooltip();
+
+	m_parent->AddStatusHelp("mouse_lmb_drag", "Create connection to new or existing node");
 }
 
 /**
@@ -1895,11 +1905,10 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	{}
 	else if(id == ax::NodeEditor::GetHoveredNode())
 	{
-		ax::NodeEditor::Suspend();
-			ImGui::BeginTooltip();
-				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
-			ImGui::EndTooltip();
-		ax::NodeEditor::Resume();
+		m_parent->AddStatusHelp("mouse_lmb", "Select");
+		m_parent->AddStatusHelp("mouse_lmb_double", "Properties (dialog)");
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move");
+		m_parent->AddStatusHelp("mouse_rmb", "Properties (popup)");
 	}
 
 	//Done with node
@@ -2094,14 +2103,13 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<
 		ax::NodeEditor::Resume();
 	}
 
-	//Tooltip on hovered node
+	//Help text on hovered node
 	else if(id == ax::NodeEditor::GetHoveredNode())
 	{
-		ax::NodeEditor::Suspend();
-			ImGui::BeginTooltip();
-				ImGui::TextUnformatted("Drag node to move.\nRight click to open node properties.");
-			ImGui::EndTooltip();
-		ax::NodeEditor::Resume();
+		m_parent->AddStatusHelp("mouse_lmb", "Select");
+		m_parent->AddStatusHelp("mouse_lmb_double", "Properties (dialog)");
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move");
+		m_parent->AddStatusHelp("mouse_rmb", "Properties (popup)");
 	}
 
 	ImGui::PopID();
@@ -2393,19 +2401,6 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 		ImGui::EndPopup();
 	}
 
-	//If no nodes, show help message
-	//(but only if popup isn't already open)
-	else
-	{
-		if(ax::NodeEditor::GetNodeCount() == 0)
-		{
-			if(ImGui::BeginItemTooltip())
-			{
-				ImGui::TextUnformatted("Right click to create a waveform\nor import data from a file");
-				ImGui::EndTooltip();
-			}
-		}
-	}
 	ax::NodeEditor::Resume();
 }
 

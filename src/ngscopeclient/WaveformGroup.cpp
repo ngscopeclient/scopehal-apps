@@ -157,10 +157,10 @@ bool WaveformGroup::Render()
 		ImGui::EndPopup();
 	}
 
-	if(ImGui::BeginItemTooltip())
+	if(ImGui::IsItemHovered())
 	{
-		ImGui::Text("Right click to rename this group");
-		ImGui::EndTooltip();
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move group");
+		m_parent->AddStatusHelp("mouse_rmb", "Rename group");
 	}
 
 	auto pos = ImGui::GetCursorScreenPos();

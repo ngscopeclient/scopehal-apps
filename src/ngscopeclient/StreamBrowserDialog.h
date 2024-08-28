@@ -38,18 +38,21 @@
 #include "Dialog.h"
 #include "Session.h"
 
+class MainWindow;
+
 class StreamBrowserDialog : public Dialog
 {
 public:
-	StreamBrowserDialog(Session& session);
+	StreamBrowserDialog(Session& session, MainWindow* parent);
 	virtual ~StreamBrowserDialog();
 
 	virtual bool DoRender() override;
 
 protected:
-	void DoItemTooltip();
+	void DoItemHelp();
 
 	Session& m_session;
+	MainWindow* m_parent;
 };
 
 #endif

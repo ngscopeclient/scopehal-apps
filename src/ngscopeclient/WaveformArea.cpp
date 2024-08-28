@@ -2376,29 +2376,17 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//BER level arrows (for BERT readout)
 	RenderBERLevelArrows(origin, size);
 
-	//Help tooltip
-	//Only show if mouse has been still for 1 sec
-	//(shorter delays interfere with dragging)
-	double tnow = GetTime();
-	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) &&
-		(tnow - m_tLastMouseMove > 1) &&
-		(m_dragState == DRAG_STATE_NONE) )
+	//Help message
+	if(ImGui::IsItemHovered())
 	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-
 		if(m_mouseOverTriggerArrow)
-			ImGui::TextUnformatted("Drag arrow to adjust trigger level.");
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Adjust trigger level");
 		else
 		{
-			ImGui::TextUnformatted(
-				"Click and drag to adjust offset.\n"
-				"Middle click to autofit range and offset to current waveform.\n"
-				"Use mouse wheel to adjust scale.");
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Adjust offset");
+			m_parent->AddStatusHelp("mouse_mmb", "Autofit range and offset");
+			m_parent->AddStatusHelp("mouse_wheel", "Adjust range");
 		}
-
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
 	}
 
 	//Draw text for the Y axis labels
