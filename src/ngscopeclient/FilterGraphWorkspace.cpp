@@ -36,6 +36,7 @@
 #include "FilterGraphWorkspace.h"
 #include "FilterGraphEditor.h"
 #include "CreateFilterBrowser.h"
+#include "MainWindow.h"
 
 using namespace std;
 
@@ -44,9 +45,10 @@ using namespace std;
 
 FilterGraphWorkspace::FilterGraphWorkspace(
 	Session& session,
+	MainWindow* parent,
 	shared_ptr<FilterGraphEditor> graphEditor,
 	shared_ptr<CreateFilterBrowser> palette)
-	: Workspace(session)
+	: Workspace(session, parent)
 	, m_firstRun(true)
 	, m_graphEditor(graphEditor)
 	, m_palette(palette)
@@ -54,36 +56,12 @@ FilterGraphWorkspace::FilterGraphWorkspace(
 	m_title = "Filter Graph";
 }
 
-bool FilterGraphWorkspace::Render()
+void FilterGraphWorkspace::DoRender(ImGuiID id)
 {
-	//Closed, nothing to do
-	if(!m_open)
-		return false;
-
-	auto dockspace_id = ImGui::GetID(m_id.c_str());
-
-	string name = m_title + "###" + m_id;
-	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
-	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
-	{
-		//If we get here, the window is tabbed out or the content area is otherwise not visible.
-		//Need to keep the dockspace node alive still, though!
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_KeepAliveOnly, nullptr);
-
-		ImGui::End();
-		return true;
-	}
-
-	if(ImGui::BeginPopupContextItem())
-	{
-		ImGui::InputText("Name", &m_title);
-		ImGui::EndPopup();
-	}
-
 	//First run? special case
 	if(m_firstRun)
 	{
-		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
+		auto topNode = ImGui::DockBuilderGetNode(id);
 		if(topNode)
 		{
 			//Split the top into two sub nodes
@@ -93,7 +71,7 @@ bool FilterGraphWorkspace::Render()
 
 			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_palette->GetTitleAndID().c_str(), rightPanelID);
-			ImGui::DockBuilderFinish(dockspace_id);
+			ImGui::DockBuilderFinish(id);
 
 			//Remove references in case user wants to close the dialogs later
 			m_graphEditor = nullptr;
@@ -101,9 +79,4 @@ bool FilterGraphWorkspace::Render()
 			m_firstRun = false;
 		}
 	}
-
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), 0, nullptr);
-
-	ImGui::End();
-	return true;
 }

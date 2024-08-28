@@ -1397,7 +1397,7 @@ void MainWindow::WindowMenu()
 			ImGui::EndDisabled();
 
 		if(ImGui::MenuItem("New Workspace"))
-			m_workspaces.emplace(make_shared<Workspace>(m_session));
+			m_workspaces.emplace(make_shared<Workspace>(m_session, this));
 
 		ImGui::EndMenu();
 	}

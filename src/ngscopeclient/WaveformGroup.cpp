@@ -145,6 +145,7 @@ bool WaveformGroup::Render()
 	if(!ImGui::Begin(GetID().c_str(), &open, ImGuiWindowFlags_NoScrollWithMouse))
 	{
 		//tabbed out, don't draw anything until we're back in the foreground
+		TitleHoverHelp();
 		ImGui::End();
 		return true;
 	}
@@ -157,11 +158,7 @@ bool WaveformGroup::Render()
 		ImGui::EndPopup();
 	}
 
-	if(ImGui::IsItemHovered())
-	{
-		m_parent->AddStatusHelp("mouse_lmb_drag", "Move group");
-		m_parent->AddStatusHelp("mouse_rmb", "Rename group");
-	}
+	TitleHoverHelp();
 
 	auto pos = ImGui::GetCursorScreenPos();
 	ImVec2 clientArea = ImGui::GetContentRegionMax();
@@ -241,6 +238,15 @@ bool WaveformGroup::Render()
 	ImGui::End();
 
 	return open;
+}
+
+void WaveformGroup::TitleHoverHelp()
+{
+	if(ImGui::IsItemHovered())
+	{
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move group");
+		m_parent->AddStatusHelp("mouse_rmb", "Rename group");
+	}
 }
 
 /**

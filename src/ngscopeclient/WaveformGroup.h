@@ -143,6 +143,8 @@ protected:
 	void RenderMarkers(ImVec2 pos, ImVec2 size);
 	void DoCursorReadouts();
 
+	void TitleHoverHelp();
+
 	float GetInBandPower(WaveformBase* wfm, Unit yunit, int64_t t1, int64_t t2);
 
 	bool IsMouseOverButtonInWaveformArea();

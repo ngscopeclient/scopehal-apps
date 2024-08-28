@@ -423,6 +423,8 @@ ax::NodeEditor::PinId FilterGraphEditor::GetSinkPinForLink(StreamDescriptor sour
  */
 bool FilterGraphEditor::DoRender()
 {
+	bool windowHovered = ImGui::IsWindowHovered();
+
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
@@ -601,7 +603,7 @@ bool FilterGraphEditor::DoRender()
 		HandleOverlaps();
 
 	//Add top level help text if there's nothing else
-	if(!ax::NodeEditor::GetHoveredNode() && !ax::NodeEditor::GetHoveredLink())
+	if(!ax::NodeEditor::GetHoveredNode() && !ax::NodeEditor::GetHoveredLink() && windowHovered)
 	{
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Select multiple");
 		m_parent->AddStatusHelp("mouse_wheel", "Zoom");

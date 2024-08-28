@@ -276,7 +276,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_filterPalette);
 
 	//Spawn a new workspace for the filter graph stuff
-	auto w = make_shared<FilterGraphWorkspace>(m_session, m_graphEditor, m_filterPalette);
+	auto w = make_shared<FilterGraphWorkspace>(m_session, this, m_graphEditor, m_filterPalette);
 	m_workspaces.emplace(w);
 
 	//Dock it
@@ -2737,7 +2737,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 		LogIndenter li2;
 
 		for(auto w : workspaces)
-			m_workspaces.emplace(make_shared<Workspace>(w, m_session));
+			m_workspaces.emplace(make_shared<Workspace>(w, m_session, this));
 	}
 
 	//Measurements
