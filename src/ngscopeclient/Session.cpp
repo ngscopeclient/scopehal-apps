@@ -45,6 +45,7 @@
 #include "RFGeneratorDialog.h"
 
 #include "../scopehal/LeCroyOscilloscope.h"
+#include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "../scopeprotocols/EyePattern.h"
 
@@ -2653,6 +2654,11 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 			lecroy->ForceHDMode(true);
 
 		//else auto resolution depending on instrument type
+	}
+	auto siglent = dynamic_pointer_cast<SiglentSCPIOscilloscope>(scope);
+	if(siglent)
+	{
+		siglent->ForceHDMode(m_preferences.GetBool("Drivers.Siglent SDS HD.force_16bit"));
 	}
 }
 
