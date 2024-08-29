@@ -1598,7 +1598,7 @@ void MainWindow::StatusBar(float height)
 	{
 		ImGui::Image(GetTexture(it.first), iconSize);
 		ImGui::SameLine();
-		ImGui::Text(it.second.c_str());
+		ImGui::TextUnformatted(it.second.c_str());
 		ImGui::SameLine();
 	}
 
