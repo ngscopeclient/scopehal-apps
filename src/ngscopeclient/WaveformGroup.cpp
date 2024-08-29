@@ -997,30 +997,18 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 	RenderTriggerPositionArrows(pos, height);
 
-	//Help tooltip
-	//Only show if mouse has been still for 250ms
-	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) &&
-		(tnow - m_tLastMouseMove > 0.25) &&
-		(m_dragState == DRAG_STATE_NONE)
-		)
+	//Help messages in status bar
+	if(ImGui::IsWindowHovered())
 	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-
 		if(m_mouseOverTriggerArrow)
-		{
-			ImGui::TextUnformatted("Click and drag to move trigger position\n");
-		}
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Move trigger position");
 		else
-		{
-			ImGui::TextUnformatted(
-				"Click and drag to scroll the timeline.\n"
-				"Use mouse wheel to zoom.\n"
-				"Middle click to zoom to fit the entire waveform.\n"
-				"Double-click to open timebase properties.");
-		}
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Pan timeline");
+
+		m_parent->AddStatusHelp("mouse_lmb_double", "Open timebase properties");
+
+		m_parent->AddStatusHelp("mouse_wheel", "Zoom timeline");
+		m_parent->AddStatusHelp("mouse_mmb", "Autoscale timeline to waveform");
 	}
 
 	ImGui::EndChild();

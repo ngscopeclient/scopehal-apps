@@ -3480,19 +3480,20 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 						tooltip += string("Sparsely sampled, ") + fs.PrettyPrint(data->m_timescale) + " resolution\n";
 				}
 			}
-			tooltip += "\n";
 		}
-
-		tooltip +=
-			"Drag to move this waveform to another plot.\n"
-			"Double click to view/edit channel properties.\n"
-			"Right click for more options.";
+		tooltip = Trim(tooltip);
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(tooltip.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
+	}
+	if(ImGui::IsItemHovered())
+	{
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move this waveform to another plot");
+		m_parent->AddStatusHelp("mouse_lmb_double", "Open channel properties");
+		m_parent->AddStatusHelp("mouse_rmb", "Channel context menu");
 	}
 
 	//Context menu
