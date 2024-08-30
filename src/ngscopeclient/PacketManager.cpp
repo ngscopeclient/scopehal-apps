@@ -67,7 +67,7 @@ PacketManager::~PacketManager()
 
 void PacketManager::RefreshRows()
 {
-	LogTrace("Refreshing rows\n");
+	LogTrace("Refreshing rows for %s\n", m_filter->GetDisplayName().c_str());
 
 	lock_guard<recursive_mutex> lock(m_mutex);
 
@@ -79,6 +79,7 @@ void PacketManager::RefreshRows()
 	for(auto& it : m_filteredPackets)
 		times.push_back(it.first);
 	std::sort(times.begin(), times.end());
+	LogTrace("%zu times\n", times.size());
 
 	double totalHeight = 0;
 	double lineheight = ImGui::CalcTextSize("dummy text").y;
@@ -93,6 +94,8 @@ void PacketManager::RefreshRows()
 		auto& markers = m_session.GetMarkers(wavetime);
 		size_t imarker = 0;
 		int64_t lastoff = 0;
+
+		LogTrace("Refreshing (markers: %zu at %s)\n", markers.size(), wavetime.PrettyPrint().c_str());
 
 		for(auto pack : wpackets)
 		{
@@ -150,6 +153,8 @@ void PacketManager::RefreshRows()
 			}
 		}
 	}
+
+	LogTrace("%zu rows\n", m_rows.size());
 }
 
 void PacketManager::OnMarkerChanged()
