@@ -43,8 +43,10 @@
 #include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
+#include "PreferenceTypes.h"
 
 #include "../scopehal/LeCroyOscilloscope.h"
+#include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "../scopeprotocols/EyePattern.h"
 
@@ -2653,6 +2655,19 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 			lecroy->ForceHDMode(true);
 
 		//else auto resolution depending on instrument type
+	}
+	auto siglent = dynamic_pointer_cast<SiglentSCPIOscilloscope>(scope);
+	if(siglent)
+	{
+		auto dataWidth = m_preferences.GetEnumRaw("Drivers.Siglent SDS HD.data_width");
+		if(dataWidth == WIDTH_8_BITS)
+		{
+			siglent->ForceHDMode(false);
+		}
+		else if(dataWidth == WIDTH_16_BITS)
+		{
+			siglent->ForceHDMode(true);
+		}
 	}
 }
 

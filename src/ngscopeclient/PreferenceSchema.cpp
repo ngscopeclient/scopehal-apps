@@ -356,6 +356,22 @@ void PreferenceManager::InitializeDefaults()
 					"Changes to this setting take effect the next time a connection to the instrument is opened; "
 					"the transfer format for active sessions is not updated."
 				));
+		auto& siglent = drivers.AddCategory("Siglent SDS HD");
+			siglent.AddPreference(
+				Preference::Enum("data_width", WIDTH_AUTO)
+					.Label("Data Width")
+					.Description(
+					"Data width used when downloading sample data from the instrument.\n\n"
+					"Even if the instrument has a 12-bit ADC, using 8 rather than 16 bit data format allows (about 10%) faster"
+					" waveform update rate.\n\n"
+					"Choose 16 bit mode if you want to privilege data accuracy over refresh rate.\n\n"
+					"Changes to this setting take effect the next time a connection to the instrument is opened; "
+					"the transfer format for active sessions is not updated."
+						)
+					.EnumValue("Auto", WIDTH_AUTO)
+					.EnumValue("8 bits", WIDTH_8_BITS)
+					.EnumValue("16 bits", WIDTH_16_BITS)
+				);
 
 	auto& files = this->m_treeRoot.AddCategory("Files");
 		files.AddPreference(
