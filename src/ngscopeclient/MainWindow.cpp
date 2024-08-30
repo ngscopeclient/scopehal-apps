@@ -1522,10 +1522,16 @@ void MainWindow::DockingArea()
 		{
 			LogTrace("Docking initial workspace\n");
 
-			//Split the top into two sub nodes
+			//Split the top into two sub nodes (unless imgui already did it for us during a session reset)
 			ImGuiID leftPanelID;
 			ImGuiID rightPanelID;
-			ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
+			if(topNode->IsSplitNode())
+			{
+				leftPanelID = topNode->ChildNodes[0]->ID;
+				rightPanelID = topNode->ChildNodes[1]->ID;
+			}
+			else
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
 
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);

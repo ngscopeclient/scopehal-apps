@@ -64,10 +64,16 @@ void FilterGraphWorkspace::DoRender(ImGuiID id)
 		auto topNode = ImGui::DockBuilderGetNode(id);
 		if(topNode)
 		{
-			//Split the top into two sub nodes
+			//Split the top into two sub nodes (unless imgui already did it for us during a session reset)
 			ImGuiID leftPanelID;
 			ImGuiID rightPanelID;
-			ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, 0.2, &rightPanelID, &leftPanelID);
+			if(topNode->IsSplitNode())
+			{
+				leftPanelID = topNode->ChildNodes[0]->ID;
+				rightPanelID = topNode->ChildNodes[1]->ID;
+			}
+			else
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, 0.2, &rightPanelID, &leftPanelID);
 
 			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_palette->GetTitleAndID().c_str(), rightPanelID);
