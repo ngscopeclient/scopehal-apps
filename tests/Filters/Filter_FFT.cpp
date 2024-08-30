@@ -45,6 +45,7 @@
 
 //TODO: switch to FFTW since test case is OK to be GPL
 #ifndef _APPLE_SILICON
+#include <ffts.h>
 
 using namespace std;
 

@@ -1379,7 +1379,7 @@ void MainWindow::WindowMenu()
 			ImGui::BeginDisabled();
 		if(ImGui::MenuItem("Stream Browser"))
 		{
-			m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+			m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 			AddDialog(m_streamBrowser);
 		}
 		if(hasStreamBrowser)
@@ -1397,7 +1397,7 @@ void MainWindow::WindowMenu()
 			ImGui::EndDisabled();
 
 		if(ImGui::MenuItem("New Workspace"))
-			m_workspaces.emplace(make_shared<Workspace>(m_session));
+			m_workspaces.emplace(make_shared<Workspace>(m_session, this));
 
 		ImGui::EndMenu();
 	}
@@ -1410,32 +1410,44 @@ void MainWindow::WindowMenu()
  */
 void MainWindow::WindowAnalyzerMenu()
 {
+	//Find all protocol analyzer filters
+	set<PacketDecoder*> decoders;
+	auto instances = Filter::GetAllInstances();
+	for(auto f : instances)
+	{
+		auto pd = dynamic_cast<PacketDecoder*>(f);
+		if(pd)
+			decoders.emplace(pd);
+	}
+
+	if(decoders.empty())
+		ImGui::BeginDisabled();
 	if(ImGui::BeginMenu("Analyzer"))
 	{
 		//Make a list of all filters
-		auto instances = Filter::GetAllInstances();
-		for(auto f : instances)
+		for(auto pd : decoders)
 		{
-			//Ignore anything that isn't a protocol decoder
-			auto pd = dynamic_cast<PacketDecoder*>(f);
-			if(!pd)
-				continue;
-
-			//Do we already have a dialog open for it? If so, don't make another
-			if(m_protocolAnalyzerDialogs.find(pd) != m_protocolAnalyzerDialogs.end())
-				continue;
+			//Do we already have a dialog open for it? If so, we don't want to open another
+			bool open = (m_protocolAnalyzerDialogs.find(pd) != m_protocolAnalyzerDialogs.end());
 
 			//Add it to the menu
+			if(open)
+				ImGui::BeginDisabled();
 			if(ImGui::MenuItem(pd->GetDisplayName().c_str()))
 			{
 				auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
 				m_protocolAnalyzerDialogs[pd] = dlg;
 				AddDialog(dlg);
 			}
+			if(open)
+				ImGui::EndDisabled();
 		}
 
 		ImGui::EndMenu();
 	}
+
+	if(decoders.empty())
+		ImGui::EndDisabled();
 }
 
 /**

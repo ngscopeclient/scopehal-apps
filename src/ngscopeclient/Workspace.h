@@ -35,15 +35,17 @@
 #ifndef Workspace_h
 #define Workspace_h
 
+class MainWindow;
+
 class Workspace
 {
 public:
-	Workspace(const YAML::Node& node, Session& session);
-	Workspace(Session& session);
+	Workspace(const YAML::Node& node, Session& session, MainWindow* parent);
+	Workspace(Session& session, MainWindow* parent);
 	virtual ~Workspace()
 	{}
 
-	virtual bool Render();
+	bool Render();
 
 	YAML::Node Serialize();
 
@@ -51,7 +53,13 @@ public:
 	{ return m_title + "###" + m_id; }
 
 protected:
+	virtual void DoRender([[maybe_unused]] ImGuiID id)
+	{}
+
+	void TitleHoverHelp();
+
 	Session& m_session;
+	MainWindow* m_parent;
 
 	bool m_open;
 	std::string m_id;

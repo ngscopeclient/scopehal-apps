@@ -142,30 +142,21 @@ add_custom_target(
 add_dependencies(nghalshaders
 	halshaders)
 
+add_custom_target(
+	ngchannels
+	COMMENT "Copying channels..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopehal/channels ${CMAKE_BINARY_DIR}/src/ngscopeclient/channels)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
 	ngrendershaders
 	ngprotoshaders
 	nghalshaders
+	ngchannels
 	)
 
 add_subdirectory(shaders)
-
-# implot has a bunch of warnings, turn them off to avoid cluttering the build
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set_source_files_properties(
-	../implot/implot.cpp
-	../implot/implot_demo.cpp
-	../implot/implot_items.cpp
-	PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  set_source_files_properties(
-	../implot/implot.cpp
-	../implot/implot_demo.cpp
-	../implot/implot_items.cpp
-	PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
-endif()
 
 ###############################################################################
 #Set up include paths

@@ -2376,29 +2376,17 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//BER level arrows (for BERT readout)
 	RenderBERLevelArrows(origin, size);
 
-	//Help tooltip
-	//Only show if mouse has been still for 1 sec
-	//(shorter delays interfere with dragging)
-	double tnow = GetTime();
-	if( (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) &&
-		(tnow - m_tLastMouseMove > 1) &&
-		(m_dragState == DRAG_STATE_NONE) )
+	//Help message
+	if(ImGui::IsItemHovered())
 	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-
 		if(m_mouseOverTriggerArrow)
-			ImGui::TextUnformatted("Drag arrow to adjust trigger level.");
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Adjust trigger level");
 		else
 		{
-			ImGui::TextUnformatted(
-				"Click and drag to adjust offset.\n"
-				"Middle click to autofit range and offset to current waveform.\n"
-				"Use mouse wheel to adjust scale.");
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Adjust offset");
+			m_parent->AddStatusHelp("mouse_mmb", "Autofit range and offset");
+			m_parent->AddStatusHelp("mouse_wheel", "Adjust range");
 		}
-
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
 	}
 
 	//Draw text for the Y axis labels
@@ -3492,19 +3480,20 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 						tooltip += string("Sparsely sampled, ") + fs.PrettyPrint(data->m_timescale) + " resolution\n";
 				}
 			}
-			tooltip += "\n";
 		}
-
-		tooltip +=
-			"Drag to move this waveform to another plot.\n"
-			"Double click to view/edit channel properties.\n"
-			"Right click for more options.";
+		tooltip = Trim(tooltip);
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(tooltip.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
+	}
+	if(ImGui::IsItemHovered())
+	{
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move this waveform to another plot");
+		m_parent->AddStatusHelp("mouse_lmb_double", "Open channel properties");
+		m_parent->AddStatusHelp("mouse_rmb", "Channel context menu");
 	}
 
 	//Context menu

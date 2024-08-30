@@ -286,6 +286,7 @@ protected:
 				void TriggerStopDropdown(float buttonsize);
 				void DoTriggerDropdown(const char* action, std::shared_ptr<TriggerGroup>& group, bool& all);
 		void DockingArea();
+			void StatusBar(float height);
 
 	void LoadGradients();
 	void LoadGradient(const std::string& friendlyName, const std::string& internalName);
@@ -293,6 +294,7 @@ protected:
 	std::vector<std::string> m_eyeGradients;
 
 	void LoadFilterIcons();
+	void LoadStatusBarIcons();
 
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
@@ -579,6 +581,16 @@ protected:
 	std::map<std::type_index, std::string> m_filterIconMap;
 
 	void UpdateFonts();
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Status bar
+public:
+
+	void AddStatusHelp(const std::string& icon, const std::string& text)
+	{ m_statusHelp.push_back(std::pair<std::string, std::string>(icon, text)); }
+
+protected:
+	std::list<std::pair<std::string, std::string> > m_statusHelp;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Performance counters

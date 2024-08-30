@@ -35,14 +35,16 @@
 #include "ngscopeclient.h"
 #include "Workspace.h"
 #include "Session.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Workspace::Workspace(Session& session)
+Workspace::Workspace(Session& session, MainWindow* parent)
 	: m_session(session)
+	, m_parent(parent)
 	, m_open(true)
 	, m_title("New Workspace")
 	, m_defaultSize(800, 600)
@@ -52,8 +54,9 @@ Workspace::Workspace(Session& session)
 	m_id = string("Workspace ") + to_string(id);
 }
 
-Workspace::Workspace(const YAML::Node& node, Session& session)
+Workspace::Workspace(const YAML::Node& node, Session& session, MainWindow* parent)
 	: m_session(session)
+	, m_parent(parent)
 	, m_open(true)
 	, m_defaultSize(800, 600)
 {
@@ -94,6 +97,8 @@ bool Workspace::Render()
 	ImGui::SetNextWindowSize(m_defaultSize, ImGuiCond_Appearing);
 	if(!ImGui::Begin(name.c_str(), &m_open, ImGuiWindowFlags_NoCollapse))
 	{
+		TitleHoverHelp();
+
 		//If we get here, the window is tabbed out or the content area is otherwise not visible.
 		//Need to keep the dockspace node alive still, though!
 		ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_KeepAliveOnly, nullptr);
@@ -108,14 +113,21 @@ bool Workspace::Render()
 		ImGui::EndPopup();
 	}
 
-	if(ImGui::BeginItemTooltip())
-	{
-		ImGui::Text("Right click to rename this workspace");
-		ImGui::EndTooltip();
-	}
+	TitleHoverHelp();
+
+	DoRender(id);
 
 	ImGui::DockSpace(id, ImVec2(0.0f, 0.0f), 0, nullptr);
 
 	ImGui::End();
 	return true;
+}
+
+void Workspace::TitleHoverHelp()
+{
+	if(ImGui::IsItemHovered())
+	{
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move workspace");
+		m_parent->AddStatusHelp("mouse_rmb", "Rename workspace");
+	}
 }

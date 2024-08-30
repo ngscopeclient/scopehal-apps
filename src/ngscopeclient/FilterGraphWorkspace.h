@@ -38,6 +38,7 @@
 #include "Workspace.h"
 class FilterGraphEditor;
 class CreateFilterBrowser;
+class MainWindow;
 
 /**
 	@brief Helper class for building the default filter graph editor workspace
@@ -47,15 +48,16 @@ class FilterGraphWorkspace : public Workspace
 public:
 	FilterGraphWorkspace(
 		Session& session,
+		MainWindow* parent,
 		std::shared_ptr<FilterGraphEditor> graphEditor,
 		std::shared_ptr<CreateFilterBrowser> palette
 		);
 	virtual ~FilterGraphWorkspace()
 	{}
 
-	virtual bool Render() override;
-
 protected:
+	virtual void DoRender(ImGuiID id) override;
+
 	bool m_firstRun;
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;
 	std::shared_ptr<CreateFilterBrowser> m_palette;

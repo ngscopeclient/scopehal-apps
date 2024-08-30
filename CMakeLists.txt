@@ -83,7 +83,6 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 	set(APPLE_SILICON TRUE)
 endif()
 
-
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
 
@@ -130,13 +129,6 @@ endif()
 # We still use gtk on Linux for the file browser dialog in "native" mode)
 if(LINUX)
 	pkg_check_modules(GTK QUIET IMPORTED_TARGET REQUIRED gtk+-3.0)
-endif()
-
-# find ffts, except on Apple Silicon where it's not supported
-if(NOT APPLE_SILICON)
-	# ffts ships a broken pkgconfig file on some platforms so we are not going to use it
-	find_path(LIBFFTS_INCLUDE_DIRS ffts.h PATH_SUFFIXES ffts REQUIRED)
-	find_library(LIBFFTS_LIBRARIES NAMES ffts libffts REQUIRED)
 endif()
 
 #WORKAROUND Fedora 38 does not include Threads from the glslang .cmake file, fixed in Fedora 39+
@@ -247,6 +239,14 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
 # Unit tests
 if(BUILD_TESTING)
+
+	# find ffts, except on Apple Silicon where it's not supported
+	if(NOT APPLE_SILICON)
+		# ffts ships a broken pkgconfig file on some platforms so we are not going to use it
+		find_path(LIBFFTS_INCLUDE_DIRS ffts.h PATH_SUFFIXES ffts REQUIRED)
+		find_library(LIBFFTS_LIBRARIES NAMES ffts libffts REQUIRED)
+	endif()
+
 	find_package(Catch2 REQUIRED)
 	include(Catch)
 	#Catch2 v3.x.y have a breaking change:

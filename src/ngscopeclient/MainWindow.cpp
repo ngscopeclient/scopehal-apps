@@ -228,6 +228,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
 		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 	LoadFilterIcons();
+	LoadStatusBarIcons();
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
@@ -267,7 +268,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_graphEditor);
 
 	//Spawn the net browser
-	m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+	m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 	AddDialog(m_streamBrowser);
 
 	//Spawn the filter browser
@@ -275,7 +276,7 @@ void MainWindow::InitializeDefaultSession()
 	AddDialog(m_filterPalette);
 
 	//Spawn a new workspace for the filter graph stuff
-	auto w = make_shared<FilterGraphWorkspace>(m_session, m_graphEditor, m_filterPalette);
+	auto w = make_shared<FilterGraphWorkspace>(m_session, this, m_graphEditor, m_filterPalette);
 	m_workspaces.emplace(w);
 
 	//Dock it
@@ -842,6 +843,26 @@ void MainWindow::Toolbar()
 }
 
 /**
+	@brief Load icons for the status bar
+ */
+void MainWindow::LoadStatusBarIcons()
+{
+	m_texmgr.LoadTexture("mouse_lmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_lmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_lmb", FindDataFile("icons/contrib/blender/24x24/mouse_lmb.png"));
+	m_texmgr.LoadTexture("mouse_lmb_double", FindDataFile("icons/contrib/blender/24x24/mouse_lmb_double.png"));
+
+	m_texmgr.LoadTexture("mouse_mmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_mmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_mmb", FindDataFile("icons/contrib/blender/24x24/mouse_mmb.png"));
+
+	m_texmgr.LoadTexture("mouse_rmb_drag", FindDataFile("icons/contrib/blender/24x24/mouse_rmb_drag.png"));
+	m_texmgr.LoadTexture("mouse_rmb", FindDataFile("icons/contrib/blender/24x24/mouse_rmb.png"));
+
+	m_texmgr.LoadTexture("mouse_move", FindDataFile("icons/contrib/blender/24x24/mouse_move.png"));
+
+	m_texmgr.LoadTexture("mouse_wheel", FindDataFile("icons/contrib/blender/24x24/mouse_wheel.png"));
+}
+
+/**
 	@brief Load icons for the filter graph
  */
 void MainWindow::LoadFilterIcons()
@@ -902,7 +923,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("input-k", FindDataFile("icons/filters/input-k.png"));
 	m_texmgr.LoadTexture("input-sma", FindDataFile("icons/filters/input-sma.png"));
 
-		//Fill out map of filter class types to icon names
+	//Fill out map of filter class types to icon names
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
 	m_filterIconMap[type_index(typeid(AddFilter))] 								= "filter-add";
@@ -1402,8 +1423,10 @@ void MainWindow::DockingArea()
 	ImGui::PopStyleVar(3);
 
 	auto dockspace_id = ImGui::GetID("DockSpace");
+	auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 
 	//Handle splitting of existing waveform groups
+	bool dockChanged = true;
 	if(!m_splitRequests.empty())
 	{
 		LogTrace("Processing split requests\n");
@@ -1470,7 +1493,6 @@ void MainWindow::DockingArea()
 		LogTrace("Processing newly added waveform group\n");
 
 		//Find the top/leftmost leaf node in the docking tree
-		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode == nullptr)
 		{
 			LogError("Top dock node is null when adding new waveform group\n");
@@ -1496,15 +1518,20 @@ void MainWindow::DockingArea()
 	//Handle initial docking of the first workspace
 	else if(m_initialWorkspaceDockRequest && m_streamBrowser)
 	{
-		auto topNode = ImGui::DockBuilderGetNode(dockspace_id);
 		if(topNode != nullptr)
 		{
 			LogTrace("Docking initial workspace\n");
 
-			//Split the top into two sub nodes
+			//Split the top into two sub nodes (unless imgui already did it for us during a session reset)
 			ImGuiID leftPanelID;
 			ImGuiID rightPanelID;
-			ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
+			if(topNode->IsSplitNode())
+			{
+				leftPanelID = topNode->ChildNodes[0]->ID;
+				rightPanelID = topNode->ChildNodes[1]->ID;
+			}
+			else
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
 
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
@@ -1515,8 +1542,42 @@ void MainWindow::DockingArea()
 			ImGui::DockBuilderFinish(dockspace_id);
 		}
 	}
+	else
+		dockChanged = false;
 
-	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), /*dockspace_flags*/0, /*window_class*/nullptr);
+	topNode = ImGui::DockContextFindNodeByID(ImGui::GetCurrentContext(), dockspace_id);
+
+	//Allocate space for the status bar before doing anything else
+	auto avail = ImGui::GetContentRegionAvail();
+	auto statusBarHeight = ImGui::GetFontSize()*1.75 + 2*ImGui::GetStyle().FramePadding.y;
+	auto dockSpaceHeight = avail.y - statusBarHeight - ImGui::GetStyle().FramePadding.y;
+
+	ImGui::DockSpace(dockspace_id, ImVec2(0.0f, dockSpaceHeight), /*dockspace_flags*/0, /*window_class*/nullptr);
+
+	//WIP: Add + button to tabs
+	if(!dockChanged && topNode)
+	{
+		/*
+		for(int i=0; i<2; i++)
+		{
+			auto node = topNode->ChildNodes[i];
+
+			if(ImGui::DockNodeBeginAmendTabBar(node))
+			{
+				if(ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
+				{
+					LogDebug("add\n");
+				}
+				ImGui::DockNodeEndAmendTabBar();
+			}
+		}
+		*/
+	}
+
+	//Draw the status bar
+	//TODO: add menu item to show/hide
+	StatusBar(statusBarHeight);
+
 	ImGui::End();
 
 	//Workspaces have to be submitted before anything they might contain (i.e. waveform groups or other dialogs)
@@ -1530,6 +1591,25 @@ void MainWindow::DockingArea()
 	}
 	for(auto& dlg : workspacesToClose)
 		m_workspaces.erase(dlg);
+}
+
+void MainWindow::StatusBar(float height)
+{
+	ImGui::Separator();
+
+	float iconHeight = height - 2*ImGui::GetStyle().FramePadding.y;
+	ImVec2 iconSize(iconHeight, iconHeight);
+
+	for(auto it : m_statusHelp)
+	{
+		ImGui::Image(GetTexture(it.first), iconSize);
+		ImGui::SameLine();
+		ImGui::TextUnformatted(it.second.c_str());
+		ImGui::SameLine();
+	}
+
+	//Delete status bar contents so we can draw new stuff next frame
+	m_statusHelp.clear();
 }
 
 /**
@@ -2663,7 +2743,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 		LogIndenter li2;
 
 		for(auto w : workspaces)
-			m_workspaces.emplace(make_shared<Workspace>(w, m_session));
+			m_workspaces.emplace(make_shared<Workspace>(w, m_session, this));
 	}
 
 	//Measurements
@@ -2861,7 +2941,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	auto sb = node["streambrowser"];
 	if(sb && sb.as<bool>())
 	{
-		m_streamBrowser = make_shared<StreamBrowserDialog>(m_session);
+		m_streamBrowser = make_shared<StreamBrowserDialog>(m_session, this);
 		AddDialog(m_streamBrowser);
 	}
 

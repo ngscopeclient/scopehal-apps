@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,15 +35,17 @@
 
 #include "ngscopeclient.h"
 #include "StreamBrowserDialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-StreamBrowserDialog::StreamBrowserDialog(Session& session)
+StreamBrowserDialog::StreamBrowserDialog(Session& session, MainWindow* parent)
 	: Dialog("Stream Browser", "Stream Browser", ImVec2(300, 400))
 	, m_session(session)
+	, m_parent(parent)
 {
 
 }
@@ -91,7 +93,7 @@ bool StreamBrowserDialog::DoRender()
 						ImGui::EndDragDropSource();
 					}
 					else
-						DoItemTooltip();
+						DoItemHelp();
 				}
 
 				//Drag source for the channel itself (if we have zero or >1 streams)
@@ -121,7 +123,7 @@ bool StreamBrowserDialog::DoRender()
 							ImGui::EndDragDropSource();
 						}
 						else
-							DoItemTooltip();
+							DoItemHelp();
 					}
 				}
 
@@ -157,7 +159,7 @@ bool StreamBrowserDialog::DoRender()
 					ImGui::EndDragDropSource();
 				}
 				else
-					DoItemTooltip();
+					DoItemHelp();
 			}
 
 			//Drag source for the channel itself (if we have zero or >1 streams)
@@ -187,7 +189,7 @@ bool StreamBrowserDialog::DoRender()
 						ImGui::EndDragDropSource();
 					}
 					else
-						DoItemTooltip();
+						DoItemHelp();
 				}
 			}
 
@@ -200,20 +202,8 @@ bool StreamBrowserDialog::DoRender()
 	return true;
 }
 
-void StreamBrowserDialog::DoItemTooltip()
+void StreamBrowserDialog::DoItemHelp()
 {
-	//Tooltip for the button
-	//Don't do a tooltip if the mouse is down (workaround for https://github.com/ocornut/imgui/issues/7922)
-	if(ImGui::IsMouseDown(ImGuiMouseButton_Left))
-		return;
-
-	if(ImGui::BeginItemTooltip())
-	{
-		ImGui::TextUnformatted(
-			"Drag to filter graph to create a node for this signal.\n"
-			"\n"
-			"Drag to a waveform view to add this signal to the plot."
-			);
-		ImGui::EndTooltip();
-	}
+	if(ImGui::IsItemHovered())
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Add to filter graph or plot");
 }
