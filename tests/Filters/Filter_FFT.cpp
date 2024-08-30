@@ -42,10 +42,10 @@
 #include "../../lib/scopehal/TestWaveformSource.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
-#include <ffts.h>
 
 //TODO: switch to FFTW since test case is OK to be GPL
 #ifndef _APPLE_SILICON
+#include <ffts.h>
 
 using namespace std;
 
