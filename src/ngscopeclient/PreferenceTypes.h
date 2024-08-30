@@ -55,4 +55,12 @@ enum ViewportMode
 	VIEWPORT_DISABLE
 };
 
+enum DataWidth
+{
+	WIDTH_AUTO,
+	WIDTH_8_BITS,
+	WIDTH_16_BITS
+};
+
+
 #endif
