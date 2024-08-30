@@ -11,10 +11,14 @@ add_executable(Filters
 	FrequencyMeasurement.cpp
 )
 
+include_directories(Filters
+	${LIBFFTS_INCLUDE_DIRS})
+
 target_link_libraries(Filters
 	scopehal
 	scopeprotocols
 	Catch2::Catch2
+	${LIBFFTS_LIBRARIES}
 	)
 
 #Needed because Windows does not support RPATH and will otherwise not be able to find DLLs when catch_discover_tests runs the executable
