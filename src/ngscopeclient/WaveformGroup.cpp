@@ -59,6 +59,7 @@ WaveformGroup::WaveformGroup(MainWindow* parent, const string& title)
 	, m_tLastMouseMove(GetTime())
 	, m_timelineHeight(0)
 	, m_mouseOverTriggerArrow(false)
+	, m_mouseOverMarker(false)
 	, m_scopeTriggerDuringDrag(nullptr)
 	, m_displayingEye(false)
 	, m_xAxisCursorMode(X_CURSOR_NONE)
@@ -483,6 +484,8 @@ float WaveformGroup::GetInBandPower(WaveformBase* wfm, Unit yunit, int64_t t1, i
  */
 void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 {
+	m_mouseOverMarker = false;
+
 	//Don't draw anything if our unit isn't fs
 	//TODO: support units for frequency domain channels etc?
 	//TODO: early out if eye pattern
@@ -535,6 +538,9 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	}
 	ImGui::EndChild();
 
+	if(m_dragState == DRAG_STATE_MARKER)
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move marker");
+
 	auto mouse = ImGui::GetMousePos();
 	if(!IsMouseOverButtonInWaveformArea())
 	{
@@ -552,6 +558,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				if( fabs(mouse.x - xpos) < searchRadius)
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+					m_mouseOverMarker = true;
 					m_parent->AddStatusHelp("mouse_lmb_drag", "Move marker");
 
 					//Start dragging if clicked
@@ -721,6 +728,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	if(m_xAxisCursorMode == X_CURSOR_DUAL)
 		DoCursor(1, DRAG_STATE_X_CURSOR1);
 
+	//Help text related to cursors
 	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !IsMouseOverButtonInWaveformArea())
 	{
 		if(m_xAxisCursorMode != X_CURSOR_NONE)
@@ -728,6 +736,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		if(m_xAxisCursorMode == X_CURSOR_DUAL)
 			m_parent->AddStatusHelp("mouse_lmb_drag", "Place second cursor");
 	}
+	if( (m_dragState == DRAG_STATE_X_CURSOR0) || (m_dragState == DRAG_STATE_X_CURSOR1) )
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
 
 	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
 	//Don't process this if a popup is open
@@ -735,7 +745,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		(m_dragState == DRAG_STATE_NONE) &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
 		!IsMouseOverButtonInWaveformArea() &&
-		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel) &&
+		!m_mouseOverMarker)
 	{
 		auto xpos = ImGui::GetMousePos().x;
 
@@ -1019,8 +1030,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 		m_parent->AddStatusHelp("mouse_lmb_double", "Open timebase properties");
 
-		m_parent->AddStatusHelp("mouse_wheel", "Zoom timeline");
-		m_parent->AddStatusHelp("mouse_mmb", "Autoscale timeline to waveform");
+		m_parent->AddStatusHelp("mouse_wheel", "Zoom horizontal axis");
+		m_parent->AddStatusHelp("mouse_mmb", "Autoscale horizontal axis to waveforms");
 	}
 
 	ImGui::EndChild();

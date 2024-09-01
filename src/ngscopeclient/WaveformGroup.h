@@ -215,6 +215,9 @@ protected:
 	///@brief True if mouse is over a trigger arrow
 	bool m_mouseOverTriggerArrow;
 
+	///@brief True if mouse is over a marker
+	bool m_mouseOverMarker;
+
 	///@brief The scope whose trigger being dragged when in DRAG_STATE_TRIGGER
 	std::shared_ptr<Oscilloscope> m_scopeTriggerDuringDrag;
 
