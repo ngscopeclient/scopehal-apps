@@ -677,6 +677,10 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		m_mouseOverButton = false;
 	ImGui::EndChild();
 
+	//Handle help messages
+	if(ImGui::IsItemHovered() && !m_mouseOverButton)
+		m_parent->AddStatusHelp("mouse_wheel", "Zoom horizontal axis");
+
 	//Draw the vertical scale on the right side of the plot
 	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 

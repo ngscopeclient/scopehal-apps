@@ -552,6 +552,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				if( fabs(mouse.x - xpos) < searchRadius)
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+					m_parent->AddStatusHelp("mouse_lmb_drag", "Move marker");
 
 					//Start dragging if clicked
 					if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -720,11 +721,21 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	if(m_xAxisCursorMode == X_CURSOR_DUAL)
 		DoCursor(1, DRAG_STATE_X_CURSOR1);
 
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !IsMouseOverButtonInWaveformArea())
+	{
+		if(m_xAxisCursorMode != X_CURSOR_NONE)
+			m_parent->AddStatusHelp("mouse_lmb", "Place first cursor");
+		if(m_xAxisCursorMode == X_CURSOR_DUAL)
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Place second cursor");
+	}
+
 	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
+	//Don't process this if a popup is open
 	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
 		(m_dragState == DRAG_STATE_NONE) &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-		!IsMouseOverButtonInWaveformArea())
+		!IsMouseOverButtonInWaveformArea() &&
+		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
 	{
 		auto xpos = ImGui::GetMousePos().x;
 
@@ -764,7 +775,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 void WaveformGroup::DoCursor(int iCursor, DragState state)
 {
 	float xpos = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[iCursor]));
-	float searchRadius = 0.25 * ImGui::GetFontSize();
+	float searchRadius = 0.5 * ImGui::GetFontSize();
 
 	//Check if the mouse hit us
 	auto mouse = ImGui::GetMousePos();
@@ -773,6 +784,7 @@ void WaveformGroup::DoCursor(int iCursor, DragState state)
 		if( fabs(mouse.x - xpos) < searchRadius)
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
 
 			//Start dragging if clicked
 			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -1056,6 +1068,7 @@ void WaveformGroup::RenderTriggerPositionArrows(ImVec2 pos, float height)
 		if( (mouse.x >= exleft) && (mouse.x <= exright) && (mouse.y >= extop) && (mouse.y <= ybot) )
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Move trigger position");
 			m_mouseOverTriggerArrow = true;
 
 			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))

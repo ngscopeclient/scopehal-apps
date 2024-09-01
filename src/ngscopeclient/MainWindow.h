@@ -587,10 +587,10 @@ protected:
 public:
 
 	void AddStatusHelp(const std::string& icon, const std::string& text)
-	{ m_statusHelp.push_back(std::pair<std::string, std::string>(icon, text)); }
+	{ m_statusHelp[icon] = text; }
 
 protected:
-	std::list<std::pair<std::string, std::string> > m_statusHelp;
+	std::map<std::string, std::string> m_statusHelp;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Performance counters
