@@ -559,6 +559,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				{
 					ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
 					m_mouseOverMarker = true;
+					m_parent->AddStatusHelp("mouse_lmb", "");
 					m_parent->AddStatusHelp("mouse_lmb_drag", "Move marker");
 
 					//Start dragging if clicked
@@ -722,14 +723,10 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	}
 	ImGui::EndChild();
 
-	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
-	//So we have to do all of our interaction processing inside the top level window
-	DoCursor(0, DRAG_STATE_X_CURSOR0);
-	if(m_xAxisCursorMode == X_CURSOR_DUAL)
-		DoCursor(1, DRAG_STATE_X_CURSOR1);
-
-	//Help text related to cursors
-	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !IsMouseOverButtonInWaveformArea())
+	//Default help text related to cursors (may change if we're over a cursor)
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		!IsMouseOverButtonInWaveformArea() &&
+		(m_dragState == DRAG_STATE_NONE) )
 	{
 		if(m_xAxisCursorMode != X_CURSOR_NONE)
 			m_parent->AddStatusHelp("mouse_lmb", "Place first cursor");
@@ -738,6 +735,12 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 	}
 	if( (m_dragState == DRAG_STATE_X_CURSOR0) || (m_dragState == DRAG_STATE_X_CURSOR1) )
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+
+	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+	//So we have to do all of our interaction processing inside the top level window
+	DoCursor(0, DRAG_STATE_X_CURSOR0);
+	if(m_xAxisCursorMode == X_CURSOR_DUAL)
+		DoCursor(1, DRAG_STATE_X_CURSOR1);
 
 	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
 	//Don't process this if a popup is open
@@ -795,6 +798,7 @@ void WaveformGroup::DoCursor(int iCursor, DragState state)
 		if( fabs(mouse.x - xpos) < searchRadius)
 		{
 			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+			m_parent->AddStatusHelp("mouse_lmb", "");
 			m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
 
 			//Start dragging if clicked

@@ -1602,6 +1602,10 @@ void MainWindow::StatusBar(float height)
 
 	for(auto it : m_statusHelp)
 	{
+		//empty help text is a legal way to remove a previous help message, don't draw this
+		if(it.second.empty())
+			continue;
+
 		ImGui::Image(GetTexture(it.first), iconSize);
 		ImGui::SameLine();
 		ImGui::TextUnformatted(it.second.c_str());
