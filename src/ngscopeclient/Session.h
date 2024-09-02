@@ -317,6 +317,8 @@ public:
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
+	std::string GetRegisteredTypeOfDriver(const std::string& drivername);
+
 	bool LoadInstruments(int version, const YAML::Node& node, bool online);
 	bool PreLoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);

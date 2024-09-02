@@ -850,6 +850,38 @@ void Session::DoLoadWaveformDataForStream(
 	#endif
 }
 
+/**
+	@brief Performs an exhaustive search of the driver list to see which type this instrument is
+
+	TODO: we should really just unify the dynamic creation tables...
+ */
+string Session::GetRegisteredTypeOfDriver(const string& drivername)
+{
+	map<string, vector<string> > typeList;
+	SCPIOscilloscope::EnumDrivers(typeList["oscilloscope"]);
+	SCPIPowerSupply::EnumDrivers(typeList["psu"]);
+	SCPIRFSignalGenerator::EnumDrivers(typeList["rfgen"]);
+	SCPIFunctionGenerator::EnumDrivers(typeList["funcgen"]);
+	SCPIMultimeter::EnumDrivers(typeList["multimeter"]);
+	SCPISpectrometer::EnumDrivers(typeList["spectrometer"]);
+	SCPISDR::EnumDrivers(typeList["sdr"]);
+	SCPILoad::EnumDrivers(typeList["load"]);
+	SCPIBERT::EnumDrivers(typeList["bert"]);
+	SCPIMiscInstrument::EnumDrivers(typeList["misc"]);
+
+	for(auto& it : typeList)
+	{
+		for(auto name : it.second)
+		{
+			if(name == drivername)
+				return it.first;
+		}
+	}
+
+	LogError("Couldn't find any driver called \"%s\"\n", drivername.c_str());
+	return "unknown";
+}
+
 bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool online)
 {
 	LogTrace("Preloading saved instruments\n");
@@ -872,54 +904,55 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 		auto nick = inst["nick"].as<string>();
 		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
 
-		//See if it's a scope
-		//(if no type specified, assume scope for backward compat)
-		if(!inst["type"].IsDefined() || (inst["type"].as<string>() == "oscilloscope") )
+		//The "type" field in the scopesession format is actually redundant, we should be able to tell what the driver
+		//is based on which table it's found in!
+		string type = GetRegisteredTypeOfDriver(inst["driver"].as<string>());
+		if(type == "oscilloscope")
 		{
 			if(!PreLoadOscilloscope(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "psu")
+		else if(type == "psu")
 		{
 			if(!PreLoadPowerSupply(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "rfgen")
+		else if(type == "rfgen")
 		{
 			if(!PreLoadRFSignalGenerator(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "funcgen")
+		else if(type == "funcgen")
 		{
 			if(!PreLoadFunctionGenerator(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "multimeter")
+		else if(type == "multimeter")
 		{
 			if(!PreLoadMultimeter(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "spectrometer")
+		else if(type == "spectrometer")
 		{
 			if(!PreLoadSpectrometer(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "sdr")
+		else if(type == "sdr")
 		{
 			if(!PreLoadSDR(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "load")
+		else if(type == "load")
 		{
 			if(!PreLoadLoad(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "bert")
+		else if(type == "bert")
 		{
 			if(!PreLoadBERT(version, inst, online))
 				return false;
 		}
-		else if(inst["type"].as<string>() == "misc")
+		else if(type == "misc")
 		{
 			if(!PreLoadMisc(version, inst, online))
 				return false;
