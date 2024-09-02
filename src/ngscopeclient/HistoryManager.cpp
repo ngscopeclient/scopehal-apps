@@ -219,7 +219,7 @@ void HistoryManager::LoadEmptyHistoryToSession(Session& session)
 
 	@param scopes		The instruments to add
 	@param deleteOld	True to delete old data that rolled off the end of the history buffer
-						Set false when loading waveforms from a sessio
+						Set false when loading waveforms from a session
 	@param pin			True to pin into history
 	@param nick			Nickname
  */
