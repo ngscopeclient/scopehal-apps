@@ -112,25 +112,23 @@ void Session::ClearBackgroundThreads()
 {
 	LogTrace("Clearing background threads\n");
 
-	//Signal our threads to exit
-	//The sooner we do this, the faster they'll exit.
-	m_shuttingDown = true;
-
 	//Stop the trigger so there's no pending waveforms
-	StopTrigger();
+	StopTrigger(true);
+
+	//Shut down instrument threads.
+	//This has to happen before we terminate the WaveformThread, to avoid waveforms getting stuck
+	//which have been acquired but not processed
+	for(auto it : m_instrumentStates)
+		it.second->Close();
 
 	//Clear our trigger state
 	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
-	m_triggerArmed = false;
 	g_waveformReadyEvent.Clear();
 	g_rerenderDoneEvent.Clear();
 	g_waveformProcessedEvent.Signal();
 
-	//Shut down instrument threads
-	for(auto it : m_instrumentStates)
-		it.second->Close();
-
-	//Block until our processing threads exit
+	//Signal our other worker threads to exit, then wait until they do so
+	m_shuttingDown = true;
 	if(m_waveformThread)
 		m_waveformThread->join();
 	m_waveformThread = nullptr;
@@ -178,10 +176,25 @@ void Session::Clear()
 	//Might be redundant.
 	lock_guard<mutex> lock2(m_scopeMutex);
 
-	//Clear history before destroying scopes.
-	//This ordering is important since waveforms removed from history get pushed into the WaveformPool of the scopes,
-	//so the scopes must not have been destroyed yet.
-	m_history.clear();
+	//Add any latecomer waveforms to history to make sure we know who owns them
+	if(g_waveformReadyEvent.Peek())
+	{
+		LogTrace("Found late waveform, adding to history before clearing it\n");
+
+		vector<shared_ptr<Oscilloscope>> scopes;
+		set<shared_ptr<TriggerGroup>> groups;
+		{
+			lock_guard<mutex> lock3(m_recentlyTriggeredScopeMutex);
+			for(auto scope : m_recentlyTriggeredScopes)
+				scopes.push_back(scope);
+			m_recentlyTriggeredScopes.clear();
+
+			groups = m_recentlyTriggeredGroups;
+			m_recentlyTriggeredGroups.clear();
+
+			m_history.AddHistory(scopes);
+		}
+	}
 
 	//Delete scopes once we've terminated the threads
 	//Detach waveforms before we destroy the scope, since history owns them
@@ -196,6 +209,11 @@ void Session::Clear()
 				chan->Detach(j);
 		}
 	}
+
+	//Clear history before destroying scopes (but after detaching waveforms)
+	//This ordering is important since waveforms removed from history get pushed into the WaveformPool of the scopes,
+	//so the scopes must not have been destroyed yet.
+	m_history.clear();
 
 	m_oscilloscopes.clear();
 	m_psus.clear();
