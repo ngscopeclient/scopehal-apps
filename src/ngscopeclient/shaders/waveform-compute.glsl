@@ -257,7 +257,8 @@ void main()
 		{
 			//Fetch coordinates
 			#ifdef ANALOG_PATH
-				vec2 left = vec2(FetchX(i) * xscale + xoff, (voltage[i] + yoff)*yscale + ybase);
+				float v = voltage[i];
+				vec2 left = vec2(FetchX(i) * xscale + xoff, (v + yoff)*yscale + ybase);
 
 				#ifdef USE_NEXT_COORDS
 					vec2 right = vec2(FetchX(i+1) * xscale + xoff, (voltage[i+1] + yoff)*yscale + ybase);
@@ -265,6 +266,12 @@ void main()
 					vec2 right = left;
 					right.x += FETCH_DURATION(i) * xscale;
 				#endif
+
+				//Don't draw zero-height histogram bars
+				#ifdef HISTOGRAM_PATH
+					bool zeroHeight = (v <= 0);
+				#endif
+
 			#endif
 
 			#ifdef DIGITAL_PATH
@@ -314,7 +321,7 @@ void main()
 				#endif
 
 				#ifdef HISTOGRAM_PATH
-					starty = 0;
+					starty = yoff*yscale + ybase;
 					endy = left.y;
 				#endif
 
@@ -324,6 +331,12 @@ void main()
 				{
 					updating = false;
 				}
+
+				//Don't draw zero-height histogram bars
+				#ifdef HISTOGRAM_PATH
+				else if(zeroHeight)
+					updating = false;
+				#endif
 
 				//Something is visible. Clip to window size in case anything is partially offscreen
 				else
