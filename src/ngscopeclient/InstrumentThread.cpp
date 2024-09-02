@@ -198,4 +198,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 		//(this also provides a yield point for the gui thread to get mutex ownership etc)
 		this_thread::sleep_for(chrono::milliseconds(10));
 	}
+
+	LogTrace("Shutting down instrument thread\n");
 }

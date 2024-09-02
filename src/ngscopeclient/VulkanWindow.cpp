@@ -276,6 +276,8 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
  */
 VulkanWindow::~VulkanWindow()
 {
+	LogTrace("Shutting down Vulkan\n");
+
 	g_vkComputeDevice->waitIdle();
 
 	m_texturesUsedThisFrame.clear();

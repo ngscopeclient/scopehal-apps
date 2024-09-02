@@ -243,6 +243,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 
 MainWindow::~MainWindow()
 {
+	LogTrace("Application exiting\n");
+
 	g_vkComputeDevice->waitIdle();
 	m_texmgr.clear();
 
