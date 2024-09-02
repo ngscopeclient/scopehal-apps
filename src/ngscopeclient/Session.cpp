@@ -1979,54 +1979,12 @@ YAML::Node Session::SerializeInstrumentConfiguration()
 	for(auto inst : instruments)
 	{
 		auto config = inst->SerializeConfiguration(m_idtable);
-
-		/*
-			Save type fields so we know how to recreate the instrument
-
-			Precedence rules:
-			* Scope-derived instruments are highest precedence: these will probably eventually be refactored
-			  as they're not actually "real" scopes but for now we have to check for them first
-			* Scopes otherwise have high precedence: any combo instrument is a scope that has some ancillary functions
-			* RF gens with baseband function generators are primarily RF gens
-		 */
-		auto spec = dynamic_pointer_cast<SCPISpectrometer>(inst);
-		auto sdr = dynamic_pointer_cast<SCPISDR>(inst);
-		auto vna = dynamic_pointer_cast<SCPIVNA>(inst);
 		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
-		auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
-		auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
-		auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
-		auto funcgen = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
-		auto load = dynamic_pointer_cast<SCPILoad>(inst);
-		auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
-		auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
-		if(spec)
-			config["type"] = "spectrometer";
-		else if(sdr)
-			config["type"] = "sdr";
-		else if(vna)
-			config["type"] = "vna";
-		else if(scope)
+		if(scope)
 		{
 			if(m_scopeDeskewCal.find(scope) != m_scopeDeskewCal.end())
 				config["triggerdeskew"] = m_scopeDeskewCal[scope];
-			config["type"] = "oscilloscope";
 		}
-		else if(rfgen)
-			config["type"] = "rfgen";
-		else if(funcgen)
-			config["type"] = "funcgen";
-		else if(meter)
-			config["type"] = "multimeter";
-		else if(psu)
-			config["type"] = "psu";
-		else if(load)
-			config["type"] = "load";
-		else if(bert)
-			config["type"] = "bert";
-		else if(misc)
-			config["type"] = "misc";
-
 		node["inst" + config["id"].as<string>()] = config;
 	}
 
