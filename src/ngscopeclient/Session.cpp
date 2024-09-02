@@ -2748,7 +2748,12 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		if(meter && (types & Instrument::INST_DMM) )
 			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
 		if(generator && (types & Instrument::INST_FUNCTION) )
-			m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
+		{
+			//If it's also a scope, don't show the generator dialog by default
+			//TODO: only if generator is currently producing a signal or something?
+			if(!scope)
+				m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
+		}
 		if(load && (types & Instrument::INST_LOAD) )
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
 		if(bert && (types & Instrument::INST_BERT) )

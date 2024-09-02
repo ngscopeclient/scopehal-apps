@@ -62,5 +62,10 @@ enum DataWidth
 	WIDTH_16_BITS
 };
 
+enum HeadlessStartupMode
+{
+	HEADLESS_STARTUP_ALL_NON_MSO,
+	HEADLESS_STARTUP_C1_ONLY
+};
 
 #endif

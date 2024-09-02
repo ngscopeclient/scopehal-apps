@@ -451,8 +451,15 @@ void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 		//For now, one area per enabled channel
 		vector<StreamDescriptor> streams;
 
-		//Headless scope? Pick every channel.
-		if( (dynamic_pointer_cast<RemoteBridgeOscilloscope>(scope)) || (dynamic_pointer_cast<DemoOscilloscope>(scope)) )
+		//Demo scope gets all channels enabled
+		bool isDemo = dynamic_pointer_cast<DemoOscilloscope>(scope) != nullptr;
+
+		//Headless scopes depend on preference
+		bool isHeadless = dynamic_pointer_cast<RemoteBridgeOscilloscope>(scope) != nullptr;
+		auto headlessMode = m_session.GetPreferences().GetEnumRaw("Drivers.General.headless_startup");
+
+		//Headless scope? Pick every channel if requested
+		if( (isHeadless && (headlessMode == HEADLESS_STARTUP_ALL_NON_MSO)) || isDemo )
 		{
 			LogTrace("Headless scope, enabling every analog channel\n");
 			for(size_t i=0; i<scope->GetChannelCount(); i++)

@@ -340,6 +340,16 @@ void PreferenceManager::InitializeDefaults()
 				);
 
 	auto& drivers = this->m_treeRoot.AddCategory("Drivers");
+		auto& dgeneral = drivers.AddCategory("General");
+			dgeneral.AddPreference(
+				Preference::Enum("headless_startup", HEADLESS_STARTUP_C1_ONLY)
+				.Label("Headless scope default state")
+				.Description(
+				"Select the set of channels which are active by default on PC-attached oscilloscopes\n"
+				"with no front panel display of their own. "
+				)
+				.EnumValue("All non-MSO channels", HEADLESS_STARTUP_ALL_NON_MSO)
+				.EnumValue("Channel 1 only", HEADLESS_STARTUP_C1_ONLY) );
 		auto& lecroy = drivers.AddCategory("Teledyne LeCroy");
 			lecroy.AddPreference(
 				Preference::Bool("force_16bit", true)
