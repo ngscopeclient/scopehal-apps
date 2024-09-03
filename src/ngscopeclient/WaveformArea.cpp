@@ -3130,8 +3130,6 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 
 			else if(payload->IsDelivery())
 			{
-				LogDebug("accept center left\n");
-
 				//Add the new stream to us
 				//TODO: copy view settings from the DisplayedChannel over?
 				AddStream(stream);
