@@ -2672,6 +2672,55 @@ void Session::StartWaveformThreadIfNeeded()
 }
 
 /**
+	@brief Creates a new instrument and adds it to the session
+ */
+void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transport, const string& nickname)
+{
+	shared_ptr<Instrument> inst = nullptr;
+
+	//Search all types of instrument until we find the right one
+	//TODO: unify this when we get rid of this ugliness
+	for(auto it : m_driverNamesByType)
+	{
+		auto type = it.first;
+		auto& drivers = it.second;
+
+		for(auto name : drivers)
+		{
+			if(name == driver)
+			{
+				if(type == "bert")
+					inst = SCPIBERT::CreateBERT(driver, transport);
+				else if(type == "funcgen")
+					inst = SCPIFunctionGenerator::CreateFunctionGenerator(driver, transport);
+				else if(type == "load")
+					inst = SCPILoad::CreateLoad(driver, transport);
+
+				break;
+			}
+		}
+
+		if(inst)
+			break;
+	}
+
+	//If we couldn't make it, abort
+	if(!inst)
+	{
+		m_mainWindow->ShowErrorPopup(
+			"Driver error",
+			"Failed to create instrument driver instance of type \"" + driver + "\"");
+		delete transport;
+		return;
+	}
+
+	//Apply preference settings, if any, here
+
+	inst->m_nickname = nickname;
+	AddInstrument(inst);
+}
+
+/**
 	@brief Adds a new instrument to the session
 
 	@param inst				The instment to add

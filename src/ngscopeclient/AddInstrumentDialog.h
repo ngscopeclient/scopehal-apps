@@ -53,7 +53,7 @@ public:
 protected:
 	SCPITransport* MakeTransport();
 
-	virtual bool DoConnect(SCPITransport* transport) =0;
+	virtual bool DoConnect(SCPITransport* transport);
 
 	Session& m_session;
 

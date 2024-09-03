@@ -42,10 +42,7 @@ add_executable(ngscopeclient
 	pthread_compat.cpp
 
 	AboutDialog.cpp
-	AddBERTDialog.cpp
-	AddGeneratorDialog.cpp
 	AddInstrumentDialog.cpp
-	AddLoadDialog.cpp
 	AddMiscDialog.cpp
 	AddMultimeterDialog.cpp
 	AddPowerSupplyDialog.cpp

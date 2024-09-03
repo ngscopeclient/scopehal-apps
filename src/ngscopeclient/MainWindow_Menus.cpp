@@ -42,9 +42,7 @@
 
 //Dialogs
 #include "AboutDialog.h"
-#include "AddBERTDialog.h"
-#include "AddGeneratorDialog.h"
-#include "AddLoadDialog.h"
+#include "AddInstrumentDialog.h"
 #include "AddMiscDialog.h"
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
@@ -301,7 +299,7 @@ void MainWindow::AddBERTMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 	if(ImGui::BeginMenu("BERT"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddBERTDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add BERT", "bert", m_session, "bert"));
 		ImGui::Separator();
 
 		//Find all known BERT drivers.
@@ -375,7 +373,7 @@ void MainWindow::AddLoadMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 	if(ImGui::BeginMenu("Load"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddLoadDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Load", "load", m_session, "load"));
 		ImGui::Separator();
 
 		//Find all known load drivers.
@@ -448,7 +446,7 @@ void MainWindow::AddGeneratorMenu(vector<time_t>& timestamps, map<time_t, vector
 	if(ImGui::BeginMenu("Generator"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddGeneratorDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Generator", "funcgen", m_session, "funcgen"));
 		ImGui::Separator();
 
 		//Find all known function generator drivers.

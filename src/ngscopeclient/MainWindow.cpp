@@ -48,7 +48,6 @@
 #include "imgui_internal.h"
 
 //Dialogs
-#include "AddGeneratorDialog.h"
 #include "AddMultimeterDialog.h"
 #include "AddPowerSupplyDialog.h"
 #include "AddRFGeneratorDialog.h"

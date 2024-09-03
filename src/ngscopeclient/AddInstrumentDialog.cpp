@@ -166,3 +166,9 @@ SCPITransport* AddInstrumentDialog::MakeTransport()
 
 	return transport;
 }
+
+bool AddInstrumentDialog::DoConnect(SCPITransport* transport)
+{
+	m_session.CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
+	return true;
+}
