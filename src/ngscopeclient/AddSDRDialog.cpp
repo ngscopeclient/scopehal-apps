@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddSDRDialog::AddSDRDialog(Session& session)
-	: AddInstrumentDialog("Add SDR", "SDR", session)
+	: AddInstrumentDialog("Add SDR", "SDR", session, "sdr")
 {
-	SCPISDR::EnumDrivers(m_drivers);
 }
 
 AddSDRDialog::~AddSDRDialog()

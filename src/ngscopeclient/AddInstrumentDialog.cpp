@@ -41,7 +41,11 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string& nickname, Session& session)
+AddInstrumentDialog::AddInstrumentDialog(
+	const string& title,
+	const string& nickname,
+	Session& session,
+	const string& driverType)
 	: Dialog(title, string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 150))
 	, m_session(session)
 	, m_nickname(nickname)
@@ -49,6 +53,8 @@ AddInstrumentDialog::AddInstrumentDialog(const string& title, const std::string&
 	, m_selectedTransport(0)
 {
 	SCPITransport::EnumTransports(m_transports);
+
+	m_drivers = session.GetDriverNamesForType(driverType);
 }
 
 AddInstrumentDialog::~AddInstrumentDialog()

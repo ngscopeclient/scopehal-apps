@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddRFGeneratorDialog::AddRFGeneratorDialog(Session& session)
-	: AddInstrumentDialog("Add RF Generator", "rfgen", session)
+	: AddInstrumentDialog("Add RF Generator", "rfgen", session, "rfgen")
 {
-	SCPIRFSignalGenerator::EnumDrivers(m_drivers);
 }
 
 AddRFGeneratorDialog::~AddRFGeneratorDialog()

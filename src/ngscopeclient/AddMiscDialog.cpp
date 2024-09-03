@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddMiscDialog::AddMiscDialog(Session& session)
-	: AddInstrumentDialog("Add Function Misc", "funcinst", session)
+	: AddInstrumentDialog("Add Misc Instrument", "inst", session, "misc")
 {
-	SCPIMiscInstrument::EnumDrivers(m_drivers);
 }
 
 AddMiscDialog::~AddMiscDialog()

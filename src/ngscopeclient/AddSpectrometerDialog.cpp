@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddSpectrometerDialog::AddSpectrometerDialog(Session& session)
-	: AddInstrumentDialog("Add Spectrometer", "Spectrometer", session)
+	: AddInstrumentDialog("Add Spectrometer", "Spectrometer", session, "spectrometer")
 {
-	SCPISpectrometer::EnumDrivers(m_drivers);
 }
 
 AddSpectrometerDialog::~AddSpectrometerDialog()

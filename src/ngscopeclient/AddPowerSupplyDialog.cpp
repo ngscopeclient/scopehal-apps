@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddPowerSupplyDialog::AddPowerSupplyDialog(Session& session)
-	: AddInstrumentDialog("Add Power Supply", "psu", session)
+	: AddInstrumentDialog("Add Power Supply", "psu", session, "psu")
 {
-	SCPIPowerSupply::EnumDrivers(m_drivers);
 }
 
 AddPowerSupplyDialog::~AddPowerSupplyDialog()

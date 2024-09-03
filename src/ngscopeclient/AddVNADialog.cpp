@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddVNADialog::AddVNADialog(Session& session)
-	: AddInstrumentDialog("Add VNA", "VNA", session)
+	: AddInstrumentDialog("Add VNA", "VNA", session, "vna")
 {
-	SCPIVNA::EnumDrivers(m_drivers);
 }
 
 AddVNADialog::~AddVNADialog()

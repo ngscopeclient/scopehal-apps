@@ -102,6 +102,7 @@ Session::Session(MainWindow* wnd)
 	SCPILoad::EnumDrivers(m_driverNamesByType["load"]);
 	SCPIBERT::EnumDrivers(m_driverNamesByType["bert"]);
 	SCPIMiscInstrument::EnumDrivers(m_driverNamesByType["misc"]);
+	SCPIVNA::EnumDrivers(m_driverNamesByType["vna"]);
 }
 
 Session::~Session()

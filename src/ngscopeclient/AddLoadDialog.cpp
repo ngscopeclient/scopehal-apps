@@ -42,9 +42,8 @@ using namespace std;
 // Construction / destruction
 
 AddLoadDialog::AddLoadDialog(Session& session)
-	: AddInstrumentDialog("Add Load", "load", session)
+	: AddInstrumentDialog("Add Load", "load", session, "load")
 {
-	SCPILoad::EnumDrivers(m_drivers);
 }
 
 AddLoadDialog::~AddLoadDialog()

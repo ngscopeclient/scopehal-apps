@@ -41,7 +41,11 @@
 class AddInstrumentDialog : public Dialog
 {
 public:
-	AddInstrumentDialog(const std::string& title, const std::string& nickname, Session& session);
+	AddInstrumentDialog(
+		const std::string& title,
+		const std::string& nickname,
+		Session& session,
+		const std::string& driverType);
 	virtual ~AddInstrumentDialog();
 
 	virtual bool DoRender();
