@@ -528,11 +528,18 @@ public:
 	const std::map<std::string, Filter*>& GetReferenceFilters()
 	{ return m_referenceFilters; }
 
+	///@brief Get all of the drivers of a given type
+	const std::vector<std::string>& GetDriverNamesForType(const std::string& type)
+	{ return m_driverNamesByType[type]; }
+
 protected:
 	void CreateReferenceFilters();
 	void DestroyReferenceFilters();
 
 	std::map<std::string, Filter*> m_referenceFilters;
+
+	///@brief Map of "type" to drivername[]
+	std::map<std::string, std::vector<std::string> > m_driverNamesByType;
 };
 
 #endif

@@ -91,6 +91,17 @@ Session::Session(MainWindow* wnd)
 	, m_nextMarkerNum(1)
 {
 	CreateReferenceFilters();
+
+	SCPIOscilloscope::EnumDrivers(m_driverNamesByType["oscilloscope"]);
+	SCPIPowerSupply::EnumDrivers(m_driverNamesByType["psu"]);
+	SCPIRFSignalGenerator::EnumDrivers(m_driverNamesByType["rfgen"]);
+	SCPIFunctionGenerator::EnumDrivers(m_driverNamesByType["funcgen"]);
+	SCPIMultimeter::EnumDrivers(m_driverNamesByType["multimeter"]);
+	SCPISpectrometer::EnumDrivers(m_driverNamesByType["spectrometer"]);
+	SCPISDR::EnumDrivers(m_driverNamesByType["sdr"]);
+	SCPILoad::EnumDrivers(m_driverNamesByType["load"]);
+	SCPIBERT::EnumDrivers(m_driverNamesByType["bert"]);
+	SCPIMiscInstrument::EnumDrivers(m_driverNamesByType["misc"]);
 }
 
 Session::~Session()
@@ -857,19 +868,7 @@ void Session::DoLoadWaveformDataForStream(
  */
 string Session::GetRegisteredTypeOfDriver(const string& drivername)
 {
-	map<string, vector<string> > typeList;
-	SCPIOscilloscope::EnumDrivers(typeList["oscilloscope"]);
-	SCPIPowerSupply::EnumDrivers(typeList["psu"]);
-	SCPIRFSignalGenerator::EnumDrivers(typeList["rfgen"]);
-	SCPIFunctionGenerator::EnumDrivers(typeList["funcgen"]);
-	SCPIMultimeter::EnumDrivers(typeList["multimeter"]);
-	SCPISpectrometer::EnumDrivers(typeList["spectrometer"]);
-	SCPISDR::EnumDrivers(typeList["sdr"]);
-	SCPILoad::EnumDrivers(typeList["load"]);
-	SCPIBERT::EnumDrivers(typeList["bert"]);
-	SCPIMiscInstrument::EnumDrivers(typeList["misc"]);
-
-	for(auto& it : typeList)
+	for(auto& it : m_driverNamesByType)
 	{
 		for(auto name : it.second)
 		{

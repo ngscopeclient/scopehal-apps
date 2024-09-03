@@ -59,26 +59,8 @@ AddVNADialog::~AddVNADialog()
 
 	@return True if successful
  */
-bool AddVNADialog::DoConnect()
+bool AddVNADialog::DoConnect(SCPITransport* transport)
 {
-	//Create the transport
-	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
-	if(transport == nullptr)
-	{
-		ShowErrorPopup(
-			"Transport error",
-			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
-		return false;
-	}
-
-	//Make sure we connected OK
-	if(!transport->IsConnected())
-	{
-		delete transport;
-		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
-		return false;
-	}
-
 	//Create the vna
 	auto vna = SCPIVNA::CreateVNA(m_drivers[m_selectedDriver], transport);
 	if(vna == nullptr)

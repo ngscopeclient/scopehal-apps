@@ -120,8 +120,12 @@ bool AddInstrumentDialog::DoRender()
 		}
 		else
 		{
-			if(DoConnect())
-				return false;
+			auto transport = MakeTransport();
+			if(transport)
+			{
+				if(DoConnect(transport))
+					return false;
+			}
 		}
 	}
 
@@ -130,3 +134,29 @@ bool AddInstrumentDialog::DoRender()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UI event handlers
+
+/**
+	@brief Create and return a new transport with the specified path
+ */
+SCPITransport* AddInstrumentDialog::MakeTransport()
+{
+	//Create the transport
+	auto transport = SCPITransport::CreateTransport(m_transports[m_selectedTransport], m_path);
+	if(transport == nullptr)
+	{
+		ShowErrorPopup(
+			"Transport error",
+			"Failed to create transport of type \"" + m_transports[m_selectedTransport] + "\"");
+		return nullptr;
+	}
+
+	//Make sure we connected OK
+	if(!transport->IsConnected())
+	{
+		delete transport;
+		ShowErrorPopup("Connection error", "Failed to connect to \"" + m_path + "\"");
+		return nullptr;
+	}
+
+	return transport;
+}

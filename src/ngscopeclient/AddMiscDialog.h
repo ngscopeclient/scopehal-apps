@@ -44,7 +44,7 @@ public:
 	virtual ~AddMiscDialog();
 
 protected:
-	virtual bool DoConnect();
+	virtual bool DoConnect(SCPITransport* transport);
 };
 
 #endif

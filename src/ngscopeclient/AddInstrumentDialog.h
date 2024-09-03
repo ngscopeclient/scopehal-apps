@@ -47,7 +47,9 @@ public:
 	virtual bool DoRender();
 
 protected:
-	virtual bool DoConnect()=0;
+	SCPITransport* MakeTransport();
+
+	virtual bool DoConnect(SCPITransport* transport) =0;
 
 	Session& m_session;
 
