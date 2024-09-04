@@ -2703,6 +2703,14 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 					inst = SCPIPowerSupply::CreatePowerSupply(driver, transport);
 				else if(type == "rfgen")
 					inst = SCPIRFSignalGenerator::CreateRFSignalGenerator(driver, transport);
+				else if(type == "sdr")
+					inst = SCPISDR::CreateSDR(driver, transport);
+				else if(type == "oscilloscope")
+					inst = SCPIOscilloscope::CreateOscilloscope(driver, transport);
+				else if(type == "spectrometer")
+					inst = SCPISpectrometer::CreateSpectrometer(driver, transport);
+				else if(type == "vna")
+					inst = SCPIVNA::CreateVNA(driver, transport);
 
 				break;
 			}
@@ -2723,6 +2731,9 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 	}
 
 	//Apply preference settings, if any, here
+	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
+	if(scope)
+		ApplyPreferences(scope);
 
 	inst->m_nickname = nickname;
 	AddInstrument(inst);

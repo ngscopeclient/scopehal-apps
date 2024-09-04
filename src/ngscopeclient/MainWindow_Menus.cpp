@@ -43,10 +43,6 @@
 //Dialogs
 #include "AboutDialog.h"
 #include "AddInstrumentDialog.h"
-#include "AddScopeDialog.h"
-#include "AddSDRDialog.h"
-#include "AddSpectrometerDialog.h"
-#include "AddVNADialog.h"
 #include "BERTDialog.h"
 #include "CreateFilterBrowser.h"
 #include "FilterGraphEditor.h"
@@ -660,7 +656,7 @@ void MainWindow::AddOscilloscopeMenu(vector<time_t>& timestamps, map<time_t, vec
 	if(ImGui::BeginMenu("Oscilloscope"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddScopeDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Oscilloscope", "scope", m_session, "oscilloscope"));
 		ImGui::Separator();
 
 		//Find all known scope drivers.
@@ -881,7 +877,7 @@ void MainWindow::AddSDRMenu(vector<time_t>& timestamps, map<time_t, vector<strin
 	if(ImGui::BeginMenu("SDR"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddSDRDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add SDR", "sdr", m_session, "sdr"));
 		ImGui::Separator();
 
 		//Find all known function generator drivers.
@@ -954,7 +950,7 @@ void MainWindow::AddSpectrometerMenu(vector<time_t>& timestamps, map<time_t, vec
 	if(ImGui::BeginMenu("Spectrometer"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddSpectrometerDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Spectrometer", "spectrometer", m_session, "spectromer"));
 		ImGui::Separator();
 
 		//Find all known Spectrometer drivers.
@@ -1027,7 +1023,7 @@ void MainWindow::AddVNAMenu(vector<time_t>& timestamps, map<time_t, vector<strin
 	if(ImGui::BeginMenu("VNA"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddVNADialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add VNA", "vna", m_session, "vna"));
 		ImGui::Separator();
 
 		//Find all known VNA drivers.
