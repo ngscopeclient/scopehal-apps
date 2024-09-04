@@ -232,39 +232,13 @@ protected:
 				void FileRecentMenu();
 			void ViewMenu();
 			void AddMenu();
-				void AddBERTMenu(
+				void DoAddSubMenu(
 					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddGeneratorMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddLoadMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddMiscMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddMultimeterMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddOscilloscopeMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddPowerSupplyMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddRFGeneratorMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddSDRMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddSpectrometerMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
-				void AddVNAMenu(
-					std::vector<time_t>& timestamps,
-					std::map<time_t, std::vector<std::string> >& reverseMap);
+					std::map<time_t, std::vector<std::string> >& reverseMap,
+					const std::string& typePretty,
+					const std::string& defaultName,
+					const std::string& typeInternal
+					);
 				void AddChannelsMenu();
 				void AddImportMenu();
 				void AddGenerateMenu();
