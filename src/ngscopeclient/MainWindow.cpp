@@ -48,10 +48,6 @@
 #include "imgui_internal.h"
 
 //Dialogs
-#include "AddMultimeterDialog.h"
-#include "AddPowerSupplyDialog.h"
-#include "AddRFGeneratorDialog.h"
-#include "AddScopeDialog.h"
 #include "BERTDialog.h"
 #include "BERTInputChannelDialog.h"
 #include "ChannelPropertiesDialog.h"

@@ -43,10 +43,6 @@
 //Dialogs
 #include "AboutDialog.h"
 #include "AddInstrumentDialog.h"
-#include "AddMiscDialog.h"
-#include "AddMultimeterDialog.h"
-#include "AddPowerSupplyDialog.h"
-#include "AddRFGeneratorDialog.h"
 #include "AddScopeDialog.h"
 #include "AddSDRDialog.h"
 #include "AddSpectrometerDialog.h"
@@ -519,7 +515,7 @@ void MainWindow::AddMiscMenu(vector<time_t>& timestamps, map<time_t, vector<stri
 	if(ImGui::BeginMenu("Misc"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddMiscDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Miscellaneous", "misc", m_session, "misc"));
 		ImGui::Separator();
 
 		//Find all known miscellaneous drivers..
@@ -591,7 +587,7 @@ void MainWindow::AddMultimeterMenu(vector<time_t>& timestamps, map<time_t, vecto
 	if(ImGui::BeginMenu("Multimeter"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddMultimeterDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Multimeter", "multimeter", m_session, "multimeter"));
 		ImGui::Separator();
 
 		//Find all known multimeter drivers.
@@ -737,7 +733,7 @@ void MainWindow::AddPowerSupplyMenu(vector<time_t>& timestamps, map<time_t, vect
 	if(ImGui::BeginMenu("Power Supply"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddPowerSupplyDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add Power Supply", "psu", m_session, "psu"));
 
 		ImGui::Separator();
 
@@ -811,7 +807,8 @@ void MainWindow::AddRFGeneratorMenu(vector<time_t>& timestamps, map<time_t, vect
 	if(ImGui::BeginMenu("RF Generator"))
 	{
 		if(ImGui::MenuItem("Connect..."))
-			m_dialogs.emplace(make_shared<AddRFGeneratorDialog>(m_session));
+			m_dialogs.emplace(make_shared<AddInstrumentDialog>("Add RF Generator", "rfgen", m_session, "rfgen"));
+
 		ImGui::Separator();
 
 		//Find all known function generator drivers.

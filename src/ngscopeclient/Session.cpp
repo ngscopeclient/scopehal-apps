@@ -2695,6 +2695,14 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 					inst = SCPIFunctionGenerator::CreateFunctionGenerator(driver, transport);
 				else if(type == "load")
 					inst = SCPILoad::CreateLoad(driver, transport);
+				else if(type == "misc")
+					inst = SCPIMiscInstrument::CreateInstrument(driver, transport);
+				else if(type == "multimeter")
+					inst = SCPIMultimeter::CreateMultimeter(driver, transport);
+				else if(type == "psu")
+					inst = SCPIPowerSupply::CreatePowerSupply(driver, transport);
+				else if(type == "rfgen")
+					inst = SCPIRFSignalGenerator::CreateRFSignalGenerator(driver, transport);
 
 				break;
 			}

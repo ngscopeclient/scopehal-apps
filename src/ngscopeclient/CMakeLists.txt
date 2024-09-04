@@ -43,10 +43,6 @@ add_executable(ngscopeclient
 
 	AboutDialog.cpp
 	AddInstrumentDialog.cpp
-	AddMiscDialog.cpp
-	AddMultimeterDialog.cpp
-	AddPowerSupplyDialog.cpp
-	AddRFGeneratorDialog.cpp
 	AddScopeDialog.cpp
 	AddSDRDialog.cpp
 	AddSpectrometerDialog.cpp
