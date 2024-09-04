@@ -206,6 +206,10 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 
 	m_config.SettingsFile = "";
 	m_context = ax::NodeEditor::CreateEditor(&m_config);
+	ax::NodeEditor::SetCurrentEditor(m_context);
+
+	auto& style = ax::NodeEditor::GetStyle();
+	style.GroupBorderWidth = 2.5;
 
 	//Load groups from parent, if we have any
 	//Start by reserving group IDs so they don't get reused by anything else
