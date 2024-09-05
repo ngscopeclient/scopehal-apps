@@ -323,7 +323,10 @@ bool ProtocolAnalyzerDialog::DoRender()
 				}
 
 				if(ImGui::IsItemHovered())
+				{
 					m_session.SetHoveredPacketTimestamp(packtime);
+					m_parent.AddStatusHelp("mouse_lmb", "Jump to packet in waveform view");
+				}
 
 				if(pack)
 				{
