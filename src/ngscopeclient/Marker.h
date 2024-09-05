@@ -58,6 +58,14 @@ public:
 	{ second = fs; }
 
 	std::string PrettyPrint() const;
+
+	int64_t operator-(const TimePoint& rhs)
+	{
+		int64_t dsec = first - rhs.first;
+		int64_t dfs = second - rhs.second;
+
+		return dsec*FS_PER_SECOND + dfs;
+	}
 };
 
 /**

@@ -737,6 +737,7 @@ void MainWindow::RenderUI()
 	}
 
 	//Dialog boxes
+	m_session.SetHoveredPacketTimestamp({});
 	set< shared_ptr<Dialog> > dlgsToClose;
 	for(auto& dlg : m_dialogs)
 	{

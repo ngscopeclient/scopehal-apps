@@ -66,6 +66,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("marker_color", ColorFromString("#ff00a0"))
 				.Label("Marker color")
 				.Description("Color for markers"));
+			cursors.AddPreference(
+				Preference::Color("hover_color", ColorFromString("#ffffff80"))
+				.Label("Hover color")
+				.Description("Color for the hovered-packet indicator"));
 
 		auto& decodes = appearance.AddCategory("Decodes");
 			decodes.AddPreference(

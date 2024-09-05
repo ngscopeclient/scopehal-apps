@@ -502,7 +502,16 @@ public:
 	void RemovePackets(TimePoint t);
 
 	std::set<FlowGraphNode*> GetAllGraphNodes();
+
+	///@brief Returns the timestamp of the protocol analyzer event that the mouse is over, if any
+	std::optional<TimePoint> GetHoveredPacketTimestamp()
+	{ return m_hoverTime; }
+
+	void SetHoveredPacketTimestamp(std::optional<TimePoint> t)
+	{ m_hoverTime = t; }
+
 protected:
+	std::optional<TimePoint> m_hoverTime;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// End user preferences (persistent across sessions)

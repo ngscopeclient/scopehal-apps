@@ -322,6 +322,9 @@ bool ProtocolAnalyzerDialog::DoRender()
 					m_parent.NavigateToTimestamp(offset, len, StreamDescriptor(m_filter, 0));
 				}
 
+				if(ImGui::IsItemHovered())
+					m_session.SetHoveredPacketTimestamp(packtime);
+
 				if(pack)
 				{
 					//Headers

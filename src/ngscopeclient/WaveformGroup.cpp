@@ -480,7 +480,7 @@ float WaveformGroup::GetInBandPower(WaveformBase* wfm, Unit yunit, int64_t t1, i
 }
 
 /**
-	@brief Render our markers
+	@brief Render our markers (and the hovered-packet indicator if any)
  */
 void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 {
@@ -496,7 +496,11 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 	if(m_areas.empty())
 		return;
 
-	auto& markers = m_parent->GetSession().GetMarkers(m_areas[0]->GetWaveformTimestamp());
+	auto& session = m_parent->GetSession();
+	auto wavetime = m_areas[0]->GetWaveformTimestamp();
+	auto& markers = session.GetMarkers(wavetime);
+
+	auto packetHover = session.GetHoveredPacketTimestamp();
 
 	//Create a child window for all of our drawing
 	//(this is needed so we're above the WaveformArea's in z order, but behind popup windows)
@@ -507,8 +511,10 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 
 		auto& prefs = m_parent->GetSession().GetPreferences();
 		auto color = prefs.GetColor("Appearance.Cursors.marker_color");
+		auto hcolor = prefs.GetColor("Appearance.Cursors.hover_color");
 		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
 		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
+
 		//Draw the markers
 		for(auto& m : markers)
 		{
@@ -534,6 +540,17 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				ImVec2(xpos - (padding + tsize.x), textTop),
 				color,
 				str.c_str());
+		}
+
+		//Draw the hovered packet, if any
+		if(packetHover)
+		{
+			//Calculate the delta between the times
+			auto offset = packetHover.value() - wavetime;
+
+			//Lines
+			auto xpos = round(XAxisUnitsToXPosition(offset));
+			list->AddLine(ImVec2(xpos, pos.y), ImVec2(xpos, pos.y + size.y), hcolor);
 		}
 	}
 	ImGui::EndChild();

@@ -235,6 +235,7 @@ void Session::Clear()
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScope = false;
+	m_hoverTime = {};
 }
 
 vector<TimePoint> Session::GetMarkerTimes()
