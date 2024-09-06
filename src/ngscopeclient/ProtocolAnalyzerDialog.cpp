@@ -577,11 +577,17 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector
 		}
 	}
 
+	auto firstPos = ImGui::GetCursorScreenPos();
 	ImGui::TextUnformatted(firstLine.c_str());
 
 	//Multiple lines? Only show if open
 	if(open)
 	{
+		//align vertically to previous line
+		auto nextPos = ImGui::GetCursorScreenPos();
+		nextPos.x = firstPos.x;
+		ImGui::SetCursorScreenPos(nextPos);
+
 		ImGui::TextUnformatted(data.c_str());
 		ImGui::TreePop();
 	}
