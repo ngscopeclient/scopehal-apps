@@ -307,7 +307,7 @@ protected:
 	std::map<std::shared_ptr<SCPIInstrument>, std::shared_ptr<Dialog> > m_scpiConsoleDialogs;
 
 	///@brief Map of channels to properties dialogs
-	std::map<OscilloscopeChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
+	std::map<InstrumentChannel*, std::shared_ptr<Dialog> > m_channelPropertiesDialogs;
 
 	///@brief Map of filters to analyzer dialogs
 	std::map<PacketDecoder*, std::shared_ptr<ProtocolAnalyzerDialog> > m_protocolAnalyzerDialogs;

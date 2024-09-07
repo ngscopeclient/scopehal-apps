@@ -30,68 +30,26 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ChannelPropertiesDialog
+	@brief Declaration of BaseChannelPropertiesDialog
  */
-#ifndef ChannelPropertiesDialog_h
-#define ChannelPropertiesDialog_h
+#ifndef BaseChannelPropertiesDialog_h
+#define BaseChannelPropertiesDialog_h
 
-#include "BaseChannelPropertiesDialog.h"
+#include "EmbeddableDialog.h"
 
-class ChannelPropertiesDialog : public BaseChannelPropertiesDialog
+class BaseChannelPropertiesDialog : public EmbeddableDialog
 {
 public:
-	ChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode = false);
-	virtual ~ChannelPropertiesDialog();
+	BaseChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode = false);
+	virtual ~BaseChannelPropertiesDialog();
+
+	InstrumentChannel* GetChannel()
+	{ return m_channel; }
 
 	virtual bool DoRender();
 
 protected:
-
-	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
-
-	std::string m_displayName;
-	std::string m_committedDisplayName;
-
-	std::vector<std::string> m_offset;
-	std::vector<float> m_committedOffset;
-
-	std::vector<std::string> m_range;
-	std::vector<float> m_committedRange;
-
-	std::string m_threshold;
-	float m_committedThreshold;
-
-	std::string m_hysteresis;
-	float m_committedHysteresis;
-
-	std::string m_attenuation;
-	float m_committedAttenuation;
-
-	std::vector<std::string> m_couplingNames;
-	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
-	int m_coupling;
-
-	std::vector<std::string> m_bwlNames;
-	std::vector<unsigned int> m_bwlValues;
-	int m_bwl;
-
-	std::vector<std::string> m_imuxNames;
-	int m_imux;
-
-	std::vector<std::string> m_modeNames;
-	int m_mode;
-
-	int m_navg;
-
-	float m_color[3];
-
-	bool m_inverted;
-
-	std::string m_probe;
-	bool m_canAutoZero;
-	bool m_canDegauss;
-	bool m_shouldDegauss;
-	bool m_canAverage;
+	InstrumentChannel* m_channel;
 };
 
 #endif

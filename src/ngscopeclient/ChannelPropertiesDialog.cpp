@@ -42,11 +42,14 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool graphEditorMode)
-	: EmbeddableDialog(chan->GetHwname(), string("Channel properties: ") + chan->GetHwname(), ImVec2(300, 400), graphEditorMode)
-	, m_channel(chan)
+ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode)
+	: BaseChannelPropertiesDialog(chan, graphEditorMode)
 {
-	m_channel->AddRef();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
+	if(!ochan)
+		LogFatal("ChannelPropertiesDialog expects an OscilloscopeChannel\n");
+
+	ochan->AddRef();
 
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
@@ -67,15 +70,15 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
 	{
 		auto unit = m_channel->GetYAxisUnits(i);
 
-		m_committedOffset[i] = chan->GetOffset(i);
+		m_committedOffset[i] = ochan->GetOffset(i);
 		m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
 
-		m_committedRange[i] = chan->GetVoltageRange(i);
+		m_committedRange[i] = ochan->GetVoltageRange(i);
 		m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 	}
 
 	//Digital channel settings
-	auto scope = chan->GetScope();
+	auto scope = ochan->GetScope();
 	if(scope)
 	{
 		m_committedHysteresis = scope->GetDigitalHysteresis(m_channel->GetIndex());
@@ -112,6 +115,8 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(OscilloscopeChannel* chan, bool
  */
 void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t nchan)
 {
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+
 	m_couplings.clear();
 	m_couplingNames.clear();
 	m_bwlValues.clear();
@@ -125,7 +130,7 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 
 	//Coupling
 	m_coupling = 0;
-	auto curCoup = m_channel->GetCoupling();
+	auto curCoup = ochan->GetCoupling();
 	m_couplings = scope->GetAvailableCouplings(nchan);
 	for(size_t i=0; i<m_couplings.size(); i++)
 	{
@@ -208,7 +213,8 @@ void ChannelPropertiesDialog::RefreshInputSettings(Oscilloscope* scope, size_t n
 
 ChannelPropertiesDialog::~ChannelPropertiesDialog()
 {
-	m_channel->Release();
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+	ochan->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,6 +228,12 @@ ChannelPropertiesDialog::~ChannelPropertiesDialog()
  */
 bool ChannelPropertiesDialog::DoRender()
 {
+	//Call the base class to draw common stuff
+	if(!BaseChannelPropertiesDialog::DoRender())
+		return false;
+
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+
 	//Flags for a header that should be open by default EXCEPT in the graph editor
 	ImGuiTreeNodeFlags defaultOpenFlags = m_graphEditorMode ? 0 : ImGuiTreeNodeFlags_DefaultOpen;
 
@@ -229,48 +241,8 @@ bool ChannelPropertiesDialog::DoRender()
 
 	float width = 10 * ImGui::GetFontSize();
 
-	auto scope = m_channel->GetScope();
+	auto scope = ochan->GetScope();
 	auto f = dynamic_cast<Filter*>(m_channel);
-	if(ImGui::CollapsingHeader("Info"))
-	{
-		//Scope info
-		if(scope)
-		{
-			auto nickname = scope->m_nickname;
-			auto hwname = m_channel->GetHwname();
-			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
-
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Instrument", &nickname);
-			ImGui::EndDisabled();
-			HelpMarker("The instrument this channel was measured by");
-
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Channel", &index);
-			ImGui::EndDisabled();
-			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
-
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Hardware Name", &hwname);
-			ImGui::EndDisabled();
-			HelpMarker("Hardware name for the channel (as used in the instrument API)");
-		}
-
-		//Filter info
-		if(f)
-		{
-			string fname = f->GetProtocolDisplayName();
-
-			ImGui::BeginDisabled();
-				ImGui::SetNextItemWidth(width);
-				ImGui::InputText("Filter Type", &fname);
-			ImGui::EndDisabled();
-			HelpMarker("Type of filter object");
-		}
-	}
 
 	//All channels have display settings
 	if(ImGui::CollapsingHeader("Display", defaultOpenFlags))
@@ -416,10 +388,10 @@ bool ChannelPropertiesDialog::DoRender()
 					{
 						auto unit = m_channel->GetYAxisUnits(i);
 
-						m_committedOffset[i] = m_channel->GetOffset(i);
+						m_committedOffset[i] = ochan->GetOffset(i);
 						m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
 
-						m_committedRange[i] = m_channel->GetVoltageRange(i);
+						m_committedRange[i] = ochan->GetVoltageRange(i);
 						m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 					}
 				}
@@ -432,7 +404,7 @@ bool ChannelPropertiesDialog::DoRender()
 				{
 					ImGui::SetNextItemWidth(width);
 					if(Combo("Coupling", m_couplingNames, m_coupling))
-						m_channel->SetCoupling(m_couplings[m_coupling]);
+						ochan->SetCoupling(m_couplings[m_coupling]);
 					HelpMarker("Coupling configuration for the input");
 				}
 
@@ -441,7 +413,7 @@ bool ChannelPropertiesDialog::DoRender()
 				{
 					ImGui::SetNextItemWidth(width);
 					if(Combo("Bandwidth", m_bwlNames, m_bwl))
-						m_channel->SetBandwidthLimit(m_bwlValues[m_bwl]);
+						ochan->SetBandwidthLimit(m_bwlValues[m_bwl]);
 					HelpMarker("Hardware bandwidth limiter setting");
 				}
 			}
@@ -489,7 +461,7 @@ bool ChannelPropertiesDialog::DoRender()
 			if(scope->CanInvert(index))
 			{
 				if(ImGui::Checkbox("Invert", &m_inverted))
-					m_channel->Invert(m_inverted);
+					ochan->Invert(m_inverted);
 
 				HelpMarker(
 					"When checked, input value is multiplied by -1.\n\n"
@@ -513,7 +485,7 @@ bool ChannelPropertiesDialog::DoRender()
 			if(m_canAutoZero)
 			{
 				if(ImGui::Button("Auto Zero"))
-					m_channel->AutoZero();
+					ochan->AutoZero();
 				HelpMarker(
 					"Click to automatically zero offset of active probe.\n\n"
 					"Check probe documentation to see whether input signal must be removed before zeroing."
@@ -527,7 +499,7 @@ bool ChannelPropertiesDialog::DoRender()
 				if(m_shouldDegauss)
 					caption += "*";
 				if(ImGui::Button(caption.c_str()))
-					m_channel->Degauss();
+					ochan->Degauss();
 				HelpMarker(
 					"Click to automatically degauss current probe.\n\n"
 					"Check probe documentation to see whether input signal must be removed before degaussing."
@@ -548,10 +520,10 @@ bool ChannelPropertiesDialog::DoRender()
 		{
 			auto unit = m_channel->GetYAxisUnits(i);
 
-			m_committedOffset[i] = m_channel->GetOffset(i);
+			m_committedOffset[i] = ochan->GetOffset(i);
 			m_offset[i] = unit.PrettyPrint(m_committedOffset[i]);
 
-			m_committedRange[i] = m_channel->GetVoltageRange(i);
+			m_committedRange[i] = ochan->GetVoltageRange(i);
 			m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 		}
 	}
@@ -571,7 +543,7 @@ bool ChannelPropertiesDialog::DoRender()
 				auto unit = m_channel->GetYAxisUnits(i);
 
 				//If no change to offset in dialog, update our input value when we change offset outside the dialog
-				auto off = m_channel->GetOffset(i);
+				auto off = ochan->GetOffset(i);
 				auto soff = unit.PrettyPrint(m_committedOffset[i]);
 				if( (m_committedOffset[i] != off) && (soff == m_offset[i]) )
 				{
@@ -580,10 +552,10 @@ bool ChannelPropertiesDialog::DoRender()
 				}
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Offset", m_offset[i], m_committedOffset[i], unit))
-					m_channel->SetOffset(m_committedOffset[i], i);
+					ochan->SetOffset(m_committedOffset[i], i);
 
 				//Same for range
-				auto range = m_channel->GetVoltageRange(i);
+				auto range = ochan->GetVoltageRange(i);
 				auto srange = unit.PrettyPrint(m_committedRange[i]);
 				if( (m_committedRange[i] != range) && (srange == m_range[i]) )
 				{
@@ -592,7 +564,7 @@ bool ChannelPropertiesDialog::DoRender()
 				}
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
-					m_channel->SetVoltageRange(m_committedRange[i], i);
+					ochan->SetVoltageRange(m_committedRange[i], i);
 			}
 		}
 	}

@@ -30,68 +30,84 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ChannelPropertiesDialog
+	@brief Implementation of BaseChannelPropertiesDialog
  */
-#ifndef ChannelPropertiesDialog_h
-#define ChannelPropertiesDialog_h
 
+#include "ngscopeclient.h"
 #include "BaseChannelPropertiesDialog.h"
+#include <imgui_node_editor.h>
 
-class ChannelPropertiesDialog : public BaseChannelPropertiesDialog
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+BaseChannelPropertiesDialog::BaseChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode)
+	: EmbeddableDialog(
+		chan->GetHwname(),
+		string("Channel properties: ") + chan->GetHwname(),
+		ImVec2(300, 400),
+		graphEditorMode)
+	, m_channel(chan)
 {
-public:
-	ChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode = false);
-	virtual ~ChannelPropertiesDialog();
+}
 
-	virtual bool DoRender();
+BaseChannelPropertiesDialog::~BaseChannelPropertiesDialog()
+{
+}
 
-protected:
+bool BaseChannelPropertiesDialog::DoRender()
+{
+	auto f = dynamic_cast<Filter*>(m_channel);
 
-	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
+	//TODO
+	auto ochan = dynamic_cast<OscilloscopeChannel*>(m_channel);
+	Oscilloscope* scope = nullptr;
+	if(ochan)
+		scope = ochan->GetScope();
 
-	std::string m_displayName;
-	std::string m_committedDisplayName;
+	float width = 10 * ImGui::GetFontSize();
 
-	std::vector<std::string> m_offset;
-	std::vector<float> m_committedOffset;
+	if(ImGui::CollapsingHeader("Info"))
+	{
+		//Scope info
+		if(scope)
+		{
+			auto nickname = scope->m_nickname;
+			auto hwname = m_channel->GetHwname();
+			auto index = to_string(m_channel->GetIndex() + 1);	//use one based index for display
 
-	std::vector<std::string> m_range;
-	std::vector<float> m_committedRange;
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Instrument", &nickname);
+			ImGui::EndDisabled();
+			HelpMarker("The instrument this channel was measured by");
 
-	std::string m_threshold;
-	float m_committedThreshold;
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Hardware Channel", &index);
+			ImGui::EndDisabled();
+			HelpMarker("Physical channel number (starting from 1) on the instrument front panel");
 
-	std::string m_hysteresis;
-	float m_committedHysteresis;
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Hardware Name", &hwname);
+			ImGui::EndDisabled();
+			HelpMarker("Hardware name for the channel (as used in the instrument API)");
+		}
 
-	std::string m_attenuation;
-	float m_committedAttenuation;
+		//Filter info
+		if(f)
+		{
+			string fname = f->GetProtocolDisplayName();
 
-	std::vector<std::string> m_couplingNames;
-	std::vector<OscilloscopeChannel::CouplingType> m_couplings;
-	int m_coupling;
+			ImGui::BeginDisabled();
+				ImGui::SetNextItemWidth(width);
+				ImGui::InputText("Filter Type", &fname);
+			ImGui::EndDisabled();
+			HelpMarker("Type of filter object");
+		}
+	}
 
-	std::vector<std::string> m_bwlNames;
-	std::vector<unsigned int> m_bwlValues;
-	int m_bwl;
-
-	std::vector<std::string> m_imuxNames;
-	int m_imux;
-
-	std::vector<std::string> m_modeNames;
-	int m_mode;
-
-	int m_navg;
-
-	float m_color[3];
-
-	bool m_inverted;
-
-	std::string m_probe;
-	bool m_canAutoZero;
-	bool m_canDegauss;
-	bool m_shouldDegauss;
-	bool m_canAverage;
-};
-
-#endif
+	return true;
+}

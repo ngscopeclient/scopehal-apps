@@ -43,6 +43,7 @@ add_executable(ngscopeclient
 
 	AboutDialog.cpp
 	AddInstrumentDialog.cpp
+	BaseChannelPropertiesDialog.cpp
 	BERTDialog.cpp
 	BERTInputChannelDialog.cpp
 	BERTOutputChannelDialog.cpp
