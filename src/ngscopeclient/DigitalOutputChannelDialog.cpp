@@ -89,7 +89,7 @@ bool DigitalOutputChannelDialog::DoRender()
 	float width = 10 * ImGui::GetFontSize();
 
 	auto bso = dynamic_cast<BufferedSwitchMatrixOutputChannel*>(m_channel);
-	auto inst = m_channel->GetParent();
+	auto inst = m_channel->GetInstrument();
 	if(!inst)
 		return true;
 
