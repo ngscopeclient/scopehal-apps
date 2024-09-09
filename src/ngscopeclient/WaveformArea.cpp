@@ -2381,6 +2381,8 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	RenderBERLevelArrows(origin, size);
 
 	//Help message
+	if( (m_dragState == DRAG_STATE_TRIGGER_LEVEL) || (m_dragState == DRAG_STATE_TRIGGER_SECONDARY_LEVEL) )
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Adjust trigger level");
 	if(ImGui::IsItemHovered())
 	{
 		if(m_mouseOverTriggerArrow)
