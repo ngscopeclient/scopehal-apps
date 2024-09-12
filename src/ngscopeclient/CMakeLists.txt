@@ -238,6 +238,9 @@ if(WIXPATH AND WIN32)
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_BINARY_DIR}/src/ngscopeclient/shaders ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/shaders
 
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_BINARY_DIR}/src/ngscopeclient/channels ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/channels
+
 		COMMAND ${CMAKE_COMMAND} -E copy
 				${CMAKE_SOURCE_DIR}/src/LICENSE
 				${CMAKE_BINARY_DIR}/lib/log/liblog.dll
