@@ -235,6 +235,12 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/scopeprotocols")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/xptools")
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
+
+# Workaround for https://github.com/btzy/nativefiledialog-extended/issues/149
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	add_compile_options("-Wno-error=shadow")
+endif()
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 
 # Unit tests

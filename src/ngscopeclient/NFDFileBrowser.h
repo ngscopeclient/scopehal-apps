@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -50,7 +50,8 @@ public:
 		const std::string& title,
 		const std::string& filterName,
 		const std::string& filterMask,
-		bool saveDialog
+		bool saveDialog,
+		MainWindow* parent
 		);
 	virtual ~NFDFileBrowser();
 
@@ -60,6 +61,8 @@ public:
 	virtual std::string GetFileName();
 
 protected:
+	MainWindow* m_parent;
+
 	std::optional<std::string> ThreadProc();
 
 	std::string m_initialPath;

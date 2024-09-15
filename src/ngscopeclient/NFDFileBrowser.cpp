@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -34,6 +34,8 @@
  */
 #include "ngscopeclient.h"
 #include "NFDFileBrowser.h"
+#include "MainWindow.h"
+#include <nfd_glfw3.h>
 
 using namespace std;
 
@@ -45,9 +47,11 @@ NFDFileBrowser::NFDFileBrowser(
 	const string& title,
 	const string& filterName,
 	const string& filterMask,
-	bool saveDialog
+	bool saveDialog,
+	MainWindow* parent
 	)
-	: m_initialPath(initialPath)
+	: m_parent(parent)
+	, m_initialPath(initialPath)
 	, m_title(title)
 	, m_filterName(filterName)
 	, m_filterMask(filterMask)
@@ -126,9 +130,28 @@ optional<string> NFDFileBrowser::ThreadProc()
 	nfdfilteritem_t filterItem = { m_filterName.c_str(), m_filterMask.c_str() };
 	nfdresult_t result;
 	if(m_saveDialog)
-		result = NFD_SaveDialog(&outPath, &filterItem, 1, nullptr, nullptr);
+	{
+		//Fill out arguments
+		nfdsavedialognargs_t args;
+		args.filterList = &filterItem;
+		args.filterCount = 1;
+		args.defaultPath = nullptr;
+		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
+
+		result = NFD_SaveDialogN_With(&outPath, &args);
+	}
 	else
-		result = NFD_OpenDialog(&outPath, &filterItem, 1, nullptr);
+	{
+		//Fill out arguments
+		nfdopendialognargs_t args;
+		args.filterList = &filterItem;
+		args.filterCount = 1;
+		args.defaultPath = nullptr;
+		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
+
+		//And run the dialog
+		result = NFD_OpenDialogN_With(&outPath, &args);
+	}
 	if(result == NFD_OKAY)
 	{
 		string ret = outPath;
