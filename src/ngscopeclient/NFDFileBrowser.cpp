@@ -127,30 +127,30 @@ optional<string> NFDFileBrowser::ThreadProc()
 	}
 
 	nfdchar_t* outPath;
-	nfdfilteritem_t filterItem = { m_filterName.c_str(), m_filterMask.c_str() };
+	nfdu8filteritem_t filterItem = { m_filterName.c_str(), m_filterMask.c_str() };
 	nfdresult_t result;
 	if(m_saveDialog)
 	{
 		//Fill out arguments
-		nfdsavedialognargs_t args;
+		nfdsavedialogu8args_t args;
 		args.filterList = &filterItem;
 		args.filterCount = 1;
 		args.defaultPath = nullptr;
 		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
 
-		result = NFD_SaveDialogN_With(&outPath, &args);
+		result = NFD_SaveDialogU8_With(&outPath, &args);
 	}
 	else
 	{
 		//Fill out arguments
-		nfdopendialognargs_t args;
+		nfdopendialogu8args_t args;
 		args.filterList = &filterItem;
 		args.filterCount = 1;
 		args.defaultPath = nullptr;
 		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
 
 		//And run the dialog
-		result = NFD_OpenDialogN_With(&outPath, &args);
+		result = NFD_OpenDialogU8_With(&outPath, &args);
 	}
 	if(result == NFD_OKAY)
 	{
