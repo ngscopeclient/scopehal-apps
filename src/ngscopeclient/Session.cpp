@@ -428,6 +428,9 @@ bool Session::LoadWaveformDataForFilters(
 		const YAML::Node& node,
 		const string& dataDir)
 {
+	//Block filter graph from running while loading
+	lock_guard<shared_mutex> lock(m_waveformDataMutex);
+
 	if(!node)
 		return true;
 	auto waveforms = node["waveforms"];
