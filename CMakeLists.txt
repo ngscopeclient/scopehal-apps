@@ -22,12 +22,13 @@ if(DEFINED ENV{VULKAN_SDK})
 	endif()
 endif()
 
-project(ngscopeclient)
+project(ngscopeclient VERSION 0.1)
 
 include(CTest)
 
 # Configuration settings
-set(BUILD_DOCS CACHE BOOL "Build the documentation")
+set(BUILD_DOCS CACHE BOOL "Build end user documentation")
+set(BUILD_DEVDOCS CACHE BOOL "Build developer documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 set(DISABLE_PCH CACHE BOOL "Disable precompiled headers as this may break certain configurations")
 
@@ -237,6 +238,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/log")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/ngscopeclient")
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
+
+add_subdirectory(devdoc)
 
 # Unit tests
 if(BUILD_TESTING)
