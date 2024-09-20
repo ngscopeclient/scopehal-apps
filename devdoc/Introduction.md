@@ -12,13 +12,25 @@ End user documentation is located at (link here).
 
 \defgroup libscopehal Libscopehal (drivers and core base classes)
 
-\defgroup datamodel Waveform data model
+\defgroup core Core classes
+\ingroup libscopehal
+
+\defgroup vksupport Vulkan acceleration
+\ingroup libscopehal
+
+\defgroup datamodel Data model
 \ingroup libscopehal
 
 \defgroup drivers Instrument drivers
 \ingroup libscopehal
 
-\defgroup transports Transports (moves commands and data between drivers and physical hardware)
+\defgroup vnadrivers VNA drivers
+\ingroup drivers
+
+\defgroup transports Transports
+\ingroup libscopehal
+
+\defgroup triggers Triggers
 \ingroup libscopehal
 
 \defgroup libscopeprotocols Libscopeprotocols (filter graph blocks)
