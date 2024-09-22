@@ -24,6 +24,22 @@ endif()
 
 project(ngscopeclient VERSION 0.1)
 
+# Git is used for git-describe based version generation if we have it
+find_package(Git)
+
+#Set up versioning (with a dummy string for now if Git isn't present)
+if(Git_FOUND)
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} describe --always --tags
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+	set(NGSCOPECLIENT_VERSION "unknown")
+endif()
+
+set(PROJECT_VERSION "0.1-dev+${NGSCOPECLIENT_VERSION}")
+
 include(CTest)
 
 # Configuration settings
@@ -83,9 +99,6 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 	add_compile_options(-D_APPLE_SILICON)
 	set(APPLE_SILICON TRUE)
 endif()
-
-# Git is used for git-describe based version generation if we have it
-find_package(Git)
 
 # Package detection
 

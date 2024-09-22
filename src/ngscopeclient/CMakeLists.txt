@@ -6,17 +6,6 @@
 
 find_package(PNG REQUIRED)
 
-#Set up versioning (with a dummy string for now if Git isn't present)
-if(Git_FOUND)
-	execute_process(
-		COMMAND ${GIT_EXECUTABLE} describe --always --tags
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
-		OUTPUT_STRIP_TRAILING_WHITESPACE)
-else()
-	set(NGSCOPECLIENT_VERSION "unknown")
-endif()
-
 configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 
 # use custom config for imguifiledialog

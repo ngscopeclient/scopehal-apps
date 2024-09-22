@@ -5,6 +5,8 @@ if(BUILD_DEVDOCS)
 		REQUIRED dot mscgen dia)
 
 	set(DOXYGEN_LOOKUP_CACHE_SIZE 2)
+	set(DOXYGEN_DOT_NUM_THREADS 16)
+	set(DOXYGEN_NUM_PROC_THREADS 16)
 
 	doxygen_add_docs(devdocs
 		${PROJECT_SOURCE_DIR}/devdoc

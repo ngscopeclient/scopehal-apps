@@ -6,7 +6,7 @@ This is the developer documentation for ngscopeclient, libscopehal, and libscope
 the project or write your own instrument drivers or filter graph blocks, this should be your primary reference
 material.
 
-End user documentation is located at (link here).
+End user documentation is located at https://www.ngscopeclient.org/manual/contentsname.html
 
 \defgroup liblog Liblog (logging framework)
 
