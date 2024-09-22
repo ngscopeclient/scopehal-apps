@@ -125,6 +125,9 @@
 #include "../scopeprotocols/PulseWidthMeasurement.h"
 #include "../scopeprotocols/QSGMIIDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
+#include "../scopeprotocols/SawtoothGeneratorFilter.h"
+#include "../scopeprotocols/SDCmdDecoder.h"
+#include "../scopeprotocols/SDDataDecoder.h"
 #include "../scopeprotocols/StepGeneratorFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
@@ -134,6 +137,7 @@
 #include "../scopeprotocols/UARTDecoder.h"
 #include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
+#include "../scopeprotocols/Waterfall.h"
 
 #include <imgui_markdown.h>
 
@@ -913,6 +917,11 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
 	m_texmgr.LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
 	m_texmgr.LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
+	m_texmgr.LoadTexture("filter-sawtooth", FindDataFile("icons/filters/filter-sawtooth.png"));
+	m_texmgr.LoadTexture("filter-sawtooth-vert-fall", FindDataFile("icons/filters/filter-sawtooth-vert-fall.png"));
+	m_texmgr.LoadTexture("filter-sawtooth-vert-rise", FindDataFile("icons/filters/filter-sawtooth-vert-rise.png"));
+	m_texmgr.LoadTexture("filter-sd-command", FindDataFile("icons/filters/filter-sd-command.png"));
+	m_texmgr.LoadTexture("filter-sd-data", FindDataFile("icons/filters/filter-sd-bus.png"));
 	m_texmgr.LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
 	m_texmgr.LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
 	m_texmgr.LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
@@ -922,6 +931,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-uart", FindDataFile("icons/filters/filter-uart.png"));
 	m_texmgr.LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_texmgr.LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
+	m_texmgr.LoadTexture("filter-waterfall", FindDataFile("icons/filters/filter-waterfall.png"));
 	m_texmgr.LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_texmgr.LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
 	m_texmgr.LoadTexture("input-k-dual", FindDataFile("icons/filters/input-k-dual.png"));
@@ -976,6 +986,8 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
 	m_filterIconMap[type_index(typeid(RiseMeasurement))] 						= "filter-rise";
+	m_filterIconMap[type_index(typeid(SDCmdDecoder))] 							= "filter-sd-command";
+	m_filterIconMap[type_index(typeid(SDDataDecoder))] 							= "filter-sd-data";
 	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 					= "filter-step";
 	m_filterIconMap[type_index(typeid(SubtractFilter))] 						= "filter-subtract";
 	m_filterIconMap[type_index(typeid(ThresholdFilter))] 						= "filter-threshold";
@@ -987,6 +999,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(UARTDecoder))]	 						= "filter-uart";
 	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
 	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
+	m_filterIconMap[type_index(typeid(Waterfall))] 								= "filter-waterfall";
 }
 
 ///@brief Gets the icon to use for a filter
@@ -1016,6 +1029,23 @@ string MainWindow::GetIconForFilter(Filter* f)
 				case FIRFilter::FILTER_TYPE_LOWPASS:
 				default:
 					return "filter-fir-lowpass";
+			}
+		}
+
+		auto saw = dynamic_cast<SawtoothGeneratorFilter*>(f);
+		if(saw)
+		{
+			switch(saw->GetRampType())
+			{
+				case SawtoothGeneratorFilter::RAMP_UP:
+					return "filter-sawtooth-vert-fall";
+
+				case SawtoothGeneratorFilter::RAMP_DOWN:
+					return "filter-sawtooth-vert-rise";
+
+				case SawtoothGeneratorFilter::RAMP_BOTH:
+				default:
+					return "filter-sawtooth";
 			}
 		}
 	}
