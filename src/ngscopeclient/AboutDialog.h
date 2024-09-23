@@ -28,6 +28,9 @@
 ***********************************************************************************************************************/
 
 /**
+	\addtogroup dialogs
+	\ingroup ngscopeclient
+
 	@file
 	@author Andrew D. Zonenberg
 	@brief Declaration of AboutDialog

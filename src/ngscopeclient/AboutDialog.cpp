@@ -28,6 +28,8 @@
 ***********************************************************************************************************************/
 
 /**
+	\addtogroup dialogs
+
 	@file
 	@author Andrew D. Zonenberg
 	@brief Implementation of AboutDialog
