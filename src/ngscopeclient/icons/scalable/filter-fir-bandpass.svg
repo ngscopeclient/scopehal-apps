@@ -2,51 +2,22 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="128"
-   height="64"
-   viewBox="0 0 33.866666 16.933333"
+   width="127.99999"
+   height="63.999996"
+   viewBox="0 0 33.866664 16.933332"
    version="1.1"
    id="svg1"
-   sodipodi:docname="filter-fir-bandpass.svg"
-   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
-   inkscape:export-filename="../filters/filter-fir-highpass.png"
-   inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xml:space="preserve"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview7"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1.0"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     showgrid="true"
-     inkscape:zoom="19.578125"
-     inkscape:cx="72.146848"
-     inkscape:cy="25.155627"
-     inkscape:window-width="3840"
-     inkscape:window-height="2103"
-     inkscape:window-x="1920"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
-    <inkscape:grid
-       type="xygrid"
-       id="grid1057" />
-  </sodipodi:namedview>
-  <defs
-     id="defs1" />
-  <g
-     id="layer1">
-    <path
-       id="path1-3"
-       style="fill:none;fill-opacity:0.3;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="m 15.931288,4.7491611 c 3.03119,0.02023 5.518649,-0.071786 7.595302,1.9755475 l 9.211301,9.2113004 M 15.953761,4.7676058 C 12.603533,4.8036525 12.601828,4.6062911 10.402335,6.7747303 L 1.1910343,15.986031"
-       sodipodi:nodetypes="cccccc" />
-  </g>
-</svg>
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1"><linearGradient
+       id="swatch1"><stop
+         style="stop-color:#ffea00;stop-opacity:1;"
+         offset="0"
+         id="stop1" /></linearGradient></defs><g
+     id="layer1"
+     style="display:inline"><g
+       id="g3"><path
+         id="path1-3"
+         style="fill:none;fill-opacity:0.3;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+         d="m 16.850511,2.0891827 c 3.03119,0.02023 3.407814,0.2318985 4.437296,3.5334268 2.311124,9.2658925 7.748607,9.9461995 10.653641,9.6209575 M 16.883826,2.0880826 C 13.533598,2.1241326 13.935243,3.9529937 12.877403,6.6150895 10.857395,11.396996 7.4624518,15.597188 2.1399775,15.217269" /></g></g></svg>
