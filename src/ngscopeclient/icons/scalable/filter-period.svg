@@ -7,8 +7,34 @@
    viewBox="0 0 33.866666 16.933333"
    version="1.1"
    id="svg1"
+   inkscape:version="1.3.1 (91b66b0783, 2023-11-16)"
+   sodipodi:docname="filter-period.svg"
+   inkscape:export-filename="filter-period.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="8.4359982"
+     inkscape:cx="65.433869"
+     inkscape:cy="30.168333"
+     inkscape:window-width="1920"
+     inkscape:window-height="1051"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
   <defs
      id="defs1">
     <marker
@@ -17,9 +43,12 @@
        refX="0"
        refY="0"
        orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
        markerWidth="0.4"
        markerHeight="0.4"
        viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
        preserveAspectRatio="xMidYMid">
       <path
          transform="scale(0.5)"
@@ -33,9 +62,12 @@
        refX="0"
        refY="0"
        orient="auto-start-reverse"
+       inkscape:stockid="Triangle arrow"
        markerWidth="0.4"
        markerHeight="0.4"
        viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
        preserveAspectRatio="xMidYMid">
       <path
          transform="scale(0.5)"
@@ -45,37 +77,43 @@
     </marker>
   </defs>
   <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
      id="layer1">
     <path
        style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M 1.6431362,8.4838556 V 1.2702261"
+       d="M 1.4549543,8.4858598 V 1.2722303"
        id="path1" />
     <path
        style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M 26.136555,8.4681737 V 1.4740895"
+       d="M 25.948371,8.4701779 V 1.4760937"
        id="path4" />
     <path
-       style="fill:none;stroke:#ec008c;stroke-width:1.05833333;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M 0.26458354,8.4666667 H 33.602083"
-       id="path2" />
+       style="fill:none;stroke:#ec008c;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.26458327,8.4686709 H 33.602083"
+       id="path2"
+       sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
        style="font-size:7.05556px;fill:#ffea00;fill-opacity:1;stroke:#ffea00;stroke-width:0.529167;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
        x="25.212324"
        y="15.430895"
        id="text6"><tspan
+         sodipodi:role="line"
          id="tspan6"
          style="font-size:7.05556px;fill:#ffea00;fill-opacity:1;stroke-width:0.529167;stroke-dasharray:none"
          x="25.212324"
          y="15.430895">Δt</tspan></text>
     <path
-       style="fill:none;fill-opacity:1;stroke:#00b9f2;stroke-width:1.05833333;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
-       d="M -0.808109 13.046 C -0.206954 12.0731 0.3942 10.9349 0.995354 9.74899 C 1.59651 8.56313 2.19766 7.33154 2.79882 6.18201 C 3.39997 5.03248 4.00113 3.96722 4.60228 3.09604 C 5.20344 2.22487 5.80459 1.55021 6.40574 1.14081 C 7.0069 0.731411 7.60805 0.589404 8.20921 0.727976 C 8.81036 0.866548 9.41152 1.28709 10.0127 1.94446 C 10.6138 2.60182 11.215 3.49637 11.8161 4.53413 C 12.4173 5.57189 13.0184 6.7521 13.6196 7.95177 C 14.2208 9.15143 14.8219 10.3688 15.4231 11.4778 C 16.0242 12.5868 16.6254 13.5851 17.2265 14.3699 C 17.8277 15.1547 18.4288 15.7237 19.03 16.0191 C 19.6311 16.3145 20.2323 16.3344 20.8334 16.0782 C 21.4346 15.822 22.0358 15.2886 22.6369 14.5348 C 23.2381 13.7809 23.8392 12.8065 24.4404 11.7137 C 25.0415 10.6209 25.6427 9.41074 26.2438 8.20908 C 26.845 7.00742 27.4461 5.81618 28.0473 4.75865 C 28.6485 3.70112 29.2496 2.77966 29.8508 2.08891 C 30.4519 1.39816 31.0531 0.940489 31.6542 0.761955 C 32.2554 0.583421 32.8565 0.68589 33.4577 1.05716"
+       style="fill:none;fill-opacity:1;stroke:#00b9f2;stroke-width:1.0502;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.80377152,9.7310785 C 1.4050543,8.563606 2.006331,7.3511124 2.6076177,6.2194065 3.2088944,5.0877006 3.8101811,4.0389581 4.4114578,3.1812862 5.0127445,2.3236241 5.6140212,1.6594251 6.2152979,1.2563731 6.8165846,0.85332201 7.4178613,0.71351691 8.019148,0.84994027 8.6204247,0.98636364 9.2217114,1.4003849 9.8230181,2.0475621 c 0.6012249,0.6471672 1.2025509,1.5278467 1.8037779,2.5495157 0.601327,1.021669 1.202554,2.1835792 1.80388,3.3646476 0.601327,1.1810586 1.202554,2.3795526 1.80388,3.4713566 0.601227,1.091805 1.202554,2.074625 1.80378,2.847257 0.601327,0.772631 1.202554,1.332808 1.803881,1.623628 0.601226,0.29082 1.202553,0.310411 1.80378,0.05818 0.601326,-0.252227 1.202653,-0.777356 1.80388,-1.519468 0.601326,-0.742211 1.202553,-1.701502 1.80388,-2.777358 0.601227,-1.075855 1.202553,-2.2672507 1.80378,-3.4502783 0.601327,-1.1830276 1.202553,-2.3557968 1.80388,-3.3969292 0.601327,-1.0411324 1.202553,-1.9483047 1.80388,-2.6283442 0.601227,-0.6800396 1.202554,-1.1306141 1.80378,-1.30637989 0.601327,-0.17576573 1.202554,-0.0748856 1.80388,0.29062769"
        title="sin(x)*2"
-       id="path7" />
+       id="path7"
+       sodipodi:nodetypes="cccccccccccccccsccc" />
     <path
        style="fill:none;stroke:#ffea00;stroke-width:1.05833;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Triangle);marker-end:url(#marker6)"
-       d="m 3.0121508,3.340224 21.8412712,0"
-       id="path5" />
+       d="M 2.8239689,3.3422282 H 24.665238"
+       id="path5"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>
