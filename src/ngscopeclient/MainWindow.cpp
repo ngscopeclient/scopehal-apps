@@ -111,7 +111,12 @@
 #include "../scopeprotocols/EthernetRGMIIDecoder.h"
 #include "../scopeprotocols/EthernetRMIIDecoder.h"
 #include "../scopeprotocols/EthernetSGMIIDecoder.h"
+#include "../scopeprotocols/EyeBitRateMeasurement.h"
+#include "../scopeprotocols/EyeHeightMeasurement.h"
+#include "../scopeprotocols/EyeJitterMeasurement.h"
 #include "../scopeprotocols/EyePattern.h"
+#include "../scopeprotocols/EyePeriodMeasurement.h"
+#include "../scopeprotocols/EyeWidthMeasurement.h"
 #include "../scopeprotocols/FallMeasurement.h"
 #include "../scopeprotocols/FIRFilter.h"
 #include "../scopeprotocols/FFTFilter.h"
@@ -127,9 +132,12 @@
 #include "../scopeprotocols/MultiplyFilter.h"
 #include "../scopeprotocols/NCOFilter.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
-#include "../scopeprotocols/PeriodMeasurement.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
+#include "../scopeprotocols/PeaksFilter.h"
+#include "../scopeprotocols/PeriodMeasurement.h"
+#include "../scopeprotocols/PkPkMeasurement.h"
 #include "../scopeprotocols/PulseWidthMeasurement.h"
+#include "../scopeprotocols/PRBSCheckerFilter.h"
 #include "../scopeprotocols/QSGMIIDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
 #include "../scopeprotocols/SawtoothGeneratorFilter.h"
@@ -910,7 +918,12 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-duty-cycle", FindDataFile("icons/filters/filter-duty-cycle.png"));
 	m_texmgr.LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
 	m_texmgr.LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
+	m_texmgr.LoadTexture("filter-eyebitrate", FindDataFile("icons/filters/filter-eyebitrate.png"));
+	m_texmgr.LoadTexture("filter-eyeheight", FindDataFile("icons/filters/filter-eyeheight.png"));
+	m_texmgr.LoadTexture("filter-eyejitter", FindDataFile("icons/filters/filter-eyejitter.png"));
 	m_texmgr.LoadTexture("filter-eyepattern", FindDataFile("icons/filters/filter-eyepattern.png"));
+	m_texmgr.LoadTexture("filter-eyeperiod", FindDataFile("icons/filters/filter-eyeperiod.png"));
+	m_texmgr.LoadTexture("filter-eyewidth", FindDataFile("icons/filters/filter-eyewidth.png"));
 	m_texmgr.LoadTexture("filter-fall", FindDataFile("icons/filters/filter-fall.png"));
 	m_texmgr.LoadTexture("filter-fir-highpass", FindDataFile("icons/filters/filter-fir-highpass.png"));
 	m_texmgr.LoadTexture("filter-fir-lowpass", FindDataFile("icons/filters/filter-fir-lowpass.png"));
@@ -922,14 +935,17 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
 	m_texmgr.LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
 	m_texmgr.LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
-	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
-	m_texmgr.LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
 	m_texmgr.LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
 	m_texmgr.LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
 	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
+	m_texmgr.LoadTexture("filter-peaks", FindDataFile("icons/filters/filter-peaks.png"));
+	m_texmgr.LoadTexture("filter-peaktopeak", FindDataFile("icons/filters/filter-peaktopeak.png"));
+	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
+	m_texmgr.LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
+	m_texmgr.LoadTexture("filter-prbs-checker", FindDataFile("icons/filters/filter-prbs-checker.png"));
 	m_texmgr.LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
 	m_texmgr.LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
 	m_texmgr.LoadTexture("filter-sawtooth", FindDataFile("icons/filters/filter-sawtooth.png"));
@@ -990,7 +1006,12 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(EthernetRGMIIDecoder))]					= "filter-rj45";
 	m_filterIconMap[type_index(typeid(EthernetRMIIDecoder))]					= "filter-rj45";
 	m_filterIconMap[type_index(typeid(EthernetSGMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(EyeBitRateMeasurement))] 					= "filter-eyebitrate";
+	m_filterIconMap[type_index(typeid(EyeHeightMeasurement))] 					= "filter-eyeheight";
+	m_filterIconMap[type_index(typeid(EyeJitterMeasurement))] 					= "filter-eyejitter";
 	m_filterIconMap[type_index(typeid(EyePattern))] 							= "filter-eyepattern";
+	m_filterIconMap[type_index(typeid(EyePeriodMeasurement))] 					= "filter-eyeperiod";
+	m_filterIconMap[type_index(typeid(EyeWidthMeasurement))] 					= "filter-eyewidth";
 	m_filterIconMap[type_index(typeid(FallMeasurement))] 						= "filter-fall";
 	m_filterIconMap[type_index(typeid(FFTFilter))] 								= "filter-fft";
 	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 					= "filter-frequency";
@@ -1005,8 +1026,11 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
+	m_filterIconMap[type_index(typeid(PeaksFilter))] 							= "filter-peaks";
+	m_filterIconMap[type_index(typeid(PkPkMeasurement))] 						= "filter-peaktopeak";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
+	m_filterIconMap[type_index(typeid(PRBSCheckerFilter))]						= "filter-prbs-checker";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
 	m_filterIconMap[type_index(typeid(RiseMeasurement))] 						= "filter-rise";
 	m_filterIconMap[type_index(typeid(SDCmdDecoder))] 							= "filter-sd-command";
