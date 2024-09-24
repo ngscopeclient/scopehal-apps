@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -109,7 +109,17 @@ public:
 		const std::string& path);
 
 	ImTextureID GetTexture(const std::string& name)
-	{ return m_textures[name]->GetTexture(); }
+	{
+		auto it = m_textures.find(name);
+		if(it == m_textures.end())
+		{
+			LogFatal(
+				"Texture \"%s\" not found. This is probably the result of a developer mistyping a texture ID.\n",
+				name.c_str());
+		}
+		else
+			return it->second->GetTexture();
+	}
 
 	std::unique_ptr<vk::raii::Sampler>& GetSampler()
 	{ return m_sampler; }
