@@ -47,6 +47,7 @@
 
 #include "../scopehal/LeCroyOscilloscope.h"
 #include "../scopehal/SiglentSCPIOscilloscope.h"
+#include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
 #include "../scopeprotocols/EyePattern.h"
 
@@ -2662,6 +2663,19 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 		else if(dataWidth == WIDTH_16_BITS)
 		{
 			siglent->ForceHDMode(true);
+		}
+	}
+	auto rigol = dynamic_pointer_cast<RigolOscilloscope>(scope);
+	if(rigol)
+	{
+		auto dataWidth = m_preferences.GetEnumRaw("Drivers.Rigol DHO.data_width");
+		if(dataWidth == WIDTH_8_BITS)
+		{
+			rigol->ForceHDMode(false);
+		}
+		else if(dataWidth == WIDTH_16_BITS)
+		{
+			rigol->ForceHDMode(true);
 		}
 	}
 }
