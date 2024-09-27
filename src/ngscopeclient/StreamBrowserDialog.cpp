@@ -100,7 +100,7 @@ bool StreamBrowserDialog::DoRender()
 			}
 			
 			// ok, we have enough space -- commit to it!
-			badgeXCur -= xsz;
+			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 			ImGui::SameLine(badgeXCur);
 			ImGui::PushStyleColor(ImGuiCol_Button, color);
 			ImGui::SmallButton(label);
