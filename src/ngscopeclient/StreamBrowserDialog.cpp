@@ -65,6 +65,18 @@ StreamBrowserDialog::~StreamBrowserDialog()
  */
 bool StreamBrowserDialog::DoRender()
 {
+	// Some helpers for rendering widgets that appear in the StreamBrowserDialog.
+	
+	// Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
+	// scope properties box.
+	auto renderInfoLink = [](const char *label, const char *linktext, bool &clicked, bool &hovered)
+	{
+		ImGui::Text("%s: ", label);
+		ImGui::SameLine(0, 0);
+		clicked |= ImGui::TextLink(linktext);
+		hovered |= ImGui::IsItemHovered();
+	};
+	
 	//Add all instruments
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
@@ -86,15 +98,15 @@ bool StreamBrowserDialog::DoRender()
 		if(instIsOpen)
 		{
 			if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
-				ImGui::BeginChild("sample_params", ImVec2(0, 50), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+				ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 				
 				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
 				auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
 				
 				bool clicked = false;
 				bool hovered = false;
-				ImGui::Text("Sample rate: "); ImGui::SameLine(0, 0); clicked |= ImGui::TextLink(srate_txt.c_str()); hovered |= ImGui::IsItemHovered();
-				ImGui::Text("Sample depth: "); ImGui::SameLine(0, 0); clicked |= ImGui::TextLink(sdepth_txt.c_str()); hovered |= ImGui::IsItemHovered();
+				renderInfoLink("Sample rate", srate_txt.c_str(), clicked, hovered);
+				renderInfoLink("Sample depth", sdepth_txt.c_str(), clicked, hovered);
 				if (clicked) {
 					m_parent->ShowTimebaseProperties();
 				}
