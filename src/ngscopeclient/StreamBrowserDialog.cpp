@@ -83,7 +83,7 @@ bool StreamBrowserDialog::DoRender()
 	{
 		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
 		// roughly, what ImGui::GetCursorPosPrevLineX would be, if it existed; convert from absolute-space to window-space
-		badgeXMin = (window->DC.CursorPosPrevLine - window->Pos + window->Scroll).x + ImGui::GetStyle().ItemSpacing.x;
+		badgeXMin = (window->DC.CursorPosPrevLine - window->Pos + window->Scroll).x;
 		badgeXCur = ImGui::GetWindowContentRegionMax().x;
 	};
 	auto renderBadge = [&badgeXMin, &badgeXCur](ImVec4 color, ... /* labels, ending in NULL */)
@@ -149,10 +149,20 @@ bool StreamBrowserDialog::DoRender()
 			{
 				auto chan = inst->GetChannel(i);
 
+				bool singleStream = chan->GetStreamCount() == 1;
+				bool renderScopeProps = false;
+				if (auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan)) {
+					if (scopechan->IsEnabled()) {
+						renderScopeProps = true;
+					}
+				}
+
+				bool hasChildren = !singleStream || renderScopeProps;
+
 				if (chan->m_displaycolor != "") {
 					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
 				}
-				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen | (!hasChildren ? ImGuiTreeNodeFlags_Leaf : 0));
 				if (chan->m_displaycolor != "") {
 					ImGui::PopStyleColor();
 				}
@@ -165,7 +175,6 @@ bool StreamBrowserDialog::DoRender()
 				}
 
 				//Single stream: drag the stream not the channel
-				bool singleStream = chan->GetStreamCount() == 1;
 				if(singleStream)
 				{
 					StreamDescriptor s(chan, 0);
@@ -191,26 +200,51 @@ bool StreamBrowserDialog::DoRender()
 					ImGui::TextUnformatted(chan->GetDisplayName().c_str());
 					ImGui::EndDragDropSource();
 				}
-
-				if(open && !singleStream)
+				
+				if(open)
 				{
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
-						ImGui::Selectable(chan->GetStreamName(j).c_str());
-
-						StreamDescriptor s(chan, j);
-						if(ImGui::BeginDragDropSource())
+						if (!singleStream)
 						{
-							if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-								ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-							else
-								ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+							ImGui::Selectable(chan->GetStreamName(j).c_str());
 
-							ImGui::TextUnformatted(s.GetName().c_str());
-							ImGui::EndDragDropSource();
+							StreamDescriptor s(chan, j);
+							if(ImGui::BeginDragDropSource())
+							{
+								if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+									ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+								else
+									ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+
+								ImGui::TextUnformatted(s.GetName().c_str());
+								ImGui::EndDragDropSource();
+							}
+							else
+								DoItemHelp();
 						}
-						else
-							DoItemHelp();
+						if (renderScopeProps)
+						{
+							auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
+							ImGui::BeginChild("scope_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+				
+							auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
+							auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
+				
+							bool clicked = false;
+							bool hovered = false;
+							renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+							renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
+							if (clicked) {
+								/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+								m_parent->ShowChannelProperties(scopechan);
+							}
+							if (hovered) {
+								m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+							}
+				
+							ImGui::EndChild();
+						}
 					}
 				}
 
