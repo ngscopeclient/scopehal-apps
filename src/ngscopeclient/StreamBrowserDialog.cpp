@@ -77,21 +77,49 @@ bool StreamBrowserDialog::DoRender()
 		hovered |= ImGui::IsItemHovered();
 	};
 	
+	float badgeXMin; // left edge over which we must not overrun
+	float badgeXCur; // right edge to render the next badge against
+	auto startBadgeLine = [&badgeXMin, &badgeXCur]()
+	{
+		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
+		// roughly, what ImGui::GetCursorPosPrevLineX would be, if it existed; convert from absolute-space to window-space
+		badgeXMin = (window->DC.CursorPosPrevLine - window->Pos + window->Scroll).x + ImGui::GetStyle().ItemSpacing.x;
+		badgeXCur = ImGui::GetWindowContentRegionMax().x;
+	};
+	auto renderBadge = [&badgeXMin, &badgeXCur](ImVec4 color, ... /* labels, ending in NULL */)
+	{
+		va_list ap;
+		va_start(ap, color);
+		
+		/* XXX: maybe color should be a prefs string? */
+		
+		while (const char *label = va_arg(ap, const char *)) {
+			float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+			if ((badgeXCur - xsz) < badgeXMin) {
+				continue;
+			}
+			
+			// ok, we have enough space -- commit to it!
+			badgeXCur -= xsz;
+			ImGui::SameLine(badgeXCur);
+			ImGui::PushStyleColor(ImGuiCol_Button, color);
+			ImGui::SmallButton(label);
+			ImGui::PopStyleColor();
+			break;
+		}
+	};
+	
 	//Add all instruments
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
 		bool instIsOpen = ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+		startBadgeLine();
 		
 		// Render ornaments for this instrument: offline, trigger status, ...
 		if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
 			if (scope->IsOffline()) {
-				/* XXX: refactor these "badges" into a common badge render function */
-				ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 60 /* XXX: size for text */);
-				/* XXX: this is not really a button, and should be rendered as a rect and a text */
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */);
-				ImGui::SmallButton("OFFLINE");
-				ImGui::PopStyleColor();
+				renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */, "OFFLINE", "OFFL", NULL);
 			}
 		}
 		
@@ -128,14 +156,11 @@ bool StreamBrowserDialog::DoRender()
 				if (chan->m_displaycolor != "") {
 					ImGui::PopStyleColor();
 				}
+				startBadgeLine();
 				
 				if (auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan)) {
 					if (!scopechan->IsEnabled()) {
-						ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 60 /* XXX: size for text */);
-						/* XXX: this is not really a button, and should be rendered as a rect and a text */
-						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */);
-						ImGui::SmallButton("disabled");
-						ImGui::PopStyleColor();
+						renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
 					}
 				}
 
