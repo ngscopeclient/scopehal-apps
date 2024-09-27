@@ -44,6 +44,7 @@ jobs:
           yaml-cpp:p
           glfw:p
           catch:p
+          libserialport:p
           vulkan-headers:p
           vulkan-loader:p
           shaderc:p
