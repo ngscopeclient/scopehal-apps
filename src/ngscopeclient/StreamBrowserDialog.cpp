@@ -69,13 +69,63 @@ bool StreamBrowserDialog::DoRender()
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
-		if(ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+		bool instIsOpen = ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+		
+		// Render ornaments for this instrument: offline, trigger status, ...
+		if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
+			if (scope->IsOffline()) {
+				/* XXX: refactor these "badges" into a common badge render function */
+				ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 60 /* XXX: size for text */);
+				/* XXX: this is not really a button, and should be rendered as a rect and a text */
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */);
+				ImGui::SmallButton("OFFLINE");
+				ImGui::PopStyleColor();
+			}
+		}
+		
+		if(instIsOpen)
 		{
+			if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
+				ImGui::BeginChild("sample_params", ImVec2(0, 50), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+				
+				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
+				auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
+				
+				bool clicked = false;
+				bool hovered = false;
+				ImGui::Text("Sample rate: "); ImGui::SameLine(0, 0); clicked |= ImGui::TextLink(srate_txt.c_str()); hovered |= ImGui::IsItemHovered();
+				ImGui::Text("Sample depth: "); ImGui::SameLine(0, 0); clicked |= ImGui::TextLink(sdepth_txt.c_str()); hovered |= ImGui::IsItemHovered();
+				if (clicked) {
+					m_parent->ShowTimebaseProperties();
+				}
+				if (hovered) {
+					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
+				}
+				
+				ImGui::EndChild();
+			}
+			
 			for(size_t i=0; i<inst->GetChannelCount(); i++)
 			{
 				auto chan = inst->GetChannel(i);
 
+				if (chan->m_displaycolor != "") {
+					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
+				}
 				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+				if (chan->m_displaycolor != "") {
+					ImGui::PopStyleColor();
+				}
+				
+				if (auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan)) {
+					if (!scopechan->IsEnabled()) {
+						ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 60 /* XXX: size for text */);
+						/* XXX: this is not really a button, and should be rendered as a rect and a text */
+						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */);
+						ImGui::SmallButton("disabled");
+						ImGui::PopStyleColor();
+					}
+				}
 
 				//Single stream: drag the stream not the channel
 				bool singleStream = chan->GetStreamCount() == 1;
