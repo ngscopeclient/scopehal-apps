@@ -123,6 +123,7 @@
 #include "../scopeprotocols/FrequencyMeasurement.h"
 #include "../scopeprotocols/FSKDecoder.h"
 #include "../scopeprotocols/FullWidthHalfMax.h"
+#include "../scopeprotocols/GateFilter.h"
 #include "../scopeprotocols/HistogramFilter.h"
 #include "../scopeprotocols/IBM8b10bDecoder.h"
 #include "../scopeprotocols/InvertFilter.h"
@@ -132,7 +133,9 @@
 #include "../scopeprotocols/MultiplyFilter.h"
 #include "../scopeprotocols/NCOFilter.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
+#include "../scopeprotocols/PcapngImportFilter.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
+#include "../scopeprotocols/PCIeDataLinkDecoder.h"
 #include "../scopeprotocols/PeaksFilter.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
 #include "../scopeprotocols/PkPkMeasurement.h"
@@ -146,6 +149,7 @@
 #include "../scopeprotocols/SpectrogramFilter.h"
 #include "../scopeprotocols/StepGeneratorFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
+#include "../scopeprotocols/ThermalDiodeFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
 #include "../scopeprotocols/TopMeasurement.h"
@@ -933,6 +937,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-fsk", FindDataFile("icons/filters/filter-fsk.png"));
 	m_texmgr.LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
 	m_texmgr.LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
+	m_texmgr.LoadTexture("filter-gate", FindDataFile("icons/filters/filter-gate.png"));
 	m_texmgr.LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
 	m_texmgr.LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
@@ -941,6 +946,9 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
+	m_texmgr.LoadTexture("filter-pcapng-export", FindDataFile("icons/filters/filter-pcapng-export.png"));
+	m_texmgr.LoadTexture("filter-pcapng-import", FindDataFile("icons/filters/filter-pcapng-import.png"));
+	m_texmgr.LoadTexture("filter-pcie-data-link", FindDataFile("icons/filters/filter-pcie-data-link.png"));
 	m_texmgr.LoadTexture("filter-peaks", FindDataFile("icons/filters/filter-peaks.png"));
 	m_texmgr.LoadTexture("filter-peaktopeak", FindDataFile("icons/filters/filter-peaktopeak.png"));
 	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
@@ -957,6 +965,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-spectrogram", FindDataFile("icons/filters/filter-spectrogram.png"));
 	m_texmgr.LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
 	m_texmgr.LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
+	m_texmgr.LoadTexture("filter-thermal-diode", FindDataFile("icons/filters/filter-thermal-diode.png"));
 	m_texmgr.LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
 	m_texmgr.LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
 	m_texmgr.LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
@@ -1017,6 +1026,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 					= "filter-frequency";
 	m_filterIconMap[type_index(typeid(FSKDecoder))]			 					= "filter-fsk";
 	m_filterIconMap[type_index(typeid(FullWidthHalfMax))] 						= "filter-fwhm";
+	m_filterIconMap[type_index(typeid(GateFilter))] 							= "filter-gate";
 	m_filterIconMap[type_index(typeid(HistogramFilter))] 						= "filter-histogram";
 	m_filterIconMap[type_index(typeid(IBM8b10bDecoder))] 						= "filter-8b10bdecoder";
 	m_filterIconMap[type_index(typeid(InvertFilter))] 							= "filter-invert";
@@ -1025,7 +1035,9 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
+	m_filterIconMap[type_index(typeid(PcapngImportFilter))] 					= "filter-pcapng-import";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
+	m_filterIconMap[type_index(typeid(PCIeDataLinkDecoder))] 					= "filter-pcie-data-link";
 	m_filterIconMap[type_index(typeid(PeaksFilter))] 							= "filter-peaks";
 	m_filterIconMap[type_index(typeid(PkPkMeasurement))] 						= "filter-peaktopeak";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
@@ -1037,6 +1049,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(SDDataDecoder))] 							= "filter-sd-data";
 	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 					= "filter-step";
 	m_filterIconMap[type_index(typeid(SubtractFilter))] 						= "filter-subtract";
+	m_filterIconMap[type_index(typeid(ThermalDiodeFilter))] 					= "filter-thermal-diode";
 	m_filterIconMap[type_index(typeid(ThresholdFilter))] 						= "filter-threshold";
 	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 					= "filter-sine";
 	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
