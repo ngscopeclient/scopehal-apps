@@ -540,6 +540,9 @@ public:
 	ImFont* GetFontPref(const std::string& name)
 	{ return m_fontmgr.GetFont(m_session.GetPreferences().GetFont(name.c_str())); }
 
+	ImU32 GetColorPref(const std::string& name)
+	{ return m_session.GetPreferences().GetColor(name); }
+
 	ImTextureID GetTexture(const std::string& name)
 	{ return m_texmgr.GetTexture(name); }
 
