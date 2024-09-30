@@ -45,6 +45,12 @@ public:
 	: std::pair<time_t, int64_t>(sec, fs)
 	{}
 
+	TimePoint(double tnow)
+	{
+		first = floor(tnow);
+		second = (tnow - first) * FS_PER_SECOND;
+	}
+
 	time_t GetSec() const
 	{ return first; }
 
