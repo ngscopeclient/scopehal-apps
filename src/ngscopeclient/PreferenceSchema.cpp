@@ -220,6 +220,17 @@ void PreferenceManager::InitializeDefaults()
 					.Label("Y axis font")
 					.Description("Font used for Y axis text"));
 
+		auto& logs = appearance.AddCategory("Log Viewer");
+			logs.AddPreference(
+				Preference::Color("error_color", ColorFromString("#800000"))
+				.Label("Error color")
+				.Description("Background color for log messages with \"error\" severity"));
+
+			logs.AddPreference(
+				Preference::Color("warning_color", ColorFromString("#404000"))
+				.Label("Warning color")
+				.Description("Background color for log messages with \"warning\" severity"));
+
 		auto& markdown = appearance.AddCategory("Markdown");
 
 			markdown.AddPreference(

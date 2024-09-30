@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -66,7 +66,7 @@ void GuiLogSink::Log(Severity severity, const string &msg)
 	//Blank lines get special handling
 	if(msg == "\n")
 	{
-		m_lines.push_back("");
+		m_lines.push_back(LogLine(severity, ""));
 		return;
 	}
 
@@ -86,20 +86,28 @@ void GuiLogSink::Log(Severity severity, const string &msg)
 	auto len = vec.size();
 	for(size_t i=0; i<len; i++)
 	{
+		//Remove the ERROR or Warning text inserted by logtools
+		//TODO: we should change logtools to make this message be inserted by the sink to avoid this!
+		string line = vec[i];
+		if(severity == Severity::ERROR)
+			line = line.substr(7);
+		else if(severity == Severity::WARNING)
+			line = line.substr(9);
+
 		//Blank line at end of buffer? Special handling
-		if( (i+1 == len) && vec[i].empty())
+		if( (i+1 == len) && line.empty())
 			break;
 
 		//If unbuffered line is present, append to it
 		if(!m_unbufferedLine.empty())
 		{
-			m_lines.push_back(m_unbufferedLine + vec[i]);
+			m_lines.push_back(LogLine(severity, m_unbufferedLine + line));
 			m_unbufferedLine = "";
 		}
 
 		//Otherwise append it
 		else
-			m_lines.push_back(indent + vec[i]);
+			m_lines.push_back(LogLine(severity, indent + line));
 	}
 }
 

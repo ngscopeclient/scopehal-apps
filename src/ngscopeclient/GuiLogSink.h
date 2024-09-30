@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,6 +35,26 @@
 #ifndef GuiLogSink_h
 #define GuiLogSink_h
 
+#include "Marker.h"
+
+/**
+	@brief A single line of the log
+ */
+class LogLine
+{
+public:
+	LogLine(Severity sev, const std::string& str)
+		: m_sev(sev)
+		, m_msg(str)
+		, m_timestamp(GetTime())
+	{
+	}
+
+	Severity m_sev;
+	std::string m_msg;
+	TimePoint m_timestamp;
+};
+
 /**
 	@brief Log sink for displaying logs in the GUI
  */
@@ -49,11 +69,11 @@ public:
 	void Log(Severity severity, const std::string &msg) override;
 	void Log(Severity severity, const char *format, va_list va) override;
 
-	const std::vector<std::string>& GetLines()
+	const std::vector<LogLine>& GetLines()
 	{ return m_lines; }
 
 protected:
-	std::vector<std::string> m_lines;
+	std::vector<LogLine> m_lines;
 
 	std::string m_unbufferedLine;
 };

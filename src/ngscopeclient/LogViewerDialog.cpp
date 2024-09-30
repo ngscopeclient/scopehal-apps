@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -59,14 +59,89 @@ LogViewerDialog::~LogViewerDialog()
 
 bool LogViewerDialog::DoRender()
 {
-	//TODO: filters etc?
+	auto errColor = m_parent->GetColorPref("Appearance.Log Viewer.error_color");
+	auto warningColor = m_parent->GetColorPref("Appearance.Log Viewer.warning_color");
+	auto baseColor = m_parent->GetColorPref("Appearance.Graphs.bottom_color");
 
 	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
 	ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
 	auto& lines = g_guiLog->GetLines();
-	for(auto& line : lines)
-		ImGui::TextUnformatted(line.c_str());
+
+	float width = ImGui::GetFontSize();
+	static ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
+	if(ImGui::BeginTable("table", 3, flags))
+	{
+		//TODO: use ImGuiListClipper
+
+		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 10*width);
+		ImGui::TableSetupColumn("Severity", ImGuiTableColumnFlags_WidthFixed, 0.0f);
+		ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch, 0.0f);
+		ImGui::TableHeadersRow();
+
+		for(auto& line : lines)
+		{
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+			switch(line.m_sev)
+			{
+				case Severity::ERROR:
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, errColor);
+					break;
+
+				case Severity::WARNING:
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, warningColor);
+					break;
+
+				default:
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, baseColor);
+					break;
+			}
+
+			ImGui::TableSetColumnIndex(0);
+			ImGui::TextUnformatted(line.m_timestamp.PrettyPrint().c_str());
+
+			ImGui::TableSetColumnIndex(1);
+			switch(line.m_sev)
+			{
+				//no need for fatal, we abort before we can see it
+
+				case Severity::ERROR:
+					ImGui::TextUnformatted("Error");
+					break;
+
+				case Severity::WARNING:
+					ImGui::TextUnformatted("Warning");
+					break;
+
+				case Severity::NOTICE:
+					ImGui::TextUnformatted("Notice");
+					break;
+
+				case Severity::VERBOSE:
+					ImGui::TextUnformatted("Verbose");
+					break;
+
+				case Severity::DEBUG:
+				default:
+					ImGui::TextUnformatted("Debug");
+					break;
+			}
+
+			ImGui::TableSetColumnIndex(2);
+			ImGui::TextUnformatted(line.m_msg.c_str());
+		}
+
+		ImGui::EndTable();
+	}
+
 	ImGui::PopFont();
 
 	if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
