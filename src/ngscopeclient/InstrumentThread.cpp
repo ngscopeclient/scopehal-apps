@@ -93,6 +93,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 			else
 			{
 				auto stat = scope->PollTrigger();
+				session->GetInstrumentConnectionState(inst)->m_lastTriggerState = stat;
 				if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 					scope->AcquireData();
 			}

@@ -120,6 +120,36 @@ bool StreamBrowserDialog::DoRender()
 		if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
 			if (scope->IsOffline()) {
 				renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */, "OFFLINE", "OFFL", NULL);
+			} else {
+				switch (m_session.GetInstrumentConnectionState(inst)->m_lastTriggerState) {
+				case Oscilloscope::TRIGGER_MODE_RUN:
+					/* prefer language "ARMED" to "RUN":
+					 * "RUN" could mean either "waiting
+					 * for trigger" or "currently
+					 * capturing samples post-trigger",
+					 * "ARMED" is unambiguous */
+					renderBadge(ImVec4(0.3, 0.8, 0.3, 1.0), "ARMED", "A", NULL);
+					break;
+				case Oscilloscope::TRIGGER_MODE_STOP:
+					renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0), "STOPPED", "STOP", "S", NULL);
+					break;
+				case Oscilloscope::TRIGGER_MODE_TRIGGERED:
+					renderBadge(ImVec4(0.7, 0.7, 0.3, 1.0), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+					break;
+				case Oscilloscope::TRIGGER_MODE_WAIT:
+					/* prefer language "BUSY" to "WAIT":
+					 * "WAIT" could mean "waiting for
+					 * trigger", "BUSY" means "I am
+					 * doing something internally and am
+					 * not ready for some reason" */
+					renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0), "BUSY", "B", NULL);
+					break;
+				case Oscilloscope::TRIGGER_MODE_AUTO:
+					renderBadge(ImVec4(0.3, 0.8, 0.3, 1.0), "AUTO", "A", NULL);
+					break;
+				default:
+					break;
+				}
 			}
 		}
 		
