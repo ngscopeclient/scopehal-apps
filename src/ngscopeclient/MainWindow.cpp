@@ -155,6 +155,7 @@
 #include "../scopeprotocols/TopMeasurement.h"
 #include "../scopeprotocols/TrendFilter.h"
 #include "../scopeprotocols/UARTDecoder.h"
+#include "../scopeprotocols/USB2PMADecoder.h"
 #include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
 #include "../scopeprotocols/Waterfall.h"
@@ -970,6 +971,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
 	m_texmgr.LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
 	m_texmgr.LoadTexture("filter-uart", FindDataFile("icons/filters/filter-uart.png"));
+	m_texmgr.LoadTexture("filter-usb2-pma", FindDataFile("icons/filters/filter-usb-pma.png"));
 	m_texmgr.LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_texmgr.LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
 	m_texmgr.LoadTexture("filter-waterfall", FindDataFile("icons/filters/filter-waterfall.png"));
@@ -1058,6 +1060,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(OvershootMeasurement))]					= "filter-overshoot";
 	m_filterIconMap[type_index(typeid(SpectrogramFilter))]						= "filter-spectrogram";
 	m_filterIconMap[type_index(typeid(UARTDecoder))]	 						= "filter-uart";
+	m_filterIconMap[type_index(typeid(USB2PMADecoder))] 						= "filter-usb2-pma";
 	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
 	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
 	m_filterIconMap[type_index(typeid(Waterfall))] 								= "filter-waterfall";
