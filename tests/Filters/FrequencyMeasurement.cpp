@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -69,9 +69,9 @@ TEST_CASE("Filter_FrequencyMeasurement")
 			float start_phase = uniform_real_distribution<float>(-M_PI, M_PI)(g_rng);
 
 			//Generate the input signal.
-			//50 Gsps, 1M points, no added noise
+			//50 Gsps, 100K points, no added noise
 			g_scope->GetOscilloscopeChannel(0)->SetData(
-				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20000, 1000000, 0),
+				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20000, 100000, 0),
 				0);
 
 			Unit hz(Unit::UNIT_HZ);

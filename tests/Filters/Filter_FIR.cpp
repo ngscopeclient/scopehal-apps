@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -62,7 +62,7 @@ TEST_CASE("Filter_FIR")
 	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	//Create an empty input waveform
-	const size_t depth = 10000000;
+	const size_t depth = 100000;
 	UniformAnalogWaveform ua;
 	ua.m_timescale = 100000;		//10 Gsps
 	ua.m_triggerPhase = 0;

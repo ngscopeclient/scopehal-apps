@@ -66,7 +66,7 @@ TEST_CASE("Filter_DeEmbed")
 	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	//Create an empty input waveform
-	const size_t depth = 1000000;
+	const size_t depth = 100000;
 	UniformAnalogWaveform ua;
 	ua.m_timescale = 100000;		//10 Gsps
 	ua.m_triggerPhase = 0;

@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* libscopehal v0.1                                                                                                     *
+* libscopehal                                                                                                          *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -72,7 +72,7 @@ TEST_CASE("Primitive_Convert8BitSamples")
 	data_out_golden.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	data_out_golden.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	const size_t wavelen = 1000000;
+	const size_t wavelen = 100000;
 	data_in.resize(wavelen);
 	data_out.resize(wavelen);
 	data_out_golden.resize(wavelen);

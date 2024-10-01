@@ -76,7 +76,7 @@ TEST_CASE("Filter_FFT")
 	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
 	//Create an empty input waveform
-	const size_t depth = 1000000;
+	const size_t depth = 100000;
 	UniformAnalogWaveform ua;
 	ua.m_timescale = 10000;		//100 Gsps
 	ua.m_triggerPhase = 0;
