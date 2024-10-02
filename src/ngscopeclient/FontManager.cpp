@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -102,10 +102,28 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	config.PixelSnapH = true;
 	config.OversampleH = 5;
 	config.OversampleV = 5;
+	string defaultFontPath = FindDataFile("fonts/DejaVuSans.ttf");
 	for(auto f : fonts)
 	{
 		float scaledsize = round(max(1.0f, f.second) * contentScale);
-		m_fonts[f] = atlas->AddFontFromFileTTF(f.first.c_str(), scaledsize, &config, ranges.Data);
+
+		//See if the file exists, if it doesn't exist use the default font
+		//(note, things will go bad if you pass a file that's not a valid TTF)
+		string fname = f.first;
+		FILE* fp = fopen(fname.c_str(), "rb");
+		if(fp)
+			fclose(fp);
+		else
+		{
+			LogWarning(
+				"Could not find font file \"%s\" requested in preferences database. "
+				"Using default font \"%s\" instead\n",
+				fname.c_str(),
+				defaultFontPath.c_str());
+			fname = defaultFontPath;
+		}
+
+		m_fonts[f] = atlas->AddFontFromFileTTF(fname.c_str(), scaledsize, &config, ranges.Data);
 	}
 
 	//Done loading fonts, build the texture
