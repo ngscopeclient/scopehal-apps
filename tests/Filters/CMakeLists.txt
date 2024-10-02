@@ -3,6 +3,7 @@ add_executable(Filters
 
 	Filter_Add.cpp
 	Filter_DeEmbed.cpp
+	Filter_EyePattern.cpp
 	Filter_FIR.cpp
 	Filter_FFT.cpp
 	Filter_Subtract.cpp
