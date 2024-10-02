@@ -62,6 +62,7 @@ add_executable(ngscopeclient
 	MainWindow_Menus.cpp
 	ManageInstrumentsDialog.cpp
 	MeasurementsDialog.cpp
+	MemoryLeakerDialog.cpp
 	MetricsDialog.cpp
 	MultimeterDialog.cpp
 	NFDFileBrowser.cpp
