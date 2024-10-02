@@ -37,7 +37,19 @@
 #include "StreamBrowserDialog.h"
 #include "MainWindow.h"
 
+/* @brief Width used to display progress bars (e.g. download progress bar)*/
+#define PROGRESS_BAR_WIDTH	90
+
 using namespace std;
+
+// TODO move this to OscilloscopeChannel class along with GetDwnwloadProgress() API
+enum DownloadState : int {
+	DOWNLOAD_PROGRESS_DISABLED = -3,
+	DOWNLOAD_NONE = -2,
+	DOWNLOAD_WAITING = -1,
+	DOWNLOAD_STARTED = 0,
+	DOWNLOAD_FINISHED = 100
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -108,6 +120,64 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 	};
+	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](int progress)
+	{
+		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", "", NULL};
+		static const char* const wait[]     = {"WAITING..." , "WAITING"  ,"WA","W", "", NULL};
+		static const char* const stop[]     = {"STOPPED"    , "STOP"     ,"ST","S", "", NULL};
+		static const char* const ready[]    = {"READY"      , "RDY"      ,"RY","R", "", NULL};
+		static const char* const* labels;
+		ImVec4 color;
+		switch(progress)
+		{
+			case DownloadState::DOWNLOAD_NONE:
+				labels = stop;
+				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
+				break;
+			case DownloadState::DOWNLOAD_WAITING:
+				labels = wait;
+				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
+				break;
+			case DownloadState::DOWNLOAD_FINISHED:
+				labels = ready;
+				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
+				break;
+			default:
+				labels = download;
+				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
+		}
+		// Only show progress bar if an download is proceeding
+		bool hasProgress = (progress >= DownloadState::DOWNLOAD_WAITING) && (progress <= DownloadState::DOWNLOAD_FINISHED);
+		bool hasLabel;
+		int labelIndex = 0;
+		while (const char *label = labels[labelIndex]) 
+		{
+			hasLabel = strlen(label)>0;
+			float xsz = ImGui::CalcTextSize(label).x + (hasProgress ? PROGRESS_BAR_WIDTH : 0) + (ImGui::GetStyle().ItemSpacing.x) * ((hasProgress && hasLabel ? 1 : 0)+(hasLabel ? 1 : 0)) + ImGui::GetStyle().FramePadding.x * 2;
+			if ((badgeXCur - xsz) < badgeXMin) {
+				labelIndex++;
+				continue;
+			}
+			
+			// ok, we have enough space -- commit to it!
+			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
+			ImGui::SameLine(badgeXCur);
+			if(hasLabel)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, color);
+				ImGui::SmallButton(labels[labelIndex]);
+				ImGui::PopStyleColor();
+				if(hasProgress) 
+					ImGui::SameLine();
+			}
+			if(hasProgress)
+			{
+				ImGui::ProgressBar(((float)progress)/100, ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));		
+			}
+
+			break;
+		}
+	};
 	
 	//Add all instruments
 	auto insts = m_session.GetInstruments();
@@ -115,13 +185,17 @@ bool StreamBrowserDialog::DoRender()
 	{
 		bool instIsOpen = ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 		startBadgeLine();
+
+		auto state = m_session.GetInstrumentConnectionState(inst);
 		
 		// Render ornaments for this instrument: offline, trigger status, ...
-		if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
+		auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst);
+		if (scope) {
 			if (scope->IsOffline()) {
 				renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */, "OFFLINE", "OFFL", NULL);
 			} else {
-				switch (m_session.GetInstrumentConnectionState(inst)->m_lastTriggerState) {
+				Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
+				switch (mode) {
 				case Oscilloscope::TRIGGER_MODE_RUN:
 					/* prefer language "ARMED" to "RUN":
 					 * "RUN" could mean either "waiting
@@ -155,7 +229,7 @@ bool StreamBrowserDialog::DoRender()
 		
 		if(instIsOpen)
 		{
-			if (auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst)) {
+			if (scope) {
 				ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 				
 				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
@@ -175,7 +249,8 @@ bool StreamBrowserDialog::DoRender()
 				ImGui::EndChild();
 			}
 			
-			for(size_t i=0; i<inst->GetChannelCount(); i++)
+			size_t channelCount = inst->GetChannelCount();
+			for(size_t i=0; i<channelCount; i++)
 			{
 				auto chan = inst->GetChannel(i);
 
@@ -188,6 +263,7 @@ bool StreamBrowserDialog::DoRender()
 				}
 
 				bool hasChildren = !singleStream || renderScopeProps;
+				bool triggerArmed = scope ? scope->IsTriggerArmed() : false;
 
 				if (chan->m_displaycolor != "") {
 					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
@@ -196,14 +272,7 @@ bool StreamBrowserDialog::DoRender()
 				if (chan->m_displaycolor != "") {
 					ImGui::PopStyleColor();
 				}
-				startBadgeLine();
 				
-				if (auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan)) {
-					if (!scopechan->IsEnabled()) {
-						renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
-					}
-				}
-
 				//Single stream: drag the stream not the channel
 				if(singleStream)
 				{
@@ -231,6 +300,77 @@ bool StreamBrowserDialog::DoRender()
 					ImGui::EndDragDropSource();
 				}
 				
+				// Channel decoration
+				startBadgeLine();
+				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
+				if (scopechan) {
+					if (!scopechan->IsEnabled()) {
+						renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
+					}
+					else if(scope) {
+						int progress = DownloadState::DOWNLOAD_NONE;
+						// TODO get this out of GetDownloadState() channel API when implemented
+						// For now, we simulate it for demonstration purpose
+						uint64_t sampleDepth = scope->GetSampleDepth();
+						if(sampleDepth <= 100000)
+						{
+							progress = DownloadState::DOWNLOAD_PROGRESS_DISABLED;
+						}
+						if(progress != DownloadState::DOWNLOAD_PROGRESS_DISABLED)
+						{
+							if(state)
+							{
+								progress = state->GetChannelDownloadState(i);
+								if(triggerArmed)
+								{
+									// Render method is called 60 times per second
+									// We want to simulate a download time of 1 MSample/S
+									uint64_t downloadIncrement = std::max(((1000000ULL*100/sampleDepth)/60),1ULL);
+									if(i == 0)
+									{	// Start with first channel
+										if(progress<=DownloadState::DOWNLOAD_STARTED)
+										{	// Restart all channels
+											for(size_t j = 0 ; j < channelCount ; j++)
+											{
+												state->SetChannelDownloadState(j,DownloadState::DOWNLOAD_WAITING);
+											}
+										}
+										if(progress<DownloadState::DOWNLOAD_FINISHED)
+										{
+											progress+=downloadIncrement;
+										}
+									}
+									else if(state->GetChannelDownloadState(i-1)>=DOWNLOAD_FINISHED)
+									{
+										if(progress<DownloadState::DOWNLOAD_FINISHED)
+										{
+											progress+=downloadIncrement;
+										}
+									}
+									if(i == (channelCount-1) && progress>=DownloadState::DOWNLOAD_FINISHED)
+									{	// Start over
+										for(size_t j = 0 ; j < channelCount ; j++)
+										{
+											state->SetChannelDownloadState(j,DownloadState::DOWNLOAD_WAITING);
+										}
+									}
+									else
+									{
+										if(progress>DownloadState::DOWNLOAD_FINISHED)
+											progress = DownloadState::DOWNLOAD_FINISHED;
+										state->SetChannelDownloadState(i,progress);
+									}
+								}
+								else if(progress != DownloadState::DOWNLOAD_NONE)
+								{	// Set download state to non
+									state->SetChannelDownloadState(i,DownloadState::DOWNLOAD_NONE);
+								}
+							}
+							renderDownloadProgress(progress);
+						}
+					}
+				}
+
 				if(open)
 				{
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
@@ -253,9 +393,9 @@ bool StreamBrowserDialog::DoRender()
 							else
 								DoItemHelp();
 						}
-						if (renderScopeProps)
+						// Channel/stram properties
+						if (renderScopeProps && scopechan)
 						{
-							auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
 							ImGui::BeginChild("scope_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 				
 							auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
