@@ -51,6 +51,7 @@
 #include "LoadDialog.h"
 #include "LogViewerDialog.h"
 #include "MeasurementsDialog.h"
+#include "MemoryLeakerDialog.h"
 #include "MetricsDialog.h"
 #include "MultimeterDialog.h"
 #include "NotesDialog.h"
@@ -831,6 +832,9 @@ void MainWindow::DebugMenu()
 			m_showDemo = true;
 		if(showDemo)
 			ImGui::EndDisabled();
+
+		if(ImGui::MenuItem("Memory Leaker"))
+			AddDialog(make_shared<MemoryLeakerDialog>(this));
 
 		ImGui::EndMenu();
 	}

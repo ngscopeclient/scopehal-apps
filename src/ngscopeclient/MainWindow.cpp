@@ -188,6 +188,7 @@
 using namespace std;
 
 extern Event g_rerenderRequestedEvent;
+extern unique_ptr<MainWindow> g_mainWindow;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
@@ -223,6 +224,9 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 {
 	LoadRecentInstrumentList();
 	LoadRecentFileList();
+
+	//Initialize memory pressure callback
+	g_memoryPressureHandlers.emplace(&OnMemoryPressureStatic);
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(
@@ -3765,3 +3769,64 @@ void MainWindow::LoadRecentFileList()
 
 }
 
+/**
+	@brief Static wrapper for calling OnMemoryPressure
+ */
+bool MainWindow::OnMemoryPressureStatic(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize)
+{
+	return g_mainWindow->OnMemoryPressure(level, type, requestedSize);
+}
+
+bool MainWindow::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize)
+{
+	LogDebug("MainWindow::OnMemoryPressure\n");
+	LogIndenter li;
+
+	LogMemoryUsage();
+
+	bool moreFreed = m_session.OnMemoryPressure(level, type, requestedSize);
+
+	LogDebug("Memory minimization completed\n");
+	LogMemoryUsage();
+
+	return moreFreed;
+}
+
+void MainWindow::LogMemoryUsage()
+{
+	if(!g_hasMemoryBudget)
+	{
+		LogDebug("Cannot print memory usage (VK_EXT_memory_budget not available)\n");
+		return;
+	}
+
+	LogDebug("Current memory usage:\n");
+	LogIndenter li;
+
+	auto properties = g_vkComputePhysicalDevice->getMemoryProperties2<
+		vk::PhysicalDeviceMemoryProperties2,
+		vk::PhysicalDeviceMemoryBudgetPropertiesEXT>();
+	auto membudget = std::get<1>(properties);
+
+	Unit bytes(Unit::UNIT_BYTES);
+	Unit pct(Unit::UNIT_PERCENT);
+
+	auto pinnedUsage = membudget.heapUsage[g_vkPinnedMemoryHeap];
+	auto pinnedBudget = membudget.heapBudget[g_vkPinnedMemoryHeap];
+
+	LogDebug("Pinned: %s used of %s budget (%s)\n",
+		bytes.PrettyPrint(pinnedBudget, 4).c_str(),
+		bytes.PrettyPrint(pinnedUsage, 4).c_str(),
+		pct.PrettyPrint(pinnedUsage * 1.0f / pinnedBudget, 4).c_str());
+
+	if(!g_vulkanDeviceHasUnifiedMemory)
+	{
+		auto localUsage = membudget.heapUsage[g_vkLocalMemoryHeap];
+		auto localBudget = membudget.heapBudget[g_vkLocalMemoryHeap];
+
+		LogDebug("Local:  %s used of %s budget (%s)\n",
+			bytes.PrettyPrint(localBudget, 4).c_str(),
+			bytes.PrettyPrint(localUsage, 4).c_str(),
+			pct.PrettyPrint(localUsage * 1.0f / localBudget, 4).c_str());
+	}
+}

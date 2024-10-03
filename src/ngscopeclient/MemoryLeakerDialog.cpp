@@ -30,83 +30,69 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of HistoryManager
+	@brief Implementation of MemoryLeakerDialog
  */
-#ifndef HistoryManager_h
-#define HistoryManager_h
 
-#include "Marker.h"
+#include "ngscopeclient.h"
+#include "MainWindow.h"
+#include "MemoryLeakerDialog.h"
 
-//Waveform history for a single instrument
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
+using namespace std;
+using namespace std::chrono_literals;
 
-/**
-	@brief A single point of waveform history
- */
-class HistoryPoint
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+MemoryLeakerDialog::MemoryLeakerDialog(MainWindow* parent)
+	: Dialog(
+		"Memory Leaker",
+		string("Memory Leaker ") + to_string(reinterpret_cast<uintptr_t>(this)),
+		ImVec2(500, 300))
+	, m_parent(parent)
+	, m_deviceMemoryString("0 kB")
+	, m_deviceMemoryUsage(0)
+	, m_hostMemoryString("0 kB")
+	, m_hostMemoryUsage(0)
 {
-public:
-	HistoryPoint();
-	~HistoryPoint();
+	m_deviceMemoryBuffer.SetGpuAccessHint(AcceleratorBuffer<uint8_t>::HINT_LIKELY);
+	m_deviceMemoryBuffer.SetCpuAccessHint(AcceleratorBuffer<uint8_t>::HINT_NEVER);
 
-	bool IsInUse();
+	m_hostMemoryBuffer.SetGpuAccessHint(AcceleratorBuffer<uint8_t>::HINT_UNLIKELY);
+	m_hostMemoryBuffer.SetCpuAccessHint(AcceleratorBuffer<uint8_t>::HINT_LIKELY);
+}
 
-	///@brief Timestamp of the point
-	TimePoint m_time;
-
-	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
-	bool m_pinned;
-
-	///@brief Free-form text nickname for this acquisition (may be blank)
-	std::string m_nickname;
-
-	///@brief Waveform data
-	std::map<std::shared_ptr<Oscilloscope>, WaveformHistory> m_history;
-
-	void LoadHistoryToSession(Session& session);
-};
-
-/**
-	@brief Keeps track of recently acquired waveforms
- */
-class HistoryManager
+MemoryLeakerDialog::~MemoryLeakerDialog()
 {
-public:
-	HistoryManager(Session& session);
-	~HistoryManager();
+}
 
-	bool OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	void AddHistory(
-		const std::vector<std::shared_ptr<Oscilloscope>>& scopes,
-		bool deleteOld = true,
-		bool pin = false,
-		std::string nick = "",
-		TimePoint refTimeIfNoWaveforms = TimePoint(0, 0));
+bool MemoryLeakerDialog::DoRender()
+{
+	ImGui::TextWrapped(
+		"This dialog allocates a configurable amount of host and/or device memory "
+		"to allow testing of ngscopeclient under memory pressure\n\n"
+		"All allocated memory will be freed when the dialog is closed.\n\n"
+		"At most 4GB may be allocated by one dialog instance, but several can be spawned.");
 
-	void LoadEmptyHistoryToSession(Session& session);
+	if(Dialog::UnitInputWithImplicitApply(
+		"Device Memory",
+		m_deviceMemoryString,
+		m_deviceMemoryUsage,
+		Unit(Unit::UNIT_BYTES)))
+	{
+		m_deviceMemoryBuffer.resize(m_deviceMemoryUsage);
+	}
 
-	bool empty();
+	if(Dialog::UnitInputWithImplicitApply(
+		"Host Memory",
+		m_hostMemoryString,
+		m_hostMemoryUsage,
+		Unit(Unit::UNIT_BYTES)))
+	{
+		m_hostMemoryBuffer.resize(m_hostMemoryUsage);
+	}
 
-	void SetMaxToCurrentDepth()
-	{ m_maxDepth = m_history.size(); }
-
-	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
-
-	bool HasHistory(TimePoint t);
-
-	TimePoint GetMostRecentPoint();
-
-	void clear()
-	{ m_history.clear(); }
-
-	std::list<std::shared_ptr<HistoryPoint>> m_history;
-
-	///@brief has to be an int for imgui compatibility
-	int m_maxDepth;
-
-protected:
-	Session& m_session;
-};
-
-#endif
+	return true;
+}

@@ -30,83 +30,38 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of HistoryManager
+	@brief Declaration of MemoryLeakerDialog
  */
-#ifndef HistoryManager_h
-#define HistoryManager_h
+#ifndef MemoryLeakerDialog_h
+#define MemoryLeakerDialog_h
 
-#include "Marker.h"
+#include "Dialog.h"
+#include <future>
 
-//Waveform history for a single instrument
-typedef std::map<StreamDescriptor, WaveformBase*> WaveformHistory;
+class MainWindow;
 
 /**
-	@brief A single point of waveform history
+	@brief Debug tool for temporarily eating a lot of memory
  */
-class HistoryPoint
+class MemoryLeakerDialog : public Dialog
 {
 public:
-	HistoryPoint();
-	~HistoryPoint();
+	MemoryLeakerDialog(MainWindow* parent);
+	virtual ~MemoryLeakerDialog();
 
-	bool IsInUse();
-
-	///@brief Timestamp of the point
-	TimePoint m_time;
-
-	///@brief Set true to "pin" this waveform so it won't be purged from history regardless of age
-	bool m_pinned;
-
-	///@brief Free-form text nickname for this acquisition (may be blank)
-	std::string m_nickname;
-
-	///@brief Waveform data
-	std::map<std::shared_ptr<Oscilloscope>, WaveformHistory> m_history;
-
-	void LoadHistoryToSession(Session& session);
-};
-
-/**
-	@brief Keeps track of recently acquired waveforms
- */
-class HistoryManager
-{
-public:
-	HistoryManager(Session& session);
-	~HistoryManager();
-
-	bool OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
-
-	void AddHistory(
-		const std::vector<std::shared_ptr<Oscilloscope>>& scopes,
-		bool deleteOld = true,
-		bool pin = false,
-		std::string nick = "",
-		TimePoint refTimeIfNoWaveforms = TimePoint(0, 0));
-
-	void LoadEmptyHistoryToSession(Session& session);
-
-	bool empty();
-
-	void SetMaxToCurrentDepth()
-	{ m_maxDepth = m_history.size(); }
-
-	std::shared_ptr<HistoryPoint> GetHistory(TimePoint t);
-
-	bool HasHistory(TimePoint t);
-
-	TimePoint GetMostRecentPoint();
-
-	void clear()
-	{ m_history.clear(); }
-
-	std::list<std::shared_ptr<HistoryPoint>> m_history;
-
-	///@brief has to be an int for imgui compatibility
-	int m_maxDepth;
+	virtual bool DoRender();
 
 protected:
-	Session& m_session;
+	MainWindow* m_parent;
+
+	std::string m_deviceMemoryString;
+	int64_t m_deviceMemoryUsage;
+
+	std::string m_hostMemoryString;
+	int64_t m_hostMemoryUsage;
+
+	AcceleratorBuffer<uint8_t> m_deviceMemoryBuffer;
+	AcceleratorBuffer<uint8_t> m_hostMemoryBuffer;
 };
 
 #endif
