@@ -93,6 +93,8 @@ public:
 	Session(MainWindow* wnd);
 	virtual ~Session();
 
+	bool OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
+
 	void ArmTrigger(TriggerGroup::TriggerType type, bool all=false);
 	void StopTrigger(bool all=false);
 	bool HasOnlineScopes();

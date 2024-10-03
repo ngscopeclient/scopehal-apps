@@ -3418,3 +3418,17 @@ void Session::DestroyReferenceFilters()
 		delete it.second;
 	m_referenceFilters.clear();
 }
+
+/**
+	@brief Handler for low memory conditions
+ */
+bool Session::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize)
+{
+	LogDebug("Session::OnMemoryPressure\n");
+	LogIndenter li;
+
+	bool moreFreed = m_history.OnMemoryPressure(level, type, requestedSize);
+	//TODO: try to free other memory
+
+	return moreFreed;
+}

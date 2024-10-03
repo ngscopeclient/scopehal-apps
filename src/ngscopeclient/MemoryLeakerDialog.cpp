@@ -46,7 +46,7 @@ using namespace std::chrono_literals;
 MemoryLeakerDialog::MemoryLeakerDialog(MainWindow* parent)
 	: Dialog(
 		"Memory Leaker",
-		"Memory Leaker",
+		string("Memory Leaker ") + to_string(reinterpret_cast<uintptr_t>(this)),
 		ImVec2(500, 300))
 	, m_parent(parent)
 	, m_deviceMemoryString("0 kB")

@@ -75,6 +75,8 @@ public:
 	HistoryManager(Session& session);
 	~HistoryManager();
 
+	bool OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
+
 	void AddHistory(
 		const std::vector<std::shared_ptr<Oscilloscope>>& scopes,
 		bool deleteOld = true,

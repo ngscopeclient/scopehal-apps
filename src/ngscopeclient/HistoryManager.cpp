@@ -363,3 +363,15 @@ bool HistoryManager::HasHistory(TimePoint t)
 
 	return false;
 }
+
+/**
+	@brief Called when we run out of memory
+ */
+bool HistoryManager::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize)
+{
+	LogDebug("HistoryManager::OnMemoryPressure\n");
+	LogIndenter li;
+
+	//no more memory freed
+	return false;
+}

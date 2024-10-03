@@ -117,6 +117,10 @@ public:
 	MainWindow(std::shared_ptr<QueueHandle> queue);
 	virtual ~MainWindow();
 
+	static bool OnMemoryPressureStatic(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
+	bool OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);
+	void LogMemoryUsage();
+
 	void AddDialog(std::shared_ptr<Dialog> dlg);
 	void RemoveFunctionGenerator(std::shared_ptr<SCPIFunctionGenerator> gen);
 
