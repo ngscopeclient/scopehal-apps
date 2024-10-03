@@ -374,7 +374,7 @@ bool HistoryManager::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureT
 
 	//For now, only free GPU memory in case of pressure here
 	if(type != MemoryPressureType::Device)
-		return;
+		return false;
 
 	//Try to lock the waveform data mutex for up to 250ms
 	auto& mutex = m_session.GetWaveformDataMutex();
