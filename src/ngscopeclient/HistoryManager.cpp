@@ -372,6 +372,53 @@ bool HistoryManager::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureT
 	LogDebug("HistoryManager::OnMemoryPressure\n");
 	LogIndenter li;
 
-	//no more memory freed
-	return false;
+	//For now, only free GPU memory in case of pressure here
+	if(type != MemoryPressureType::Device)
+		return;
+
+	//Try to lock the waveform data mutex for up to 250ms
+	auto& mutex = m_session.GetWaveformDataMutex();
+	double end = GetTime() + 0.25;
+	bool gotMutex = false;
+	while(GetTime() < end)
+	{
+		if(mutex.try_lock())
+		{
+			gotMutex = true;
+			break;
+		}
+	}
+	if(!gotMutex)
+	{
+		LogDebug("Failed to lock waveform data mutex\n");
+		return false;
+	}
+	LogDebug("Got waveform data mutex, freeing GPU memory of all old points\n");
+
+	auto mostRecent = GetMostRecentPoint();
+
+	//Go through historical waveforms and free memory
+	bool memFreed = false;
+	for(auto& pt : m_history)
+	{
+		if(pt->m_time == mostRecent)
+			continue;
+
+		for(auto& it : pt->m_history)
+		{
+			auto& hist = it.second;
+			for(auto jt : hist)
+			{
+				if(jt.second->HasGpuBuffer())
+				{
+					memFreed = true;
+					jt.second->FreeGpuMemory();
+				}
+			}
+		}
+	}
+
+	//Done
+	mutex.unlock();
+	return memFreed;
 }

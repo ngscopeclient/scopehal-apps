@@ -3427,8 +3427,22 @@ bool Session::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType typ
 	LogDebug("Session::OnMemoryPressure\n");
 	LogIndenter li;
 
-	bool moreFreed = m_history.OnMemoryPressure(level, type, requestedSize);
-	//TODO: try to free other memory
+	bool moreFreed = false;
+
+	//Free historical waveforms
+	if(m_history.OnMemoryPressure(level, type, requestedSize))
+		moreFreed = true;
+
+	//Free waveform pools
+	if(!moreFreed)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		for(auto scope : m_oscilloscopes)
+		{
+			if(scope->FreeWaveformPools())
+				moreFreed = true;
+		}
+	}
 
 	return moreFreed;
 }

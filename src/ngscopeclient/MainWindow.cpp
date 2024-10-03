@@ -3815,8 +3815,8 @@ void MainWindow::LogMemoryUsage()
 	auto pinnedBudget = membudget.heapBudget[g_vkPinnedMemoryHeap];
 
 	LogDebug("Pinned: %s used of %s budget (%s)\n",
-		bytes.PrettyPrint(pinnedBudget, 4).c_str(),
 		bytes.PrettyPrint(pinnedUsage, 4).c_str(),
+		bytes.PrettyPrint(pinnedBudget, 4).c_str(),
 		pct.PrettyPrint(pinnedUsage * 1.0f / pinnedBudget, 4).c_str());
 
 	if(!g_vulkanDeviceHasUnifiedMemory)
@@ -3825,8 +3825,8 @@ void MainWindow::LogMemoryUsage()
 		auto localBudget = membudget.heapBudget[g_vkLocalMemoryHeap];
 
 		LogDebug("Local:  %s used of %s budget (%s)\n",
-			bytes.PrettyPrint(localBudget, 4).c_str(),
 			bytes.PrettyPrint(localUsage, 4).c_str(),
+			bytes.PrettyPrint(localBudget, 4).c_str(),
 			pct.PrettyPrint(localUsage * 1.0f / localBudget, 4).c_str());
 	}
 }
