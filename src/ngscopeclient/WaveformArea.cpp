@@ -1354,7 +1354,7 @@ void WaveformArea::RenderDigitalWaveform(shared_ptr<DisplayedChannel> channel, I
 	auto tex = channel->GetTexture();
 	if(tex != nullptr)
 	{
-		auto ypos = (channel->GetYButtonPos() * ImGui::GetWindowDpiScale()) + start.y;
+		auto ypos = channel->GetYButtonPos() + start.y;
 		list->AddImage(
 			tex->GetTexture(),
 			ImVec2(start.x, ypos - m_channelButtonHeight),
