@@ -47,7 +47,7 @@ using namespace std;
 
 TEST_CASE("Filter_EyePattern")
 {
-	auto filter = dynamic_cast<EyePattern*>(Filter::CreateFilter("EyePattern", "#ffffff"));
+	auto filter = dynamic_cast<EyePattern*>(Filter::CreateFilter("Eye pattern", "#ffffff"));
 	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
