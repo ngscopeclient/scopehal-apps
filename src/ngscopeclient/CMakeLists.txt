@@ -59,6 +59,7 @@ add_executable(ngscopeclient
 	LoadDialog.cpp
 	LogViewerDialog.cpp
 	MainWindow.cpp
+	MainWindow_Icons.cpp
 	MainWindow_Menus.cpp
 	ManageInstrumentsDialog.cpp
 	MeasurementsDialog.cpp
