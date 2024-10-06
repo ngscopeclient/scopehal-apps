@@ -263,7 +263,6 @@ bool StreamBrowserDialog::DoRender()
 				}
 
 				bool hasChildren = !singleStream || renderScopeProps;
-				bool triggerArmed = scope ? scope->IsTriggerArmed() : false;
 
 				if (chan->m_displaycolor != "") {
 					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
@@ -303,69 +302,17 @@ bool StreamBrowserDialog::DoRender()
 				// Channel decoration
 				startBadgeLine();
 				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
-				if (scopechan) {
-					if (!scopechan->IsEnabled()) {
+				if (scopechan) 
+				{
+					if (!scopechan->IsEnabled()) 
+					{
 						renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
 					}
-					else if(scope) {
-						int progress = DownloadState::DOWNLOAD_NONE;
-						// TODO get this out of GetDownloadState() channel API when implemented
-						// For now, we simulate it for demonstration purpose
-						uint64_t sampleDepth = scope->GetSampleDepth();
-						if(sampleDepth <= 100000)
-						{
-							progress = DownloadState::DOWNLOAD_PROGRESS_DISABLED;
-						}
+					else
+					{
+						int progress = scopechan->GetDownloadState();
 						if(progress != DownloadState::DOWNLOAD_PROGRESS_DISABLED)
 						{
-							if(state)
-							{
-								progress = state->GetChannelDownloadState(i);
-								if(triggerArmed)
-								{
-									// Render method is called 60 times per second
-									// We want to simulate a download time of 1 MSample/S
-									uint64_t downloadIncrement = std::max(((1000000ULL*100/sampleDepth)/60),1ULL);
-									if(i == 0)
-									{	// Start with first channel
-										if(progress<=DownloadState::DOWNLOAD_STARTED)
-										{	// Restart all channels
-											for(size_t j = 0 ; j < channelCount ; j++)
-											{
-												state->SetChannelDownloadState(j,DownloadState::DOWNLOAD_WAITING);
-											}
-										}
-										if(progress<DownloadState::DOWNLOAD_FINISHED)
-										{
-											progress+=downloadIncrement;
-										}
-									}
-									else if(state->GetChannelDownloadState(i-1)>=DOWNLOAD_FINISHED)
-									{
-										if(progress<DownloadState::DOWNLOAD_FINISHED)
-										{
-											progress+=downloadIncrement;
-										}
-									}
-									if(i == (channelCount-1) && progress>=DownloadState::DOWNLOAD_FINISHED)
-									{	// Start over
-										for(size_t j = 0 ; j < channelCount ; j++)
-										{
-											state->SetChannelDownloadState(j,DownloadState::DOWNLOAD_WAITING);
-										}
-									}
-									else
-									{
-										if(progress>DownloadState::DOWNLOAD_FINISHED)
-											progress = DownloadState::DOWNLOAD_FINISHED;
-										state->SetChannelDownloadState(i,progress);
-									}
-								}
-								else if(progress != DownloadState::DOWNLOAD_NONE)
-								{	// Set download state to non
-									state->SetChannelDownloadState(i,DownloadState::DOWNLOAD_NONE);
-								}
-							}
 							renderDownloadProgress(progress);
 						}
 					}
