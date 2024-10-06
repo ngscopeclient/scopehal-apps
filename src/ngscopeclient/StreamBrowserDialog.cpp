@@ -255,11 +255,13 @@ bool StreamBrowserDialog::DoRender()
 				auto chan = inst->GetChannel(i);
 
 				bool singleStream = chan->GetStreamCount() == 1;
+				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
 				bool renderScopeProps = false;
-				if (auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan)) {
-					if (scopechan->IsEnabled()) {
-						renderScopeProps = true;
-					}
+				bool isDigital = false;
+				if (scopechan) 
+				{
+					renderScopeProps = scopechan->IsEnabled();
+					isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
 				}
 
 				bool hasChildren = !singleStream || renderScopeProps;
@@ -267,7 +269,7 @@ bool StreamBrowserDialog::DoRender()
 				if (chan->m_displaycolor != "") {
 					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
 				}
-				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen | (!hasChildren ? ImGuiTreeNodeFlags_Leaf : 0));
+				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), isDigital ? 0 : ImGuiTreeNodeFlags_DefaultOpen | (!hasChildren ? ImGuiTreeNodeFlags_Leaf : 0));
 				if (chan->m_displaycolor != "") {
 					ImGui::PopStyleColor();
 				}
@@ -301,7 +303,6 @@ bool StreamBrowserDialog::DoRender()
 				
 				// Channel decoration
 				startBadgeLine();
-				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
 				if (scopechan) 
 				{
 					if (!scopechan->IsEnabled()) 
@@ -345,19 +346,38 @@ bool StreamBrowserDialog::DoRender()
 						{
 							ImGui::BeginChild("scope_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 				
-							auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
-							auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
-				
-							bool clicked = false;
-							bool hovered = false;
-							renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-							renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
-							if (clicked) {
-								/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-								m_parent->ShowChannelProperties(scopechan);
+							if(isDigital)
+							{
+								// TODO: Digital Threshold value is not cached on most scopes... uncomment the code bellow ONLY once it has been cached on all drivers
+								auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(0/*scope->GetDigitalThreshold(i)*/);
+					
+								bool clicked = false;
+								bool hovered = false;
+								renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+								if (clicked) {
+									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+									m_parent->ShowChannelProperties(scopechan);
+								}
+								if (hovered) {
+									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+								}
 							}
-							if (hovered) {
-								m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+							else
+							{
+								auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
+								auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
+					
+								bool clicked = false;
+								bool hovered = false;
+								renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+								renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
+								if (clicked) {
+									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+									m_parent->ShowChannelProperties(scopechan);
+								}
+								if (hovered) {
+									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+								}
 							}
 				
 							ImGui::EndChild();
