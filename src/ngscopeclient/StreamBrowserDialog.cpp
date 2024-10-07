@@ -348,8 +348,7 @@ bool StreamBrowserDialog::DoRender()
 				
 							if(isDigital)
 							{
-								// TODO: Digital Threshold value is not cached on most scopes... uncomment the code bellow ONLY once it has been cached on all drivers
-								auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(0/*scope->GetDigitalThreshold(i)*/);
+								auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(i));
 					
 								bool clicked = false;
 								bool hovered = false;
