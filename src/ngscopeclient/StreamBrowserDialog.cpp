@@ -108,17 +108,17 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 	};
-	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](InstrumentChannel *chan)
+	auto renderDownloadProgress = [this, &badgeXMin, &badgeXCur](std::shared_ptr<Instrument> inst, InstrumentChannel *chan)
 	{
 		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
-		
+
 		/* prefer language "PENDING" to "WAITING": "PENDING" implies
 		 * that we are going to do it when we get through a list of
 		 * other things, "WAITING" could mean that the channel is
 		 * waiting for something else (trigger?)
 		 */
 		static const char* const pend[]     = {"PENDING"    , "PEND"     ,"PE","P", NULL};
-		
+
 		/* prefer language "COMPLETE" to "READY": "READY" implies
 		 * that the channel might be ready to capture or something,
 		 * but "COMPLETE" at least is not to be confused with that. 
@@ -129,8 +129,21 @@ bool StreamBrowserDialog::DoRender()
 		 */
 		static const char* const ready[]    = {"COMPLETE"   , "DL OK"    ,"OK","C", NULL};
 		static const char* const* labels;
+
 		ImVec4 color;
 		bool hasProgress = false;
+		double elapsed = GetTime() - chan->GetDownloadStartTime();
+
+		// determine what label we should apply, and while we are at
+		// it, determine if this channel appears to be slow enough
+		// to need a progress bar
+
+/// @brief hysteresis threshold for a channel finishing a download faster than this to be declared fast
+#define CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS ((double)0.2)
+
+/// @brief hysteresis threshold for a channel finishing a still being in progress for longer than this to be declared slow
+#define CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS ((double)0.4)
+
 		switch(chan->GetDownloadState())
 		{
 			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
@@ -144,27 +157,32 @@ bool StreamBrowserDialog::DoRender()
 				return;
 			case InstrumentChannel::DownloadState::DOWNLOAD_WAITING:
 				labels = pend;
-				hasProgress = true;
+				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
+					m_channelDownloadIsSlow[{inst, chan}] = true;
+				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
 				labels = download;
-				hasProgress = true;
+				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
+					m_channelDownloadIsSlow[{inst, chan}] = true;
+				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
 				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
+				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
+					m_channelDownloadIsSlow[{inst, chan}] = false;
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
 				return;
 		}
-		
 
 /// @brief Width used to display progress bars (e.g. download progress bar)
 #define PROGRESS_BAR_WIDTH	80
 
-		// try first adding a bar, and if ther eisn't enough room
+		// try first adding a bar, and if there isn't enough room
 		// for a bar, skip it and try just putting a label
 		for (int withoutBar = 0; withoutBar < 2; withoutBar++)
 		{
@@ -194,7 +212,7 @@ bool StreamBrowserDialog::DoRender()
 				return;
 			}
 		}
-		
+
 		// well, shoot -- I guess there wasn't enough room to do *anything* useful!
 	};
 
@@ -326,7 +344,7 @@ bool StreamBrowserDialog::DoRender()
 				{
 					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
 				} else {
-					renderDownloadProgress(chan);
+					renderDownloadProgress(inst, chan);
 				}
 
 				if(open)
