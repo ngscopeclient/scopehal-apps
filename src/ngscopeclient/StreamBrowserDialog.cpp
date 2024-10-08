@@ -127,11 +127,17 @@ bool StreamBrowserDialog::DoRender()
 		 * mid-length abbreviation for "COMPLETE" than "DL OK" /
 		 * "OK", give it a go, I guess.)
 		 */
-		static const char* const ready[]    = {"COMPLETE"   , "DL OK"    ,"OK","C", NULL};
+		static const char* const ready[]  	= {"COMPLETE"   , "DL OK"    ,"OK","C", NULL};
+
+		/* Let's use active for fast download channels to display when data is available
+		 */
+		static const char* const active[]   = {"ACTIVE"      , "ACTV"    ,"ACT","A", NULL};
+
 		static const char* const* labels;
 
 		ImVec4 color;
 		bool hasProgress = false;
+		bool isActive = false;
 		double elapsed = GetTime() - chan->GetDownloadStartTime();
 
 		// determine what label we should apply, and while we are at
@@ -160,6 +166,7 @@ bool StreamBrowserDialog::DoRender()
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = true;
 				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
+				isActive = !hasProgress;
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
@@ -167,16 +174,24 @@ bool StreamBrowserDialog::DoRender()
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = true;
 				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
+				isActive = !hasProgress;
 				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
 				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = false;
+				isActive = !m_channelDownloadIsSlow[{inst, chan}];
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
 				return;
+		}
+
+		if(isActive)
+		{	// For fast channels, only show a constant ACTIVE green badge
+			labels = active;
+			color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 		}
 
 /// @brief Width used to display progress bars (e.g. download progress bar)
@@ -343,7 +358,9 @@ bool StreamBrowserDialog::DoRender()
 				if (scopechan && !scopechan->IsEnabled())
 				{
 					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
-				} else {
+				} 
+				else if (state && state->m_lastTriggerState != Oscilloscope::TRIGGER_MODE_STOP) 
+				{
 					renderDownloadProgress(inst, chan);
 				}
 
