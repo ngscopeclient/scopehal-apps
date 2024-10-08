@@ -37,9 +37,6 @@
 #include "StreamBrowserDialog.h"
 #include "MainWindow.h"
 
-/* @brief Width used to display progress bars (e.g. download progress bar)*/
-#define PROGRESS_BAR_WIDTH	90
-
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -113,21 +110,41 @@ bool StreamBrowserDialog::DoRender()
 	};
 	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](OscilloscopeChannel *scopechan)
 	{
-		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", "", NULL};
-		static const char* const wait[]     = {"WAITING..." , "WAITING"  ,"WA","W", "", NULL};
-		static const char* const stop[]     = {"STOPPED"    , "STOP"     ,"ST","S", "", NULL};
-		static const char* const ready[]    = {"READY"      , "RDY"      ,"RY","R", "", NULL};
+		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
+		
+		/* prefer language "PENDING" to "WAITING": "PENDING" implies
+		 * that we are going to do it when we get through a list of
+		 * other things, "WAITING" could mean that the channel is
+		 * waiting for something else (trigger?)
+		 */
+		static const char* const pend[]     = {"PENDING"    , "PEND"     ,"PE","P", NULL};
+		
+		/* prefer language "COMPLETE" to "READY": "READY" implies
+		 * that the channel might be ready to capture or something,
+		 * but "COMPLETE" at least is not to be confused with that. 
+		 * ("DOWNLOADED" is more specific but is easy to confuse
+		 * with "DOWNLOADING".  If you can come up with a better
+		 * mid-length abbreviation for "COMPLETE" than "DL OK" /
+		 * "OK", give it a go, I guess.)
+		 */
+		static const char* const ready[]    = {"COMPLETE"   , "DL OK"    ,"OK","C", NULL};
 		static const char* const* labels;
 		ImVec4 color;
 		bool hasProgress = false;
 		switch(scopechan->GetDownloadState())
 		{
 			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
-				labels = stop;
-				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
-				break;
+			case InstrumentChannel::DownloadState::DOWNLOAD_UNKNOWN:
+				/* There is nothing to say about this --
+				 * either there is nothing pending at all on
+				 * the system, or this scope doesn't know
+				 * how to report it, and in either case, we
+				 * don't need to render a badge about it.
+				 */
+				return;
 			case InstrumentChannel::DownloadState::DOWNLOAD_WAITING:
-				labels = wait;
+				labels = pend;
+				hasProgress = true;
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
@@ -137,42 +154,48 @@ bool StreamBrowserDialog::DoRender()
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
-				hasProgress = true;
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
 				return;
 		}
-		// Only show progress bar if an download is proceeding
-		bool hasLabel;
-		int labelIndex = 0;
-		while (const char *label = labels[labelIndex]) 
+		
+
+/// @brief Width used to display progress bars (e.g. download progress bar)
+#define PROGRESS_BAR_WIDTH	80
+
+		// try first adding a bar, and if ther eisn't enough room
+		// for a bar, skip it and try just putting a label
+		for (int withoutBar = 0; withoutBar < 2; withoutBar++)
 		{
-			hasLabel = strlen(label)>0;
-			float xsz = ImGui::CalcTextSize(label).x + (hasProgress ? PROGRESS_BAR_WIDTH : 0) + (ImGui::GetStyle().ItemSpacing.x) * ((hasProgress && hasLabel ? 1 : 0)+(hasLabel ? 1 : 0)) + ImGui::GetStyle().FramePadding.x * 2;
-			if ((badgeXCur - xsz) < badgeXMin) {
-				labelIndex++;
-				continue;
-			}
+			if (withoutBar)
+				hasProgress = false;
 
-			// ok, we have enough space -- commit to it!
-			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
-			ImGui::SameLine(badgeXCur);
-			if(hasLabel)
+			for (int i = 0; labels[i]; i++)
 			{
+				const char *label = labels[i];
+
+				float xsz = ImGui::CalcTextSize(label).x + (hasProgress ? (ImGui::GetStyle().ItemSpacing.x + PROGRESS_BAR_WIDTH) : 0) + ImGui::GetStyle().FramePadding.x * 2 + ImGui::GetStyle().ItemSpacing.x;
+				if ((badgeXCur - xsz) < badgeXMin)
+					continue;
+
+				// ok, we have enough space -- commit to it!
+				badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
+				ImGui::SameLine(badgeXCur);
 				ImGui::PushStyleColor(ImGuiCol_Button, color);
-				ImGui::SmallButton(labels[labelIndex]);
+				ImGui::SmallButton(label);
 				ImGui::PopStyleColor();
-				if(hasProgress) 
+				if(hasProgress)
+				{
 					ImGui::SameLine();
-			}
-			if(hasProgress)
-			{
-				ImGui::ProgressBar(scopechan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
-			}
+					ImGui::ProgressBar(scopechan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
+				}
 
-			break;
+				return;
+			}
 		}
+		
+		// well, shoot -- I guess there wasn't enough room to do *anything* useful!
 	};
 
 	//Add all instruments
