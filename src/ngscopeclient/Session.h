@@ -136,6 +136,9 @@ public:
 	bool IsMultiScope()
 	{ return m_multiScope; }
 
+	MainWindow* GetMainWindow()
+	{ return m_mainWindow; }
+
 	/**
 		@brief Returns a pointer to the state for a BERT
 	 */

@@ -432,6 +432,9 @@ protected:
 
 	///@brief Y axis position of our button within the view
 	float m_yButtonPos;
+
+	std::unique_ptr<vk::raii::CommandPool> m_utilCmdPool;
+	std::unique_ptr<vk::raii::CommandBuffer> m_utilCmdBuffer;
 };
 
 /**

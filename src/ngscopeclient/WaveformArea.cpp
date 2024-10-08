@@ -66,6 +66,15 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 	if(schan)
 		schan->AddRef();
 
+	vk::CommandPoolCreateInfo cmdPoolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		session.GetMainWindow()->GetRenderQueue()->m_family );
+	m_utilCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
+	vk::CommandBufferAllocateInfo bufinfo(**m_utilCmdPool, vk::CommandBufferLevel::ePrimary, 1);
+
+	m_utilCmdBuffer = make_unique<vk::raii::CommandBuffer>(
+			std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
 	//Use GPU-side memory for rasterized waveform
 	//TODO: instead of using CPU-side mirror, use a shader to memset it when clearing?
 	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
@@ -168,7 +177,7 @@ bool DisplayedChannel::UpdateSize(ImVec2 newSize, MainWindow* top)
 			{
 				eye->SetWidth(roundedX);
 				eye->SetHeight(roundedY);
-				eye->Refresh();
+				eye->Refresh(*m_utilCmdBuffer, m_session.GetMainWindow()->GetRenderQueue());
 			}
 
 			x = roundedX;
