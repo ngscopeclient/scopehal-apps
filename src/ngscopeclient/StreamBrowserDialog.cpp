@@ -108,7 +108,7 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 	};
-	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](OscilloscopeChannel *scopechan)
+	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](InstrumentChannel *chan)
 	{
 		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
 		
@@ -131,7 +131,7 @@ bool StreamBrowserDialog::DoRender()
 		static const char* const* labels;
 		ImVec4 color;
 		bool hasProgress = false;
-		switch(scopechan->GetDownloadState())
+		switch(chan->GetDownloadState())
 		{
 			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
 			case InstrumentChannel::DownloadState::DOWNLOAD_UNKNOWN:
@@ -188,7 +188,7 @@ bool StreamBrowserDialog::DoRender()
 				if(hasProgress)
 				{
 					ImGui::SameLine();
-					ImGui::ProgressBar(scopechan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
+					ImGui::ProgressBar(chan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
 				}
 
 				return;
@@ -322,16 +322,11 @@ bool StreamBrowserDialog::DoRender()
 				
 				// Channel decoration
 				startBadgeLine();
-				if (scopechan) 
+				if (scopechan && !scopechan->IsEnabled())
 				{
-					if (!scopechan->IsEnabled()) 
-					{
-						renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
-					}
-					else
-					{
-						renderDownloadProgress(scopechan);
-					}
+					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
+				} else {
+					renderDownloadProgress(chan);
 				}
 
 				if(open)
