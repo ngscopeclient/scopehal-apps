@@ -128,9 +128,15 @@ add_custom_target(
 	COMMENT "Copying channels..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/lib/scopehal/channels ${CMAKE_BINARY_DIR}/src/ngscopeclient/channels)
 
+add_custom_target(
+	ngmasks
+	COMMENT "Copying eye masks..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks ${CMAKE_BINARY_DIR}/src/ngscopeclient/masks)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
+	ngmasks
 	ngrendershaders
 	ngprotoshaders
 	nghalshaders
