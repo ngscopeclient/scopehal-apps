@@ -59,12 +59,6 @@ public:
 		args.shuttingDown = &m_shuttingDown;
 		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
 		m_lastTriggerState = Oscilloscope::TRIGGER_MODE_WAIT;
-		size_t channelNumber = 0;
-	
-		// TODO : temporary => should no longer be needed once GetDownloadProgress() API is available on OscilloscopeChannel
-		if(args.inst)
-			channelNumber = args.inst->GetChannelCount();
-		m_channelDownloadStates.assign(channelNumber,-1);
 	}
 
 	~InstrumentConnectionState()
@@ -81,20 +75,6 @@ public:
 		m_thread = nullptr;
 	}
 
-	int GetChannelDownloadState(size_t i) const
-	{
-		if(i >= m_channelDownloadStates.size())
-			return -1;
-
-		return m_channelDownloadStates[i];
-	}
-
-	void  SetChannelDownloadState(size_t i, int downloadState)
-	{
-		m_channelDownloadStates[i] = downloadState;
-	}
-
-
 	///@brief Termination flag for shutting down the polling thread
 	std::atomic<bool> m_shuttingDown;
 
@@ -103,10 +83,6 @@ public:
 	
 	///@brief Cached trigger state, to reflect in the UI
 	Oscilloscope::TriggerMode m_lastTriggerState;
-
-	// TODO : temporary => should no longer be needed once GetDownloadProgress() API is available on OscilloscopeChannel
-	///@brief Cached download sates, to reflect in the UI
-	std::vector<int> m_channelDownloadStates;
 };
 
 /**
