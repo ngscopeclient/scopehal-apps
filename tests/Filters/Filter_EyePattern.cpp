@@ -45,6 +45,8 @@
 
 using namespace std;
 
+void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height);
+
 TEST_CASE("Filter_EyePattern")
 {
 	auto filter = dynamic_cast<EyePattern*>(Filter::CreateFilter("Eye pattern", "#ffffff"));
@@ -61,104 +63,132 @@ TEST_CASE("Filter_EyePattern")
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
 	vk::raii::CommandBuffer cmdbuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
 
-	//Create input waveform for clock: square wave at 1 Gbps (500 MHz), 10 Gsps
-	const size_t depth = 1000000;
-	const size_t timescale = 100000;
-	const size_t clockToggleInterval = 10;
-
-	/*
-	//Create two empty input waveforms
-	UniformAnalogWaveform ua;
-	UniformAnalogWaveform ub;
-	UniformAnalogWaveform ubase;
-	ubase.Resize(depth);
-
-	//Set up filter configuration
-	g_scope->GetOscilloscopeChannel(0)->SetData(&ua, 0);
-	g_scope->GetOscilloscopeChannel(1)->SetData(&ub, 0);
-	filter->SetInput("a", g_scope->GetOscilloscopeChannel(0));
-	filter->SetInput("b", g_scope->GetOscilloscopeChannel(1));
-
-	const size_t niter = 5;
-	for(size_t i=0; i<niter; i++)
+	//Create input waveform for clock: square wave
+	const size_t depth = 3200000;
+	const int64_t timescale = 100000;
+	const int64_t clockToggleInterval = 32;
+	const int64_t center = clockToggleInterval / 2;
+	const size_t nclks = (depth / clockToggleInterval);
+	SparseDigitalWaveform clk;
+	clk.Resize(nclks);
+	clk.PrepareForCpuAccess();
+	clk.m_timescale = timescale;
+	clk.m_triggerPhase = timescale / 2;	//center edge in the sample clock window
+	bool b = false;
+	for(size_t i=0; i<nclks; i++)
 	{
-		SECTION(string("Iteration ") + to_string(i))
-		{
-			LogVerbose("Iteration %zu\n", i);
-			LogIndenter li;
+		clk.m_samples[i] = b;
+		clk.m_durations[i] = clockToggleInterval;
+		clk.m_offsets[i] = (clockToggleInterval * i) - center;
 
-			//Create two random input waveforms
-			FillRandomWaveform(&ua, depth);
-			FillRandomWaveform(&ub, depth);
+		b = !b;
+	}
+	clk.MarkModifiedFromCpu();
 
-			//Set up the filter (don't count this towards execution time)
-			ua.PrepareForGpuAccess();
-			ub.PrepareForGpuAccess();
+	//Create input waveform for data: slightly noisy stretched sinusoid
+	UniformAnalogWaveform data;
+	auto rdist = uniform_real_distribution<float>(-0.01, 0.01);
+	data.Resize(depth);
+	data.PrepareForCpuAccess();
+	data.m_timescale = timescale;
+	data.m_triggerPhase = 0;
+	size_t period = 2*clockToggleInterval;
+	for(size_t i=0; i<depth; i++)
+	{
+		float phase = 2*M_PI * (i % period) / period;
+		data.m_samples[i] = rdist(g_rng) + sin(rdist(g_rng) + phase) * 0.3;
+	}
+	data.MarkModifiedFromCpu();
 
-			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
-			filter->Refresh(cmdbuf, queue);
+	//Set up channels
+	g_scope->GetOscilloscopeChannel(4)->SetData(&clk, 0);
+	g_scope->GetOscilloscopeChannel(0)->SetData(&data, 0);
+	g_scope->GetOscilloscopeChannel(0)->SetVoltageRange(0.7, 0);
+	filter->SetInput("din", g_scope->GetOscilloscopeChannel(0));
+	filter->SetInput("clk", g_scope->GetOscilloscopeChannel(4));
 
-			//Baseline on the CPU
-			double start = GetTime();
-			AddCpu(&ubase, &ua, &ub);
-			double tbase = GetTime() - start;
-			LogVerbose("CPU: %.2f ms\n", tbase * 1000);
+	//Configure the mask and dimensions of the eye
+	size_t width = 64;
+	size_t height = 64;
+	auto maskpath = FindDataFile("masks/pcie-gen2-5gbps-rx.yml");
+	filter->GetParameter("Mask").SetStringVal(maskpath);
+	filter->SetWidth(width);
+	filter->SetHeight(height);
 
-			VerifyAdditionResult(&ua, &ub, &ubase);
+	SECTION("Baseline")
+	{
+		LogVerbose("Baseline (expecting no mask hits)\n");
+		LogIndenter li;
+		REQUIRE(maskpath != "");
 
-			start = GetTime();
-			filter->Refresh(cmdbuf, queue);
-			double dt = GetTime() - start;
-			LogVerbose("GPU: %.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+		//Run the filter
+		filter->Refresh(cmdbuf, queue);
 
-			VerifyAdditionResult(&ua, &ub, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)));
-		}
+		//Expect that we've integrated the right number of UIs (OK to lose one at each end to edge effects)
+		auto eyewfm = dynamic_cast<EyeWaveform*>(filter->GetData(0));
+		REQUIRE(eyewfm != nullptr);
+		size_t nuis = eyewfm->GetTotalUIs();
+		LogVerbose("Total UIs: %zu\n", nuis);
+		//DumpEye(eyewfm, "/tmp/eye.csv", width, height);
+		REQUIRE(nuis >= (nclks - 2));
+		REQUIRE(nuis <= nclks);
+
+		//Expect there to be no hits on the mask starting out
+		auto hitrate = filter->GetScalarValue(1);
+		LogVerbose("Mask hit rate: %e\n", hitrate);
+
+		REQUIRE(hitrate == 0);
+	}
+
+	SECTION("ShouldFail1")
+	{
+		float expectedHitRate = 1.0 / nclks;
+
+		LogVerbose("Add one sample at center of eye (expecting a single mask hit, %e)\n", expectedHitRate);
+		LogIndenter li;
+		REQUIRE(maskpath != "");
+
+		//center of UI, at 0V - exact middle of eye opening
+		size_t nsample = 2 * clockToggleInterval + center;
+		LogVerbose("Old value at %zu was %f\n", nsample, data.m_samples[nsample]);
+		data.m_samples[nsample] = 0;
+		data.m_revision ++;
+		data.MarkModifiedFromCpu();
+
+		//Run the filter again
+		filter->Refresh(cmdbuf, queue);
+
+		//Expect that we've integrated the right number of UIs (OK to lose one at each end to edge effects)
+		auto eyewfm = dynamic_cast<EyeWaveform*>(filter->GetData(0));
+		REQUIRE(eyewfm != nullptr);
+		size_t nuis = eyewfm->GetTotalUIs();
+		LogVerbose("Total UIs: %zu\n", nuis);
+		//DumpEye(eyewfm, "/tmp/eye.csv", width, height);
+		REQUIRE(nuis >= (nclks - 2));
+		REQUIRE(nuis <= nclks);
+
+		//We now expect a single hit out of nclks UIs
+		auto hitrate = filter->GetScalarValue(1);
+		LogVerbose("Mask hit rate: %e\n", hitrate);
 	}
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
-	g_scope->GetOscilloscopeChannel(1)->Detach(0);
-	*/
+	g_scope->GetOscilloscopeChannel(4)->Detach(0);
+
 	filter->Release();
 }
 
-/*
-void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb)
+void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height)
 {
-	REQUIRE(pout != nullptr);
-	REQUIRE(pa != nullptr);
-	REQUIRE(pb != nullptr);
-	REQUIRE(pout->size() == pa->size());
-	REQUIRE(pa->size() == pb->size());
+	FILE* fp = fopen(path, "w");
 
-	pout->PrepareForCpuAccess();
-	pa->PrepareForCpuAccess();
-	pb->PrepareForCpuAccess();
-
-	float* out = pout->m_samples.GetCpuPointer();
-
-	size_t len = pa->size();
-
-	for(size_t i=0; i<len; i++)
-		out[i] = pa->m_samples[i] + pb->m_samples[i];
-
-	pout->MarkModifiedFromCpu();
-}
-
-void VerifyAdditionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* padd)
-{
-	REQUIRE(padd != nullptr);
-	REQUIRE(padd->size() == min(pa->size(), pb->size()) );
-
-	pa->PrepareForCpuAccess();
-	pb->PrepareForCpuAccess();
-	padd->PrepareForCpuAccess();
-
-	size_t len = padd->size();
-
-	for(size_t i=0; i<len; i++)
+	for(size_t y = 0; y < height; y++)
 	{
-		float expected = pa->m_samples[i] + pb->m_samples[i];
-		REQUIRE(fabs(padd->m_samples[i] - expected) < 1e-6);
+		auto prow = wfm->GetData() + (y * width);
+		for(size_t x=0; x < width; x++)
+			fprintf(fp, "%.6f, ", prow[x]);
+		fprintf(fp, "\n");
 	}
+
+	fclose(fp);
 }
-*/

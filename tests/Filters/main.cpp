@@ -82,6 +82,12 @@ public:
 		g_scope->AddChannel(new OscilloscopeChannel(
 			g_scope, "Angle", "#ffffffff", Unit(Unit::UNIT_HZ), Unit(Unit::UNIT_DEGREES)));
 
+		g_scope->AddChannel(new OscilloscopeChannel(
+			g_scope, "D1", "#ffffffff",
+			Unit(Unit::UNIT_FS),
+			Unit(Unit::UNIT_VOLTS),
+			Stream::STREAM_TYPE_DIGITAL));
+
 	}
 
 	//Clean up after the scope goes out of scope (pun not intended)
