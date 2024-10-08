@@ -43,7 +43,7 @@ using namespace std;
 // Construction / destruction
 
 StreamBrowserDialog::StreamBrowserDialog(Session& session, MainWindow* parent)
-	: Dialog("Stream Browser", "Stream Browser", ImVec2(300, 400))
+	: Dialog("Stream Browser", "Stream Browser", ImVec2(550, 400))
 	, m_session(session)
 	, m_parent(parent)
 {

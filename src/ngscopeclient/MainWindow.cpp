@@ -1277,7 +1277,7 @@ void MainWindow::DockingArea()
 				rightPanelID = topNode->ChildNodes[1]->ID;
 			}
 			else
-				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.2, &leftPanelID, &rightPanelID);
 
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
