@@ -42,15 +42,6 @@
 
 using namespace std;
 
-// TODO move this to OscilloscopeChannel class along with GetDwnwloadProgress() API
-enum DownloadState : int {
-	DOWNLOAD_PROGRESS_DISABLED = -3,
-	DOWNLOAD_NONE = -2,
-	DOWNLOAD_WAITING = -1,
-	DOWNLOAD_STARTED = 0,
-	DOWNLOAD_FINISHED = 100
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -78,7 +69,7 @@ StreamBrowserDialog::~StreamBrowserDialog()
 bool StreamBrowserDialog::DoRender()
 {
 	// Some helpers for rendering widgets that appear in the StreamBrowserDialog.
-	
+
 	// Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
 	// scope properties box.
 	auto renderInfoLink = [](const char *label, const char *linktext, bool &clicked, bool &hovered)
@@ -88,7 +79,7 @@ bool StreamBrowserDialog::DoRender()
 		clicked |= ImGui::TextLink(linktext);
 		hovered |= ImGui::IsItemHovered();
 	};
-	
+
 	float badgeXMin; // left edge over which we must not overrun
 	float badgeXCur; // right edge to render the next badge against
 	auto startBadgeLine = [&badgeXMin, &badgeXCur]()
@@ -102,15 +93,15 @@ bool StreamBrowserDialog::DoRender()
 	{
 		va_list ap;
 		va_start(ap, color);
-		
+
 		/* XXX: maybe color should be a prefs string? */
-		
+
 		while (const char *label = va_arg(ap, const char *)) {
 			float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
 			if ((badgeXCur - xsz) < badgeXMin) {
 				continue;
 			}
-			
+
 			// ok, we have enough space -- commit to it!
 			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 			ImGui::SameLine(badgeXCur);
@@ -120,7 +111,7 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 	};
-	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](int progress)
+	auto renderDownloadProgress = [&badgeXMin, &badgeXCur](OscilloscopeChannel *scopechan)
 	{
 		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", "", NULL};
 		static const char* const wait[]     = {"WAITING..." , "WAITING"  ,"WA","W", "", NULL};
@@ -128,26 +119,31 @@ bool StreamBrowserDialog::DoRender()
 		static const char* const ready[]    = {"READY"      , "RDY"      ,"RY","R", "", NULL};
 		static const char* const* labels;
 		ImVec4 color;
-		switch(progress)
+		bool hasProgress = false;
+		switch(scopechan->GetDownloadState())
 		{
-			case DownloadState::DOWNLOAD_NONE:
+			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
 				labels = stop;
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
-			case DownloadState::DOWNLOAD_WAITING:
+			case InstrumentChannel::DownloadState::DOWNLOAD_WAITING:
 				labels = wait;
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
-			case DownloadState::DOWNLOAD_FINISHED:
+			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
+				labels = download;
+				hasProgress = true;
+				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
+				break;
+			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
+				hasProgress = true;
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
-				labels = download;
-				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
+				return;
 		}
 		// Only show progress bar if an download is proceeding
-		bool hasProgress = (progress >= DownloadState::DOWNLOAD_WAITING) && (progress <= DownloadState::DOWNLOAD_FINISHED);
 		bool hasLabel;
 		int labelIndex = 0;
 		while (const char *label = labels[labelIndex]) 
@@ -158,7 +154,7 @@ bool StreamBrowserDialog::DoRender()
 				labelIndex++;
 				continue;
 			}
-			
+
 			// ok, we have enough space -- commit to it!
 			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 			ImGui::SameLine(badgeXCur);
@@ -172,13 +168,13 @@ bool StreamBrowserDialog::DoRender()
 			}
 			if(hasProgress)
 			{
-				ImGui::ProgressBar(((float)progress)/100, ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));		
+				ImGui::ProgressBar(scopechan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
 			}
 
 			break;
 		}
 	};
-	
+
 	//Add all instruments
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
@@ -187,7 +183,7 @@ bool StreamBrowserDialog::DoRender()
 		startBadgeLine();
 
 		auto state = m_session.GetInstrumentConnectionState(inst);
-		
+
 		// Render ornaments for this instrument: offline, trigger status, ...
 		auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst);
 		if (scope) {
@@ -226,7 +222,7 @@ bool StreamBrowserDialog::DoRender()
 				}
 			}
 		}
-		
+
 		if(instIsOpen)
 		{
 			if (scope) {
@@ -311,11 +307,7 @@ bool StreamBrowserDialog::DoRender()
 					}
 					else
 					{
-						int progress = scopechan->GetDownloadState();
-						if(progress != DownloadState::DOWNLOAD_PROGRESS_DISABLED)
-						{
-							renderDownloadProgress(progress);
-						}
+						renderDownloadProgress(scopechan);
 					}
 				}
 
