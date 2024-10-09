@@ -108,7 +108,7 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 	};
-	auto renderDownloadProgress = [this, &badgeXMin, &badgeXCur](std::shared_ptr<Instrument> inst, InstrumentChannel *chan)
+	auto renderDownloadProgress = [this, &badgeXMin, &badgeXCur](std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 	{
 		static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
 
@@ -153,8 +153,8 @@ bool StreamBrowserDialog::DoRender()
 		switch(chan->GetDownloadState())
 		{
 			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
-				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
-					m_channelDownloadIsSlow[{inst, chan}] = false;
+				if (isLast && (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS))
+					m_instrumentDownloadIsSlow[inst] = false;
 				/* FALLTHRU */
 			case InstrumentChannel::DownloadState::DOWNLOAD_UNKNOWN:
 				/* There is nothing to say about this --
@@ -168,21 +168,21 @@ bool StreamBrowserDialog::DoRender()
 			case InstrumentChannel::DownloadState::DOWNLOAD_WAITING:
 				labels = pend;
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
-					m_channelDownloadIsSlow[{inst, chan}] = true;
-				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
+					m_instrumentDownloadIsSlow[inst] = true;
+				hasProgress = m_instrumentDownloadIsSlow[inst];
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
 				labels = download;
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
-					m_channelDownloadIsSlow[{inst, chan}] = true;
-				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
+					m_instrumentDownloadIsSlow[inst] = true;
+				hasProgress = m_instrumentDownloadIsSlow[inst];
 				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
-				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
-					m_channelDownloadIsSlow[{inst, chan}] = false;
+				if (isLast && (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS))
+					m_instrumentDownloadIsSlow[inst] = false;
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
@@ -196,7 +196,7 @@ bool StreamBrowserDialog::DoRender()
 		// misleading (i.e., after a channel goes into STOP mode, we
 		// will remain ACTIVE for up to THRESHOLD_SLOW time) but the
 		// period of time for which it is misleading is short!
-		if(!m_channelDownloadIsSlow[{inst, chan}] && elapsed < CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
+		if(!m_instrumentDownloadIsSlow[inst] && elapsed < CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 		{
 			labels = active;
 			color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
@@ -294,6 +294,8 @@ bool StreamBrowserDialog::DoRender()
 
 		if(instIsOpen)
 		{
+			size_t lastEnabledChannelIndex;
+			size_t channelCount = inst->GetChannelCount();
 			if (scope) {
 				ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 				
@@ -310,11 +312,17 @@ bool StreamBrowserDialog::DoRender()
 				if (hovered) {
 					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
 				}
+				for(size_t i = 0; i<channelCount; i++)
+				{
+					if(scope->IsChannelEnabled(i))
+					{
+						lastEnabledChannelIndex = i;
+					}
+				}
 				
 				ImGui::EndChild();
 			}
 			
-			size_t channelCount = inst->GetChannelCount();
 			for(size_t i=0; i<channelCount; i++)
 			{
 				auto chan = inst->GetChannel(i);
@@ -374,7 +382,7 @@ bool StreamBrowserDialog::DoRender()
 				} 
 				else 
 				{
-					renderDownloadProgress(inst, chan);
+					renderDownloadProgress(inst, chan, (i == lastEnabledChannelIndex));
 				}
 
 				if(open)
