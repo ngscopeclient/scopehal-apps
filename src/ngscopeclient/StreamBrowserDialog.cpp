@@ -359,7 +359,7 @@ bool StreamBrowserDialog::DoRender()
 				{
 					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
 				} 
-				else if (state && state->m_lastTriggerState != Oscilloscope::TRIGGER_MODE_STOP) 
+				else if (state) 
 				{
 					renderDownloadProgress(inst, chan);
 				}

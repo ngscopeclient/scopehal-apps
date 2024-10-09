@@ -92,7 +92,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 				{	// Check for trigger state change
 					auto stat = scope->PollTrigger();
 					session->GetInstrumentConnectionState(inst)->m_lastTriggerState = stat;
-					if(stat == Oscilloscope::TRIGGER_MODE_STOP)
+					if(stat == Oscilloscope::TRIGGER_MODE_STOP || stat == Oscilloscope::TRIGGER_MODE_RUN || stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 					{	// Final state
 						triggerUpToDate = true;
 					}
