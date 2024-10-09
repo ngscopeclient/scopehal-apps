@@ -136,8 +136,8 @@ bool StreamBrowserDialog::DoRender()
 		static const char* const* labels;
 
 		ImVec4 color;
+		bool shouldRender = true;
 		bool hasProgress = false;
-		bool isActive = false;
 		double elapsed = GetTime() - chan->GetDownloadStartTime();
 
 		// determine what label we should apply, and while we are at
@@ -153,6 +153,9 @@ bool StreamBrowserDialog::DoRender()
 		switch(chan->GetDownloadState())
 		{
 			case InstrumentChannel::DownloadState::DOWNLOAD_NONE:
+				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
+					m_channelDownloadIsSlow[{inst, chan}] = false;
+				/* FALLTHRU */
 			case InstrumentChannel::DownloadState::DOWNLOAD_UNKNOWN:
 				/* There is nothing to say about this --
 				 * either there is nothing pending at all on
@@ -160,13 +163,13 @@ bool StreamBrowserDialog::DoRender()
 				 * how to report it, and in either case, we
 				 * don't need to render a badge about it.
 				 */
-				return;
+				shouldRender = false;
+				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_WAITING:
 				labels = pend;
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = true;
 				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
-				isActive = !hasProgress;
 				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
@@ -174,25 +177,35 @@ bool StreamBrowserDialog::DoRender()
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = true;
 				hasProgress = m_channelDownloadIsSlow[{inst, chan}];
-				isActive = !hasProgress;
 				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
 				if (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS)
 					m_channelDownloadIsSlow[{inst, chan}] = false;
-				isActive = !m_channelDownloadIsSlow[{inst, chan}];
 				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
 				break;
 			default:
-				return;
+				shouldRender = false;
+				break;
 		}
 
-		if(isActive)
-		{	// For fast channels, only show a constant ACTIVE green badge
+		// For fast channels, show a constant green badge when a
+		// download has started "recently" -- even if we're not
+		// downloading at this moment.  This could be slightly
+		// misleading (i.e., after a channel goes into STOP mode, we
+		// will remain ACTIVE for up to THRESHOLD_SLOW time) but the
+		// period of time for which it is misleading is short!
+		if(!m_channelDownloadIsSlow[{inst, chan}] && elapsed < CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
+		{
 			labels = active;
 			color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
+			shouldRender = true;
+			hasProgress = false;
 		}
+		
+		if (!shouldRender)
+			return;
 
 /// @brief Width used to display progress bars (e.g. download progress bar)
 #define PROGRESS_BAR_WIDTH	80
@@ -359,7 +372,7 @@ bool StreamBrowserDialog::DoRender()
 				{
 					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
 				} 
-				else if (state) 
+				else 
 				{
 					renderDownloadProgress(inst, chan);
 				}
