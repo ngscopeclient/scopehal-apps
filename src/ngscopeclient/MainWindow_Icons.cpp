@@ -118,6 +118,7 @@
 #include "../scopeprotocols/PkPkMeasurement.h"
 #include "../scopeprotocols/PulseWidthMeasurement.h"
 #include "../scopeprotocols/PRBSCheckerFilter.h"
+#include "../scopeprotocols/PRBSGeneratorFilter.h"
 #include "../scopeprotocols/QSGMIIDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
 #include "../scopeprotocols/SawtoothGeneratorFilter.h"
@@ -251,6 +252,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-peaktopeak", FindDataFile("icons/filters/filter-peaktopeak.png"));
 	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
 	m_texmgr.LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
+	m_texmgr.LoadTexture("filter-prbs", FindDataFile("icons/filters/filter-prbs.png"));
 	m_texmgr.LoadTexture("filter-prbs-checker", FindDataFile("icons/filters/filter-prbs-checker.png"));
 	m_texmgr.LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
 	m_texmgr.LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
@@ -295,6 +297,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
 	m_filterIconMap[type_index(typeid(AddFilter))] 								= "filter-add";
+	m_filterIconMap[type_index(typeid(AutocorrelationFilter))] 					= "filter-autocorrelation";
 	m_filterIconMap[type_index(typeid(AreaMeasurement))] 						= "filter-area-under-curve";
 	m_filterIconMap[type_index(typeid(AverageFilter))] 							= "filter-average";
 	m_filterIconMap[type_index(typeid(BandwidthMeasurement))] 					= "filter-bandwidth";
@@ -368,6 +371,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(PkPkMeasurement))] 						= "filter-peaktopeak";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
+	m_filterIconMap[type_index(typeid(PRBSGeneratorFilter))]					= "filter-prbs";
 	m_filterIconMap[type_index(typeid(PRBSCheckerFilter))]						= "filter-prbs-checker";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
 	m_filterIconMap[type_index(typeid(RiseMeasurement))] 						= "filter-rise";
