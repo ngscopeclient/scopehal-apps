@@ -387,6 +387,8 @@ bool StreamBrowserDialog::DoRender()
 				{
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
+						ImGui::PushID(j);
+
 						if (!singleStream)
 						{
 							ImGui::Selectable(chan->GetStreamName(j).c_str());
@@ -408,7 +410,8 @@ bool StreamBrowserDialog::DoRender()
 						// Channel/stram properties
 						if (renderScopeProps && scopechan)
 						{
-							ImGui::BeginChild("scope_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+							ImGui::BeginChild("scope_params", ImVec2(0, 0),
+								ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
 							if(isDigital)
 							{
@@ -417,13 +420,13 @@ bool StreamBrowserDialog::DoRender()
 								bool clicked = false;
 								bool hovered = false;
 								renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-								if (clicked) {
+								if (clicked)
+								{
 									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
 									m_parent->ShowChannelProperties(scopechan);
 								}
-								if (hovered) {
+								if (hovered)
 									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-								}
 							}
 							else
 							{
@@ -434,17 +437,19 @@ bool StreamBrowserDialog::DoRender()
 								bool hovered = false;
 								renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
 								renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
-								if (clicked) {
+								if (clicked)
+								{
 									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
 									m_parent->ShowChannelProperties(scopechan);
 								}
-								if (hovered) {
+								if (hovered)
 									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-								}
 							}
 
 							ImGui::EndChild();
 						}
+
+						ImGui::PopID();
 					}
 				}
 

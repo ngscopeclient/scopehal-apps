@@ -33,6 +33,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup spectrometerdrivers Spectrometer drivers
 \ingroup drivers
 
+\defgroup matrixdrivers Switch matrix drivers
+\ingroup drivers
+
 \defgroup vnadrivers VNA drivers
 \ingroup drivers
 
@@ -48,6 +51,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \ingroup libscopeprotocols
 
 \defgroup math Basic math functions
+\ingroup libscopeprotocols
+
+\defgroup rf RF
 \ingroup libscopeprotocols
 
 \defgroup ngscopeclient Ngscopeclient (GUI)
