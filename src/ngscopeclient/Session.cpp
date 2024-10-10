@@ -85,7 +85,7 @@ Session::Session(MainWindow* wnd)
 	, m_tPrimaryTrigger(0)
 	, m_triggerArmed(false)
 	, m_triggerOneShot(false)
-	, m_graphExecutor(/*8*/1)
+	, m_graphExecutor(4)
 	, m_lastFilterGraphExecTime(0)
 	, m_history(*this)
 	, m_multiScope(false)
@@ -3174,7 +3174,6 @@ size_t Session::GetFilterCount()
 	return filters.size();
 }
 
-
 /**
 	@brief Queues a request to refresh all filters the next time we poll stuff
  */
@@ -3239,6 +3238,10 @@ void Session::RefreshAllFilters()
 	}
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+	{
+		lock_guard<mutex> lock(m_lastFilterGraphRuntimeMutex);
+		m_lastFilterGraphRuntimeStats = m_graphExecutor.GetRunTimes();
+	}
 }
 
 /**
@@ -3291,6 +3294,10 @@ bool Session::RefreshDirtyFilters()
 	}
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
+	{
+		lock_guard<mutex> lock(m_lastFilterGraphRuntimeMutex);
+		m_lastFilterGraphRuntimeStats = m_graphExecutor.GetRunTimes();
+	}
 
 	return true;
 }

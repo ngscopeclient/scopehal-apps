@@ -171,6 +171,8 @@ void MainWindow::LoadStatusBarIcons()
 	m_texmgr.LoadTexture("mouse_move", FindDataFile("icons/contrib/blender/24x24/mouse_move.png"));
 
 	m_texmgr.LoadTexture("mouse_wheel", FindDataFile("icons/contrib/blender/24x24/mouse_wheel.png"));
+
+	m_texmgr.LoadTexture("time", FindDataFile("icons/contrib/blender/24x24/time.png"));
 }
 
 /**

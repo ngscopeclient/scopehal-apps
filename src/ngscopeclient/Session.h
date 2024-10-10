@@ -80,7 +80,7 @@ public:
 
 	///@brief Thread for polling the instrument
 	std::unique_ptr<std::thread> m_thread;
-	
+
 	///@brief Cached trigger state, to reflect in the UI
 	Oscilloscope::TriggerMode m_lastTriggerState;
 };
@@ -324,6 +324,13 @@ public:
 
 	void OnMarkerChanged();
 
+	///@brief Return the last filter graph runtime stats
+	std::map<FlowGraphNode*, int64_t> GetFilterGraphRuntime()
+	{
+		std::lock_guard<std::mutex> lock(m_lastFilterGraphRuntimeMutex);
+		return m_lastFilterGraphRuntimeStats;
+	}
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
@@ -444,6 +451,12 @@ protected:
 
 	///@brief Time spent on the last filter graph execution
 	std::atomic<int64_t> m_lastFilterGraphExecTime;
+
+	///@brief Mutex for controlling access to m_lastFilterGraphRuntimeStats
+	std::mutex m_lastFilterGraphRuntimeMutex;
+
+	///@brief Performance stats from last graph execution
+	std::map<FlowGraphNode*, int64_t> m_lastFilterGraphRuntimeStats;
 
 	///@brief Mutex for controlling access to performance counters
 	std::mutex m_perfClockMutex;
