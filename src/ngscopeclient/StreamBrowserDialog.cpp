@@ -121,7 +121,7 @@ bool StreamBrowserDialog::DoRender()
 
 		/* prefer language "COMPLETE" to "READY": "READY" implies
 		 * that the channel might be ready to capture or something,
-		 * but "COMPLETE" at least is not to be confused with that. 
+		 * but "COMPLETE" at least is not to be confused with that.
 		 * ("DOWNLOADED" is more specific but is easy to confuse
 		 * with "DOWNLOADING".  If you can come up with a better
 		 * mid-length abbreviation for "COMPLETE" than "DL OK" /
@@ -203,7 +203,7 @@ bool StreamBrowserDialog::DoRender()
 			shouldRender = true;
 			hasProgress = false;
 		}
-		
+
 		if (!shouldRender)
 			return;
 
@@ -256,9 +256,10 @@ bool StreamBrowserDialog::DoRender()
 		// Render ornaments for this instrument: offline, trigger status, ...
 		auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst);
 		if (scope) {
-			if (scope->IsOffline()) {
+			if (scope->IsOffline())
 				renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */, "OFFLINE", "OFFL", NULL);
-			} else {
+			else
+			{
 				Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
 				switch (mode) {
 				case Oscilloscope::TRIGGER_MODE_RUN:
@@ -294,24 +295,23 @@ bool StreamBrowserDialog::DoRender()
 
 		if(instIsOpen)
 		{
-			size_t lastEnabledChannelIndex;
+			size_t lastEnabledChannelIndex = 0;
 			size_t channelCount = inst->GetChannelCount();
-			if (scope) {
+			if (scope)
+			{
 				ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-				
+
 				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
 				auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
-				
+
 				bool clicked = false;
 				bool hovered = false;
 				renderInfoLink("Sample rate", srate_txt.c_str(), clicked, hovered);
 				renderInfoLink("Sample depth", sdepth_txt.c_str(), clicked, hovered);
-				if (clicked) {
+				if (clicked)
 					m_parent->ShowTimebaseProperties();
-				}
-				if (hovered) {
+				if (hovered)
 					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
-				}
 				for(size_t i = 0; i<channelCount; i++)
 				{
 					if(scope->IsChannelEnabled(i))
@@ -319,10 +319,10 @@ bool StreamBrowserDialog::DoRender()
 						lastEnabledChannelIndex = i;
 					}
 				}
-				
+
 				ImGui::EndChild();
 			}
-			
+
 			for(size_t i=0; i<channelCount; i++)
 			{
 				auto chan = inst->GetChannel(i);
@@ -331,7 +331,7 @@ bool StreamBrowserDialog::DoRender()
 				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
 				bool renderScopeProps = false;
 				bool isDigital = false;
-				if (scopechan) 
+				if (scopechan)
 				{
 					renderScopeProps = scopechan->IsEnabled();
 					isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
@@ -339,14 +339,12 @@ bool StreamBrowserDialog::DoRender()
 
 				bool hasChildren = !singleStream || renderScopeProps;
 
-				if (chan->m_displaycolor != "") {
+				if (chan->m_displaycolor != "")
 					ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(chan->m_displaycolor));
-				}
 				bool open = ImGui::TreeNodeEx(chan->GetDisplayName().c_str(), isDigital ? 0 : ImGuiTreeNodeFlags_DefaultOpen | (!hasChildren ? ImGuiTreeNodeFlags_Leaf : 0));
-				if (chan->m_displaycolor != "") {
+				if (chan->m_displaycolor != "")
 					ImGui::PopStyleColor();
-				}
-				
+
 				//Single stream: drag the stream not the channel
 				if(singleStream)
 				{
@@ -373,14 +371,14 @@ bool StreamBrowserDialog::DoRender()
 					ImGui::TextUnformatted(chan->GetDisplayName().c_str());
 					ImGui::EndDragDropSource();
 				}
-				
+
 				// Channel decoration
 				startBadgeLine();
 				if (scopechan && !scopechan->IsEnabled())
 				{
 					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
-				} 
-				else 
+				}
+				else
 				{
 					renderDownloadProgress(inst, chan, (i == lastEnabledChannelIndex));
 				}
@@ -411,11 +409,11 @@ bool StreamBrowserDialog::DoRender()
 						if (renderScopeProps && scopechan)
 						{
 							ImGui::BeginChild("scope_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-				
+
 							if(isDigital)
 							{
 								auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(i));
-					
+
 								bool clicked = false;
 								bool hovered = false;
 								renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
@@ -431,7 +429,7 @@ bool StreamBrowserDialog::DoRender()
 							{
 								auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
 								auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
-					
+
 								bool clicked = false;
 								bool hovered = false;
 								renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
@@ -444,7 +442,7 @@ bool StreamBrowserDialog::DoRender()
 									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 								}
 							}
-				
+
 							ImGui::EndChild();
 						}
 					}
