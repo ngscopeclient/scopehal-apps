@@ -46,6 +46,7 @@
 using namespace std;
 
 void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height);
+void DumpEyeMask(vector<uint8_t>& pixels, const char* path, size_t width, size_t height);
 
 TEST_CASE("Filter_EyePattern")
 {
@@ -142,7 +143,9 @@ TEST_CASE("Filter_EyePattern")
 
 	SECTION("ShouldFail1")
 	{
-		float expectedHitRate = 1.0 / nclks;
+		//We have one SAMPLE hitting the mask
+		//Per SFF-8431 appendix D.2.1, hit rate is (samples touching mask) / (total samples integrated)
+		float expectedHitRate = 1.0 / depth;
 
 		LogVerbose("Add one sample at center of eye (expecting a single mask hit, %e)\n", expectedHitRate);
 		LogIndenter li;
@@ -167,9 +170,16 @@ TEST_CASE("Filter_EyePattern")
 		REQUIRE(nuis >= (nclks - 2));
 		REQUIRE(nuis <= nclks);
 
-		//We now expect a single hit out of nclks UIs
+		//Dump the eye mask
+		vector<uint8_t> pixels;
+		filter->GetMask().GetPixels(pixels);
+		//DumpEyeMask(pixels, "/tmp/mask.csv", width, height);
+
+		//We now expect a single hit out of nsamples samples (minus rounding artifacts for fractional UIs)
 		auto hitrate = filter->GetScalarValue(1);
-		LogVerbose("Mask hit rate: %e\n", hitrate);
+		float deltaHitRate = (hitrate - expectedHitRate) / expectedHitRate;
+		REQUIRE(deltaHitRate < 0.001);
+		LogVerbose("Mask hit rate: %e (error = %.2f %%)\n", hitrate, deltaHitRate * 100);
 	}
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
@@ -178,6 +188,7 @@ TEST_CASE("Filter_EyePattern")
 	filter->Release();
 }
 
+///@brief Helper function not called if the test passes, but may be useful for troubleshooting if it fails
 void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height)
 {
 	FILE* fp = fopen(path, "w");
@@ -187,6 +198,22 @@ void DumpEye(EyeWaveform* wfm, const char* path, size_t width, size_t height)
 		auto prow = wfm->GetData() + (y * width);
 		for(size_t x=0; x < width; x++)
 			fprintf(fp, "%.6f, ", prow[x]);
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+}
+
+///@brief Helper function not called if the test passes, but may be useful for troubleshooting if it fails
+void DumpEyeMask(vector<uint8_t>& pixels, const char* path, size_t width, size_t height)
+{
+	FILE* fp = fopen(path, "w");
+
+	for(size_t y = 0; y < height; y++)
+	{
+		auto prow = &pixels[y * width * 4];
+		for(size_t x=0; x < width; x++)
+			fprintf(fp, "%u, ", (uint8_t)prow[x * 4]);
 		fprintf(fp, "\n");
 	}
 
