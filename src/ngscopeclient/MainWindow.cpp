@@ -1277,7 +1277,7 @@ void MainWindow::DockingArea()
 				rightPanelID = topNode->ChildNodes[1]->ID;
 			}
 			else
-				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.1, &leftPanelID, &rightPanelID);
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Left, 0.2, &leftPanelID, &rightPanelID);
 
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
@@ -1490,7 +1490,9 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 	if(inst == nullptr)
 		return;
 
-	LogTrace("Adding instrument \"%s\" to recent instrument list\n", inst->m_nickname.c_str());
+	LogTrace("Adding instrument \"%s\" to recent instrument list (had %zu)\n",
+		inst->m_nickname.c_str(), m_recentInstruments.size());
+	LogIndenter li;
 
 	auto now = time(NULL);
 
@@ -1499,6 +1501,7 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 		inst->GetDriverName() + ":" +
 		inst->GetTransportName() + ":" +
 		inst->GetTransportConnectionString();
+	LogTrace("Connection string: %s\n", connectionString.c_str());
 	m_recentInstruments[connectionString] = now;
 
 	//Delete anything old
@@ -1517,8 +1520,12 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 			}
 		}
 
+		LogTrace("Removing oldest instrument (%s) to make room\n", oldestPath.c_str());
 		m_recentInstruments.erase(oldestPath);
 	}
+
+	LogTrace("Added (now have %zu total recent instruments)\n", m_recentInstruments.size());
+	SaveRecentInstrumentList();
 }
 
 /**

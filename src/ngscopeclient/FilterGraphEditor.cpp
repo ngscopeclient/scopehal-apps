@@ -494,7 +494,7 @@ bool FilterGraphEditor::DoRender()
 	for(auto it : chans)
 	{
 		for(auto chan : it.second)
-			DoNodeForChannel(chan, it.first, multiInst);
+			DoNodeForChannel(chan, it.first, multiInst, 0);	//TODO: acquisition time etc?
 	}
 
 	//Make a newly dragged node spawn at the mouse position
@@ -518,9 +518,10 @@ bool FilterGraphEditor::DoRender()
 
 	//Filters
 	auto filters = Filter::GetAllInstances();
+	auto filterperf = m_session.GetFilterGraphRuntime();
 	for(auto f : filters)
 	{
-		DoNodeForChannel(f, nullptr, false);
+		DoNodeForChannel(f, nullptr, false, filterperf[f]);
 
 		//Add a reference to the channel so even if we remove the last user of it this frame, it won't be deleted until we're ready
 		f->AddRef();
@@ -1942,8 +1943,14 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 
 	TODO: this seems to fail hard if we do not have at least one input OR output on the node. Why?
  */
-void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<Instrument> inst, bool multiInst)
+void FilterGraphEditor::DoNodeForChannel(
+	InstrumentChannel* channel,
+	shared_ptr<Instrument> inst,
+	bool multiInst,
+	int64_t runtime)
 {
+	Unit fs(Unit::UNIT_FS);
+
 	//If the channel has no color, make it neutral gray
 	//(this is often true for e.g. external trigger)
 	string displaycolor = channel->m_displaycolor;
@@ -2135,6 +2142,49 @@ void FilterGraphEditor::DoNodeForChannel(InstrumentChannel* channel, shared_ptr<
 		ImVec2(pos.x + headerfontsize*0.5, pos.y + headerfontsize*0.25),
 		headercolor,
 		headerText.c_str());
+
+	//TODO: add an option for toggling this
+	//TODO: add preference for colors
+	//Draw a bubble above the text with the runtime stats
+	if(runtime > 0)
+	{
+		auto runtimeText = fs.PrettyPrint(runtime);
+		auto runtimeSize = headerfont->CalcTextSizeA(headerfontsize, FLT_MAX, 0, runtimeText.c_str());
+
+		auto timebgColor = ColorFromString("#404040");
+		auto timeTextColor = ColorFromString("#ffffff");
+		float timespacing = 0.1 * headerheight;
+		float runtimeBot = pos.y - timespacing;
+		float bubbleHeight = runtimeSize.y + 2*ImGui::GetStyle().FramePadding.y;
+
+		ImVec2 clockiconpos(
+			pos.x + ImGui::GetStyle().FramePadding.x,
+			runtimeBot - bubbleHeight + ImGui::GetStyle().FramePadding.y);
+		ImVec2 clockiconsize(runtimeSize.y, runtimeSize.y);
+
+		ImVec2 textpos(
+			clockiconpos.x + clockiconsize.x + ImGui::GetStyle().ItemSpacing.x,
+			clockiconpos.y );
+
+		bgList->AddRectFilled(
+			ImVec2(pos.x + 1, runtimeBot - bubbleHeight),
+			ImVec2(textpos.x + runtimeSize.x + ImGui::GetStyle().FramePadding.y, runtimeBot),
+			timebgColor,
+			rounding,
+			ImDrawFlags_RoundCornersAll);
+
+		bgList->AddImage(
+			m_parent->GetTextureManager()->GetTexture("time"),
+			clockiconpos,
+			clockiconpos + clockiconsize );
+
+		bgList->AddText(
+			headerfont,
+			headerfontsize,
+			textpos,
+			timeTextColor,
+			runtimeText.c_str());
+	}
 
 	//Draw the force vector
 	if(ImGui::IsKeyDown(ImGuiKey_Q))

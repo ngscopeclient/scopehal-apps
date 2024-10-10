@@ -58,6 +58,7 @@ public:
 		m_shuttingDown = false;
 		args.shuttingDown = &m_shuttingDown;
 		m_thread = std::make_unique<std::thread>(InstrumentThread, args);
+		m_lastTriggerState = Oscilloscope::TRIGGER_MODE_WAIT;
 	}
 
 	~InstrumentConnectionState()
@@ -79,6 +80,9 @@ public:
 
 	///@brief Thread for polling the instrument
 	std::unique_ptr<std::thread> m_thread;
+
+	///@brief Cached trigger state, to reflect in the UI
+	Oscilloscope::TriggerMode m_lastTriggerState;
 };
 
 /**
@@ -132,6 +136,7 @@ public:
 
 	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);
 	void RemoveInstrument(std::shared_ptr<Instrument> inst);
+	std::shared_ptr<InstrumentConnectionState> GetInstrumentConnectionState(std::shared_ptr<Instrument> inst) { return m_instrumentStates[inst]; }
 
 	bool IsMultiScope()
 	{ return m_multiScope; }
@@ -319,6 +324,13 @@ public:
 
 	void OnMarkerChanged();
 
+	///@brief Return the last filter graph runtime stats
+	std::map<FlowGraphNode*, int64_t> GetFilterGraphRuntime()
+	{
+		std::lock_guard<std::mutex> lock(m_lastFilterGraphRuntimeMutex);
+		return m_lastFilterGraphRuntimeStats;
+	}
+
 protected:
 	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
 
@@ -439,6 +451,12 @@ protected:
 
 	///@brief Time spent on the last filter graph execution
 	std::atomic<int64_t> m_lastFilterGraphExecTime;
+
+	///@brief Mutex for controlling access to m_lastFilterGraphRuntimeStats
+	std::mutex m_lastFilterGraphRuntimeMutex;
+
+	///@brief Performance stats from last graph execution
+	std::map<FlowGraphNode*, int64_t> m_lastFilterGraphRuntimeStats;
 
 	///@brief Mutex for controlling access to performance counters
 	std::mutex m_perfClockMutex;

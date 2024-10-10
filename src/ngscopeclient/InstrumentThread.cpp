@@ -65,6 +65,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 	auto bertstate = args.bertstate;
 	auto psustate = args.psustate;
 
+	bool triggerUpToDate = false;
+
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
@@ -86,6 +88,15 @@ void InstrumentThread(InstrumentThreadArgs args)
 			{
 				//LogTrace("Scope isn't armed, sleeping\n");
 				this_thread::sleep_for(chrono::milliseconds(5));
+				if(!triggerUpToDate)
+				{	// Check for trigger state change
+					auto stat = scope->PollTrigger();
+					session->GetInstrumentConnectionState(inst)->m_lastTriggerState = stat;
+					if(stat == Oscilloscope::TRIGGER_MODE_STOP || stat == Oscilloscope::TRIGGER_MODE_RUN || stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+					{	// Final state
+						triggerUpToDate = true;
+					}
+				}
 			}
 
 			//Grab data if it's ready
@@ -93,8 +104,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 			else
 			{
 				auto stat = scope->PollTrigger();
+				session->GetInstrumentConnectionState(inst)->m_lastTriggerState = stat;
 				if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
 					scope->AcquireData();
+				triggerUpToDate = false;
 			}
 		}
 

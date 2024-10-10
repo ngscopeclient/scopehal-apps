@@ -35,6 +35,8 @@
 #ifndef StreamBrowserDialog_h
 #define StreamBrowserDialog_h
 
+#include <map>
+
 #include "Dialog.h"
 #include "Session.h"
 
@@ -53,6 +55,8 @@ protected:
 
 	Session& m_session;
 	MainWindow* m_parent;
+
+	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
 };
 
 #endif

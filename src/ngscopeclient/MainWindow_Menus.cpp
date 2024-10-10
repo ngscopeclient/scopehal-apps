@@ -322,8 +322,17 @@ void MainWindow::DoAddSubMenu(
 			for(auto cstring : cstrings)
 			{
 				auto fields = explode(cstring, ':');
+
+				//make sure it's well formed
 				if(fields.size() < 4)
-					continue;
+				{
+					//Special case: null transport allows 3 fields
+					if( (fields.size() == 3) && (fields[2] == "null") )
+					{}
+
+					else
+						continue;
+				}
 
 				auto nick = fields[0];
 				auto drivername = fields[1];
@@ -333,9 +342,13 @@ void MainWindow::DoAddSubMenu(
 				{
 					if(ImGui::MenuItem(nick.c_str()))
 					{
-						auto path = fields[3];
-						for(size_t j=4; j<fields.size(); j++)
-							path = path + ":" + fields[j];
+						string path;
+						if(fields.size() >= 4)
+						{
+							path = fields[3];
+							for(size_t j=4; j<fields.size(); j++)
+								path = path + ":" + fields[j];
+						}
 
 						auto transport = MakeTransport(transname, path);
 						if(transport != nullptr)
