@@ -59,6 +59,7 @@
 #include <shlwapi.h>
 #else
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 #endif
 
