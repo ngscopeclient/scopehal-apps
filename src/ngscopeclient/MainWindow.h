@@ -130,6 +130,7 @@ public:
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
+	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrumet);
 	void ShowTimebaseProperties();
 	void ShowTriggerProperties();
 	void ShowManageInstruments();

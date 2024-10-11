@@ -164,6 +164,80 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Icon color")
 				.Description("Color for icon captions"));
 
+		auto& stream = appearance.AddCategory("Stream Browser");
+			stream.AddPreference(
+				Preference::Color("download_wait_badge_color", ColorFromString("#CC4C4C"))
+				.Label("Download wait badge color")
+				.Description("Color for download 'wait' badge"));
+			stream.AddPreference(
+				Preference::Color("download_progress_badge_color", ColorFromString("#B3B44D"))
+				.Label("Download progress badge color")
+				.Description("Color for download 'progress' badge"));
+			stream.AddPreference(
+				Preference::Color("download_finished_badge_color", ColorFromString("#4CCC4C"))
+				.Label("Download finished badge color")
+				.Description("Color for download 'finished' badge"));
+			stream.AddPreference(
+				Preference::Color("download_active_badge_color", ColorFromString("#4CCC4C"))
+				.Label("Download active badge color")
+				.Description("Color for download 'active' badge"));
+			stream.AddPreference(
+				Preference::Color("trigger_armed_badge_color", ColorFromString("#4CCC4C"))
+				.Label("Trigger armed badge color")
+				.Description("Color for trigger 'armed' badge"));
+			stream.AddPreference(
+				Preference::Color("trigger_stopped_badge_color", ColorFromString("#CC4C4C"))
+				.Label("Trigger stopped badge color")
+				.Description("Color for trigger 'stopped' badge"));
+			stream.AddPreference(
+				Preference::Color("trigger_triggered_badge_color", ColorFromString("#B3B44D"))
+				.Label("Trigger triggered badge color")
+				.Description("Color for trigger 'triggered' badge"));
+			stream.AddPreference(
+				Preference::Color("trigger_busy_badge_color", ColorFromString("#CC4C4C"))
+				.Label("Trigger buwy badge color")
+				.Description("Color for trigger 'busy' badge"));
+			stream.AddPreference(
+				Preference::Color("trigger_auto_badge_color", ColorFromString("#4CCC4C"))
+				.Label("Trigger auto badge color")
+				.Description("Color for trigger 'auto' badge"));
+			stream.AddPreference(
+				Preference::Color("intrument_disabled_badge_color", ColorFromString("#666666"))
+				.Label("Instrument disabled badge color")
+				.Description("Color for instrument 'disabled' badge"));
+			stream.AddPreference(
+				Preference::Color("intrument_offline_badge_color", ColorFromString("#CC4C4C"))
+				.Label("Instrument offline badge color")
+				.Description("Color for instrument 'offline' badge"));
+			stream.AddPreference(
+				Preference::Color("instrument_on_badge_color", ColorFromString("#4CCC4C"))
+				.Label("Instrument on badge color")
+				.Description("Color for instrument 'on' badge"));
+			stream.AddPreference(
+				Preference::Color("instrument_partial_badge_color", ColorFromString("#E2CD23FF"))
+				.Label("Instrument partial on badge color")
+				.Description("Color for intrument partial 'on' badge"));
+			stream.AddPreference(
+				Preference::Color("instrument_off_badge_color", ColorFromString("#CC4C4C"))
+				.Label("Instrument off badge color")
+				.Description("Color for instrument 'off' badge"));
+			stream.AddPreference(
+				Preference::Color("psu_cv_badge_color", ColorFromString("#4CCC4C"))
+				.Label("PSU cv badge color")
+				.Description("Color for PSU 'cv' badge"));
+			stream.AddPreference(
+				Preference::Color("psu_cc_badge_color", ColorFromString("#CC4C4C"))
+				.Label("PCU CC badge color")
+				.Description("Color for psu 'c' badge"));
+			stream.AddPreference(
+				Preference::Color("psu_set_badge_color", ColorFromString("#FFFF00"))
+				.Label("PSU set badge color")
+				.Description("Color for PSU 'set' badge"));
+			stream.AddPreference(
+				Preference::Color("psu_meas_badge_color", ColorFromString("#00C100"))
+				.Label("PSU measured badge color")
+				.Description("Color for PSU 'meas.' badge"));
+
 		auto& general = appearance.AddCategory("General");
 			general.AddPreference(
 				Preference::Enum("theme", THEME_DARK)

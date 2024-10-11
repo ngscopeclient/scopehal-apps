@@ -139,6 +139,8 @@ bool StreamBrowserDialog::DoRender()
 		bool shouldRender = true;
 		bool hasProgress = false;
 		double elapsed = GetTime() - chan->GetDownloadStartTime();
+		auto& prefs = m_session.GetPreferences();
+
 
 		// determine what label we should apply, and while we are at
 		// it, determine if this channel appears to be slow enough
@@ -170,20 +172,20 @@ bool StreamBrowserDialog::DoRender()
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_instrumentDownloadIsSlow[inst] = true;
 				hasProgress = m_instrumentDownloadIsSlow[inst];
-				color.x = 0.8 ; color.y=0.3 ; color.z=0.3; color.w=1.0;
+				color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.download_wait_badge_color"));
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_IN_PROGRESS:
 				labels = download;
 				if (elapsed > CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 					m_instrumentDownloadIsSlow[inst] = true;
 				hasProgress = m_instrumentDownloadIsSlow[inst];
-				color.x = 0.7 ; color.y=0.7 ; color.z=0.3; color.w=1.0;
+				color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.download_progress_badge_color"));
 				break;
 			case InstrumentChannel::DownloadState::DOWNLOAD_FINISHED:
 				labels = ready;
 				if (isLast && (elapsed < CHANNEL_DOWNLOAD_THRESHOLD_FAST_SECONDS))
 					m_instrumentDownloadIsSlow[inst] = false;
-				color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
+				color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.download_finished_badge_color"));
 				break;
 			default:
 				shouldRender = false;
@@ -199,7 +201,7 @@ bool StreamBrowserDialog::DoRender()
 		if(!m_instrumentDownloadIsSlow[inst] && elapsed < CHANNEL_DOWNLOAD_THRESHOLD_SLOW_SECONDS)
 		{
 			labels = active;
-			color.x = 0.3 ; color.y=0.8 ; color.z=0.3; color.w=1.0;
+			color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.download_active_badge_color"));
 			shouldRender = true;
 			hasProgress = false;
 		}
@@ -244,6 +246,59 @@ bool StreamBrowserDialog::DoRender()
 		// well, shoot -- I guess there wasn't enough room to do *anything* useful!
 	};
 
+	auto renderPsuRows = [this](bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
+	{	
+		auto& prefs = m_session.GetPreferences();
+		// Row 1
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		ImGui::Text(isVoltage ? "Voltage:" : "Current:");
+		ImGui::TableSetColumnIndex(1);
+		StreamDescriptor sv(chan, isVoltage ? 1 : 3);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_badge_color")));
+		ImGui::Selectable("- Set");
+		ImGui::PopStyleColor();
+		if(ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
+			ImGui::TextUnformatted((isVoltage ? "Voltage set value" : "Current set value"));
+			ImGui::EndDragDropSource();
+		}
+		else
+			DoItemHelp();
+		ImGui::TableSetColumnIndex(2);
+		clicked |= ImGui::TextLink(setValue);
+		hovered |= ImGui::IsItemHovered();
+		// Row 2
+		ImGui::TableNextRow();
+		if((isVoltage && !cc) || (!isVoltage && cc))
+		{
+			ImGui::TableSetColumnIndex(0);
+			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isVoltage ? "Appearance.Stream Browser.psu_cv_badge_color" : "Appearance.Stream Browser.psu_cc_badge_color")));
+			ImGui::SmallButton(isVoltage ? "CV" : "CC");
+			ImGui::PopStyleColor();
+		}
+		ImGui::TableSetColumnIndex(1);
+		StreamDescriptor mv(chan, isVoltage ? 0 : 2);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_badge_color")));
+		ImGui::Selectable("- Meas.");
+		ImGui::PopStyleColor();
+		if(ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("Scalar", &mv, sizeof(mv));
+			ImGui::TextUnformatted((isVoltage ? "Voltage measured value" : "Current measured value"));
+			ImGui::EndDragDropSource();
+		}
+		else
+			DoItemHelp();
+		ImGui::TableSetColumnIndex(2);
+		clicked |= ImGui::TextLink(measuredValue);
+		hovered |= ImGui::IsItemHovered();
+	};
+
+
+	// Get preferences for colors
+	auto& prefs = m_session.GetPreferences();
 	//Add all instruments
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
@@ -253,11 +308,14 @@ bool StreamBrowserDialog::DoRender()
 
 		auto state = m_session.GetInstrumentConnectionState(inst);
 
-		// Render ornaments for this instrument: offline, trigger status, ...
+		size_t channelCount = inst->GetChannelCount();
+
+		// Render ornaments for this scope: offline, trigger status, ...
 		auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst);
-		if (scope) {
+		if (scope) 
+		{
 			if (scope->IsOffline())
-				renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0) /* XXX: pull color from prefs */, "OFFLINE", "OFFL", NULL);
+				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
 			else
 			{
 				Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
@@ -268,13 +326,13 @@ bool StreamBrowserDialog::DoRender()
 					 * for trigger" or "currently
 					 * capturing samples post-trigger",
 					 * "ARMED" is unambiguous */
-					renderBadge(ImVec4(0.3, 0.8, 0.3, 1.0), "ARMED", "A", NULL);
+					renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
 					break;
 				case Oscilloscope::TRIGGER_MODE_STOP:
-					renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0), "STOPPED", "STOP", "S", NULL);
+					renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
 					break;
 				case Oscilloscope::TRIGGER_MODE_TRIGGERED:
-					renderBadge(ImVec4(0.7, 0.7, 0.3, 1.0), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+					renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
 					break;
 				case Oscilloscope::TRIGGER_MODE_WAIT:
 					/* prefer language "BUSY" to "WAIT":
@@ -282,10 +340,10 @@ bool StreamBrowserDialog::DoRender()
 					 * trigger", "BUSY" means "I am
 					 * doing something internally and am
 					 * not ready for some reason" */
-					renderBadge(ImVec4(0.8, 0.3, 0.3, 1.0), "BUSY", "B", NULL);
+					renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
 					break;
 				case Oscilloscope::TRIGGER_MODE_AUTO:
-					renderBadge(ImVec4(0.3, 0.8, 0.3, 1.0), "AUTO", "A", NULL);
+					renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
 					break;
 				default:
 					break;
@@ -293,10 +351,44 @@ bool StreamBrowserDialog::DoRender()
 			}
 		}
 
+		// Render ornaments for this PSU: on/off status, ...
+		auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(inst);
+		if (psu) 
+		{
+			bool allOn = false;
+			bool someOn = false;
+			if(psu->SupportsMasterOutputSwitching())
+			{
+				allOn = psu->GetMasterPowerEnable();
+			}
+			else
+			{
+				allOn = true;
+				for(size_t i = 0 ; i < channelCount ; i++)
+				{
+					if(psu->GetPowerChannelActive(i))
+					{
+						someOn = true;
+					}
+					else
+					{
+						allOn = false;
+					}
+				}
+			}
+			if(allOn || someOn)
+			{
+				renderBadge(allOn ? ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) : ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
+			}
+			else
+			{
+				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+			}
+		}
+
 		if(instIsOpen)
 		{
 			size_t lastEnabledChannelIndex = 0;
-			size_t channelCount = inst->GetChannelCount();
 			if (scope)
 			{
 				ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
@@ -329,6 +421,7 @@ bool StreamBrowserDialog::DoRender()
 
 				bool singleStream = chan->GetStreamCount() == 1;
 				auto scopechan = dynamic_cast<OscilloscopeChannel *>(chan);
+				auto psuchan = dynamic_cast<PowerSupplyChannel *>(chan);
 				bool renderScopeProps = false;
 				bool isDigital = false;
 				if (scopechan)
@@ -374,82 +467,135 @@ bool StreamBrowserDialog::DoRender()
 
 				// Channel decoration
 				startBadgeLine();
-				if (scopechan && !scopechan->IsEnabled())
+				if (scopechan)
 				{
-					renderBadge(ImVec4(0.4, 0.4, 0.4, 1.0) /* XXX: pull color from prefs */, "disabled", "disa", NULL);
+					if(!scopechan->IsEnabled())
+					{
+						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", NULL);
+					}
+					else
+					{
+						renderDownloadProgress(inst, chan, (i == lastEnabledChannelIndex));
+					}
 				}
-				else
+				else if(psu)
 				{
-					renderDownloadProgress(inst, chan, (i == lastEnabledChannelIndex));
+					if(psu->GetPowerChannelActive(i))
+					{
+						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")), "ON", "I", NULL);
+					}
+					else
+					{
+						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+					}
 				}
 
 				if(open)
 				{
-					for(size_t j=0; j<chan->GetStreamCount(); j++)
+					if(psu)
+					{	
+						
+						// For PSU we will have a special handlig for the 4 streams associated to a PSU channel
+						ImGui::BeginChild("psu_params", ImVec2(0, 0),
+							ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+
+						auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
+						auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
+						auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
+						auto mcurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentMeasured ());
+
+						bool cc = false;
+						auto psuState = m_session.GetPSUState(psu);
+						if(psuState)
+							cc = psuState->m_channelConstantCurrent[i].load();
+
+						bool clicked = false;
+						bool hovered = false;
+
+						if (ImGui::BeginTable("table1", 3))
+						{
+							// Voltage
+							renderPsuRows(true,cc,psuchan,svoltage_txt.c_str(),mvoltage_txt.c_str(),clicked,hovered);
+							// Current
+							renderPsuRows(false,cc,psuchan,scurrent_txt.c_str(),mcurrent_txt.c_str(),clicked,hovered);
+							// End table
+							ImGui::EndTable();
+							if (clicked)
+							{
+								m_parent->ShowInstrumentProperties(psu);
+							}
+							if (hovered)
+								m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+						}						
+						ImGui::EndChild();
+					}
+					else
 					{
-						ImGui::PushID(j);
-
-						if (!singleStream)
+						for(size_t j=0; j<chan->GetStreamCount(); j++)
 						{
-							ImGui::Selectable(chan->GetStreamName(j).c_str());
+							ImGui::PushID(j);
 
-							StreamDescriptor s(chan, j);
-							if(ImGui::BeginDragDropSource())
+							if (!singleStream)
 							{
-								if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-									ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+								ImGui::Selectable(chan->GetStreamName(j).c_str());
+
+								StreamDescriptor s(chan, j);
+								if(ImGui::BeginDragDropSource())
+								{
+									if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+										ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+									else
+										ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+
+									ImGui::TextUnformatted(s.GetName().c_str());
+									ImGui::EndDragDropSource();
+								}
 								else
-									ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-								ImGui::TextUnformatted(s.GetName().c_str());
-								ImGui::EndDragDropSource();
+									DoItemHelp();
 							}
-							else
-								DoItemHelp();
-						}
-						// Channel/stram properties
-						if (renderScopeProps && scopechan)
-						{
-							ImGui::BeginChild("scope_params", ImVec2(0, 0),
-								ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+							// Channel/stram properties
+							if (renderScopeProps && scopechan)
+							{	// Scope channel
+								ImGui::BeginChild("scope_params", ImVec2(0, 0),
+									ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
-							if(isDigital)
-							{
-								auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(i));
-
-								bool clicked = false;
-								bool hovered = false;
-								renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-								if (clicked)
+								if(isDigital)
 								{
-									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-									m_parent->ShowChannelProperties(scopechan);
-								}
-								if (hovered)
-									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-							}
-							else
-							{
-								auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
-								auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
+									auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(i));
 
-								bool clicked = false;
-								bool hovered = false;
-								renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-								renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
-								if (clicked)
+									bool clicked = false;
+									bool hovered = false;
+									renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+									if (clicked)
+									{
+										/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+										m_parent->ShowChannelProperties(scopechan);
+									}
+									if (hovered)
+										m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+								}
+								else
 								{
-									/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-									m_parent->ShowChannelProperties(scopechan);
+									auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
+									auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
+
+									bool clicked = false;
+									bool hovered = false;
+									renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+									renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
+									if (clicked)
+									{
+										/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+										m_parent->ShowChannelProperties(scopechan);
+									}
+									if (hovered)
+										m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 								}
-								if (hovered)
-									m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+
+								ImGui::EndChild();
 							}
-
-							ImGui::EndChild();
+							ImGui::PopID();
 						}
-
-						ImGui::PopID();
 					}
 				}
 
