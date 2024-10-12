@@ -48,6 +48,7 @@
 #include "../scopeprotocols/BaseMeasurement.h"
 #include "../scopeprotocols/BINImportFilter.h"
 #include "../scopeprotocols/BurstWidthMeasurement.h"
+#include "../scopeprotocols/BusHeatmapFilter.h"
 #include "../scopeprotocols/CANAnalyzerFilter.h"
 #include "../scopeprotocols/CANBitmaskFilter.h"
 #include "../scopeprotocols/CANDecoder.h"
@@ -55,12 +56,15 @@
 #include "../scopeprotocols/ClipFilter.h"
 #include "../scopeprotocols/ClockRecoveryFilter.h"
 #include "../scopeprotocols/ConstellationFilter.h"
+#include "../scopeprotocols/CTLEFilter.h"
 #include "../scopeprotocols/CurrentShuntFilter.h"
 #include "../scopeprotocols/CSVExportFilter.h"
 #include "../scopeprotocols/CSVImportFilter.h"
 #include "../scopeprotocols/DDR1Decoder.h"
 #include "../scopeprotocols/DDR3Decoder.h"
 #include "../scopeprotocols/DeskewFilter.h"
+#include "../scopeprotocols/DigitalToNRZFilter.h"
+#include "../scopeprotocols/DigitalToPAM4Filter.h"
 #include "../scopeprotocols/DivideFilter.h"
 #include "../scopeprotocols/DownsampleFilter.h"
 #include "../scopeprotocols/DPAuxChannelDecoder.h"
@@ -104,6 +108,7 @@
 #include "../scopeprotocols/InvertFilter.h"
 #include "../scopeprotocols/MaximumFilter.h"
 #include "../scopeprotocols/MemoryFilter.h"
+#include "../scopeprotocols/MilStd1553Decoder.h"
 #include "../scopeprotocols/MinimumFilter.h"
 #include "../scopeprotocols/MultiplyFilter.h"
 #include "../scopeprotocols/NCOFilter.h"
@@ -138,6 +143,7 @@
 #include "../scopeprotocols/TDRFilter.h"
 #include "../scopeprotocols/ThermalDiodeFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
+#include "../scopeprotocols/TIEMeasurement.h"
 #include "../scopeprotocols/TMDSDecoder.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
 #include "../scopeprotocols/TopMeasurement.h"
@@ -149,7 +155,10 @@
 #include "../scopeprotocols/USB2ActivityDecoder.h"
 #include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
+#include "../scopeprotocols/VCDImportFilter.h"
 #include "../scopeprotocols/Waterfall.h"
+#include "../scopeprotocols/WAVImportFilter.h"
+#include "../scopeprotocols/WFMImportFilter.h"
 #include "../scopeprotocols/XYSweepFilter.h"
 
 using namespace std;
@@ -192,6 +201,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
 	m_texmgr.LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
 	m_texmgr.LoadTexture("filter-bin-import", FindDataFile("icons/filters/filter-bin-import.png"));
+	m_texmgr.LoadTexture("filter-bus-heatmap", FindDataFile("icons/filters/filter-bus-heatmap.png"));
 	m_texmgr.LoadTexture("filter-can-analyzer", FindDataFile("icons/filters/filter-can-analyzer.png"));
 	m_texmgr.LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
 	m_texmgr.LoadTexture("filter-bandwidth", FindDataFile("icons/filters/filter-bandwidth.png"));
@@ -202,13 +212,17 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-candump-import", FindDataFile("icons/filters/filter-can-utils-import.png"));
 	m_texmgr.LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
 	m_texmgr.LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
+	m_texmgr.LoadTexture("filter-clock-jitter-tie", FindDataFile("icons/filters/filter-clock-jitter-tie.png"));
 	m_texmgr.LoadTexture("filter-constellation", FindDataFile("icons/filters/filter-constellation.png"));
 	m_texmgr.LoadTexture("filter-csv-export", FindDataFile("icons/filters/filter-csv-export.png"));
 	m_texmgr.LoadTexture("filter-csv-import", FindDataFile("icons/filters/filter-csv-import.png"));
+	m_texmgr.LoadTexture("filter-ctle", FindDataFile("icons/filters/filter-ctle.png"));
 	m_texmgr.LoadTexture("filter-current-shunt", FindDataFile("icons/filters/filter-current-shunt.png"));
 	m_texmgr.LoadTexture("filter-ddr1-command", FindDataFile("icons/filters/filter-ddr1-command.png"));
 	m_texmgr.LoadTexture("filter-ddr3-command", FindDataFile("icons/filters/filter-ddr3-command.png"));
 	m_texmgr.LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
+	m_texmgr.LoadTexture("filter-digital-to-nrz", FindDataFile("icons/filters/filter-digital-to-nrz.png"));
+	m_texmgr.LoadTexture("filter-digital-to-pam4", FindDataFile("icons/filters/filter-digital-to-pam4.png"));
 	m_texmgr.LoadTexture("filter-displayport-aux", FindDataFile("icons/filters/filter-displayport-aux.png"));
 	m_texmgr.LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
 	m_texmgr.LoadTexture("filter-dram-clocks", FindDataFile("icons/filters/filter-dram-clocks.png"));
@@ -241,6 +255,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
 	m_texmgr.LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
 	m_texmgr.LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
+	m_texmgr.LoadTexture("filter-mil-std-1553", FindDataFile("icons/filters/filter-mil-std-1553.png"));
 	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
@@ -285,7 +300,10 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-usb2-activity", FindDataFile("icons/filters/filter-usb-activity.png"));
 	m_texmgr.LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_texmgr.LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
+	m_texmgr.LoadTexture("filter-vcd-import", FindDataFile("icons/filters/filter-vcd-import.png"));
 	m_texmgr.LoadTexture("filter-waterfall", FindDataFile("icons/filters/filter-waterfall.png"));
+	m_texmgr.LoadTexture("filter-wav-import", FindDataFile("icons/filters/filter-wav-import.png"));
+	m_texmgr.LoadTexture("filter-wfm-import", FindDataFile("icons/filters/filter-wfm-import.png"));
 	m_texmgr.LoadTexture("filter-xy-sweep", FindDataFile("icons/filters/filter-xy-sweep.png"));
 	m_texmgr.LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
 	m_texmgr.LoadTexture("input-bnc", FindDataFile("icons/filters/input-bnc.png"));
@@ -304,6 +322,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(BaseMeasurement))] 						= "filter-base";
 	m_filterIconMap[type_index(typeid(BINImportFilter))] 						= "filter-bin-import";
 	m_filterIconMap[type_index(typeid(BurstWidthMeasurement))] 					= "filter-burst-width";
+	m_filterIconMap[type_index(typeid(BusHeatmapFilter))] 						= "filter-bus-heatmap";
 	m_filterIconMap[type_index(typeid(CANAnalyzerFilter))] 						= "filter-can-analyzer";
 	m_filterIconMap[type_index(typeid(CANBitmaskFilter))] 						= "filter-can-bitmask";
 	m_filterIconMap[type_index(typeid(CANDecoder))] 							= "filter-can";
@@ -313,6 +332,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(ConstellationFilter))] 					= "filter-constellation";
 	m_filterIconMap[type_index(typeid(CSVExportFilter))] 						= "filter-csv-export";
 	m_filterIconMap[type_index(typeid(CSVImportFilter))] 						= "filter-csv-import";
+	m_filterIconMap[type_index(typeid(CTLEFilter))] 							= "filter-ctle";
 	m_filterIconMap[type_index(typeid(CurrentShuntFilter))]						= "filter-current-shunt";
 	m_filterIconMap[type_index(typeid(DDR1Decoder))] 							= "filter-ddr1-command";
 	m_filterIconMap[type_index(typeid(DDR3Decoder))] 							= "filter-ddr3-command";
@@ -359,6 +379,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(IPv4Decoder))] 							= "filter-ipv4";
 	m_filterIconMap[type_index(typeid(MaximumFilter))] 							= "filter-max";
 	m_filterIconMap[type_index(typeid(MemoryFilter))] 							= "filter-memory";
+	m_filterIconMap[type_index(typeid(MilStd1553Decoder))] 						= "filter-mil-std-1553";
 	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
@@ -390,6 +411,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(TDRFilter))] 								= "filter-tdr";
 	m_filterIconMap[type_index(typeid(ThermalDiodeFilter))] 					= "filter-thermal-diode";
 	m_filterIconMap[type_index(typeid(ThresholdFilter))] 						= "filter-threshold";
+	m_filterIconMap[type_index(typeid(TIEMeasurement))] 						= "filter-clock-jitter-tie";
 	m_filterIconMap[type_index(typeid(TMDSDecoder))] 							= "filter-8b10b-tmds";
 	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 					= "filter-sine";
 	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
@@ -404,7 +426,10 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(USB2ActivityDecoder))] 					= "filter-usb2-activity";
 	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
 	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
+	m_filterIconMap[type_index(typeid(VCDImportFilter))] 						= "filter-vcd-import";
 	m_filterIconMap[type_index(typeid(Waterfall))] 								= "filter-waterfall";
+	m_filterIconMap[type_index(typeid(WAVImportFilter))] 						= "filter-wav-import";
+	m_filterIconMap[type_index(typeid(WFMImportFilter))] 						= "filter-wfm-import";
 	m_filterIconMap[type_index(typeid(XYSweepFilter))] 							= "filter-xy-sweep";
 }
 
