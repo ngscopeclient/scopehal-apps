@@ -255,17 +255,19 @@ bool StreamBrowserDialog::DoRender()
 		ImGui::Text(isVoltage ? "Voltage:" : "Current:");
 		ImGui::TableSetColumnIndex(1);
 		StreamDescriptor sv(chan, isVoltage ? 1 : 3);
+		ImGui::PushID(isVoltage ? "sV" :  "sC");
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_badge_color")));
 		ImGui::Selectable("- Set");
 		ImGui::PopStyleColor();
 		if(ImGui::BeginDragDropSource())
 		{
 			ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
-			ImGui::TextUnformatted((isVoltage ? "Voltage set value" : "Current set value"));
+			ImGui::TextUnformatted((isVoltage ? "Voltage set value" : "Current set value")); // TODO WTF !
 			ImGui::EndDragDropSource();
 		}
 		else
 			DoItemHelp();
+		ImGui::PopID();
 		ImGui::TableSetColumnIndex(2);
 		clicked |= ImGui::TextLink(setValue);
 		hovered |= ImGui::IsItemHovered();
@@ -280,6 +282,7 @@ bool StreamBrowserDialog::DoRender()
 		}
 		ImGui::TableSetColumnIndex(1);
 		StreamDescriptor mv(chan, isVoltage ? 0 : 2);
+		ImGui::PushID(isVoltage ? "mV" :  "mC");
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_badge_color")));
 		ImGui::Selectable("- Meas.");
 		ImGui::PopStyleColor();
@@ -291,6 +294,7 @@ bool StreamBrowserDialog::DoRender()
 		}
 		else
 			DoItemHelp();
+		ImGui::PopID();
 		ImGui::TableSetColumnIndex(2);
 		clicked |= ImGui::TextLink(measuredValue);
 		hovered |= ImGui::IsItemHovered();
@@ -492,13 +496,11 @@ bool StreamBrowserDialog::DoRender()
 
 				if(open)
 				{
+					ImGui::PushID(inst.get());
 					if(psu)
-					{	
-						
-						// For PSU we will have a special handlig for the 4 streams associated to a PSU channel
+					{	// For PSU we will have a special handling for the 4 streams associated to a PSU channel
 						ImGui::BeginChild("psu_params", ImVec2(0, 0),
 							ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-
 						auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
 						auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
 						auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
@@ -597,6 +599,7 @@ bool StreamBrowserDialog::DoRender()
 							ImGui::PopID();
 						}
 					}
+					ImGui::PopID();
 				}
 
 				if(open)
