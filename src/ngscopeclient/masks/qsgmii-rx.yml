@@ -38,4 +38,4 @@ mask:
         -   x:   -2
             y:  800
 conditions:
-    hitrate: 1.0e-6
+    hitrate: 0

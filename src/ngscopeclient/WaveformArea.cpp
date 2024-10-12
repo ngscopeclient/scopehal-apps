@@ -941,7 +941,7 @@ void WaveformArea::RenderEyeWaveform(shared_ptr<DisplayedChannel> channel, ImVec
 		auto borderpass = prefs.GetColor("Appearance.Eye Patterns.border_color_pass");
 		auto borderfailed = prefs.GetColor("Appearance.Eye Patterns.border_color_fail");
 
-		auto mask = eye ? eye->GetMask() : bichan->GetMask();
+		auto& mask = eye ? eye->GetMask() : bichan->GetMask();
 		auto polygons = mask.GetPolygons();
 		bool relative = mask.IsTimebaseRelative();
 		bool failed = edata->GetMaskHitRate() > mask.GetAllowedHitRate();

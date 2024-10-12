@@ -56,9 +56,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <direct.h>
 #include <shlwapi.h>
 #else
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
 #endif
 
@@ -2138,7 +2140,7 @@ bool Session::SerializeWaveforms(const string& dataDir)
 			//Make the directory for the scope if needed
 			string scopedir = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope.get()]) + "_waveforms";
 			#ifdef _WIN32
-				mkdir(scopedir.c_str());
+				_mkdir(scopedir.c_str());
 			#else
 				mkdir(scopedir.c_str(), 0755);
 			#endif
