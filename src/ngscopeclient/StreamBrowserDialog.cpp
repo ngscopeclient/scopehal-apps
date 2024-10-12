@@ -86,10 +86,11 @@ bool StreamBrowserDialog::DoRender()
 		badgeXMin = (window->DC.CursorPosPrevLine - window->Pos + window->Scroll).x;
 		badgeXCur = ImGui::GetWindowContentRegionMax().x;
 	};
-	auto renderBadge = [&badgeXMin, &badgeXCur](ImVec4 color, ... /* labels, ending in NULL */)
+	auto renderBadge = [&badgeXMin, &badgeXCur](ImVec4 color, ... /* labels, ending in NULL */) -> bool
 	{
 		va_list ap;
 		va_start(ap, color);
+		bool result = false;
 
 		/* XXX: maybe color should be a prefs string? */
 
@@ -103,10 +104,11 @@ bool StreamBrowserDialog::DoRender()
 			badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 			ImGui::SameLine(badgeXCur);
 			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			ImGui::SmallButton(label);
+			result = ImGui::SmallButton(label);
 			ImGui::PopStyleColor();
 			break;
 		}
+		return result;
 	};
 	auto renderDownloadProgress = [this, &badgeXMin, &badgeXCur](std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 	{
@@ -262,7 +264,8 @@ bool StreamBrowserDialog::DoRender()
 		if(ImGui::BeginDragDropSource())
 		{
 			ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
-			ImGui::TextUnformatted((isVoltage ? "Voltage set value" : "Current set value")); // TODO WTF !
+			string dragText = chan->GetDisplayName() + (isVoltage ? " voltage" : " current") + " set value";
+			ImGui::TextUnformatted(dragText.c_str());
 			ImGui::EndDragDropSource();
 		}
 		else
@@ -289,7 +292,8 @@ bool StreamBrowserDialog::DoRender()
 		if(ImGui::BeginDragDropSource())
 		{
 			ImGui::SetDragDropPayload("Scalar", &mv, sizeof(mv));
-			ImGui::TextUnformatted((isVoltage ? "Voltage measured value" : "Current measured value"));
+			string dragText = chan->GetDisplayName() + (isVoltage ? " voltage" : " current") + " measured value";
+			ImGui::TextUnformatted(dragText.c_str());
 			ImGui::EndDragDropSource();
 		}
 		else
@@ -380,13 +384,18 @@ bool StreamBrowserDialog::DoRender()
 					}
 				}
 			}
+			bool clicked;
 			if(allOn || someOn)
 			{
-				renderBadge(allOn ? ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) : ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
+				clicked = renderBadge(allOn ? ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) : ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
 			}
 			else
 			{
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+				clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+			}
+			if(clicked)
+			{
+				psu->SetMasterPowerEnable(!allOn);
 			}
 		}
 
@@ -484,13 +493,19 @@ bool StreamBrowserDialog::DoRender()
 				}
 				else if(psu)
 				{
-					if(psu->GetPowerChannelActive(i))
+					bool clicked;
+					bool active = psu->GetPowerChannelActive(i);
+					if(active)
 					{
-						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")), "ON", "I", NULL);
+						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")), "ON", "I", NULL);
 					}
 					else
 					{
-						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+					}
+					if(clicked)
+					{
+						psu->SetPowerChannelActive(i,!active);
 					}
 				}
 
