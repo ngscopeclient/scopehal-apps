@@ -311,6 +311,7 @@ bool StreamBrowserDialog::DoRender()
 	auto insts = m_session.GetInstruments();
 	for(auto inst : insts)
 	{
+		ImGui::PushID(inst.get());
 		bool instIsOpen = ImGui::TreeNodeEx(inst->m_nickname.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 		startBadgeLine();
 
@@ -430,6 +431,7 @@ bool StreamBrowserDialog::DoRender()
 
 			for(size_t i=0; i<channelCount; i++)
 			{
+				ImGui::PushID(i);
 				auto chan = inst->GetChannel(i);
 
 				bool singleStream = chan->GetStreamCount() == 1;
@@ -619,10 +621,13 @@ bool StreamBrowserDialog::DoRender()
 
 				if(open)
 					ImGui::TreePop();
+
+				ImGui::PopID();
 			}
 
 			ImGui::TreePop();
 		}
+		ImGui::PopID();
 	}
 
 	//Add all filters
