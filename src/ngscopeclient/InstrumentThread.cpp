@@ -130,9 +130,14 @@ void InstrumentThread(InstrumentThreadArgs args)
 				psustate->m_channelCurrent[i] = pchan->GetCurrentMeasured();
 				psustate->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
 				psustate->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
+				psustate->m_channelOn[i] = psu->GetPowerChannelActive(i);
 
 				session->MarkChannelDirty(pchan);
 			}
+
+			if(psu->SupportsMasterOutputSwitching())
+				psustate->m_masterEnable = psu->GetMasterPowerEnable();
+
 			psustate->m_firstUpdateDone = true;
 		}
 		if(load)

@@ -249,7 +249,7 @@ bool StreamBrowserDialog::DoRender()
 	};
 
 	auto renderPsuRows = [this](bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
-	{	
+	{
 		auto& prefs = m_session.GetPreferences();
 		// Row 1
 		ImGui::TableNextRow();
@@ -321,7 +321,7 @@ bool StreamBrowserDialog::DoRender()
 
 		// Render ornaments for this scope: offline, trigger status, ...
 		auto scope = std::dynamic_pointer_cast<Oscilloscope>(inst);
-		if (scope) 
+		if (scope)
 		{
 			if (scope->IsOffline())
 				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
@@ -362,42 +362,40 @@ bool StreamBrowserDialog::DoRender()
 
 		// Render ornaments for this PSU: on/off status, ...
 		auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(inst);
-		if (psu) 
+		if (psu)
 		{
+			//Get the state
+			auto psustate = m_session.GetPSUState(psu);
+
 			bool allOn = false;
 			bool someOn = false;
 			if(psu->SupportsMasterOutputSwitching())
-			{
-				allOn = psu->GetMasterPowerEnable();
-			}
+				allOn = psustate->m_masterEnable;
 			else
 			{
 				allOn = true;
 				for(size_t i = 0 ; i < channelCount ; i++)
 				{
-					if(psu->GetPowerChannelActive(i))
-					{
+					if(psustate->m_channelOn[i])
 						someOn = true;
-					}
 					else
-					{
 						allOn = false;
-					}
 				}
 			}
 			bool clicked;
 			if(allOn || someOn)
 			{
-				clicked = renderBadge(allOn ? ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) : ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
+				clicked = renderBadge(allOn ?
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
 			}
 			else
 			{
-				clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+				clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(
+					prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
 			}
 			if(clicked)
-			{
 				psu->SetMasterPowerEnable(!allOn);
-			}
 		}
 
 		if(instIsOpen)
@@ -421,9 +419,7 @@ bool StreamBrowserDialog::DoRender()
 				for(size_t i = 0; i<channelCount; i++)
 				{
 					if(scope->IsChannelEnabled(i))
-					{
 						lastEnabledChannelIndex = i;
-					}
 				}
 
 				ImGui::EndChild();
@@ -485,30 +481,23 @@ bool StreamBrowserDialog::DoRender()
 				if (scopechan)
 				{
 					if(!scopechan->IsEnabled())
-					{
 						renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", NULL);
-					}
 					else
-					{
 						renderDownloadProgress(inst, chan, (i == lastEnabledChannelIndex));
-					}
 				}
 				else if(psu)
 				{
+					//Get the state
+					auto psustate = m_session.GetPSUState(psu);
+
 					bool clicked;
-					bool active = psu->GetPowerChannelActive(i);
+					bool active = psustate->m_channelOn[i];
 					if(active)
-					{
 						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")), "ON", "I", NULL);
-					}
 					else
-					{
 						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
-					}
 					if(clicked)
-					{
 						psu->SetPowerChannelActive(i,!active);
-					}
 				}
 
 				if(open)
@@ -545,7 +534,7 @@ bool StreamBrowserDialog::DoRender()
 							}
 							if (hovered)
 								m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-						}						
+						}
 						ImGui::EndChild();
 					}
 					else
