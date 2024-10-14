@@ -92,8 +92,6 @@ bool StreamBrowserDialog::DoRender()
 		va_start(ap, color);
 		bool result = false;
 
-		/* XXX: maybe color should be a prefs string? */
-
 		while (const char *label = va_arg(ap, const char *)) {
 			float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
 			if ((badgeXCur - xsz) < badgeXMin) {
@@ -109,6 +107,66 @@ bool StreamBrowserDialog::DoRender()
 			break;
 		}
 		return result;
+	};
+	auto renderCombo = [&badgeXMin, &badgeXCur](ImVec4 color,int selected, ... /* values, ending in NULL */) -> int
+	{
+		va_list ap;
+		va_start(ap, selected);
+		int result = selected;
+
+		const char* selectedLabel = NULL;
+		int itemIndex = 0;
+		while (const char *label = va_arg(ap, const char *)) 
+		{
+			if(itemIndex == selected)
+			{
+				selectedLabel = label;
+				break;
+			}
+			itemIndex++;
+		}
+		if(selectedLabel == NULL)
+		{
+			va_start(ap, selected);
+			selectedLabel = va_arg(ap, const char *);
+			selected = 0;
+		}
+		float xsz = ImGui::CalcTextSize(selectedLabel).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+		if ((badgeXCur - xsz) < badgeXMin)
+			return result; // No room to display the combo
+		badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
+		ImGui::SameLine(badgeXCur);
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
+		if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
+		{
+			va_start(ap, selected);
+			itemIndex = 0;
+			while (const char *label = va_arg(ap, const char *)) 
+			{
+                const bool is_selected = (itemIndex == selected);
+                if(ImGui::Selectable(label, is_selected))
+					result = itemIndex;
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                    ImGui::SetItemDefaultFocus();
+				itemIndex++;
+            }
+            ImGui::EndCombo();
+		}
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor();
+		return result;
+	};
+	auto renderToggle = [&badgeXMin, &badgeXCur, renderCombo](ImVec4 color, bool curValue) -> bool
+	{
+		return (renderCombo(color, (int)curValue, "OFF", "ON", NULL) == 1);
+	};
+	auto renderOnOffToggle = [this,&badgeXMin, &badgeXCur, renderToggle](bool curValue) -> bool
+	{
+		auto& prefs = m_session.GetPreferences();
+		ImVec4 color = ImGui::ColorConvertU32ToFloat4((curValue ? prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") : prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
+		return renderToggle(color, curValue);
 	};
 	auto renderDownloadProgress = [this, &badgeXMin, &badgeXCur](std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 	{
@@ -382,20 +440,19 @@ bool StreamBrowserDialog::DoRender()
 						allOn = false;
 				}
 			}
-			bool clicked;
+			bool result;
 			if(allOn || someOn)
 			{
-				clicked = renderBadge(allOn ?
+				result = renderToggle(allOn ?
 					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
-					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), "ON", "I", NULL);
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), true);
 			}
 			else
 			{
-				clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(
-					prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
+				result = renderOnOffToggle(false);
 			}
-			if(clicked)
-				psu->SetMasterPowerEnable(!allOn);
+			if(result != allOn)
+				psu->SetMasterPowerEnable(result);
 		}
 
 		if(instIsOpen)
@@ -490,14 +547,10 @@ bool StreamBrowserDialog::DoRender()
 					//Get the state
 					auto psustate = m_session.GetPSUState(psu);
 
-					bool clicked;
 					bool active = psustate->m_channelOn[i];
-					if(active)
-						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")), "ON", "I", NULL);
-					else
-						clicked = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")), "OFF", "O", NULL);
-					if(clicked)
-						psu->SetPowerChannelActive(i,!active);
+					bool result = renderOnOffToggle(active);
+					if(result != active)
+						psu->SetPowerChannelActive(i,result);
 				}
 
 				if(open)
