@@ -1441,6 +1441,86 @@ void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 	}
 }
 
+
+void MainWindow::ShowInstrumentProperties(std::shared_ptr<Instrument> instrument)
+{
+	LogTrace("Show properties for %s\n", instrument->GetName().c_str());
+	LogIndenter li;
+	// PSU
+	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(instrument);
+	if(psu)
+	{
+		if(m_psuDialogs.find(psu) != m_psuDialogs.end())
+		{
+			LogTrace("PSU properties dialog is already open, no action required\n");
+			return;
+		}
+		AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
+		return;
+	}
+	// Meter
+	auto dmm = dynamic_pointer_cast<SCPIMultimeter>(instrument);
+	if(dmm)
+	{
+		if(m_meterDialogs.find(dmm) != m_meterDialogs.end())
+		{
+			LogTrace("Multimeter properties dialog is already open, no action required\n");
+			return;
+		}
+		m_session.AddMultimeterDialog(dmm);
+		return;
+	}
+	// AWG
+	auto awg = dynamic_pointer_cast<SCPIFunctionGenerator>(instrument);
+	if(awg)
+	{
+		if(m_generatorDialogs.find(awg) != m_generatorDialogs.end())
+		{
+			LogTrace("Generator properties dialog is already open, no action required\n");
+			return;
+		}
+		AddDialog(make_shared<FunctionGeneratorDialog>(awg, &m_session));
+		return;
+	}
+	// Bert
+	auto bert = dynamic_pointer_cast<SCPIBERT>(instrument);
+	if(bert)
+	{
+		if(m_bertDialogs.find(bert) != m_bertDialogs.end())
+		{
+			LogTrace("BERT properties dialog is already open, no action required\n");
+			return;
+		}
+		AddDialog(make_shared<BERTDialog>(bert, m_session.GetBERTState(bert), &m_session));
+		return;
+	}
+	// Rf Gen
+	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(instrument);
+	if(rfgen)
+	{
+		if(m_rfgeneratorDialogs.find(rfgen) != m_rfgeneratorDialogs.end())
+		{
+			LogTrace("RF generator properties dialog is already open, no action required\n");
+			return;
+		}
+		AddDialog(make_shared<RFGeneratorDialog>(rfgen, &m_session));
+		return;
+	}
+	// Load
+	auto load = dynamic_pointer_cast<SCPILoad>(instrument);
+	if(load)
+	{
+		if(m_loadDialogs.find(load) != m_loadDialogs.end())
+		{
+			LogTrace("Load properties dialog is already open, no action required\n");
+			return;
+		}
+		AddDialog(make_shared<LoadDialog>(load, m_session.GetLoadState(load), &m_session));
+		return;
+	}
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Recent instruments
 
