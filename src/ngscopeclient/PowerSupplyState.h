@@ -44,10 +44,13 @@ public:
 
 	PowerSupplyState(size_t n = 0)
 	{
+		m_masterEnable = false;
+
 		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
 		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
 		m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
 		m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
+		m_channelOn = std::make_unique<std::atomic<bool>[] >(n);
 
 		for(size_t i=0; i<n; i++)
 		{
@@ -55,6 +58,7 @@ public:
 			m_channelCurrent[i] = 0;
 			m_channelConstantCurrent[i] = false;
 			m_channelFuseTripped[i] = false;
+			m_channelOn[i] = false;
 		}
 
 		m_firstUpdateDone = false;
@@ -64,8 +68,11 @@ public:
 	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
+	std::unique_ptr<std::atomic<bool>[]> m_channelOn;
 
 	std::atomic<bool> m_firstUpdateDone;
+
+	std::atomic<bool> m_masterEnable;
 };
 
 #endif
