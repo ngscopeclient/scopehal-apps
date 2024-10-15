@@ -202,11 +202,11 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Trigger auto badge color")
 				.Description("Color for trigger 'auto' badge"));
 			stream.AddPreference(
-				Preference::Color("intrument_disabled_badge_color", ColorFromString("#666666"))
+				Preference::Color("instrument_disabled_badge_color", ColorFromString("#666666"))
 				.Label("Instrument disabled badge color")
 				.Description("Color for instrument 'disabled' badge"));
 			stream.AddPreference(
-				Preference::Color("intrument_offline_badge_color", ColorFromString("#CC4C4C"))
+				Preference::Color("instrument_offline_badge_color", ColorFromString("#CC4C4C"))
 				.Label("Instrument offline badge color")
 				.Description("Color for instrument 'offline' badge"));
 			stream.AddPreference(
