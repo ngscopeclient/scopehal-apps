@@ -42,7 +42,8 @@ jobs:
           glslang \
           shaderc \
           molten-vk \
-          ninja
+          ninja \
+          hidapi
 
     - name: Configure
       run: |
