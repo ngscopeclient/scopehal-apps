@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="127.99999"
+   height="63.999996"
+   viewBox="0 0 33.866664 16.933332"
+   version="1.1"
+   id="svg1"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs1"><linearGradient
+       id="swatch18"><stop
+         style="stop-color:#ffeb00;stop-opacity:0.87843137;"
+         offset="0"
+         id="stop18" /></linearGradient><linearGradient
+       id="swatch1"><stop
+         style="stop-color:#ffea00;stop-opacity:1;"
+         offset="0"
+         id="stop1" /></linearGradient><style
+       id="style1">.c{fill:#ec008c;}.c,.d{stroke-width:0px;}.d{fill:#00b9f2;}</style></defs><g
+     id="layer1"
+     style="display:inline"><path
+       style="fill:none;stroke:#00b9f2;stroke-width:0.993758;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.6303172,8.6142921 C 2.1719493,6.753927 2.7135871,4.9081526 3.2552153,3.6475961 3.7968522,2.3870397 4.3384804,1.7337254 4.8801182,1.8865864 c 0.5416282,0.1528611 1.0832565,1.113689 1.6248933,2.5813043 0.5416283,1.4676162 1.0832661,3.422424 1.6248943,5.257532 0.5416368,1.8351173 1.0832651,3.5221943 1.6249026,4.5404063 0.5416286,1.018119 1.0832546,1.348627 1.6249016,0.89262 0.541647,-0.455914 1.083294,-1.695388 1.624848,-3.331121 0.541646,-1.635825 1.083293,-3.6451897 1.624941,-5.4050079 0.541646,-1.759809 1.083294,-3.2421914 1.62494,-3.9901975 0.541553,-0.7480006 1.0832,-0.7465922 1.624846,0 0.541648,0.7465931 1.083295,2.2308869 1.624942,3.9901975 0.541552,1.7593105 1.0832,3.7684439 1.624846,5.4050079 0.541646,1.636471 1.083293,2.87373 1.62494,3.331121 0.541647,0.457484 1.083199,0.124205 1.624847,-0.89262 0.541647,-1.016919 1.083294,-2.705566 1.624942,-4.5404063 0.541646,-1.8348588 1.083294,-3.7889744 1.624846,-5.257532 0.541647,-1.4685576 1.083294,-2.4269102 1.624941,-2.5813043 0.541647,-0.154394 1.083294,0.5015885 1.624847,1.7610097 0.541646,1.2594203 1.083294,3.1063309 1.62494,4.966696"
+       title="sin(x)*3.5"
+       id="path1-7" /><path
+       style="fill:none;stroke:#ffea00;stroke-width:0.79375;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="M 2.9104166,3.5057291 H 31.286979"
+       id="path95" /><path
+       style="fill:none;stroke:#ec008c;stroke-width:0.838327;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="M 1.3229167,8.8635413 H 33.271354"
+       id="path96" /></g></svg>
