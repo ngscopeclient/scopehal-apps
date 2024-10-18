@@ -39,7 +39,8 @@ jobs:
           dvipng \
           texlive \
           texlive-fonts-extra \
-          texlive-extra-utils
+          texlive-extra-utils \
+          libhidapi-dev
 
     - name: Clone and Build FFTS Library
       run: |
