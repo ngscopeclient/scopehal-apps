@@ -50,7 +50,6 @@ jobs:
           glslang:p
           spirv-tools:p
           ffts:p
-          hidapi:p
 
     - name: Build
       run: |
