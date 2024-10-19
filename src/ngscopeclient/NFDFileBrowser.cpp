@@ -58,6 +58,8 @@ NFDFileBrowser::NFDFileBrowser(
 	, m_saveDialog(saveDialog)
 	, m_cachedResultValid(false)
 {
+	LogDebug("initialPath = %s\n", initialPath.c_str());
+
 	//Trim off filter name
 	size_t iparen = m_filterName.find('(');
 	if(iparen != string::npos)
@@ -126,17 +128,20 @@ optional<string> NFDFileBrowser::ThreadProc()
 		return {};
 	}
 
-	nfdchar_t* outPath;
+	nfdchar_t* outPath = nullptr;
 	nfdu8filteritem_t filterItem = { m_filterName.c_str(), m_filterMask.c_str() };
 	nfdresult_t result;
 	if(m_saveDialog)
 	{
 		//Fill out arguments
 		nfdsavedialogu8args_t args;
+		memset(&args, 0, sizeof(args));
+
 		args.filterList = &filterItem;
 		args.filterCount = 1;
 		args.defaultPath = nullptr;
-		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
+		if(!NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow))
+			LogError("failed to get window handle\n");
 
 		result = NFD_SaveDialogU8_With(&outPath, &args);
 	}
@@ -144,10 +149,13 @@ optional<string> NFDFileBrowser::ThreadProc()
 	{
 		//Fill out arguments
 		nfdopendialogu8args_t args;
+		memset(&args, 0, sizeof(args));
+
 		args.filterList = &filterItem;
 		args.filterCount = 1;
 		args.defaultPath = nullptr;
-		NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow);
+		if(!NFD_GetNativeWindowFromGLFWWindow(m_parent->GetWindow(), &args.parentWindow))
+			LogError("failed to get window handle\n");
 
 		//And run the dialog
 		result = NFD_OpenDialogU8_With(&outPath, &args);
