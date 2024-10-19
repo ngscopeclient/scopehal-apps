@@ -989,7 +989,8 @@ void FilterGraphEditor::ClearOldPropertiesDialogs()
 	int nnodes = ax::NodeEditor::GetNodeCount();
 	vector<ax::NodeEditor::NodeId> nodes;
 	nodes.resize(nnodes);
-	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+	if(nnodes > 0)
+		ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
 
 	//Make a set we can quickly search
 	set<ax::NodeEditor::NodeId, lessID<ax::NodeEditor::NodeId> > nodeset;
@@ -1250,7 +1251,8 @@ void FilterGraphEditor::HandleOverlaps()
 	int nnodes = ax::NodeEditor::GetNodeCount();
 	vector<ax::NodeEditor::NodeId> nodes;
 	nodes.resize(nnodes);
-	ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
+	if(nnodes > 0)
+		ax::NodeEditor::GetOrderedNodeIds(&nodes[0], nnodes);
 
 	//Default all nodes to having zero force on them
 	vector<ImVec2> forces;
