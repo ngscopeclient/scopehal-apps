@@ -58,7 +58,7 @@ jobs:
           curl \
           wget \
           xzip \
-          libhidapi-dev=0.14.0-1build1 \
+          libhidapi-dev \
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
