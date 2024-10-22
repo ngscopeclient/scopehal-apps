@@ -69,12 +69,72 @@ void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext
 	hovered |= ImGui::IsItemHovered();
 }
 
+/*
+	@brief prepare rendering context to display a badge at the end of current line
+ */
 void StreamBrowserDialog::startBadgeLine()
 {
 	ImGuiWindow *window = ImGui::GetCurrentWindowRead();
 	// roughly, what ImGui::GetCursorPosPrevLineX would be, if it existed; convert from absolute-space to window-space
 	m_badgeXMin = (window->DC.CursorPosPrevLine - window->Pos + window->Scroll).x;
 	m_badgeXCur = ImGui::GetWindowContentRegionMax().x;
+}
+
+/*
+	@brief render a badge for an instrument node
+
+	@param inst the instrument to render the badge for
+	@param latched true if the redering of this batch should be latched (i.e. only renderd it previous badge has been here for more than a given time)
+	@param badge the bade type
+*/
+bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge)
+{
+	auto& prefs = m_session.GetPreferences();
+	double now = GetTime();
+	bool result = false;
+	if(latched)
+	{
+		std::pair<double,InstrumentBadge> old = m_instrumentLastBadge[inst];
+		double elapsed = now - old.first;
+		if(elapsed < 0.4)
+		{	// Keep previous badge
+			badge = old.second;
+		}
+	}
+	else
+		m_instrumentLastBadge[inst] = std::pair<double,InstrumentBadge>(now,badge);
+
+	switch (badge) 
+	{
+		case StreamBrowserDialog::BADGE_ARMED:
+			/* prefer language "ARMED" to "RUN":
+				* "RUN" could mean either "waiting
+				* for trigger" or "currently
+				* capturing samples post-trigger",
+				* "ARMED" is unambiguous */
+			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
+			break;
+		case StreamBrowserDialog::BADGE_STOPPED:
+			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
+			break;
+		case StreamBrowserDialog::BADGE_TRIGGERED:
+			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+			break;
+		case StreamBrowserDialog::BADGE_BUSY:
+			/* prefer language "BUSY" to "WAIT":
+				* "WAIT" could mean "waiting for
+				* trigger", "BUSY" means "I am
+				* doing something internally and am
+				* not ready for some reason" */
+			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
+			break;
+		case StreamBrowserDialog::BADGE_AUTO:
+			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
+			break;
+		default:
+			break;
+	}
+	return result;
 }
 
 bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
@@ -380,31 +440,22 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		else
 		{
 			Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
-			switch (mode) {
+			switch (mode) 
+			{
 			case Oscilloscope::TRIGGER_MODE_RUN:
-				/* prefer language "ARMED" to "RUN":
-					* "RUN" could mean either "waiting
-					* for trigger" or "currently
-					* capturing samples post-trigger",
-					* "ARMED" is unambiguous */
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
+				renderInstrumentBadge(instrument,false,BADGE_ARMED);
 				break;
 			case Oscilloscope::TRIGGER_MODE_STOP:
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
+				renderInstrumentBadge(instrument,true,BADGE_STOPPED);
 				break;
 			case Oscilloscope::TRIGGER_MODE_TRIGGERED:
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+				renderInstrumentBadge(instrument,false,BADGE_TRIGGERED);
 				break;
 			case Oscilloscope::TRIGGER_MODE_WAIT:
-				/* prefer language "BUSY" to "WAIT":
-					* "WAIT" could mean "waiting for
-					* trigger", "BUSY" means "I am
-					* doing something internally and am
-					* not ready for some reason" */
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
+				renderInstrumentBadge(instrument,true,BADGE_BUSY);
 				break;
 			case Oscilloscope::TRIGGER_MODE_AUTO:
-				renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
+				renderInstrumentBadge(instrument,false,BADGE_AUTO);
 				break;
 			default:
 				break;

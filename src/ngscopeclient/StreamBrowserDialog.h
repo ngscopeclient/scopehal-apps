@@ -53,11 +53,21 @@ public:
 	virtual bool DoRender() override;
 
 protected:
+	enum InstrumentBadge 
+	{
+		BADGE_ARMED,
+		BADGE_STOPPED,
+		BADGE_TRIGGERED,
+		BADGE_BUSY,
+		BADGE_AUTO
+	};
+
 	void DoItemHelp();
 	// Rendeding of StreamBorwserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
 	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
+	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
 	int  renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */);
 	bool renderToggle(ImVec4 color, bool curValue);
 	bool renderOnOffToggle(bool curValue);
@@ -81,6 +91,8 @@ protected:
 	float m_badgeXCur; // right edge to render the next badge against
 
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
+
+	std::map<std::shared_ptr<Instrument>, pair<double, InstrumentBadge>> m_instrumentLastBadge;
 };
 
 #endif
