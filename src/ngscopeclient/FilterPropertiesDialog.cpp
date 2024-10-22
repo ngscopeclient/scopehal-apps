@@ -31,6 +31,7 @@
 	@file
 	@author Andrew D. Zonenberg
 	@brief Implementation of FilterPropertiesDialog
+	@ingroup dialogs
  */
 #include "ngscopeclient.h"
 #include "ChannelPropertiesDialog.h"
@@ -154,6 +155,8 @@ bool FilterPropertiesDialog::DoRender()
 	{
 		if(ImGui::CollapsingHeader("Inputs", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			ImGui::PushID("Inputs");
+
 			//TODO: cache some of this?
 			vector<StreamDescriptor> streams;
 			FindAllStreams(streams);
@@ -184,6 +187,8 @@ bool FilterPropertiesDialog::DoRender()
 					reconfigured = true;
 				}
 			}
+
+			ImGui::PopID();
 		}
 	}
 
