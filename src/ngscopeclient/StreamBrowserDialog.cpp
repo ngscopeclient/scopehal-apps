@@ -654,9 +654,11 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		ImGui::BeginChild("scope_params", ImVec2(0, 0),
 			ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
+		Unit unit = channel->GetYAxisUnits(streamIndex);
+
 		if(isDigital)
 		{
-			auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+			auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
 
 			bool clicked = false;
 			bool hovered = false;
@@ -671,13 +673,13 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		else
 		{
-			auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(streamIndex));
-			auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+			auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
+			auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
 
 			bool clicked = false;
 			bool hovered = false;
 			renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-			renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
+			renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
 			if (clicked)
 			{
 				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
