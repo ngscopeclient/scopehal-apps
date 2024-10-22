@@ -61,6 +61,7 @@
 #include "../scopeprotocols/ComplexImportFilter.h"
 #include "../scopeprotocols/ComplexSpectrogramFilter.h"
 #include "../scopeprotocols/ConstantFilter.h"
+#include "../scopeprotocols/CouplerDeEmbedFilter.h"
 #include "../scopeprotocols/CTLEFilter.h"
 #include "../scopeprotocols/CurrentShuntFilter.h"
 #include "../scopeprotocols/CSVExportFilter.h"
@@ -73,6 +74,7 @@
 #include "../scopeprotocols/DigitalToNRZFilter.h"
 #include "../scopeprotocols/DigitalToPAM4Filter.h"
 #include "../scopeprotocols/DivideFilter.h"
+#include "../scopeprotocols/DownconvertFilter.h"
 #include "../scopeprotocols/DownsampleFilter.h"
 #include "../scopeprotocols/DPAuxChannelDecoder.h"
 #include "../scopeprotocols/DPhyHSClockRecoveryFilter.h"
@@ -110,7 +112,12 @@
 #include "../scopeprotocols/FSKDecoder.h"
 #include "../scopeprotocols/FullWidthHalfMax.h"
 #include "../scopeprotocols/GateFilter.h"
+#include "../scopeprotocols/GlitchRemovalFilter.h"
+#include "../scopeprotocols/GroupDelayFilter.h"
 #include "../scopeprotocols/HistogramFilter.h"
+#include "../scopeprotocols/HyperRAMDecoder.h"
+#include "../scopeprotocols/I2CDecoder.h"
+#include "../scopeprotocols/I2CRegisterDecoder.h"
 #include "../scopeprotocols/IBM8b10bDecoder.h"
 #include "../scopeprotocols/IPv4Decoder.h"
 #include "../scopeprotocols/InvertFilter.h"
@@ -224,7 +231,13 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-cdrpll", FindDataFile("icons/filters/filter-cdrpll.png"));
 	m_texmgr.LoadTexture("filter-clip", FindDataFile("icons/filters/filter-clip.png"));
 	m_texmgr.LoadTexture("filter-clock-jitter-tie", FindDataFile("icons/filters/filter-clock-jitter-tie.png"));
+	m_texmgr.LoadTexture("filter-clock-recovery-dphy-hs-mode", FindDataFile("icons/filters/filter-clock-recovery-d-phy-hs-mode.png"));
+	m_texmgr.LoadTexture("filter-clock-recovery-uart", FindDataFile("icons/filters/filter-clock-recovery-uart.png"));
+	m_texmgr.LoadTexture("filter-complex-import", FindDataFile("icons/filters/filter-complex-import.png"));
+	m_texmgr.LoadTexture("filter-complex-spectrogram", FindDataFile("icons/filters/filter-complex-spectrogram.png"));
+	m_texmgr.LoadTexture("filter-constant", FindDataFile("icons/filters/filter-constant.png"));
 	m_texmgr.LoadTexture("filter-constellation", FindDataFile("icons/filters/filter-constellation.png"));
+	m_texmgr.LoadTexture("filter-coupler-de-embed", FindDataFile("icons/filters/filter-coupler-de-embed.png"));
 	m_texmgr.LoadTexture("filter-csv-export", FindDataFile("icons/filters/filter-csv-export.png"));
 	m_texmgr.LoadTexture("filter-csv-import", FindDataFile("icons/filters/filter-csv-import.png"));
 	m_texmgr.LoadTexture("filter-ctle", FindDataFile("icons/filters/filter-ctle.png"));
@@ -236,6 +249,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-digital-to-nrz", FindDataFile("icons/filters/filter-digital-to-nrz.png"));
 	m_texmgr.LoadTexture("filter-digital-to-pam4", FindDataFile("icons/filters/filter-digital-to-pam4.png"));
 	m_texmgr.LoadTexture("filter-displayport-aux", FindDataFile("icons/filters/filter-displayport-aux.png"));
+	m_texmgr.LoadTexture("filter-downconvert", FindDataFile("icons/filters/filter-downconvert.png"));
 	m_texmgr.LoadTexture("filter-downsample", FindDataFile("icons/filters/filter-downsample.png"));
 	m_texmgr.LoadTexture("filter-dram-clocks", FindDataFile("icons/filters/filter-dram-clocks.png"));
 	m_texmgr.LoadTexture("filter-dram-trcd", FindDataFile("icons/filters/filter-dram-trcd.png"));
@@ -261,7 +275,13 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
 	m_texmgr.LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
 	m_texmgr.LoadTexture("filter-gate", FindDataFile("icons/filters/filter-gate.png"));
+	m_texmgr.LoadTexture("filter-glitch-removal", FindDataFile("icons/filters/filter-glitch-removal.png"));
+	m_texmgr.LoadTexture("filter-group-delay", FindDataFile("icons/filters/filter-group-delay.png"));
 	m_texmgr.LoadTexture("filter-histogram", FindDataFile("icons/filters/filter-histogram.png"));
+	m_texmgr.LoadTexture("filter-horz-bathtub", FindDataFile("icons/filters/filter-horz-bathtub.png"));
+	m_texmgr.LoadTexture("filter-hyperram", FindDataFile("icons/filters/filter-hyperram.png"));
+	m_texmgr.LoadTexture("filter-i2c", FindDataFile("icons/filters/filter-i2c.png"));
+	m_texmgr.LoadTexture("filter-i2c-register", FindDataFile("icons/filters/filter-i2c-register.png"));
 	m_texmgr.LoadTexture("filter-invert", FindDataFile("icons/filters/filter-invert.png"));
 	m_texmgr.LoadTexture("filter-ipv4", FindDataFile("icons/filters/filter-ipv4.png"));
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
@@ -344,6 +364,9 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(ClipFilter))] 							= "filter-clip";
 	m_filterIconMap[type_index(typeid(ClockRecoveryFilter))]					= "filter-cdrpll";
 	m_filterIconMap[type_index(typeid(ConstellationFilter))] 					= "filter-constellation";
+	m_filterIconMap[type_index(typeid(ConstantFilter))]							= "filter-constant";
+	m_filterIconMap[type_index(typeid(ComplexImportFilter))]					= "filter-complex-import";
+	m_filterIconMap[type_index(typeid(ComplexSpectrogramFilter))]				= "filter-complex-spectrogram";
 	m_filterIconMap[type_index(typeid(CSVExportFilter))] 						= "filter-csv-export";
 	m_filterIconMap[type_index(typeid(CSVImportFilter))] 						= "filter-csv-import";
 	m_filterIconMap[type_index(typeid(CTLEFilter))] 							= "filter-ctle";
@@ -352,9 +375,13 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DDR3Decoder))] 							= "filter-ddr3-command";
 	m_filterIconMap[type_index(typeid(DeEmbedFilter))] 							= "filter-de-embed";
 	m_filterIconMap[type_index(typeid(DeskewFilter))] 							= "filter-deskew";
+	m_filterIconMap[type_index(typeid(DigitalToNRZFilter))] 					= "filter-digital-to-nrz";
+	m_filterIconMap[type_index(typeid(DigitalToPAM4Filter))] 					= "filter-digital-to-pam4";
 	m_filterIconMap[type_index(typeid(DivideFilter))] 							= "filter-divide";
+	m_filterIconMap[type_index(typeid(DownconvertFilter))] 						= "filter-downconvert";
 	m_filterIconMap[type_index(typeid(DownsampleFilter))] 						= "filter-downsample";
 	m_filterIconMap[type_index(typeid(DPAuxChannelDecoder))] 					= "filter-displayport-aux";
+	m_filterIconMap[type_index(typeid(DPhyHSClockRecoveryFilter))]				= "filter-clock-recovery-dphy-hs-mode";
 	m_filterIconMap[type_index(typeid(DramClockFilter))] 						= "filter-dram-clocks";
 	m_filterIconMap[type_index(typeid(DramRefreshActivateMeasurement))] 		= "filter-dram-trfc";
 	m_filterIconMap[type_index(typeid(DramRowColumnLatencyMeasurement))] 		= "filter-dram-trcd";
@@ -388,8 +415,13 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(FSKDecoder))]			 					= "filter-fsk";
 	m_filterIconMap[type_index(typeid(FullWidthHalfMax))] 						= "filter-fwhm";
 	m_filterIconMap[type_index(typeid(GateFilter))] 							= "filter-gate";
+	m_filterIconMap[type_index(typeid(GlitchRemovalFilter))] 					= "filter-glitch-removal";
+	m_filterIconMap[type_index(typeid(GroupDelayFilter))] 						= "filter-group-delay";
 	m_filterIconMap[type_index(typeid(HistogramFilter))] 						= "filter-histogram";
+	m_filterIconMap[type_index(typeid(HyperRAMDecoder))] 						= "filter-hyperram";
 	m_filterIconMap[type_index(typeid(IBM8b10bDecoder))] 						= "filter-8b10bdecoder";
+	m_filterIconMap[type_index(typeid(I2CDecoder))] 							= "filter-i2c";
+	m_filterIconMap[type_index(typeid(I2CRegisterDecoder))] 					= "filter-i2c-register";
 	m_filterIconMap[type_index(typeid(InvertFilter))] 							= "filter-invert";
 	m_filterIconMap[type_index(typeid(IPv4Decoder))] 							= "filter-ipv4";
 	m_filterIconMap[type_index(typeid(MaximumFilter))] 							= "filter-max";
@@ -435,6 +467,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
 	m_filterIconMap[type_index(typeid(OvershootMeasurement))]					= "filter-overshoot";
 	m_filterIconMap[type_index(typeid(SpectrogramFilter))]						= "filter-spectrogram";
+	m_filterIconMap[type_index(typeid(UartClockRecoveryFilter))]	 			= "filter-clock-recovery-uart";
 	m_filterIconMap[type_index(typeid(UARTDecoder))]	 						= "filter-uart";
 	m_filterIconMap[type_index(typeid(USB2PMADecoder))] 						= "filter-usb2-pma";
 	m_filterIconMap[type_index(typeid(USB2PCSDecoder))] 						= "filter-usb2-pcs";
