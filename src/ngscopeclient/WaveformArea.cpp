@@ -2375,7 +2375,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	ImGui::Dummy(size);
 
 	//Catch mouse wheel events
-	ImGui::SetItemUsingMouseWheel();
+	ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
 	if(ImGui::IsItemHovered())
 	{
 		auto wheel = ImGui::GetIO().MouseWheel;

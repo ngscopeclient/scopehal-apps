@@ -860,7 +860,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	if( (mouseDelta.x != 0) || (mouseDelta.y != 0) )
 		m_tLastMouseMove = tnow;
 
-	ImGui::SetItemUsingMouseWheel();
+	ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
 	if(ImGui::IsItemHovered())
 	{
 		//Catch mouse wheel events
