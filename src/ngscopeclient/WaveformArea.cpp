@@ -781,8 +781,20 @@ void WaveformArea::PlotContextMenu()
  */
 void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 {
-	for(auto& chan : m_displayedChannels)
+	vector<size_t> displayedChannelsToRemove;
+
+	for(size_t i=0; i<m_displayedChannels.size(); i++)
 	{
+		auto& chan = m_displayedChannels[i];
+
+		//Make sure the stream exists. If it was removed (filter config changed, etc) it may no longer be there
+		if(chan->GetStream().IsOutOfRange())
+		{
+			m_channelsToRemove.push_back(m_displayedChannels[i]);
+			displayedChannelsToRemove.push_back(i);
+			continue;
+		}
+
 		auto stream = chan->GetStream();
 
 		switch(stream.GetType())
@@ -823,6 +835,12 @@ void WaveformArea::RenderWaveforms(ImVec2 start, ImVec2 size)
 				LogWarning("Unimplemented stream type %d, don't know how to render it\n", stream.GetType());
 				break;
 		}
+	}
+
+	if(!displayedChannelsToRemove.empty())
+	{
+		for(ssize_t i=displayedChannelsToRemove.size()-1; i>=0; i--)
+			m_displayedChannels.erase(m_displayedChannels.begin() + displayedChannelsToRemove[i]);
 	}
 }
 
