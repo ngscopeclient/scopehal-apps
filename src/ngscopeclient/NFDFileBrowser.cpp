@@ -58,8 +58,6 @@ NFDFileBrowser::NFDFileBrowser(
 	, m_saveDialog(saveDialog)
 	, m_cachedResultValid(false)
 {
-	LogDebug("initialPath = %s\n", initialPath.c_str());
-
 	//Trim off filter name
 	size_t iparen = m_filterName.find('(');
 	if(iparen != string::npos)

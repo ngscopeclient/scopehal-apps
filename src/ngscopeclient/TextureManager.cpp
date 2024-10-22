@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -124,7 +124,8 @@ Texture::Texture(
 		);
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_texture = reinterpret_cast<intptr_t>(
+		ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 
 	SetName(name);
 }
@@ -177,7 +178,8 @@ Texture::Texture(
 		);
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
-	m_texture = ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_GENERAL);
+	m_texture = reinterpret_cast<intptr_t>(
+		ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_GENERAL));
 
 	SetName(name);
 }
@@ -199,7 +201,7 @@ void Texture::SetName(const string& name)
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(
 			vk::DebugUtilsObjectNameInfoEXT(
 				vk::ObjectType::eDescriptorSet,
-				reinterpret_cast<uint64_t>(m_texture),
+				m_texture,
 				texName.c_str()));
 
 		g_vkComputeDevice->setDebugUtilsObjectNameEXT(

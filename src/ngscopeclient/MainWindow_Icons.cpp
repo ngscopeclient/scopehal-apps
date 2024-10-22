@@ -41,6 +41,7 @@
 #include "../scopeprotocols/ACCoupleFilter.h"
 #include "../scopeprotocols/ACRMSMeasurement.h"
 #include "../scopeprotocols/AddFilter.h"
+#include "../scopeprotocols/ADL5205Decoder.h"
 #include "../scopeprotocols/AutocorrelationFilter.h"
 #include "../scopeprotocols/AreaMeasurement.h"
 #include "../scopeprotocols/AverageFilter.h"
@@ -53,21 +54,28 @@
 #include "../scopeprotocols/CANBitmaskFilter.h"
 #include "../scopeprotocols/CANDecoder.h"
 #include "../scopeprotocols/CandumpImportFilter.h"
+#include "../scopeprotocols/ChannelEmulationFilter.h"
 #include "../scopeprotocols/ClipFilter.h"
 #include "../scopeprotocols/ClockRecoveryFilter.h"
 #include "../scopeprotocols/ConstellationFilter.h"
+#include "../scopeprotocols/ComplexImportFilter.h"
+#include "../scopeprotocols/ComplexSpectrogramFilter.h"
+#include "../scopeprotocols/ConstantFilter.h"
 #include "../scopeprotocols/CTLEFilter.h"
 #include "../scopeprotocols/CurrentShuntFilter.h"
 #include "../scopeprotocols/CSVExportFilter.h"
 #include "../scopeprotocols/CSVImportFilter.h"
 #include "../scopeprotocols/DDR1Decoder.h"
 #include "../scopeprotocols/DDR3Decoder.h"
+#include "../scopeprotocols/DDJMeasurement.h"
+#include "../scopeprotocols/DeEmbedFilter.h"
 #include "../scopeprotocols/DeskewFilter.h"
 #include "../scopeprotocols/DigitalToNRZFilter.h"
 #include "../scopeprotocols/DigitalToPAM4Filter.h"
 #include "../scopeprotocols/DivideFilter.h"
 #include "../scopeprotocols/DownsampleFilter.h"
 #include "../scopeprotocols/DPAuxChannelDecoder.h"
+#include "../scopeprotocols/DPhyHSClockRecoveryFilter.h"
 #include "../scopeprotocols/DramClockFilter.h"
 #include "../scopeprotocols/DramRefreshActivateMeasurement.h"
 #include "../scopeprotocols/DramRowColumnLatencyMeasurement.h"
@@ -149,6 +157,7 @@
 #include "../scopeprotocols/TopMeasurement.h"
 #include "../scopeprotocols/TRCImportFilter.h"
 #include "../scopeprotocols/TrendFilter.h"
+#include "../scopeprotocols/UartClockRecoveryFilter.h"
 #include "../scopeprotocols/UARTDecoder.h"
 #include "../scopeprotocols/USB2PMADecoder.h"
 #include "../scopeprotocols/USB2PCSDecoder.h"
@@ -197,12 +206,14 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-ac-couple", FindDataFile("icons/filters/filter-ac-couple.png"));
 	m_texmgr.LoadTexture("filter-ac-rms", FindDataFile("icons/filters/filter-ac-rms.png"));
 	m_texmgr.LoadTexture("filter-add", FindDataFile("icons/filters/filter-add.png"));
+	m_texmgr.LoadTexture("filter-adl5205", FindDataFile("icons/filters/filter-adl5205.png"));
 	m_texmgr.LoadTexture("filter-autocorrelation", FindDataFile("icons/filters/filter-autocorrelation.png"));
 	m_texmgr.LoadTexture("filter-area-under-curve", FindDataFile("icons/filters/filter-area-under-curve.png"));
 	m_texmgr.LoadTexture("filter-average", FindDataFile("icons/filters/filter-average.png"));
 	m_texmgr.LoadTexture("filter-bin-import", FindDataFile("icons/filters/filter-bin-import.png"));
 	m_texmgr.LoadTexture("filter-bus-heatmap", FindDataFile("icons/filters/filter-bus-heatmap.png"));
 	m_texmgr.LoadTexture("filter-can-analyzer", FindDataFile("icons/filters/filter-can-analyzer.png"));
+	m_texmgr.LoadTexture("filter-channel-emulation", FindDataFile("icons/filters/filter-channel-emulation.png"));
 	m_texmgr.LoadTexture("filter-base", FindDataFile("icons/filters/filter-base.png"));
 	m_texmgr.LoadTexture("filter-bandwidth", FindDataFile("icons/filters/filter-bandwidth.png"));
 	m_texmgr.LoadTexture("filter-burst-width", FindDataFile("icons/filters/filter-burst-width.png"));
@@ -220,6 +231,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-current-shunt", FindDataFile("icons/filters/filter-current-shunt.png"));
 	m_texmgr.LoadTexture("filter-ddr1-command", FindDataFile("icons/filters/filter-ddr1-command.png"));
 	m_texmgr.LoadTexture("filter-ddr3-command", FindDataFile("icons/filters/filter-ddr3-command.png"));
+	m_texmgr.LoadTexture("filter-de-embed", FindDataFile("icons/filters/filter-de-embed.png"));
 	m_texmgr.LoadTexture("filter-deskew", FindDataFile("icons/filters/filter-deskew.png"));
 	m_texmgr.LoadTexture("filter-digital-to-nrz", FindDataFile("icons/filters/filter-digital-to-nrz.png"));
 	m_texmgr.LoadTexture("filter-digital-to-pam4", FindDataFile("icons/filters/filter-digital-to-pam4.png"));
@@ -315,6 +327,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(ACCoupleFilter))] 						= "filter-ac-couple";
 	m_filterIconMap[type_index(typeid(ACRMSMeasurement))] 						= "filter-ac-rms";
 	m_filterIconMap[type_index(typeid(AddFilter))] 								= "filter-add";
+	m_filterIconMap[type_index(typeid(ADL5205Decoder))] 						= "filter-adl5205";
 	m_filterIconMap[type_index(typeid(AutocorrelationFilter))] 					= "filter-autocorrelation";
 	m_filterIconMap[type_index(typeid(AreaMeasurement))] 						= "filter-area-under-curve";
 	m_filterIconMap[type_index(typeid(AverageFilter))] 							= "filter-average";
@@ -327,6 +340,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(CANBitmaskFilter))] 						= "filter-can-bitmask";
 	m_filterIconMap[type_index(typeid(CANDecoder))] 							= "filter-can";
 	m_filterIconMap[type_index(typeid(CandumpImportFilter))] 					= "filter-candump-import";
+	m_filterIconMap[type_index(typeid(ChannelEmulationFilter))] 				= "filter-channel-emulation";
 	m_filterIconMap[type_index(typeid(ClipFilter))] 							= "filter-clip";
 	m_filterIconMap[type_index(typeid(ClockRecoveryFilter))]					= "filter-cdrpll";
 	m_filterIconMap[type_index(typeid(ConstellationFilter))] 					= "filter-constellation";
@@ -336,6 +350,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(CurrentShuntFilter))]						= "filter-current-shunt";
 	m_filterIconMap[type_index(typeid(DDR1Decoder))] 							= "filter-ddr1-command";
 	m_filterIconMap[type_index(typeid(DDR3Decoder))] 							= "filter-ddr3-command";
+	m_filterIconMap[type_index(typeid(DeEmbedFilter))] 							= "filter-de-embed";
 	m_filterIconMap[type_index(typeid(DeskewFilter))] 							= "filter-deskew";
 	m_filterIconMap[type_index(typeid(DivideFilter))] 							= "filter-divide";
 	m_filterIconMap[type_index(typeid(DownsampleFilter))] 						= "filter-downsample";
