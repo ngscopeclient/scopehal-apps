@@ -1684,6 +1684,9 @@ void WaveformArea::ToneMapAllWaveforms(vk::raii::CommandBuffer& cmdbuf)
 	for(auto& chan : m_displayedChannels)
 	{
 		auto stream = chan->GetStream();
+		if(chan->GetStream().IsOutOfRange())
+			continue;
+
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
