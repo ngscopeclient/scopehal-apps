@@ -96,7 +96,7 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 	{
 		std::pair<double,InstrumentBadge> old = m_instrumentLastBadge[inst];
 		double elapsed = now - old.first;
-		if(elapsed < 0.4)
+		if(elapsed < prefs.GetReal("Appearance.Stream Browser.instrument_badge_latch_duration"))
 		{	// Keep previous badge
 			badge = old.second;
 		}
@@ -443,7 +443,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			switch (mode) 
 			{
 			case Oscilloscope::TRIGGER_MODE_RUN:
-				renderInstrumentBadge(instrument,false,BADGE_ARMED);
+				renderInstrumentBadge(instrument,true,BADGE_ARMED);
 				break;
 			case Oscilloscope::TRIGGER_MODE_STOP:
 				renderInstrumentBadge(instrument,true,BADGE_STOPPED);
@@ -497,7 +497,17 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			result = renderOnOffToggle(false);
 		}
 		if(result != allOn)
-			psu->SetMasterPowerEnable(result);
+		{
+			if(psu->SupportsMasterOutputSwitching())
+				psu->SetMasterPowerEnable(result);
+			else
+			{
+				for(size_t i = 0 ; i < channelCount ; i++)
+				{
+					psu->SetPowerChannelActive(i,result);				
+				}
+			}
+		}
 	}
 
 	if(instIsOpen)
@@ -528,7 +538,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		}
 
 		for(size_t i=0; i<channelCount; i++)
-		{
+		{	// Iterate on each channel
 			renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
 		}
 
@@ -602,14 +612,14 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	// Channel decoration
 	startBadgeLine();
 	if (scopechan)
-	{
+	{	// Scope channel
 		if(!scopechan->IsEnabled())
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", NULL);
 		else
 			renderDownloadProgress(instrument, channel, isLast);
 	}
 	else if(psu)
-	{
+	{	// PSU Channel
 		//Get the state
 		auto psustate = m_session.GetPSUState(psu);
 
@@ -659,7 +669,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		else
 		{
 			for(size_t j=0; j<channel->GetStreamCount(); j++)
-			{
+			{	// Iterate on each stream
 				renderStreamNode(instrument,channel,j,!singleStream,renderProps);
 			}
 		}

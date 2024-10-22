@@ -53,6 +53,9 @@ public:
 	virtual bool DoRender() override;
 
 protected:
+	/**
+	 * @brief State of badges used in intrument node rendering
+	 */
 	enum InstrumentBadge 
 	{
 		BADGE_ARMED,
@@ -63,6 +66,7 @@ protected:
 	};
 
 	void DoItemHelp();
+	
 	// Rendeding of StreamBorwserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
@@ -91,7 +95,7 @@ protected:
 	float m_badgeXCur; // right edge to render the next badge against
 
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
-
+	// @brief Store the last state of an intrument badge (used for badge state latching)
 	std::map<std::shared_ptr<Instrument>, pair<double, InstrumentBadge>> m_instrumentLastBadge;
 };
 
