@@ -1745,6 +1745,9 @@ void WaveformArea::RenderWaveformTextures(
 	for(auto& chan : chans)
 	{
 		auto stream = chan->GetStream();
+		if(chan->GetStream().IsOutOfRange())
+			continue;
+
 		switch(stream.GetType())
 		{
 			case Stream::STREAM_TYPE_ANALOG:
