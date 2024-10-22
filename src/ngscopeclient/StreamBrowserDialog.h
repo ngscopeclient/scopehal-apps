@@ -70,6 +70,9 @@ protected:
 	// Rendering of a channel node
 	void renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
 
+	// Rendering of a stream node
+	void renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps);
+
 	Session& m_session;
 	MainWindow* m_parent;
 

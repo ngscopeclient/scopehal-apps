@@ -505,15 +505,15 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	bool singleStream = channel->GetStreamCount() == 1;
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
-	bool renderScopeProps = false;
+	bool renderProps = false;
 	bool isDigital = false;
 	if (scopechan)
 	{
-		renderScopeProps = scopechan->IsEnabled();
+		renderProps = scopechan->IsEnabled();
 		isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
 	}
 
-	bool hasChildren = !singleStream || renderScopeProps;
+	bool hasChildren = !singleStream || renderProps;
 
 	if (channel->m_displaycolor != "")
 		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(channel->m_displaycolor));
@@ -609,68 +609,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		{
 			for(size_t j=0; j<channel->GetStreamCount(); j++)
 			{
-				ImGui::PushID(j);
-
-				if (!singleStream)
-				{
-					ImGui::Selectable(channel->GetStreamName(j).c_str());
-
-					StreamDescriptor s(channel, j);
-					if(ImGui::BeginDragDropSource())
-					{
-						if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-							ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-						else
-							ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-						ImGui::TextUnformatted(s.GetName().c_str());
-						ImGui::EndDragDropSource();
-					}
-					else
-						DoItemHelp();
-				}
-				// Channel/stram properties
-				if (renderScopeProps && scopechan)
-				{	// Scope channel
-					ImGui::BeginChild("scope_params", ImVec2(0, 0),
-						ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-
-					if(isDigital)
-					{
-						auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(channelIndex));
-
-						bool clicked = false;
-						bool hovered = false;
-						renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-						if (clicked)
-						{
-							/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-							m_parent->ShowChannelProperties(scopechan);
-						}
-						if (hovered)
-							m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-					}
-					else
-					{
-						auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(j));
-						auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(j));
-
-						bool clicked = false;
-						bool hovered = false;
-						renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-						renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
-						if (clicked)
-						{
-							/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-							m_parent->ShowChannelProperties(scopechan);
-						}
-						if (hovered)
-							m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-					}
-
-					ImGui::EndChild();
-				}
-				ImGui::PopID();
+				renderStreamNode(instrument,channel,j,!singleStream,renderProps);
 			}
 		}
 		ImGui::PopID();
@@ -679,6 +618,77 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	if(open)
 		ImGui::TreePop();
 
+	ImGui::PopID();
+}
+
+// Rendering of a stream node
+void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps)
+{
+	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
+	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
+	bool isDigital = scopechan && scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
+
+	ImGui::PushID(streamIndex);
+
+	if (renderName)
+	{
+		ImGui::Selectable(channel->GetStreamName(streamIndex).c_str());
+
+		StreamDescriptor s(channel, streamIndex);
+		if(ImGui::BeginDragDropSource())
+		{
+			if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+				ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+			else
+				ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+
+			ImGui::TextUnformatted(s.GetName().c_str());
+			ImGui::EndDragDropSource();
+		}
+		else
+			DoItemHelp();
+	}
+	// Channel/stram properties
+	if (renderProps && scope && scopechan)
+	{	// Scope channel
+		ImGui::BeginChild("scope_params", ImVec2(0, 0),
+			ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+
+		if(isDigital)
+		{
+			auto threshold_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+
+			bool clicked = false;
+			bool hovered = false;
+			renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+			if (clicked)
+			{
+				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+				m_parent->ShowChannelProperties(scopechan);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+		}
+		else
+		{
+			auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetOffset(streamIndex));
+			auto range_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+
+			bool clicked = false;
+			bool hovered = false;
+			renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+			renderInfoLink("Voltage range", range_txt.c_str(), clicked, hovered);
+			if (clicked)
+			{
+				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+				m_parent->ShowChannelProperties(scopechan);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+		}
+
+		ImGui::EndChild();
+	}
 	ImGui::PopID();
 }
 
