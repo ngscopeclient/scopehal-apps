@@ -27,6 +27,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup scopedrivers Oscilloscope / LA drivers
 \ingroup drivers
 
+\defgroup psudrivers Power supply drivers
+\ingroup drivers
+
 \defgroup sdrdrivers SDR drivers
 \ingroup drivers
 
