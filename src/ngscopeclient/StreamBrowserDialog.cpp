@@ -158,11 +158,11 @@ bool StreamBrowserDialog::DoRender()
 		ImGui::PopStyleColor();
 		return result;
 	};
-	auto renderToggle = [&badgeXMin, &badgeXCur, renderCombo](ImVec4 color, bool curValue) -> bool
+	auto renderToggle = [renderCombo](ImVec4 color, bool curValue) -> bool
 	{
 		return (renderCombo(color, (int)curValue, "OFF", "ON", NULL) == 1);
 	};
-	auto renderOnOffToggle = [this,&badgeXMin, &badgeXCur, renderToggle](bool curValue) -> bool
+	auto renderOnOffToggle = [this, renderToggle](bool curValue) -> bool
 	{
 		auto& prefs = m_session.GetPreferences();
 		ImVec4 color = ImGui::ColorConvertU32ToFloat4((curValue ? prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") : prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
