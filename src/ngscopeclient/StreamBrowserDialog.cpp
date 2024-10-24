@@ -562,16 +562,22 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 
 	auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
+	auto awg = std::dynamic_pointer_cast<FunctionGenerator>(instrument);
 
 	bool singleStream = channel->GetStreamCount() == 1;
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
+	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
 	bool renderProps = false;
 	bool isDigital = false;
 	if (scopechan)
 	{
 		renderProps = scopechan->IsEnabled();
 		isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
+	}
+	else if(awg && awgchan)
+	{
+		renderProps = awg->GetFunctionChannelActive(channelIndex);
 	}
 
 	bool hasChildren = !singleStream || renderProps;
