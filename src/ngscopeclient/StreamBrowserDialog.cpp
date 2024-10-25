@@ -612,9 +612,16 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	// Channel decoration
 	startBadgeLine();
 	if (scopechan)
-	{	// Scope channel
-		if(!scopechan->IsEnabled())
+	{
+		//No badge on trigger inputs
+		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
+		{}
+
+		// Scope channel
+		else if (!scopechan->IsEnabled())
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", NULL);
+
+		//Download in progress
 		else
 			renderDownloadProgress(instrument, channel, isLast);
 	}
