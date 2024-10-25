@@ -40,6 +40,8 @@
 #include "Dialog.h"
 #include "Session.h"
 
+using namespace std;
+
 class MainWindow;
 
 class StreamBrowserDialog : public Dialog
@@ -51,12 +53,50 @@ public:
 	virtual bool DoRender() override;
 
 protected:
+	/**
+	 * @brief State of badges used in intrument node rendering
+	 */
+	enum InstrumentBadge 
+	{
+		BADGE_ARMED,
+		BADGE_STOPPED,
+		BADGE_TRIGGERED,
+		BADGE_BUSY,
+		BADGE_AUTO
+	};
+
 	void DoItemHelp();
+	
+	// Rendeding of StreamBorwserDialog elements
+	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
+	void startBadgeLine();
+	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
+	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
+	int  renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */);
+	bool renderToggle(ImVec4 color, bool curValue);
+	bool renderOnOffToggle(bool curValue);
+	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
+	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
+
+	// Rendering of an instrument node
+	void renderInstrumentNode(shared_ptr<Instrument> instrument);
+
+	// Rendering of a channel node
+	void renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
+
+	// Rendering of a stream node
+	void renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps);
 
 	Session& m_session;
 	MainWindow* m_parent;
 
+	// @brief Positions for badge display
+	float m_badgeXMin; // left edge over which we must not overrun
+	float m_badgeXCur; // right edge to render the next badge against
+
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
+	// @brief Store the last state of an intrument badge (used for badge state latching)
+	std::map<std::shared_ptr<Instrument>, pair<double, InstrumentBadge>> m_instrumentLastBadge;
 };
 
 #endif

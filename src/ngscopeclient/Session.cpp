@@ -964,13 +964,18 @@ bool Session::PreLoadInstruments(int version, const YAML::Node& node, bool onlin
 			if(!PreLoadMisc(version, inst, online))
 				return false;
 		}
+		else if(type == "vna")
+		{
+			if(!PreLoadVNA(version, inst, online))
+				return false;
+		}
 
 		//Unknown instrument type - too new file format?
 		else
 		{
 			m_mainWindow->ShowErrorPopup(
 				"File load error",
-				string("Instrument ") + nick.c_str() + " is of unknown type " + inst["type"].as<string>());
+				string("Instrument ") + nick.c_str() + " is of unknown type " + type.c_str());
 			return false;
 		}
 	}
@@ -1113,6 +1118,73 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
+
+	//Run the preload
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
+	return true;
+}
+
+bool Session::PreLoadVNA(int version, const YAML::Node& node, bool online)
+{
+	//Create the instrument
+	shared_ptr<Oscilloscope> scope = nullptr;
+
+	auto transtype = node["transport"].as<string>();
+	auto driver = node["driver"].as<string>();
+
+	if(online)
+	{
+		if( (transtype == "null") && (driver != "demo") )
+		{
+			m_mainWindow->ShowErrorPopup(
+				"Unable to reconnect",
+				"The session file does not contain any connection information.\n\n"
+				"Loading in offline mode.");
+		}
+
+		else
+		{
+			//Create the scope
+			auto transport = CreateTransportForNode(node);
+
+			if(transport && transport->IsConnected())
+			{
+				scope = SCPIVNA::CreateVNA(driver, transport);
+				if(!VerifyInstrument(node, scope))
+					scope = nullptr;
+			}
+			else
+			{
+				delete transport;
+
+				m_mainWindow->ShowErrorPopup(
+					"Unable to reconnect",
+					string("Failed to reconnect to oscilloscope at ") + node["args"].as<string>() + ".\n\n"
+					"Loading this instrument in offline mode.");
+			}
+		}
+	}
+
+	if(!scope)
+	{
+		//Create the mock scope
+		scope = make_shared<MockOscilloscope>(
+			node["name"].as<string>(),
+			node["vendor"].as<string>(),
+			node["serial"].as<string>(),
+			transtype,
+			driver,
+			node["args"].as<string>()
+			);
+	}
+
+	//Make any config settings to the instrument from our preference settings
+	ApplyPreferences(scope);
+
+	//All good. Add to our list of scopes etc
+	AddInstrument(scope, false);
+	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
 
 	//Run the preload
 	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);

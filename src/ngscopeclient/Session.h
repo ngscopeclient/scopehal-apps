@@ -340,6 +340,7 @@ protected:
 	bool PreLoadInstruments(int version, const YAML::Node& node, bool online);
 	SCPITransport* CreateTransportForNode(const YAML::Node& node);
 	bool VerifyInstrument(const YAML::Node& node, std::shared_ptr<Instrument> inst);
+	bool PreLoadVNA(int version, const YAML::Node& node, bool online);
 	bool PreLoadOscilloscope(int version, const YAML::Node& node, bool online);
 	bool PreLoadPowerSupply(int version, const YAML::Node& node, bool online);
 	bool PreLoadRFSignalGenerator(int version, const YAML::Node& node, bool online);

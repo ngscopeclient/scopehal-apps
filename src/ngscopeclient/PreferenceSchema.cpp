@@ -166,6 +166,10 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& stream = appearance.AddCategory("Stream Browser");
 			stream.AddPreference(
+				Preference::Real("instrument_badge_latch_duration", 0.4)
+				.Label("Intrument badge latch duration (seconds)")
+				.Description("Duration during which instrument badges are preserved (to prevent flashing)."));
+			stream.AddPreference(
 				Preference::Color("download_wait_badge_color", ColorFromString("#CC4C4C"))
 				.Label("Download wait badge color")
 				.Description("Color for download 'wait' badge"));

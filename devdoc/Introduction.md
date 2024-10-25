@@ -24,6 +24,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup drivers Instrument drivers
 \ingroup libscopehal
 
+\defgroup miscdrivers Miscellaneous instrument drivers
+\ingroup drivers
+
 \defgroup scopedrivers Oscilloscope / LA drivers
 \ingroup drivers
 
