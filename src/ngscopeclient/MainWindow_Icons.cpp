@@ -129,6 +129,7 @@
 #include "../scopeprotocols/NCOFilter.h"
 #include "../scopeprotocols/OneWireDecoder.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
+#include "../scopeprotocols/PcapngExportFilter.h"
 #include "../scopeprotocols/PcapngImportFilter.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
 #include "../scopeprotocols/PCIeDataLinkDecoder.h"
@@ -431,6 +432,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
 	m_filterIconMap[type_index(typeid(OneWireDecoder))] 						= "filter-1-wire";
+	m_filterIconMap[type_index(typeid(PcapngExportFilter))] 					= "filter-pcapng-export";
 	m_filterIconMap[type_index(typeid(PcapngImportFilter))] 					= "filter-pcapng-import";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
 	m_filterIconMap[type_index(typeid(PCIeDataLinkDecoder))] 					= "filter-pcie-data-link";

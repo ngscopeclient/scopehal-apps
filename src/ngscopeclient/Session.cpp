@@ -134,7 +134,10 @@ void Session::ClearBackgroundThreads()
 	//This has to happen before we terminate the WaveformThread, to avoid waveforms getting stuck
 	//which have been acquired but not processed
 	for(auto it : m_instrumentStates)
-		it.second->Close();
+	{
+		if(it.second)
+			it.second->Close();
+	}
 
 	//Clear our trigger state
 	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
