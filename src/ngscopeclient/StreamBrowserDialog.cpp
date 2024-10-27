@@ -173,9 +173,10 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
  * @param color the color of the combo box
  * @param selected the selected value index (in/out)
  * @param values the combo box values
+ * @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
  * @return true true if the selected value of the combo has been changed
  */
-bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values)
+bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, uint8_t cropTextTo)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -183,9 +184,26 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 	}
 	bool changed = false;
 	const char* selectedLabel = values[selected].c_str();
-	float xsz = ImGui::CalcTextSize(selectedLabel).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+	int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+	float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
 	if ((m_badgeXCur - xsz) < m_badgeXMin)
-		return changed; // No room to display the combo
+	{
+		if(cropTextTo == 0)
+			return changed; // No room and we don't want to crop text
+		string resizedLabel = selectedLabel;
+		while((m_badgeXCur - xsz) < m_badgeXMin)
+		{	
+			// Try and crop text
+			resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
+			if(resizedLabel.size() < cropTextTo)
+				break; // We don't want to make the text that short
+			xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
+		}
+		if((m_badgeXCur - xsz) < m_badgeXMin)
+			return changed; // Still no room
+		// We found an acceptable size
+		selectedLabel = (resizedLabel + "...").c_str();
+	}
 	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::SameLine(m_badgeXCur);
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
@@ -500,12 +518,12 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	auto& prefs = m_session.GetPreferences();
 	// Row 1
-	startBadgeLine(); // Needed for shape combo
 	ImGui::Text("Waveform:");
+	startBadgeLine(); // Needed for shape combo
 	// TODO Shape combo
 	ImGui::PushID("waveform");
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][awgState->m_channelShape[channelIndex]];
-	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex]))
+	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],3))
 	{
 		awg->SetFunctionChannelShape(channelIndex, awgState->m_channelShapes[channelIndex][shapeIndex]);
 		// Tell intrument thread that the FunctionGenerator state has to be updated
@@ -519,7 +537,8 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	StreamDescriptor sv(awgchan, 0);
 	ImGui::PushID("frequ");
 	// TODO
-	ImGui::Selectable("Frequency:",false,0,ImVec2(40, 0));
+	const char* freqLabel = "Frequency: "; 
+	ImGui::Selectable(freqLabel,false,0,ImVec2(ImGui::CalcTextSize(freqLabel).x, 0));
 	if(ImGui::BeginDragDropSource())
 	{
 		ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
