@@ -234,13 +234,21 @@ void PreferenceManager::InitializeDefaults()
 				.Label("PCU CC badge color")
 				.Description("Color for psu 'c' badge"));
 			stream.AddPreference(
-				Preference::Color("psu_set_badge_color", ColorFromString("#FFFF00"))
-				.Label("PSU set badge color")
-				.Description("Color for PSU 'set' badge"));
+				Preference::Color("psu_set_label_color", ColorFromString("#FFFF00"))
+				.Label("PSU set label color")
+				.Description("Color for PSU 'set' label"));
 			stream.AddPreference(
-				Preference::Color("psu_meas_badge_color", ColorFromString("#00C100"))
-				.Label("PSU measured badge color")
-				.Description("Color for PSU 'meas.' badge"));
+				Preference::Color("psu_meas_label_color", ColorFromString("#00C100"))
+				.Label("PSU measured label color")
+				.Description("Color for PSU 'meas.' label"));
+			stream.AddPreference(
+				Preference::Color("awg_hiz_badge_color", ColorFromString("#E2CD23FF"))
+				.Label("Function Generator HI-Z badge color")
+				.Description("Color for Function Generator 'HI-Z' badge"));
+			stream.AddPreference(
+				Preference::Color("awg_50ohms_badge_color", ColorFromString("#FF6ABC"))
+				.Label("Function Generator 50 Ohms badge color")
+				.Description("Color for Function Generator '50Ohm' badge"));
 
 		auto& general = appearance.AddCategory("General");
 			general.AddPreference(

@@ -369,7 +369,7 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(1);
 	StreamDescriptor sv(chan, isVoltage ? 1 : 3);
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
-	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_badge_color")));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_label_color")));
 	ImGui::Selectable("- Set");
 	ImGui::PopStyleColor();
 	if(ImGui::BeginDragDropSource())
@@ -397,7 +397,7 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(1);
 	StreamDescriptor mv(chan, isVoltage ? 0 : 2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
-	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_badge_color")));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_label_color")));
 	ImGui::Selectable("- Meas.");
 	ImGui::PopStyleColor();
 	if(ImGui::BeginDragDropSource())
@@ -413,6 +413,83 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(2);
 	clicked |= ImGui::TextLink(measuredValue);
 	hovered |= ImGui::IsItemHovered();
+}
+
+void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered)
+{
+	//FunctionGenerator::WaveShape shape = FunctionGenerator::WaveShape::SHAPE_SINE;
+	FunctionGenerator::OutputImpedance impedance = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
+	size_t channelIndex = awgchan->GetIndex();
+	float frequency = 0;
+	float amplitude = 0;
+	float offset = 0;
+	auto awgState = m_session.GetFunctionGeneratorState(awg);
+	if(awgState)
+	{
+		//shape = awgState->m_channelShape[channelIndex];
+		impedance = awgState->m_channelOutputImpedance[channelIndex];
+		frequency = awgState->m_channelFrequency[channelIndex];
+		amplitude = awgState->m_channelAmplitude[channelIndex];
+		offset = awgState->m_channelOffset[channelIndex];
+	}
+	auto frequency_txt = Unit(Unit::UNIT_HZ).PrettyPrint(frequency);
+	auto amplitude_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(amplitude);
+	auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(offset);
+
+	auto& prefs = m_session.GetPreferences();
+	// Row 1
+	ImGui::Text("Waveform:");
+	// TODO Shape combo
+	ImGui::SameLine(0,0);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
+	//if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
+	int shapeIndex;
+	if(Combo("Waveform", awgState->m_channelShapeNames[channelIndex], shapeIndex))
+	{
+		awg->SetFunctionChannelShape(channelIndex, awgState->m_channelShapes[channelIndex][shapeIndex]);
+		// Tell intrument thread that the FunctionGenerator state has to be updated
+		awgState->m_needsUpdate = true;
+	}
+	// TODO Shape preview
+	
+	// Row 2
+	// Frequency label
+	StreamDescriptor sv(awgchan, 0);
+	ImGui::PushID("frequ");
+	ImGui::Selectable("Frequency:");
+	if(ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
+		string dragText = awgchan->GetDisplayName() + " frequency";
+		ImGui::TextUnformatted(dragText.c_str());
+		ImGui::EndDragDropSource();
+	}
+	else
+		DoItemHelp();
+	ImGui::PopID();
+	// Frequency text
+	ImGui::SameLine(0, 0);
+	clicked |= ImGui::TextLink(frequency_txt.c_str());
+	hovered |= ImGui::IsItemHovered();
+
+	// Row 3
+	// Amplitude label
+	renderInfoLink("Amplitude",amplitude_txt.c_str(),clicked,hovered);
+	// Impedance value
+	startBadgeLine(); // Neede for impedance badge
+	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
+	int selected = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
+								,(isHiZ ? 0 : 1)
+								,"Hi-Z", "50 Oh" );
+	bool newHiZ = (selected == 0);
+	if(newHiZ != isHiZ)
+	{
+		awg->SetFunctionChannelOutputImpedance(channelIndex,(newHiZ ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM));
+		awgState->m_needsUpdate = true;
+	}
+	// Row 4
+	// Offset label
+	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
 }
 
 /*
@@ -641,12 +718,30 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(result != active)
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
+	else if(awg && awgchan)
+	{	
+		// AWG Channel : get the state
+		auto awgstate = m_session.GetFunctionGeneratorState(awg);
+
+		bool active = awgstate->m_channelActive[channelIndex];
+		bool result = renderOnOffToggle(active);
+		if(result != active)
+		{
+			awg->SetFunctionChannelActive(channelIndex,result);
+			auto awgState = m_session.GetFunctionGeneratorState(awg);
+			if(awgState)
+				awgState->m_needsUpdate = true;
+
+		}
+	}
+
 
 	if(open)
 	{
 		ImGui::PushID(instrument.get());
 		if(psu)
-		{	// For PSU we will have a special handling for the 4 streams associated to a PSU channel
+		{	
+			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
 			ImGui::BeginChild("psu_params", ImVec2(0, 0),
 				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
@@ -677,6 +772,22 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 				if (hovered)
 					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 			}
+			ImGui::EndChild();
+		}
+		else if(awg && awgchan)
+		{
+			// No stream for FunctionGenerator => render properties on channel node
+			ImGui::BeginChild("awg_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+			bool clicked = false;
+			bool hovered = false;
+			renderAwgProperties(awg,awgchan,clicked,hovered);
+			if (clicked)
+			{
+				m_parent->ShowInstrumentProperties(awg);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open Function Generator properties");
 			ImGui::EndChild();
 		}
 		else
@@ -722,47 +833,49 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		else
 			DoItemHelp();
 	}
-	// Channel/stram properties
-	if (renderProps && scope && scopechan)
-	{	// Scope channel
-		ImGui::BeginChild("scope_params", ImVec2(0, 0),
+	// Channel/steram properties
+	if(renderProps)
+	{	
+		ImGui::BeginChild("stream_params", ImVec2(0, 0),
 			ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
 		Unit unit = channel->GetYAxisUnits(streamIndex);
-
-		if(isDigital)
+		// Scope params
+		if(scope && scopechan)
 		{
-			auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-
-			bool clicked = false;
-			bool hovered = false;
-			renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-			if (clicked)
+			if(isDigital)
 			{
-				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-		}
-		else
-		{
-			auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
-			auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+				auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
 
-			bool clicked = false;
-			bool hovered = false;
-			renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-			renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
-			if (clicked)
+				bool clicked = false;
+				bool hovered = false;
+				renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+				if (clicked)
+				{
+					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+					m_parent->ShowChannelProperties(scopechan);
+				}
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+			}
+			else
 			{
-				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-		}
+				auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
+				auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
 
+				bool clicked = false;
+				bool hovered = false;
+				renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+				renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
+				if (clicked)
+				{
+					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+					m_parent->ShowChannelProperties(scopechan);
+				}
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+			}
+		}
 		ImGui::EndChild();
 	}
 	ImGui::PopID();

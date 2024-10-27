@@ -60,10 +60,12 @@ void InstrumentThread(InstrumentThreadArgs args)
 	auto rfgen = dynamic_pointer_cast<SCPIRFSignalGenerator>(inst);
 	auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+	auto awg = dynamic_pointer_cast<FunctionGenerator>(inst);
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
 	auto bertstate = args.bertstate;
 	auto psustate = args.psustate;
+	auto awgstate = args.awgstate;
 
 	bool triggerUpToDate = false;
 
@@ -207,6 +209,31 @@ void InstrumentThread(InstrumentThreadArgs args)
 			}
 
 			bertstate->m_firstUpdateDone = true;
+		}
+		// Read and cache FunctionGenerator settings
+		if(awg)
+		{
+			if(awgstate->m_needsUpdate)
+			{
+				//Read status
+				for(size_t i=0; i<awg->GetChannelCount(); i++)
+				{
+					//Skip non-awg channels
+					auto awgchan = dynamic_cast<FunctionGeneratorChannel*>(awg->GetChannel(i));
+					if(!awgchan)
+						continue;
+					awgstate->m_channelActive[i] = awg->GetFunctionChannelActive(i);
+					awgstate->m_channelAmplitude[i] = awg->GetFunctionChannelAmplitude(i);
+					awgstate->m_channelOffset[i] = awg->GetFunctionChannelOffset(i);
+					awgstate->m_channelFrequency[i] = awg->GetFunctionChannelFrequency(i);
+					awgstate->m_channelShape[i] = awg->GetFunctionChannelShape(i);
+					awgstate->m_channelOutputImpedance[i] = awg->GetFunctionChannelOutputImpedance(i);
+
+					session->MarkChannelDirty(awgchan);
+				}
+
+				awgstate->m_needsUpdate = false;
+			}
 		}
 
 		//TODO: does this make sense to do in the instrument thread?

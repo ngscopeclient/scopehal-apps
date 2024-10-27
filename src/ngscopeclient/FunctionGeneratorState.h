@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* ngscopeclient                                                                                                        *
+* glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -29,75 +29,61 @@
 
 /**
 	@file
-	@author Andrew D. Zonenberg
-	@brief Declaration of StreamBrowserDialog
+	@author Frederic BORRY
+	@brief Declaration of FunctionGeneratorState
  */
-#ifndef StreamBrowserDialog_h
-#define StreamBrowserDialog_h
+#ifndef FunctionGeneratorState_h
+#define FunctionGeneratorState_h
 
-#include <map>
-
-#include "Dialog.h"
-#include "Session.h"
-
-using namespace std;
-
-class MainWindow;
-
-class StreamBrowserDialog : public Dialog
+/**
+	@brief Current status of a power supply
+ */
+class FunctionGeneratorState
 {
 public:
-	StreamBrowserDialog(Session& session, MainWindow* parent);
-	virtual ~StreamBrowserDialog();
 
-	virtual bool DoRender() override;
-
-protected:
-	/**
-	 * @brief State of badges used in intrument node rendering
-	 */
-	enum InstrumentBadge 
+	FunctionGeneratorState(std::shared_ptr<FunctionGenerator> generator)
 	{
-		BADGE_ARMED,
-		BADGE_STOPPED,
-		BADGE_TRIGGERED,
-		BADGE_BUSY,
-		BADGE_AUTO
-	};
+		size_t n = generator->GetChannelCount();
+		m_channelActive = std::make_unique<std::atomic<bool>[] >(n);
+		m_channelAmplitude = std::make_unique<std::atomic<float>[] >(n);
+		m_channelOffset= std::make_unique<std::atomic<float>[] >(n);
+		m_channelFrequency = std::make_unique<std::atomic<float>[] >(n);
+		m_channelShape = std::make_unique<std::atomic<FunctionGenerator::WaveShape>[] >(n);
+		m_channelOutputImpedance = std::make_unique<std::atomic<FunctionGenerator::OutputImpedance>[] >(n);
+		m_channelShapes = std::make_unique<std::vector<FunctionGenerator::WaveShape>[] >(n);
+		m_channelShapeNames = std::make_unique<std::vector<std::string>[] >(n);
 
-	void DoItemHelp();
-	
-	// Rendeding of StreamBorwserDialog elements
-	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
-	void startBadgeLine();
-	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
-	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
-	int  renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */);
-	bool renderToggle(ImVec4 color, bool curValue);
-	bool renderOnOffToggle(bool curValue);
-	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
-	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
-	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered);
+		for(size_t i=0; i<n; i++)
+		{
+			m_channelActive[i] = false;
+			m_channelAmplitude[i] = 0;
+			m_channelOffset[i] = 0;
+			m_channelFrequency[i] = 0;
+			m_channelShape[i] = FunctionGenerator::WaveShape::SHAPE_SINE;
+			m_channelOutputImpedance[i] = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
+			// Init shape list and names			
+			m_channelShapes[i] = generator->GetAvailableWaveformShapes(i);
+			for(size_t j=0; j<m_channelShapes[i].size(); j++)
+			{
+				m_channelShapeNames[i].push_back(generator->GetNameOfShape(m_channelShapes[i][j]));
+			}
+		}
 
-	// Rendering of an instrument node
-	void renderInstrumentNode(shared_ptr<Instrument> instrument);
+		m_needsUpdate = true;
+	}
 
-	// Rendering of a channel node
-	void renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
+	std::unique_ptr<std::atomic<bool>[]> m_channelActive;
+	std::unique_ptr<std::atomic<float>[]> m_channelAmplitude;
+	std::unique_ptr<std::atomic<float>[]> m_channelOffset;
+	std::unique_ptr<std::atomic<float>[]> m_channelFrequency;
+	std::unique_ptr<std::atomic<FunctionGenerator::WaveShape>[]> m_channelShape;
+	std::unique_ptr<std::atomic<FunctionGenerator::OutputImpedance>[]> m_channelOutputImpedance;
+	std::unique_ptr<std::vector<FunctionGenerator::WaveShape>[]> m_channelShapes;
+	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
+	 
+	std::atomic<bool> m_needsUpdate;
 
-	// Rendering of a stream node
-	void renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps);
-
-	Session& m_session;
-	MainWindow* m_parent;
-
-	// @brief Positions for badge display
-	float m_badgeXMin; // left edge over which we must not overrun
-	float m_badgeXCur; // right edge to render the next badge against
-
-	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
-	// @brief Store the last state of an intrument badge (used for badge state latching)
-	std::map<std::shared_ptr<Instrument>, pair<double, InstrumentBadge>> m_instrumentLastBadge;
 };
 
 #endif

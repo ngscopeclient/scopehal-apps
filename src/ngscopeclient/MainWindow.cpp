@@ -1479,7 +1479,7 @@ void MainWindow::ShowInstrumentProperties(std::shared_ptr<Instrument> instrument
 			LogTrace("Generator properties dialog is already open, no action required\n");
 			return;
 		}
-		AddDialog(make_shared<FunctionGeneratorDialog>(awg, &m_session));
+		AddDialog(make_shared<FunctionGeneratorDialog>(awg, m_session.GetFunctionGeneratorState(awg), &m_session));
 		return;
 	}
 	// Bert
@@ -2679,7 +2679,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 			if(gen)
 			{
 				auto sgen = dynamic_pointer_cast<SCPIFunctionGenerator>(gen->shared_from_this());
-				AddDialog(make_shared<FunctionGeneratorDialog>(sgen, &m_session));
+				AddDialog(make_shared<FunctionGeneratorDialog>(sgen, m_session.GetFunctionGeneratorState(sgen), &m_session));
 			}
 			else
 			{
