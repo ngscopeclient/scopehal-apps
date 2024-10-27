@@ -164,6 +164,7 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 		ImGui::PopStyleColor();
 		break;
 	}
+	va_end(ap);
 	return result;
 }
 
@@ -173,10 +174,11 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
  * @param color the color of the combo box
  * @param selected the selected value index (in/out)
  * @param values the combo box values
+ * @param useColorForText if true, use the provided color for text (and a darker version of it for background color)
  * @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
  * @return true true if the selected value of the combo has been changed
  */
-bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, uint8_t cropTextTo)
+bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, bool useColorForText, uint8_t cropTextTo)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -206,7 +208,18 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 	}
 	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::SameLine(m_badgeXCur);
-	ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+	if(useColorForText)
+	{
+		// Use channel color for shape combo, but darken it to make text readable
+		float bgmul = 0.4;
+		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w) );
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, bcolor);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+	}
+	else
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+	}
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
 	if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
 	{
@@ -226,6 +239,8 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 	}
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
+	if(useColorForText)
+		ImGui::PopStyleColor();
 	return changed;
 }
 
@@ -246,6 +261,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int &selected, ... /* values,
 	{
 		values.push_back(string(label));
 	}
+	va_end(ap);
 	return renderCombo(color,selected,values);
 }
 
@@ -520,10 +536,11 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
-	// TODO Shape combo
+	// Shape combo
 	ImGui::PushID("waveform");
+	// Get current shape index
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][awgState->m_channelShape[channelIndex]];
-	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],3))
+	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],true,3))
 	{
 		awg->SetFunctionChannelShape(channelIndex, awgState->m_channelShapes[channelIndex][shapeIndex]);
 		// Tell intrument thread that the FunctionGenerator state has to be updated
@@ -564,7 +581,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	int comboValue = isHiZ ? 0 : 1;
 	bool changed = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
 								,comboValue
-								,"Hi-Z", "50 Oh" );
+								,"Hi-Z", "50 Oh", NULL);
 	if(changed)
 	{
 		awg->SetFunctionChannelOutputImpedance(channelIndex,((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM));
@@ -573,6 +590,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	ImGui::PopID();
 	// Row 4
 	// Offset label
+
 	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
 }
 
