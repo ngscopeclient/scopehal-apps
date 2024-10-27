@@ -2150,7 +2150,7 @@ void FilterGraphEditor::DoNodeForChannel(
 	//Draw a bubble above the text with the runtime stats
 	if(runtime > 0)
 	{
-		auto runtimeText = fs.PrettyPrint(runtime);
+		auto runtimeText = fs.PrettyPrint(runtime, 3);
 		auto runtimeSize = headerfont->CalcTextSizeA(headerfontsize, FLT_MAX, 0, runtimeText.c_str());
 
 		auto timebgColor = ColorFromString("#404040");
