@@ -52,6 +52,7 @@ public:
 		m_channelShape = std::make_unique<std::atomic<FunctionGenerator::WaveShape>[] >(n);
 		m_channelOutputImpedance = std::make_unique<std::atomic<FunctionGenerator::OutputImpedance>[] >(n);
 		m_channelShapes = std::make_unique<std::vector<FunctionGenerator::WaveShape>[] >(n);
+		m_channelShapeIndexes = std::make_unique<std::map<FunctionGenerator::WaveShape,int>[] >(n);
 		m_channelShapeNames = std::make_unique<std::vector<std::string>[] >(n);
 
 		for(size_t i=0; i<n; i++)
@@ -67,6 +68,7 @@ public:
 			for(size_t j=0; j<m_channelShapes[i].size(); j++)
 			{
 				m_channelShapeNames[i].push_back(generator->GetNameOfShape(m_channelShapes[i][j]));
+				m_channelShapeIndexes[i][m_channelShapes[i][j]] = j;
 			}
 		}
 
@@ -80,6 +82,7 @@ public:
 	std::unique_ptr<std::atomic<FunctionGenerator::WaveShape>[]> m_channelShape;
 	std::unique_ptr<std::atomic<FunctionGenerator::OutputImpedance>[]> m_channelOutputImpedance;
 	std::unique_ptr<std::vector<FunctionGenerator::WaveShape>[]> m_channelShapes;
+	std::unique_ptr<std::map<FunctionGenerator::WaveShape,int>[]> m_channelShapeIndexes;
 	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
 	 
 	std::atomic<bool> m_needsUpdate;

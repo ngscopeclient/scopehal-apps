@@ -72,7 +72,8 @@ protected:
 	void startBadgeLine();
 	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
 	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
-	int  renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */);
+	bool renderCombo(ImVec4 color,int &selected, const std::vector<string> &values);
+	bool renderCombo(ImVec4 color,int &selected, ... /* values, ending in NULL */);
 	bool renderToggle(ImVec4 color, bool curValue);
 	bool renderOnOffToggle(bool curValue);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);

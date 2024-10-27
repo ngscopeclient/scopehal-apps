@@ -57,7 +57,7 @@ StreamBrowserDialog::~StreamBrowserDialog()
 
 // @brief Helper methods for rendering widgets that appear in the StreamBrowserDialog.
 
-/*
+/**
 	@brief Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
 	scope properties box.
 */
@@ -69,7 +69,7 @@ void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext
 	hovered |= ImGui::IsItemHovered();
 }
 
-/*
+/**
 	@brief prepare rendering context to display a badge at the end of current line
  */
 void StreamBrowserDialog::startBadgeLine()
@@ -80,12 +80,12 @@ void StreamBrowserDialog::startBadgeLine()
 	m_badgeXCur = ImGui::GetWindowContentRegionMax().x;
 }
 
-/*
+/**
 	@brief render a badge for an instrument node
 
 	@param inst the instrument to render the badge for
 	@param latched true if the redering of this batch should be latched (i.e. only renderd it previous badge has been here for more than a given time)
-	@param badge the bade type
+	@param badge the badge type
 */
 bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge)
 {
@@ -137,6 +137,13 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 	return result;
 }
 
+/** 
+	@brief render a badge at the end of current line with provided color and text
+
+	@param color the color of the badge
+	@param ... a null terminated list of labels form the largest to the smallest to use as a badge label according to the available space
+	@return true if the badge has been clicked
+*/
 bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
 {
 	va_list ap;
@@ -160,61 +167,90 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 	return result;
 }
 
-int  StreamBrowserDialog::renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */)
+/**
+ * @brief Render a combo box with provded color and values
+ * 
+ * @param color the color of the combo box
+ * @param selected the selected value index (in/out)
+ * @param values the combo box values
+ * @return true true if the selected value of the combo has been changed
+ */
+bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values)
 {
-	va_list ap;
-	va_start(ap, selected);
-	int result = selected;
-
-	const char* selectedLabel = NULL;
-	int itemIndex = 0;
-	while (const char *label = va_arg(ap, const char *))
+	if(selected >= (int)values.size() || selected < 0)
 	{
-		if(itemIndex == selected)
-		{
-			selectedLabel = label;
-			break;
-		}
-		itemIndex++;
-	}
-	if(selectedLabel == NULL)
-	{
-		va_start(ap, selected);
-		selectedLabel = va_arg(ap, const char *);
 		selected = 0;
 	}
+	bool changed = false;
+	const char* selectedLabel = values[selected].c_str();
 	float xsz = ImGui::CalcTextSize(selectedLabel).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
 	if ((m_badgeXCur - xsz) < m_badgeXMin)
-		return result; // No room to display the combo
+		return changed; // No room to display the combo
 	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::SameLine(m_badgeXCur);
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
 	if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
 	{
-		va_start(ap, selected);
-		itemIndex = 0;
-		while (const char *label = va_arg(ap, const char *))
+		for(int i = 0 ; i < (int)values.size() ; i++)
 		{
-			const bool is_selected = (itemIndex == selected);
-			if(ImGui::Selectable(label, is_selected))
-				result = itemIndex;
+			const bool is_selected = (i == selected);
+			if(ImGui::Selectable(values[i].c_str(), is_selected))
+			{
+				selected = i;
+				changed = true;
+			}
 			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
 			if (is_selected)
 				ImGui::SetItemDefaultFocus();
-			itemIndex++;
 		}
 		ImGui::EndCombo();
 	}
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
-	return result;
+	return changed;
 }
 
+/**
+ * @brief Render a combo box with provded color and values
+ * 
+ * @param color the color of the combo box
+ * @param selected the selected value index (in/out)
+ * @param ... the combo box values
+ * @return true true if the selected value of the combo has been changed
+ */
+bool StreamBrowserDialog::renderCombo(ImVec4 color,int &selected, ... /* values, ending in NULL */)
+{
+	va_list ap;
+	va_start(ap, selected);
+	std::vector<string> values;
+	while (const char *label = va_arg(ap, const char *))
+	{
+		values.push_back(string(label));
+	}
+	return renderCombo(color,selected,values);
+}
+
+/**
+ * @brief Render a toggle button combo
+ * 
+ * @param color the color of the toggle button
+ * @param curValue the value of the toggle button
+ * @return the selected value for the toggle button
+ */
 bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
 {
-	return (renderCombo(color, (int)curValue, "OFF", "ON", NULL) == 1);
+	int selection = (int)curValue;
+	renderCombo(color, selection, "OFF", "ON", NULL);
+	return (selection == 1);
 }
+
+/**
+ * @brief Render an on/off toggle button combo
+ * 
+ * @param curValue the value of the toggle button
+ * @return the selected value for the toggle button
+ */
 bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 {
 	auto& prefs = m_session.GetPreferences();
@@ -222,6 +258,13 @@ bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 	return renderToggle(color, curValue);
 }
 
+/**
+ * @brief Render a download progress bar for a given instrument channel
+ * 
+ * @param inst the instrument to render the progress channel for
+ * @param chan the channel to render the progress for
+ * @param isLast true if it is the last channel of the instrument
+ */
 void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 {
 	static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
@@ -359,6 +402,17 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 	// well, shoot -- I guess there wasn't enough room to do *anything* useful!
 }
 
+/**
+ * @brief Render a PSU properties row
+ * 
+ * @param isVoltage true for voltage rows, false for current rows
+ * @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
+ * @param chan the PSU channel to render properties for
+ * @param setValue the set value text
+ * @param measuredValue the measured value text
+ * @param clicked output param for clicked state
+ * @param hovered output param for hovered state
+ */
 void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
 {
 	auto& prefs = m_session.GetPreferences();
@@ -415,6 +469,14 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	hovered |= ImGui::IsItemHovered();
 }
 
+/**
+ * @brief Render AWG channel properties
+ * 
+ * @param awg the AWG to render channel properties for
+ * @param awgchan the AWG channel to render properties for
+ * @param clicked output param for clicked state
+ * @param hovered output param for hovered state
+ */
 void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered)
 {
 	//FunctionGenerator::WaveShape shape = FunctionGenerator::WaveShape::SHAPE_SINE;
@@ -438,25 +500,26 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	auto& prefs = m_session.GetPreferences();
 	// Row 1
+	startBadgeLine(); // Needed for shape combo
 	ImGui::Text("Waveform:");
 	// TODO Shape combo
-	ImGui::SameLine(0,0);
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
-	//if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
-	int shapeIndex;
-	if(Combo("Waveform", awgState->m_channelShapeNames[channelIndex], shapeIndex))
+	ImGui::PushID("waveform");
+	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][awgState->m_channelShape[channelIndex]];
+	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex]))
 	{
 		awg->SetFunctionChannelShape(channelIndex, awgState->m_channelShapes[channelIndex][shapeIndex]);
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate = true;
 	}
+	ImGui::PopID();
 	// TODO Shape preview
 	
 	// Row 2
 	// Frequency label
 	StreamDescriptor sv(awgchan, 0);
 	ImGui::PushID("frequ");
-	ImGui::Selectable("Frequency:");
+	// TODO
+	ImGui::Selectable("Frequency:",false,0,ImVec2(40, 0));
 	if(ImGui::BeginDragDropSource())
 	{
 		ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
@@ -476,17 +539,19 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Amplitude label
 	renderInfoLink("Amplitude",amplitude_txt.c_str(),clicked,hovered);
 	// Impedance value
-	startBadgeLine(); // Neede for impedance badge
+	startBadgeLine(); // Needed for impedance badge
+	ImGui::PushID("impedance");
 	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
-	int selected = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
-								,(isHiZ ? 0 : 1)
+	int comboValue = isHiZ ? 0 : 1;
+	bool changed = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
+								,comboValue
 								,"Hi-Z", "50 Oh" );
-	bool newHiZ = (selected == 0);
-	if(newHiZ != isHiZ)
+	if(changed)
 	{
-		awg->SetFunctionChannelOutputImpedance(channelIndex,(newHiZ ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM));
+		awg->SetFunctionChannelOutputImpedance(channelIndex,((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM));
 		awgState->m_needsUpdate = true;
 	}
+	ImGui::PopID();
 	// Row 4
 	// Offset label
 	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
