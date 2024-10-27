@@ -134,7 +134,10 @@ void Session::ClearBackgroundThreads()
 	//This has to happen before we terminate the WaveformThread, to avoid waveforms getting stuck
 	//which have been acquired but not processed
 	for(auto it : m_instrumentStates)
-		it.second->Close();
+	{
+		if(it.second)
+			it.second->Close();
+	}
 
 	//Clear our trigger state
 	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
@@ -176,16 +179,33 @@ void Session::Clear()
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 
-	//HACK: for now, export filters keep an open reference to themselves to avoid memory leaks
-	//Free this refererence now.
-	//Long term we can probably do this better https://github.com/glscopeclient/scopehal-apps/issues/573
+	/**
+		HACK: for now, export filters keep an open reference to themselves to avoid memory leaks
+
+		Free them now. Need to use a 2-pass flow to avoid attempting to iterate over something that got freed
+		when we freed a previous filter. This will be so much easier when we transition to shared_ptr's!
+	 */
 	auto filters = Filter::GetAllInstances();
+	set<Filter*> filtersToFree;
 	for(auto f : filters)
 	{
+		LogTrace("First pass: Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
+
+		//See if it's an export filter, if so free it
 		auto e = dynamic_cast<ExportFilter*>(f);
 		if(e)
-			e->Release();
+			filtersToFree.emplace(e);
 	}
+	for(auto f : filtersToFree)
+	{
+		LogTrace("Freeing filter %s\n", f->GetHwname().c_str());
+		f->Release();
+	}
+
+	//Log any that are still around but don't touch as we have no idea why they're here
+	filters = Filter::GetAllInstances();
+	for(auto f : filters)
+		LogWarning("Second pass: Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
 
 	//TODO: do we need to lock the mutex now that all of the background threads should have terminated?
 	//Might be redundant.
@@ -225,12 +245,6 @@ void Session::Clear()
 	m_triggerGroups.clear();
 	m_recentlyTriggeredScopes.clear();
 	m_recentlyTriggeredGroups.clear();
-
-	//We SHOULD not have any filters at this point.
-	//But there have been reports that some stick around. If this happens, print an error message.
-	filters = Filter::GetAllInstances();
-	for(auto f : filters)
-		LogWarning("Leaked filter %s (%zu refs)\n", f->GetHwname().c_str(), f->GetRefCount());
 
 	//Remove any existing IDs
 	m_idtable.clear();

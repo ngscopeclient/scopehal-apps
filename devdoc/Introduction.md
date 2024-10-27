@@ -59,6 +59,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup ethernet Ethernet protocol decodes
 \ingroup libscopeprotocols
 
+\defgroup export File export filters
+\ingroup libscopeprotocols
+
 \defgroup math Basic math functions
 \ingroup libscopeprotocols
 
