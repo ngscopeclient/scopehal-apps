@@ -78,10 +78,14 @@
 #include "../scopeprotocols/DownconvertFilter.h"
 #include "../scopeprotocols/DownsampleFilter.h"
 #include "../scopeprotocols/DPAuxChannelDecoder.h"
+#include "../scopeprotocols/DPhyDataDecoder.h"
+#include "../scopeprotocols/DPhyEscapeModeDecoder.h"
 #include "../scopeprotocols/DPhyHSClockRecoveryFilter.h"
+#include "../scopeprotocols/DPhySymbolDecoder.h"
 #include "../scopeprotocols/DramClockFilter.h"
 #include "../scopeprotocols/DramRefreshActivateMeasurement.h"
 #include "../scopeprotocols/DramRowColumnLatencyMeasurement.h"
+#include "../scopeprotocols/DSIPacketDecoder.h"
 #include "../scopeprotocols/DutyCycleMeasurement.h"
 #include "../scopeprotocols/EmphasisFilter.h"
 #include "../scopeprotocols/EmphasisRemovalFilter.h"
@@ -133,6 +137,7 @@
 #include "../scopeprotocols/J1939SourceMatchFilter.h"
 #include "../scopeprotocols/J1939TransportDecoder.h"
 #include "../scopeprotocols/JitterFilter.h"
+#include "../scopeprotocols/JitterSpectrumFilter.h"
 #include "../scopeprotocols/JtagDecoder.h"
 #include "../scopeprotocols/MaximumFilter.h"
 #include "../scopeprotocols/MemoryFilter.h"
@@ -146,6 +151,11 @@
 #include "../scopeprotocols/PcapngImportFilter.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
 #include "../scopeprotocols/PCIeDataLinkDecoder.h"
+#include "../scopeprotocols/PCIeDataLinkDecoder.h"
+#include "../scopeprotocols/PCIeGen2LogicalDecoder.h"
+#include "../scopeprotocols/PCIeGen3LogicalDecoder.h"
+#include "../scopeprotocols/PCIeLinkTrainingDecoder.h"
+#include "../scopeprotocols/PCIeTransportDecoder.h"
 #include "../scopeprotocols/PeakHoldFilter.h"
 #include "../scopeprotocols/PeaksFilter.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
@@ -311,17 +321,25 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-j1939-source-match", FindDataFile("icons/filters/filter-j1939-source-match.png"));
 	m_texmgr.LoadTexture("filter-j1939-transport", FindDataFile("icons/filters/filter-j1939-transport.png"));
 	m_texmgr.LoadTexture("filter-jitter", FindDataFile("icons/filters/filter-jitter.png"));
+	m_texmgr.LoadTexture("filter-jitter-spectrum", FindDataFile("icons/filters/filter-jitter-spectrum.png"));
 	m_texmgr.LoadTexture("filter-jtag", FindDataFile("icons/filters/filter-jtag.png"));
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
 	m_texmgr.LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
 	m_texmgr.LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
 	m_texmgr.LoadTexture("filter-mil-std-1553", FindDataFile("icons/filters/filter-mil-std-1553.png"));
+	m_texmgr.LoadTexture("filter-mipi-d-phy-data", FindDataFile("icons/filters/filter-mipi-d-phy-data.png"));
+	m_texmgr.LoadTexture("filter-mipi-d-phy-escape-mode", FindDataFile("icons/filters/filter-mipi-d-phy-escape-mode.png"));
+	m_texmgr.LoadTexture("filter-mipi-dsi-packet", FindDataFile("icons/filters/filter-mipi-dsi-packet.png"));
 	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
 	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
 	m_texmgr.LoadTexture("filter-pcapng-export", FindDataFile("icons/filters/filter-pcapng-export.png"));
 	m_texmgr.LoadTexture("filter-pcapng-import", FindDataFile("icons/filters/filter-pcapng-import.png"));
 	m_texmgr.LoadTexture("filter-pcie-data-link", FindDataFile("icons/filters/filter-pcie-data-link.png"));
+	m_texmgr.LoadTexture("filter-pcie-gen-1-2-logical", FindDataFile("icons/filters/filter-pcie-gen-1-2-logical.png"));
+	m_texmgr.LoadTexture("filter-pcie-gen-3-4-5-logical", FindDataFile("icons/filters/filter-pcie-gen-3-4-5-logical.png"));
+	m_texmgr.LoadTexture("filter-pcie-link-training", FindDataFile("icons/filters/filter-pcie-link-training.png"));
+	m_texmgr.LoadTexture("filter-pcie-transport", FindDataFile("icons/filters/filter-pcie-transport.png"));
 	m_texmgr.LoadTexture("filter-peaks", FindDataFile("icons/filters/filter-peaks.png"));
 	m_texmgr.LoadTexture("filter-peak-hold", FindDataFile("icons/filters/filter-peak-hold.png"));
 	m_texmgr.LoadTexture("filter-peaktopeak", FindDataFile("icons/filters/filter-peaktopeak.png"));
@@ -412,6 +430,9 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DownsampleFilter))] 						= "filter-downsample";
 	m_filterIconMap[type_index(typeid(DPAuxChannelDecoder))] 					= "filter-displayport-aux";
 	m_filterIconMap[type_index(typeid(DPhyHSClockRecoveryFilter))]				= "filter-clock-recovery-dphy-hs-mode";
+	m_filterIconMap[type_index(typeid(DPhyDataDecoder))] 						= "filter-mipi-d-phy-data";
+	m_filterIconMap[type_index(typeid(DPhyEscapeModeDecoder))] 					= "filter-mipi-d-phy-escape-mode";
+	m_filterIconMap[type_index(typeid(DSIPacketDecoder))] 						= "filter-mipi-dsi-packet";
 	m_filterIconMap[type_index(typeid(DramClockFilter))] 						= "filter-dram-clocks";
 	m_filterIconMap[type_index(typeid(DramRefreshActivateMeasurement))] 		= "filter-dram-trfc";
 	m_filterIconMap[type_index(typeid(DramRowColumnLatencyMeasurement))] 		= "filter-dram-trcd";
@@ -465,6 +486,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(J1939SourceMatchFilter))]					= "filter-j1939-source-match";
 	m_filterIconMap[type_index(typeid(J1939TransportDecoder))]					= "filter-j1939-transport";
 	m_filterIconMap[type_index(typeid(JitterFilter))] 							= "filter-jitter";
+	m_filterIconMap[type_index(typeid(JitterSpectrumFilter))] 					= "filter-jitter-spectrum";
 	m_filterIconMap[type_index(typeid(JtagDecoder))] 							= "filter-jtag";
 	m_filterIconMap[type_index(typeid(MaximumFilter))] 							= "filter-max";
 	m_filterIconMap[type_index(typeid(MemoryFilter))] 							= "filter-memory";
@@ -477,6 +499,10 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(PcapngImportFilter))] 					= "filter-pcapng-import";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
 	m_filterIconMap[type_index(typeid(PCIeDataLinkDecoder))] 					= "filter-pcie-data-link";
+	m_filterIconMap[type_index(typeid(PCIeGen2LogicalDecoder))] 				= "filter-pcie-gen-1-2-logical";
+	m_filterIconMap[type_index(typeid(PCIeGen3LogicalDecoder))] 				= "filter-pcie-gen-3-4-5-logical";
+	m_filterIconMap[type_index(typeid(PCIeLinkTrainingDecoder))] 				= "filter-pcie-link-training";
+	m_filterIconMap[type_index(typeid(PCIeTransportDecoder))] 					= "filter-pcie-transport";
 	m_filterIconMap[type_index(typeid(PeaksFilter))] 							= "filter-peaks";
 	m_filterIconMap[type_index(typeid(PeakHoldFilter))] 						= "filter-peak-hold";
 	m_filterIconMap[type_index(typeid(PkPkMeasurement))] 						= "filter-peaktopeak";
