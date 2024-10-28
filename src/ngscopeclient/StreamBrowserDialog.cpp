@@ -574,6 +574,9 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Row 3
 	// Amplitude label
 	renderInfoLink("Amplitude",amplitude_txt.c_str(),clicked,hovered);
+	// Row 4
+	// Offset label
+	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
 	// Impedance value
 	startBadgeLine(); // Needed for impedance badge
 	ImGui::PushID("impedance");
@@ -588,10 +591,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate = true;
 	}
 	ImGui::PopID();
-	// Row 4
-	// Offset label
-
-	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
 }
 
 /*
@@ -756,7 +755,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	}
 	else if(awg && awgchan)
 	{
-		renderProps = awg->GetFunctionChannelActive(channelIndex);
+		renderProps = m_session.GetFunctionGeneratorState(awg)->m_channelActive[channelIndex];
 	}
 
 	bool hasChildren = !singleStream || renderProps;
