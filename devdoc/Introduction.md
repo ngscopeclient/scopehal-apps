@@ -36,6 +36,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup psudrivers Power supply drivers
 \ingroup drivers
 
+\defgroup rfgendrivers RF signal generator drivers
+\ingroup drivers
+
 \defgroup sdrdrivers SDR drivers
 \ingroup drivers
 

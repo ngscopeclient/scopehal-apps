@@ -199,6 +199,10 @@ bool FilterPropertiesDialog::DoRender()
 		{
 			for(auto it = f->GetParamBegin(); it != f->GetParamEnd(); it++)
 			{
+				//Skip hidden parameters
+				if(it->second.IsHidden())
+					continue;
+
 				//This can never be used in a trigger so special case
 				if(it->second.GetType() == FilterParameter::TYPE_FILENAME)
 				{
