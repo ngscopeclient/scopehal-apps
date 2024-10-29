@@ -625,29 +625,51 @@ void MainWindow::LoadWaveformShapeIcons()
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_UP] = "shape-sawtooth-up";
 	m_texmgr.LoadTexture("shape-sawtooth-down", FindDataFile("icons/shapes/sawtooth-down.png"));
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_DOWN] = "shape-sawtooth-down";
+	m_texmgr.LoadTexture("shape-staircase-up", FindDataFile("icons/shapes/staircase-up.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_UP] = "shape-staircase-up";
+	m_texmgr.LoadTexture("shape-staircase-down", FindDataFile("icons/shapes/staircase-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_DOWN] = "shape-staircase-down";
+	m_texmgr.LoadTexture("shape-staircase-up-down", FindDataFile("icons/shapes/staircase-up-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_UP_DOWN] = "shape-staircase-up-down";
+	m_texmgr.LoadTexture("shape-sinc", FindDataFile("icons/shapes/sinc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SINC] = "shape-sinc";
+	m_texmgr.LoadTexture("shape-gaussian", FindDataFile("icons/shapes/gaussian.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN] = "shape-gaussian";
+	m_texmgr.LoadTexture("shape-lorentz", FindDataFile("icons/shapes/lorentz.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LORENTZ] = "shape-lorentz";
+	m_texmgr.LoadTexture("shape-half-sine", FindDataFile("icons/shapes/half-sine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HALF_SINE] = "shape-half-sine";
+	m_texmgr.LoadTexture("shape-prbs", FindDataFile("icons/shapes/prbs.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_PRBS_NONSTANDARD] = "shape-prbs";
+	m_texmgr.LoadTexture("shape-exponential-rise", FindDataFile("icons/shapes/exponential-rise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_EXPONENTIAL_RISE] = "shape-exponential-rise";
+	m_texmgr.LoadTexture("shape-exponential-decay", FindDataFile("icons/shapes/exponential-decay.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_EXPONENTIAL_DECAY] = "shape-exponential-decay";
+	m_texmgr.LoadTexture("shape-haversine", FindDataFile("icons/shapes/haversine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HAVERSINE] = "shape-haversine";
+	m_texmgr.LoadTexture("shape-cardiac", FindDataFile("icons/shapes/cardiac.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CARDIAC] = "shape-cardiac";
+	m_texmgr.LoadTexture("shape-negative-pulse", FindDataFile("icons/shapes/negative-pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_NEGATIVE_PULSE] = "shape-negative-pulse";
+	m_texmgr.LoadTexture("shape-log-rise", FindDataFile("icons/shapes/log-rise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LOG_RISE] = "shape-log-rise";
+	m_texmgr.LoadTexture("shape-log-decay", FindDataFile("icons/shapes/log-decay.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LOG_DECAY] = "shape-log-decay";
+	m_texmgr.LoadTexture("shape-square-root", FindDataFile("icons/shapes/square-root.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SQUARE_ROOT] = "shape-square-root";
+	m_texmgr.LoadTexture("shape-cube-root", FindDataFile("icons/shapes/cube-root.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CUBE_ROOT] = "shape-cube-root";
+	m_texmgr.LoadTexture("shape-quadratic", FindDataFile("icons/shapes/quadratic.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_QUADRATIC] = "shape-quadratic";
+	m_texmgr.LoadTexture("shape-cubic", FindDataFile("icons/shapes/cubic.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_QUADRATIC] = "shape-cubic";
+	m_texmgr.LoadTexture("shape-gaussian-pulse", FindDataFile("icons/shapes/gaussian-pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN_PULSE] = "shape-gaussian-pulse";
+	m_texmgr.LoadTexture("shape-dlorentz", FindDataFile("icons/shapes/lorentz.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_DLORENTZ] = "shape-dlorentz";
 
 /*		SHAPE_SINC,
-		SHAPE_GAUSSIAN,
-		SHAPE_LORENTZ,
-		SHAPE_HALF_SINE,
-		SHAPE_PRBS_NONSTANDARD,
-		SHAPE_EXPONENTIAL_RISE,
-		SHAPE_EXPONENTIAL_DECAY,
-		SHAPE_HAVERSINE,
-		SHAPE_CARDIAC,
 
-		SHAPE_STAIRCASE_UP,
-		SHAPE_STAIRCASE_DOWN,
-		SHAPE_STAIRCASE_UP_DOWN,
-		SHAPE_NEGATIVE_PULSE,
-		SHAPE_LOG_RISE,
-		SHAPE_LOG_DECAY,
-		SHAPE_SQUARE_ROOT,
-		SHAPE_CUBE_ROOT,
-		SHAPE_QUADRATIC,
-		SHAPE_CUBIC,
-		SHAPE_DLORENTZ,
-		SHAPE_GAUSSIAN_PULSE,
 		SHAPE_HAMMING,
 		SHAPE_HANNING,
 		SHAPE_KAISER,
