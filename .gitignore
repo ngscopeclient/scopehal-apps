@@ -3,3 +3,4 @@ release-build
 debug-build
 analysis-build
 asan-build
+release-nodebug-build
