@@ -26,61 +26,28 @@
 * POSSIBILITY OF SUCH DAMAGE.                                                                                          *
 *                                                                                                                      *
 ***********************************************************************************************************************/
-#ifndef ngscopeclient_h
-#define ngscopeclient_h
+#ifndef ImGuiDisabler_h
+#define ImGuiDisabler_h
 
-#include "../scopehal/scopehal.h"
-
-#define GLFW_INCLUDE_NONE
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include <imgui.h>
-#include <misc/cpp/imgui_stdlib.h>
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_vulkan.h>
-
-#include "ImGuiDisabler.h"
-
-#include <atomic>
-#include <shared_mutex>
-
-#include "BERTState.h"
-#include "PowerSupplyState.h"
-#include "MultimeterState.h"
-#include "LoadState.h"
-#include "GuiLogSink.h"
-#include "Event.h"
-
-class Session;
-
-class InstrumentThreadArgs
+///@brief RAII wrapper for enabling / disabling widgets
+class ImGuiDisabler
 {
 public:
-	InstrumentThreadArgs(std::shared_ptr<SCPIInstrument> p, Session* sess)
-	: inst(p)
-	, session(sess)
-	{}
+	ImGuiDisabler(bool disable = true)
+		: m_disabled(disable)
+	{
+		if(disable)
+			ImGui::BeginDisabled();
+	}
 
-	std::shared_ptr<SCPIInstrument> inst;
-	std::atomic<bool>* shuttingDown;
-	Session* session;
+	~ImGuiDisabler()
+	{
+		if(m_disabled)
+			ImGui::EndDisabled();
+	}
 
-	//Additional per-instrument-type state we can add
-	std::shared_ptr<LoadState> loadstate;
-	std::shared_ptr<MultimeterState> meterstate;
-	std::shared_ptr<BERTState> bertstate;
-	std::shared_ptr<PowerSupplyState> psustate;
+protected:
+	bool m_disabled;
 };
-
-void InstrumentThread(InstrumentThreadArgs args);
-void WaveformThread(Session* session, std::atomic<bool>* shuttingDown);
-
-void RightJustifiedText(const std::string& str);
-
-extern std::shared_mutex g_vulkanActivityMutex;
-
-bool RectIntersect(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
-bool RectContains(ImVec2 posA, ImVec2 sizeA, ImVec2 posB, ImVec2 sizeB);
 
 #endif
