@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -31,6 +31,7 @@
 	@file
 	@author Andrew D. Zonenberg
 	@brief Implementation of PreferenceDialog
+	@ingroup dialogs
  */
 
 #include "ngscopeclient.h"
@@ -304,6 +305,10 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 				ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
 				if(ImGui::InputFloat(label.c_str(), &size, 1, 5))
 					changed = true;
+
+				//Clamp font size to plausible range
+				size = max(size, 5.0f);
+				size = min(size, 100.0f);
 
 				if(changed)
 					pref.SetFont(FontDescription(path, size));

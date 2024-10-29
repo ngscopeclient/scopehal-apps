@@ -283,6 +283,8 @@ bool FilterPropertiesDialog::DoRender()
  */
 bool FilterPropertiesDialog::DoParameter(FilterParameter& param, string name, map<string, string>& tempValues)
 {
+	ImGuiDisabler disabler(param.IsReadOnly());
+
 	//See what kind of parameter it is
 	switch(param.GetType())
 	{
