@@ -167,6 +167,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 	LoadFilterIcons();
 	LoadStatusBarIcons();
+	LoadWaveformShapeIcons();
+
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;

@@ -538,11 +538,12 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	startBadgeLine(); // Needed for shape combo
 	// Shape combo
 	ImGui::PushID("waveform");
-	// Get current shape index
-	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][awgState->m_channelShape[channelIndex]];
+	// Get current shape and  shape index
+	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
+	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
 	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],true,3))
 	{
-		auto shape = awgState->m_channelShapes[channelIndex][shapeIndex];
+		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
 		awg->SetFunctionChannelShape(channelIndex, shape);
 		// Update state right now to cover from slow intruments
 		awgState->m_channelShape[channelIndex]=shape;
@@ -579,10 +580,10 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	if ((m_badgeXCur - width) >= m_badgeXMin) 
 	{
 		// ok, we have enough space draw preview
-		m_badgeXCur -= width - ImGui::GetStyle().ItemSpacing.x;
+		m_badgeXCur -= width /*- ImGui::GetStyle().ItemSpacing.x*/;
 		ImGui::SameLine(m_badgeXCur);
 		ImGui::Image(
-			m_parent->GetTextureManager()->GetTexture("filter-sine"),
+			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
 			ImVec2(width,height));
 		// Go back one line since preview spans on two text lines
 		ImGuiWindow *window = ImGui::GetCurrentWindowRead();

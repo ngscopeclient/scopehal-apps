@@ -603,6 +603,81 @@ string MainWindow::GetIconForFilter(Filter* f)
 }
 
 /**
+	@brief Load icons for the filter graph
+ */
+void MainWindow::LoadWaveformShapeIcons()
+{
+	m_texmgr.LoadTexture("shape-default", FindDataFile("icons/shapes/default.png"));
+
+	m_texmgr.LoadTexture("shape-sine", FindDataFile("icons/shapes/sine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SINE] = "shape-sine";
+	m_texmgr.LoadTexture("shape-square", FindDataFile("icons/shapes/square.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SQUARE] = "shape-square";
+	m_texmgr.LoadTexture("shape-triangle", FindDataFile("icons/shapes/triangle.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_TRIANGLE] = "shape-triangle";
+	m_texmgr.LoadTexture("shape-pulse", FindDataFile("icons/shapes/pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_PULSE] = "shape-pulse";
+	m_texmgr.LoadTexture("shape-dc", FindDataFile("icons/shapes/dc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_DC] = "shape-dc";
+	m_texmgr.LoadTexture("shape-noise", FindDataFile("icons/shapes/noise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_NOISE] = "shape-noise";
+	m_texmgr.LoadTexture("shape-sawtooth-up", FindDataFile("icons/shapes/sawtooth-up.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_UP] = "shape-sawtooth-up";
+	m_texmgr.LoadTexture("shape-sawtooth-down", FindDataFile("icons/shapes/sawtooth-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_DOWN] = "shape-sawtooth-down";
+
+/*		SHAPE_SINC,
+		SHAPE_GAUSSIAN,
+		SHAPE_LORENTZ,
+		SHAPE_HALF_SINE,
+		SHAPE_PRBS_NONSTANDARD,
+		SHAPE_EXPONENTIAL_RISE,
+		SHAPE_EXPONENTIAL_DECAY,
+		SHAPE_HAVERSINE,
+		SHAPE_CARDIAC,
+
+		SHAPE_STAIRCASE_UP,
+		SHAPE_STAIRCASE_DOWN,
+		SHAPE_STAIRCASE_UP_DOWN,
+		SHAPE_NEGATIVE_PULSE,
+		SHAPE_LOG_RISE,
+		SHAPE_LOG_DECAY,
+		SHAPE_SQUARE_ROOT,
+		SHAPE_CUBE_ROOT,
+		SHAPE_QUADRATIC,
+		SHAPE_CUBIC,
+		SHAPE_DLORENTZ,
+		SHAPE_GAUSSIAN_PULSE,
+		SHAPE_HAMMING,
+		SHAPE_HANNING,
+		SHAPE_KAISER,
+		SHAPE_BLACKMAN,
+		SHAPE_GAUSSIAN_WINDOW,
+		SHAPE_HARRIS,
+		SHAPE_BARTLETT,
+		SHAPE_TAN,
+		SHAPE_COT,
+		SHAPE_SEC,
+		SHAPE_CSC,
+		SHAPE_ASIN,
+		SHAPE_ACOS,
+		SHAPE_ATAN,
+		SHAPE_ACOT,
+
+		SHAPE_ARB*/
+}
+
+///@brief Gets the icon to use for a filter
+string MainWindow::GetIconForWaveformShape(FunctionGenerator::WaveShape shape)
+{
+	auto it = m_waveformShapeIconMap.find(shape);
+	if(it != m_waveformShapeIconMap.end())
+		return it->second;
+
+	return "shape-default";
+}
+
+/**
 	@brief Load toolbar icons from disk if preferences changed
  */
 void MainWindow::LoadToolbarIcons()
