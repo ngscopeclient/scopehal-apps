@@ -55,6 +55,8 @@ public:
 		m_channelShapeIndexes = std::make_unique<std::map<FunctionGenerator::WaveShape,int>[] >(n);
 		m_channelShapeNames = std::make_unique<std::vector<std::string>[] >(n);
 
+		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
+
 		for(size_t i=0; i<n; i++)
 		{
 			m_channelActive[i] = false;
@@ -70,9 +72,9 @@ public:
 				m_channelShapeNames[i].push_back(generator->GetNameOfShape(m_channelShapes[i][j]));
 				m_channelShapeIndexes[i][m_channelShapes[i][j]] = j;
 			}
-		}
 
-		m_needsUpdate = true;
+			m_needsUpdate[i] = true;
+		}
 	}
 
 	std::unique_ptr<std::atomic<bool>[]> m_channelActive;
@@ -85,7 +87,7 @@ public:
 	std::unique_ptr<std::map<FunctionGenerator::WaveShape,int>[]> m_channelShapeIndexes;
 	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
 	 
-	std::atomic<bool> m_needsUpdate;
+	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
 
 };
 

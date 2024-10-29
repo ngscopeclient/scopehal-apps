@@ -213,10 +213,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 		// Read and cache FunctionGenerator settings
 		if(awg)
 		{
-			if(awgstate->m_needsUpdate)
+			//Read status for channels that need it
+			for(size_t i=0; i<awg->GetChannelCount(); i++)
 			{
-				//Read status
-				for(size_t i=0; i<awg->GetChannelCount(); i++)
+				if(awgstate->m_needsUpdate[i])
 				{
 					//Skip non-awg channels
 					auto awgchan = dynamic_cast<FunctionGeneratorChannel*>(awg->GetChannel(i));
@@ -230,9 +230,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 					awgstate->m_channelOutputImpedance[i] = awg->GetFunctionChannelOutputImpedance(i);
 
 					session->MarkChannelDirty(awgchan);
-				}
 
-				awgstate->m_needsUpdate = false;
+					awgstate->m_needsUpdate[i] = false;
+				}
+				
 			}
 		}
 

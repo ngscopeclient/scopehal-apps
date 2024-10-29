@@ -187,7 +187,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
 
 			// Tell intrument thread that the FunctionGenerator state has to be updated
-			m_state->m_needsUpdate = true;
+			m_state->m_needsUpdate[i] = true;
 		}
 		HelpMarker("Turns the output signal from this channel on or off");
 
@@ -206,7 +206,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 				state.m_offset = volts.PrettyPrint(state.m_committedOffset);
 
 				// Tell intrument thread that the FunctionGenerator state has to be updated
-				m_state->m_needsUpdate = true;
+				m_state->m_needsUpdate[i] = true;
 			}
 			HelpMarker(
 				"Select the expected load impedance.\n\n"
@@ -220,7 +220,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		{
 			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_committedAmplitude);
 			// Tell intrument thread that the FunctionGenerator state has to be updated
-			m_state->m_needsUpdate = true;
+			m_state->m_needsUpdate[i] = true;
 		}
 		HelpMarker("Peak-to-peak amplitude of the generated waveform");
 
@@ -229,7 +229,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		{
 			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_committedOffset);
 			// Tell intrument thread that the FunctionGenerator state has to be updated
-			m_state->m_needsUpdate = true;
+			m_state->m_needsUpdate[i] = true;
 		}
 		HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
@@ -239,7 +239,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		{
 			m_generator->SetFunctionChannelShape(i, m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex]);
 			// Tell intrument thread that the FunctionGenerator state has to be updated
-			m_state->m_needsUpdate = true;
+			m_state->m_needsUpdate[i] = true;
 		}
 		HelpMarker("Select the type of waveform to generate");
 
@@ -248,7 +248,7 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		{
 			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
 			// Tell intrument thread that the FunctionGenerator state has to be updated
-			m_state->m_needsUpdate = true;
+			m_state->m_needsUpdate[i] = true;
 		}
 
 		//Duty cycle controls are not available in all generators

@@ -542,12 +542,14 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][awgState->m_channelShape[channelIndex]];
 	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],true,3))
 	{
-		awg->SetFunctionChannelShape(channelIndex, awgState->m_channelShapes[channelIndex][shapeIndex]);
+		auto shape = awgState->m_channelShapes[channelIndex][shapeIndex];
+		awg->SetFunctionChannelShape(channelIndex, shape);
+		// Update state right now to cover from slow intruments
+		awgState->m_channelShape[channelIndex]=shape;
 		// Tell intrument thread that the FunctionGenerator state has to be updated
-		awgState->m_needsUpdate = true;
+		awgState->m_needsUpdate[channelIndex] = true;
 	}
 	ImGui::PopID();
-	// TODO Shape preview
 	
 	// Row 2
 	// Frequency label
@@ -570,6 +572,22 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	ImGui::SameLine(0, 0);
 	clicked |= ImGui::TextLink(frequency_txt.c_str());
 	hovered |= ImGui::IsItemHovered();
+	// Shape preview
+	startBadgeLine();
+	auto height = ImGui::GetFontSize() * 2;
+	auto width =  height * 2;
+	if ((m_badgeXCur - width) >= m_badgeXMin) 
+	{
+		// ok, we have enough space draw preview
+		m_badgeXCur -= width - ImGui::GetStyle().ItemSpacing.x;
+		ImGui::SameLine(m_badgeXCur);
+		ImGui::Image(
+			m_parent->GetTextureManager()->GetTexture("filter-sine"),
+			ImVec2(width,height));
+		// Go back one line since preview spans on two text lines
+		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
+		window->DC.CursorPos.y -= ImGui::GetFontSize();
+	}
 
 	// Row 3
 	// Amplitude label
@@ -587,8 +605,12 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 								,"Hi-Z", "50 Oh", NULL);
 	if(changed)
 	{
-		awg->SetFunctionChannelOutputImpedance(channelIndex,((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM));
-		awgState->m_needsUpdate = true;
+		impedance = ((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM);
+		awg->SetFunctionChannelOutputImpedance(channelIndex,impedance);
+		// Update state right now to cover from slow intruments
+		awgState->m_channelOutputImpedance[channelIndex]=impedance;
+		// Tell intrument thread that the FunctionGenerator state has to be updated
+		awgState->m_needsUpdate[channelIndex] = true;
 	}
 	ImGui::PopID();
 }
@@ -831,7 +853,12 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			awg->SetFunctionChannelActive(channelIndex,result);
 			auto awgState = m_session.GetFunctionGeneratorState(awg);
 			if(awgState)
-				awgState->m_needsUpdate = true;
+			{
+				// Update state right now to cover from slow intruments
+				awgState->m_channelActive[channelIndex]=result;
+				// Tell intrument thread that the FunctionGenerator state has to be updated
+				awgState->m_needsUpdate[channelIndex] = true;
+			}
 
 		}
 	}
