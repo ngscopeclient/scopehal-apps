@@ -701,7 +701,7 @@ void MainWindow::LoadWaveformShapeIcons()
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ARB] = "shape-arb";
 }
 
-///@brief Gets the icon to use for a filter
+///@brief Gets the icon to use for a given wave shape
 string MainWindow::GetIconForWaveformShape(FunctionGenerator::WaveShape shape)
 {
 	auto it = m_waveformShapeIconMap.find(shape);
