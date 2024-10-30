@@ -149,6 +149,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DDISABLE_PCH=ON \
           -GNinja \
+          -DCPACK_GENERATOR=DEB \
+          -DCMAKE_INSTALL_PREFIX=/usr \
           ..
 
     - name: Build
@@ -156,6 +158,12 @@ jobs:
       run: |
         cd build
         ninja
+
+     name: Build Package
+      if: ${{ ! matrix.docs }}
+      run: |
+        cd build
+        ninja package
 
     - name: Build Docs
       if: ${{ matrix.docs }}
@@ -183,6 +191,13 @@ jobs:
           build/lib/scopehal/libscopehal.so
           build/lib/scopeprotocols/libscopeprotocols.so
           build/Testing/Temporary/LastTest.log
+
+    - name: Upload Package
+      if: ${{ !  matrix.docs }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ matrix.os }}-${{ github.job }}-${{ matrix.sdk_type }}-package
+        path: build/*.deb
 
     - name: Upload Documentation
       if: ${{ matrix.docs }}
