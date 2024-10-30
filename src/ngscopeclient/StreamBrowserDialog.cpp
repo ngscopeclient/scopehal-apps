@@ -188,11 +188,12 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 	const char* selectedLabel = values[selected].c_str();
 	int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
 	float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
+	string resizedLabel;
 	if ((m_badgeXCur - xsz) < m_badgeXMin)
 	{
 		if(cropTextTo == 0)
 			return changed; // No room and we don't want to crop text
-		string resizedLabel = selectedLabel;
+		resizedLabel = selectedLabel;
 		while((m_badgeXCur - xsz) < m_badgeXMin)
 		{	
 			// Try and crop text
@@ -204,7 +205,8 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 		if((m_badgeXCur - xsz) < m_badgeXMin)
 			return changed; // Still no room
 		// We found an acceptable size
-		selectedLabel = (resizedLabel + "...").c_str();
+		resizedLabel = resizedLabel + "...";
+		selectedLabel = resizedLabel.c_str();
 	}
 	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::SameLine(m_badgeXCur);
