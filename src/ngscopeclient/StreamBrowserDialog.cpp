@@ -580,7 +580,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	if ((m_badgeXCur - width) >= m_badgeXMin) 
 	{
 		// ok, we have enough space draw preview
-		m_badgeXCur -= width /*- ImGui::GetStyle().ItemSpacing.x*/;
+		m_badgeXCur -= width;
 		ImGui::SameLine(m_badgeXCur);
 		ImGui::Image(
 			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
