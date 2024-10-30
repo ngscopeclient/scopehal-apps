@@ -252,8 +252,13 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
  * @param ... the combo box values
  * @return true true if the selected value of the combo has been changed
  */
-bool StreamBrowserDialog::renderCombo(ImVec4 color,int &selected, ... /* values, ending in NULL */)
+bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values, ending in NULL */)
 {
+	if(!selected)
+	{
+		LogError("Invalid call to renderCombo() method, 'selected' parameter must not be null.");
+		return false;
+	}
 	va_list ap;
 	va_start(ap, selected);
 	std::vector<string> values;
@@ -262,7 +267,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int &selected, ... /* values,
 		values.push_back(string(label));
 	}
 	va_end(ap);
-	return renderCombo(color,selected,values);
+	return renderCombo(color,(*selected),values);
 }
 
 /**
@@ -275,7 +280,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int &selected, ... /* values,
 bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
 {
 	int selection = (int)curValue;
-	renderCombo(color, selection, "OFF", "ON", NULL);
+	renderCombo(color, &selection, "OFF", "ON", NULL);
 	return (selection == 1);
 }
 
@@ -602,7 +607,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
 	int comboValue = isHiZ ? 0 : 1;
 	bool changed = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
-								,comboValue
+								,&comboValue
 								,"Hi-Z", "50 Oh", NULL);
 	if(changed)
 	{
