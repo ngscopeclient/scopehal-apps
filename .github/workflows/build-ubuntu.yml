@@ -14,13 +14,16 @@ jobs:
   Linux:
     strategy:
         matrix:
-            os: [ubuntu-20.04, ubuntu-22.04]
+            os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
             sdk_type: [standalone,repo]
             docs: [false,true]
             exclude:
               - os: ubuntu-20.04
                 docs: true
               - os: ubuntu-22.04
+                sdk_type: standalone
+                docs: true
+              - os: ubuntu-24.04
                 sdk_type: standalone
                 docs: true
 
@@ -58,7 +61,7 @@ jobs:
           curl \
           wget \
           xzip \
-          libhidapi-dev \
+          libhidapi-dev
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
@@ -170,7 +173,6 @@ jobs:
       run: |
         cd build
         ninja doc
-
 
     - name: Run Tests
       if: ${{ !  matrix.docs }}
