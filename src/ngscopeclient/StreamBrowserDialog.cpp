@@ -962,7 +962,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		else
 			DoItemHelp();
 	}
-	// Channel/steram properties
+	// Channel/stream properties
 	if(renderProps)
 	{	
 		ImGui::BeginChild("stream_params", ImVec2(0, 0),
