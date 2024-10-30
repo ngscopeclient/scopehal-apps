@@ -36,7 +36,7 @@
 #define FunctionGeneratorState_h
 
 /**
-	@brief Current status of a power supply
+	@brief Current status of a Function Generator
  */
 class FunctionGeneratorState
 {
