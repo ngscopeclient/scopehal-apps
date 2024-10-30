@@ -161,7 +161,7 @@ jobs:
         cd build
         ninja
 
-     name: Build Package
+    - name: Build Package
       if: ${{ ! matrix.docs }}
       run: |
         cd build
