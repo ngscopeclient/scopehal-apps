@@ -603,7 +603,7 @@ string MainWindow::GetIconForFilter(Filter* f)
 }
 
 /**
-	@brief Load icons for the filter graph
+	@brief Load icons for wave shape preview
  */
 void MainWindow::LoadWaveformShapeIcons()
 {
