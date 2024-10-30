@@ -667,13 +667,17 @@ void MainWindow::LoadWaveformShapeIcons()
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN_PULSE] = "shape-gaussian-pulse";
 	m_texmgr.LoadTexture("shape-dlorentz", FindDataFile("icons/shapes/lorentz.png"));
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_DLORENTZ] = "shape-dlorentz";
+	m_texmgr.LoadTexture("shape-hamming", FindDataFile("icons/shapes/hamming.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HAMMING] = "shape-hamming";
+	m_texmgr.LoadTexture("shape-hanning", FindDataFile("icons/shapes/hanning.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HANNING] = "shape-hanning";
+	m_texmgr.LoadTexture("shape-kaiser", FindDataFile("icons/shapes/kaiser.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_KAISER] = "shape-kaiser";
+	m_texmgr.LoadTexture("shape-blackman", FindDataFile("icons/shapes/blackman.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_BLACKMAN] = "shape-blackman";
 
 /*		SHAPE_SINC,
 
-		SHAPE_HAMMING,
-		SHAPE_HANNING,
-		SHAPE_KAISER,
-		SHAPE_BLACKMAN,
 		SHAPE_GAUSSIAN_WINDOW,
 		SHAPE_HARRIS,
 		SHAPE_BARTLETT,
