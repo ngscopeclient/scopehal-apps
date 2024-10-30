@@ -675,22 +675,30 @@ void MainWindow::LoadWaveformShapeIcons()
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_KAISER] = "shape-kaiser";
 	m_texmgr.LoadTexture("shape-blackman", FindDataFile("icons/shapes/blackman.png"));
 	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_BLACKMAN] = "shape-blackman";
-
-/*		SHAPE_SINC,
-
-		SHAPE_GAUSSIAN_WINDOW,
-		SHAPE_HARRIS,
-		SHAPE_BARTLETT,
-		SHAPE_TAN,
-		SHAPE_COT,
-		SHAPE_SEC,
-		SHAPE_CSC,
-		SHAPE_ASIN,
-		SHAPE_ACOS,
-		SHAPE_ATAN,
-		SHAPE_ACOT,
-
-		SHAPE_ARB*/
+	m_texmgr.LoadTexture("shape-gaussian-window", FindDataFile("icons/shapes/gaussian-window.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN_WINDOW] = "shape-gaussian-window";
+	m_texmgr.LoadTexture("shape-harris", FindDataFile("icons/shapes/harris.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HARRIS] = "shape-harris";
+	m_texmgr.LoadTexture("shape-bartlett", FindDataFile("icons/shapes/bartlett.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_BARTLETT] = "shape-bartlett";
+	m_texmgr.LoadTexture("shape-tan", FindDataFile("icons/shapes/tan.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_TAN] = "shape-tan";
+	m_texmgr.LoadTexture("shape-cot", FindDataFile("icons/shapes/cot.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_COT] = "shape-cot";
+	m_texmgr.LoadTexture("shape-sec", FindDataFile("icons/shapes/sec.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SEC] = "shape-sec";
+	m_texmgr.LoadTexture("shape-csc", FindDataFile("icons/shapes/csc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CSC] = "shape-csc";
+	m_texmgr.LoadTexture("shape-asin", FindDataFile("icons/shapes/asin.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ASIN] = "shape-asin";
+	m_texmgr.LoadTexture("shape-acos", FindDataFile("icons/shapes/acos.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ACOS] = "shape-acos";
+	m_texmgr.LoadTexture("shape-atan", FindDataFile("icons/shapes/atan.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ATAN] = "shape-atan";
+	m_texmgr.LoadTexture("shape-acot", FindDataFile("icons/shapes/acot.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ACOT] = "shape-acot";
+	m_texmgr.LoadTexture("shape-arb", FindDataFile("icons/shapes/arb.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ARB] = "shape-arb";
 }
 
 ///@brief Gets the icon to use for a filter
