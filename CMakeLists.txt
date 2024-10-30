@@ -71,9 +71,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Woverloaded-virtual -Wpointer-sign -Wno-gnu-zero-variadic-macro-arguments -Wno-unknown-warning-option)
 endif()
-add_compile_options(-g -mtune=native)
+add_compile_options(-mtune=native)
 add_compile_options("$<$<CONFIG:RELEASE>:-O3>")
-add_compile_options("$<$<CONFIG:DEBUG>:-Og;-D_DEBUG>")
+add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:-O3;-g>")
+add_compile_options("$<$<CONFIG:DEBUG>:-Og;-D_DEBUG;-g>")
 
 # Needed for %zu/%zd on MSYS2, must be added here to avoid redefinition
 if(WIN32 AND (NOT MSVC))
