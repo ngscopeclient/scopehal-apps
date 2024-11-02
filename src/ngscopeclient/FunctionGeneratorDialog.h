@@ -72,7 +72,7 @@ public:
 class FunctionGeneratorDialog : public Dialog
 {
 public:
-	FunctionGeneratorDialog(std::shared_ptr<SCPIFunctionGenerator> gen, Session* session);
+	FunctionGeneratorDialog(std::shared_ptr<SCPIFunctionGenerator> gen, std::shared_ptr<FunctionGeneratorState> sessionState, Session* session);
 	virtual ~FunctionGeneratorDialog();
 
 	virtual bool DoRender();
@@ -88,6 +88,9 @@ protected:
 
 	///@brief The generator we're controlling
 	std::shared_ptr<SCPIFunctionGenerator> m_generator;
+
+	///@brief Current channel stats, live updated
+	std::shared_ptr<FunctionGeneratorState> m_state;
 
 	///@brief UI state for each channel
 	std::vector<FunctionGeneratorChannelUIState> m_uiState;

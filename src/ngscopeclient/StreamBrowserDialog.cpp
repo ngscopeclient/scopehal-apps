@@ -57,7 +57,7 @@ StreamBrowserDialog::~StreamBrowserDialog()
 
 // @brief Helper methods for rendering widgets that appear in the StreamBrowserDialog.
 
-/*
+/**
 	@brief Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
 	scope properties box.
 */
@@ -69,7 +69,7 @@ void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext
 	hovered |= ImGui::IsItemHovered();
 }
 
-/*
+/**
 	@brief prepare rendering context to display a badge at the end of current line
  */
 void StreamBrowserDialog::startBadgeLine()
@@ -80,12 +80,12 @@ void StreamBrowserDialog::startBadgeLine()
 	m_badgeXCur = ImGui::GetWindowContentRegionMax().x;
 }
 
-/*
+/**
 	@brief render a badge for an instrument node
 
 	@param inst the instrument to render the badge for
 	@param latched true if the redering of this batch should be latched (i.e. only renderd it previous badge has been here for more than a given time)
-	@param badge the bade type
+	@param badge the badge type
 */
 bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge)
 {
@@ -137,6 +137,13 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 	return result;
 }
 
+/** 
+	@brief render a badge at the end of current line with provided color and text
+
+	@param color the color of the badge
+	@param ... a null terminated list of labels form the largest to the smallest to use as a badge label according to the available space
+	@return true if the badge has been clicked
+*/
 bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
 {
 	va_list ap;
@@ -157,64 +164,134 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 		ImGui::PopStyleColor();
 		break;
 	}
+	va_end(ap);
 	return result;
 }
 
-int  StreamBrowserDialog::renderCombo(ImVec4 color,int selected, ... /* values, ending in NULL */)
+/**
+ * @brief Render a combo box with provded color and values
+ * 
+ * @param color the color of the combo box
+ * @param selected the selected value index (in/out)
+ * @param values the combo box values
+ * @param useColorForText if true, use the provided color for text (and a darker version of it for background color)
+ * @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
+ * @return true true if the selected value of the combo has been changed
+ */
+bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, bool useColorForText, uint8_t cropTextTo)
 {
-	va_list ap;
-	va_start(ap, selected);
-	int result = selected;
-
-	const char* selectedLabel = NULL;
-	int itemIndex = 0;
-	while (const char *label = va_arg(ap, const char *))
+	if(selected >= (int)values.size() || selected < 0)
 	{
-		if(itemIndex == selected)
-		{
-			selectedLabel = label;
-			break;
-		}
-		itemIndex++;
-	}
-	if(selectedLabel == NULL)
-	{
-		va_start(ap, selected);
-		selectedLabel = va_arg(ap, const char *);
 		selected = 0;
 	}
-	float xsz = ImGui::CalcTextSize(selectedLabel).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+	bool changed = false;
+	const char* selectedLabel = values[selected].c_str();
+	int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+	float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
+	string resizedLabel;
 	if ((m_badgeXCur - xsz) < m_badgeXMin)
-		return result; // No room to display the combo
+	{
+		if(cropTextTo == 0)
+			return changed; // No room and we don't want to crop text
+		resizedLabel = selectedLabel;
+		while((m_badgeXCur - xsz) < m_badgeXMin)
+		{	
+			// Try and crop text
+			resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
+			if(resizedLabel.size() < cropTextTo)
+				break; // We don't want to make the text that short
+			xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
+		}
+		if((m_badgeXCur - xsz) < m_badgeXMin)
+			return changed; // Still no room
+		// We found an acceptable size
+		resizedLabel = resizedLabel + "...";
+		selectedLabel = resizedLabel.c_str();
+	}
 	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 	ImGui::SameLine(m_badgeXCur);
-	ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+	if(useColorForText)
+	{
+		// Use channel color for shape combo, but darken it to make text readable
+		float bgmul = 0.4;
+		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w) );
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, bcolor);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+	}
+	else
+	{
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+	}
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
 	if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
 	{
-		va_start(ap, selected);
-		itemIndex = 0;
-		while (const char *label = va_arg(ap, const char *))
+		for(int i = 0 ; i < (int)values.size() ; i++)
 		{
-			const bool is_selected = (itemIndex == selected);
-			if(ImGui::Selectable(label, is_selected))
-				result = itemIndex;
+			const bool is_selected = (i == selected);
+			if(ImGui::Selectable(values[i].c_str(), is_selected))
+			{
+				selected = i;
+				changed = true;
+			}
 			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
 			if (is_selected)
 				ImGui::SetItemDefaultFocus();
-			itemIndex++;
 		}
 		ImGui::EndCombo();
 	}
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
-	return result;
+	if(useColorForText)
+		ImGui::PopStyleColor();
+	return changed;
 }
 
+/**
+ * @brief Render a combo box with provded color and values
+ * 
+ * @param color the color of the combo box
+ * @param selected the selected value index (in/out)
+ * @param ... the combo box values
+ * @return true true if the selected value of the combo has been changed
+ */
+bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values, ending in NULL */)
+{
+	if(!selected)
+	{
+		LogError("Invalid call to renderCombo() method, 'selected' parameter must not be null.");
+		return false;
+	}
+	va_list ap;
+	va_start(ap, selected);
+	std::vector<string> values;
+	while (const char *label = va_arg(ap, const char *))
+	{
+		values.push_back(string(label));
+	}
+	va_end(ap);
+	return renderCombo(color,(*selected),values);
+}
+
+/**
+ * @brief Render a toggle button combo
+ * 
+ * @param color the color of the toggle button
+ * @param curValue the value of the toggle button
+ * @return the selected value for the toggle button
+ */
 bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
 {
-	return (renderCombo(color, (int)curValue, "OFF", "ON", NULL) == 1);
+	int selection = (int)curValue;
+	renderCombo(color, &selection, "OFF", "ON", NULL);
+	return (selection == 1);
 }
+
+/**
+ * @brief Render an on/off toggle button combo
+ * 
+ * @param curValue the value of the toggle button
+ * @return the selected value for the toggle button
+ */
 bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 {
 	auto& prefs = m_session.GetPreferences();
@@ -222,6 +299,13 @@ bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 	return renderToggle(color, curValue);
 }
 
+/**
+ * @brief Render a download progress bar for a given instrument channel
+ * 
+ * @param inst the instrument to render the progress channel for
+ * @param chan the channel to render the progress for
+ * @param isLast true if it is the last channel of the instrument
+ */
 void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 {
 	static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
@@ -359,6 +443,17 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 	// well, shoot -- I guess there wasn't enough room to do *anything* useful!
 }
 
+/**
+ * @brief Render a PSU properties row
+ * 
+ * @param isVoltage true for voltage rows, false for current rows
+ * @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
+ * @param chan the PSU channel to render properties for
+ * @param setValue the set value text
+ * @param measuredValue the measured value text
+ * @param clicked output param for clicked state
+ * @param hovered output param for hovered state
+ */
 void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
 {
 	auto& prefs = m_session.GetPreferences();
@@ -369,7 +464,7 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(1);
 	StreamDescriptor sv(chan, isVoltage ? 1 : 3);
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
-	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_badge_color")));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_set_label_color")));
 	ImGui::Selectable("- Set");
 	ImGui::PopStyleColor();
 	if(ImGui::BeginDragDropSource())
@@ -397,7 +492,7 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(1);
 	StreamDescriptor mv(chan, isVoltage ? 0 : 2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
-	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_badge_color")));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_meas_label_color")));
 	ImGui::Selectable("- Meas.");
 	ImGui::PopStyleColor();
 	if(ImGui::BeginDragDropSource())
@@ -413,6 +508,119 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::TableSetColumnIndex(2);
 	clicked |= ImGui::TextLink(measuredValue);
 	hovered |= ImGui::IsItemHovered();
+}
+
+/**
+ * @brief Render AWG channel properties
+ * 
+ * @param awg the AWG to render channel properties for
+ * @param awgchan the AWG channel to render properties for
+ * @param clicked output param for clicked state
+ * @param hovered output param for hovered state
+ */
+void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered)
+{
+	//FunctionGenerator::WaveShape shape = FunctionGenerator::WaveShape::SHAPE_SINE;
+	FunctionGenerator::OutputImpedance impedance = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
+	size_t channelIndex = awgchan->GetIndex();
+	float frequency = 0;
+	float amplitude = 0;
+	float offset = 0;
+	auto awgState = m_session.GetFunctionGeneratorState(awg);
+	if(awgState)
+	{
+		//shape = awgState->m_channelShape[channelIndex];
+		impedance = awgState->m_channelOutputImpedance[channelIndex];
+		frequency = awgState->m_channelFrequency[channelIndex];
+		amplitude = awgState->m_channelAmplitude[channelIndex];
+		offset = awgState->m_channelOffset[channelIndex];
+	}
+	auto frequency_txt = Unit(Unit::UNIT_HZ).PrettyPrint(frequency);
+	auto amplitude_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(amplitude);
+	auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(offset);
+
+	auto& prefs = m_session.GetPreferences();
+	// Row 1
+	ImGui::Text("Waveform:");
+	startBadgeLine(); // Needed for shape combo
+	// Shape combo
+	ImGui::PushID("waveform");
+	// Get current shape and  shape index
+	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
+	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
+	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],true,3))
+	{
+		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
+		awg->SetFunctionChannelShape(channelIndex, shape);
+		// Update state right now to cover from slow intruments
+		awgState->m_channelShape[channelIndex]=shape;
+		// Tell intrument thread that the FunctionGenerator state has to be updated
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	ImGui::PopID();
+	
+	// Row 2
+	// Frequency label
+	StreamDescriptor sv(awgchan, 0);
+	ImGui::PushID("frequ");
+	// TODO
+	const char* freqLabel = "Frequency: "; 
+	ImGui::Selectable(freqLabel,false,0,ImVec2(ImGui::CalcTextSize(freqLabel).x, 0));
+	if(ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
+		string dragText = awgchan->GetDisplayName() + " frequency";
+		ImGui::TextUnformatted(dragText.c_str());
+		ImGui::EndDragDropSource();
+	}
+	else
+		DoItemHelp();
+	ImGui::PopID();
+	// Frequency text
+	ImGui::SameLine(0, 0);
+	clicked |= ImGui::TextLink(frequency_txt.c_str());
+	hovered |= ImGui::IsItemHovered();
+	// Shape preview
+	startBadgeLine();
+	auto height = ImGui::GetFontSize() * 2;
+	auto width =  height * 2;
+	if ((m_badgeXCur - width) >= m_badgeXMin) 
+	{
+		// ok, we have enough space draw preview
+		m_badgeXCur -= width;
+		ImGui::SameLine(m_badgeXCur);
+		ImGui::Image(
+			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
+			ImVec2(width,height));
+		// Go back one line since preview spans on two text lines
+		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
+		window->DC.CursorPos.y -= ImGui::GetFontSize();
+	}
+
+	// Row 3
+	// Amplitude label
+	renderInfoLink("Amplitude",amplitude_txt.c_str(),clicked,hovered);
+	// Row 4
+	// Offset label
+	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
+	// Impedance value
+	startBadgeLine(); // Needed for impedance badge
+	ImGui::PushID("impedance");
+	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
+	int comboValue = isHiZ ? 0 : 1;
+	bool changed = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
+								,&comboValue
+								,"Hi-Z", "50 Oh", NULL);
+	if(changed)
+	{
+		impedance = ((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM);
+		awg->SetFunctionChannelOutputImpedance(channelIndex,impedance);
+		// Update state right now to cover from slow intruments
+		awgState->m_channelOutputImpedance[channelIndex]=impedance;
+		// Tell intrument thread that the FunctionGenerator state has to be updated
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	ImGui::PopID();
 }
 
 /*
@@ -562,16 +770,22 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 
 	auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
+	auto awg = std::dynamic_pointer_cast<FunctionGenerator>(instrument);
 
 	bool singleStream = channel->GetStreamCount() == 1;
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
+	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
 	bool renderProps = false;
 	bool isDigital = false;
 	if (scopechan)
 	{
 		renderProps = scopechan->IsEnabled();
 		isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
+	}
+	else if(awg && awgchan)
+	{
+		renderProps = m_session.GetFunctionGeneratorState(awg)->m_channelActive[channelIndex];
 	}
 
 	bool hasChildren = !singleStream || renderProps;
@@ -635,12 +849,35 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(result != active)
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
+	else if(awg && awgchan)
+	{	
+		// AWG Channel : get the state
+		auto awgstate = m_session.GetFunctionGeneratorState(awg);
+
+		bool active = awgstate->m_channelActive[channelIndex];
+		bool result = renderOnOffToggle(active);
+		if(result != active)
+		{
+			awg->SetFunctionChannelActive(channelIndex,result);
+			auto awgState = m_session.GetFunctionGeneratorState(awg);
+			if(awgState)
+			{
+				// Update state right now to cover from slow intruments
+				awgState->m_channelActive[channelIndex]=result;
+				// Tell intrument thread that the FunctionGenerator state has to be updated
+				awgState->m_needsUpdate[channelIndex] = true;
+			}
+
+		}
+	}
+
 
 	if(open)
 	{
 		ImGui::PushID(instrument.get());
 		if(psu)
-		{	// For PSU we will have a special handling for the 4 streams associated to a PSU channel
+		{	
+			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
 			ImGui::BeginChild("psu_params", ImVec2(0, 0),
 				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
@@ -671,6 +908,22 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 				if (hovered)
 					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 			}
+			ImGui::EndChild();
+		}
+		else if(awg && awgchan)
+		{
+			// No stream for FunctionGenerator => render properties on channel node
+			ImGui::BeginChild("awg_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+			bool clicked = false;
+			bool hovered = false;
+			renderAwgProperties(awg,awgchan,clicked,hovered);
+			if (clicked)
+			{
+				m_parent->ShowInstrumentProperties(awg);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open Function Generator properties");
 			ImGui::EndChild();
 		}
 		else
@@ -716,47 +969,49 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		else
 			DoItemHelp();
 	}
-	// Channel/stram properties
-	if (renderProps && scope && scopechan)
-	{	// Scope channel
-		ImGui::BeginChild("scope_params", ImVec2(0, 0),
+	// Channel/stream properties
+	if(renderProps)
+	{	
+		ImGui::BeginChild("stream_params", ImVec2(0, 0),
 			ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
 		Unit unit = channel->GetYAxisUnits(streamIndex);
-
-		if(isDigital)
+		// Scope params
+		if(scope && scopechan)
 		{
-			auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-
-			bool clicked = false;
-			bool hovered = false;
-			renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-			if (clicked)
+			if(isDigital)
 			{
-				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-		}
-		else
-		{
-			auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
-			auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+				auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
 
-			bool clicked = false;
-			bool hovered = false;
-			renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-			renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
-			if (clicked)
+				bool clicked = false;
+				bool hovered = false;
+				renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+				if (clicked)
+				{
+					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+					m_parent->ShowChannelProperties(scopechan);
+				}
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+			}
+			else
 			{
-				/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-		}
+				auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
+				auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
 
+				bool clicked = false;
+				bool hovered = false;
+				renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+				renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
+				if (clicked)
+				{
+					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
+					m_parent->ShowChannelProperties(scopechan);
+				}
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
+			}
+		}
 		ImGui::EndChild();
 	}
 	ImGui::PopID();

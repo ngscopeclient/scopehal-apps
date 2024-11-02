@@ -47,6 +47,7 @@
 
 #include "BERTState.h"
 #include "PowerSupplyState.h"
+#include "FunctionGeneratorState.h"
 #include "MultimeterState.h"
 #include "LoadState.h"
 #include "GuiLogSink.h"
@@ -71,6 +72,7 @@ public:
 	std::shared_ptr<MultimeterState> meterstate;
 	std::shared_ptr<BERTState> bertstate;
 	std::shared_ptr<PowerSupplyState> psustate;
+	std::shared_ptr<FunctionGeneratorState> awgstate;
 };
 
 void InstrumentThread(InstrumentThreadArgs args);

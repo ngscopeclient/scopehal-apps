@@ -603,6 +603,115 @@ string MainWindow::GetIconForFilter(Filter* f)
 }
 
 /**
+	@brief Load icons for wave shape preview
+ */
+void MainWindow::LoadWaveformShapeIcons()
+{
+	m_texmgr.LoadTexture("shape-default", FindDataFile("icons/shapes/default.png"));
+
+	m_texmgr.LoadTexture("shape-sine", FindDataFile("icons/shapes/sine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SINE] = "shape-sine";
+	m_texmgr.LoadTexture("shape-square", FindDataFile("icons/shapes/square.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SQUARE] = "shape-square";
+	m_texmgr.LoadTexture("shape-triangle", FindDataFile("icons/shapes/triangle.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_TRIANGLE] = "shape-triangle";
+	m_texmgr.LoadTexture("shape-pulse", FindDataFile("icons/shapes/pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_PULSE] = "shape-pulse";
+	m_texmgr.LoadTexture("shape-dc", FindDataFile("icons/shapes/dc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_DC] = "shape-dc";
+	m_texmgr.LoadTexture("shape-noise", FindDataFile("icons/shapes/noise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_NOISE] = "shape-noise";
+	m_texmgr.LoadTexture("shape-sawtooth-up", FindDataFile("icons/shapes/sawtooth-up.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_UP] = "shape-sawtooth-up";
+	m_texmgr.LoadTexture("shape-sawtooth-down", FindDataFile("icons/shapes/sawtooth-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SAWTOOTH_DOWN] = "shape-sawtooth-down";
+	m_texmgr.LoadTexture("shape-staircase-up", FindDataFile("icons/shapes/staircase-up.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_UP] = "shape-staircase-up";
+	m_texmgr.LoadTexture("shape-staircase-down", FindDataFile("icons/shapes/staircase-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_DOWN] = "shape-staircase-down";
+	m_texmgr.LoadTexture("shape-staircase-up-down", FindDataFile("icons/shapes/staircase-up-down.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_STAIRCASE_UP_DOWN] = "shape-staircase-up-down";
+	m_texmgr.LoadTexture("shape-sinc", FindDataFile("icons/shapes/sinc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SINC] = "shape-sinc";
+	m_texmgr.LoadTexture("shape-gaussian", FindDataFile("icons/shapes/gaussian.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN] = "shape-gaussian";
+	m_texmgr.LoadTexture("shape-lorentz", FindDataFile("icons/shapes/lorentz.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LORENTZ] = "shape-lorentz";
+	m_texmgr.LoadTexture("shape-half-sine", FindDataFile("icons/shapes/half-sine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HALF_SINE] = "shape-half-sine";
+	m_texmgr.LoadTexture("shape-prbs", FindDataFile("icons/shapes/prbs.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_PRBS_NONSTANDARD] = "shape-prbs";
+	m_texmgr.LoadTexture("shape-exponential-rise", FindDataFile("icons/shapes/exponential-rise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_EXPONENTIAL_RISE] = "shape-exponential-rise";
+	m_texmgr.LoadTexture("shape-exponential-decay", FindDataFile("icons/shapes/exponential-decay.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_EXPONENTIAL_DECAY] = "shape-exponential-decay";
+	m_texmgr.LoadTexture("shape-haversine", FindDataFile("icons/shapes/haversine.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HAVERSINE] = "shape-haversine";
+	m_texmgr.LoadTexture("shape-cardiac", FindDataFile("icons/shapes/cardiac.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CARDIAC] = "shape-cardiac";
+	m_texmgr.LoadTexture("shape-negative-pulse", FindDataFile("icons/shapes/negative-pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_NEGATIVE_PULSE] = "shape-negative-pulse";
+	m_texmgr.LoadTexture("shape-log-rise", FindDataFile("icons/shapes/log-rise.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LOG_RISE] = "shape-log-rise";
+	m_texmgr.LoadTexture("shape-log-decay", FindDataFile("icons/shapes/log-decay.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_LOG_DECAY] = "shape-log-decay";
+	m_texmgr.LoadTexture("shape-square-root", FindDataFile("icons/shapes/square-root.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SQUARE_ROOT] = "shape-square-root";
+	m_texmgr.LoadTexture("shape-cube-root", FindDataFile("icons/shapes/cube-root.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CUBE_ROOT] = "shape-cube-root";
+	m_texmgr.LoadTexture("shape-quadratic", FindDataFile("icons/shapes/quadratic.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_QUADRATIC] = "shape-quadratic";
+	m_texmgr.LoadTexture("shape-cubic", FindDataFile("icons/shapes/cubic.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_QUADRATIC] = "shape-cubic";
+	m_texmgr.LoadTexture("shape-gaussian-pulse", FindDataFile("icons/shapes/gaussian-pulse.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN_PULSE] = "shape-gaussian-pulse";
+	m_texmgr.LoadTexture("shape-dlorentz", FindDataFile("icons/shapes/lorentz.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_DLORENTZ] = "shape-dlorentz";
+	m_texmgr.LoadTexture("shape-hamming", FindDataFile("icons/shapes/hamming.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HAMMING] = "shape-hamming";
+	m_texmgr.LoadTexture("shape-hanning", FindDataFile("icons/shapes/hanning.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HANNING] = "shape-hanning";
+	m_texmgr.LoadTexture("shape-kaiser", FindDataFile("icons/shapes/kaiser.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_KAISER] = "shape-kaiser";
+	m_texmgr.LoadTexture("shape-blackman", FindDataFile("icons/shapes/blackman.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_BLACKMAN] = "shape-blackman";
+	m_texmgr.LoadTexture("shape-gaussian-window", FindDataFile("icons/shapes/gaussian-window.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_GAUSSIAN_WINDOW] = "shape-gaussian-window";
+	m_texmgr.LoadTexture("shape-harris", FindDataFile("icons/shapes/harris.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_HARRIS] = "shape-harris";
+	m_texmgr.LoadTexture("shape-bartlett", FindDataFile("icons/shapes/bartlett.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_BARTLETT] = "shape-bartlett";
+	m_texmgr.LoadTexture("shape-tan", FindDataFile("icons/shapes/tan.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_TAN] = "shape-tan";
+	m_texmgr.LoadTexture("shape-cot", FindDataFile("icons/shapes/cot.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_COT] = "shape-cot";
+	m_texmgr.LoadTexture("shape-sec", FindDataFile("icons/shapes/sec.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_SEC] = "shape-sec";
+	m_texmgr.LoadTexture("shape-csc", FindDataFile("icons/shapes/csc.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_CSC] = "shape-csc";
+	m_texmgr.LoadTexture("shape-asin", FindDataFile("icons/shapes/asin.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ASIN] = "shape-asin";
+	m_texmgr.LoadTexture("shape-acos", FindDataFile("icons/shapes/acos.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ACOS] = "shape-acos";
+	m_texmgr.LoadTexture("shape-atan", FindDataFile("icons/shapes/atan.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ATAN] = "shape-atan";
+	m_texmgr.LoadTexture("shape-acot", FindDataFile("icons/shapes/acot.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ACOT] = "shape-acot";
+	m_texmgr.LoadTexture("shape-arb", FindDataFile("icons/shapes/arb.png"));
+	m_waveformShapeIconMap[FunctionGenerator::WaveShape::SHAPE_ARB] = "shape-arb";
+}
+
+///@brief Gets the icon to use for a given wave shape
+string MainWindow::GetIconForWaveformShape(FunctionGenerator::WaveShape shape)
+{
+	auto it = m_waveformShapeIconMap.find(shape);
+	if(it != m_waveformShapeIconMap.end())
+		return it->second;
+
+	return "shape-default";
+}
+
+/**
 	@brief Load toolbar icons from disk if preferences changed
  */
 void MainWindow::LoadToolbarIcons()

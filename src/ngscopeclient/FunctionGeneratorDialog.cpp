@@ -41,13 +41,14 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-FunctionGeneratorDialog::FunctionGeneratorDialog(shared_ptr<SCPIFunctionGenerator> generator, Session* session)
+FunctionGeneratorDialog::FunctionGeneratorDialog(shared_ptr<SCPIFunctionGenerator> generator, std::shared_ptr<FunctionGeneratorState> sessionState, Session* session)
 	: Dialog(
 		string("Function Generator: ") + generator->m_nickname,
 		string("Function Generator: ") + generator->m_nickname,
 		ImVec2(400, 350))
 	, m_session(session)
 	, m_generator(generator)
+	, m_state(sessionState)
 {
 	Unit hz(Unit::UNIT_HZ);
 	Unit percent(Unit::UNIT_PERCENT);
@@ -182,7 +183,12 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		ImGui::PushID(chname.c_str());
 
 		if(ImGui::Checkbox("Output Enable", &m_uiState[i].m_outputEnabled))
+		{
 			m_generator->SetFunctionChannelActive(i, m_uiState[i].m_outputEnabled);
+
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			m_state->m_needsUpdate[i] = true;
+		}
 		HelpMarker("Turns the output signal from this channel on or off");
 
 		if(m_generator->HasFunctionImpedanceControls(i))
@@ -198,6 +204,9 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 				state.m_amplitude = volts.PrettyPrint(state.m_committedAmplitude);
 				state.m_committedOffset = m_generator->GetFunctionChannelOffset(i);
 				state.m_offset = volts.PrettyPrint(state.m_committedOffset);
+
+				// Tell intrument thread that the FunctionGenerator state has to be updated
+				m_state->m_needsUpdate[i] = true;
 			}
 			HelpMarker(
 				"Select the expected load impedance.\n\n"
@@ -208,23 +217,39 @@ void FunctionGeneratorDialog::DoChannel(size_t i)
 		//Require the user to explicitly commit changes before they take effect
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithExplicitApply("Amplitude", m_uiState[i].m_amplitude, m_uiState[i].m_committedAmplitude, volts))
+		{
 			m_generator->SetFunctionChannelAmplitude(i, m_uiState[i].m_committedAmplitude);
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			m_state->m_needsUpdate[i] = true;
+		}
 		HelpMarker("Peak-to-peak amplitude of the generated waveform");
 
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithExplicitApply("Offset", m_uiState[i].m_offset, m_uiState[i].m_committedOffset, volts))
+		{
 			m_generator->SetFunctionChannelOffset(i, m_uiState[i].m_committedOffset);
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			m_state->m_needsUpdate[i] = true;
+		}
 		HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
 		//All other settings apply when user presses enter or focus is lost
 		ImGui::SetNextItemWidth(valueWidth);
 		if(Combo("Waveform", m_uiState[i].m_waveShapeNames, m_uiState[i].m_shapeIndex))
+		{
 			m_generator->SetFunctionChannelShape(i, m_uiState[i].m_waveShapes[m_uiState[i].m_shapeIndex]);
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			m_state->m_needsUpdate[i] = true;
+		}
 		HelpMarker("Select the type of waveform to generate");
 
 		ImGui::SetNextItemWidth(valueWidth);
 		if(UnitInputWithImplicitApply("Frequency", m_uiState[i].m_frequency, m_uiState[i].m_committedFrequency, hz))
+		{
 			m_generator->SetFunctionChannelFrequency(i, m_uiState[i].m_committedFrequency);
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			m_state->m_needsUpdate[i] = true;
+		}
 
 		//Duty cycle controls are not available in all generators
 		if(m_generator->HasFunctionDutyCycleControls(i))

@@ -2900,6 +2900,13 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		if(m_oscilloscopes.size() > 1)
 			m_multiScope = true;
 	}
+	if(generator && (types & Instrument::INST_FUNCTION) )
+	{
+		auto state = make_shared<FunctionGeneratorState>(generator);
+		
+		m_awgs[generator] = state;
+		args.awgstate = state;
+	}
 
 	//Make the instrument thread
 	if(si)
@@ -2917,7 +2924,7 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 			//If it's also a scope, don't show the generator dialog by default
 			//TODO: only if generator is currently producing a signal or something?
 			if(!scope)
-				m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, this));
+				m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, args.awgstate, this));
 		}
 		if(load && (types & Instrument::INST_LOAD) )
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));

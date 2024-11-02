@@ -163,6 +163,15 @@ public:
 	}
 
 	/**
+		@brief Returns a pointer to the state for a function generator
+	 */
+	std::shared_ptr<FunctionGeneratorState> GetFunctionGeneratorState(std::shared_ptr<FunctionGenerator> awg)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_awgs[awg];
+	}
+
+	/**
 		@brief Returns a pointer to the existing packet manager for a protocol decode filter
 	 */
 	std::shared_ptr<PacketManager> GetPacketManager(PacketDecoder* filter)
@@ -410,6 +419,9 @@ protected:
 
 	///@brief BERTs we are currently connected to
 	std::map<std::shared_ptr<BERT>, std::shared_ptr<BERTState> > m_berts;
+
+	///@brief Function generator we are currently connected to
+	std::map<std::shared_ptr<FunctionGenerator>, std::shared_ptr<FunctionGeneratorState> > m_awgs;
 
 	///@brief Trigger groups for syncing oscilloscopes
 	std::vector<std::shared_ptr<TriggerGroup> > m_triggerGroups;

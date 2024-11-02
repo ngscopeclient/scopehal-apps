@@ -274,6 +274,7 @@ protected:
 
 	void LoadFilterIcons();
 	void LoadStatusBarIcons();
+	void LoadWaveformShapeIcons();
 
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;
@@ -556,11 +557,16 @@ public:
 
 	std::string GetIconForFilter(Filter* f);
 
+	std::string GetIconForWaveformShape(FunctionGenerator::WaveShape shape);
+
 protected:
 	FontManager m_fontmgr;
 
 	///@brief Map of filter types to class names
 	std::map<std::type_index, std::string> m_filterIconMap;
+
+	///@brief Map of Waveform Shapes to icons
+	std::map<FunctionGenerator::WaveShape, std::string> m_waveformShapeIconMap;
 
 	void UpdateFonts();
 
