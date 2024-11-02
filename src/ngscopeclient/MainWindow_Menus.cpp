@@ -738,7 +738,7 @@ void MainWindow::WindowGeneratorMenu()
 
 			//Add it to the menu
 			if(ImGui::MenuItem(generator->m_nickname.c_str()))
-				m_session.AddInstrument(generator);
+				AddDialog(make_shared<FunctionGeneratorDialog>(generator, &m_session));
 		}
 
 		ImGui::EndMenu();
