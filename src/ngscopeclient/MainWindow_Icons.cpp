@@ -85,6 +85,7 @@
 #include "../scopeprotocols/DramClockFilter.h"
 #include "../scopeprotocols/DramRefreshActivateMeasurement.h"
 #include "../scopeprotocols/DramRowColumnLatencyMeasurement.h"
+#include "../scopeprotocols/DSIFrameDecoder.h"
 #include "../scopeprotocols/DSIPacketDecoder.h"
 #include "../scopeprotocols/DutyCycleMeasurement.h"
 #include "../scopeprotocols/EmphasisFilter.h"
@@ -105,6 +106,7 @@
 #include "../scopeprotocols/EthernetRGMIIDecoder.h"
 #include "../scopeprotocols/EthernetRMIIDecoder.h"
 #include "../scopeprotocols/EthernetSGMIIDecoder.h"
+#include "../scopeprotocols/ExponentialMovingAverageFilter.h"
 #include "../scopeprotocols/EyeBitRateMeasurement.h"
 #include "../scopeprotocols/EyeHeightMeasurement.h"
 #include "../scopeprotocols/EyeJitterMeasurement.h"
@@ -140,13 +142,18 @@
 #include "../scopeprotocols/JitterSpectrumFilter.h"
 #include "../scopeprotocols/JtagDecoder.h"
 #include "../scopeprotocols/MaximumFilter.h"
+#include "../scopeprotocols/MDIODecoder.h"
 #include "../scopeprotocols/MemoryFilter.h"
 #include "../scopeprotocols/MilStd1553Decoder.h"
 #include "../scopeprotocols/MinimumFilter.h"
+#include "../scopeprotocols/MovingAverageFilter.h"
 #include "../scopeprotocols/MultiplyFilter.h"
 #include "../scopeprotocols/NCOFilter.h"
+#include "../scopeprotocols/NoiseFilter.h"
 #include "../scopeprotocols/OneWireDecoder.h"
 #include "../scopeprotocols/OvershootMeasurement.h"
+#include "../scopeprotocols/PAM4DemodulatorFilter.h"
+#include "../scopeprotocols/PAMEdgeDetectorFilter.h"
 #include "../scopeprotocols/PcapngExportFilter.h"
 #include "../scopeprotocols/PcapngImportFilter.h"
 #include "../scopeprotocols/PCIe128b130bDecoder.h"
@@ -156,6 +163,8 @@
 #include "../scopeprotocols/PCIeGen3LogicalDecoder.h"
 #include "../scopeprotocols/PCIeLinkTrainingDecoder.h"
 #include "../scopeprotocols/PCIeTransportDecoder.h"
+#include "../scopeprotocols/PhaseMeasurement.h"
+#include "../scopeprotocols/PhaseNonlinearityFilter.h"
 #include "../scopeprotocols/PeakHoldFilter.h"
 #include "../scopeprotocols/PeaksFilter.h"
 #include "../scopeprotocols/PeriodMeasurement.h"
@@ -163,8 +172,11 @@
 #include "../scopeprotocols/PulseWidthMeasurement.h"
 #include "../scopeprotocols/PRBSCheckerFilter.h"
 #include "../scopeprotocols/PRBSGeneratorFilter.h"
+#include "../scopeprotocols/QSPIDecoder.h"
 #include "../scopeprotocols/QSGMIIDecoder.h"
+#include "../scopeprotocols/QuadratureDecoder.h"
 #include "../scopeprotocols/RiseMeasurement.h"
+#include "../scopeprotocols/RMSMeasurement.h"
 #include "../scopeprotocols/SawtoothGeneratorFilter.h"
 #include "../scopeprotocols/ScalarPulseDelayFilter.h"
 #include "../scopeprotocols/ScalarStairstepFilter.h"
@@ -198,6 +210,7 @@
 #include "../scopeprotocols/UpsampleFilter.h"
 #include "../scopeprotocols/VCDImportFilter.h"
 #include "../scopeprotocols/Waterfall.h"
+#include "../scopeprotocols/WindowFilter.h"
 #include "../scopeprotocols/WAVImportFilter.h"
 #include "../scopeprotocols/WFMImportFilter.h"
 #include "../scopeprotocols/XYSweepFilter.h"
@@ -286,6 +299,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-emphasis", FindDataFile("icons/filters/filter-emphasis.png"));
 	m_texmgr.LoadTexture("filter-emphasis-removal", FindDataFile("icons/filters/filter-emphasis-removal.png"));
 	m_texmgr.LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
+	m_texmgr.LoadTexture("filter-exponential-moving-average", FindDataFile("icons/filters/filter-exponential-moving-average.png"));
 	m_texmgr.LoadTexture("filter-eyebitrate", FindDataFile("icons/filters/filter-eyebitrate.png"));
 	m_texmgr.LoadTexture("filter-eyeheight", FindDataFile("icons/filters/filter-eyeheight.png"));
 	m_texmgr.LoadTexture("filter-eyejitter", FindDataFile("icons/filters/filter-eyejitter.png"));
@@ -325,14 +339,21 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-jtag", FindDataFile("icons/filters/filter-jtag.png"));
 	m_texmgr.LoadTexture("filter-lc", FindDataFile("icons/filters/filter-lc.png"));
 	m_texmgr.LoadTexture("filter-max", FindDataFile("icons/filters/filter-max.png"));
+	m_texmgr.LoadTexture("filter-mdio", FindDataFile("icons/filters/filter-mdio.png"));
 	m_texmgr.LoadTexture("filter-memory", FindDataFile("icons/filters/filter-memory.png"));
 	m_texmgr.LoadTexture("filter-mil-std-1553", FindDataFile("icons/filters/filter-mil-std-1553.png"));
 	m_texmgr.LoadTexture("filter-mipi-d-phy-data", FindDataFile("icons/filters/filter-mipi-d-phy-data.png"));
 	m_texmgr.LoadTexture("filter-mipi-d-phy-escape-mode", FindDataFile("icons/filters/filter-mipi-d-phy-escape-mode.png"));
+	m_texmgr.LoadTexture("filter-mipi-d-phy-symbol", FindDataFile("icons/filters/filter-mipi-d-phy-symbol.png"));
+	m_texmgr.LoadTexture("filter-mipi-dsi-frame", FindDataFile("icons/filters/filter-mipi-dsi-frame.png"));
 	m_texmgr.LoadTexture("filter-mipi-dsi-packet", FindDataFile("icons/filters/filter-mipi-dsi-packet.png"));
 	m_texmgr.LoadTexture("filter-min", FindDataFile("icons/filters/filter-min.png"));
+	m_texmgr.LoadTexture("filter-moving-average", FindDataFile("icons/filters/filter-moving-average.png"));
 	m_texmgr.LoadTexture("filter-multiply", FindDataFile("icons/filters/filter-multiply.png"));
+	m_texmgr.LoadTexture("filter-noise", FindDataFile("icons/filters/filter-noise.png"));
 	m_texmgr.LoadTexture("filter-overshoot", FindDataFile("icons/filters/filter-overshoot.png"));
+	m_texmgr.LoadTexture("filter-pam4-edge-detect", FindDataFile("icons/filters/filter-pam4-edge-detect.png"));
+	m_texmgr.LoadTexture("filter-pam4-demodulator", FindDataFile("icons/filters/filter-pam4-demodulator.png"));
 	m_texmgr.LoadTexture("filter-pcapng-export", FindDataFile("icons/filters/filter-pcapng-export.png"));
 	m_texmgr.LoadTexture("filter-pcapng-import", FindDataFile("icons/filters/filter-pcapng-import.png"));
 	m_texmgr.LoadTexture("filter-pcie-data-link", FindDataFile("icons/filters/filter-pcie-data-link.png"));
@@ -344,10 +365,15 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-peak-hold", FindDataFile("icons/filters/filter-peak-hold.png"));
 	m_texmgr.LoadTexture("filter-peaktopeak", FindDataFile("icons/filters/filter-peaktopeak.png"));
 	m_texmgr.LoadTexture("filter-period", FindDataFile("icons/filters/filter-period.png"));
+	m_texmgr.LoadTexture("filter-phase", FindDataFile("icons/filters/filter-phase.png"));
+	m_texmgr.LoadTexture("filter-phase-nonlinearity", FindDataFile("icons/filters/filter-phase-nonlinearity.png"));
 	m_texmgr.LoadTexture("filter-pulse-width", FindDataFile("icons/filters/filter-pulse-width.png"));
 	m_texmgr.LoadTexture("filter-prbs", FindDataFile("icons/filters/filter-prbs.png"));
 	m_texmgr.LoadTexture("filter-prbs-checker", FindDataFile("icons/filters/filter-prbs-checker.png"));
+	m_texmgr.LoadTexture("filter-quad-spi", FindDataFile("icons/filters/filter-quad-spi.png"));
+	m_texmgr.LoadTexture("filter-quadrature", FindDataFile("icons/filters/filter-quadrature.png"));
 	m_texmgr.LoadTexture("filter-rise", FindDataFile("icons/filters/filter-rise.png"));
+	m_texmgr.LoadTexture("filter-rms", FindDataFile("icons/filters/filter-rms.png"));
 	m_texmgr.LoadTexture("filter-rj45", FindDataFile("icons/filters/filter-rj45.png"));
 	m_texmgr.LoadTexture("filter-sawtooth", FindDataFile("icons/filters/filter-sawtooth.png"));
 	m_texmgr.LoadTexture("filter-sawtooth-vert-fall", FindDataFile("icons/filters/filter-sawtooth-vert-fall.png"));
@@ -381,6 +407,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-vcd-import", FindDataFile("icons/filters/filter-vcd-import.png"));
 	m_texmgr.LoadTexture("filter-waterfall", FindDataFile("icons/filters/filter-waterfall.png"));
 	m_texmgr.LoadTexture("filter-wav-import", FindDataFile("icons/filters/filter-wav-import.png"));
+	m_texmgr.LoadTexture("filter-window", FindDataFile("icons/filters/filter-window.png"));
 	m_texmgr.LoadTexture("filter-wfm-import", FindDataFile("icons/filters/filter-wfm-import.png"));
 	m_texmgr.LoadTexture("filter-xy-sweep", FindDataFile("icons/filters/filter-xy-sweep.png"));
 	m_texmgr.LoadTexture("input-banana-dual", FindDataFile("icons/filters/input-banana-dual.png"));
@@ -432,6 +459,8 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DPhyHSClockRecoveryFilter))]				= "filter-clock-recovery-dphy-hs-mode";
 	m_filterIconMap[type_index(typeid(DPhyDataDecoder))] 						= "filter-mipi-d-phy-data";
 	m_filterIconMap[type_index(typeid(DPhyEscapeModeDecoder))] 					= "filter-mipi-d-phy-escape-mode";
+	m_filterIconMap[type_index(typeid(DPhySymbolDecoder))] 						= "filter-mipi-d-phy-symbol";
+	m_filterIconMap[type_index(typeid(DSIFrameDecoder))] 						= "filter-mipi-dsi-frame";
 	m_filterIconMap[type_index(typeid(DSIPacketDecoder))] 						= "filter-mipi-dsi-packet";
 	m_filterIconMap[type_index(typeid(DramClockFilter))] 						= "filter-dram-clocks";
 	m_filterIconMap[type_index(typeid(DramRefreshActivateMeasurement))] 		= "filter-dram-trfc";
@@ -455,6 +484,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(EthernetRGMIIDecoder))]					= "filter-rj45";
 	m_filterIconMap[type_index(typeid(EthernetRMIIDecoder))]					= "filter-rj45";
 	m_filterIconMap[type_index(typeid(EthernetSGMIIDecoder))]					= "filter-rj45";
+	m_filterIconMap[type_index(typeid(ExponentialMovingAverageFilter))]			= "filter-exponential-moving-average";
 	m_filterIconMap[type_index(typeid(EyeBitRateMeasurement))] 					= "filter-eyebitrate";
 	m_filterIconMap[type_index(typeid(EyeHeightMeasurement))] 					= "filter-eyeheight";
 	m_filterIconMap[type_index(typeid(EyeJitterMeasurement))] 					= "filter-eyejitter";
@@ -489,12 +519,17 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(JitterSpectrumFilter))] 					= "filter-jitter-spectrum";
 	m_filterIconMap[type_index(typeid(JtagDecoder))] 							= "filter-jtag";
 	m_filterIconMap[type_index(typeid(MaximumFilter))] 							= "filter-max";
+	m_filterIconMap[type_index(typeid(MDIODecoder))]							= "filter-mdio";
 	m_filterIconMap[type_index(typeid(MemoryFilter))] 							= "filter-memory";
 	m_filterIconMap[type_index(typeid(MilStd1553Decoder))] 						= "filter-mil-std-1553";
 	m_filterIconMap[type_index(typeid(MinimumFilter))] 							= "filter-min";
+	m_filterIconMap[type_index(typeid(MovingAverageFilter))] 					= "filter-moving-average";
 	m_filterIconMap[type_index(typeid(MultiplyFilter))] 						= "filter-multiply";
 	m_filterIconMap[type_index(typeid(NCOFilter))] 								= "filter-sine";
+	m_filterIconMap[type_index(typeid(NoiseFilter))] 								= "filter-noise";
 	m_filterIconMap[type_index(typeid(OneWireDecoder))] 						= "filter-1-wire";
+	m_filterIconMap[type_index(typeid(PAMEdgeDetectorFilter))] 					= "filter-pam4-edge-detect";
+	m_filterIconMap[type_index(typeid(PAM4DemodulatorFilter))] 					= "filter-pam4-demodulator";
 	m_filterIconMap[type_index(typeid(PcapngExportFilter))] 					= "filter-pcapng-export";
 	m_filterIconMap[type_index(typeid(PcapngImportFilter))] 					= "filter-pcapng-import";
 	m_filterIconMap[type_index(typeid(PCIe128b130bDecoder))] 					= "filter-64b66bdecoder";
@@ -505,13 +540,18 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(PCIeTransportDecoder))] 					= "filter-pcie-transport";
 	m_filterIconMap[type_index(typeid(PeaksFilter))] 							= "filter-peaks";
 	m_filterIconMap[type_index(typeid(PeakHoldFilter))] 						= "filter-peak-hold";
+	m_filterIconMap[type_index(typeid(PhaseMeasurement))] 						= "filter-phase";
+	m_filterIconMap[type_index(typeid(PhaseNonlinearityFilter))] 				= "filter-phase-nonlinearity";
 	m_filterIconMap[type_index(typeid(PkPkMeasurement))] 						= "filter-peaktopeak";
 	m_filterIconMap[type_index(typeid(PeriodMeasurement))] 						= "filter-period";
 	m_filterIconMap[type_index(typeid(PulseWidthMeasurement))] 					= "filter-pulse-width";
 	m_filterIconMap[type_index(typeid(PRBSGeneratorFilter))]					= "filter-prbs";
 	m_filterIconMap[type_index(typeid(PRBSCheckerFilter))]						= "filter-prbs-checker";
+	m_filterIconMap[type_index(typeid(QSPIDecoder))]							= "filter-quad-spi";
 	m_filterIconMap[type_index(typeid(QSGMIIDecoder))]							= "filter-rj45";
+	m_filterIconMap[type_index(typeid(QuadratureDecoder))]						= "filter-quadrature";
 	m_filterIconMap[type_index(typeid(RiseMeasurement))] 						= "filter-rise";
+	m_filterIconMap[type_index(typeid(RMSMeasurement))] 						= "filter-rms";
 	m_filterIconMap[type_index(typeid(ScalarPulseDelayFilter))] 				= "filter-scalar-pulse-delay";
 	m_filterIconMap[type_index(typeid(ScalarStairstepFilter))] 					= "filter-scalar-stairstep";
 	m_filterIconMap[type_index(typeid(SDCmdDecoder))] 							= "filter-sd-command";
@@ -548,6 +588,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(Waterfall))] 								= "filter-waterfall";
 	m_filterIconMap[type_index(typeid(WAVImportFilter))] 						= "filter-wav-import";
 	m_filterIconMap[type_index(typeid(WFMImportFilter))] 						= "filter-wfm-import";
+	m_filterIconMap[type_index(typeid(WindowFilter))] 							= "filter-window";
 	m_filterIconMap[type_index(typeid(XYSweepFilter))] 							= "filter-xy-sweep";
 }
 
