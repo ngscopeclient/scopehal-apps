@@ -629,9 +629,11 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	ImGui::PopID();
 }
 
-/*
-	@brief Rendering of an instrument node
-*/
+/**
+ * @brief Rendering of an instrument node
+ * 
+ * @param instrument the instrument to render
+ */
 void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument)
 {
 	// Get preferences for colors
@@ -789,9 +791,13 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 }
 
-/*
-	@brief Rendering of a channel node
-*/
+/**
+ * @brief Rendering of a channel node
+ * 
+ * @param instrument the instrument containing the instrument to render
+ * @param channelIndex the index of the channel to render
+ * @param isLast true if this is the last channel of the instrument
+ */
 void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast)
 {
 	// Get preferences for colors
@@ -961,9 +967,11 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else
 		{
-			for(size_t j=0; j<channel->GetStreamCount(); j++)
-			{	// Iterate on each stream
-				renderStreamNode(instrument,channel,j,!singleStream,renderProps);
+			size_t streamCount = channel->GetStreamCount();
+			for(size_t j=0; j<streamCount; j++)
+			{	
+				// Iterate on each stream
+				renderStreamNode(instrument,channel,j,!singleStream,renderProps,(j==(streamCount-1)));
 			}
 		}
 		ImGui::PopID();
@@ -975,15 +983,25 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	ImGui::PopID();
 }
 
-// Rendering of a stream node
-void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps)
+/**
+ * @brief Rendering of a stream node
+ * 
+ * @param instrument the instrument containing the stream to render (may be null if the stream is in a Filter)
+ * @param channel the channel or the Filter containing the stream to render
+ * @param streamIndex the index of the stream to render
+ * @param renderName true if the name of the stream should be rendred as a selectable item
+ * @param renderProps true if a properties block should be rendered for this stream
+ * @param isLast true if this is the last stream of the channel
+ */
+void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast)
 {
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
-	bool isDigital = scopechan && scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
+	Stream::StreamType type = scopechan ? scopechan->GetType(streamIndex) : Stream::StreamType::STREAM_TYPE_ANALOG;
 
 	ImGui::PushID(streamIndex);
 
+	// Stream name
 	if (renderName)
 	{
 		ImGui::Selectable(channel->GetStreamName(streamIndex).c_str());
@@ -1002,51 +1020,131 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		else
 			DoItemHelp();
 	}
-	// Channel/stream properties
-	if(renderProps)
+	// Channel/stream properties block
+	if(renderProps && scopechan)
 	{	
-		ImGui::BeginChild("stream_params", ImVec2(0, 0),
-			ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-
-		Unit unit = channel->GetYAxisUnits(streamIndex);
-		// Scope params
-		if(scope && scopechan)
+		// If no properties are available for this stream, only show a "Properties" link if it is the last stream of the channel/filter
+		bool hasProps = isLast;
+		switch (type)
 		{
-			if(isDigital)
-			{
-				auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-
-				bool clicked = false;
-				bool hovered = false;
-				renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
-				if (clicked)
+			case Stream::STREAM_TYPE_ANALOG:
+				hasProps = true;
+				break;
+			case Stream::STREAM_TYPE_DIGITAL:
+				if(scope)
 				{
-					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-					m_parent->ShowChannelProperties(scopechan);
+					hasProps = true;
 				}
-				if (hovered)
-					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-			}
-			else
-			{
-				auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
-				auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
-
-				bool clicked = false;
-				bool hovered = false;
-				renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
-				renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
-				if (clicked)
-				{
-					/* XXX: refactor to be more like FilterGraphEditor::HandleNodeProperties? */
-					m_parent->ShowChannelProperties(scopechan);
-				}
-				if (hovered)
-					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
-			}
+				break;
+			default:
+				break;
 		}
-		ImGui::EndChild();
+		if(hasProps)
+		{
+			ImGui::BeginChild("stream_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+
+			Unit unit = channel->GetYAxisUnits(streamIndex);
+			bool clicked = false;
+			bool hovered = false;
+			switch (type)
+			{
+				case Stream::STREAM_TYPE_ANALOG:
+					{
+						auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
+						auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+						renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+						renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
+					}
+					break;
+				case Stream::STREAM_TYPE_DIGITAL:
+					if(scope)
+					{
+						auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+						renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
+						break;
+					}
+					//fall through
+				default:
+					{
+						clicked = ImGui::TextLink("Properties");
+						hovered = ImGui::IsItemHovered();
+					}					
+					break;
+			}
+			ImGui::EndChild();
+			if (clicked)
+			{
+				m_parent->ShowChannelProperties(scopechan);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open properties");
+		}
 	}
+	ImGui::PopID();
+}
+
+/**
+ * @brief Rendering of a Filter node
+ * 
+ * @param filter the filter to render
+ */
+void StreamBrowserDialog::renderFilterNode(Filter* filter)
+{
+	ImGui::PushID(filter);
+
+	bool singleStream = filter->GetStreamCount() == 1;
+
+	if (filter->m_displaycolor != "")
+		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(filter->m_displaycolor));
+	bool open = ImGui::TreeNodeEx(filter->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+	if (filter->m_displaycolor != "")
+		ImGui::PopStyleColor();
+
+	//Single stream: drag the stream not the filter
+	if(singleStream)
+	{
+		StreamDescriptor s(filter, 0);
+		if(ImGui::BeginDragDropSource())
+		{
+			if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+				ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+			else
+				ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+
+			ImGui::TextUnformatted(s.GetName().c_str());
+			ImGui::EndDragDropSource();
+		}
+		else
+			DoItemHelp();
+	}
+
+	//Drag source for the channel itself (if we have zero or >1 streams)
+	else if(ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("Channel", &filter, sizeof(filter));
+
+		ImGui::TextUnformatted(filter->GetDisplayName().c_str());
+		ImGui::EndDragDropSource();
+	}
+
+	// Channel decoration
+	if(open)
+	{
+		ImGui::PushID(filter);
+
+		size_t streamCount = filter->GetStreamCount();
+		for(size_t j=0; j<streamCount; j++)
+		{	
+			// Iterate on each stream
+			renderStreamNode(nullptr,filter,j,!singleStream,true,(j==(streamCount-1)));
+		}
+		ImGui::PopID();
+	}
+
+	if(open)
+		ImGui::TreePop();
+
 	ImGui::PopID();
 }
 
@@ -1073,60 +1171,7 @@ bool StreamBrowserDialog::DoRender()
 		auto filters = Filter::GetAllInstances();
 		for(auto f : filters)
 		{
-			bool open = ImGui::TreeNodeEx(f->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-			//Single stream: drag the stream not the channel
-			bool singleStream = f->GetStreamCount() == 1;
-			if(singleStream)
-			{
-				StreamDescriptor s(f, 0);
-				if(ImGui::BeginDragDropSource())
-				{
-					if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-						ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-					else
-						ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-					ImGui::TextUnformatted(s.GetName().c_str());
-					ImGui::EndDragDropSource();
-				}
-				else
-					DoItemHelp();
-			}
-
-			//Drag source for the channel itself (if we have zero or >1 streams)
-			else if(ImGui::BeginDragDropSource())
-			{
-				ImGui::SetDragDropPayload("Channel", &f, sizeof(f));
-
-				ImGui::TextUnformatted(f->GetDisplayName().c_str());
-				ImGui::EndDragDropSource();
-			}
-
-			if(open && !singleStream)
-			{
-				for(size_t j=0; j<f->GetStreamCount(); j++)
-				{
-					ImGui::Selectable(f->GetStreamName(j).c_str());
-
-					StreamDescriptor s(f, j);
-					if(ImGui::BeginDragDropSource())
-					{
-						if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-							ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-						else
-							ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-						ImGui::TextUnformatted(s.GetName().c_str());
-						ImGui::EndDragDropSource();
-					}
-					else
-						DoItemHelp();
-				}
-			}
-
-			if(open)
-				ImGui::TreePop();
+			renderFilterNode(f);
 		}
 		ImGui::TreePop();
 	}
