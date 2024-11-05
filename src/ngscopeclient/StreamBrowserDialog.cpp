@@ -63,10 +63,12 @@ StreamBrowserDialog::~StreamBrowserDialog()
 */
 void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered)
 {
+	ImGui::PushID(label);	// Prevent collision if several sibling links have the same linktext
 	ImGui::Text("%s: ", label);
 	ImGui::SameLine(0, 0);
 	clicked |= ImGui::TextLink(linktext);
 	hovered |= ImGui::IsItemHovered();
+	ImGui::PopID();
 }
 
 /**
@@ -478,8 +480,10 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 		DoItemHelp();
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
+	ImGui::PushID(isVoltage ? "sV" :  "sC");
 	clicked |= ImGui::TextLink(setValue);
 	hovered |= ImGui::IsItemHovered();
+	ImGui::PopID();
 	// Row 2
 	ImGui::TableNextRow();
 	if((isVoltage && !cc) || (!isVoltage && cc))
@@ -506,8 +510,10 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 		DoItemHelp();
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
+	ImGui::PushID(isVoltage ? "mV" :  "mC");
 	clicked |= ImGui::TextLink(measuredValue);
 	hovered |= ImGui::IsItemHovered();
+	ImGui::PopID();
 }
 
 /**
@@ -725,21 +731,48 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		{
 			ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
 
-			auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
-			auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
-
-			bool clicked = false;
-			bool hovered = false;
-			renderInfoLink("Sample rate", srate_txt.c_str(), clicked, hovered);
-			renderInfoLink("Sample depth", sdepth_txt.c_str(), clicked, hovered);
-			if (clicked)
-				m_parent->ShowTimebaseProperties();
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
-			for(size_t i = 0; i<channelCount; i++)
+			if(scope->HasTimebaseControls())
 			{
-				if(scope->IsChannelEnabled(i))
-					lastEnabledChannelIndex = i;
+				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
+				auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
+
+				bool clicked = false;
+				bool hovered = false;
+				renderInfoLink("Sample rate", srate_txt.c_str(), clicked, hovered);
+				renderInfoLink("Sample depth", sdepth_txt.c_str(), clicked, hovered);
+				if (clicked)
+					m_parent->ShowTimebaseProperties();
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
+				for(size_t i = 0; i<channelCount; i++)
+				{
+					if(scope->IsChannelEnabled(i))
+						lastEnabledChannelIndex = i;
+				}
+			}
+			if(scope->HasFrequencyControls())
+			{
+				auto sdepth_txt 	= Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
+				auto rbw_txt    	= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetResolutionBandwidth());
+				auto centerFreq_txt = Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetCenterFrequency(0));
+				auto span_txt 		= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetSpan());
+
+				bool clicked = false;
+				bool hovered = false;
+				if(!scope->HasTimebaseControls()) // Only render sample depth if it has not already been shown in timebase controls
+					renderInfoLink("Points", sdepth_txt.c_str(), clicked, hovered);
+				renderInfoLink("Rbw", rbw_txt.c_str(), clicked, hovered);
+				renderInfoLink("Center freq.", centerFreq_txt.c_str(), clicked, hovered);
+				renderInfoLink("Span", span_txt.c_str(), clicked, hovered);
+				if (clicked)
+					m_parent->ShowTimebaseProperties();
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
+				for(size_t i = 0; i<channelCount; i++)
+				{
+					if(scope->IsChannelEnabled(i))
+						lastEnabledChannelIndex = i;
+				}
 			}
 
 			ImGui::EndChild();

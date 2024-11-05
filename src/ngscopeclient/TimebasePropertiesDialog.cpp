@@ -82,6 +82,10 @@ TimebasePropertiesPage::TimebasePropertiesPage(shared_ptr<Oscilloscope> scope)
 	}
 
 	Unit hz(Unit::UNIT_HZ);
+
+	m_rbw = scope->GetResolutionBandwidth();
+	m_rbwText = hz.PrettyPrint(m_rbw);
+
 	m_span = scope->GetSpan();
 	m_spanText = hz.PrettyPrint(m_span);
 
@@ -237,9 +241,21 @@ bool TimebasePropertiesDialog::DoRender()
 					HelpMarker("Number of points in the sweep");
 				}
 
+				Unit hz(Unit::UNIT_HZ);
+
+				// Resolution Bandwidh
+				ImGui::SetNextItemWidth(width);
+				if(UnitInputWithImplicitApply("Rbw", p->m_rbwText, p->m_rbw, hz))
+				{
+					scope->SetResolutionBandwidth(p->m_rbw);
+					// Update with values from the device
+					p->m_rbw = scope->GetResolutionBandwidth();
+					p->m_rbwText = hz.PrettyPrint(p->m_rbw);
+				}
+				HelpMarker("Resolution Bandwidth");
+
 				//Frequency
 				bool changed = false;
-				Unit hz(Unit::UNIT_HZ);
 
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithImplicitApply("Start", p->m_startText, p->m_start, hz))

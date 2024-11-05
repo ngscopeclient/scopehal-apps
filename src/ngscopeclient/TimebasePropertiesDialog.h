@@ -58,6 +58,10 @@ public:
 	//(only valid if both RT and equivalent are available)
 	int m_samplingMode;
 
+	//Resolution Bandwidth
+	std::string m_rbwText;
+	int64_t m_rbw;
+
 	//Frequency domain controls
 	std::string m_centerText;
 	double m_center;
