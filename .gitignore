@@ -4,3 +4,4 @@ debug-build
 analysis-build
 asan-build
 release-nodebug-build
+debug-noopt-build

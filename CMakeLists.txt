@@ -75,6 +75,7 @@ add_compile_options(-mtune=native)
 add_compile_options("$<$<CONFIG:RELEASE>:-O3>")
 add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:-O3;-g>")
 add_compile_options("$<$<CONFIG:DEBUG>:-Og;-D_DEBUG;-g>")
+add_compile_options("$<$<CONFIG:DEBUGNOOPT>:-O0;-D_DEBUG;-g>")
 
 # Needed for %zu/%zd on MSYS2, must be added here to avoid redefinition
 if(WIN32 AND (NOT MSVC))
