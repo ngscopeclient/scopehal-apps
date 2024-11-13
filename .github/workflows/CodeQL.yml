@@ -124,4 +124,5 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
+        config-file: ./.github/codewl/codeql-config.yml
         category: "/language:${{matrix.language}}"
