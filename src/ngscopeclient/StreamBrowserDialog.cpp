@@ -55,7 +55,7 @@ StreamBrowserDialog::~StreamBrowserDialog()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
-// @brief Helper methods for rendering widgets that appear in the StreamBrowserDialog.
+//Helper methods for rendering widgets that appear in the StreamBrowserDialog.
 
 /**
 	@brief Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
