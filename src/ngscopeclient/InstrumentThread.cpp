@@ -118,7 +118,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 			inst->AcquireData();
 
 		//Populate scalar channel and do other instrument-specific processing
-		if(psu)
+		if(psu && psustate)
 		{
 			//Poll status
 			for(size_t i=0; i<psu->GetChannelCount(); i++)
@@ -142,7 +142,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 			psustate->m_firstUpdateDone = true;
 		}
-		if(load)
+		if(load && loadstate)
 		{
 			for(size_t i=0; i<load->GetChannelCount(); i++)
 			{
@@ -155,7 +155,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 			}
 			loadstate->m_firstUpdateDone = true;
 		}
-		if(meter)
+		if(meter && meterstate)
 		{
 			auto chan = dynamic_cast<MultimeterChannel*>(meter->GetChannel(meter->GetCurrentMeterChannel()));
 			if(chan)
@@ -176,7 +176,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 					session->MarkChannelDirty(chan);
 			}
 		}
-		if(bert)
+		if(bert && bertstate)
 		{
 			//Check if we have any pending acquisition requests
 			for(size_t i=0; i<bert->GetChannelCount(); i++)
@@ -211,7 +211,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 			bertstate->m_firstUpdateDone = true;
 		}
 		// Read and cache FunctionGenerator settings
-		if(awg)
+		if(awg && awgstate)
 		{
 			//Read status for channels that need it
 			for(size_t i=0; i<awg->GetChannelCount(); i++)
@@ -233,7 +233,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 
 					awgstate->m_needsUpdate[i] = false;
 				}
-				
+
 			}
 		}
 
