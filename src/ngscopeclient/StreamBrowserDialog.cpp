@@ -139,7 +139,7 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 	return result;
 }
 
-/** 
+/**
 	@brief render a badge at the end of current line with provided color and text
 
 	@param color the color of the badge
@@ -172,7 +172,7 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 
 /**
    @brief Render a combo box with provded color and values
-   
+
    @param color the color of the combo box
    @param selected the selected value index (in/out)
    @param values the combo box values
@@ -197,7 +197,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 			return changed; // No room and we don't want to crop text
 		resizedLabel = selectedLabel;
 		while((m_badgeXCur - xsz) < m_badgeXMin)
-		{	
+		{
 			// Try and crop text
 			resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
 			if(resizedLabel.size() < cropTextTo)
@@ -250,7 +250,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 
 /**
    @brief Render a combo box with provded color and values
-   
+
    @param color the color of the combo box
    @param selected the selected value index (in/out)
    @param ... the combo box values
@@ -276,7 +276,7 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values,
 
 /**
    @brief Render a toggle button combo
-   
+
    @param color the color of the toggle button
    @param curValue the value of the toggle button
    @return the selected value for the toggle button
@@ -564,13 +564,13 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
 	ImGui::PopID();
-	
+
 	// Row 2
 	// Frequency label
 	StreamDescriptor sv(awgchan, 0);
 	ImGui::PushID("frequ");
 	// TODO
-	const char* freqLabel = "Frequency: "; 
+	const char* freqLabel = "Frequency: ";
 	ImGui::Selectable(freqLabel,false,0,ImVec2(ImGui::CalcTextSize(freqLabel).x, 0));
 	if(ImGui::BeginDragDropSource())
 	{
@@ -590,7 +590,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	startBadgeLine();
 	auto height = ImGui::GetFontSize() * 2;
 	auto width =  height * 2;
-	if ((m_badgeXCur - width) >= m_badgeXMin) 
+	if ((m_badgeXCur - width) >= m_badgeXMin)
 	{
 		// ok, we have enough space draw preview
 		m_badgeXCur -= width;
@@ -781,7 +781,8 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		}
 
 		for(size_t i=0; i<channelCount; i++)
-		{	// Iterate on each channel
+		{
+			// Iterate on each channel
 			renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
 		}
 
@@ -831,7 +832,21 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 
 	if (channel->m_displaycolor != "")
 		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(channel->m_displaycolor));
-	bool open = ImGui::TreeNodeEx(channel->GetDisplayName().c_str(), isDigital ? 0 : ImGuiTreeNodeFlags_DefaultOpen | (!hasChildren ? ImGuiTreeNodeFlags_Leaf : 0));
+
+	int flags = 0;
+	if(!hasChildren)
+		flags |= ImGuiTreeNodeFlags_Leaf;
+
+	//Collapse digital channel nodes by default to reduce clutter
+	if(isDigital)
+	{}
+
+	else
+		flags |= ImGuiTreeNodeFlags_DefaultOpen;
+
+	bool open = ImGui::TreeNodeEx(
+		channel->GetDisplayName().c_str(),
+		flags);
 	if (channel->m_displaycolor != "")
 		ImGui::PopStyleColor();
 
@@ -889,7 +904,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
 	else if(awg && awgchan)
-	{	
+	{
 		// AWG Channel : get the state
 		auto awgstate = m_session.GetFunctionGeneratorState(awg);
 
@@ -915,7 +930,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	{
 		ImGui::PushID(instrument.get());
 		if(psu)
-		{	
+		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
 			ImGui::BeginChild("psu_params", ImVec2(0, 0),
 				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
@@ -969,7 +984,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		{
 			size_t streamCount = channel->GetStreamCount();
 			for(size_t j=0; j<streamCount; j++)
-			{	
+			{
 				// Iterate on each stream
 				renderStreamNode(instrument,channel,j,!singleStream,renderProps,(j==(streamCount-1)));
 			}
@@ -1022,7 +1037,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 	}
 	// Channel/stream properties block
 	if(renderProps && scopechan)
-	{	
+	{
 		// If no properties are available for this stream, only show a "Properties" link if it is the last stream of the channel/filter
 		bool hasProps = isLast;
 		switch (type)
@@ -1069,7 +1084,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 					{
 						clicked = ImGui::TextLink("Properties");
 						hovered = ImGui::IsItemHovered();
-					}					
+					}
 					break;
 			}
 			ImGui::EndChild();
@@ -1097,7 +1112,13 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 
 	if (filter->m_displaycolor != "")
 		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(filter->m_displaycolor));
-	bool open = ImGui::TreeNodeEx(filter->GetDisplayName().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+	//Don't expand filters with a single stream by default
+	int flags = 0;
+	if(!singleStream)
+		flags |= ImGuiTreeNodeFlags_DefaultOpen;
+
+	bool open = ImGui::TreeNodeEx(filter->GetDisplayName().c_str(), flags);
 	if (filter->m_displaycolor != "")
 		ImGui::PopStyleColor();
 
@@ -1135,7 +1156,7 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 
 		size_t streamCount = filter->GetStreamCount();
 		for(size_t j=0; j<streamCount; j++)
-		{	
+		{
 			// Iterate on each stream
 			renderStreamNode(nullptr,filter,j,!singleStream,true,(j==(streamCount-1)));
 		}
