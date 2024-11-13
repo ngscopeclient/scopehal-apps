@@ -54,7 +54,7 @@ public:
 
 protected:
 	/**
-	 * @brief State of badges used in intrument node rendering
+	   @brief State of badges used in intrument node rendering
 	 */
 	enum InstrumentBadge 
 	{

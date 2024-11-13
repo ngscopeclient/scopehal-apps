@@ -171,14 +171,14 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 }
 
 /**
- * @brief Render a combo box with provded color and values
- * 
- * @param color the color of the combo box
- * @param selected the selected value index (in/out)
- * @param values the combo box values
- * @param useColorForText if true, use the provided color for text (and a darker version of it for background color)
- * @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
- * @return true true if the selected value of the combo has been changed
+   @brief Render a combo box with provded color and values
+   
+   @param color the color of the combo box
+   @param selected the selected value index (in/out)
+   @param values the combo box values
+   @param useColorForText if true, use the provided color for text (and a darker version of it for background color)
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
+   @return true true if the selected value of the combo has been changed
  */
 bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, bool useColorForText, uint8_t cropTextTo)
 {
@@ -249,12 +249,12 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 }
 
 /**
- * @brief Render a combo box with provded color and values
- * 
- * @param color the color of the combo box
- * @param selected the selected value index (in/out)
- * @param ... the combo box values
- * @return true true if the selected value of the combo has been changed
+   @brief Render a combo box with provded color and values
+   
+   @param color the color of the combo box
+   @param selected the selected value index (in/out)
+   @param ... the combo box values
+   @return true true if the selected value of the combo has been changed
  */
 bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values, ending in NULL */)
 {
@@ -275,11 +275,11 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values,
 }
 
 /**
- * @brief Render a toggle button combo
- * 
- * @param color the color of the toggle button
- * @param curValue the value of the toggle button
- * @return the selected value for the toggle button
+   @brief Render a toggle button combo
+   
+   @param color the color of the toggle button
+   @param curValue the value of the toggle button
+   @return the selected value for the toggle button
  */
 bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
 {
@@ -289,10 +289,10 @@ bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
 }
 
 /**
- * @brief Render an on/off toggle button combo
- * 
- * @param curValue the value of the toggle button
- * @return the selected value for the toggle button
+   @brief Render an on/off toggle button combo
+
+   @param curValue the value of the toggle button
+   @return the selected value for the toggle button
  */
 bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 {
@@ -302,11 +302,11 @@ bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
 }
 
 /**
- * @brief Render a download progress bar for a given instrument channel
- * 
- * @param inst the instrument to render the progress channel for
- * @param chan the channel to render the progress for
- * @param isLast true if it is the last channel of the instrument
+   @brief Render a download progress bar for a given instrument channel
+
+   @param inst the instrument to render the progress channel for
+   @param chan the channel to render the progress for
+   @param isLast true if it is the last channel of the instrument
  */
 void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 {
@@ -446,15 +446,15 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 }
 
 /**
- * @brief Render a PSU properties row
- * 
- * @param isVoltage true for voltage rows, false for current rows
- * @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
- * @param chan the PSU channel to render properties for
- * @param setValue the set value text
- * @param measuredValue the measured value text
- * @param clicked output param for clicked state
- * @param hovered output param for hovered state
+   @brief Render a PSU properties row
+
+   @param isVoltage true for voltage rows, false for current rows
+   @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
+   @param chan the PSU channel to render properties for
+   @param setValue the set value text
+   @param measuredValue the measured value text
+   @param clicked output param for clicked state
+   @param hovered output param for hovered state
  */
 void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
 {
@@ -517,12 +517,12 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 }
 
 /**
- * @brief Render AWG channel properties
- * 
- * @param awg the AWG to render channel properties for
- * @param awgchan the AWG channel to render properties for
- * @param clicked output param for clicked state
- * @param hovered output param for hovered state
+   @brief Render AWG channel properties
+
+   @param awg the AWG to render channel properties for
+   @param awgchan the AWG channel to render properties for
+   @param clicked output param for clicked state
+   @param hovered output param for hovered state
  */
 void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered)
 {
@@ -630,9 +630,9 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 }
 
 /**
- * @brief Rendering of an instrument node
- * 
- * @param instrument the instrument to render
+   @brief Rendering of an instrument node
+
+   @param instrument the instrument to render
  */
 void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument)
 {
@@ -792,11 +792,11 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 }
 
 /**
- * @brief Rendering of a channel node
- * 
- * @param instrument the instrument containing the instrument to render
- * @param channelIndex the index of the channel to render
- * @param isLast true if this is the last channel of the instrument
+   @brief Rendering of a channel node
+
+   @param instrument the instrument containing the instrument to render
+   @param channelIndex the index of the channel to render
+   @param isLast true if this is the last channel of the instrument
  */
 void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast)
 {
@@ -984,14 +984,14 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 }
 
 /**
- * @brief Rendering of a stream node
- * 
- * @param instrument the instrument containing the stream to render (may be null if the stream is in a Filter)
- * @param channel the channel or the Filter containing the stream to render
- * @param streamIndex the index of the stream to render
- * @param renderName true if the name of the stream should be rendred as a selectable item
- * @param renderProps true if a properties block should be rendered for this stream
- * @param isLast true if this is the last stream of the channel
+   @brief Rendering of a stream node
+
+   @param instrument the instrument containing the stream to render (may be null if the stream is in a Filter)
+   @param channel the channel or the Filter containing the stream to render
+   @param streamIndex the index of the stream to render
+   @param renderName true if the name of the stream should be rendred as a selectable item
+   @param renderProps true if a properties block should be rendered for this stream
+   @param isLast true if this is the last stream of the channel
  */
 void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast)
 {
@@ -1085,9 +1085,9 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 }
 
 /**
- * @brief Rendering of a Filter node
- * 
- * @param filter the filter to render
+   @brief Rendering of a Filter node
+
+   @param filter the filter to render
  */
 void StreamBrowserDialog::renderFilterNode(Filter* filter)
 {
