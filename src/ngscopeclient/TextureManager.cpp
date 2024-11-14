@@ -377,8 +377,8 @@ void TextureManager::LoadTexture(
 	auto rowPtrs = png_get_rows(png, info);
 
 	//Figure out the file dimensions
-	int width = png_get_image_width(png, info);
-	int height = png_get_image_height(png, info);
+	size_t width = png_get_image_width(png, info);
+	size_t height = png_get_image_height(png, info);
 	int depth = png_get_bit_depth(png, info);
 	if(png_get_color_type(png, info) != PNG_COLOR_TYPE_RGBA)
 	{
@@ -395,7 +395,7 @@ void TextureManager::LoadTexture(
 		return;
 	}
 	int bytesPerComponent = 1;
-	int bytesPerPixel = 4*bytesPerComponent;
+	size_t bytesPerPixel = 4*bytesPerComponent;
 	LogTrace("Image is %d x %d pixels, RGBA8888\n", width, height);
 	VkDeviceSize size = width * height * bytesPerPixel;
 
