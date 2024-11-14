@@ -431,7 +431,7 @@ void TextureManager::LoadTexture(
 
 	//Fill the mapped buffer with image data from the PNG
 	size_t rowSize = width * bytesPerPixel;
-	for(int y=0; y<height; y++)
+	for(size_t y=0; y<height; y++)
 		memcpy(mappedPtr + (y*rowSize), rowPtrs[y], rowSize);
 	physMem.unmapMemory();
 
