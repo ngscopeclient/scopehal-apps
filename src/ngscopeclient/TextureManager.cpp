@@ -396,7 +396,7 @@ void TextureManager::LoadTexture(
 	}
 	int bytesPerComponent = 1;
 	size_t bytesPerPixel = 4*bytesPerComponent;
-	LogTrace("Image is %d x %d pixels, RGBA8888\n", width, height);
+	LogTrace("Image is %zu x %zu pixels, RGBA8888\n", width, height);
 	VkDeviceSize size = width * height * bytesPerPixel;
 
 	//Allocate temporary staging buffer
