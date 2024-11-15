@@ -54,6 +54,7 @@ jobs:
 
     - name: Install WiX
       run: |
+        choco install wixtoolset
         where wix
         wix --version
       shell: cmd
