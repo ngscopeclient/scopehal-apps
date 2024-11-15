@@ -52,7 +52,22 @@ jobs:
           ffts:p
           hidapi:p
 
-    - name: Build
+    - name: Install WiX
+      if: ${{ matrix.sys == 'ucrt64' }}
+      run: |
+        choco install wixtoolset --force
+      shell: cmd
+
+    - name: Build And Dist
+      if: ${{ matrix.sys == 'ucrt64' }}
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
+        ninja
+
+    - name: Build Only
+      if: ${{ matrix.sys != 'ucrt64' }}
       run: |
         mkdir build
         cd build
@@ -77,14 +92,16 @@ jobs:
     #     name: glscopeclient-windows-${{ runner.os }}-${{ github.job }}
     #     path: msys2/*.zst
 
-    # - name: Upload Artifacts (ngscopeclient portable zip)
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
-    #     path: build/dist/ngscopeclient*.zip
+    - name: Upload Artifacts (ngscopeclient portable zip)
+      if: ${{ matrix.sys == 'ucrt64' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
+        path: build/dist/ngscopeclient*.zip
 
-    # - name: Upload Artifacts (ngscopeclient MSI)
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
-    #     path: build/dist/ngscopeclient*.msi
+    - name: Upload Artifacts (ngscopeclient MSI)
+      if: ${{ matrix.sys == 'ucrt64' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
+        path: build/dist/ngscopeclient*.msi
