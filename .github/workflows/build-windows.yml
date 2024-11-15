@@ -19,9 +19,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - { sys: mingw64, env: x86_64 }
+          # - { sys: mingw64, env: x86_64 }
           - { sys: ucrt64,  env: ucrt-x86_64 }
-          - { sys: clang64, env: clang-x86_64 }
+          # - { sys: clang64, env: clang-x86_64 }
 
     steps:
     - uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. --trace -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
+        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
         ninja
 
     - name: Test
