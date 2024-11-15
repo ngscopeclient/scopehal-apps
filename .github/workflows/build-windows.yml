@@ -83,14 +83,14 @@ jobs:
     #     name: glscopeclient-windows-${{ runner.os }}-${{ github.job }}
     #     path: msys2/*.zst
 
-    # - name: Upload Artifacts (ngscopeclient portable zip)
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
-    #     path: build/dist/ngscopeclient*.zip
+    - name: Upload Artifacts (ngscopeclient portable zip)
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
+        path: build/dist/ngscopeclient*.zip
 
-    # - name: Upload Artifacts (ngscopeclient MSI)
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
-    #     path: build/dist/ngscopeclient*.msi
+    - name: Upload Artifacts (ngscopeclient MSI)
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
+        path: build/dist/ngscopeclient*.msi
