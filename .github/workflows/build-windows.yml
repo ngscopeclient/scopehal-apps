@@ -19,9 +19,9 @@ jobs:
     strategy:
       matrix:
         include:
-          # - { sys: mingw64, env: x86_64 }
+          - { sys: mingw64, env: x86_64 }
           - { sys: ucrt64,  env: ucrt-x86_64 }
-          # - { sys: clang64, env: clang-x86_64 }
+          - { sys: clang64, env: clang-x86_64 }
 
     steps:
     - uses: actions/checkout@v4
@@ -55,14 +55,23 @@ jobs:
     - name: Install WiX
       run: |
         choco install wixtoolset --force
-        "C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe" -?
+        # "C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe" -?
       shell: cmd
 
-    - name: Build
+    - name: Build And Dist
+      if: ${{ matrix.sys == 'ucrt64' }}
       run: |
         mkdir build
         cd build
         cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
+        ninja
+
+    - name: Build Only
+      if: ${{ matrix.sys != 'ucrt64' }}
+      run: |
+        mkdir build
+        cd build
+        cmake .. -GNinja
         ninja
 
     - name: Test
@@ -84,12 +93,14 @@ jobs:
     #     path: msys2/*.zst
 
     - name: Upload Artifacts (ngscopeclient portable zip)
+      if: ${{ matrix.sys == 'ucrt64' }}
       uses: actions/upload-artifact@v4
       with:
         name: ngscopeclient-windows-portable-${{ runner.os }}-${{ github.job }}
         path: build/dist/ngscopeclient*.zip
 
     - name: Upload Artifacts (ngscopeclient MSI)
+      if: ${{ matrix.sys == 'ucrt64' }}
       uses: actions/upload-artifact@v4
       with:
         name: ngscopeclient-${{ runner.os }}-${{ github.job }}.msi
