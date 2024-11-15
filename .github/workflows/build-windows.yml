@@ -55,8 +55,8 @@ jobs:
     - name: Install WiX
       run: |
         choco install wixtoolset
-        where wix
-        wix --version
+        dir "C:\Program Files (x86)\WiX Toolset v3.14\bin"
+        "C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe" -?
       shell: cmd
 
     - name: Build
