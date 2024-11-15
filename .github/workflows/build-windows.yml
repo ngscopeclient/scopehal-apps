@@ -53,9 +53,9 @@ jobs:
           hidapi:p
 
     - name: Install WiX
+      if: ${{ matrix.sys == 'ucrt64' }}
       run: |
         choco install wixtoolset --force
-        # "C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe" -?
       shell: cmd
 
     - name: Build And Dist
