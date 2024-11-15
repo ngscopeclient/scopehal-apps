@@ -62,7 +62,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
+        cmake .. --trace -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
         ninja
 
     - name: Test
