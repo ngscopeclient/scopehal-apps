@@ -55,7 +55,6 @@ jobs:
     - name: Install WiX
       run: |
         choco install wixtoolset
-        dir "C:\Program Files (x86)\WiX Toolset v3.14\bin"
         "C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe" -?
       shell: cmd
 
@@ -63,7 +62,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -GNinja
+        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
         ninja
 
     - name: Test
