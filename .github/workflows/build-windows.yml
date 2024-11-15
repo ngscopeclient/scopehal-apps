@@ -60,6 +60,7 @@ jobs:
         dotnet tool install --global wix
         wix --version
         where wix
+      shell: cmd
 
     - name: Build
       run: |
