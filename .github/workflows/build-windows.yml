@@ -52,14 +52,14 @@ jobs:
           ffts:p
           hidapi:p
 
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.1
+#    - name: Add msbuild to PATH
+#      uses: microsoft/setup-msbuild@v1.1
     
     - name: Install WiX
       run: |
-        dotnet tool install --global wix
-        wix --version
+#        dotnet tool install --global wix
         where wix
+        wix --version
       shell: cmd
 
     - name: Build
