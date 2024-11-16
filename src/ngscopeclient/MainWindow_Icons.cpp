@@ -88,6 +88,7 @@
 #include "../scopeprotocols/DSIFrameDecoder.h"
 #include "../scopeprotocols/DSIPacketDecoder.h"
 #include "../scopeprotocols/DutyCycleMeasurement.h"
+#include "../scopeprotocols/DVIDecoder.h"
 #include "../scopeprotocols/EmphasisFilter.h"
 #include "../scopeprotocols/EmphasisRemovalFilter.h"
 #include "../scopeprotocols/EnvelopeFilter.h"
@@ -184,6 +185,7 @@
 #include "../scopeprotocols/SDDataDecoder.h"
 #include "../scopeprotocols/SetupHoldMeasurement.h"
 #include "../scopeprotocols/SpectrogramFilter.h"
+#include "../scopeprotocols/SPIDecoder.h"
 #include "../scopeprotocols/SquelchFilter.h"
 #include "../scopeprotocols/StepGeneratorFilter.h"
 #include "../scopeprotocols/SubtractFilter.h"
@@ -195,6 +197,7 @@
 #include "../scopeprotocols/ThermalDiodeFilter.h"
 #include "../scopeprotocols/ThresholdFilter.h"
 #include "../scopeprotocols/TIEMeasurement.h"
+#include "../scopeprotocols/TimeOutsideLevelMeasurement.h"
 #include "../scopeprotocols/TMDSDecoder.h"
 #include "../scopeprotocols/ToneGeneratorFilter.h"
 #include "../scopeprotocols/TopMeasurement.h"
@@ -209,6 +212,7 @@
 #include "../scopeprotocols/UndershootMeasurement.h"
 #include "../scopeprotocols/UpsampleFilter.h"
 #include "../scopeprotocols/VCDImportFilter.h"
+#include "../scopeprotocols/VerticalBathtub.h"
 #include "../scopeprotocols/Waterfall.h"
 #include "../scopeprotocols/WindowFilter.h"
 #include "../scopeprotocols/WAVImportFilter.h"
@@ -296,6 +300,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-dram-trfc", FindDataFile("icons/filters/filter-dram-trfc.png"));
 	m_texmgr.LoadTexture("filter-duty-cycle", FindDataFile("icons/filters/filter-duty-cycle.png"));
 	m_texmgr.LoadTexture("filter-divide", FindDataFile("icons/filters/filter-divide.png"));
+	m_texmgr.LoadTexture("filter-dvi", FindDataFile("icons/filters/filter-dvi.png"));
 	m_texmgr.LoadTexture("filter-emphasis", FindDataFile("icons/filters/filter-emphasis.png"));
 	m_texmgr.LoadTexture("filter-emphasis-removal", FindDataFile("icons/filters/filter-emphasis-removal.png"));
 	m_texmgr.LoadTexture("filter-envelope", FindDataFile("icons/filters/filter-envelope.png"));
@@ -385,6 +390,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-setup-hold", FindDataFile("icons/filters/filter-setup-hold.png"));
 	m_texmgr.LoadTexture("filter-sine", FindDataFile("icons/filters/filter-sine.png"));
 	m_texmgr.LoadTexture("filter-spectrogram", FindDataFile("icons/filters/filter-spectrogram.png"));
+	m_texmgr.LoadTexture("filter-spi", FindDataFile("icons/filters/filter-spi.png"));
 	m_texmgr.LoadTexture("filter-squelch", FindDataFile("icons/filters/filter-squelch.png"));
 	m_texmgr.LoadTexture("filter-step", FindDataFile("icons/filters/filter-step.png"));
 	m_texmgr.LoadTexture("filter-subtract", FindDataFile("icons/filters/filter-subtract.png"));
@@ -395,6 +401,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-tdr", FindDataFile("icons/filters/filter-tdr.png"));
 	m_texmgr.LoadTexture("filter-thermal-diode", FindDataFile("icons/filters/filter-thermal-diode.png"));
 	m_texmgr.LoadTexture("filter-threshold", FindDataFile("icons/filters/filter-threshold.png"));
+	m_texmgr.LoadTexture("filter-time-outside", FindDataFile("icons/filters/filter-time-outside-level.png"));
 	m_texmgr.LoadTexture("filter-top", FindDataFile("icons/filters/filter-top.png"));
 	m_texmgr.LoadTexture("filter-trc-import", FindDataFile("icons/filters/filter-trc-import.png"));
 	m_texmgr.LoadTexture("filter-trend", FindDataFile("icons/filters/filter-trend.png"));
@@ -405,6 +412,7 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-upsample", FindDataFile("icons/filters/filter-upsample.png"));
 	m_texmgr.LoadTexture("filter-undershoot", FindDataFile("icons/filters/filter-undershoot.png"));
 	m_texmgr.LoadTexture("filter-vcd-import", FindDataFile("icons/filters/filter-vcd-import.png"));
+	m_texmgr.LoadTexture("filter-vertical-bathtub", FindDataFile("icons/filters/filter-vertical-bathtub.png"));
 	m_texmgr.LoadTexture("filter-waterfall", FindDataFile("icons/filters/filter-waterfall.png"));
 	m_texmgr.LoadTexture("filter-wav-import", FindDataFile("icons/filters/filter-wav-import.png"));
 	m_texmgr.LoadTexture("filter-window", FindDataFile("icons/filters/filter-window.png"));
@@ -466,6 +474,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(DramRefreshActivateMeasurement))] 		= "filter-dram-trfc";
 	m_filterIconMap[type_index(typeid(DramRowColumnLatencyMeasurement))] 		= "filter-dram-trcd";
 	m_filterIconMap[type_index(typeid(DutyCycleMeasurement))] 					= "filter-duty-cycle";
+	m_filterIconMap[type_index(typeid(DVIDecoder))] 							= "filter-dvi";
 	m_filterIconMap[type_index(typeid(EnvelopeFilter))] 						= "filter-envelope";
 	m_filterIconMap[type_index(typeid(EmphasisFilter))] 						= "filter-emphasis";
 	m_filterIconMap[type_index(typeid(EmphasisRemovalFilter))] 					= "filter-emphasis-removal";
@@ -557,6 +566,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(SDCmdDecoder))] 							= "filter-sd-command";
 	m_filterIconMap[type_index(typeid(SDDataDecoder))] 							= "filter-sd-data";
 	m_filterIconMap[type_index(typeid(SetupHoldMeasurement))] 					= "filter-setup-hold";
+	m_filterIconMap[type_index(typeid(SPIDecoder))] 							= "filter-spi";
 	m_filterIconMap[type_index(typeid(SquelchFilter))] 							= "filter-squelch";
 	m_filterIconMap[type_index(typeid(StepGeneratorFilter))] 					= "filter-step";
 	m_filterIconMap[type_index(typeid(SubtractFilter))] 						= "filter-subtract";
@@ -568,6 +578,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(ThermalDiodeFilter))] 					= "filter-thermal-diode";
 	m_filterIconMap[type_index(typeid(ThresholdFilter))] 						= "filter-threshold";
 	m_filterIconMap[type_index(typeid(TIEMeasurement))] 						= "filter-clock-jitter-tie";
+	m_filterIconMap[type_index(typeid(TimeOutsideLevelMeasurement))] 			= "filter-time-outside";
 	m_filterIconMap[type_index(typeid(TMDSDecoder))] 							= "filter-8b10b-tmds";
 	m_filterIconMap[type_index(typeid(ToneGeneratorFilter))] 					= "filter-sine";
 	m_filterIconMap[type_index(typeid(TopMeasurement))] 						= "filter-top";
@@ -585,6 +596,7 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(UndershootMeasurement))] 					= "filter-undershoot";
 	m_filterIconMap[type_index(typeid(UpsampleFilter))] 						= "filter-upsample";
 	m_filterIconMap[type_index(typeid(VCDImportFilter))] 						= "filter-vcd-import";
+	m_filterIconMap[type_index(typeid(VerticalBathtub))] 						= "filter-vertical-bathtub";
 	m_filterIconMap[type_index(typeid(Waterfall))] 								= "filter-waterfall";
 	m_filterIconMap[type_index(typeid(WAVImportFilter))] 						= "filter-wav-import";
 	m_filterIconMap[type_index(typeid(WFMImportFilter))] 						= "filter-wfm-import";
