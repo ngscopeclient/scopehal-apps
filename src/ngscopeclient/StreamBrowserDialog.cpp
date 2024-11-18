@@ -481,8 +481,13 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
-	clicked |= ImGui::TextLink(setValue);
-	hovered |= ImGui::IsItemHovered();
+
+	float height = ImGui::GetFontSize();
+	ImVec4 color(1,1,1,1);
+    Render7SegmentValue(setValue, color,height,clicked,hovered);
+
+//	clicked |= ImGui::TextLink(setValue);
+//	hovered |= ImGui::IsItemHovered();
 	ImGui::PopID();
 	// Row 2
 	ImGui::TableNextRow();
@@ -511,8 +516,9 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
-	clicked |= ImGui::TextLink(measuredValue);
-	hovered |= ImGui::IsItemHovered();
+    Render7SegmentValue(measuredValue, color,height,clicked,hovered);
+//	clicked |= ImGui::TextLink(measuredValue);
+//	hovered |= ImGui::IsItemHovered();
 	ImGui::PopID();
 }
 
@@ -626,6 +632,88 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
+	ImGui::PopID();
+}
+
+/**
+   @brief Render DMM channel properties
+
+   @param dmm the DMM to render channel properties for
+   @param dmmchan the DMM channel to render properties for
+   @param clicked output param for clicked state
+   @param hovered output param for hovered state
+ */
+void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, MultimeterChannel* dmmchan, bool isMain, bool &clicked, bool &hovered)
+{
+	size_t streamIndex = isMain ? 0 : 1;
+	Unit unit = dmmchan->GetYAxisUnits(streamIndex);
+	float mainValue = dmmchan->GetScalarValue(streamIndex);
+	string valueText = unit.PrettyPrint(mainValue,dmm->GetMeterDigits());
+	ImVec4 color = ImGui::ColorConvertU32ToFloat4(ColorFromString(dmmchan->m_displaycolor));
+	string streamName = isMain ? "Main" : "Secondary";
+
+	ImGui::PushID(streamName.c_str());
+
+	// Get available operating and current modes
+	auto modemask = isMain ? dmm->GetMeasurementTypes() : dmm->GetSecondaryMeasurementTypes();
+	auto curMode = isMain ? dmm->GetMeterMode() : dmm->GetSecondaryMeterMode();
+
+	// Stream name
+	bool open = ImGui::TreeNodeEx(streamName.c_str(), (curMode > 0) ? ImGuiTreeNodeFlags_DefaultOpen : 0);
+	//ImGui::Selectable(isMain ? "Main" : "Secondary");
+
+	// Mode combo
+	if(modemask > 0)
+	{
+		// There a modes to show
+		startBadgeLine();
+		ImGui::PushID(streamName.c_str());
+		vector<std::string> modeNames;
+		vector<Multimeter::MeasurementTypes> modes;
+		int modeSelector = 0;
+		for(unsigned int i=0; i<32; i++)
+		{
+			auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
+			if(modemask & mode)
+			{
+				modes.push_back(mode);
+				modeNames.push_back(dmm->ModeToText(mode));
+				if(curMode == mode)
+					modeSelector = modes.size() - 1;
+			}
+		}
+
+		if(renderCombo(color, modeSelector, modeNames,true,3))
+		{
+			curMode = modes[modeSelector];
+			if(isMain)
+				dmm->SetMeterMode(curMode);
+			else
+				dmm->SetSecondaryMeterMode(curMode);
+		}
+		ImGui::PopID();
+	}
+
+	StreamDescriptor s(dmmchan, streamIndex);
+	if(ImGui::BeginDragDropSource())
+	{
+		if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
+			ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
+		else
+			ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
+
+		ImGui::TextUnformatted(s.GetName().c_str());
+		ImGui::EndDragDropSource();
+	}
+	else
+		DoItemHelp();
+
+	if(open)
+		ImGui::TreePop();
+
+	if(open)
+		Render7SegmentValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+
 	ImGui::PopID();
 }
 
@@ -811,11 +899,13 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
 	auto awg = std::dynamic_pointer_cast<FunctionGenerator>(instrument);
+	auto dmm = std::dynamic_pointer_cast<Multimeter>(instrument);
 
 	bool singleStream = channel->GetStreamCount() == 1;
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
 	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
+	auto dmmchan = dynamic_cast<MultimeterChannel *>(channel);
 	bool renderProps = false;
 	bool isDigital = false;
 	if (scopechan)
@@ -978,6 +1068,26 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			}
 			if (hovered)
 				m_parent->AddStatusHelp("mouse_lmb", "Open Function Generator properties");
+			ImGui::EndChild();
+		}
+		else if(dmm && dmmchan)
+		{
+			ImGui::BeginChild("dmm_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+			// Always 2 streams for dmm channel => render properties on channel node
+			bool clicked = false;
+			bool hovered = false;
+			// Main measurement
+			renderDmmProperties(dmm,dmmchan,true,clicked,hovered);
+			// Secondary measurement
+			renderDmmProperties(dmm,dmmchan,false,clicked,hovered);
+			if (clicked)
+			{
+				m_parent->ShowInstrumentProperties(dmm);
+			}
+			if (hovered)
+				m_parent->AddStatusHelp("mouse_lmb", "Open Multimeter properties");
+
 			ImGui::EndChild();
 		}
 		else
@@ -1196,7 +1306,6 @@ bool StreamBrowserDialog::DoRender()
 		}
 		ImGui::TreePop();
 	}
-
 	return true;
 }
 

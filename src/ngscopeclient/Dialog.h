@@ -96,6 +96,11 @@ protected:
 	void RenderErrorPopup();
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
+	void Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 size, ImVec2 position, float thikness, ImU32 colorOn, ImU32 colorOff);
+	void Render7SegmentValue(const std::string& value, ImVec4 color, float digitHeight);
+	void Render7SegmentValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
+
+
 	bool m_open;
 	std::string m_id;
 	std::string m_title;
