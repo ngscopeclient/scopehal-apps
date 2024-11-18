@@ -425,7 +425,16 @@ bool Dialog::UnitInputWithExplicitApply(
 	return changed;
 }
 
-
+/**
+  @brief Segment on/off state for each of the 10 digits + "L" (needed for OL / Overload)
+	0b01000000 : Top h segment
+	0b00100000 : Top right v seglent
+	0b00010000 : Bottom right v segment
+	0b00001000 : Bottom h segment
+	0b00000100 : Bottom left v segment
+	0b00000010 : Top left v segment
+	0b00000001 : Center h segment
+ */
 static char SEGMENTS[] = 
 {
 	0x7E, // 0
@@ -440,6 +449,7 @@ static char SEGMENTS[] =
 	0x7B, // 9
 	0x0E, // L
 };
+
 /**
    @brief Render a single digit in 7 segment display style
 
@@ -518,10 +528,10 @@ void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 siz
 	}
 }
 
-// @brief ratio between unit font size and digit size and digit size 
+// @brief ratio between unit font size and digit size
 #define UNIT_SCALE 0.80f
 
-// @brief ratio between digit widt and height
+// @brief ratio between digit width and height
 #define DIGIT_WIDTH_RATIO 0.50f
 
 /**
