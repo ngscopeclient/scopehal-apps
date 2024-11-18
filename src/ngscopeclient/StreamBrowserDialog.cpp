@@ -279,12 +279,18 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values,
 
    @param color the color of the toggle button
    @param curValue the value of the toggle button
+   @param valueOff label for value off (optionnal, defaults to "OFF")
+   @param valueOn label for value on (optionnal, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
    @return the selected value for the toggle button
  */
-bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
+bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
 {
 	int selection = (int)curValue;
-	renderCombo(color, &selection, "OFF", "ON", NULL);
+	std::vector<string> values;
+	values.push_back(string(valueOff));
+	values.push_back(string(valueOn));
+	renderCombo(color, selection, values, false, cropTextTo);
 	return (selection == 1);
 }
 
@@ -292,13 +298,16 @@ bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
    @brief Render an on/off toggle button combo
 
    @param curValue the value of the toggle button
+   @param valueOff label for value off (optionnal, defaults to "OFF")
+   @param valueOn label for value on (optionnal, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
    @return the selected value for the toggle button
  */
-bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
+bool StreamBrowserDialog::renderOnOffToggle(bool curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4((curValue ? prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") : prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggle(color, curValue);
+	return renderToggle(color, curValue, valueOff, valueOn, cropTextTo);
 }
 
 /**
@@ -483,7 +492,7 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
 
 	float height = ImGui::GetFontSize();
-	ImVec4 color(1,1,1,1);
+	ImVec4 color(0.7f,1,1,1);
     Render7SegmentValue(setValue, color,height,clicked,hovered);
 
 //	clicked |= ImGui::TextLink(setValue);
@@ -660,39 +669,45 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 
 	// Stream name
 	bool open = ImGui::TreeNodeEx(streamName.c_str(), (curMode > 0) ? ImGuiTreeNodeFlags_DefaultOpen : 0);
-	//ImGui::Selectable(isMain ? "Main" : "Secondary");
 
 	// Mode combo
-	if(modemask > 0)
+	startBadgeLine();
+	ImGui::PushID(streamName.c_str());
+	vector<std::string> modeNames;
+	vector<Multimeter::MeasurementTypes> modes;
+	if(!isMain)
 	{
-		// There a modes to show
-		startBadgeLine();
-		ImGui::PushID(streamName.c_str());
-		vector<std::string> modeNames;
-		vector<Multimeter::MeasurementTypes> modes;
-		int modeSelector = 0;
-		for(unsigned int i=0; i<32; i++)
-		{
-			auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
-			if(modemask & mode)
-			{
-				modes.push_back(mode);
-				modeNames.push_back(dmm->ModeToText(mode));
-				if(curMode == mode)
-					modeSelector = modes.size() - 1;
-			}
-		}
-
-		if(renderCombo(color, modeSelector, modeNames,true,3))
-		{
-			curMode = modes[modeSelector];
-			if(isMain)
-				dmm->SetMeterMode(curMode);
-			else
-				dmm->SetSecondaryMeterMode(curMode);
-		}
-		ImGui::PopID();
+		// Add None for secondary measurement to be able to disable it
+		modeNames.push_back("None");
+		modes.push_back(Multimeter::MeasurementTypes::NONE);
 	}
+	int modeSelector = 0;
+	for(unsigned int i=0; i<32; i++)
+	{
+		auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
+		if(modemask & mode)
+		{
+			modes.push_back(mode);
+			modeNames.push_back(dmm->ModeToText(mode));
+			if(curMode == mode)
+				modeSelector = modes.size() - 1;
+		}
+	}
+
+	if(renderCombo(color, modeSelector, modeNames,true,3))
+	{
+		curMode = modes[modeSelector];
+		if(isMain)
+			dmm->SetMeterMode(curMode);
+		else
+		{
+			dmm->SetSecondaryMeterMode(curMode);
+			// Open or close tree node according the secondary measure mode
+		    ImGuiContext& g = *GImGui;
+			ImGui::TreeNodeSetOpen(g.LastItemData.ID,(curMode > 0));
+		}
+	}
+	ImGui::PopID();
 
 	StreamDescriptor s(dmmchan, streamIndex);
 	if(ImGui::BeginDragDropSource())
@@ -712,7 +727,20 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 		ImGui::TreePop();
 
 	if(open)
+	{
 		Render7SegmentValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+		if(isMain)
+		{
+			ImGui::PushID("autorange");
+			// For main, also show the autorange combo
+			startBadgeLine();
+			bool autorange = dmm->GetMeterAutoRange();
+			bool result = renderOnOffToggle(autorange,"Manual Range","Autorange",3);
+			if(result != autorange)
+				dmm->SetMeterAutoRange(result);
+			ImGui::PopID();
+		}
+	}
 
 	ImGui::PopID();
 }

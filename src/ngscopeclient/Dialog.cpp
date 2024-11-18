@@ -426,7 +426,20 @@ bool Dialog::UnitInputWithExplicitApply(
 }
 
 
-static char SEGMENTS[] = {0x7E, 0x30, 0x6D, 0x79, 0x33, 0x5B, 0x5F, 0x70, 0x7F, 0x7B};
+static char SEGMENTS[] = 
+{
+	0x7E, // 0
+	0x30, // 1
+	0x6D, // 2
+	0x79, // 3
+	0x33, // 4
+	0x5B, // 5
+	0x5F, // 6
+	0x70, // 7
+	0x7F, // 8
+	0x7B, // 9
+	0x0E, // L
+};
 /**
    @brief Render a single digit in 7 segment display style
 
@@ -441,6 +454,8 @@ static char SEGMENTS[] = {0x7E, 0x30, 0x6D, 0x79, 0x33, 0x5B, 0x5F, 0x70, 0x7F, 
 void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 size, ImVec2 position, float thickness, ImU32 colorOn, ImU32 colorOff)
 {
 	// Inspired by https://github.com/ocornut/imgui/issues/3606#issuecomment-736855952
+	if(digit > 10)
+		digit = 10; // 10 is for L of OL (Overload)
 	size.y += thickness;
 	ImVec2 halfSize(size.x/2,size.y/2);
 	ImVec2 centerPosition(position.x+halfSize.x,position.y+halfSize.y);
@@ -552,53 +567,63 @@ void Dialog::Render7SegmentValue(const std::string& value, ImVec4 color, float d
 	vector<uint8_t> fractPart;
 	string unit;
 
-	// Iterate on each char of the value string
-	for(const char c : value) 
+	if(value == UNIT_OVERLOAD_LABEL)
 	{
-		if(c >= '0' && c <='9')
-		{
-			// This is a numeric digit
-			if(inIntPart)
-				intPart.push_back((uint8_t)(c-'0'));
-			else if(inFractPart)
-				fractPart.push_back((uint8_t)(c-'0'));
-			else
-				unit += c;
-		}
-		else if(c == '.' || c == std::use_facet<std::numpunct<char> >(std::locale()).decimal_point() || c == ',')
-		{
-			// This is the decimal separator
-			if(inIntPart)
-			{
-				inFractPart = true;
-				inIntPart = false;
-			}
-			else
-				LogWarning("Unexpected decimal separator '%c' in value '%s'.\n",c,value.c_str());
-		}
-		else if(isspace(c) || c == std::use_facet< std::numpunct<char> >(std::locale()).thousands_sep())
-		{
-			// We ingore spaces (except in unit part)
-			if(inIntPart || inFractPart) {} // Ignore
-			else
-				unit += c;
-		}
-		else // Anything else
-		{
-			// This is the unit
-			inFractPart = false;
-			inIntPart = false;
-			unit += c;
-		}
+		// Overload
+		intPart.push_back(0);
+		intPart.push_back(10); // 10 is for L
+		unit = "Inf.";
 	}
-	// Trim the unit string
-	unit = Trim(unit);
-
-	// Fill fractional part with 2 zeros if it's empty
-	if(fractPart.empty())
+	else
 	{
-		fractPart.push_back(0);
-		fractPart.push_back(0);
+		// Iterate on each char of the value string
+		for(const char c : value) 
+		{
+			if(c >= '0' && c <='9')
+			{
+				// This is a numeric digit
+				if(inIntPart)
+					intPart.push_back((uint8_t)(c-'0'));
+				else if(inFractPart)
+					fractPart.push_back((uint8_t)(c-'0'));
+				else
+					unit += c;
+			}
+			else if(c == '.' || c == std::use_facet<std::numpunct<char> >(std::locale()).decimal_point() || c == ',')
+			{
+				// This is the decimal separator
+				if(inIntPart)
+				{
+					inFractPart = true;
+					inIntPart = false;
+				}
+				else
+					LogWarning("Unexpected decimal separator '%c' in value '%s'.\n",c,value.c_str());
+			}
+			else if(isspace(c) || c == std::use_facet< std::numpunct<char> >(std::locale()).thousands_sep())
+			{
+				// We ingore spaces (except in unit part)
+				if(inIntPart || inFractPart) {} // Ignore
+				else
+					unit += c;
+			}
+			else // Anything else
+			{
+				// This is the unit
+				inFractPart = false;
+				inIntPart = false;
+				unit += c;
+			}
+		}
+		// Trim the unit string
+		unit = Trim(unit);
+
+		// Fill fractional part with 2 zeros if it's empty
+		if(fractPart.empty())
+		{
+			fractPart.push_back(0);
+			fractPart.push_back(0);
+		}
 	}
 
 	// Segment thickness

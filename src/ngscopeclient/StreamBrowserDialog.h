@@ -74,8 +74,8 @@ protected:
 	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
 	bool renderCombo(ImVec4 color,int &selected, const std::vector<string> &values, bool useColorForText = false, uint8_t cropTextTo = 0);
 	bool renderCombo(ImVec4 color,int* selected, ... /* values, ending in NULL */);
-	bool renderToggle(ImVec4 color, bool curValue);
-	bool renderOnOffToggle(bool curValue);
+	bool renderToggle(ImVec4 color, bool curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
+	bool renderOnOffToggle(bool curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered);
