@@ -492,11 +492,15 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
 
 	float height = ImGui::GetFontSize();
-	ImVec4 color(0.7f,1,1,1);
-    Render7SegmentValue(setValue, color,height,clicked,hovered);
+	ImVec4 color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_7_segment_color"));
 
-//	clicked |= ImGui::TextLink(setValue);
-//	hovered |= ImGui::IsItemHovered();
+	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
+	    Render7SegmentValue(setValue,color,height,clicked,hovered);
+	else
+	{
+		clicked |= ImGui::TextLink(setValue);
+		hovered |= ImGui::IsItemHovered();
+	}
 	ImGui::PopID();
 	// Row 2
 	ImGui::TableNextRow();
@@ -525,9 +529,14 @@ void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChan
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
-    Render7SegmentValue(measuredValue, color,height,clicked,hovered);
-//	clicked |= ImGui::TextLink(measuredValue);
-//	hovered |= ImGui::IsItemHovered();
+
+	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
+	    Render7SegmentValue(measuredValue, color,height,clicked,hovered);
+	else
+	{
+		clicked |= ImGui::TextLink(measuredValue);
+		hovered |= ImGui::IsItemHovered();
+	}
 	ImGui::PopID();
 }
 
@@ -654,6 +663,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
  */
 void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, MultimeterChannel* dmmchan, bool isMain, bool &clicked, bool &hovered)
 {
+	auto& prefs = m_session.GetPreferences();
 	size_t streamIndex = isMain ? 0 : 1;
 	Unit unit = dmmchan->GetYAxisUnits(streamIndex);
 	float mainValue = dmmchan->GetScalarValue(streamIndex);
@@ -728,7 +738,13 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 
 	if(open)
 	{
-		Render7SegmentValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+		if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
+			Render7SegmentValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+		else
+		{
+			clicked |= ImGui::TextLink(valueText.c_str());
+			hovered |= ImGui::IsItemHovered();
+		}
 		if(isMain)
 		{
 			ImGui::PushID("autorange");
