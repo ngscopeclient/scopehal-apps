@@ -52,7 +52,8 @@ Texture::Texture(
 	int width,
 	int height,
 	TextureManager* mgr,
-	const std::string& name
+	const std::string& name,
+	bool upsampleLinear
 	)
 	: m_image(device, imageInfo)
 {
@@ -125,7 +126,10 @@ Texture::Texture(
 	m_view = make_unique<vk::raii::ImageView>(*g_vkComputeDevice, vinfo);
 
 	m_texture = reinterpret_cast<intptr_t>(
-		ImGui_ImplVulkan_AddTexture(**mgr->GetSampler(), **m_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+		ImGui_ImplVulkan_AddTexture(
+			upsampleLinear ? **mgr->GetSampler() : **mgr->GetNearestSampler(),
+			**m_view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
 
 	SetName(name);
 }
@@ -293,6 +297,25 @@ TextureManager::TextureManager(shared_ptr<QueueHandle> queue)
 		1000
 	);
 	m_sampler = make_unique<vk::raii::Sampler>(*g_vkComputeDevice, sinfo);
+
+	//Second sampler with nearest neighbor upsampling
+	vk::SamplerCreateInfo sinfoNearest(
+		{},
+		vk::Filter::eNearest,
+		vk::Filter::eNearest,
+		vk::SamplerMipmapMode::eLinear,
+		vk::SamplerAddressMode::eRepeat,
+		vk::SamplerAddressMode::eRepeat,
+		vk::SamplerAddressMode::eRepeat,
+		{},
+		{},
+		1.0,
+		{},
+		vk::CompareOp::eNever,
+		-1000,
+		1000
+	);
+	m_nearestSampler = make_unique<vk::raii::Sampler>(*g_vkComputeDevice, sinfoNearest);
 
 	//Initialize command pool/buffer
 	vk::CommandPoolCreateInfo poolInfo(

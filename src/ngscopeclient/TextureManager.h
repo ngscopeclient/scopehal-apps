@@ -52,7 +52,8 @@ public:
 		int width,
 		int height,
 		TextureManager* mgr,
-		const std::string& name = ""
+		const std::string& name = "",
+		bool upsampleLinear = true		//false for nearest neighbor upsampling instead
 		);
 
 	Texture(
@@ -124,6 +125,9 @@ public:
 	std::unique_ptr<vk::raii::Sampler>& GetSampler()
 	{ return m_sampler; }
 
+	std::unique_ptr<vk::raii::Sampler>& GetNearestSampler()
+	{ return m_nearestSampler; }
+
 	void clear()
 	{ m_textures.clear(); }
 
@@ -141,6 +145,8 @@ protected:
 
 	///@brief Sampler for textures
 	std::unique_ptr<vk::raii::Sampler> m_sampler;
+
+	std::unique_ptr<vk::raii::Sampler> m_nearestSampler;
 
 	std::shared_ptr<QueueHandle> m_queue;
 	std::unique_ptr<vk::raii::CommandPool> m_cmdPool;
