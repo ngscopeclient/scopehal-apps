@@ -108,10 +108,11 @@ bool ProtocolAnalyzerDialog::DoRender()
 	//Default is timestamp plus all headers, add optional other channels as needed
 	int ncols = 1 + cols.size();
 	int datacol = 0;
+	int imgcol = 0;
 	if(m_filter->GetShowDataColumn())
 		datacol = (ncols ++);
 	if(m_filter->GetShowImageColumn())
-		ncols ++;
+		imgcol = (ncols ++);
 	//TODO: integrate length natively vs having to make the filter calculate it??
 
 	auto dataFont = m_parent.GetFontPref("Appearance.Protocol Analyzer.data_font");
@@ -353,6 +354,18 @@ bool ProtocolAnalyzerDialog::DoRender()
 							DoDataColumn(pack, dataFont, rows, i);
 						}
 					}
+
+					if(m_filter->GetShowImageColumn())
+					{
+						if(ImGui::TableSetColumnIndex(imgcol))
+						{
+							if(firstRow)
+								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+
+							DoImageColumn(pack);
+						}
+					}
+
 				}
 
 				//Marker name
@@ -362,6 +375,17 @@ bool ProtocolAnalyzerDialog::DoRender()
 					if(m_filter->GetShowDataColumn())
 					{
 						if(ImGui::TableSetColumnIndex(datacol))
+						{
+							if(firstRow)
+								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+							ImGui::TextUnformatted(row.m_marker.m_name.c_str());
+						}
+					}
+
+					//if no data column, use first column whatever it is
+					else
+					{
+						if(ImGui::TableSetColumnIndex(1))
 						{
 							if(firstRow)
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
@@ -422,6 +446,14 @@ bool ProtocolAnalyzerDialog::DoRender()
 	}
 
 	return true;
+}
+
+/**
+	@brief Handles the "image" column for packets
+ */
+void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack)
+{
+	ImGui::TextUnformatted("Image TODO");
 }
 
 /**
