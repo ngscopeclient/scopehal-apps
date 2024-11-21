@@ -111,7 +111,7 @@ protected:
 	bool m_needToScrollToSelectedPacket;
 
 	void DoDataColumn(Packet* pack, ImFont* dataFont, std::vector<RowData>& rows, size_t nrow);
-	void DoImageColumn(Packet* pack);
+	void DoImageColumn(Packet* pack, std::vector<RowData>& rows, size_t nrow);
 
 	///@brief True the first time DoDataColumn() is called in a given frame
 	bool m_firstDataBlockOfFrame;

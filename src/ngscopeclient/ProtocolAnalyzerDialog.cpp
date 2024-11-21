@@ -36,6 +36,7 @@
 #include "ngscopeclient.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "MainWindow.h"
+#include "../../lib/scopeprotocols/RGBLEDDecoder.h"
 
 using namespace std;
 
@@ -362,7 +363,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 							if(firstRow)
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
 
-							DoImageColumn(pack);
+							DoImageColumn(pack, rows, i);
 						}
 					}
 
@@ -451,9 +452,106 @@ bool ProtocolAnalyzerDialog::DoRender()
 /**
 	@brief Handles the "image" column for packets
  */
-void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack)
+void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, size_t nrow)
 {
-	ImGui::TextUnformatted("Image TODO");
+	//TODO: get the actual texture
+	auto pos = ImGui::GetCursorScreenPos();
+	auto list = ImGui::GetWindowDrawList();
+	auto size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeight());
+
+	//auto tex = m_parent.GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm");
+
+	if(!rows[nrow].m_texture)
+	{
+		size_t width = pack->m_data.size() / 3;
+
+		LogTrace("filling texture with 1x%zu pixels of scanline data\n", width);
+		LogIndenter li;
+
+		//TODO: this and TextureManager::LoadTexture have a lot in common
+		//we should refactor into common code
+		VkDeviceSize devsize = width * 4;
+
+		//Allocate temporary staging buffer
+		vk::BufferCreateInfo bufinfo({}, devsize, vk::BufferUsageFlagBits::eTransferSrc);
+		vk::raii::Buffer stagingBuf(*g_vkComputeDevice, bufinfo);
+
+		//Figure out memory requirements of the buffer and decide what physical memory type to use
+		//For now, default to using the first type in the mask that is host visible
+		auto req = stagingBuf.getMemoryRequirements();
+		auto memProperties = g_vkComputePhysicalDevice->getMemoryProperties();
+		uint32_t memType = 0;
+		for(uint32_t i=0; i<32; i++)
+		{
+			//Skip anything not host visible since we have to be able to write to it
+			if(!(memProperties.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible))
+				continue;
+
+			//Stop if buffer is compatible
+			if(req.memoryTypeBits & (1 << i) )
+			{
+				memType = i;
+				break;
+			}
+		}
+		LogTrace("Using memory type %u for staging buffer\n", memType);
+
+		//Allocate the memory and bind to the buffer
+		vk::MemoryAllocateInfo minfo(req.size, memType);
+		vk::raii::DeviceMemory physMem(*g_vkComputeDevice, minfo);
+		auto mappedPtr = reinterpret_cast<uint8_t*>(physMem.mapMemory(0, req.size));
+		stagingBuf.bindMemory(*physMem, 0);
+
+		//Special case: RGB LED decodes can have scaling if not running at full brightness
+		float scale = 1;
+		auto rgbf = dynamic_cast<RGBLEDDecoder*>(m_filter);
+		if(rgbf)
+			scale = rgbf->GetScale();
+
+		//Fill the mapped buffer with image data
+		for(size_t i=0; i<width; i++)
+		{
+			mappedPtr[i*4] 		= min(pack->m_data[i*3] * scale, 255.0f);
+			mappedPtr[i*4 + 1]	= min(pack->m_data[i*3 + 1] * scale, 255.0f);
+			mappedPtr[i*4 + 2]	= min(pack->m_data[i*3 + 2] * scale, 255.0f);
+			mappedPtr[i*4 + 3]	= 255;
+		}
+		physMem.unmapMemory();
+
+		//NOTE: Assumes the render queue is also capable of transfers (see QueueManager)
+		vk::ImageCreateInfo imageInfo(
+			{},
+			vk::ImageType::e2D,
+			vk::Format::eR8G8B8A8Unorm,
+			vk::Extent3D(width, 1, 1),
+			1,
+			1,
+			VULKAN_HPP_NAMESPACE::SampleCountFlagBits::e1,
+			VULKAN_HPP_NAMESPACE::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+			vk::SharingMode::eExclusive,
+			{},
+			vk::ImageLayout::eUndefined
+			);
+
+		//Make the Vulkan texture for it
+		rows[nrow].m_texture = make_shared<Texture>(
+			*g_vkComputeDevice,
+			imageInfo,
+			stagingBuf,
+			width,
+			1,
+			m_parent.GetTextureManager(),
+			"ProtocolAnalyzerDialog.scanline",
+			false);
+	}
+
+	//Actually draw it
+	auto tex = rows[nrow].m_texture;
+	list->AddImage(
+		tex->GetTexture(),
+		pos,
+		pos + size);
 }
 
 /**

@@ -37,6 +37,7 @@
 
 #include "../../lib/scopehal/PacketDecoder.h"
 #include "Marker.h"
+#include "TextureManager.h"
 
 class Session;
 
@@ -84,6 +85,9 @@ public:
 
 	///@brief The marker in this row (ignored if m_packet is valid)
 	Marker m_marker;
+
+	///@brief Texture containing the scanline image for this row (only valid if m_packet is a VideoScanlinePacket)
+	std::shared_ptr<Texture> m_texture;
 };
 
 class ProtocolDisplayFilter;
