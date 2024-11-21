@@ -548,6 +548,7 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
 
 	//Actually draw it
 	auto tex = rows[nrow].m_texture;
+	m_parent.AddTextureUsedThisFrame(tex);
 	list->AddImage(
 		tex->GetTexture(),
 		pos,
