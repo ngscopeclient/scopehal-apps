@@ -59,7 +59,8 @@ jobs:
           xzip \
           catch2 \
           mesa-vulkan-drivers \
-          libhidapi-dev
+          libhidapi-dev \
+          ccache
 
     - name: Load Vulkan SDK Repo (Ubuntu 22.04)
       run: |
