@@ -306,8 +306,14 @@ bool ProtocolAnalyzerDialog::DoRender()
 				bool rowIsSelected = pack && (m_selectedPacket == pack);
 				TimePoint packtime(row.m_stamp.GetSec(), row.m_stamp.GetFs() + offset);
 
+				string selid;
+				if(hasChildren)
+					selid = packtime.PrettyPrint() + "###" + packtime.PrettyPrint() + "_parent";
+				else
+					selid = packtime.PrettyPrint();
+
 				if(ImGui::Selectable(
-					packtime.PrettyPrint().c_str(),
+					selid.c_str(),
 					rowIsSelected,
 					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
 					ImVec2(0, 0)))
