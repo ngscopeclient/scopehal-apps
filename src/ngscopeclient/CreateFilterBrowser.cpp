@@ -54,9 +54,6 @@ CreateFilterBrowser::CreateFilterBrowser(Session& session, MainWindow* parent)
 	m_categoryNames.push_back("Bus");
 	m_categoryValues.push_back(Filter::CAT_BUS);
 
-	m_categoryNames.push_back("Bus");
-	m_categoryValues.push_back(Filter::CAT_BUS);
-
 	m_categoryNames.push_back("Clocking");
 	m_categoryValues.push_back(Filter::CAT_CLOCK);
 
