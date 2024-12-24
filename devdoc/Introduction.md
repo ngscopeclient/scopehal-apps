@@ -27,6 +27,9 @@ End user documentation is located at https://www.ngscopeclient.org/manual/conten
 \defgroup bertdrivers BERT drivers
 \ingroup drivers
 
+\defgroup funcdrivers Function generator drivers
+\ingroup drivers
+
 \defgroup miscdrivers Miscellaneous instrument drivers
 \ingroup drivers
 

@@ -161,8 +161,8 @@ void Session::FlushConfigCache()
 	LogIndenter li;
 
 	lock_guard<mutex> lock(m_scopeMutex);
-	for(auto scope : m_oscilloscopes)
-		scope->FlushConfigCache();
+	for(auto it : m_instrumentStates)
+		it.first->FlushConfigCache();
 }
 
 /**
@@ -2903,7 +2903,7 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	if(generator && (types & Instrument::INST_FUNCTION) )
 	{
 		auto state = make_shared<FunctionGeneratorState>(generator);
-		
+
 		m_awgs[generator] = state;
 		args.awgstate = state;
 	}
