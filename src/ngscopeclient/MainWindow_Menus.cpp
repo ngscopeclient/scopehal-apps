@@ -369,15 +369,17 @@ void MainWindow::AddChannelsMenu()
 {
 	if(ImGui::BeginMenu("Channels"))
 	{
-		for(auto scope : m_session.GetScopes())
+		auto insts = m_session.GetInstruments();
+		for(auto inst : insts)
 		{
-			if(ImGui::BeginMenu(scope->m_nickname.c_str()))
+			if(ImGui::BeginMenu(inst->m_nickname.c_str()))
 			{
-				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				for(size_t i=0; i<inst->GetChannelCount(); i++)
 				{
-					auto chan = scope->GetOscilloscopeChannel(i);
+					auto chan = dynamic_cast<OscilloscopeChannel*>(inst->GetChannel(i));
 					if(!chan)
 						continue;
+					auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 					for(size_t j=0; j<chan->GetStreamCount(); j++)
 					{
 						//skip trigger channels, those can't be displayed
@@ -385,29 +387,9 @@ void MainWindow::AddChannelsMenu()
 							continue;
 
 						//Skip channels we can't enable
-						if(!scope->CanEnableChannel(i))
+						if(scope && !scope->CanEnableChannel(i))
 							continue;
 
-						StreamDescriptor stream(chan, j);
-						if(ImGui::MenuItem(stream.GetName().c_str()))
-							FindAreaForStream(nullptr, stream);
-					}
-				}
-
-				ImGui::EndMenu();
-			}
-		}
-
-		//BERTs have channels as well
-		for(auto bert : m_session.GetBERTs())
-		{
-			if(ImGui::BeginMenu(bert->m_nickname.c_str()))
-			{
-				for(size_t i=0; i<bert->GetChannelCount(); i++)
-				{
-					auto chan = bert->GetChannel(i);
-					for(size_t j=0; j<chan->GetStreamCount(); j++)
-					{
 						StreamDescriptor stream(chan, j);
 						if(ImGui::MenuItem(stream.GetName().c_str()))
 							FindAreaForStream(nullptr, stream);
