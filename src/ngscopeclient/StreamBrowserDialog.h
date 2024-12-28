@@ -40,9 +40,26 @@
 #include "Dialog.h"
 #include "Session.h"
 
-using namespace std;
-
 class MainWindow;
+
+class StreamBrowserTimebaseInfo
+{
+public:
+	StreamBrowserTimebaseInfo(std::shared_ptr<Oscilloscope> scope);
+
+	bool m_interleaving;
+
+	//Sample rate
+	std::vector<uint64_t> m_rates;
+	std::vector<std::string> m_rateNames;
+	int m_rate;
+
+	//Memory depth
+	std::vector<uint64_t> m_depths;
+	std::vector<std::string> m_depthNames;
+	int m_depth;
+
+};
 
 class StreamBrowserDialog : public Dialog
 {
@@ -56,7 +73,7 @@ protected:
 	/**
 	   @brief State of badges used in intrument node rendering
 	 */
-	enum InstrumentBadge 
+	enum InstrumentBadge
 	{
 		BADGE_ARMED,
 		BADGE_STOPPED,
@@ -66,28 +83,45 @@ protected:
 	};
 
 	void DoItemHelp();
-	
+
 	// Rendeding of StreamBorwserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
 	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
 	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
-	bool renderCombo(ImVec4 color,int &selected, const std::vector<string> &values, bool useColorForText = false, uint8_t cropTextTo = 0);
-	bool renderCombo(ImVec4 color,int* selected, ... /* values, ending in NULL */);
-	bool renderToggle(ImVec4 color, bool curValue);
-	bool renderOnOffToggle(bool curValue);
+	bool renderCombo(
+		const char* label,
+		bool alignRight,
+		ImVec4 color,
+		int &selected,
+		const std::vector<std::string>& values,
+		bool useColorForText = false,
+		uint8_t cropTextTo = 0);
+	bool renderCombo(
+		const char* label,
+		bool alignRight,
+		ImVec4 color,
+		int* selected,
+		...);
+	bool renderToggle(
+		const char* label,
+		bool alignRight,
+		ImVec4 color,
+		bool curValue);
+	bool renderOnOffToggle(const char* label, bool alignRight, bool curValue);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered);
 
 	// Rendering of an instrument node
-	void renderInstrumentNode(shared_ptr<Instrument> instrument);
+	void renderInstrumentNode(std::shared_ptr<Instrument> instrument);
+	void DoTimebaseSettings(std::shared_ptr<Oscilloscope> scope);
 
 	// Rendering of a channel node
-	void renderChannelNode(shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
+	void renderChannelNode(std::shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
 
 	// Rendering of a stream node
-	void renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast);
+	void renderStreamNode(std::shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast);
 
 	// Rendering of an Filter node
 	void renderFilterNode(Filter* filter);
@@ -95,13 +129,16 @@ protected:
 	Session& m_session;
 	MainWindow* m_parent;
 
-	// @brief Positions for badge display
+	///@brief Positions for badge display
 	float m_badgeXMin; // left edge over which we must not overrun
 	float m_badgeXCur; // right edge to render the next badge against
 
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
-	// @brief Store the last state of an intrument badge (used for badge state latching)
-	std::map<std::shared_ptr<Instrument>, pair<double, InstrumentBadge>> m_instrumentLastBadge;
+	///@brief Store the last state of an intrument badge (used for badge state latching)
+	std::map<std::shared_ptr<Instrument>, std::pair<double, InstrumentBadge>> m_instrumentLastBadge;
+
+	///@brief Map of instruments to timebase settings
+	std::map<std::shared_ptr<Instrument>, std::shared_ptr<StreamBrowserTimebaseInfo> > m_timebaseConfig;
 };
 
 #endif

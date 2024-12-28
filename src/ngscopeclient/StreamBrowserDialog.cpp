@@ -37,6 +37,82 @@
 #include "StreamBrowserDialog.h"
 #include "MainWindow.h"
 
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// StreamBrowserTimebaseInfo
+
+StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> scope)
+{
+	//Interleaving flag
+	m_interleaving = scope->IsInterleaving();
+
+	//Sample rate
+	Unit srate(Unit::UNIT_SAMPLERATE);
+	auto rate = scope->GetSampleRate();
+	if(m_interleaving)
+		m_rates = scope->GetSampleRatesInterleaved();
+	else
+		m_rates = scope->GetSampleRatesNonInterleaved();
+
+	m_rate = 0;
+	for(size_t i=0; i<m_rates.size(); i++)
+	{
+		m_rateNames.push_back(srate.PrettyPrint(m_rates[i]));
+		if(m_rates[i] == rate)
+			m_rate = i;
+	}
+
+	//Sample depth
+	Unit sdepth(Unit::UNIT_SAMPLEDEPTH);
+	auto depth = scope->GetSampleDepth();
+	if(m_interleaving)
+		m_depths = scope->GetSampleDepthsInterleaved();
+	else
+		m_depths = scope->GetSampleDepthsNonInterleaved();
+
+	m_depth = 0;
+	for(size_t i=0; i<m_depths.size(); i++)
+	{
+		m_depthNames.push_back(sdepth.PrettyPrint(m_depths[i]));
+		if(m_depths[i] == depth)
+			m_depth = i;
+	}
+
+	//TODO: frequency domain controls
+
+	/*
+	Unit hz(Unit::UNIT_HZ);
+
+	m_rbw = scope->GetResolutionBandwidth();
+	m_rbwText = hz.PrettyPrint(m_rbw);
+
+	m_span = scope->GetSpan();
+	m_spanText = hz.PrettyPrint(m_span);
+
+	//TODO: some instruments have per channel center freq, how to handle this?
+	m_center = scope->GetCenterFrequency(0);
+	m_centerText = hz.PrettyPrint(m_center);
+
+	m_start = m_center - m_span/2;
+	m_startText = hz.PrettyPrint(m_start);
+	m_end = m_center + m_span/2;
+	m_endText = hz.PrettyPrint(m_end);
+
+	m_samplingMode = scope->GetSamplingMode();
+
+	auto spec = dynamic_pointer_cast<SCPISpectrometer>(scope);
+	if(spec)
+	{
+		Unit fs(Unit::UNIT_FS);
+		m_integrationTime = spec->GetIntegrationTime();
+		m_integrationText = fs.PrettyPrint(m_integrationTime);
+	}
+	else
+		m_integrationTime = 0;
+	*/
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -171,47 +247,60 @@ bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 }
 
 /**
-   @brief Render a combo box with provded color and values
+	@brief Render a combo box with provided color and values
 
-   @param color the color of the combo box
-   @param selected the selected value index (in/out)
-   @param values the combo box values
-   @param useColorForText if true, use the provided color for text (and a darker version of it for background color)
-   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
-   @return true true if the selected value of the combo has been changed
+	@param label	Label for the combo box
+	@param color the color of the combo box
+	@param selected the selected value index (in/out)
+	@param values the combo box values
+	@param useColorForText if true, use the provided color for text (and a darker version of it for background color)
+	@param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
+	@return true true if the selected value of the combo has been changed
  */
-bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::vector<string> &values, bool useColorForText, uint8_t cropTextTo)
+bool StreamBrowserDialog::renderCombo(
+	const char* label,
+	bool alignRight,
+	ImVec4 color,
+	int &selected,
+	const vector<string> &values,
+	bool useColorForText,
+	uint8_t cropTextTo)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
 		selected = 0;
 	}
-	bool changed = false;
+
 	const char* selectedLabel = values[selected].c_str();
-	int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
-	float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
-	string resizedLabel;
-	if ((m_badgeXCur - xsz) < m_badgeXMin)
+
+	if(alignRight)
 	{
-		if(cropTextTo == 0)
-			return changed; // No room and we don't want to crop text
-		resizedLabel = selectedLabel;
-		while((m_badgeXCur - xsz) < m_badgeXMin)
+		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+		float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
+		string resizedLabel;
+		if ((m_badgeXCur - xsz) < m_badgeXMin)
 		{
-			// Try and crop text
-			resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
-			if(resizedLabel.size() < cropTextTo)
-				break; // We don't want to make the text that short
-			xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
+			if(cropTextTo == 0)
+				return false; // No room and we don't want to crop text
+			resizedLabel = selectedLabel;
+			while((m_badgeXCur - xsz) < m_badgeXMin)
+			{
+				// Try and crop text
+				resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
+				if(resizedLabel.size() < cropTextTo)
+					break; // We don't want to make the text that short
+				xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
+			}
+			if((m_badgeXCur - xsz) < m_badgeXMin)
+				return false; // Still no room
+			// We found an acceptable size
+			resizedLabel = resizedLabel + "...";
+			selectedLabel = resizedLabel.c_str();
 		}
-		if((m_badgeXCur - xsz) < m_badgeXMin)
-			return changed; // Still no room
-		// We found an acceptable size
-		resizedLabel = resizedLabel + "...";
-		selectedLabel = resizedLabel.c_str();
+		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
+		ImGui::SameLine(m_badgeXCur);
 	}
-	m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
-	ImGui::SameLine(m_badgeXCur);
+
 	if(useColorForText)
 	{
 		// Use channel color for shape combo, but darken it to make text readable
@@ -225,7 +314,12 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
 	}
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
-	if(ImGui::BeginCombo(" ", selectedLabel, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview)) // Label cannot be emtpy for the combo to work
+	int flags = ImGuiComboFlags_NoArrowButton;
+	if(alignRight)
+		flags |= ImGuiComboFlags_WidthFitPreview;
+
+	bool changed = false;
+	if(ImGui::BeginCombo(label, selectedLabel, flags))
 	{
 		for(int i = 0 ; i < (int)values.size() ; i++)
 		{
@@ -256,7 +350,11 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color, int &selected, const std::ve
    @param ... the combo box values
    @return true true if the selected value of the combo has been changed
  */
-bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values, ending in NULL */)
+bool StreamBrowserDialog::renderCombo(
+	const char* label,
+	bool alignRight,
+	ImVec4 color,
+	int *selected, ... /* values, ending in NULL */)
 {
 	if(!selected)
 	{
@@ -266,12 +364,11 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values,
 	va_list ap;
 	va_start(ap, selected);
 	std::vector<string> values;
-	while (const char *label = va_arg(ap, const char *))
-	{
-		values.push_back(string(label));
-	}
+	while (const char *item = va_arg(ap, const char *))
+		values.push_back(string(item));
+
 	va_end(ap);
-	return renderCombo(color,(*selected),values);
+	return renderCombo(label, alignRight, color, (*selected), values);
 }
 
 /**
@@ -281,10 +378,10 @@ bool StreamBrowserDialog::renderCombo(ImVec4 color,int *selected, ... /* values,
    @param curValue the value of the toggle button
    @return the selected value for the toggle button
  */
-bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
+bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool curValue)
 {
 	int selection = (int)curValue;
-	renderCombo(color, &selection, "OFF", "ON", NULL);
+	renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
 	return (selection == 1);
 }
 
@@ -294,11 +391,11 @@ bool StreamBrowserDialog::renderToggle(ImVec4 color, bool curValue)
    @param curValue the value of the toggle button
    @return the selected value for the toggle button
  */
-bool StreamBrowserDialog::renderOnOffToggle(bool curValue)
+bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool curValue)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4((curValue ? prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") : prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggle(color, curValue);
+	return renderToggle(label, alignRight, color, curValue);
 }
 
 /**
@@ -456,7 +553,14 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
    @param clicked output param for clicked state
    @param hovered output param for hovered state
  */
-void StreamBrowserDialog::renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered)
+void StreamBrowserDialog::renderPsuRows(
+	bool isVoltage,
+	bool cc,
+	PowerSupplyChannel* chan,
+	const char *setValue,
+	const char *measuredValue,
+	bool &clicked,
+	bool &hovered)
 {
 	auto& prefs = m_session.GetPreferences();
 	// Row 1
@@ -550,11 +654,16 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
 	// Shape combo
-	ImGui::PushID("waveform");
 	// Get current shape and  shape index
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
-	if(renderCombo(ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)), shapeIndex, awgState->m_channelShapeNames[channelIndex],true,3))
+	if(renderCombo(
+		"#waveform",
+		true,
+		ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)),
+		shapeIndex, awgState->m_channelShapeNames[channelIndex],
+		true,
+		3))
 	{
 		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
 		awg->SetFunctionChannelShape(channelIndex, shape);
@@ -563,7 +672,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	ImGui::PopID();
 
 	// Row 2
 	// Frequency label
@@ -611,12 +719,18 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
 	// Impedance value
 	startBadgeLine(); // Needed for impedance badge
-	ImGui::PushID("impedance");
 	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
 	int comboValue = isHiZ ? 0 : 1;
-	bool changed = renderCombo(	ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" : "Appearance.Stream Browser.awg_50ohms_badge_color"))
-								,&comboValue
-								,"Hi-Z", "50 Oh", NULL);
+	bool changed = renderCombo(
+		"###impedance",
+		true,
+		ImGui::ColorConvertU32ToFloat4(prefs.GetColor(
+			isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" :
+			"Appearance.Stream Browser.awg_50ohms_badge_color")),
+		&comboValue,
+		"Hi-Z",
+		"50 Ω",
+		nullptr);
 	if(changed)
 	{
 		impedance = ((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM);
@@ -626,7 +740,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	ImGui::PopID();
 }
 
 /**
@@ -704,13 +817,16 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		bool result;
 		if(allOn || someOn)
 		{
-			result = renderToggle(allOn ?
+			result = renderToggle(
+				"###psuon",
+				true,
+				allOn ?
 				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
 				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), true);
 		}
 		else
 		{
-			result = renderOnOffToggle(false);
+			result = renderOnOffToggle("###psuon", true, false);
 		}
 		if(result != allOn)
 		{
@@ -731,53 +847,38 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		size_t lastEnabledChannelIndex = 0;
 		if (scope)
 		{
-			ImGui::BeginChild("sample_params", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-
-			if(scope->HasTimebaseControls())
+			if(ImGui::TreeNodeEx("Timebase", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				auto srate_txt = Unit(Unit::UNIT_SAMPLERATE).PrettyPrint(scope->GetSampleRate());
-				auto sdepth_txt = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
-
-				bool clicked = false;
-				bool hovered = false;
-				renderInfoLink("Sample rate", srate_txt.c_str(), clicked, hovered);
-				renderInfoLink("Sample depth", sdepth_txt.c_str(), clicked, hovered);
-				if (clicked)
-					m_parent->ShowTimebaseProperties();
-				if (hovered)
-					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
-				for(size_t i = 0; i<channelCount; i++)
+				if(scope->HasTimebaseControls())
+					DoTimebaseSettings(scope);
+				if(scope->HasFrequencyControls())
 				{
-					if(scope->IsChannelEnabled(i))
-						lastEnabledChannelIndex = i;
-				}
-			}
-			if(scope->HasFrequencyControls())
-			{
-				auto sdepth_txt 	= Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
-				auto rbw_txt    	= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetResolutionBandwidth());
-				auto centerFreq_txt = Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetCenterFrequency(0));
-				auto span_txt 		= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetSpan());
+					auto sdepth_txt 	= Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
+					auto rbw_txt    	= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetResolutionBandwidth());
+					auto centerFreq_txt = Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetCenterFrequency(0));
+					auto span_txt 		= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetSpan());
 
-				bool clicked = false;
-				bool hovered = false;
-				if(!scope->HasTimebaseControls()) // Only render sample depth if it has not already been shown in timebase controls
-					renderInfoLink("Points", sdepth_txt.c_str(), clicked, hovered);
-				renderInfoLink("Rbw", rbw_txt.c_str(), clicked, hovered);
-				renderInfoLink("Center freq.", centerFreq_txt.c_str(), clicked, hovered);
-				renderInfoLink("Span", span_txt.c_str(), clicked, hovered);
-				if (clicked)
-					m_parent->ShowTimebaseProperties();
-				if (hovered)
-					m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
-				for(size_t i = 0; i<channelCount; i++)
-				{
-					if(scope->IsChannelEnabled(i))
-						lastEnabledChannelIndex = i;
+					bool clicked = false;
+					bool hovered = false;
+					if(!scope->HasTimebaseControls()) // Only render sample depth if it has not already been shown in timebase controls
+						renderInfoLink("Points", sdepth_txt.c_str(), clicked, hovered);
+					renderInfoLink("Rbw", rbw_txt.c_str(), clicked, hovered);
+					renderInfoLink("Center freq.", centerFreq_txt.c_str(), clicked, hovered);
+					renderInfoLink("Span", span_txt.c_str(), clicked, hovered);
+					if (clicked)
+						m_parent->ShowTimebaseProperties();
+					if (hovered)
+						m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
 				}
+
+				ImGui::TreePop();
 			}
 
-			ImGui::EndChild();
+			for(size_t i = 0; i<channelCount; i++)
+			{
+				if(scope->IsChannelEnabled(i))
+					lastEnabledChannelIndex = i;
+			}
 		}
 
 		for(size_t i=0; i<channelCount; i++)
@@ -790,6 +891,58 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	}
 	ImGui::PopID();
 
+}
+
+/**
+	@brief Add nodes for timebase controls under an instrument
+ */
+void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
+{
+	size_t channelCount = scope->GetChannelCount();
+	auto width = ImGui::GetFontSize() * 5;
+
+	//If we don't have timebase settings for the scope, create them
+	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
+		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+
+	//Interleaving
+	bool refresh = false;
+	if(scope->CanInterleave())
+	{
+		ImGui::SetNextItemWidth(width);
+		if(renderOnOffToggle("Interleaving", false, m_timebaseConfig[scope]->m_interleaving))
+		{
+			scope->SetInterleaving(m_timebaseConfig[scope]->m_interleaving);
+			refresh = true;
+		}
+	}
+
+	//Sample rate
+	ImGui::SetNextItemWidth(width);
+	if(renderCombo(
+		"Sample Rate",
+		false,
+		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+		m_timebaseConfig[scope]->m_rate, m_timebaseConfig[scope]->m_rateNames))
+	{
+		scope->SetSampleRate(m_timebaseConfig[scope]->m_rates[m_timebaseConfig[scope]->m_rate]);
+		refresh = true;
+	}
+
+	//Memory depth
+	ImGui::SetNextItemWidth(width);
+	if(renderCombo(
+		"Memory Depth",
+		false,
+		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+		m_timebaseConfig[scope]->m_depth, m_timebaseConfig[scope]->m_depthNames))
+	{
+		scope->SetSampleDepth(m_timebaseConfig[scope]->m_depths[m_timebaseConfig[scope]->m_depth]);
+		refresh = true;
+	}
+
+	if(refresh)
+		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
 }
 
 /**
@@ -894,12 +1047,13 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			renderDownloadProgress(instrument, channel, isLast);
 	}
 	else if(psu)
-	{	// PSU Channel
+	{
+		// PSU Channel
 		//Get the state
 		auto psustate = m_session.GetPSUState(psu);
 
 		bool active = psustate->m_channelOn[channelIndex];
-		bool result = renderOnOffToggle(active);
+		bool result = renderOnOffToggle("###active", true, active);
 		if(result != active)
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
@@ -909,7 +1063,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		auto awgstate = m_session.GetFunctionGeneratorState(awg);
 
 		bool active = awgstate->m_channelActive[channelIndex];
-		bool result = renderOnOffToggle(active);
+		bool result = renderOnOffToggle("###active", true, active);
 		if(result != active)
 		{
 			awg->SetFunctionChannelActive(channelIndex,result);
