@@ -1869,7 +1869,7 @@ void MainWindow::UpdateFonts()
 	//Check for any changes to font preferences and rebuild the atlas if so
 	//Skip rebuilding atlas if nothing changed
 	auto& prefs = GetSession().GetPreferences();
-	if(m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
+	if(m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetUIScale() * GetFontScale()))
 	{
 		//Download imgui fonts
 		ImGui_ImplVulkan_CreateFontsTexture();
