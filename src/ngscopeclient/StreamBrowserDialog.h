@@ -58,7 +58,6 @@ public:
 	std::vector<uint64_t> m_depths;
 	std::vector<std::string> m_depthNames;
 	int m_depth;
-
 };
 
 class StreamBrowserDialog : public Dialog
@@ -111,7 +110,7 @@ protected:
 	bool renderOnOffToggle(const char* label, bool alignRight, bool curValue);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
-	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered);
+	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
 
 	// Rendering of an instrument node
 	void renderInstrumentNode(std::shared_ptr<Instrument> instrument);

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -57,6 +57,15 @@ public:
 
 		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
 
+		m_strOffset = std::make_unique<std::string[]>(n);
+		m_committedOffset = std::make_unique<float[]>(n);
+		m_strAmplitude = std::make_unique<std::string[]>(n);
+		m_committedAmplitude = std::make_unique<float[]>(n);
+		m_strFrequency = std::make_unique<std::string[]>(n);
+		m_committedFrequency = std::make_unique<float[]>(n);
+
+		Unit volts(Unit::UNIT_VOLTS);
+
 		for(size_t i=0; i<n; i++)
 		{
 			m_channelActive[i] = false;
@@ -65,15 +74,18 @@ public:
 			m_channelFrequency[i] = 0;
 			m_channelShape[i] = FunctionGenerator::WaveShape::SHAPE_SINE;
 			m_channelOutputImpedance[i] = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
-			// Init shape list and names			
+			// Init shape list and names
 			m_channelShapes[i] = generator->GetAvailableWaveformShapes(i);
 			for(size_t j=0; j<m_channelShapes[i].size(); j++)
 			{
 				m_channelShapeNames[i].push_back(generator->GetNameOfShape(m_channelShapes[i][j]));
 				m_channelShapeIndexes[i][m_channelShapes[i][j]] = j;
 			}
-
 			m_needsUpdate[i] = true;
+
+			m_committedAmplitude[i] = FLT_MIN;
+			m_committedOffset[i] = FLT_MIN;
+			m_committedFrequency[i] = FLT_MIN;
 		}
 	}
 
@@ -86,9 +98,18 @@ public:
 	std::unique_ptr<std::vector<FunctionGenerator::WaveShape>[]> m_channelShapes;
 	std::unique_ptr<std::map<FunctionGenerator::WaveShape,int>[]> m_channelShapeIndexes;
 	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
-	 
+
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
 
+	//UI state for dialogs etc
+	std::unique_ptr<float[]> m_committedOffset;
+	std::unique_ptr<std::string[]> m_strOffset;
+
+	std::unique_ptr<float[]> m_committedAmplitude;
+	std::unique_ptr<std::string[]> m_strAmplitude;
+
+	std::unique_ptr<float[]> m_committedFrequency;
+	std::unique_ptr<std::string[]> m_strFrequency;
 };
 
 #endif

@@ -271,7 +271,9 @@ bool StreamBrowserDialog::renderCombo(
 		selected = 0;
 	}
 
-	const char* selectedLabel = values[selected].c_str();
+	const char* selectedLabel = "";
+	if(selected < (int)values.size())
+		values[selected].c_str();
 
 	if(alignRight)
 	{
@@ -625,31 +627,57 @@ void StreamBrowserDialog::renderPsuRows(
 
    @param awg the AWG to render channel properties for
    @param awgchan the AWG channel to render properties for
-   @param clicked output param for clicked state
-   @param hovered output param for hovered state
  */
-void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan, bool &clicked, bool &hovered)
+void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan)
 {
-	//FunctionGenerator::WaveShape shape = FunctionGenerator::WaveShape::SHAPE_SINE;
-	FunctionGenerator::OutputImpedance impedance = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
+	Unit volts(Unit::UNIT_VOLTS);
+	Unit hz(Unit::UNIT_HZ);
+
 	size_t channelIndex = awgchan->GetIndex();
-	float frequency = 0;
-	float amplitude = 0;
-	float offset = 0;
 	auto awgState = m_session.GetFunctionGeneratorState(awg);
-	if(awgState)
+	if(!awgState)
+		return;
+
+	auto dwidth = ImGui::GetFontSize() * 6;
+
+	//Check if anything changed hardware side
+	float amp = awgState->m_channelAmplitude[channelIndex];
+	if(amp != awgState->m_committedAmplitude[channelIndex])
 	{
-		//shape = awgState->m_channelShape[channelIndex];
-		impedance = awgState->m_channelOutputImpedance[channelIndex];
-		frequency = awgState->m_channelFrequency[channelIndex];
-		amplitude = awgState->m_channelAmplitude[channelIndex];
-		offset = awgState->m_channelOffset[channelIndex];
+		awgState->m_committedAmplitude[channelIndex] = amp;
+		awgState->m_strAmplitude[channelIndex] = volts.PrettyPrint(amp);
 	}
-	auto frequency_txt = Unit(Unit::UNIT_HZ).PrettyPrint(frequency);
-	auto amplitude_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(amplitude);
-	auto offset_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(offset);
+	float off = awgState->m_channelOffset[channelIndex];
+	if(off != awgState->m_committedOffset[channelIndex])
+	{
+		awgState->m_committedOffset[channelIndex] = off;
+		awgState->m_strOffset[channelIndex] = volts.PrettyPrint(off);
+	}
+	float freq = awgState->m_channelFrequency[channelIndex];
+	if(freq != awgState->m_committedFrequency[channelIndex])
+	{
+		awgState->m_committedFrequency[channelIndex] = freq;
+		awgState->m_strFrequency[channelIndex] = hz.PrettyPrint(freq);
+	}
 
 	auto& prefs = m_session.GetPreferences();
+
+	//Impedance
+	ImGui::SetNextItemWidth(dwidth);
+	/*
+	if(renderCombo(
+		"Sample Rate",
+		false,
+		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+		m_timebaseConfig[scope]->m_rate, m_timebaseConfig[scope]->m_rateNames))
+	{
+		scope->SetSampleRate(m_timebaseConfig[scope]->m_rates[m_timebaseConfig[scope]->m_rate]);
+		refresh = true;
+	}
+	*/
+
+	//shape = awgState->m_channelShape[channelIndex];
+
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
@@ -675,25 +703,30 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	// Row 2
 	// Frequency label
-	StreamDescriptor sv(awgchan, 0);
-	ImGui::PushID("frequ");
-	// TODO
-	const char* freqLabel = "Frequency: ";
-	ImGui::Selectable(freqLabel,false,0,ImVec2(ImGui::CalcTextSize(freqLabel).x, 0));
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithImplicitApply(
+		"Frequency",
+		awgState->m_strFrequency[channelIndex],
+		awgState->m_committedFrequency[channelIndex],
+		hz))
+	{
+		awg->SetFunctionChannelFrequency(channelIndex, awgState->m_committedFrequency[channelIndex]);
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	/*StreamDescriptor sfreq(awgchan, 0);
 	if(ImGui::BeginDragDropSource())
 	{
-		ImGui::SetDragDropPayload("Scalar", &sv, sizeof(sv));
+		ImGui::SetDragDropPayload("Scalar", &sfreq, sizeof(sfreq));
 		string dragText = awgchan->GetDisplayName() + " frequency";
 		ImGui::TextUnformatted(dragText.c_str());
 		ImGui::EndDragDropSource();
 	}
 	else
-		DoItemHelp();
-	ImGui::PopID();
-	// Frequency text
-	ImGui::SameLine(0, 0);
-	clicked |= ImGui::TextLink(frequency_txt.c_str());
-	hovered |= ImGui::IsItemHovered();
+	*/
+	DoItemHelp();
+	HelpMarker("Frequency of the generated waveform");
+
+	/*
 	// Shape preview
 	startBadgeLine();
 	auto height = ImGui::GetFontSize() * 2;
@@ -710,20 +743,45 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
 		window->DC.CursorPos.y -= ImGui::GetFontSize();
 	}
+	*/
 
 	// Row 3
-	// Amplitude label
-	renderInfoLink("Amplitude",amplitude_txt.c_str(),clicked,hovered);
-	// Row 4
-	// Offset label
-	renderInfoLink("Offsset",offset_txt.c_str(),clicked,hovered);
-	// Impedance value
-	startBadgeLine(); // Needed for impedance badge
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithExplicitApply(
+		"Amplitude",
+		awgState->m_strAmplitude[channelIndex],
+		awgState->m_committedAmplitude[channelIndex],
+		volts))
+	{
+		awg->SetFunctionChannelAmplitude(channelIndex, awgState->m_committedAmplitude[channelIndex]);
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	HelpMarker("Peak-to-peak amplitude of the generated waveform");
+
+	//Row 4
+	//Offset
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithExplicitApply(
+		"Offset",
+		awgState->m_strOffset[channelIndex],
+		awgState->m_committedOffset[channelIndex],
+		volts))
+	{
+		awg->SetFunctionChannelOffset(channelIndex, awgState->m_committedOffset[channelIndex]);
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
+
+	//TODO: Duty cycle
+
+	//Impedance
+	ImGui::SetNextItemWidth(dwidth);
+	FunctionGenerator::OutputImpedance impedance = awgState->m_channelOutputImpedance[channelIndex];
 	bool isHiZ = (impedance == FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z);
 	int comboValue = isHiZ ? 0 : 1;
 	bool changed = renderCombo(
-		"###impedance",
-		true,
+		"Impedance",
+		false,
 		ImGui::ColorConvertU32ToFloat4(prefs.GetColor(
 			isHiZ ? "Appearance.Stream Browser.awg_hiz_badge_color" :
 			"Appearance.Stream Browser.awg_50ohms_badge_color")),
@@ -731,12 +789,16 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		"Hi-Z",
 		"50 Ω",
 		nullptr);
+
 	if(changed)
 	{
 		impedance = ((comboValue == 0) ? FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z : FunctionGenerator::OutputImpedance::IMPEDANCE_50_OHM);
+
 		awg->SetFunctionChannelOutputImpedance(channelIndex,impedance);
+
 		// Update state right now to cover from slow intruments
 		awgState->m_channelOutputImpedance[channelIndex]=impedance;
+
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
@@ -898,7 +960,6 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
  */
 void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 {
-	size_t channelCount = scope->GetChannelCount();
 	auto width = ImGui::GetFontSize() * 5;
 
 	//If we don't have timebase settings for the scope, create them
@@ -1120,19 +1181,9 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else if(awg && awgchan)
 		{
-			// No stream for FunctionGenerator => render properties on channel node
-			ImGui::BeginChild("awg_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
-			bool clicked = false;
-			bool hovered = false;
-			renderAwgProperties(awg,awgchan,clicked,hovered);
-			if (clicked)
-			{
-				m_parent->ShowInstrumentProperties(awg);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open Function Generator properties");
-			ImGui::EndChild();
+			ImGui::PushID("awgparams");
+				renderAwgProperties(awg, awgchan);
+			ImGui::PopID();
 		}
 		else
 		{

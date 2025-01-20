@@ -218,6 +218,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 			{
 				if(awgstate->m_needsUpdate[i])
 				{
+					Unit volts(Unit::UNIT_VOLTS);
+
 					//Skip non-awg channels
 					auto awgchan = dynamic_cast<FunctionGeneratorChannel*>(awg->GetChannel(i));
 					if(!awgchan)
@@ -228,7 +230,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 					awgstate->m_channelFrequency[i] = awg->GetFunctionChannelFrequency(i);
 					awgstate->m_channelShape[i] = awg->GetFunctionChannelShape(i);
 					awgstate->m_channelOutputImpedance[i] = awg->GetFunctionChannelOutputImpedance(i);
-
 					session->MarkChannelDirty(awgchan);
 
 					awgstate->m_needsUpdate[i] = false;
