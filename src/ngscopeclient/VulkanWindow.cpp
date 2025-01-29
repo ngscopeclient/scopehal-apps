@@ -354,7 +354,7 @@ bool VulkanWindow::UpdateFramebuffer()
 	//Save old swapchain
 	unique_ptr<vk::raii::SwapchainKHR> oldSwapchain = std::move(m_swapchain);
 
-	//Makw the swapchain
+	//Make the swapchain
 	vk::SwapchainKHR oldSwapchainIfValid = {};
 	if(oldSwapchain != nullptr)
 		oldSwapchainIfValid = **oldSwapchain;
@@ -375,7 +375,6 @@ bool VulkanWindow::UpdateFramebuffer()
 		true,
 		oldSwapchainIfValid);
 	m_swapchain = make_unique<vk::raii::SwapchainKHR>(*g_vkComputeDevice, chainInfo);
-	oldSwapchain = nullptr;
 
 	//Make render pass
 	vk::AttachmentDescription attachment(
@@ -462,7 +461,10 @@ void VulkanWindow::Render()
 	}
 
 	//Start frame
-	ImGui_ImplVulkan_NewFrame();
+	{
+		QueueLock qlock(m_renderQueue);
+		ImGui_ImplVulkan_NewFrame();
+	}
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
@@ -491,18 +493,10 @@ void VulkanWindow::Render()
 			m_frameIndex = result.second;
 			if(result.first == vk::Result::eSuboptimalKHR)
 			{
+				// eSuboptimalKHR is actually a success code, meaning that although the image is suboptimal,
+				// we *did* acquire the next image from the swapchain. Proceed to render the suboptimal frame
+				// to avoid Vulkan validation error VUID-vkAcquireNextImageKHR-semaphore-01286.
 				LogTrace("eSuboptimalKHR\n");
-
-				m_resizeEventPending = true;
-				ImGui::UpdatePlatformWindows();
-				{
-					//Hold queue lock, ImGui_ImplVulkan_RenderDrawData uses the VkQueue handle passed into ImGui_ImplVulkan_Init
-					QueueLock qlock(m_renderQueue);
-					ImGui::RenderPlatformWindowsDefault();
-				}
-				Render();
-
-				return;
 			}
 		}
 		catch(const vk::OutOfDateKHRError& err)
@@ -558,11 +552,14 @@ void VulkanWindow::Render()
 		(*qlock).submit(info, **m_fences[m_frameIndex]);
 	}
 
-	//Handle any additional popup windows created by imgui
-	ImGui::UpdatePlatformWindows();
+	// if (!m_resizeEventPending)
 	{
-		QueueLock qlock(m_renderQueue);
-		ImGui::RenderPlatformWindowsDefault();
+		//Handle any additional popup windows created by imgui
+		ImGui::UpdatePlatformWindows();
+		{
+			QueueLock qlock(m_renderQueue);
+			ImGui::RenderPlatformWindowsDefault();
+		}
 	}
 
 	//Present the main window
