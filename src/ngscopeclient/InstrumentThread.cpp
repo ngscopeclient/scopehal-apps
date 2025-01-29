@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -108,7 +108,13 @@ void InstrumentThread(InstrumentThreadArgs args)
 				auto stat = scope->PollTrigger();
 				session->GetInstrumentConnectionState(inst)->m_lastTriggerState = stat;
 				if(stat == Oscilloscope::TRIGGER_MODE_TRIGGERED)
+				{
+					//Hold this lock because some scopes use vulkan for sample processing internally
+					//and we need to block in case a swapchain recreation comes in
+					shared_lock<shared_mutex> vlock(g_vulkanActivityMutex);
+
 					scope->AcquireData();
+				}
 				triggerUpToDate = false;
 			}
 		}
