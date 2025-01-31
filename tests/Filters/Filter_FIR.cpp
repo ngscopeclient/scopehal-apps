@@ -125,6 +125,7 @@ TEST_CASE("Filter_FIR")
 			//Copy the result
 			AcceleratorBuffer<float> golden;
 			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
+			filter->SetData(nullptr, 0);
 
 			#ifdef __x86_64__
 				//Try again with AVX
