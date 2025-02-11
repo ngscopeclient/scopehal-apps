@@ -13,12 +13,10 @@ jobs:
   Linux:
     strategy:
         matrix:
-            os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+            os: [ubuntu-22.04, ubuntu-24.04]
             sdk_type: [standalone,repo]
             docs: [false,true]
             exclude:
-              - os: ubuntu-20.04
-                docs: true
               - os: ubuntu-22.04
                 sdk_type: standalone
                 docs: true
@@ -72,15 +70,6 @@ jobs:
           texlive-fonts-extra \
           texlive-extra-utils
 
-
-    - name: Load Vulkan SDK Repo (Ubuntu 20.04)
-      if: ${{ (matrix.os == 'ubuntu-20.04') && (matrix.sdk_type == 'repo') }}
-      run: |
-        wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-        sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-${{ env.SDK_VERSION_REPO }}-focal.list https://packages.lunarg.com/vulkan/${{ env.SDK_VERSION_REPO }}/lunarg-vulkan-${{ env.SDK_VERSION_REPO }}-focal.list
-        sudo apt-get update
-        sudo apt-get install vulkan-sdk
-
     - name: Load Vulkan SDK Repo (Ubuntu 22.04)
       if: ${{ (matrix.os == 'ubuntu-22.04') && (matrix.sdk_type == 'repo') }}
       run: |
@@ -94,10 +83,6 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libvulkan-dev glslang-dev glslang-tools spirv-tools glslc
-
-    - name: Add PPA for Ubuntu 20.04 for catch2
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      run: sudo add-apt-repository ppa:savoury1/build-tools
 
     - name: Install More Dependencies
       run: |
