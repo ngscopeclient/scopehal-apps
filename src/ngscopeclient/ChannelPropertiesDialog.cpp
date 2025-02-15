@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -540,6 +540,8 @@ bool ChannelPropertiesDialog::DoRender()
 		{
 			if(ImGui::CollapsingHeader(streamname.c_str()))
 			{
+				ImGui::PushID(i);
+
 				auto unit = m_channel->GetYAxisUnits(i);
 
 				//If no change to offset in dialog, update our input value when we change offset outside the dialog
@@ -565,6 +567,8 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
 					ochan->SetVoltageRange(m_committedRange[i], i);
+
+				ImGui::PopID();
 			}
 		}
 	}
