@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -273,7 +273,7 @@ bool StreamBrowserDialog::renderCombo(
 
 	const char* selectedLabel = "";
 	if(selected < (int)values.size())
-		values[selected].c_str();
+		selectedLabel = values[selected].c_str();
 
 	if(alignRight)
 	{
