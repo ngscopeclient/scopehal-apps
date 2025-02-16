@@ -181,17 +181,11 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		ImGui_ImplVulkan_Init(&info);
 	}
 
-	// Apply DPI scaling now that glfw initialized
-	float scale = GetContentScale();
+	float ui_scale = GetUIScale(), font_scale = GetFontScale();
+	LogTrace("UI scale: %.2f\n", ui_scale);
+	LogTrace("Text density: %.2f dpi = 96 dpi × %.2f (UI scale) × %.2f (font scale)\n", 96.0 * ui_scale * font_scale, ui_scale, font_scale);
 
-	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
-
-	//WORKAROUND: handle HiDPI correctly on macOS.
-#ifdef __APPLE__
-	io.FontGlobalScale = 1.0f / scale;
-#else
-	ImGui::GetStyle().ScaleAllSizes(scale);
-#endif
+	ImGui::GetStyle().ScaleAllSizes(ui_scale);
 
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -428,14 +422,37 @@ bool VulkanWindow::UpdateFramebuffer()
 	return true;
 }
 
-float VulkanWindow::GetContentScale()
+float VulkanWindow::GetUIScale()
 {
-	float xscale;
-	float yscale;
-	glfwGetWindowContentScale(m_window, &xscale, &yscale);
+	if (const char *scale_override = getenv("NGSCOPECLIENT_UI_SCALE"))
+		return atof(scale_override);
+#if defined(WIN32)
+	// FIXME
+#elif defined(__APPLE__)
+	// FIXME
+#else
+	// KDE also sets these variables.
+	if (const char *gdk_scale = getenv("GDK_SCALE"))
+		return atoi(gdk_scale);
+#endif
 
-	// Hope this works well should a screen have unequal X- and Y- DPIs...
-	return (xscale + yscale) / 2;
+	return 1.0;
+}
+
+float VulkanWindow::GetFontScale()
+{
+	if (const char *scale_override = getenv("NGSCOPECLIENT_FONT_SCALE"))
+		return atof(scale_override);
+#if defined(WIN32)
+	// FIXME
+#elif defined(__APPLE__)
+	// FIXME
+#else
+	// KDE also sets these variables.
+	if (const char *gdk_dpi_scale = getenv("GDK_DPI_SCALE"))
+		return atof(gdk_dpi_scale);
+#endif
+	return 1.0;
 }
 
 void VulkanWindow::Render()
