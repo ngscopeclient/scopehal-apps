@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -73,11 +73,6 @@ TEST_CASE("Filter_FIR")
 
 	auto rdist = uniform_real_distribution<float>(10e6, 1e9);
 
-#ifdef __x86_64__
-	bool reallyHasAvx2 = g_hasAvx2;
-	bool reallyHasAvx512F = g_hasAvx512F;
-#endif
-
 	const size_t niter = 8;
 	for(size_t i=0; i<niter; i++)
 	{
@@ -111,53 +106,17 @@ TEST_CASE("Filter_FIR")
 			g_gpuFilterEnabled = false;
 			filter->Refresh(cmdbuf, queue);
 
-			//Baseline on the CPU with no AVX
-			#ifdef __x86_64__
-				g_hasAvx2 = false;
-				g_hasAvx512F = false;
-			#endif
+			//Baseline on the CPU
 			g_gpuFilterEnabled = false;
 			double start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX)  : %5.2f ms\n", tbase * 1000);
+			LogVerbose("CPU: %5.2f ms\n", tbase * 1000);
 
 			//Copy the result
 			AcceleratorBuffer<float> golden;
 			golden.CopyFrom(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples);
 			filter->SetData(nullptr, 0);
-
-			#ifdef __x86_64__
-				//Try again with AVX
-				if(reallyHasAvx2)
-				{
-					g_hasAvx2 = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX2)    : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-					VerifyMatchingResult(
-						golden,
-						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3e-3f
-						);
-				}
-				if(reallyHasAvx512F)
-				{
-					g_hasAvx512F = true;
-					start = GetTime();
-					filter->Refresh(cmdbuf, queue);
-					float dt = GetTime() - start;
-					LogVerbose("CPU (AVX512F) : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
-
-					VerifyMatchingResult(
-						golden,
-						dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-						3e-3f
-						);
-				}
-			#endif
 
 			//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 			g_gpuFilterEnabled = true;
@@ -167,7 +126,7 @@ TEST_CASE("Filter_FIR")
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU           : %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU: %5.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			VerifyMatchingResult(
 				golden,
@@ -176,11 +135,6 @@ TEST_CASE("Filter_FIR")
 				);
 		}
 	}
-
-	#ifdef __x86_64__
-		g_hasAvx512F = reallyHasAvx512F;
-		g_hasAvx2 = reallyHasAvx2;
-	#endif
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 
