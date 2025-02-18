@@ -85,7 +85,7 @@ TEST_CASE("Filter_FIR")
 			FillRandomWaveform(&ua, depth);
 
 			//Configure the filter
-			filter->SetFilterType(static_cast<FIRFilter::FilterType>(i % 4));
+			filter->SetFilterType(static_cast<Filter::FIRFilterType>(i % 4));
 			float freqLow = rdist(g_rng);
 			float freqHigh = rdist(g_rng);
 			float tmp;

@@ -176,7 +176,7 @@ TEST_CASE("Filter_FFT")
 			//Peak search to keep time fair vs GPU filter
 			start = GetTime();
 			PeakDetector det;
-			det.FindPeaks(&golden, 10, 500000);
+			det.FindPeaks(&golden, 10, 500000, true, cmdbuf, queue);
 			double tpeak = GetTime() - start;
 			LogVerbose("Peak search : %5.2f ms\n", tpeak * 1000);
 
