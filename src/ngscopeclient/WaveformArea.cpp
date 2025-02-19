@@ -861,7 +861,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size)
 	if( (m_yAxisCursorPositions[0] > m_yAxisCursorPositions[1]) && (m_yAxisCursorMode == Y_CURSOR_DUAL) )
 	{
 		//Swap the cursors themselves
-		int64_t tmp = m_yAxisCursorPositions[0];
+		float tmp = m_yAxisCursorPositions[0];
 		m_yAxisCursorPositions[0] = m_yAxisCursorPositions[1];
 		m_yAxisCursorPositions[1] = tmp;
 
