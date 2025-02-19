@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -349,7 +349,11 @@ WaveformArea::WaveformArea(StreamDescriptor stream, shared_ptr<WaveformGroup> gr
 	, m_channelButtonHeight(0)
 	, m_dragPeakLabel(nullptr)
 	, m_mouseOverButton(false)
+	, m_yAxisCursorMode(Y_CURSOR_NONE)
 {
+	m_yAxisCursorPositions[0] = 0;
+	m_yAxisCursorPositions[1] = 0;
+
 	m_displayedChannels.push_back(make_shared<DisplayedChannel>(stream, m_parent->GetSession()));
 }
 
@@ -623,6 +627,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	float vbot = 0.0f;
 	float vtop = 0.0f;
 
+	auto cpos = ImGui::GetCursorPos();
 	if(ImGui::BeginChild(ImGui::GetID(this), ImVec2(clientArea.x - yAxisWidthSpaced, unspacedHeightPerArea)))
 	{
 		auto csize = ImGui::GetContentRegionAvail();
@@ -693,6 +698,16 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	//Draw the vertical scale on the right side of the plot
 	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 
+	//Render the Y axis cursors (if we have any) over the top of everything else
+	auto oldpos = ImGui::GetCursorPos();
+	{
+		auto csize = ImGui::GetContentRegionAvail();
+		auto pos = ImGui::GetWindowPos();
+		ImGui::SetCursorPos(cpos);
+		RenderYAxisCursors(pos, csize);
+	}
+	ImGui::SetCursorPos(oldpos);
+
 	ImGui::PopID();
 
 	//Update scale again in case we had a mouse wheel event
@@ -703,6 +718,192 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	if(m_displayedChannels.empty())
 		return false;
 	return true;
+}
+
+/**
+	@brief Render horizontal cursors over the plot
+ */
+void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size)
+{
+	//No cursors? Nothing to do
+	if(m_yAxisCursorMode == Y_CURSOR_NONE)
+	{
+		//Exit cursor drag state if we no longer have a cursor to drag
+		if( (m_dragState == DRAG_STATE_Y_CURSOR0) || (m_dragState == DRAG_STATE_Y_CURSOR1) )
+			m_dragState = DRAG_STATE_NONE;
+		return;
+	}
+
+	//Create a child window for all of our drawing
+	//(this is needed so we're above the WaveformArea content in z order, but behind popup windows)
+	if(ImGui::BeginChild("ycursors", size, ImGuiChildFlags_None, ImGuiWindowFlags_NoInputs))
+	{
+		auto list = ImGui::GetWindowDrawList();
+
+		auto& prefs = m_parent->GetSession().GetPreferences();
+		auto cursor0_color = prefs.GetColor("Appearance.Cursors.cursor_1_color");
+		auto cursor1_color = prefs.GetColor("Appearance.Cursors.cursor_2_color");
+		auto fill_color = prefs.GetColor("Appearance.Cursors.cursor_fill_color");
+		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
+
+		float ypos0 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[0]));
+		float ypos1 = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[1]));
+
+		//Fill between if dual cursor
+		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
+			list->AddRectFilled(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x, ypos1), fill_color);
+
+		//First cursor
+		list->AddLine(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x, ypos0), cursor0_color, 1);
+
+		/*
+		//Text
+		//Anchor bottom right at the cursor
+		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
+		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
+		auto tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+		float padding = 2;
+		float wrounding = 2;
+		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+		list->AddRectFilled(
+			ImVec2(xpos0 - (2*padding + tsize.x), textTop - padding ),
+			ImVec2(xpos0 - 1, pos.y + m_timelineHeight),
+			ImGui::GetColorU32(ImGuiCol_PopupBg),
+			wrounding);
+		list->AddText(
+			font,
+			fontSize,
+			ImVec2(xpos0 - (padding + tsize.x), textTop),
+			cursor0_color,
+			str.c_str());
+		*/
+
+		//Second cursor
+		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
+		{
+			list->AddLine(ImVec2(pos.x, ypos1), ImVec2(pos.x + size.x, ypos1), cursor1_color, 1);
+
+			/*
+			int64_t delta = m_xAxisCursorPositions[1] - m_xAxisCursorPositions[0];
+			str = string("X2: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[1]) + "\n" +
+				"ΔX = " + m_xAxisUnit.PrettyPrint(delta);
+
+			//If X axis is time domain, show frequency dual
+			Unit hz(Unit::UNIT_HZ);
+			if(m_xAxisUnit.GetType() == Unit::UNIT_FS)
+				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
+
+			//Text
+			tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+			list->AddRectFilled(
+				ImVec2(xpos1 + 1, textTop - padding ),
+				ImVec2(xpos1 + (2*padding + tsize.x), pos.y + m_timelineHeight),
+				ImGui::GetColorU32(ImGuiCol_PopupBg),
+				wrounding);
+			list->AddText(
+				font,
+				fontSize,
+				ImVec2(xpos1 + padding, textTop),
+				cursor1_color,
+				str.c_str());
+			*/
+		}
+
+		//not dragging if we no longer have a second cursor
+		else if(m_dragState == DRAG_STATE_Y_CURSOR1)
+			m_dragState = DRAG_STATE_NONE;
+
+		//TODO: text for value readouts, in-band power, etc
+	}
+	ImGui::EndChild();
+
+	//Default help text related to cursors (may change if we're over a cursor)
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		!m_mouseOverButton && (m_dragState == DRAG_STATE_NONE) )
+	{
+		if(m_yAxisCursorMode != Y_CURSOR_NONE)
+			m_parent->AddStatusHelp("mouse_lmb", "Place first cursor");
+		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Place second cursor");
+	}
+	if( (m_dragState == DRAG_STATE_Y_CURSOR0) || (m_dragState == DRAG_STATE_Y_CURSOR1) )
+		m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+
+	//Child window doesn't get mouse events (this flag is needed so we can pass mouse events to the WaveformArea's)
+	//So we have to do all of our interaction processing inside the top level window
+	DoCursor(0, DRAG_STATE_Y_CURSOR0);
+	if(m_yAxisCursorMode == Y_CURSOR_DUAL)
+		DoCursor(1, DRAG_STATE_Y_CURSOR1);
+
+	//If not currently dragging, a click places cursor 0 and starts dragging cursor 1 (if enabled)
+	//Don't process this if a popup is open
+	if( ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+		(m_dragState == DRAG_STATE_NONE) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!m_mouseOverButton &&
+		!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+	{
+		auto ypos = ImGui::GetMousePos().y;
+
+		m_yAxisCursorPositions[0] = YPositionToYAxisUnits(ypos);
+		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
+		{
+			m_dragState = DRAG_STATE_Y_CURSOR1;
+			m_yAxisCursorPositions[1] = m_yAxisCursorPositions[0];
+		}
+		else
+			m_dragState = DRAG_STATE_Y_CURSOR0;
+	}
+
+	//Cursor 0 should always be above cursor 1 (if both are enabled).
+	//If they get swapped, exchange them.
+	if( (m_yAxisCursorPositions[0] > m_yAxisCursorPositions[1]) && (m_yAxisCursorMode == Y_CURSOR_DUAL) )
+	{
+		//Swap the cursors themselves
+		int64_t tmp = m_yAxisCursorPositions[0];
+		m_yAxisCursorPositions[0] = m_yAxisCursorPositions[1];
+		m_yAxisCursorPositions[1] = tmp;
+
+		//If dragging one cursor, switch to dragging the other
+		if(m_dragState == DRAG_STATE_Y_CURSOR0)
+			m_dragState = DRAG_STATE_Y_CURSOR1;
+		else if(m_dragState == DRAG_STATE_Y_CURSOR1)
+			m_dragState = DRAG_STATE_Y_CURSOR0;
+	}
+}
+
+/**
+	@brief Run interaction processing for dragging a Y axis cursor
+ */
+void WaveformArea::DoCursor(int iCursor, DragState state)
+{
+	float ypos = round(YAxisUnitsToYPosition(m_yAxisCursorPositions[iCursor]));
+	float searchRadius = 0.5 * ImGui::GetFontSize();
+
+	//Check if the mouse hit us
+	auto mouse = ImGui::GetMousePos();
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && !m_mouseOverButton)
+	{
+		if( fabs(mouse.y - ypos) < searchRadius)
+		{
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+			m_parent->AddStatusHelp("mouse_lmb", "");
+			m_parent->AddStatusHelp("mouse_lmb_drag", "Move cursor");
+
+			//Start dragging if clicked
+			if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				m_dragState = state;
+		}
+	}
+
+	//If dragging, move the cursor to track
+	if(m_dragState == state)
+	{
+		if(ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			m_dragState = DRAG_STATE_NONE;
+		m_yAxisCursorPositions[iCursor] = YPositionToYAxisUnits(mouse.y);
+	}
 }
 
 /**
@@ -759,6 +960,13 @@ void WaveformArea::PlotContextMenu()
 
 				if(ImGui::BeginMenu("Y axis"))
 				{
+					if(ImGui::MenuItem("None", nullptr, (m_yAxisCursorMode == Y_CURSOR_NONE)))
+						m_yAxisCursorMode = Y_CURSOR_NONE;
+					if(ImGui::MenuItem("Single", nullptr, (m_yAxisCursorMode == Y_CURSOR_SINGLE)))
+						m_yAxisCursorMode = Y_CURSOR_SINGLE;
+					if(ImGui::MenuItem("Dual", nullptr, (m_yAxisCursorMode == Y_CURSOR_DUAL)))
+						m_yAxisCursorMode = Y_CURSOR_DUAL;
+
 					ImGui::EndMenu();
 				}
 

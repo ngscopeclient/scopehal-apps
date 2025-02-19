@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -495,6 +495,7 @@ protected:
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderBERLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
+	void RenderYAxisCursors(ImVec2 pos, ImVec2 size);
 	void RenderBERSamplingPoint(ImVec2 start, ImVec2 size);
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderEyePatternTooltip(ImVec2 start, ImVec2 size);
@@ -591,7 +592,9 @@ protected:
 		DRAG_STATE_TRIGGER_SECONDARY_LEVEL,
 		DRAG_STATE_BER_LEVEL,
 		DRAG_STATE_BER_BOTH,
-		DRAG_STATE_PEAK_MARKER
+		DRAG_STATE_PEAK_MARKER,
+		DRAG_STATE_Y_CURSOR0,
+		DRAG_STATE_Y_CURSOR1
 	} m_dragState;
 
 	///@brief The stream currently being dragged (invalid if m_dragState != DRAG_STATE_CHANNEL)
@@ -658,6 +661,22 @@ protected:
 
 	///@brief True if the mouse cursor is over a channel button
 	bool m_mouseOverButton;
+
+	///@brief Horizontal cursor configuration
+	enum YAxisCursorMode
+	{
+		Y_CURSOR_NONE,
+		Y_CURSOR_SINGLE,
+		Y_CURSOR_DUAL
+	};
+
+	///@brief Currently selected state of the Y axis cursor(s)
+	YAxisCursorMode m_yAxisCursorMode;
+
+	///@brief Position of the Y axis cursor(s)
+	float m_yAxisCursorPositions[2];
+
+	void DoCursor(int iCursor, DragState state);
 };
 
 typedef std::pair<WaveformArea*, size_t> DragDescriptor;
