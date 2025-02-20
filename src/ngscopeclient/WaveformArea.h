@@ -498,7 +498,7 @@ protected:
 	void RenderTriggerLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderBERLevelArrows(ImVec2 start, ImVec2 size);
 	void RenderCursors(ImVec2 start, ImVec2 size);
-	void RenderYAxisCursors(ImVec2 pos, ImVec2 size);
+	void RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth);
 	void RenderBERSamplingPoint(ImVec2 start, ImVec2 size);
 	void CheckForScaleMismatch(ImVec2 start, ImVec2 size);
 	void RenderEyePatternTooltip(ImVec2 start, ImVec2 size);

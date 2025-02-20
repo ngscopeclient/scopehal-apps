@@ -751,7 +751,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
 		ImGui::SetCursorPos(cpos);
-		RenderYAxisCursors(pos, csize);
+		RenderYAxisCursors(pos, csize, yAxisWidth);
 	}
 	ImGui::SetCursorPos(oldpos);
 
@@ -770,7 +770,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 /**
 	@brief Render horizontal cursors over the plot
  */
-void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size)
+void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 {
 	//No cursors? Nothing to do
 	if(m_yAxisCursorMode == Y_CURSOR_NONE)
@@ -803,58 +803,52 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size)
 		//First cursor
 		list->AddLine(ImVec2(pos.x, ypos0), ImVec2(pos.x + size.x, ypos0), cursor0_color, 1);
 
-		/*
 		//Text
-		//Anchor bottom right at the cursor
-		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
+		//Anchor bottom left at the cursor
+		auto str = string("Y1: ") + m_yAxisUnit.PrettyPrint(m_yAxisCursorPositions[0]);
 		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
 		auto tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
 		float padding = 2;
 		float wrounding = 2;
-		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+		float textTop = ypos0 - (3*padding + tsize.y);
+		float plotRight = pos.x + size.x - yAxisWidth;
+		float textLeft = plotRight - (2*padding + tsize.x);
 		list->AddRectFilled(
-			ImVec2(xpos0 - (2*padding + tsize.x), textTop - padding ),
-			ImVec2(xpos0 - 1, pos.y + m_timelineHeight),
+			ImVec2(textLeft, textTop - padding ),
+			ImVec2(plotRight, ypos0 - padding),
 			ImGui::GetColorU32(ImGuiCol_PopupBg),
 			wrounding);
 		list->AddText(
 			font,
 			fontSize,
-			ImVec2(xpos0 - (padding + tsize.x), textTop),
+			ImVec2(textLeft + padding, textTop + padding),
 			cursor0_color,
 			str.c_str());
-		*/
 
 		//Second cursor
 		if(m_yAxisCursorMode == Y_CURSOR_DUAL)
 		{
 			list->AddLine(ImVec2(pos.x, ypos1), ImVec2(pos.x + size.x, ypos1), cursor1_color, 1);
 
-			/*
-			int64_t delta = m_xAxisCursorPositions[1] - m_xAxisCursorPositions[0];
-			str = string("X2: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[1]) + "\n" +
-				"ΔX = " + m_xAxisUnit.PrettyPrint(delta);
-
-			//If X axis is time domain, show frequency dual
-			Unit hz(Unit::UNIT_HZ);
-			if(m_xAxisUnit.GetType() == Unit::UNIT_FS)
-				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
+			float delta = m_yAxisCursorPositions[0] - m_yAxisCursorPositions[1];
+			str = string("Y2: ") + m_yAxisUnit.PrettyPrint(m_yAxisCursorPositions[1]) + "\n" +
+				"ΔY = " + m_yAxisUnit.PrettyPrint(delta);
 
 			//Text
 			tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
-			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
+			textTop = ypos1 - (3*padding + tsize.y);
+			textLeft = plotRight - (2*padding + tsize.x);
 			list->AddRectFilled(
-				ImVec2(xpos1 + 1, textTop - padding ),
-				ImVec2(xpos1 + (2*padding + tsize.x), pos.y + m_timelineHeight),
+				ImVec2(textLeft, textTop - padding ),
+				ImVec2(plotRight, ypos1 - padding),
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
 				font,
 				fontSize,
-				ImVec2(xpos1 + padding, textTop),
+				ImVec2(textLeft + padding, textTop + padding),
 				cursor1_color,
 				str.c_str());
-			*/
 		}
 
 		//not dragging if we no longer have a second cursor
