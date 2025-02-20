@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -2561,6 +2561,8 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 					LogWarning("no waveform area created for area %d\n", aid);
 				else
 					group->AddArea(area);
+
+				area->LoadConfiguration(an);
 			}
 		}
 	}
@@ -3165,6 +3167,9 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 			YAML::Node streamNode;
 			for(size_t i=0; i<area->GetStreamCount(); i++)
 				streamNode["stream" + to_string(i)] = area->GetDisplayedChannel(i)->Serialize(m_session.m_idtable);
+
+			//Serialize cursors and other config for the area
+			area->SerializeConfiguration(areaNode);
 
 			areaNode["streams"] = streamNode;
 			areas["area" + to_string(id)] = areaNode;

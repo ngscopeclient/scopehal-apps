@@ -363,6 +363,53 @@ WaveformArea::~WaveformArea()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+void WaveformArea::SerializeConfiguration(YAML::Node& node)
+{
+	YAML::Node ycursors;
+
+	switch(m_yAxisCursorMode)
+	{
+		case Y_CURSOR_SINGLE:
+			ycursors["mode"] = "single";
+			break;
+
+		case Y_CURSOR_DUAL:
+			ycursors["mode"] = "dual";
+			break;
+
+		case Y_CURSOR_NONE:
+		default:
+			ycursors["mode"] = "none";
+			break;
+	}
+
+	ycursors["pos0"] = m_yAxisCursorPositions[0];
+	ycursors["pos1"] = m_yAxisCursorPositions[1];
+
+	node["ycursors"] = ycursors;
+}
+
+void WaveformArea::LoadConfiguration(YAML::Node& node)
+{
+	auto cursornode = node["ycursors"];
+	if(cursornode)
+	{
+		m_yAxisCursorPositions[0] = cursornode["pos0"].as<float>();
+		m_yAxisCursorPositions[1] = cursornode["pos1"].as<float>();
+
+		auto mode = cursornode["mode"].as<string>();
+		if(mode == "single")
+			m_yAxisCursorMode = Y_CURSOR_SINGLE;
+		else if(mode == "dual")
+			m_yAxisCursorMode = Y_CURSOR_DUAL;
+		else
+			m_yAxisCursorMode = Y_CURSOR_NONE;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stream management
 
 /**
@@ -858,7 +905,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size)
 
 	//Cursor 0 should always be above cursor 1 (if both are enabled).
 	//If they get swapped, exchange them.
-	if( (m_yAxisCursorPositions[0] > m_yAxisCursorPositions[1]) && (m_yAxisCursorMode == Y_CURSOR_DUAL) )
+	if( (m_yAxisCursorPositions[0] < m_yAxisCursorPositions[1]) && (m_yAxisCursorMode == Y_CURSOR_DUAL) )
 	{
 		//Swap the cursors themselves
 		float tmp = m_yAxisCursorPositions[0];

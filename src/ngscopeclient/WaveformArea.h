@@ -487,6 +487,9 @@ public:
 
 	TimePoint GetWaveformTimestamp();
 
+	void SerializeConfiguration(YAML::Node& node);
+	void LoadConfiguration(YAML::Node& node);
+
 protected:
 	void ChannelButton(std::shared_ptr<DisplayedChannel> chan, size_t index);
 	void RenderBackgroundGradient(ImVec2 start, ImVec2 size);
