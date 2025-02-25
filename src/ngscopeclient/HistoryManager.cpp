@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -367,7 +367,10 @@ bool HistoryManager::HasHistory(TimePoint t)
 /**
 	@brief Called when we run out of memory
  */
-bool HistoryManager::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize)
+bool HistoryManager::OnMemoryPressure(
+	[[maybe_unused]] MemoryPressureLevel level,
+	MemoryPressureType type,
+	[[maybe_unused]] size_t requestedSize)
 {
 	LogDebug("HistoryManager::OnMemoryPressure\n");
 	LogIndenter li;
