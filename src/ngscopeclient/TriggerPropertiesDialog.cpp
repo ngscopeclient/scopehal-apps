@@ -118,7 +118,7 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 				m_committedTriggerOffset,
 				fs))
 			{
-				m_scope->SetTriggerOffset(off);
+				m_scope->SetTriggerOffset(/*off*/m_committedTriggerOffset);
 			}
 
 			Dialog::HelpMarker(
@@ -248,6 +248,9 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 			{
 				//Skip trigger level as that's redundant
 				if(it->first == "Level")
+					continue;
+					
+				if(it->second.IsHidden())
 					continue;
 
 				if(FilterPropertiesDialog::DoParameter(it->second, it->first, m_paramTempValues))

@@ -540,6 +540,8 @@ bool ChannelPropertiesDialog::DoRender()
 		{
 			if(ImGui::CollapsingHeader(streamname.c_str()))
 			{
+				
+				ImGui::PushID(i);
 				auto unit = m_channel->GetYAxisUnits(i);
 
 				//If no change to offset in dialog, update our input value when we change offset outside the dialog
@@ -565,6 +567,7 @@ bool ChannelPropertiesDialog::DoRender()
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
 					ochan->SetVoltageRange(m_committedRange[i], i);
+				ImGui::PopID();
 			}
 		}
 	}
