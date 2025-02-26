@@ -119,6 +119,7 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 				fs))
 			{
 				m_scope->SetTriggerOffset(/*off*/m_committedTriggerOffset);
+				updated = true;
 			}
 
 			Dialog::HelpMarker(
