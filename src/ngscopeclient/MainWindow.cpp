@@ -185,6 +185,7 @@ MainWindow::~MainWindow()
 {
 	LogTrace("Application exiting\n");
 
+	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 	g_vkComputeDevice->waitIdle();
 	m_texmgr.clear();
 
@@ -616,6 +617,7 @@ void MainWindow::RenderUI()
 	//Block until all background processing completes to ensure no command buffers are still pending
 	if(!m_groupsToClose.empty())
 	{
+		lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 		g_vkComputeDevice->waitIdle();
 		m_groupsToClose.clear();
 	}
