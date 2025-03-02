@@ -54,13 +54,6 @@ atomic<int64_t> g_lastWaveformRenderTime;
 
 void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue);
 
-/**
-	@brief Mutex for controlling access to background Vulkan activity
-
-	Arbitrarily many threads can own this mutex at once, but recreating the swapchain conflicts with any and all uses
- */
-std::shared_mutex g_vulkanActivityMutex;
-
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
 	pthread_setname_np_compat("WaveformThread");
