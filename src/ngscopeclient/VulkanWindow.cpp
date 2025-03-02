@@ -445,7 +445,7 @@ void VulkanWindow::Render()
 		m_softwareResizeRequested = false;
 		LogTrace("Software window resize to (%d, %d)\n", m_pendingWidth, m_pendingHeight);
 
-		//can't resize the window during any other vulkan activity
+		//waitIdle is exclusive with all other operations
 		lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 		g_vkComputeDevice->waitIdle();
 		glfwSetWindowSize(m_window, m_pendingWidth, m_pendingHeight);
