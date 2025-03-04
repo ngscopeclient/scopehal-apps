@@ -133,15 +133,6 @@ if(NOT SIGCXX_FOUND)
 	message(FATAL_ERROR "Unable to find any version of sigc++; this is required to build ngscopeclient.")
 endif()
 
-# cairomm is used by EyeMask
-pkg_check_modules(CAIROMM QUIET IMPORTED_TARGET cairomm-1.16) # look for latest version first
-if(NOT CAIROMM_FOUND)
-	pkg_check_modules(CAIROMM QUIET IMPORTED_TARGET cairomm-1.0) # look for older version too
-endif()
-if(NOT CAIROMM_FOUND)
-	message(FATAL_ERROR "Unable to find any version of cairomm; this is required to build ngscopeclient.")
-endif()
-
 # We still use gtk on Linux for the file browser dialog in "native" mode)
 if(LINUX)
 	pkg_check_modules(GTK QUIET IMPORTED_TARGET REQUIRED gtk+-3.0)
