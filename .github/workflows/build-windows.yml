@@ -50,6 +50,7 @@ jobs:
           spirv-tools:p
           ffts:p
           hidapi:p
+          libpng:p
 
     - name: Install WiX
       if: ${{ matrix.sys == 'ucrt64' }}
