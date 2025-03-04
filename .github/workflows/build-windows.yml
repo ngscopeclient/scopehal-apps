@@ -40,7 +40,6 @@ jobs:
           cmake:p
           toolchain:p
           libsigc++:p
-          cairomm:p
           yaml-cpp:p
           glfw:p
           catch:p
