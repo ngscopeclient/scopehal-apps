@@ -28,7 +28,6 @@ jobs:
           cmake \
           pkgconf \
           libgtkmm-3.0-dev \
-          libcairomm-1.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
           catch2 \
@@ -99,7 +98,7 @@ jobs:
         path: build/doc/ngscopeclient-manual.pdf
 
     - name: Upload Test Log
-      if: ${{ always() }} 
+      if: ${{ always() }}
       uses: actions/upload-artifact@v3
       with:
         name: ngscopeclient-test_log

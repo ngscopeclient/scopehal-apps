@@ -40,7 +40,6 @@ jobs:
           cmake:p
           toolchain:p
           libsigc++:p
-          cairomm:p
           yaml-cpp:p
           glfw:p
           catch:p
@@ -51,6 +50,7 @@ jobs:
           spirv-tools:p
           ffts:p
           hidapi:p
+          libpng:p
 
     - name: Install WiX
       if: ${{ matrix.sys == 'ucrt64' }}
