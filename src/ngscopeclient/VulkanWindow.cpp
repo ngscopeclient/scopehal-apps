@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -303,6 +303,8 @@ VulkanWindow::~VulkanWindow()
 bool VulkanWindow::UpdateFramebuffer()
 {
 	LogTrace("Recreating framebuffer due to window resize\n");
+	LogIndenter li;
+
 	lock_guard<shared_mutex> lock(g_vulkanActivityMutex);
 
 	//Wait until any previous rendering has finished
@@ -313,6 +315,8 @@ bool VulkanWindow::UpdateFramebuffer()
 	//(This will be corrected next frame, so no worries)
 	auto caps = g_vkComputePhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
+	LogTrace("Max image extent: %d x %d\n", caps.maxImageExtent.width, caps.maxImageExtent.height);
+	LogTrace("Current dims: %d x %d\n", m_width, m_height);
 	if( (caps.maxImageExtent.width < (unsigned int)m_width) ||
 		(caps.maxImageExtent.height < (unsigned int)m_height) ||
 		(caps.minImageExtent.width > (unsigned int)m_width) ||
