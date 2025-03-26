@@ -40,6 +40,33 @@ endif()
 
 set(PROJECT_VERSION "0.1-dev+${NGSCOPECLIENT_VERSION}")
 
+# MacOS X RPATH handling
+# ref: https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
+# tests are currently broken on MacOS X due to RPATH and library handling
+# in the meantime use cmake -DBUILD_TESTING:BOOL=OFF
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# the RPATH to be used when installing, but only if it's not a system directory
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif("${isSystemDir}" STREQUAL "-1")
+endif()
+
 include(CTest)
 
 # Configuration settings
