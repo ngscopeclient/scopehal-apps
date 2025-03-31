@@ -50,6 +50,12 @@ void InstrumentThread(InstrumentThreadArgs args)
 		return;
 	}
 
+	//Make locale handling thread safe on Windows
+	#ifdef _WIN32
+	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
+	Unit::SetDefaultLocale();
+	#endif
+
 	auto session = args.session;
 
 	//Extract type-specified fields

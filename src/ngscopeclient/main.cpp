@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 	if((policy == NULL) || (strcmp(policy, "PASSIVE") != 0) )
 	{
 		#ifdef _WIN32
-			LogWarning("glscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
+			LogWarning("ngscopeclient works best with the OMP_WAIT_POLICY environment variable set to PASSIVE\n");
 		#else
 			LogDebug("OMP_WAIT_POLICY not set to PASSIVE\n");
 			setenv("OMP_WAIT_POLICY", "PASSIVE", true);
@@ -98,6 +98,12 @@ int main(int argc, char* argv[])
 			LogDebug("Re-exec'ing with correct environment\n");
 			Relaunch(argc, argv);
 		}
+	#endif
+
+	//Make locale handling thread safe on Windows
+	#ifdef _WIN32
+	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
+	Unit::SetDefaultLocale();
 	#endif
 
 	//Initialize object creation tables for predefined libraries
