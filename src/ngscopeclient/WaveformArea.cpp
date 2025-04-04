@@ -2146,6 +2146,12 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	float alpha_scaled = alpha / sqrt(samplesPerPixel);
 	alpha_scaled = min(1.0f, alpha_scaled) * 2;
 
+	//Trigger phase can't go entirely in ConfigPushConstants::xoff due to limited dynamic range
+	//so pass only the fractional part there and put the integer part in innerxoff
+	int64_t triggerPhaseSamples	= data->m_triggerPhase / data->m_timescale;
+	int64_t fractionalTriggerPhase = data->m_triggerPhase % data->m_timescale;
+	innerxoff -= triggerPhaseSamples;
+
 	//Fill shader configuration
 	ConfigPushConstants config;
 	config.innerXoff = -innerxoff;
@@ -2154,7 +2160,7 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	config.memDepth = data->size();
 	config.offset_samples = offset_samples - 2;
 	config.alpha = alpha_scaled;
-	config.xoff = (data->m_triggerPhase - fractional_offset) * pixelsPerX;
+	config.xoff = (fractionalTriggerPhase - fractional_offset) * pixelsPerX;
 	config.xscale = xscale;
 	if(sadata || uadata)	//analog
 	{
