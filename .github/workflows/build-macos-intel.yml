@@ -64,6 +64,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=$HOME/ffts-prefix \
           -DCMAKE_INSTALL_RPATH=$HOME/ffts-prefix/lib \
           -DCMAKE_MACOSX_RPATH=ON \
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
           -GNinja \
           ..
         ninja
