@@ -18,8 +18,9 @@ wouldn't hurt.
 
 Copyright in the project is collectively held by all contributors as we do not require contributors to sign a CLA. The
 license header on source files currently states "Andrew D. Zonenberg and contributors" but may eventually be rephrased
-to simply "project contributors" or similar. If you are the primary author of a new file being added to the project you
-may list yourself in the Doxygen @author tag, however the intent of this is simply to reflect "who to ask if you have
+to simply "project contributors" or similar and is not intended to reflect the maintainers or other contributors
+claiming rights to your contribution. If you are the primary author of a new file being added to the project you may
+list yourself in the Doxygen @author tag, however the intent of this is simply to reflect "who to ask if you have
 questions about this code" rather than to be an exhaustive list of contributors.
 
 ### Attribution and third party / AI generated code
