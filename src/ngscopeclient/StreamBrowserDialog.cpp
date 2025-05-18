@@ -1374,7 +1374,10 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 	ImGui::PopID();
 }
 
-
+void StreamBrowserDialog::FlushConfigCache()
+{
+	m_timebaseConfig.clear();
+}
 
 /**
 	@brief Renders the dialog and handles UI events

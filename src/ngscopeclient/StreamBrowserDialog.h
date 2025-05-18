@@ -68,6 +68,8 @@ public:
 
 	virtual bool DoRender() override;
 
+	void FlushConfigCache();
+
 protected:
 	/**
 	   @brief State of badges used in intrument node rendering
@@ -83,7 +85,7 @@ protected:
 
 	void DoItemHelp();
 
-	// Rendeding of StreamBorwserDialog elements
+	// Rendeding of StreamBrowserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
 	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);

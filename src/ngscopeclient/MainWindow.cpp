@@ -1040,6 +1040,8 @@ void MainWindow::ToolbarButtons()
 	if(ImGui::ImageButton("refresh-settings", GetTexture("refresh-settings"), buttonsize))
 	{
 		m_session.FlushConfigCache();
+		if(m_streamBrowser)
+			m_streamBrowser->FlushConfigCache();
 		ClearPersistence();
 	}
 	Dialog::Tooltip(
