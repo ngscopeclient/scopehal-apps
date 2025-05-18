@@ -2564,9 +2564,10 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 				if(!area)
 					LogWarning("no waveform area created for area %d\n", aid);
 				else
+				{
 					group->AddArea(area);
-
-				area->LoadConfiguration(an);
+					area->LoadConfiguration(an);
+				}
 			}
 		}
 	}

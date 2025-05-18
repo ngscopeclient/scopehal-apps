@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -1879,6 +1879,11 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		if(pri)
 		{
 			auto inst = reinterpret_cast<Instrument*>(m_idtable[pri.as<int64_t>()]);
+			if(inst == nullptr)
+			{
+				LogWarning("null instrument loading trigger groups, skipping\n");
+				continue;
+			}
 			auto sscope = dynamic_pointer_cast<Oscilloscope>(inst->shared_from_this());
 			group = make_shared<TriggerGroup>(sscope, this);
 

@@ -62,7 +62,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
 	add_compile_options(-Wall -Wextra -Wuninitialized)
 	add_compile_options(-Wshadow -Wpedantic -Wcast-align -Wwrite-strings)
 	add_compile_options(-Wmissing-declarations -Wvla)
-  add_compile_options(-Werror -Wno-error=deprecated-declarations -Wno-error=unused-parameter -Wno-error=unused-variable -Wno-error=unused-result)
+  add_compile_options(-Werror -Wno-error=deprecated-declarations -Wno-error=unused-parameter -Wno-error=unused-variable -Wno-error=unused-result -Wno-error=shadow)
 endif()
 
 # Compiler warnings specific to GCC or Clang
