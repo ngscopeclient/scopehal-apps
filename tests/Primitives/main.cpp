@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* libscopehal v0.1                                                                                                     *
+* libscopehal                                                                                                          *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -50,10 +50,10 @@ mt19937 g_rng;
 class testRunListener : public Catch::EventListenerBase
 {
 public:
-    using Catch::EventListenerBase::EventListenerBase;
+	using Catch::EventListenerBase::EventListenerBase;
 
-    void testRunStarting(Catch::TestRunInfo const&) override
-    {
+	void testRunStarting(Catch::TestRunInfo const&) override
+	{
 		g_log_sinks.emplace(g_log_sinks.begin(), new ColoredSTDLogSink(Severity::VERBOSE));
 
 		if(!VulkanInit(true))
@@ -69,8 +69,8 @@ public:
 		g_rng.seed(0);
 	}
 
-    void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
-    {
+	void testRunEnded([[maybe_unused]] Catch::TestRunStats const& testRunStats) override
+	{
 		ScopehalStaticCleanup();
 	}
 };

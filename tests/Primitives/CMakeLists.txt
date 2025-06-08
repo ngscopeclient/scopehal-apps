@@ -3,6 +3,7 @@ add_executable(Primitives
 
 	Convert8BitSamples.cpp
 	Convert16BitSamples.cpp
+	EdgeDetection.cpp
 	Sampling.cpp
 )
 
@@ -21,3 +22,8 @@ add_custom_command(TARGET Primitives POST_BUILD
 endif()
 
 catch_discover_tests(Primitives)
+
+add_dependencies(Primitives
+	ngprotoshaders
+	nghalshaders
+	)

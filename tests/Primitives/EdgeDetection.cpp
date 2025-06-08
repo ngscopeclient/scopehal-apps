@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Unit test for SampleOn* primitives
+	@brief Unit test for FindZeroCrossings() and similar
  */
 #ifdef _CATCH2_V3
 #include <catch2/catch_all.hpp>
@@ -39,93 +39,64 @@
 #endif
 
 #include "../../lib/scopehal/scopehal.h"
+#include "../../lib/scopehal/LevelCrossingDetector.h"
 #include "../../lib/scopehal/TestWaveformSource.h"
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Primitives.h"
 
 using namespace std;
 
-TEST_CASE("Primitive_SampleOnRisingEdges")
+TEST_CASE("Primitive_FindZeroCrossings")
 {
-	const size_t wavelen = 1000000;
+	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_FindZeroCrossings.queue"));
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		queue->m_family );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
-	SECTION("SparseDigitalWaveform")
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
+	const size_t depth = 50000000;
+
+	//Deterministic PRNG for repeatable testing
+	minstd_rand rng;
+	rng.seed(0);
+	TestWaveformSource source(rng);
+
+	SECTION("UniformAnalogWaveform")
 	{
-		//Generate a random data/clock waveform
-		SparseDigitalWaveform data;
-		SparseDigitalWaveform clock;
-		data.m_timescale = 5;
-		clock.m_timescale = 5;
-		SparseDigitalWaveform samples_expected;
-		uniform_int_distribution<int> edgeprob(0, 3);
-		uniform_int_distribution<int> dataprob(0, 1);
-		size_t nsamples = 0;
-		bool last_was_high = false;
-		for(size_t i=0; i<wavelen; i++)
+		//Input waveforms
+		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
+			source.GenerateNoisySinewave(1.0, 0.0, 200000, 20000, depth, 0.1));
+		wfm->MarkModifiedFromCpu();
+
+		//Find the reference zero crossings using the base function
+		float threshold = 0.05;
+		double start = GetTime();
+		vector<int64_t> edges;
+		Filter::FindZeroCrossings(wfm, threshold, edges);
+		double dt = GetTime() - start;
+		LogNotice("CPU: %.3f ms, %zu edges, %zu samples\n", dt*1000, edges.size(), depth);
+
 		{
+			LogNotice("First few ref timestamps:\n");
 			LogIndenter li;
-
-			//75% chance of emitting a random data bit with clock low.
-			//Always emit a 0 bit for the first clock sample, since rising edges at time zero
-			//are indistinguishable from a constant-high clock.
-			//Also, always emit a clock-low sample if the clock was high, since we need a low period before
-			//the next rising edge.
-			if( (edgeprob(g_rng) == 0) || (i == 0) || last_was_high)
-			{
-				//Create the data bit
-				data.m_offsets.push_back(i);
-				data.m_durations.push_back(1);
-				data.m_samples.push_back(dataprob(g_rng));
-
-				//Create the clock bit
-				//TODO: generate test waveforms with multi-cycle clock samples
-				clock.m_offsets.push_back(i);
-				clock.m_durations.push_back(1);
-				clock.m_samples.push_back(0);
-
-				last_was_high = false;
-			}
-
-			//25% chance of emitting a rising clock edge with the same data value as last clock
-			else
-			{
-				bool value = data.m_samples[data.m_samples.size()-1];
-
-				//Create the data bit
-				data.m_offsets.push_back(i);
-				data.m_durations.push_back(1);
-				data.m_samples.push_back(value);
-
-				//Create the clock bit
-				//TODO: generate test waveforms with multi-cycle clock samples
-				clock.m_offsets.push_back(i);
-				clock.m_durations.push_back(1);
-				clock.m_samples.push_back(1);
-
-				//Extend the last data bit, if present
-				if(nsamples)
-				{
-					samples_expected.m_durations[nsamples-1] =
-						(i * data.m_timescale) - samples_expected.m_offsets[nsamples-1];
-				}
-
-				//Save this as an expected data bit
-				//Duration is 1 until we get another clock edge.
-				//The last sample in the waveform always has duration 1, because we don't have an endpoint.
-				//TODO: should we extend to end of the waveform instead?
-				samples_expected.m_samples.push_back(value);
-				samples_expected.m_offsets.push_back(i * data.m_timescale);
-				samples_expected.m_durations.push_back(1);
-				nsamples ++;
-
-				last_was_high = true;
-			}
+			for(size_t i=0; i<5; i++)
+				LogNotice("%" PRIi64 "\n", edges[i]);
 		}
 
-		//Sample it
-		SparseDigitalWaveform samples;
-		Filter::SampleOnRisingEdges(&data, &clock, samples);
+		//Do the GPU version
+		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
+		LevelCrossingDetector ldet;
+		ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		start = GetTime();
+		ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		dt = GetTime() - start;
+		LogNotice("GPU: %.3f ms, TBD\n", dt*1000);
 
+		/*
 		//Initial sanity check: we should have the same number of data bits as we generated,
 		//and all sizes should be consistent
 		REQUIRE(nsamples == samples.m_offsets.size());
@@ -139,9 +110,9 @@ TEST_CASE("Primitive_SampleOnRisingEdges")
 			REQUIRE(samples.m_durations[i] == samples_expected.m_durations[i]);
 			REQUIRE(samples.m_samples[i] == samples_expected.m_samples[i]);
 		}
+		*/
+
+		//done, clean up
+		delete wfm;
 	}
-
-	//TODO: add test for DigitalBusWaveform version
-
-	//TODO: Add test for AnalogWaveform version
 }
