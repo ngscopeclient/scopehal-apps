@@ -1,6 +1,7 @@
 add_executable(Primitives
 	main.cpp
 
+	Averager.cpp
 	Convert8BitSamples.cpp
 	Convert16BitSamples.cpp
 	EdgeDetection.cpp
