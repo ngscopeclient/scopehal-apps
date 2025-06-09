@@ -72,13 +72,14 @@ TEST_CASE("Filter_ACRMS")
 				Baseline naive summation	456.16 ms
 				Kahan						560.00 ms
 				GPU average					511.00 ms
+				GPU edge detect				401.00 ms
 		*/
 
 		const size_t depth = 50000000;
 
 		//Input waveforms
 		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
-			source.GenerateNoisySinewave(1.0, 0.0, 200000, 20000, depth, 0.01));
+			source.GenerateNoisySinewave(1.0, 0.5, 200000, 20000, depth, 0.0));
 
 		//Add a small DC offset to make sure we null it out right
 		float offset = 0.314159;
@@ -117,9 +118,37 @@ TEST_CASE("Filter_ACRMS")
 		double dt = GetTime() - start;
 		LogVerbose("GPU: %.2f ms, RMS = %f, %.2fx speedup\n", dt * 1000, gpurms, tbase / dt);
 
+		//Verify the overall results
 		const float epsilon = 0.001;
 		REQUIRE(fabs(cpurms - 0.353553) < epsilon);
 		REQUIRE(fabs(gpurms - 0.353553) < epsilon);
+
+		//Verify the cycle-by-cycle results
+		//TODO: why do we occasionally get spikes of larger deltas?
+		const float epsilon2 = 0.05;
+		SparseAnalogWaveform& gpucycles = *dynamic_cast<SparseAnalogWaveform*>(filter->GetData(0));
+		REQUIRE(cycles.size() == gpucycles.size());
+		for(size_t i=0; i<gpucycles.size(); i++)
+		{
+			int64_t doff = cycles.m_offsets[i] == gpucycles.m_offsets[i];
+			REQUIRE(llabs(doff) <= 1);
+
+			float delta = cycles.m_samples[i] - gpucycles.m_samples[i];
+			if(fabs(delta) >= epsilon2)
+			{
+				LogNotice(
+					"delta = %f, i = %zu, cpu = %f, gpu = %f\n",
+					delta,
+					i,
+					cycles.m_samples[i],
+					gpucycles.m_samples[i]);
+
+				LogNotice("cputime = %" PRIi64 ", gputime = %" PRIi64 "\n",
+					cycles.m_offsets[i],
+					gpucycles.m_offsets[i]);
+			}
+			REQUIRE(fabs(delta) < epsilon2);
+		}
 
 		g_scope->GetOscilloscopeChannel(0)->SetData(nullptr, 0);
 	}
@@ -149,8 +178,10 @@ float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& 
 	float rms = sqrt(temp / length);
 
 	//Auto-threshold analog signals at average of the full scale range
+	temp = 0;
 	vector<int64_t> edges;
 	Filter::FindZeroCrossings(wfm, average, edges);
+	cycles.clear();
 	cycles.PrepareForCpuAccess();
 
 	size_t elen = edges.size();
