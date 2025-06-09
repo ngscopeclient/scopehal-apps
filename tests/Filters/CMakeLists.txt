@@ -2,6 +2,7 @@ add_executable(Filters
 	main.cpp
 
 	Filter_Add.cpp
+	Filter_ACRMS.cpp
 	Filter_DeEmbed.cpp
 	Filter_EyePattern.cpp
 	Filter_FIR.cpp
@@ -31,3 +32,8 @@ add_custom_command(TARGET Filters POST_BUILD
 endif()
 
 catch_discover_tests(Filters)
+
+add_dependencies(Filters
+	ngprotoshaders
+	nghalshaders
+	)
