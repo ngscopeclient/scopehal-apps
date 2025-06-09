@@ -67,8 +67,14 @@ TEST_CASE("Filter_ACRMS")
 
 	SECTION("UniformAnalogWaveform")
 	{
-		//const size_t depth = 50000000;
-		const size_t depth = 5000000;
+		/*
+			Xeon 6144 + RTX 2080 Ti, 50M points
+				Baseline naive summation	456.16 ms
+				Kahan						560.00 ms
+				GPU average					511.00 ms
+		*/
+
+		const size_t depth = 50000000;
 
 		//Input waveforms
 		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
@@ -128,9 +134,18 @@ float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& 
 
 	//Calculate the global RMS value
 	//Sum the squares of all values after subtracting the DC value
+	//Kahan summation for improved accuracy
 	float temp = 0;
+	float c = 0;
 	for (size_t i = 0; i < length; i++)
-		temp += ((wfm->m_samples[i] - average) * (wfm->m_samples[i] - average));
+	{
+		float delta = wfm->m_samples[i] - average;
+		float deltaSquared = delta * delta;
+		float y = deltaSquared - c;
+		float t = temp + y;
+		c = (t - temp) - y;
+		temp = t;
+	}
 	float rms = sqrt(temp / length);
 
 	//Auto-threshold analog signals at average of the full scale range
