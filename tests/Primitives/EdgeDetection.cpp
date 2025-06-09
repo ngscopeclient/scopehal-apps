@@ -80,37 +80,32 @@ TEST_CASE("Primitive_FindZeroCrossings")
 		double dt = GetTime() - start;
 		LogNotice("CPU: %.3f ms, %zu edges, %zu samples\n", dt*1000, edges.size(), depth);
 
-		{
-			LogNotice("First few ref timestamps:\n");
-			LogIndenter li;
-			for(size_t i=0; i<5; i++)
-				LogNotice("%" PRIi64 "\n", edges[i]);
-		}
-
 		//Do the GPU version
 		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
 		LevelCrossingDetector ldet;
-		ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		auto& gpuedges = ldet.GetResults();
+		size_t gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
 		start = GetTime();
-		ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
 		dt = GetTime() - start;
-		LogNotice("GPU: %.3f ms, TBD\n", dt*1000);
+		LogNotice("GPU: %.3f ms, %zu edges\n", dt*1000, gpulen);
 
-		/*
-		//Initial sanity check: we should have the same number of data bits as we generated,
-		//and all sizes should be consistent
-		REQUIRE(nsamples == samples.m_offsets.size());
-		REQUIRE(nsamples == samples.m_durations.size());
-		REQUIRE(nsamples == samples.m_samples.size());
+		//Don't count the final memcpy against run time since we assume the buffer is going to get used on the GPU
+		gpuedges.PrepareForCpuAccess();
 
-		//Check each of the bits
-		for(size_t i=0; i<nsamples; i++)
+		//Verify everything matches
+		//Allow +/- 1 timebase unit of mismatch for different CPU-GPU rounding behavior in the interpolation
+		REQUIRE(gpulen == edges.size());
+		for(size_t i=0; i<edges.size(); i++)
 		{
-			REQUIRE(samples.m_offsets[i] == samples_expected.m_offsets[i]);
-			REQUIRE(samples.m_durations[i] == samples_expected.m_durations[i]);
-			REQUIRE(samples.m_samples[i] == samples_expected.m_samples[i]);
+			int64_t delta = edges[i] - gpuedges[i];
+
+			if( (delta > 1) || (delta < -1) )
+				LogNotice("mismatch at i=%zu\n", i);
+
+			REQUIRE(delta <= 1);
+			REQUIRE(delta >= -1);
 		}
-		*/
 
 		//done, clean up
 		delete wfm;
