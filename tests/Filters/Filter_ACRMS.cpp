@@ -45,10 +45,7 @@
 
 using namespace std;
 
-/*
-void VerifyAdditionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* padd);
-void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb);
-*/
+float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& cycles);
 
 TEST_CASE("Filter_ACRMS")
 {
@@ -89,23 +86,33 @@ TEST_CASE("Filter_ACRMS")
 
 		//Set up the filter (don't count this towards execution time)
 		wfm->PrepareForGpuAccess();
+		wfm->PrepareForCpuAccess();
 
 		//Run the filter once without looking at results, to make sure caches are hot and buffers are allocated etc
 		filter->Refresh(cmdbuf, queue);
 
-		//TODO: CPU side reference implementation for speed comparison
+		//Clear zero crossing cache
+		Filter::ClearAnalysisCache();
 
-		float tbase = 1.0;
+		//CPU side reference implementation for speed comparison
+		SparseAnalogWaveform cycles;
+		double start = GetTime();
+		float cpurms = ReferenceImplementation(wfm, cycles);
+		double tbase = GetTime() - start;
+		LogVerbose("CPU: %.2f ms, RMS = %f, %zu samples\n", tbase * 1000, cpurms, cycles.size());
+
+		//Clear zero crossing cache
+		Filter::ClearAnalysisCache();
 
 		//Run on the GPU for score
-		double start = GetTime();
+		start = GetTime();
 		filter->Refresh(cmdbuf, queue);
 		float gpurms = filter->GetScalarValue(1);
 		double dt = GetTime() - start;
-		//LogVerbose("GPU: %.2f ms, RMS = %f, %.2fx speedup\n", dt * 1000, gpurms, tbase / dt);
-		LogVerbose("CPU: %.2f ms, RMS = %f\n", dt * 1000, gpurms);
+		LogVerbose("GPU: %.2f ms, RMS = %f, %.2fx speedup\n", dt * 1000, gpurms, tbase / dt);
 
 		const float epsilon = 0.001;
+		REQUIRE(fabs(cpurms - 0.353553) < epsilon);
 		REQUIRE(fabs(gpurms - 0.353553) < epsilon);
 
 		g_scope->GetOscilloscopeChannel(0)->SetData(nullptr, 0);
@@ -114,44 +121,53 @@ TEST_CASE("Filter_ACRMS")
 	filter->Release();
 }
 
-/*
-void AddCpu(UniformAnalogWaveform* pout, UniformAnalogWaveform* pa, UniformAnalogWaveform* pb)
+float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& cycles)
 {
-	REQUIRE(pout != nullptr);
-	REQUIRE(pa != nullptr);
-	REQUIRE(pb != nullptr);
-	REQUIRE(pout->size() == pa->size());
-	REQUIRE(pa->size() == pb->size());
+	float average = Filter::GetAvgVoltage(wfm);
+	auto length = wfm->size();
 
-	pout->PrepareForCpuAccess();
-	pa->PrepareForCpuAccess();
-	pb->PrepareForCpuAccess();
+	//Calculate the global RMS value
+	//Sum the squares of all values after subtracting the DC value
+	float temp = 0;
+	for (size_t i = 0; i < length; i++)
+		temp += ((wfm->m_samples[i] - average) * (wfm->m_samples[i] - average));
+	float rms = sqrt(temp / length);
 
-	float* out = pout->m_samples.GetCpuPointer();
+	//Auto-threshold analog signals at average of the full scale range
+	vector<int64_t> edges;
+	Filter::FindZeroCrossings(wfm, average, edges);
+	cycles.PrepareForCpuAccess();
 
-	size_t len = pa->size();
-
-	for(size_t i=0; i<len; i++)
-		out[i] = pa->m_samples[i] + pb->m_samples[i];
-
-	pout->MarkModifiedFromCpu();
-}
-
-void VerifyAdditionResult(UniformAnalogWaveform* pa, UniformAnalogWaveform* pb, UniformAnalogWaveform* padd)
-{
-	REQUIRE(padd != nullptr);
-	REQUIRE(padd->size() == min(pa->size(), pb->size()) );
-
-	pa->PrepareForCpuAccess();
-	pb->PrepareForCpuAccess();
-	padd->PrepareForCpuAccess();
-
-	size_t len = padd->size();
-
-	for(size_t i=0; i<len; i++)
+	size_t elen = edges.size();
+	for(size_t i = 0; i < (elen - 2); i += 2)
 	{
-		float expected = pa->m_samples[i] + pb->m_samples[i];
-		REQUIRE(fabs(padd->m_samples[i] - expected) < 1e-6);
+		//Measure from edge to 2 edges later, since we find all zero crossings regardless of polarity
+		int64_t start = edges[i] / wfm->m_timescale;
+		int64_t end = edges[i + 2] / wfm->m_timescale;
+		int64_t j = 0;
+
+		//Simply sum the squares of all values in a cycle after subtracting the DC value
+		for(j = start; (j <= end) && (j < (int64_t)length); j++)
+			temp += ((wfm->m_samples[j] - average) * (wfm->m_samples[j] - average));
+
+		//Get the difference between the end and start of cycle. This would be the number of samples
+		//on which AC RMS calculation was performed
+		int64_t delta = j - start - 1;
+
+		if (delta != 0)
+		{
+			//Divide by total number of samples for one cycle
+			temp /= delta;
+
+			//Take square root to get the final AC RMS Value of one cycle
+			temp = sqrt(temp);
+
+			//Push values to the waveform
+			cycles.m_offsets.push_back(start);
+			cycles.m_durations.push_back(delta);
+			cycles.m_samples.push_back(temp);
+		}
 	}
+
+	return rms;
 }
-*/
