@@ -87,8 +87,8 @@ TEST_CASE("Primitive_FindZeroCrossings")
 		size_t gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
 		start = GetTime();
 		gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
-		dt = GetTime() - start;
-		LogNotice("GPU: %.3f ms, %zu edges\n", dt*1000, gpulen);
+		double gpudt = GetTime() - start;
+		LogNotice("GPU: %.3f ms, %zu edges, %.2fx speedup\n", gpudt*1000, gpulen, dt / gpudt);
 
 		//Don't count the final memcpy against run time since we assume the buffer is going to get used on the GPU
 		gpuedges.PrepareForCpuAccess();
