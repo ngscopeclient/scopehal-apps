@@ -73,6 +73,9 @@ TEST_CASE("Filter_ACRMS")
 				Kahan						560.00 ms
 				GPU average					511.00 ms
 				GPU edge detect				401.00 ms
+				GPU initial RMS				174.79 ms
+				Preallocate output			172.80 ms
+				GPU cycle-by-cycle output	 10.84 ms
 		*/
 
 		const size_t depth = 50000000;
@@ -124,14 +127,17 @@ TEST_CASE("Filter_ACRMS")
 		REQUIRE(fabs(gpurms - 0.353553) < epsilon);
 
 		//Verify the cycle-by-cycle results
-		//TODO: why do we occasionally get spikes of larger deltas?
-		const float epsilon2 = 0.05;
+		//TODO: why do we occasionally get spikes of larger deltas? smaller epsilon should be achievable
+		const float epsilon2 = 0.025;
 		SparseAnalogWaveform& gpucycles = *dynamic_cast<SparseAnalogWaveform*>(filter->GetData(0));
+		gpucycles.PrepareForCpuAccess();
 		REQUIRE(cycles.size() == gpucycles.size());
 		for(size_t i=0; i<gpucycles.size(); i++)
 		{
 			int64_t doff = cycles.m_offsets[i] == gpucycles.m_offsets[i];
+			int64_t ddur = cycles.m_durations[i] == gpucycles.m_durations[i];
 			REQUIRE(llabs(doff) <= 1);
+			REQUIRE(llabs(ddur) <= 1);
 
 			float delta = cycles.m_samples[i] - gpucycles.m_samples[i];
 			if(fabs(delta) >= epsilon2)
@@ -178,7 +184,6 @@ float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& 
 	float rms = sqrt(temp / length);
 
 	//Auto-threshold analog signals at average of the full scale range
-	temp = 0;
 	vector<int64_t> edges;
 	Filter::FindZeroCrossings(wfm, average, edges);
 	cycles.clear();
@@ -193,6 +198,7 @@ float ReferenceImplementation(UniformAnalogWaveform* wfm, SparseAnalogWaveform& 
 		int64_t j = 0;
 
 		//Simply sum the squares of all values in a cycle after subtracting the DC value
+		temp = 0;
 		for(j = start; (j <= end) && (j < (int64_t)length); j++)
 			temp += ((wfm->m_samples[j] - average) * (wfm->m_samples[j] - average));
 
