@@ -101,7 +101,7 @@ TEST_CASE("Primitive_FindZeroCrossings")
 			int64_t delta = edges[i] - gpuedges[i];
 
 			if( (delta > 1) || (delta < -1) )
-				LogNotice("mismatch at i=%zu\n", i);
+				LogNotice("mismatch at i=%zu (delta=%" PRIi64 ")\n", i, delta);
 
 			REQUIRE(delta <= 1);
 			REQUIRE(delta >= -1);
