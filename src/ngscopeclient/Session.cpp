@@ -874,6 +874,7 @@ void Session::DoLoadWaveformDataForStream(
 	}
 
 	cap->MarkModifiedFromCpu();
+	cap->PrepareForGpuAccess();
 
 	#ifdef _WIN32
 		delete[] buf;
