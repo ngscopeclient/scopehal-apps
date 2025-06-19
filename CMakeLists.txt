@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
+project(ngscopeclient VERSION 0.1)
 include_directories(cmake) #WORKAROUND needed for find_package(Vulkan) for Vulkan SDK
 enable_language(CXX)
 
@@ -21,8 +22,6 @@ if(DEFINED ENV{VULKAN_SDK})
 		list(PREPEND CMAKE_PREFIX_PATH ${VULKAN_SDK_PATH})
 	endif()
 endif()
-
-project(ngscopeclient VERSION 0.1)
 
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
@@ -48,7 +47,16 @@ set(BUILD_DEVDOCS CACHE BOOL "Build developer documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 set(DISABLE_PCH CACHE BOOL "Disable precompiled headers as this may break certain configurations")
 
-set(CMAKE_CXX_STANDARD 17)
+# Build with C++ 17 on Linux for maximum compatibility with older system
+# but for Windows, enable C++ 20 to bypass a deprecation warning
+# (workaround for https://github.com/KhronosGroup/Vulkan-Hpp/issues/2034)
+# even though we do not yet use any C++ 20 features in our codebase
+if(WIN32)
+	set(CMAKE_CXX_STANDARD 20)
+else()
+	set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # error if compiler doesn't support c++17
 set(CMAKE_CXX_EXTENSIONS OFF) # use c++17 instead of gnu++17
 
