@@ -68,15 +68,15 @@ TEST_CASE("Primitive_FindZeroCrossings")
 	SECTION("UniformAnalogWaveform")
 	{
 		//Input waveforms
-		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
-			source.GenerateNoisySinewave(1.0, 0.0, 200000, 20000, depth, 0.1));
-		wfm->MarkModifiedFromCpu();
+		UniformAnalogWaveform wfm;
+		source.GenerateNoisySinewave(cmdBuf, queue, &wfm, 1.0, 0.0, 200000, 20000, depth, 0.1);
+		wfm.PrepareForCpuAccess();
 
 		//Find the reference zero crossings using the base function
 		float threshold = 0.05;
 		double start = GetTime();
 		vector<int64_t> edges;
-		Filter::FindZeroCrossings(wfm, threshold, edges);
+		Filter::FindZeroCrossings(&wfm, threshold, edges);
 		double dt = GetTime() - start;
 		LogNotice("CPU: %.3f ms, %zu edges, %zu samples\n", dt*1000, edges.size(), depth);
 
@@ -84,9 +84,9 @@ TEST_CASE("Primitive_FindZeroCrossings")
 		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
 		LevelCrossingDetector ldet;
 		auto& gpuedges = ldet.GetResults();
-		size_t gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		size_t gpulen = ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
 		start = GetTime();
-		gpulen = ldet.FindZeroCrossings(wfm, threshold, cmdBuf, queue);
+		gpulen = ldet.FindZeroCrossings(&wfm, threshold, cmdBuf, queue);
 		double gpudt = GetTime() - start;
 		LogNotice("GPU: %.3f ms, %zu edges, %.2fx speedup\n", gpudt*1000, gpulen, dt / gpudt);
 
@@ -106,8 +106,5 @@ TEST_CASE("Primitive_FindZeroCrossings")
 			REQUIRE(delta <= 1);
 			REQUIRE(delta >= -1);
 		}
-
-		//done, clean up
-		delete wfm;
 	}
 }

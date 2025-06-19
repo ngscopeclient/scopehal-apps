@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -52,6 +52,16 @@ TEST_CASE("Filter_FrequencyMeasurement")
 	REQUIRE(filter != nullptr);
 	filter->AddRef();
 
+	//Create a queue and command buffer
+	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Primitive_FindZeroCrossings.queue"));
+	vk::CommandPoolCreateInfo poolInfo(
+		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		queue->m_family );
+	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
+
+	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::raii::CommandBuffer cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice, bufinfo).front()));
+
 	const size_t niter = 25;
 	for(size_t i=0; i<niter; i++)
 	{
@@ -70,9 +80,10 @@ TEST_CASE("Filter_FrequencyMeasurement")
 
 			//Generate the input signal.
 			//50 Gsps, 100K points, no added noise
-			g_scope->GetOscilloscopeChannel(0)->SetData(
-				source.GenerateNoisySinewave(gen_amp, start_phase, gen_period, 20000, 100000, 0),
-				0);
+			auto wfm = new UniformAnalogWaveform;
+			source.GenerateNoisySinewave(cmdBuf, queue, wfm, gen_amp, start_phase, gen_period, 20000, 100000, 0);
+			g_scope->GetOscilloscopeChannel(0)->SetData(wfm, 0);
+			wfm->PrepareForCpuAccess();
 
 			Unit hz(Unit::UNIT_HZ);
 			LogVerbose("Frequency: %s\n", hz.PrettyPrint(gen_freq).c_str());

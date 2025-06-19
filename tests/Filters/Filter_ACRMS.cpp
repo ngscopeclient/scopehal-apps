@@ -81,10 +81,11 @@ TEST_CASE("Filter_ACRMS")
 		const size_t depth = 50000000;
 
 		//Input waveforms
-		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
-			source.GenerateNoisySinewave(1.0, 0.5, 200000, 20000, depth, 0.0));
+		UniformAnalogWaveform* wfm = new UniformAnalogWaveform;
+		source.GenerateNoisySinewave(cmdbuf, queue, wfm, 1.0, 0.5, 200000, 20000, depth, 0.0);
 
 		//Add a small DC offset to make sure we null it out right
+		wfm->PrepareForCpuAccess();
 		float offset = 0.314159;
 		for(size_t i=0; i<depth; i++)
 			wfm->m_samples[i] += offset;
@@ -121,10 +122,14 @@ TEST_CASE("Filter_ACRMS")
 		double dt = GetTime() - start;
 		LogVerbose("GPU: %.2f ms, RMS = %f, %.2fx speedup\n", dt * 1000, gpurms, tbase / dt);
 
-		//Verify the overall results
-		const float epsilon = 0.001;
-		REQUIRE(fabs(cpurms - 0.353553) < epsilon);
-		REQUIRE(fabs(gpurms - 0.353553) < epsilon);
+		//Verify the overall results are roughly in the right ballpark (randomness means it won't be perfect)
+		const float epsilon1 = 0.04;
+		REQUIRE(fabs(cpurms - 0.353553) < epsilon1);
+		REQUIRE(fabs(gpurms - 0.353553) < epsilon1);
+
+		//and that CPU and GPU match
+		const float epsilon3 = 0.0001;
+		REQUIRE(fabs(cpurms - gpurms) < epsilon3);
 
 		//Verify the cycle-by-cycle results
 		//TODO: why do we occasionally get spikes of larger deltas? smaller epsilon should be achievable

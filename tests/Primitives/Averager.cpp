@@ -68,36 +68,39 @@ TEST_CASE("Primitive_Averager")
 	SECTION("UniformAnalogWaveform")
 	{
 		//Input waveform
-		auto wfm = dynamic_cast<UniformAnalogWaveform*>(
-			source.GenerateNoisySinewave(1.0, 0.0, 200000, 20000, depth, 0.1));
-		wfm->MarkModifiedFromCpu();
+		UniformAnalogWaveform wfm;
+		source.GenerateNoisySinewave(cmdBuf, queue, &wfm, 1.0, 0.0, 200000, 20000, depth, 0.1);
 
 		//Add a small DC offset to the waveform so we have a nonzero average
+		wfm.PrepareForCpuAccess();
 		float offset = 0.314159;
 		for(size_t i=0; i<depth; i++)
-			wfm->m_samples[i] += offset;
+			wfm.m_samples[i] += offset;
+		wfm.MarkModifiedFromCpu();
 
 		//Find the average using the base function
 		double start = GetTime();
-		float avg = Filter::GetAvgVoltage(wfm);
+		float avg = Filter::GetAvgVoltage(&wfm);
 		double dt = GetTime() - start;
-		LogNotice("CPU: %.3f ms, average = %.3f\n", dt*1000, avg);
+		LogNotice("CPU: %6.3f ms, average = %.7f\n", dt*1000, avg);
 
 		//Do the GPU version
 		//Run twice, second time for score, so we don't count deferred init or allocations in the benchmark
 		Averager acomp;
-		float gpuavg = acomp.Average(wfm, cmdBuf, queue);
+		float gpuavg = acomp.Average(&wfm, cmdBuf, queue);
 		start = GetTime();
-		gpuavg = acomp.Average(wfm, cmdBuf, queue);
+		gpuavg = acomp.Average(&wfm, cmdBuf, queue);
 		double gpudt = GetTime() - start;
-		LogNotice("GPU: %.3f ms, average = %.3f, %.2fx speedup\n", gpudt*1000, gpuavg, dt / gpudt);
+		LogNotice("GPU: %6.3f ms, average = %.7f, %.2fx speedup\n", gpudt*1000, gpuavg, dt / gpudt);
 
 		//Verify everything matches
-		float epsilon = 0.0001;
-		REQUIRE(fabs(avg - offset) < epsilon);
-		REQUIRE(fabs(gpuavg - offset) < epsilon);
+		//Noisy sine should be close to the desired offset
+		float epsilon1 = 0.002;
+		REQUIRE(fabs(avg - offset) < epsilon1);
+		REQUIRE(fabs(gpuavg - offset) < epsilon1);
 
-		//done, clean up
-		delete wfm;
+		//and CPU and GPU versions should closely agree
+		float epsilon2 = 0.0001;
+		REQUIRE(fabs(gpuavg - avg) < epsilon2);
 	}
 }
