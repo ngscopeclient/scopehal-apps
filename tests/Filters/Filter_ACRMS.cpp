@@ -78,7 +78,9 @@ TEST_CASE("Filter_ACRMS")
 				GPU cycle-by-cycle output	 10.84 ms
 		*/
 
-		const size_t depth = 50000000;
+		//50M is a good benchmark, but drop down to 10M because CI uses llvmpipe which has maxStorageBufferRange
+		//of 134217728 (128 MB = 32M float32s)
+		const size_t depth = 10000000;
 
 		//Input waveforms
 		UniformAnalogWaveform* wfm = new UniformAnalogWaveform;
