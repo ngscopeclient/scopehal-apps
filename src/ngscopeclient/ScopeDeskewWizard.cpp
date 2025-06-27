@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -143,10 +143,12 @@ bool ScopeDeskewWizard::DoRender()
 	if(m_state == STATE_CLOSE)
 		return false;
 
+	auto titleFont = m_parent->GetFontPref("Appearance.General.title_font");
+
 	switch(m_state)
 	{
 		case STATE_WELCOME_1:
-			ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+			ImGui::PushFont(titleFont.first, titleFont.second);
 			ImGui::TextUnformatted("Welcome");
 			ImGui::PopFont();
 			ImGui::Separator();
@@ -164,7 +166,7 @@ bool ScopeDeskewWizard::DoRender()
 			break;
 
 		case STATE_WELCOME_2:
-			ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+			ImGui::PushFont(titleFont.first, titleFont.second);
 			ImGui::TextUnformatted("Cross-Trigger Cabling");
 			ImGui::PopFont();
 			ImGui::Separator();
@@ -190,8 +192,7 @@ bool ScopeDeskewWizard::DoRender()
 			break;
 
 		case STATE_WELCOME_3:
-
-			ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+			ImGui::PushFont(titleFont.first, titleFont.second);
 			ImGui::TextUnformatted("Cross-Trigger Setup");
 			ImGui::PopFont();
 			ImGui::Separator();
@@ -215,8 +216,7 @@ bool ScopeDeskewWizard::DoRender()
 			break;
 
 		case STATE_WELCOME_4:
-
-			ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+			ImGui::PushFont(titleFont.first, titleFont.second);
 			ImGui::TextUnformatted("Calibration Signal Setup");
 			ImGui::PopFont();
 			ImGui::Separator();
@@ -254,8 +254,7 @@ bool ScopeDeskewWizard::DoRender()
 			break;
 
 		case STATE_WELCOME_5:
-
-			ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+			ImGui::PushFont(titleFont.first, titleFont.second);
 			ImGui::TextUnformatted("Reference Clock Setup");
 			ImGui::PopFont();
 			ImGui::Separator();
@@ -360,7 +359,8 @@ void ScopeDeskewWizard::DoMainProcessingFlow()
 {
 	const int nWaveforms = 10;
 
-	ImGui::PushFont(m_parent->GetFontPref("Appearance.General.title_font"));
+	auto titleFont = m_parent->GetFontPref("Appearance.General.title_font");
+	ImGui::PushFont(titleFont.first, titleFont.second);
 	ImGui::TextUnformatted("Calibration Measurements");
 	ImGui::PopFont();
 	ImGui::Separator();

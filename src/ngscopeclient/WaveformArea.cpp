@@ -806,8 +806,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 		//Text
 		//Anchor bottom left at the cursor
 		auto str = string("Y1: ") + m_yAxisUnit.PrettyPrint(m_yAxisCursorPositions[0]);
-		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
-		auto tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+		auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
 		float padding = 2;
 		float wrounding = 2;
 		float textTop = ypos0 - (3*padding + tsize.y);
@@ -819,8 +818,8 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 			ImGui::GetColorU32(ImGuiCol_PopupBg),
 			wrounding);
 		list->AddText(
-			font,
-			fontSize,
+			font.first,
+			font.second,
 			ImVec2(textLeft + padding, textTop + padding),
 			cursor0_color,
 			str.c_str());
@@ -835,7 +834,7 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 				"ΔY = " + m_yAxisUnit.PrettyPrint(delta);
 
 			//Text
-			tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+			tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
 			textTop = ypos1 - (3*padding + tsize.y);
 			textLeft = plotRight - (2*padding + tsize.x);
 			list->AddRectFilled(
@@ -844,8 +843,8 @@ void WaveformArea::RenderYAxisCursors(ImVec2 pos, ImVec2 size, float yAxisWidth)
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
-				font,
-				fontSize,
+				font.first,
+				font.second,
 				ImVec2(textLeft + padding, textTop + padding),
 				cursor1_color,
 				str.c_str());
@@ -1423,7 +1422,6 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 
 	//Draw the peaks and update X/Y size for collision detection
 	auto font = m_parent->GetFontPref("Appearance.Peaks.label_font");
-	auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
 	auto& prefs = m_parent->GetSession().GetPreferences();
 	auto textColor = prefs.GetColor("Appearance.Peaks.peak_text_color");
 	auto mousePos = ImGui::GetMousePos();
@@ -1437,7 +1435,7 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			"X = " + stream.GetXAxisUnits().PrettyPrint(label.m_peakXpos) + "\n" +
 			"Y = " + stream.GetYAxisUnits().PrettyPrint(label.m_peakYpos) + "\n" +
 			"FWHM = " + stream.GetXAxisUnits().PrettyPrint(label.m_fwhm);
-		auto textSizePixels = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str.c_str());
+		auto textSizePixels = font.first->CalcTextSizeA(font.second, FLT_MAX, 0, str.c_str());
 
 		//Create rectangle for box around centroid
 		float padding = 2;
@@ -1531,8 +1529,8 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 
 		//Draw text
 		list->AddText(
-			font,
-			fontSize,
+			font.first,
+			font.second,
 			ImVec2(labelLeft + padding, labelTop + padding),
 			textColor,
 			str.c_str());
@@ -1785,8 +1783,7 @@ void WaveformArea::RenderComplexSignal(
 	if(available_width > 15)
 	{
 		auto font = m_parent->GetFontPref("Appearance.Decodes.protocol_font");
-		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
-		auto textsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str.c_str());
+		auto textsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0, str.c_str());
 
 		//Minimum width (if outline ends up being smaller than this, just fill)
 		float min_width = 40;
@@ -1862,7 +1859,7 @@ void WaveformArea::RenderComplexSignal(
 					else
 						str_render = "..." + str.substr(str.length() - len - 1);
 
-					textsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0, str_render.c_str());
+					textsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0, str_render.c_str());
 					if(textsize.x < available_width)
 					{
 						//Re-center text in available space
@@ -1881,7 +1878,7 @@ void WaveformArea::RenderComplexSignal(
 
 			drew_text = true;
 			ImU32 textcolor = 0xffffffff;	//TODO: figure out color based on theme or something
-			list->AddText(font, fontSize, ImVec2(xp, ymid-textsize.y/2), textcolor, str_render.c_str());
+			list->AddText(font.first, font.second, ImVec2(xp, ymid-textsize.y/2), textcolor, str_render.c_str());
 		}
 	}
 
@@ -2647,7 +2644,6 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 	//Style settings
 	auto font = m_parent->GetFontPref("Appearance.Graphs.y_axis_font");
 	auto& prefs = m_parent->GetSession().GetPreferences();
-	float theight = font->FontSize * ImGui::GetIO().FontGlobalScale;
 	auto textColor = prefs.GetColor("Appearance.Graphs.y_axis_text_color");
 
 	//Reserve an empty area we're going to draw into
@@ -2691,15 +2687,14 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		float vhi = YPositionToYAxisUnits(it.second + 0.5);
 		auto label = m_yAxisUnit.PrettyPrintRange(vlo, vhi, vbot, vtop);
 
-		float y = it.second - theight/2;
+		auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0, label.c_str());
+		float y = it.second - tsize.y/2;
 		if(y > ybot)
 			continue;
 		if(y < ytop)
 			continue;
 
-		auto tsize = font->CalcTextSizeA(theight, FLT_MAX, 0, label.c_str());
-
-		draw_list->AddText(font, theight, ImVec2(origin.x + size.x - tsize.x - xmargin, y), textColor, label.c_str());
+		draw_list->AddText(font.first, font.second, ImVec2(origin.x + size.x - tsize.x - xmargin, y), textColor, label.c_str());
 	}
 
 	ImGui::EndChild();
@@ -2984,7 +2979,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 
 	//Draw background for text
 	float wrapWidth = 40 * fontHeight;
-	auto textsize = font->CalcTextSizeA(
+	auto textsize = font.first->CalcTextSizeA(
 		fontHeight,
 		FLT_MAX,
 		wrapWidth,
@@ -2999,7 +2994,7 @@ void WaveformArea::CheckForScaleMismatch(ImVec2 start, ImVec2 size)
 
 	//Draw the text
 	list->AddText(
-		font,
+		font.first,
 		fontHeight,
 		ImVec2(center.x + padding, center.y - textsize.y/2),
 		ImGui::GetColorU32(ImGuiCol_Text),
@@ -3613,7 +3608,7 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 
 		//Draw background for text
 		float wrapWidth = 40 * fontHeight;
-		auto textsize = font->CalcTextSizeA(
+		auto textsize = font.first->CalcTextSizeA(
 			fontHeight,
 			FLT_MAX,
 			wrapWidth,
@@ -3628,7 +3623,7 @@ void WaveformArea::DrawDropRangeMismatchMessage(
 
 		//Draw the text
 		list->AddText(
-			font,
+			font.first,
 			fontHeight,
 			ImVec2(center.x + padding, center.y - textsize.y/2),
 			ImGui::GetColorU32(ImGuiCol_Text),

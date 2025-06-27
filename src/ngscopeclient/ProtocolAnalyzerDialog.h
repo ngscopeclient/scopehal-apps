@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -110,7 +110,7 @@ protected:
 	///@brief True if the selected packet should be scrolled to
 	bool m_needToScrollToSelectedPacket;
 
-	void DoDataColumn(Packet* pack, ImFont* dataFont, std::vector<RowData>& rows, size_t nrow);
+	void DoDataColumn(Packet* pack, FontWithSize dataFont, std::vector<RowData>& rows, size_t nrow);
 	void DoImageColumn(Packet* pack, std::vector<RowData>& rows, size_t nrow);
 
 	///@brief True the first time DoDataColumn() is called in a given frame

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -564,7 +564,7 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
 /**
 	@brief Handles the "data" column for packets
  */
-void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector<RowData>& rows, size_t nrow)
+void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, vector<RowData>& rows, size_t nrow)
 {
 	//When drawing the first cell, figure out dimensions for subsequent stuff
 	if(m_firstDataBlockOfFrame)
@@ -575,7 +575,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector
 		//Figure out how many characters of text we can fit in the data region
 		//This assumes data font is fixed width, may break if user chooses variable width.
 		//But hex dumps with variable width will look horrible anyway so that's probably not a problem?
-		auto fontwidth = dataFont->CalcTextSizeA(dataFont->FontSize * ImGui::GetIO().FontGlobalScale, FLT_MAX, -1, "W").x;
+		auto fontwidth = dataFont.first->CalcTextSizeA(dataFont.second, FLT_MAX, -1, "W").x;
 		size_t charsPerLine = floor(xsize / fontwidth);
 
 		//TODO: use 2-nibble address if packet has <256 bytes of data
@@ -615,7 +615,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, ImFont* dataFont, vector
 	string lineAscii;
 
 	//Create the tree node early - before we've even rendered any data - so we know the open / closed state
-	ImGui::PushFont(dataFont);
+	ImGui::PushFont(dataFont.first, dataFont.second);
 	bool open = false;
 	if(!bytes.empty())
 	{

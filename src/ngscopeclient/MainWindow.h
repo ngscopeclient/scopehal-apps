@@ -543,8 +543,11 @@ public:
 	/**
 		@brief Returns a font, given the name of a preference setting
 	 */
-	ImFont* GetFontPref(const std::string& name)
-	{ return m_fontmgr.GetFont(m_session.GetPreferences().GetFont(name.c_str())); }
+	FontWithSize GetFontPref(const std::string& name)
+	{
+		auto desc = m_session.GetPreferences().GetFont(name.c_str());
+		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second);
+	}
 
 	ImU32 GetColorPref(const std::string& name)
 	{ return m_session.GetPreferences().GetColor(name); }

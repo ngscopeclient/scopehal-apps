@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -67,6 +67,13 @@ AboutDialog::~AboutDialog()
  */
 bool AboutDialog::DoRender()
 {
+	pair<ImFont*, float> headings[] =
+	{
+		m_parent->GetFontPref("Appearance.Markdown.heading_1_font"),
+		m_parent->GetFontPref("Appearance.Markdown.heading_2_font"),
+		m_parent->GetFontPref("Appearance.Markdown.heading_3_font")
+	};
+
 	ImGui::MarkdownConfig mdConfig
 	{
 		nullptr,	//linkCallback
@@ -74,9 +81,9 @@ bool AboutDialog::DoRender()
 		nullptr,	//imageCallback
 		"",			//linkIcon (not used)
 		{
-			{ m_parent->GetFontPref("Appearance.Markdown.heading_1_font"), true },
-			{ m_parent->GetFontPref("Appearance.Markdown.heading_2_font"), true },
-			{ m_parent->GetFontPref("Appearance.Markdown.heading_3_font"), false }
+			{ headings[0].first, headings[0].second, true },
+			{ headings[1].first, headings[1].second, true },
+			{ headings[2].first, headings[2].second, false }
 		},
 		nullptr		//userData
 	};

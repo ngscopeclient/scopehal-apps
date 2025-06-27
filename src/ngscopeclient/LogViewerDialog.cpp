@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -65,7 +65,8 @@ bool LogViewerDialog::DoRender()
 
 	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-	ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
+	auto font = m_parent->GetFontPref("Appearance.General.console_font");
+	ImGui::PushFont(font.first, font.second);
 	auto& lines = g_guiLog->GetLines();
 
 	float width = ImGui::GetFontSize();

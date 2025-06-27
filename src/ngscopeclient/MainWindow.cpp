@@ -1720,6 +1720,13 @@ void MainWindow::RenderLoadWarningPopup()
 				"Please review your lab notes and confirm that the experimental setup matches your previous session."
 				);
 
+			pair<ImFont*, float> headings[] =
+			{
+				GetFontPref("Appearance.Markdown.heading_1_font"),
+				GetFontPref("Appearance.Markdown.heading_2_font"),
+				GetFontPref("Appearance.Markdown.heading_3_font")
+			};
+
 			ImGui::MarkdownConfig mdConfig
 			{
 				nullptr,	//linkCallback
@@ -1727,9 +1734,9 @@ void MainWindow::RenderLoadWarningPopup()
 				nullptr,	//imageCallback
 				"",			//linkIcon (not used)
 				{
-					{ GetFontPref("Appearance.Markdown.heading_1_font"), true },
-					{ GetFontPref("Appearance.Markdown.heading_2_font"), true },
-					{ GetFontPref("Appearance.Markdown.heading_3_font"), false }
+					{ headings[0].first, headings[0].second, true },
+					{ headings[1].first, headings[1].second, true },
+					{ headings[2].first, headings[2].second, false }
 				},
 				nullptr		//userData
 			};
@@ -1875,8 +1882,7 @@ void MainWindow::UpdateFonts()
 	auto& prefs = GetSession().GetPreferences();
 	if(m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
 	{
-		//Download imgui fonts
-		ImGui_ImplVulkan_CreateFontsTexture();
+		//TODO: remove this if not needed
 	}
 
 	//Set the default font. Needs to be done regardless of atlas rebuild as it may already be loaded

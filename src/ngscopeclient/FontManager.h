@@ -42,6 +42,9 @@ class PreferenceCategory;
 //pair of (font file, size)
 typedef std::pair<std::string, float> FontDescription;
 
+//pair of (font object, size)
+typedef std::pair<ImFont*, float> FontWithSize;
+
 class FontManager
 {
 public:

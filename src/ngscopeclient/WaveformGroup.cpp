@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -513,7 +513,6 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 		auto color = prefs.GetColor("Appearance.Cursors.marker_color");
 		auto hcolor = prefs.GetColor("Appearance.Cursors.hover_color");
 		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
-		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
 
 		//Draw the markers
 		for(auto& m : markers)
@@ -525,7 +524,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 			//Text
 			//Anchor bottom right at the cursor
 			auto str = m.m_name + ": " + m_xAxisUnit.PrettyPrint(m.m_offset);
-			auto tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+			auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
 			float padding = 2;
 			float wrounding = 2;
 			float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -535,8 +534,8 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
-				font,
-				fontSize,
+				font.first,
+				font.second,
 				ImVec2(xpos - (padding + tsize.x), textTop),
 				color,
 				str.c_str());
@@ -685,8 +684,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		//Text
 		//Anchor bottom right at the cursor
 		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
-		auto fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
-		auto tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+		auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
 		float padding = 2;
 		float wrounding = 2;
 		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -696,8 +694,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 			ImGui::GetColorU32(ImGuiCol_PopupBg),
 			wrounding);
 		list->AddText(
-			font,
-			fontSize,
+			font.first,
+			font.second,
 			ImVec2(xpos0 - (padding + tsize.x), textTop),
 			cursor0_color,
 			str.c_str());
@@ -717,7 +715,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
 
 			//Text
-			tsize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0, str.c_str());
+			tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
 			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
 			list->AddRectFilled(
 				ImVec2(xpos1 + 1, textTop - padding ),
@@ -725,8 +723,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
-				font,
-				fontSize,
+				font.first,
+				font.second,
 				ImVec2(xpos1 + padding, textTop),
 				cursor1_color,
 				str.c_str());
@@ -847,7 +845,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
 	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");
 	auto font = m_parent->GetFontPref("Appearance.Timeline.x_axis_font");
-	float fontSize = font->FontSize * ImGui::GetIO().FontGlobalScale;
 
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
@@ -1032,8 +1029,8 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 		//Render label
 		list->AddText(
-			font,
-			fontSize,
+			font.first,
+			font.second,
 			ImVec2(x + textMargin, ymid),
 			textcolor,
 			m_xAxisUnit.PrettyPrint(t).c_str());

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -82,7 +82,8 @@ bool SCPIConsoleDialog::DoRender()
 	//Scroll area for console output is full window minus command box
 	ImVec2 scrollarea(csize.x, csize.y - 1.5*ImGui::GetTextLineHeightWithSpacing());
 	ImGui::BeginChild("scrollview", scrollarea, false, ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::PushFont(m_parent->GetFontPref("Appearance.General.console_font"));
+		auto font = m_parent->GetFontPref("Appearance.General.console_font");
+		ImGui::PushFont(font.first, font.second);
 		for(auto& line : m_output)
 			ImGui::TextUnformatted(line.c_str());
 		ImGui::PopFont();
