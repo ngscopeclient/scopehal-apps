@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -68,6 +68,7 @@ bool BaseChannelPropertiesDialog::DoRender()
 
 	float width = 10 * ImGui::GetFontSize();
 
+	ImGui::PushID("info");
 	if(ImGui::CollapsingHeader("Info"))
 	{
 		//Scope info
@@ -108,6 +109,7 @@ bool BaseChannelPropertiesDialog::DoRender()
 			HelpMarker("Type of filter object");
 		}
 	}
+	ImGui::PopID();
 
 	return true;
 }
