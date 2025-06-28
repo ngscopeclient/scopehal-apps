@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -79,24 +79,6 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	atlas->Clear();
 	m_fonts.clear();
 
-	//Add default Latin-1 glyph ranges plus some Greek letters and math symbols we use
-	ImFontGlyphRangesBuilder builder;
-	builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
-	builder.AddChar(L'°');
-	builder.AddChar(L'‣');
-	builder.AddChar(L'×');	//multiplication sign, not a letter 'x'
-	builder.AddChar(L'÷');
-	builder.AddChar(L'∑');
-	builder.AddChar(L'√');
-	builder.AddChar(L'∫');
-	builder.AddChar(L'∿');
-	builder.AddChar(L'²');	//U+00B2 superscript two
-	builder.AddChar(L'─');	//U+2500 box drawings light horizontal
-
-	//Build the range of glyphs we're using for the font
-	ImVector<ImWchar> ranges;
-	builder.BuildRanges(&ranges);
-
 	//Load the fonts
 	ImFontConfig config;
 	config.PixelSnapH = true;
@@ -123,7 +105,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 			fname = defaultFontPath;
 		}
 
-		m_fonts[f] = atlas->AddFontFromFileTTF(fname.c_str(), scaledsize, &config, ranges.Data);
+		m_fonts[f] = atlas->AddFontFromFileTTF(fname.c_str(), scaledsize, &config);
 	}
 
 	//Done loading fonts, build the texture
