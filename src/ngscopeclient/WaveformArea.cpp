@@ -646,11 +646,14 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 	ImGui::PushID(to_string(iArea).c_str());
 
-	float totalHeightAvailable = floor(clientArea.y - ImGui::GetFrameHeightWithSpacing());
-	totalHeightAvailable -= 5;	//fudge factor, need to figure out root cause
+	float totalHeightAvailable = floor(clientArea.y - 2*ImGui::GetFrameHeightWithSpacing());
 	float spacing = m_group->GetSpacing();
 	float heightPerArea = totalHeightAvailable / numAreas;
-	float unspacedHeightPerArea = floor(heightPerArea - spacing);
+	float totalSpacing = (numAreas-1)*spacing;
+	float unspacedHeightPerArea = floor( (totalHeightAvailable - totalSpacing) / numAreas);
+	unspacedHeightPerArea -= ImGui::GetStyle().FramePadding.y;
+	if(numAreas == 1)
+		unspacedHeightPerArea = heightPerArea;
 
 	//Update cached scale
 	m_height = unspacedHeightPerArea;
@@ -746,14 +749,19 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 	RenderYAxis(ImVec2(yAxisWidth, unspacedHeightPerArea), gridmap, vbot, vtop);
 
 	//Render the Y axis cursors (if we have any) over the top of everything else
-	auto oldpos = ImGui::GetCursorPos();
 	{
 		auto csize = ImGui::GetContentRegionAvail();
 		auto pos = ImGui::GetWindowPos();
 		ImGui::SetCursorPos(cpos);
 		RenderYAxisCursors(pos, csize, yAxisWidth);
 	}
-	ImGui::SetCursorPos(oldpos);
+
+	//Cursor should now be at end of window
+	ImGui::SetCursorPos(ImVec2(cpos.x, cpos.y + unspacedHeightPerArea));
+
+	//Add spacing
+	if(iArea != numAreas-1)
+		ImGui::Dummy(ImVec2(0, spacing));
 
 	ImGui::PopID();
 

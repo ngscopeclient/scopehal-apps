@@ -162,7 +162,7 @@ bool WaveformGroup::Render()
 	TitleHoverHelp();
 
 	auto pos = ImGui::GetCursorScreenPos();
-	ImVec2 clientArea = ImGui::GetContentRegionMax();
+	ImVec2 clientArea = ImGui::GetContentRegionAvail();
 	m_width = clientArea.x;
 
 	float yAxisWidthSpaced = GetYAxisWidth() + GetSpacing();
@@ -200,7 +200,6 @@ bool WaveformGroup::Render()
 
 	//Render the timeline
 	m_timelineHeight = 2.5 * ImGui::GetFontSize();
-	clientArea.y -= m_timelineHeight;
 	RenderTimeline(plotWidth, m_timelineHeight);
 
 	//Close any areas that we destroyed last frame
