@@ -755,7 +755,7 @@ void MainWindow::Toolbar()
 	//Toolbar should be at the top of the main window.
 	//Update work area size so docking area doesn't include the toolbar rectangle
 	auto viewport = ImGui::GetMainViewport();
-	float toolbarHeight = m_toolbarIconSize + 8;
+	float toolbarHeight = 2.5 * ImGui::GetFontSize();
 	m_workPos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y + toolbarHeight);
 	m_workSize = ImVec2(viewport->WorkSize.x, viewport->WorkSize.y - toolbarHeight);
 	ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -789,7 +789,6 @@ void MainWindow::Toolbar()
 	ImGui::SetNextItemWidth(6 * toolbarHeight);
 	if(ImGui::SliderFloat("Intensity", &m_traceAlpha, 0, 0.75, "", ImGuiSliderFlags_Logarithmic))
 		SetNeedRender();
-	ImGui::SetCursorPosY(y);
 
 	ImGui::End();
 }
@@ -977,7 +976,8 @@ void MainWindow::TriggerStopDropdown(float buttonsize)
 
 void MainWindow::ToolbarButtons()
 {
-	ImVec2 buttonsize(m_toolbarIconSize, m_toolbarIconSize);
+	float sz = 2 * ImGui::GetFontSize();
+	ImVec2 buttonsize(sz, sz);
 
 	bool multigroup = (m_session.GetTriggerGroups().size() > 1);
 
