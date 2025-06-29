@@ -938,7 +938,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	if(m_dragState == DRAG_STATE_TIMELINE)
 	{
 		//Use relative delta, not drag delta, since we update the offset every frame
-		float dx = mouseDelta.x * ImGui::GetWindowDpiScale();
+		float dx = mouseDelta.x;
 		if(dx != 0)
 		{
 			m_xAxisOffset -= PixelsToXAxisUnits(dx);
@@ -950,10 +950,9 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	}
 
 	//Dimensions for various things
-	float dpiScale = ImGui::GetWindowDpiScale();
-	float fineTickLength = 10 * dpiScale;
+	float fineTickLength = 10;
 	float coarseTickLength = height;
-	const double min_label_grad_width = 75 * dpiScale;	//Minimum distance between text labels
+	const double min_label_grad_width = 6 * ImGui::GetFontSize();	//Minimum distance between text labels
 	float thickLineWidth = 2;
 	float thinLineWidth = 1;
 	float ymid = pos.y + height/2;

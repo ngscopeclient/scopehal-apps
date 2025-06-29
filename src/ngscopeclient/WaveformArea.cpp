@@ -1677,7 +1677,7 @@ void WaveformArea::RenderProtocolWaveform(std::shared_ptr<DisplayedChannel> chan
 	if(ifirst > 0)
 		ifirst --;
 
-	float ybot = (channel->GetYButtonPos() * ImGui::GetWindowDpiScale()) + start.y;
+	float ybot = channel->GetYButtonPos() + start.y;
 	float ytop = ybot - m_channelButtonHeight;
 	float ymid = ybot - m_channelButtonHeight/2;
 
@@ -4076,7 +4076,7 @@ void WaveformArea::OnDragUpdate()
 	{
 		case DRAG_STATE_Y_AXIS:
 			{
-				float dy = ImGui::GetIO().MouseDelta.y * ImGui::GetWindowDpiScale();
+				float dy = ImGui::GetIO().MouseDelta.y;
 				m_yAxisOffset -= PixelsToYAxisUnits(dy);
 
 				for(auto chan : m_displayedChannels)

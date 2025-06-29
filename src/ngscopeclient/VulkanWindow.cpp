@@ -181,16 +181,20 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		ImGui_ImplVulkan_Init(&info);
 	}
 
-	// Apply DPI scaling now that glfw initialized
+	//Apply DPI scaling now that glfw initialized
+	//This appears to be cached by glfw at init time and is not updated for dynamic scaling changes at least on X11
+	//TODO: can we fix this by moving to SDL?
 	float scale = GetContentScale();
-
-	LogTrace("Applying ImGui style scale factor: %.2f\n", scale);
+	LogTrace("Using ImGui style scale factor: %.2f\n", scale);
 
 	//WORKAROUND: handle HiDPI correctly on macOS.
+	//This is probably wrong, per comment in imgui_impl_glfw "Apple platforms use FramebufferScale"
 #ifdef __APPLE__
 	io.FontGlobalScale = 1.0f / scale;
 #else
-	ImGui::GetStyle().ScaleAllSizes(scale);
+	//ImGui::GetStyle().ScaleAllSizes(scale);
+	//ImGui::GetStyle().FontScaleMain = scale;
+	//Don't change any scaling for now in hidpi mode!
 #endif
 
 	//Hook a couple of backend functions with mutexing
