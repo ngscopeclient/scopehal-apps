@@ -52,7 +52,7 @@ FontManager::~FontManager()
 
 	@return True if changes were made to the font atlas
  */
-bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
+bool FontManager::UpdateFonts(PreferenceCategory& root)
 {
 	//Make a list of fonts we want to have
 	set<FontDescription> fonts;
@@ -87,8 +87,6 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 	string defaultFontPath = FindDataFile("fonts/DejaVuSans.ttf");
 	for(auto f : fonts)
 	{
-		float scaledsize = round(max(1.0f, f.second) * contentScale);
-
 		//See if the file exists, if it doesn't exist use the default font
 		//(note, things will go bad if you pass a file that's not a valid TTF)
 		string fname = f.first;
@@ -105,7 +103,7 @@ bool FontManager::UpdateFonts(PreferenceCategory& root, float contentScale)
 			fname = defaultFontPath;
 		}
 
-		m_fonts[f] = atlas->AddFontFromFileTTF(fname.c_str(), scaledsize, &config);
+		m_fonts[f] = atlas->AddFontFromFileTTF(fname.c_str(), 0.0, &config);
 	}
 
 	//Done loading fonts, build the texture

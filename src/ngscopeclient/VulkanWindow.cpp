@@ -192,9 +192,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 #ifdef __APPLE__
 	io.FontGlobalScale = 1.0f / scale;
 #else
-	//ImGui::GetStyle().ScaleAllSizes(scale);
-	//ImGui::GetStyle().FontScaleMain = scale;
-	//Don't change any scaling for now in hidpi mode!
+	ImGui::GetStyle().FontScaleMain = scale;
 #endif
 
 	//Hook a couple of backend functions with mutexing

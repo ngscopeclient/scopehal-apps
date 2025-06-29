@@ -51,7 +51,7 @@ public:
 	FontManager();
 	~FontManager();
 
-	bool UpdateFonts(PreferenceCategory& root, float contentScale);
+	bool UpdateFonts(PreferenceCategory& root);
 
 	/**
 		@brief Gets the font, if any, for the provided description

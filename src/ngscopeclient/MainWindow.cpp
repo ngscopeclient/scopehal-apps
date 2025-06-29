@@ -587,6 +587,12 @@ void MainWindow::RenderWaveformTextures(
 
 void MainWindow::RenderUI()
 {
+	//Set default font including size, since this is no longer part of the ImFont
+	//Scale to a nominal 13 point default font
+	auto defaultFont = GetFontPref("Appearance.General.default_font");
+	float defaultFontScale = 13.0 / ImGui::GetFontSize();
+	ImGui::PushFont(defaultFont.first, defaultFont.second * defaultFontScale);
+
 	//Set up colors
 	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
 	{
@@ -745,6 +751,8 @@ void MainWindow::RenderUI()
 	//DEBUG: draw the demo windows
 	if(m_showDemo)
 		ImGui::ShowDemoWindow(&m_showDemo);
+
+	ImGui::PopFont();
 }
 
 void MainWindow::Toolbar()
@@ -1880,10 +1888,7 @@ void MainWindow::UpdateFonts()
 	//Check for any changes to font preferences and rebuild the atlas if so
 	//Skip rebuilding atlas if nothing changed
 	auto& prefs = GetSession().GetPreferences();
-	if(m_fontmgr.UpdateFonts(prefs.AllPreferences(), GetContentScale()))
-	{
-		//TODO: remove this if not needed
-	}
+	m_fontmgr.UpdateFonts(prefs.AllPreferences());
 
 	//Set the default font. Needs to be done regardless of atlas rebuild as it may already be loaded
 	//e.g. in case the user is already using it for another pref
