@@ -466,7 +466,7 @@ bool Session::LoadWaveformDataForFilters(
 
 		string datdir = filtdir + "/filter_" + to_string(id);
 
-		auto f = static_cast<OscilloscopeChannel*>(m_idtable[id]);
+		auto f = m_idtable.Lookup<OscilloscopeChannel*>(id);
 		if(!f)
 			continue;
 		for(size_t i=0; i<f->GetStreamCount(); i++)
@@ -481,11 +481,11 @@ bool Session::LoadWaveformDataForFilters(
 			//TODO: we need to encode a digital path in the YAML once MemoryFilter has digital channel support
 			//TODO: support non-analog/digital captures (eyes, spectrograms, etc)
 
-			WaveformBase* cap = NULL;
-			SparseAnalogWaveform* sacap = NULL;
-			UniformAnalogWaveform* uacap = NULL;
-			//SparseDigitalWaveform* sdcap = NULL;
-			//UniformDigitalWaveform* udcap = NULL;
+			WaveformBase* cap = nullptr;
+			SparseAnalogWaveform* sacap = nullptr;
+			UniformAnalogWaveform* uacap = nullptr;
+			//SparseDigitalWaveform* sdcap = nullptr;
+			//UniformDigitalWaveform* udcap = nullptr;
 			if(f->GetType(0) == Stream::STREAM_TYPE_ANALOG)
 			{
 				if(dense)
@@ -1010,7 +1010,7 @@ bool Session::LoadInstruments(int version, const YAML::Node& node, bool /*online
 		auto nick = inst["nick"].as<string>();
 		LogTrace("Loading instrument \"%s\"\n", nick.c_str());
 
-		auto pinst = reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()]);
+		auto pinst = m_idtable.Lookup<Instrument*>(inst["id"].as<uintptr_t>());
 		if(!pinst)
 			continue;
 
@@ -1879,7 +1879,7 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 		shared_ptr<TriggerGroup> group;
 		if(pri)
 		{
-			auto inst = reinterpret_cast<Instrument*>(m_idtable[pri.as<int64_t>()]);
+			auto inst = m_idtable.Lookup<Instrument*>(pri.as<int64_t>());
 			if(inst == nullptr)
 			{
 				LogWarning("null instrument loading trigger groups, skipping\n");
@@ -1892,7 +1892,7 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 			auto snode = gnode["secondaries"];
 			for(auto jt : snode)
 			{
-				inst = reinterpret_cast<Instrument*>(m_idtable[jt.second.as<int64_t>()]);
+				inst = m_idtable.Lookup<Instrument*>(jt.second.as<int64_t>());
 				sscope = dynamic_pointer_cast<Oscilloscope>(inst->shared_from_this());
 				group->m_secondaries.push_back(sscope);
 			}
@@ -1906,7 +1906,7 @@ bool Session::LoadTriggerGroups(const YAML::Node& node)
 				group = make_shared<TriggerGroup>(nullptr, this);
 
 			for(auto fid : filters)
-				group->m_filters.push_back(reinterpret_cast<PausableFilter*>(m_idtable[fid.as<int64_t>()]));
+				group->m_filters.push_back(m_idtable.Lookup<PausableFilter*>(fid.as<int64_t>()));
 		}
 
 		m_triggerGroups.push_back(group);
@@ -2027,7 +2027,7 @@ bool Session::LoadFilters(int /*version*/, const YAML::Node& node)
 	for(auto it : node)
 	{
 		auto dnode = it.second;
-		auto filter = static_cast<Filter*>(m_idtable[dnode["id"].as<uintptr_t>()]);
+		auto filter = m_idtable.Lookup<Filter*>(dnode["id"].as<uintptr_t>());
 		if(filter)
 			filter->LoadInputs(dnode, m_idtable);
 	}
@@ -2049,7 +2049,7 @@ bool Session::LoadInstrumentInputs(int /*version*/, const YAML::Node& node)
 		auto nick = inst["nick"].as<string>();
 		LogTrace("Loading additional inputs for instrument \"%s\"\n", nick.c_str());
 
-		auto pinst = reinterpret_cast<Instrument*>(m_idtable[inst["id"].as<uintptr_t>()]);
+		auto pinst = m_idtable.Lookup<Instrument*>(inst["id"].as<uintptr_t>());
 		if(!pinst)
 			continue;
 

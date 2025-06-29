@@ -40,7 +40,7 @@
 /**
 	@brief A WaveformGroup is a container for one or more WaveformArea's.
  */
-class WaveformGroup
+class WaveformGroup : public SerializableObject
 {
 public:
 	WaveformGroup(MainWindow* parent, const std::string& title);

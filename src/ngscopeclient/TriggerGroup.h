@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -51,7 +51,7 @@
 		Common reference clock supplied to all instruments in the group
 		If instruments do not share a common clock, drift will worsen with increasing capture depth
  */
-class TriggerGroup
+class TriggerGroup : public SerializableObject
 {
 public:
 	enum TriggerType

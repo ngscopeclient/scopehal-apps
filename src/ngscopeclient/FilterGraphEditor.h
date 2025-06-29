@@ -74,7 +74,7 @@ public:
 
 class FilterGraphEditor;
 
-class FilterGraphGroup
+class FilterGraphGroup : public SerializableObject
 {
 public:
 

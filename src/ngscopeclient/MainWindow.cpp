@@ -2474,7 +2474,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 						auto an = kt.second;
 						if(an["id"].as<int>() == aid)
 						{
-							auto channel = static_cast<OscilloscopeChannel*>(m_session.m_idtable[an["channel"].as<int>()]);
+							auto channel = m_session.m_idtable.Lookup<OscilloscopeChannel*>(an["channel"].as<int>());
 							if(!channel)	//don't crash on bad IDs or missing filters
 								break;
 							size_t stream = 0;
@@ -2487,7 +2487,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 							auto overlays = an["overlays"];
 							for(auto jt : overlays)
 							{
-								auto filter = static_cast<Filter*>(m_session.m_idtable[jt.second["id"].as<int>()]);
+								auto filter = m_session.m_idtable.Lookup<Filter*>(jt.second["id"].as<int>());
 								stream = 0;
 								if(jt.second["stream"])
 									stream = jt.second["stream"].as<int>();
@@ -2514,7 +2514,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 				{
 					auto an = areas[string("area") + to_string(aid)];
 
-					auto channel = static_cast<OscilloscopeChannel*>(m_session.m_idtable[an["channel"].as<int>()]);
+					auto channel = m_session.m_idtable.Lookup<OscilloscopeChannel*>(an["channel"].as<int>());
 					if(!channel)	//don't crash on bad IDs or missing filters
 						continue;
 					size_t stream = 0;
@@ -2527,7 +2527,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 					auto overlays = an["overlays"];
 					for(auto jt : overlays)
 					{
-						auto filter = static_cast<Filter*>(m_session.m_idtable[jt.second["id"].as<int>()]);
+						auto filter = m_session.m_idtable.Lookup<Filter*>(jt.second["id"].as<int>());
 						stream = 0;
 						if(jt.second["stream"])
 							stream = jt.second["stream"].as<int>();
@@ -2549,7 +2549,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 				auto streams = an["streams"];
 				for(auto jt : streams)
 				{
-					auto chan = static_cast<OscilloscopeChannel*>(m_session.m_idtable[jt.second["channel"].as<int>()]);
+					auto chan = m_session.m_idtable.Lookup<OscilloscopeChannel*>(jt.second["channel"].as<int>());
 					auto stream = jt.second["stream"].as<int>();
 					auto persist = jt.second["persistence"].as<bool>();
 					auto ramp = jt.second["colorRamp"].as<string>();
@@ -2626,7 +2626,7 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			}
 
 			m_measurementsDialog->AddStream(
-				StreamDescriptor(static_cast<OscilloscopeChannel*>(m_session.m_idtable[index]), stream));
+				StreamDescriptor(m_session.m_idtable.Lookup<OscilloscopeChannel*>(index), stream));
 		}
 	}
 
@@ -2659,7 +2659,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 				filt = it.second["filter"].as<string>();
 			}
 
-			auto pd = static_cast<PacketDecoder*>(m_session.m_idtable[id]);
+			auto pd = m_session.m_idtable.Lookup<PacketDecoder*>(id);
 
 			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
 			dlg->SetFilterExpression(filt);
@@ -2673,8 +2673,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : meters)
 		{
-			auto meter = dynamic_cast<SCPIMultimeter*>(
-				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			auto meter = dynamic_cast<SCPIMultimeter*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
 			if(meter)
 			{
 				auto smeter = dynamic_pointer_cast<SCPIMultimeter>(meter->shared_from_this());
@@ -2693,8 +2692,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : generators)
 		{
-			auto gen = dynamic_cast<SCPIFunctionGenerator*>(
-				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			auto gen = dynamic_cast<SCPIFunctionGenerator*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
 
 			if(gen)
 			{
@@ -2714,8 +2712,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : psus)
 		{
-			auto psu = dynamic_cast<SCPIPowerSupply*>(
-				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			auto psu = dynamic_cast<SCPIPowerSupply*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
 
 			if(psu)
 			{
@@ -2735,8 +2732,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : berts)
 		{
-			auto bert = dynamic_cast<SCPIBERT*>(
-				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			auto bert = dynamic_cast<SCPIBERT*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
 
 			if(bert)
 			{
@@ -2756,8 +2752,7 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 	{
 		for(auto it : loads)
 		{
-			auto load = dynamic_cast<SCPILoad*>(
-				static_cast<Instrument*>(m_session.m_idtable[it.second.as<int>()]));
+			auto load = dynamic_cast<SCPILoad*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
 
 			if(load)
 			{

@@ -442,7 +442,7 @@ protected:
 
 	WaveformArea's auto resize, and will collectively fill the entire client area of their parent window.
  */
-class WaveformArea
+class WaveformArea : public SerializableObject
 {
 public:
 	WaveformArea(StreamDescriptor stream, std::shared_ptr<WaveformGroup> group, MainWindow* parent);
