@@ -900,6 +900,10 @@ string Session::GetRegisteredTypeOfDriver(const string& drivername)
 		}
 	}
 
+	//Workaround for legacy scopesession files that used the mock driver rather than saving the real driver name
+	if(drivername == "mock")
+		return "oscilloscope";
+
 	LogError("Couldn't find any driver called \"%s\"\n", drivername.c_str());
 	return "unknown";
 }
