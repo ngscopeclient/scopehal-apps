@@ -189,9 +189,8 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 
 	//WORKAROUND: handle HiDPI correctly on macOS.
 	//This is probably wrong, per comment in imgui_impl_glfw "Apple platforms use FramebufferScale"
-#ifdef __APPLE__
-	io.FontGlobalScale = 1.0f / scale;
-#else
+	//On macOS, setting FontScaleMain appears to double the scaling
+#ifndef __APPLE__
 	ImGui::GetStyle().FontScaleMain = scale;
 #endif
 
