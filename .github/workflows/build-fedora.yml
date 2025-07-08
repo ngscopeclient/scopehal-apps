@@ -1,0 +1,203 @@
+name: Build-fedora
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  SDK_VERSION_STANDALONE: 1.4.313.0
+  SDK_VERSION_REPO: 1.4.313
+
+jobs:
+  Linux:
+    strategy:
+        fail-fast: false
+        matrix:
+            os:
+              - name: fedora
+                version: 42
+                container: fedora:42
+            sdk_type: [repo, standalone]
+            docs: [false]
+            exclude:
+              - sdk_type: standalone
+                docs: true
+
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os.container }}
+      env:
+        SDK_VERSION_STANDALONE: 1.4.309.0
+        SDK_VERSION_REPO: 1.4.309
+
+    steps:
+    - name: Install General Dependencies
+      run: |
+        dnf upgrade -y
+        dnf install -y \
+          git \
+          ccache \
+          gcc \
+          g++ \
+          cmake \
+          make \
+          pkgconf \
+          cairomm-devel \
+          gtk3-devel \
+          libsigc++30-devel \
+          yaml-cpp-devel \
+          catch-devel \
+          glfw-devel \
+          hidapi-devel \
+          ninja-build \
+          fedora-packager \
+          rpmdevtools \
+          mesa-vulkan-drivers
+
+    - name: Install Docs Dependencies
+      if: ${{ matrix.docs }}
+      run: |
+        dnf install -y \
+          texlive-dvipng \
+          texlive \
+          texlive-tex4ht \
+          texlive-makecell \
+          texlive-tocloft \
+          texlive-inconsolata \
+          texlive-gensymb \
+          texlive-newtx \
+          texlive-upquote
+
+    - name: Install Vulkan Repo Dependencies
+      if: ${{ (matrix.sdk_type == 'repo') }}
+      run: |
+        dnf install -y \
+          vulkan-headers \
+          vulkan-loader-devel \
+          libshaderc-devel \
+          glslang-devel \
+          glslc \
+          spirv-tools-devel
+
+    - name: Check Out Code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Use CCache
+      if: ${{ ! matrix.docs }}
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ github.job }}-${{ matrix.os.container }}-${{ matrix.sdk_type}}
+        max-size: "1500M"
+
+    - name: Cache Vulkan SDK Standalone
+      if: ${{ matrix.sdk_type == 'standalone' }}
+      uses: actions/cache@v4
+      with:
+        path: ~/VulkanSDK
+        key: ${{ matrix.os.container }}-vulkansdk-${{ env.SDK_VERSION_STANDALONE }}
+
+    - name: Install Vulkan SDK (Standalone)
+      if: ${{ matrix.sdk_type == 'standalone' }}
+      run: |
+        [[ -d ~/VulkanSDK/${{ env.SDK_VERSION_STANDALONE }} ]] && exit 0
+        cd
+        mkdir VulkanSDK
+        cd VulkanSDK
+        curl -LO https://sdk.lunarg.com/sdk/download/${{ env.SDK_VERSION_STANDALONE }}/linux/vulkansdk-linux-x86_64-${{ env.SDK_VERSION_STANDALONE }}.tar.xz
+        tar xf vulkansdk-linux-x86_64-${{ env.SDK_VERSION_STANDALONE }}.tar.xz
+
+    - name: Cache FFTS
+      uses: actions/cache@v4
+      with:
+        path: ~/ffts
+        key: ${{ runner.os }}-${{ matrix.os.container }}-ffts
+
+    - name: Clone and Build FFTS Library
+      run: |
+        [[  ${{ matrix.docs }} = 'false' ]] && export CMAKE_C_COMPILER_LAUNCHER=ccache && export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+        if [[ ! -d ~/ffts ]]; then
+          cd
+          git clone https://github.com/anthonix/ffts.git
+          cd ffts
+          mkdir build
+          cd build
+          cmake \
+            -DENABLE_SHARED=ON \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -GNinja \
+            ..
+          ninja
+        fi
+        cd ~/ffts/build
+        sudo ninja install
+
+    - name: Configure
+      run: |
+        [[ (${{matrix.sdk_type }} = 'standalone') ]] && source $HOME/VulkanSDK/${{ env.SDK_VERSION_STANDALONE }}/setup-env.sh
+        [[  ${{ matrix.docs }} = 'false' ]] && export CMAKE_C_COMPILER_LAUNCHER=ccache && export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+        mkdir build
+        cd build
+        cmake \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DDISABLE_PCH=ON \
+          -GNinja \
+          -DCPACK_GENERATOR=RPM \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          ..
+
+    - name: Build
+      if: ${{ ! matrix.docs }}
+      run: |
+        cd build
+        ninja
+
+    - name: Build Package
+      if: ${{ ! matrix.docs }}
+      run: |
+        cd build
+        ninja package
+
+    - name: Build Docs
+      if: ${{ matrix.docs }}
+      run: |
+        cd build
+        ninja doc
+
+    - name: Run Tests
+      if: ${{ !  matrix.docs }}
+      run: |
+        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        cd build
+        ctest --output-on-failure
+
+    - name: Upload Artifacts
+      if: ${{ !  matrix.docs }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ github.job }}-${{ matrix.sdk_type }}
+        path: |
+          build/src/ngscopeclient/ngscopeclient
+          build/src/ngscopeclient/icons/*
+          build/src/ngscopeclient/shaders/*
+          build/lib/scopehal/libscopehal.so
+          build/lib/scopeprotocols/libscopeprotocols.so
+          build/Testing/Temporary/LastTest.log
+
+    - name: Upload Package
+      if: ${{ !  matrix.docs }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ github.job }}-${{ matrix.sdk_type }}-package
+        path: build/*.rpm
+
+    - name: Upload Documentation
+      if: ${{ matrix.docs }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ github.job }}-docs
+        path: build/doc/ngscopeclient-manual.pdf
