@@ -111,7 +111,6 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
 endif()
 
 # Package detection
-
 find_package(PkgConfig MODULE REQUIRED)
 
 # yaml-cpp is used in scopehal and ngscopeclient
