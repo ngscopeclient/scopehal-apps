@@ -75,6 +75,7 @@
 #include "TriggerPropertiesDialog.h"
 
 #include <imgui_markdown.h>
+#include <filesystem>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -587,6 +588,21 @@ void MainWindow::RenderWaveformTextures(
 
 void MainWindow::RenderUI()
 {
+	//Update window title only if necessary, in case this is expensive on some platforms
+	string title = m_title + " - ";
+	if(m_sessionFileName.empty())
+		title += "[unsaved session]";
+	else
+	{
+		std::filesystem::path path(m_sessionFileName);
+		title += path.filename();
+	}
+	if(m_lastWindowTitle != title)
+	{
+		m_lastWindowTitle = title;
+		glfwSetWindowTitle(m_window, title.c_str());
+	}
+
 	//Set default font including size, since this is no longer part of the ImFont
 	//Scale to a nominal 13 point default font
 	auto defaultFont = GetFontPref("Appearance.General.default_font");

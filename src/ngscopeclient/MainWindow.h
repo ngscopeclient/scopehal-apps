@@ -463,6 +463,9 @@ protected:
 	///@brief Current session data directory
 	std::string m_sessionDataDir;
 
+	///@brief Last window title set (glfw doesnt let us get this)
+	std::string m_lastWindowTitle;
+
 public:
 	std::string GetDataDir()
 	{ return m_sessionDataDir; }

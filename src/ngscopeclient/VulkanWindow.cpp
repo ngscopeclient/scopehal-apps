@@ -73,6 +73,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	, m_windowedY(0)
 	, m_windowedWidth(0)
 	, m_windowedHeight(0)
+	, m_title(title)
 {
 	//Initialize ImGui
 	IMGUI_CHECKVERSION();
