@@ -595,7 +595,7 @@ void MainWindow::RenderUI()
 	else
 	{
 		std::filesystem::path path(m_sessionFileName);
-		title += path.filename();
+		title += path.filename().string();
 	}
 	if(m_lastWindowTitle != title)
 	{
