@@ -50,6 +50,11 @@ AboutDialog::AboutDialog(MainWindow* parent)
 	: Dialog("About ngscopeclient", to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 400))
 	, m_parent(parent)
 {
+	//this file is currently maintained by hand and updated for each release
+	//TODO: make a script for this using https://api.github.com/repos/ngscopeclient/scopehal-apps/contributors
+	m_authorsMarkdown = ReadDataFile("md/authors.md");
+
+	m_licenseMarkdown = ReadDataFile("md/licenses.md");
 }
 
 AboutDialog::~AboutDialog()
@@ -106,14 +111,13 @@ bool AboutDialog::DoRender()
 
 		if(ImGui::BeginTabItem("Licenses"))
 		{
-			string str =
-				"This is free software: you are free to change and redistribute it.\n"
-				"There is NO WARRANTY, to the extent permitted by law.\n"
-				"\n"
-				"ngscopeclient and libscopehal are released under 3-clause BSD license.\n"
-				"TODO: add full dependency list and individual licenses here";
-			ImGui::Markdown( str.c_str(), str.length(), mdConfig );
+			ImGui::Markdown(m_licenseMarkdown.c_str(), m_licenseMarkdown.length(), mdConfig );
+			ImGui::EndTabItem();
+		}
 
+		if(ImGui::BeginTabItem("Authors"))
+		{
+			ImGui::Markdown(m_authorsMarkdown.c_str(), m_authorsMarkdown.length(), mdConfig );
 			ImGui::EndTabItem();
 		}
 

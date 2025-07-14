@@ -133,10 +133,16 @@ add_custom_target(
 	COMMENT "Copying eye masks..."
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks ${CMAKE_BINARY_DIR}/src/ngscopeclient/masks)
 
+add_custom_target(
+	ngmd
+	COMMENT "Copying markdown files..."
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md ${CMAKE_BINARY_DIR}/src/ngscopeclient/md)
+
 add_dependencies(ngscopeclient
 	ngfonts
 	ngicons
 	ngmasks
+	ngmd
 	ngrendershaders
 	ngprotoshaders
 	nghalshaders
@@ -196,6 +202,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks
 	DESTINATION share/ngscopeclient)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
 	DESTINATION share/ngscopeclient)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md
+	DESTINATION share/ngscopeclient)
 
 install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
 	DESTINATION share/applications)
@@ -229,6 +237,8 @@ if(WIXPATH AND WIN32)
 				${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/icons
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_SOURCE_DIR}/src/ngscopeclient/masks ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/masks
+		COMMAND ${CMAKE_COMMAND} -E copy_directory
+				${CMAKE_SOURCE_DIR}/src/ngscopeclient/md ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/md
 
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
 				${CMAKE_BINARY_DIR}/lib/scopeprotocols/shaders ${CMAKE_BINARY_DIR}/dist/ngscopeclient_windows_x64/shaders

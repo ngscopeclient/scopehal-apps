@@ -1,0 +1,79 @@
+The following is a list of all contributors to ngscopeclient, libscopehal, and libscopeprotocols, alphabetically by GitHub username.
+
+* 0bs3n (sen)
+* 602p (Louis Goessling)
+* 9names
+* andresmanelli (Andres)
+* antikerneldev
+* attie-argentum (Attie Grande)
+* azonenberg (Andrew Zonenberg)
+* bgianfo (Brian Gianforcaro)
+* biswa96 (Biswapriyo Nath)
+* bvernoux (Benjamin Vernoux)
+* chille (Christian Antila)
+* codysseus (Cody Holliday)
+* craigjb (Craig Bishop)
+* cushychicken (Nash Reilly)
+* cyberpunkdre (Dre)
+* d235j (David Ryskalczyk)
+* daglem (Dag Lem)
+* dannas (Dan Näslund)
+* dizzystem
+* dresco (Jon Escombe)
+* drandyhaas (Andy Haas)
+* ehntoo (Mitch Johnson)
+* electroniceel (Electronic Eel)
+* erdnaxe
+* four0four (Galen Schretlen)
+* fredzo
+* fsedano (Francisco Sedano)
+* hansemro (Hansem Ro)
+* hansfbaier (Hans Baier)
+* fazs (Fabian Zboril-Schwarz)
+* fridtjof (Fridtjof Mund)
+* gherkin
+* iromero91 (Jose Ignacio Romero)
+* johnsel (John Simons)
+* juan-domenech (Juan Domenech Fernandez)
+* jwise (Joshua Wise)
+* kench (Kenley Cheung)
+* kilimnik (Daniel Kilimnik)
+* kliment
+* lainy (Lain Agan)
+* laminar-oss
+* ledvinap (Petr Ledvina)
+* lethalbit (Aki)
+* macaba
+* mandl
+* matfi
+* mldulaney (Mairi Dulaney)
+* megabytephreak
+* miek (Mike Walters)
+* mubes
+* mugheeschohan (Mughees Chohan)
+* natemeyer (Nate Meyer)
+* noopwafel (Alyssa Milburn)
+* nshcat (Alex)
+* pepijndevos (Pepijn de Vos)
+* pd0wm (William Melching)
+* qduff (Quentin Duff)
+* randomplum (Dominik Sliwa)
+* rroohhh (Robin Heinemann)
+* rx14 (Stephanie Wilde-Hobbs)
+* sam210723 (Sam)
+* sajattack (Paul Sajna)
+* schneider-engineering (Felix Schneider)
+* smunaut (Sylvain Munaut)
+* someone--else
+* spookyvision (Anatol Ulrich)
+* stanciuadrian (Adrian Stanciu)
+* tarunik
+* tech2077
+* tiltmesenpai (Joshua Koike)
+* tomverbeure (Tom Verbeure)
+* travisgoodspeed (Travis Goodspeed)
+* umarcor (Unai Martinez-Corral)
+* vipqualitypost
+* whitequark (Catherine)
+* x44203
+* xzcvczx
