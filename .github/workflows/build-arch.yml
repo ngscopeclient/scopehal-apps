@@ -45,8 +45,7 @@ jobs:
           cmake \
           make \
           pkgconf \
-          cairomm-1.16 \
-          gtkmm3 \
+          gtk3 \
           libsigc++ \
           yaml-cpp \
           catch2 \

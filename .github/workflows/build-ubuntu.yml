@@ -50,7 +50,7 @@ jobs:
           cmake \
           ninja-build \
           pkgconf \
-          libgtkmm-3.0-dev \
+          libgtk-3.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
           libglfw3-dev \

@@ -49,7 +49,6 @@ jobs:
           cmake \
           ninja-build \
           pkgconf \
-          libgtkmm-3.0-dev \
           libsigc++-2.0-dev \
           libyaml-cpp-dev \
           libglfw3-dev \
@@ -92,7 +91,6 @@ jobs:
         cd ~/ffts/build
         sudo ninja install
 
-
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
@@ -119,8 +117,6 @@ jobs:
       run: |
         cd build
         ninja
-
-
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
