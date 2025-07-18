@@ -457,6 +457,13 @@ void VulkanWindow::Render()
 		return;
 	}
 
+	//Check for resize
+	int fbWidth = 0;
+	int fbHeight = 0;
+	glfwGetFramebufferSize(m_window, &fbWidth, &fbHeight);
+	if( (fbWidth != m_width) || (fbHeight != m_height) )
+		m_resizeEventPending = true;
+
 	//If we're re-rendering after the window size changed, fix up the framebuffer before we worry about anything else
 	if(m_resizeEventPending)
 	{
