@@ -37,7 +37,7 @@ else()
 	set(NGSCOPECLIENT_VERSION "unknown")
 endif()
 
-set(PROJECT_VERSION "0.1-dev+${NGSCOPECLIENT_VERSION}")
+set(PROJECT_VERSION "${NGSCOPECLIENT_VERSION}")
 
 include(CTest)
 
