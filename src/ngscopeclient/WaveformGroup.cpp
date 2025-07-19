@@ -99,7 +99,7 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 		m_areas.push_back(area);
 	}
 
-	m_parent->RefreshTimebasePropertiesDialog();
+	m_parent->RefreshStreamBrowserDialog();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,7 +222,7 @@ bool WaveformGroup::Render()
 	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
 		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
 	if(!m_areasToClose.empty())
-		m_parent->RefreshTimebasePropertiesDialog();
+		m_parent->RefreshStreamBrowserDialog();
 
 	//If we no longer have any areas in the group, close the group
 	if(areas.empty())
@@ -864,10 +864,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		if(wheel != 0)
 			OnMouseWheel(wheel);
 
-		//Double click to open the timebase properties
-		if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-			m_parent->ShowTimebaseProperties();
-
 		//Start dragging
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 		{
@@ -1043,8 +1039,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 			m_parent->AddStatusHelp("mouse_lmb_drag", "Move trigger position");
 		else
 			m_parent->AddStatusHelp("mouse_lmb_drag", "Pan timeline");
-
-		m_parent->AddStatusHelp("mouse_lmb_double", "Open timebase properties");
 
 		m_parent->AddStatusHelp("mouse_wheel", "Zoom horizontal axis");
 		m_parent->AddStatusHelp("mouse_mmb", "Autoscale horizontal axis to waveforms");

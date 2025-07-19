@@ -46,7 +46,6 @@
 #include "ManageInstrumentsDialog.h"
 #include "ProtocolAnalyzerDialog.h"
 #include "StreamBrowserDialog.h"
-#include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Workspace.h"
 
@@ -131,7 +130,6 @@ public:
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrumet);
-	void ShowTimebaseProperties();
 	void ShowTriggerProperties();
 	void ShowManageInstruments();
 	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, std::shared_ptr<Oscilloscope> secondary);
@@ -146,10 +144,10 @@ public:
 	/**
 		@brief Update the timebase properties dialog
 	 */
-	void RefreshTimebasePropertiesDialog()
+	void RefreshStreamBrowserDialog()
 	{
-		if(m_timebaseDialog)
-			m_timebaseDialog->Refresh();
+		if(m_streamBrowser)
+			m_streamBrowser->FlushConfigCache();
 	}
 
 	/**
@@ -343,9 +341,6 @@ protected:
 
 	///@brief History
 	std::shared_ptr<HistoryDialog> m_historyDialog;
-
-	///@brief Timebase properties
-	std::shared_ptr<TimebasePropertiesDialog> m_timebaseDialog;
 
 	///@brief Trigger properties
 	std::shared_ptr<TriggerPropertiesDialog> m_triggerDialog;

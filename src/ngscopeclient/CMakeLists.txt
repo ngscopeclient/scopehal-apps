@@ -83,7 +83,6 @@ add_executable(ngscopeclient
 	Session.cpp
 	StreamBrowserDialog.cpp
 	TextureManager.cpp
-	TimebasePropertiesDialog.cpp
 	TriggerGroup.cpp
 	TriggerPropertiesDialog.cpp
 	VulkanWindow.cpp

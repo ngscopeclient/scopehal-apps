@@ -79,9 +79,6 @@ StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> sc
 			m_depth = i;
 	}
 
-	//TODO: frequency domain controls
-
-	/*
 	Unit hz(Unit::UNIT_HZ);
 
 	m_rbw = scope->GetResolutionBandwidth();
@@ -110,7 +107,6 @@ StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> sc
 	}
 	else
 		m_integrationTime = 0;
-	*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,14 +158,13 @@ void StreamBrowserDialog::startBadgeLine()
 	@brief render a badge for an instrument node
 
 	@param inst the instrument to render the badge for
-	@param latched true if the redering of this batch should be latched (i.e. only renderd it previous badge has been here for more than a given time)
+	@param latched true if the redering of this batch should be latched (i.e. only render if previous badge has been here for more than a given time)
 	@param badge the badge type
 */
-bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge)
+void StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge)
 {
 	auto& prefs = m_session.GetPreferences();
 	double now = GetTime();
-	bool result = false;
 	if(latched)
 	{
 		std::pair<double,InstrumentBadge> old = m_instrumentLastBadge[inst];
@@ -190,13 +185,13 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 				* for trigger" or "currently
 				* capturing samples post-trigger",
 				* "ARMED" is unambiguous */
-			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_armed_badge_color")), "ARMED", "A", NULL);
 			break;
 		case StreamBrowserDialog::BADGE_STOPPED:
-			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_stopped_badge_color")), "STOPPED", "STOP", "S", NULL);
 			break;
 		case StreamBrowserDialog::BADGE_TRIGGERED:
-			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_triggered_badge_color")), "TRIGGERED", "TRIG'D", "T'D", "T", NULL);
 			break;
 		case StreamBrowserDialog::BADGE_BUSY:
 			/* prefer language "BUSY" to "WAIT":
@@ -204,15 +199,14 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 				* trigger", "BUSY" means "I am
 				* doing something internally and am
 				* not ready for some reason" */
-			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_busy_badge_color")), "BUSY", "B", NULL);
 			break;
 		case StreamBrowserDialog::BADGE_AUTO:
-			result = renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.trigger_auto_badge_color")), "AUTO", "A", NULL);
 			break;
 		default:
 			break;
 	}
-	return result;
 }
 
 /**
@@ -220,30 +214,27 @@ bool StreamBrowserDialog::renderInstrumentBadge(std::shared_ptr<Instrument> inst
 
 	@param color the color of the badge
 	@param ... a null terminated list of labels form the largest to the smallest to use as a badge label according to the available space
-	@return true if the badge has been clicked
 */
-bool StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
+void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NULL */)
 {
 	va_list ap;
 	va_start(ap, color);
-	bool result = false;
 
-	while (const char *label = va_arg(ap, const char *)) {
+	while (const char *label = va_arg(ap, const char *))
+	{
 		float xsz = ImGui::CalcTextSize(label).x + ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
-		if ((m_badgeXCur - xsz) < m_badgeXMin) {
+		if ((m_badgeXCur - xsz) < m_badgeXMin)
 			continue;
-		}
 
 		// ok, we have enough space -- commit to it!
 		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 		ImGui::SameLine(m_badgeXCur);
 		ImGui::PushStyleColor(ImGuiCol_Button, color);
-		result = ImGui::SmallButton(label);
+		SmallDisabledButton(label);
 		ImGui::PopStyleColor();
 		break;
 	}
 	va_end(ap);
-	return result;
 }
 
 /**
@@ -396,7 +387,10 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
 bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool curValue)
 {
 	auto& prefs = m_session.GetPreferences();
-	ImVec4 color = ImGui::ColorConvertU32ToFloat4((curValue ? prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") : prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
+	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
+		(curValue ?
+			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
+			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
 	return renderToggle(label, alignRight, color, curValue);
 }
 
@@ -530,7 +524,7 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 			m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
 			ImGui::SameLine(m_badgeXCur);
 			ImGui::PushStyleColor(ImGuiCol_Button, color);
-			ImGui::SmallButton(label);
+			SmallDisabledButton(label);
 			ImGui::PopStyleColor();
 			if(hasProgress)
 			{
@@ -596,7 +590,7 @@ void StreamBrowserDialog::renderPsuRows(
 	{
 		ImGui::TableSetColumnIndex(0);
 		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::ColorConvertU32ToFloat4(prefs.GetColor(isVoltage ? "Appearance.Stream Browser.psu_cv_badge_color" : "Appearance.Stream Browser.psu_cc_badge_color")));
-		ImGui::SmallButton(isVoltage ? "CV" : "CC");
+		SmallDisabledButton(isVoltage ? "CV" : "CC");
 		ImGui::PopStyleColor();
 	}
 	ImGui::TableSetColumnIndex(1);
@@ -831,6 +825,8 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		else
 		{
 			Oscilloscope::TriggerMode mode = state ? state->m_lastTriggerState : Oscilloscope::TRIGGER_MODE_STOP;
+			if(!scope->IsTriggerArmed())
+				mode = Oscilloscope::TRIGGER_MODE_STOP;
 			switch (mode)
 			{
 			case Oscilloscope::TRIGGER_MODE_RUN:
@@ -855,7 +851,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	}
 
 	// Render ornaments for this PSU: on/off status, ...
-	auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(instrument);
+	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	if (psu)
 	{
 		//Get the state
@@ -914,25 +910,10 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				if(scope->HasTimebaseControls())
 					DoTimebaseSettings(scope);
 				if(scope->HasFrequencyControls())
-				{
-					auto sdepth_txt 	= Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(scope->GetSampleDepth());
-					auto rbw_txt    	= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetResolutionBandwidth());
-					auto centerFreq_txt = Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetCenterFrequency(0));
-					auto span_txt 		= Unit(Unit::UNIT_HZ).PrettyPrint(scope->GetSpan());
-
-					bool clicked = false;
-					bool hovered = false;
-					if(!scope->HasTimebaseControls()) // Only render sample depth if it has not already been shown in timebase controls
-						renderInfoLink("Points", sdepth_txt.c_str(), clicked, hovered);
-					renderInfoLink("Rbw", rbw_txt.c_str(), clicked, hovered);
-					renderInfoLink("Center freq.", centerFreq_txt.c_str(), clicked, hovered);
-					renderInfoLink("Span", span_txt.c_str(), clicked, hovered);
-					if (clicked)
-						m_parent->ShowTimebaseProperties();
-					if (hovered)
-						m_parent->AddStatusHelp("mouse_lmb", "Open timebase properties");
-				}
-
+					DoFrequencySettings(scope);
+				auto spec = dynamic_pointer_cast<SCPISpectrometer>(scope);
+				if(spec)
+					DoSpectrometerSettings(spec);
 				ImGui::TreePop();
 			}
 
@@ -955,6 +936,106 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 }
 
+void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
+{
+	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
+		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	auto p = m_timebaseConfig[scope];
+
+	//Memory depth (but don't duplicate if we also have time domain controls, like for a SDR/RTSA)
+	auto width = ImGui::GetFontSize() * 6;
+	if(!scope->HasTimebaseControls())
+	{
+		ImGui::SetNextItemWidth(width);
+		if(Combo("Points", p->m_depthNames, p->m_depth))
+			scope->SetSampleDepth(p->m_depths[p->m_depth]);
+		HelpMarker("Number of points in the sweep");
+	}
+
+	Unit hz(Unit::UNIT_HZ);
+
+	// Resolution Bandwidh
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Rbw", p->m_rbwText, p->m_rbw, hz))
+	{
+		scope->SetResolutionBandwidth(p->m_rbw);
+		// Update with values from the device
+		p->m_rbw = scope->GetResolutionBandwidth();
+		p->m_rbwText = hz.PrettyPrint(p->m_rbw);
+	}
+	HelpMarker("Resolution Bandwidth");
+
+	//Frequency
+	bool changed = false;
+
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Start", p->m_startText, p->m_start, hz))
+	{
+		double mid = (p->m_start + p->m_end) / 2;
+		double span = (p->m_end - p->m_start);
+		scope->SetCenterFrequency(0, mid);
+		scope->SetSpan(span);
+		changed = true;
+	}
+	HelpMarker("Start of the frequency sweep");
+
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Center", p->m_centerText, p->m_center, hz))
+	{
+		scope->SetCenterFrequency(0, p->m_center);
+		changed = true;
+	}
+	HelpMarker("Midpoint of the frequency sweep");
+
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Span", p->m_spanText, p->m_span, hz))
+	{
+		scope->SetSpan(p->m_span);
+		changed = true;
+	}
+	HelpMarker("Width of the frequency sweep");
+
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("End", p->m_endText, p->m_end, hz))
+	{
+		double mid = (p->m_start + p->m_end) / 2;
+		double span = (p->m_end - p->m_start);
+		scope->SetCenterFrequency(0, mid);
+		scope->SetSpan(span);
+		changed = true;
+	}
+	HelpMarker("End of the frequency sweep");
+
+	//Update everything if one setting is changed
+	if(changed)
+	{
+		p->m_span = scope->GetSpan();
+		p->m_center = scope->GetCenterFrequency(0);
+		p->m_start = p->m_center - p->m_span/2;
+		p->m_end = p->m_center + p->m_span/2;
+
+		p->m_spanText = hz.PrettyPrint(p->m_span);
+		p->m_centerText = hz.PrettyPrint(p->m_center);
+		p->m_startText = hz.PrettyPrint(p->m_start);
+		p->m_endText = hz.PrettyPrint(p->m_end);
+	}
+}
+void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> spec)
+{
+	auto scope = dynamic_pointer_cast<SCPIOscilloscope>(spec);
+	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
+		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	auto config = m_timebaseConfig[scope];
+
+	auto width = ImGui::GetFontSize() * 5;
+	ImGui::SetNextItemWidth(width);
+
+	Unit fs(Unit::UNIT_FS);
+	if(UnitInputWithImplicitApply("Integration time", config->m_integrationText, config->m_integrationTime, fs))
+		spec->SetIntegrationTime(config->m_integrationTime);
+	HelpMarker("Spectrometer integration / exposure time");
+}
+
 /**
 	@brief Add nodes for timebase controls under an instrument
  */
@@ -965,15 +1046,44 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 	//If we don't have timebase settings for the scope, create them
 	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	auto config = m_timebaseConfig[scope];
 
 	//Interleaving
 	bool refresh = false;
-	if(scope->CanInterleave())
+	ImGui::SetNextItemWidth(width);
+	bool disabled = !scope->CanInterleave();
+	ImGui::BeginDisabled(disabled);
+	if(renderOnOffToggle("Interleaving", false, config->m_interleaving))
 	{
-		ImGui::SetNextItemWidth(width);
-		if(renderOnOffToggle("Interleaving", false, m_timebaseConfig[scope]->m_interleaving))
+		scope->SetInterleaving(config->m_interleaving);
+		refresh = true;
+	}
+	ImGui::EndDisabled();
+	HelpMarker(
+		"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
+		"\n"
+		"Some instruments do not have an explicit interleaving switch, but available sample rates "
+		"may vary depending on which channels are active."
+		);
+
+	//Show sampling mode iff both are available
+	if(
+		scope->IsSamplingModeAvailable(Oscilloscope::REAL_TIME) &&
+		scope->IsSamplingModeAvailable(Oscilloscope::EQUIVALENT_TIME) )
+	{
+		static const char* items[]=
 		{
-			scope->SetInterleaving(m_timebaseConfig[scope]->m_interleaving);
+			"Real time",
+			"Equivalent time"
+		};
+		ImGui::SetNextItemWidth(width);
+		if(ImGui::Combo("Sampling mode", &config->m_samplingMode, items, 2))
+		{
+			if(config->m_samplingMode == Oscilloscope::REAL_TIME)
+				scope->SetSamplingMode(Oscilloscope::REAL_TIME);
+			else
+				scope->SetSamplingMode(Oscilloscope::EQUIVALENT_TIME);
+
 			refresh = true;
 		}
 	}
@@ -984,9 +1094,9 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		"Sample Rate",
 		false,
 		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-		m_timebaseConfig[scope]->m_rate, m_timebaseConfig[scope]->m_rateNames))
+		config->m_rate, config->m_rateNames))
 	{
-		scope->SetSampleRate(m_timebaseConfig[scope]->m_rates[m_timebaseConfig[scope]->m_rate]);
+		scope->SetSampleRate(config->m_rates[config->m_rate]);
 		refresh = true;
 	}
 
@@ -996,9 +1106,9 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		"Memory Depth",
 		false,
 		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-		m_timebaseConfig[scope]->m_depth, m_timebaseConfig[scope]->m_depthNames))
+		config->m_depth, config->m_depthNames))
 	{
-		scope->SetSampleDepth(m_timebaseConfig[scope]->m_depths[m_timebaseConfig[scope]->m_depth]);
+		scope->SetSampleDepth(config->m_depths[config->m_depth]);
 		refresh = true;
 	}
 
@@ -1051,8 +1161,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	if(!hasChildren)
 		flags |= ImGuiTreeNodeFlags_Leaf;
 
-	//Collapse digital channel nodes by default to reduce clutter
-	if(isDigital)
+	//Collapse all scope channel nodes by default to reduce clutter
+	if(isDigital || scopechan)
 	{}
 
 	else
@@ -1095,13 +1205,13 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	startBadgeLine();
 	if (scopechan)
 	{
-		//No badge on trigger inputs
+		//"trigger" badge on trigger inputs to show they're not displayable channels
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
-		{}
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
 
 		// Scope channel
 		else if (!scopechan->IsEnabled())
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", NULL);
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
 
 		//Download in progress
 		else
@@ -1139,7 +1249,6 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 
 		}
 	}
-
 
 	if(open)
 	{
@@ -1238,7 +1347,12 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 			ImGui::EndDragDropSource();
 		}
 		else
-			DoItemHelp();
+		{
+			if(channel->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
+			{}
+			else
+				DoItemHelp();
+		}
 	}
 	// Channel/stream properties block
 	if(renderProps && scopechan)

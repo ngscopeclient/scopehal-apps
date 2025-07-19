@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -500,14 +500,6 @@ void MainWindow::SetupMenu()
 		if(ImGui::MenuItem("Manage Instruments..."))
 			ShowManageInstruments();
 		if(manageVisible)
-			ImGui::EndDisabled();
-
-		bool timebaseVisible = (m_timebaseDialog != nullptr);
-		if(timebaseVisible)
-			ImGui::BeginDisabled();
-		if(ImGui::MenuItem("Timebase..."))
-			ShowTimebaseProperties();
-		if(timebaseVisible)
 			ImGui::EndDisabled();
 
 		bool triggerVisible = (m_triggerDialog != nullptr);

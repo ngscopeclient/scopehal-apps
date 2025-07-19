@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -199,7 +199,7 @@ void PreferenceManager::InitializeDefaults()
 				.Description("Color for trigger 'triggered' badge"));
 			stream.AddPreference(
 				Preference::Color("trigger_busy_badge_color", ColorFromString("#CC4C4C"))
-				.Label("Trigger buwy badge color")
+				.Label("Trigger busy badge color")
 				.Description("Color for trigger 'busy' badge"));
 			stream.AddPreference(
 				Preference::Color("trigger_auto_badge_color", ColorFromString("#4CCC4C"))
@@ -222,7 +222,7 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Instrument partial on badge color")
 				.Description("Color for intrument partial 'on' badge"));
 			stream.AddPreference(
-				Preference::Color("instrument_off_badge_color", ColorFromString("#CC4C4C"))
+				Preference::Color("instrument_off_badge_color", ColorFromString("#808000ff"))
 				.Label("Instrument off badge color")
 				.Description("Color for instrument 'off' badge"));
 			stream.AddPreference(

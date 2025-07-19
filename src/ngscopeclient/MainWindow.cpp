@@ -71,7 +71,6 @@
 #include "RFGeneratorDialog.h"
 #include "SCPIConsoleDialog.h"
 #include "ScopeDeskewWizard.h"
-#include "TimebasePropertiesDialog.h"
 #include "TriggerPropertiesDialog.h"
 
 #include <imgui_markdown.h>
@@ -254,7 +253,6 @@ void MainWindow::CloseSession()
 	LogTrace("Clearing dialogs\n");
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
-	m_timebaseDialog = nullptr;
 	m_triggerDialog = nullptr;
 	m_filterPalette = nullptr;
 	m_streamBrowser = nullptr;
@@ -511,7 +509,7 @@ void MainWindow::OnScopeAdded(shared_ptr<Oscilloscope> scope, bool createViews)
 	}
 
 	//Refresh any dialogs that depend on it
-	RefreshTimebasePropertiesDialog();
+	RefreshStreamBrowserDialog();
 	RefreshTriggerPropertiesDialog();
 }
 
@@ -1147,8 +1145,6 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_streamBrowser = nullptr;
 	if(m_metricsDialog == dlg)
 		m_metricsDialog = nullptr;
-	if(m_timebaseDialog == dlg)
-		m_timebaseDialog = nullptr;
 	if(m_triggerDialog == dlg)
 		m_triggerDialog = nullptr;
 	if(m_historyDialog == dlg)
@@ -1404,15 +1400,6 @@ void MainWindow::NavigateToTimestamp(int64_t stamp, int64_t duration, StreamDesc
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Other GUI handlers
-
-void MainWindow::ShowTimebaseProperties()
-{
-	if(m_timebaseDialog != nullptr)
-		return;
-
-	m_timebaseDialog = make_shared<TimebasePropertiesDialog>(&m_session);
-	AddDialog(m_timebaseDialog);
-}
 
 void MainWindow::ShowSyncWizard(shared_ptr<TriggerGroup> group, shared_ptr<Oscilloscope> secondary)
 {
@@ -2834,10 +2821,6 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_historyDialog);
 	}
 
-	auto time = node["timebase"];
-	if(time && time.as<bool>())
-		ShowTimebaseProperties();
-
 	auto trig = node["trigger"];
 	if(trig && trig.as<bool>())
 		ShowTriggerProperties();
@@ -3380,10 +3363,6 @@ YAML::Node MainWindow::SerializeDialogs()
 	//History
 	if(m_historyDialog)
 		node["history"] = true;
-
-	//Timebase
-	if(m_timebaseDialog)
-		node["timebase"] = true;
 
 	//Trigger
 	if(m_triggerDialog)

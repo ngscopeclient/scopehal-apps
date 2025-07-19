@@ -58,6 +58,31 @@ public:
 	std::vector<uint64_t> m_depths;
 	std::vector<std::string> m_depthNames;
 	int m_depth;
+
+	//Sampling mode
+	//(only valid if both RT and equivalent are available)
+	int m_samplingMode;
+
+	//Resolution Bandwidth
+	std::string m_rbwText;
+	int64_t m_rbw;
+
+	//Frequency domain controls
+	std::string m_centerText;
+	double m_center;
+
+	std::string m_spanText;
+	double m_span;
+
+	std::string m_startText;
+	double m_start;
+
+	std::string m_endText;
+	double m_end;
+
+	//Spectrometer controls
+	std::string m_integrationText;
+	double m_integrationTime;
 };
 
 class StreamBrowserDialog : public Dialog
@@ -88,8 +113,8 @@ protected:
 	// Rendeding of StreamBrowserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
-	bool renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
-	bool renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
+	void renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
+	void renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
 	bool renderCombo(
 		const char* label,
 		bool alignRight,
@@ -117,6 +142,8 @@ protected:
 	// Rendering of an instrument node
 	void renderInstrumentNode(std::shared_ptr<Instrument> instrument);
 	void DoTimebaseSettings(std::shared_ptr<Oscilloscope> scope);
+	void DoFrequencySettings(std::shared_ptr<Oscilloscope> scope);
+	void DoSpectrometerSettings(std::shared_ptr<SCPISpectrometer> spec);
 
 	// Rendering of a channel node
 	void renderChannelNode(std::shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
@@ -140,6 +167,16 @@ protected:
 
 	///@brief Map of instruments to timebase settings
 	std::map<std::shared_ptr<Instrument>, std::shared_ptr<StreamBrowserTimebaseInfo> > m_timebaseConfig;
+
+	///@brief Helper to render a small button that's non-interactive
+	void SmallDisabledButton(const char* label)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_DisabledAlpha, 1);
+		ImGui::BeginDisabled();
+		ImGui::SmallButton(label);
+		ImGui::EndDisabled();
+		ImGui::PopStyleVar();
+	}
 };
 
 #endif
