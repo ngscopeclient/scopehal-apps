@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -131,8 +131,10 @@ bool PreferenceDialog::DoRender()
 			auto& subCategory = node->AsCategory();
 			if(subCategory.IsVisible())
 			{
+				ImGui::PushID(identifier.c_str());
 				if(ImGui::CollapsingHeader(identifier.c_str()))
 					ProcessCategory(subCategory);
+				ImGui::PopID();
 			}
 		}
 	}
@@ -159,7 +161,9 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
 			{
 				if(ImGui::TreeNode(identifier.c_str()))
 				{
+					ImGui::PushID(identifier.c_str());
 					ProcessCategory(subCategory);
+					ImGui::PopID();
 					ImGui::TreePop();
 				}
 			}
