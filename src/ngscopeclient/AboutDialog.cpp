@@ -98,10 +98,17 @@ bool AboutDialog::DoRender()
 	{
 		if(ImGui::BeginTabItem("Versions"))
 		{
+			int nver = VkFFTGetVersion();
+			string vkfftVersion =
+				to_string(nver / 10000) + "." +
+				to_string( (nver / 100) % 100) +  "." +
+				to_string( nver % 100);
+
 			string str =
 				string("  * ngscopeclient ") + NGSCOPECLIENT_VERSION + "\n" +
 				"  * libscopehal " + ScopehalGetVersion() + "\n" +
 				"  * Dear ImGui " + IMGUI_VERSION + "\n"
+				"  * VkFFT " + vkfftVersion + "\n"
 				"  * Vulkan SDK " + to_string(VK_HEADER_VERSION) + "\n"
 				;
 			ImGui::Markdown( str.c_str(), str.length(), mdConfig );
