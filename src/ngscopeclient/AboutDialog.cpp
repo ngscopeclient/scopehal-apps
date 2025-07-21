@@ -40,6 +40,7 @@
 #include "MainWindow.h"
 #include <ngscopeclient-version.h>
 #include <imgui_markdown.h>
+#include <vkFFT.h>
 
 using namespace std;
 
