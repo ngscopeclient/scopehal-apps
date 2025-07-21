@@ -46,6 +46,7 @@ set(BUILD_DOCS CACHE BOOL "Build end user documentation")
 set(BUILD_DEVDOCS CACHE BOOL "Build developer documentation")
 set(ANALYZE CACHE BOOL "Run static analysis on the code, requires cppcheck and clang-analyzer to be installed")
 set(DISABLE_PCH CACHE BOOL "Disable precompiled headers as this may break certain configurations")
+set(BUILD_TESTING CACHE BOOL "Build unit tests")
 
 # Build with C++ 17 on Linux for maximum compatibility with older system
 # but for Windows, enable C++ 20 to bypass a deprecation warning
@@ -255,7 +256,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 add_subdirectory(devdoc)
 
 # Unit tests
-if(BUILD_TESTING)
+if(git AND BUILD_TESTING)
 
 	# find ffts, except on Apple Silicon where it's not supported
 	if(NOT APPLE_SILICON)
