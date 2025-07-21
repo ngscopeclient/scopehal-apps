@@ -256,8 +256,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/nativefiledialog-extended")
 add_subdirectory(devdoc)
 
 # Unit tests
-if(git AND BUILD_TESTING)
-
+if(Git_FOUND AND BUILD_TESTING)
 	# find ffts, except on Apple Silicon where it's not supported
 	if(NOT APPLE_SILICON)
 		# ffts ships a broken pkgconfig file on some platforms so we are not going to use it
