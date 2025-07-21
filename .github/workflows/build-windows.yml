@@ -63,7 +63,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -GNinja
+        cmake .. -DWIXPATH="C:\Program Files (x86)\WiX Toolset v3.14\bin" -DBUILD_TESTING=ON -GNinja
         ninja
 
     - name: Build Only
@@ -71,7 +71,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -GNinja
+        cmake .. -DBUILD_TESTING=ON -GNinja
         ninja
 
     - name: Test

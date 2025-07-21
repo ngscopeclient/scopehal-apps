@@ -147,6 +147,7 @@ jobs:
           -DDISABLE_PCH=ON \
           -GNinja \
           -DCPACK_GENERATOR=RPM \
+          -DBUILD_TESTING=ON \
           -DCMAKE_INSTALL_PREFIX=/usr \
           ..
 

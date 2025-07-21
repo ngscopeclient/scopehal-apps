@@ -148,6 +148,7 @@ jobs:
         cmake \
           -DCMAKE_BUILD_TYPE=Release \
           -DDISABLE_PCH=ON \
+          -DBUILD_TESTING=ON \
           -GNinja \
           -DCMAKE_INSTALL_PREFIX=/usr \
           ..
