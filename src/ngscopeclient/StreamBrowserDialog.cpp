@@ -370,6 +370,8 @@ bool StreamBrowserDialog::renderCombo(
    @param color the color of the toggle button
    @param curValue the value of the toggle button
    @return the selected value for the toggle button
+
+   TODO: replace with renderToggleEXT
  */
 bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool curValue)
 {
@@ -379,10 +381,27 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
 }
 
 /**
+   @brief Render a toggle button combo
+
+   @param color the color of the toggle button
+   @param curValue the value of the toggle button
+   @return true if selection has changed
+ */
+bool StreamBrowserDialog::renderToggleEXT(const char* label, bool alignRight, ImVec4 color, bool& curValue)
+{
+	int selection = (int)curValue;
+	bool ret = renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
+	curValue = (selection == 1);
+	return ret;
+}
+
+/**
    @brief Render an on/off toggle button combo
 
    @param curValue the value of the toggle button
    @return the selected value for the toggle button
+
+   TODO: replace with renderOnOffToggleEXT
  */
 bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool curValue)
 {
@@ -392,6 +411,22 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
 			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
 			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
 	return renderToggle(label, alignRight, color, curValue);
+}
+
+/**
+   @brief Render an on/off toggle button combo
+
+   @param curValue the value of the toggle button
+   @return true if value has changed
+ */
+bool StreamBrowserDialog::renderOnOffToggleEXT(const char* label, bool alignRight, bool& curValue)
+{
+	auto& prefs = m_session.GetPreferences();
+	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
+		(curValue ?
+			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
+			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
+	return renderToggleEXT(label, alignRight, color, curValue);
 }
 
 /**
@@ -1053,7 +1088,7 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 	ImGui::SetNextItemWidth(width);
 	bool disabled = !scope->CanInterleave();
 	ImGui::BeginDisabled(disabled);
-	if(renderOnOffToggle("Interleaving", false, config->m_interleaving))
+	if(renderOnOffToggleEXT("Interleaving", false, config->m_interleaving))
 	{
 		scope->SetInterleaving(config->m_interleaving);
 		refresh = true;
