@@ -127,7 +127,14 @@ DisplayedChannel::~DisplayedChannel()
 			m_session.GetTriggerGroupForFilter(pf)->RemoveFilter(pf);
 		}
 
+		auto scope = schan->GetScope();
 		schan->Release();
+
+		//If the channel is part of an instrument and we turned it off, we may have changed the set of sample rates
+		//Refresh the sidebar!
+		//TODO: make this more narrow and only refresh this scope etc?
+		if( (scope != nullptr) && !schan->IsEnabled())
+			m_session.GetMainWindow()->RefreshStreamBrowserDialog();
 	}
 }
 
