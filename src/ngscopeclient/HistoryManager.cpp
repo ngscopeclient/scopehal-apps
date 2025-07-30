@@ -319,7 +319,7 @@ void HistoryManager::AddHistory(
 				LogTrace("Removing un-pinned waveform at t=%s (now have %zu points of %d allowed)\n",
 					point->m_time.PrettyPrint().c_str(), m_history.size(), m_maxDepth);
 				m_session.RemoveMarkers(point->m_time);
-				m_session.RemovePackets(point->m_time, false);
+				m_session.RemovePackets(point->m_time);
 				m_history.erase(it);
 				deletedSomething = true;
 				break;

@@ -140,7 +140,7 @@ void Session::ClearBackgroundThreads()
 	}
 
 	//Clear our trigger state
-	//Important to signal the WaveformProcessingThread so it doesn't block waiting on response that's not going to come
+	//Important to signal the WaveformThread so it doesn't block waiting on response that's not going to come
 	g_waveformReadyEvent.Clear();
 	g_rerenderDoneEvent.Clear();
 	g_waveformProcessedEvent.Signal();
@@ -153,6 +153,9 @@ void Session::ClearBackgroundThreads()
 
 	//Clear shutdown flag in case we're reusing the session object
 	m_shuttingDown = false;
+
+	//Clear the WaveformThread signal if it's not already cleared
+	g_waveformProcessedEvent.Clear();
 }
 
 void Session::FlushConfigCache()
@@ -3473,10 +3476,10 @@ shared_ptr<PacketManager> Session::AddPacketFilter(PacketDecoder* filter)
 /**
 	@brief Deletes packets from our packet managers for a waveform timestamp
  */
-void Session::RemovePackets(TimePoint t, bool immediateRefresh)
+void Session::RemovePackets(TimePoint t)
 {
 	for(auto it : m_packetmgrs)
-		it.second->RemoveHistoryFrom(t, immediateRefresh);
+		it.second->RemoveHistoryFrom(t);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

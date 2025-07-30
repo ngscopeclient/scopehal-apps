@@ -44,6 +44,7 @@ using namespace std;
 PacketManager::PacketManager(PacketDecoder* pd, Session& session)
 	: m_session(session)
 	, m_filter(pd)
+	, m_refreshPending(false)
 {
 
 }
@@ -72,6 +73,7 @@ void PacketManager::RefreshRows()
 	lock_guard<recursive_mutex> lock(m_mutex);
 
 	//Clear all existing row state
+	m_refreshPending = false;
 	m_rows.clear();
 
 	//Make a list of waveform timestamps and make sure we display them in order
@@ -185,7 +187,7 @@ void PacketManager::Update()
 	m_cachekey = key;
 
 	//Remove any old history we might have had from this timestamp
-	RemoveHistoryFrom(time, false);
+	RemoveHistoryFrom(time);
 
 	//Copy the new packets and detach them so the filter doesn't delete them.
 	//Do the merging now
@@ -259,8 +261,7 @@ void PacketManager::FilterPackets()
 		m_filteredChildPackets = m_childPackets;
 
 		//but still refresh the set of rows being displayed
-		RefreshRows();
-
+		m_refreshPending = true;
 		return;
 	}
 
@@ -301,18 +302,15 @@ void PacketManager::FilterPackets()
 		}
 	}
 
-	//Refresh the set of rows being displayed
-	RefreshRows();
+	m_refreshPending = true;
 }
 
 /**
 	@brief Removes all history from the specified timestamp
 
 	@param timestamp		Time to remove the history from
-	@param refreshAfter		True if we should refresh the list of displayed rows, false to not refresh
-							(should only be set false in Update())
  */
-void PacketManager::RemoveHistoryFrom(TimePoint timestamp, bool refreshAfter)
+void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 {
 	lock_guard<recursive_mutex> lock(m_mutex);
 
@@ -329,8 +327,7 @@ void PacketManager::RemoveHistoryFrom(TimePoint timestamp, bool refreshAfter)
 	m_filteredPackets.erase(timestamp);
 
 	//update the list of displayed rows so we don't have anything left pointing to stale packets
-	if(refreshAfter)
-		RefreshRows();
+	m_refreshPending = true;
 }
 
 void PacketManager::RemoveChildHistoryFrom(Packet* pack)

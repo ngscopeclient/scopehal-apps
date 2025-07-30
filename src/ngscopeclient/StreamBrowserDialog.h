@@ -55,7 +55,11 @@ public:
 	int m_rate;
 
 	uint64_t GetRate()
-	{ return m_rates[m_rate]; }
+	{
+		if(m_rates.empty())
+			return 0;
+		return m_rates[m_rate];
+	}
 
 	//Memory depth
 	std::vector<uint64_t> m_depths;

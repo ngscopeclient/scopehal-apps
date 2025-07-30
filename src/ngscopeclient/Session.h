@@ -535,7 +535,7 @@ public:
 	void RemoveMarkers(TimePoint t)
 	{ m_markers.erase(t); }
 
-	void RemovePackets(TimePoint t, bool immediateRefresh = true);
+	void RemovePackets(TimePoint t);
 
 	std::set<FlowGraphNode*> GetAllGraphNodes();
 

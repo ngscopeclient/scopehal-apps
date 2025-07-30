@@ -156,7 +156,7 @@ public:
 	virtual ~PacketManager();
 
 	void Update();
-	void RemoveHistoryFrom(TimePoint timestamp, bool refreshAfter = true);
+	void RemoveHistoryFrom(TimePoint timestamp);
 
 	std::recursive_mutex& GetMutex()
 	{ return m_mutex; }
@@ -191,9 +191,25 @@ public:
 	{ m_lastChildOpen[pack] = open; }
 
 	std::vector<RowData>& GetRows()
-	{ return m_rows; }
+	{
+		RefreshIfPending();
+		return m_rows;
+	}
 
 	void OnMarkerChanged();
+
+	/**
+		@brief Refresh the list of pending packets
+	 */
+	void RefreshIfPending()
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_mutex);
+		if(m_refreshPending)
+		{
+			LogTrace("Refreshing rows for %s due to pending changes\n", m_filter->GetDisplayName().c_str());
+			RefreshRows();
+		}
+	}
 
 protected:
 	void RemoveChildHistoryFrom(Packet* pack);
@@ -233,6 +249,9 @@ protected:
 
 	///@brief Map of packets to child-open flags from last frame
 	std::map<Packet*, bool> m_lastChildOpen;
+
+	///@brief True if we have a refresh pending before we can render (i.e. pending deletion or similar)
+	bool m_refreshPending;
 };
 
 #endif
