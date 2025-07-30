@@ -54,6 +54,9 @@ public:
 	std::vector<std::string> m_rateNames;
 	int m_rate;
 
+	uint64_t GetRate()
+	{ return m_rates[m_rate]; }
+
 	//Memory depth
 	std::vector<uint64_t> m_depths;
 	std::vector<std::string> m_depthNames;
@@ -147,6 +150,7 @@ protected:
 
 	// Rendering of an instrument node
 	void renderInstrumentNode(std::shared_ptr<Instrument> instrument);
+	std::shared_ptr<StreamBrowserTimebaseInfo> GetTimebaseInfoFor(std::shared_ptr<Oscilloscope>& scope);
 	void DoTimebaseSettings(std::shared_ptr<Oscilloscope> scope);
 	void DoFrequencySettings(std::shared_ptr<Oscilloscope> scope);
 	void DoSpectrometerSettings(std::shared_ptr<SCPISpectrometer> spec);

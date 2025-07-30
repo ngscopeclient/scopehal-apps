@@ -971,11 +971,23 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 }
 
-void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
+shared_ptr<StreamBrowserTimebaseInfo> StreamBrowserDialog::GetTimebaseInfoFor(shared_ptr<Oscilloscope>& scope)
 {
+	//If no timebase info, create it
 	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
-	auto p = m_timebaseConfig[scope];
+
+	//If we had info, but it's clearly out of date, recreate it
+	else if(m_timebaseConfig[scope]->GetRate() != scope->GetSampleRate())
+		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+
+	//Use whatever is left
+	return m_timebaseConfig[scope];
+}
+
+void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
+{
+	auto p = GetTimebaseInfoFor(scope);
 
 	//Memory depth (but don't duplicate if we also have time domain controls, like for a SDR/RTSA)
 	auto width = ImGui::GetFontSize() * 6;
@@ -1079,9 +1091,7 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 	auto width = ImGui::GetFontSize() * 5;
 
 	//If we don't have timebase settings for the scope, create them
-	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
-		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
-	auto config = m_timebaseConfig[scope];
+	auto config = GetTimebaseInfoFor(scope);
 
 	//Interleaving
 	bool refresh = false;
