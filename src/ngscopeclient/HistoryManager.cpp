@@ -265,6 +265,8 @@ void HistoryManager::AddHistory(
 	if(HasHistory(tp))
 		return;
 
+	LogTrace("Adding history for %s\n", tp.PrettyPrint().c_str());
+
 	//All good. Generate a new history point and add it
 	auto pt = make_shared<HistoryPoint>();
 	m_history.push_back(pt);
@@ -309,10 +311,15 @@ void HistoryManager::AddHistory(
 				//With multiple trigger groups at different rates, we might have the most recent trigger for a scope
 				//roll to the start of the history queue. Don't delete that!!
 				if(point->IsInUse())
+				{
+					LogTrace("Not removing %s because it's in use\n", point->m_time.PrettyPrint().c_str());
 					continue;
+				}
 
+				LogTrace("Removing un-pinned waveform at t=%s (now have %zu points of %d allowed)\n",
+					point->m_time.PrettyPrint().c_str(), m_history.size(), m_maxDepth);
 				m_session.RemoveMarkers(point->m_time);
-				m_session.RemovePackets(point->m_time);
+				m_session.RemovePackets(point->m_time, false);
 				m_history.erase(it);
 				deletedSomething = true;
 				break;

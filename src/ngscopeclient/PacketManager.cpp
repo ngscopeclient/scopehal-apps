@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -179,13 +179,13 @@ void PacketManager::Update()
 	if(key == m_cachekey)
 		return;
 
-	LogTrace("Updating\n");
+	LogTrace("Updating packet manager with new data at %s\n", time.PrettyPrint().c_str());
 
 	//If we get here, waveform changed. Update cache key
 	m_cachekey = key;
 
 	//Remove any old history we might have had from this timestamp
-	RemoveHistoryFrom(time);
+	RemoveHistoryFrom(time, false);
 
 	//Copy the new packets and detach them so the filter doesn't delete them.
 	//Do the merging now
@@ -307,10 +307,16 @@ void PacketManager::FilterPackets()
 
 /**
 	@brief Removes all history from the specified timestamp
+
+	@param timestamp		Time to remove the history from
+	@param refreshAfter		True if we should refresh the list of displayed rows, false to not refresh
+							(should only be set false in Update())
  */
-void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
+void PacketManager::RemoveHistoryFrom(TimePoint timestamp, bool refreshAfter)
 {
 	lock_guard<recursive_mutex> lock(m_mutex);
+
+	LogTrace("Removing history from %s\n", timestamp.PrettyPrint().c_str());
 
 	auto& packets = m_packets[timestamp];
 	for(auto p : packets)
@@ -323,7 +329,8 @@ void PacketManager::RemoveHistoryFrom(TimePoint timestamp)
 	m_filteredPackets.erase(timestamp);
 
 	//update the list of displayed rows so we don't have anything left pointing to stale packets
-	RefreshRows();
+	if(refreshAfter)
+		RefreshRows();
 }
 
 void PacketManager::RemoveChildHistoryFrom(Packet* pack)

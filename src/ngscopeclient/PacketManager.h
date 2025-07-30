@@ -156,7 +156,7 @@ public:
 	virtual ~PacketManager();
 
 	void Update();
-	void RemoveHistoryFrom(TimePoint timestamp);
+	void RemoveHistoryFrom(TimePoint timestamp, bool refreshAfter = true);
 
 	std::recursive_mutex& GetMutex()
 	{ return m_mutex; }
