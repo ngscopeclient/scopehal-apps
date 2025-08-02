@@ -523,7 +523,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 			//Text
 			//Anchor bottom right at the cursor
 			auto str = m.m_name + ": " + m_xAxisUnit.PrettyPrint(m.m_offset);
-			auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
+			auto tsize = CalcTextSizeForFont(font, str.c_str());
 			float padding = 2;
 			float wrounding = 2;
 			float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -683,7 +683,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		//Text
 		//Anchor bottom right at the cursor
 		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
-		auto tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
+		auto tsize = CalcTextSizeForFont(font, str.c_str());
 		float padding = 2;
 		float wrounding = 2;
 		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -714,7 +714,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
 
 			//Text
-			tsize = font.first->CalcTextSizeA(font.second, FLT_MAX, 0.0, str.c_str());
+			tsize = CalcTextSizeForFont(font, str.c_str());
 			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
 			list->AddRectFilled(
 				ImVec2(xpos1 + 1, textTop - padding ),

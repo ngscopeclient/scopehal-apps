@@ -566,6 +566,8 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
  */
 void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, vector<RowData>& rows, size_t nrow)
 {
+	ImGui::PushFont(dataFont.first, dataFont.second);
+
 	//When drawing the first cell, figure out dimensions for subsequent stuff
 	if(m_firstDataBlockOfFrame)
 	{
@@ -575,7 +577,7 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 		//Figure out how many characters of text we can fit in the data region
 		//This assumes data font is fixed width, may break if user chooses variable width.
 		//But hex dumps with variable width will look horrible anyway so that's probably not a problem?
-		auto fontwidth = dataFont.first->CalcTextSizeA(dataFont.second, FLT_MAX, -1, "W").x;
+		auto fontwidth = ImGui::CalcTextSize("W").x;
 		size_t charsPerLine = floor(xsize / fontwidth);
 
 		//TODO: use 2-nibble address if packet has <256 bytes of data
@@ -604,7 +606,10 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 		}
 
 		if(m_bytesPerLine <= 0)
+		{
+			ImGui::PopFont();
 			return;
+		}
 	}
 
 	string firstLine;
@@ -615,7 +620,6 @@ void ProtocolAnalyzerDialog::DoDataColumn(Packet* pack, FontWithSize dataFont, v
 	string lineAscii;
 
 	//Create the tree node early - before we've even rendered any data - so we know the open / closed state
-	ImGui::PushFont(dataFont.first, dataFont.second);
 	bool open = false;
 	if(!bytes.empty())
 	{

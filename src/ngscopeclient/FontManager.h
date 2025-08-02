@@ -66,4 +66,10 @@ protected:
 	std::map<FontDescription, ImFont*> m_fonts;
 };
 
+ImVec2 CalcTextSizeForFont(
+	FontWithSize font,
+	const char* text,
+	bool hide_text_after_double_hash = false,
+	float wrap_width = -1.0f);
+
 #endif

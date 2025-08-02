@@ -739,9 +739,8 @@ void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
 	auto gpos = ax::NodeEditor::GetNodePosition(gid);
 
 	//Figure out how big the port text is
-	auto textfont = ImGui::GetFont();
 	float oportmax = 1;
-	float iportmax = textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, "‣").x;
+	float iportmax = ImGui::CalcTextSize("‣").x;
 	vector<string> onames;
 	for(auto it : group->m_hierInputMap)
 	{
@@ -759,7 +758,7 @@ void FilterGraphEditor::DoNodeForGroupInputs(shared_ptr<FilterGraphGroup> group)
 		auto name = sinkname + " ‣";
 		onames.push_back(name);
 		oportmax = max(oportmax,
-			textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, name.c_str()).x +
+			ImGui::CalcTextSize(name.c_str()).x +
 			ImGui::GetFontSize() * 2);
 	}
 	float nodewidth = oportmax + iportmax + 1*ImGui::GetStyle().ItemSpacing.x;
@@ -848,9 +847,8 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 	auto gsz = ax::NodeEditor::GetNodeSize(gid);
 
 	//Figure out how big the port text is
-	auto textfont = ImGui::GetFont();
 	float oportmax = 1;
-	float iportmax = textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, "‣").x;
+	float iportmax = ImGui::CalcTextSize("‣").x;
 	vector<string> onames;
 	for(auto it : group->m_hierOutputMap)
 	{
@@ -858,7 +856,7 @@ void FilterGraphEditor::DoNodeForGroupOutputs(shared_ptr<FilterGraphGroup> group
 
 		auto name = stream.GetName() + " ‣";
 		onames.push_back(name);
-		oportmax = max(oportmax, textfont->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, name.c_str()).x);
+		oportmax = max(oportmax, ImGui::CalcTextSize(name.c_str()).x);
 	}
 	float nodewidth = oportmax + iportmax + 3*ImGui::GetStyle().ItemSpacing.x;
 
@@ -1886,7 +1884,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 		headerText = trig->GetScope()->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is and reserve space for it
-	auto headerSize = headerfont.first->CalcTextSizeA(headerfontsize, FLT_MAX, 0, headerText.c_str());
+	auto headerSize = CalcTextSizeForFont(headerfont, headerText.c_str());
 	float nodewidth = max(15*tsize, headerSize.x);
 	ImGui::Dummy(ImVec2(nodewidth, headerheight));
 
@@ -1995,7 +1993,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		headerText = inst->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is
-	auto headerSize = headerfont.first->CalcTextSizeA(headerfontsize, FLT_MAX, 0, headerText.c_str());
+	auto headerSize = CalcTextSizeForFont(headerfont, headerText.c_str());
 
 	//Format block type early, even though it's not drawn until later
 	//so that we know how much space to allocate
@@ -2021,7 +2019,7 @@ void FilterGraphEditor::DoNodeForChannel(
 			blocktype = "Hardware input";
 	}
 	ImVec2 iconsize(ImGui::GetFontSize() * 6, ImGui::GetFontSize() * 3);
-	auto captionsize = textfont.first->CalcTextSizeA(textfontsize, FLT_MAX, 0, blocktype.c_str());
+	auto captionsize = CalcTextSizeForFont(textfont, blocktype.c_str());
 
 	//Reserve space for the center icon and node type caption
 	float iconwidth = max(iconsize.x, captionsize.x);
@@ -2035,13 +2033,13 @@ void FilterGraphEditor::DoNodeForChannel(
 	{
 		auto name = string("‣ ") + channel->GetInputName(i);
 		inames.push_back(name);
-		iportmax = max(iportmax, textfont.first->CalcTextSizeA(textfontsize, FLT_MAX, 0, name.c_str()).x);
+		iportmax = max(iportmax, CalcTextSizeForFont(textfont, name.c_str()).x);
 	}
 	for(size_t i=0; i<channel->GetStreamCount(); i++)
 	{
 		auto name = channel->GetStreamName(i) + " ‣";
 		onames.push_back(name);
-		oportmax = max(oportmax, textfont.first->CalcTextSizeA(textfontsize, FLT_MAX, 0, name.c_str()).x);
+		oportmax = max(oportmax, CalcTextSizeForFont(textfont, name.c_str()).x);
 	}
 	float colswidth = iportmax + oportmax + iconwidth;
 	float nodewidth = max(colswidth, headerSize.x) + 3*ImGui::GetStyle().ItemSpacing.x;
@@ -2161,7 +2159,7 @@ void FilterGraphEditor::DoNodeForChannel(
 	if(runtime > 0)
 	{
 		auto runtimeText = fs.PrettyPrint(runtime, 3);
-		auto runtimeSize = headerfont.first->CalcTextSizeA(headerfontsize, FLT_MAX, 0, runtimeText.c_str());
+		auto runtimeSize = CalcTextSizeForFont(headerfont, runtimeText.c_str());
 
 		auto timebgColor = ColorFromString("#404040");
 		auto timeTextColor = ColorFromString("#ffffff");
