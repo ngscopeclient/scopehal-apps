@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -81,11 +81,12 @@ shared float priSampleCache[X_BLOCK_SIZE];
 
 void main()
 {
-	if(gl_GlobalInvocationID.x >= numDeltas)
+	uint nthread = (gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x) + gl_GlobalInvocationID.x;
+	if(nthread >= numDeltas)
 		return;
 
 	//Convert delta from samples of the primary waveform to femtoseconds
-	int d = int(gl_GlobalInvocationID.x) + startingDelta;
+	int d = int(nthread) + startingDelta;
 	int64_t deltaFs = (priTimescale * int64_t(d)) + trigPhaseDelta;
 	int phaseshift = int(deltaFs / priTimescale);
 
@@ -125,5 +126,5 @@ void main()
 	}
 
 	//Output the final correlation
-	corrOut[gl_GlobalInvocationID.x] = sum / samplesProcessed;
+	corrOut[nthread] = sum / samplesProcessed;
 }

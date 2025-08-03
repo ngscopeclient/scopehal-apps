@@ -856,7 +856,11 @@ void ScopeDeskewWizard::DoProcessWaveformUniform4xRateVulkan(
 	m_uniform4xRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniform4xRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniform4xRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
-	m_uniform4xRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
+
+	const uint32_t compute_block_count = GetComputeBlockCount(2*m_maxSkewSamples, 64);
+	m_uniform4xRatePipeline->Dispatch(m_cmdBuf, args,
+		min(compute_block_count, 32768u),
+		compute_block_count / 32768 + 1);
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
@@ -886,7 +890,10 @@ void ScopeDeskewWizard::DoProcessWaveformUniformUnequalRateVulkan(
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformUnequalRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
-	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
+	const uint32_t compute_block_count = GetComputeBlockCount(2*m_maxSkewSamples, 64);
+	m_uniformUnequalRatePipeline->Dispatch(m_cmdBuf, args,
+		min(compute_block_count, 32768u),
+		compute_block_count / 32768 + 1);
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
@@ -916,7 +923,10 @@ void ScopeDeskewWizard::DoProcessWaveformUniformEqualRateVulkan(
 	m_uniformEqualRatePipeline->BindBufferNonblocking(0, m_corrOut, m_cmdBuf, true);
 	m_uniformEqualRatePipeline->BindBufferNonblocking(1, ppri->m_samples, m_cmdBuf);
 	m_uniformEqualRatePipeline->BindBufferNonblocking(2, psec->m_samples, m_cmdBuf);
-	m_uniformEqualRatePipeline->Dispatch(m_cmdBuf, args, GetComputeBlockCount(2*m_maxSkewSamples, 64));
+	const uint32_t compute_block_count = GetComputeBlockCount(2*m_maxSkewSamples, 64);
+	m_uniformEqualRatePipeline->Dispatch(m_cmdBuf, args,
+		min(compute_block_count, 32768u),
+		compute_block_count / 32768 + 1);
 
 	m_cmdBuf.end();
 	m_queue->SubmitAndBlock(m_cmdBuf);
