@@ -473,9 +473,29 @@ bool FilterGraphEditor::DoRender()
 			if(ftype->IsDelivery())
 			{
 				//Make the filter but don't spawn a properties dialog for it
-				//If measurement, don't add trends by default
+				//If measurement, don't add trends by default... but always add something
 				StreamDescriptor emptyStream;
 				auto f = m_parent->CreateFilter(fname, nullptr, emptyStream, false, (cat != Filter::CAT_MEASUREMENT) );
+
+				//If it's a measurement that has no scalar outputs (only one as of this writing is burst width),
+				//we *do* want to spawn a waveform area for it
+				if(cat == Filter::CAT_MEASUREMENT)
+				{
+					//See what outputs it has
+					bool hasScalar = false;
+					for(size_t nstream=0; nstream < f->GetStreamCount(); nstream ++)
+					{
+						if(f->GetType(nstream) == Stream::STREAM_TYPE_ANALOG_SCALAR)
+						{
+							hasScalar = true;
+							break;
+						}
+					}
+
+					//No scalar outputs? Add a view for the first output
+					if(!hasScalar)
+						m_parent->FindAreaForStream(nullptr, StreamDescriptor(f, 0));
+				}
 
 				nodeAdded = true;
 				newNode = GetID(f);
