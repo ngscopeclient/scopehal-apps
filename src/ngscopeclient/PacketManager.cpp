@@ -46,7 +46,7 @@ PacketManager::PacketManager(PacketDecoder* pd, Session& session)
 	, m_filter(pd)
 	, m_refreshPending(false)
 {
-
+	m_filter->AddRef();
 }
 
 PacketManager::~PacketManager()
@@ -61,6 +61,8 @@ PacketManager::~PacketManager()
 	}
 	m_packets.clear();
 	m_childPackets.clear();
+
+	m_filter->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

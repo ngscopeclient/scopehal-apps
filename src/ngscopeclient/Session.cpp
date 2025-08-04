@@ -182,6 +182,9 @@ void Session::Clear()
 
 	lock_guard<shared_mutex> lock(m_waveformDataMutex);
 
+	//Clear packet managers before removing filters (since they can hold references to them)
+	m_packetmgrs.clear();
+
 	/**
 		HACK: for now, export filters keep an open reference to themselves to avoid memory leaks
 
