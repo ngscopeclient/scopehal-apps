@@ -696,20 +696,28 @@ void MainWindow::WindowAnalyzerMenu()
  */
 void MainWindow::WindowGeneratorMenu()
 {
+	//Make a list of generators
+	vector< shared_ptr<SCPIFunctionGenerator> > gens;
+	auto insts = m_session.GetSCPIInstruments();
+	for(auto inst : insts)
+	{
+		//Skip anything that's not a function generator
+		if( (inst->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
+			continue;
+
+		//Do we already have a dialog open for it? If so, don't make another
+		auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
+		if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
+			continue;
+
+		gens.push_back(generator);
+	}
+
+	ImGui::BeginDisabled(gens.empty());
 	if(ImGui::BeginMenu("Generator"))
 	{
-		auto insts = m_session.GetSCPIInstruments();
-		for(auto inst : insts)
+		for(auto generator : gens)
 		{
-			//Skip anything that's not a function generator
-			if( (inst->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
-				continue;
-
-			//Do we already have a dialog open for it? If so, don't make another
-			auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
-			if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
-				continue;
-
 			//Add it to the menu
 			if(ImGui::MenuItem(generator->m_nickname.c_str()))
 			{
@@ -722,6 +730,7 @@ void MainWindow::WindowGeneratorMenu()
 
 		ImGui::EndMenu();
 	}
+	ImGui::EndDisabled();
 }
 
 /**
@@ -731,20 +740,28 @@ void MainWindow::WindowGeneratorMenu()
  */
 void MainWindow::WindowPSUMenu()
 {
+	//Make a list of PSUs
+	vector< shared_ptr<SCPIPowerSupply> > psus;
+	auto insts = m_session.GetSCPIInstruments();
+	for(auto inst : insts)
+	{
+		//Skip anything that's not a PSU
+		if( (inst->GetInstrumentTypes() & Instrument::INST_PSU) == 0)
+			continue;
+
+		//Do we already have a dialog open for it? If so, don't make another
+		auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+		if(m_psuDialogs.find(psu) != m_psuDialogs.end())
+			continue;
+
+		psus.push_back(psu);
+	}
+
+	ImGui::BeginDisabled(psus.empty());
 	if(ImGui::BeginMenu("Power Supply"))
 	{
-		auto insts = m_session.GetSCPIInstruments();
-		for(auto inst : insts)
+		for(auto psu : psus)
 		{
-			//Skip anything that's not a PSU
-			if( (inst->GetInstrumentTypes() & Instrument::INST_PSU) == 0)
-				continue;
-
-			//Do we already have a dialog open for it? If so, don't make another
-			auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
-			if(m_psuDialogs.find(psu) != m_psuDialogs.end())
-				continue;
-
 			//Add it to the menu
 			if(ImGui::MenuItem(psu->m_nickname.c_str()))
 				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
@@ -752,6 +769,7 @@ void MainWindow::WindowPSUMenu()
 
 		ImGui::EndMenu();
 	}
+	ImGui::EndDisabled();
 }
 
 /**
@@ -759,27 +777,36 @@ void MainWindow::WindowPSUMenu()
  */
 void MainWindow::WindowMultimeterMenu()
 {
+	//This is a bit of a hack but all of the dialogs are gonna get redone eventually so
+	vector< shared_ptr<SCPIMultimeter> > meters;
+	auto insts = m_session.GetScopes();
+	for(auto inst : insts)
+	{
+		//Skip anything that's not a multimeter
+		if( (inst->GetInstrumentTypes() & Instrument::INST_DMM) == 0)
+			continue;
+
+		//Do we already have a dialog open for it? If so, don't make another
+		auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
+		if(m_meterDialogs.find(meter) != m_meterDialogs.end())
+			continue;
+
+		meters.push_back(meter);
+	}
+
+	ImGui::BeginDisabled(meters.empty());
 	if(ImGui::BeginMenu("Multimeter"))
 	{
-		auto scopes = m_session.GetScopes();
-		for(auto scope : scopes)
+		for(auto meter : meters)
 		{
-			//Is the scope also a multimeter? If not, skip it
-			if( (scope->GetInstrumentTypes() & Instrument::INST_DMM) == 0)
-				continue;
-
-			//Do we already have a dialog open for it? If so, don't make another
-			auto meter = dynamic_pointer_cast<SCPIMultimeter>(scope);
-			if(m_meterDialogs.find(meter) != m_meterDialogs.end())
-				continue;
-
 			//Add it to the menu
-			if(ImGui::MenuItem(scope->m_nickname.c_str()))
+			if(ImGui::MenuItem(meter->m_nickname.c_str()))
 				m_session.AddInstrument(meter);
 		}
 
 		ImGui::EndMenu();
 	}
+	ImGui::EndDisabled();
 }
 
 /**
@@ -787,15 +814,22 @@ void MainWindow::WindowMultimeterMenu()
  */
 void MainWindow::DebugSCPIConsoleMenu()
 {
+	vector<shared_ptr<SCPIInstrument> > targets;
+	auto insts = m_session.GetSCPIInstruments();
+	for(auto inst : insts)
+	{
+		//If we already have a dialog, don't show the menu
+		if(m_scpiConsoleDialogs.find(inst) != m_scpiConsoleDialogs.end())
+			continue;
+		targets.push_back(inst);
+	}
+
+	ImGui::BeginDisabled(targets.empty());
+
 	if(ImGui::BeginMenu("SCPI Console"))
 	{
-		auto insts = m_session.GetSCPIInstruments();
-		for(auto inst : insts)
+		for(auto inst : targets)
 		{
-			//If we already have a dialog, don't show the menu
-			if(m_scpiConsoleDialogs.find(inst) != m_scpiConsoleDialogs.end())
-				continue;
-
 			if(ImGui::MenuItem(inst->m_nickname.c_str()))
 			{
 				auto dlg = make_shared<SCPIConsoleDialog>(this, inst);
@@ -806,6 +840,8 @@ void MainWindow::DebugSCPIConsoleMenu()
 
 		ImGui::EndMenu();
 	}
+
+	ImGui::EndDisabled();
 }
 
 /**
