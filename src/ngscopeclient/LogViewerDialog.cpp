@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -47,7 +47,17 @@ extern GuiLogSink* g_guiLog;
 LogViewerDialog::LogViewerDialog(MainWindow* parent)
 	: Dialog("Log Viewer", "Log Viewer", ImVec2(500, 300))
 	, m_parent(parent)
+	, m_displayedSeverity(5)
+	, m_severityFilter(Severity::DEBUG)
+	, m_lastLine(0)
 {
+	m_severities.push_back("Fatal");
+	m_severities.push_back("Error");
+	m_severities.push_back("Warning");
+	m_severities.push_back("Notice");
+	m_severities.push_back("Verbose");
+	m_severities.push_back("Debug");
+	m_severities.push_back("Trace");
 }
 
 LogViewerDialog::~LogViewerDialog()
@@ -63,7 +73,78 @@ bool LogViewerDialog::DoRender()
 	auto warningColor = m_parent->GetColorPref("Appearance.Log Viewer.warning_color");
 	auto baseColor = m_parent->GetColorPref("Appearance.Graphs.bottom_color");
 
-	ImGui::BeginChild("scrollview", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+	if(ImGui::CollapsingHeader("Settings"))
+	{
+		if(Combo("###Severity", m_severities, m_displayedSeverity))
+			m_severityFilter = static_cast<Severity>(m_displayedSeverity + 1);
+
+		float width = ImGui::GetFontSize();
+		static ImGuiTableFlags flags =
+			ImGuiTableFlags_Resizable |
+			ImGuiTableFlags_BordersOuter |
+			ImGuiTableFlags_BordersV |
+			ImGuiTableFlags_ScrollY |
+			ImGuiTableFlags_RowBg |
+			ImGuiTableFlags_SizingFixedFit;
+		if(ImGui::BeginTable("filters", 2, flags, ImVec2(0, 7*ImGui::GetFontSize())))
+		{
+			ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+			ImGui::TableSetupColumn("Class", ImGuiTableColumnFlags_WidthFixed, 10*width);
+			ImGui::TableSetupColumn("Function", ImGuiTableColumnFlags_WidthStretch, 0.0f);
+			ImGui::TableHeadersRow();
+
+			for(auto filter : g_trace_filters)
+			{
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
+
+				//Split the filter on the :: if any
+				if(filter.find("::") != string::npos)
+				{
+					size_t icolon = filter.find(':');
+					string cname = filter.substr(0, icolon);
+					if(cname == "")
+						cname = "[global]";
+					string label = cname + "###" + filter;
+
+					//Class name
+					if(ImGui::Selectable(label.c_str(),
+						(filter == m_selectedFilter), ImGuiSelectableFlags_SpanAllColumns))
+					{
+						m_selectedFilter = filter;
+					}
+
+					//Function name
+					ImGui::TableSetColumnIndex(1);
+					string fname = filter.substr(icolon + 2);
+					ImGui::Text(fname.c_str());
+				}
+
+				//no it's just a class name
+				else
+				{
+					if(ImGui::Selectable(filter.c_str(),
+						(filter == m_selectedFilter), ImGuiSelectableFlags_SpanAllColumns))
+					{
+						m_selectedFilter = filter;
+					}
+				}
+			}
+
+			ImGui::EndTable();
+		}
+
+		ImGui::InputText("Filter", &m_traceFilter);
+		ImGui::SameLine();
+		if(ImGui::Button("+"))
+		{
+			g_trace_filters.emplace(m_traceFilter);
+			m_traceFilter = "";
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("-"))
+			g_trace_filters.erase(m_selectedFilter);
+	}
 
 	auto font = m_parent->GetFontPref("Appearance.General.console_font");
 	ImGui::PushFont(font.first, font.second);
@@ -74,6 +155,7 @@ bool LogViewerDialog::DoRender()
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
 		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollX |
 		ImGuiTableFlags_ScrollY |
 		ImGuiTableFlags_RowBg |
 		ImGuiTableFlags_SizingFixedFit;
@@ -87,8 +169,14 @@ bool LogViewerDialog::DoRender()
 		ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch, 0.0f);
 		ImGui::TableHeadersRow();
 
-		for(auto& line : lines)
+		for(size_t i=0; i<lines.size(); i++)
 		{
+			auto& line = lines[i];
+
+			//Hide anything that doesn't pass our filter
+			if(line.m_sev > m_severityFilter)
+				continue;
+
 			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 			switch(line.m_sev)
@@ -131,24 +219,31 @@ bool LogViewerDialog::DoRender()
 					break;
 
 				case Severity::DEBUG:
-				default:
 					ImGui::TextUnformatted("Debug");
+					break;
+
+				case Severity::TRACE:
+					ImGui::TextUnformatted("Trace");
+					break;
+				default:
 					break;
 			}
 
 			ImGui::TableSetColumnIndex(2);
 			ImGui::TextUnformatted(line.m_msg.c_str());
+
+			//Autoscroll when new messages arrive
+			if(m_lastLine < i)
+			{
+				m_lastLine = i;
+				ImGui::SetScrollHereY(1.0f);
+			}
 		}
 
 		ImGui::EndTable();
 	}
 
 	ImGui::PopFont();
-
-	if(ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-		ImGui::SetScrollHereY(1.0f);
-
-	ImGui::EndChild();
 
 	return true;
 }

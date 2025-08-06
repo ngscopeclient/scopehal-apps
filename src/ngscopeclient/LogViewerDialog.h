@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,6 +49,18 @@ public:
 
 protected:
 	MainWindow* m_parent;
+
+	//Displayed severity level
+	int m_displayedSeverity;
+	Severity m_severityFilter;
+
+	std::vector<std::string> m_severities;
+
+	std::string m_traceFilter;
+
+	std::string m_selectedFilter;
+
+	size_t m_lastLine;
 };
 
 #endif
