@@ -117,7 +117,7 @@ bool LogViewerDialog::DoRender()
 					//Function name
 					ImGui::TableSetColumnIndex(1);
 					string fname = filter.substr(icolon + 2);
-					ImGui::Text(fname.c_str());
+					ImGui::TextUnformatted(fname.c_str());
 				}
 
 				//no it's just a class name
