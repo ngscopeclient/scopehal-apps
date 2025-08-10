@@ -273,6 +273,7 @@ protected:
 	void LoadFilterIcons();
 	void LoadStatusBarIcons();
 	void LoadWaveformShapeIcons();
+	void LoadAppIcon();
 
 	///@brief Enable flag for main imgui demo window
 	bool m_showDemo;

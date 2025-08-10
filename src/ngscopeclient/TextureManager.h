@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -36,6 +36,8 @@
 #define TextureManager_h
 
 class TextureManager;
+
+#include <png.h>
 
 /**
 	@brief Encapsulates the various Vulkan objects we need to represent texture image memory
@@ -109,6 +111,8 @@ public:
 		const std::string& name,
 		const std::string& path);
 
+	GLFWimage LoadPNGToGLFWImage(const std::string& path);
+
 	ImTextureID GetTexture(const std::string& name)
 	{
 		auto it = m_textures.find(name);
@@ -141,6 +145,15 @@ public:
 	{ return m_textures[name]->GetView(); }
 
 protected:
+
+	png_structp LoadPNG(
+		const std::string& path,
+		size_t& width,
+		size_t& height,
+		FILE*& fp,
+		png_infop& info,
+		png_infop& end);
+
 	std::map<std::string, std::shared_ptr<Texture> > m_textures;
 
 	///@brief Sampler for textures

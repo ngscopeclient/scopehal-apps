@@ -168,6 +168,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	LoadFilterIcons();
 	LoadStatusBarIcons();
 	LoadWaveformShapeIcons();
+	LoadAppIcon();
 
 	//Don't move windows when dragging in the body, only the title bar
 	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;

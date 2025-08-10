@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,7 +35,6 @@
 
 #include "ngscopeclient.h"
 #include "TextureManager.h"
-#include <png.h>
 
 using namespace std;
 
@@ -339,6 +338,128 @@ TextureManager::~TextureManager()
 // File loading
 
 /**
+	@brief Helper function to initialize libpng and get header info
+ */
+png_structp TextureManager::LoadPNG(
+	const string& path,
+	size_t& width,
+	size_t& height,
+	FILE*& fp,
+	png_infop& info,
+	png_infop& end
+	)
+{
+	//Initialize libpng
+	auto png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+	if(!png)
+	{
+		LogError("Failed to create PNG read struct\n");
+		return nullptr;
+	}
+	info = png_create_info_struct(png);
+	if(!info)
+	{
+		png_destroy_read_struct(&png, nullptr, nullptr);
+		LogError("Failed to create PNG info struct\n");
+		return nullptr;
+	}
+	end = png_create_info_struct(png);
+	if(!end)
+	{
+		png_destroy_read_struct(&png, &info, nullptr);
+		LogError("Failed to create PNG end info struct\n");
+		return nullptr;
+	}
+
+	//Prepare to load the file (assume it's a PNG for now)
+	fp = fopen(path.c_str(), "rb");
+	if(!fp)
+	{
+		LogError("Failed to open texture file \"%s\"\n", path.c_str());
+		return nullptr;
+	}
+	uint8_t sig[8];
+	if(sizeof(sig) != fread(sig, 1, sizeof(sig), fp))
+	{
+		LogError("Failed to read signature of PNG file \"%s\"\n", path.c_str());
+		fclose(fp);
+		return nullptr;
+	}
+	if(0 != png_sig_cmp(sig, 0, sizeof(sig)))
+	{
+		LogError("Bad magic number in PNG file \"%s\"\n", path.c_str());
+		fclose(fp);
+		return nullptr;
+	}
+	png_init_io(png, fp);
+	png_set_sig_bytes(png, sizeof(sig));
+
+	//Read the headers
+	png_read_png(png, info, PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, nullptr);
+
+	//Get and validate metadata
+	width = png_get_image_width(png, info);
+	height = png_get_image_height(png, info);
+
+	//Figure out the file dimensions
+	int depth = png_get_bit_depth(png, info);
+	if(png_get_color_type(png, info) != PNG_COLOR_TYPE_RGBA)
+	{
+		LogError("Image \"%s\" is not RGBA color type, don't know how to load it\n", path.c_str());
+		png_destroy_read_struct(&png, &info, &end);
+		fclose(fp);
+		return nullptr;
+	}
+	if(depth != 8)
+	{
+		LogError("Image \"%s\" is not 8 bits per channel, don't know how to load it\n", path.c_str());
+		png_destroy_read_struct(&png, &info, &end);
+		fclose(fp);
+		return nullptr;
+	}
+
+	return png;
+}
+
+/**
+	@brief Loads a PNG to a GLFWimage
+ */
+GLFWimage TextureManager::LoadPNGToGLFWImage(const string& path)
+{
+	GLFWimage img;
+
+	//Load the image metadata
+	size_t width;
+	size_t height;
+	FILE* fp;
+	png_infop info;
+	png_infop end;
+	auto png = LoadPNG(path, width, height, fp, info, end);
+	if(!png)
+	{
+		img.width = 0;
+		img.height = 0;
+		img.pixels = nullptr;
+		return img;
+	}
+
+	//Copy metadata and allocate pixels
+	img.width = width;
+	img.height = height;
+	int bytesPerComponent = 1;
+	size_t bytesPerPixel = 4*bytesPerComponent;
+	img.pixels = new uint8_t[width * height * bytesPerPixel];
+
+	//Copy pixels
+	auto rowPtrs = png_get_rows(png, info);
+	size_t rowSize = width * bytesPerPixel;
+	for(size_t y=0; y<height; y++)
+		memcpy(img.pixels + (y*rowSize), rowPtrs[y], rowSize);
+
+	return img;
+}
+
+/**
 	@brief Loads a texture from a file into a named resource
 
 	If an existing texture by the same name already exists, it is overwritten.
@@ -350,73 +471,18 @@ void TextureManager::LoadTexture(
 	LogTrace("Loading texture \"%s\" from file \"%s\"\n", name.c_str(), path.c_str());
 	LogIndenter li;
 
-	//Initialize libpng
-	auto png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+	//Load the headers and validate things
+	size_t width;
+	size_t height;
+	FILE* fp;
+	png_infop info;
+	png_infop end;
+	auto png = LoadPNG(path, width, height, fp, info, end);
 	if(!png)
-	{
-		LogError("Failed to create PNG read struct\n");
 		return;
-	}
-	auto info = png_create_info_struct(png);
-	if(!info)
-	{
-		png_destroy_read_struct(&png, nullptr, nullptr);
-		LogError("Failed to create PNG info struct\n");
-		return;
-	}
-	auto end = png_create_info_struct(png);
-	if(!end)
-	{
-		png_destroy_read_struct(&png, &info, nullptr);
-		LogError("Failed to create PNG end info struct\n");
-		return;
-	}
 
-	//Prepare to load the file (assume it's a PNG for now)
-	FILE* fp = fopen(path.c_str(), "rb");
-	if(!fp)
-	{
-		LogError("Failed to open texture file \"%s\"\n", path.c_str());
-		return;
-	}
-	uint8_t sig[8];
-	if(sizeof(sig) != fread(sig, 1, sizeof(sig), fp))
-	{
-		LogError("Failed to read signature of PNG file \"%s\"\n", path.c_str());
-		fclose(fp);
-		return;
-	}
-	if(0 != png_sig_cmp(sig, 0, sizeof(sig)))
-	{
-		LogError("Bad magic number in PNG file \"%s\"\n", path.c_str());
-		fclose(fp);
-		return;
-	}
-	png_init_io(png, fp);
-	png_set_sig_bytes(png, sizeof(sig));
-
-	//Read it
-	png_read_png(png, info, PNG_TRANSFORM_IDENTITY, nullptr);
 	auto rowPtrs = png_get_rows(png, info);
 
-	//Figure out the file dimensions
-	size_t width = png_get_image_width(png, info);
-	size_t height = png_get_image_height(png, info);
-	int depth = png_get_bit_depth(png, info);
-	if(png_get_color_type(png, info) != PNG_COLOR_TYPE_RGBA)
-	{
-		LogError("Image \"%s\" is not RGBA color type, don't know how to load it\n", path.c_str());
-		png_destroy_read_struct(&png, &info, &end);
-		fclose(fp);
-		return;
-	}
-	if(depth != 8)
-	{
-		LogError("Image \"%s\" is not 8 bits per channel, don't know how to load it\n", path.c_str());
-		png_destroy_read_struct(&png, &info, &end);
-		fclose(fp);
-		return;
-	}
 	int bytesPerComponent = 1;
 	size_t bytesPerPixel = 4*bytesPerComponent;
 	LogTrace("Image is %zu x %zu pixels, RGBA8888\n", width, height);

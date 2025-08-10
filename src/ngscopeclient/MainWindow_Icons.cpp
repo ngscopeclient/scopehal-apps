@@ -221,6 +221,29 @@
 
 using namespace std;
 
+void MainWindow::LoadAppIcon()
+{
+	//This code path is not used on macos which gets icons from the .app bundle
+	#ifndef __APPLE__
+
+		//Wayland gets icons from the .desktop file unless you have xdg-toplevel-icon which glfw doesn't support
+
+		//Load the images
+		const int nimages = 1;
+		GLFWimage images[nimages] =
+		{
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/32x32/app-icon.png"))
+		};
+
+		//Set it as the window icon
+		glfwSetWindowIcon(m_window, nimages, images);
+
+		//Clean up
+		for(auto img : images)
+			delete[] img.pixels;
+	#endif
+}
+
 /**
 	@brief Load icons for the status bar
  */
