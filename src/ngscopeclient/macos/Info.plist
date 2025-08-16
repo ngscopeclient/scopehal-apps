@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>ngscopeclient</string>
+  <key>CFBundleIconFile</key>
+  <string>ngscopeclient</string>
+  <key>CFBundleIdentifier</key>
+  <string>org.ngscopeclient</string>
+  <key>CFBundleDisplayName</key>
+  <string>ngscopeclient</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>LSArchitecturePriority</key>
+  <string>arm64</string>
+</dict>
+</plist>

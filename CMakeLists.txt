@@ -294,11 +294,25 @@ set(CPACK_PACKAGE_VERSION_PATCH "0+${NGSCOPECLIENT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION "Cross platform T&M remote control and signal analysis suite")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://www.ngscopeclient.org/")
 set(CPACK_THREADS 0)
+set(CPACK_STRIP_FILES TRUE)
 
 # Debian / Ubuntu specific packaging config
 # Versions are based on what Bookworm is shipping as of 2024-10-30
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andrew Zonenberg <andrew.zonenberg@antikernel.net>")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.36-9), libpng16-16(>= 1.6.39-2), libsigc++-2.0-0v5 (>= 2.12.0-1), libyaml-cpp0.7(>= 0.7.0), libgomp1(>= 12.2.0), libvulkan1(>= 1.3.239), libglfw3(>= 3.3.8), libgtk-3-0(>= 3.24.38), zlib1g(>= 1.2.13), libhidapi-hidraw0(>= 0.13.1), liblxi1(>= 1.18), libtirpc3 (>= 1.3.3)" )
+
+if(APPLE)
+    set(CPACK_BUNDLE "ON")
+	set(CPACK_BUNDLE_PLIST "${PROJECT_SOURCE_DIR}/src/ngscopeclient/macos/Info.plist")
+	# Must be generated with:
+	# iconutil -c icns ngscopeclient.iconset
+	set(CPACK_BUNDLE_ICON "${PROJECT_SOURCE_DIR}/src/ngscopeclient/icons/macos/ngscopeclient.icns")
+	set(CPACK_PACKAGE_ICON "${PROJECT_SOURCE_DIR}/src/ngscopeclient/icons/macos/ngscopeclient.icns")
+    set(CPACK_BUNDLE_NAME "ngscopeclient")
+	set(CPACK_BUNDLE_STARTUP_COMMAND "${PROJECT_SOURCE_DIR}/src/ngscopeclient/macos/ngscopeclient.sh")
+	set_target_properties(ngscopeclient PROPERTIES
+		INSTALL_RPATH "@executable_path/../lib;/usr/local/lib;/opt/homebrew/lib")
+endif()
 
 # this must be at the very end *after* we've done all the config
 include(CPack)
