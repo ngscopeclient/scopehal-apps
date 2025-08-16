@@ -94,6 +94,12 @@ bool AboutDialog::DoRender()
 		nullptr		//userData
 	};
 
+	float iconsize = 5 * ImGui::GetFontSize();
+	float width = ImGui::GetContentRegionAvail().x;
+	float off = (width - iconsize) * 0.5;
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
+	ImGui::Image(m_parent->GetTexture("app-icon"), ImVec2(iconsize, iconsize));
+
 	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
 	if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
 	{

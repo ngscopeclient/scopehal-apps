@@ -229,10 +229,14 @@ void MainWindow::LoadAppIcon()
 		//Wayland gets icons from the .desktop file unless you have xdg-toplevel-icon which glfw doesn't support
 
 		//Load the images
-		const int nimages = 1;
+		const int nimages = 5;
 		GLFWimage images[nimages] =
 		{
-			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/32x32/app-icon.png"))
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/16x16/app-icon.png")),
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/32x32/app-icon.png")),
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/48x48/app-icon.png")),
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/128x128/app-icon.png")),
+			m_texmgr.LoadPNGToGLFWImage(FindDataFile("icons/256x256/app-icon.png"))
 		};
 
 		//Set it as the window icon
@@ -242,6 +246,8 @@ void MainWindow::LoadAppIcon()
 		for(auto img : images)
 			delete[] img.pixels;
 	#endif
+
+	m_texmgr.LoadTexture("app-icon", FindDataFile("icons/256x256/app-icon.png"));
 }
 
 /**
