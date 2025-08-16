@@ -162,6 +162,8 @@ public:
 
 	std::map<uintptr_t, std::string> GetGroupIDs();
 
+	static bool IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst);
+
 protected:
 	friend class FilterGraphGroup;
 
@@ -189,7 +191,6 @@ protected:
 	void HandleLinkDeletionRequests(Filter*& fReconfigure);
 	void HandleBackgroundContextMenu();
 	void DoAddMenu();
-	bool IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst);
 
 	void HandleOverlaps();
 	void CalculateNodeForces(
