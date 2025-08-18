@@ -65,25 +65,24 @@ int main(int argc, char* argv[])
 
 	}
 
+	//Set up logging to the GUI
+	g_guiLog = new GuiLogSink(console_verbosity);
+	g_log_sinks.push_back(unique_ptr<GuiLogSink>(g_guiLog));
+
 	//If on Windows, and not run from a console
 	//remove the stdout log sink that would otherwise spawn a console on startup
 	#ifdef _WIN32
 		if(getenv("PROMPT") != nullptr)
-		{
-			if(g_log_sinks.size() > 0)
-			{
-				g_log_sinks.erase(g_log_sinks.begin());
-				LogDebug("Startup: removing stdout log sink since not run from a console\n");
-			}
+			LogDebug("Startup: skipping stdout log sink since not run from a console\n");
 		}
 		else
-			LogDebug("Startup: run from a console, keeping stdout log sink attached\n");
+		{
 	#endif
-
-	//Set up logging
-	g_guiLog = new GuiLogSink(console_verbosity);
-	g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(console_verbosity));
-	g_log_sinks.push_back(unique_ptr<GuiLogSink>(g_guiLog));
+			g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(console_verbosity));
+	#ifdef _WIN32
+			LogDebug("Startup: run from a console, keeping stdout log sink attached\n");
+		}
+	#endif
 
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");
