@@ -54,7 +54,7 @@ void pthread_setname_np_compat(const char *name)
 #ifdef _WIN32
 	const size_t nmax = 128;
 	wchar_t wname[nmax];
-	MultiByteToWideChar(CP_UTF8, MB_MB_PRECOMPOSED, name, -1, wname, nmax);
+	MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, name, -1, wname, nmax);
 	SetThreadDescription(GetCurrentThread(), wname);
 #endif
 }
