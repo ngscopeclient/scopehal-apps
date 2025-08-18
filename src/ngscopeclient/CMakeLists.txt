@@ -11,15 +11,14 @@ configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 # use custom config for imguifiledialog
 add_compile_definitions(CUSTOM_IMGUIFILEDIALOG_CONFIG="../ngscopeclient/IGFDConfig.h")
 
-if(MINGW)
-  set(CMAKE_RC_COMPILER_INIT windres)
-  ENABLE_LANGUAGE(RC)
-  SET(CMAKE_RC_COMPILE_OBJECT
-    "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
-endif(MINGW)
-
-if(WINDOWS)
+if(WIN32)
+	set(CMAKE_RC_COMPILER_INIT windres)
+	ENABLE_LANGUAGE(RC)
+	if(MINGW)
+		SET(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+	endif()
 	set(RC_FILES "ngscopeclient.rc")
+	message(STATUS "Enabling Windows resource support")
 else()
 	set(RC_FILES "")
 endif()
