@@ -11,6 +11,19 @@ configure_file(ngscopeclient-version.h.in ngscopeclient-version.h)
 # use custom config for imguifiledialog
 add_compile_definitions(CUSTOM_IMGUIFILEDIALOG_CONFIG="../ngscopeclient/IGFDConfig.h")
 
+if(MINGW)
+  set(CMAKE_RC_COMPILER_INIT windres)
+  ENABLE_LANGUAGE(RC)
+  SET(CMAKE_RC_COMPILE_OBJECT
+    "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+endif(MINGW)
+
+if(WINDOWS)
+	set(RC_FILES "ngscopeclient.rc")
+else()
+	set(RC_FILES "")
+endif()
+
 ###############################################################################
 #C++ compilation
 add_executable(ngscopeclient
@@ -92,6 +105,8 @@ add_executable(ngscopeclient
 	Workspace.cpp
 
 	main.cpp
+
+	${RC_FILES}
 )
 
 add_custom_target(
