@@ -65,13 +65,19 @@ int main(int argc, char* argv[])
 
 	}
 
-	//If on Windows, and not in a console, remove the stdout log sink that would otherwise spawn a console on startup
+	//If on Windows, and not run from a console
+	//remove the stdout log sink that would otherwise spawn a console on startup
 	#ifdef _WIN32
-		if(GetConsoleWindow() != NULL)
+		if(getenv("PROMPT") != nullptr)
 		{
 			if(g_log_sinks.size() > 0)
+			{
 				g_log_sinks.erase(g_log_sinks.begin());
+				LogDebug("Startup: removing stdout log sink since not run from a console\n");
+			}
 		}
+		else
+			LogDebug("Startup: run from a console, keeping stdout log sink attached\n");
 	#endif
 
 	//Set up logging
