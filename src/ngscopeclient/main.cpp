@@ -70,11 +70,7 @@ int main(int argc, char* argv[])
 		if(GetConsoleWindow() != NULL)
 		{
 			if(g_log_sinks.size() > 0)
-			{
-				auto firstSink = g_log_sinks[0];
-				delete firstSink;
 				g_log_sinks.erase(g_log_sinks.begin());
-			}
 		}
 	#endif
 
