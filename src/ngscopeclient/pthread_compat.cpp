@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2021 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -31,6 +31,12 @@
 #include <pthread.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#include <processthreadsapi.h>
+#include <stringapiset.h>
+#endif
+
 #include "pthread_compat.h"
 
 void pthread_setname_np_compat(const char *name)
@@ -43,5 +49,12 @@ void pthread_setname_np_compat(const char *name)
 		// BSD, including Apple
 		pthread_setname_np(name);
 	#endif
+#endif
+
+#ifdef _WIN32
+	const size_t nmax = 128;
+	wchar_t wname[nmax];
+	MultiByteToWideChar(CP_UTF8, MB_MB_PRECOMPOSED, name, -1, wname, nmax);
+	SetThreadDescription(GetCurrentThread(), wname);
 #endif
 }
