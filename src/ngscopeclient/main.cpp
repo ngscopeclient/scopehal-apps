@@ -65,6 +65,19 @@ int main(int argc, char* argv[])
 
 	}
 
+	//If on Windows, and not in a console, remove the stdout log sink that would otherwise spawn a console on startup
+	#ifdef _WIN32
+		if(GetConsoleWindow() != NULL)
+		{
+			if(g_log_sinks.size() > 0)
+			{
+				auto firstSink = g_log_sinks[0];
+				delete firstSink;
+				g_log_sinks.erase(g_log_sinks.begin());
+			}
+		}
+	#endif
+
 	//Set up logging
 	g_guiLog = new GuiLogSink(console_verbosity);
 	g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(console_verbosity));
