@@ -22,7 +22,7 @@ else()
 	set(RC_FILES "")
 endif()
 
-if(WIN32 AND (NOT MSVC))
+if(WIN32 AND MINGW)
 	add_compile_options(-mwindows)
 endif()
 
