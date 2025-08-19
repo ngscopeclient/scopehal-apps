@@ -24,7 +24,7 @@ endif()
 
 if(WIN32)
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-		add_compile_options(-Wl,--subsystem,windows)
+		add_link_options(/SUBSYSTEM:WINDOWS)
 	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		add_compile_options(-mwindows)
 	endif()
