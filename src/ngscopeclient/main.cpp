@@ -80,8 +80,6 @@ int main(int argc, char* argv[])
 		}
 		else if(GetConsoleWindow() == NULL)
 			LogNotice("Startup: skipping stdout log sink since not run from a console (no console window)\n");
-		else if(getenv("PROMPT") != nullptr)
-			LogNotice("Startup: skipping stdout log sink since not run from a console (no prompt)\n");
 		else
 		{
 	#endif
