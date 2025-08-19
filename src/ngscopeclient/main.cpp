@@ -69,21 +69,37 @@ int main(int argc, char* argv[])
 	g_guiLog = new GuiLogSink(console_verbosity);
 	g_log_sinks.push_back(unique_ptr<GuiLogSink>(g_guiLog));
 
-	//If on Windows, and not run from a console
-	//remove the stdout log sink that would otherwise spawn a console on startup
+	//Windows needs special console handling!
 	#ifdef _WIN32
+
+		//If we have a parent process console, we were probably run from a powershell/cmd.exe session.
+		//If we had one, we need to attach to it (since as a Win32 subsystem application we aren't connected by default)
+		//Failing here indicates we were run from explorer, and thus should not be spawning a console window
+		//(we just log to the GuiLogSink instead)
 		if(!AttachConsole(ATTACH_PARENT_PROCESS))
 		{
 			LogNotice(
 				"Startup: skipping stdout log sink since not run from a console "
 				"(AttachConsole reports parent process has no console)\n");
 		}
+
+		//Once we've attached to the console (if we had one), make sure we had a window for it
 		else if(GetConsoleWindow() == NULL)
 			LogNotice("Startup: skipping stdout log sink since not run from a console (no console window)\n");
+
+		//If we get here, we were run from a Windows shell session and should log to that console
 		else
 		{
+			//We're using the existing parent process console.
+			//Reopen stdio streams so they point to it
+			freopen("CON", "w", stdout);
+			freopen("CON", "w", stderr);
+			freopen("CON", "r", stdin);
 	#endif
+
+			//Creating the log sink is done on all platforms, windows and otherwise
 			g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(console_verbosity));
+
 	#ifdef _WIN32
 			LogNotice("Startup: run from a console, keeping stdout log sink attached\n");
 		}
