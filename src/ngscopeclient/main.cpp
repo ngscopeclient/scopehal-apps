@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 	//If on Windows, and not run from a console
 	//remove the stdout log sink that would otherwise spawn a console on startup
 	#ifdef _WIN32
-		if(GetConsoleWindow()) == NULL)
+		if(GetConsoleWindow() == NULL)
 			LogNotice("Startup: skipping stdout log sink since not run from a console (no console window)\n");
 		else if(getenv("PROMPT") != nullptr)
 			LogNotice("Startup: skipping stdout log sink since not run from a console (no prompt)\n");
