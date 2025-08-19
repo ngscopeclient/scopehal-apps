@@ -74,7 +74,6 @@ int main(int argc, char* argv[])
 	#ifdef _WIN32
 		if(getenv("PROMPT") != nullptr)
 			LogDebug("Startup: skipping stdout log sink since not run from a console\n");
-		}
 		else
 		{
 	#endif
