@@ -22,6 +22,10 @@ else()
 	set(RC_FILES "")
 endif()
 
+if(WIN32 AND (NOT MSVC))
+	add_compile_options(-mwindows)
+endif()
+
 ###############################################################################
 #C++ compilation
 add_executable(ngscopeclient
