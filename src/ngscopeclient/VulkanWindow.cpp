@@ -502,8 +502,19 @@ void VulkanWindow::Render()
 		{
 			auto result = m_swapchain->acquireNextImage(UINT64_MAX, **m_imageAcquiredSemaphores[m_semaphoreIndex], {});
 			m_lastFrameIndex = m_frameIndex;
-			m_frameIndex = result.second;
-			if(result.first == vk::Result::eSuboptimalKHR)
+
+			//Accidental breaking API change in 1.4.324 Vulkan SDK release.
+			//See https://github.com/KhronosGroup/Vulkan-Hpp/issues/2260
+			//We can remove this first ifdef path when all supported platforms ship .324 and newer SDK
+			#if (VK_HEADER_VERSION < 324)
+				//Old SDK: std::pair<Result, uint32_t>
+				m_frameIndex = result.second;
+				if(result.first == vk::Result::eSuboptimalKHR)
+			#else
+				//New SD: vk::ResultValue<uint32_t>
+				m_frameIndex = result.value;
+				if(result.result == vk::Result::eSuboptimalKHR)
+			#endif
 			{
 				// eSuboptimalKHR is actually a success code, meaning that although the image is suboptimal,
 				// we *did* acquire the next image from the swapchain. Proceed to render the suboptimal frame
