@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  SDK_VERSION_STANDALONE: 1.4.325.0
+  SDK_VERSION_STANDALONE: 1.4.321.1
   SDK_VERSION_REPO: 1.4.309
 
 jobs:
