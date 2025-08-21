@@ -15,10 +15,10 @@ jobs:
         fail-fast: false
         matrix:
             os:
-              - name: debian
+              - name: debian-oldstable
                 version: bookworm
                 container: debian:bookworm
-              - name: debian
+              - name: debian-stable
                 version: trixie
                 container: debian:trixie
             sdk_type: [repo, standalone]
@@ -26,9 +26,7 @@ jobs:
             exclude:
               - sdk_type: standalone
                 docs: true
-              - os:
-                  - name: debian
-                  - version: trixie
+              - os: debian-stable
                 sdk_type: standalone
 
     runs-on: ubuntu-latest
