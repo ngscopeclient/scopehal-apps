@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  SDK_VERSION_STANDALONE: 1.4.309.0
+  SDK_VERSION_STANDALONE: 1.4.325.0
   SDK_VERSION_REPO: 1.4.309
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
     container:
       image: ${{ matrix.os.container }}
       env:
-        SDK_VERSION_STANDALONE: 1.4.309.0
+        SDK_VERSION_STANDALONE: 1.4.325.0
         SDK_VERSION_REPO: 1.4.309
 
     defaults:
