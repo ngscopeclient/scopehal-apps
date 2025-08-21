@@ -18,6 +18,9 @@ jobs:
               - name: debian
                 version: bookworm
                 container: debian:bookworm
+              - name: debian
+                version: trixie
+                container: debian:trixie
             sdk_type: [repo, standalone]
             docs: [true, false]
             exclude:
