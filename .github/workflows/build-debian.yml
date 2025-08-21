@@ -26,8 +26,9 @@ jobs:
             exclude:
               - sdk_type: standalone
                 docs: true
-              - os: debian
-                version: trixie
+              - os:
+                  - name: debian
+                  - version: trixie
                 sdk_type: standalone
 
     runs-on: ubuntu-latest
