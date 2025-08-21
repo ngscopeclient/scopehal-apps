@@ -26,8 +26,7 @@ jobs:
             exclude:
               - sdk_type: standalone
                 docs: true
-            exclude:
-              - os: debian-stable
+              - os.name: debian-stable
                 sdk_type: standalone
 
     runs-on: ubuntu-latest
