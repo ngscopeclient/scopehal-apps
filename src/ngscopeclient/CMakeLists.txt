@@ -233,6 +233,19 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md
 install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
 	DESTINATION share/applications)
 
+if(LINUX)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/16x16/app-icon.png
+			DESTINATION share/icons/hicolor/16x16/apps RENAME ngscopeclient.png)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/32x32/app-icon.png
+			DESTINATION share/icons/hicolor/32x32/apps RENAME ngscopeclient.png)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/48x48/app-icon.png
+			DESTINATION share/icons/hicolor/48x48/apps RENAME ngscopeclient.png)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/128x128/app-icon.png
+			DESTINATION share/icons/hicolor/128x128/apps RENAME ngscopeclient.png)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/256x256/app-icon.png
+			DESTINATION share/icons/hicolor/256x256/apps RENAME ngscopeclient.png)
+endif()
+
 # ngscopeclient Windows portable zip/MSI installer build
 if(WIXPATH AND WIN32)
 	# Run the command to get /mingw64/bin full path using where gcc

@@ -5,3 +5,4 @@ Type=Application
 Exec=ngscopeclient
 Categories=Development;Electronics
 Terminal=false
+Icon=ngscopeclient
