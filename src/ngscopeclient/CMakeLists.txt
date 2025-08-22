@@ -310,6 +310,7 @@ if(WIXPATH AND WIN32)
 		COMMENT "Creating ngscopeclient Windows x64 MSI..."
 		DEPENDS ngscopeclient_dist_windows_x64
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/src/ngscopeclient/wix/LICENSE.rtf ${CMAKE_BINARY_DIR}
 		COMMAND ${WIXPATH}/heat dir dist/ngscopeclient_windows_x64 -gg -ke -scom -sreg -srd -cg AllFiles -dr APPLICATIONFOLDER -sfrag -template fragment -out ngscopeclient-files.wxs
 		COMMAND ${WIXPATH}/candle -nologo ngscopeclient-files.wxs -arch x64 -out ngscopeclient-files.wixobj
 		COMMAND ${WIXPATH}/candle -nologo ngscopeclient.wxs -arch x64 -out ngscopeclient.wixobj -ext WixUIExtension -ext WixUtilExtension
