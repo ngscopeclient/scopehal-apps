@@ -179,7 +179,7 @@ jobs:
         ctest --output-on-failure
 
     # vulkan ICD path changed from bookworm to trixie so need to consider both
-     - name: Run Tests
+    - name: Run Tests
       if: ${{ !  matrix.docs }} && {matrix.os = 'debian-stable'}
       run: |
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
