@@ -42,6 +42,10 @@ if(Git_FOUND)
 		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION_LONG
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+	# TODO: if/when we have a point release, make MSI version 10x+9
+	# ex: 0.1.2-rc2 is 0.1.22
+	# ex: 0.1.2 is 0.1.29
+
 	# Ugly string parsing to make windows build happy
 	# First path: release candidate tags
 	if(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-rc([0-9])-([0-9]*)")
@@ -49,7 +53,7 @@ if(Git_FOUND)
 
 	# Release tags
 	elseif(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-([0-9]*)")
-		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.0.${CMAKE_MATCH_3}")
+		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.9.${CMAKE_MATCH_3}")
 	endif()
 
 else()
