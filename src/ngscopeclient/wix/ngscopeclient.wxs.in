@@ -19,7 +19,9 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramMenuFolder">
         <Directory Id="DesktopFolder" Name="Desktop">
-            <Shortcut Id="RunProgram" Directory="DesktopFolder" Name="$(var.Product)" Description="$(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
+            <Component Id="DesktopShortcuts" Guid="$(var.Uuid.DesktopShortcuts)">
+                <Shortcut Id="RunProgram" Directory="DesktopFolder" Name="$(var.Product)" Description="$(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
+            </Component>
         </Directory>
         <Directory Id="ProgramMenuDir" Name="ngscopeclient">
           <Component Id="StartMenuShortcuts" Guid="$(var.Uuid.StartMenuShortcuts)">
@@ -40,6 +42,7 @@
     </Directory>
     <Feature Id="DefaultFeature" Level="1" Title="$(var.Product)">
       <ComponentRef Id="StartMenuShortcuts" />
+      <ComponentRef Id="DesktopShortcuts" />
       <ComponentRef Id="InstallDir" />
       <ComponentGroupRef Id="AllFiles" />
     </Feature>
