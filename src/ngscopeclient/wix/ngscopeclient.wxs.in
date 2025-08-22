@@ -8,6 +8,7 @@
 <?define Uuid.UpgradeCode = "{6f7807ac-21e7-4b98-9483-df801cd0f13b}" ?>
 <?define Uuid.InstallDir = "{3518b5d3-20af-4e91-ab6f-92c189c8153c}" ?>
 <?define Uuid.StartMenuShortcuts = "{cf59dd90-f6b0-468a-b679-b460cae36108}" ?>
+<?define Uuid.DesktopShortcuts = "{6b11c8ec-514c-4e12-9baa-597c504a94b7}" ?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Id="*" Codepage="1252" Language="1033" Manufacturer="$(var.Manufacturer)" Name="$(var.Product)" UpgradeCode="$(var.Uuid.UpgradeCode)" Version="$(var.Version)">
     <Package Compressed="yes" Description="$(var.Product) $(var.Version)" InstallerVersion="200" Languages="1033" Manufacturer="$(var.Manufacturer)" Platform="x64" />
@@ -17,12 +18,14 @@
     <Property Id="ARPNOMODIFY" Value="1" />
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramMenuFolder">
+        <Directory Id="DesktopFolder" Name="Desktop">
+            <Shortcut Id="RunProgram" Directory="DesktopFolder" Name="$(var.Product)" Description="$(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
+        </Directory>
         <Directory Id="ProgramMenuDir" Name="ngscopeclient">
           <Component Id="StartMenuShortcuts" Guid="$(var.Uuid.StartMenuShortcuts)">
             <RegistryValue Root="HKCU" Key="Software\$(var.RegKey)" Name="InstallDir" Value="[APPLICATIONFOLDER]" Type="string" KeyPath="yes" />
             <RemoveFolder Id="ProgramMenuDir" Directory="ProgramMenuDir" On="uninstall" />
             <Shortcut Id="RunProgram" Directory="ProgramMenuDir" Name="$(var.Product)" Description="Run $(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
-            <Shortcut Id="RunProgramDesktop" Directory="DesktopFolder" Name="$(var.Product)"/>
             <Shortcut Id="UninstallProduct" Directory="ProgramMenuDir" Name="Uninstall $(var.Product)" Description="Uninstalls the $(var.Product)" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" />
           </Component>
         </Directory>
