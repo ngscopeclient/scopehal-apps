@@ -140,6 +140,7 @@ jobs:
         [[ (${{matrix.sdk_type }} = 'standalone') ]] && source $HOME/VulkanSDK/${{ env.SDK_VERSION_STANDALONE }}/setup-env.sh
         [[  ${{ matrix.docs }} = 'false' ]] && export CMAKE_C_COMPILER_LAUNCHER=ccache && export CMAKE_CXX_COMPILER_LAUNCHER=ccache
 
+        git config --global --add safe.directory `pwd`
         mkdir build
         cd build
         cmake \
