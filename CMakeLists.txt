@@ -34,8 +34,27 @@ if(Git_FOUND)
 		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
 	message("Git reports scopehal-apps version ${NGSCOPECLIENT_VERSION}")
+
+
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} describe --always --tags --long
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION_LONG
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+	# Ugly string parsing to make windows build happy
+	# First path: release candidate tags
+	if(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-rc([0-9])-([0-9]*)")
+		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}.${CMAKE_MATCH_4}")
+
+	# Release tags
+	elseif(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-([0-9]*)")
+		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.0.${CMAKE_MATCH_3}")
+	endif()
+
 else()
 	set(NGSCOPECLIENT_VERSION "unknown")
+	set(MSI_VERSION "0.1")
 	message("Git not detected, scopehal-apps version unknown")
 endif()
 

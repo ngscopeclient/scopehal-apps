@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?define Manufacturer = "Antikernel Labs" ?>
 <?define Product = "ngscopeclient" ?>
-<?define Version = "0.1" ?>
+<?define Version = "@MSI_VERSION@" ?>
 <?define RegKey = "ngscopeclient" ?>
 <?define DefaultInstallDir = "ngscopeclient" ?>
 <?define ShortcutTarget = "ngscopeclient.exe" ?>
@@ -15,7 +15,7 @@
     <Property Id="ARPURLINFOABOUT" Value="https://www.github.com/azonenberg/scopehal-apps" />
     <Property Id="ARPURLUPDATEINFO" Value="https://www.github.com/azonenberg/scopehal-apps" />
     <Property Id="ARPNOMODIFY" Value="1" />
-    <Directory Id="TARGETDIR" Name="SourceDir">      
+    <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ProgramMenuDir" Name="ngscopeclient">
           <Component Id="StartMenuShortcuts" Guid="$(var.Uuid.StartMenuShortcuts)">
@@ -43,7 +43,7 @@
     <UIRef Id="WixUI_Custom" />
     <Property Id="ALLUSERS" Value="1" />
     <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
-    <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONFOLDER" /> 
+    <Property Id="WIXUI_INSTALLDIR" Value="APPLICATIONFOLDER" />
     <UI Id="WixUI_Custom">
       <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
       <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
