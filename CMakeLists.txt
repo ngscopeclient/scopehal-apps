@@ -33,8 +33,10 @@ if(Git_FOUND)
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
+	message("Git reports scopehal-apps version ${NGSCOPECLIENT_VERSION}")
 else()
 	set(NGSCOPECLIENT_VERSION "unknown")
+	message("Git not detected, scopehal-apps version unknown")
 endif()
 
 set(PROJECT_VERSION "${NGSCOPECLIENT_VERSION}")
