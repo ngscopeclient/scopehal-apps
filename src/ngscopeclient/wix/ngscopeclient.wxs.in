@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?define Manufacturer = "Antikernel Labs" ?>
 <?define Product = "ngscopeclient" ?>
-<?define Version = "@MSI_VERSION@" ?>
+<?define Version = "@PROJECT_VERSION@" ?>
 <?define RegKey = "ngscopeclient" ?>
 <?define DefaultInstallDir = "ngscopeclient" ?>
 <?define ShortcutTarget = "ngscopeclient.exe" ?>
