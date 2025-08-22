@@ -172,7 +172,7 @@ jobs:
         ninja doc
 
     - name: Run Tests
-      if: ${{ !  matrix.docs }} && {matrix.os = 'debian-oldstable'}
+      if: ${{ !  matrix.docs }} && {matrix.os == 'debian-oldstable'}
       run: |
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
         cd build
@@ -180,7 +180,7 @@ jobs:
 
     # vulkan ICD path changed from bookworm to trixie so need to consider both
     - name: Run Tests
-      if: ${{ !  matrix.docs }} && {matrix.os = 'debian-stable'}
+      if: ${{ !  matrix.docs }} && {matrix.os == 'debian-stable'}
       run: |
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
         cd build
