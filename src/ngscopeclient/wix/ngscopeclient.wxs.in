@@ -24,10 +24,8 @@
             <RegistryValue Root="HKCU" Key="Software\$(var.RegKey)" Name="InstallDir" Value="[APPLICATIONFOLDER]" Type="string" KeyPath="yes" />
             <RemoveFolder Id="ProgramMenuDir" Directory="ProgramMenuDir" On="uninstall" />
             <Shortcut Id="RunProgram" Directory="ProgramMenuDir" Name="$(var.Product)" Description="Run $(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
+            <Shortcut Id="RunProgramDesktop" Directory="DesktopFolder" Name="$(var.Product)" Description="Run $(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
             <Shortcut Id="UninstallProduct" Directory="ProgramMenuDir" Name="Uninstall $(var.Product)" Description="Uninstalls the $(var.Product)" Target="[System64Folder]msiexec.exe" Arguments="/x [ProductCode]" />
-          </Component>
-          <Component Id="DesktopShortcuts" Guid="$(var.Uuid.DesktopShortcuts)">
-              <Shortcut Id="RunProgramDesktop" Directory="DesktopFolder" Name="$(var.Product)" Description="Run $(var.Product)" Target="[APPLICATIONFOLDER]$(var.ShortcutTarget)" />
           </Component>
         </Directory>
       </Directory>
@@ -43,9 +41,6 @@
       <ComponentRef Id="StartMenuShortcuts" />
       <ComponentRef Id="InstallDir" />
       <ComponentGroupRef Id="AllFiles" />
-    </Feature>
-    <Feature Id="Icons" Level="1" Title="Create Desktop Shortcut">
-        <ComponentRef Id="DesktopShortcuts" />
     </Feature>
     <Media Id="1" Cabinet="files.cab" EmbedCab="yes" />
     <UIRef Id="WixUI_Custom" />
