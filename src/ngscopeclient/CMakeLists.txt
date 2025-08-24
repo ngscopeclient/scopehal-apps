@@ -249,11 +249,10 @@ if(LINUX)
 endif()
 
 if(APPLE)
-	set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
-	install(CODE [[
-	  include(BundleUtilities)
-	  fixup_bundle("${CMAKE_INSTALL_PREFIX}/ngscopeclient-${NGSCOPECLIENT_VERSION}.app" "" "")
-	]] COMPONENT Runtime)
+	set(APPS "\${CMAKE_INSTALL_PREFIX}/bin/ngscopeclient")
+	set(DIRS "\${CMAKE_INSTALL_PREFIX}/lib")
+	install(CODE "include(BundleUtilities)
+		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")")
 endif()
 
 # ngscopeclient Windows portable zip/MSI installer build
