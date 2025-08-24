@@ -251,8 +251,11 @@ endif()
 if(APPLE)
 	set(APPS "\${CMAKE_INSTALL_PREFIX}/bin/ngscopeclient")
 	set(DIRS "\${CMAKE_INSTALL_PREFIX}/lib")
-	install(CODE "include(BundleUtilities)
-		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")")
+	install(CODE "
+		include(BundleUtilities)
+		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
+		execute_process(COMMAND \"codesign --remove-signature ${DIRS}/*.dylib\")
+		")
 endif()
 
 # ngscopeclient Windows portable zip/MSI installer build
