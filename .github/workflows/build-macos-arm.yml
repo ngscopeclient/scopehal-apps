@@ -70,6 +70,12 @@ jobs:
         cd build
         ninja test
 
+    - name: Build Package
+      if: ${{ ! matrix.docs }}
+      run: |
+        cd build
+        cpack -G Bundle
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -80,3 +86,9 @@ jobs:
           build/src/ngscopeclient/shaders/*
           build/lib/scopehal/libscopehal.dylib
           build/lib/scopeprotocols/libscopeprotocols.dylib
+
+    - name: Upload Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ngscopeclient-${{ runner.os }}-${{ github.job }}-package
+        path: build/*.dmg
