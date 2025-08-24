@@ -251,10 +251,11 @@ endif()
 if(APPLE)
 	set(APPS "\${CMAKE_INSTALL_PREFIX}/bin/ngscopeclient")
 	set(DIRS "\${CMAKE_INSTALL_PREFIX}/lib")
+	set(FRAMEWORKS "\${CMAKE_INSTALL_PREFIX}/Frameworks")
 	install(CODE "
 		include(BundleUtilities)
 		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
-		execute_process(COMMAND \"codesign --remove-signature ${DIRS}/*.dylib\")
+		execute_process(COMMAND \"codesign --remove-signature ${FRAMEWORKS}/*.dylib\")
 		")
 endif()
 
