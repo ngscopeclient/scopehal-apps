@@ -216,8 +216,10 @@ add_custom_command(TARGET ngscopeclient POST_BUILD
 	COMMAND_EXPAND_LISTS
 	)
 endif()
+
 ###############################################################################
 # Installation
+
 install(TARGETS ngscopeclient RUNTIME)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/fonts
 	DESTINATION share/ngscopeclient)
@@ -244,6 +246,14 @@ if(LINUX)
 			DESTINATION share/icons/hicolor/128x128/apps RENAME ngscopeclient.png)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/256x256/app-icon.png
 			DESTINATION share/icons/hicolor/256x256/apps RENAME ngscopeclient.png)
+endif()
+
+if(APPLE)
+	set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
+	install(CODE [[
+	  include(BundleUtilities)
+	  fixup_bundle("${CMAKE_INSTALL_PREFIX}/ngscopeclient-${NGSCOPECLIENT_VERSION}.app" "" "")
+	]] COMPONENT Runtime)
 endif()
 
 # ngscopeclient Windows portable zip/MSI installer build
