@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -42,6 +42,33 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TimePoint
 
+string TimePoint::PrettyPrintDate() const
+{
+	auto base = GetSec();
+	auto offset = GetFs();
+
+	//If offset is >1 sec, shift the timestamp
+	if(offset > FS_PER_SECOND)
+	{
+		base += (offset / FS_PER_SECOND);
+		offset = offset % (int64_t)FS_PER_SECOND;
+	}
+
+	//Format timestamp
+	char tmp[128];
+	struct tm ltime;
+
+#ifdef _WIN32
+	localtime_s(&ltime, &base);
+#else
+	localtime_r(&base, &ltime);
+#endif
+
+	strftime(tmp, sizeof(tmp), "%F", &ltime);
+	string stime = tmp;
+	return stime;
+}
+
 string TimePoint::PrettyPrint() const
 {
 	auto base = GetSec();
@@ -65,7 +92,6 @@ string TimePoint::PrettyPrint() const
 #endif
 
 	//round to nearest 100ps for display
-	//TODO: do we want to include date as an optional column or something??
 	strftime(tmp, sizeof(tmp), "%H:%M:%S.", &ltime);
 	string stime = tmp;
 	snprintf(tmp, sizeof(tmp), "%010zu", static_cast<size_t>(offset / 100000));
@@ -147,6 +173,37 @@ bool HistoryDialog::DoRender()
 				rowIsSelected = true;
 				m_selectionChanged = true;
 				m_selectedMarker = nullptr;
+			}
+			if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+			{
+				//Format full details for saved waveforms
+				string strDetails;
+				strDetails += string("Waveform acquired on ") + point->m_time.PrettyPrintDate() +
+					" at " + point->m_time.PrettyPrint() + "\n";
+				strDetails += "\n";
+				strDetails += string("Data for ") + to_string(point->m_history.size());
+				if(point->m_history.size() > 1)
+					strDetails += " instruments:\n";
+				else
+					strDetails += " instrument:\n";
+				for(auto& jt : point->m_history)
+				{
+					//Figure out how many channels actually have non-null waveform data
+					size_t numNonNull = 0;
+					for(auto& kt : jt.second)
+					{
+						if(kt.second)
+							numNonNull ++;
+					}
+
+					strDetails += "  * " + jt.first->m_nickname + " (" + to_string(numNonNull) + " channels with data)\n";
+				}
+
+				ImGui::BeginTooltip();
+				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+				ImGui::TextUnformatted(strDetails.c_str());
+				ImGui::PopTextWrapPos();
+				ImGui::EndTooltip();
 			}
 
 			if(ImGui::BeginPopupContextItem())
