@@ -140,10 +140,28 @@ bool LogViewerDialog::DoRender()
 		{
 			g_trace_filters.emplace(m_traceFilter);
 			m_traceFilter = "";
+
+			//Enable tracing if it wasn't on already
+			if(g_guiLog->GetSeverity() != Severity::TRACE)
+			{
+				g_guiLog->SetSeverity(Severity::TRACE);
+				m_severityFilter = Severity::TRACE;
+				m_displayedSeverity = static_cast<int>(Severity::TRACE) - 1;
+			}
 		}
 		ImGui::SameLine();
 		if(ImGui::Button("-"))
+		{
 			g_trace_filters.erase(m_selectedFilter);
+
+			//Turn tracing off if we're removing the last trace filter
+			if(g_trace_filters.empty())
+			{
+				g_guiLog->SetSeverity(Severity::DEBUG);
+				m_severityFilter = Severity::DEBUG;
+				m_displayedSeverity = static_cast<int>(Severity::DEBUG) - 1;
+			}
+		}
 	}
 
 	auto font = m_parent->GetFontPref("Appearance.General.console_font");
