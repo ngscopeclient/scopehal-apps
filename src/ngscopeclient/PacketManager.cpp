@@ -156,6 +156,19 @@ void PacketManager::RefreshRows()
 				}
 			}
 		}
+
+		//If we have a marker after the start of the last packet, add it now
+		//(loop because we might have two or more markers)
+		while( (imarker < markers.size()) && (markers[imarker].m_offset >= lastoff) )
+		{
+			RowData row(wavetime, markers[imarker]);
+			row.m_height = padding*2 + lineheight;
+			totalHeight += row.m_height;
+			row.m_totalHeight = totalHeight;
+			m_rows.push_back(row);
+
+			imarker ++;
+		}
 	}
 
 	LogTrace("%zu rows\n", m_rows.size());
