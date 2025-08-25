@@ -5,7 +5,7 @@ RESOURCES="$BUNDLE/Contents/Resources"
 
 export "PATH=$RESOURCES/bin:$PATH"
 
-exec "$RESOURCES/bin/ngscopeclient"
+exec "$RESOURCES/bin/ngscopeclient" $*
 
 #eof
 
