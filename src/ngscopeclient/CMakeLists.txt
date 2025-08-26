@@ -255,7 +255,7 @@ if(APPLE)
 	install(CODE "
 		include(BundleUtilities)
 		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
-		execute_process(COMMAND \"codesign --deep --force -s - ${CMAKE_INSTALL_PREFIX}\")
+		include(\"${CMAKE_SOURCE_DIR}/src/ngscopeclient/macos/signing.cmake\")
 		")
 endif()
 
