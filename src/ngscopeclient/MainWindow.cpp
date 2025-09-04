@@ -755,7 +755,8 @@ void MainWindow::RenderUI()
 		}
 	}
 
-	//Handle error messages
+	//Handle error messages and other blocking notifications
+	RenderReconnectPopup();
 	RenderErrorPopup();
 	RenderLoadWarningPopup();
 
@@ -1675,6 +1676,47 @@ void MainWindow::ShowErrorPopup(const string& title, const string& msg)
 {
 	m_errorPopupTitle = title;
 	m_errorPopupMessage = msg;
+}
+
+/**
+	@brief Popup message when reconnecting to a session
+ */
+void MainWindow::RenderReconnectPopup()
+{
+	const char* title = "Open Session";
+
+	if(!m_startupSession.empty())
+		ImGui::OpenPopup(title);
+
+	if(ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextUnformatted("Do you want to reconnect to the lab instruments or load session data for offline analysis?\n");
+		ImGui::Separator();
+
+		if(ImGui::Button("Reconnect"))
+		{
+			DoOpenFile(m_startupSession, true);
+			m_startupSession = "";
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+		if(ImGui::Button("Load Offline"))
+		{
+			DoOpenFile(m_startupSession, false);
+			m_startupSession = "";
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+		if(ImGui::Button("Cancel"))
+		{
+			m_startupSession = "";
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
 }
 
 /**

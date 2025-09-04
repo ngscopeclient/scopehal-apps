@@ -53,6 +53,8 @@ int main(int argc, char* argv[])
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
 
+	string sessionToOpen;
+	vector<string> instrumentConnectionStrings;
 	for(int i=1; i<argc; i++)
 	{
 		string s(argv[i]);
@@ -61,8 +63,21 @@ int main(int argc, char* argv[])
 		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
 			continue;
 
-		//TODO: other arguments
+		//Other switch (unrecognized)
+		else if(s.find("-") == 0)
+		{
+			//Don't know what it is
+			fprintf(stderr, "Unrecognized argument \"%s\"\n", s.c_str());
+			return 1;
+		}
 
+		//If it ends in .scopesession assume it's a session file
+		else if(s.find(".scopesession") != string::npos)
+			sessionToOpen = s;
+
+		//Assume it's an instrument
+		else
+			instrumentConnectionStrings.push_back(s);
 	}
 
 	//Set up logging to the GUI
@@ -104,6 +119,13 @@ int main(int argc, char* argv[])
 			LogNotice("Startup: run from a console, keeping stdout log sink attached\n");
 		}
 	#endif
+
+	//Can't load a session and reconnect to an instrument, has to be one or the other
+	if( !sessionToOpen.empty() && !instrumentConnectionStrings.empty())
+	{
+		LogError("Cannot load a session and connect to an instrument simultaneously\n");
+		return 1;
+	}
 
 	//Complain if the OpenMP wait policy isn't set right
 	const char* policy = getenv("OMP_WAIT_POLICY");
@@ -154,8 +176,20 @@ int main(int argc, char* argv[])
 		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("g_mainWindow.render"));
 		g_mainWindow = make_unique<MainWindow>(queue);
 
-		//Main event loop
 		auto& session = g_mainWindow->GetSession();
+
+		//Load a session on startup if requested
+		if(!sessionToOpen.empty())
+			g_mainWindow->SetStartupSession(sessionToOpen);
+
+		//Initialize the session with the requested arguments
+		//TODO: support connecting to things other than scopes
+		//(this will make more sense when we unify our driver model)
+		/*
+		vector<string> instrumentConnectionStrings;
+		*/
+
+		//Main event loop
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
 		{
 			//Check which event loop model to use

@@ -220,6 +220,9 @@ public:
 	std::map<uintptr_t, std::string> GetGraphEditorGroups()
 	{ return m_graphEditorGroups; }
 
+	void SetStartupSession(const std::string& path)
+	{ m_startupSession = path; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -398,6 +401,9 @@ protected:
 	///@brief Pending requests to display a channel in a waveform area (from CreateFilter())
 	std::set< std::pair<OscilloscopeChannel*, WaveformArea*> > m_pendingChannelDisplayRequests;
 
+	///@brief Pending request to open a session
+	std::string m_startupSession;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Session state
 
@@ -506,6 +512,7 @@ protected:
 	bool m_showingLoadWarnings;
 	bool m_loadConfirmationChecked;
 
+	void RenderReconnectPopup();
 	void RenderErrorPopup();
 	void RenderLoadWarningPopup();
 public:
