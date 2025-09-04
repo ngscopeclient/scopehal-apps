@@ -27,6 +27,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        brew uninstall cmake
         brew install --force --overwrite \
           pkg-config \
           libsigc++@2 \
