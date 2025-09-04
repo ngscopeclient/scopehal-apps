@@ -64,7 +64,8 @@ string TimePoint::PrettyPrintDate() const
 	localtime_r(&base, &ltime);
 #endif
 
-	strftime(tmp, sizeof(tmp), "%F", &ltime);
+	strftime(tmp, sizeof(tmp), "%Y-%m-%d", &ltime);
+
 	string stime = tmp;
 	return stime;
 }
