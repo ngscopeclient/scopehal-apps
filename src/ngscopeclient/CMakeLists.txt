@@ -234,6 +234,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md
 
 install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
 	DESTINATION share/applications)
+install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.xml
+	DESTINATION share/mine/packages)
 
 if(LINUX)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/16x16/app-icon.png

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-ngscopeclient-session">
+    <sub-class-of type="application/x-yaml"/>
+    <generic-icon name="text-x-generic"/>
+    <comment>ngscopeclient session</comment>
+    <glob pattern="*.scopesession"/>
+  </mime-type>
+</mime-info>

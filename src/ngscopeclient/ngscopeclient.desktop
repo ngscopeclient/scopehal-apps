@@ -6,3 +6,4 @@ Exec=ngscopeclient
 Categories=Development;Electronics
 Terminal=false
 Icon=ngscopeclient
+MimeType=application/x-ngscopeclient-session
