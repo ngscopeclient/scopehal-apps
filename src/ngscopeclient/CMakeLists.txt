@@ -232,22 +232,21 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/shaders
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ngscopeclient/md
 	DESTINATION share/ngscopeclient)
 
-install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
-	DESTINATION share/applications)
-install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.xml
-	DESTINATION share/mine/packages)
-
 if(LINUX)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/16x16/app-icon.png
-			DESTINATION share/icons/hicolor/16x16/apps RENAME ngscopeclient.png)
+		DESTINATION share/icons/hicolor/16x16/apps RENAME ngscopeclient.png)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/32x32/app-icon.png
-			DESTINATION share/icons/hicolor/32x32/apps RENAME ngscopeclient.png)
+		DESTINATION share/icons/hicolor/32x32/apps RENAME ngscopeclient.png)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/48x48/app-icon.png
-			DESTINATION share/icons/hicolor/48x48/apps RENAME ngscopeclient.png)
+		DESTINATION share/icons/hicolor/48x48/apps RENAME ngscopeclient.png)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/128x128/app-icon.png
-			DESTINATION share/icons/hicolor/128x128/apps RENAME ngscopeclient.png)
+		DESTINATION share/icons/hicolor/128x128/apps RENAME ngscopeclient.png)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/icons/256x256/app-icon.png
-			DESTINATION share/icons/hicolor/256x256/apps RENAME ngscopeclient.png)
+		DESTINATION share/icons/hicolor/256x256/apps RENAME ngscopeclient.png)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
+		DESTINATION share/applications)
+	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.xml
+		DESTINATION share/mine/packages)
 endif()
 
 if(APPLE)
