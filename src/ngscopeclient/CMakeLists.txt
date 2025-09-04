@@ -246,7 +246,7 @@ if(LINUX)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.desktop
 		DESTINATION share/applications)
 	install(FILES ${CMAKE_SOURCE_DIR}/src/ngscopeclient/ngscopeclient.xml
-		DESTINATION share/mine/packages)
+		DESTINATION share/mime/packages)
 endif()
 
 if(APPLE)
