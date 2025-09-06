@@ -175,38 +175,7 @@ bool HistoryDialog::DoRender()
 				m_selectionChanged = true;
 				m_selectedMarker = nullptr;
 			}
-			if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
-			{
-				//Format full details for saved waveforms
-				string strDetails;
-				strDetails += string("Waveform acquired on ") + point->m_time.PrettyPrintDate() +
-					" at " + point->m_time.PrettyPrint() + "\n";
-				strDetails += "\n";
-				strDetails += string("Data for ") + to_string(point->m_history.size());
-				if(point->m_history.size() > 1)
-					strDetails += " instruments:\n";
-				else
-					strDetails += " instrument:\n";
-				for(auto& jt : point->m_history)
-				{
-					//Figure out how many channels actually have non-null waveform data
-					size_t numNonNull = 0;
-					for(auto& kt : jt.second)
-					{
-						if(kt.second)
-							numNonNull ++;
-					}
-
-					strDetails += "  * " + jt.first->m_nickname + " (" + to_string(numNonNull) + " channels with data)\n";
-				}
-
-				ImGui::BeginTooltip();
-				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
-				ImGui::TextUnformatted(strDetails.c_str());
-				ImGui::PopTextWrapPos();
-				ImGui::EndTooltip();
-			}
-
+			bool rowIsHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
 			if(ImGui::BeginPopupContextItem())
 			{
 				if(ImGui::MenuItem("Delete"))
@@ -242,15 +211,53 @@ bool HistoryDialog::DoRender()
 
 			//Editable nickname box
 			ImGui::TableSetColumnIndex(2);
+			bool nicknameFocused = false;
 			if(rowIsSelected)
 			{
 				if(m_selectionChanged)
 					ImGui::SetKeyboardFocusHere();
 				ImGui::SetNextItemWidth(ImGui::GetColumnWidth() - 4);
 				ImGui::InputText("###nick", &point->m_nickname);
+
+				if(ImGui::IsItemFocused() || ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone))
+					nicknameFocused = true;
 			}
 			else
 				ImGui::TextUnformatted(point->m_nickname.c_str());
+
+			//If hovered, but NOT focused on the nickname
+			if(rowIsHovered && !nicknameFocused)
+			{
+				//Format full details for saved waveforms
+				string strDetails;
+				strDetails += string("Waveform acquired on ") + point->m_time.PrettyPrintDate() +
+					" at " + point->m_time.PrettyPrint() + "\n";
+				strDetails += "\n";
+				strDetails += string("Data for ") + to_string(point->m_history.size());
+				if(point->m_history.size() > 1)
+					strDetails += " instruments:\n";
+				else
+					strDetails += " instrument:\n";
+				for(auto& jt : point->m_history)
+				{
+					//Figure out how many channels actually have non-null waveform data
+					size_t numNonNull = 0;
+					for(auto& kt : jt.second)
+					{
+						if(kt.second)
+							numNonNull ++;
+					}
+
+					strDetails += "  * " + jt.first->m_nickname + " (" + to_string(numNonNull) + " channels with data)\n";
+				}
+
+				ImGui::BeginTooltip();
+				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
+				ImGui::TextUnformatted(strDetails.c_str());
+				ImGui::PopTextWrapPos();
+				ImGui::EndTooltip();
+			}
+
 
 			//Child nodes for markers
 			if(open)
