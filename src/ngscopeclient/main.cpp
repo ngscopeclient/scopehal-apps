@@ -182,12 +182,38 @@ int main(int argc, char* argv[])
 		if(!sessionToOpen.empty())
 			g_mainWindow->SetStartupSession(sessionToOpen);
 
+		//Render the main window once, so it can initialize a new empty session before we connect any instruments
+		glfwPollEvents();
+		g_mainWindow->Render();
+
 		//Initialize the session with the requested arguments
-		//TODO: support connecting to things other than scopes
-		//(this will make more sense when we unify our driver model)
-		/*
-		vector<string> instrumentConnectionStrings;
-		*/
+		for(auto s : instrumentConnectionStrings)
+		{
+			LogTrace("Setup: connecting to %s\n", s.c_str());
+			LogIndenter li;
+
+			char name[128];
+			char driver[128];
+			char transport[128];
+			char args[256];
+			sscanf(s.c_str(), "%127[^:]:%127[^:]:%127[^:]:%255s", name, driver, transport, args);
+
+			//Try to connect
+			auto ptransport = SCPITransport::CreateTransport(transport, args);
+			if(ptransport == nullptr)
+			{
+				LogError("Failed to create transport of type \"%s\"\n", transport);
+				return 1;
+			}
+			if(!ptransport->IsConnected())
+			{
+				delete ptransport;
+				LogError("Failed to connect to \"%s\"\n", args);
+				return 1;
+			}
+
+			session.CreateAndAddInstrument(driver, ptransport, name);
+		}
 
 		//Main event loop
 		while(!glfwWindowShouldClose(g_mainWindow->GetWindow()))
