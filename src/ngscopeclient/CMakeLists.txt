@@ -253,9 +253,13 @@ if(APPLE)
 	set(APPS "\${CMAKE_INSTALL_PREFIX}/bin/ngscopeclient")
 	set(DIRS "\${CMAKE_INSTALL_PREFIX}/lib")
 	set(FRAMEWORKS "\${CMAKE_INSTALL_PREFIX}/Frameworks")
+	# https://vulkan.lunarg.com/doc/view/1.3.275.0/mac/getting_started.html#application-bundle-structure-on-macos
+	install(FILES "${CMAKE_SOURCE_DIR}/src/ngscopeclient/macos/MoltenVK_icd.json"
+		DESTINATION bin/vulkan/icd.d/)
+	install(FILES "/opt/homebrew/opt/molten-vk/lib/libMoltenVK.dylib" DESTINATION lib)
 	install(CODE "
 		include(BundleUtilities)
-		fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
+		fixup_bundle(\"${APPS}\" \"lib/libMoltenVK.dylib\" \"${DIRS}\")
 		include(\"${CMAKE_SOURCE_DIR}/src/ngscopeclient/macos/signing.cmake\")
 		")
 endif()

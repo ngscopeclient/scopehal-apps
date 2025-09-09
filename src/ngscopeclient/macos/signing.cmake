@@ -4,6 +4,9 @@ endif()
 
 get_filename_component(APP_BUNDLE "${CMAKE_INSTALL_PREFIX}/../.." ABSOLUTE)
 
+message(STATUS "Running chmod 755 for all dylibs")
+execute_process(COMMAND find "${APP_BUNDLE}" -type f -name "*.dylib" -exec chmod 755 {} \;)
+
 message(STATUS "Signing all dylibs")
 execute_process(COMMAND find "${APP_BUNDLE}" -type f -name "*.dylib" -exec codesign --force -s "${SIGNING_IDENTITY}" {} \;)
 
