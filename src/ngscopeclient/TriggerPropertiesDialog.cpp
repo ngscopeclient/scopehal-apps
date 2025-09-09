@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -164,32 +164,6 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 					"Some instruments have restrictions on which channels can be used for some trigger types\n"
 					"(for example, dedicated routing to a CDR board)\n");
 			}
-
-			EndSection(graphEditorMode);
-		}
-
-		if(StartSection("Thresholds", graphEditorMode))
-		{
-			//Primary level
-			Unit volts(Unit::UNIT_VOLTS);
-			if(Dialog::UnitInputWithImplicitApply(
-				"Level",
-				m_triggerLevel,
-				m_committedLevel,
-				volts))
-			{
-				trig->SetLevel(m_committedLevel);
-				updated = true;
-			}
-
-			//Check for changes made elsewhere in the GUI (dragging arrow etc)
-			if(trig->GetLevel() != m_committedLevel)
-			{
-				m_committedLevel = trig->GetLevel();
-				m_triggerLevel = volts.PrettyPrint(m_committedLevel);
-			}
-
-			//TODO: if we have a secondary level, do that
 
 			EndSection(graphEditorMode);
 		}
