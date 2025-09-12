@@ -315,7 +315,16 @@ bool VulkanWindow::UpdateFramebuffer()
 	//If size doesn't match up, early out. We're probably in the middle of a resize.
 	//(This will be corrected next frame, so no worries)
 	auto caps = g_vkComputePhysicalDevice->getSurfaceCapabilitiesKHR(**m_surface);
+	int oldWidth = m_width;
+	int oldHeight = m_height;
 	glfwGetFramebufferSize(m_window, &m_width, &m_height);
+	if( (m_width == 0) || (m_height == 0) )
+	{
+		LogTrace("Invalid size 0x0 reported (window minimized?)\n");
+		m_width = oldWidth;
+		m_height = oldHeight;
+		return false;
+	}
 	LogTrace("Max image extent: %d x %d\n", caps.maxImageExtent.width, caps.maxImageExtent.height);
 	LogTrace("Current dims: %d x %d\n", m_width, m_height);
 	if( (caps.maxImageExtent.width < (unsigned int)m_width) ||
