@@ -48,7 +48,7 @@ jobs:
           shaderc:p
           glslang:p
           spirv-tools:p
-          ffts:p
+          fftw:p
           hidapi:p
           libpng:p
 

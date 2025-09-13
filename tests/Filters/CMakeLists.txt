@@ -3,25 +3,32 @@ add_executable(Filters
 
 	Filter_Add.cpp
 	Filter_ACRMS.cpp
-	Filter_DeEmbed.cpp
 	Filter_EyePattern.cpp
 	Filter_FIR.cpp
-	Filter_FFT.cpp
 	Filter_Subtract.cpp
 	Filter_Upsample.cpp
 
 	FrequencyMeasurement.cpp
 )
 
-include_directories(Filters
-	${LIBFFTS_INCLUDE_DIRS})
-
 target_link_libraries(Filters
 	scopehal
 	scopeprotocols
 	Catch2::Catch2
-	${LIBFFTS_LIBRARIES}
 	)
+
+pkg_search_module(FFTW fftw3f IMPORTED_TARGET)
+
+if (${FFTW_FOUND})
+	message("Found FFTW3, enabling unit tests which depend on it")
+	target_link_libraries(Filters PkgConfig::FFTW)
+	target_sources(Filters PRIVATE
+			Filter_DeEmbed.cpp
+			Filter_FFT.cpp
+	)
+else ()
+	message("Didn't find FFTW3, disabling tests which depend on it")
+endif ()
 
 #Needed because Windows does not support RPATH and will otherwise not be able to find DLLs when catch_discover_tests runs the executable
 if(WIN32)

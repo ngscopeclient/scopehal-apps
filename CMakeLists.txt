@@ -130,12 +130,6 @@ if(WIN32)
 	add_compile_options(-D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS)
 endif()
 
-# Detect Apple Silicon as FFTS is not available for it
-if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-	add_compile_options(-D_APPLE_SILICON)
-	set(APPLE_SILICON TRUE)
-endif()
-
 # Package detection
 find_package(PkgConfig MODULE REQUIRED)
 
@@ -282,13 +276,6 @@ add_subdirectory(devdoc)
 
 # Unit tests
 if(Git_FOUND AND BUILD_TESTING)
-	# find ffts, except on Apple Silicon where it's not supported
-	if(NOT APPLE_SILICON)
-		# ffts ships a broken pkgconfig file on some platforms so we are not going to use it
-		find_path(LIBFFTS_INCLUDE_DIRS ffts.h PATH_SUFFIXES ffts REQUIRED)
-		find_library(LIBFFTS_LIBRARIES NAMES ffts libffts REQUIRED)
-	endif()
-
 	find_package(Catch2 REQUIRED)
 	include(Catch)
 	#Catch2 v3.x.y have a breaking change:

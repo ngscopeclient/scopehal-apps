@@ -67,7 +67,8 @@ jobs:
           glslang-tools \
           spirv-tools \
           glslc \
-          lsb-release
+          lsb-release \
+          libfftw3-dev
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
@@ -112,31 +113,6 @@ jobs:
         cd VulkanSDK
         curl -LO https://sdk.lunarg.com/sdk/download/${{ env.SDK_VERSION_STANDALONE }}/linux/vulkansdk-linux-x86_64-${{ env.SDK_VERSION_STANDALONE }}.tar.xz
         tar xf vulkansdk-linux-x86_64-${{ env.SDK_VERSION_STANDALONE }}.tar.xz
-
-    - name: Cache FFTS
-      uses: actions/cache@v4
-      with:
-        path: ~/ffts
-        key: ${{ runner.os }}-${{ matrix.os.container }}-ffts
-
-    - name: Clone and Build FFTS Library
-      run: |
-        [[  ${{ matrix.docs }} = 'false' ]] && export CMAKE_C_COMPILER_LAUNCHER=ccache && export CMAKE_CXX_COMPILER_LAUNCHER=ccache
-        if [[ ! -d ~/ffts ]]; then
-          cd
-          git clone https://github.com/anthonix/ffts.git
-          cd ffts
-          mkdir build
-          cd build
-          cmake \
-            -DENABLE_SHARED=ON \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-            -GNinja \
-            ..
-          ninja
-        fi
-        cd ~/ffts/build
-        ninja install
 
     - name: Configure
       run: |

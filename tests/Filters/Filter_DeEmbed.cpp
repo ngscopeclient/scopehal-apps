@@ -43,9 +43,7 @@
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
-//TODO: switch to FFTW since test case is OK to be GPL
-#ifndef _APPLE_SILICON
-#include <ffts.h>
+#include <fftw3.h>
 
 using namespace std;
 
@@ -104,13 +102,9 @@ TEST_CASE("Filter_DeEmbed")
 			//Also compute some temporaries we rely on
 			filter->Refresh(cmdbuf, queue);
 
-			//Allocate FFTS plan
-			//TODO: switch to FFTW
 			auto npoints = filter->test_GetNumPoints();
 			auto outlen = filter->test_GetOutLen();
 			auto nouts = filter->test_GetNouts();
-			ffts_plan_t* forwardPlan = ffts_init_1d_real(npoints, FFTS_FORWARD);
-			ffts_plan_t* reversePlan = ffts_init_1d_real(npoints, FFTS_BACKWARD);
 
 			//Allocate output buffers
 			auto& forwardIn = filter->test_GetCachedInputBuffer();
@@ -122,6 +116,16 @@ TEST_CASE("Filter_DeEmbed")
 			forwardOut.resize(2*nouts);
 			reverseOut.resize(npoints);
 			golden.resize(outlen);
+
+			//Allocate FFTW plans
+			auto forwardPlan = fftwf_plan_dft_r2c_1d(npoints,
+				forwardIn.GetCpuPointer(),
+				reinterpret_cast<fftwf_complex*>(forwardOut.GetCpuPointer()),
+				FFTW_PRESERVE_INPUT | FFTW_ESTIMATE);
+			auto reversePlan = fftwf_plan_dft_c2r_1d(npoints,
+				reinterpret_cast<fftwf_complex*>(forwardOut.GetCpuPointer()),
+				reverseOut.GetCpuPointer(),
+				FFTW_PRESERVE_INPUT | FFTW_ESTIMATE);
 
 			//Baseline on the CPU
 			//We're only going to check correctness of the inner loop for now, so reuse the calculated S-parameters
@@ -135,7 +139,7 @@ TEST_CASE("Filter_DeEmbed")
 			cosines.PrepareForCpuAccess();
 
 			//Do the forward FFT
-			ffts_execute(forwardPlan, forwardIn.GetCpuPointer(), forwardOut.GetCpuPointer());
+			fftwf_execute(forwardPlan);
 
 			//Apply the interpolated S-parameters
 			for(size_t j=0; j<nouts; j++)
@@ -153,7 +157,7 @@ TEST_CASE("Filter_DeEmbed")
 			}
 
 			//Calculate the inverse FFT
-			ffts_execute(reversePlan, &forwardOut[0], &reverseOut[0]);
+			fftwf_execute(reversePlan);
 
 			//Copy waveform data after rescaling
 			float scale = 1.0f / npoints;
@@ -173,15 +177,11 @@ TEST_CASE("Filter_DeEmbed")
 			LogVerbose("GPU : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			REQUIRE(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)) != nullptr);
-			VerifyMatchingResult(
-				golden,
-				dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples,
-				1e-2f
-				);
+			VerifyMatchingResult(golden, dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0))->m_samples, 1e-2f);
 
 			//Clean up
-			ffts_free(forwardPlan);
-			ffts_free(reversePlan);
+			fftwf_free(forwardPlan);
+			fftwf_free(reversePlan);
 		}
 	}
 
@@ -191,5 +191,3 @@ TEST_CASE("Filter_DeEmbed")
 
 	filter->Release();
 }
-
-#endif

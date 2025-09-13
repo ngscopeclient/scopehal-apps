@@ -59,7 +59,8 @@ jobs:
           catch2 \
           mesa-vulkan-drivers \
           libhidapi-dev \
-          ccache
+          ccache \
+          libfftw3-dev
 
     - name: Load Vulkan SDK Repo (Ubuntu 22.04)
       run: |
@@ -67,30 +68,6 @@ jobs:
         sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-${{ env.SDK_VERSION_REPO }}-jammy.list https://packages.lunarg.com/vulkan/${{ env.SDK_VERSION_REPO }}/lunarg-vulkan-${{ env.SDK_VERSION_REPO }}-jammy.list
         sudo apt update
         sudo apt install vulkan-sdk
-
-    - name: Cache FFTS
-      uses: actions/cache@v4
-      with:
-        path: ~/ffts
-        key: ${{ runner.os }}-ubuntu-22.04-ffts
-
-    - name: Clone and Build FFTS Library
-      run: |
-        if [[ ! -d ~/ffts ]]; then
-          cd
-          git clone https://github.com/anthonix/ffts.git
-          cd ffts
-          mkdir build
-          cd build
-          cmake \
-            -DENABLE_SHARED=ON \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-            -GNinja \
-            ..
-          ninja
-        fi
-        cd ~/ffts/build
-        sudo ninja install
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL

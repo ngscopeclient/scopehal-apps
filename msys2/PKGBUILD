@@ -14,7 +14,7 @@ depends=(
   "${MINGW_PACKAGE_PREFIX}-libsigc++"
   "${MINGW_PACKAGE_PREFIX}-cairomm"
   "${MINGW_PACKAGE_PREFIX}-yaml-cpp"
-  "${MINGW_PACKAGE_PREFIX}-ffts"
+  "${MINGW_PACKAGE_PREFIX}-fftw"
   "${MINGW_PACKAGE_PREFIX}-vulkan-loader"
   "${MINGW_PACKAGE_PREFIX}-glfw"
 )

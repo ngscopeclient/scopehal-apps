@@ -43,9 +43,7 @@
 #include "../../lib/scopeprotocols/scopeprotocols.h"
 #include "Filters.h"
 
-//TODO: switch to FFTW since test case is OK to be GPL
-#ifndef _APPLE_SILICON
-#include <ffts.h>
+#include <fftw3.h>
 
 using namespace std;
 
@@ -112,13 +110,17 @@ TEST_CASE("Filter_FFT")
 			//Output buffer
 			auto npoints = filter->test_GetNumPoints();
 			auto nouts = filter->test_GetNumOuts();
-			auto plan = ffts_init_1d_real(npoints, FFTS_FORWARD);
 			UniformAnalogWaveform golden;
 			golden.Resize(nouts);
 			AcceleratorBuffer<float> inbuf;
 			inbuf.resize(npoints);
 			AcceleratorBuffer<float> outbuf;
 			outbuf.resize(2*nouts);
+			//fftwf_complex can be safely treated as a float[2] array, according to https://www.fftw.org/doc/Complex-numbers.html
+			auto plan = fftwf_plan_dft_r2c_1d(npoints,
+				inbuf.GetCpuPointer(),
+				reinterpret_cast<fftwf_complex*>(outbuf.GetCpuPointer()),
+				FFTW_PRESERVE_INPUT);
 
 			//Calculate output scale
 			float scale = sqrt(2) / npoints;
@@ -160,8 +162,7 @@ TEST_CASE("Filter_FFT")
 				window);
 
 			//Calculate the FFT
-			ffts_execute(plan, &inbuf[0], &outbuf[0]);
-
+			fftwf_execute(plan);
 			//Normalize magnitudes
 			if(log_output)
 				NormalizeOutputLog(outbuf, golden.m_samples, nouts, scale);
@@ -183,7 +184,7 @@ TEST_CASE("Filter_FFT")
 			double tbase = tpeak + tfft;
 
 			//Clean up
-			ffts_free(plan);
+			fftwf_free(plan);
 
 			//Try again on the GPU, this time for score
 			start = GetTime();
@@ -307,5 +308,3 @@ void HammingWindow(const float* data, size_t len, float* out)
 {
 	CosineSumWindow(data, len, out, 25.0f / 46);
 }
-
-#endif

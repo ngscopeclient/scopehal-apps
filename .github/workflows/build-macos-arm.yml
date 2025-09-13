@@ -43,7 +43,8 @@ jobs:
           shaderc \
           molten-vk \
           ninja \
-          hidapi
+          hidapi \
+          fftw
 
     - name: Configure
       run: |
