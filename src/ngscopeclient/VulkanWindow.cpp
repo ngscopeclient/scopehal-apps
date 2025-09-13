@@ -471,7 +471,20 @@ void VulkanWindow::Render()
 	int fbHeight = 0;
 	glfwGetFramebufferSize(m_window, &fbWidth, &fbHeight);
 	if( (fbWidth != m_width) || (fbHeight != m_height) )
+	{
 		m_resizeEventPending = true;
+
+		//Windows: this can fail and return 0x0 if window is minimized, which throws things off
+		//Just bail and don't draw anything in this case.
+		//See https://github.com/ngscopeclient/scopehal-apps/issues/893
+		#ifdef _WIN32
+			if(glfwGetWindowAttrib(m_window, GLFW_ICONIFIED))
+			{
+				this_thread::sleep_for(chrono::milliseconds(10));
+				return;
+			}
+		#endif
+	}
 
 	//If we're re-rendering after the window size changed, fix up the framebuffer before we worry about anything else
 	if(m_resizeEventPending)
