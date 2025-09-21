@@ -348,7 +348,16 @@ if(LINUX)
 			set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.41-12), libpng16-16t64(>= 1.6.48), libsigc++-2.0-0v5 (>= 2.12.1), libyaml-cpp0.8(>= 0.8.0), libgomp1(>= 14.2.0-19), libvulkan1(>= 1.4.309.0), libglfw3(>= 3.4-3), libgtk-3-0t64(>= 3.24.49), zlib1g(>= 1:1.3.dfsg+really1.3.1-1), libhidapi-hidraw0(>= 0.14.0-1), liblxi1(>= 1.22-1), libtirpc3t64 (>= 1.3.6+ds-1)" )
 		endif()
 
-	# Default Debian-derived distro settings
+	# Ubuntu specific packaging config
+	elseif(DISTRO_NAME STREQUAL "Ubuntu")
+
+		if(DISTRO_VER STREQUAL "22.04")
+			set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.35-0), libpng16-16(>= 1.6.37-3), libsigc++-2.0-0v5 (>= 2.10.4-2), libyaml-cpp0.7(>= 0.7.0), libgomp1(>= 12.2.0), libvulkan1(>= 1.3.204.1-2), libglfw3(>= 3.3.6-1), libgtk-3-0(>= 3.24.33-1), zlib1g(>= 1:1.2.11), libhidapi-hidraw0(>= 0.11.2-1), liblxi1(>= 1.16-1), libtirpc3 (>= 1.3.2-2)" )
+		elseif(DISTRO_VER STREQUAL "24.04")
+			#set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.36-9), libpng16-16(>= 1.6.39-2), libsigc++-2.0-0v5 (>= 2.12.0-1), libyaml-cpp0.7(>= 0.7.0), libgomp1(>= 12.2.0), libvulkan1(>= 1.3.239), libglfw3(>= 3.3.8), libgtk-3-0(>= 3.24.38), zlib1g(>= 1.2.13), libhidapi-hidraw0(>= 0.13.1), liblxi1(>= 1.18), libtirpc3 (>= 1.3.3)" )
+		endif()
+
+	# Unrecognized Debian-derived distro settings (assume Bookworm for now)
 	else()
 		set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.36-9), libpng16-16(>= 1.6.39-2), libsigc++-2.0-0v5 (>= 2.12.0-1), libyaml-cpp0.7(>= 0.7.0), libgomp1(>= 12.2.0), libvulkan1(>= 1.3.239), libglfw3(>= 3.3.8), libgtk-3-0(>= 3.24.38), zlib1g(>= 1.2.13), libhidapi-hidraw0(>= 0.13.1), liblxi1(>= 1.18), libtirpc3 (>= 1.3.3)" )
 	endif()
