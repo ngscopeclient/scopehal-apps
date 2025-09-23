@@ -53,7 +53,8 @@ jobs:
           ninja-build \
           fedora-packager \
           rpmdevtools \
-          mesa-vulkan-drivers
+          mesa-vulkan-drivers \
+          lsb-release
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
