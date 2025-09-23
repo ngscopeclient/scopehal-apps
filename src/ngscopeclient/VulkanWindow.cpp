@@ -83,6 +83,8 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	io.ConfigDpiScaleFonts = true;
+	io.ConfigDpiScaleViewports = true;
 
 	//Don't serialize UI config for now
 	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
@@ -181,18 +183,6 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 		info.Queue = **lock;
 		ImGui_ImplVulkan_Init(&info);
 	}
-
-	//Apply DPI scaling now that glfw initialized
-	//This appears to be cached by glfw at init time and is not updated for dynamic scaling changes at least on X11
-	//TODO: can we fix this by moving to SDL?
-	float scale = GetContentScale();
-	LogTrace("Using ImGui style scale factor: %.2f\n", scale);
-
-	//Per comment in imgui_impl_glfw "Apple platforms use FramebufferScale"
-	//On everything else use FontScaleMain
-#ifndef __APPLE__
-	ImGui::GetStyle().FontScaleMain = scale;
-#endif
 
 	//Hook a couple of backend functions with mutexing
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -440,16 +430,6 @@ bool VulkanWindow::UpdateFramebuffer()
 
 	m_resizeEventPending = false;
 	return true;
-}
-
-float VulkanWindow::GetContentScale()
-{
-	float xscale;
-	float yscale;
-	glfwGetWindowContentScale(m_window, &xscale, &yscale);
-
-	// Hope this works well should a screen have unequal X- and Y- DPIs...
-	return (xscale + yscale) / 2;
 }
 
 void VulkanWindow::Render()
