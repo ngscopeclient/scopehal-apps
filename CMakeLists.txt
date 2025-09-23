@@ -324,10 +324,10 @@ set(CPACK_STRIP_FILES TRUE)
 # Figure out what distro version we're on
 if(LINUX)
 	find_program(LSB_RELEASE_EXEC lsb_release)
-	execute_process(COMMAND ${LSB_RELEASE_EXEC} -is 2>&1
+	execute_process(COMMAND ${LSB_RELEASE_EXEC} -is
 		OUTPUT_VARIABLE DISTRO_NAME
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
-	execute_process(COMMAND ${LSB_RELEASE_EXEC} -rs 2>&1
+	execute_process(COMMAND ${LSB_RELEASE_EXEC} -rs
 		OUTPUT_VARIABLE DISTRO_VER
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
 
