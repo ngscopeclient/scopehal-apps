@@ -194,11 +194,17 @@ target_include_directories(ngscopeclient
 	)
 
 #Linker settings
+if(LINUX)
+	set(PLATFORM_LIBS X11)
+else()
+	set(PLATFORM_LIBS "")
+endif()
 target_link_libraries(ngscopeclient
 	scopehal
 	scopeprotocols
 	nfd
 	PNG::PNG
+	${PLATFORM_LIBS}
 	)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
