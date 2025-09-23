@@ -54,7 +54,8 @@ jobs:
           hidapi \
           ccache \
           ninja \
-          vulkan-swrast
+          vulkan-swrast \
+          lsb-release
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
