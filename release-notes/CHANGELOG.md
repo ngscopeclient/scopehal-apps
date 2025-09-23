@@ -11,3 +11,4 @@ This is a running list of significant bug fixes and new features since the last 
 * (in progress) Incorrect version dependencies on Debian/Ubuntu packages (https://github.com/ngscopeclient/scopehal-apps/issues/896)
 * Crash with vk::OutOfHostMemoryError when application is minimized on a Windows system with an Intel ARC GPU (https://github.com/ngscopeclient/scopehal-apps/issues/893)
 * Incorrect loading of CSV files with Windows line endings (https://github.com/ngscopeclient/scopehal/issues/1002)
+* Incorrect buffer size calculation in DeEmbedFilter unit test causing intermittent crashes of the test case in CI (no issue ticket)
