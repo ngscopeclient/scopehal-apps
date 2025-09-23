@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -107,7 +107,8 @@ TEST_CASE("Filter_DeEmbed")
 			//Allocate FFTS plan
 			//TODO: switch to FFTW
 			auto npoints = filter->test_GetNumPoints();
-			auto nouts = filter->test_GetOutLen();
+			auto outlen = filter->test_GetOutLen();
+			auto nouts = filter->test_GetNouts();
 			ffts_plan_t* forwardPlan = ffts_init_1d_real(npoints, FFTS_FORWARD);
 			ffts_plan_t* reversePlan = ffts_init_1d_real(npoints, FFTS_BACKWARD);
 
@@ -120,7 +121,7 @@ TEST_CASE("Filter_DeEmbed")
 			AcceleratorBuffer<float> golden;
 			forwardOut.resize(2*nouts);
 			reverseOut.resize(npoints);
-			golden.resize(nouts);
+			golden.resize(outlen);
 
 			//Baseline on the CPU
 			//We're only going to check correctness of the inner loop for now, so reuse the calculated S-parameters
@@ -157,19 +158,19 @@ TEST_CASE("Filter_DeEmbed")
 			//Copy waveform data after rescaling
 			float scale = 1.0f / npoints;
 			auto istart = filter->test_GetIstart();
-			for(size_t j=0; j<nouts; j++)
+			for(size_t j=0; j<outlen; j++)
 				golden[j] = reverseOut[j+istart] * scale;
 
 			golden.MarkModifiedFromCpu();
 
 			double tbase = GetTime() - start;
-			LogVerbose("CPU (no AVX)  : %6.2f ms\n", tbase * 1000);
+			LogVerbose("CPU : %6.2f ms\n", tbase * 1000);
 
 			//Run the real filter for score
 			start = GetTime();
 			filter->Refresh(cmdbuf, queue);
 			double dt = GetTime() - start;
-			LogVerbose("GPU           : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
+			LogVerbose("GPU : %6.2f ms, %.2fx speedup\n", dt * 1000, tbase / dt);
 
 			REQUIRE(dynamic_cast<UniformAnalogWaveform*>(filter->GetData(0)) != nullptr);
 			VerifyMatchingResult(
