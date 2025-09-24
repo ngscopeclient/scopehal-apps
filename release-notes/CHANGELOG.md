@@ -17,3 +17,4 @@ This is a running list of significant bug fixes and new features since the last 
 ## Other changes since v0.1
 
 * Updated to latest upstream imgui (1.92.4 WIP)
+* Unit tests now use FFTW instead of FFTS because FFTS had portability issues and a GPL dependency is fine for unit tests we don't redistribute (https://github.com/ngscopeclient/scopehal/issues/757)
