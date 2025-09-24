@@ -163,6 +163,7 @@ endif()
 # We still use gtk on Linux for the file browser dialog in "native" mode)
 if(LINUX)
 	pkg_check_modules(GTK QUIET IMPORTED_TARGET REQUIRED gtk+-3.0)
+	pkg_search_module(WAYLAND_CLIENT wayland-client IMPORTED_TARGET GLOBAL REQUIRED)
 endif()
 
 #WORKAROUND Fedora 38 does not include Threads from the glslang .cmake file, fixed in Fedora 39+
