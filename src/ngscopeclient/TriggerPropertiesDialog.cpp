@@ -102,23 +102,23 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 	{
 		if(StartSection("Position", graphEditorMode))
 		{
-			//Check if trigger offset changed outside the dialog
-			Unit fs(Unit::UNIT_FS);
-			float off = m_scope->GetTriggerOffset();
-			if(m_committedTriggerOffset != off)
-			{
-				m_committedTriggerOffset = off;
-				m_triggerOffset = fs.PrettyPrint(off);
-			}
-
 			//Actual trigger position
+			Unit fs(Unit::UNIT_FS);
 			if(Dialog::UnitInputWithImplicitApply(
 				"Delay",
 				m_triggerOffset,
 				m_committedTriggerOffset,
 				fs))
 			{
-				m_scope->SetTriggerOffset(off);
+				m_scope->SetTriggerOffset(m_committedTriggerOffset);
+			}
+
+			//Check if trigger offset changed outside the dialog
+			float off = m_scope->GetTriggerOffset();
+			if(m_committedTriggerOffset != off)
+			{
+				m_committedTriggerOffset = off;
+				m_triggerOffset = fs.PrettyPrint(off);
 			}
 
 			Dialog::HelpMarker(

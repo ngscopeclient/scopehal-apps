@@ -14,6 +14,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Incorrect loading of CSV files with Windows line endings (https://github.com/ngscopeclient/scopehal/issues/1002)
 * Incorrect buffer size calculation in DeEmbedFilter unit test causing intermittent crashes of the test case in CI (no github ticket)
 * ThunderScope: trigger position would occasionally be corrupted and get stuck at -9223 seconds (no github ticket)
+* Typing a new trigger position into the text box in the trigger properties dialog does not actually change the trigger position in hardware (no github ticket)
 
 ## Other changes since v0.1
 
