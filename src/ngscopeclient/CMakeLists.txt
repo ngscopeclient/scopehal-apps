@@ -196,6 +196,10 @@ target_include_directories(ngscopeclient
 #Linker settings
 if(LINUX)
 	set(PLATFORM_LIBS X11)
+	if(${WAYLAND_CLIENT_FOUND})
+		list(APPEND PLATFORM_LIBS ${WAYLAND_CLIENT_MODULE_NAME})
+		target_include_directories(ngscopeclient SYSTEM PRIVATE ${WAYLAND_CLIENT_INCLUDE_DIRS})
+	endif ()
 else()
 	set(PLATFORM_LIBS "")
 endif()
