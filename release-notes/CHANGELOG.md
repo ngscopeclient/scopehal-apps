@@ -5,6 +5,7 @@ This is a running list of significant bug fixes and new features since the last 
 ## New features since v0.1
 
 * ThunderScope: updates for API changes in ThunderScope driver
+* SiniLink: Added driver for ModBus control of XYS3580 and related PSUs (https://github.com/ngscopeclient/scopehal/pull/1003)
 
 ## Bugs fixed since v0.1
 
