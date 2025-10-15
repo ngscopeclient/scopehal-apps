@@ -779,7 +779,7 @@ void MainWindow::WindowMultimeterMenu()
 {
 	//This is a bit of a hack but all of the dialogs are gonna get redone eventually so
 	vector< shared_ptr<SCPIMultimeter> > meters;
-	auto insts = m_session.GetScopes();
+	auto insts = m_session.GetSCPIInstruments();
 	for(auto inst : insts)
 	{
 		//Skip anything that's not a multimeter
