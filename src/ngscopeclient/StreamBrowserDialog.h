@@ -90,6 +90,10 @@ public:
 	//Spectrometer controls
 	std::string m_integrationText;
 	double m_integrationTime;
+
+	//ADC mode controls
+	std::vector<std::string> m_adcmodeNames;
+	int m_adcmode;
 };
 
 class StreamBrowserDialog : public Dialog
@@ -129,7 +133,8 @@ protected:
 		int &selected,
 		const std::vector<std::string>& values,
 		bool useColorForText = false,
-		uint8_t cropTextTo = 0);
+		uint8_t cropTextTo = 0,
+		bool hideArrow = true);
 	bool renderCombo(
 		const char* label,
 		bool alignRight,

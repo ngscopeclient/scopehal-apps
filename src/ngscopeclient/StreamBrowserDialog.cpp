@@ -107,6 +107,9 @@ StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> sc
 	}
 	else
 		m_integrationTime = 0;
+
+	m_adcmode = scope->GetADCMode(0);
+	m_adcmodeNames = scope->GetADCModeNames(0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +249,9 @@ void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 	@param values the combo box values
 	@param useColorForText if true, use the provided color for text (and a darker version of it for background color)
 	@param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
-	@return true true if the selected value of the combo has been changed
+	@param hideArrow True to hide the dropdown arrow
+
+	@return true if the selected value of the combo has been changed
  */
 bool StreamBrowserDialog::renderCombo(
 	const char* label,
@@ -255,7 +260,8 @@ bool StreamBrowserDialog::renderCombo(
 	int &selected,
 	const vector<string> &values,
 	bool useColorForText,
-	uint8_t cropTextTo)
+	uint8_t cropTextTo,
+	bool hideArrow)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -307,7 +313,9 @@ bool StreamBrowserDialog::renderCombo(
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
 	}
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 0));
-	int flags = ImGuiComboFlags_NoArrowButton;
+	int flags = 0;
+	if(hideArrow)
+		flags |= ImGuiComboFlags_NoArrowButton;
 	if(alignRight)
 		flags |= ImGuiComboFlags_WidthFitPreview;
 
@@ -975,11 +983,17 @@ shared_ptr<StreamBrowserTimebaseInfo> StreamBrowserDialog::GetTimebaseInfoFor(sh
 {
 	//If no timebase info, create it
 	if(m_timebaseConfig.find(scope) == m_timebaseConfig.end())
+	{
+		LogTrace("Creating initial timebase info\n");
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	}
 
 	//If we had info, but it's clearly out of date, recreate it
 	else if(m_timebaseConfig[scope]->GetRate() != scope->GetSampleRate())
+	{
+		LogTrace("Recreating timebase info (out of date sample rate)\n");
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+	}
 
 	//Use whatever is left
 	return m_timebaseConfig[scope];
@@ -1088,28 +1102,31 @@ void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> sp
  */
 void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 {
-	auto width = ImGui::GetFontSize() * 5;
+	auto width = ImGui::GetFontSize() * 7;
 
 	//If we don't have timebase settings for the scope, create them
 	auto config = GetTimebaseInfoFor(scope);
 
 	//Interleaving
 	bool refresh = false;
-	ImGui::SetNextItemWidth(width);
-	bool disabled = !scope->CanInterleave();
-	ImGui::BeginDisabled(disabled);
-	if(renderOnOffToggleEXT("Interleaving", false, config->m_interleaving))
+	if(scope->HasInterleavingControls())
 	{
-		scope->SetInterleaving(config->m_interleaving);
-		refresh = true;
+		ImGui::SetNextItemWidth(width);
+		bool disabled = !scope->CanInterleave();
+		ImGui::BeginDisabled(disabled);
+		if(renderOnOffToggleEXT("Interleaving", false, config->m_interleaving))
+		{
+			scope->SetInterleaving(config->m_interleaving);
+			refresh = true;
+		}
+		ImGui::EndDisabled();
+		HelpMarker(
+			"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
+			"\n"
+			"Some instruments do not have an explicit interleaving switch, but available sample rates "
+			"may vary depending on which channels are active."
+			);
 	}
-	ImGui::EndDisabled();
-	HelpMarker(
-		"Combine ADCs from multiple channels to get higher sampling rate on a subset of channels.\n"
-		"\n"
-		"Some instruments do not have an explicit interleaving switch, but available sample rates "
-		"may vary depending on which channels are active."
-		);
 
 	//Show sampling mode iff both are available
 	if(
@@ -1131,6 +1148,12 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 
 			refresh = true;
 		}
+
+		HelpMarker(
+			"Switch the acquisition system between real time (continuous capture of consecutive samples\n"
+			"and equivalent time (undersampling with a narrow sample-and-hold to build up a high resolution\n"
+			"view of a repetitive signal over many acquisitions)"
+			);
 	}
 
 	//Sample rate
@@ -1139,11 +1162,19 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		"Sample Rate",
 		false,
 		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-		config->m_rate, config->m_rateNames))
+		config->m_rate,
+		config->m_rateNames,
+		false,
+		0,
+		false))
 	{
 		scope->SetSampleRate(config->m_rates[config->m_rate]);
 		refresh = true;
 	}
+	HelpMarker(
+		"Adjust the ADC sampling rate.\n\n"
+		"Note that with some instruments, the set of available sampling rates varies depending on which channels are active."
+		);
 
 	//Memory depth
 	ImGui::SetNextItemWidth(width);
@@ -1151,14 +1182,56 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		"Memory Depth",
 		false,
 		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-		config->m_depth, config->m_depthNames))
+		config->m_depth,
+		config->m_depthNames,
+		false,
+		0,
+		false))
 	{
 		scope->SetSampleDepth(config->m_depths[config->m_depth]);
 		refresh = true;
 	}
+	HelpMarker(
+		"Adjust the number of samples captured each trigger event.\n\n"
+		"Note that with some instruments, the maximum memory depth varies depending on which channels are active."
+		);
+
+	//Global ADC mode switch
+	if(scope->IsADCModeConfigurable() && !scope->IsADCModePerChannel())
+	{
+		bool nomodes = config->m_adcmodeNames.size() <= 1;
+		if(nomodes)
+			ImGui::BeginDisabled();
+		ImGui::SetNextItemWidth(width);
+		if(renderCombo(
+			"ADC mode",
+			false,
+			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+			config->m_adcmode,
+			config->m_adcmodeNames,
+			false,
+			0,
+			false))
+		{
+			scope->SetADCMode(0, config->m_adcmode);
+			refresh = true;
+		}
+		if(nomodes)
+			ImGui::EndDisabled();
+
+		HelpMarker(
+			"Operating mode for the analog-to-digital converter.\n\n"
+			"Some instruments allow the ADC to operate in several modes, typically trading bit depth "
+			"against sample rate. Available modes may vary depending on the current sample rate and "
+			"which channels are in use."
+			);
+	}
 
 	if(refresh)
+	{
 		m_timebaseConfig[scope] = make_shared<StreamBrowserTimebaseInfo>(scope);
+		LogTrace("Refreshing timebase config for %s\n", scope->m_nickname.c_str());
+	}
 }
 
 /**
