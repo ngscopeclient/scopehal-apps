@@ -26,22 +26,35 @@ endif()
 # Git is used for git-describe based version generation if we have it
 find_package(Git)
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release-info.cmake")
+	message("Release-info file is present")
+	include("${CMAKE_CURRENT_SOURCE_DIR}/release-info.cmake")
+endif ()
+
 #Set up versioning (with a dummy string for now if Git isn't present)
-if(Git_FOUND)
-	execute_process(
-		COMMAND ${GIT_EXECUTABLE} describe --always --tags
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
-		OUTPUT_STRIP_TRAILING_WHITESPACE)
-	message("Git reports scopehal-apps version ${NGSCOPECLIENT_VERSION}")
+if(Git_FOUND OR NGSCOPECLIENT_PACKAGE_VERSION)
+	if(NOT NGSCOPECLIENT_PACKAGE_VERSION)
+		execute_process(
+			COMMAND ${GIT_EXECUTABLE} describe --always --tags
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE NGSCOPECLIENT_VERSION
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		message("Git reports scopehal-apps version ${NGSCOPECLIENT_VERSION}")
+	else ()
+		set(NGSCOPECLIENT_VERSION "${NGSCOPECLIENT_PACKAGE_VERSION}")
+		message("External release version is ${NGSCOPECLIENT_VERSION}")
+	endif ()
 
-
-	execute_process(
-		COMMAND ${GIT_EXECUTABLE} describe --always --tags --long
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		OUTPUT_VARIABLE NGSCOPECLIENT_VERSION_LONG
-		OUTPUT_STRIP_TRAILING_WHITESPACE)
-
+	if(NOT NGSCOPECLIENT_PACKAGE_VERSION_LONG)
+		execute_process(
+			COMMAND ${GIT_EXECUTABLE} describe --always --tags --long
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_VARIABLE NGSCOPECLIENT_VERSION_LONG
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+	else()
+		set(NGSCOPECLIENT_VERSION_LONG "${NGSCOPECLIENT_PACKAGE_VERSION_LONG}")
+		message("External long release version is ${NGSCOPECLIENT_VERSION_LONG}")
+	endif ()
 	# TODO: if/when we have a point release, make MSI version 10x+9
 	# ex: 0.1.2-rc2 is 0.1.22
 	# ex: 0.1.2 is 0.1.29
