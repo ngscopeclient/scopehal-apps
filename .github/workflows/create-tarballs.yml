@@ -1,0 +1,69 @@
+name: Create tarballs
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  Linux:
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - name: debian
+            version: base
+
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+      env:
+        SDK_VERSION_STANDALONE: 1.4.325.0
+        SDK_VERSION_REPO: 1.4.309
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: show env
+        run: env
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get upgrade -y
+          apt-get install -y \
+            git \
+            gettext-base 
+
+      - name: Check Out Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Fix missing tags
+        run: |
+          git config --global --add safe.directory `pwd`
+          git submodule foreach 'git fetch --unshallow --tags|| true'
+          git fetch --unshallow --tags
+          git submodule update --recursive
+          ./create-tarballs.sh
+          echo "Checksums"
+          cat tarballs/*.txt
+          echo "Extracted versions"
+          cat release-info.cmake
+
+      - name: Create tarballs
+        run: |
+          ./create-tarballs.sh
+          echo "Checksums"
+          cat tarballs/*.txt
+          echo "Extracted versions"
+          cat release-info.cmake
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ngscopeclient-source
+          path: |
+            tarballs/*
