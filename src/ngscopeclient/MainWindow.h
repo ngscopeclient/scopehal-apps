@@ -48,6 +48,7 @@
 #include "StreamBrowserDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Workspace.h"
+#include "imgui_markdown.h"
 
 #include "../scopehal/PacketDecoder.h"
 
@@ -575,6 +576,8 @@ public:
 	std::string GetIconForFilter(Filter* f);
 
 	std::string GetIconForWaveformShape(FunctionGenerator::WaveShape shape);
+
+	ImGui::MarkdownConfig GetMarkdownConfig();
 
 protected:
 	FontManager m_fontmgr;

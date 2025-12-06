@@ -1741,6 +1741,32 @@ void MainWindow::RenderErrorPopup()
 	}
 }
 
+ImGui::MarkdownConfig MainWindow::GetMarkdownConfig()
+{
+	pair<ImFont*, float> headings[] =
+	{
+		GetFontPref("Appearance.Markdown.heading_1_font"),
+		GetFontPref("Appearance.Markdown.heading_2_font"),
+		GetFontPref("Appearance.Markdown.heading_3_font")
+	};
+
+	ImGui::MarkdownConfig mdConfig
+	{
+		nullptr,	//linkCallback
+		nullptr,	//tooltipCallback
+		nullptr,	//imageCallback
+		"",			//linkIcon (not used)
+		{
+						{ headings[0].first, headings[0].second, true },
+						{ headings[1].first, headings[1].second, true },
+						{ headings[2].first, headings[2].second, false }
+		},
+		nullptr		//userData
+	};
+
+	return mdConfig;
+}
+
 /**
 	@brief Popup message when loading a file that might not match the current hardware setup
  */
@@ -1773,32 +1799,12 @@ void MainWindow::RenderLoadWarningPopup()
 				"Please review your lab notes and confirm that the experimental setup matches your previous session."
 				);
 
-			pair<ImFont*, float> headings[] =
-			{
-				GetFontPref("Appearance.Markdown.heading_1_font"),
-				GetFontPref("Appearance.Markdown.heading_2_font"),
-				GetFontPref("Appearance.Markdown.heading_3_font")
-			};
-
-			ImGui::MarkdownConfig mdConfig
-			{
-				nullptr,	//linkCallback
-				nullptr,	//tooltipCallback
-				nullptr,	//imageCallback
-				"",			//linkIcon (not used)
-				{
-					{ headings[0].first, headings[0].second, true },
-					{ headings[1].first, headings[1].second, true },
-					{ headings[2].first, headings[2].second, false }
-				},
-				nullptr		//userData
-			};
 
 			if (ImGui::BeginChild("labnotes",
 					ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 10),
 					ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
 			{
-				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), mdConfig );
+				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), GetMarkdownConfig());
 				ImGui::EndChild();
 			}
 		}
