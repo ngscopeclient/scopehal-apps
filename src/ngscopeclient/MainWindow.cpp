@@ -601,11 +601,8 @@ void MainWindow::RenderUI()
 		glfwSetWindowTitle(m_window, title.c_str());
 	}
 
-	//Set default font including size, since this is no longer part of the ImFont
-	//Scale to a nominal 13 point default font
 	auto defaultFont = GetFontPref("Appearance.General.default_font");
-	float defaultFontScale = 13.0 / ImGui::GetFontSize();
-	ImGui::PushFont(defaultFont.first, defaultFont.second * defaultFontScale);
+	ImGui::PushFont(defaultFont.first, defaultFont.second);
 
 	//Set up colors
 	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))

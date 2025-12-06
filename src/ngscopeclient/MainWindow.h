@@ -553,16 +553,8 @@ public:
 	FontWithSize GetFontPref(const std::string& name)
 	{
 		auto desc = m_session.GetPreferences().GetFont(name.c_str());
-		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second * GetFontScale());
+		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second);
 	}
-
-	/**
-		@brief Get scaling factor for fonts being drawn with ImDrawList
-
-		For now, normalize everything to a nominal size 13 default font
-	 */
-	float GetFontScale()
-	{ return ImGui::GetFontSize() / 13; }
 
 	ImU32 GetColorPref(const std::string& name)
 	{ return m_session.GetPreferences().GetColor(name); }
