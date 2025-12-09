@@ -25,4 +25,4 @@ This is a running list of significant bug fixes and new features since the last 
 
 * Updated to latest upstream imgui (1.92.4 WIP)
 * Unit tests now use FFTW instead of FFTS because FFTS had portability issues and a GPL dependency is fine for unit tests we don't redistribute (https://github.com/ngscopeclient/scopehal/issues/757)
-* Protocol analyzer now displays marker text in the rightmost column if there is no hexdump column, and stretches the column width to leave room for text (https://github.com/ngscopeclient/scopehal/issues/926) rather than defaulting to the leftmost which might be too small to read clearly
+* Protocol analyzer now displays marker text in the rightmost column if there is no hexdump column, and stretches the column width to leave room for text (https://github.com/ngscopeclient/scopehal-apps/issues/926) rather than defaulting to the leftmost which might be too small to read clearly
