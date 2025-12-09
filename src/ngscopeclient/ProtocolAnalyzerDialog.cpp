@@ -188,14 +188,26 @@ bool ProtocolAnalyzerDialog::DoRender()
 	auto& rows = m_mgr->GetRows();
 
 	m_firstDataBlockOfFrame = true;
+	int lastTextColumn = 0;
 	if(!rows.empty() && ImGui::BeginTable("table", ncols, flags))
 	{
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Timestamp", ImGuiTableColumnFlags_WidthFixed, 12*width);
-		for(auto c : cols)
-			ImGui::TableSetupColumn(c.c_str(), ImGuiTableColumnFlags_WidthFixed, 0.0f);
+		for(size_t i=0; i<cols.size(); i++)
+		{
+			//Stretch the last text column if we have no data column
+			if( (i == (cols.size() - 1)) && !m_filter->GetShowDataColumn() )
+				ImGui::TableSetupColumn(cols[i].c_str(), ImGuiTableColumnFlags_WidthStretch, 0.0f);
+			else
+				ImGui::TableSetupColumn(cols[i].c_str(), ImGuiTableColumnFlags_WidthFixed, 0.0f);
+
+			lastTextColumn ++;
+		}
 		if(m_filter->GetShowDataColumn())
+		{
 			ImGui::TableSetupColumn("Data", ImGuiTableColumnFlags_WidthStretch, 0.0f);
+			lastTextColumn ++;
+		}
 		if(m_filter->GetShowImageColumn())
 			ImGui::TableSetupColumn("Image", ImGuiTableColumnFlags_WidthFixed, 0.0f);
 		ImGui::TableHeadersRow();
@@ -381,26 +393,12 @@ bool ProtocolAnalyzerDialog::DoRender()
 				//Marker name
 				else
 				{
-					//TODO: which column to use for marker text??)
-					if(m_filter->GetShowDataColumn())
+					//Use the rightmost text column (not the image column, if present) for marker text
+					if(ImGui::TableSetColumnIndex(lastTextColumn))
 					{
-						if(ImGui::TableSetColumnIndex(datacol))
-						{
-							if(firstRow)
-								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
-							ImGui::TextUnformatted(row.m_marker.m_name.c_str());
-						}
-					}
-
-					//if no data column, use first column whatever it is
-					else
-					{
-						if(ImGui::TableSetColumnIndex(1))
-						{
-							if(firstRow)
-								ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
-							ImGui::TextUnformatted(row.m_marker.m_name.c_str());
-						}
+						if(firstRow)
+							ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (ImGui::GetScrollY() - rowStart));
+						ImGui::TextUnformatted(row.m_marker.m_name.c_str());
 					}
 				}
 

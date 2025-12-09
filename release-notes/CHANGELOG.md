@@ -6,6 +6,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 * ThunderScope: updates for SCPI / binary waveform format API changes in TS.NET
 * SiniLink: Added driver for ModBus control of XYS3580 and related PSUs (https://github.com/ngscopeclient/scopehal/pull/1003)
+* 8B/10B decode now tries more aggressively to recover comma sync after bitslipping when decoding jittery or noisy data, rather than giving decode errors for the remainder of the waveform (https://github.com/ngscopeclient/scopehal/issues/1025)
 
 ## Bugs fixed since v0.1
 
@@ -18,8 +19,10 @@ This is a running list of significant bug fixes and new features since the last 
 * ThunderScope: trigger position would occasionally be corrupted and get stuck at -9223 seconds (no github ticket)
 * Typing a new trigger position into the text box in the trigger properties dialog does not actually change the trigger position in hardware (no github ticket)
 * Protocol analyzer dialogs still show the old title if a filter is renamed (https://github.com/ngscopeclient/scopehal-apps/issues/923)
+* PCIe link training decode got confused if the waveform started with the link in L0 then it dropped (https://github.com/ngscopeclient/scopehal/issues/1024)
 
 ## Other changes since v0.1
 
 * Updated to latest upstream imgui (1.92.4 WIP)
 * Unit tests now use FFTW instead of FFTS because FFTS had portability issues and a GPL dependency is fine for unit tests we don't redistribute (https://github.com/ngscopeclient/scopehal/issues/757)
+* Protocol analyzer now displays marker text in the rightmost column if there is no hexdump column, and stretches the column width to leave room for text (https://github.com/ngscopeclient/scopehal/issues/926) rather than defaulting to the leftmost which might be too small to read clearly
