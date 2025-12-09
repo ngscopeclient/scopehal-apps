@@ -547,6 +547,8 @@ protected:
 
 public:
 
+	void ResetStyle();
+
 	/**
 		@brief Returns a font, given the name of a preference setting
 	 */
