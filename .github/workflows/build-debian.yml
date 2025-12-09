@@ -69,7 +69,8 @@ jobs:
           glslc \
           lsb-release \
           libfftw3-dev \
-          dpkg-dev
+          dpkg-dev \
+          file
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
