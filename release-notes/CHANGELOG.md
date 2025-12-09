@@ -9,7 +9,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## Bugs fixed since v0.1
 
-* Fixed crash in protocol analyzer dialog caused by deleting packet manager during a partial filter graph refresh (https://github.com/ngscopeclient/scopehal-apps/issues/925)
+* Crash in protocol analyzer dialog caused by deleting packet manager during a partial filter graph refresh (https://github.com/ngscopeclient/scopehal-apps/issues/925)
 * (partial) Incorrect version dependencies on Debian/Ubuntu packages (https://github.com/ngscopeclient/scopehal-apps/issues/896)
 * (partial) DPI scaling issues in the filter graph editor (https://github.com/ngscopeclient/scopehal-apps/issues/868)
 * Crash with vk::OutOfHostMemoryError when application is minimized on a Windows system with an Intel ARC GPU (https://github.com/ngscopeclient/scopehal-apps/issues/893)
