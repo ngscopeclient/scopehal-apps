@@ -177,7 +177,22 @@ public:
 	std::shared_ptr<PacketManager> GetPacketManager(PacketDecoder* filter)
 	{
 		std::lock_guard<std::mutex> lock(m_packetMgrMutex);
-		return m_packetmgrs[filter];
+
+		auto it = m_packetmgrs.find(filter);
+		if(it != m_packetmgrs.end())
+			return it->second;
+
+		else
+		{
+			LogWarning(
+				"No packet manager found for filter %s (this should never happen). "
+				"Creating a new one to avoid crashing\n",
+				filter->GetDisplayName().c_str());
+
+			auto ret = std::make_shared<PacketManager>(filter, *this);
+			m_packetmgrs[filter] = ret;
+			return ret;
+		}
 	}
 
 	void ApplyPreferences(std::shared_ptr<Oscilloscope> scope);
@@ -341,7 +356,7 @@ public:
 	}
 
 protected:
-	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes);
+	void UpdatePacketManagers(const std::set<FlowGraphNode*>& nodes, bool nodesListIsComplete);
 
 	std::string GetRegisteredTypeOfDriver(const std::string& drivername);
 

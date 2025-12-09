@@ -3345,7 +3345,7 @@ void Session::RefreshAllFilters()
 		lock_guard<shared_mutex> lock(m_waveformDataMutex);
 		//shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(nodes);
-		UpdatePacketManagers(nodes);
+		UpdatePacketManagers(nodes, true);
 	}
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
@@ -3401,7 +3401,7 @@ bool Session::RefreshDirtyFilters()
 		lock_guard<shared_mutex> lock(m_waveformDataMutex);
 		shared_lock<shared_mutex> lock3(g_vulkanActivityMutex);
 		m_graphExecutor.RunBlocking(nodesToUpdate);
-		UpdatePacketManagers(nodesToUpdate);
+		UpdatePacketManagers(nodesToUpdate, false);
 	}
 
 	m_lastFilterGraphExecTime = (GetTime() - tstart) * FS_PER_SECOND;
@@ -3441,8 +3441,13 @@ void Session::ClearSweeps()
 
 /**
 	@brief Update all of the packet managers when new data arrives
+
+	@param nodes				Set of filters to update
+	@param nodesListIsComplete	True - nodes is all-inclusive.
+								This means any manager not corresponding to one of these can be deleted
+								False - nodes is a subset of the whole graph and we may have managers elsewhere
  */
-void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes)
+void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes, bool nodesListIsComplete)
 {
 	lock_guard<mutex> lock(m_packetMgrMutex);
 
@@ -3451,7 +3456,10 @@ void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes)
 	{
 		//Remove filters that no longer exist
 		if(nodes.find(it.first) == nodes.end())
-			deletedFilters.emplace(it.first);
+		{
+			if(nodesListIsComplete)
+				deletedFilters.emplace(it.first);
+		}
 
 		//It exists, update it
 		else
@@ -3460,7 +3468,10 @@ void Session::UpdatePacketManagers(const set<FlowGraphNode*>& nodes)
 
 	//Delete managers for nonexistent filters
 	for(auto f : deletedFilters)
+	{
+		LogTrace("Deleting packet manager for filter %p\n", (void*)f);
 		m_packetmgrs.erase(f);
+	}
 }
 
 /**
