@@ -93,6 +93,9 @@ void ProtocolAnalyzerDialog::SetFilterExpression(const string& f)
  */
 bool ProtocolAnalyzerDialog::DoRender()
 {
+	//Keep title in sync
+	m_title = string("Protocol: ") + m_filter->GetDisplayName();
+
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |

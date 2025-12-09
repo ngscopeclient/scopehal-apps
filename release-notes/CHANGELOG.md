@@ -10,13 +10,14 @@ This is a running list of significant bug fixes and new features since the last 
 ## Bugs fixed since v0.1
 
 * Crash in protocol analyzer dialog caused by deleting packet manager during a partial filter graph refresh (https://github.com/ngscopeclient/scopehal-apps/issues/925)
+* Crash with vk::OutOfHostMemoryError when application is minimized on a Windows system with an Intel ARC GPU (https://github.com/ngscopeclient/scopehal-apps/issues/893)
+* Incorrect buffer size calculation in DeEmbedFilter unit test causing intermittent crashes of the test case in CI (no github ticket)
 * (partial) Incorrect version dependencies on Debian/Ubuntu packages (https://github.com/ngscopeclient/scopehal-apps/issues/896)
 * (partial) DPI scaling issues in the filter graph editor (https://github.com/ngscopeclient/scopehal-apps/issues/868)
-* Crash with vk::OutOfHostMemoryError when application is minimized on a Windows system with an Intel ARC GPU (https://github.com/ngscopeclient/scopehal-apps/issues/893)
 * Incorrect loading of CSV files with Windows line endings (https://github.com/ngscopeclient/scopehal/issues/1002)
-* Incorrect buffer size calculation in DeEmbedFilter unit test causing intermittent crashes of the test case in CI (no github ticket)
 * ThunderScope: trigger position would occasionally be corrupted and get stuck at -9223 seconds (no github ticket)
 * Typing a new trigger position into the text box in the trigger properties dialog does not actually change the trigger position in hardware (no github ticket)
+* Protocol analyzer dialogs still show the old title if a filter is renamed (https://github.com/ngscopeclient/scopehal-apps/issues/923)
 
 ## Other changes since v0.1
 
