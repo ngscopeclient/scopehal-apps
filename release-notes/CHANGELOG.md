@@ -12,7 +12,8 @@ This is a running list of significant bug fixes and new features since the last 
 
 * GUI: Crash in protocol analyzer dialog caused by deleting packet manager during a partial filter graph refresh (https://github.com/ngscopeclient/scopehal-apps/issues/925)
 * GUI: Crash with vk::OutOfHostMemoryError when application is minimized on a Windows system with an Intel ARC GPU (https://github.com/ngscopeclient/scopehal-apps/issues/893)
-* LeCroy: Crash with unhandled exception when acquiring wavefrom on WaveSurfer 3000/3000Z (https://github.com/ngscopeclient/scopehal/issues/1026)
+* GUI: Crash with YAML::ParserException when instrument path contains a backslash (https://github.com/ngscopeclient/scopehal-apps/issues/915)
+* LeCroy: Crash with std::out_of_range when acquiring wavefrom on WaveSurfer 3000/3000Z (https://github.com/ngscopeclient/scopehal/issues/1026)
 * Siglent: many crashes and malfunctions especially with SDS HD series scopes (https://github.com/ngscopeclient/scopehal/pull/1023)
 * Siglent: function generator configuration refreshes too fast, causing device firmware to freeze (https://github.com/ngscopeclient/scopehal/pull/1008)
 * Agilent: problems with DSO-X 2022A since it only has eight digital channels (https://github.com/ngscopeclient/scopehal/pull/1015)

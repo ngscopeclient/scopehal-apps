@@ -1591,18 +1591,34 @@ void MainWindow::SaveRecentInstrumentList()
 {
 	LogTrace("Saving recent instrument list\n");
 
-	auto path = m_session.GetPreferences().GetConfigDirectory() + "/recent.yml";
-	FILE* fp = fopen(path.c_str(), "w");
-
+	YAML::Node node{};
 	for(auto it : m_recentInstruments)
 	{
+		//don't save anything with no nickname
 		auto nick = it.first.substr(0, it.first.find(":"));
-		fprintf(fp, "%s:\n", nick.c_str());
-		fprintf(fp, "    path: \"%s\"\n", it.first.c_str());
-		fprintf(fp, "    timestamp: %" PRId64 "\n", static_cast<int64_t>(it.second));
+		if(nick.empty())
+			continue;
+
+		//Make a node for the instrument
+		YAML::Node inode;
+		inode["path"] = it.first;
+		inode["timestamp"] = static_cast<int64_t>(it.second);
+		node[nick] = inode;
 	}
 
-	fclose(fp);
+	//Write the generated YAML to disk
+	auto path = m_session.GetPreferences().GetConfigDirectory() + "/recent.yml";
+	ofstream outfs(path);
+	if(!outfs)
+	{
+		ShowErrorPopup(
+			"Cannot open file",
+			string("Failed to open instrument history file \"") + path + "\" for writing");
+		return;
+	}
+
+	outfs << node;
+	outfs.close();
 }
 
 void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
