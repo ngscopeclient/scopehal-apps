@@ -432,6 +432,12 @@ bool FilterGraphEditor::DoRender()
 	ax::NodeEditor::SetCurrentEditor(m_context);
 	ax::NodeEditor::Begin("Filter Graph", ImVec2(0, 0));
 
+	// NodeEditor seems to handle DPI scaling on its own
+	// so turn off global scaling to avoid double scaling
+	ImGui::GetStyle().FontScaleDpi = 1.0f;
+	ImGui::UpdateCurrentFontSize(0.0f);
+	m_parent->ResetStyle();
+
 	//Handle dropping a stream or channel from the browser
 	ax::NodeEditor::NodeId newNode;
 	bool nodeAdded = false;
@@ -612,6 +618,10 @@ bool FilterGraphEditor::DoRender()
 	HandleDoubleClicks();
 	bool triggerChanged = HandleNodeProperties();
 	HandleBackgroundContextMenu();
+
+	ImGui::GetStyle().FontScaleDpi = ImGui::GetWindowViewport()->DpiScale;
+	ImGui::UpdateCurrentFontSize(0.0f);
+	m_parent->ResetStyle();
 
 	ax::NodeEditor::End();
 
