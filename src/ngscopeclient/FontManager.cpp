@@ -136,18 +136,3 @@ void FontManager::AddFontDescriptions(PreferenceCategory& cat, set<FontDescripti
 		}
 	}
 }
-
-/**
-	@brief Wrapper around ImGui::CalcTextSize that uses an explicit font
- */
-ImVec2 CalcTextSizeForFont(
-	FontWithSize font,
-	const char* text,
-	bool hide_text_after_double_hash,
-	float wrap_width)
-{
-	ImGui::PushFont(font.first, font.second);
-	ImVec2 size = ImGui::CalcTextSize(text, nullptr, hide_text_after_double_hash, wrap_width);
-	ImGui::PopFont();
-	return size;
-}

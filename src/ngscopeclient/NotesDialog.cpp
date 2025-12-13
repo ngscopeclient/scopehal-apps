@@ -111,27 +111,6 @@ void NotesDialog::GeneralNotes()
  */
 void NotesDialog::MarkdownEditor(string& str)
 {
-	pair<ImFont*, float> headings[] =
-	{
-		m_parent->GetFontPref("Appearance.Markdown.heading_1_font"),
-		m_parent->GetFontPref("Appearance.Markdown.heading_2_font"),
-		m_parent->GetFontPref("Appearance.Markdown.heading_3_font")
-	};
-
-	ImGui::MarkdownConfig mdConfig
-	{
-		nullptr,	//linkCallback
-		nullptr,	//tooltipCallback
-		nullptr,	//imageCallback
-		"",			//linkIcon (not used)
-		{
-			{ headings[0].first, headings[0].second, true },
-			{ headings[1].first, headings[1].second, true },
-			{ headings[2].first, headings[2].second, false }
-		},
-		nullptr		//userData
-	};
-
 	//Table with one col for live view and one for editor
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
@@ -149,7 +128,7 @@ void NotesDialog::MarkdownEditor(string& str)
 
 		//Render the markdown
 		ImGui::TableSetColumnIndex(1);
-		ImGui::Markdown( str.c_str(), str.length(), mdConfig );
+		ImGui::Markdown(str.c_str(), str.length(), m_parent->GetMarkdownConfig());
 
 		ImGui::EndTable();
 	}

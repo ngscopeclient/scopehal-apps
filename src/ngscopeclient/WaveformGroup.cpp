@@ -512,6 +512,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 		auto color = prefs.GetColor("Appearance.Cursors.marker_color");
 		auto hcolor = prefs.GetColor("Appearance.Cursors.hover_color");
 		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
+		ImGui::PushFont(font.first, font.second);
 
 		//Draw the markers
 		for(auto& m : markers)
@@ -523,7 +524,7 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 			//Text
 			//Anchor bottom right at the cursor
 			auto str = m.m_name + ": " + m_xAxisUnit.PrettyPrint(m.m_offset);
-			auto tsize = CalcTextSizeForFont(font, str.c_str());
+			auto tsize = ImGui::CalcTextSize(str.c_str());
 			float padding = 2;
 			float wrounding = 2;
 			float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -533,8 +534,6 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
-				font.first,
-				font.second,
 				ImVec2(xpos - (padding + tsize.x), textTop),
 				color,
 				str.c_str());
@@ -550,6 +549,8 @@ void WaveformGroup::RenderMarkers(ImVec2 pos, ImVec2 size)
 			auto xpos = round(XAxisUnitsToXPosition(offset));
 			list->AddLine(ImVec2(xpos, pos.y), ImVec2(xpos, pos.y + size.y), hcolor);
 		}
+
+		ImGui::PopFont();
 	}
 	ImGui::EndChild();
 
@@ -669,6 +670,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		auto cursor1_color = prefs.GetColor("Appearance.Cursors.cursor_2_color");
 		auto fill_color = prefs.GetColor("Appearance.Cursors.cursor_fill_color");
 		auto font = m_parent->GetFontPref("Appearance.Cursors.label_font");
+		ImGui::PushFont(font.first, font.second);
 
 		float xpos0 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[0]));
 		float xpos1 = round(XAxisUnitsToXPosition(m_xAxisCursorPositions[1]));
@@ -683,7 +685,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 		//Text
 		//Anchor bottom right at the cursor
 		auto str = string("X1: ") + m_xAxisUnit.PrettyPrint(m_xAxisCursorPositions[0]);
-		auto tsize = CalcTextSizeForFont(font, str.c_str());
+		auto tsize = ImGui::CalcTextSize(str.c_str());
 		float padding = 2;
 		float wrounding = 2;
 		float textTop = pos.y + m_timelineHeight - (padding + tsize.y);
@@ -693,8 +695,6 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 			ImGui::GetColorU32(ImGuiCol_PopupBg),
 			wrounding);
 		list->AddText(
-			font.first,
-			font.second,
 			ImVec2(xpos0 - (padding + tsize.x), textTop),
 			cursor0_color,
 			str.c_str());
@@ -714,7 +714,7 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				str += string(" (") + hz.PrettyPrint(FS_PER_SECOND / delta) + ")";
 
 			//Text
-			tsize = CalcTextSizeForFont(font, str.c_str());
+			tsize = ImGui::CalcTextSize(str.c_str());
 			textTop = pos.y + m_timelineHeight - (padding + tsize.y);
 			list->AddRectFilled(
 				ImVec2(xpos1 + 1, textTop - padding ),
@@ -722,8 +722,6 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 				ImGui::GetColorU32(ImGuiCol_PopupBg),
 				wrounding);
 			list->AddText(
-				font.first,
-				font.second,
 				ImVec2(xpos1 + padding, textTop),
 				cursor1_color,
 				str.c_str());
@@ -734,6 +732,8 @@ void WaveformGroup::RenderXAxisCursors(ImVec2 pos, ImVec2 size)
 			m_dragState = DRAG_STATE_NONE;
 
 		//TODO: text for value readouts, in-band power, etc
+
+		ImGui::PopFont();
 	}
 	ImGui::EndChild();
 
@@ -844,6 +844,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	auto color = prefs.GetColor("Appearance.Timeline.axis_color");
 	auto textcolor = prefs.GetColor("Appearance.Timeline.text_color");
 	auto font = m_parent->GetFontPref("Appearance.Timeline.x_axis_font");
+	ImGui::PushFont(font.first, font.second);
 
 	//Reserve an empty area for the timeline
 	auto pos = ImGui::GetWindowPos();
@@ -978,6 +979,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 	//avoid divide-by-zero in weird cases with no waveform etc
 	if(grad_xunits_rounded == 0)
 	{
+		ImGui::PopFont();
 		ImGui::EndChild();
 		return;
 	}
@@ -1023,8 +1025,6 @@ void WaveformGroup::RenderTimeline(float width, float height)
 
 		//Render label
 		list->AddText(
-			font.first,
-			font.second,
 			ImVec2(x + textMargin, ymid),
 			textcolor,
 			m_xAxisUnit.PrettyPrint(t).c_str());
@@ -1044,6 +1044,7 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		m_parent->AddStatusHelp("mouse_mmb", "Autoscale horizontal axis to waveforms");
 	}
 
+	ImGui::PopFont();
 	ImGui::EndChild();
 }
 

@@ -93,6 +93,15 @@ using namespace std;
 extern Event g_rerenderRequestedEvent;
 extern unique_ptr<MainWindow> g_mainWindow;
 
+// called by ImGui during ImGui::Begin()
+// when switching viewports, just after setting ImGuiStyle.FontScaleDpi
+static void MainWindow_OnChangedViewport(ImGuiViewport *vp)
+{
+	if (g_mainWindow != nullptr) {
+		g_mainWindow->ResetStyle();
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
@@ -179,6 +188,8 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 	else
 		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+
+	ImGui::GetPlatformIO().Platform_OnChangedViewport = MainWindow_OnChangedViewport;
 }
 
 MainWindow::~MainWindow()
@@ -584,6 +595,34 @@ void MainWindow::RenderWaveformTextures(
 		group->RenderWaveformTextures(cmdbuf, channels, clear);
 }
 
+void MainWindow::ResetStyle()
+{
+	auto oldStyle = ImGui::GetStyle();
+
+	ImGui::GetStyle() = ImGuiStyle();
+	auto& style = ImGui::GetStyle();
+
+	style.FontSizeBase = oldStyle.FontSizeBase;
+	style.FontScaleMain = oldStyle.FontScaleMain;
+	style.FontScaleDpi = oldStyle.FontScaleDpi;
+	style.ScaleAllSizes(style.FontScaleDpi);
+
+	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
+	{
+		case THEME_LIGHT:
+			ImGui::StyleColorsLight();
+			break;
+
+		case THEME_DARK:
+			ImGui::StyleColorsDark();
+			break;
+
+		case THEME_CLASSIC:
+			ImGui::StyleColorsClassic();
+			break;
+	}
+}
+
 void MainWindow::RenderUI()
 {
 	//Update window title only if necessary, in case this is expensive on some platforms
@@ -601,27 +640,10 @@ void MainWindow::RenderUI()
 		glfwSetWindowTitle(m_window, title.c_str());
 	}
 
-	//Set default font including size, since this is no longer part of the ImFont
-	//Scale to a nominal 13 point default font
 	auto defaultFont = GetFontPref("Appearance.General.default_font");
-	float defaultFontScale = 13.0 / ImGui::GetFontSize();
-	ImGui::PushFont(defaultFont.first, defaultFont.second * defaultFontScale);
+	ImGui::PushFont(defaultFont.first, defaultFont.second);
 
-	//Set up colors
-	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
-	{
-		case THEME_LIGHT:
-			ImGui::StyleColorsLight();
-			break;
-
-		case THEME_DARK:
-			ImGui::StyleColorsDark();
-			break;
-
-		case THEME_CLASSIC:
-			ImGui::StyleColorsClassic();
-			break;
-	}
+	ResetStyle();
 
 	m_needRender = false;
 
@@ -1741,6 +1763,32 @@ void MainWindow::RenderErrorPopup()
 	}
 }
 
+ImGui::MarkdownConfig MainWindow::GetMarkdownConfig()
+{
+	pair<ImFont*, float> headings[] =
+	{
+		GetFontPref("Appearance.Markdown.heading_1_font"),
+		GetFontPref("Appearance.Markdown.heading_2_font"),
+		GetFontPref("Appearance.Markdown.heading_3_font")
+	};
+
+	ImGui::MarkdownConfig mdConfig
+	{
+		nullptr,	//linkCallback
+		nullptr,	//tooltipCallback
+		nullptr,	//imageCallback
+		"",			//linkIcon (not used)
+		{
+						{ headings[0].first, headings[0].second, true },
+						{ headings[1].first, headings[1].second, true },
+						{ headings[2].first, headings[2].second, false }
+		},
+		nullptr		//userData
+	};
+
+	return mdConfig;
+}
+
 /**
 	@brief Popup message when loading a file that might not match the current hardware setup
  */
@@ -1773,32 +1821,12 @@ void MainWindow::RenderLoadWarningPopup()
 				"Please review your lab notes and confirm that the experimental setup matches your previous session."
 				);
 
-			pair<ImFont*, float> headings[] =
-			{
-				GetFontPref("Appearance.Markdown.heading_1_font"),
-				GetFontPref("Appearance.Markdown.heading_2_font"),
-				GetFontPref("Appearance.Markdown.heading_3_font")
-			};
-
-			ImGui::MarkdownConfig mdConfig
-			{
-				nullptr,	//linkCallback
-				nullptr,	//tooltipCallback
-				nullptr,	//imageCallback
-				"",			//linkIcon (not used)
-				{
-					{ headings[0].first, headings[0].second, true },
-					{ headings[1].first, headings[1].second, true },
-					{ headings[2].first, headings[2].second, false }
-				},
-				nullptr		//userData
-			};
 
 			if (ImGui::BeginChild("labnotes",
 					ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 10),
 					ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
 			{
-				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), mdConfig );
+				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), GetMarkdownConfig());
 				ImGui::EndChild();
 			}
 		}

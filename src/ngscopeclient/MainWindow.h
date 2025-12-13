@@ -48,6 +48,7 @@
 #include "StreamBrowserDialog.h"
 #include "TriggerPropertiesDialog.h"
 #include "Workspace.h"
+#include "imgui_markdown.h"
 
 #include "../scopehal/PacketDecoder.h"
 
@@ -546,22 +547,16 @@ protected:
 
 public:
 
+	void ResetStyle();
+
 	/**
 		@brief Returns a font, given the name of a preference setting
 	 */
 	FontWithSize GetFontPref(const std::string& name)
 	{
 		auto desc = m_session.GetPreferences().GetFont(name.c_str());
-		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second * GetFontScale());
+		return std::pair<ImFont*, float>(m_fontmgr.GetFont(desc), desc.second);
 	}
-
-	/**
-		@brief Get scaling factor for fonts being drawn with ImDrawList
-
-		For now, normalize everything to a nominal size 13 default font
-	 */
-	float GetFontScale()
-	{ return ImGui::GetFontSize() / 13; }
 
 	ImU32 GetColorPref(const std::string& name)
 	{ return m_session.GetPreferences().GetColor(name); }
@@ -575,6 +570,8 @@ public:
 	std::string GetIconForFilter(Filter* f);
 
 	std::string GetIconForWaveformShape(FunctionGenerator::WaveShape shape);
+
+	ImGui::MarkdownConfig GetMarkdownConfig();
 
 protected:
 	FontManager m_fontmgr;

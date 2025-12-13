@@ -95,9 +95,14 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	style.WindowRounding = 0.0f;
 	style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
-	//Don't configure Vulkan or center the mouse
+	//Don't create an OpenGL context - we use Vulkan
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+	//Don't move the mouse pointer when creating fullscreen windows
 	glfwWindowHint(GLFW_CENTER_CURSOR, GLFW_FALSE);
+
+	//Scale the initial window size by the monitor DPI
+	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
 	//Create the window
 	m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);

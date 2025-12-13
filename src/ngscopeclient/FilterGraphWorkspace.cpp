@@ -73,7 +73,10 @@ void FilterGraphWorkspace::DoRender(ImGuiID id)
 				rightPanelID = topNode->ChildNodes[1]->ID;
 			}
 			else
-				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, 0.2, &rightPanelID, &leftPanelID);
+			{
+				auto ratio = ImGui::GetFontSize() * 13 / topNode->Size.x;
+				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, ratio, &rightPanelID, &leftPanelID);
+			}
 
 			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_palette->GetTitleAndID().c_str(), rightPanelID);
