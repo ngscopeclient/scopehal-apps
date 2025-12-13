@@ -95,7 +95,7 @@ extern unique_ptr<MainWindow> g_mainWindow;
 
 // called by ImGui during ImGui::Begin()
 // when switching viewports, just after setting ImGuiStyle.FontScaleDpi
-static void MainWindow_OnChangedViewport(ImGuiViewport *vp)
+static void MainWindow_OnChangedViewport([[maybe_unused]] ImGuiViewport *vp)
 {
 	if (g_mainWindow != nullptr) {
 		g_mainWindow->ResetStyle();
