@@ -68,7 +68,9 @@ jobs:
           spirv-tools \
           glslc \
           lsb-release \
-          libfftw3-dev
+          libfftw3-dev \
+          dpkg-dev \
+          file
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}

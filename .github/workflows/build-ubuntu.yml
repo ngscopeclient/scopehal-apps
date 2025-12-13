@@ -59,7 +59,8 @@ jobs:
           xzip \
           libhidapi-dev \
           ccache \
-          libfftw3-dev
+          libfftw3-dev \
+          dpkg-dev
 
     - name: Install Docs Dependencies
       if: ${{ matrix.docs }}
