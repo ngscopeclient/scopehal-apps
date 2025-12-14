@@ -7,6 +7,7 @@ This is a running list of significant bug fixes and new features since the last 
 * ThunderScope: updates for SCPI / binary waveform format API changes in TS.NET
 * SiniLink: Added driver for ModBus control of XYS3580 and related PSUs (https://github.com/ngscopeclient/scopehal/pull/1003)
 * Filters: 8B/10B decode now tries more aggressively to recover comma sync after bitslipping when decoding jittery or noisy data, rather than giving decode errors for the remainder of the waveform (https://github.com/ngscopeclient/scopehal/issues/1025)
+* Filters: Added basic decoding for PCIe message TLPs (hex type and body but no upper layer)
 
 ## Bugs fixed since v0.1
 
