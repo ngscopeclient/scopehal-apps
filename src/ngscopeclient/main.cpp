@@ -34,6 +34,7 @@
  */
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "ngscopeclient.h"
+#include "ngscopeclient-version.h"
 #include "MainWindow.h"
 #include "../scopeprotocols/scopeprotocols.h"
 #include "imgui_internal.h"
@@ -47,6 +48,44 @@ GuiLogSink* g_guiLog;
 #ifndef _WIN32
 void Relaunch(int argc, char* argv[]);
 #endif
+
+static void print_help(FILE* stream)
+{
+	fprintf(stream,
+		"usage: ngscopeclient [option...] [session | instrument...]\n"
+		"\n"
+		"ngscopeclient is a test and measurement remote control and analysis suite\n"
+		"\n"
+		"General options:\n"
+		"  --version    print the application version and exit\n"
+		"  --help, -h   print this help and exit\n"
+		"\n"
+		"Logging options:\n"
+		"  -q, --quiet  make logging one level quieter (can be repeated)\n"
+		"  --verbose    emit more detailed logs that might be useful to end users\n"
+		"  --debug      emit very detailed logs only useful to developers\n"
+		"  --trace <channel>\n"
+		"      emit maximally detailed logs for the given channel\n"
+		"  -l, --logfile <file>\n"
+		"      write log entries to the specified file\n"
+		"  -L, --logfile-lines <file>\n"
+		"      write log entries to the specified file with line buffering\n"
+		"  --stdout-only\n"
+		"      only write logs to stdout (normally warning and above go to stderr)\n"
+		"\n"
+		"Session files:\n"
+		"  If you wish to resume a prior session, pass the path to a session file\n"
+		"  saved from the graphical interface as the sole non-option argument.\n"
+		"  The file name _must_ end in '.scopesession'.\n"
+		"\n"
+		"Instrument connection strings:\n"
+		"  When starting a new session, you may provide one or more instrument\n"
+		"  connection strings as arguments, which will be added to the session.\n"
+		"  Connection strings are not accepted when resuming an existing session.\n"
+		"\n"
+		"For full documentation, see https://ngscopeclient.org\n"
+	);
+}
 
 int main(int argc, char* argv[])
 {
@@ -63,16 +102,29 @@ int main(int argc, char* argv[])
 		if(ParseLoggerArguments(i, argc, argv, console_verbosity))
 			continue;
 
+		if (s == "--version")
+		{
+			fprintf(stdout, "ngscopeclient %s\n", NGSCOPECLIENT_VERSION);
+			return 0;
+		}
+
+		if (s == "--help" || s == "-h")
+		{
+			print_help(stdout);
+			return 0;
+		}
+
 		//Other switch (unrecognized)
-		else if(s.find("-") == 0)
+		if(s.find('-') == 0)
 		{
 			//Don't know what it is
-			fprintf(stderr, "Unrecognized argument \"%s\"\n", s.c_str());
+			fprintf(stderr, "ngscopeclient: unrecognized option '%s'\n", s.c_str());
+			fprintf(stderr, "Try 'ngscopeclient --help' for more information.\n");
 			return 1;
 		}
 
 		//If it ends in .scopesession assume it's a session file
-		else if(s.find(".scopesession") != string::npos)
+		if(s.find(".scopesession") != string::npos)
 			sessionToOpen = s;
 
 		//Assume it's an instrument
