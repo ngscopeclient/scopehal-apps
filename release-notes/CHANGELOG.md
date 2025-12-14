@@ -25,6 +25,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: PCIe link training decode got confused if the waveform started with the link in L0 then it dropped (https://github.com/ngscopeclient/scopehal/issues/1024)
 * GUI: Typing a new trigger position into the text box in the trigger properties dialog does not actually change the trigger position in hardware (no github ticket)
 * GUI: Protocol analyzer dialogs still show the old title if a filter is renamed (https://github.com/ngscopeclient/scopehal-apps/issues/923)
+* Packaging: tarballs didn't tag binaries with the hash since no .git folder was included and there was no other way to pass that info along (https://github.com/ngscopeclient/scopehal-apps/pull/910)
 
 ## Other changes since v0.1
 
