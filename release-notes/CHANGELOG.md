@@ -33,7 +33,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Siglent: many crashes and malfunctions especially with SDS HD series scopes (https://github.com/ngscopeclient/scopehal/pull/1023)
 * Siglent: function generator configuration refreshes too fast, causing device firmware to freeze (https://github.com/ngscopeclient/scopehal/pull/1008)
 * ThunderScope: trigger position would occasionally be corrupted and get stuck at -9223 seconds (no github ticket)
-* ThunderScope: when waiting for a trigger event the socket TX buffer would never be flushed causing changes to instrument settings to not take effect
+* ThunderScope, Pico, Digilent: when waiting for a trigger event the socket TX buffer would never be flushed causing changes to instrument settings to not take effect
 
 ## Other changes since v0.1
 
