@@ -9,8 +9,9 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: Initial implementation of PCIe BDF decoding for destination addresses in configuration write TLPs (https://github.com/ngscopeclient/scopehal/issues/1030)
 * General: Added --help and --version command line arguments (https://github.com/ngscopeclient/scopehal-apps/pull/931)
 
-* ThunderScope: updates for SCPI / binary waveform format API changes in TS.NET
+* Batronix: initial Magnova scope support (https://github.com/ngscopeclient/scopehal/pull/1031)
 * SiniLink: Added driver for ModBus control of XYS3580 and related PSUs (https://github.com/ngscopeclient/scopehal/pull/1003)
+* ThunderScope: updates for SCPI / binary waveform format API changes in TS.NET
 
 ## Bugs fixed since v0.1
 
