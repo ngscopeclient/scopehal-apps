@@ -2413,7 +2413,7 @@ bool FilterGraphEditor::HandleNodeProperties()
 
 				//must be last since many other types are derived from OscilloscopeChannel
 				else if(o)
-					m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, true);
+					m_propertiesDialogs[id] = make_shared<ChannelPropertiesDialog>(o, m_parent, true);
 				else
 					LogWarning("Don't know how to display properties of this node!\n");
 			}

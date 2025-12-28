@@ -49,8 +49,7 @@ using namespace std;
 // Constuction / destruction
 
 FilterPropertiesDialog::FilterPropertiesDialog(Filter* f, MainWindow* parent, bool graphEditorMode)
-	: ChannelPropertiesDialog(f, graphEditorMode)
-	, m_parent(parent)
+	: ChannelPropertiesDialog(f, parent, graphEditorMode)
 {
 
 }

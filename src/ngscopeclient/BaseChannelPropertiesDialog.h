@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -36,11 +36,12 @@
 #define BaseChannelPropertiesDialog_h
 
 #include "EmbeddableDialog.h"
+class MainWindow;
 
 class BaseChannelPropertiesDialog : public EmbeddableDialog
 {
 public:
-	BaseChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode = false);
+	BaseChannelPropertiesDialog(InstrumentChannel* chan, MainWindow* parent, bool graphEditorMode = false);
 	virtual ~BaseChannelPropertiesDialog();
 
 	InstrumentChannel* GetChannel()
@@ -50,6 +51,8 @@ public:
 
 protected:
 	InstrumentChannel* m_channel;
+
+	MainWindow* m_parent;
 };
 
 #endif

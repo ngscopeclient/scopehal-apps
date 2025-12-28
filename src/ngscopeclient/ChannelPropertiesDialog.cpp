@@ -34,6 +34,7 @@
  */
 
 #include "ngscopeclient.h"
+#include "MainWindow.h"
 #include "ChannelPropertiesDialog.h"
 #include <imgui_node_editor.h>
 
@@ -42,8 +43,8 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode)
-	: BaseChannelPropertiesDialog(chan, graphEditorMode)
+ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan,  MainWindow* parent, bool graphEditorMode)
+	: BaseChannelPropertiesDialog(chan, parent, graphEditorMode)
 {
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 	if(!ochan)
@@ -298,6 +299,9 @@ bool ChannelPropertiesDialog::DoRender()
 				static_cast<int>(round(m_color[1] * 255)),
 				static_cast<int>(round(m_color[2] * 255)));
 			m_channel->m_displaycolor = tmp;
+
+			//If color is changed, request a re-render
+			m_parent->SetNeedRender();
 		}
 	}
 

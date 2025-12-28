@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -58,8 +58,6 @@ protected:
 
 	void FindAllStreams(std::vector<StreamDescriptor>& streams);
 	void OnReconfigured(Filter* f, size_t oldStreamCount);
-
-	MainWindow* m_parent;
 
 	///@brief File dialog (can only ever have one at a time)
 	std::shared_ptr<FileBrowser> m_fileDialog;

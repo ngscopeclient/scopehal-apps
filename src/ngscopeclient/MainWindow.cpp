@@ -1475,7 +1475,7 @@ void MainWindow::ShowChannelProperties(OscilloscopeChannel* channel)
 	}
 	else
 	{
-		auto dlg = make_shared<ChannelPropertiesDialog>(channel);
+		auto dlg = make_shared<ChannelPropertiesDialog>(channel, this);
 		m_channelPropertiesDialogs[channel] = dlg;
 		AddDialog(dlg);
 	}

@@ -42,13 +42,17 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-BaseChannelPropertiesDialog::BaseChannelPropertiesDialog(InstrumentChannel* chan, bool graphEditorMode)
+BaseChannelPropertiesDialog::BaseChannelPropertiesDialog(
+	InstrumentChannel* chan,
+	MainWindow* parent,
+	bool graphEditorMode)
 	: EmbeddableDialog(
 		chan->GetHwname(),
 		string("Channel properties: ") + chan->GetHwname(),
 		ImVec2(300, 400),
 		graphEditorMode)
 	, m_channel(chan)
+	, m_parent(parent)
 {
 }
 
