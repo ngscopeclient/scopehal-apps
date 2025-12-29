@@ -119,8 +119,8 @@ jobs:
         git config --global --add safe.directory `pwd`
         mkdir build
         cd build
-        export CC=/usr/bin/gcc-14
-        export CXX=/usr/bin/g++-14
+        export CC=/usr/bin/gcc
+        export CXX=/usr/bin/g++
         cmake \
           -DCMAKE_BUILD_TYPE=Release \
           -DDISABLE_PCH=ON \
