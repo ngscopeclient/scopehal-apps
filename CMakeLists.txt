@@ -55,18 +55,31 @@ if(Git_FOUND OR NGSCOPECLIENT_PACKAGE_VERSION)
 		set(NGSCOPECLIENT_VERSION_LONG "${NGSCOPECLIENT_PACKAGE_VERSION_LONG}")
 		message("External long release version is ${NGSCOPECLIENT_VERSION_LONG}")
 	endif ()
-	# TODO: if/when we have a point release, make MSI version 10x+9
+
+	# For point releases make MSI version 10x+9. This limits us to 9 release candidates which should be ok??
 	# ex: 0.1.2-rc2 is 0.1.22
 	# ex: 0.1.2 is 0.1.29
 
 	# Ugly string parsing to make windows build happy
-	# First path: release candidate tags
+	# First path: release candidate tags for primary releases
 	if(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-rc([0-9])-([0-9]*)")
 		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}.${CMAKE_MATCH_4}")
+
+	# Release candidates for point releases
+	elseif(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*).([0-9]*)-rc([0-9])-([0-9]*)")
+		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}${CMAKE_MATCH_4}.${CMAKE_MATCH_5}")
 
 	# Release tags
 	elseif(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*)-([0-9]*)")
 		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.9.${CMAKE_MATCH_3}")
+
+	# Release tags for point releases
+	elseif(NGSCOPECLIENT_VERSION_LONG MATCHES "v([0-9]*).([0-9]*).([0-9]*)-([0-9]*)")
+		set(MSI_VERSION "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}9.${CMAKE_MATCH_4}")
+
+	# No release matched
+	else()
+		message(FATAL_ERROR "Unrecognized version tag ${NGSCOPECLIENT_VERSION} / ${NGSCOPECLIENT_VERSION_LONG}, can't create a VERSIONINFO from it. Must be of format v1.2, v1.2.3, v1.2-rc3, v1.2.3-rc4")
 	endif()
 
 else()
