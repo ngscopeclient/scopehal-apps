@@ -41,7 +41,7 @@ jobs:
         pacman -Syuu --noconfirm
         pacman -S --noconfirm \
           git \
-          gcc14 \
+          gcc \
           cmake \
           make \
           pkgconf \
