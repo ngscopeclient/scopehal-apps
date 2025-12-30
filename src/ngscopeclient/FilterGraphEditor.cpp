@@ -1745,6 +1745,8 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 
 	if(ImGui::BeginMenu(name.c_str()))
 	{
+		ImGui::PushFont(nullptr, 0);
+
 		//Find all filters in this category and sort them alphabetically
 		vector<string> sortedNames;
 		for(auto it : refs)
@@ -1785,6 +1787,7 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 			}
 		}
 
+		ImGui::PopFont();
 		ImGui::EndMenu();
 	}
 }
@@ -2509,6 +2512,8 @@ void FilterGraphEditor::DoAddMenu()
 
 	if(ImGui::BeginMenu("Import"))
 	{
+		ImGui::PushFont(nullptr, 0);
+
 		//Do all of the menu items
 		for(auto fname : sortedNames)
 		{
@@ -2523,11 +2528,15 @@ void FilterGraphEditor::DoAddMenu()
 			if(ImGui::MenuItem(shortname.c_str()))
 				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
 		}
+
+		ImGui::PopFont();
 		ImGui::EndMenu();
 	}
 
 	if(ImGui::BeginMenu("Generate"))
 	{
+		ImGui::PushFont(nullptr, 0);
+
 		//Do all of the menu items
 		for(auto fname : sortedNames)
 		{
@@ -2543,6 +2552,7 @@ void FilterGraphEditor::DoAddMenu()
 				m_parent->CreateFilter(fname, nullptr, StreamDescriptor(nullptr, 0));
 		}
 
+		ImGui::PopFont();
 		ImGui::EndMenu();
 	}
 
