@@ -208,6 +208,9 @@ protected:
 		const std::vector<ImVec2>& positions,
 		std::vector<ImVec2>& forces);
 
+	void SetCanvasManagedDPI();
+	void SetImGuiManagedDPI();
+
 	void ClearOldPropertiesDialogs();
 
 	void NodeIcon(InstrumentChannel* chan, ImVec2 iconpos, ImVec2 iconsize, ImDrawList* list);
