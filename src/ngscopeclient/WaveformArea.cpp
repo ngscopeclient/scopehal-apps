@@ -701,7 +701,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 
 		//Blank out space for the actual waveform
 		ImGui::Dummy(ImVec2(csize.x, csize.y));
-		ImGui::SetItemAllowOverlap();
+		ImGui::SetNextItemAllowOverlap();
 
 		//Check for context menu if we didn't do one yet
 		PlotContextMenu();
@@ -742,7 +742,7 @@ bool WaveformArea::Render(int iArea, int numAreas, ImVec2 clientArea)
 				ChannelButton(m_displayedChannels[i], i);
 
 		ImGui::EndGroup();
-		ImGui::SetItemAllowOverlap();
+		ImGui::SetNextItemAllowOverlap();
 	}
 	else
 		m_mouseOverButton = false;
@@ -3261,7 +3261,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
 	//ImGui::Button(name.c_str(), size);
-	ImGui::SetItemAllowOverlap();
+	ImGui::SetNextItemAllowOverlap();
 
 	auto payload = ImGui::GetDragDropPayload();
 	if(!payload)
@@ -3394,7 +3394,7 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
 	//ImGui::Button("center", size);
-	ImGui::SetItemAllowOverlap();
+	ImGui::SetNextItemAllowOverlap();
 
 	auto payload = ImGui::GetDragDropPayload();
 	if(!payload)
@@ -3506,7 +3506,7 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("centersplit", size);
 	//ImGui::Button("center", size);
-	ImGui::SetItemAllowOverlap();
+	ImGui::SetNextItemAllowOverlap();
 
 	auto payload = ImGui::GetDragDropPayload();
 	if(!payload)

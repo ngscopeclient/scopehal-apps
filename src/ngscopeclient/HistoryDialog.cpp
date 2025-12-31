@@ -167,7 +167,7 @@ bool HistoryDialog::DoRender()
 			if(ImGui::Selectable(
 				point->m_time.PrettyPrint().c_str(),
 				rowIsSelected && !m_selectedMarker,
-				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
 				ImVec2(0, m_rowHeight)))
 			{
 				m_selectedPoint = point;
@@ -278,7 +278,7 @@ bool HistoryDialog::DoRender()
 					if(ImGui::Selectable(
 						m.GetMarkerTime().PrettyPrint().c_str(),
 						markerIsSelected,
-						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+						ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
 						ImVec2(0, m_rowHeight)))
 					{
 						//Select the marker

@@ -174,11 +174,11 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	info.QueueFamily = queue->m_family;
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
 	info.DescriptorPool = **m_imguiDescriptorPool;
-	info.Subpass = 0;
+	info.PipelineInfoMain.Subpass = 0;
 	info.MinImageCount = m_minImageCount;
 	info.ImageCount = m_backBuffers.size();
-	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-	info.RenderPass = **m_renderPass;
+	info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	info.PipelineInfoMain.RenderPass = **m_renderPass;
 
 	//HERE BE DRAGONS:
 	// We're handing imgui a VkQueue here without holding the lock.

@@ -330,7 +330,7 @@ bool ProtocolAnalyzerDialog::DoRender()
 				if(ImGui::Selectable(
 					selid.c_str(),
 					rowIsSelected,
-					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+					ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
 					ImVec2(0, 0)))
 				{
 					m_selectedPacket = pack;

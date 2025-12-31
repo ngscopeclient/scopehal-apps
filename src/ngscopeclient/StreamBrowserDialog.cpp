@@ -1375,7 +1375,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
 			ImGui::BeginChild("psu_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
 			auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
 			auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
@@ -1494,7 +1494,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		if(hasProps)
 		{
 			ImGui::BeginChild("stream_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border);
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
 			bool clicked = false;

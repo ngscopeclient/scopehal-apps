@@ -1840,7 +1840,7 @@ void MainWindow::RenderLoadWarningPopup()
 
 			if (ImGui::BeginChild("labnotes",
 					ImVec2(-FLT_MIN, ImGui::GetTextLineHeightWithSpacing() * 10),
-					ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+					ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
 			{
 				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), GetMarkdownConfig());
 				ImGui::EndChild();

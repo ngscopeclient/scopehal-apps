@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -415,7 +415,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 		if(ImGui::Selectable(
 				inst->m_nickname.c_str(),
 				rowIsSelected,
-				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap,
+				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
 				ImVec2(0, 0)))
 		{
 			m_selection = dynamic_pointer_cast<SCPIInstrument>(inst);
