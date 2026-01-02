@@ -699,22 +699,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	auto& prefs = m_session.GetPreferences();
 
-	//Impedance
-	ImGui::SetNextItemWidth(dwidth);
-	/*
-	if(renderCombo(
-		"Sample Rate",
-		false,
-		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-		m_timebaseConfig[scope]->m_rate, m_timebaseConfig[scope]->m_rateNames))
-	{
-		scope->SetSampleRate(m_timebaseConfig[scope]->m_rates[m_timebaseConfig[scope]->m_rate]);
-		refresh = true;
-	}
-	*/
-
-	//shape = awgState->m_channelShape[channelIndex];
-
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
@@ -737,6 +721,9 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		// Tell intrument thread that the FunctionGenerator state has to be updated
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
+
+	// Store current Y position for shape preview
+	float shapePreviewY = ImGui::GetCursorPosY();
 
 	// Row 2
 	// Frequency label
@@ -763,25 +750,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	DoItemHelp();
 	HelpMarker("Frequency of the generated waveform");
 
-	/*
-	// Shape preview
-	startBadgeLine();
-	auto height = ImGui::GetFontSize() * 2;
-	auto width =  height * 2;
-	if ((m_badgeXCur - width) >= m_badgeXMin)
-	{
-		// ok, we have enough space draw preview
-		m_badgeXCur -= width;
-		ImGui::SameLine(m_badgeXCur);
-		ImGui::Image(
-			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
-			ImVec2(width,height));
-		// Go back one line since preview spans on two text lines
-		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
-		window->DC.CursorPos.y -= ImGui::GetFontSize();
-	}
-	*/
-
 	// Row 3
 	ImGui::SetNextItemWidth(dwidth);
 	if(UnitInputWithExplicitApply(
@@ -794,6 +762,27 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
 	HelpMarker("Peak-to-peak amplitude of the generated waveform");
+
+	// Shape preview
+	startBadgeLine();
+	auto height = ImGui::GetFontSize() * 2;
+	auto width =  height * 2;
+	if ((m_badgeXCur - width) >= m_badgeXMin)
+	{
+		// ok, we have enough space draw preview
+		m_badgeXCur -= width;
+		// save current y position to restore it after drawing the preview
+		float currentY = ImGui::GetCursorPosY();
+		// Continue layout on current line (row 3)
+		ImGui::SameLine(m_badgeXCur);
+		// But use y position of row 2
+		ImGui::SetCursorPosY(shapePreviewY);
+		ImGui::Image(
+			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
+			ImVec2(width,height));
+		// Now that we're done with shape preview, restore y position of row 3
+		ImGui::SetCursorPosY(currentY);
+	}
 
 	//Row 4
 	//Offset
