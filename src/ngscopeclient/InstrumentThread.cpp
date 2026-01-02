@@ -240,6 +240,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 					awgstate->m_channelAmplitude[i] = awg->GetFunctionChannelAmplitude(i);
 					awgstate->m_channelOffset[i] = awg->GetFunctionChannelOffset(i);
 					awgstate->m_channelFrequency[i] = awg->GetFunctionChannelFrequency(i);
+					awgstate->m_channelDutyCycle[i] = awg->GetFunctionChannelDutyCycle(i);
 					awgstate->m_channelShape[i] = awg->GetFunctionChannelShape(i);
 					awgstate->m_channelOutputImpedance[i] = awg->GetFunctionChannelOutputImpedance(i);
 					session->MarkChannelDirty(awgchan);

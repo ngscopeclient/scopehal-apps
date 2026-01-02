@@ -669,6 +669,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 {
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit hz(Unit::UNIT_HZ);
+	Unit percent(Unit::UNIT_PERCENT);
 
 	size_t channelIndex = awgchan->GetIndex();
 	auto awgState = m_session.GetFunctionGeneratorState(awg);
@@ -695,6 +696,12 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	{
 		awgState->m_committedFrequency[channelIndex] = freq;
 		awgState->m_strFrequency[channelIndex] = hz.PrettyPrint(freq);
+	}
+	float dutyCycle = awgState->m_channelDutyCycle[channelIndex];
+	if(dutyCycle != awgState->m_committedDutyCycle[channelIndex])
+	{
+		awgState->m_committedDutyCycle[channelIndex] = dutyCycle;
+		awgState->m_strDutyCycle[channelIndex] = percent.PrettyPrint(dutyCycle);
 	}
 
 	auto& prefs = m_session.GetPreferences();
@@ -746,22 +753,23 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::EndDragDropSource();
 	}
 	else
-	*/
 	DoItemHelp();
-	HelpMarker("Frequency of the generated waveform");
+	*/
+	//HelpMarker("Frequency of the generated waveform");
 
-	// Row 3
+	//Row 2
+	//Duty cycle
 	ImGui::SetNextItemWidth(dwidth);
-	if(UnitInputWithExplicitApply(
-		"Amplitude",
-		awgState->m_strAmplitude[channelIndex],
-		awgState->m_committedAmplitude[channelIndex],
-		volts))
+	if(UnitInputWithImplicitApply(
+		"Duty cycle",
+		awgState->m_strDutyCycle[channelIndex],
+		awgState->m_committedDutyCycle[channelIndex],
+		percent))
 	{
-		awg->SetFunctionChannelAmplitude(channelIndex, awgState->m_committedAmplitude[channelIndex]);
+		awg->SetFunctionChannelDutyCycle(channelIndex, awgState->m_committedDutyCycle[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	HelpMarker("Peak-to-peak amplitude of the generated waveform");
+	//HelpMarker("Duty cycle of the generated waveform");
 
 	// Shape preview
 	startBadgeLine();
@@ -784,6 +792,19 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::SetCursorPosY(currentY);
 	}
 
+	// Row 3
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithExplicitApply(
+		"Amplitude",
+		awgState->m_strAmplitude[channelIndex],
+		awgState->m_committedAmplitude[channelIndex],
+		volts))
+	{
+		awg->SetFunctionChannelAmplitude(channelIndex, awgState->m_committedAmplitude[channelIndex]);
+		awgState->m_needsUpdate[channelIndex] = true;
+	}
+	HelpMarker("Peak-to-peak amplitude of the generated waveform");
+
 	//Row 4
 	//Offset
 	ImGui::SetNextItemWidth(dwidth);
@@ -798,8 +819,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	}
 	HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
-	//TODO: Duty cycle
-
+	//Row 5
 	//Impedance
 	ImGui::SetNextItemWidth(dwidth);
 	FunctionGenerator::OutputImpedance impedance = awgState->m_channelOutputImpedance[channelIndex];

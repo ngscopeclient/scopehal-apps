@@ -49,6 +49,7 @@ public:
 		m_channelAmplitude = std::make_unique<std::atomic<float>[] >(n);
 		m_channelOffset= std::make_unique<std::atomic<float>[] >(n);
 		m_channelFrequency = std::make_unique<std::atomic<float>[] >(n);
+		m_channelDutyCycle = std::make_unique<std::atomic<float>[] >(n);
 		m_channelShape = std::make_unique<std::atomic<FunctionGenerator::WaveShape>[] >(n);
 		m_channelOutputImpedance = std::make_unique<std::atomic<FunctionGenerator::OutputImpedance>[] >(n);
 		m_channelShapes = std::make_unique<std::vector<FunctionGenerator::WaveShape>[] >(n);
@@ -63,6 +64,8 @@ public:
 		m_committedAmplitude = std::make_unique<float[]>(n);
 		m_strFrequency = std::make_unique<std::string[]>(n);
 		m_committedFrequency = std::make_unique<float[]>(n);
+		m_strDutyCycle = std::make_unique<std::string[]>(n);
+		m_committedDutyCycle = std::make_unique<float[]>(n);
 
 		Unit volts(Unit::UNIT_VOLTS);
 
@@ -72,6 +75,7 @@ public:
 			m_channelAmplitude[i] = 0;
 			m_channelOffset[i] = 0;
 			m_channelFrequency[i] = 0;
+			m_channelDutyCycle[i] = 0;
 			m_channelShape[i] = FunctionGenerator::WaveShape::SHAPE_SINE;
 			m_channelOutputImpedance[i] = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
 			// Init shape list and names
@@ -93,6 +97,7 @@ public:
 	std::unique_ptr<std::atomic<float>[]> m_channelAmplitude;
 	std::unique_ptr<std::atomic<float>[]> m_channelOffset;
 	std::unique_ptr<std::atomic<float>[]> m_channelFrequency;
+	std::unique_ptr<std::atomic<float>[]> m_channelDutyCycle;
 	std::unique_ptr<std::atomic<FunctionGenerator::WaveShape>[]> m_channelShape;
 	std::unique_ptr<std::atomic<FunctionGenerator::OutputImpedance>[]> m_channelOutputImpedance;
 	std::unique_ptr<std::vector<FunctionGenerator::WaveShape>[]> m_channelShapes;
@@ -110,6 +115,9 @@ public:
 
 	std::unique_ptr<float[]> m_committedFrequency;
 	std::unique_ptr<std::string[]> m_strFrequency;
+
+	std::unique_ptr<float[]> m_committedDutyCycle;
+	std::unique_ptr<std::string[]> m_strDutyCycle;
 };
 
 #endif
