@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -2903,9 +2903,27 @@ void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone) && (m_dragState == DRAG_STATE_NONE) && !m_mouseOverButton )
 	{
 		//Calculate the BER at this point
-		//TODO: this currently assumes the midpoint of the waveform is the zero point,
-		//which is only true for NRZ waveforms (not PAM / MLT3)
-		auto ber = eyedata->GetBERAtPoint(delta.x, delta.y, eyedata->GetWidth() / 2, eyedata->GetHeight() / 2);
+		//Figure out which level we're targeting
+		int ymid = 0;
+		switch(eyedata->m_numLevels)
+		{
+			//NRZ: always use the midpoint
+			case 2:
+				ymid = eyedata->m_midpoints[0];
+				break;
+
+			//PAM3 / MLT3: decide upper or lower
+			case 3:
+				if(delta.y > (eyedata->GetHeight() / 2))
+					ymid = eyedata->m_midpoints[1];
+				else
+					ymid = eyedata->m_midpoints[0];
+				break;
+
+			default:
+				break;
+		}
+		auto ber = eyedata->GetBERAtPoint(delta.x, delta.y, eyedata->GetWidth() / 2, ymid);
 
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
