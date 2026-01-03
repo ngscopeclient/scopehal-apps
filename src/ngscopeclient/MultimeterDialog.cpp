@@ -75,6 +75,10 @@ MultimeterDialog::MultimeterDialog(shared_ptr<SCPIMultimeter> meter, shared_ptr<
 		}
 	}
 
+	//Check for autorange state change
+	if(m_state->m_autoRange.load() != m_autorange)
+		m_state->m_needsRangeUpdate = true;
+
 	//Secondary operating modes
 	RefreshSecondaryModeList();
 }
