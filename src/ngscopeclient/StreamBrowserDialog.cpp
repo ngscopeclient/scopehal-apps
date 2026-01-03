@@ -377,12 +377,18 @@ bool StreamBrowserDialog::renderCombo(
 
    @param color the color of the toggle button
    @param curValue the value of the toggle button
+   @param valueOff label for value off (optionnal, defaults to "OFF")
+   @param valueOn label for value on (optionnal, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
    @return true if selection has changed
  */
-bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue)
+bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
 {
 	int selection = (int)curValue;
-	bool ret = renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
+	std::vector<string> values;
+	values.push_back(string(valueOff));
+	values.push_back(string(valueOn));
+	bool ret = renderCombo(label, alignRight, color, selection, values, false, cropTextTo);
 	curValue = (selection == 1);
 	return ret;
 }
@@ -391,16 +397,19 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
    @brief Render an on/off toggle button combo
 
    @param curValue the value of the toggle button
+   @param valueOff label for value off (optionnal, defaults to "OFF")
+   @param valueOn label for value on (optionnal, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
    @return true if value has changed
  */
-bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue)
+bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
 		(curValue ?
 			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
 			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggle(label, alignRight, color, curValue);
+	return renderToggle(label, alignRight, color, curValue, valueOff, valueOn, cropTextTo);
 }
 
 /**
