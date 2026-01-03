@@ -176,6 +176,12 @@ void InstrumentThread(InstrumentThreadArgs args)
 				meterstate->m_secondaryMeasurement = chan->GetSecondaryValue();
 				meterstate->m_firstUpdateDone = true;
 
+				if(meterstate->m_needsRangeUpdate.load())
+				{	// We need to update range state
+					meterstate->m_autoRange = meter->GetMeterAutoRange();
+					meterstate->m_needsRangeUpdate = false;
+				}
+
 				session->MarkChannelDirty(chan);
 			}
 		}

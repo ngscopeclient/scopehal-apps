@@ -47,11 +47,15 @@ public:
 		m_primaryMeasurement = 0;
 		m_secondaryMeasurement = 0;
 		m_firstUpdateDone = false;
+		m_autoRange = true;
+		m_needsRangeUpdate = true;
 	}
 
 	std::atomic<float> m_primaryMeasurement;
 	std::atomic<float> m_secondaryMeasurement;
 	std::atomic<bool> m_firstUpdateDone;
+	std::atomic<bool> m_autoRange;
+	std::atomic<bool> m_needsRangeUpdate;
 };
 
 #endif

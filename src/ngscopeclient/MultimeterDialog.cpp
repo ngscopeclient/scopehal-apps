@@ -137,7 +137,10 @@ bool MultimeterDialog::DoRender()
 	if(ImGui::CollapsingHeader("Configuration", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		if(ImGui::Checkbox("Autorange", &m_autorange))
+		{
 			m_meter->SetMeterAutoRange(m_autorange);
+			m_state->m_needsRangeUpdate = true;
+		}
 		HelpMarker("Enables automatic selection of meter scale ranges.");
 
 		//Channel selector (hide if we have only one channel)
