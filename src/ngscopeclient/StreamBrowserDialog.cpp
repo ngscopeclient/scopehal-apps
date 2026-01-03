@@ -346,10 +346,12 @@ bool StreamBrowserDialog::renderCombo(
 /**
    @brief Render a combo box with provded color and values
 
+   @param label	Label for the combo box
+   @param alignRight true if the combo should be aligned to the right
    @param color the color of the combo box
    @param selected the selected value index (in/out)
    @param ... the combo box values
-   @return true true if the selected value of the combo has been changed
+   @return true if the selected value of the combo has been changed
  */
 bool StreamBrowserDialog::renderCombo(
 	const char* label,
@@ -375,6 +377,8 @@ bool StreamBrowserDialog::renderCombo(
 /**
    @brief Render a toggle button combo
 
+   @param label	Label for the combo box
+   @param alignRight true if the combo should be aligned to the right
    @param color the color of the toggle button
    @param curValue the value of the toggle button
    @param valueOff label for value off (optionnal, defaults to "OFF")
@@ -396,6 +400,8 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
 /**
    @brief Render an on/off toggle button combo
 
+   @param label	Label for the combo box
+   @param alignRight true if the combo should be aligned to the right
    @param curValue the value of the toggle button
    @param valueOff label for value off (optionnal, defaults to "OFF")
    @param valueOn label for value on (optionnal, defaults to "ON")
