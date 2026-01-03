@@ -377,25 +377,9 @@ bool StreamBrowserDialog::renderCombo(
 
    @param color the color of the toggle button
    @param curValue the value of the toggle button
-   @return the selected value for the toggle button
-
-   TODO: replace with renderToggleEXT
- */
-bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool curValue)
-{
-	int selection = (int)curValue;
-	renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
-	return (selection == 1);
-}
-
-/**
-   @brief Render a toggle button combo
-
-   @param color the color of the toggle button
-   @param curValue the value of the toggle button
    @return true if selection has changed
  */
-bool StreamBrowserDialog::renderToggleEXT(const char* label, bool alignRight, ImVec4 color, bool& curValue)
+bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue)
 {
 	int selection = (int)curValue;
 	bool ret = renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
@@ -407,11 +391,9 @@ bool StreamBrowserDialog::renderToggleEXT(const char* label, bool alignRight, Im
    @brief Render an on/off toggle button combo
 
    @param curValue the value of the toggle button
-   @return the selected value for the toggle button
-
-   TODO: replace with renderOnOffToggleEXT
+   @return true if value has changed
  */
-bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool curValue)
+bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
@@ -419,22 +401,6 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
 			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
 			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
 	return renderToggle(label, alignRight, color, curValue);
-}
-
-/**
-   @brief Render an on/off toggle button combo
-
-   @param curValue the value of the toggle button
-   @return true if value has changed
- */
-bool StreamBrowserDialog::renderOnOffToggleEXT(const char* label, bool alignRight, bool& curValue)
-{
-	auto& prefs = m_session.GetPreferences();
-	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
-		(curValue ?
-			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
-			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggleEXT(label, alignRight, color, curValue);
 }
 
 /**
@@ -927,16 +893,18 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		bool result;
 		if(allOn || someOn)
 		{
-			result = renderToggle(
+			result = true;
+			renderToggle(
 				"###psuon",
 				true,
 				allOn ?
 				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), true);
+				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
 		}
 		else
 		{
-			result = renderOnOffToggle("###psuon", true, false);
+			result = false;
+			renderOnOffToggle("###psuon", true, result);
 		}
 		if(result != allOn)
 		{
@@ -1123,7 +1091,7 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		ImGui::SetNextItemWidth(width);
 		bool disabled = !scope->CanInterleave();
 		ImGui::BeginDisabled(disabled);
-		if(renderOnOffToggleEXT("Interleaving", false, config->m_interleaving))
+		if(renderOnOffToggle("Interleaving", false, config->m_interleaving))
 		{
 			scope->SetInterleaving(config->m_interleaving);
 			refresh = true;
@@ -1351,7 +1319,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		auto psustate = m_session.GetPSUState(psu);
 
 		bool active = psustate->m_channelOn[channelIndex];
-		bool result = renderOnOffToggle("###active", true, active);
+		bool result = active;
+		renderOnOffToggle("###active", true, result);
 		if(result != active)
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
@@ -1361,7 +1330,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		auto awgstate = m_session.GetFunctionGeneratorState(awg);
 
 		bool active = awgstate->m_channelActive[channelIndex];
-		bool result = renderOnOffToggle("###active", true, active);
+		bool result = active;
+		renderOnOffToggle("###active", true, result);
 		if(result != active)
 		{
 			awg->SetFunctionChannelActive(channelIndex,result);

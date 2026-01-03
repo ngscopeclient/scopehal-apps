@@ -145,14 +145,8 @@ protected:
 		const char* label,
 		bool alignRight,
 		ImVec4 color,
-		bool curValue);
-	bool renderToggleEXT(
-		const char* label,
-		bool alignRight,
-		ImVec4 color,
 		bool& curValue);
-	bool renderOnOffToggle(const char* label, bool alignRight, bool curValue);
-	bool renderOnOffToggleEXT(const char* label, bool alignRight, bool& curValue);
+	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
