@@ -705,7 +705,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 		}
 	}
 
-	if(renderCombo("#mode", true, color, modeSelector, modeNames,true,3))
+	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3))
 	{
 		curMode = modes[modeSelector];
 		if(isMain)
@@ -755,7 +755,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 				// For main, also show the autorange combo
 				startBadgeLine();
 				bool autorange = dmmState->m_autoRange.load();
-				if(renderOnOffToggle("#autorange",true,autorange,"Manual Range","Autorange",3))
+				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3))
 				{
 					dmm->SetMeterAutoRange(autorange);
 					dmmState->m_needsRangeUpdate = true;
@@ -823,7 +823,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
 	if(renderCombo(
-		"#waveform",
+		"##waveform",
 		true,
 		ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)),
 		shapeIndex, awgState->m_channelShapeNames[channelIndex],
