@@ -4,7 +4,8 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.1.1
 
-* Filters: Eye pattern is now GPU accelerated for the common case (DDR clock on uniformly sampled input) and runs about 25x faster than before
+* Filters: Eye pattern is now GPU accelerated for the common case (DDR clock on uniformly sampled input) and runs about 25x faster than before (no github ticket)
+* Filters: CDR PLL is now GPU accelerated for the common case (no gating, deep waveform) and runs about 7.5x faster than before (https://github.com/ngscopeclient/scopehal/issues/977)
 
 ## Bugs fixed since v0.1.1
 
