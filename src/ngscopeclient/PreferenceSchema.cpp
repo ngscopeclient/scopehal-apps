@@ -166,6 +166,10 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& stream = appearance.AddCategory("Stream Browser");
 			stream.AddPreference(
+				Preference::Bool("use_7_segment_display", true)
+				.Label("Use 7 segment style display")
+				.Description("Use 7 segment style display for DMM and PSU values"));
+			stream.AddPreference(
 				Preference::Real("instrument_badge_latch_duration", 0.4)
 				.Label("Intrument badge latch duration (seconds)")
 				.Description("Duration during which instrument badges are preserved (to prevent flashing)."));
@@ -241,6 +245,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Color("psu_meas_label_color", ColorFromString("#00C100"))
 				.Label("PSU measured label color")
 				.Description("Color for PSU 'meas.' label"));
+			stream.AddPreference(
+				Preference::Color("psu_7_segment_color", ColorFromString("#B2FFFF"))
+				.Label("PSU 7 segment display color")
+				.Description("Color for PSU 7 segment style display"));
 			stream.AddPreference(
 				Preference::Color("awg_hiz_badge_color", ColorFromString("#666600"))
 				.Label("Function Generator HI-Z badge color")

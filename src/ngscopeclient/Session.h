@@ -172,6 +172,15 @@ public:
 	}
 
 	/**
+		@brief Returns a pointer to the state for a Digital Multimeter
+	 */
+	std::shared_ptr<MultimeterState> GetDmmState(std::shared_ptr<Multimeter> dmm)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_meters[dmm];
+	}
+
+	/**
 		@brief Returns a pointer to the existing packet manager for a protocol decode filter
 	 */
 	std::shared_ptr<PacketManager> GetPacketManager(PacketDecoder* filter)
