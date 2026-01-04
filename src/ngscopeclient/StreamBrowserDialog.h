@@ -154,6 +154,7 @@ protected:
 		const char* valueOn = "ON", 
 		uint8_t cropTextTo = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
+	void renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);

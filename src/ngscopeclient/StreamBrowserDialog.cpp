@@ -419,6 +419,28 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
 }
 
 /**
+   @brief Render a numeric value
+   @param value the string representation of the value to display (may include the unit)
+   @param color the color to use
+   @param digitHeight the height of a digit
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param clickable true (default) if the displayed value should be clickable
+ */
+void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable)
+{
+	auto& prefs = m_session.GetPreferences();
+	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
+	    Render7SegmentValue(value,color,digitHeight,clicked,hovered);
+	else
+	{
+		clicked |= ImGui::TextLink(value.c_str());
+		hovered |= ImGui::IsItemHovered();
+	}
+}
+
+
+/**
    @brief Render a download progress bar for a given instrument channel
 
    @param inst the instrument to render the progress channel for
@@ -609,13 +631,8 @@ void StreamBrowserDialog::renderPsuRows(
 	float height = ImGui::GetFontSize();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_7_segment_color"));
 
-	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
-	    Render7SegmentValue(setValue,color,height,clicked,hovered);
-	else
-	{
-		clicked |= ImGui::TextLink(setValue);
-		hovered |= ImGui::IsItemHovered();
-	}
+	renderNumericValue(setValue,color,height,clicked,hovered);
+
 	ImGui::PopID();
 	// Row 2
 	ImGui::TableNextRow();
@@ -645,13 +662,8 @@ void StreamBrowserDialog::renderPsuRows(
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
 
-	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
-	    Render7SegmentValue(measuredValue, color,height,clicked,hovered);
-	else
-	{
-		clicked |= ImGui::TextLink(measuredValue);
-		hovered |= ImGui::IsItemHovered();
-	}
+	renderNumericValue(measuredValue, color,height,clicked,hovered);
+
 	ImGui::PopID();
 }
 
@@ -739,13 +751,8 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 
 	if(open)
 	{
-		if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
-			Render7SegmentValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
-		else
-		{
-			clicked |= ImGui::TextLink(valueText.c_str());
-			hovered |= ImGui::IsItemHovered();
-		}
+		renderNumericValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+
 		if(isMain)
 		{
 			auto dmmState = m_session.GetDmmState(dmm);
