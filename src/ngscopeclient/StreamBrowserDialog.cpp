@@ -1070,6 +1070,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		{
 			if(ImGui::TreeNodeEx("Timebase", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				BeginBlock("timebase");
 				if(scope->HasTimebaseControls())
 					DoTimebaseSettings(scope);
 				if(scope->HasFrequencyControls())
@@ -1077,6 +1078,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				auto spec = dynamic_pointer_cast<SCPISpectrometer>(scope);
 				if(spec)
 					DoSpectrometerSettings(spec);
+				EndBlock();
 				ImGui::TreePop();
 			}
 
@@ -1498,8 +1500,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(psu)
 		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
-			ImGui::BeginChild("psu_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+			BeginBlock("psu_params");
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
 			auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
 			auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
@@ -1528,18 +1529,17 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 				if (hovered)
 					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 			}
-			ImGui::EndChild();
+			EndBlock();
 		}
 		else if(awg && awgchan)
 		{
-			ImGui::PushID("awgparams");
+			BeginBlock("awgparams");
 				renderAwgProperties(awg, awgchan);
-			ImGui::PopID();
+			EndBlock();
 		}
 		else if(dmm && dmmchan)
 		{
-			ImGui::BeginChild("dmm_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+			BeginBlock("dmm_params");
 			// Always 2 streams for dmm channel => render properties on channel node
 			bool clicked = false;
 			bool hovered = false;
@@ -1554,7 +1554,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			if (hovered)
 				m_parent->AddStatusHelp("mouse_lmb", "Open Multimeter properties");
 
-			ImGui::EndChild();
+			EndBlock();
 		}
 		else
 		{
@@ -1637,8 +1637,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		if(hasProps)
 		{
-			ImGui::BeginChild("stream_params", ImVec2(0, 0),
-				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+			BeginBlock("stream_params");
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
 			bool clicked = false;
@@ -1668,7 +1667,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 					}
 					break;
 			}
-			ImGui::EndChild();
+			EndBlock();
 			if (clicked)
 			{
 				m_parent->ShowChannelProperties(scopechan);
@@ -1788,4 +1787,26 @@ void StreamBrowserDialog::DoItemHelp()
 {
 	if(ImGui::IsItemHovered())
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Add to filter graph or plot");
+}
+
+void StreamBrowserDialog::BeginBlock(const char* label)
+{
+	auto& prefs = m_session.GetPreferences();
+	ImGuiWindowFlags flags = ImGuiChildFlags_AutoResizeY;
+	if(prefs.GetBool("Appearance.Stream Browser.show_block_border"))
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
+		flags |= ImGuiChildFlags_Borders;
+	}
+	ImGui::BeginChild(label, ImVec2(0, 0), flags);
+}
+
+void StreamBrowserDialog::EndBlock()
+{
+	ImGui::EndChild();
+	auto& prefs = m_session.GetPreferences();
+	if(prefs.GetBool("Appearance.Stream Browser.show_block_border"))
+	{
+		ImGui::PopStyleVar();
+	}
 }

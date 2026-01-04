@@ -170,6 +170,10 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Use 7 segment style display")
 				.Description("Use 7 segment style display for DMM and PSU values"));
 			stream.AddPreference(
+				Preference::Bool("show_block_border", true)
+				.Label("Show block border")
+				.Description("Add a visual border around stream browser blocks (e.g. channel properties)"));
+			stream.AddPreference(
 				Preference::Real("instrument_badge_latch_duration", 0.4)
 				.Label("Intrument badge latch duration (seconds)")
 				.Description("Duration during which instrument badges are preserved (to prevent flashing)."));

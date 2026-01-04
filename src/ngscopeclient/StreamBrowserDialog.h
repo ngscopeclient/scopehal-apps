@@ -121,6 +121,10 @@ protected:
 
 	void DoItemHelp();
 
+	// Block handling
+	void BeginBlock(const char *label);
+	void EndBlock();
+
 	// Rendeding of StreamBrowserDialog elements
 	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
