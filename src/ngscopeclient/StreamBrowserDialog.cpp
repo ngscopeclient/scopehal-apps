@@ -497,7 +497,13 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 				validateChange = true;
 			}
 			if(!dirty)
+			{
 				ImGui::EndDisabled();
+			}
+			else if(ImGui::IsItemHovered())
+			{	// Help to explain apply button
+				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
+			}
 			ImGui::PopStyleColor(3);
 		}
 		if(!validateChange)
