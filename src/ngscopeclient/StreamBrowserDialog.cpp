@@ -304,7 +304,7 @@ bool StreamBrowserDialog::renderCombo(
 	{
 		// Use channel color for shape combo, but darken it to make text readable
 		float bgmul = 0.4;
-		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w) );
+		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w));
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, bcolor);
 		ImGui::PushStyleColor(ImGuiCol_Text, color);
 	}
@@ -431,12 +431,164 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 co
 {
 	auto& prefs = m_session.GetPreferences();
 	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
-	    Render7SegmentValue(value,color,digitHeight,clicked,hovered);
+	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
 	else
 	{
-		clicked |= ImGui::TextLink(value.c_str());
-		hovered |= ImGui::IsItemHovered();
+		if(clickable)
+		{
+			clicked |= ImGui::TextLink(value.c_str());
+			hovered |= ImGui::IsItemHovered();
+		}
+		else
+		{
+			ImGui::Text(value.c_str());
+		}
 	}
+}
+
+bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
+{
+	auto& prefs = m_session.GetPreferences();
+	bool changed = false;
+	bool validateChange = false;
+	bool cancelEdit = false;
+	bool keepEditing = false;
+	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
+	string editLabel = label+"##Edit";
+	ImGuiID editId = ImGui::GetID(editLabel.c_str());
+	ImGuiID labelId = ImGui::GetID(label.c_str());
+	if(m_editedItemId == editId)
+	{	// Item currently beeing edited
+		ImGui::BeginGroup();
+
+		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
+		{	// Input validated (but no apply button)
+			if(!explicitApply)
+			{	// Implcit apply => validate change
+				validateChange = true;
+			}
+			else
+			{	// Explicit apply needed => keep editing
+				keepEditing = true;
+			}
+		}
+		if(explicitApply)
+		{	// Add Apply button
+			ImGui::SameLine();
+			ImVec4 buttonColorActive = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.apply_button_color"));
+			float bgmul = 0.8f;
+			ImVec4 buttonColorHovered = ImVec4(buttonColorActive.x*bgmul, buttonColorActive.y*bgmul, buttonColorActive.z*bgmul, buttonColorActive.w);
+			bgmul = 0.7f;
+			ImVec4 buttonColor = ImVec4(buttonColorActive.x*bgmul, buttonColorActive.y*bgmul, buttonColorActive.z*bgmul, buttonColorActive.w);
+			ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
+			if(!dirty)
+				ImGui::BeginDisabled();
+			if(ImGui::SmallButton("\xE2\x8F\x8E")) // Carriage return symbol
+			{	// Apply button click
+				validateChange = true;
+			}
+			if(!dirty)
+				ImGui::EndDisabled();
+			ImGui::PopStyleColor(3);
+		}
+		if(!validateChange)
+		{
+			if(keepEditing)
+			{	// Give back focus to test input
+				ImGui::ActivateItemByID(editId);
+			}
+			else if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+			{	// Detect escape => stop editing
+				cancelEdit = true;
+				//Prevent focus from going to parent node
+				ImGui::ActivateItemByID(0);
+			}
+			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))  
+			{	// Detect focus lost => stop editing too
+				if(explicitApply)
+				{	// Cancel on focus lost
+					cancelEdit = true;
+				}
+				else
+				{	// Validate on focus list
+					validateChange = true;
+				}
+			}
+		}
+		ImGui::EndGroup();
+	}
+	else
+	{
+		if(m_lastEditedItemId == editId)
+		{	// Focus lost
+			if(explicitApply)
+			{	// Cancel edit
+				cancelEdit = true;
+			}
+			else
+			{	// Validate change
+				validateChange = true;
+			}
+			m_lastEditedItemId = 0;
+		}
+		bool clicked = false;
+		bool hovered = false;
+		bool use7Segment = false;
+		if(allow7SegmentDisplay)
+		{
+			use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
+		}
+		if(use7Segment)
+		{
+			ImGui::PushID(labelId);
+			Render7SegmentValue(currentValue,color,ImGui::GetFontSize(),clicked,hovered);
+			ImGui::PopID();
+		}
+		else
+		{
+			ImGui::InputText(label.c_str(),&currentValue,ImGuiInputTextFlags_ReadOnly);
+			clicked |= ImGui::IsItemClicked();
+			if(ImGui::IsItemHovered())
+			{	// Keep hand cursor while read-only
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
+				hovered = true;
+			}
+		}
+
+		if (clicked)
+		{
+			m_lastEditedItemId = m_editedItemId;
+			m_editedItemId = editId;
+			ImGui::ActivateItemByID(editId);
+		}
+		if (hovered)
+			m_parent->AddStatusHelp("mouse_lmb", "Edit value");
+	}
+	if(validateChange)
+	{
+		m_lastEditedItemId = 0;
+		m_editedItemId = 0;
+		if(dirty)
+		{	// Content actually changed
+			committedValue = unit.ParseString(currentValue);
+			currentValue = unit.PrettyPrint(committedValue);
+			changed = true;
+		}
+	}
+	else if(cancelEdit)
+	{	// Restore value
+		currentValue = unit.PrettyPrint(committedValue);
+		m_lastEditedItemId = 0;
+		m_editedItemId = 0;
+	}
+	return changed;
+}
+
+bool StreamBrowserDialog::renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay)
+{
+	return renderEditableNumericValue(label,currentValue,committedValue,unit,color,allow7SegmentDisplay,true);
 }
 
 
@@ -631,7 +783,16 @@ void StreamBrowserDialog::renderPsuRows(
 	float height = ImGui::GetFontSize();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_7_segment_color"));
 
-	renderNumericValue(setValue,color,height,clicked,hovered);
+	Unit unit(isVoltage ? Unit::UNIT_VOLTS : Unit::UNIT_AMPS);
+
+	string setValueString = string(setValue);
+	// TODO: use PSU state here
+	float commitValue = unit.ParseString(setValue);
+	auto dwidth = ImGui::GetFontSize() * 6;
+	ImGui::SetNextItemWidth(dwidth);
+	if(renderEditableNumericValueWithExplicitApply("##psuSetValue",setValueString,commitValue,unit,color,true))
+	{	// TODO Update PSU value
+	}
 
 	ImGui::PopID();
 	// Row 2
@@ -676,7 +837,6 @@ void StreamBrowserDialog::renderPsuRows(
  */
 void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, MultimeterChannel* dmmchan, bool isMain, bool &clicked, bool &hovered)
 {
-	auto& prefs = m_session.GetPreferences();
 	size_t streamIndex = isMain ? 0 : 1;
 	Unit unit = dmmchan->GetYAxisUnits(streamIndex);
 	float mainValue = dmmchan->GetScalarValue(streamIndex);
@@ -851,7 +1011,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Row 2
 	// Frequency label
 	ImGui::SetNextItemWidth(dwidth);
-	if(UnitInputWithImplicitApply(
+	if(renderEditableNumericValue(
 		"Frequency",
 		awgState->m_strFrequency[channelIndex],
 		awgState->m_committedFrequency[channelIndex],
@@ -876,7 +1036,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	//Row 2
 	//Duty cycle
 	ImGui::SetNextItemWidth(dwidth);
-	if(UnitInputWithImplicitApply(
+	if(renderEditableNumericValue(
 		"Duty cycle",
 		awgState->m_strDutyCycle[channelIndex],
 		awgState->m_committedDutyCycle[channelIndex],
@@ -910,7 +1070,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	// Row 3
 	ImGui::SetNextItemWidth(dwidth);
-	if(UnitInputWithExplicitApply(
+	if(renderEditableNumericValueWithExplicitApply(
 		"Amplitude",
 		awgState->m_strAmplitude[channelIndex],
 		awgState->m_committedAmplitude[channelIndex],
@@ -924,7 +1084,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	//Row 4
 	//Offset
 	ImGui::SetNextItemWidth(dwidth);
-	if(UnitInputWithExplicitApply(
+	if(renderEditableNumericValueWithExplicitApply(
 		"Offset",
 		awgState->m_strOffset[channelIndex],
 		awgState->m_committedOffset[channelIndex],

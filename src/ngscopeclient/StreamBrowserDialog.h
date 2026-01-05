@@ -155,6 +155,8 @@ protected:
 		uint8_t cropTextTo = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
 	void renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
+	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
+	bool renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
@@ -182,6 +184,11 @@ protected:
 	///@brief Positions for badge display
 	float m_badgeXMin; // left edge over which we must not overrun
 	float m_badgeXCur; // right edge to render the next badge against
+
+	///@brief Id of the item currently beeing edited
+	ImGuiID m_editedItemId = 0;
+	///@brief Id of the last edited item
+	ImGuiID m_lastEditedItemId = 0;
 
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
 	///@brief Store the last state of an intrument badge (used for badge state latching)

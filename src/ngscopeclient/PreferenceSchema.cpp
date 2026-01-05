@@ -234,6 +234,10 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Instrument off badge color")
 				.Description("Color for instrument 'off' badge"));
 			stream.AddPreference(
+				Preference::Color("apply_button_color", ColorFromString("#4CCC4C"))
+				.Label("Apply button color")
+				.Description("Color for the apply value button"));
+			stream.AddPreference(
 				Preference::Color("psu_cv_badge_color", ColorFromString("#4CCC4C"))
 				.Label("PSU cv badge color")
 				.Description("Color for PSU 'cv' badge"));
