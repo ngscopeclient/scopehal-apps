@@ -441,7 +441,7 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 co
 		}
 		else
 		{
-			ImGui::Text(value.c_str());
+			ImGui::TextUnformatted(value.c_str());
 		}
 	}
 }
