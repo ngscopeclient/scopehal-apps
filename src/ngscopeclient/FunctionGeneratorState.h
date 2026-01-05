@@ -90,6 +90,7 @@ public:
 			m_committedAmplitude[i] = FLT_MIN;
 			m_committedOffset[i] = FLT_MIN;
 			m_committedFrequency[i] = FLT_MIN;
+			m_committedDutyCycle[i] = FLT_MIN;
 		}
 	}
 
