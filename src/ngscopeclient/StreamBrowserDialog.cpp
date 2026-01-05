@@ -447,6 +447,19 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 co
 }
 
 template<typename T>
+/**
+   @brief Render an editable numeric value
+   @param label the value label (used as a label for the TextInput)
+   @param currentValue the string representation of the current value
+   @param comittedValue the last comitted typed (float, double or int64_t) value
+   @param unit the Unit of the value
+   @param color the color to use
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
+   @return true if the value has changed
+ */
 bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
 {
     static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableNumericValue only supports float or double");
@@ -632,6 +645,18 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 }
 
 template<typename T>
+/**
+   @brief Render an editable numeric value with explicit apply (if the input value needs to explicitly be applied by clicking the apply button)
+   @param label the value label (used as a label for the TextInput)
+   @param currentValue the string representation of the current value
+   @param comittedValue the last comitted typed (float, double or int64_t) value
+   @param unit the Unit of the value
+   @param color the color to use
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @return true if the value has changed
+ */
 bool StreamBrowserDialog::renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay)
 {
 	return renderEditableNumericValue(label,currentValue,committedValue,unit,color,allow7SegmentDisplay,true);
