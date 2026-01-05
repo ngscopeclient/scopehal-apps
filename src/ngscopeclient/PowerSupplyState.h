@@ -52,6 +52,17 @@ public:
 		m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
 		m_channelOn = std::make_unique<std::atomic<bool>[] >(n);
 
+		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
+
+		m_overcurrentShutdownEnabled = std::make_unique<std::atomic<bool>[] >(n);
+		m_softStartEnabled = std::make_unique<std::atomic<bool>[] >(n);
+		m_committedSetVoltage = std::make_unique<float[]>(n);
+		m_setVoltage = std::make_unique<std::string[]>(n);
+		m_committedSetCurrent = std::make_unique<float[]>(n);
+		m_setCurrent = std::make_unique<std::string[]>(n);
+		m_committedSSRamp = std::make_unique<float[]>(n);
+		m_setSSRamp = std::make_unique<std::string[]>(n);
+
 		for(size_t i=0; i<n; i++)
 		{
 			m_channelVoltage[i] = 0;
@@ -59,6 +70,13 @@ public:
 			m_channelConstantCurrent[i] = false;
 			m_channelFuseTripped[i] = false;
 			m_channelOn[i] = false;
+
+			m_needsUpdate[i] = true;
+			m_overcurrentShutdownEnabled[i] = false;
+			m_softStartEnabled[i]=false;
+			m_committedSetVoltage[i] = FLT_MIN;
+			m_committedSetCurrent[i] = FLT_MIN;
+			m_committedSSRamp[i] = FLT_MIN;
 		}
 
 		m_firstUpdateDone = false;
@@ -69,6 +87,19 @@ public:
 	std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
 	std::unique_ptr<std::atomic<bool>[]> m_channelOn;
+
+	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
+	//UI state for dialogs etc
+	std::unique_ptr<std::atomic<bool>[]> m_overcurrentShutdownEnabled;
+	std::unique_ptr<std::atomic<bool>[]> m_softStartEnabled;
+
+	std::unique_ptr<float[]> m_committedSetVoltage;
+	std::unique_ptr<std::string[]> m_setVoltage;
+	std::unique_ptr<float[]> m_committedSetCurrent;
+	std::unique_ptr<std::string[]> m_setCurrent;
+	std::unique_ptr<float[]> m_committedSSRamp;
+	std::unique_ptr<std::string[]> m_setSSRamp;
+
 
 	std::atomic<bool> m_firstUpdateDone;
 
