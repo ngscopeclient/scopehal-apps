@@ -2745,6 +2745,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 			for(auto& c : m_displayedChannels)
 			{
 				auto data = c->GetStream().GetData();
+				data->PrepareForCpuAccess();
 				auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
 				auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
 				if(!sdata && !udata)

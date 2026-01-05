@@ -22,6 +22,7 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 ## Bugs fixed since v0.1.1
 
-* PcapNG export did not handle named pipes correctly (no github ticket)
+* Filters: PcapNG export did not handle named pipes correctly (no github ticket)
+* GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 
 ## Other changes since v0.1.1
