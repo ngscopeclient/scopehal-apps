@@ -141,8 +141,7 @@ void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext
 	ImGui::PushID(label);	// Prevent collision if several sibling links have the same linktext
 	ImGui::Text("%s: ", label);
 	ImGui::SameLine(0, 0);
-	clicked |= ImGui::TextLink(linktext);
-	hovered |= ImGui::IsItemHovered();
+	renderNumericValue(linktext,clicked,hovered);
 	ImGui::PopID();
 }
 
@@ -421,27 +420,55 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
 /**
    @brief Render a numeric value
    @param value the string representation of the value to display (may include the unit)
-   @param color the color to use
-   @param digitHeight the height of a digit
    @param clicked output value for clicked state
    @param hovered output value for hovered state
+   @param color the color to use (defaults to white)
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @param digitHeight the height of a digit (if 0 (defualt), will use ImGui::GetFontSize())
    @param clickable true (default) if the displayed value should be clickable
  */
-void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable)
+void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color, bool allow7SegmentDisplay, float digitHeight, bool clickable)
 {
-	auto& prefs = m_session.GetPreferences();
-	if(prefs.GetBool("Appearance.Stream Browser.use_7_segment_display"))
+	bool use7Segment = false;
+	if(allow7SegmentDisplay)
+	{
+		auto& prefs = m_session.GetPreferences();
+		use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
+	}
+	if(use7Segment)
+	{
+		if(digitHeight <= 0) digitHeight = ImGui::GetFontSize();
 	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
+	}
 	else
 	{
 		if(clickable)
 		{
-			clicked |= ImGui::TextLink(value.c_str());
-			hovered |= ImGui::IsItemHovered();
+			ImVec2 pos = ImGui::GetCursorPos();
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			ImGui::TextUnformatted(value.c_str());
+			ImGui::PopStyleColor();
+
+			clicked |= ImGui::IsItemClicked();
+			if(ImGui::IsItemHovered())
+			{	// Hand cursor
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
+				// Lighter if hovered
+				color.x = color.x * 1.2f;
+				color.y = color.y * 1.2f;
+				color.z = color.z * 1.2f;
+				ImGui::SetCursorPos(pos);
+				ImGui::PushStyleColor(ImGuiCol_Text, color);
+				ImGui::TextUnformatted(value.c_str());
+				ImGui::PopStyleColor();
+				hovered = true;
+			}
 		}
 		else
 		{
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
 			ImGui::TextUnformatted(value.c_str());
+			ImGui::PopStyleColor();
 		}
 	}
 }
@@ -484,6 +511,7 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 		float inputWidth = g.NextItemData.Width;
 		// Allow overlap for apply button
 		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
 		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
 		{	// Input validated (but no apply button)
 			if(!explicitApply)
@@ -495,6 +523,7 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 				keepEditing = true;
 			}
 		}
+		ImGui::PopStyleColor();
 		ImGui::PopItemFlag();
 		if(explicitApply)
 		{	// Add Apply button
@@ -580,11 +609,13 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 		}
 		else
 		{
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
 			ImGui::InputText(label.c_str(),&currentValue,ImGuiInputTextFlags_ReadOnly);
+			ImGui::PopStyleColor();
 			clicked |= ImGui::IsItemClicked();
 			if(ImGui::IsItemHovered())
 			{	// Keep hand cursor while read-only
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 				hovered = true;
 			}
 		}
@@ -897,7 +928,7 @@ bool StreamBrowserDialog::renderPsuRows(
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
 
-	renderNumericValue(measuredValue, color,height,clicked,hovered);
+	renderNumericValue(measuredValue,clicked,hovered,color,true);
 
 	ImGui::PopID();
 	return changed;
@@ -986,7 +1017,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 
 	if(open)
 	{
-		renderNumericValue(valueText, color,ImGui::GetFontSize()*2,clicked,hovered);
+		renderNumericValue(valueText,clicked,hovered,color,true,ImGui::GetFontSize()*2);
 
 		if(isMain)
 		{

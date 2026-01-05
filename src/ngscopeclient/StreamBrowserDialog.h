@@ -154,7 +154,7 @@ protected:
 		const char* valueOn = "ON", 
 		uint8_t cropTextTo = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
-	void renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
+	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
 	template<typename T>
 	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
 	template<typename T>
