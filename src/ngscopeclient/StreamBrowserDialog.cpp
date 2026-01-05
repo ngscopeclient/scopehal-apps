@@ -82,7 +82,7 @@ StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> sc
 	Unit hz(Unit::UNIT_HZ);
 
 	m_rbw = scope->GetResolutionBandwidth();
-	m_rbwText = hz.PrettyPrint(m_rbw);
+	m_rbwText = hz.PrettyPrintInt64(m_rbw);
 
 	m_span = scope->GetSpan();
 	m_spanText = hz.PrettyPrint(m_span);
@@ -446,14 +446,20 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, ImVec4 co
 	}
 }
 
-bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
+template<typename T>
+bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
 {
+    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableNumericValue only supports float or double");
 	auto& prefs = m_session.GetPreferences();
 	bool changed = false;
 	bool validateChange = false;
 	bool cancelEdit = false;
 	bool keepEditing = false;
-	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
+	bool dirty;
+	if constexpr (std::is_same_v<T, int64_t>)
+		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
+	else
+		dirty = unit.PrettyPrint(committedValue) != currentValue;
 	string editLabel = label+"##Edit";
 	ImGuiID editId = ImGui::GetID(editLabel.c_str());
 	ImGuiID labelId = ImGui::GetID(label.c_str());
@@ -588,14 +594,34 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 		}
 		if(dirty)
 		{	// Content actually changed
-			committedValue = unit.ParseString(currentValue);
-			currentValue = unit.PrettyPrint(committedValue);
+			if constexpr (std::is_same_v<T, int64_t>)
+			{
+				//Float path if the user input a decimal value like "3.5G"
+				if(currentValue.find(".") != string::npos)
+					committedValue = unit.ParseString(currentValue);
+				//Integer path otherwise for full precision
+				else
+					committedValue = unit.ParseStringInt64(currentValue);
+
+				currentValue = unit.PrettyPrintInt64(committedValue);
+			}
+			else
+			{
+				committedValue = static_cast<T>(unit.ParseString(currentValue));
+				if constexpr (std::is_same_v<T, int64_t>)
+					currentValue = unit.PrettyPrintInt64(committedValue);
+				else
+					currentValue = unit.PrettyPrint(committedValue);
+			}
 			changed = true;
 		}
 	}
 	else if(cancelEdit)
 	{	// Restore value
-		currentValue = unit.PrettyPrint(committedValue);
+		if constexpr (std::is_same_v<T, int64_t>)
+			currentValue = unit.PrettyPrintInt64(committedValue);
+		else
+			currentValue = unit.PrettyPrint(committedValue);
 		if(m_editedItemId == editId)
 		{
 			m_lastEditedItemId = 0;
@@ -605,7 +631,8 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 	return changed;
 }
 
-bool StreamBrowserDialog::renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay)
+template<typename T>
+bool StreamBrowserDialog::renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay)
 {
 	return renderEditableNumericValue(label,currentValue,committedValue,unit,color,allow7SegmentDisplay,true);
 }
@@ -762,19 +789,24 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
    @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
    @param chan the PSU channel to render properties for
    @param setValue the set value text
+   @param committedValue the last commited value
    @param measuredValue the measured value text
    @param clicked output param for clicked state
    @param hovered output param for hovered state
+
+   @return true if the value has been modified
  */
-void StreamBrowserDialog::renderPsuRows(
+bool StreamBrowserDialog::renderPsuRows(
 	bool isVoltage,
 	bool cc,
 	PowerSupplyChannel* chan,
-	const char *setValue,
-	const char *measuredValue,
+	std::string& currentValue, 
+	float& committedValue, 
+	std::string& measuredValue,
 	bool &clicked,
 	bool &hovered)
 {
+	bool changed = false;
 	auto& prefs = m_session.GetPreferences();
 	// Row 1
 	ImGui::TableNextRow();
@@ -804,13 +836,11 @@ void StreamBrowserDialog::renderPsuRows(
 
 	Unit unit(isVoltage ? Unit::UNIT_VOLTS : Unit::UNIT_AMPS);
 
-	string setValueString = string(setValue);
-	// TODO: use PSU state here
-	float commitValue = unit.ParseString(setValue);
 	auto dwidth = ImGui::GetFontSize() * 6;
 	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditableNumericValueWithExplicitApply("##psuSetValue",setValueString,commitValue,unit,color,true))
-	{	// TODO Update PSU value
+	if(renderEditableNumericValueWithExplicitApply("##psuSetValue",currentValue,committedValue,unit,color,true))
+	{
+		changed = true;
 	}
 
 	ImGui::PopID();
@@ -845,6 +875,7 @@ void StreamBrowserDialog::renderPsuRows(
 	renderNumericValue(measuredValue, color,height,clicked,hovered);
 
 	ImGui::PopID();
+	return changed;
 }
 
 /**
@@ -1325,12 +1356,12 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 
 	// Resolution Bandwidh
 	ImGui::SetNextItemWidth(width);
-	if(UnitInputWithImplicitApply("Rbw", p->m_rbwText, p->m_rbw, hz))
+	if(renderEditableNumericValue("Rbw", p->m_rbwText, p->m_rbw, hz))
 	{
 		scope->SetResolutionBandwidth(p->m_rbw);
 		// Update with values from the device
 		p->m_rbw = scope->GetResolutionBandwidth();
-		p->m_rbwText = hz.PrettyPrint(p->m_rbw);
+		p->m_rbwText = hz.PrettyPrintInt64(p->m_rbw);
 	}
 	HelpMarker("Resolution Bandwidth");
 
@@ -1338,7 +1369,7 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	bool changed = false;
 
 	ImGui::SetNextItemWidth(width);
-	if(UnitInputWithImplicitApply("Start", p->m_startText, p->m_start, hz))
+	if(renderEditableNumericValue("Start", p->m_startText, p->m_start, hz))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1349,7 +1380,7 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	HelpMarker("Start of the frequency sweep");
 
 	ImGui::SetNextItemWidth(width);
-	if(UnitInputWithImplicitApply("Center", p->m_centerText, p->m_center, hz))
+	if(renderEditableNumericValue("Center", p->m_centerText, p->m_center, hz))
 	{
 		scope->SetCenterFrequency(0, p->m_center);
 		changed = true;
@@ -1357,7 +1388,7 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	HelpMarker("Midpoint of the frequency sweep");
 
 	ImGui::SetNextItemWidth(width);
-	if(UnitInputWithImplicitApply("Span", p->m_spanText, p->m_span, hz))
+	if(renderEditableNumericValue("Span", p->m_spanText, p->m_span, hz))
 	{
 		scope->SetSpan(p->m_span);
 		changed = true;
@@ -1365,7 +1396,7 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	HelpMarker("Width of the frequency sweep");
 
 	ImGui::SetNextItemWidth(width);
-	if(UnitInputWithImplicitApply("End", p->m_endText, p->m_end, hz))
+	if(renderEditableNumericValue("End", p->m_endText, p->m_end, hz))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1400,7 +1431,7 @@ void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> sp
 	ImGui::SetNextItemWidth(width);
 
 	Unit fs(Unit::UNIT_FS);
-	if(UnitInputWithImplicitApply("Integration time", config->m_integrationText, config->m_integrationTime, fs))
+	if(renderEditableNumericValue("Integration time", config->m_integrationText, config->m_integrationTime, fs))
 		spec->SetIntegrationTime(config->m_integrationTime);
 	HelpMarker("Spectrometer integration / exposure time");
 }
@@ -1695,25 +1726,35 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			bool cc = false;
 			auto psuState = m_session.GetPSUState(psu);
 			if(psuState)
+			{
 				cc = psuState->m_channelConstantCurrent[channelIndex].load();
 
-			bool clicked = false;
-			bool hovered = false;
+				bool clicked = false;
+				bool hovered = false;
 
-			if (ImGui::BeginTable("table1", 3))
-			{
-				// Voltage
-				renderPsuRows(true,cc,psuchan,svoltage_txt.c_str(),mvoltage_txt.c_str(),clicked,hovered);
-				// Current
-				renderPsuRows(false,cc,psuchan,scurrent_txt.c_str(),mcurrent_txt.c_str(),clicked,hovered);
-				// End table
-				ImGui::EndTable();
-				if (clicked)
+				if (ImGui::BeginTable("table1", 3))
 				{
-					m_parent->ShowInstrumentProperties(psu);
+					// Voltage
+					if(renderPsuRows(true,cc,psuchan,psuState->m_setVoltage[channelIndex],psuState->m_committedSetVoltage[channelIndex],mvoltage_txt,clicked,hovered))
+					{	// Update set voltage
+						psu->SetPowerVoltage(channelIndex, psuState->m_committedSetVoltage[channelIndex]);
+						psuState->m_needsUpdate[channelIndex] = true;
+					}
+					// Current
+					if(renderPsuRows(false,cc,psuchan,psuState->m_setCurrent[channelIndex],psuState->m_committedSetCurrent[channelIndex],mcurrent_txt,clicked,hovered))
+					{	// Update set current 
+						psu->SetPowerCurrent(channelIndex, psuState->m_committedSetCurrent[channelIndex]);
+						psuState->m_needsUpdate[channelIndex] = true;
+					}
+					// End table
+					ImGui::EndTable();
+					if (clicked)
+					{
+						m_parent->ShowInstrumentProperties(psu);
+					}
+					if (hovered)
+						m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 				}
-				if (hovered)
-					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 			}
 			EndBlock();
 		}

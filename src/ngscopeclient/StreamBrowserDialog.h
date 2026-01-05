@@ -155,10 +155,12 @@ protected:
 		uint8_t cropTextTo = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
 	void renderNumericValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
-	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
-	bool renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, float& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
+	template<typename T>
+	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
+	template<typename T>
+	bool renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
-	void renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan,const char *setValue, const char *measuredValue, bool &clicked, bool &hovered);
+	bool renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan, std::string& currentValue, float& committedValue, std::string& measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
 	void renderDmmProperties(std::shared_ptr<Multimeter> dmm, MultimeterChannel* dmmchan, bool isMain, bool &clicked, bool &hovered);
 
