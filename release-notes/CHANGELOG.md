@@ -4,12 +4,14 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.1.1
 
-* Filters: CDR PLL is now GPU accelerated for the common case (no gating, deep waveform) and runs about 7.5x faster than before (https://github.com/ngscopeclient/scopehal/issues/977)
+* Filters: CDR PLL is now GPU accelerated for the common case (no gating, deep waveform) and runs about 7.5x faster (https://github.com/ngscopeclient/scopehal/issues/977)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream.
 * Filters: 100baseTX Ethernet is now GPU accelerated for a subset of processing and runs about 2.5x faster than before
-* Filters: Eye pattern is now GPU accelerated for the common case (DDR clock on uniformly sampled input) and runs about 25x faster than before
+* Filters: Eye pattern is now GPU accelerated for the common case (DDR clock on uniformly sampled input) and runs about 25x faster
+* Filters: Histogram filter is now GPU accelerated and runs about 12x faster
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
+* Filters: TIE measurement is now GPU accelerated and runs about 5.3x faster than before
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 
 ## Breaking changes since v0.1.1
