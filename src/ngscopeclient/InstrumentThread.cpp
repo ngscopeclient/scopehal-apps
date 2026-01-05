@@ -146,6 +146,24 @@ void InstrumentThread(InstrumentThreadArgs args)
 				psustate->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
 				psustate->m_channelOn[i] = psu->GetPowerChannelActive(i);
 
+				if(psustate->m_needsUpdate[i])
+				{
+					psustate->m_overcurrentShutdownEnabled[i] = psu->GetPowerOvercurrentShutdownEnabled(i);
+					psustate->m_softStartEnabled[i] = psu->IsSoftStartEnabled(i);
+					psustate->m_committedSetVoltage[i] = psu->GetPowerVoltageNominal(i);
+					psustate->m_committedSetCurrent[i] = psu->GetPowerCurrentNominal(i);
+					psustate->m_committedSSRamp[i] = psu->GetSoftStartRampTime(i);
+					Unit volts(Unit::UNIT_VOLTS);
+					Unit amps(Unit::UNIT_AMPS);
+					Unit fs(Unit::UNIT_FS);
+					psustate->m_setVoltage[i] = volts.PrettyPrint(psustate->m_committedSetVoltage[i]);
+					psustate->m_setCurrent[i] = amps.PrettyPrint(psustate->m_committedSetCurrent[i]);
+					psustate->m_setSSRamp[i] = fs.PrettyPrint(psustate->m_committedSSRamp[i]);
+
+					psustate->m_needsUpdate[i] = false;
+					
+				}
+
 				session->MarkChannelDirty(pchan);
 			}
 
@@ -236,8 +254,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 			{
 				if(awgstate->m_needsUpdate[i])
 				{
-					Unit volts(Unit::UNIT_VOLTS);
-
 					//Skip non-awg channels
 					auto awgchan = dynamic_cast<FunctionGeneratorChannel*>(awg->GetChannel(i));
 					if(!awgchan)
