@@ -460,7 +460,11 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 	if(m_editedItemId == editId)
 	{	// Item currently beeing edited
 		ImGui::BeginGroup();
-
+		float inputXPos = ImGui::GetCursorPosX();
+	    ImGuiContext& g = *GImGui;
+		float inputWidth = g.NextItemData.Width;
+		// Allow overlap for apply button
+		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
 		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
 		{	// Input validated (but no apply button)
 			if(!explicitApply)
@@ -472,9 +476,12 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 				keepEditing = true;
 			}
 		}
+		ImGui::PopItemFlag();
 		if(explicitApply)
 		{	// Add Apply button
-			ImGui::SameLine();
+			float buttonWidth = ImGui::GetFontSize() * 2;
+			// Position the button just before the right side of the text input
+			ImGui::SameLine(inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x);
 			ImVec4 buttonColorActive = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.apply_button_color"));
 			float bgmul = 0.8f;
 			ImVec4 buttonColorHovered = ImVec4(buttonColorActive.x*bgmul, buttonColorActive.y*bgmul, buttonColorActive.z*bgmul, buttonColorActive.w);
@@ -485,7 +492,7 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
 			if(!dirty)
 				ImGui::BeginDisabled();
-			if(ImGui::SmallButton("\xE2\x8F\x8E")) // Carriage return symbol
+			if(ImGui::Button("\xE2\x8F\x8E")) // Carriage return symbol
 			{	// Apply button click
 				validateChange = true;
 			}
@@ -568,8 +575,11 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 	}
 	if(validateChange)
 	{
-		m_lastEditedItemId = 0;
-		m_editedItemId = 0;
+		if(m_editedItemId == editId)
+		{
+			m_lastEditedItemId = 0;
+			m_editedItemId = 0;
+		}
 		if(dirty)
 		{	// Content actually changed
 			committedValue = unit.ParseString(currentValue);
@@ -580,8 +590,11 @@ bool StreamBrowserDialog::renderEditableNumericValue(const std::string& label, s
 	else if(cancelEdit)
 	{	// Restore value
 		currentValue = unit.PrettyPrint(committedValue);
-		m_lastEditedItemId = 0;
-		m_editedItemId = 0;
+		if(m_editedItemId == editId)
+		{
+			m_lastEditedItemId = 0;
+			m_editedItemId = 0;
+		}
 	}
 	return changed;
 }
