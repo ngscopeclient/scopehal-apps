@@ -78,7 +78,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
-		inst->GetTransport()->FlushCommandQueue();
+		inst->BackgroundProcessing();
 
 		//Scope processing
 		if(scope)
@@ -253,9 +253,9 @@ void InstrumentThread(InstrumentThreadArgs args)
 		//TODO: does this make sense to do in the instrument thread?
 		session->RefreshDirtyFiltersNonblocking();
 
-		//Rate limit to 100 Hz to avoid saturating CPU with polls
+		//Rate limit to 1 kHz to avoid saturating CPU with polls
 		//(this also provides a yield point for the gui thread to get mutex ownership etc)
-		this_thread::sleep_for(chrono::milliseconds(10));
+		this_thread::sleep_for(chrono::milliseconds(1));
 	}
 
 	LogTrace("Shutting down instrument thread\n");

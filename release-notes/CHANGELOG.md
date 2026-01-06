@@ -4,7 +4,8 @@ This is a running list of significant bug fixes and new features since the last 
 
 ## New features since v0.1.1
 
-* Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a 10-15% speedup
+* Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
+* Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: CDR PLL is now GPU accelerated for the common case (no gating, deep waveform) and runs about 7.5x faster (https://github.com/ngscopeclient/scopehal/issues/977)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream.
 * Filters: 100baseTX Ethernet is now GPU accelerated for a subset of processing and runs about 2.5x faster than before
