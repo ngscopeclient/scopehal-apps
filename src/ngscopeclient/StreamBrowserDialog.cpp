@@ -472,32 +472,39 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &cli
    @brief Render a read-only instrument property value
    @param label the value label (used as a label for the property)
    @param currentValue the string representation of the current value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
 */
-void StreamBrowserDialog::renderReadOnlyProperty(const string& label, const string& value)
+void StreamBrowserDialog::renderReadOnlyProperty(float width, const string& label, const string& value, const char* tooltip)
 {
 	ImGui::PushID(label.c_str());	// Prevent collision if several sibling links have the same linktext
 	float fontSize = ImGui::GetFontSize();
-	auto dwidth = fontSize * 6;
+	if(width <= 0) width = 6*fontSize;
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4 bg = style.Colors[ImGuiCol_FrameBg];
 	ImGui::PushStyleColor(ImGuiCol_ChildBg, bg);
-	ImGui::BeginChild("##readOnlyValue", ImVec2(dwidth, ImGui::GetFontSize()),false,ImGuiWindowFlags_None);
+	ImGui::BeginChild("##readOnlyValue", ImVec2(width, ImGui::GetFontSize()),false,ImGuiWindowFlags_None);
 	ImGui::TextUnformatted(value.c_str());
 	ImGui::EndChild();
 	ImGui::PopStyleColor();
 	ImGui::SameLine();
 	ImGui::TextUnformatted(label.c_str());
 	ImGui::PopID();
+	if(tooltip)
+	{
+		HelpMarker(tooltip);
+	}
 }
 
 
 template<typename T>
 /**
    @brief Render an editable numeric value
+   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
    @param label the value label (used as a label for the TextInput)
    @param currentValue the string representation of the current value
    @param comittedValue the last comitted typed (float, double or int64_t) value
    @param unit the Unit of the value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
    @param color the color to use
    @param clicked output value for clicked state
    @param hovered output value for hovered state
@@ -505,7 +512,7 @@ template<typename T>
    @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
    @return true if the value has changed
  */
-bool StreamBrowserDialog::renderEditableProperty(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
+bool StreamBrowserDialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
 {
     static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports float or double");
 	auto& prefs = m_session.GetPreferences();
@@ -514,6 +521,9 @@ bool StreamBrowserDialog::renderEditableProperty(const std::string& label, std::
 	bool cancelEdit = false;
 	bool keepEditing = false;
 	bool dirty;
+	float fontSize = ImGui::GetFontSize();
+	if(width <= 0) width = 6*fontSize;
+	ImGui::SetNextItemWidth(width);
 	if constexpr (std::is_same_v<T, int64_t>)
 		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
 	else
@@ -556,17 +566,13 @@ bool StreamBrowserDialog::renderEditableProperty(const std::string& label, std::
 			ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
-			if(!dirty)
-				ImGui::BeginDisabled();
+			ImGui::BeginDisabled(!dirty);
 			if(ImGui::Button("\xE2\x8F\x8E")) // Carriage return symbol
 			{	// Apply button click
 				validateChange = true;
 			}
-			if(!dirty)
-			{
-				ImGui::EndDisabled();
-			}
-			else if(ImGui::IsItemHovered())
+			ImGui::EndDisabled();
+			if(dirty && ImGui::IsItemHovered())
 			{	// Help to explain apply button
 				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
 			}
@@ -690,25 +696,31 @@ bool StreamBrowserDialog::renderEditableProperty(const std::string& label, std::
 			m_editedItemId = 0;
 		}
 	}
+	if(tooltip)
+	{
+		HelpMarker(tooltip);
+	}
 	return changed;
 }
 
 template<typename T>
 /**
    @brief Render an editable numeric value with explicit apply (if the input value needs to explicitly be applied by clicking the apply button)
+   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
    @param label the value label (used as a label for the TextInput)
    @param currentValue the string representation of the current value
    @param comittedValue the last comitted typed (float, double or int64_t) value
    @param unit the Unit of the value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
    @param color the color to use
    @param clicked output value for clicked state
    @param hovered output value for hovered state
    @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
    @return true if the value has changed
  */
-bool StreamBrowserDialog::renderEditablePropertyWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color, bool allow7SegmentDisplay)
+bool StreamBrowserDialog::renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay)
 {
-	return renderEditableProperty(label,currentValue,committedValue,unit,color,allow7SegmentDisplay,true);
+	return renderEditableProperty(width,label,currentValue,committedValue,unit,tooltip,color,allow7SegmentDisplay,true);
 }
 
 
@@ -909,9 +921,7 @@ bool StreamBrowserDialog::renderPsuRows(
 
 	Unit unit(isVoltage ? Unit::UNIT_VOLTS : Unit::UNIT_AMPS);
 
-	auto dwidth = ImGui::GetFontSize() * 6;
-	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditablePropertyWithExplicitApply("##psuSetValue",currentValue,committedValue,unit,color,true))
+	if(renderEditablePropertyWithExplicitApply(0,"##psuSetValue",currentValue,committedValue,unit,nullptr,color,true))
 	{
 		changed = true;
 	}
@@ -1038,7 +1048,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 
 	if(open)
 	{
-		renderNumericValue(valueText,clicked,hovered,color,true,ImGui::GetFontSize()*2);
+		renderNumericValue(valueText,clicked,hovered,color,true,ImGui::GetFontSize()*2,false);
 
 		if(isMain)
 		{
@@ -1139,12 +1149,11 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 
 	// Row 2
 	// Frequency label
-	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditableProperty(
+	if(renderEditableProperty(dwidth,
 		"Frequency",
 		awgState->m_strFrequency[channelIndex],
 		awgState->m_committedFrequency[channelIndex],
-		hz))
+		hz/*,"Frequency of the generated waveform"*/))
 	{
 		awg->SetFunctionChannelFrequency(channelIndex, awgState->m_committedFrequency[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
@@ -1160,21 +1169,18 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	else
 	DoItemHelp();
 	*/
-	//HelpMarker("Frequency of the generated waveform");
 
 	//Row 2
 	//Duty cycle
-	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditableProperty(
+	if(renderEditableProperty(dwidth,
 		"Duty cycle",
 		awgState->m_strDutyCycle[channelIndex],
 		awgState->m_committedDutyCycle[channelIndex],
-		percent))
+		percent/*,"Duty cycle of the generated waveform"*/))
 	{
 		awg->SetFunctionChannelDutyCycle(channelIndex, awgState->m_committedDutyCycle[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	//HelpMarker("Duty cycle of the generated waveform");
 
 	// Shape preview
 	startBadgeLine();
@@ -1199,31 +1205,27 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	}
 
 	// Row 3
-	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditablePropertyWithExplicitApply(
+	if(renderEditablePropertyWithExplicitApply(dwidth,
 		"Amplitude",
 		awgState->m_strAmplitude[channelIndex],
 		awgState->m_committedAmplitude[channelIndex],
-		volts))
+		volts,"Peak-to-peak amplitude of the generated waveform"))
 	{
 		awg->SetFunctionChannelAmplitude(channelIndex, awgState->m_committedAmplitude[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	HelpMarker("Peak-to-peak amplitude of the generated waveform");
 
 	//Row 4
 	//Offset
-	ImGui::SetNextItemWidth(dwidth);
-	if(renderEditablePropertyWithExplicitApply(
+	if(renderEditablePropertyWithExplicitApply(dwidth,
 		"Offset",
 		awgState->m_strOffset[channelIndex],
 		awgState->m_committedOffset[channelIndex],
-		volts))
+		volts,"DC offset for the waveform above (positive) or below (negative) ground"))
 	{
 		awg->SetFunctionChannelOffset(channelIndex, awgState->m_committedOffset[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
-	HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
 	//Row 5
 	//Impedance
@@ -1435,21 +1437,18 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	Unit hz(Unit::UNIT_HZ);
 
 	// Resolution Bandwidh
-	ImGui::SetNextItemWidth(width);
-	if(renderEditableProperty("Rbw", p->m_rbwText, p->m_rbw, hz))
+	if(renderEditableProperty(width,"Rbw", p->m_rbwText, p->m_rbw, hz, "Resolution Bandwidth"))
 	{
 		scope->SetResolutionBandwidth(p->m_rbw);
 		// Update with values from the device
 		p->m_rbw = scope->GetResolutionBandwidth();
 		p->m_rbwText = hz.PrettyPrintInt64(p->m_rbw);
 	}
-	HelpMarker("Resolution Bandwidth");
 
 	//Frequency
 	bool changed = false;
 
-	ImGui::SetNextItemWidth(width);
-	if(renderEditableProperty("Start", p->m_startText, p->m_start, hz))
+	if(renderEditableProperty(width,"Start", p->m_startText, p->m_start, hz, "Start of the frequency sweep"))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1457,26 +1456,20 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 		scope->SetSpan(span);
 		changed = true;
 	}
-	HelpMarker("Start of the frequency sweep");
 
-	ImGui::SetNextItemWidth(width);
-	if(renderEditableProperty("Center", p->m_centerText, p->m_center, hz))
+	if(renderEditableProperty(width,"Center", p->m_centerText, p->m_center, hz, "Midpoint of the frequency sweep"))
 	{
 		scope->SetCenterFrequency(0, p->m_center);
 		changed = true;
 	}
-	HelpMarker("Midpoint of the frequency sweep");
 
-	ImGui::SetNextItemWidth(width);
-	if(renderEditableProperty("Span", p->m_spanText, p->m_span, hz))
+	if(renderEditableProperty(width,"Span", p->m_spanText, p->m_span, hz, "Width of the frequency sweep"))
 	{
 		scope->SetSpan(p->m_span);
 		changed = true;
 	}
-	HelpMarker("Width of the frequency sweep");
 
-	ImGui::SetNextItemWidth(width);
-	if(renderEditableProperty("End", p->m_endText, p->m_end, hz))
+	if(renderEditableProperty(width,"End", p->m_endText, p->m_end, hz, "End of the frequency sweep"))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1484,7 +1477,6 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 		scope->SetSpan(span);
 		changed = true;
 	}
-	HelpMarker("End of the frequency sweep");
 
 	//Update everything if one setting is changed
 	if(changed)
@@ -1508,12 +1500,10 @@ void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> sp
 	auto config = m_timebaseConfig[scope];
 
 	auto width = ImGui::GetFontSize() * 5;
-	ImGui::SetNextItemWidth(width);
 
 	Unit fs(Unit::UNIT_FS);
-	if(renderEditableProperty("Integration time", config->m_integrationText, config->m_integrationTime, fs))
+	if(renderEditableProperty(width, "Integration time", config->m_integrationText, config->m_integrationTime, fs, "Spectrometer integration / exposure time"))
 		spec->SetIntegrationTime(config->m_integrationTime);
-	HelpMarker("Spectrometer integration / exposure time");
 }
 
 /**
@@ -1954,15 +1944,15 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 					{
 						auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
 						auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
-						renderReadOnlyProperty("Offset", offset_txt);
-						renderReadOnlyProperty("Vertical range", range_txt);
+						renderReadOnlyProperty(0,"Offset", offset_txt);
+						renderReadOnlyProperty(0,"Vertical range", range_txt, "Vertical range");
 					}
 					break;
 				case Stream::STREAM_TYPE_DIGITAL:
 					if(scope)
 					{
 						auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-						renderReadOnlyProperty("Threshold", threshold_txt);
+						renderReadOnlyProperty(0,"Threshold", threshold_txt);
 						break;
 					}
 					//fall through
