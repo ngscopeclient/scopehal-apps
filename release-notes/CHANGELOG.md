@@ -25,6 +25,7 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 ## Bugs fixed since v0.1.1
 
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
+* Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 
 ## Other changes since v0.1.1
