@@ -126,7 +126,6 @@ protected:
 	void EndBlock();
 
 	// Rendeding of StreamBrowserDialog elements
-	void renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered);
 	void startBadgeLine();
 	void renderBadge(ImVec4 color, ... /* labels, ending in NULL */);
 	void renderInstrumentBadge(std::shared_ptr<Instrument> inst, bool latched, InstrumentBadge badge);
@@ -157,10 +156,11 @@ protected:
 		float paddingRight = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0, float paddingRight = 0);
 	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
+	void renderReadOnlyProperty(const std::string& label, const std::string& value);
 	template<typename T>
-	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
+	bool renderEditableProperty(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
 	template<typename T>
-	bool renderEditableNumericValueWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
+	bool renderEditablePropertyWithExplicitApply(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	bool renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan, std::string& currentValue, float& committedValue, std::string& measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
