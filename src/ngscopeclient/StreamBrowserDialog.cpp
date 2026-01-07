@@ -248,12 +248,14 @@ void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 	@brief Render a combo box with provided color and values
 
 	@param label	Label for the combo box
+	@param alignRight if true
 	@param color the color of the combo box
 	@param selected the selected value index (in/out)
 	@param values the combo box values
 	@param useColorForText if true, use the provided color for text (and a darker version of it for background color)
 	@param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
-	@param hideArrow True to hide the dropdown arrow
+	@param hideArrow True to hide the dropdown arrow (defaults to true)
+	@param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
 
 	@return true if the selected value of the combo has been changed
  */
@@ -266,7 +268,7 @@ bool StreamBrowserDialog::renderCombo(
 	bool useColorForText,
 	uint8_t cropTextTo,
 	bool hideArrow,
-	int paddingRight)
+	float paddingRight)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -389,15 +391,16 @@ bool StreamBrowserDialog::renderCombo(
    @param valueOff label for value off (optionnal, defaults to "OFF")
    @param valueOn label for value on (optionnal, defaults to "ON")
    @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
+   @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
    @return true if selection has changed
  */
-bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
+bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo, float paddingRight)
 {
 	int selection = (int)curValue;
 	std::vector<string> values;
 	values.push_back(string(valueOff));
 	values.push_back(string(valueOn));
-	bool ret = renderCombo(label, alignRight, color, selection, values, false, cropTextTo);
+	bool ret = renderCombo(label, alignRight, color, selection, values, false, cropTextTo, true, paddingRight);
 	curValue = (selection == 1);
 	return ret;
 }
@@ -411,16 +414,17 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
    @param valueOff label for value off (optionnal, defaults to "OFF")
    @param valueOn label for value on (optionnal, defaults to "ON")
    @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
+   @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
    @return true if value has changed
  */
-bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo)
+bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo, float paddingRight)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
 		(curValue ?
 			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
 			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggle(label, alignRight, color, curValue, valueOff, valueOn, cropTextTo);
+	return renderToggle(label, alignRight, color, curValue, valueOff, valueOn, cropTextTo,paddingRight);
 }
 
 /**
@@ -933,7 +937,7 @@ bool StreamBrowserDialog::renderPsuRows(
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
 
-	renderNumericValue(measuredValue,clicked,hovered,color,true);
+	renderNumericValue(measuredValue,clicked,hovered,color,true,0,false);
 
 	ImGui::PopID();
 	return changed;
@@ -988,7 +992,11 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 		}
 	}
 
-	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3))
+	// Padding to give space for ChannelProperties dialog button 
+	auto& prefs = m_session.GetPreferences();
+	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
+
+	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3,true,padding))
 	{
 		curMode = modes[modeSelector];
 		if(isMain)
@@ -1033,7 +1041,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 				// For main, also show the autorange combo
 				startBadgeLine();
 				bool autorange = dmmState->m_autoRange.load();
-				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3))
+				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3,padding))
 				{
 					dmm->SetMeterAutoRange(autorange);
 					dmmState->m_needsRangeUpdate = true;
@@ -1781,7 +1789,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(psu)
 		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
-			if(BeginBlock("psu_params",true))
+			if(BeginBlock("psu_params",true,"Open PSU channel properties"))
 			{
 				m_parent->ShowInstrumentProperties(psu);
 			}
@@ -1816,12 +1824,6 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 					}
 					// End table
 					ImGui::EndTable();
-					if (clicked)
-					{
-						m_parent->ShowInstrumentProperties(psu);
-					}
-					if (hovered)
-						m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 				}
 			}
 			EndBlock();
@@ -1837,7 +1839,10 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else if(dmm && dmmchan)
 		{
-			BeginBlock("dmm_params");
+			if(BeginBlock("dmm_params",true,"Open Multimeter properties"))
+			{
+				m_parent->ShowInstrumentProperties(dmm);
+			}
 			// Always 2 streams for dmm channel => render properties on channel node
 			bool clicked = false;
 			bool hovered = false;
@@ -1845,12 +1850,6 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			renderDmmProperties(dmm,dmmchan,true,clicked,hovered);
 			// Secondary measurement
 			renderDmmProperties(dmm,dmmchan,false,clicked,hovered);
-			if (clicked)
-			{
-				m_parent->ShowInstrumentProperties(dmm);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open Multimeter properties");
 
 			EndBlock();
 		}
@@ -1935,7 +1934,10 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		if(hasProps)
 		{
-			BeginBlock("stream_params");
+			if(BeginBlock("stream_params",true,"Open channel properties"))
+			{
+				m_parent->ShowChannelProperties(scopechan);
+			}
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
 			bool clicked = false;
@@ -1966,12 +1968,6 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 					break;
 			}
 			EndBlock();
-			if (clicked)
-			{
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open properties");
 		}
 	}
 	ImGui::PopID();
@@ -2087,7 +2083,7 @@ void StreamBrowserDialog::DoItemHelp()
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Add to filter graph or plot");
 }
 
-bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton)
+bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton, const char* tooltip)
 {
 	bool clicked = false;
 	auto& prefs = m_session.GetPreferences();
@@ -2121,6 +2117,10 @@ bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton)
 		if(ImGui::IsItemHovered())
 		{	// Hand cursor
 			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+			if(tooltip)
+			{
+				m_parent->AddStatusHelp("mouse_lmb", tooltip);
+			}
 		}
 		ImGui::PopStyleVar(2);
 		ImGui::PopStyleColor(3);

@@ -122,7 +122,7 @@ protected:
 	void DoItemHelp();
 
 	// Block handling
-	bool BeginBlock(const char *label, bool withButton = false);
+	bool BeginBlock(const char *label, bool withButton = false, const char* tooltip = nullptr);
 	void EndBlock();
 
 	// Rendeding of StreamBrowserDialog elements
@@ -139,7 +139,7 @@ protected:
 		bool useColorForText = false,
 		uint8_t cropTextTo = 0,
 		bool hideArrow = true,
-		int paddingRight = 0);
+		float paddingRight = 0);
 	bool renderCombo(
 		const char* label,
 		bool alignRight,
@@ -153,8 +153,9 @@ protected:
 		bool& curValue, 
 		const char* valueOff = "OFF", 
 		const char* valueOn = "ON", 
-		uint8_t cropTextTo = 0);
-	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0);
+		uint8_t cropTextTo = 0,
+		float paddingRight = 0);
+	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0, float paddingRight = 0);
 	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
 	template<typename T>
 	bool renderEditableNumericValue(const std::string& label, std::string& currentValue, T& committedValue, Unit unit, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
