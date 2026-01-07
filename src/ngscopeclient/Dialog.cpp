@@ -448,6 +448,7 @@ static char SEGMENTS[] =
 	0x7F, // 8
 	0x7B, // 9
 	0x0E, // L
+	0x01, // -
 };
 
 /**
@@ -463,7 +464,9 @@ static char SEGMENTS[] =
 void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 size, ImVec2 position, float thickness, ImU32 colorOn, ImU32 colorOff)
 {
 	// Inspired by https://github.com/ocornut/imgui/issues/3606#issuecomment-736855952
-	if(digit > 10)
+	if(digit == '-')
+		digit = 11;	// Minus sign
+	else if(digit > 10)
 		digit = 10; // 10 is for L of OL (Overload)
 	size.y += thickness;
 	ImVec2 halfSize(size.x/2,size.y/2);
@@ -598,6 +601,16 @@ void Dialog::Render7SegmentValue(const std::string& value, ImVec4 color, float d
 					fractPart.push_back((uint8_t)(c-'0'));
 				else
 					unit += c;
+			}
+			else if(c == '-')
+			{
+				// This is the decimal separator
+				if(inIntPart)
+				{
+					intPart.push_back(c);
+				}
+				else
+					LogWarning("Unexpected sign '%c' in value '%s'.\n",c,value.c_str());
 			}
 			else if(c == '.' || c == std::use_facet<std::numpunct<char> >(std::locale()).decimal_point() || c == ',')
 			{
