@@ -43,6 +43,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 {
 	pthread_setname_np_compat("InstrumentThread");
 
+	#ifdef HAVE_NVTX
+		NVTX3_FUNC_RANGE();
+	#endif
+
 	auto inst = args.inst;
 	if(!inst)
 	{
