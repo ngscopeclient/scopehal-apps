@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -149,6 +149,8 @@ struct ConfigPushConstants
 	@brief State for a single peak label
 
 	All positions/sizes are in waveform units, not screen units, so that they scale/move correctly with the waveform
+
+	X axis positions are in base units, not scaled by timebase
  */
 struct PeakLabel
 {

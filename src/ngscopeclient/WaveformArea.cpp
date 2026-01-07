@@ -1378,9 +1378,8 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 	for(auto p : peaks)
 	{
 		//Draw the circle for the peak
-		auto x = (p.m_x * data->m_timescale) + data->m_triggerPhase;
 		list->AddCircle(
-			ImVec2(m_group->XAxisUnitsToXPosition(x), YAxisUnitsToYPosition(p.m_y)),
+			ImVec2(m_group->XAxisUnitsToXPosition(p.m_x), YAxisUnitsToYPosition(p.m_y)),
 			radius,
 			circleColor,
 			0,
@@ -1390,11 +1389,11 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 		bool hit = false;
 		for(size_t i=0; i<channel->m_peakLabels.size(); i++)
 		{
-			if( llabs(channel->m_peakLabels[i].m_peakXpos - x) < neighborThresholdXUnits )
+			if( llabs(channel->m_peakLabels[i].m_peakXpos - p.m_x) < neighborThresholdXUnits )
 			{
 				//This peak is close enough we'll call it the same. Update the position.
 				hit = true;
-				channel->m_peakLabels[i].m_peakXpos = x;
+				channel->m_peakLabels[i].m_peakXpos = p.m_x;
 				channel->m_peakLabels[i].m_peakYpos = p.m_y;
 				channel->m_peakLabels[i].m_peakAlpha = 255;
 				channel->m_peakLabels[i].m_fwhm = p.m_fwhm;
@@ -1408,8 +1407,8 @@ void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedCha
 			PeakLabel npeak;
 
 			//Initial X position is just left of the peak
-			npeak.m_labelXpos = x - m_group->PixelsToXAxisUnits(5 * ImGui::GetFontSize());
-			npeak.m_peakXpos = x;
+			npeak.m_labelXpos = p.m_x - m_group->PixelsToXAxisUnits(5 * ImGui::GetFontSize());
+			npeak.m_peakXpos = p.m_x;
 			npeak.m_peakYpos = p.m_y;
 			npeak.m_fwhm = p.m_fwhm;
 
