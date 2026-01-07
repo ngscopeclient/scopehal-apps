@@ -122,7 +122,7 @@ protected:
 	void DoItemHelp();
 
 	// Block handling
-	void BeginBlock(const char *label);
+	bool BeginBlock(const char *label, bool withButton = false);
 	void EndBlock();
 
 	// Rendeding of StreamBrowserDialog elements
@@ -138,7 +138,8 @@ protected:
 		const std::vector<std::string>& values,
 		bool useColorForText = false,
 		uint8_t cropTextTo = 0,
-		bool hideArrow = true);
+		bool hideArrow = true,
+		int paddingRight = 0);
 	bool renderCombo(
 		const char* label,
 		bool alignRight,

@@ -39,6 +39,9 @@
 
 using namespace std;
 
+#define ELLIPSIS_CHAR "\xE2\x80\xA6" // "..." character
+#define PLUS_CHAR "+"
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StreamBrowserTimebaseInfo
 
@@ -139,9 +142,11 @@ StreamBrowserDialog::~StreamBrowserDialog()
 void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered)
 {
 	ImGui::PushID(label);	// Prevent collision if several sibling links have the same linktext
-	ImGui::Text("%s: ", label);
-	ImGui::SameLine(0, 0);
+	auto dwidth = ImGui::GetFontSize() * 6;
+	ImGui::SetNextItemWidth(dwidth);
 	renderNumericValue(linktext,clicked,hovered);
+	ImGui::SameLine(0, 0);
+	ImGui::TextUnformatted(label);
 	ImGui::PopID();
 }
 
@@ -260,7 +265,8 @@ bool StreamBrowserDialog::renderCombo(
 	const vector<string> &values,
 	bool useColorForText,
 	uint8_t cropTextTo,
-	bool hideArrow)
+	bool hideArrow,
+	int paddingRight)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -273,7 +279,7 @@ bool StreamBrowserDialog::renderCombo(
 
 	if(alignRight)
 	{
-		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
+		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2 + paddingRight;
 		float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
 		string resizedLabel;
 		if ((m_badgeXCur - xsz) < m_badgeXMin)
@@ -287,12 +293,12 @@ bool StreamBrowserDialog::renderCombo(
 				resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
 				if(resizedLabel.size() < cropTextTo)
 					break; // We don't want to make the text that short
-				xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
+				xsz = ImGui::CalcTextSize((resizedLabel + ELLIPSIS_CHAR).c_str()).x + padding;
 			}
 			if((m_badgeXCur - xsz) < m_badgeXMin)
 				return false; // Still no room
 			// We found an acceptable size
-			resizedLabel = resizedLabel + "...";
+			resizedLabel = resizedLabel + ELLIPSIS_CHAR;
 			selectedLabel = resizedLabel.c_str();
 		}
 		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
@@ -887,7 +893,6 @@ bool StreamBrowserDialog::renderPsuRows(
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
 
-	float height = ImGui::GetFontSize();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_7_segment_color"));
 
 	Unit unit(isVoltage ? Unit::UNIT_VOLTS : Unit::UNIT_AMPS);
@@ -1091,6 +1096,8 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
+	// Padding to give space for ChannelProperties dialog button 
+	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
 	// Shape combo
 	// Get current shape and  shape index
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
@@ -1101,7 +1108,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)),
 		shapeIndex, awgState->m_channelShapeNames[channelIndex],
 		true,
-		3))
+		3,true,padding))
 	{
 		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
 		awg->SetFunctionChannelShape(channelIndex, shape);
@@ -1157,10 +1164,11 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	startBadgeLine();
 	auto height = ImGui::GetFontSize() * 2;
 	auto width =  height * 2;
-	if ((m_badgeXCur - width) >= m_badgeXMin)
+	auto totalWidth = width + padding;
+	if ((m_badgeXCur - totalWidth) >= m_badgeXMin)
 	{
 		// ok, we have enough space draw preview
-		m_badgeXCur -= width;
+		m_badgeXCur -= totalWidth;
 		// save current y position to restore it after drawing the preview
 		float currentY = ImGui::GetCursorPosY();
 		// Continue layout on current line (row 3)
@@ -1773,7 +1781,11 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(psu)
 		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
-			BeginBlock("psu_params");
+			if(BeginBlock("psu_params",true))
+			{
+				m_parent->ShowInstrumentProperties(psu);
+			}
+
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
 			auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
 			auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
@@ -1816,8 +1828,11 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else if(awg && awgchan)
 		{
-			BeginBlock("awgparams");
-				renderAwgProperties(awg, awgchan);
+			if(BeginBlock("awgparams",true))
+			{
+				m_parent->ShowInstrumentProperties(awg);
+			}
+			renderAwgProperties(awg, awgchan);
 			EndBlock();
 		}
 		else if(dmm && dmmchan)
@@ -2072,16 +2087,46 @@ void StreamBrowserDialog::DoItemHelp()
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Add to filter graph or plot");
 }
 
-void StreamBrowserDialog::BeginBlock(const char* label)
+bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton)
 {
+	bool clicked = false;
 	auto& prefs = m_session.GetPreferences();
 	ImGuiWindowFlags flags = ImGuiChildFlags_AutoResizeY;
+	bool withBorders = false;
 	if(prefs.GetBool("Appearance.Stream Browser.show_block_border"))
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
 		flags |= ImGuiChildFlags_Borders;
+		withBorders = true;
 	}
 	ImGui::BeginChild(label, ImVec2(0, 0), flags);
+	if(withButton)
+	{	// Create a "+" button on the top right corner of the box
+		ImVec2 oldPos = ImGui::GetCursorPos();
+		float padding = ImGui::GetStyle().FramePadding.x;
+		float shift = withBorders ? padding*1.5 : 0;
+		float xsz = ImGui::GetFontSize();
+		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - xsz + shift);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY()-shift);
+		// Use the same color as border for the button
+		ImVec4 border = ImGui::GetStyle().Colors[ImGuiCol_Border];
+		ImVec4 hover = ImVec4(border.x * 1.2f, border.y * 1.2f, border.z * 1.2f, border.w);
+		ImVec4 active = ImVec4(border.x * 0.9f, border.y * 0.9f, border.z * 0.9f, border.w);
+		ImGui::PushStyleColor(ImGuiCol_Button, border);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.6f, 0.5f));
+		clicked = ImGui::Button(PLUS_CHAR,ImVec2(xsz, xsz));
+		if(ImGui::IsItemHovered())
+		{	// Hand cursor
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+		}
+		ImGui::PopStyleVar(2);
+		ImGui::PopStyleColor(3);
+		ImGui::SetCursorPos(oldPos);
+	}
+	return clicked;
 }
 
 void StreamBrowserDialog::EndBlock()
