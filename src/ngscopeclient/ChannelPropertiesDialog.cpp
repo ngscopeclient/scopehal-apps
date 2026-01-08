@@ -324,9 +324,9 @@ bool ChannelPropertiesDialog::DoRender()
 
 	//Input settings only make sense if we have an attached scope
 	auto nstreams = m_channel->GetStreamCount();
+	auto index = m_channel->GetIndex();
 	if(scope)
 	{
-		auto index = m_channel->GetIndex();
 		if(ImGui::CollapsingHeader("Input", defaultOpenFlags))
 		{
 			//Type of probe connected

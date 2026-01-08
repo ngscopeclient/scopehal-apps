@@ -1853,6 +1853,16 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else
 		{
+			if(!singleStream)
+			{
+				if(BeginBlock("stream_params",true,"Open channel properties"))
+				{
+					m_parent->ShowChannelProperties(scopechan);
+				}
+				auto scopeState = m_session.GetOscillopscopeState(scope);
+				renderChannelProperties(scope,scopechan,channelIndex,scopeState);
+				EndBlock();
+			}
 			size_t streamCount = channel->GetStreamCount();
 			for(size_t j=0; j<streamCount; j++)
 			{
@@ -1867,6 +1877,81 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		ImGui::TreePop();
 
 	ImGui::PopID();
+}
+
+/**
+   @brief Rendering of channel properties
+
+   @param scope the scope
+   @param scopechan the scope channel
+   @param channelIndex the index of the channel
+   @param scopeState the OscilloscopeState
+ */
+void StreamBrowserDialog::renderChannelProperties(std::shared_ptr<Oscilloscope> scope, OscilloscopeChannel* scopechan, size_t channelIndex, shared_ptr<OscilloscopeState> scopeState)
+{
+	float fontSize = ImGui::GetFontSize();
+	float width = 6*fontSize;
+
+	Unit counts(Unit::UNIT_COUNTS);
+	if(renderEditableProperty(width,"Attenuation",scopeState->m_strAttenuation[channelIndex],scopeState->m_committedAttenuation[channelIndex],counts,
+	"Attenuation setting for the probe (for example, 10 for a 10:1 probe)"))
+	{	// Update offset
+		scopechan->SetAttenuation(scopeState->m_committedAttenuation[channelIndex]);
+		scopeState->m_needsUpdate[channelIndex] = true;
+	}
+	//Only show coupling box if the instrument has configurable coupling
+	if( (scopeState->m_couplings[channelIndex].size() > 1) && (scopeState->m_probeName[channelIndex] == "") )
+	{
+		ImGui::SetNextItemWidth(width);
+		if(renderCombo(
+			"Coupling",
+			false,
+			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+			scopeState->m_channelCoupling[channelIndex],
+			scopeState->m_couplingNames[channelIndex],
+			false,
+			0,
+			false))
+		{
+			scope->SetChannelCoupling(channelIndex,scopeState->m_couplings[channelIndex][scopeState->m_channelCoupling[channelIndex]]);
+			scopeState->m_needsUpdate[channelIndex] = true;
+		}
+		HelpMarker("Coupling configuration for the input");
+	}
+	//Bandwidth limiters (only show if more than one value available)
+	if(scopeState->m_bandwidthLimitNames[channelIndex].size() > 1)
+	{
+		ImGui::SetNextItemWidth(width);
+		if(renderCombo(
+			"Bandwidth",
+			false,
+			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+			scopeState->m_channelBandwidthLimit[channelIndex],
+			scopeState->m_bandwidthLimitNames[channelIndex],
+			false,
+			0,
+			false))
+		{
+			scopechan->SetBandwidthLimit(scopeState->m_bandwidthLimits[channelIndex][scopeState->m_channelBandwidthLimit[channelIndex]]);
+			scopeState->m_needsUpdate[channelIndex] = true;
+		}
+		HelpMarker("Hardware bandwidth limiter setting");
+	}
+	//If the probe supports inversion, show a checkbox for it
+	if(scope->CanInvert(channelIndex))
+	{
+		ImGui::SetNextItemWidth(width);
+		if(renderOnOffToggle("Invert",false,scopeState->m_channelInverted[channelIndex]))
+		{
+			scope->Invert(channelIndex,scopeState->m_channelInverted[channelIndex]);
+			scopeState->m_needsUpdate[channelIndex] = true;
+		}
+		HelpMarker(
+			"When ON, input value is multiplied by -1.\n"
+			"For a differential probe, this is equivalent to swapping the positive and negative inputs."
+			);
+	}
+
 }
 
 /**
@@ -1945,6 +2030,10 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 			{
 				case Stream::STREAM_TYPE_ANALOG:
 					{
+						if(!renderName)
+						{	// No streams => display channel properties here
+							renderChannelProperties(scope,scopechan,channelIndex,scopeState);
+						}
 						if(renderEditablePropertyWithExplicitApply(0,"Offset",scopeState->m_strOffset[channelIndex][streamIndex],scopeState->m_committedOffset[channelIndex][streamIndex],unit))
 						{	// Update offset
 							scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
@@ -1960,8 +2049,19 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 				case Stream::STREAM_TYPE_DIGITAL:
 					if(scope)
 					{
-						auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-						renderReadOnlyProperty(0,"Threshold", threshold_txt);
+						if(scope->IsDigitalThresholdConfigurable())
+						{
+							if(renderEditablePropertyWithExplicitApply(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
+							{	// Update offset
+								scopechan->SetDigitalThreshold(scopeState->m_committedDigitalThreshold[channelIndex]);
+								scopeState->m_needsUpdate[channelIndex] = true;
+							}
+						}
+						else
+						{
+							auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+							renderReadOnlyProperty(0,"Threshold", threshold_txt);
+						}
 						break;
 					}
 					//fall through

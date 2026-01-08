@@ -151,7 +151,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 						{
 							scopestate->m_channelAttenuation[i] = scope->GetChannelAttenuation(i);
 							scopestate->m_channelBandwidthLimit[i] = scope->GetChannelBandwidthLimit(i);
-							scopestate->m_channelCoupling[i] = scope->GetChannelCoupling(i);
 							scopestate->m_committedAttenuation[i] = scopestate->m_channelAttenuation[i];
 							Unit counts(Unit::UNIT_COUNTS);
 							scopestate->m_strAttenuation[i] = counts.PrettyPrint(scopestate->m_committedAttenuation[i]);
@@ -168,6 +167,65 @@ void InstrumentThread(InstrumentThreadArgs args)
 								scopestate->m_committedRange[i][j] = range;
 								scopestate->m_strOffset[i][j] = unit.PrettyPrint(offset);
 								scopestate->m_strRange[i][j] = unit.PrettyPrint(range);
+							}
+							// Get probe name
+							scopestate->m_probeName[i] = scope->GetProbeName(i);
+							// Popilate bandwidth limit values
+							auto limit = scope->GetChannelBandwidthLimit(i);
+							scopestate->m_bandwidthLimits[i].clear();
+							scopestate->m_bandwidthLimitNames[i].clear();
+							scopestate->m_bandwidthLimits[i] = scope->GetChannelBandwidthLimiters(i);
+							Unit hz(Unit::UNIT_HZ);
+							for(size_t j=0; j<scopestate->m_bandwidthLimits[i].size(); j++)
+							{
+								auto b = scopestate->m_bandwidthLimits[i][j];
+								if(b == 0)
+									scopestate->m_bandwidthLimitNames[i].push_back("Full");
+								else
+									scopestate->m_bandwidthLimitNames[i].push_back(hz.PrettyPrint(b*1e6));
+
+								if(b == limit)
+									scopestate->m_channelBandwidthLimit[i] = j;
+							}
+
+
+							// Populate coupling values
+							auto coupling = scope->GetChannelCoupling(i);
+							scopestate->m_couplings[i].clear();
+							scopestate->m_couplingNames[i].clear();
+							scopestate->m_couplings[i] = scope->GetAvailableCouplings(i);
+							for(size_t j=0; j<scopestate->m_couplings[i].size(); j++)
+							{
+								auto c = scopestate->m_couplings[i][j];
+
+								switch(c)
+								{
+									case OscilloscopeChannel::COUPLE_DC_50:
+										scopestate->m_couplingNames[i].push_back("DC 50Ω");
+										break;
+
+									case OscilloscopeChannel::COUPLE_AC_50:
+										scopestate->m_couplingNames[i].push_back("AC 50Ω");
+										break;
+
+									case OscilloscopeChannel::COUPLE_DC_1M:
+										scopestate->m_couplingNames[i].push_back("DC 1MΩ");
+										break;
+
+									case OscilloscopeChannel::COUPLE_AC_1M:
+										scopestate->m_couplingNames[i].push_back("AC 1MΩ");
+										break;
+
+									case OscilloscopeChannel::COUPLE_GND:
+										scopestate->m_couplingNames[i].push_back("Ground");
+										break;
+
+									default:
+										scopestate->m_couplingNames[i].push_back("Invalid");
+										break;
+								}
+								if(c == coupling)
+									scopestate->m_channelCoupling[i] = j;
 							}
 						}
 

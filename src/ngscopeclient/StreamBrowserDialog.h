@@ -176,6 +176,8 @@ protected:
 	// Rendering of a channel node
 	void renderChannelNode(std::shared_ptr<Instrument> instrument, size_t channelIndex, bool isLast);
 
+	void renderChannelProperties(std::shared_ptr<Oscilloscope> scope, OscilloscopeChannel* scopechan, size_t channelIndex, std::shared_ptr<OscilloscopeState> scopeState);
+
 	// Rendering of a stream node
 	void renderStreamNode(std::shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast);
 
