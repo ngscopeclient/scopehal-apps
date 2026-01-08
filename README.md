@@ -1,10 +1,14 @@
-# scopehal-apps
+# ngscopeclient and scopehal-apps
 
-https://www.ngscopeclient.org
+This is the top level repository for ngscopeclient, as well as the unit tests for libscopehal.
 
-Applications for libscopehal
+Project website: [https://www.ngscopeclient.org](https://www.ngscopeclient.org)
 
-[C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
+## Policies
+
+* [C++ coding policy](https://github.com/azonenberg/coding-policy/blob/master/cpp-coding-policy.md)
+* [Code of Conduct](https://github.com/ngscopeclient/scopehal-apps/blob/master/CODE_OF_CONDUCT.md)
+* We are a proudly AI-free project. Only human created code is acceptable for contribution.
 
 ## Installation
 

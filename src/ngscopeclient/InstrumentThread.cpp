@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -43,6 +43,10 @@ void InstrumentThread(InstrumentThreadArgs args)
 {
 	pthread_setname_np_compat("InstrumentThread");
 
+	#ifdef HAVE_NVTX
+		NVTX3_FUNC_RANGE();
+	#endif
+
 	auto inst = args.inst;
 	if(!inst)
 	{
@@ -79,7 +83,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 	while(!*args.shuttingDown)
 	{
 		//Flush any pending commands
-		inst->GetTransport()->FlushCommandQueue();
+		inst->BackgroundProcessing();
 
 		//Scope processing
 		if(scope)
@@ -389,9 +393,9 @@ void InstrumentThread(InstrumentThreadArgs args)
 		//TODO: does this make sense to do in the instrument thread?
 		session->RefreshDirtyFiltersNonblocking();
 
-		//Rate limit to 100 Hz to avoid saturating CPU with polls
+		//Rate limit to 1 kHz to avoid saturating CPU with polls
 		//(this also provides a yield point for the gui thread to get mutex ownership etc)
-		this_thread::sleep_for(chrono::milliseconds(10));
+		this_thread::sleep_for(chrono::milliseconds(1));
 	}
 
 	LogTrace("Shutting down instrument thread\n");

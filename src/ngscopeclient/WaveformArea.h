@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -145,10 +145,21 @@ struct ConfigPushConstants
 	float persistScale;
 };
 
+class IndexSearchConstants
+{
+public:
+	int64_t offset_samples;
+	float xscale;
+	uint32_t len;
+	uint32_t w;
+};
+
 /**
 	@brief State for a single peak label
 
 	All positions/sizes are in waveform units, not screen units, so that they scale/move correctly with the waveform
+
+	X axis positions are in base units, not scaled by timebase
  */
 struct PeakLabel
 {
@@ -333,6 +344,9 @@ public:
 	std::shared_ptr<ComputePipeline> GetToneMapPipeline()
 	{ return m_toneMapPipe; }
 
+	std::shared_ptr<ComputePipeline> GetIndexSearchPipeline()
+	{ return m_indexSearchComputePipeline; }
+
 	bool ZeroHoldFlagSet()
 	{
 		return m_stream.GetFlags() & Stream::STREAM_DO_NOT_INTERPOLATE;
@@ -429,6 +443,9 @@ protected:
 
 	///@brief Compute pipeline for rendering sparse digital waveforms
 	std::shared_ptr<ComputePipeline> m_sparseDigitalComputePipeline;
+
+	///@brief Compute pipeline for index searching
+	std::shared_ptr<ComputePipeline> m_indexSearchComputePipeline;
 
 	///@brief Y axis position of our button within the view
 	float m_yButtonPos;

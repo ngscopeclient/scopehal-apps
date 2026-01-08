@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -57,6 +57,9 @@ void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, share
 void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 {
 	pthread_setname_np_compat("WaveformThread");
+	#ifdef HAVE_NVTX
+		nvtx3::scoped_range range("WaveformThread");
+	#endif
 
 	LogTrace("Starting\n");
 
@@ -125,6 +128,10 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//Wait for data to be available from all scopes
 		if(!session->CheckForPendingWaveforms())
 		{
+			#ifdef HAVE_NVTX
+				nvtx3::scoped_range range2("No data ready");
+			#endif
+
 			this_thread::sleep_for(chrono::milliseconds(1));
 			continue;
 		}
@@ -146,6 +153,10 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 
 void RenderAllWaveforms(vk::raii::CommandBuffer& cmdbuf, Session* session, shared_ptr<QueueHandle> queue)
 {
+	#ifdef HAVE_NVTX
+		nvtx3::scoped_range range("RenderAllWaveforms");
+	#endif
+
 	double tstart = GetTime();
 
 	//Must lock mutexes in this order to avoid deadlock
