@@ -67,6 +67,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 	auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto awg = dynamic_pointer_cast<FunctionGenerator>(inst);
+	auto scopestate = args.oscilloscopestate;
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
 	auto bertstate = args.bertstate;
@@ -122,6 +123,60 @@ void InstrumentThread(InstrumentThreadArgs args)
 					scope->AcquireData();
 				}
 				triggerUpToDate = false;
+			}
+
+			if(scopestate)
+			{	// Update state
+				//Read status for channels that need it
+				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					if(scopestate->m_needsUpdate[i])
+					{
+						//Skip non-scope channels
+						auto scopechan = dynamic_cast<OscilloscopeChannel*>(scope->GetChannel(i));
+						if(!scopechan)
+							continue;
+
+						scopestate->m_channelInverted[i] = scope->IsInverted(i);
+
+						bool isDigital = (scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
+						if(isDigital)
+						{
+							Unit unit = scopechan->GetYAxisUnits(0);
+							scopestate->m_channelDigitalTrehshold[i] = scope->GetDigitalThreshold(i);
+							scopestate->m_committedDigitalThreshold[i] = scopestate->m_channelDigitalTrehshold[i];
+							scopestate->m_strDigitalThreshold[i] = unit.PrettyPrint(scopestate->m_channelDigitalTrehshold[i]);
+						}
+						else
+						{
+							scopestate->m_channelAttenuation[i] = scope->GetChannelAttenuation(i);
+							scopestate->m_channelBandwidthLimit[i] = scope->GetChannelBandwidthLimit(i);
+							scopestate->m_channelCoupling[i] = scope->GetChannelCoupling(i);
+							scopestate->m_committedAttenuation[i] = scopestate->m_channelAttenuation[i];
+							Unit counts(Unit::UNIT_COUNTS);
+							scopestate->m_strAttenuation[i] = counts.PrettyPrint(scopestate->m_committedAttenuation[i]);
+
+							size_t nstreams = scopechan->GetStreamCount();
+							for(size_t j=0; j<nstreams; j++)
+							{
+								float offset = scopechan->GetOffset(j);
+								float range = scopechan->GetVoltageRange(j);
+								Unit unit = scopechan->GetYAxisUnits(j);
+								scopestate->m_channelOffset[i][j] = scopechan->GetOffset(j);
+								scopestate->m_channelRange[i][j] = scopechan->GetVoltageRange(j);
+								scopestate->m_committedOffset[i][j] = offset;
+								scopestate->m_committedRange[i][j] = range;
+								scopestate->m_strOffset[i][j] = unit.PrettyPrint(offset);
+								scopestate->m_strRange[i][j] = unit.PrettyPrint(range);
+							}
+						}
+
+						session->MarkChannelDirty(scopechan);
+
+						scopestate->m_needsUpdate[i] = false;
+					}
+
+				}
 			}
 		}
 

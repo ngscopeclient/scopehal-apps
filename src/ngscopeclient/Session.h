@@ -145,6 +145,15 @@ public:
 	{ return m_mainWindow; }
 
 	/**
+		@brief Returns a pointer to the state for a function generator
+	 */
+	std::shared_ptr<OscilloscopeState> GetOscillopscopeState(std::shared_ptr<Oscilloscope> scope)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_oscilloscopesStates[scope];
+	}
+
+	/**
 		@brief Returns a pointer to the state for a BERT
 	 */
 	std::shared_ptr<BERTState> GetBERTState(std::shared_ptr<BERT> bert)
@@ -431,6 +440,9 @@ protected:
 
 	///@brief Oscilloscopes we are currently connected to
 	std::vector<std::shared_ptr<Oscilloscope>> m_oscilloscopes;
+
+	///@brief Oscilloscopes we are currently connected to
+	std::map<std::shared_ptr<Oscilloscope>, std::shared_ptr<OscilloscopeState> > m_oscilloscopesStates;
 
 	///@brief Power supplies we are currently connected to
 	std::map<std::shared_ptr<PowerSupply>, std::shared_ptr<PowerSupplyState> > m_psus;

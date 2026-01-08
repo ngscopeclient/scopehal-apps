@@ -239,6 +239,7 @@ void Session::Clear()
 	m_history.clear();
 
 	m_oscilloscopes.clear();
+	m_oscilloscopesStates.clear();
 	m_psus.clear();
 	m_loads.clear();
 	m_meters.clear();
@@ -2913,6 +2914,9 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	if(scope && (types & Instrument::INST_OSCILLOSCOPE))
 	{
 		m_oscilloscopes.push_back(scope);
+		auto state = make_shared<OscilloscopeState>(scope);
+		m_oscilloscopesStates[scope] = state;
+		args.oscilloscopestate = state;
 		if(m_oscilloscopes.size() > 1)
 			m_multiScope = true;
 	}
@@ -2970,11 +2974,14 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 
 	//Remove instrument-specific state
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	if(psu)
 		m_psus.erase(psu);
+	if(scope)
+		m_oscilloscopesStates.erase(scope);
 	if(meter)
 		m_meters.erase(meter);
 	if(load)

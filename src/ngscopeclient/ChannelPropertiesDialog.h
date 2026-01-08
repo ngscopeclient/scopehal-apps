@@ -49,6 +49,9 @@ protected:
 
 	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
 
+	///@brief Current channel stats, live updated
+	std::shared_ptr<OscilloscopeState> m_state;
+
 	std::string m_displayName;
 	std::string m_committedDisplayName;
 

@@ -43,9 +43,26 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan,  MainWindow* parent, bool graphEditorMode)
+ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWindow* parent, bool graphEditorMode)
 	: BaseChannelPropertiesDialog(chan, parent, graphEditorMode)
 {
+	// Get oscilloscope state, for that we need to make a shared_ptr out of the base pointer returned by chan->GetInstrument()
+	Session& session = m_parent->GetSession();
+	// We pass an empty Deleter since this pointer's lifecycle is handled elsewhere
+	std::shared_ptr<Instrument> scopeSharedPointer(chan->GetInstrument(), [](Instrument*){});
+	shared_ptr<Oscilloscope> sharedScope = dynamic_pointer_cast<Oscilloscope>(scopeSharedPointer);
+	if(sharedScope)
+	{
+		m_state = session.GetOscillopscopeState(sharedScope);
+		if(!m_state)
+			LogError("Could not get OscilloscopeState for scope %s.\n",chan->GetInstrument()->GetName().c_str());
+
+	}
+	else
+	{
+		LogError("Could not get cast Instrument %s to Oscilloscope.\n",chan->GetInstrument()->GetName().c_str());
+	}
+
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 	if(!ochan)
 		LogFatal("ChannelPropertiesDialog expects an OscilloscopeChannel\n");
@@ -309,10 +326,10 @@ bool ChannelPropertiesDialog::DoRender()
 	auto nstreams = m_channel->GetStreamCount();
 	if(scope)
 	{
+		auto index = m_channel->GetIndex();
 		if(ImGui::CollapsingHeader("Input", defaultOpenFlags))
 		{
 			//Type of probe connected
-			auto index = m_channel->GetIndex();
 			string ptype = m_probe;
 			if(ptype == "")
 				ptype = "(not detected)";
@@ -340,6 +357,9 @@ bool ChannelPropertiesDialog::DoRender()
 						//refresh in case scope driver changed the value
 						m_committedThreshold = scope->GetDigitalThreshold(index);
 						m_threshold = yunit.PrettyPrint(m_committedThreshold);
+
+						// Tell intrument thread that the scope state has to be updated
+						m_state->m_needsUpdate[index] = true;
 					}
 					HelpMarker("Switching threshold for the digital input buffer");
 				}
@@ -354,6 +374,9 @@ bool ChannelPropertiesDialog::DoRender()
 						//refresh in case scope driver changed the value
 						m_committedHysteresis = scope->GetDigitalHysteresis(index);
 						m_hysteresis = yunit.PrettyPrint(m_committedHysteresis);
+
+						// Tell intrument thread that the scope state has to be updated
+						m_state->m_needsUpdate[index] = true;
 					}
 					HelpMarker("Hysteresis for the digital input buffer");
 				}
@@ -398,6 +421,9 @@ bool ChannelPropertiesDialog::DoRender()
 						m_committedRange[i] = ochan->GetVoltageRange(i);
 						m_range[i] = unit.PrettyPrint(m_committedRange[i]);
 					}
+
+					// Tell intrument thread that the scope state has to be updated
+					m_state->m_needsUpdate[index] = true;
 				}
 				if(m_probe != "")
 					ImGui::EndDisabled();
@@ -408,7 +434,12 @@ bool ChannelPropertiesDialog::DoRender()
 				{
 					ImGui::SetNextItemWidth(width);
 					if(Combo("Coupling", m_couplingNames, m_coupling))
+					{
 						ochan->SetCoupling(m_couplings[m_coupling]);
+
+						// Tell intrument thread that the scope state has to be updated
+						m_state->m_needsUpdate[index] = true;
+					}
 					HelpMarker("Coupling configuration for the input");
 				}
 
@@ -417,7 +448,12 @@ bool ChannelPropertiesDialog::DoRender()
 				{
 					ImGui::SetNextItemWidth(width);
 					if(Combo("Bandwidth", m_bwlNames, m_bwl))
+					{
 						ochan->SetBandwidthLimit(m_bwlValues[m_bwl]);
+
+						// Tell intrument thread that the scope state has to be updated
+						m_state->m_needsUpdate[index] = true;
+					}
 					HelpMarker("Hardware bandwidth limiter setting");
 				}
 			}
@@ -465,7 +501,12 @@ bool ChannelPropertiesDialog::DoRender()
 			if(scope->CanInvert(index))
 			{
 				if(ImGui::Checkbox("Invert", &m_inverted))
+				{
 					ochan->Invert(m_inverted);
+
+					// Tell intrument thread that the scope state has to be updated
+					m_state->m_needsUpdate[index] = true;
+				}
 
 				HelpMarker(
 					"When checked, input value is multiplied by -1.\n\n"
@@ -558,7 +599,12 @@ bool ChannelPropertiesDialog::DoRender()
 				}
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Offset", m_offset[i], m_committedOffset[i], unit))
+				{
 					ochan->SetOffset(m_committedOffset[i], i);
+
+					// Tell intrument thread that the scope state has to be updated
+					m_state->m_needsUpdate[index] = true;
+				}
 
 				//Same for range
 				auto range = ochan->GetVoltageRange(i);
@@ -570,7 +616,12 @@ bool ChannelPropertiesDialog::DoRender()
 				}
 				ImGui::SetNextItemWidth(width);
 				if(UnitInputWithExplicitApply("Range", m_range[i], m_committedRange[i], unit))
+				{
 					ochan->SetVoltageRange(m_committedRange[i], i);
+
+					// Tell intrument thread that the scope state has to be updated
+					m_state->m_needsUpdate[index] = true;
+				}
 
 				ImGui::PopID();
 			}

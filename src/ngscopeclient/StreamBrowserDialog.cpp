@@ -1938,14 +1938,23 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 			}
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
+			size_t channelIndex = scopechan->GetIndex();
+			auto scopeState = m_session.GetOscillopscopeState(scope);
+
 			switch (type)
 			{
 				case Stream::STREAM_TYPE_ANALOG:
 					{
-						auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
-						auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
-						renderReadOnlyProperty(0,"Offset", offset_txt);
-						renderReadOnlyProperty(0,"Vertical range", range_txt, "Vertical range");
+						if(renderEditablePropertyWithExplicitApply(0,"Offset",scopeState->m_strOffset[channelIndex][streamIndex],scopeState->m_committedOffset[channelIndex][streamIndex],unit))
+						{	// Update offset
+							scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
+							scopeState->m_needsUpdate[channelIndex] = true;
+						}
+						if(renderEditablePropertyWithExplicitApply(0,"Vertical range",scopeState->m_strRange[channelIndex][streamIndex],scopeState->m_committedRange[channelIndex][streamIndex],unit))
+						{	// Update offset
+							scopechan->SetVoltageRange(scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
+							scopeState->m_needsUpdate[channelIndex] = true;
+						}
 					}
 					break;
 				case Stream::STREAM_TYPE_DIGITAL:

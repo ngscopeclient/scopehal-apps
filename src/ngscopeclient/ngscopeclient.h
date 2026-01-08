@@ -44,6 +44,7 @@
 
 #include <atomic>
 
+#include "OscilloscopeState.h"
 #include "BERTState.h"
 #include "PowerSupplyState.h"
 #include "FunctionGeneratorState.h"
@@ -67,6 +68,7 @@ public:
 	Session* session;
 
 	//Additional per-instrument-type state we can add
+	std::shared_ptr<OscilloscopeState> oscilloscopestate;
 	std::shared_ptr<LoadState> loadstate;
 	std::shared_ptr<MultimeterState> meterstate;
 	std::shared_ptr<BERTState> bertstate;
