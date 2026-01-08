@@ -31,6 +31,7 @@ add_compute_shaders(
 	SOURCES
 		ConstellationToneMap.glsl
 		EyeToneMap.glsl
+		IndexSearch.glsl
 		ScopeDeskewUniform4xRate.glsl
 		ScopeDeskewUniformUnequalRate.glsl
 		ScopeDeskewUniformEqualRate.glsl

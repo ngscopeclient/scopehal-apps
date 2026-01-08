@@ -80,10 +80,6 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 	m_rasterizedWaveform.SetCpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 	m_rasterizedWaveform.SetGpuAccessHint(AcceleratorBuffer<float>::HINT_LIKELY);
 
-	//Use pinned memory for index buffer since it should only be read once
-	m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
-	m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_UNLIKELY);
-
 	//Create tone map pipeline depending on waveform type
 	switch(m_stream.GetType())
 	{
@@ -110,6 +106,23 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 		default:
 			m_toneMapPipe = make_shared<ComputePipeline>(
 				"shaders/WaveformToneMap.spv", 1, sizeof(WaveformToneMapArgs), 1);
+	}
+
+	//If we have native int64 support we can do the index search for sparse waveforms on the GPU
+	if(g_hasShaderInt64)
+	{
+		m_indexSearchComputePipeline = make_shared<ComputePipeline>(
+				"shaders/IndexSearch.spv", 2, sizeof(IndexSearchConstants));
+
+		//Use GPU local memory for index buffer
+		m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
+		m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
+	}
+	else
+	{
+		//Use pinned memory for index buffer since it should only be read once
+		m_indexBuffer.SetCpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_LIKELY);
+		m_indexBuffer.SetGpuAccessHint(AcceleratorBuffer<uint32_t>::HINT_UNLIKELY);
 	}
 }
 
@@ -1339,7 +1352,6 @@ ImVec2 WaveformArea::ClosestPointOnLineSegment(ImVec2 lineA, ImVec2 lineB, ImVec
 void WaveformArea::RenderSpectrumPeaks(ImDrawList* list, shared_ptr<DisplayedChannel> channel)
 {
 	auto stream = channel->GetStream();
-	auto data = stream.GetData();
 	auto& peaks = dynamic_cast<PeakDetectionFilter*>(stream.m_channel)->GetPeaks();
 
 	//TODO: add a preference for peak circle color and size?
@@ -2107,12 +2119,55 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	}
 
 	//Bind input buffers
-	if(uadata)
-		comp->BindBufferNonblocking(1, uadata->m_samples, cmdbuf);
-	if(uddata)
-		comp->BindBufferNonblocking(1, uddata->m_samples, cmdbuf);
 	if(sdata)
 	{
+		//Calculate indexes for X axis
+		auto& ibuf = channel->GetIndexBuffer();
+
+		//FIXME: what still depends on m_offsets CPU side??
+		//If we don't copy this, nothing is drawn
+		sdata->m_offsets.PrepareForCpuAccessNonblocking(cmdbuf);
+
+		//If we have native int64, do this on the GPU
+		if(g_hasShaderInt64)
+		{
+			IndexSearchConstants cfg;
+			cfg.len = data->size();
+			cfg.w = w;
+			cfg.xscale = xscale;
+			cfg.offset_samples = offset_samples;
+
+			const uint32_t threadsPerBlock = 64;
+			const uint32_t numBlocks = (w | (threadsPerBlock - 1)) / threadsPerBlock;
+
+			auto ipipe = channel->GetIndexSearchPipeline();
+			ipipe->BindBufferNonblocking(0, sdata->m_offsets, cmdbuf);
+			ipipe->BindBufferNonblocking(1, ibuf, cmdbuf, true);
+			ipipe->Dispatch(cmdbuf, cfg, numBlocks);
+			ipipe->AddComputeMemoryBarrier(cmdbuf);
+			ibuf.MarkModifiedFromGpu();
+		}
+
+		//otherwise CPU fallback
+		else
+		{
+			ibuf.PrepareForCpuAccess();
+			sdata->m_offsets.PrepareForCpuAccess();
+			for(size_t i=0; i<w; i++)
+			{
+				int64_t target = floor(i / xscale) + offset_samples;
+				ibuf[i] = BinarySearchForGequal(
+					sdata->m_offsets.GetCpuPointer(),
+					data->size(),
+					target);
+
+				if(i < 16)
+					LogDebug("ibuf[%zu] = %d\n", i, ibuf[i]);
+			}
+			ibuf.MarkModifiedFromCpu();
+		}
+
+		//Bind the buffers
 		if(sadata)
 			comp->BindBufferNonblocking(1, sadata->m_samples, cmdbuf);
 		if(sddata)
@@ -2120,24 +2175,15 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 
 		//Map offsets and, if requested, durations
 		comp->BindBufferNonblocking(2, sdata->m_offsets, cmdbuf);
+		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
 		if(channel->ShouldMapDurations())
 			comp->BindBufferNonblocking(4, sdata->m_durations, cmdbuf);
-
-		//Calculate indexes for X axis
-		auto& ibuf = channel->GetIndexBuffer();
-		ibuf.PrepareForCpuAccess();
-		sdata->m_offsets.PrepareForCpuAccess();
-		for(size_t i=0; i<w; i++)
-		{
-			int64_t target = floor(i / xscale) + offset_samples;
-			ibuf[i] = BinarySearchForGequal(
-				sdata->m_offsets.GetCpuPointer(),
-				data->size(),
-				target);
-		}
-		ibuf.MarkModifiedFromCpu();
-		comp->BindBufferNonblocking(3, ibuf, cmdbuf);
 	}
+
+	if(uadata)
+		comp->BindBufferNonblocking(1, uadata->m_samples, cmdbuf);
+	if(uddata)
+		comp->BindBufferNonblocking(1, uddata->m_samples, cmdbuf);
 
 	//Bind output texture and bail if there's nothing there
 	auto& imgOut = channel->GetRasterizedWaveform();

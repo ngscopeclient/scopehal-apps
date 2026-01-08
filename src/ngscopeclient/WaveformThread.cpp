@@ -128,6 +128,10 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		//Wait for data to be available from all scopes
 		if(!session->CheckForPendingWaveforms())
 		{
+			#ifdef HAVE_NVTX
+				nvtx3::scoped_range range2("No data ready");
+			#endif
+
 			this_thread::sleep_for(chrono::milliseconds(1));
 			continue;
 		}
