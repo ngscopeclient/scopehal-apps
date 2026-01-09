@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -130,7 +130,7 @@ public:
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
-	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrumet);
+	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrument);
 	void ShowTriggerProperties();
 	void ShowManageInstruments();
 	void ShowSyncWizard(std::shared_ptr<TriggerGroup> group, std::shared_ptr<Oscilloscope> secondary);
@@ -275,6 +275,7 @@ protected:
 	std::vector<std::string> m_eyeGradients;
 
 	void LoadFilterIcons();
+	void LoadMiscIcons();
 	void LoadStatusBarIcons();
 	void LoadWaveformShapeIcons();
 	void LoadAppIcon();

@@ -553,6 +553,8 @@ protected:
 		StreamDescriptor ourStream,
 		StreamDescriptor theirStream);
 
+	void DrawDropScalarMessage(ImDrawList* list, ImVec2 center);
+
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterLeftDropArea(ImVec2 start, ImVec2 size);
 	void CenterRightDropArea(ImVec2 start, ImVec2 size);

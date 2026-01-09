@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -791,6 +791,17 @@ string MainWindow::GetIconForWaveformShape(FunctionGenerator::WaveShape shape)
 		return it->second;
 
 	return "shape-default";
+}
+
+/**
+	@brief Load various miscellaneous icons and textures
+ */
+void MainWindow::LoadMiscIcons()
+{
+	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
+	m_texmgr.LoadTexture("info", FindDataFile("icons/48x48/dialog-information-3.png"));
+	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
+		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
 }
 
 /**

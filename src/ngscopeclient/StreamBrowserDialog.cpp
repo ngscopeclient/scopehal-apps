@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -1259,11 +1259,9 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
 	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
 	bool renderProps = false;
-	bool isDigital = false;
 	if (scopechan)
 	{
 		renderProps = scopechan->IsEnabled();
-		isDigital = scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL;
 	}
 	else if(awg && awgchan)
 	{
@@ -1278,19 +1276,32 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	int flags = 0;
 	if(!hasChildren)
 		flags |= ImGuiTreeNodeFlags_Leaf;
-
-	//Collapse all scope channel nodes by default to reduce clutter
-	if(isDigital || scopechan)
-	{}
-
 	else
-		flags |= ImGuiTreeNodeFlags_DefaultOpen;
+		flags |= ImGuiTreeNodeFlags_OpenOnArrow;
 
 	bool open = ImGui::TreeNodeEx(
 		channel->GetDisplayName().c_str(),
 		flags);
 	if (channel->m_displaycolor != "")
 		ImGui::PopStyleColor();
+
+	//Open properties dialog on double click
+	if(ImGui::IsItemHovered())
+	{
+		if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		{
+			if(scopechan)
+				m_parent->ShowChannelProperties(scopechan);
+			else if(psuchan)
+				m_parent->ShowInstrumentProperties(psu);
+			else if(awgchan)
+				m_parent->ShowInstrumentProperties(awg);
+			else
+				LogWarning("Don't know how to open channel properties yet\n");
+		}
+
+		m_parent->AddStatusHelp("mouse_lmb_double", "Open properties");
+	}
 
 	//Single stream: drag the stream not the channel
 	if(singleStream)
@@ -1418,7 +1429,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			for(size_t j=0; j<streamCount; j++)
 			{
 				// Iterate on each stream
-				renderStreamNode(instrument,channel,j,!singleStream,renderProps,(j==(streamCount-1)));
+				renderStreamNode(instrument,channel,j,!singleStream,renderProps);
 			}
 		}
 		ImGui::PopID();
@@ -1438,9 +1449,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
    @param streamIndex the index of the stream to render
    @param renderName true if the name of the stream should be rendred as a selectable item
    @param renderProps true if a properties block should be rendered for this stream
-   @param isLast true if this is the last stream of the channel
  */
-void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps, bool isLast)
+void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, InstrumentChannel* channel, size_t streamIndex, bool renderName, bool renderProps)
 {
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
@@ -1452,7 +1462,6 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 	if (renderName)
 	{
 		ImGui::Selectable(channel->GetStreamName(streamIndex).c_str());
-
 		StreamDescriptor s(channel, streamIndex);
 		if(ImGui::BeginDragDropSource())
 		{
@@ -1475,8 +1484,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 	// Channel/stream properties block
 	if(renderProps && scopechan)
 	{
-		// If no properties are available for this stream, only show a "Properties" link if it is the last stream of the channel/filter
-		bool hasProps = isLast;
+		bool hasProps = false;
 		switch (type)
 		{
 			case Stream::STREAM_TYPE_ANALOG:
@@ -1497,8 +1505,8 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
-			bool clicked = false;
-			bool hovered = false;
+			bool clicked;
+			bool hovered;
 			switch (type)
 			{
 				case Stream::STREAM_TYPE_ANALOG:
@@ -1519,18 +1527,10 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 					//fall through
 				default:
 					{
-						clicked = ImGui::TextLink("Properties");
-						hovered = ImGui::IsItemHovered();
 					}
 					break;
 			}
 			ImGui::EndChild();
-			if (clicked)
-			{
-				m_parent->ShowChannelProperties(scopechan);
-			}
-			if (hovered)
-				m_parent->AddStatusHelp("mouse_lmb", "Open properties");
 		}
 	}
 	ImGui::PopID();
@@ -1551,13 +1551,21 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 		ImGui::PushStyleColor(ImGuiCol_Text, ColorFromString(filter->m_displaycolor));
 
 	//Don't expand filters with a single stream by default
-	int flags = 0;
+	int flags = ImGuiTreeNodeFlags_OpenOnArrow;
 	if(!singleStream)
 		flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
 	bool open = ImGui::TreeNodeEx(filter->GetDisplayName().c_str(), flags);
 	if (filter->m_displaycolor != "")
 		ImGui::PopStyleColor();
+
+	//Open properties dialog on double click
+	if(ImGui::IsItemHovered())
+	{
+		if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			m_parent->ShowChannelProperties(filter);
+		m_parent->AddStatusHelp("mouse_lmb_double", "Open properties");
+	}
 
 	//Single stream: drag the stream not the filter
 	if(singleStream)
@@ -1593,10 +1601,8 @@ void StreamBrowserDialog::renderFilterNode(Filter* filter)
 
 		size_t streamCount = filter->GetStreamCount();
 		for(size_t j=0; j<streamCount; j++)
-		{
-			// Iterate on each stream
-			renderStreamNode(nullptr,filter,j,!singleStream,true,(j==(streamCount-1)));
-		}
+			renderStreamNode(nullptr,filter,j,!singleStream,true);
+
 		ImGui::PopID();
 	}
 

@@ -7,7 +7,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: Added GPU acceleration for several filters including CDR PLL (7.5x speedup), 100baseTX (10x speedup), eye pattern (25x speedup), histogram (12x speedup), TIE (5.3x speedup) and more (https://github.com/ngscopeclient/scopehal/issues/977).
-* Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream.
+* Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
@@ -28,3 +28,5 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 
 ## Other changes since v0.1.1
+
+* General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -171,9 +171,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	m_toolbarIconSize = 0;
 	LoadToolbarIcons();
 	LoadGradients();
-	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
-	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
-		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
+	LoadMiscIcons();
 	LoadFilterIcons();
 	LoadStatusBarIcons();
 	LoadWaveformShapeIcons();
