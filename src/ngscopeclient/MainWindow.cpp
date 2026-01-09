@@ -1315,6 +1315,9 @@ void MainWindow::DockingArea()
 		{
 			LogTrace("Docking initial workspace\n");
 
+			//Undock anything that might already be there
+			ImGui::DockBuilderRemoveNodeChildNodes(topNode->ID);
+
 			//Split the top into two sub nodes (unless imgui already did it for us during a session reset)
 			ImGuiID leftPanelID;
 			ImGuiID rightPanelID;
@@ -1329,10 +1332,10 @@ void MainWindow::DockingArea()
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
 
-			m_initialWorkspaceDockRequest = nullptr;
-
 			//Finish up
 			ImGui::DockBuilderFinish(dockspace_id);
+
+			m_initialWorkspaceDockRequest = nullptr;
 		}
 	}
 	else
