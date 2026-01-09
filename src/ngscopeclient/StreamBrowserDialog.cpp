@@ -1364,6 +1364,9 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 	if(instIsOpen)
 	{
+		vector<Oscilloscope::DigitalBank> digitalBanks;
+		vector<size_t> analogChannels;
+		vector<size_t> otherChannels;
 		size_t lastEnabledChannelIndex = 0;
 		if (scope)
 		{
@@ -1381,17 +1384,58 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				ImGui::TreePop();
 			}
 
+			digitalBanks = scope->GetDigitalBanks();
+
 			for(size_t i = 0; i<channelCount; i++)
 			{
 				if(scope->IsChannelEnabled(i))
 					lastEnabledChannelIndex = i;
+				auto scopechan = scope->GetChannel(i);
+				auto streamType = scopechan->GetType(0);
+				if(streamType != Stream::STREAM_TYPE_DIGITAL)
+				{
+					if(streamType ==  Stream::STREAM_TYPE_ANALOG)
+						analogChannels.push_back(i);
+					else
+						otherChannels.push_back(i);
+				}
 			}
 		}
 
-		for(size_t i=0; i<channelCount; i++)
-		{
-			// Iterate on each channel
-			renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+		if(digitalBanks.size() > 0)
+		{	// If digital banks are avaialble, gather digital channels in banks
+			for(size_t i : analogChannels)
+			{	// Iterate on analog channel first
+				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+			}
+			int bankNumber = 1;
+			for(auto bank : digitalBanks)
+			{	// Iterate on digital banks
+				string nodeName = "Digital Bank " + to_string(bankNumber);
+				if(ImGui::TreeNodeEx(nodeName.c_str()))
+				{
+					ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+					for(auto channel : bank)
+					{	// Iterate on bank's channel
+						size_t i = channel->GetIndex();
+						renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+					}
+					ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+					ImGui::TreePop();
+				}
+				bankNumber++;
+			}
+			for(size_t i : otherChannels)
+			{	// Finally iterate on other channels
+				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+			}
+		}
+		else
+		{	// Display all channels if no digital bank is available
+			for(size_t i=0; i<channelCount; i++)
+			{	// Iterate on each channel
+				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+			}
 		}
 
 		ImGui::TreePop();
