@@ -3488,8 +3488,27 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	if(!isWaveform && !isStream)
 		return;
 
-	//Add drop target
+	//Peek the payload. If not compatible, don't even display the target
 	StreamDescriptor stream;
+	auto peekPayload = ImGui::GetDragDropPayload();
+	if(peekPayload)
+	{
+		if(isWaveform)
+		{
+			auto peekDesc = reinterpret_cast<DragDescriptor*>(peekPayload->Data);
+			stream = peekDesc->first->GetStream(peekDesc->second);
+			if( (peekDesc->first == this) || !IsCompatible(stream))
+				return;
+		}
+		else if(isStream)
+		{
+			stream = *reinterpret_cast<StreamDescriptor*>(peekPayload->Data);
+			if(!IsCompatible(stream))
+				return;
+		}
+	}
+
+	//Add drop target
 	bool ok = true;
 	bool hover = false;
 	if(ImGui::BeginDragDropTarget())
