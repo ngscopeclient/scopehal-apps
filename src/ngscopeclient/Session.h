@@ -387,11 +387,8 @@ protected:
 		int version,
 		const YAML::Node& node,
 		const std::string& dataDir);
-	void DoLoadWaveformDataForStream(
-		OscilloscopeChannel* chan,
-		int stream,
-		std::string format,
-		std::string fname);
+	void DoLoadWaveformDataForStream(WaveformBase* cap, std::string format, std::string fname);
+	bool ConvertLegacyUniformWaveforms();
 
 	///@brief Version of the file being loaded
 	int m_fileLoadVersion;

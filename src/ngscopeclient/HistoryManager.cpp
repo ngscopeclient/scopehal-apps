@@ -215,6 +215,33 @@ void HistoryManager::LoadEmptyHistoryToSession(Session& session)
 }
 
 /**
+	@brief Retroactively modify history for an instrument
+
+	This is used during session loading if we find waveforms in certain legacy formats that need to be converted
+	ex post facto
+ */
+void HistoryManager::Retcon(shared_ptr<Oscilloscope> scope, size_t chan, size_t stream, WaveformBase* wfm)
+{
+	TimePoint tp(wfm->m_startTimestamp, wfm->m_startFemtoseconds);
+
+	for(auto& point : m_history)
+	{
+		if(point->m_time != tp)
+			continue;
+
+		//Make sure we have history for this scope
+		auto jt = point->m_history.find(scope);
+		if(jt == point->m_history.end())
+			return;
+
+		//Overwrite the waveform.
+		//Does not free the old one, it's assumed this is done by SetData() on the scope before calling this function
+		jt->second[StreamDescriptor(scope->GetChannel(chan), stream)] = wfm;
+		break;
+	}
+}
+
+/**
 	@brief Adds new data to the history
 
 	@param scopes		The instruments to add
@@ -262,6 +289,7 @@ void HistoryManager::AddHistory(
 
 	//If we already have a history point for the same exact timestamp, do nothing
 	//Either a bug or we're in append mode
+	//TODO: when loading multiscope scopesessions, do we want to add stuff here??
 	if(HasHistory(tp))
 		return;
 
