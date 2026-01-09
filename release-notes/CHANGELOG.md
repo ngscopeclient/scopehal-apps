@@ -26,8 +26,9 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
-* GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
+* GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
+* GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)
 
 ## Other changes since v0.1.1
 
