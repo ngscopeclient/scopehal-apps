@@ -45,6 +45,7 @@ public:
 	FunctionGeneratorState(std::shared_ptr<FunctionGenerator> generator)
 	{
 		size_t n = generator->GetChannelCount();
+		m_channelNumner = n;
 		m_channelActive = std::make_unique<std::atomic<bool>[] >(n);
 		m_channelAmplitude = std::make_unique<std::atomic<float>[] >(n);
 		m_channelOffset= std::make_unique<std::atomic<float>[] >(n);
@@ -94,6 +95,12 @@ public:
 		}
 	}
 
+	void FlushConfigCache()
+	{
+		for(size_t i = 0 ; i < m_channelNumner.load() ; i++)
+			m_needsUpdate[i] = true;
+	}
+
 	std::unique_ptr<std::atomic<bool>[]> m_channelActive;
 	std::unique_ptr<std::atomic<float>[]> m_channelAmplitude;
 	std::unique_ptr<std::atomic<float>[]> m_channelOffset;
@@ -106,6 +113,8 @@ public:
 	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
 
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
+
+	std::atomic<size_t> m_channelNumner;
 
 	//UI state for dialogs etc
 	std::unique_ptr<float[]> m_committedOffset;

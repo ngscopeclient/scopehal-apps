@@ -45,6 +45,7 @@ public:
 	PowerSupplyState(size_t n = 0)
 	{
 		m_masterEnable = false;
+		m_channelNumner = n;
 
 		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
 		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
@@ -82,6 +83,12 @@ public:
 		m_firstUpdateDone = false;
 	}
 
+	void FlushConfigCache()
+	{
+		for(size_t i = 0 ; i < m_channelNumner.load() ; i++)
+			m_needsUpdate[i] = true;
+	}
+
 	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
 	std::unique_ptr<std::atomic<float>[]> m_channelCurrent;
 	std::unique_ptr<std::atomic<bool>[]> m_channelConstantCurrent;
@@ -104,6 +111,8 @@ public:
 	std::atomic<bool> m_firstUpdateDone;
 
 	std::atomic<bool> m_masterEnable;
+
+	std::atomic<size_t> m_channelNumner;
 };
 
 #endif

@@ -166,6 +166,24 @@ void Session::FlushConfigCache()
 	lock_guard<mutex> lock(m_scopeMutex);
 	for(auto it : m_instrumentStates)
 		it.first->FlushConfigCache();
+
+	// Also flush session states
+	for(auto it : m_psus)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_meters)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_oscilloscopesStates)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_awgs)
+	{
+		it.second->FlushConfigCache();
+	}
 }
 
 /**

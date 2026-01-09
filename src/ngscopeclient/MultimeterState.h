@@ -51,6 +51,11 @@ public:
 		m_needsRangeUpdate = true;
 	}
 
+	void FlushConfigCache()
+	{
+		m_needsRangeUpdate = true;
+	}
+
 	std::atomic<float> m_primaryMeasurement;
 	std::atomic<float> m_secondaryMeasurement;
 	std::atomic<bool> m_firstUpdateDone;

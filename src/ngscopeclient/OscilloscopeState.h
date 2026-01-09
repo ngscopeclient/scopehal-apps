@@ -45,6 +45,7 @@ public:
 	OscilloscopeState(std::shared_ptr<Oscilloscope> scope)
 	{
 		size_t n = scope->GetChannelCount();
+		m_channelNumner = n;
 		m_channelInverted = std::make_unique<bool[] >(n);
 		m_channelOffset = std::make_unique<std::vector<float>[] >(n);
 		m_channelRange = std::make_unique<std::vector<float>[] >(n);
@@ -111,6 +112,12 @@ public:
 		}
 	}
 
+	void FlushConfigCache()
+	{
+		for(size_t i = 0 ; i < m_channelNumner.load() ; i++)
+			m_needsUpdate[i] = true;
+	}
+
 	std::unique_ptr<bool[]> m_channelInverted;
 	std::unique_ptr<std::vector<float>[]> m_channelOffset;
 	std::unique_ptr<std::vector<float>[]> m_channelRange;
@@ -118,6 +125,8 @@ public:
 	std::unique_ptr<std::atomic<float>[]> m_channelAttenuation;
 
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
+
+	std::atomic<size_t> m_channelNumner;
 
 	//UI state for dialogs etc
 	std::unique_ptr<std::string[]> m_probeName;
