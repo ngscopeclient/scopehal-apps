@@ -1910,13 +1910,16 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		{
 			if(!singleStream)
 			{
-				if(BeginBlock("stream_params",true,"Open channel properties"))
-				{
-					m_parent->ShowChannelProperties(scopechan);
-				}
 				auto scopeState = m_session.GetOscillopscopeState(scope);
-				renderChannelProperties(scope,scopechan,channelIndex,scopeState);
+				if(scopeState)
+				{
+					if(BeginBlock("stream_params",true,"Open channel properties"))
+					{
+						m_parent->ShowChannelProperties(scopechan);
+					}
+					renderChannelProperties(scope,scopechan,channelIndex,scopeState);
 				EndBlock();
+				}
 			}
 			size_t streamCount = channel->GetStreamCount();
 			for(size_t j=0; j<streamCount; j++)
@@ -2070,58 +2073,61 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		if(hasProps)
 		{
-			if(BeginBlock("stream_params",true,"Open channel properties"))
-			{
-				m_parent->ShowChannelProperties(scopechan);
-			}
-
-			Unit unit = channel->GetYAxisUnits(streamIndex);
-			size_t channelIndex = scopechan->GetIndex();
 			auto scopeState = m_session.GetOscillopscopeState(scope);
+			if(scopeState)
+			{ 	// For now, only show properties for scope channel / streams
+				if(BeginBlock("stream_params",true,"Open channel properties"))
+				{
+					m_parent->ShowChannelProperties(scopechan);
+				}
 
-			switch (type)
-			{
-				case Stream::STREAM_TYPE_ANALOG:
-					{
-						if(!renderName)
-						{	// No streams => display channel properties here
-							renderChannelProperties(scope,scopechan,channelIndex,scopeState);
-						}
-						if(renderEditablePropertyWithExplicitApply(0,"Offset",scopeState->m_strOffset[channelIndex][streamIndex],scopeState->m_committedOffset[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
-						}
-						if(renderEditablePropertyWithExplicitApply(0,"Vertical range",scopeState->m_strRange[channelIndex][streamIndex],scopeState->m_committedRange[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetVoltageRange(scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
-						}
-					}
-					break;
-				case Stream::STREAM_TYPE_DIGITAL:
-					if(scope)
-					{
-						if(scope->IsDigitalThresholdConfigurable())
+				Unit unit = channel->GetYAxisUnits(streamIndex);
+				size_t channelIndex = scopechan->GetIndex();
+
+				switch (type)
+				{
+					case Stream::STREAM_TYPE_ANALOG:
 						{
-							if(renderEditablePropertyWithExplicitApply(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
+							if(!renderName)
+							{	// No streams => display channel properties here
+								renderChannelProperties(scope,scopechan,channelIndex,scopeState);
+							}
+							if(renderEditablePropertyWithExplicitApply(0,"Offset",scopeState->m_strOffset[channelIndex][streamIndex],scopeState->m_committedOffset[channelIndex][streamIndex],unit))
 							{	// Update offset
-								scopechan->SetDigitalThreshold(scopeState->m_committedDigitalThreshold[channelIndex]);
+								scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
+								scopeState->m_needsUpdate[channelIndex] = true;
+							}
+							if(renderEditablePropertyWithExplicitApply(0,"Vertical range",scopeState->m_strRange[channelIndex][streamIndex],scopeState->m_committedRange[channelIndex][streamIndex],unit))
+							{	// Update offset
+								scopechan->SetVoltageRange(scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
 								scopeState->m_needsUpdate[channelIndex] = true;
 							}
 						}
-						else
-						{
-							auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-							renderReadOnlyProperty(0,"Threshold", threshold_txt);
-						}
 						break;
-					}
-					//fall through
-				default:
-					break;
+					case Stream::STREAM_TYPE_DIGITAL:
+						if(scope)
+						{
+							if(scope->IsDigitalThresholdConfigurable())
+							{
+								if(renderEditablePropertyWithExplicitApply(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
+								{	// Update offset
+									scopechan->SetDigitalThreshold(scopeState->m_committedDigitalThreshold[channelIndex]);
+									scopeState->m_needsUpdate[channelIndex] = true;
+								}
+							}
+							else
+							{
+								auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+								renderReadOnlyProperty(0,"Threshold", threshold_txt);
+							}
+							break;
+						}
+						//fall through
+					default:
+						break;
+				}
+				EndBlock();
 			}
-			EndBlock();
 		}
 	}
 	ImGui::PopID();
