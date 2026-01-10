@@ -39,9 +39,6 @@
 
 using namespace std;
 
-#define ELLIPSIS_CHAR "\xE2\x80\xA6" // "..." character
-#define PLUS_CHAR "+"
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StreamBrowserTimebaseInfo
 
@@ -85,7 +82,7 @@ StreamBrowserTimebaseInfo::StreamBrowserTimebaseInfo(shared_ptr<Oscilloscope> sc
 	Unit hz(Unit::UNIT_HZ);
 
 	m_rbw = scope->GetResolutionBandwidth();
-	m_rbwText = hz.PrettyPrintInt64(m_rbw);
+	m_rbwText = hz.PrettyPrint(m_rbw);
 
 	m_span = scope->GetSpan();
 	m_spanText = hz.PrettyPrint(m_span);
@@ -134,6 +131,20 @@ StreamBrowserDialog::~StreamBrowserDialog()
 // Rendering
 
 //Helper methods for rendering widgets that appear in the StreamBrowserDialog.
+
+/**
+	@brief Render a link of the "Sample rate: 4 GSa/s" type that shows up in the
+	scope properties box.
+*/
+void StreamBrowserDialog::renderInfoLink(const char *label, const char *linktext, bool &clicked, bool &hovered)
+{
+	ImGui::PushID(label);	// Prevent collision if several sibling links have the same linktext
+	ImGui::Text("%s: ", label);
+	ImGui::SameLine(0, 0);
+	clicked |= ImGui::TextLink(linktext);
+	hovered |= ImGui::IsItemHovered();
+	ImGui::PopID();
+}
 
 /**
 	@brief prepare rendering context to display a badge at the end of current line
@@ -233,14 +244,12 @@ void StreamBrowserDialog::renderBadge(ImVec4 color, ... /* labels, ending in NUL
 	@brief Render a combo box with provided color and values
 
 	@param label	Label for the combo box
-	@param alignRight if true
 	@param color the color of the combo box
 	@param selected the selected value index (in/out)
 	@param values the combo box values
 	@param useColorForText if true, use the provided color for text (and a darker version of it for background color)
 	@param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space
-	@param hideArrow True to hide the dropdown arrow (defaults to true)
-	@param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
+	@param hideArrow True to hide the dropdown arrow
 
 	@return true if the selected value of the combo has been changed
  */
@@ -252,8 +261,7 @@ bool StreamBrowserDialog::renderCombo(
 	const vector<string> &values,
 	bool useColorForText,
 	uint8_t cropTextTo,
-	bool hideArrow,
-	float paddingRight)
+	bool hideArrow)
 {
 	if(selected >= (int)values.size() || selected < 0)
 	{
@@ -266,7 +274,7 @@ bool StreamBrowserDialog::renderCombo(
 
 	if(alignRight)
 	{
-		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2 + paddingRight;
+		int padding = ImGui::GetStyle().ItemSpacing.x + ImGui::GetStyle().FramePadding.x * 2;
 		float xsz = ImGui::CalcTextSize(selectedLabel).x + padding;
 		string resizedLabel;
 		if ((m_badgeXCur - xsz) < m_badgeXMin)
@@ -280,12 +288,12 @@ bool StreamBrowserDialog::renderCombo(
 				resizedLabel = resizedLabel.substr(0,resizedLabel.size()-1);
 				if(resizedLabel.size() < cropTextTo)
 					break; // We don't want to make the text that short
-				xsz = ImGui::CalcTextSize((resizedLabel + ELLIPSIS_CHAR).c_str()).x + padding;
+				xsz = ImGui::CalcTextSize((resizedLabel + "...").c_str()).x + padding;
 			}
 			if((m_badgeXCur - xsz) < m_badgeXMin)
 				return false; // Still no room
 			// We found an acceptable size
-			resizedLabel = resizedLabel + ELLIPSIS_CHAR;
+			resizedLabel = resizedLabel + "...";
 			selectedLabel = resizedLabel.c_str();
 		}
 		m_badgeXCur -= xsz - ImGui::GetStyle().ItemSpacing.x;
@@ -296,7 +304,7 @@ bool StreamBrowserDialog::renderCombo(
 	{
 		// Use channel color for shape combo, but darken it to make text readable
 		float bgmul = 0.4;
-		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w));
+		auto bcolor = ImGui::ColorConvertFloat4ToU32(ImVec4(color.x*bgmul, color.y*bgmul, color.z*bgmul, color.w) );
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, bcolor);
 		ImGui::PushStyleColor(ImGuiCol_Text, color);
 	}
@@ -338,12 +346,10 @@ bool StreamBrowserDialog::renderCombo(
 /**
    @brief Render a combo box with provded color and values
 
-   @param label	Label for the combo box
-   @param alignRight true if the combo should be aligned to the right
    @param color the color of the combo box
    @param selected the selected value index (in/out)
    @param ... the combo box values
-   @return true if the selected value of the combo has been changed
+   @return true true if the selected value of the combo has been changed
  */
 bool StreamBrowserDialog::renderCombo(
 	const char* label,
@@ -369,23 +375,30 @@ bool StreamBrowserDialog::renderCombo(
 /**
    @brief Render a toggle button combo
 
-   @param label	Label for the combo box
-   @param alignRight true if the combo should be aligned to the right
    @param color the color of the toggle button
    @param curValue the value of the toggle button
-   @param valueOff label for value off (optionnal, defaults to "OFF")
-   @param valueOn label for value on (optionnal, defaults to "ON")
-   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
-   @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
-   @return true if selection has changed
+   @return the selected value for the toggle button
+
+   TODO: replace with renderToggleEXT
  */
-bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo, float paddingRight)
+bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec4 color, bool curValue)
 {
 	int selection = (int)curValue;
-	std::vector<string> values;
-	values.push_back(string(valueOff));
-	values.push_back(string(valueOn));
-	bool ret = renderCombo(label, alignRight, color, selection, values, false, cropTextTo, true, paddingRight);
+	renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
+	return (selection == 1);
+}
+
+/**
+   @brief Render a toggle button combo
+
+   @param color the color of the toggle button
+   @param curValue the value of the toggle button
+   @return true if selection has changed
+ */
+bool StreamBrowserDialog::renderToggleEXT(const char* label, bool alignRight, ImVec4 color, bool& curValue)
+{
+	int selection = (int)curValue;
+	bool ret = renderCombo(label, alignRight, color, &selection, "OFF", "ON", nullptr);
 	curValue = (selection == 1);
 	return ret;
 }
@@ -393,336 +406,36 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
 /**
    @brief Render an on/off toggle button combo
 
-   @param label	Label for the combo box
-   @param alignRight true if the combo should be aligned to the right
    @param curValue the value of the toggle button
-   @param valueOff label for value off (optionnal, defaults to "OFF")
-   @param valueOn label for value on (optionnal, defaults to "ON")
-   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
-   @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
-   @return true if value has changed
+   @return the selected value for the toggle button
+
+   TODO: replace with renderOnOffToggleEXT
  */
-bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff, const char* valueOn, uint8_t cropTextTo, float paddingRight)
+bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, bool curValue)
 {
 	auto& prefs = m_session.GetPreferences();
 	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
 		(curValue ?
 			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
 			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
-	return renderToggle(label, alignRight, color, curValue, valueOff, valueOn, cropTextTo,paddingRight);
+	return renderToggle(label, alignRight, color, curValue);
 }
 
 /**
-   @brief Render a numeric value
-   @param value the string representation of the value to display (may include the unit)
-   @param clicked output value for clicked state
-   @param hovered output value for hovered state
-   @param color the color to use (defaults to white)
-   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
-   @param digitHeight the height of a digit (if 0 (defualt), will use ImGui::GetFontSize())
-   @param clickable true (default) if the displayed value should be clickable
+   @brief Render an on/off toggle button combo
+
+   @param curValue the value of the toggle button
+   @return true if value has changed
  */
-void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color, bool allow7SegmentDisplay, float digitHeight, bool clickable)
+bool StreamBrowserDialog::renderOnOffToggleEXT(const char* label, bool alignRight, bool& curValue)
 {
-	bool use7Segment = false;
-	if(allow7SegmentDisplay)
-	{
-		auto& prefs = m_session.GetPreferences();
-		use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
-	}
-	if(use7Segment)
-	{
-		if(digitHeight <= 0) digitHeight = ImGui::GetFontSize();
-	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
-	}
-	else
-	{
-		if(clickable)
-		{
-			ImVec2 pos = ImGui::GetCursorPos();
-			ImGui::PushStyleColor(ImGuiCol_Text, color);
-			ImGui::TextUnformatted(value.c_str());
-			ImGui::PopStyleColor();
-
-			clicked |= ImGui::IsItemClicked();
-			if(ImGui::IsItemHovered())
-			{	// Hand cursor
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
-				// Lighter if hovered
-				color.x = color.x * 1.2f;
-				color.y = color.y * 1.2f;
-				color.z = color.z * 1.2f;
-				ImGui::SetCursorPos(pos);
-				ImGui::PushStyleColor(ImGuiCol_Text, color);
-				ImGui::TextUnformatted(value.c_str());
-				ImGui::PopStyleColor();
-				hovered = true;
-			}
-		}
-		else
-		{
-			ImGui::PushStyleColor(ImGuiCol_Text, color);
-			ImGui::TextUnformatted(value.c_str());
-			ImGui::PopStyleColor();
-		}
-	}
-}
-
-/**
-   @brief Render a read-only instrument property value
-   @param label the value label (used as a label for the property)
-   @param currentValue the string representation of the current value
-   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
-*/
-void StreamBrowserDialog::renderReadOnlyProperty(float width, const string& label, const string& value, const char* tooltip)
-{
-	ImGui::PushID(label.c_str());	// Prevent collision if several sibling links have the same linktext
-	float fontSize = ImGui::GetFontSize();
-	if(width <= 0) width = 6*fontSize;
-	ImGuiStyle& style = ImGui::GetStyle();
-	ImVec4 bg = style.Colors[ImGuiCol_FrameBg];
-	ImGui::PushStyleColor(ImGuiCol_ChildBg, bg);
-	ImGui::BeginChild("##readOnlyValue", ImVec2(width, ImGui::GetFontSize()),false,ImGuiWindowFlags_None);
-	ImGui::TextUnformatted(value.c_str());
-	ImGui::EndChild();
-	ImGui::PopStyleColor();
-	ImGui::SameLine();
-	ImGui::TextUnformatted(label.c_str());
-	ImGui::PopID();
-	if(tooltip)
-	{
-		HelpMarker(tooltip);
-	}
-}
-
-
-template<typename T>
-/**
-   @brief Render an editable numeric value
-   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
-   @param label the value label (used as a label for the TextInput)
-   @param currentValue the string representation of the current value
-   @param comittedValue the last comitted typed (float, double or int64_t) value
-   @param unit the Unit of the value
-   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
-   @param color the color to use
-   @param clicked output value for clicked state
-   @param hovered output value for hovered state
-   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
-   @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
-   @return true if the value has changed
- */
-bool StreamBrowserDialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
-{
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports float or double");
 	auto& prefs = m_session.GetPreferences();
-	bool changed = false;
-	bool validateChange = false;
-	bool cancelEdit = false;
-	bool keepEditing = false;
-	bool dirty;
-	float fontSize = ImGui::GetFontSize();
-	if(width <= 0) width = 6*fontSize;
-	ImGui::SetNextItemWidth(width);
-	if constexpr (std::is_same_v<T, int64_t>)
-		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
-	else
-		dirty = unit.PrettyPrint(committedValue) != currentValue;
-	string editLabel = label+"##Edit";
-	ImGuiID editId = ImGui::GetID(editLabel.c_str());
-	ImGuiID labelId = ImGui::GetID(label.c_str());
-	if(m_editedItemId == editId)
-	{	// Item currently beeing edited
-		ImGui::BeginGroup();
-		float inputXPos = ImGui::GetCursorPosX();
-	    ImGuiContext& g = *GImGui;
-		float inputWidth = g.NextItemData.Width;
-		// Allow overlap for apply button
-		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
-		ImGui::PushStyleColor(ImGuiCol_Text, color);
-		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
-		{	// Input validated (but no apply button)
-			if(!explicitApply)
-			{	// Implcit apply => validate change
-				validateChange = true;
-			}
-			else
-			{	// Explicit apply needed => keep editing
-				keepEditing = true;
-			}
-		}
-		ImGui::PopStyleColor();
-		ImGui::PopItemFlag();
-		if(explicitApply)
-		{	// Add Apply button
-			float buttonWidth = ImGui::GetFontSize() * 2;
-			// Position the button just before the right side of the text input
-			ImGui::SameLine(inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x);
-			ImVec4 buttonColorActive = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.apply_button_color"));
-			float bgmul = 0.8f;
-			ImVec4 buttonColorHovered = ImVec4(buttonColorActive.x*bgmul, buttonColorActive.y*bgmul, buttonColorActive.z*bgmul, buttonColorActive.w);
-			bgmul = 0.7f;
-			ImVec4 buttonColor = ImVec4(buttonColorActive.x*bgmul, buttonColorActive.y*bgmul, buttonColorActive.z*bgmul, buttonColorActive.w);
-			ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
-			ImGui::BeginDisabled(!dirty);
-			if(ImGui::Button("\xE2\x8F\x8E")) // Carriage return symbol
-			{	// Apply button click
-				validateChange = true;
-			}
-			ImGui::EndDisabled();
-			if(dirty && ImGui::IsItemHovered())
-			{	// Help to explain apply button
-				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
-			}
-			ImGui::PopStyleColor(3);
-		}
-		if(!validateChange)
-		{
-			if(keepEditing)
-			{	// Give back focus to test input
-				ImGui::ActivateItemByID(editId);
-			}
-			else if(ImGui::IsKeyPressed(ImGuiKey_Escape))
-			{	// Detect escape => stop editing
-				cancelEdit = true;
-				//Prevent focus from going to parent node
-				ImGui::ActivateItemByID(0);
-			}
-			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))  
-			{	// Detect focus lost => stop editing too
-				if(explicitApply)
-				{	// Cancel on focus lost
-					cancelEdit = true;
-				}
-				else
-				{	// Validate on focus list
-					validateChange = true;
-				}
-			}
-		}
-		ImGui::EndGroup();
-	}
-	else
-	{
-		if(m_lastEditedItemId == editId)
-		{	// Focus lost
-			if(explicitApply)
-			{	// Cancel edit
-				cancelEdit = true;
-			}
-			else
-			{	// Validate change
-				validateChange = true;
-			}
-			m_lastEditedItemId = 0;
-		}
-		bool clicked = false;
-		bool hovered = false;
-		bool use7Segment = false;
-		if(allow7SegmentDisplay)
-		{
-			use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
-		}
-		if(use7Segment)
-		{
-			ImGui::PushID(labelId);
-			Render7SegmentValue(currentValue,color,ImGui::GetFontSize(),clicked,hovered);
-			ImGui::PopID();
-		}
-		else
-		{
-			ImGui::PushStyleColor(ImGuiCol_Text, color);
-			ImGui::InputText(label.c_str(),&currentValue,ImGuiInputTextFlags_ReadOnly);
-			ImGui::PopStyleColor();
-			clicked |= ImGui::IsItemClicked();
-			if(ImGui::IsItemHovered())
-			{	// Keep hand cursor while read-only
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-				hovered = true;
-			}
-		}
-
-		if (clicked)
-		{
-			m_lastEditedItemId = m_editedItemId;
-			m_editedItemId = editId;
-			ImGui::ActivateItemByID(editId);
-		}
-		if (hovered)
-			m_parent->AddStatusHelp("mouse_lmb", "Edit value");
-	}
-	if(validateChange)
-	{
-		if(m_editedItemId == editId)
-		{
-			m_lastEditedItemId = 0;
-			m_editedItemId = 0;
-		}
-		if(dirty)
-		{	// Content actually changed
-			if constexpr (std::is_same_v<T, int64_t>)
-			{
-				//Float path if the user input a decimal value like "3.5G"
-				if(currentValue.find(".") != string::npos)
-					committedValue = unit.ParseString(currentValue);
-				//Integer path otherwise for full precision
-				else
-					committedValue = unit.ParseStringInt64(currentValue);
-
-				currentValue = unit.PrettyPrintInt64(committedValue);
-			}
-			else
-			{
-				committedValue = static_cast<T>(unit.ParseString(currentValue));
-				if constexpr (std::is_same_v<T, int64_t>)
-					currentValue = unit.PrettyPrintInt64(committedValue);
-				else
-					currentValue = unit.PrettyPrint(committedValue);
-			}
-			changed = true;
-		}
-	}
-	else if(cancelEdit)
-	{	// Restore value
-		if constexpr (std::is_same_v<T, int64_t>)
-			currentValue = unit.PrettyPrintInt64(committedValue);
-		else
-			currentValue = unit.PrettyPrint(committedValue);
-		if(m_editedItemId == editId)
-		{
-			m_lastEditedItemId = 0;
-			m_editedItemId = 0;
-		}
-	}
-	if(tooltip)
-	{
-		HelpMarker(tooltip);
-	}
-	return changed;
+	ImVec4 color = ImGui::ColorConvertU32ToFloat4(
+		(curValue ?
+			prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color") :
+			prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")));
+	return renderToggleEXT(label, alignRight, color, curValue);
 }
-
-template<typename T>
-/**
-   @brief Render an editable numeric value with explicit apply (if the input value needs to explicitly be applied by clicking the apply button)
-   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
-   @param label the value label (used as a label for the TextInput)
-   @param currentValue the string representation of the current value
-   @param comittedValue the last comitted typed (float, double or int64_t) value
-   @param unit the Unit of the value
-   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
-   @param color the color to use
-   @param clicked output value for clicked state
-   @param hovered output value for hovered state
-   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
-   @return true if the value has changed
- */
-bool StreamBrowserDialog::renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay)
-{
-	return renderEditableProperty(width,label,currentValue,committedValue,unit,tooltip,color,allow7SegmentDisplay,true);
-}
-
 
 /**
    @brief Render a download progress bar for a given instrument channel
@@ -875,24 +588,19 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
    @param cc true if the PSU channel is in constant current mode, false for constant voltage mode
    @param chan the PSU channel to render properties for
    @param setValue the set value text
-   @param committedValue the last commited value
    @param measuredValue the measured value text
    @param clicked output param for clicked state
    @param hovered output param for hovered state
-
-   @return true if the value has been modified
  */
-bool StreamBrowserDialog::renderPsuRows(
+void StreamBrowserDialog::renderPsuRows(
 	bool isVoltage,
 	bool cc,
 	PowerSupplyChannel* chan,
-	std::string& currentValue, 
-	float& committedValue, 
-	std::string& measuredValue,
+	const char *setValue,
+	const char *measuredValue,
 	bool &clicked,
 	bool &hovered)
 {
-	bool changed = false;
 	auto& prefs = m_session.GetPreferences();
 	// Row 1
 	ImGui::TableNextRow();
@@ -916,16 +624,8 @@ bool StreamBrowserDialog::renderPsuRows(
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "sV" :  "sC");
-
-	ImVec4 color = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.psu_7_segment_color"));
-
-	Unit unit(isVoltage ? Unit::UNIT_VOLTS : Unit::UNIT_AMPS);
-
-	if(renderEditablePropertyWithExplicitApply(0,"##psuSetValue",currentValue,committedValue,unit,nullptr,color,true))
-	{
-		changed = true;
-	}
-
+	clicked |= ImGui::TextLink(setValue);
+	hovered |= ImGui::IsItemHovered();
 	ImGui::PopID();
 	// Row 2
 	ImGui::TableNextRow();
@@ -954,121 +654,8 @@ bool StreamBrowserDialog::renderPsuRows(
 	ImGui::PopID();
 	ImGui::TableSetColumnIndex(2);
 	ImGui::PushID(isVoltage ? "mV" :  "mC");
-
-	renderNumericValue(measuredValue,clicked,hovered,color,true,0,false);
-
-	ImGui::PopID();
-	return changed;
-}
-
-/**
-   @brief Render DMM channel properties
-   @param dmm the DMM to render channel properties for
-   @param dmmchan the DMM channel to render properties for
-   @param clicked output param for clicked state
-   @param hovered output param for hovered state
- */
-void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, MultimeterChannel* dmmchan, bool isMain, bool &clicked, bool &hovered)
-{
-	size_t streamIndex = isMain ? 0 : 1;
-	Unit unit = dmmchan->GetYAxisUnits(streamIndex);
-	float mainValue = dmmchan->GetScalarValue(streamIndex);
-	string valueText = unit.PrettyPrint(mainValue,dmm->GetMeterDigits());
-	ImVec4 color = ImGui::ColorConvertU32ToFloat4(ColorFromString(dmmchan->m_displaycolor));
-	string streamName = isMain ? "Main" : "Secondary";
-
-	ImGui::PushID(streamName.c_str());
-
-	// Get available operating and current modes
-	auto modemask = isMain ? dmm->GetMeasurementTypes() : dmm->GetSecondaryMeasurementTypes();
-	auto curMode = isMain ? dmm->GetMeterMode() : dmm->GetSecondaryMeterMode();
-
-	// Stream name
-	bool open = ImGui::TreeNodeEx(streamName.c_str(), (curMode > 0) ? ImGuiTreeNodeFlags_DefaultOpen : 0);
-
-	// Mode combo
-	startBadgeLine();
-	ImGui::PushID(streamName.c_str());
-	vector<std::string> modeNames;
-	vector<Multimeter::MeasurementTypes> modes;
-	if(!isMain)
-	{
-		// Add None for secondary measurement to be able to disable it
-		modeNames.push_back("None");
-		modes.push_back(Multimeter::MeasurementTypes::NONE);
-	}
-	int modeSelector = 0;
-	for(unsigned int i=0; i<32; i++)
-	{
-		auto mode = static_cast<Multimeter::MeasurementTypes>(1 << i);
-		if(modemask & mode)
-		{
-			modes.push_back(mode);
-			modeNames.push_back(dmm->ModeToText(mode));
-			if(curMode == mode)
-				modeSelector = modes.size() - 1;
-		}
-	}
-
-	// Padding to give space for ChannelProperties dialog button 
-	auto& prefs = m_session.GetPreferences();
-	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
-
-	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3,true,padding))
-	{
-		curMode = modes[modeSelector];
-		if(isMain)
-			dmm->SetMeterMode(curMode);
-		else
-		{
-			dmm->SetSecondaryMeterMode(curMode);
-			// Open or close tree node according the secondary measure mode
-		    ImGuiContext& g = *GImGui;
-			ImGui::TreeNodeSetOpen(g.LastItemData.ID,(curMode > 0));
-		}
-	}
-	ImGui::PopID();
-
-	StreamDescriptor s(dmmchan, streamIndex);
-	if(ImGui::BeginDragDropSource())
-	{
-		if(s.GetType() == Stream::STREAM_TYPE_ANALOG_SCALAR)
-			ImGui::SetDragDropPayload("Scalar", &s, sizeof(s));
-		else
-			ImGui::SetDragDropPayload("Stream", &s, sizeof(s));
-
-		ImGui::TextUnformatted(s.GetName().c_str());
-		ImGui::EndDragDropSource();
-	}
-	else
-		DoItemHelp();
-
-	if(open)
-		ImGui::TreePop();
-
-	if(open)
-	{
-		renderNumericValue(valueText,clicked,hovered,color,true,ImGui::GetFontSize()*2,false);
-
-		if(isMain)
-		{
-			auto dmmState = m_session.GetDmmState(dmm);
-			if(dmmState)
-			{
-				ImGui::PushID("autorange");
-				// For main, also show the autorange combo
-				startBadgeLine();
-				bool autorange = dmmState->m_autoRange.load();
-				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3,padding))
-				{
-					dmm->SetMeterAutoRange(autorange);
-					dmmState->m_needsRangeUpdate = true;
-				}
-				ImGui::PopID();
-			}
-		}
-	}
-
+	clicked |= ImGui::TextLink(measuredValue);
+	hovered |= ImGui::IsItemHovered();
 	ImGui::PopID();
 }
 
@@ -1082,7 +669,6 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 {
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit hz(Unit::UNIT_HZ);
-	Unit percent(Unit::UNIT_PERCENT);
 
 	size_t channelIndex = awgchan->GetIndex();
 	auto awgState = m_session.GetFunctionGeneratorState(awg);
@@ -1110,31 +696,39 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_committedFrequency[channelIndex] = freq;
 		awgState->m_strFrequency[channelIndex] = hz.PrettyPrint(freq);
 	}
-	float dutyCycle = awgState->m_channelDutyCycle[channelIndex];
-	if(dutyCycle != awgState->m_committedDutyCycle[channelIndex])
-	{
-		awgState->m_committedDutyCycle[channelIndex] = dutyCycle;
-		awgState->m_strDutyCycle[channelIndex] = percent.PrettyPrint(dutyCycle);
-	}
 
 	auto& prefs = m_session.GetPreferences();
+
+	//Impedance
+	ImGui::SetNextItemWidth(dwidth);
+	/*
+	if(renderCombo(
+		"Sample Rate",
+		false,
+		ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+		m_timebaseConfig[scope]->m_rate, m_timebaseConfig[scope]->m_rateNames))
+	{
+		scope->SetSampleRate(m_timebaseConfig[scope]->m_rates[m_timebaseConfig[scope]->m_rate]);
+		refresh = true;
+	}
+	*/
+
+	//shape = awgState->m_channelShape[channelIndex];
 
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
-	// Padding to give space for ChannelProperties dialog button 
-	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
 	// Shape combo
 	// Get current shape and  shape index
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
 	int shapeIndex = awgState->m_channelShapeIndexes[channelIndex][shape];
 	if(renderCombo(
-		"##waveform",
+		"#waveform",
 		true,
 		ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)),
 		shapeIndex, awgState->m_channelShapeNames[channelIndex],
 		true,
-		3,true,padding))
+		3))
 	{
 		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
 		awg->SetFunctionChannelShape(channelIndex, shape);
@@ -1144,16 +738,14 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
 
-	// Store current Y position for shape preview
-	float shapePreviewY = ImGui::GetCursorPosY();
-
 	// Row 2
 	// Frequency label
-	if(renderEditableProperty(dwidth,
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithImplicitApply(
 		"Frequency",
 		awgState->m_strFrequency[channelIndex],
 		awgState->m_committedFrequency[channelIndex],
-		hz/*,"Frequency of the generated waveform"*/))
+		hz))
 	{
 		awg->SetFunctionChannelFrequency(channelIndex, awgState->m_committedFrequency[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
@@ -1167,67 +759,58 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::EndDragDropSource();
 	}
 	else
-	DoItemHelp();
 	*/
+	DoItemHelp();
+	HelpMarker("Frequency of the generated waveform");
 
-	//Row 2
-	//Duty cycle
-	if(renderEditableProperty(dwidth,
-		"Duty cycle",
-		awgState->m_strDutyCycle[channelIndex],
-		awgState->m_committedDutyCycle[channelIndex],
-		percent/*,"Duty cycle of the generated waveform"*/))
-	{
-		awg->SetFunctionChannelDutyCycle(channelIndex, awgState->m_committedDutyCycle[channelIndex]);
-		awgState->m_needsUpdate[channelIndex] = true;
-	}
-
+	/*
 	// Shape preview
 	startBadgeLine();
 	auto height = ImGui::GetFontSize() * 2;
 	auto width =  height * 2;
-	auto totalWidth = width + padding;
-	if ((m_badgeXCur - totalWidth) >= m_badgeXMin)
+	if ((m_badgeXCur - width) >= m_badgeXMin)
 	{
 		// ok, we have enough space draw preview
-		m_badgeXCur -= totalWidth;
-		// save current y position to restore it after drawing the preview
-		float currentY = ImGui::GetCursorPosY();
-		// Continue layout on current line (row 3)
+		m_badgeXCur -= width;
 		ImGui::SameLine(m_badgeXCur);
-		// But use y position of row 2
-		ImGui::SetCursorPosY(shapePreviewY);
 		ImGui::Image(
 			m_parent->GetTextureManager()->GetTexture(m_parent->GetIconForWaveformShape(shape)),
 			ImVec2(width,height));
-		// Now that we're done with shape preview, restore y position of row 3
-		ImGui::SetCursorPosY(currentY);
+		// Go back one line since preview spans on two text lines
+		ImGuiWindow *window = ImGui::GetCurrentWindowRead();
+		window->DC.CursorPos.y -= ImGui::GetFontSize();
 	}
+	*/
 
 	// Row 3
-	if(renderEditablePropertyWithExplicitApply(dwidth,
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithExplicitApply(
 		"Amplitude",
 		awgState->m_strAmplitude[channelIndex],
 		awgState->m_committedAmplitude[channelIndex],
-		volts,"Peak-to-peak amplitude of the generated waveform"))
+		volts))
 	{
 		awg->SetFunctionChannelAmplitude(channelIndex, awgState->m_committedAmplitude[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
+	HelpMarker("Peak-to-peak amplitude of the generated waveform");
 
 	//Row 4
 	//Offset
-	if(renderEditablePropertyWithExplicitApply(dwidth,
+	ImGui::SetNextItemWidth(dwidth);
+	if(UnitInputWithExplicitApply(
 		"Offset",
 		awgState->m_strOffset[channelIndex],
 		awgState->m_committedOffset[channelIndex],
-		volts,"DC offset for the waveform above (positive) or below (negative) ground"))
+		volts))
 	{
 		awg->SetFunctionChannelOffset(channelIndex, awgState->m_committedOffset[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
+	HelpMarker("DC offset for the waveform above (positive) or below (negative) ground");
 
-	//Row 5
+	//TODO: Duty cycle
+
 	//Impedance
 	ImGui::SetNextItemWidth(dwidth);
 	FunctionGenerator::OutputImpedance impedance = awgState->m_channelOutputImpedance[channelIndex];
@@ -1335,18 +918,16 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 		bool result;
 		if(allOn || someOn)
 		{
-			result = true;
-			renderToggle(
+			result = renderToggle(
 				"###psuon",
 				true,
 				allOn ?
 				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
+				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), true);
 		}
 		else
 		{
-			result = false;
-			renderOnOffToggle("###psuon", true, result);
+			result = renderOnOffToggle("###psuon", true, false);
 		}
 		if(result != allOn)
 		{
@@ -1364,15 +945,11 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 
 	if(instIsOpen)
 	{
-		vector<Oscilloscope::DigitalBank> digitalBanks;
-		vector<size_t> analogChannels;
-		vector<size_t> otherChannels;
 		size_t lastEnabledChannelIndex = 0;
 		if (scope)
 		{
 			if(ImGui::TreeNodeEx("Timebase", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				BeginBlock("timebase");
 				if(scope->HasTimebaseControls())
 					DoTimebaseSettings(scope);
 				if(scope->HasFrequencyControls())
@@ -1380,62 +957,20 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				auto spec = dynamic_pointer_cast<SCPISpectrometer>(scope);
 				if(spec)
 					DoSpectrometerSettings(spec);
-				EndBlock();
 				ImGui::TreePop();
 			}
-
-			digitalBanks = scope->GetDigitalBanks();
 
 			for(size_t i = 0; i<channelCount; i++)
 			{
 				if(scope->IsChannelEnabled(i))
 					lastEnabledChannelIndex = i;
-				auto scopechan = scope->GetChannel(i);
-				auto streamType = scopechan->GetType(0);
-				if(streamType != Stream::STREAM_TYPE_DIGITAL)
-				{
-					if(streamType ==  Stream::STREAM_TYPE_ANALOG)
-						analogChannels.push_back(i);
-					else
-						otherChannels.push_back(i);
-				}
 			}
 		}
 
-		if(digitalBanks.size() > 0)
-		{	// If digital banks are avaialble, gather digital channels in banks
-			for(size_t i : analogChannels)
-			{	// Iterate on analog channel first
-				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
-			}
-			int bankNumber = 1;
-			for(auto bank : digitalBanks)
-			{	// Iterate on digital banks
-				string nodeName = "Digital Bank " + to_string(bankNumber);
-				if(ImGui::TreeNodeEx(nodeName.c_str()))
-				{
-					ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-					for(auto channel : bank)
-					{	// Iterate on bank's channel
-						size_t i = channel->GetIndex();
-						renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
-					}
-					ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-					ImGui::TreePop();
-				}
-				bankNumber++;
-			}
-			for(size_t i : otherChannels)
-			{	// Finally iterate on other channels
-				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
-			}
-		}
-		else
-		{	// Display all channels if no digital bank is available
-			for(size_t i=0; i<channelCount; i++)
-			{	// Iterate on each channel
-				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
-			}
+		for(size_t i=0; i<channelCount; i++)
+		{
+			// Iterate on each channel
+			renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
 		}
 
 		ImGui::TreePop();
@@ -1481,18 +1016,21 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 	Unit hz(Unit::UNIT_HZ);
 
 	// Resolution Bandwidh
-	if(renderEditableProperty(width,"Rbw", p->m_rbwText, p->m_rbw, hz, "Resolution Bandwidth"))
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Rbw", p->m_rbwText, p->m_rbw, hz))
 	{
 		scope->SetResolutionBandwidth(p->m_rbw);
 		// Update with values from the device
 		p->m_rbw = scope->GetResolutionBandwidth();
-		p->m_rbwText = hz.PrettyPrintInt64(p->m_rbw);
+		p->m_rbwText = hz.PrettyPrint(p->m_rbw);
 	}
+	HelpMarker("Resolution Bandwidth");
 
 	//Frequency
 	bool changed = false;
 
-	if(renderEditableProperty(width,"Start", p->m_startText, p->m_start, hz, "Start of the frequency sweep"))
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Start", p->m_startText, p->m_start, hz))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1500,20 +1038,26 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 		scope->SetSpan(span);
 		changed = true;
 	}
+	HelpMarker("Start of the frequency sweep");
 
-	if(renderEditableProperty(width,"Center", p->m_centerText, p->m_center, hz, "Midpoint of the frequency sweep"))
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Center", p->m_centerText, p->m_center, hz))
 	{
 		scope->SetCenterFrequency(0, p->m_center);
 		changed = true;
 	}
+	HelpMarker("Midpoint of the frequency sweep");
 
-	if(renderEditableProperty(width,"Span", p->m_spanText, p->m_span, hz, "Width of the frequency sweep"))
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("Span", p->m_spanText, p->m_span, hz))
 	{
 		scope->SetSpan(p->m_span);
 		changed = true;
 	}
+	HelpMarker("Width of the frequency sweep");
 
-	if(renderEditableProperty(width,"End", p->m_endText, p->m_end, hz, "End of the frequency sweep"))
+	ImGui::SetNextItemWidth(width);
+	if(UnitInputWithImplicitApply("End", p->m_endText, p->m_end, hz))
 	{
 		double mid = (p->m_start + p->m_end) / 2;
 		double span = (p->m_end - p->m_start);
@@ -1521,6 +1065,7 @@ void StreamBrowserDialog::DoFrequencySettings(shared_ptr<Oscilloscope> scope)
 		scope->SetSpan(span);
 		changed = true;
 	}
+	HelpMarker("End of the frequency sweep");
 
 	//Update everything if one setting is changed
 	if(changed)
@@ -1544,10 +1089,12 @@ void StreamBrowserDialog::DoSpectrometerSettings(shared_ptr<SCPISpectrometer> sp
 	auto config = m_timebaseConfig[scope];
 
 	auto width = ImGui::GetFontSize() * 5;
+	ImGui::SetNextItemWidth(width);
 
 	Unit fs(Unit::UNIT_FS);
-	if(renderEditableProperty(width, "Integration time", config->m_integrationText, config->m_integrationTime, fs, "Spectrometer integration / exposure time"))
+	if(UnitInputWithImplicitApply("Integration time", config->m_integrationText, config->m_integrationTime, fs))
 		spec->SetIntegrationTime(config->m_integrationTime);
+	HelpMarker("Spectrometer integration / exposure time");
 }
 
 /**
@@ -1567,7 +1114,7 @@ void StreamBrowserDialog::DoTimebaseSettings(shared_ptr<Oscilloscope> scope)
 		ImGui::SetNextItemWidth(width);
 		bool disabled = !scope->CanInterleave();
 		ImGui::BeginDisabled(disabled);
-		if(renderOnOffToggle("Interleaving", false, config->m_interleaving))
+		if(renderOnOffToggleEXT("Interleaving", false, config->m_interleaving))
 		{
 			scope->SetInterleaving(config->m_interleaving);
 			refresh = true;
@@ -1706,13 +1253,11 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	auto psu = std::dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	auto scope = std::dynamic_pointer_cast<Oscilloscope>(instrument);
 	auto awg = std::dynamic_pointer_cast<FunctionGenerator>(instrument);
-	auto dmm = std::dynamic_pointer_cast<Multimeter>(instrument);
 
 	bool singleStream = channel->GetStreamCount() == 1;
 	auto scopechan = dynamic_cast<OscilloscopeChannel *>(channel);
 	auto psuchan = dynamic_cast<PowerSupplyChannel *>(channel);
 	auto awgchan = dynamic_cast<FunctionGeneratorChannel *>(channel);
-	auto dmmchan = dynamic_cast<MultimeterChannel *>(channel);
 	bool renderProps = false;
 	if (scopechan)
 	{
@@ -1731,8 +1276,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	int flags = 0;
 	if(!hasChildren)
 		flags |= ImGuiTreeNodeFlags_Leaf;
-
-	flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+	else
+		flags |= ImGuiTreeNodeFlags_OpenOnArrow;
 
 	bool open = ImGui::TreeNodeEx(
 		channel->GetDisplayName().c_str(),
@@ -1808,8 +1353,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		auto psustate = m_session.GetPSUState(psu);
 
 		bool active = psustate->m_channelOn[channelIndex];
-		bool result = active;
-		renderOnOffToggle("###active", true, result);
+		bool result = renderOnOffToggle("###active", true, active);
 		if(result != active)
 			psu->SetPowerChannelActive(channelIndex,result);
 	}
@@ -1819,8 +1363,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		auto awgstate = m_session.GetFunctionGeneratorState(awg);
 
 		bool active = awgstate->m_channelActive[channelIndex];
-		bool result = active;
-		renderOnOffToggle("###active", true, result);
+		bool result = renderOnOffToggle("###active", true, active);
 		if(result != active)
 		{
 			awg->SetFunctionChannelActive(channelIndex,result);
@@ -1842,11 +1385,8 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(psu)
 		{
 			// For PSU we will have a special handling for the 4 streams associated to a PSU channel
-			if(BeginBlock("psu_params",true,"Open PSU channel properties"))
-			{
-				m_parent->ShowInstrumentProperties(psu);
-			}
-
+			ImGui::BeginChild("psu_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
 			auto svoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageSetPoint ());
 			auto mvoltage_txt = Unit(Unit::UNIT_VOLTS).PrettyPrint(psuchan->GetVoltageMeasured());
 			auto scurrent_txt = Unit(Unit::UNIT_AMPS).PrettyPrint(psuchan->GetCurrentSetPoint ());
@@ -1855,69 +1395,36 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			bool cc = false;
 			auto psuState = m_session.GetPSUState(psu);
 			if(psuState)
-			{
 				cc = psuState->m_channelConstantCurrent[channelIndex].load();
 
-				bool clicked = false;
-				bool hovered = false;
+			bool clicked = false;
+			bool hovered = false;
 
-				if (ImGui::BeginTable("table1", 3))
+			if (ImGui::BeginTable("table1", 3))
+			{
+				// Voltage
+				renderPsuRows(true,cc,psuchan,svoltage_txt.c_str(),mvoltage_txt.c_str(),clicked,hovered);
+				// Current
+				renderPsuRows(false,cc,psuchan,scurrent_txt.c_str(),mcurrent_txt.c_str(),clicked,hovered);
+				// End table
+				ImGui::EndTable();
+				if (clicked)
 				{
-					// Voltage
-					if(renderPsuRows(true,cc,psuchan,psuState->m_setVoltage[channelIndex],psuState->m_committedSetVoltage[channelIndex],mvoltage_txt,clicked,hovered))
-					{	// Update set voltage
-						psu->SetPowerVoltage(channelIndex, psuState->m_committedSetVoltage[channelIndex]);
-						psuState->m_needsUpdate[channelIndex] = true;
-					}
-					// Current
-					if(renderPsuRows(false,cc,psuchan,psuState->m_setCurrent[channelIndex],psuState->m_committedSetCurrent[channelIndex],mcurrent_txt,clicked,hovered))
-					{	// Update set current 
-						psu->SetPowerCurrent(channelIndex, psuState->m_committedSetCurrent[channelIndex]);
-						psuState->m_needsUpdate[channelIndex] = true;
-					}
-					// End table
-					ImGui::EndTable();
+					m_parent->ShowInstrumentProperties(psu);
 				}
+				if (hovered)
+					m_parent->AddStatusHelp("mouse_lmb", "Open channel properties");
 			}
-			EndBlock();
+			ImGui::EndChild();
 		}
 		else if(awg && awgchan)
 		{
-			if(BeginBlock("awgparams",true))
-			{
-				m_parent->ShowInstrumentProperties(awg);
-			}
-			renderAwgProperties(awg, awgchan);
-			EndBlock();
-		}
-		else if(dmm && dmmchan)
-		{
-			if(BeginBlock("dmm_params",true,"Open Multimeter properties"))
-			{
-				m_parent->ShowInstrumentProperties(dmm);
-			}
-			// Always 2 streams for dmm channel => render properties on channel node
-			bool clicked = false;
-			bool hovered = false;
-			// Main measurement
-			renderDmmProperties(dmm,dmmchan,true,clicked,hovered);
-			// Secondary measurement
-			renderDmmProperties(dmm,dmmchan,false,clicked,hovered);
-
-			EndBlock();
+			ImGui::PushID("awgparams");
+				renderAwgProperties(awg, awgchan);
+			ImGui::PopID();
 		}
 		else
 		{
-			if(!singleStream)
-			{
-				if(BeginBlock("stream_params",true,"Open channel properties"))
-				{
-					m_parent->ShowChannelProperties(scopechan);
-				}
-				auto scopeState = m_session.GetOscillopscopeState(scope);
-				renderChannelProperties(scope,scopechan,channelIndex,scopeState);
-				EndBlock();
-			}
 			size_t streamCount = channel->GetStreamCount();
 			for(size_t j=0; j<streamCount; j++)
 			{
@@ -1932,81 +1439,6 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		ImGui::TreePop();
 
 	ImGui::PopID();
-}
-
-/**
-   @brief Rendering of channel properties
-
-   @param scope the scope
-   @param scopechan the scope channel
-   @param channelIndex the index of the channel
-   @param scopeState the OscilloscopeState
- */
-void StreamBrowserDialog::renderChannelProperties(std::shared_ptr<Oscilloscope> scope, OscilloscopeChannel* scopechan, size_t channelIndex, shared_ptr<OscilloscopeState> scopeState)
-{
-	float fontSize = ImGui::GetFontSize();
-	float width = 6*fontSize;
-
-	Unit counts(Unit::UNIT_COUNTS);
-	if(renderEditableProperty(width,"Attenuation",scopeState->m_strAttenuation[channelIndex],scopeState->m_committedAttenuation[channelIndex],counts,
-	"Attenuation setting for the probe (for example, 10 for a 10:1 probe)"))
-	{	// Update offset
-		scopechan->SetAttenuation(scopeState->m_committedAttenuation[channelIndex]);
-		scopeState->m_needsUpdate[channelIndex] = true;
-	}
-	//Only show coupling box if the instrument has configurable coupling
-	if( (scopeState->m_couplings[channelIndex].size() > 1) && (scopeState->m_probeName[channelIndex] == "") )
-	{
-		ImGui::SetNextItemWidth(width);
-		if(renderCombo(
-			"Coupling",
-			false,
-			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-			scopeState->m_channelCoupling[channelIndex],
-			scopeState->m_couplingNames[channelIndex],
-			false,
-			0,
-			false))
-		{
-			scope->SetChannelCoupling(channelIndex,scopeState->m_couplings[channelIndex][scopeState->m_channelCoupling[channelIndex]]);
-			scopeState->m_needsUpdate[channelIndex] = true;
-		}
-		HelpMarker("Coupling configuration for the input");
-	}
-	//Bandwidth limiters (only show if more than one value available)
-	if(scopeState->m_bandwidthLimitNames[channelIndex].size() > 1)
-	{
-		ImGui::SetNextItemWidth(width);
-		if(renderCombo(
-			"Bandwidth",
-			false,
-			ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
-			scopeState->m_channelBandwidthLimit[channelIndex],
-			scopeState->m_bandwidthLimitNames[channelIndex],
-			false,
-			0,
-			false))
-		{
-			scopechan->SetBandwidthLimit(scopeState->m_bandwidthLimits[channelIndex][scopeState->m_channelBandwidthLimit[channelIndex]]);
-			scopeState->m_needsUpdate[channelIndex] = true;
-		}
-		HelpMarker("Hardware bandwidth limiter setting");
-	}
-	//If the probe supports inversion, show a checkbox for it
-	if(scope->CanInvert(channelIndex))
-	{
-		ImGui::SetNextItemWidth(width);
-		if(renderOnOffToggle("Invert",false,scopeState->m_channelInverted[channelIndex]))
-		{
-			scope->Invert(channelIndex,scopeState->m_channelInverted[channelIndex]);
-			scopeState->m_needsUpdate[channelIndex] = true;
-		}
-		HelpMarker(
-			"When ON, input value is multiplied by -1.\n"
-			"For a differential probe, this is equivalent to swapping the positive and negative inputs."
-			);
-	}
-
 }
 
 /**
@@ -2052,7 +1484,6 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 	// Channel/stream properties block
 	if(renderProps && scopechan)
 	{
-		// If no properties are available for this stream, only show a "Properties" link if it is the last stream of the channel/filter
 		bool hasProps = false;
 		switch (type)
 		{
@@ -2070,58 +1501,36 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		if(hasProps)
 		{
-			if(BeginBlock("stream_params",true,"Open channel properties"))
-			{
-				m_parent->ShowChannelProperties(scopechan);
-			}
+			ImGui::BeginChild("stream_params", ImVec2(0, 0),
+				ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
 
 			Unit unit = channel->GetYAxisUnits(streamIndex);
-			size_t channelIndex = scopechan->GetIndex();
-			auto scopeState = m_session.GetOscillopscopeState(scope);
-
+			bool clicked;
+			bool hovered;
 			switch (type)
 			{
 				case Stream::STREAM_TYPE_ANALOG:
 					{
-						if(!renderName)
-						{	// No streams => display channel properties here
-							renderChannelProperties(scope,scopechan,channelIndex,scopeState);
-						}
-						if(renderEditablePropertyWithExplicitApply(0,"Offset",scopeState->m_strOffset[channelIndex][streamIndex],scopeState->m_committedOffset[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetOffset(scopeState->m_committedOffset[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
-						}
-						if(renderEditablePropertyWithExplicitApply(0,"Vertical range",scopeState->m_strRange[channelIndex][streamIndex],scopeState->m_committedRange[channelIndex][streamIndex],unit))
-						{	// Update offset
-							scopechan->SetVoltageRange(scopeState->m_committedRange[channelIndex][streamIndex],streamIndex);
-							scopeState->m_needsUpdate[channelIndex] = true;
-						}
+						auto offset_txt = unit.PrettyPrint(scopechan->GetOffset(streamIndex));
+						auto range_txt = unit.PrettyPrint(scopechan->GetVoltageRange(streamIndex));
+						renderInfoLink("Offset", offset_txt.c_str(), clicked, hovered);
+						renderInfoLink("Vertical range", range_txt.c_str(), clicked, hovered);
 					}
 					break;
 				case Stream::STREAM_TYPE_DIGITAL:
 					if(scope)
 					{
-						if(scope->IsDigitalThresholdConfigurable())
-						{
-							if(renderEditablePropertyWithExplicitApply(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
-							{	// Update offset
-								scopechan->SetDigitalThreshold(scopeState->m_committedDigitalThreshold[channelIndex]);
-								scopeState->m_needsUpdate[channelIndex] = true;
-							}
-						}
-						else
-						{
-							auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
-							renderReadOnlyProperty(0,"Threshold", threshold_txt);
-						}
+						auto threshold_txt = unit.PrettyPrint(scope->GetDigitalThreshold(scopechan->GetIndex()));
+						renderInfoLink("Threshold", threshold_txt.c_str(), clicked, hovered);
 						break;
 					}
 					//fall through
 				default:
+					{
+					}
 					break;
 			}
-			EndBlock();
+			ImGui::EndChild();
 		}
 	}
 	ImGui::PopID();
@@ -2241,60 +1650,4 @@ void StreamBrowserDialog::DoItemHelp()
 {
 	if(ImGui::IsItemHovered())
 		m_parent->AddStatusHelp("mouse_lmb_drag", "Add to filter graph or plot");
-}
-
-bool StreamBrowserDialog::BeginBlock(const char* label, bool withButton, const char* tooltip)
-{
-	bool clicked = false;
-	auto& prefs = m_session.GetPreferences();
-	ImGuiWindowFlags flags = ImGuiChildFlags_AutoResizeY;
-	bool withBorders = false;
-	if(prefs.GetBool("Appearance.Stream Browser.show_block_border"))
-	{
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 6));
-		flags |= ImGuiChildFlags_Borders;
-		withBorders = true;
-	}
-	ImGui::BeginChild(label, ImVec2(0, 0), flags);
-	if(withButton)
-	{	// Create a "+" button on the top right corner of the box
-		ImVec2 oldPos = ImGui::GetCursorPos();
-		float padding = ImGui::GetStyle().FramePadding.x;
-		float shift = withBorders ? padding*1.5 : 0;
-		float xsz = ImGui::GetFontSize();
-		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - xsz + shift);
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY()-shift);
-		// Use the same color as border for the button
-		ImVec4 border = ImGui::GetStyle().Colors[ImGuiCol_Border];
-		ImVec4 hover = ImVec4(border.x * 1.2f, border.y * 1.2f, border.z * 1.2f, border.w);
-		ImVec4 active = ImVec4(border.x * 0.9f, border.y * 0.9f, border.z * 0.9f, border.w);
-		ImGui::PushStyleColor(ImGuiCol_Button, border);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.6f, 0.5f));
-		clicked = ImGui::Button(PLUS_CHAR,ImVec2(xsz, xsz));
-		if(ImGui::IsItemHovered())
-		{	// Hand cursor
-			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-			if(tooltip)
-			{
-				m_parent->AddStatusHelp("mouse_lmb", tooltip);
-			}
-		}
-		ImGui::PopStyleVar(2);
-		ImGui::PopStyleColor(3);
-		ImGui::SetCursorPos(oldPos);
-	}
-	return clicked;
-}
-
-void StreamBrowserDialog::EndBlock()
-{
-	ImGui::EndChild();
-	auto& prefs = m_session.GetPreferences();
-	if(prefs.GetBool("Appearance.Stream Browser.show_block_border"))
-	{
-		ImGui::PopStyleVar();
-	}
 }
