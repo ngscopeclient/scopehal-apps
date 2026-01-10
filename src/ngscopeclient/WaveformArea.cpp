@@ -2124,13 +2124,13 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 		//Calculate indexes for X axis
 		auto& ibuf = channel->GetIndexBuffer();
 
-		//FIXME: what still depends on m_offsets CPU side??
-		//If we don't copy this, nothing is drawn
-		sdata->m_offsets.PrepareForCpuAccessNonblocking(cmdbuf);
-
 		//If we have native int64, do this on the GPU
 		if(g_hasShaderInt64)
 		{
+			//FIXME: what still depends on m_offsets CPU side??
+			//If we don't copy this, nothing is drawn
+			sdata->m_offsets.PrepareForCpuAccessNonblocking(cmdbuf);
+
 			IndexSearchConstants cfg;
 			cfg.len = data->size();
 			cfg.w = w;
@@ -2138,7 +2138,7 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 			cfg.offset_samples = offset_samples;
 
 			const uint32_t threadsPerBlock = 64;
-			const uint32_t numBlocks = (w | (threadsPerBlock - 1)) / threadsPerBlock;
+			const uint32_t numBlocks = GetComputeBlockCount(w, threadsPerBlock);
 
 			auto ipipe = channel->GetIndexSearchPipeline();
 			ipipe->BindBufferNonblocking(0, sdata->m_offsets, cmdbuf);
@@ -2160,9 +2160,6 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 					sdata->m_offsets.GetCpuPointer(),
 					data->size(),
 					target);
-
-				if(i < 16)
-					LogDebug("ibuf[%zu] = %d\n", i, ibuf[i]);
 			}
 			ibuf.MarkModifiedFromCpu();
 		}
