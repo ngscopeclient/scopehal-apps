@@ -2971,6 +2971,7 @@ void WaveformArea::RenderEyePatternTooltip(ImVec2 start, ImVec2 size)
 		}
 		auto ber = eyedata->GetBERAtPoint(delta.x, delta.y, eyedata->GetWidth() / 2, ymid);
 
+		MainWindow::SetTooltipPosition();
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 
@@ -3916,6 +3917,7 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 		}
 		tooltip = Trim(tooltip);
 
+		MainWindow::SetTooltipPosition();
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(tooltip.c_str());

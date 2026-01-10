@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -34,6 +34,7 @@
  */
 #include "ngscopeclient.h"
 #include "Dialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
@@ -185,6 +186,8 @@ void Dialog::Tooltip(const string& str, bool allowDisabled)
 
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort | extraFlags))
 	{
+		MainWindow::SetTooltipPosition();
+
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(str.c_str());
@@ -202,6 +205,8 @@ void Dialog::HelpMarker(const string& header, const vector<string>& bullets)
 	ImGui::TextDisabled("(?)");
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
 	{
+		MainWindow::SetTooltipPosition();
+
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50);
 		ImGui::TextUnformatted(header.c_str());

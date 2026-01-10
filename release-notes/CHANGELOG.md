@@ -32,4 +32,5 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 ## Other changes since v0.1.1
 
-* General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks
+* GUI: General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks
+* GUI: Adjusted tooltip layout code to prevent mouse cursor from blocking the first character of a tooltip

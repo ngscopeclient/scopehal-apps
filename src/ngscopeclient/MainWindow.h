@@ -137,6 +137,13 @@ public:
 
 	void OnCursorMoved(int64_t offset);
 
+	///@brief Helper for making sure tooltips aren't obscured by the mouse
+	static void SetTooltipPosition()
+	{
+		auto pos = ImGui::GetIO().MousePos;
+		ImGui::SetNextWindowPos(ImVec2(pos.x + ImGui::GetFontSize(), pos.y), ImGuiCond_Always, ImVec2(0.0, 0.5));
+	}
+
 	void NavigateToTimestamp(
 		int64_t stamp,
 		int64_t duration = 0,
