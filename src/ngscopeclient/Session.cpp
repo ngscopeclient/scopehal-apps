@@ -457,9 +457,80 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 		}
 	}
 
+	//Third pass: history and refresh filters
+	double hstart = GetTime();
+	double cdt = 0;
+	bool converted = false;
+	for(auto point : m_history.m_history)
+	{
+		point->LoadHistoryToSession(*this);
+
+		double cstart = GetTime();
+		if(ConvertLegacyUniformWaveforms())
+			converted = true;
+		cdt += GetTime() - cstart;
+
+		RefreshAllFilters();
+	}
+	double hdt = GetTime() - hstart;
+	LogTrace("History replay took %.3f ms\n", hdt * 1000);
+	if(converted)
+		LogTrace("Legacy waveform conversion took %.3f ms\n", cdt * 1000);
+
 	m_history.SetMaxToCurrentDepth();
 
 	return true;
+}
+
+/**
+	@brief Check for any legacy waveforms stored in sparsev1 format that are actually uniform
+ */
+bool Session::ConvertLegacyUniformWaveforms()
+{
+	bool converted = false;
+
+	for(auto scope : m_oscilloscopes)
+	{
+		for(size_t i=0; i < scope->GetChannelCount(); i++)
+		{
+			auto oc = scope->GetOscilloscopeChannel(i);
+			if(!oc)
+				continue;
+
+			for(size_t j=0; j<oc->GetStreamCount(); j++)
+			{
+				auto data = oc->GetData(j);
+				if(!data)
+					continue;
+
+				auto sacap = dynamic_cast<SparseAnalogWaveform*>(data);
+
+				//Quickly check if the waveform is dense packed, even if it was stored as sparse.
+				//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
+				if(sacap)
+				{
+					int64_t nlast = sacap->size() - 1;
+					if( (sacap->m_offsets[0] == 0) &&
+						(sacap->m_offsets[nlast] == nlast) &&
+						(sacap->m_durations[nlast] == 1) )
+					{
+						LogDebug("Found legacy uniform waveform stored on disk as sparse, converting to uniform\n");
+
+						//Waveform was actually uniform, so convert it
+						auto cap = new UniformAnalogWaveform(*sacap);
+						oc->SetData(cap, j);
+
+						//Update history
+						m_history.Retcon(scope, i, j, cap);
+
+						converted = true;
+					}
+				}
+			}
+		}
+	}
+
+	return converted;
 }
 
 /**
@@ -539,7 +610,7 @@ bool Session::LoadWaveformDataForFilters(
 
 			//Actually load the waveform
 			string fname = datdir + "/stream" + to_string(i) + ".bin";
-			DoLoadWaveformDataForStream(f, i, fmt, fname);
+			DoLoadWaveformDataForStream(cap, fmt, fname);
 		}
 	}
 
@@ -557,6 +628,7 @@ bool Session::LoadWaveformDataForScope(
 {
 	LogTrace("Loading waveform data for scope \"%s\"\n", scope->m_nickname.c_str());
 	LogIndenter li;
+	double start = GetTime();
 
 	TimePoint time(0, 0);
 	TimePoint newest(0, 0);
@@ -582,7 +654,16 @@ bool Session::LoadWaveformDataForScope(
 			chan->SetData(nullptr, j);
 	}
 
-	//Load the data for each waveform
+	//Save info for each waveform so we know where to load it from
+	struct WaveformLoadInfo
+	{
+		WaveformBase* wfm;
+		string format;
+		string fname;
+	};
+	vector<WaveformLoadInfo> waveformsToLoad;
+
+	//First pass: Load metadata and allocate waveforms etc
 	for(auto it : wavenode)
 	{
 		//Top level metadata
@@ -725,32 +806,49 @@ bool Session::LoadWaveformDataForScope(
 					nstream);
 			}
 
-			DoLoadWaveformDataForStream(
-				scope->GetOscilloscopeChannel(nchan),
-				nstream,
-				formats[i],
-				tmp);
+			//Figure out what needs to be loaded
+			WaveformLoadInfo info;
+			info.wfm = scope->GetOscilloscopeChannel(nchan)->GetData(nstream);
+			info.format = formats[i];
+			info.fname = tmp;
+			waveformsToLoad.push_back(info);
 		}
 
+		//TODO: merge history in multi scope sessions?
 		vector<shared_ptr<Oscilloscope>> temp;
 		temp.push_back(scope);
 		m_history.AddHistory(temp, false, pinned, label);
-
-		//TODO: this is not good for multiscope
-		//TODO: handle eye patterns (need to know window size for it to work right)
-		RefreshAllFilters();
 	}
+
+	//Second pass: Actually load the waveform data in parallel
+	#pragma omp parallel for
+	for(size_t i=0; i<waveformsToLoad.size(); i++)
+	{
+		auto info = waveformsToLoad[i];
+		DoLoadWaveformDataForStream(info.wfm, info.format, info.fname);
+	}
+
+	//Copy it all to the GPU in one go
+	//For now, use the global transfer queue for this
+	{
+		std::lock_guard<std::mutex> lock(g_vkTransferMutex);
+		g_vkTransferCommandBuffer->begin({});
+
+		for(size_t i=0; i<waveformsToLoad.size(); i++)
+			waveformsToLoad[i].wfm->PrepareForGpuAccessNonblocking(*g_vkTransferCommandBuffer);
+
+		g_vkTransferCommandBuffer->end();
+		g_vkTransferQueue->SubmitAndBlock(*g_vkTransferCommandBuffer);
+	}
+
+	double dt = GetTime() - start;
+	LogTrace("Scope data loaded in %.3f ms\n", dt * 1000);
+
 	return true;
 }
 
-void Session::DoLoadWaveformDataForStream(
-	OscilloscopeChannel* chan,
-	int stream,
-	string format,
-	string fname
-	)
+void Session::DoLoadWaveformDataForStream(WaveformBase* cap, string format, string fname)
 {
-	auto cap = chan->GetData(stream);
 	auto sacap = dynamic_cast<SparseAnalogWaveform*>(cap);
 	auto uacap = dynamic_cast<UniformAnalogWaveform*>(cap);
 	auto sdcap = dynamic_cast<SparseDigitalWaveform*>(cap);
@@ -856,21 +954,6 @@ void Session::DoLoadWaveformDataForStream(
 				ccap->m_durations[j] = stime[1];
 			}
 		}
-
-		//Quickly check if the waveform is dense packed, even if it was stored as sparse.
-		//Since we know samples must be monotonic and non-overlapping, we don't have to check every single one!
-		int64_t nlast = nsamples - 1;
-		if(sacap)
-		{
-			if( (sacap->m_offsets[0] == 0) &&
-				(sacap->m_offsets[nlast] == nlast) &&
-				(sacap->m_durations[nlast] == 1) )
-			{
-				//Waveform was actually uniform, so convert it
-				cap = new UniformAnalogWaveform(*sacap);
-				chan->SetData(cap, stream);
-			}
-		}
 	}
 
 	//Dense packed
@@ -899,7 +982,6 @@ void Session::DoLoadWaveformDataForStream(
 	}
 
 	cap->MarkModifiedFromCpu();
-	cap->PrepareForGpuAccess();
 
 	#ifdef _WIN32
 		delete[] buf;

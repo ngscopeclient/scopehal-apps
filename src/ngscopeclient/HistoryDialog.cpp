@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -141,6 +141,10 @@ bool HistoryDialog::DoRender()
 	HelpMarker(
 		"Adjust the cap on total history depth, in waveforms.\n"
 		"Large history depths can use significant amounts of RAM with deep memory.");
+
+	//Clamp depth so it can't go below 1
+	if(m_mgr.m_maxDepth < 1)
+		m_mgr.m_maxDepth = 1;
 
 	if(ImGui::BeginTable("history", 3, flags))
 	{

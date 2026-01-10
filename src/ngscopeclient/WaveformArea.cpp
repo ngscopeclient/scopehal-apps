@@ -3313,6 +3313,25 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
 	EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
+
+	//Cannot drop scalars into a waveform view. Make this a bit more obvious
+	auto payload = ImGui::GetDragDropPayload();
+	if(payload)
+	{
+		if(payload->IsDataType("Scalar"))
+		{
+			ImGui::SetCursorScreenPos(start);
+			ImGui::InvisibleButton("scalarDrop", size);
+			ImGui::SetNextItemAllowOverlap();
+
+			if(ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly))
+			{
+				DrawDropScalarMessage(
+					ImGui::GetWindowDrawList(),
+					ImVec2(start.x + size.x/4, start.y + size.y/2));
+			}
+		}
+	}
 }
 
 /**
@@ -3330,6 +3349,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	auto payload = ImGui::GetDragDropPayload();
 	if(!payload)
 		return;
+
 	bool isWaveform = payload->IsDataType("Waveform");
 	bool isStream = payload->IsDataType("Stream");
 	if(!isWaveform && !isStream)
@@ -3468,8 +3488,27 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	if(!isWaveform && !isStream)
 		return;
 
-	//Add drop target
+	//Peek the payload. If not compatible, don't even display the target
 	StreamDescriptor stream;
+	auto peekPayload = ImGui::GetDragDropPayload();
+	if(peekPayload)
+	{
+		if(isWaveform)
+		{
+			auto peekDesc = reinterpret_cast<DragDescriptor*>(peekPayload->Data);
+			stream = peekDesc->first->GetStream(peekDesc->second);
+			if( (peekDesc->first == this) || !IsCompatible(stream))
+				return;
+		}
+		else if(isStream)
+		{
+			stream = *reinterpret_cast<StreamDescriptor*>(peekPayload->Data);
+			if(!IsCompatible(stream))
+				return;
+		}
+	}
+
+	//Add drop target
 	bool ok = true;
 	bool hover = false;
 	if(ImGui::BeginDragDropTarget())
@@ -3648,6 +3687,42 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
 		lineColor,
 		rounding);
+}
+
+void WaveformArea::DrawDropScalarMessage(ImDrawList* list, ImVec2 center)
+{
+	float iconSize = ImGui::GetFontSize() * 3;
+
+	//Warning icon
+	list->AddImage(
+		m_parent->GetTextureManager()->GetTexture("info"),
+		ImVec2(center.x - 0.5, center.y - iconSize/2 - 0.5),
+		ImVec2(center.x + iconSize + 0.5, center.y + iconSize/2 + 0.5));
+
+	//Prepare to draw text
+	center.x += iconSize;
+	string str = "Cannot add a scalar value to a waveform view.\nTry dragging to the measurements window.";
+
+	//Draw background for text
+	float wrapWidth = 40 * ImGui::GetFontSize();
+	auto textsize = ImGui::CalcTextSize(str.c_str(), nullptr, false, wrapWidth);
+	float padding = 5;
+	float wrounding = 2;
+	list->AddRectFilled(
+		ImVec2(center.x, center.y - textsize.y/2 - padding),
+		ImVec2(center.x + textsize.x + 2*padding, center.y + textsize.y/2 + padding),
+		ImGui::GetColorU32(ImGuiCol_PopupBg),
+		wrounding);
+
+	//Draw the text
+	list->AddText(
+		ImGui::GetFont(),
+		ImGui::GetFontSize(),
+		ImVec2(center.x + padding, center.y - textsize.y/2),
+		ImGui::GetColorU32(ImGuiCol_Text),
+		str.c_str(),
+		nullptr,
+		wrapWidth);
 }
 
 /**

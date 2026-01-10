@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -171,9 +171,7 @@ MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
 	m_toolbarIconSize = 0;
 	LoadToolbarIcons();
 	LoadGradients();
-	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
-	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",
-		FindDataFile("icons/gradients/visible-spectrum-380nm-750nm.png"));
+	LoadMiscIcons();
 	LoadFilterIcons();
 	LoadStatusBarIcons();
 	LoadWaveformShapeIcons();
@@ -1317,6 +1315,9 @@ void MainWindow::DockingArea()
 		{
 			LogTrace("Docking initial workspace\n");
 
+			//Undock anything that might already be there
+			ImGui::DockBuilderRemoveNodeChildNodes(topNode->ID);
+
 			//Split the top into two sub nodes (unless imgui already did it for us during a session reset)
 			ImGuiID leftPanelID;
 			ImGuiID rightPanelID;
@@ -1331,10 +1332,10 @@ void MainWindow::DockingArea()
 			ImGui::DockBuilderDockWindow(m_streamBrowser->GetTitleAndID().c_str(), leftPanelID);
 			ImGui::DockBuilderDockWindow(m_initialWorkspaceDockRequest->GetTitleAndID().c_str(), rightPanelID);
 
-			m_initialWorkspaceDockRequest = nullptr;
-
 			//Finish up
 			ImGui::DockBuilderFinish(dockspace_id);
+
+			m_initialWorkspaceDockRequest = nullptr;
 		}
 	}
 	else
