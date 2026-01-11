@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -56,6 +56,8 @@ AboutDialog::AboutDialog(MainWindow* parent)
 	m_authorsMarkdown = ReadDataFile("md/authors.md");
 
 	m_licenseMarkdown = ReadDataFile("md/licenses.md");
+
+	InitVulkanInfo();
 }
 
 AboutDialog::~AboutDialog()
@@ -116,10 +118,35 @@ bool AboutDialog::DoRender()
 			ImGui::EndTabItem();
 		}
 
+		if(ImGui::BeginTabItem("GPU"))
+		{
+			ImGui::Markdown(m_vulkanInfoMarkdown.c_str(), m_vulkanInfoMarkdown.length(), mdConfig );
+			ImGui::EndTabItem();
+		}
+
 		ImGui::EndTabBar();
 	}
 
 	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Initialization
+
+void AboutDialog::InitVulkanInfo()
+{
+	m_vulkanInfoMarkdown = "";
+
+	auto availableVersion = g_vkContext.enumerateInstanceVersion();
+	uint32_t loader_major = VK_VERSION_MAJOR(availableVersion);
+	uint32_t loader_minor = VK_VERSION_MINOR(availableVersion);
+	m_vulkanInfoMarkdown +=
+		string("# Vulkan loader\n") +
+		"* Version " + to_string(loader_major) + "." + to_string(loader_minor) + "\n";
+
+	//auto features = g_vkComputePhysicalDevice->getFeatures();
+	auto properties = g_vkComputePhysicalDevice->getProperties();
+	m_vulkanInfoMarkdown += string("# Vulkan device (") + &properties.deviceName[0] + ")\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
