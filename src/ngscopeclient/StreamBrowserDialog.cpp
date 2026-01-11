@@ -1910,7 +1910,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		{
 			if(!singleStream)
 			{
-				auto scopeState = m_session.GetOscillopscopeState(scope);
+				auto scopeState = m_session.GetOscilloscopeState(scope);
 				if(scopeState)
 				{
 					if(BeginBlock("stream_params",true,"Open channel properties"))
@@ -2073,7 +2073,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 		}
 		if(hasProps)
 		{
-			auto scopeState = m_session.GetOscillopscopeState(scope);
+			auto scopeState = m_session.GetOscilloscopeState(scope);
 			if(scopeState)
 			{ 	// For now, only show properties for scope channel / streams
 				if(BeginBlock("stream_params",true,"Open channel properties"))

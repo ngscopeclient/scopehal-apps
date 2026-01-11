@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -48,11 +48,10 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
 {
 	// Get oscilloscope state, for that we need to make a shared_ptr out of the base pointer returned by chan->GetInstrument()
 	Session& session = m_parent->GetSession();
-	// We pass an empty Deleter since this pointer's lifecycle is handled elsewhere
-	std::shared_ptr<Instrument> scopeSharedPointer(chan->GetInstrument(), [](Instrument*){});
+	std::shared_ptr<Instrument> scopeSharedPointer = chan->GetInstrument()->shared_from_this();
 	shared_ptr<Oscilloscope> sharedScope = dynamic_pointer_cast<Oscilloscope>(scopeSharedPointer);
 	if(sharedScope)
-		m_state = session.GetOscillopscopeState(sharedScope);
+		m_state = session.GetOscilloscopeState(sharedScope);
 
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 	if(!ochan)

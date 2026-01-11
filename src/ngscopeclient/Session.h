@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -147,7 +147,7 @@ public:
 	/**
 		@brief Returns a pointer to the state for a function generator
 	 */
-	std::shared_ptr<OscilloscopeState> GetOscillopscopeState(std::shared_ptr<Oscilloscope> scope)
+	std::shared_ptr<OscilloscopeState> GetOscilloscopeState(std::shared_ptr<Oscilloscope> scope)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_oscilloscopesStates[scope];

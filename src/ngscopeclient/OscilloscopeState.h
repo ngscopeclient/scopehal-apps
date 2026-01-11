@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -45,7 +45,7 @@ public:
 	OscilloscopeState(std::shared_ptr<Oscilloscope> scope)
 	{
 		size_t n = scope->GetChannelCount();
-		m_channelNumner = n;
+		m_channelNumber = n;
 		m_channelInverted = std::make_unique<bool[] >(n);
 		m_channelOffset = std::make_unique<std::vector<float>[] >(n);
 		m_channelRange = std::make_unique<std::vector<float>[] >(n);
@@ -114,7 +114,7 @@ public:
 
 	void FlushConfigCache()
 	{
-		for(size_t i = 0 ; i < m_channelNumner.load() ; i++)
+		for(size_t i = 0 ; i < m_channelNumber.load() ; i++)
 			m_needsUpdate[i] = true;
 	}
 
@@ -126,7 +126,7 @@ public:
 
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
 
-	std::atomic<size_t> m_channelNumner;
+	std::atomic<size_t> m_channelNumber;
 
 	//UI state for dialogs etc
 	std::unique_ptr<std::string[]> m_probeName;

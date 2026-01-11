@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -45,7 +45,7 @@ public:
 	PowerSupplyState(size_t n = 0)
 	{
 		m_masterEnable = false;
-		m_channelNumner = n;
+		m_channelNumber = n;
 
 		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
 		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
@@ -85,7 +85,7 @@ public:
 
 	void FlushConfigCache()
 	{
-		for(size_t i = 0 ; i < m_channelNumner.load() ; i++)
+		for(size_t i = 0 ; i < m_channelNumber.load() ; i++)
 			m_needsUpdate[i] = true;
 	}
 
@@ -112,7 +112,7 @@ public:
 
 	std::atomic<bool> m_masterEnable;
 
-	std::atomic<size_t> m_channelNumner;
+	std::atomic<size_t> m_channelNumber;
 };
 
 #endif
