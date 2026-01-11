@@ -1083,6 +1083,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	Unit volts(Unit::UNIT_VOLTS);
 	Unit hz(Unit::UNIT_HZ);
 	Unit percent(Unit::UNIT_PERCENT);
+	Unit fs(Unit::UNIT_FS);
 
 	size_t channelIndex = awgchan->GetIndex();
 	auto awgState = m_session.GetFunctionGeneratorState(awg);
@@ -1116,14 +1117,24 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_committedDutyCycle[channelIndex] = dutyCycle;
 		awgState->m_strDutyCycle[channelIndex] = percent.PrettyPrint(dutyCycle);
 	}
+	float riseTime = awgState->m_channelRiseTime[channelIndex];
+	if(riseTime != awgState->m_committedRiseTime[channelIndex])
+	{
+		awgState->m_committedRiseTime[channelIndex] = riseTime;
+		awgState->m_strRiseTime[channelIndex] = fs.PrettyPrint(riseTime);
+	}
+	float fallTime = awgState->m_channelFallTime[channelIndex];
+	if(fallTime != awgState->m_committedFallTime[channelIndex])
+	{
+		awgState->m_committedFallTime[channelIndex] = fallTime;
+		awgState->m_strFallTime[channelIndex] = fs.PrettyPrint(fallTime);
+	}
 
 	auto& prefs = m_session.GetPreferences();
 
 	// Row 1
 	ImGui::Text("Waveform:");
 	startBadgeLine(); // Needed for shape combo
-	// Padding to give space for ChannelProperties dialog button 
-	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
 	// Shape combo
 	// Get current shape and  shape index
 	FunctionGenerator::WaveShape shape = awgState->m_channelShape[channelIndex];
@@ -1134,7 +1145,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::ColorConvertU32ToFloat4(ColorFromString(awgchan->m_displaycolor)),
 		shapeIndex, awgState->m_channelShapeNames[channelIndex],
 		true,
-		3,true,padding))
+		3,true))
 	{
 		shape = awgState->m_channelShapes[channelIndex][shapeIndex];
 		awg->SetFunctionChannelShape(channelIndex, shape);
@@ -1176,7 +1187,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		"Duty cycle",
 		awgState->m_strDutyCycle[channelIndex],
 		awgState->m_committedDutyCycle[channelIndex],
-		percent/*,"Duty cycle of the generated waveform"*/))
+		percent/*,"Duty cycle of the waveform, in percent. Not applicable to all waveform types."*/))
 	{
 		awg->SetFunctionChannelDutyCycle(channelIndex, awgState->m_committedDutyCycle[channelIndex]);
 		awgState->m_needsUpdate[channelIndex] = true;
@@ -1186,11 +1197,10 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 	startBadgeLine();
 	auto height = ImGui::GetFontSize() * 2;
 	auto width =  height * 2;
-	auto totalWidth = width + padding;
-	if ((m_badgeXCur - totalWidth) >= m_badgeXMin)
+	if ((m_badgeXCur - width) >= m_badgeXMin)
 	{
 		// ok, we have enough space draw preview
-		m_badgeXCur -= totalWidth;
+		m_badgeXCur -= width;
 		// save current y position to restore it after drawing the preview
 		float currentY = ImGui::GetCursorPosY();
 		// Continue layout on current line (row 3)
@@ -1204,7 +1214,32 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		ImGui::SetCursorPosY(currentY);
 	}
 
-	// Row 3
+	if(awg->HasFunctionRiseFallTimeControls(channelIndex))
+	{	//Row 3
+		//Fall Time
+		if(renderEditableProperty(dwidth,
+			"Rise Time",
+			awgState->m_strRiseTime[channelIndex],
+			awgState->m_committedRiseTime[channelIndex],
+			fs))
+		{
+			awg->SetFunctionChannelRiseTime(channelIndex, awgState->m_committedRiseTime[channelIndex]);
+			awgState->m_needsUpdate[channelIndex] = true;
+		}
+		//Row 4
+		//Fall Time
+		if(renderEditableProperty(dwidth,
+			"Fall Time",
+			awgState->m_strFallTime[channelIndex],
+			awgState->m_committedFallTime[channelIndex],
+			fs))
+		{
+			awg->SetFunctionChannelFallTime(channelIndex, awgState->m_committedFallTime[channelIndex]);
+			awgState->m_needsUpdate[channelIndex] = true;
+		}
+	}
+
+	// Row 5
 	if(renderEditablePropertyWithExplicitApply(dwidth,
 		"Amplitude",
 		awgState->m_strAmplitude[channelIndex],
@@ -1215,7 +1250,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
 
-	//Row 4
+	//Row 6
 	//Offset
 	if(renderEditablePropertyWithExplicitApply(dwidth,
 		"Offset",
@@ -1227,7 +1262,7 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		awgState->m_needsUpdate[channelIndex] = true;
 	}
 
-	//Row 5
+	//Row 7
 	//Impedance
 	ImGui::SetNextItemWidth(dwidth);
 	FunctionGenerator::OutputImpedance impedance = awgState->m_channelOutputImpedance[channelIndex];
@@ -1243,6 +1278,10 @@ void StreamBrowserDialog::renderAwgProperties(std::shared_ptr<FunctionGenerator>
 		"Hi-Z",
 		"50 Ω",
 		nullptr);
+	HelpMarker(
+		"Select the expected load impedance.\n\n"
+		"If set incorrectly, amplitude and offset will be inaccurate due to reflections.");
+
 
 	if(changed)
 	{
@@ -1883,10 +1922,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else if(awg && awgchan)
 		{
-			if(BeginBlock("awgparams",true))
-			{
-				m_parent->ShowInstrumentProperties(awg);
-			}
+			BeginBlock("awgparams");
 			renderAwgProperties(awg, awgchan);
 			EndBlock();
 		}

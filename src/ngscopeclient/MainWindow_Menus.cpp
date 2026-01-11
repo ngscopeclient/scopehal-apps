@@ -46,7 +46,6 @@
 #include "BERTDialog.h"
 #include "CreateFilterBrowser.h"
 #include "FilterGraphEditor.h"
-#include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LoadDialog.h"
 #include "LogViewerDialog.h"
@@ -83,10 +82,6 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto bdlg = dynamic_cast<BERTDialog*>(dlg.get());
 	if(bdlg != nullptr)
 		m_bertDialogs[bdlg->GetBERT()] = dlg;
-
-	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
-	if(fdlg != nullptr)
-		m_generatorDialogs[fdlg->GetGenerator()] = dlg;
 
 	auto rdlg = dynamic_cast<RFGeneratorDialog*>(dlg.get());
 	if(rdlg != nullptr)
@@ -535,7 +530,6 @@ void MainWindow::WindowMenu()
 	if(ImGui::BeginMenu("Window"))
 	{
 		WindowAnalyzerMenu();
-		WindowGeneratorMenu();
 		WindowMultimeterMenu();
 		WindowPSUMenu();
 
@@ -687,50 +681,6 @@ void MainWindow::WindowAnalyzerMenu()
 
 	if(decoders.empty())
 		ImGui::EndDisabled();
-}
-
-/**
-	@brief Run the Window | Generator menu
-
-	This menu is used for connecting to a function generator that is part of an oscilloscope or other instrument.
- */
-void MainWindow::WindowGeneratorMenu()
-{
-	//Make a list of generators
-	vector< shared_ptr<SCPIFunctionGenerator> > gens;
-	auto insts = m_session.GetSCPIInstruments();
-	for(auto inst : insts)
-	{
-		//Skip anything that's not a function generator
-		if( (inst->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
-			continue;
-
-		//Do we already have a dialog open for it? If so, don't make another
-		auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
-		if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
-			continue;
-
-		gens.push_back(generator);
-	}
-
-	ImGui::BeginDisabled(gens.empty());
-	if(ImGui::BeginMenu("Generator"))
-	{
-		for(auto generator : gens)
-		{
-			//Add it to the menu
-			if(ImGui::MenuItem(generator->m_nickname.c_str()))
-			{
-				AddDialog(make_shared<FunctionGeneratorDialog>(
-					generator,
-					m_session.GetFunctionGeneratorState(generator),
-					&m_session));
-			}
-		}
-
-		ImGui::EndMenu();
-	}
-	ImGui::EndDisabled();
 }
 
 /**
