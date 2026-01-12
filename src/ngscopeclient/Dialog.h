@@ -37,13 +37,15 @@
 
 #include "imgui_stdlib.h"
 
+class MainWindow;
+
 /**
 	@brief Generic dialog box or other popup window
  */
 class Dialog
 {
 public:
-	Dialog(const std::string& title, const std::string& id, ImVec2 defaultSize = ImVec2(300, 100) );
+	Dialog(const std::string& title, const std::string& id, ImVec2 defaultSize = ImVec2(300, 100),Session* session = nullptr, MainWindow* parent = nullptr);
 	virtual ~Dialog();
 
 	virtual bool Render();
@@ -87,6 +89,13 @@ protected:
 		std::string& currentValue,
 		float& committedValue,
 		Unit unit);
+	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
+	void renderReadOnlyProperty(float width, const std::string& label, const std::string& value, const char* tooltip = nullptr);
+	template<typename T>
+	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
+	template<typename T>
+	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
+
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);
 	static void HelpMarker(const std::string& str);
@@ -107,6 +116,17 @@ protected:
 
 	std::string m_errorPopupTitle;
 	std::string m_errorPopupMessage;
+
+	///@brief optionnal reference to session
+	Session* m_session;
+	///@brief optionnal reference to parent MainWindow
+	MainWindow* m_parent;
+
+
+	///@brief Id of the item currently beeing edited
+	ImGuiID m_editedItemId = 0;
+	///@brief Id of the last edited item
+	ImGuiID m_lastEditedItemId = 0;
 };
 
 #endif

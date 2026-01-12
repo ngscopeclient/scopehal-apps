@@ -243,10 +243,6 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Instrument off badge color")
 				.Description("Color for instrument 'off' badge"));
 			stream.AddPreference(
-				Preference::Color("apply_button_color", ColorFromString("#4CCC4C"))
-				.Label("Apply button color")
-				.Description("Color for the apply value button"));
-			stream.AddPreference(
 				Preference::Color("psu_cv_badge_color", ColorFromString("#4CCC4C"))
 				.Label("PSU cv badge color")
 				.Description("Color for PSU 'cv' badge"));
@@ -296,6 +292,10 @@ void PreferenceManager::InitializeDefaults()
 				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
 				.Label("Console font")
 				.Description("Font used for SCPI console, log viewer and PSU/DMM numeric values in Stream Browser"));
+			general.AddPreference(
+				Preference::Color("apply_button_color", ColorFromString("#4CCC4C"))
+				.Label("Apply button color")
+				.Description("Color for the apply value button"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(

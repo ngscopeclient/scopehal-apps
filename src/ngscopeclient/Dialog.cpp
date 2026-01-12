@@ -35,17 +35,23 @@
 #include "ngscopeclient.h"
 #include "Dialog.h"
 #include "MainWindow.h"
+#include "PreferenceTypes.h"
 
 using namespace std;
+
+#define CARRIAGE_RETURN_CHAR "⏎"
+#define DEFAULT_APPLY_BUTTON_COLOR "#4CCC4C"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Construction / destruction
 
-Dialog::Dialog(const string& title, const string& id, ImVec2 defaultSize)
+Dialog::Dialog(const string& title, const string& id, ImVec2 defaultSize, Session* session, MainWindow* parent)
 	: m_open(true)
 	, m_id(id)
 	, m_title(title)
 	, m_defaultSize(defaultSize)
+	, m_session(session)
+	, m_parent(parent)
 {
 }
 
@@ -429,6 +435,365 @@ bool Dialog::UnitInputWithExplicitApply(
 	ImGui::EndGroup();
 	return changed;
 }
+
+/**
+   @brief Render a numeric value
+   @param value the string representation of the value to display (may include the unit)
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param color the color to use (defaults to white)
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @param digitHeight the height of a digit (if 0 (defualt), will use ImGui::GetFontSize())
+   @param clickable true (default) if the displayed value should be clickable
+ */
+void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color, bool allow7SegmentDisplay, float digitHeight, bool clickable)
+{
+	bool use7Segment = false;
+	bool changeFont = false;
+	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
+	if(m_session)
+	{
+		auto& prefs = m_session->GetPreferences();
+		displayType = prefs.GetEnumRaw("Appearance.Stream Browser.numeric_value_display");
+	}
+	FontWithSize font;
+	if(allow7SegmentDisplay)
+	{
+		use7Segment = (displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT);
+		if(!use7Segment && m_parent)
+		{
+			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			changeFont = true;
+		}
+	}
+	if(use7Segment)
+	{
+		if(digitHeight <= 0) digitHeight = ImGui::GetFontSize();
+	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
+	}
+	else
+	{
+		if(clickable)
+		{
+			ImVec2 pos = ImGui::GetCursorPos();
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
+			ImGui::TextUnformatted(value.c_str());
+			if(changeFont) ImGui::PopFont();
+			ImGui::PopStyleColor();
+
+			clicked |= ImGui::IsItemClicked();
+			if(ImGui::IsItemHovered())
+			{	// Hand cursor
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
+				// Lighter if hovered
+				color.x = color.x * 1.2f;
+				color.y = color.y * 1.2f;
+				color.z = color.z * 1.2f;
+				ImGui::SetCursorPos(pos);
+				ImGui::PushStyleColor(ImGuiCol_Text, color);
+				ImGui::TextUnformatted(value.c_str());
+				ImGui::PopStyleColor();
+				hovered = true;
+			}
+		}
+		else
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
+			ImGui::TextUnformatted(value.c_str());
+			if(changeFont) ImGui::PopFont();
+			ImGui::PopStyleColor();
+		}
+	}
+}
+
+/**
+   @brief Render a read-only instrument property value
+   @param label the value label (used as a label for the property)
+   @param currentValue the string representation of the current value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
+*/
+void Dialog::renderReadOnlyProperty(float width, const string& label, const string& value, const char* tooltip)
+{
+	ImGui::PushID(label.c_str());	// Prevent collision if several sibling links have the same linktext
+	float fontSize = ImGui::GetFontSize();
+	if(width <= 0) width = 6*fontSize;
+	ImGuiStyle& style = ImGui::GetStyle();
+	ImVec4 bg = style.Colors[ImGuiCol_FrameBg];
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, bg);
+	ImGui::BeginChild("##readOnlyValue", ImVec2(width, ImGui::GetFontSize()),false,ImGuiWindowFlags_None);
+	ImGui::TextUnformatted(value.c_str());
+	ImGui::EndChild();
+	ImGui::PopStyleColor();
+	ImGui::SameLine();
+	ImGui::TextUnformatted(label.c_str());
+	ImGui::PopID();
+	if(tooltip)
+	{
+		HelpMarker(tooltip);
+	}
+}
+
+
+template<typename T>
+/**
+   @brief Render an editable numeric value
+   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
+   @param label the value label (used as a label for the TextInput)
+   @param currentValue the string representation of the current value
+   @param comittedValue the last comitted typed (float, double or int64_t) value
+   @param unit the Unit of the value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
+   @param color the color to use
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
+   @return true if the value has changed
+ */
+bool Dialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
+{
+    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports float or double");
+	bool use7Segment = false;
+	bool changeFont = false;
+	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
+	ImVec4 buttonColor;
+	if(m_session)
+	{
+		auto& prefs = m_session->GetPreferences();
+		displayType = prefs.GetEnumRaw("Appearance.Stream Browser.numeric_value_display");
+		buttonColor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.General.apply_button_color"));
+	}
+	else
+	{
+		buttonColor = ImGui::ColorConvertU32ToFloat4(ColorFromString(DEFAULT_APPLY_BUTTON_COLOR));
+	}
+	FontWithSize font;
+	if(allow7SegmentDisplay)
+	{
+		use7Segment = (displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT);
+		if(!use7Segment && m_parent)
+		{
+			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			changeFont = true;
+		}
+	}
+
+	bool changed = false;
+	bool validateChange = false;
+	bool cancelEdit = false;
+	bool keepEditing = false;
+	bool dirty;
+	float fontSize = ImGui::GetFontSize();
+	if(width <= 0) width = 6*fontSize;
+	ImGui::SetNextItemWidth(width);
+	if constexpr (std::is_same_v<T, int64_t>)
+		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
+	else
+		dirty = unit.PrettyPrint(committedValue) != currentValue;
+	string editLabel = label+"##Edit";
+	ImGuiID editId = ImGui::GetID(editLabel.c_str());
+	ImGuiID labelId = ImGui::GetID(label.c_str());
+	if(m_editedItemId == editId)
+	{	// Item currently beeing edited
+		ImGui::BeginGroup();
+		float inputXPos = ImGui::GetCursorPosX();
+	    ImGuiContext& g = *GImGui;
+		float inputWidth = g.NextItemData.Width;
+		// Allow overlap for apply button
+		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+		if(changeFont) ImGui::PushFont(font.first, font.second);
+		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
+		{	// Input validated (but no apply button)
+			if(!explicitApply)
+			{	// Implcit apply => validate change
+				validateChange = true;
+			}
+			else
+			{	// Explicit apply needed => keep editing
+				keepEditing = true;
+			}
+		}
+		if(changeFont) ImGui::PopFont();
+		ImGui::PopStyleColor();
+		ImGui::PopItemFlag();
+		if(explicitApply)
+		{	// Add Apply button
+			float buttonWidth = ImGui::GetFontSize() * 2;
+			// Position the button just before the right side of the text input
+			ImGui::SameLine(inputXPos+inputWidth-ImGui::GetCursorPosX()-buttonWidth+2*ImGui::GetStyle().ItemInnerSpacing.x);
+			ImVec4 buttonColorHovered = buttonColor;
+			float bgmul = 0.8f;
+			ImVec4 buttonColorDefault = ImVec4(buttonColor.x*bgmul, buttonColor.y*bgmul, buttonColor.z*bgmul, buttonColor.w);
+			bgmul = 0.7f;
+			ImVec4 buttonColorActive = ImVec4(buttonColor.x*bgmul, buttonColor.y*bgmul, buttonColor.z*bgmul, buttonColor.w);
+			ImGui::PushStyleColor(ImGuiCol_Button, buttonColorDefault);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
+			ImGui::BeginDisabled(!dirty);
+			if(ImGui::Button(CARRIAGE_RETURN_CHAR)) // Carriage return symbol
+			{	// Apply button click
+				validateChange = true;
+			}
+			ImGui::EndDisabled();
+			if(dirty && ImGui::IsItemHovered())
+			{	// Help to explain apply button
+				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
+			}
+			ImGui::PopStyleColor(3);
+		}
+		if(!validateChange)
+		{
+			if(keepEditing)
+			{	// Give back focus to test input
+				ImGui::ActivateItemByID(editId);
+			}
+			else if(ImGui::IsKeyPressed(ImGuiKey_Escape))
+			{	// Detect escape => stop editing
+				cancelEdit = true;
+				//Prevent focus from going to parent node
+				ImGui::ActivateItemByID(0);
+			}
+			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))  
+			{	// Detect focus lost => stop editing too
+				if(explicitApply)
+				{	// Cancel on focus lost
+					cancelEdit = true;
+				}
+				else
+				{	// Validate on focus list
+					validateChange = true;
+				}
+			}
+		}
+		ImGui::EndGroup();
+	}
+	else
+	{
+		if(m_lastEditedItemId == editId)
+		{	// Focus lost
+			if(explicitApply)
+			{	// Cancel edit
+				cancelEdit = true;
+			}
+			else
+			{	// Validate change
+				validateChange = true;
+			}
+			m_lastEditedItemId = 0;
+		}
+		bool clicked = false;
+		bool hovered = false;
+		if(use7Segment)
+		{
+			ImGui::PushID(labelId);
+			Render7SegmentValue(currentValue,color,ImGui::GetFontSize(),clicked,hovered);
+			ImGui::PopID();
+		}
+		else
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
+			ImGui::InputText(label.c_str(),&currentValue,ImGuiInputTextFlags_ReadOnly);
+			if(changeFont) ImGui::PopFont();
+			ImGui::PopStyleColor();
+			clicked |= ImGui::IsItemClicked();
+			if(ImGui::IsItemHovered())
+			{	// Keep hand cursor while read-only
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+				hovered = true;
+			}
+		}
+
+		if (clicked)
+		{
+			m_lastEditedItemId = m_editedItemId;
+			m_editedItemId = editId;
+			ImGui::ActivateItemByID(editId);
+		}
+		if (hovered)
+			m_parent->AddStatusHelp("mouse_lmb", "Edit value");
+	}
+	if(validateChange)
+	{
+		if(m_editedItemId == editId)
+		{
+			m_lastEditedItemId = 0;
+			m_editedItemId = 0;
+		}
+		if(dirty)
+		{	// Content actually changed
+			if constexpr (std::is_same_v<T, int64_t>)
+			{
+				//Float path if the user input a decimal value like "3.5G"
+				if(currentValue.find(".") != string::npos)
+					committedValue = unit.ParseString(currentValue);
+				//Integer path otherwise for full precision
+				else
+					committedValue = unit.ParseStringInt64(currentValue);
+
+				currentValue = unit.PrettyPrintInt64(committedValue);
+			}
+			else
+			{
+				committedValue = static_cast<T>(unit.ParseString(currentValue));
+				if constexpr (std::is_same_v<T, int64_t>)
+					currentValue = unit.PrettyPrintInt64(committedValue);
+				else
+					currentValue = unit.PrettyPrint(committedValue);
+			}
+			changed = true;
+		}
+	}
+	else if(cancelEdit)
+	{	// Restore value
+		if constexpr (std::is_same_v<T, int64_t>)
+			currentValue = unit.PrettyPrintInt64(committedValue);
+		else
+			currentValue = unit.PrettyPrint(committedValue);
+		if(m_editedItemId == editId)
+		{
+			m_lastEditedItemId = 0;
+			m_editedItemId = 0;
+		}
+	}
+	if(tooltip)
+	{
+		HelpMarker(tooltip);
+	}
+	return changed;
+}
+
+template bool Dialog::renderEditableProperty<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
+
+template<typename T>
+/**
+   @brief Render an editable numeric value with explicit apply (if the input value needs to explicitly be applied by clicking the apply button)
+   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
+   @param label the value label (used as a label for the TextInput)
+   @param currentValue the string representation of the current value
+   @param comittedValue the last comitted typed (float, double or int64_t) value
+   @param unit the Unit of the value
+   @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
+   @param color the color to use
+   @param clicked output value for clicked state
+   @param hovered output value for hovered state
+   @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
+   @return true if the value has changed
+ */
+bool Dialog::renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay)
+{
+	return renderEditableProperty(width,label,currentValue,committedValue,unit,tooltip,color,allow7SegmentDisplay,true);
+}
+
+template bool Dialog::renderEditablePropertyWithExplicitApply<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
+
 
 /**
   @brief Segment on/off state for each of the 10 digits + "L" (needed for OL / Overload)

@@ -155,12 +155,6 @@ protected:
 		uint8_t cropTextTo = 0,
 		float paddingRight = 0);
 	bool renderOnOffToggle(const char* label, bool alignRight, bool& curValue, const char* valueOff = "OFF", const char* valueOn = "ON", uint8_t cropTextTo = 0, float paddingRight = 0);
-	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
-	void renderReadOnlyProperty(float width, const std::string& label, const std::string& value, const char* tooltip = nullptr);
-	template<typename T>
-	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
-	template<typename T>
-	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
 	void renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast);
 	bool renderPsuRows(bool isVoltage, bool cc, PowerSupplyChannel* chan, std::string& currentValue, float& committedValue, std::string& measuredValue, bool &clicked, bool &hovered);
 	void renderAwgProperties(std::shared_ptr<FunctionGenerator> awg, FunctionGeneratorChannel* awgchan);
@@ -184,17 +178,9 @@ protected:
 	// Rendering of an Filter node
 	void renderFilterNode(Filter* filter);
 
-	Session& m_session;
-	MainWindow* m_parent;
-
 	///@brief Positions for badge display
 	float m_badgeXMin; // left edge over which we must not overrun
 	float m_badgeXCur; // right edge to render the next badge against
-
-	///@brief Id of the item currently beeing edited
-	ImGuiID m_editedItemId = 0;
-	///@brief Id of the last edited item
-	ImGuiID m_lastEditedItemId = 0;
 
 	std::map<std::shared_ptr<Instrument>, bool> m_instrumentDownloadIsSlow;
 	///@brief Store the last state of an intrument badge (used for badge state latching)
