@@ -174,7 +174,7 @@ void Session::FlushConfigCache()
 	{
 		it.second->FlushConfigCache();
 	}
-	for(auto it : m_oscilloscopesStates)
+	for(auto it : m_oscilloscopes)
 	{
 		it.second->FlushConfigCache();
 	}
@@ -236,8 +236,13 @@ void Session::Clear()
 	//Delete scopes once we've terminated the threads
 	//Detach waveforms before we destroy the scope, since history owns them
 	//(but make sure they're actually *in* history first!)
-	m_history.AddHistory(m_oscilloscopes);
-	for(auto scope : m_oscilloscopes)
+	std::vector<std::shared_ptr<Oscilloscope>> scopes;
+	for(auto it : m_oscilloscopes)
+	{
+		scopes.push_back(it.first);
+	}
+	m_history.AddHistory(scopes);
+	for(auto scope : scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
@@ -255,7 +260,6 @@ void Session::Clear()
 	m_history.clear();
 
 	m_oscilloscopes.clear();
-	m_oscilloscopesStates.clear();
 	m_psus.clear();
 	m_loads.clear();
 	m_meters.clear();
@@ -435,9 +439,9 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 	}
 
 	//Load data for each scope
-	for(size_t i=0; i<m_oscilloscopes.size(); i++)
+	for(auto it : m_oscilloscopes)
 	{
-		auto scope = m_oscilloscopes[i];
+		auto scope = it.first;
 		int id = m_idtable[(Instrument*)scope.get()];
 
 		char tmp[512] = {0};
@@ -487,8 +491,9 @@ bool Session::ConvertLegacyUniformWaveforms()
 {
 	bool converted = false;
 
-	for(auto scope : m_oscilloscopes)
+	for(auto it : m_oscilloscopes)
 	{
+		auto scope = it.first;
 		for(size_t i=0; i < scope->GetChannelCount(); i++)
 		{
 			auto oc = scope->GetOscilloscopeChannel(i);
@@ -2423,9 +2428,9 @@ bool Session::SerializeWaveforms(const string& dataDir)
 	}
 
 	//Write metadata files (by this point, data directories should have been created)
-	for(size_t i=0; i<m_oscilloscopes.size(); i++)
+	for(auto it : m_oscilloscopes)
 	{
-		auto scope = m_oscilloscopes[i];
+		auto scope = it.first;
 		string fname = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope.get()]) + "_metadata.yml";
 
 		ofstream outfs(fname);
@@ -3016,9 +3021,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	}
 	if(scope && (types & Instrument::INST_OSCILLOSCOPE))
 	{
-		m_oscilloscopes.push_back(scope);
 		auto state = make_shared<OscilloscopeState>(scope);
-		m_oscilloscopesStates[scope] = state;
+		m_oscilloscopes[scope] = state;
 		args.oscilloscopestate = state;
 		if(m_oscilloscopes.size() > 1)
 			m_multiScope = true;
@@ -3075,7 +3079,7 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 	if(psu)
 		m_psus.erase(psu);
 	if(scope)
-		m_oscilloscopesStates.erase(scope);
+		m_oscilloscopes.erase(scope);
 	if(meter)
 	{
 		auto state = m_meters[meter];
@@ -3111,9 +3115,9 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 		if(s != nullptr)
 			insts.emplace(s);
 	}
-	for(auto& scope : m_oscilloscopes)
+	for(auto& it : m_oscilloscopes)
 	{
-		auto s = dynamic_pointer_cast<SCPIInstrument>(scope);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
@@ -3155,8 +3159,8 @@ set<shared_ptr<Instrument>> Session::GetInstruments()
 	lock_guard<mutex> lock(m_scopeMutex);
 
 	set<shared_ptr<Instrument>> insts;
-	for(auto& scope : m_oscilloscopes)
-		insts.emplace(scope);
+	for(auto& it : m_oscilloscopes)
+		insts.emplace(it.first);
 	for(auto& it : m_psus)
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
@@ -3246,9 +3250,9 @@ void Session::StopTrigger(bool all)
  */
 bool Session::HasOnlineScopes()
 {
-	for(auto scope : m_oscilloscopes)
+	for(auto it : m_oscilloscopes)
 	{
-		if(!scope->IsOffline())
+		if(!it.first->IsOffline())
 			return true;
 	}
 	return false;
@@ -3663,9 +3667,9 @@ bool Session::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType typ
 	if(!moreFreed)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		for(auto scope : m_oscilloscopes)
+		for(auto it : m_oscilloscopes)
 		{
-			if(scope->FreeWaveformPools())
+			if(it.first->FreeWaveformPools())
 				moreFreed = true;
 		}
 	}

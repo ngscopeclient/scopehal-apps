@@ -149,7 +149,7 @@ public:
 	std::shared_ptr<OscilloscopeState> GetOscilloscopeState(std::shared_ptr<Oscilloscope> scope)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		return m_oscilloscopesStates[scope];
+		return m_oscilloscopes[scope];
 	}
 
 	/**
@@ -247,7 +247,12 @@ public:
 	const std::vector<std::shared_ptr<Oscilloscope>> GetScopes()
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		return m_oscilloscopes;
+		std::vector<std::shared_ptr<Oscilloscope>> scopes;
+		for(auto it : m_oscilloscopes)
+		{
+			scopes.push_back(it.first);
+		}
+		return scopes;
 	}
 
 	/**
@@ -435,10 +440,7 @@ protected:
 	bool m_modifiedSinceLastSave;
 
 	///@brief Oscilloscopes we are currently connected to
-	std::vector<std::shared_ptr<Oscilloscope>> m_oscilloscopes;
-
-	///@brief Oscilloscopes we are currently connected to
-	std::map<std::shared_ptr<Oscilloscope>, std::shared_ptr<OscilloscopeState> > m_oscilloscopesStates;
+	std::map<std::shared_ptr<Oscilloscope>, std::shared_ptr<OscilloscopeState> > m_oscilloscopes;
 
 	///@brief Power supplies we are currently connected to
 	std::map<std::shared_ptr<PowerSupply>, std::shared_ptr<PowerSupplyState> > m_psus;
