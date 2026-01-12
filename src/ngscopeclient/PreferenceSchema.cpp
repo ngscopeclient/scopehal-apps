@@ -166,9 +166,18 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& stream = appearance.AddCategory("Stream Browser");
 			stream.AddPreference(
-				Preference::Bool("use_7_segment_display", true)
-				.Label("Use 7 segment style display")
-				.Description("Use 7 segment style display for DMM and PSU values"));
+				Preference::Enum("numeric_value_display", NUMERIC_DISPLAY_MONO_FONT)
+					.Label("Numeric value display")
+					.Description(
+						"Select the way numeric values are displayed for DMM and PSU nodes.\n"
+						"- Console font: use Console font (monospace) defined in General preferences.\n"
+						"- 7 segment: use 7 segment style display.\n"
+						"- Default font: use Default font (proportional) defined in General preferences.\n"
+						)
+					.EnumValue("Console font", NUMERIC_DISPLAY_MONO_FONT)
+					.EnumValue("7 segment", NUMERIC_DISPLAY_7SEGMENT)
+					.EnumValue("Default font", NUMERIC_DISPLAY_DEFAULT_FONT)
+				);
 			stream.AddPreference(
 				Preference::Bool("show_block_border", true)
 				.Label("Show block border")
@@ -286,7 +295,7 @@ void PreferenceManager::InitializeDefaults()
 			general.AddPreference(
 				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
 				.Label("Console font")
-				.Description("Font used for SCPI console and log viewer"));
+				.Description("Font used for SCPI console, log viewer and PSU/DMM numeric values in Stream Browser"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(

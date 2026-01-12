@@ -36,6 +36,7 @@
 #include "ngscopeclient.h"
 #include "StreamBrowserDialog.h"
 #include "MainWindow.h"
+#include "PreferenceTypes.h"
 
 using namespace std;
 
@@ -425,10 +426,18 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
 void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color, bool allow7SegmentDisplay, float digitHeight, bool clickable)
 {
 	bool use7Segment = false;
+	bool changeFont = false;
+	auto& prefs = m_session.GetPreferences();
+	auto displayType = prefs.GetEnumRaw("Appearance.Stream Browser.numeric_value_display");
+	FontWithSize font;
 	if(allow7SegmentDisplay)
 	{
-		auto& prefs = m_session.GetPreferences();
-		use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
+		use7Segment = displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT;
+		if(!use7Segment)
+		{
+			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			changeFont = true;
+		}
 	}
 	if(use7Segment)
 	{
@@ -441,7 +450,9 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &cli
 		{
 			ImVec2 pos = ImGui::GetCursorPos();
 			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
 			ImGui::TextUnformatted(value.c_str());
+			if(changeFont) ImGui::PopFont();
 			ImGui::PopStyleColor();
 
 			clicked |= ImGui::IsItemClicked();
@@ -462,7 +473,9 @@ void StreamBrowserDialog::renderNumericValue(const std::string& value, bool &cli
 		else
 		{
 			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
 			ImGui::TextUnformatted(value.c_str());
+			if(changeFont) ImGui::PopFont();
 			ImGui::PopStyleColor();
 		}
 	}
@@ -516,6 +529,20 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 {
     static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports float or double");
 	auto& prefs = m_session.GetPreferences();
+	auto displayType = prefs.GetEnumRaw("Appearance.Stream Browser.numeric_value_display");
+	bool use7Segment = false;
+	bool changeFont = false;
+	FontWithSize font;
+	if(allow7SegmentDisplay)
+	{
+		use7Segment = displayType == NumericValueDisplay::NUMERIC_DISPLAY_7SEGMENT;
+		if(!use7Segment)
+		{
+			font = m_parent->GetFontPref(displayType == NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT ? "Appearance.General.default_font" : "Appearance.General.console_font");
+			changeFont = true;
+		}
+	}
+
 	bool changed = false;
 	bool validateChange = false;
 	bool cancelEdit = false;
@@ -540,6 +567,7 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 		// Allow overlap for apply button
 		ImGui::PushItemFlag(ImGuiItemFlags_AllowOverlap, true);
 		ImGui::PushStyleColor(ImGuiCol_Text, color);
+		if(changeFont) ImGui::PushFont(font.first, font.second);
 		if(ImGui::InputText(editLabel.c_str(), &currentValue, ImGuiInputTextFlags_EnterReturnsTrue))
 		{	// Input validated (but no apply button)
 			if(!explicitApply)
@@ -551,6 +579,7 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 				keepEditing = true;
 			}
 		}
+		if(changeFont) ImGui::PopFont();
 		ImGui::PopStyleColor();
 		ImGui::PopItemFlag();
 		if(explicitApply)
@@ -620,11 +649,6 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 		}
 		bool clicked = false;
 		bool hovered = false;
-		bool use7Segment = false;
-		if(allow7SegmentDisplay)
-		{
-			use7Segment = prefs.GetBool("Appearance.Stream Browser.use_7_segment_display");
-		}
 		if(use7Segment)
 		{
 			ImGui::PushID(labelId);
@@ -634,7 +658,9 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 		else
 		{
 			ImGui::PushStyleColor(ImGuiCol_Text, color);
+			if(changeFont) ImGui::PushFont(font.first, font.second);
 			ImGui::InputText(label.c_str(),&currentValue,ImGuiInputTextFlags_ReadOnly);
+			if(changeFont) ImGui::PopFont();
 			ImGui::PopStyleColor();
 			clicked |= ImGui::IsItemClicked();
 			if(ImGui::IsItemHovered())
