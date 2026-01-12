@@ -525,7 +525,6 @@ void MainWindow::WindowMenu()
 	if(ImGui::BeginMenu("Window"))
 	{
 		WindowAnalyzerMenu();
-		WindowMultimeterMenu();
 		WindowPSUMenu();
 
 		bool hasLabNotes = m_notesDialog != nullptr;
@@ -710,43 +709,6 @@ void MainWindow::WindowPSUMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(psu->m_nickname.c_str()))
 				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
-		}
-
-		ImGui::EndMenu();
-	}
-	ImGui::EndDisabled();
-}
-
-/**
-	@brief Run the Window | Multimeter menu
- */
-void MainWindow::WindowMultimeterMenu()
-{
-	//This is a bit of a hack but all of the dialogs are gonna get redone eventually so
-	vector< shared_ptr<SCPIMultimeter> > meters;
-	auto insts = m_session.GetScopes();
-	for(auto inst : insts)
-	{
-		//Skip anything that's not a multimeter
-		if( (inst->GetInstrumentTypes() & Instrument::INST_DMM) == 0)
-			continue;
-
-		//Do we already have a dialog open for it? If so, don't make another
-		auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
-		if(m_meterDialogs.find(meter) != m_meterDialogs.end())
-			continue;
-
-		meters.push_back(meter);
-	}
-
-	ImGui::BeginDisabled(meters.empty());
-	if(ImGui::BeginMenu("Multimeter"))
-	{
-		for(auto meter : meters)
-		{
-			//Add it to the menu
-			if(ImGui::MenuItem(meter->m_nickname.c_str()))
-				m_session.AddInstrument(meter);
 		}
 
 		ImGui::EndMenu();

@@ -259,7 +259,6 @@ protected:
 			void WindowMenu();
 				void WindowAnalyzerMenu();
 				void WindowPSUMenu();
-				void WindowMultimeterMenu();
 			void DebugMenu();
 				void DebugSCPIConsoleMenu();
 			void HelpMenu();

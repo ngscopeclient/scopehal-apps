@@ -1010,11 +1010,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 		}
 	}
 
-	// Padding to give space for ChannelProperties dialog button 
-	auto& prefs = m_session.GetPreferences();
-	int padding = prefs.GetBool("Appearance.Stream Browser.show_block_border") ? (ImGui::GetFontSize() - 1) : (1.5 * ImGui::GetFontSize());
-
-	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3,true,padding))
+	if(renderCombo("##mode", true, color, modeSelector, modeNames,true,3,true))
 	{
 		curMode = modes[modeSelector];
 		if(isMain)
@@ -1059,7 +1055,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 				// For main, also show the autorange combo
 				startBadgeLine();
 				bool autorange = dmmState->m_autoRange.load();
-				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3,padding))
+				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3))
 				{
 					dmm->SetMeterAutoRange(autorange);
 					dmmState->m_needsUpdate = true;
@@ -1934,10 +1930,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		}
 		else if(dmm && dmmchan)
 		{
-			if(BeginBlock("dmm_params",true,"Open Multimeter properties"))
-			{
-				m_parent->ShowInstrumentProperties(dmm);
-			}
+			BeginBlock("dmm_params");
 			// Always 2 streams for dmm channel => render properties on channel node
 			bool clicked = false;
 			bool hovered = false;
