@@ -89,12 +89,12 @@ protected:
 		std::string& currentValue,
 		float& committedValue,
 		Unit unit);
-	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
+	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
 	void renderReadOnlyProperty(float width, const std::string& label, const std::string& value, const char* tooltip = nullptr);
 	template<typename T>
-	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false, bool explicitApply = false);
+	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false, bool explicitApply = false);
 	template<typename T>
-	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, ImVec4 color = ImVec4(1, 1, 1, 1), bool allow7SegmentDisplay = false);
+	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false);
 
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);

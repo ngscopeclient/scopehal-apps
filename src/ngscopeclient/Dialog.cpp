@@ -376,6 +376,7 @@ bool Dialog::UnitInputWithImplicitApply(
 		int64_t& committedValue,
 		Unit unit)
 {
+	//	return renderEditableProperty(-1,label,currentValue,committedValue,unit,);
 	bool dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
 
 	ImGui::InputText(label.c_str(), &currentValue);
@@ -413,27 +414,7 @@ bool Dialog::UnitInputWithExplicitApply(
 		float& committedValue,
 		Unit unit)
 {
-	bool dirty = unit.PrettyPrint(committedValue) != currentValue;
-
-	ImGui::BeginGroup();
-
-	ImGui::InputText(label.c_str(), &currentValue);
-	ImGui::SameLine();
-	if(!dirty)
-		ImGui::BeginDisabled();
-	auto applyLabel = string("Apply###Apply") + label;
-	bool changed = false;
-	if(ImGui::Button(applyLabel.c_str()))
-	{
-		changed = true;
-		committedValue = unit.ParseString(currentValue);
-		currentValue = unit.PrettyPrint(committedValue);
-	}
-	if(!dirty)
-		ImGui::EndDisabled();
-
-	ImGui::EndGroup();
-	return changed;
+	return renderEditablePropertyWithExplicitApply(-1,label,currentValue,committedValue,unit);
 }
 
 /**
@@ -441,16 +422,17 @@ bool Dialog::UnitInputWithExplicitApply(
    @param value the string representation of the value to display (may include the unit)
    @param clicked output value for clicked state
    @param hovered output value for hovered state
-   @param color the color to use (defaults to white)
+   @param optcolor the optional color to use (defaults to text color)
    @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
    @param digitHeight the height of a digit (if 0 (defualt), will use ImGui::GetFontSize())
    @param clickable true (default) if the displayed value should be clickable
  */
-void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, ImVec4 color, bool allow7SegmentDisplay, float digitHeight, bool clickable)
+void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &hovered, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, float digitHeight, bool clickable)
 {
 	bool use7Segment = false;
 	bool changeFont = false;
 	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
+	ImVec4 color = optcolor ? optcolor.value() : ImGui::GetStyleColorVec4(ImGuiCol_Text);
 	if(m_session)
 	{
 		auto& prefs = m_session->GetPreferences();
@@ -469,6 +451,7 @@ void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &h
 	if(use7Segment)
 	{
 		if(digitHeight <= 0) digitHeight = ImGui::GetFontSize();
+		
 	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
 	}
 	else
@@ -539,26 +522,27 @@ void Dialog::renderReadOnlyProperty(float width, const string& label, const stri
 template<typename T>
 /**
    @brief Render an editable numeric value
-   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
+   @param width the width of the input value (if <0 will be ignored, if =0 will default to 6*ImGui::GetStyle())
    @param label the value label (used as a label for the TextInput)
    @param currentValue the string representation of the current value
    @param comittedValue the last comitted typed (float, double or int64_t) value
    @param unit the Unit of the value
    @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
-   @param color the color to use
+   @param optcolor the optional color to use (defaults to text color)
    @param clicked output value for clicked state
    @param hovered output value for hovered state
    @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
    @param explicitApply (defaults to false) true if the input value needs to explicitly be applied (by clicking the apply button)
    @return true if the value has changed
  */
-bool Dialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply)
+bool Dialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply)
 {
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports float or double");
+    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports int64_t, float or double");
 	bool use7Segment = false;
 	bool changeFont = false;
 	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
 	ImVec4 buttonColor;
+	ImVec4 color = optcolor ? optcolor.value() : ImGui::GetStyleColorVec4(ImGuiCol_Text);
 	if(m_session)
 	{
 		auto& prefs = m_session->GetPreferences();
@@ -586,8 +570,11 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 	bool keepEditing = false;
 	bool dirty;
 	float fontSize = ImGui::GetFontSize();
-	if(width <= 0) width = 6*fontSize;
-	ImGui::SetNextItemWidth(width);
+	if(width >= 0)
+	{
+		if(width == 0) width = 6*fontSize;
+		ImGui::SetNextItemWidth(width);
+	}
 	if constexpr (std::is_same_v<T, int64_t>)
 		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
 	else
@@ -638,7 +625,7 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 				validateChange = true;
 			}
 			ImGui::EndDisabled();
-			if(dirty && ImGui::IsItemHovered())
+			if(dirty && ImGui::IsItemHovered() && m_parent)
 			{	// Help to explain apply button
 				m_parent->AddStatusHelp("mouse_lmb", "Apply value changes and send them to the instrument");
 			}
@@ -713,7 +700,7 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 			m_editedItemId = editId;
 			ImGui::ActivateItemByID(editId);
 		}
-		if (hovered)
+		if (hovered && m_parent)
 			m_parent->AddStatusHelp("mouse_lmb", "Edit value");
 	}
 	if(validateChange)
@@ -766,33 +753,33 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 	return changed;
 }
 
-template bool Dialog::renderEditableProperty<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
-template bool Dialog::renderEditableProperty<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
-template bool Dialog::renderEditableProperty<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
 
 template<typename T>
 /**
    @brief Render an editable numeric value with explicit apply (if the input value needs to explicitly be applied by clicking the apply button)
-   @param width the width of the input value (if <=0 will default to 6*ImGui::GetStyle())
+   @param width the width of the input value (if <0 will be ignored, if =0 will default to 6*ImGui::GetStyle())
    @param label the value label (used as a label for the TextInput)
    @param currentValue the string representation of the current value
    @param comittedValue the last comitted typed (float, double or int64_t) value
    @param unit the Unit of the value
    @param tooltip if not null, will add the provided text as an help marker (defaults to nullptr)
-   @param color the color to use
+   @param optcolor the optional color to use (defaults to text color)
    @param clicked output value for clicked state
    @param hovered output value for hovered state
    @param allow7SegmentDisplay (defaults to false) true if the value can be displayed in 7 segment format
    @return true if the value has changed
  */
-bool Dialog::renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay)
+bool Dialog::renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay)
 {
-	return renderEditableProperty(width,label,currentValue,committedValue,unit,tooltip,color,allow7SegmentDisplay,true);
+	return renderEditableProperty(width,label,currentValue,committedValue,unit,tooltip,optcolor,allow7SegmentDisplay,true);
 }
 
-template bool Dialog::renderEditablePropertyWithExplicitApply<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
-template bool Dialog::renderEditablePropertyWithExplicitApply<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
-template bool Dialog::renderEditablePropertyWithExplicitApply<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, ImVec4 color, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
 
 
 /**
