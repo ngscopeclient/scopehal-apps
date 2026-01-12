@@ -45,6 +45,7 @@ public:
 	MultimeterState()
 	{
 		m_started = false;
+		m_selectedChannel = 0;
 		m_primaryMeasurement = 0;
 		m_secondaryMeasurement = 0;
 		m_firstUpdateDone = false;
@@ -58,6 +59,7 @@ public:
 	}
 
 	bool m_started;
+	int m_selectedChannel;
 	std::atomic<float> m_primaryMeasurement;
 	std::atomic<float> m_secondaryMeasurement;
 	std::atomic<bool> m_firstUpdateDone;

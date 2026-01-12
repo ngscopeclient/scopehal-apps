@@ -312,7 +312,8 @@ void InstrumentThread(InstrumentThreadArgs args)
 				meterstate->m_firstUpdateDone = true;
 
 				if(meterstate->m_needsUpdate.load())
-				{	// We need to update range state
+				{	// We need to update dmm state
+					meterstate->m_selectedChannel = meter->GetCurrentMeterChannel();
 					meterstate->m_autoRange = meter->GetMeterAutoRange();
 					meterstate->m_needsUpdate = false;
 				}

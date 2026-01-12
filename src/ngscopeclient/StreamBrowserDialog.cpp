@@ -1961,6 +1961,33 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 			// Always 2 streams for dmm channel => render properties on channel node
 			bool clicked = false;
 			bool hovered = false;
+			// Channel selection
+			size_t channelCount = instrument->GetChannelCount();
+			if(channelCount > 1)
+			{
+				auto dmmState = m_session.GetDmmState(dmm);
+				if(dmmState)
+				{
+					ImGui::SetNextItemWidth(6*ImGui::GetFontSize());
+					vector<std::string> channelNames;
+					for(size_t i=0; i<dmm->GetChannelCount(); i++)
+						channelNames.push_back(dmm->GetChannel(i)->GetDisplayName());
+					if(renderCombo(
+						"Channel",
+						false,
+						ImGui::GetStyleColorVec4(ImGuiCol_FrameBg),
+						dmmState->m_selectedChannel,
+						channelNames,
+						false,
+						0,
+						false))
+					{
+						dmm->SetCurrentMeterChannel(dmmState->m_selectedChannel);
+						dmmState->m_needsUpdate = true;
+					}
+					HelpMarker("Select which input channel is being monitored.");
+				}
+			}
 			// Main measurement
 			renderDmmProperties(dmm,dmmchan,true,clicked,hovered);
 			// Secondary measurement
