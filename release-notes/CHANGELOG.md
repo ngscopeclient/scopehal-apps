@@ -8,7 +8,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Drivers: Added support for many more PicoScope models
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration for several filters including CDR PLL (7.5x speedup), 100baseTX (10x speedup), eye pattern (25x speedup), histogram (12x speedup), TIE (5.3x speedup) and more (https://github.com/ngscopeclient/scopehal/issues/977).
+* Filters: Added GPU acceleration for several filters including CDR PLL (7.5x speedup), 100baseTX (10x speedup), DDJ (16x speedup), eye pattern (25x speedup), histogram (12x speedup), TIE (5.3x speedup) and more (https://github.com/ngscopeclient/scopehal/issues/977).
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
