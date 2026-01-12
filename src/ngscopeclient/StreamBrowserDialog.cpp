@@ -40,7 +40,8 @@
 
 using namespace std;
 
-#define ELLIPSIS_CHAR "\xE2\x80\xA6" // "..." character
+#define ELLIPSIS_CHAR "…"
+#define CARRIAGE_RETURN_CHAR "⏎"
 #define PLUS_CHAR "+"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -596,7 +597,7 @@ bool StreamBrowserDialog::renderEditableProperty(float width, const std::string&
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColorHovered);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColorActive);
 			ImGui::BeginDisabled(!dirty);
-			if(ImGui::Button("\xE2\x8F\x8E")) // Carriage return symbol
+			if(ImGui::Button(CARRIAGE_RETURN_CHAR)) // Carriage return symbol
 			{	// Apply button click
 				validateChange = true;
 			}
