@@ -52,7 +52,6 @@
 #include "MeasurementsDialog.h"
 #include "MemoryLeakerDialog.h"
 #include "MetricsDialog.h"
-#include "MultimeterDialog.h"
 #include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
@@ -70,10 +69,6 @@ using namespace std;
 void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 {
 	m_dialogs.emplace(dlg);
-
-	auto mdlg = dynamic_cast<MultimeterDialog*>(dlg.get());
-	if(mdlg != nullptr)
-		m_meterDialogs[mdlg->GetMeter()] = dlg;
 
 	auto pdlg = dynamic_cast<PowerSupplyDialog*>(dlg.get());
 	if(pdlg != nullptr)

@@ -53,7 +53,6 @@
 #include "../scopehal/PacketDecoder.h"
 
 class MeasurementsDialog;
-class MultimeterDialog;
 class HistoryDialog;
 class FileBrowser;
 class CreateFilterBrowser;

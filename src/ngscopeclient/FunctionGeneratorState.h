@@ -46,7 +46,7 @@ public:
 	{
 		size_t n = generator->GetChannelCount();
 		m_channelNumber = n;
-		m_channelActive = std::make_unique<std::atomic<bool>[] >(n);
+		m_channelActive = std::make_unique<bool[] >(n);
 		m_channelAmplitude = std::make_unique<std::atomic<float>[] >(n);
 		m_channelOffset= std::make_unique<std::atomic<float>[] >(n);
 		m_channelFrequency = std::make_unique<std::atomic<float>[] >(n);
@@ -111,7 +111,7 @@ public:
 			m_needsUpdate[i] = true;
 	}
 
-	std::unique_ptr<std::atomic<bool>[]> m_channelActive;
+	std::unique_ptr<bool[]> m_channelActive;
 	std::unique_ptr<std::atomic<float>[]> m_channelAmplitude;
 	std::unique_ptr<std::atomic<float>[]> m_channelOffset;
 	std::unique_ptr<std::atomic<float>[]> m_channelFrequency;

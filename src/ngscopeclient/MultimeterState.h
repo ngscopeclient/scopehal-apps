@@ -44,23 +44,25 @@ public:
 
 	MultimeterState()
 	{
+		m_started = false;
 		m_primaryMeasurement = 0;
 		m_secondaryMeasurement = 0;
 		m_firstUpdateDone = false;
 		m_autoRange = true;
-		m_needsRangeUpdate = true;
+		m_needsUpdate = true;
 	}
 
 	void FlushConfigCache()
 	{
-		m_needsRangeUpdate = true;
+		m_needsUpdate = true;
 	}
 
+	bool m_started;
 	std::atomic<float> m_primaryMeasurement;
 	std::atomic<float> m_secondaryMeasurement;
 	std::atomic<bool> m_firstUpdateDone;
 	std::atomic<bool> m_autoRange;
-	std::atomic<bool> m_needsRangeUpdate;
+	std::atomic<bool> m_needsUpdate;
 };
 
 #endif

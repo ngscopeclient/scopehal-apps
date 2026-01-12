@@ -39,7 +39,6 @@
 #include "MainWindow.h"
 #include "BERTDialog.h"
 #include "LoadDialog.h"
-#include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
 #include "PreferenceTypes.h"
@@ -2997,6 +2996,11 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		auto state = make_shared<MultimeterState>();
 		m_meters[meter] = state;
 		args.meterstate = state;
+		if(!(scope && (types & Instrument::INST_OSCILLOSCOPE)))
+		{	// This is a standalone multimeter (not in an Oscilloscope) => start it by default
+			meter->StartMeter();
+			m_meters[meter]->m_started = true;
+		}
 	}
 	if(load && (types & Instrument::INST_LOAD) )
 	{
@@ -3036,8 +3040,6 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	{
 		if(psu && (types & Instrument::INST_PSU) )
 			m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, args.psustate, this));
-		if(meter && (types & Instrument::INST_DMM) )
-			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
 		if(load && (types & Instrument::INST_LOAD) )
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
 		if(bert && (types & Instrument::INST_BERT) )
@@ -3075,7 +3077,13 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 	if(scope)
 		m_oscilloscopesStates.erase(scope);
 	if(meter)
+	{
+		auto state = m_meters[meter];
+		// Stop meter if needed
+		if(state && state->m_started)
+			meter->StopMeter();
 		m_meters.erase(meter);
+	}
 	if(load)
 		m_loads.erase(load);
 	if(bert)
@@ -3085,16 +3093,6 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 
 	//Clear worker threads etc
 	m_instrumentStates.erase(inst);
-}
-
-/**
-	@brief Adds a multimeter dialog to the session
-
-	Low level helper, intended to be only used by file loading
- */
-void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
-{
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
 }
 
 /**

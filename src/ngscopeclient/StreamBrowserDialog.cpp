@@ -1062,7 +1062,7 @@ void StreamBrowserDialog::renderDmmProperties(std::shared_ptr<Multimeter> dmm, M
 				if(renderOnOffToggle("##autorange",true,autorange,"Manual Range","Autorange",3,padding))
 				{
 					dmm->SetMeterAutoRange(autorange);
-					dmmState->m_needsRangeUpdate = true;
+					dmmState->m_needsUpdate = true;
 				}
 				ImGui::PopID();
 			}
@@ -1761,6 +1761,10 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	{
 		renderProps = m_session.GetFunctionGeneratorState(awg)->m_channelActive[channelIndex];
 	}
+	else if(dmm && dmmchan)
+	{
+		renderProps = m_session.GetDmmState(dmm)->m_started;
+	}
 
 	bool hasChildren = !singleStream || renderProps;
 
@@ -1788,8 +1792,6 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 				m_parent->ShowChannelProperties(scopechan);
 			else if(psuchan)
 				m_parent->ShowInstrumentProperties(psu);
-			else if(awgchan)
-				m_parent->ShowInstrumentProperties(awg);
 			else
 				LogWarning("Don't know how to open channel properties yet\n");
 		}
@@ -1856,22 +1858,26 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	{
 		// AWG Channel : get the state
 		auto awgstate = m_session.GetFunctionGeneratorState(awg);
-
-		bool active = awgstate->m_channelActive[channelIndex];
-		bool result = active;
-		renderOnOffToggle("###active", true, result);
-		if(result != active)
+		if(renderOnOffToggle("###active", true,awgstate->m_channelActive[channelIndex]))
 		{
-			awg->SetFunctionChannelActive(channelIndex,result);
-			auto awgState = m_session.GetFunctionGeneratorState(awg);
-			if(awgState)
-			{
-				// Update state right now to cover from slow intruments
-				awgState->m_channelActive[channelIndex]=result;
-				// Tell intrument thread that the FunctionGenerator state has to be updated
-				awgState->m_needsUpdate[channelIndex] = true;
-			}
+			awg->SetFunctionChannelActive(channelIndex,awgstate->m_channelActive[channelIndex]);
+			// Tell intrument thread that the FunctionGenerator state has to be updated
+			awgstate->m_needsUpdate[channelIndex] = true;
+		}
+	}
+	else if(dmm && dmmchan)
+	{
+		// DMM Channel : get the state
+		auto dmmstate = m_session.GetDmmState(dmm);
 
+		if(renderOnOffToggle("###active", true, dmmstate->m_started))
+		{
+			if(dmmstate->m_started)
+				dmm->StartMeter();
+			else
+				dmm->StopMeter();
+			// Tell intrument thread that the Dmm state has to be updated
+			dmmstate->m_needsUpdate = true;
 		}
 	}
 

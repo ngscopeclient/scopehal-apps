@@ -131,7 +131,6 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
-	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
 	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);

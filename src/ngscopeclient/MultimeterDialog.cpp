@@ -77,7 +77,7 @@ MultimeterDialog::MultimeterDialog(shared_ptr<SCPIMultimeter> meter, shared_ptr<
 
 	//Check for autorange state change
 	if(m_state->m_autoRange.load() != m_autorange)
-		m_state->m_needsRangeUpdate = true;
+		m_state->m_needsUpdate = true;
 
 	//Secondary operating modes
 	RefreshSecondaryModeList();
@@ -143,7 +143,7 @@ bool MultimeterDialog::DoRender()
 		if(ImGui::Checkbox("Autorange", &m_autorange))
 		{
 			m_meter->SetMeterAutoRange(m_autorange);
-			m_state->m_needsRangeUpdate = true;
+			m_state->m_needsUpdate = true;
 		}
 		HelpMarker("Enables automatic selection of meter scale ranges.");
 
