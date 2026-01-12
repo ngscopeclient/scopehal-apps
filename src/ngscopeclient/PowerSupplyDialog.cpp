@@ -49,8 +49,7 @@ PowerSupplyDialog::PowerSupplyDialog(
 	: Dialog(
 		string("Power Supply: ") + psu->m_nickname,
 		string("Power Supply: ") + psu->m_nickname,
-		ImVec2(500, 400))
-	, m_session(session)
+		ImVec2(500, 400), session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
 	, m_tstart(GetTime())
 	, m_psu(psu)

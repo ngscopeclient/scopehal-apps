@@ -1857,7 +1857,7 @@ void StreamBrowserDialog::renderStreamNode(shared_ptr<Instrument> instrument, In
 						{
 							if(scope->IsDigitalThresholdConfigurable())
 							{
-								if(renderEditablePropertyWithExplicitApply(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
+								if(renderEditableProperty(0,"Threshold",scopeState->m_strDigitalThreshold[channelIndex],scopeState->m_committedDigitalThreshold[channelIndex],unit))
 								{	// Update offset
 									scopechan->SetDigitalThreshold(scopeState->m_committedDigitalThreshold[channelIndex]);
 									scopeState->m_needsUpdate[channelIndex] = true;

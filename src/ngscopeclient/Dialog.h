@@ -81,8 +81,6 @@ public:
 		std::string& committedValue);
 
 protected:
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
 	bool UnitInputWithExplicitApply(
 		const std::string& label,

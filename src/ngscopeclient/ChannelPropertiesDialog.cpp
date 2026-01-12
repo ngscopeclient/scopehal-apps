@@ -47,11 +47,15 @@ ChannelPropertiesDialog::ChannelPropertiesDialog(InstrumentChannel* chan, MainWi
 	: BaseChannelPropertiesDialog(chan, parent, graphEditorMode)
 {
 	// Get oscilloscope state, for that we need to make a shared_ptr out of the base pointer returned by chan->GetInstrument()
-	Session& session = m_parent->GetSession();
-	std::shared_ptr<Instrument> scopeSharedPointer = chan->GetInstrument()->shared_from_this();
-	shared_ptr<Oscilloscope> sharedScope = dynamic_pointer_cast<Oscilloscope>(scopeSharedPointer);
-	if(sharedScope)
-		m_state = session.GetOscilloscopeState(sharedScope);
+	m_session = &m_parent->GetSession();
+	auto instrument = chan->GetInstrument();
+	if(instrument)
+	{
+		std::shared_ptr<Instrument> scopeSharedPointer = instrument->shared_from_this();
+		shared_ptr<Oscilloscope> sharedScope = dynamic_pointer_cast<Oscilloscope>(scopeSharedPointer);
+		if(sharedScope)
+			m_state = m_session->GetOscilloscopeState(sharedScope);
+	}
 
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(chan);
 	if(!ochan)

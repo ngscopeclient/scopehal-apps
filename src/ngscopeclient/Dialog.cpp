@@ -223,55 +223,6 @@ void Dialog::HelpMarker(const string& header, const vector<string>& bullets)
 	}
 }
 
-/**
-	@brief Helper for displaying a floating-point input box with an "apply" button
- */
-bool Dialog::FloatInputWithApplyButton(const string& label, float& currentValue, float& committedValue)
-{
-	ImGui::BeginGroup();
-
-	bool dirty = currentValue != committedValue;
-	ImGui::InputFloat(label.c_str(), &currentValue);
-	ImGui::SameLine();
-	if(!dirty)
-		ImGui::BeginDisabled();
-	auto applyLabel = string("Apply###Apply") + label;
-	bool changed = false;
-	if(ImGui::Button(applyLabel.c_str()))
-	{
-		changed = true;
-		committedValue = currentValue;
-	}
-	if(!dirty)
-		ImGui::EndDisabled();
-
-	ImGui::EndGroup();
-	return changed;
-}
-
-bool Dialog::TextInputWithApplyButton(const string& label, string& currentValue, string& committedValue)
-{
-	ImGui::BeginGroup();
-
-	bool dirty = currentValue != committedValue;
-	ImGui::InputText(label.c_str(), &currentValue);
-	ImGui::SameLine();
-	if(!dirty)
-		ImGui::BeginDisabled();
-	auto applyLabel = string("Apply###Apply") + label;
-	bool changed = false;
-	if(ImGui::Button(applyLabel.c_str()))
-	{
-		changed = true;
-		committedValue = currentValue;
-	}
-	if(!dirty)
-		ImGui::EndDisabled();
-
-	ImGui::EndGroup();
-	return changed;
-}
-
 bool Dialog::TextInputWithImplicitApply(const string& label, string& currentValue, string& committedValue)
 {
 	bool dirty = currentValue != committedValue;

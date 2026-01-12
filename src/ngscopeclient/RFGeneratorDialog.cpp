@@ -153,8 +153,7 @@ RFGeneratorDialog::RFGeneratorDialog(
 	: Dialog(
 		string("RF Generator: ") + generator->m_nickname,
 		string("RF Generator: ") + generator->m_nickname,
-		ImVec2(400, 350))
-	, m_session(session)
+		ImVec2(400, 350),session)
 	, m_generator(generator)
 {
 	Unit hz(Unit::UNIT_HZ);
