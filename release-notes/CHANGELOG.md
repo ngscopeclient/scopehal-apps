@@ -10,6 +10,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: Added GPU acceleration for several filters including CDR PLL (7.5x speedup), 100baseTX (10x speedup), DDJ (16x speedup), eye pattern (25x speedup), histogram (12x speedup), TIE (5.3x speedup) and more (https://github.com/ngscopeclient/scopehal/issues/977).
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
+* Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
@@ -28,7 +29,7 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
-* Filters: FFT waveforms were shifted one bin to the right of the correct position
+* Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
