@@ -371,9 +371,9 @@ bool StreamBrowserDialog::renderCombo(
    @param alignRight true if the combo should be aligned to the right
    @param color the color of the toggle button
    @param curValue the value of the toggle button
-   @param valueOff label for value off (optionnal, defaults to "OFF")
-   @param valueOn label for value on (optionnal, defaults to "ON")
-   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
+   @param valueOff label for value off (optional, defaults to "OFF")
+   @param valueOn label for value on (optional, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optional, defaults to 0)
    @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
    @return true if selection has changed
  */
@@ -394,9 +394,9 @@ bool StreamBrowserDialog::renderToggle(const char* label, bool alignRight, ImVec
    @param label	Label for the combo box
    @param alignRight true if the combo should be aligned to the right
    @param curValue the value of the toggle button
-   @param valueOff label for value off (optionnal, defaults to "OFF")
-   @param valueOn label for value on (optionnal, defaults to "ON")
-   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optionnal, defaults to 0)
+   @param valueOff label for value off (optional, defaults to "OFF")
+   @param valueOn label for value on (optional, defaults to "ON")
+   @param cropTextTo if >0 crop the combo text up to this number of characters to have it fit the available space (optional, defaults to 0)
    @param paddingRight the padding to leave at the right of the combo when alighRight is true (defaults to 0)
    @return true if value has changed
  */

@@ -115,9 +115,9 @@ protected:
 	std::string m_errorPopupTitle;
 	std::string m_errorPopupMessage;
 
-	///@brief optionnal reference to session
+	///@brief optional reference to session
 	Session* m_session;
-	///@brief optionnal reference to parent MainWindow
+	///@brief optional reference to parent MainWindow
 	MainWindow* m_parent;
 
 

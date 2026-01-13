@@ -174,7 +174,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 							}
 							// Get probe name
 							scopestate->m_probeName[i] = scope->GetProbeName(i);
-							// Popilate bandwidth limit values
+							// Populate bandwidth limit values
 							auto limit = scope->GetChannelBandwidthLimit(i);
 							scopestate->m_bandwidthLimits[i].clear();
 							scopestate->m_bandwidthLimitNames[i].clear();
