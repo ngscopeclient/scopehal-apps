@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -87,7 +87,7 @@ Session::Session(MainWindow* wnd)
 	, m_tPrimaryTrigger(0)
 	, m_triggerArmed(false)
 	, m_triggerOneShot(false)
-	, m_graphExecutor(4)
+	, m_graphExecutor(8)
 	, m_lastFilterGraphExecTime(0)
 	, m_history(*this)
 	, m_multiScope(false)
