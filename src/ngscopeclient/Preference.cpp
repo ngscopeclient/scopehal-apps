@@ -440,11 +440,11 @@ impl::PreferenceBuilder Preference::Color(std::string identifier, const ImU32& d
 			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff)));
-	new (&pref.m_defaultValue) impl::Color(std::move(impl::Color(
+	new (&pref.m_defaultValue) impl::Color(
 			static_cast<uint8_t>((defaultValue >> IM_COL32_R_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
-			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff))));
+			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
