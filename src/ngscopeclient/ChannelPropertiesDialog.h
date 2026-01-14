@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -48,6 +48,9 @@ public:
 protected:
 
 	void RefreshInputSettings(Oscilloscope* scope, size_t nchan);
+
+	///@brief Current channel stats, live updated
+	std::shared_ptr<OscilloscopeState> m_state;
 
 	std::string m_displayName;
 	std::string m_committedDisplayName;

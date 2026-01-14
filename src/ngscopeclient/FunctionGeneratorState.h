@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -45,10 +45,14 @@ public:
 	FunctionGeneratorState(std::shared_ptr<FunctionGenerator> generator)
 	{
 		size_t n = generator->GetChannelCount();
-		m_channelActive = std::make_unique<std::atomic<bool>[] >(n);
+		m_channelNumber = n;
+		m_channelActive = std::make_unique<bool[] >(n);
 		m_channelAmplitude = std::make_unique<std::atomic<float>[] >(n);
 		m_channelOffset= std::make_unique<std::atomic<float>[] >(n);
 		m_channelFrequency = std::make_unique<std::atomic<float>[] >(n);
+		m_channelDutyCycle = std::make_unique<std::atomic<float>[] >(n);
+		m_channelRiseTime = std::make_unique<std::atomic<float>[] >(n);
+		m_channelFallTime = std::make_unique<std::atomic<float>[] >(n);
 		m_channelShape = std::make_unique<std::atomic<FunctionGenerator::WaveShape>[] >(n);
 		m_channelOutputImpedance = std::make_unique<std::atomic<FunctionGenerator::OutputImpedance>[] >(n);
 		m_channelShapes = std::make_unique<std::vector<FunctionGenerator::WaveShape>[] >(n);
@@ -63,6 +67,12 @@ public:
 		m_committedAmplitude = std::make_unique<float[]>(n);
 		m_strFrequency = std::make_unique<std::string[]>(n);
 		m_committedFrequency = std::make_unique<float[]>(n);
+		m_strDutyCycle = std::make_unique<std::string[]>(n);
+		m_committedDutyCycle = std::make_unique<float[]>(n);
+		m_strRiseTime = std::make_unique<std::string[]>(n);
+		m_committedRiseTime = std::make_unique<float[]>(n);
+		m_strFallTime = std::make_unique<std::string[]>(n);
+		m_committedFallTime = std::make_unique<float[]>(n);
 
 		Unit volts(Unit::UNIT_VOLTS);
 
@@ -72,6 +82,9 @@ public:
 			m_channelAmplitude[i] = 0;
 			m_channelOffset[i] = 0;
 			m_channelFrequency[i] = 0;
+			m_channelDutyCycle[i] = 0;
+			m_channelRiseTime[i] = 0;
+			m_channelFallTime[i] = 0;
 			m_channelShape[i] = FunctionGenerator::WaveShape::SHAPE_SINE;
 			m_channelOutputImpedance[i] = FunctionGenerator::OutputImpedance::IMPEDANCE_HIGH_Z;
 			// Init shape list and names
@@ -86,13 +99,25 @@ public:
 			m_committedAmplitude[i] = FLT_MIN;
 			m_committedOffset[i] = FLT_MIN;
 			m_committedFrequency[i] = FLT_MIN;
+			m_committedDutyCycle[i] = FLT_MIN;
+			m_committedRiseTime[i] = FLT_MIN;
+			m_committedFallTime[i] = FLT_MIN;
 		}
 	}
 
-	std::unique_ptr<std::atomic<bool>[]> m_channelActive;
+	void FlushConfigCache()
+	{
+		for(size_t i = 0 ; i < m_channelNumber.load() ; i++)
+			m_needsUpdate[i] = true;
+	}
+
+	std::unique_ptr<bool[]> m_channelActive;
 	std::unique_ptr<std::atomic<float>[]> m_channelAmplitude;
 	std::unique_ptr<std::atomic<float>[]> m_channelOffset;
 	std::unique_ptr<std::atomic<float>[]> m_channelFrequency;
+	std::unique_ptr<std::atomic<float>[]> m_channelDutyCycle;
+	std::unique_ptr<std::atomic<float>[]> m_channelRiseTime;
+	std::unique_ptr<std::atomic<float>[]> m_channelFallTime;
 	std::unique_ptr<std::atomic<FunctionGenerator::WaveShape>[]> m_channelShape;
 	std::unique_ptr<std::atomic<FunctionGenerator::OutputImpedance>[]> m_channelOutputImpedance;
 	std::unique_ptr<std::vector<FunctionGenerator::WaveShape>[]> m_channelShapes;
@@ -100,6 +125,8 @@ public:
 	std::unique_ptr<std::vector<std::string>[]> m_channelShapeNames;
 
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
+
+	std::atomic<size_t> m_channelNumber;
 
 	//UI state for dialogs etc
 	std::unique_ptr<float[]> m_committedOffset;
@@ -110,6 +137,15 @@ public:
 
 	std::unique_ptr<float[]> m_committedFrequency;
 	std::unique_ptr<std::string[]> m_strFrequency;
+
+	std::unique_ptr<float[]> m_committedDutyCycle;
+	std::unique_ptr<std::string[]> m_strDutyCycle;
+
+	std::unique_ptr<float[]> m_committedRiseTime;
+	std::unique_ptr<std::string[]> m_strRiseTime;
+
+	std::unique_ptr<float[]> m_committedFallTime;
+	std::unique_ptr<std::string[]> m_strFallTime;
 };
 
 #endif

@@ -73,7 +73,6 @@ add_executable(ngscopeclient
 	FilterGraphWorkspace.cpp
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
-	FunctionGeneratorDialog.cpp
 	GuiLogSink.cpp
 	HistoryDialog.cpp
 	HistoryManager.cpp
@@ -89,7 +88,6 @@ add_executable(ngscopeclient
 	MeasurementsDialog.cpp
 	MemoryLeakerDialog.cpp
 	MetricsDialog.cpp
-	MultimeterDialog.cpp
 	NFDFileBrowser.cpp
 	NotesDialog.cpp
 	PacketManager.cpp

@@ -45,8 +45,7 @@ LoadDialog::LoadDialog(shared_ptr<SCPILoad> load, shared_ptr<LoadState> state, S
 	: Dialog(
 		string("Load: ") + load->m_nickname,
 		string("Load: ") + load->m_nickname,
-		ImVec2(500, 400))
-	, m_session(session)
+		ImVec2(500, 400), session)
 	, m_tstart(GetTime())
 	, m_load(load)
 	, m_state(state)

@@ -104,9 +104,6 @@ protected:
 	void ChannelSettings(int i, float v, float a, float etime);
 	void AsyncLoadState();
 
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
 	//@brief Global power enable (if we have one)
 	bool m_masterEnable;
 

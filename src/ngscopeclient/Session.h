@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -131,7 +131,6 @@ public:
 	bool SerializeSparseWaveform(SparseWaveformBase* wfm, const std::string& path);
 	bool SerializeUniformWaveform(UniformWaveformBase* wfm, const std::string& path);
 
-	void AddMultimeterDialog(std::shared_ptr<SCPIMultimeter> meter);
 	std::shared_ptr<PacketManager> AddPacketFilter(PacketDecoder* filter);
 
 	void AddInstrument(std::shared_ptr<Instrument> inst, bool createDialogs = true);
@@ -143,6 +142,15 @@ public:
 
 	MainWindow* GetMainWindow()
 	{ return m_mainWindow; }
+
+	/**
+		@brief Returns a pointer to the state for a function generator
+	 */
+	std::shared_ptr<OscilloscopeState> GetOscilloscopeState(std::shared_ptr<Oscilloscope> scope)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_oscilloscopes[scope];
+	}
 
 	/**
 		@brief Returns a pointer to the state for a BERT
@@ -169,6 +177,15 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
 		return m_awgs[awg];
+	}
+
+	/**
+		@brief Returns a pointer to the state for a Digital Multimeter
+	 */
+	std::shared_ptr<MultimeterState> GetDmmState(std::shared_ptr<Multimeter> dmm)
+	{
+		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		return m_meters[dmm];
 	}
 
 	/**
@@ -230,7 +247,12 @@ public:
 	const std::vector<std::shared_ptr<Oscilloscope>> GetScopes()
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		return m_oscilloscopes;
+		std::vector<std::shared_ptr<Oscilloscope>> scopes;
+		for(auto it : m_oscilloscopes)
+		{
+			scopes.push_back(it.first);
+		}
+		return scopes;
 	}
 
 	/**
@@ -418,7 +440,7 @@ protected:
 	bool m_modifiedSinceLastSave;
 
 	///@brief Oscilloscopes we are currently connected to
-	std::vector<std::shared_ptr<Oscilloscope>> m_oscilloscopes;
+	std::map<std::shared_ptr<Oscilloscope>, std::shared_ptr<OscilloscopeState> > m_oscilloscopes;
 
 	///@brief Power supplies we are currently connected to
 	std::map<std::shared_ptr<PowerSupply>, std::shared_ptr<PowerSupplyState> > m_psus;

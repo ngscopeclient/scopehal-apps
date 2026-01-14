@@ -55,14 +55,12 @@
 #include "FileBrowser.h"
 #include "FilterGraphWorkspace.h"
 #include "FilterPropertiesDialog.h"
-#include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LoadDialog.h"
 #include "LogViewerDialog.h"
 #include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
 #include "MetricsDialog.h"
-#include "MultimeterDialog.h"
 #include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
@@ -1121,17 +1119,9 @@ void MainWindow::ToolbarButtons()
 void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 {
 	//Handle multi-instance dialogs
-	auto meterDlg = dynamic_pointer_cast<MultimeterDialog>(dlg);
-	if(meterDlg)
-		m_meterDialogs.erase(meterDlg->GetMeter());
-
 	auto psuDlg = dynamic_pointer_cast<PowerSupplyDialog>(dlg);
 	if(psuDlg)
 		m_psuDialogs.erase(psuDlg->GetPSU());
-
-	auto genDlg = dynamic_pointer_cast<FunctionGeneratorDialog>(dlg);
-	if(genDlg)
-		m_generatorDialogs.erase(genDlg->GetGenerator());
 
 	auto rgenDlg = dynamic_pointer_cast<RFGeneratorDialog>(dlg);
 	if(rgenDlg)
@@ -1497,30 +1487,6 @@ void MainWindow::ShowInstrumentProperties(std::shared_ptr<Instrument> instrument
 			return;
 		}
 		AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
-		return;
-	}
-	// Meter
-	auto dmm = dynamic_pointer_cast<SCPIMultimeter>(instrument);
-	if(dmm)
-	{
-		if(m_meterDialogs.find(dmm) != m_meterDialogs.end())
-		{
-			LogTrace("Multimeter properties dialog is already open, no action required\n");
-			return;
-		}
-		m_session.AddMultimeterDialog(dmm);
-		return;
-	}
-	// AWG
-	auto awg = dynamic_pointer_cast<SCPIFunctionGenerator>(instrument);
-	if(awg)
-	{
-		if(m_generatorDialogs.find(awg) != m_generatorDialogs.end())
-		{
-			LogTrace("Generator properties dialog is already open, no action required\n");
-			return;
-		}
-		AddDialog(make_shared<FunctionGeneratorDialog>(awg, m_session.GetFunctionGeneratorState(awg), &m_session));
 		return;
 	}
 	// Bert
@@ -2755,45 +2721,6 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 			dlg->SetFilterExpression(filt);
 			m_protocolAnalyzerDialogs[pd] = dlg;
 			AddDialog(dlg);
-		}
-	}
-
-	auto meters = node["meters"];
-	if(meters)
-	{
-		for(auto it : meters)
-		{
-			auto meter = dynamic_cast<SCPIMultimeter*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
-			if(meter)
-			{
-				auto smeter = dynamic_pointer_cast<SCPIMultimeter>(meter->shared_from_this());
-				m_session.AddMultimeterDialog(smeter);
-			}
-			else
-			{
-				ShowErrorPopup("Invalid meter", "Multimeter dialog references nonexistent instrument");
-				continue;
-			}
-		}
-	}
-
-	auto generators = node["generators"];
-	if(generators)
-	{
-		for(auto it : generators)
-		{
-			auto gen = dynamic_cast<SCPIFunctionGenerator*>(m_session.m_idtable.Lookup<Instrument*>(it.second.as<int>()));
-
-			if(gen)
-			{
-				auto sgen = dynamic_pointer_cast<SCPIFunctionGenerator>(gen->shared_from_this());
-				AddDialog(make_shared<FunctionGeneratorDialog>(sgen, m_session.GetFunctionGeneratorState(sgen), &m_session));
-			}
-			else
-			{
-				ShowErrorPopup("Invalid function generator", "Function generator dialog references nonexistent instrument");
-				continue;
-			}
 		}
 	}
 

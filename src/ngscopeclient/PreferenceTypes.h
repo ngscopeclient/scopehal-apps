@@ -68,4 +68,11 @@ enum HeadlessStartupMode
 	HEADLESS_STARTUP_C1_ONLY
 };
 
+enum NumericValueDisplay
+{
+	NUMERIC_DISPLAY_MONO_FONT,
+	NUMERIC_DISPLAY_7SEGMENT,
+	NUMERIC_DISPLAY_DEFAULT_FONT
+};
+
 #endif

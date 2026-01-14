@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * glscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -45,12 +45,24 @@ public:
 	PowerSupplyState(size_t n = 0)
 	{
 		m_masterEnable = false;
+		m_channelNumber = n;
 
 		m_channelVoltage = std::make_unique<std::atomic<float>[] >(n);
 		m_channelCurrent = std::make_unique<std::atomic<float>[] >(n);
 		m_channelConstantCurrent = std::make_unique<std::atomic<bool>[] >(n);
 		m_channelFuseTripped = std::make_unique<std::atomic<bool>[] >(n);
 		m_channelOn = std::make_unique<std::atomic<bool>[] >(n);
+
+		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
+
+		m_overcurrentShutdownEnabled = std::make_unique<std::atomic<bool>[] >(n);
+		m_softStartEnabled = std::make_unique<std::atomic<bool>[] >(n);
+		m_committedSetVoltage = std::make_unique<float[]>(n);
+		m_setVoltage = std::make_unique<std::string[]>(n);
+		m_committedSetCurrent = std::make_unique<float[]>(n);
+		m_setCurrent = std::make_unique<std::string[]>(n);
+		m_committedSSRamp = std::make_unique<float[]>(n);
+		m_setSSRamp = std::make_unique<std::string[]>(n);
 
 		for(size_t i=0; i<n; i++)
 		{
@@ -59,9 +71,22 @@ public:
 			m_channelConstantCurrent[i] = false;
 			m_channelFuseTripped[i] = false;
 			m_channelOn[i] = false;
+
+			m_needsUpdate[i] = true;
+			m_overcurrentShutdownEnabled[i] = false;
+			m_softStartEnabled[i]=false;
+			m_committedSetVoltage[i] = FLT_MIN;
+			m_committedSetCurrent[i] = FLT_MIN;
+			m_committedSSRamp[i] = FLT_MIN;
 		}
 
 		m_firstUpdateDone = false;
+	}
+
+	void FlushConfigCache()
+	{
+		for(size_t i = 0 ; i < m_channelNumber.load() ; i++)
+			m_needsUpdate[i] = true;
 	}
 
 	std::unique_ptr<std::atomic<float>[]> m_channelVoltage;
@@ -70,9 +95,24 @@ public:
 	std::unique_ptr<std::atomic<bool>[]> m_channelFuseTripped;
 	std::unique_ptr<std::atomic<bool>[]> m_channelOn;
 
+	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
+	//UI state for dialogs etc
+	std::unique_ptr<std::atomic<bool>[]> m_overcurrentShutdownEnabled;
+	std::unique_ptr<std::atomic<bool>[]> m_softStartEnabled;
+
+	std::unique_ptr<float[]> m_committedSetVoltage;
+	std::unique_ptr<std::string[]> m_setVoltage;
+	std::unique_ptr<float[]> m_committedSetCurrent;
+	std::unique_ptr<std::string[]> m_setCurrent;
+	std::unique_ptr<float[]> m_committedSSRamp;
+	std::unique_ptr<std::string[]> m_setSSRamp;
+
+
 	std::atomic<bool> m_firstUpdateDone;
 
 	std::atomic<bool> m_masterEnable;
+
+	std::atomic<size_t> m_channelNumber;
 };
 
 #endif

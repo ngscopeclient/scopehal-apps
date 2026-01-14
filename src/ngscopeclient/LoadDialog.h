@@ -155,9 +155,6 @@ public:
 protected:
 	void ChannelSettings(size_t channel);
 
-	///@brief Session handle so we can remove the load when closed
-	Session* m_session;
-
 	///@brief Timestamp of when we opened the dialog
 	double m_tstart;
 

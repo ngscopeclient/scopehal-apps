@@ -46,14 +46,12 @@
 #include "BERTDialog.h"
 #include "CreateFilterBrowser.h"
 #include "FilterGraphEditor.h"
-#include "FunctionGeneratorDialog.h"
 #include "HistoryDialog.h"
 #include "LoadDialog.h"
 #include "LogViewerDialog.h"
 #include "MeasurementsDialog.h"
 #include "MemoryLeakerDialog.h"
 #include "MetricsDialog.h"
-#include "MultimeterDialog.h"
 #include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
@@ -72,10 +70,6 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 {
 	m_dialogs.emplace(dlg);
 
-	auto mdlg = dynamic_cast<MultimeterDialog*>(dlg.get());
-	if(mdlg != nullptr)
-		m_meterDialogs[mdlg->GetMeter()] = dlg;
-
 	auto pdlg = dynamic_cast<PowerSupplyDialog*>(dlg.get());
 	if(pdlg != nullptr)
 		m_psuDialogs[pdlg->GetPSU()] = dlg;
@@ -83,10 +77,6 @@ void MainWindow::AddDialog(shared_ptr<Dialog> dlg)
 	auto bdlg = dynamic_cast<BERTDialog*>(dlg.get());
 	if(bdlg != nullptr)
 		m_bertDialogs[bdlg->GetBERT()] = dlg;
-
-	auto fdlg = dynamic_cast<FunctionGeneratorDialog*>(dlg.get());
-	if(fdlg != nullptr)
-		m_generatorDialogs[fdlg->GetGenerator()] = dlg;
 
 	auto rdlg = dynamic_cast<RFGeneratorDialog*>(dlg.get());
 	if(rdlg != nullptr)
@@ -535,8 +525,6 @@ void MainWindow::WindowMenu()
 	if(ImGui::BeginMenu("Window"))
 	{
 		WindowAnalyzerMenu();
-		WindowGeneratorMenu();
-		WindowMultimeterMenu();
 		WindowPSUMenu();
 
 		bool hasLabNotes = m_notesDialog != nullptr;
@@ -690,50 +678,6 @@ void MainWindow::WindowAnalyzerMenu()
 }
 
 /**
-	@brief Run the Window | Generator menu
-
-	This menu is used for connecting to a function generator that is part of an oscilloscope or other instrument.
- */
-void MainWindow::WindowGeneratorMenu()
-{
-	//Make a list of generators
-	vector< shared_ptr<SCPIFunctionGenerator> > gens;
-	auto insts = m_session.GetSCPIInstruments();
-	for(auto inst : insts)
-	{
-		//Skip anything that's not a function generator
-		if( (inst->GetInstrumentTypes() & Instrument::INST_FUNCTION) == 0)
-			continue;
-
-		//Do we already have a dialog open for it? If so, don't make another
-		auto generator = dynamic_pointer_cast<SCPIFunctionGenerator>(inst);
-		if(m_generatorDialogs.find(generator) != m_generatorDialogs.end())
-			continue;
-
-		gens.push_back(generator);
-	}
-
-	ImGui::BeginDisabled(gens.empty());
-	if(ImGui::BeginMenu("Generator"))
-	{
-		for(auto generator : gens)
-		{
-			//Add it to the menu
-			if(ImGui::MenuItem(generator->m_nickname.c_str()))
-			{
-				AddDialog(make_shared<FunctionGeneratorDialog>(
-					generator,
-					m_session.GetFunctionGeneratorState(generator),
-					&m_session));
-			}
-		}
-
-		ImGui::EndMenu();
-	}
-	ImGui::EndDisabled();
-}
-
-/**
 	@brief Run the Window | Power Supply menu
 
 	This menu is used for controlling a power supply that is already open in the session but has had the dialog closed.
@@ -765,43 +709,6 @@ void MainWindow::WindowPSUMenu()
 			//Add it to the menu
 			if(ImGui::MenuItem(psu->m_nickname.c_str()))
 				AddDialog(make_shared<PowerSupplyDialog>(psu, m_session.GetPSUState(psu), &m_session));
-		}
-
-		ImGui::EndMenu();
-	}
-	ImGui::EndDisabled();
-}
-
-/**
-	@brief Run the Window | Multimeter menu
- */
-void MainWindow::WindowMultimeterMenu()
-{
-	//This is a bit of a hack but all of the dialogs are gonna get redone eventually so
-	vector< shared_ptr<SCPIMultimeter> > meters;
-	auto insts = m_session.GetScopes();
-	for(auto inst : insts)
-	{
-		//Skip anything that's not a multimeter
-		if( (inst->GetInstrumentTypes() & Instrument::INST_DMM) == 0)
-			continue;
-
-		//Do we already have a dialog open for it? If so, don't make another
-		auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
-		if(m_meterDialogs.find(meter) != m_meterDialogs.end())
-			continue;
-
-		meters.push_back(meter);
-	}
-
-	ImGui::BeginDisabled(meters.empty());
-	if(ImGui::BeginMenu("Multimeter"))
-	{
-		for(auto meter : meters)
-		{
-			//Add it to the menu
-			if(ImGui::MenuItem(meter->m_nickname.c_str()))
-				m_session.AddInstrument(meter);
 		}
 
 		ImGui::EndMenu();

@@ -71,6 +71,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 	auto misc = dynamic_pointer_cast<SCPIMiscInstrument>(inst);
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
 	auto awg = dynamic_pointer_cast<FunctionGenerator>(inst);
+	auto scopestate = args.oscilloscopestate;
 	auto loadstate = args.loadstate;
 	auto meterstate = args.meterstate;
 	auto bertstate = args.bertstate;
@@ -127,6 +128,118 @@ void InstrumentThread(InstrumentThreadArgs args)
 				}
 				triggerUpToDate = false;
 			}
+
+			if(scopestate)
+			{	// Update state
+				//Read status for channels that need it
+				for(size_t i=0; i<scope->GetChannelCount(); i++)
+				{
+					if(scopestate->m_needsUpdate[i])
+					{
+						//Skip non-scope channels
+						auto scopechan = dynamic_cast<OscilloscopeChannel*>(scope->GetChannel(i));
+						if(!scopechan)
+							continue;
+
+						scopestate->m_channelInverted[i] = scope->IsInverted(i);
+
+						bool isDigital = (scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
+						if(isDigital)
+						{
+							Unit unit = scopechan->GetYAxisUnits(0);
+							scopestate->m_channelDigitalTrehshold[i] = scope->GetDigitalThreshold(i);
+							scopestate->m_committedDigitalThreshold[i] = scopestate->m_channelDigitalTrehshold[i];
+							scopestate->m_strDigitalThreshold[i] = unit.PrettyPrint(scopestate->m_channelDigitalTrehshold[i]);
+						}
+						else
+						{
+							scopestate->m_channelAttenuation[i] = scope->GetChannelAttenuation(i);
+							scopestate->m_channelBandwidthLimit[i] = scope->GetChannelBandwidthLimit(i);
+							scopestate->m_committedAttenuation[i] = scopestate->m_channelAttenuation[i];
+							Unit counts(Unit::UNIT_COUNTS);
+							scopestate->m_strAttenuation[i] = counts.PrettyPrint(scopestate->m_committedAttenuation[i]);
+
+							size_t nstreams = scopechan->GetStreamCount();
+							for(size_t j=0; j<nstreams; j++)
+							{
+								float offset = scopechan->GetOffset(j);
+								float range = scopechan->GetVoltageRange(j);
+								Unit unit = scopechan->GetYAxisUnits(j);
+								scopestate->m_channelOffset[i][j] = scopechan->GetOffset(j);
+								scopestate->m_channelRange[i][j] = scopechan->GetVoltageRange(j);
+								scopestate->m_committedOffset[i][j] = offset;
+								scopestate->m_committedRange[i][j] = range;
+								scopestate->m_strOffset[i][j] = unit.PrettyPrint(offset);
+								scopestate->m_strRange[i][j] = unit.PrettyPrint(range);
+							}
+							// Get probe name
+							scopestate->m_probeName[i] = scope->GetProbeName(i);
+							// Populate bandwidth limit values
+							auto limit = scope->GetChannelBandwidthLimit(i);
+							scopestate->m_bandwidthLimits[i].clear();
+							scopestate->m_bandwidthLimitNames[i].clear();
+							scopestate->m_bandwidthLimits[i] = scope->GetChannelBandwidthLimiters(i);
+							Unit hz(Unit::UNIT_HZ);
+							for(size_t j=0; j<scopestate->m_bandwidthLimits[i].size(); j++)
+							{
+								auto b = scopestate->m_bandwidthLimits[i][j];
+								if(b == 0)
+									scopestate->m_bandwidthLimitNames[i].push_back("Full");
+								else
+									scopestate->m_bandwidthLimitNames[i].push_back(hz.PrettyPrint(b*1e6));
+
+								if(b == limit)
+									scopestate->m_channelBandwidthLimit[i] = j;
+							}
+
+
+							// Populate coupling values
+							auto coupling = scope->GetChannelCoupling(i);
+							scopestate->m_couplings[i].clear();
+							scopestate->m_couplingNames[i].clear();
+							scopestate->m_couplings[i] = scope->GetAvailableCouplings(i);
+							for(size_t j=0; j<scopestate->m_couplings[i].size(); j++)
+							{
+								auto c = scopestate->m_couplings[i][j];
+
+								switch(c)
+								{
+									case OscilloscopeChannel::COUPLE_DC_50:
+										scopestate->m_couplingNames[i].push_back("DC 50Ω");
+										break;
+
+									case OscilloscopeChannel::COUPLE_AC_50:
+										scopestate->m_couplingNames[i].push_back("AC 50Ω");
+										break;
+
+									case OscilloscopeChannel::COUPLE_DC_1M:
+										scopestate->m_couplingNames[i].push_back("DC 1MΩ");
+										break;
+
+									case OscilloscopeChannel::COUPLE_AC_1M:
+										scopestate->m_couplingNames[i].push_back("AC 1MΩ");
+										break;
+
+									case OscilloscopeChannel::COUPLE_GND:
+										scopestate->m_couplingNames[i].push_back("Ground");
+										break;
+
+									default:
+										scopestate->m_couplingNames[i].push_back("Invalid");
+										break;
+								}
+								if(c == coupling)
+									scopestate->m_channelCoupling[i] = j;
+							}
+						}
+
+						session->MarkChannelDirty(scopechan);
+
+						scopestate->m_needsUpdate[i] = false;
+					}
+
+				}
+			}
 		}
 
 		//Always acquire data from non-scope instruments
@@ -149,6 +262,24 @@ void InstrumentThread(InstrumentThreadArgs args)
 				psustate->m_channelConstantCurrent[i] = psu->IsPowerConstantCurrent(i);
 				psustate->m_channelFuseTripped[i] = psu->GetPowerOvercurrentShutdownTripped(i);
 				psustate->m_channelOn[i] = psu->GetPowerChannelActive(i);
+
+				if(psustate->m_needsUpdate[i])
+				{
+					psustate->m_overcurrentShutdownEnabled[i] = psu->GetPowerOvercurrentShutdownEnabled(i);
+					psustate->m_softStartEnabled[i] = psu->IsSoftStartEnabled(i);
+					psustate->m_committedSetVoltage[i] = psu->GetPowerVoltageNominal(i);
+					psustate->m_committedSetCurrent[i] = psu->GetPowerCurrentNominal(i);
+					psustate->m_committedSSRamp[i] = psu->GetSoftStartRampTime(i);
+					Unit volts(Unit::UNIT_VOLTS);
+					Unit amps(Unit::UNIT_AMPS);
+					Unit fs(Unit::UNIT_FS);
+					psustate->m_setVoltage[i] = volts.PrettyPrint(psustate->m_committedSetVoltage[i]);
+					psustate->m_setCurrent[i] = amps.PrettyPrint(psustate->m_committedSetCurrent[i]);
+					psustate->m_setSSRamp[i] = fs.PrettyPrint(psustate->m_committedSSRamp[i]);
+
+					psustate->m_needsUpdate[i] = false;
+					
+				}
 
 				session->MarkChannelDirty(pchan);
 			}
@@ -179,6 +310,13 @@ void InstrumentThread(InstrumentThreadArgs args)
 				meterstate->m_primaryMeasurement = chan->GetPrimaryValue();
 				meterstate->m_secondaryMeasurement = chan->GetSecondaryValue();
 				meterstate->m_firstUpdateDone = true;
+
+				if(meterstate->m_needsUpdate.load())
+				{	// We need to update dmm state
+					meterstate->m_selectedChannel = meter->GetCurrentMeterChannel();
+					meterstate->m_autoRange = meter->GetMeterAutoRange();
+					meterstate->m_needsUpdate = false;
+				}
 
 				session->MarkChannelDirty(chan);
 			}
@@ -234,8 +372,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 			{
 				if(awgstate->m_needsUpdate[i])
 				{
-					Unit volts(Unit::UNIT_VOLTS);
-
 					//Skip non-awg channels
 					auto awgchan = dynamic_cast<FunctionGeneratorChannel*>(awg->GetChannel(i));
 					if(!awgchan)
@@ -244,6 +380,9 @@ void InstrumentThread(InstrumentThreadArgs args)
 					awgstate->m_channelAmplitude[i] = awg->GetFunctionChannelAmplitude(i);
 					awgstate->m_channelOffset[i] = awg->GetFunctionChannelOffset(i);
 					awgstate->m_channelFrequency[i] = awg->GetFunctionChannelFrequency(i);
+					awgstate->m_channelDutyCycle[i] = awg->GetFunctionChannelDutyCycle(i);
+					awgstate->m_channelRiseTime[i] = awg->GetFunctionChannelRiseTime(i);
+					awgstate->m_channelFallTime[i] = awg->GetFunctionChannelFallTime(i);
 					awgstate->m_channelShape[i] = awg->GetFunctionChannelShape(i);
 					awgstate->m_channelOutputImpedance[i] = awg->GetFunctionChannelOutputImpedance(i);
 					session->MarkChannelDirty(awgchan);

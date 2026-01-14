@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -166,6 +166,23 @@ void PreferenceManager::InitializeDefaults()
 
 		auto& stream = appearance.AddCategory("Stream Browser");
 			stream.AddPreference(
+				Preference::Enum("numeric_value_display", NUMERIC_DISPLAY_MONO_FONT)
+					.Label("Numeric value display")
+					.Description(
+						"Select the way numeric values are displayed for DMM and PSU nodes.\n"
+						"- Console font: use Console font (monospace) defined in General preferences.\n"
+						"- 7 segment: use 7 segment style display.\n"
+						"- Default font: use Default font (proportional) defined in General preferences.\n"
+						)
+					.EnumValue("Console font", NUMERIC_DISPLAY_MONO_FONT)
+					.EnumValue("7 segment", NUMERIC_DISPLAY_7SEGMENT)
+					.EnumValue("Default font", NUMERIC_DISPLAY_DEFAULT_FONT)
+				);
+			stream.AddPreference(
+				Preference::Bool("show_block_border", true)
+				.Label("Show block border")
+				.Description("Add a visual border around stream browser blocks (e.g. channel properties)"));
+			stream.AddPreference(
 				Preference::Real("instrument_badge_latch_duration", 0.4)
 				.Label("Intrument badge latch duration (seconds)")
 				.Description("Duration during which instrument badges are preserved (to prevent flashing)."));
@@ -242,6 +259,10 @@ void PreferenceManager::InitializeDefaults()
 				.Label("PSU measured label color")
 				.Description("Color for PSU 'meas.' label"));
 			stream.AddPreference(
+				Preference::Color("psu_7_segment_color", ColorFromString("#B2FFFF"))
+				.Label("PSU 7 segment display color")
+				.Description("Color for PSU 7 segment style display"));
+			stream.AddPreference(
 				Preference::Color("awg_hiz_badge_color", ColorFromString("#666600"))
 				.Label("Function Generator HI-Z badge color")
 				.Description("Color for Function Generator 'HI-Z' badge"));
@@ -270,7 +291,11 @@ void PreferenceManager::InitializeDefaults()
 			general.AddPreference(
 				Preference::Font("console_font", FontDescription(FindDataFile("fonts/DejaVuSansMono.ttf"), 13))
 				.Label("Console font")
-				.Description("Font used for SCPI console and log viewer"));
+				.Description("Font used for SCPI console, log viewer and PSU/DMM numeric values in Stream Browser"));
+			general.AddPreference(
+				Preference::Color("apply_button_color", ColorFromString("#4CCC4C"))
+				.Label("Apply button color")
+				.Description("Color for the apply value button"));
 
 		auto& graphs = appearance.AddCategory("Graphs");
 			graphs.AddPreference(

@@ -124,9 +124,6 @@ protected:
 
 	void DoChannel(size_t i);
 
-	///@brief Session handle so we can remove the PSU when closed
-	Session* m_session;
-
 	///@brief The generator we're controlling
 	std::shared_ptr<SCPIRFSignalGenerator> m_generator;
 

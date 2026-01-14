@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -49,8 +49,7 @@ PowerSupplyDialog::PowerSupplyDialog(
 	: Dialog(
 		string("Power Supply: ") + psu->m_nickname,
 		string("Power Supply: ") + psu->m_nickname,
-		ImVec2(500, 400))
-	, m_session(session)
+		ImVec2(500, 400), session)
 	, m_masterEnable(psu->GetMasterPowerEnable())
 	, m_tstart(GetTime())
 	, m_psu(psu)
@@ -202,7 +201,11 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 		if(m_psu->SupportsIndividualOutputSwitching())
 		{
 			if(ImGui::Checkbox("Output Enable", &m_channelUIState[i].m_outputEnabled))
+			{
 				m_psu->SetPowerChannelActive(i, m_channelUIState[i].m_outputEnabled);
+				// Tell intrument thread that the PSU state has to be updated
+				m_state->m_needsUpdate[i] = true;
+			}
 			if(shdn)
 			{
 				//TODO: preference for configuring this?
@@ -230,7 +233,11 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 				if(ocp)
 				{
 					if(ImGui::Checkbox("Overcurrent Shutdown", &m_channelUIState[i].m_overcurrentShutdownEnabled))
+					{
 						m_psu->SetPowerOvercurrentShutdownEnabled(i, m_channelUIState[i].m_overcurrentShutdownEnabled);
+						// Tell intrument thread that the PSU state has to be updated
+						m_state->m_needsUpdate[i] = true;
+					}
 					HelpMarker(
 						"When enabled, the channel will shut down on overcurrent rather than switching to constant current mode.\n"
 						"\n"
@@ -241,7 +248,11 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 				if(ss)
 				{
 					if(ImGui::Checkbox("Soft Start", &m_channelUIState[i].m_softStartEnabled))
+					{
 						m_psu->SetSoftStartEnabled(i, m_channelUIState[i].m_softStartEnabled);
+						// Tell intrument thread that the PSU state has to be updated
+						m_state->m_needsUpdate[i] = true;
+					}
 
 					HelpMarker(
 						"Deliberately limit the rise time of the output in order to reduce inrush current when driving "
@@ -252,6 +263,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 						"Ramp time", m_channelUIState[i].m_setSSRamp, m_channelUIState[i].m_committedSSRamp, fs))
 					{
 						m_psu->SetSoftStartRampTime(i, m_channelUIState[i].m_committedSSRamp);
+						// Tell intrument thread that the PSU state has to be updated
+						m_state->m_needsUpdate[i] = true;
 					}
 					HelpMarker(
 						"Transition time between off and on state when using soft start\n\n"
@@ -276,6 +289,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 					"Voltage", m_channelUIState[i].m_setVoltage, m_channelUIState[i].m_committedSetVoltage, volts))
 				{
 					m_psu->SetPowerVoltage(i, m_channelUIState[i].m_committedSetVoltage);
+					// Tell intrument thread that the PSU state has to be updated
+					m_state->m_needsUpdate[i] = true;
 				}
 				HelpMarker("Target voltage to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 
@@ -284,6 +299,8 @@ void PowerSupplyDialog::ChannelSettings(int i, float v, float a, float etime)
 					"Current", m_channelUIState[i].m_setCurrent, m_channelUIState[i].m_committedSetCurrent, amps))
 				{
 					m_psu->SetPowerCurrent(i, m_channelUIState[i].m_committedSetCurrent);
+					// Tell intrument thread that the PSU state has to be updated
+					m_state->m_needsUpdate[i] = true;
 				}
 				HelpMarker("Maximum current to be supplied to the load.\n\nChanges are not pushed to hardware until you click Apply.");
 

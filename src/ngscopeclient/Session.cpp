@@ -38,9 +38,7 @@
 #include "../scopeprotocols/ExportFilter.h"
 #include "MainWindow.h"
 #include "BERTDialog.h"
-#include "FunctionGeneratorDialog.h"
 #include "LoadDialog.h"
-#include "MultimeterDialog.h"
 #include "PowerSupplyDialog.h"
 #include "RFGeneratorDialog.h"
 #include "PreferenceTypes.h"
@@ -166,6 +164,24 @@ void Session::FlushConfigCache()
 	lock_guard<mutex> lock(m_scopeMutex);
 	for(auto it : m_instrumentStates)
 		it.first->FlushConfigCache();
+
+	// Also flush session states
+	for(auto it : m_psus)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_meters)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_oscilloscopes)
+	{
+		it.second->FlushConfigCache();
+	}
+	for(auto it : m_awgs)
+	{
+		it.second->FlushConfigCache();
+	}
 }
 
 /**
@@ -220,8 +236,13 @@ void Session::Clear()
 	//Delete scopes once we've terminated the threads
 	//Detach waveforms before we destroy the scope, since history owns them
 	//(but make sure they're actually *in* history first!)
-	m_history.AddHistory(m_oscilloscopes);
-	for(auto scope : m_oscilloscopes)
+	std::vector<std::shared_ptr<Oscilloscope>> scopes;
+	for(auto it : m_oscilloscopes)
+	{
+		scopes.push_back(it.first);
+	}
+	m_history.AddHistory(scopes);
+	for(auto scope : scopes)
 	{
 		for(size_t i=0; i<scope->GetChannelCount(); i++)
 		{
@@ -418,9 +439,9 @@ bool Session::LoadWaveformData(int version, const string& dataDir)
 	}
 
 	//Load data for each scope
-	for(size_t i=0; i<m_oscilloscopes.size(); i++)
+	for(auto it : m_oscilloscopes)
 	{
-		auto scope = m_oscilloscopes[i];
+		auto scope = it.first;
 		int id = m_idtable[(Instrument*)scope.get()];
 
 		char tmp[512] = {0};
@@ -470,8 +491,9 @@ bool Session::ConvertLegacyUniformWaveforms()
 {
 	bool converted = false;
 
-	for(auto scope : m_oscilloscopes)
+	for(auto it : m_oscilloscopes)
 	{
+		auto scope = it.first;
 		for(size_t i=0; i < scope->GetChannelCount(); i++)
 		{
 			auto oc = scope->GetOscilloscopeChannel(i);
@@ -2406,9 +2428,9 @@ bool Session::SerializeWaveforms(const string& dataDir)
 	}
 
 	//Write metadata files (by this point, data directories should have been created)
-	for(size_t i=0; i<m_oscilloscopes.size(); i++)
+	for(auto it : m_oscilloscopes)
 	{
-		auto scope = m_oscilloscopes[i];
+		auto scope = it.first;
 		string fname = dataDir + "/scope_" + to_string(m_idtable[(Instrument*)scope.get()]) + "_metadata.yml";
 
 		ofstream outfs(fname);
@@ -2979,6 +3001,11 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		auto state = make_shared<MultimeterState>();
 		m_meters[meter] = state;
 		args.meterstate = state;
+		if(!(scope && (types & Instrument::INST_OSCILLOSCOPE)))
+		{	// This is a standalone multimeter (not in an Oscilloscope) => start it by default
+			meter->StartMeter();
+			m_meters[meter]->m_started = true;
+		}
 	}
 	if(load && (types & Instrument::INST_LOAD) )
 	{
@@ -2994,7 +3021,9 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	}
 	if(scope && (types & Instrument::INST_OSCILLOSCOPE))
 	{
-		m_oscilloscopes.push_back(scope);
+		auto state = make_shared<OscilloscopeState>(scope);
+		m_oscilloscopes[scope] = state;
+		args.oscilloscopestate = state;
 		if(m_oscilloscopes.size() > 1)
 			m_multiScope = true;
 	}
@@ -3015,15 +3044,6 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 	{
 		if(psu && (types & Instrument::INST_PSU) )
 			m_mainWindow->AddDialog(make_shared<PowerSupplyDialog>(psu, args.psustate, this));
-		if(meter && (types & Instrument::INST_DMM) )
-			m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, args.meterstate, this));
-		if(generator && (types & Instrument::INST_FUNCTION) )
-		{
-			//If it's also a scope, don't show the generator dialog by default
-			//TODO: only if generator is currently producing a signal or something?
-			if(!scope)
-				m_mainWindow->AddDialog(make_shared<FunctionGeneratorDialog>(generator, args.awgstate, this));
-		}
 		if(load && (types & Instrument::INST_LOAD) )
 			m_mainWindow->AddDialog(make_shared<LoadDialog>(load, args.loadstate, this));
 		if(bert && (types & Instrument::INST_BERT) )
@@ -3052,13 +3072,22 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 
 	//Remove instrument-specific state
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(inst);
+	auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
 	auto meter = dynamic_pointer_cast<SCPIMultimeter>(inst);
 	auto load = dynamic_pointer_cast<SCPILoad>(inst);
 	auto bert = dynamic_pointer_cast<SCPIBERT>(inst);
 	if(psu)
 		m_psus.erase(psu);
+	if(scope)
+		m_oscilloscopes.erase(scope);
 	if(meter)
+	{
+		auto state = m_meters[meter];
+		// Stop meter if needed
+		if(state && state->m_started)
+			meter->StopMeter();
 		m_meters.erase(meter);
+	}
 	if(load)
 		m_loads.erase(load);
 	if(bert)
@@ -3068,16 +3097,6 @@ void Session::RemoveInstrument(shared_ptr<Instrument> inst)
 
 	//Clear worker threads etc
 	m_instrumentStates.erase(inst);
-}
-
-/**
-	@brief Adds a multimeter dialog to the session
-
-	Low level helper, intended to be only used by file loading
- */
-void Session::AddMultimeterDialog(shared_ptr<SCPIMultimeter> meter)
-{
-	m_mainWindow->AddDialog(make_shared<MultimeterDialog>(meter, m_meters[meter], this));
 }
 
 /**
@@ -3096,9 +3115,9 @@ set<shared_ptr<SCPIInstrument>> Session::GetSCPIInstruments()
 		if(s != nullptr)
 			insts.emplace(s);
 	}
-	for(auto& scope : m_oscilloscopes)
+	for(auto& it : m_oscilloscopes)
 	{
-		auto s = dynamic_pointer_cast<SCPIInstrument>(scope);
+		auto s = dynamic_pointer_cast<SCPIInstrument>(it.first);
 		if(s != nullptr)
 			insts.emplace(s);
 	}
@@ -3140,8 +3159,8 @@ set<shared_ptr<Instrument>> Session::GetInstruments()
 	lock_guard<mutex> lock(m_scopeMutex);
 
 	set<shared_ptr<Instrument>> insts;
-	for(auto& scope : m_oscilloscopes)
-		insts.emplace(scope);
+	for(auto& it : m_oscilloscopes)
+		insts.emplace(it.first);
 	for(auto& it : m_psus)
 		insts.emplace(it.first);
 	for(auto& it : m_berts)
@@ -3231,9 +3250,9 @@ void Session::StopTrigger(bool all)
  */
 bool Session::HasOnlineScopes()
 {
-	for(auto scope : m_oscilloscopes)
+	for(auto it : m_oscilloscopes)
 	{
-		if(!scope->IsOffline())
+		if(!it.first->IsOffline())
 			return true;
 	}
 	return false;
@@ -3648,9 +3667,9 @@ bool Session::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType typ
 	if(!moreFreed)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
-		for(auto scope : m_oscilloscopes)
+		for(auto it : m_oscilloscopes)
 		{
-			if(scope->FreeWaveformPools())
+			if(it.first->FreeWaveformPools())
 				moreFreed = true;
 		}
 	}

@@ -51,6 +51,7 @@ DigitalOutputChannelDialog::DigitalOutputChannelDialog(DigitalOutputChannel* cha
 	, m_drive("")
 	, m_committedDrive(0)
 {
+	m_session = &parent->GetSession();
 	m_committedDisplayName = m_channel->GetDisplayName();
 	m_displayName = m_committedDisplayName;
 

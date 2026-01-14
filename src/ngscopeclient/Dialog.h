@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -37,13 +37,15 @@
 
 #include "imgui_stdlib.h"
 
+class MainWindow;
+
 /**
 	@brief Generic dialog box or other popup window
  */
 class Dialog
 {
 public:
-	Dialog(const std::string& title, const std::string& id, ImVec2 defaultSize = ImVec2(300, 100) );
+	Dialog(const std::string& title, const std::string& id, ImVec2 defaultSize = ImVec2(300, 100),Session* session = nullptr, MainWindow* parent = nullptr);
 	virtual ~Dialog();
 
 	virtual bool Render();
@@ -79,14 +81,19 @@ public:
 		std::string& committedValue);
 
 protected:
-	bool FloatInputWithApplyButton(const std::string& label, float& currentValue, float& committedValue);
-	bool TextInputWithApplyButton(const std::string& label, std::string& currentValue, std::string& committedValue);
 	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
 	bool UnitInputWithExplicitApply(
 		const std::string& label,
 		std::string& currentValue,
 		float& committedValue,
 		Unit unit);
+	void renderNumericValue(const std::string& value, bool &clicked, bool &hovered, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false, float digitHeight = 0, bool clickable = true);
+	void renderReadOnlyProperty(float width, const std::string& label, const std::string& value, const char* tooltip = nullptr);
+	template<typename T>
+	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false, bool explicitApply = false);
+	template<typename T>
+	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false);
+
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);
 	static void HelpMarker(const std::string& str);
@@ -96,6 +103,10 @@ protected:
 	void RenderErrorPopup();
 	void ShowErrorPopup(const std::string& title, const std::string& msg);
 
+	void Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 size, ImVec2 position, float thikness, ImU32 colorOn, ImU32 colorOff);
+	void Render7SegmentValue(const std::string& value, ImVec4 color, float digitHeight);
+	void Render7SegmentValue(const std::string& value, ImVec4 color, float digitHeight, bool &clicked, bool &hovered, bool clickable = true);
+
 	bool m_open;
 	std::string m_id;
 	std::string m_title;
@@ -103,6 +114,17 @@ protected:
 
 	std::string m_errorPopupTitle;
 	std::string m_errorPopupMessage;
+
+	///@brief optional reference to session
+	Session* m_session;
+	///@brief optional reference to parent MainWindow
+	MainWindow* m_parent;
+
+
+	///@brief Id of the item currently beeing edited
+	ImGuiID m_editedItemId = 0;
+	///@brief Id of the last edited item
+	ImGuiID m_lastEditedItemId = 0;
 };
 
 #endif
