@@ -40,3 +40,4 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 * Core: Updated to vkFFT v1.3.4 (https://github.com/ngscopeclient/scopehal-apps/issues/866)
 * GUI: General UI overhaul of stream browser to make things more intuitive and reduce the number of clicks needed to perform common tasks
 * GUI: Adjusted tooltip layout code to prevent mouse cursor from blocking the first character of a tooltip
+* Filters: FFT and waterfall now use uHz rather than Hz as internal frequency unit for improved resolution at the cost of not being able to represent frequencies in excess of 9.22 THz
