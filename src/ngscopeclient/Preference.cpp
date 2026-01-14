@@ -212,6 +212,11 @@ bool Preference::HasUnit()
 	return this->m_unit.GetType() != Unit::UNIT_COUNTS;
 }
 
+void Preference::ResetToDefault()
+{
+	m_value = std::move(m_defaultValue);
+}
+
 Unit& Preference::GetUnit()
 {
 	return this->m_unit;
@@ -302,6 +307,8 @@ void Preference::MoveFrom(Preference& other)
 				break;
 		}
 	}
+	// Copy default value
+	m_defaultValue = std::move(other.m_defaultValue);
 
 	other.m_type = PreferenceType::None;
 }
@@ -393,6 +400,7 @@ impl::PreferenceBuilder Preference::Int(std::string identifier, int64_t defaultV
 {
 	Preference pref(PreferenceType::Int, std::move(identifier));
 	pref.Construct<int64_t>(defaultValue);
+	new (&pref.m_defaultValue) int64_t(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -401,6 +409,7 @@ impl::PreferenceBuilder Preference::Real(std::string identifier, double defaultV
 {
 	Preference pref(PreferenceType::Real, std::move(identifier));
 	pref.Construct<double>(defaultValue);
+	new (&pref.m_defaultValue) double(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -409,6 +418,7 @@ impl::PreferenceBuilder Preference::Bool(std::string identifier, bool defaultVal
 {
 	Preference pref(PreferenceType::Boolean, std::move(identifier));
 	pref.Construct<bool>(defaultValue);
+	new (&pref.m_defaultValue) bool(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -417,6 +427,7 @@ impl::PreferenceBuilder Preference::String(std::string identifier, std::string d
 {
 	Preference pref(PreferenceType::String, std::move(identifier));
 	pref.Construct<std::string>(defaultValue);
+	new (&pref.m_defaultValue) std::string(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -429,6 +440,11 @@ impl::PreferenceBuilder Preference::Color(std::string identifier, const ImU32& d
 			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
 			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff)));
+	new (&pref.m_defaultValue) impl::Color(
+			static_cast<uint8_t>((defaultValue >> IM_COL32_R_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_G_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_B_SHIFT) & 0xff),
+			static_cast<uint8_t>((defaultValue >> IM_COL32_A_SHIFT) & 0xff));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -437,6 +453,7 @@ impl::PreferenceBuilder Preference::EnumRaw(std::string identifier, std::int64_t
 {
 	Preference pref(PreferenceType::Enum, std::move(identifier));
 	pref.Construct<std::int64_t>(defaultValue);
+	new (&pref.m_defaultValue) std::int64_t(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }
@@ -445,6 +462,7 @@ impl::PreferenceBuilder Preference::Font(std::string identifier, FontDescription
 {
 	Preference pref(PreferenceType::Font, std::move(identifier));
 	pref.Construct<FontDescription>(defaultValue);
+	new (&pref.m_defaultValue) FontDescription(std::move(defaultValue));
 
 	return impl::PreferenceBuilder{ std::move(pref) };
 }

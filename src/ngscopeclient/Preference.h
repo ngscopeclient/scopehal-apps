@@ -146,6 +146,7 @@ private:
 	std::string m_description;
 	PreferenceType m_type;
 	PreferenceValue m_value;
+	PreferenceValue m_defaultValue;
 	bool m_isVisible{true};
 	Unit m_unit{Unit::UNIT_COUNTS};
 	bool m_hasValue{false};
@@ -204,6 +205,7 @@ public:
 	void SetLabel(std::string label);
 	void SetDescription(std::string description);
 	bool HasUnit();
+	void ResetToDefault();
 	Unit& GetUnit();
 	const EnumMapping& GetMapping() const;
 

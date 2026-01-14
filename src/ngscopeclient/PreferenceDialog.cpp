@@ -110,6 +110,55 @@ void PreferenceDialog::FindFontFiles(const string& path)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
+bool PreferenceDialog::DefaultButton(const std::string& label, const std::string& id, bool centered)
+{
+	float buttonWidth = ImGui::CalcTextSize(label.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+	float availWidth = ImGui::GetContentRegionAvail().x;
+	float cursorX = ImGui::GetCursorPosX();
+	float xPos = centered ? (cursorX + (availWidth - buttonWidth)/2.0f) : (cursorX + availWidth - buttonWidth);
+	ImGui::SetCursorPosX(xPos);
+	ImGui::PushID(id.c_str());
+	bool result = ImGui::Button(label.c_str());
+	ImGui::PopID();
+	ImGui::SameLine(cursorX);
+	return result;
+}
+
+void PreferenceDialog::OpenConfirmDialog(const std::string& title, const std::string& message, const std::string& identifier)
+{
+	ImGui::OpenPopup((title + "###" + identifier).c_str());
+	m_confirmDialogTitle = title;
+	m_confirmDialogMessage = message;
+}
+
+bool PreferenceDialog::RenderConfirmDialog(const std::string& identifier)
+{
+   bool confirmed = false;
+    if (ImGui::BeginPopupModal((m_confirmDialogTitle + "###" + identifier).c_str(), nullptr,ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TextWrapped("%s", m_confirmDialogMessage.c_str());
+        ImGui::Separator();
+		float buttonWidth = ImGui::GetFontSize()*6;
+        // OK button
+        if (ImGui::Button("OK", ImVec2(buttonWidth, 0)))
+        {
+            confirmed = true;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        // Cancel button
+        if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        // Default focus on cancel buttun
+        ImGui::SetItemDefaultFocus();
+        ImGui::EndPopup();
+    }
+    return confirmed;
+}
+
+
 /**
 	@brief Renders the dialog and handles UI events
 
@@ -132,6 +181,14 @@ bool PreferenceDialog::DoRender()
 			if(subCategory.IsVisible())
 			{
 				ImGui::PushID(identifier.c_str());
+				if(DefaultButton("Default section",identifier))
+				{
+					OpenConfirmDialog("Reset to default","Reset all settings in this section to default?",identifier);
+				}
+				if(RenderConfirmDialog(identifier))
+				{
+					ResetCategoryToDefault(subCategory);
+				}
 				if(ImGui::CollapsingHeader(identifier.c_str()))
 					ProcessCategory(subCategory);
 				ImGui::PopID();
@@ -139,6 +196,24 @@ bool PreferenceDialog::DoRender()
 		}
 	}
 
+	ImGui::NewLine();
+	if(DefaultButton("Default all Preferences","###resetAll",true))
+	{
+		OpenConfirmDialog("Reset to default","Reset all settings to default?","resetAll");
+	}
+	if(RenderConfirmDialog("resetAll"))
+	{
+		for(const auto& identifier: root.GetOrdering())
+		{
+			auto& node = children[identifier];
+
+			if(node->IsCategory())
+			{
+				auto& subCategory = node->AsCategory();
+				ResetCategoryToDefault(subCategory);
+			}
+		}
+	}
 	return true;
 }
 
@@ -159,6 +234,14 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
 
 			if(subCategory.IsVisible())
 			{
+				if(DefaultButton("Default category",identifier))
+				{
+					OpenConfirmDialog("Reset to default","Reset all settings in this category to default?",identifier);
+				}
+				if(RenderConfirmDialog(identifier))
+				{
+					ResetCategoryToDefault(subCategory);
+				}
 				if(ImGui::TreeNode(identifier.c_str()))
 				{
 					ImGui::PushID(identifier.c_str());
@@ -172,6 +255,34 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
 		//Add preference widgets
 		if(node->IsPreference())
 			ProcessPreference(node->AsPreference());
+	}
+}
+
+/**
+	@brief Reset all preferences in this category to default
+ */
+void PreferenceDialog::ResetCategoryToDefault(PreferenceCategory& cat)
+{
+	auto& children = cat.GetChildren();
+	for(const auto& identifier: cat.GetOrdering())
+	{
+		auto& node = children[identifier];
+
+		//Add child categories
+		if(node->IsCategory())
+		{
+			auto& subCategory = node->AsCategory();
+			ResetCategoryToDefault(subCategory);
+		}
+
+		//Add preference widgets
+		if(node->IsPreference())
+		{
+			auto& pref = node->AsPreference();
+			pref.ResetToDefault();
+			// Clear cache
+			m_preferenceTemporaries.erase(pref.GetIdentifier());
+		}
 	}
 }
 
@@ -328,4 +439,12 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 	}
 
 	HelpMarker(pref.GetDescription());
+	label = "Default###" + pref.GetIdentifier() + "default";
+	ImGui::SameLine();
+	if(ImGui::Button(label.c_str()))
+	{
+		pref.ResetToDefault();
+		// Clear cache
+		m_preferenceTemporaries.erase(pref.GetIdentifier());
+	}
 }
