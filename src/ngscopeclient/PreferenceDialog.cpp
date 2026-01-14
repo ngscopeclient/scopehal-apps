@@ -181,7 +181,7 @@ bool PreferenceDialog::DoRender()
 			if(subCategory.IsVisible())
 			{
 				ImGui::PushID(identifier.c_str());
-				if(DefaultButton("Default section",identifier))
+				if(DefaultButton("Reset section",identifier))
 				{
 					OpenConfirmDialog("Reset to default","Reset all settings in this section to default?",identifier);
 				}
@@ -197,7 +197,7 @@ bool PreferenceDialog::DoRender()
 	}
 
 	ImGui::NewLine();
-	if(DefaultButton("Default all Preferences","###resetAll",true))
+	if(DefaultButton("Reset all Preferences","###resetAll",true))
 	{
 		OpenConfirmDialog("Reset to default","Reset all settings to default?","resetAll");
 	}
@@ -234,7 +234,7 @@ void PreferenceDialog::ProcessCategory(PreferenceCategory& cat)
 
 			if(subCategory.IsVisible())
 			{
-				if(DefaultButton("Default category",identifier))
+				if(DefaultButton("Reset category",identifier))
 				{
 					OpenConfirmDialog("Reset to default","Reset all settings in this category to default?",identifier);
 				}
@@ -439,12 +439,12 @@ void PreferenceDialog::ProcessPreference(Preference& pref)
 	}
 
 	HelpMarker(pref.GetDescription());
-	label = "Default###" + pref.GetIdentifier() + "default";
 	ImGui::SameLine();
-	if(ImGui::Button(label.c_str()))
+	if(DefaultButton("Reset", pref.GetIdentifier() + "default", false))
 	{
 		pref.ResetToDefault();
 		// Clear cache
 		m_preferenceTemporaries.erase(pref.GetIdentifier());
 	}
+	ImGui::NewLine();
 }
