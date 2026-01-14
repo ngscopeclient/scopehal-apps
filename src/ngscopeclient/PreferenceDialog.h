@@ -52,12 +52,19 @@ public:
 protected:
 	void ProcessCategory(PreferenceCategory& cat);
 	void ProcessPreference(Preference& pref);
+	bool DefaultButton(const std::string& label, const std::string& id, bool centered = false);
+	void ResetCategoryToDefault(PreferenceCategory& cat);
+	void OpenConfirmDialog(const std::string& title, const std::string& message, const std::string& identifier);
+	bool RenderConfirmDialog(const std::string& identifier);
 
 	PreferenceManager& m_prefs;
 
 	std::vector<std::string> m_fontPaths;
 	std::vector<std::string> m_fontShortNames;
 	std::map<std::string, size_t> m_fontReverseMap;
+
+	std::string m_confirmDialogTitle;
+	std::string m_confirmDialogMessage;
 
 	void FindFontFiles(const std::string& path);
 
