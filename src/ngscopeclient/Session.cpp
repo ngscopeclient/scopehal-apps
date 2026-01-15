@@ -2899,8 +2899,9 @@ void Session::StartWaveformThreadIfNeeded()
 
 /**
 	@brief Creates a new instrument and adds it to the session
+	@return Returns false if creation failed
  */
-void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transport, const string& nickname)
+bool Session::CreateAndAddInstrument(const string& driver, SCPITransport* transport, const string& nickname)
 {
 	shared_ptr<Instrument> inst = nullptr;
 
@@ -2953,7 +2954,7 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 			"Driver error",
 			"Failed to create instrument driver instance of type \"" + driver + "\"");
 		delete transport;
-		return;
+		return false;
 	}
 
 	//Apply preference settings, if any, here
@@ -2963,6 +2964,7 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 
 	inst->m_nickname = nickname;
 	AddInstrument(inst);
+	return true;
 }
 
 /**

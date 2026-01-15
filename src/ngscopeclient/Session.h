@@ -621,7 +621,7 @@ public:
 	const std::vector<std::string>& GetDriverNamesForType(const std::string& type)
 	{ return m_driverNamesByType[type]; }
 
-	void CreateAndAddInstrument(
+	bool CreateAndAddInstrument(
 		const std::string& driver,
 		SCPITransport* transport,
 		const std::string& nickname);
