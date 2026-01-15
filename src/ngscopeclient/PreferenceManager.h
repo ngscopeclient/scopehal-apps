@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -79,6 +79,10 @@ public:
     double GetReal(const std::string& path) const;
     bool GetBool(const std::string& path) const;
     ImU32 GetColor(const std::string& path) const;
+
+    ImVec4 GetColorFloat4(const std::string& path) const
+    { return ImGui::ColorConvertU32ToFloat4(GetColor(path)); }
+
     FontDescription GetFont(const std::string& path) const;
 
     template< typename E >

@@ -503,6 +503,9 @@ bool FilterGraphEditor::DoRender()
 
 				nodeAdded = true;
 				newNode = GetID(f);
+
+				//Do an initial refresh so we can get error messages, an initial output if it's a waveform generation filter, etc
+				m_parent->OnFilterReconfigured(f);
 			}
 		}
 	}
@@ -1397,8 +1400,8 @@ void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 {
 	//for some reason node editor wants colors as vec4 not ImU32
 	auto& prefs = m_session.GetPreferences();
-	auto validcolor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Filter Graph.valid_link_color"));
-	auto invalidcolor = ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Filter Graph.invalid_link_color"));
+	auto validcolor = prefs.GetColorFloat4("Appearance.Filter Graph.valid_link_color");
+	auto invalidcolor = prefs.GetColorFloat4("Appearance.Filter Graph.invalid_link_color");
 
 	if(ax::NodeEditor::BeginCreate())
 	{
@@ -2009,6 +2012,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		displaycolor = "#808080";
 
 	auto& prefs = m_session.GetPreferences();
+	auto errorColor = prefs.GetColor("Appearance.Filter Graph.error_outline_color");
 
 	//Get some configuration / style settings
 	auto color = ColorFromString(displaycolor);
@@ -2194,9 +2198,10 @@ void FilterGraphEditor::DoNodeForChannel(
 		headercolor,
 		headerText.c_str());
 
-	//TODO: add an option for toggling this
-	//TODO: add preference for colors
+	auto bubbleColor = prefs.GetColor("Appearance.Filter Graph.infobubble_color");
+
 	//Draw a bubble above the text with the runtime stats
+	//TODO: add an option for toggling this
 	float messageSpacing = 0.1 * headerheight;
 	float nextIconBot = pos.y - messageSpacing;
 	if(runtime > 0)
@@ -2204,8 +2209,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		auto runtimeText = fs.PrettyPrint(runtime, 3);
 		auto runtimeSize = ImGui::CalcTextSize(runtimeText.c_str());
 
-		auto timebgColor = ColorFromString("#404040");
-		auto timeTextColor = ColorFromString("#ffffff");
+		auto timeTextColor = ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
 		float bubbleHeight = runtimeSize.y + 2*ImGui::GetStyle().FramePadding.y;
 
 		ImVec2 clockiconpos(
@@ -2220,7 +2224,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		bgList->AddRectFilled(
 			ImVec2(pos.x + 1, nextIconBot - bubbleHeight),
 			ImVec2(textpos.x + runtimeSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot),
-			timebgColor,
+			bubbleColor,
 			rounding,
 			ImDrawFlags_RoundCornersAll);
 
@@ -2234,7 +2238,7 @@ void FilterGraphEditor::DoNodeForChannel(
 			timeTextColor,
 			runtimeText.c_str());
 
-		nextIconBot -= runtimeSize.y + 3*messageSpacing;
+		nextIconBot -= bubbleHeight + 2*messageSpacing;
 	}
 
 	//Display errors
@@ -2243,10 +2247,8 @@ void FilterGraphEditor::DoNodeForChannel(
 		auto errorText = channel->GetErrorTitle();
 		auto errorSize = ImGui::CalcTextSize(errorText.c_str());
 
-		//TODO: preferences?
-		auto bgColor = ColorFromString("#404040");
-		auto textColor = ColorFromString("#ffffff");
-		float bubbleHeight = errorSize.y + 2*ImGui::GetStyle().FramePadding.y;
+		auto textColor = ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Text));
+		float bubbleHeight = errorSize.y + 3*ImGui::GetStyle().FramePadding.y;
 
 		ImVec2 erriconpos(
 			pos.x + ImGui::GetStyle().FramePadding.x,
@@ -2257,7 +2259,7 @@ void FilterGraphEditor::DoNodeForChannel(
 		ImVec2 rectStart(pos.x + 1, nextIconBot - bubbleHeight);
 		ImVec2 rectEnd(textpos.x + errorSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot);
 
-		bgList->AddRectFilled(rectStart, rectEnd, bgColor, rounding, ImDrawFlags_RoundCornersAll);
+		bgList->AddRectFilled(rectStart, rectEnd, bubbleColor, rounding, ImDrawFlags_RoundCornersAll);
 		bgList->AddImage(m_parent->GetTextureManager()->GetTexture("error"), erriconpos, erriconpos + erriconsize );
 		bgList->AddText(textpos, textColor, errorText.c_str());
 
@@ -2277,7 +2279,11 @@ void FilterGraphEditor::DoNodeForChannel(
 			ax::NodeEditor::Resume();
 		}
 
-		nextIconBot -= errorSize.y + 3*messageSpacing;
+		nextIconBot -= bubbleHeight + 2*messageSpacing;
+
+		//Draw outline rectangle around the entire filter
+		auto errorOutlineThickness = 0.4 * ImGui::GetFontSize();
+		bgList->AddRect(pos, pos+size, errorColor, rounding, ImDrawFlags_RoundCornersAll, errorOutlineThickness);
 	}
 
 	ImGui::PopFont(); // headerfont
