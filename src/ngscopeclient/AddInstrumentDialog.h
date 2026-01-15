@@ -45,7 +45,10 @@ public:
 		const std::string& title,
 		const std::string& nickname,
 		Session& session,
-		const std::string& driverType);
+		const std::string& driverType,
+		const std::string& driver = "",
+		const std::string& transport = "",
+		const std::string& path = "");
 	virtual ~AddInstrumentDialog();
 
 	virtual bool DoRender();

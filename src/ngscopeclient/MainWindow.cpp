@@ -1567,10 +1567,14 @@ void MainWindow::SaveRecentInstrumentList()
 			continue;
 
 		//Make a node for the instrument
-		YAML::Node inode;
-		inode["path"] = it.first;
-		inode["timestamp"] = static_cast<int64_t>(it.second);
-		node[nick] = inode;
+		int64_t timestamp = static_cast<int64_t>(it.second);
+		if(!node[nick] || (node[nick]["timestamp"].as<int64_t>() < timestamp))
+		{	// Only add node if not already present or if other timestamp is older
+			YAML::Node inode;
+			inode["path"] = it.first;
+			inode["timestamp"] = timestamp;
+			node[nick] = inode;
+		}
 	}
 
 	//Write the generated YAML to disk
