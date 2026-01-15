@@ -2240,7 +2240,7 @@ void FilterGraphEditor::DoNodeForChannel(
 	//Display errors
 	if(channel->HasErrors())
 	{
-		auto errorText = /*channel->GetErrorLog()*/ string("ERROR");
+		auto errorText = channel->GetErrorTitle();
 		auto errorSize = ImGui::CalcTextSize(errorText.c_str());
 
 		//TODO: preferences?
@@ -2253,26 +2253,29 @@ void FilterGraphEditor::DoNodeForChannel(
 			nextIconBot - bubbleHeight + ImGui::GetStyle().FramePadding.y);
 		ImVec2 erriconsize(errorSize.y, errorSize.y);
 
-		ImVec2 textpos(
-			erriconpos.x + erriconsize.x + ImGui::GetStyle().ItemSpacing.x,
-			erriconpos.y );
+		ImVec2 textpos(erriconpos.x + erriconsize.x + ImGui::GetStyle().ItemSpacing.x, erriconpos.y );
+		ImVec2 rectStart(pos.x + 1, nextIconBot - bubbleHeight);
+		ImVec2 rectEnd(textpos.x + errorSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot);
 
-		bgList->AddRectFilled(
-			ImVec2(pos.x + 1, nextIconBot - bubbleHeight),
-			ImVec2(textpos.x + errorSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot),
-			bgColor,
-			rounding,
-			ImDrawFlags_RoundCornersAll);
+		bgList->AddRectFilled(rectStart, rectEnd, bgColor, rounding, ImDrawFlags_RoundCornersAll);
+		bgList->AddImage(m_parent->GetTextureManager()->GetTexture("error"), erriconpos, erriconpos + erriconsize );
+		bgList->AddText(textpos, textColor, errorText.c_str());
 
-		bgList->AddImage(
-			m_parent->GetTextureManager()->GetTexture("error"),
-			erriconpos,
-			erriconpos + erriconsize );
+		//See if the mouse is hovering this spot
+		//TODO: add hover delay or something
+		auto mousepos = ImGui::GetMousePos();
+		if( (mousepos.x > rectStart.x) && (mousepos.y > rectStart.y) &&
+			(mousepos.x < rectEnd.x) && (mousepos.y < rectEnd.y) )
+		{
+			auto log = Trim(channel->GetErrorLog());
 
-		bgList->AddText(
-			textpos,
-			textColor,
-			errorText.c_str());
+			ax::NodeEditor::Suspend();
+				MainWindow::SetTooltipPosition();
+				ImGui::BeginTooltip();
+				ImGui::TextUnformatted(log.c_str());
+				ImGui::EndTooltip();
+			ax::NodeEditor::Resume();
+		}
 
 		nextIconBot -= errorSize.y + 3*messageSpacing;
 	}
