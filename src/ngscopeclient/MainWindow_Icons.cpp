@@ -798,6 +798,7 @@ string MainWindow::GetIconForWaveformShape(FunctionGenerator::WaveShape shape)
  */
 void MainWindow::LoadMiscIcons()
 {
+	m_texmgr.LoadTexture("error", FindDataFile("icons/48x48/dialog-error.png"));
 	m_texmgr.LoadTexture("warning", FindDataFile("icons/48x48/dialog-warning-2.png"));
 	m_texmgr.LoadTexture("info", FindDataFile("icons/48x48/dialog-information-3.png"));
 	m_texmgr.LoadTexture("visible-spectrum-380nm-750nm",

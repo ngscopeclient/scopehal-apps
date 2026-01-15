@@ -2,5 +2,8 @@ Icons in this directory were commissioned for the project and are covered by the
 EXCEPT for the following icons which are from the Open Icon Library and covered by the respective licenses
 (details in OpenIconLibraryLicensing.txt):
 
-dialog-warning-2.png (public domain)
 dialog-information-3.png (CC-BY-SA 3.0 or LGPL)
+dialog-error.png (LGPL-2.1)
+dialog-warning-2.png (public domain)
+
+and in contrib/blender (covered by license in contrib/blender/COPYING)
