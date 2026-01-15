@@ -149,6 +149,8 @@ public:
 	std::shared_ptr<OscilloscopeState> GetOscilloscopeState(std::shared_ptr<Oscilloscope> scope)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		if(m_oscilloscopes.find(scope) == m_oscilloscopes.end())
+			return nullptr;
 		return m_oscilloscopes[scope];
 	}
 
@@ -158,6 +160,8 @@ public:
 	std::shared_ptr<BERTState> GetBERTState(std::shared_ptr<BERT> bert)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		if(m_berts.find(bert) == m_berts.end())
+			return nullptr;
 		return m_berts[bert];
 	}
 
@@ -167,6 +171,8 @@ public:
 	std::shared_ptr<PowerSupplyState> GetPSUState(std::shared_ptr<SCPIPowerSupply> psu)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		if(m_psus.find(psu) == m_psus.end())
+			return nullptr;
 		return m_psus[psu];
 	}
 
@@ -176,6 +182,8 @@ public:
 	std::shared_ptr<FunctionGeneratorState> GetFunctionGeneratorState(std::shared_ptr<FunctionGenerator> awg)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		if(m_awgs.find(awg) == m_awgs.end())
+			return nullptr;
 		return m_awgs[awg];
 	}
 
@@ -185,6 +193,8 @@ public:
 	std::shared_ptr<MultimeterState> GetDmmState(std::shared_ptr<Multimeter> dmm)
 	{
 		std::lock_guard<std::mutex> lock(m_scopeMutex);
+		if(m_meters.find(dmm) == m_meters.end())
+			return nullptr;
 		return m_meters[dmm];
 	}
 
