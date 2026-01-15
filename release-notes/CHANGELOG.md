@@ -10,6 +10,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: Added GPU acceleration for several filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
+  * Average (5.6x speedup)
   * CDR PLL (7.5x speedup)
   * DDJ (16x speedup)
   * Ethernet - 100baseTX (10x speedup)
