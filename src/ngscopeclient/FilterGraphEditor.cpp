@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -2197,6 +2197,8 @@ void FilterGraphEditor::DoNodeForChannel(
 	//TODO: add an option for toggling this
 	//TODO: add preference for colors
 	//Draw a bubble above the text with the runtime stats
+	float messageSpacing = 0.1 * headerheight;
+	float nextIconBot = pos.y - messageSpacing;
 	if(runtime > 0)
 	{
 		auto runtimeText = fs.PrettyPrint(runtime, 3);
@@ -2204,13 +2206,11 @@ void FilterGraphEditor::DoNodeForChannel(
 
 		auto timebgColor = ColorFromString("#404040");
 		auto timeTextColor = ColorFromString("#ffffff");
-		float timespacing = 0.1 * headerheight;
-		float runtimeBot = pos.y - timespacing;
 		float bubbleHeight = runtimeSize.y + 2*ImGui::GetStyle().FramePadding.y;
 
 		ImVec2 clockiconpos(
 			pos.x + ImGui::GetStyle().FramePadding.x,
-			runtimeBot - bubbleHeight + ImGui::GetStyle().FramePadding.y);
+			nextIconBot - bubbleHeight + ImGui::GetStyle().FramePadding.y);
 		ImVec2 clockiconsize(runtimeSize.y, runtimeSize.y);
 
 		ImVec2 textpos(
@@ -2218,8 +2218,8 @@ void FilterGraphEditor::DoNodeForChannel(
 			clockiconpos.y );
 
 		bgList->AddRectFilled(
-			ImVec2(pos.x + 1, runtimeBot - bubbleHeight),
-			ImVec2(textpos.x + runtimeSize.x + ImGui::GetStyle().FramePadding.y, runtimeBot),
+			ImVec2(pos.x + 1, nextIconBot - bubbleHeight),
+			ImVec2(textpos.x + runtimeSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot),
 			timebgColor,
 			rounding,
 			ImDrawFlags_RoundCornersAll);
@@ -2233,7 +2233,50 @@ void FilterGraphEditor::DoNodeForChannel(
 			textpos,
 			timeTextColor,
 			runtimeText.c_str());
+
+		nextIconBot -= runtimeSize.y + 3*messageSpacing;
 	}
+
+	//Display errors
+	if(channel->HasErrors())
+	{
+		auto errorText = /*channel->GetErrorLog()*/ string("ERROR");
+		auto errorSize = ImGui::CalcTextSize(errorText.c_str());
+
+		//TODO: preferences?
+		auto bgColor = ColorFromString("#404040");
+		auto textColor = ColorFromString("#ffffff");
+		float bubbleHeight = errorSize.y + 2*ImGui::GetStyle().FramePadding.y;
+
+		ImVec2 erriconpos(
+			pos.x + ImGui::GetStyle().FramePadding.x,
+			nextIconBot - bubbleHeight + ImGui::GetStyle().FramePadding.y);
+		ImVec2 erriconsize(errorSize.y, errorSize.y);
+
+		ImVec2 textpos(
+			erriconpos.x + erriconsize.x + ImGui::GetStyle().ItemSpacing.x,
+			erriconpos.y );
+
+		bgList->AddRectFilled(
+			ImVec2(pos.x + 1, nextIconBot - bubbleHeight),
+			ImVec2(textpos.x + errorSize.x + ImGui::GetStyle().FramePadding.y, nextIconBot),
+			bgColor,
+			rounding,
+			ImDrawFlags_RoundCornersAll);
+
+		bgList->AddImage(
+			m_parent->GetTextureManager()->GetTexture("error"),
+			erriconpos,
+			erriconpos + erriconsize );
+
+		bgList->AddText(
+			textpos,
+			textColor,
+			errorText.c_str());
+
+		nextIconBot -= errorSize.y + 3*messageSpacing;
+	}
+
 	ImGui::PopFont(); // headerfont
 
 	//Draw the force vector
