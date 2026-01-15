@@ -26,6 +26,7 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 ## Bugs fixed since v0.1.1
 
+* Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
