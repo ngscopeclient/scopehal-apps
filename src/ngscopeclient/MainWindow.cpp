@@ -1781,6 +1781,9 @@ ImGui::MarkdownConfig MainWindow::GetMarkdownConfig()
  */
 void MainWindow::RenderLoadWarningPopup()
 {
+	if(!m_errorPopupTitle.empty())
+		return; // Already showing Error popup, skip Warning for now
+		
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |

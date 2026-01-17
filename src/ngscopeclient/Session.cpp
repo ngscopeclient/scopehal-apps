@@ -47,6 +47,7 @@
 #include "../scopehal/SiglentSCPIOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
+#include "../scopehal/MockPowerSupply.h"
 #include "../scopeprotocols/EyePattern.h"
 
 #include <fstream>
@@ -1240,6 +1241,9 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	//Make any config settings to the instrument from our preference settings
 	ApplyPreferences(scope);
 
+	//Run the preload
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
@@ -1247,9 +1251,6 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
-
-	//Run the preload
-	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1311,12 +1312,12 @@ bool Session::PreLoadVNA(int version, const YAML::Node& node, bool online)
 	//Make any config settings to the instrument from our preference settings
 	ApplyPreferences(scope);
 
+	//Run the preload
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
-
-	//Run the preload
-	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1797,9 +1798,8 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 
 	if(!psu)
 	{
-		/*
-		//Create the mock scope
-		scope = new MockOscilloscope(
+		//Create the mock PSU
+		psu = make_shared<MockPowerSupply>(
 			node["name"].as<string>(),
 			node["vendor"].as<string>(),
 			node["serial"].as<string>(),
@@ -1807,20 +1807,17 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 			driver,
 			node["args"].as<string>()
 			);
-		*/
-		LogError("offline loading of power supplies not implemented yet\n");
-		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
 	//ApplyPreferences(psu);
 
+	//Run the preload
+	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(psu, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu.get());
-
-	//Run the preload
-	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -3037,8 +3034,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		args.awgstate = state;
 	}
 
-	//Make the instrument thread
-	if(si)
+	//Make the instrument thread (only if Instrument is online)
+	if(si && !inst->IsOffline())
 		m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
 	//Spawn dialogs/views if requested

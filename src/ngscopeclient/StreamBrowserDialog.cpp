@@ -1132,19 +1132,27 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			int bankNumber = 1;
 			for(auto bank : digitalBanks)
 			{	// Iterate on digital banks
-				string nodeName = "Digital Bank " + to_string(bankNumber);
-				if(ImGui::TreeNodeEx(nodeName.c_str()))
-				{
-					ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-					for(auto channel : bank)
-					{	// Iterate on bank's channel
-						size_t i = channel->GetIndex();
-						renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+				if(bank.size() > 1)
+				{	// Only show Digital Bank node if there is more than on channel in the bank
+					string nodeName = "Digital Bank " + to_string(bankNumber);
+					if(ImGui::TreeNodeEx(nodeName.c_str()))
+					{
+						ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+						for(auto channel : bank)
+						{	// Iterate on bank's channel
+							size_t i = channel->GetIndex();
+							renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+						}
+						ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+						ImGui::TreePop();
 					}
-					ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-					ImGui::TreePop();
+					bankNumber++;
 				}
-				bankNumber++;
+				else if(bank.size() == 1)
+				{	// Only one channel in the bank, render it directly
+					size_t i = bank[0]->GetIndex();
+					renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+				}
 			}
 			for(size_t i : otherChannels)
 			{	// Finally iterate on other channels
