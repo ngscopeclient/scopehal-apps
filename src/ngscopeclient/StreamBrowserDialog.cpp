@@ -1035,49 +1035,54 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	if (psu)
 	{
-		//Get the state
-		auto psustate = m_session->GetPSUState(psu);
+		if (psu->IsOffline())
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
+		else
+		{
+			//Get the state
+			auto psustate = m_session->GetPSUState(psu);
 
-		bool allOn = false;
-		bool someOn = false;
-		if(psu->SupportsMasterOutputSwitching())
-			allOn = psustate->m_masterEnable;
-		else
-		{
-			allOn = true;
-			for(size_t i = 0 ; i < channelCount ; i++)
-			{
-				if(psustate->m_channelOn[i])
-					someOn = true;
-				else
-					allOn = false;
-			}
-		}
-		bool result;
-		if(allOn || someOn)
-		{
-			result = true;
-			renderToggle(
-				"###psuon",
-				true,
-				allOn ?
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
-		}
-		else
-		{
-			result = false;
-			renderOnOffToggle("###psuon", true, result);
-		}
-		if(result != allOn)
-		{
+			bool allOn = false;
+			bool someOn = false;
 			if(psu->SupportsMasterOutputSwitching())
-				psu->SetMasterPowerEnable(result);
+				allOn = psustate->m_masterEnable;
 			else
 			{
+				allOn = true;
 				for(size_t i = 0 ; i < channelCount ; i++)
 				{
-					psu->SetPowerChannelActive(i,result);
+					if(psustate->m_channelOn[i])
+						someOn = true;
+					else
+						allOn = false;
+				}
+			}
+			bool result;
+			if(allOn || someOn)
+			{
+				result = true;
+				renderToggle(
+					"###psuon",
+					true,
+					allOn ?
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
+			}
+			else
+			{
+				result = false;
+				renderOnOffToggle("###psuon", true, result);
+			}
+			if(result != allOn)
+			{
+				if(psu->SupportsMasterOutputSwitching())
+					psu->SetMasterPowerEnable(result);
+				else
+				{
+					for(size_t i = 0 ; i < channelCount ; i++)
+					{
+						psu->SetPowerChannelActive(i,result);
+					}
 				}
 			}
 		}

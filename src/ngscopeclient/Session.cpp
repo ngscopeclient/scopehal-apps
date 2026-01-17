@@ -3034,8 +3034,8 @@ void Session::AddInstrument(shared_ptr<Instrument> inst, bool createDialogs)
 		args.awgstate = state;
 	}
 
-	//Make the instrument thread (only if Instrument is online)
-	if(si && !inst->IsOffline())
+	//Make the instrument thread
+	if(si)
 		m_instrumentStates[inst] = make_shared<InstrumentConnectionState>(args);
 
 	//Spawn dialogs/views if requested
