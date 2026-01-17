@@ -11,6 +11,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: Added GPU acceleration for several filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
+  * Base (17x speedup)
   * CDR PLL (7.5x speedup)
   * DDJ (16x speedup)
   * Ethernet - 100baseTX (10x speedup)
@@ -29,7 +30,7 @@ This is a running list of significant bug fixes and new features since the last 
 
 We try to maintain compatibility with older versions of ngscopeclient but occasionally we have no choice to change the interface of a block in a way that requires old filter graphs to be updated.
 
-* Many filter no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
+* Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
   * DDJ
 

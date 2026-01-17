@@ -42,6 +42,7 @@ using namespace std;
 void InstrumentThread(InstrumentThreadArgs args)
 {
 	pthread_setname_np_compat("InstrumentThread");
+	LogTrace("Starting InstrumentThread\n");
 
 	#ifdef HAVE_NVTX
 		NVTX3_FUNC_RANGE();
@@ -278,7 +279,7 @@ void InstrumentThread(InstrumentThreadArgs args)
 					psustate->m_setSSRamp[i] = fs.PrettyPrint(psustate->m_committedSSRamp[i]);
 
 					psustate->m_needsUpdate[i] = false;
-					
+
 				}
 
 				session->MarkChannelDirty(pchan);
