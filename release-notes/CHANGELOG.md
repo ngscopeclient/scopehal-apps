@@ -8,11 +8,12 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Drivers: Added support for many more PicoScope models
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration for several filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+* Filters: Added GPU acceleration for many filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
   * Base (17x speedup)
   * CDR PLL (7.5x speedup)
+  * Clip (4x speedup)
   * DDJ (16x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
