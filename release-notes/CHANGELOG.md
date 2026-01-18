@@ -18,6 +18,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
+  * PAM Edge Detector (2x speedup)
   * TIE (5.3x speedup)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
