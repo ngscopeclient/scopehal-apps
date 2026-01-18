@@ -156,6 +156,14 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Invalid link color")
 				.Description("Color indicating a potential connection path is invalid"));
 			graph.AddPreference(
+				Preference::Color("infobubble_color", ColorFromString("#404040"))
+				.Label("Info bubble color")
+				.Description("Color for information bubbles displayed above graph nodes"));
+			graph.AddPreference(
+				Preference::Color("error_outline_color", ColorFromString("#ff0000"))
+				.Label("Error outline color")
+				.Description("Color for outlining graph nodes with errors"));
+			graph.AddPreference(
 				Preference::Font("icon_caption_font", FontDescription(FindDataFile("fonts/DejaVuSans.ttf"), 13))
 				.Label("Icon font")
 				.Description("Font for icon captions"));
