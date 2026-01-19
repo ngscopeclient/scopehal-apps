@@ -425,7 +425,7 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 			if(m_instrumentCommittedNames[instIndex].empty()) m_instrumentCommittedNames[instIndex]=inst->m_nickname;
 			if(m_instrumentCurrentNames[instIndex].empty()) m_instrumentCurrentNames[instIndex]=inst->m_nickname;
 			ImGui::SetNextItemWidth(12*width);
-			if(TextInputWithExplicitApply("",m_instrumentCurrentNames[instIndex],m_instrumentCommittedNames[instIndex]))
+			if(TextInputWithExplicitApply("###nickname",m_instrumentCurrentNames[instIndex],m_instrumentCommittedNames[instIndex]))
 			{
 				string oldName = inst->m_nickname;
 				inst->m_nickname = m_instrumentCommittedNames[instIndex];
@@ -462,8 +462,27 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 		}
 		if(ImGui::TableSetColumnIndex(4))
 		{
-			ImGui::AlignTextToFramePadding();
-			ImGui::TextUnformatted(inst->GetTransportConnectionString().c_str());
+			if(inst->IsOffline())
+			{	// Only allow changing path if instrument is Offline
+				if(m_instrumentCommittedPaths[instIndex].empty()) m_instrumentCommittedPaths[instIndex]=inst->GetTransportConnectionString();
+				if(m_instrumentCurrentPaths[instIndex].empty()) m_instrumentCurrentPaths[instIndex]=inst->GetTransportConnectionString();
+				ImGui::SetNextItemWidth(12*width);
+				if(TextInputWithExplicitApply("###path",m_instrumentCurrentPaths[instIndex],m_instrumentCommittedPaths[instIndex]))
+				{
+					string oldPath = inst->GetTransportConnectionString();
+					auto mi = dynamic_pointer_cast<MockInstrument>(inst);
+					if(mi)
+						mi->SetTransportConnectionString(m_instrumentCommittedPaths[instIndex]);
+					auto si = dynamic_pointer_cast<SCPIInstrument>(inst);
+					if(si)
+						m_parent->RepathRecentInstrument(si,oldPath);
+				}
+			}
+			else
+			{
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(inst->GetTransportConnectionString().c_str());
+			}
 		}
 		if(ImGui::TableSetColumnIndex(5))
 		{
