@@ -1635,6 +1635,35 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 	SaveRecentInstrumentList();
 }
 
+void MainWindow::RenameRecentInstrument(std::shared_ptr<SCPIInstrument> inst, const std::string& oldName)
+{
+	if(inst == nullptr)
+		return;
+
+	LogTrace("Renaming instrument \"%s\" with name \"%s\" in recent instrument list (had %zu)\n",
+		oldName.c_str(), inst->m_nickname.c_str(), m_recentInstruments.size());
+
+	auto oldConnectionString =
+		oldName + ":" +
+		inst->GetDriverName() + ":" +
+		inst->GetTransportName() + ":" +
+		inst->GetTransportConnectionString();
+	auto it = m_recentInstruments.find(oldConnectionString);
+	if (it != m_recentInstruments.end()) 
+	{
+		auto now = time(NULL);
+		auto newConnectionString =
+			inst->m_nickname + ":" +
+			inst->GetDriverName() + ":" +
+			inst->GetTransportName() + ":" +
+			inst->GetTransportConnectionString();
+		LogTrace("Replaced connection string %s by %s\n", oldConnectionString.c_str(),newConnectionString.c_str());
+		m_recentInstruments.erase(it);
+		m_recentInstruments.emplace(newConnectionString, now);
+		SaveRecentInstrumentList();
+	}
+}
+
 /**
 	@brief Helper function for creating a transport and printing an error if the connection is unsuccessful
  */

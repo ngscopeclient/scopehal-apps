@@ -44,10 +44,10 @@ using namespace std;
 // Construction / destruction
 
 ManageInstrumentsDialog::ManageInstrumentsDialog(Session& session, MainWindow* parent)
-	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1000, 300))
+	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1024, 300))
 	, m_session(session)
 	, m_parent(parent)
-	, m_selection(nullptr)
+	//, m_selection(nullptr)
 {
 }
 
@@ -97,7 +97,7 @@ bool ManageInstrumentsDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("All Instruments", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if(ImGui::BeginTable("alltable", 7, flags))
+		if(ImGui::BeginTable("alltable", 8, flags))
 		{
 			AllInstrumentsTable();
 			ImGui::EndTable();
@@ -393,45 +393,91 @@ void ManageInstrumentsDialog::RowForNewGroup()
 
 void ManageInstrumentsDialog::AllInstrumentsTable()
 {
+	auto& prefs = m_session.GetPreferences();
 	auto insts = m_session.GetInstruments();
 	float width = ImGui::GetFontSize();
 	ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
-	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 6*width);
+	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 12*width);
 	ImGui::TableSetupColumn("Make", ImGuiTableColumnFlags_WidthFixed, 9*width);
-	ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthFixed, 15*width);
+	ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthFixed, 12*width);
 	ImGui::TableSetupColumn("Transport", ImGuiTableColumnFlags_WidthFixed, 4*width);
-	ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthFixed, 25*width);
-	ImGui::TableSetupColumn("Serial", ImGuiTableColumnFlags_WidthFixed, 8*width);
+	ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthFixed, 15*width);
+	ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed, 5*width);
+	ImGui::TableSetupColumn("Serial", ImGuiTableColumnFlags_WidthFixed, 7*width);
 	ImGui::TableSetupColumn("Features", ImGuiTableColumnFlags_WidthFixed, 10*width);
 	ImGui::TableHeadersRow();
+
+	size_t instNumber = insts.size();
+	size_t instIndex = 0;
+	m_instrumentCurrentNames.resize(instNumber);
+	m_instrumentCommittedNames.resize(instNumber);
+	m_instrumentCurrentPaths.resize(instNumber);
+	m_instrumentCommittedPaths.resize(instNumber);
 
 	for(auto inst : insts)
 	{
 		auto itype = inst->GetInstrumentTypes();
-		bool rowIsSelected = (m_selection == inst);
+		//bool rowIsSelected = (m_selection == inst);
 		ImGui::PushID(inst.get());
 		ImGui::TableNextRow(ImGuiTableRowFlags_None);
-		ImGui::TableSetColumnIndex(0);
+		if(ImGui::TableSetColumnIndex(0))
+		{
+			if(m_instrumentCommittedNames[instIndex].empty()) m_instrumentCommittedNames[instIndex]=inst->m_nickname;
+			if(m_instrumentCurrentNames[instIndex].empty()) m_instrumentCurrentNames[instIndex]=inst->m_nickname;
+			ImGui::SetNextItemWidth(12*width);
+			if(TextInputWithExplicitApply("",m_instrumentCurrentNames[instIndex],m_instrumentCommittedNames[instIndex]))
+			{
+				string oldName = inst->m_nickname;
+				inst->m_nickname = m_instrumentCommittedNames[instIndex];
+				auto si = dynamic_pointer_cast<SCPIInstrument>(inst);
+				if(si)
+					m_parent->RenameRecentInstrument(si,oldName);
+			}
+		}
+		if(ImGui::TableSetColumnIndex(1))
+		{
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(inst->GetVendor().c_str());
+		}
+		/*ImGui::TableSetColumnIndex(1);
+		ImGui::AlignTextToFramePadding();
 		if(ImGui::Selectable(
-				inst->m_nickname.c_str(),
+				inst->GetVendor().c_str(),
 				rowIsSelected,
 				ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap,
 				ImVec2(0, 0)))
 		{
 			m_selection = dynamic_pointer_cast<SCPIInstrument>(inst);
 			rowIsSelected = true;
-		}
-		if(ImGui::TableSetColumnIndex(1))
-			ImGui::TextUnformatted(inst->GetVendor().c_str());
+		}*/
 		if(ImGui::TableSetColumnIndex(2))
+		{
+			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(inst->GetName().c_str());
+		}
 		if(ImGui::TableSetColumnIndex(3))
+		{
+			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(inst->GetTransportName().c_str());
+		}
 		if(ImGui::TableSetColumnIndex(4))
+		{
+			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(inst->GetTransportConnectionString().c_str());
+		}
 		if(ImGui::TableSetColumnIndex(5))
-			ImGui::TextUnformatted(inst->GetSerial().c_str());
+		{
+			ImGui::AlignTextToFramePadding();
+			renderBadge(0,
+						inst->IsOffline() ? ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")) : ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")),
+						inst->IsOffline() ? "Offline" : "Online");
+		}
 		if(ImGui::TableSetColumnIndex(6))
+		{
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(inst->GetSerial().c_str());
+		}
+		if(ImGui::TableSetColumnIndex(7))
 		{
 			string types = "";
 
@@ -453,8 +499,10 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 			if(itype & Instrument::INST_BERT)
 				types += "bert ";
 
+			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted(types.c_str());
 		}
 		ImGui::PopID();
+		instIndex++;
 	}
 }

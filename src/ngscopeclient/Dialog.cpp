@@ -237,6 +237,11 @@ bool Dialog::TextInputWithImplicitApply(const string& label, string& currentValu
 	return false;
 }
 
+bool Dialog::TextInputWithExplicitApply(const string& label, string& currentValue, string& committedValue)
+{
+	return renderEditablePropertyWithExplicitApply(-1,label,currentValue,committedValue,Unit()/*not used for string*/);
+}
+
 bool Dialog::IntInputWithImplicitApply(const string& label, int& currentValue, int& committedValue)
 {
 	bool dirty = currentValue != committedValue;
@@ -488,7 +493,7 @@ template<typename T>
  */
 bool Dialog::renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply)
 {
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t>,"renderEditableProperty only supports int64_t, float or double");
+    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, int64_t> || std::is_same_v<T, std::string>,"renderEditableProperty only supports string, int64_t, float or double");
 	bool use7Segment = false;
 	bool changeFont = false;
 	int64_t displayType = NumericValueDisplay::NUMERIC_DISPLAY_DEFAULT_FONT;
@@ -528,6 +533,8 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 	}
 	if constexpr (std::is_same_v<T, int64_t>)
 		dirty = unit.PrettyPrintInt64(committedValue) != currentValue;
+	else if constexpr (std::is_same_v<T, std::string>)
+		dirty = committedValue != currentValue;
 	else
 		dirty = unit.PrettyPrint(committedValue) != currentValue;
 	string editLabel = label+"##Edit";
@@ -674,6 +681,10 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 
 				currentValue = unit.PrettyPrintInt64(committedValue);
 			}
+			else if constexpr (std::is_same_v<T, std::string>)
+			{
+				committedValue = currentValue;
+			}
 			else
 			{
 				committedValue = static_cast<T>(unit.ParseString(currentValue));
@@ -689,6 +700,8 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 	{	// Restore value
 		if constexpr (std::is_same_v<T, int64_t>)
 			currentValue = unit.PrettyPrintInt64(committedValue);
+		else if constexpr (std::is_same_v<T, std::string>)
+			currentValue = committedValue;
 		else
 			currentValue = unit.PrettyPrint(committedValue);
 		if(m_editedItemId == editId)
@@ -707,6 +720,7 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 template bool Dialog::renderEditableProperty<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
 template bool Dialog::renderEditableProperty<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
 template bool Dialog::renderEditableProperty<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
+template bool Dialog::renderEditableProperty<std::string>(float width, const std::string& label, std::string& currentValue, std::string& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay, bool explicitApply);
 
 template<typename T>
 /**
@@ -731,7 +745,24 @@ bool Dialog::renderEditablePropertyWithExplicitApply(float width, const std::str
 template bool Dialog::renderEditablePropertyWithExplicitApply<float>(float width, const std::string& label, std::string& currentValue, float& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
 template bool Dialog::renderEditablePropertyWithExplicitApply<double>(float width, const std::string& label, std::string& currentValue, double& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
 template bool Dialog::renderEditablePropertyWithExplicitApply<int64_t>(float width, const std::string& label, std::string& currentValue, int64_t& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
+template bool Dialog::renderEditablePropertyWithExplicitApply<std::string>(float width, const std::string& label, std::string& currentValue, std::string& committedValue, Unit unit, const char* tooltip, std::optional<ImVec4> optcolor, bool allow7SegmentDisplay);
 
+/**
+   @brief Render a badge with text inside
+   @param width the width of the badge
+   @param color the badge color
+   @param label the text of the badge
+*/
+void Dialog::renderBadge(float width, ImVec4 color, const string& label)
+{
+	float fontSize = ImGui::GetFontSize();
+	if(width <= 0) width = 6*fontSize;
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
+	ImGui::BeginChild("##badge", ImVec2(width, ImGui::GetFontSize()),false,ImGuiWindowFlags_None);
+	ImGui::TextUnformatted(label.c_str());
+	ImGui::EndChild();
+	ImGui::PopStyleColor();
+}
 
 /**
   @brief Segment on/off state for each of the 10 digits + "L" (needed for OL / Overload)
