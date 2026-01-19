@@ -44,7 +44,7 @@ using namespace std;
 // Construction / destruction
 
 ManageInstrumentsDialog::ManageInstrumentsDialog(Session& session, MainWindow* parent)
-	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1024, 300))
+	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1024, 300),&session,parent)
 	, m_session(session)
 	, m_parent(parent)
 	//, m_selection(nullptr)
@@ -409,10 +409,17 @@ void ManageInstrumentsDialog::AllInstrumentsTable()
 
 	size_t instNumber = insts.size();
 	size_t instIndex = 0;
-	m_instrumentCurrentNames.resize(instNumber);
-	m_instrumentCommittedNames.resize(instNumber);
-	m_instrumentCurrentPaths.resize(instNumber);
-	m_instrumentCommittedPaths.resize(instNumber);
+	if(instNumber != m_instrumentCurrentNames.size())
+	{	// Instrument list has changed, clear cache
+		m_instrumentCurrentNames.clear();
+		m_instrumentCommittedNames.clear();
+		m_instrumentCurrentPaths.clear();
+		m_instrumentCommittedPaths.clear();
+		m_instrumentCurrentNames.resize(instNumber);
+		m_instrumentCommittedNames.resize(instNumber);
+		m_instrumentCurrentPaths.resize(instNumber);
+		m_instrumentCommittedPaths.resize(instNumber);
+	}
 
 	for(auto inst : insts)
 	{
