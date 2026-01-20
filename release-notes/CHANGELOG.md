@@ -38,6 +38,7 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 ## Bugs fixed since v0.1.1
 
+* Core: Vulkan initialization code would break on cards that advertised 32-bit atomic float support, but did not support atomic addition (https://github.com/ngscopeclient/scopehal-apps/issues/947)
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
