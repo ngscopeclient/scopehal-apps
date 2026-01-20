@@ -10,11 +10,15 @@ Project website: [https://www.ngscopeclient.org](https://www.ngscopeclient.org)
 * [Code of Conduct](https://github.com/ngscopeclient/scopehal-apps/blob/master/CODE_OF_CONDUCT.md)
 * We are a proudly AI-free project. Only human created code is acceptable for contribution.
 
-## Installation
+## Installation 
 
 Refer to the "getting started" chapter of the User manual
 * [User manual GettingStarted (HTML)](https://www.ngscopeclient.org/manual/GettingStarted.html)
 * [User manual (PDF)](https://www.ngscopeclient.org/downloads/ngscopeclient-manual.pdf)
+
+## Compilation instructions (Linux,macOS,Windows)
+
+* [User manual Compilation (HTML)](https://www.ngscopeclient.org/manual/GettingStarted.html#compilation)
 
 ## Special comments
 
