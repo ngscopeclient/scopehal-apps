@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -48,7 +48,11 @@ class MainWindow;
 class ProtocolAnalyzerDialog : public Dialog
 {
 public:
-	ProtocolAnalyzerDialog(PacketDecoder* filter, std::shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd);
+	ProtocolAnalyzerDialog(
+		PacketDecoder* filter,
+		std::shared_ptr<PacketManager> mgr,
+		Session* session,
+		MainWindow* wnd);
 	virtual ~ProtocolAnalyzerDialog();
 
 	virtual bool DoRender();
@@ -87,8 +91,6 @@ public:
 protected:
 	PacketDecoder* m_filter;
 	std::shared_ptr<PacketManager> m_mgr;
-	Session& m_session;
-	MainWindow& m_parent;
 
 	///@brief True if a new waveform in the dialog was selected this frame
 	bool m_waveformChanged;

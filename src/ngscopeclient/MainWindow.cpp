@@ -2020,7 +2020,7 @@ Filter* MainWindow::CreateFilter(
 	{
 		m_session.AddPacketFilter(pd);
 
-		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), &m_session, this);
 		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}
@@ -2717,7 +2717,11 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			auto pd = m_session.m_idtable.Lookup<PacketDecoder*>(id);
 
-			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+			auto dlg = make_shared<ProtocolAnalyzerDialog>(
+				pd,
+				m_session.GetPacketManager(pd),
+				&m_session,
+				this);
 			dlg->SetFilterExpression(filt);
 			m_protocolAnalyzerDialogs[pd] = dlg;
 			AddDialog(dlg);
