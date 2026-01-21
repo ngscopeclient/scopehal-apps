@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2023 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -30,7 +30,7 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of ChannelPropertiesDialog
+	@brief Declaration of MetricsDialog
  */
 #ifndef MetricsDialog_h
 #define MetricsDialog_h
@@ -46,7 +46,6 @@ public:
 	virtual bool DoRender();
 
 protected:
-	Session* m_session;
 
 	int m_displayRefreshRate;
 };
