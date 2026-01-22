@@ -30,41 +30,102 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterGraphWorkspace
+	@brief Implementation of FilterGraphErrorWindow
  */
-#ifndef FilterGraphWorkspace_h
-#define FilterGraphWorkspace_h
 
-#include "Workspace.h"
-class FilterGraphEditor;
-class CreateFilterBrowser;
-class MainWindow;
+#include "ngscopeclient.h"
+#include "FilterGraphErrorWindow.h"
+#include "Session.h"
+
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+FilterGraphErrorWindow::FilterGraphErrorWindow(Session* session)
+	: Dialog("Errors", "FilterGraphErrors", ImVec2(300, 400), session)
+	, m_firstRun(true)
+{
+}
+
+FilterGraphErrorWindow::~FilterGraphErrorWindow()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
+
+bool FilterGraphErrorWindow::Render()
+{
+	//Refresh list of errors
+	auto& nodes = Filter::GetAllInstances();
+	m_nodesWithErrors.clear();
+	for(auto node : nodes)
+	{
+		if(node->HasErrors())
+			m_nodesWithErrors.emplace(node);
+	}
+
+	//Show error window on first run, or if we have errors
+	if(!m_nodesWithErrors.empty())
+		m_open = true;
+	else if(m_firstRun)
+	{
+		m_open = true;
+		m_firstRun = false;
+	}
+	else
+		m_open = false;
+
+	return Dialog::Render();
+}
 
 /**
-	@brief Helper class for building the default filter graph editor workspace
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
  */
-class FilterGraphWorkspace : public Workspace
+bool FilterGraphErrorWindow::DoRender()
 {
-public:
-	FilterGraphWorkspace(
-		Session& session,
-		MainWindow* parent,
-		std::shared_ptr<FilterGraphEditor> graphEditor,
-		std::shared_ptr<CreateFilterBrowser> palette
-		);
-	virtual ~FilterGraphWorkspace()
-	{}
+	const ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
 
-protected:
-	virtual void DoRender(ImGuiID id) override;
+	auto width = ImGui::GetFontSize();
+	if(ImGui::BeginTable("table", 2, flags))
+	{
+		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 
-	bool m_firstRun;
+		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 12*width);
+		ImGui::TableSetupColumn("Error", ImGuiTableColumnFlags_WidthStretch, 0);
+		ImGui::TableHeadersRow();
 
-	//Only valid on initial launch of the workspace, set to null after
-	//TODO: maybe use weak pointers here?
-	std::shared_ptr<FilterGraphEditor> m_graphEditor;
-	std::shared_ptr<CreateFilterBrowser> m_palette;
-};
+		for(auto f : m_nodesWithErrors)
+		{
+			auto messages = explode(f->GetErrorLog(), '\n');
+			for(auto& m : messages)
+			{
+				//remove bullet and space
+				string s = m.substr(m.find(' ') + 1);
 
-#endif
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TextUnformatted(f->GetDisplayName().c_str());
+				ImGui::TableSetColumnIndex(1);
+				ImGui::TextUnformatted(s.c_str());
+			}
+		}
 
+		ImGui::EndTable();
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers

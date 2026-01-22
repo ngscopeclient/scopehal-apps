@@ -38,6 +38,7 @@
 #include "Dialog.h"
 #include "Session.h"
 #include "Bijection.h"
+#include "FilterGraphErrorWindow.h"
 class EmbeddableDialog;
 
 #include <imgui_node_editor.h>
@@ -164,6 +165,9 @@ public:
 
 	static bool IsBackEdge(FlowGraphNode* src, FlowGraphNode* dst);
 
+	FilterGraphErrorWindow& GetErrorWindow()
+	{ return m_errorWindow; }
+
 protected:
 	friend class FilterGraphGroup;
 
@@ -219,12 +223,6 @@ protected:
 	void FilterSubmenu(StreamDescriptor src, const std::string& name, Filter::Category cat);
 	void CreateChannelMenu();
 
-	///@brief Session being manipulated
-	Session& m_session;
-
-	///@brief Top level window
-	MainWindow* m_parent;
-
 	///@brief Graph editor setup
 	ax::NodeEditor::Config m_config;
 
@@ -261,13 +259,13 @@ protected:
 	ax::NodeEditor::NodeId GetID(FlowGraphNode* node);
 
 	ax::NodeEditor::NodeId GetID(InstrumentChannel* chan)
-	{ return m_session.m_idtable.emplace(chan); }
+	{ return m_session->m_idtable.emplace(chan); }
 
 	ax::NodeEditor::NodeId GetID(Trigger* trig)
-	{ return m_session.m_idtable.emplace(trig); }
+	{ return m_session->m_idtable.emplace(trig); }
 
 	ax::NodeEditor::NodeId GetID(std::shared_ptr<FilterGraphGroup> group)
-	{ return m_session.m_idtable.emplace(group.get()); }
+	{ return m_session->m_idtable.emplace(group.get()); }
 
 	uintptr_t AllocateID();
 	ax::NodeEditor::PinId GetID(StreamDescriptor stream);
@@ -322,6 +320,9 @@ protected:
 		void* pThis);
 
 	static size_t LoadSettingsCallback(char* data, void* pThis);
+
+	//Error message window
+	FilterGraphErrorWindow m_errorWindow;
 };
 
 #endif

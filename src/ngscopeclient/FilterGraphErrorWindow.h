@@ -30,41 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterGraphWorkspace
+	@brief Declaration of FilterGraphErrorWindow
  */
-#ifndef FilterGraphWorkspace_h
-#define FilterGraphWorkspace_h
+#ifndef FilterGraphErrorWindow_h
+#define FilterGraphErrorWindow_h
 
-#include "Workspace.h"
-class FilterGraphEditor;
-class CreateFilterBrowser;
-class MainWindow;
+#include "Dialog.h"
 
-/**
-	@brief Helper class for building the default filter graph editor workspace
- */
-class FilterGraphWorkspace : public Workspace
+class FilterGraphErrorWindow : public Dialog
 {
 public:
-	FilterGraphWorkspace(
-		Session& session,
-		MainWindow* parent,
-		std::shared_ptr<FilterGraphEditor> graphEditor,
-		std::shared_ptr<CreateFilterBrowser> palette
-		);
-	virtual ~FilterGraphWorkspace()
-	{}
+	FilterGraphErrorWindow(Session* session);
+	virtual ~FilterGraphErrorWindow();
+
+	virtual bool Render();
+	virtual bool DoRender();
 
 protected:
-	virtual void DoRender(ImGuiID id) override;
-
+	std::set<InstrumentChannel*> m_nodesWithErrors;
 	bool m_firstRun;
-
-	//Only valid on initial launch of the workspace, set to null after
-	//TODO: maybe use weak pointers here?
-	std::shared_ptr<FilterGraphEditor> m_graphEditor;
-	std::shared_ptr<CreateFilterBrowser> m_palette;
 };
 
 #endif
-

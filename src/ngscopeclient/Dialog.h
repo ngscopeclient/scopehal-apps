@@ -117,12 +117,13 @@ protected:
 
 	///@brief optional reference to session
 	Session* m_session;
+
 	///@brief optional reference to parent MainWindow
 	MainWindow* m_parent;
 
-
 	///@brief Id of the item currently beeing edited
 	ImGuiID m_editedItemId = 0;
+
 	///@brief Id of the last edited item
 	ImGuiID m_lastEditedItemId = 0;
 };
