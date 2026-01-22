@@ -47,6 +47,7 @@
 #include "ProtocolAnalyzerDialog.h"
 #include "StreamBrowserDialog.h"
 #include "TriggerPropertiesDialog.h"
+#include "TutorialWizard.h"
 #include "Workspace.h"
 #include "imgui_markdown.h"
 
@@ -230,6 +231,10 @@ public:
 	void SetStartupSession(const std::string& path)
 	{ m_startupSession = path; }
 
+	///@brief Gets a pointer to the tutorial wizard (if we have one open)
+	std::shared_ptr<TutorialWizard> GetTutorialWizard()
+	{ return m_tutorialDialog; }
+
 protected:
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 
@@ -363,6 +368,9 @@ protected:
 
 	///@brief Lab notes
 	std::shared_ptr<Dialog> m_notesDialog;
+
+	///@brief Tutorial flow
+	std::shared_ptr<TutorialWizard> m_tutorialDialog;
 
 	///@brief Filter graph editor
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;

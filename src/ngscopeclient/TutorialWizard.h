@@ -30,39 +30,55 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Declaration of TutorialWizard
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
+#ifndef TutorialWizard_h
+#define TutorialWizard_h
 
 #include "Dialog.h"
-#include "Session.h"
 
-class AddInstrumentDialog : public Dialog
+class TutorialWizard : public Dialog
 {
 public:
-	AddInstrumentDialog(
-		const std::string& title,
-		const std::string& nickname,
-		Session* session,
-		MainWindow* parent,
-		const std::string& driverType);
-	virtual ~AddInstrumentDialog();
+	TutorialWizard(Session* session, MainWindow* parent);
+	virtual ~TutorialWizard();
 
+	virtual bool Render() override;
 	virtual bool DoRender();
 
+	enum TutorialStep
+	{
+		TUTORIAL_00_INTRO,
+		TUTORIAL_01_ADDINSTRUMENT,
+		TUTORIAL_02_CONNECT
+	};
+
+	TutorialStep GetCurrentStep()
+	{ return static_cast<TutorialStep>(m_step); }
+
+	///@brief Move the tutorial to the next step
+	void AdvanceToNextStep()
+	{ m_step ++; }
+
+	void MakePathSpeechBubble(
+		ImDrawList* list,
+		ImGuiDir dirTip,
+		ImVec2 anchorPos,
+		ImVec2 textsize,
+		float tailLength,
+		float radius);
+
+	void DrawSpeechBubble(
+		ImVec2 anchorPos,
+		ImGuiDir dirTip,
+		const std::string& str);
+
 protected:
-	SCPITransport* MakeTransport();
+	std::vector<std::string> m_markdownText;
 
-	virtual bool DoConnect(SCPITransport* transport);
+	size_t m_step;
 
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
+	bool m_continueEnabled;
 };
 
 #endif

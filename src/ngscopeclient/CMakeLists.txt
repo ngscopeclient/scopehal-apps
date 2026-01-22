@@ -108,6 +108,7 @@ add_executable(ngscopeclient
 	TextureManager.cpp
 	TriggerGroup.cpp
 	TriggerPropertiesDialog.cpp
+	TutorialWizard.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp

@@ -136,8 +136,10 @@ void Dialog::RenderErrorPopup()
 
 /**
 	@brief Displays a combo box from a vector<string>
+
+	@param open optional boolean indicating the dropdown is open
  */
-bool Dialog::Combo(const string& label, const vector<string>& items, int& selection)
+bool Dialog::Combo(const string& label, const vector<string>& items, int& selection, bool* open)
 {
 	string preview;
 	ImGuiComboFlags flags = 0;
@@ -155,6 +157,9 @@ bool Dialog::Combo(const string& label, const vector<string>& items, int& select
 	//Render the box
 	if(ImGui::BeginCombo(label.c_str(), preview.c_str(), flags))
 	{
+		if(open)
+			*open = true;
+
 		for(int i=0; i<(int)items.size(); i++)
 		{
 			bool selected = (i == selection);
@@ -168,6 +173,8 @@ bool Dialog::Combo(const string& label, const vector<string>& items, int& select
 		}
 		ImGui::EndCombo();
 	}
+	else if(open)
+		*open = false;
 	return changed;
 }
 

@@ -236,6 +236,8 @@ void MainWindow::ViewMenu()
  */
 void MainWindow::AddMenu()
 {
+	auto menuStartPos = ImGui::GetCursorScreenPos();
+
 	if(ImGui::BeginMenu("Add"))
 	{
 		//Make a reverse mapping: timestamp -> instruments last used at that time
@@ -272,6 +274,19 @@ void MainWindow::AddMenu()
 
 		ImGui::EndMenu();
 	}
+
+	//Add hint bubble here during the tutorial, but only if menu is not open
+	//(we don't want to block the user's view of said menu)
+	else if(m_tutorialDialog && (m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_01_ADDINSTRUMENT) )
+	{
+		auto menuEndPos = ImGui::GetCursorScreenPos();
+
+		ImVec2 anchorPos(
+			(menuStartPos.x + menuEndPos.x)/2,
+			menuStartPos.y + 2*ImGui::GetFontSize());
+
+		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Add an oscilloscope to your session");
+	}
 }
 
 /**
@@ -293,8 +308,17 @@ void MainWindow::DoAddSubMenu(
 			m_dialogs.emplace(make_shared<AddInstrumentDialog>(
 				string("Add ") + typePretty,
 				defaultName,
-				m_session,
+				&m_session,
+				this,
 				typeInternal));
+
+			//Move to the next step of the tutorial if needed
+			if((typeInternal == "oscilloscope") &&
+				m_tutorialDialog &&
+				(m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_01_ADDINSTRUMENT) )
+			{
+				m_tutorialDialog->AdvanceToNextStep();
+			}
 		}
 		ImGui::Separator();
 
@@ -782,6 +806,16 @@ void MainWindow::HelpMenu()
 {
 	if(ImGui::BeginMenu("Help"))
 	{
+		ImGui::BeginDisabled(m_tutorialDialog != nullptr);
+			if(ImGui::MenuItem("Tutorial..."))
+			{
+				m_tutorialDialog = make_shared<TutorialWizard>(&m_session, this);
+				AddDialog(m_tutorialDialog);
+			}
+		ImGui::EndDisabled();
+
+		ImGui::Separator();
+
 		if(ImGui::MenuItem("About..."))
 			AddDialog(make_shared<AboutDialog>(this));
 

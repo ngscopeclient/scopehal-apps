@@ -231,6 +231,13 @@ void MainWindow::InitializeDefaultSession()
 
 	//Dock it
 	m_initialWorkspaceDockRequest = w;
+
+	//Spawn the tutorial if requested
+	if(m_session.GetPreferences().GetBool("Help.Wizards.first_run_wizard"))
+	{
+		m_tutorialDialog = make_shared<TutorialWizard>(&m_session, this);
+		AddDialog(m_tutorialDialog);
+	}
 }
 
 void MainWindow::CloseSession()
@@ -266,6 +273,7 @@ void MainWindow::CloseSession()
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
+	m_tutorialDialog = nullptr;
 	m_manageInstrumentsDialog = nullptr;
 	m_initialWorkspaceDockRequest = nullptr;
 	m_graphEditor = nullptr;
@@ -1166,6 +1174,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_persistenceDialog = nullptr;
 	if(m_notesDialog == dlg)
 		m_notesDialog = nullptr;
+	if(m_tutorialDialog == dlg)
+		m_tutorialDialog = nullptr;
 	if(m_graphEditor == dlg)
 	{
 		m_graphEditorGroups = m_graphEditor->GetGroupIDs();
