@@ -52,6 +52,7 @@ TutorialWizard::TutorialWizard(Session* session, MainWindow* parent)
 	m_markdownText.push_back(ReadDataFile("md/tutorial_00_intro.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_01_addinstrument.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_02_connect.md"));
+	m_markdownText.push_back(ReadDataFile("md/tutorial_03_acquire.md"));
 }
 
 TutorialWizard::~TutorialWizard()
@@ -183,12 +184,25 @@ void TutorialWizard::MakePathSpeechBubble(
 	float radius)
 {
 	auto size = ImGui::GetFontSize();
+	auto tailWidth = size;
+
+	//Default is for the arrow to be 1/4 of the way across
+	auto leftOverhang = textsize.x / 4;
+
+	//Update overhang if the button would go off the start of the window
+	auto wpos = ImGui::GetWindowPos();
+	float minleft = wpos.x;
+	float farleft = anchorPos.x - (leftOverhang + radius);
+	float offLeftEdge = farleft - minleft;
+	if(offLeftEdge < 0)
+	{
+		//leftOverhang = 0.5*size;
+	}
+
+	auto rightOverhang = textsize.x - leftOverhang;
 
 	//ImGui wants clockwise winding. Starting from the tip of the speech bubble go down, then across
 	//Angles are measured clockwise from the 3 o'clock position
-	auto tailWidth = size;
-	auto leftOverhang = textsize.x / 4;
-	auto rightOverhang = textsize.x - leftOverhang;
 	ImVec2 tailCorner(anchorPos.x, anchorPos.y + tailLength);
 	ImVec2 topRight(tailCorner.x + rightOverhang, tailCorner.y);
 	ImVec2 topRightRadiusCenter(topRight.x, topRight.y + radius);

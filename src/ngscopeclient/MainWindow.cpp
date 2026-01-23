@@ -233,7 +233,8 @@ void MainWindow::InitializeDefaultSession()
 	m_initialWorkspaceDockRequest = w;
 
 	//Spawn the tutorial if requested
-	if(m_session.GetPreferences().GetBool("Help.Wizards.first_run_wizard"))
+	//if(m_session.GetPreferences().GetBool("Help.Wizards.first_run_wizard"))
+	if(false)
 	{
 		m_tutorialDialog = make_shared<TutorialWizard>(&m_session, this);
 		AddDialog(m_tutorialDialog);
@@ -1030,6 +1031,8 @@ void MainWindow::ToolbarButtons()
 
 	bool multigroup = (m_session.GetTriggerGroups().size() > 1);
 
+	auto buttonStartPos = ImGui::GetCursorScreenPos();;
+
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
@@ -1041,6 +1044,17 @@ void MainWindow::ToolbarButtons()
 	}
 
 	ImGui::SameLine(0.0, 0.0);
+
+	if(m_tutorialDialog && (m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_03_ACQUIRE) )
+	{
+		auto buttonEndPos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(
+			buttonEndPos.x - ImGui::GetFontSize(),
+			buttonStartPos.y + 2*ImGui::GetFontSize());
+		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "  Arm the trigger");
+		//FIXME better handling of going off edge
+	}
+
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
 	Dialog::Tooltip("Arm the trigger in one-shot mode");

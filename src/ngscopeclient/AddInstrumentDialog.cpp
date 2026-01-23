@@ -78,7 +78,10 @@ AddInstrumentDialog::~AddInstrumentDialog()
  */
 bool AddInstrumentDialog::DoRender()
 {
+	//Get the tutorial wizard and see if we're on the "connect to scope" page
 	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() != TutorialWizard::TUTORIAL_02_CONNECT) )
+		tutorial = nullptr;
 
 	ImGui::InputText("Nickname", &m_nickname);
 	HelpMarker(
@@ -99,10 +102,7 @@ bool AddInstrumentDialog::DoRender()
 
 	//Show speech bubble for tutorial
 	bool showedBubble = false;
-	if(tutorial &&
-		(tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_02_CONNECT) &&
-		(m_drivers[m_selectedDriver] != "demo") &&
-		!dropdownOpen )
+	if(tutorial && (m_drivers[m_selectedDriver] != "demo") && !dropdownOpen )
 	{
 		auto pos = ImGui::GetCursorScreenPos();
 		ImVec2 anchorPos(pos.x + 10*ImGui::GetFontSize(), pos.y);
@@ -129,11 +129,7 @@ bool AddInstrumentDialog::DoRender()
 		);
 
 	//Show speech bubble for tutorial
-	if(tutorial &&
-		(tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_02_CONNECT) &&
-		(m_transports[m_selectedTransport] != "null") &&
-		!dropdownOpen &&
-		!showedBubble)
+	if(tutorial && (m_transports[m_selectedTransport] != "null") && !dropdownOpen && !showedBubble)
 	{
 		auto pos = ImGui::GetCursorScreenPos();
 		ImVec2 anchorPos(pos.x + 10*ImGui::GetFontSize(), pos.y);
@@ -161,8 +157,8 @@ bool AddInstrumentDialog::DoRender()
 		if(m_nickname.empty())
 		{
 			ShowErrorPopup(
-			"Nickname error",
-			"Nickname shall be not empty");
+				"Nickname error",
+				"The nickname cannot be left blank");
 		}
 		else
 		{
@@ -170,9 +166,22 @@ bool AddInstrumentDialog::DoRender()
 			if(transport)
 			{
 				if(DoConnect(transport))
+				{
+					if(tutorial)
+						tutorial->AdvanceToNextStep();
+
 					return false;
+				}
 			}
 		}
+	}
+
+	if(tutorial && !dropdownOpen && !showedBubble)
+	{
+		auto pos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(pos.x + 2*ImGui::GetFontSize(), pos.y);
+		tutorial->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Add the scope to your session");
+		showedBubble = true;
 	}
 
 	return true;
