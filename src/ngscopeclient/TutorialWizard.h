@@ -44,7 +44,7 @@ public:
 	virtual ~TutorialWizard();
 
 	virtual bool Render() override;
-	virtual bool DoRender();
+	virtual bool DoRender() override;
 
 	enum TutorialStep
 	{
