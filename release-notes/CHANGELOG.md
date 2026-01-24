@@ -15,6 +15,7 @@ This is a running list of significant bug fixes and new features since the last 
   * CDR PLL (7.5x speedup)
   * Clip (4x speedup)
   * DDJ (16x speedup)
+  * Downconvert (5.8x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
