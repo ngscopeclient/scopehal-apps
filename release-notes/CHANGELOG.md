@@ -20,6 +20,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Histogram (12x speedup)
   * PAM Edge Detector (2x speedup)
   * TIE (5.3x speedup)
+  * Vector Frequency (1040x speedup)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
