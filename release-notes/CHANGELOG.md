@@ -8,7 +8,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Drivers: Added support for many more PicoScope models
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration for many filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+* Filters: Added GPU acceleration for many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
   * Base (17x speedup)
@@ -21,6 +21,7 @@ This is a running list of significant bug fixes and new features since the last 
   * PAM Edge Detector (2x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
+  * Vector Phase (243x speedup)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
