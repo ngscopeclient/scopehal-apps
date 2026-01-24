@@ -51,7 +51,10 @@ public:
 		TUTORIAL_00_INTRO,
 		TUTORIAL_01_ADDINSTRUMENT,
 		TUTORIAL_02_CONNECT,
-		TUTORIAL_03_ACQUIRE
+		TUTORIAL_03_ACQUIRE,
+		TUTORIAL_04_SCROLLZOOM,
+
+		TUTORIAL_99_FINAL
 	};
 
 	TutorialStep GetCurrentStep()
@@ -59,7 +62,21 @@ public:
 
 	///@brief Move the tutorial to the next step
 	void AdvanceToNextStep()
-	{ m_step ++; }
+	{
+		m_step ++;
+		m_continueEnabled = false;
+	}
+
+	///@brief Enable the next step but do not advance to it
+	void EnableNextStep()
+	{ m_continueEnabled = true; }
+
+	void DrawSpeechBubble(
+		ImVec2 anchorPos,
+		ImGuiDir dirTip,
+		std::string str);
+
+protected:
 
 	void MakePathSpeechBubble(
 		ImDrawList* list,
@@ -67,18 +84,16 @@ public:
 		ImVec2 anchorPos,
 		ImVec2 textsize,
 		float tailLength,
-		float radius);
+		float radius,
+		float leftOverhang);
 
-	void DrawSpeechBubble(
-		ImVec2 anchorPos,
-		ImGuiDir dirTip,
-		const std::string& str);
-
-protected:
+	///@brief Text for each tutorial page
 	std::vector<std::string> m_markdownText;
 
+	///@brief Current step of the tutorial
 	size_t m_step;
 
+	///@brief True if the "continue" button is active
 	bool m_continueEnabled;
 };
 

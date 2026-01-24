@@ -1035,7 +1035,12 @@ void MainWindow::ToolbarButtons()
 
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
+	{
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
+
+		if(m_tutorialDialog && (m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_03_ACQUIRE) )
+			m_tutorialDialog->AdvanceToNextStep();
+	}
 	Dialog::Tooltip("Arm the trigger in normal mode");
 	if(multigroup)
 	{
@@ -1051,8 +1056,7 @@ void MainWindow::ToolbarButtons()
 		ImVec2 anchorPos(
 			buttonEndPos.x - ImGui::GetFontSize(),
 			buttonStartPos.y + 2*ImGui::GetFontSize());
-		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "  Arm the trigger");
-		//FIXME better handling of going off edge
+		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Arm the trigger");
 	}
 
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))

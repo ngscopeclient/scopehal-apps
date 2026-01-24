@@ -53,6 +53,12 @@ TutorialWizard::TutorialWizard(Session* session, MainWindow* parent)
 	m_markdownText.push_back(ReadDataFile("md/tutorial_01_addinstrument.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_02_connect.md"));
 	m_markdownText.push_back(ReadDataFile("md/tutorial_03_acquire.md"));
+	m_markdownText.push_back(ReadDataFile("md/tutorial_04_scrollzoom.md"));
+
+	m_markdownText.push_back(ReadDataFile("md/tutorial_99_final.md"));
+
+	//DEBUG: autiomatically jump ahead a bit
+	m_step = TUTORIAL_03_ACQUIRE;
 }
 
 TutorialWizard::~TutorialWizard()
@@ -93,16 +99,18 @@ bool TutorialWizard::DoRender()
 
 	ImGui::Separator();
 
-	//move slightly right of centerline
-	ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x / 2);
+	//move near the right edge
+	ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x * 0.8);
 
 	//Show back button unless at first step
+	//TODO: is this necessary? will it break things? For now turn it off
+	/*
 	ImGui::BeginDisabled(m_step == TUTORIAL_00_INTRO);
 		if(ImGui::Button("<< Back"))
 			m_step --;
 	ImGui::EndDisabled();
-
 	ImGui::SameLine();
+	*/
 
 	//Show forward button
 	//If last step, close dialog when pressed
@@ -114,26 +122,32 @@ bool TutorialWizard::DoRender()
 	}
 	else
 	{
-		//Enable the continue button as needed
 		ImGui::BeginDisabled(!m_continueEnabled);
-
-		//By default, continue is disabled when we move to the next step
-		if(ImGui::Button("Continue >>"))
-		{
-			m_step ++;
-			m_continueEnabled = false;
-		}
-
+			if(ImGui::Button("Continue >>"))
+				AdvanceToNextStep();
 		ImGui::EndDisabled();
 	}
 
-	//If this is the first step, show the first bubble
-	if(m_step == TUTORIAL_00_INTRO)
+	//Show hints on continue button for some steps
+	if(m_continueEnabled)
 	{
 		ImVec2 anchorPos(
 			buttonStartPos.x + 2*ImGui::GetFontSize(),
 			buttonStartPos.y + 2*ImGui::GetFontSize());
-		DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Begin the tutorial");
+		switch(m_step)
+		{
+			case TUTORIAL_00_INTRO:
+				DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Begin the tutorial");
+				break;
+
+			case TUTORIAL_04_SCROLLZOOM:
+				DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Continue when you are comfortable zooming the plot");
+				break;
+
+			//show nothing otherwise
+			default:
+				break;
+		}
 	}
 
 	return true;
@@ -144,8 +158,8 @@ bool TutorialWizard::DoRender()
 
 void TutorialWizard::DrawSpeechBubble(
 		ImVec2 anchorPos,
-		ImGuiDir dirTip,
-		const string& str)
+		[[maybe_unused]] ImGuiDir dirTip,
+		string str)
 {
 	auto& prefs = m_session->GetPreferences();
 	auto outlineColor = prefs.GetColor("Appearance.Help.bubble_outline_color");
@@ -153,21 +167,43 @@ void TutorialWizard::DrawSpeechBubble(
 	auto list = ImGui::GetForegroundDrawList();
 
 	auto textsize = ImGui::CalcTextSize(str.c_str(), nullptr);
-
-	//Anchor position is the tip of the speech bubble, centered on the menu
 	auto size = ImGui::GetFontSize();
-	float tailLength = size;
+
+	//Default is for the arrow to be 1/4 of the way across
+	auto leftOverhang = textsize.x / 4;
 	float radius = 0.5 * size;
+
+	//Update overhang if the button would go off the start of the window
+	//For now, we only care about the left side
+	auto viewport = ImGui::GetWindowViewport();
+	auto wpos = viewport->Pos;
+	float farleft = anchorPos.x - (leftOverhang + radius);
+	float offLeftEdge = farleft - wpos.x;
+	if(offLeftEdge < 0)
+	{
+		//for now just clamp the anchor
+		//but this breaks things we can't make it too small
+		//anchorPos.x += fabs(offLeftEdge) + size;
+		leftOverhang = 2*size;
+
+		//Make the text a bit wider and recalculate the size
+		//Quick hack, but it keeps it visible!
+		str = "   " + str;
+		textsize = ImGui::CalcTextSize(str.c_str(), nullptr);
+	}
+
+	//Anchor position is the tip of the speech bubble
+	float tailLength = size;
 	ImVec2 textPos(
-		anchorPos.x - textsize.x/4,
+		anchorPos.x - leftOverhang,
 		anchorPos.y + tailLength + radius);
 
 	//Fill
-	MakePathSpeechBubble(list, dirTip, anchorPos, textsize, tailLength, radius);
+	MakePathSpeechBubble(list, dirTip, anchorPos, textsize, tailLength, radius, leftOverhang);
 	list->PathFillConcave(fillColor);
 
 	//Outline
-	MakePathSpeechBubble(list, dirTip, anchorPos, textsize, tailLength, radius);
+	MakePathSpeechBubble(list, dirTip, anchorPos, textsize, tailLength, radius, leftOverhang);
 	list->PathStroke(outlineColor, 0, 0.25 * size);
 
 	//Text
@@ -181,24 +217,11 @@ void TutorialWizard::MakePathSpeechBubble(
 	ImVec2 anchorPos,
 	ImVec2 textsize,
 	float tailLength,
-	float radius)
+	float radius,
+	float leftOverhang)
 {
 	auto size = ImGui::GetFontSize();
 	auto tailWidth = size;
-
-	//Default is for the arrow to be 1/4 of the way across
-	auto leftOverhang = textsize.x / 4;
-
-	//Update overhang if the button would go off the start of the window
-	auto wpos = ImGui::GetWindowPos();
-	float minleft = wpos.x;
-	float farleft = anchorPos.x - (leftOverhang + radius);
-	float offLeftEdge = farleft - minleft;
-	if(offLeftEdge < 0)
-	{
-		//leftOverhang = 0.5*size;
-	}
-
 	auto rightOverhang = textsize.x - leftOverhang;
 
 	//ImGui wants clockwise winding. Starting from the tip of the speech bubble go down, then across
