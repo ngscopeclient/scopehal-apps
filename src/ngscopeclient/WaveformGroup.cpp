@@ -875,59 +875,16 @@ void WaveformGroup::RenderTimeline(float width, float height)
 		//Autoscale on middle mouse
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
 		{
-			LogTrace("middle mouse autoscale\n");
-
-			//Find beginning and end of all waveforms in the group
-			int64_t start = INT64_MAX;
-			int64_t end = -INT64_MAX;
-			bool dataFound = false;
-			auto areas = GetWaveformAreas();
-			for(auto a : areas)
-			{
-				for(size_t i=0; i<a->GetStreamCount(); i++)
-				{
-					auto stream = a->GetStream(i);
-					auto data = stream.GetData();
-					if(data == nullptr)
-						continue;
-					auto sdata = dynamic_cast<SparseWaveformBase*>(data);
-					auto udata = dynamic_cast<UniformWaveformBase*>(data);
-					auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
-
-					//Regular waveform
-					if(sdata || udata)
-					{
-						dataFound = true;
-
-						int64_t wstart = GetOffsetScaled(sdata, udata, 0);
-						int64_t wend =
-							GetOffsetScaled(sdata, udata, data->size()-1) +
-							GetDurationScaled(sdata, udata, data->size()-1);
-
-						start = min(start, wstart);
-						end = max(end, wend);
-					}
-
-					//Density plot
-					else if(ddata)
-					{
-						dataFound = true;
-						start = 0;
-						end = ddata->GetWidth() * ddata->m_timescale;
-					}
-				}
-			}
-
-			int64_t sigwidth = end - start;
-
-			//Don't divide by zero if no data!
-			if( dataFound && (sigwidth > 1) )
-			{
-				m_pixelsPerXUnit = width / sigwidth;
-				m_xAxisOffset = start;
-				ClearPersistence();
-			}
+			AutofitHorizontal(width);
 		}
+	}
+
+	if(ImGui::BeginPopupContextWindow())
+	{
+		if(ImGui::MenuItem("Autofit")){
+			AutofitHorizontal(width);
+		}
+		ImGui::EndPopup();
 	}
 
 	//Handle dragging
@@ -1459,4 +1416,61 @@ YAML::Node WaveformGroup::SerializeConfiguration(IDTable& table)
 	}
 
 	return node;
+
+}
+
+void WaveformGroup::AutofitHorizontal(float width)
+{
+	LogTrace("middle mouse autoscale\n");
+
+	//Find beginning and end of all waveforms in the group
+	int64_t start = INT64_MAX;
+	int64_t end = -INT64_MAX;
+	bool dataFound = false;
+	auto areas = GetWaveformAreas();
+	for(auto a : areas)
+	{
+		for(size_t i=0; i<a->GetStreamCount(); i++)
+		{
+			auto stream = a->GetStream(i);
+			auto data = stream.GetData();
+			if(data == nullptr)
+				continue;
+			auto sdata = dynamic_cast<SparseWaveformBase*>(data);
+			auto udata = dynamic_cast<UniformWaveformBase*>(data);
+			auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
+
+			//Regular waveform
+			if(sdata || udata)
+			{
+				dataFound = true;
+
+				int64_t wstart = GetOffsetScaled(sdata, udata, 0);
+				int64_t wend =
+					GetOffsetScaled(sdata, udata, data->size()-1) +
+					GetDurationScaled(sdata, udata, data->size()-1);
+
+				start = min(start, wstart);
+				end = max(end, wend);
+			}
+
+			//Density plot
+			else if(ddata)
+			{
+				dataFound = true;
+				start = 0;
+				end = ddata->GetWidth() * ddata->m_timescale;
+			}
+		}
+	}
+
+	int64_t sigwidth = end - start;
+
+	//Don't divide by zero if no data!
+	if( dataFound && (sigwidth > 1) )
+	{
+		m_pixelsPerXUnit = width / sigwidth;
+		m_xAxisOffset = start;
+		ClearPersistence();
+	}
 }
