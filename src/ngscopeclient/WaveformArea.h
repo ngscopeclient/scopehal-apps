@@ -496,6 +496,8 @@ public:
 	bool IsChannelBeingDragged();
 	StreamDescriptor GetChannelBeingDragged();
 
+	void AutofitVertical();
+
 	/**
 		@brief Gets the WaveformGroup for this area
 	 */
