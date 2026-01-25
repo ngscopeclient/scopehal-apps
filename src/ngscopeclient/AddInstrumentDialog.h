@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -44,7 +44,8 @@ public:
 	AddInstrumentDialog(
 		const std::string& title,
 		const std::string& nickname,
-		Session& session,
+		Session* session,
+		MainWindow* parent,
 		const std::string& driverType,
 		const std::string& driver = "",
 		const std::string& transport = "",
@@ -57,8 +58,6 @@ protected:
 	SCPITransport* MakeTransport();
 
 	virtual bool DoConnect(SCPITransport* transport);
-
-	Session& m_session;
 
 	//GUI widget values
 	std::string m_nickname;

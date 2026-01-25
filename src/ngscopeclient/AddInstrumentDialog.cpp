@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2026 Andrew D. Zonenberg                                                                          *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -35,6 +35,7 @@
 
 #include "ngscopeclient.h"
 #include "AddInstrumentDialog.h"
+#include "MainWindow.h"
 
 using namespace std;
 
@@ -44,13 +45,18 @@ using namespace std;
 AddInstrumentDialog::AddInstrumentDialog(
 	const string& title,
 	const string& nickname,
-	Session& session,
+	Session* session,
+	MainWindow* parent,
 	const string& driverType,
 	const std::string& driver,
 	const std::string& transport,
 	const std::string& path)
-	: Dialog(title, string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)), ImVec2(600, 150))
-	, m_session(session)
+	: Dialog(
+		title,
+		string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)),
+		ImVec2(600, 150),
+		session,
+		parent)
 	, m_nickname(nickname)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
@@ -58,8 +64,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 {
 	SCPITransport::EnumTransports(m_transports);
 
-	m_drivers = session.GetDriverNamesForType(driverType);
-
+	m_drivers = session->GetDriverNamesForType(driverType);
 	if(!driver.empty())
 	{
 		int i = 0;
@@ -105,13 +110,19 @@ AddInstrumentDialog::~AddInstrumentDialog()
  */
 bool AddInstrumentDialog::DoRender()
 {
+	//Get the tutorial wizard and see if we're on the "connect to scope" page
+	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() != TutorialWizard::TUTORIAL_02_CONNECT) )
+		tutorial = nullptr;
+
 	ImGui::InputText("Nickname", &m_nickname);
 	HelpMarker(
 		"Text nickname for this instrument so you can distinguish between multiple similar devices.\n"
 		"\n"
 		"This is shown on the list of recent instruments, to disambiguate channel names in multi-instrument setups, etc.");
 
-	Combo("Driver", m_drivers, m_selectedDriver);
+	bool dropdownOpen = false;
+	Combo("Driver", m_drivers, m_selectedDriver, &dropdownOpen);
 	HelpMarker(
 		"Select the instrument driver to use.\n"
 		"\n"
@@ -121,7 +132,19 @@ bool AddInstrumentDialog::DoRender()
 		"\n"
 		"Check the user manual for details of what driver to use with a given instrument.");
 
-	Combo("Transport", m_transports, m_selectedTransport);
+	//Show speech bubble for tutorial
+	bool showedBubble = false;
+	if(tutorial && (m_drivers[m_selectedDriver] != "demo") && !dropdownOpen )
+	{
+		auto pos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(pos.x + 10*ImGui::GetFontSize(), pos.y);
+		tutorial->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Select the \"demo\" driver");
+		showedBubble = true;
+	}
+	else if(dropdownOpen)	//suppress further bubbles if dropdown is active
+		showedBubble = true;
+
+	Combo("Transport", m_transports, m_selectedTransport, &dropdownOpen);
 	HelpMarker(
 		"Select the SCPI transport for the connection between your computer and the instrument.\n"
 		"\n"
@@ -136,6 +159,17 @@ bool AddInstrumentDialog::DoRender()
 				"vicp: Teledyne LeCroy Virtual Instrument Control Protocol"
 			}
 		);
+
+	//Show speech bubble for tutorial
+	if(tutorial && (m_transports[m_selectedTransport] != "null") && !dropdownOpen && !showedBubble)
+	{
+		auto pos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(pos.x + 10*ImGui::GetFontSize(), pos.y);
+		tutorial->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Select the \"null\" transport");
+		showedBubble = true;
+	}
+	else if(dropdownOpen)	//suppress further bubbles if dropdown is active
+		showedBubble = true;
 
 	ImGui::InputText("Path", &m_path);
 	HelpMarker(
@@ -155,8 +189,8 @@ bool AddInstrumentDialog::DoRender()
 		if(m_nickname.empty())
 		{
 			ShowErrorPopup(
-			"Nickname error",
-			"Nickname shall be not empty");
+				"Nickname error",
+				"The nickname cannot be left blank");
 		}
 		else
 		{
@@ -164,9 +198,22 @@ bool AddInstrumentDialog::DoRender()
 			if(transport)
 			{
 				if(DoConnect(transport))
+				{
+					if(tutorial)
+						tutorial->AdvanceToNextStep();
+
 					return false;
+				}
 			}
 		}
+	}
+
+	if(tutorial && !dropdownOpen && !showedBubble)
+	{
+		auto pos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(pos.x + 2*ImGui::GetFontSize(), pos.y);
+		tutorial->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Add the scope to your session");
+		showedBubble = true;
 	}
 
 	return true;
@@ -203,5 +250,5 @@ SCPITransport* AddInstrumentDialog::MakeTransport()
 
 bool AddInstrumentDialog::DoConnect(SCPITransport* transport)
 {
-	return m_session.CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
+	return m_session->CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
 }
