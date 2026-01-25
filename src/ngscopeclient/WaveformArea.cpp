@@ -4273,14 +4273,32 @@ void WaveformArea::OnMouseWheelPlotArea(float delta, float delta_h)
 
 	int64_t target = m_group->XPositionToXAxisUnits(ImGui::GetIO().MousePos.x);
 
-	//Zoom in
-	if(delta > 0)
-		m_group->OnZoomInHorizontal(target, pow(1.5, delta));
-	else if (delta < 0)
-		m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
+	//If we have both X and Y deltas, use the larger one and ignore incidental movement in the other axis
+	if(fabs(delta) > fabs(delta_h) )
+	{
+		//Zoom in
+		if(delta > 0)
+		{
+			m_group->OnZoomInHorizontal(target, pow(1.5, delta));
+
+			//If in the tutorial, ungate the wizard
+			auto tutorial = m_parent->GetTutorialWizard();
+			if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_04_SCROLLZOOM) )
+				tutorial->EnableNextStep();
+		}
+		else if (delta < 0)
+		{
+			m_group->OnZoomOutHorizontal(target, pow(1.5, -delta));
+
+			//If in the tutorial, ungate the wizard
+			auto tutorial = m_parent->GetTutorialWizard();
+			if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_04_SCROLLZOOM) )
+				tutorial->EnableNextStep();
+		}
+	}
 
 	//Pan horizontally
-	if (delta_h != 0)
+	else if (delta_h != 0)
 		m_group->OnPanHorizontal(delta_h);
 }
 

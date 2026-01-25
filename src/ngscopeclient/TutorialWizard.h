@@ -30,41 +30,71 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of FilterGraphWorkspace
+	@brief Declaration of TutorialWizard
  */
-#ifndef FilterGraphWorkspace_h
-#define FilterGraphWorkspace_h
+#ifndef TutorialWizard_h
+#define TutorialWizard_h
 
-#include "Workspace.h"
-class FilterGraphEditor;
-class CreateFilterBrowser;
-class MainWindow;
+#include "Dialog.h"
 
-/**
-	@brief Helper class for building the default filter graph editor workspace
- */
-class FilterGraphWorkspace : public Workspace
+class TutorialWizard : public Dialog
 {
 public:
-	FilterGraphWorkspace(
-		Session& session,
-		MainWindow* parent,
-		std::shared_ptr<FilterGraphEditor> graphEditor,
-		std::shared_ptr<CreateFilterBrowser> palette
-		);
-	virtual ~FilterGraphWorkspace()
-	{}
+	TutorialWizard(Session* session, MainWindow* parent);
+	virtual ~TutorialWizard();
+
+	virtual bool Render() override;
+	virtual bool DoRender() override;
+
+	enum TutorialStep
+	{
+		TUTORIAL_00_INTRO,
+		TUTORIAL_01_ADDINSTRUMENT,
+		TUTORIAL_02_CONNECT,
+		TUTORIAL_03_ACQUIRE,
+		TUTORIAL_04_SCROLLZOOM,
+
+		TUTORIAL_99_FINAL
+	};
+
+	TutorialStep GetCurrentStep()
+	{ return static_cast<TutorialStep>(m_step); }
+
+	///@brief Move the tutorial to the next step
+	void AdvanceToNextStep()
+	{
+		m_step ++;
+		m_continueEnabled = false;
+	}
+
+	///@brief Enable the next step but do not advance to it
+	void EnableNextStep()
+	{ m_continueEnabled = true; }
+
+	void DrawSpeechBubble(
+		ImVec2 anchorPos,
+		ImGuiDir dirTip,
+		std::string str);
 
 protected:
-	virtual void DoRender(ImGuiID id) override;
 
-	bool m_firstRun;
+	void MakePathSpeechBubble(
+		ImDrawList* list,
+		ImGuiDir dirTip,
+		ImVec2 anchorPos,
+		ImVec2 textsize,
+		float tailLength,
+		float radius,
+		float leftOverhang);
 
-	//Only valid on initial launch of the workspace, set to null after
-	//TODO: maybe use weak pointers here?
-	std::shared_ptr<FilterGraphEditor> m_graphEditor;
-	std::shared_ptr<CreateFilterBrowser> m_palette;
+	///@brief Text for each tutorial page
+	std::vector<std::string> m_markdownText;
+
+	///@brief Current step of the tutorial
+	size_t m_step;
+
+	///@brief True if the "continue" button is active
+	bool m_continueEnabled;
 };
 
 #endif
-

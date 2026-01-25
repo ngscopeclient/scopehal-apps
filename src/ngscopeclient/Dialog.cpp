@@ -136,8 +136,10 @@ void Dialog::RenderErrorPopup()
 
 /**
 	@brief Displays a combo box from a vector<string>
+
+	@param open optional boolean indicating the dropdown is open
  */
-bool Dialog::Combo(const string& label, const vector<string>& items, int& selection)
+bool Dialog::Combo(const string& label, const vector<string>& items, int& selection, bool* open)
 {
 	string preview;
 	ImGuiComboFlags flags = 0;
@@ -155,6 +157,9 @@ bool Dialog::Combo(const string& label, const vector<string>& items, int& select
 	//Render the box
 	if(ImGui::BeginCombo(label.c_str(), preview.c_str(), flags))
 	{
+		if(open)
+			*open = true;
+
 		for(int i=0; i<(int)items.size(); i++)
 		{
 			bool selected = (i == selection);
@@ -168,6 +173,8 @@ bool Dialog::Combo(const string& label, const vector<string>& items, int& select
 		}
 		ImGui::EndCombo();
 	}
+	else if(open)
+		*open = false;
 	return changed;
 }
 
@@ -407,7 +414,7 @@ void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &h
 	if(use7Segment)
 	{
 		if(digitHeight <= 0) digitHeight = ImGui::GetFontSize();
-		
+
 	    Render7SegmentValue(value,color,digitHeight,clicked,hovered,clickable);
 	}
 	else
@@ -424,7 +431,7 @@ void Dialog::renderNumericValue(const std::string& value, bool &clicked, bool &h
 			clicked |= ImGui::IsItemClicked();
 			if(ImGui::IsItemHovered())
 			{	// Hand cursor
-				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);			
+				ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 				// Lighter if hovered
 				color.x = color.x * 1.2f;
 				color.y = color.y * 1.2f;
@@ -601,7 +608,7 @@ bool Dialog::renderEditableProperty(float width, const std::string& label, std::
 				//Prevent focus from going to parent node
 				ImGui::ActivateItemByID(0);
 			}
-			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))  
+			else if((ImGui::GetActiveID() != editId) && (!explicitApply || !ImGui::IsItemActive() /* This is here to prevent detecting focus lost when apply button is clicked */))
 			{	// Detect focus lost => stop editing too
 				if(explicitApply)
 				{	// Cancel on focus lost
@@ -774,7 +781,7 @@ void Dialog::renderBadge(float width, ImVec4 color, const string& label)
 	0b00000010 : Top left v segment
 	0b00000001 : Center h segment
  */
-static char SEGMENTS[] = 
+static char SEGMENTS[] =
 {
 	0x7E, // 0
 	0x30, // 1
@@ -812,7 +819,7 @@ void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 siz
 	ImVec2 centerPosition(position.x+halfSize.x,position.y+halfSize.y);
 	float w = thickness;
 	float h = thickness/2;
-	float segmentSpec[7][4] = 
+	float segmentSpec[7][4] =
 	{
 		{-1, -1,  h,  h},		// Top h segment
 		{ 1, -1, -h,  h},		// Top right v seglent
@@ -826,7 +833,7 @@ void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 siz
 	{
 		ImVec2 topLeft, bottomRight;
 		if(i % 3 == 0)
-		{	
+		{
 			// Horizontal segment
 			topLeft = ImVec2(centerPosition.x + segmentSpec[i][0] * halfSize.x + segmentSpec[i][2], centerPosition.y + segmentSpec[i][1] * halfSize.y + segmentSpec[i][3] - h);
 			bottomRight = ImVec2(topLeft.x + size.x - w, topLeft.y + w);
@@ -843,7 +850,7 @@ void Dialog::Render7SegmentDigit(ImDrawList* drawList, uint8_t digit, ImVec2 siz
 		if(segmentSize.x > segmentSize.y)
 		{
 			// Horizontal segment
-			ImVec2 points[] = 
+			ImVec2 points[] =
 			{
 				{topLeft.x + u, topLeft.y + segmentSize.y * .5f},
 				{topLeft.x + space, topLeft.y},
@@ -929,7 +936,7 @@ void Dialog::Render7SegmentValue(const std::string& value, ImVec4 color, float d
 	else
 	{
 		// Iterate on each char of the value string
-		for(const char c : value) 
+		for(const char c : value)
 		{
 			if(c >= '0' && c <='9')
 			{

@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -78,7 +78,30 @@ void FilterGraphWorkspace::DoRender(ImGuiID id)
 				ImGui::DockBuilderSplitNode(topNode->ID, ImGuiDir_Right, ratio, &rightPanelID, &leftPanelID);
 			}
 
-			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), leftPanelID);
+			//Split the main panel into two sub nodes
+			auto mainNode = ImGui::DockBuilderGetNode(leftPanelID);
+			ImGuiID topLeftPanelID;
+			ImGuiID bottomLeftPanelID;
+			if(mainNode->IsSplitNode())
+			{
+				topLeftPanelID = mainNode->ChildNodes[0]->ID;
+				bottomLeftPanelID = mainNode->ChildNodes[1]->ID;
+			}
+			else
+			{
+				auto ratio = ImGui::GetFontSize() * 13 / mainNode->Size.x;
+				ImGui::DockBuilderSplitNode(mainNode->ID, ImGuiDir_Down, ratio, &bottomLeftPanelID, &topLeftPanelID);
+			}
+
+			//this doesn't quite work but leaving here in hopes we can use it as a baseline
+			auto errorNode = ImGui::DockBuilderGetNode(bottomLeftPanelID);
+			errorNode->SetLocalFlags(
+				errorNode->LocalFlags |
+				ImGuiDockNodeFlags_NoCloseButton |
+				ImGuiDockNodeFlags_NoWindowMenuButton);
+
+			ImGui::DockBuilderDockWindow(m_graphEditor->GetTitleAndID().c_str(), topLeftPanelID);
+			ImGui::DockBuilderDockWindow(m_graphEditor->GetErrorWindow().GetTitleAndID().c_str(), bottomLeftPanelID);
 			ImGui::DockBuilderDockWindow(m_palette->GetTitleAndID().c_str(), rightPanelID);
 			ImGui::DockBuilderFinish(id);
 

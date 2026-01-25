@@ -49,8 +49,8 @@ public:
 		m_channelInverted = std::make_unique<bool[] >(n);
 		m_channelOffset = std::make_unique<std::vector<float>[] >(n);
 		m_channelRange = std::make_unique<std::vector<float>[] >(n);
-		
-		m_channelDigitalTrehshold = std::make_unique<std::atomic<float>[] >(n);
+
+		m_channelDigitalThreshold = std::make_unique<std::atomic<float>[] >(n);
 		m_channelAttenuation = std::make_unique<std::atomic<float>[] >(n);
 
 		m_needsUpdate = std::make_unique<std::atomic<bool>[] >(n);
@@ -83,7 +83,7 @@ public:
 		{
 			m_channelInverted[i] = false;
 
-			m_channelDigitalTrehshold[i] = 0;
+			m_channelDigitalThreshold[i] = 0;
 			m_channelAttenuation[i] = 0;
 			m_channelBandwidthLimit[i] = 0;
 			m_channelCoupling[i] = 0;
@@ -121,7 +121,7 @@ public:
 	std::unique_ptr<bool[]> m_channelInverted;
 	std::unique_ptr<std::vector<float>[]> m_channelOffset;
 	std::unique_ptr<std::vector<float>[]> m_channelRange;
-	std::unique_ptr<std::atomic<float>[]> m_channelDigitalTrehshold;
+	std::unique_ptr<std::atomic<float>[]> m_channelDigitalThreshold;
 	std::unique_ptr<std::atomic<float>[]> m_channelAttenuation;
 
 	std::unique_ptr<std::atomic<bool>[]> m_needsUpdate;
