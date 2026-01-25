@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2024 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -59,6 +59,9 @@ protected:
 	virtual void DoRender(ImGuiID id) override;
 
 	bool m_firstRun;
+
+	//Only valid on initial launch of the workspace, set to null after
+	//TODO: maybe use weak pointers here?
 	std::shared_ptr<FilterGraphEditor> m_graphEditor;
 	std::shared_ptr<CreateFilterBrowser> m_palette;
 };

@@ -30,39 +30,102 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Implementation of FilterGraphErrorWindow
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
 
-#include "Dialog.h"
+#include "ngscopeclient.h"
+#include "FilterGraphErrorWindow.h"
 #include "Session.h"
 
-class AddInstrumentDialog : public Dialog
+using namespace std;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Construction / destruction
+
+FilterGraphErrorWindow::FilterGraphErrorWindow(Session* session)
+	: Dialog("Errors", "FilterGraphErrors", ImVec2(300, 400), session)
+	, m_firstRun(true)
 {
-public:
-	AddInstrumentDialog(
-		const std::string& title,
-		const std::string& nickname,
-		Session* session,
-		MainWindow* parent,
-		const std::string& driverType);
-	virtual ~AddInstrumentDialog();
+}
 
-	virtual bool DoRender();
+FilterGraphErrorWindow::~FilterGraphErrorWindow()
+{
+}
 
-protected:
-	SCPITransport* MakeTransport();
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Rendering
 
-	virtual bool DoConnect(SCPITransport* transport);
+bool FilterGraphErrorWindow::Render()
+{
+	//Refresh list of errors
+	auto& nodes = Filter::GetAllInstances();
+	m_nodesWithErrors.clear();
+	for(auto node : nodes)
+	{
+		if(node->HasErrors())
+			m_nodesWithErrors.emplace(node);
+	}
 
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
-};
+	//Show error window on first run, or if we have errors
+	if(!m_nodesWithErrors.empty())
+		m_open = true;
+	else if(m_firstRun)
+	{
+		m_open = true;
+		m_firstRun = false;
+	}
+	else
+		m_open = false;
 
-#endif
+	return Dialog::Render();
+}
+
+/**
+	@brief Renders the dialog and handles UI events
+
+	@return		True if we should continue showing the dialog
+				False if it's been closed
+ */
+bool FilterGraphErrorWindow::DoRender()
+{
+	const ImGuiTableFlags flags =
+		ImGuiTableFlags_Resizable |
+		ImGuiTableFlags_BordersOuter |
+		ImGuiTableFlags_BordersV |
+		ImGuiTableFlags_ScrollY |
+		ImGuiTableFlags_RowBg |
+		ImGuiTableFlags_SizingFixedFit;
+
+	auto width = ImGui::GetFontSize();
+	if(ImGui::BeginTable("table", 2, flags))
+	{
+		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
+
+		ImGui::TableSetupColumn("Channel", ImGuiTableColumnFlags_WidthFixed, 12*width);
+		ImGui::TableSetupColumn("Error", ImGuiTableColumnFlags_WidthStretch, 0);
+		ImGui::TableHeadersRow();
+
+		for(auto f : m_nodesWithErrors)
+		{
+			auto messages = explode(f->GetErrorLog(), '\n');
+			for(auto& m : messages)
+			{
+				//remove bullet and space
+				string s = m.substr(m.find(' ') + 1);
+
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TextUnformatted(f->GetDisplayName().c_str());
+				ImGui::TableSetColumnIndex(1);
+				ImGui::TextUnformatted(s.c_str());
+			}
+		}
+
+		ImGui::EndTable();
+	}
+
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI event handlers

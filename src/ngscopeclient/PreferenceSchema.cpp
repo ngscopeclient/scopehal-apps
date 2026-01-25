@@ -172,6 +172,17 @@ void PreferenceManager::InitializeDefaults()
 				.Label("Icon color")
 				.Description("Color for icon captions"));
 
+		auto& ahelp = appearance.AddCategory("Help");
+			ahelp.AddPreference(
+				Preference::Color("bubble_outline_color", ColorFromString("#00ff00"))
+				.Label("Bubble outline color")
+				.Description("Color for tutorial bubble outlines"));
+
+			ahelp.AddPreference(
+				Preference::Color("bubble_fill_color", ColorFromString("#202020e0"))
+				.Label("Bubble fill color")
+				.Description("Color for tutorial bubble fill"));
+
 		auto& stream = appearance.AddCategory("Stream Browser");
 			stream.AddPreference(
 				Preference::Enum("numeric_value_display", NUMERIC_DISPLAY_MONO_FONT)
@@ -542,6 +553,13 @@ void PreferenceManager::InitializeDefaults()
 			.Label("Max recent files")
 			.Description("Maximum number of recent .scopesession file paths to save in history")
 			.Unit(Unit::UNIT_COUNTS));
+
+	auto& help = this->m_treeRoot.AddCategory("Help");
+		auto& wizards = help.AddCategory("Wizards");
+			wizards.AddPreference(
+				Preference::Bool("first_run_wizard", true)
+				.Label("First-run wizard")
+				.Description("Enable the first-run tutorial wizard"));
 
 	auto& misc = this->m_treeRoot.AddCategory("Miscellaneous");
 		auto& menus = misc.AddCategory("Menus");

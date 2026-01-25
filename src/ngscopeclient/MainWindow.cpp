@@ -231,6 +231,14 @@ void MainWindow::InitializeDefaultSession()
 
 	//Dock it
 	m_initialWorkspaceDockRequest = w;
+
+	//Spawn the tutorial if requested
+	//if(m_session.GetPreferences().GetBool("Help.Wizards.first_run_wizard"))
+	if(false)
+	{
+		m_tutorialDialog = make_shared<TutorialWizard>(&m_session, this);
+		AddDialog(m_tutorialDialog);
+	}
 }
 
 void MainWindow::CloseSession()
@@ -266,6 +274,7 @@ void MainWindow::CloseSession()
 	m_historyDialog = nullptr;
 	m_preferenceDialog = nullptr;
 	m_persistenceDialog = nullptr;
+	m_tutorialDialog = nullptr;
 	m_manageInstrumentsDialog = nullptr;
 	m_initialWorkspaceDockRequest = nullptr;
 	m_graphEditor = nullptr;
@@ -1022,9 +1031,16 @@ void MainWindow::ToolbarButtons()
 
 	bool multigroup = (m_session.GetTriggerGroups().size() > 1);
 
+	auto buttonStartPos = ImGui::GetCursorScreenPos();;
+
 	//Trigger button group
 	if(ImGui::ImageButton("trigger-start", GetTexture("trigger-start"), buttonsize))
+	{
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_NORMAL);
+
+		if(m_tutorialDialog && (m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_03_ACQUIRE) )
+			m_tutorialDialog->AdvanceToNextStep();
+	}
 	Dialog::Tooltip("Arm the trigger in normal mode");
 	if(multigroup)
 	{
@@ -1033,6 +1049,16 @@ void MainWindow::ToolbarButtons()
 	}
 
 	ImGui::SameLine(0.0, 0.0);
+
+	if(m_tutorialDialog && (m_tutorialDialog->GetCurrentStep() == TutorialWizard::TUTORIAL_03_ACQUIRE) )
+	{
+		auto buttonEndPos = ImGui::GetCursorScreenPos();
+		ImVec2 anchorPos(
+			buttonEndPos.x - ImGui::GetFontSize(),
+			buttonStartPos.y + 2*ImGui::GetFontSize());
+		m_tutorialDialog->DrawSpeechBubble(anchorPos, ImGuiDir_Up, "Arm the trigger");
+	}
+
 	if(ImGui::ImageButton("trigger-single", GetTexture("trigger-single"), buttonsize))
 		m_session.ArmTrigger(TriggerGroup::TRIGGER_TYPE_SINGLE);
 	Dialog::Tooltip("Arm the trigger in one-shot mode");
@@ -1166,6 +1192,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_persistenceDialog = nullptr;
 	if(m_notesDialog == dlg)
 		m_notesDialog = nullptr;
+	if(m_tutorialDialog == dlg)
+		m_tutorialDialog = nullptr;
 	if(m_graphEditor == dlg)
 	{
 		m_graphEditorGroups = m_graphEditor->GetGroupIDs();
@@ -2020,7 +2048,7 @@ Filter* MainWindow::CreateFilter(
 	{
 		m_session.AddPacketFilter(pd);
 
-		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+		auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), &m_session, this);
 		m_protocolAnalyzerDialogs[pd] = dlg;
 		AddDialog(dlg);
 	}
@@ -2717,7 +2745,11 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 
 			auto pd = m_session.m_idtable.Lookup<PacketDecoder*>(id);
 
-			auto dlg = make_shared<ProtocolAnalyzerDialog>(pd, m_session.GetPacketManager(pd), m_session, *this);
+			auto dlg = make_shared<ProtocolAnalyzerDialog>(
+				pd,
+				m_session.GetPacketManager(pd),
+				&m_session,
+				this);
 			dlg->SetFilterExpression(filt);
 			m_protocolAnalyzerDialogs[pd] = dlg;
 			AddDialog(dlg);

@@ -30,39 +30,71 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Declaration of TutorialWizard
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
+#ifndef TutorialWizard_h
+#define TutorialWizard_h
 
 #include "Dialog.h"
-#include "Session.h"
 
-class AddInstrumentDialog : public Dialog
+class TutorialWizard : public Dialog
 {
 public:
-	AddInstrumentDialog(
-		const std::string& title,
-		const std::string& nickname,
-		Session* session,
-		MainWindow* parent,
-		const std::string& driverType);
-	virtual ~AddInstrumentDialog();
+	TutorialWizard(Session* session, MainWindow* parent);
+	virtual ~TutorialWizard();
 
-	virtual bool DoRender();
+	virtual bool Render() override;
+	virtual bool DoRender() override;
+
+	enum TutorialStep
+	{
+		TUTORIAL_00_INTRO,
+		TUTORIAL_01_ADDINSTRUMENT,
+		TUTORIAL_02_CONNECT,
+		TUTORIAL_03_ACQUIRE,
+		TUTORIAL_04_SCROLLZOOM,
+
+		TUTORIAL_99_FINAL
+	};
+
+	TutorialStep GetCurrentStep()
+	{ return static_cast<TutorialStep>(m_step); }
+
+	///@brief Move the tutorial to the next step
+	void AdvanceToNextStep()
+	{
+		m_step ++;
+		m_continueEnabled = false;
+	}
+
+	///@brief Enable the next step but do not advance to it
+	void EnableNextStep()
+	{ m_continueEnabled = true; }
+
+	void DrawSpeechBubble(
+		ImVec2 anchorPos,
+		ImGuiDir dirTip,
+		std::string str);
 
 protected:
-	SCPITransport* MakeTransport();
 
-	virtual bool DoConnect(SCPITransport* transport);
+	void MakePathSpeechBubble(
+		ImDrawList* list,
+		ImGuiDir dirTip,
+		ImVec2 anchorPos,
+		ImVec2 textsize,
+		float tailLength,
+		float radius,
+		float leftOverhang);
 
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
+	///@brief Text for each tutorial page
+	std::vector<std::string> m_markdownText;
+
+	///@brief Current step of the tutorial
+	size_t m_step;
+
+	///@brief True if the "continue" button is active
+	bool m_continueEnabled;
 };
 
 #endif

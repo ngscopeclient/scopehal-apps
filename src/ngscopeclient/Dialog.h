@@ -59,7 +59,7 @@ public:
 	{ return m_title + "###" + m_id; }
 
 	//TODO: this might be better off as a global method?
-	static bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection);
+	static bool Combo(const std::string& label, const std::vector<std::string>& items, int& selection, bool* open = nullptr);
 	static bool UnitInputWithImplicitApply(
 		const std::string& label,
 		std::string& currentValue,
@@ -117,12 +117,13 @@ protected:
 
 	///@brief optional reference to session
 	Session* m_session;
+
 	///@brief optional reference to parent MainWindow
 	MainWindow* m_parent;
 
-
 	///@brief Id of the item currently beeing edited
 	ImGuiID m_editedItemId = 0;
+
 	///@brief Id of the last edited item
 	ImGuiID m_lastEditedItemId = 0;
 };

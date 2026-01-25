@@ -30,39 +30,25 @@
 /**
 	@file
 	@author Andrew D. Zonenberg
-	@brief Declaration of AddInstrumentDialog
+	@brief Declaration of FilterGraphErrorWindow
  */
-#ifndef AddInstrumentDialog_h
-#define AddInstrumentDialog_h
+#ifndef FilterGraphErrorWindow_h
+#define FilterGraphErrorWindow_h
 
 #include "Dialog.h"
-#include "Session.h"
 
-class AddInstrumentDialog : public Dialog
+class FilterGraphErrorWindow : public Dialog
 {
 public:
-	AddInstrumentDialog(
-		const std::string& title,
-		const std::string& nickname,
-		Session* session,
-		MainWindow* parent,
-		const std::string& driverType);
-	virtual ~AddInstrumentDialog();
+	FilterGraphErrorWindow(Session* session);
+	virtual ~FilterGraphErrorWindow();
 
+	virtual bool Render();
 	virtual bool DoRender();
 
 protected:
-	SCPITransport* MakeTransport();
-
-	virtual bool DoConnect(SCPITransport* transport);
-
-	//GUI widget values
-	std::string m_nickname;
-	int m_selectedDriver;
-	std::vector<std::string> m_drivers;
-	int m_selectedTransport;
-	std::vector<std::string> m_transports;
-	std::string m_path;
+	std::set<InstrumentChannel*> m_nodesWithErrors;
+	bool m_firstRun;
 };
 
 #endif

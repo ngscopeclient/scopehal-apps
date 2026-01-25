@@ -1195,6 +1195,11 @@ void WaveformGroup::OnMouseWheel(float delta)
 		OnZoomInHorizontal(target, pow(1.5, delta));
 	else
 		OnZoomOutHorizontal(target, pow(1.5, -delta));
+
+	//If in the tutorial, ungate the wizard
+	auto tutorial = m_parent->GetTutorialWizard();
+	if(tutorial && (tutorial->GetCurrentStep() == TutorialWizard::TUTORIAL_04_SCROLLZOOM) )
+		tutorial->EnableNextStep();
 }
 
 /**

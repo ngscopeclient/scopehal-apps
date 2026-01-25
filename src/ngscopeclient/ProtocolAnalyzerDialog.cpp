@@ -44,15 +44,18 @@ using namespace std;
 // Construction / destruction
 
 ProtocolAnalyzerDialog::ProtocolAnalyzerDialog(
-	PacketDecoder* filter, shared_ptr<PacketManager> mgr, Session& session, MainWindow& wnd)
+	PacketDecoder* filter,
+	shared_ptr<PacketManager> mgr,
+	Session* session,
+	MainWindow* wnd)
 	: Dialog(
 		string("Protocol: ") + filter->GetDisplayName(),
 		string("Protocol: ") + filter->GetHwname(),
-		ImVec2(425, 350))
+		ImVec2(425, 350),
+		session,
+		wnd)
 	, m_filter(filter)
 	, m_mgr(mgr)
-	, m_session(session)
-	, m_parent(wnd)
 	, m_waveformChanged(false)
 	, m_lastSelectedWaveform(0, 0)
 	, m_selectedPacket(nullptr)
@@ -119,8 +122,8 @@ bool ProtocolAnalyzerDialog::DoRender()
 		imgcol = (ncols ++);
 	//TODO: integrate length natively vs having to make the filter calculate it??
 
-	auto dataFont = m_parent.GetFontPref("Appearance.Protocol Analyzer.data_font");
-	auto& prefs = m_parent.GetSession().GetPreferences();
+	auto dataFont = m_parent->GetFontPref("Appearance.Protocol Analyzer.data_font");
+	auto& prefs = m_parent->GetSession().GetPreferences();
 
 	//Figure out color for filter expression
 	ImU32 bgcolor;
@@ -342,13 +345,13 @@ bool ProtocolAnalyzerDialog::DoRender()
 						m_waveformChanged = true;
 					m_lastSelectedWaveform = row.m_stamp;
 
-					m_parent.NavigateToTimestamp(offset, len, StreamDescriptor(m_filter, 0));
+					m_parent->NavigateToTimestamp(offset, len, StreamDescriptor(m_filter, 0));
 				}
 
 				if(ImGui::IsItemHovered())
 				{
-					m_session.SetHoveredPacketTimestamp(packtime);
-					m_parent.AddStatusHelp("mouse_lmb", "Jump to packet in waveform view");
+					m_session->SetHoveredPacketTimestamp(packtime);
+					m_parent->AddStatusHelp("mouse_lmb", "Jump to packet in waveform view");
 				}
 
 				if(pack)
@@ -466,7 +469,7 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
 	auto list = ImGui::GetWindowDrawList();
 	auto size = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeight());
 
-	//auto tex = m_parent.GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm");
+	//auto tex = m_parent->GetTextureManager()->GetTexture("visible-spectrum-380nm-750nm");
 
 	if(!rows[nrow].m_texture)
 	{
@@ -548,14 +551,14 @@ void ProtocolAnalyzerDialog::DoImageColumn(Packet* pack, vector<RowData>& rows, 
 			stagingBuf,
 			width,
 			1,
-			m_parent.GetTextureManager(),
+			m_parent->GetTextureManager(),
 			"ProtocolAnalyzerDialog.scanline",
 			false);
 	}
 
 	//Actually draw it
 	auto tex = rows[nrow].m_texture;
-	m_parent.AddTextureUsedThisFrame(tex);
+	m_parent->AddTextureUsedThisFrame(tex);
 	list->AddImage(
 		tex->GetTexture(),
 		pos,

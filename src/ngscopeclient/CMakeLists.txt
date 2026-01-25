@@ -70,6 +70,7 @@ add_executable(ngscopeclient
 	EmbeddedTriggerPropertiesDialog.cpp
 	FileBrowser.cpp
 	FilterGraphEditor.cpp
+	FilterGraphErrorWindow.cpp
 	FilterGraphWorkspace.cpp
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
@@ -107,6 +108,7 @@ add_executable(ngscopeclient
 	TextureManager.cpp
 	TriggerGroup.cpp
 	TriggerPropertiesDialog.cpp
+	TutorialWizard.cpp
 	VulkanWindow.cpp
 	WaveformArea.cpp
 	WaveformGroup.cpp

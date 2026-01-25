@@ -195,10 +195,9 @@ void FilterGraphGroup::MoveBy(ImVec2 displacement)
 // Construction / destruction
 
 FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
-	: Dialog("Filter Graph Editor", "Filter Graph Editor", ImVec2(800, 600))
-	, m_session(session)
-	, m_parent(parent)
+	: Dialog("Filter Graph Editor", "Filter Graph Editor", ImVec2(800, 600), &session, parent)
 	, m_nextID(1)
+	, m_errorWindow(&session)
 {
 	m_config.SaveSettings = &FilterGraphEditor::SaveSettingsCallback;
 	m_config.LoadSettings = &FilterGraphEditor::LoadSettingsCallback;
@@ -215,7 +214,7 @@ FilterGraphEditor::FilterGraphEditor(Session& session, MainWindow* parent)
 	//Start by reserving group IDs so they don't get reused by anything else
 	auto groups = parent->GetGraphEditorGroups();
 	for(auto it : groups)
-		m_session.m_idtable.ReserveID(it.first);
+		m_session->m_idtable.ReserveID(it.first);
 	for(auto it : groups)
 	{
 		auto group = make_shared<FilterGraphGroup>(*this);
@@ -243,6 +242,9 @@ bool FilterGraphEditor::Render()
 	else if(bdlg)
 		bdlg->RunFileDialog();
 
+	//Render our error window
+	m_errorWindow.Render();
+
 	return Dialog::Render();
 }
 
@@ -253,7 +255,7 @@ map<shared_ptr<Instrument>, vector<InstrumentChannel*> > FilterGraphEditor::GetA
 {
 	map<shared_ptr<Instrument>, vector<InstrumentChannel*> > ret;
 
-	auto insts = m_session.GetInstruments();
+	auto insts = m_session->GetInstruments();
 	for(auto inst : insts)
 	{
 		vector<InstrumentChannel*> chans;
@@ -343,7 +345,7 @@ vector<FlowGraphNode*> FilterGraphEditor::GetAllNodes()
 	}
 
 	//Triggers
-	auto insts = m_session.GetInstruments();
+	auto insts = m_session->GetInstruments();
 	for(auto inst : insts)
 	{
 		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
@@ -472,7 +474,7 @@ bool FilterGraphEditor::DoRender()
 		if(ftype)
 		{
 			string fname((char*)ftype->Data, ftype->DataSize);
-			auto cat = m_session.GetReferenceFilter(fname)->GetCategory();
+			auto cat = m_session->GetReferenceFilter(fname)->GetCategory();
 
 			if(ftype->IsDelivery())
 			{
@@ -516,7 +518,7 @@ bool FilterGraphEditor::DoRender()
 		DoNodeForGroup(it.first);
 
 	//Make nodes for all instrument channels
-	bool multiInst = (m_session.GetInstrumentCount() > 1);
+	bool multiInst = (m_session->GetInstrumentCount() > 1);
 	auto chans = GetAllVisibleChannels();
 	for(auto it : chans)
 	{
@@ -529,7 +531,7 @@ bool FilterGraphEditor::DoRender()
 		ax::NodeEditor::SetNodePosition(newNode, ImGui::GetMousePos());
 
 	//Make nodes for all triggers
-	auto insts = m_session.GetInstruments();
+	auto insts = m_session->GetInstruments();
 	for(auto inst : insts)
 	{
 		auto scope = dynamic_pointer_cast<Oscilloscope>(inst);
@@ -545,7 +547,7 @@ bool FilterGraphEditor::DoRender()
 
 	//Filters
 	auto filters = Filter::GetAllInstances();
-	auto filterperf = m_session.GetFilterGraphRuntime();
+	auto filterperf = m_session->GetFilterGraphRuntime();
 	for(auto f : filters)
 	{
 		DoNodeForChannel(f, nullptr, false, filterperf[f]);
@@ -556,7 +558,7 @@ bool FilterGraphEditor::DoRender()
 	ClearOldPropertiesDialogs();
 
 	//All nodes
-	auto nodes = m_session.GetAllGraphNodes();
+	auto nodes = m_session->GetAllGraphNodes();
 
 	//Add links within groups
 	for(auto it : m_groups)
@@ -581,7 +583,7 @@ bool FilterGraphEditor::DoRender()
 	}
 
 	//Add links from each trigger input to the stream it's fed by
-	auto& scopes = m_session.GetScopes();
+	auto& scopes = m_session->GetScopes();
 	for(auto scope : scopes)
 	{
 		auto trig = scope->GetTrigger();
@@ -678,7 +680,7 @@ ax::NodeEditor::NodeId FilterGraphEditor::GetID(FlowGraphNode* node)
 	if(trig)
 		return GetID(trig);
 
-	return m_session.m_idtable.emplace(node);
+	return m_session->m_idtable.emplace(node);
 }
 
 /**
@@ -1399,7 +1401,7 @@ ax::NodeEditor::PinId FilterGraphEditor::CanonicalizePin(ax::NodeEditor::PinId p
 void FilterGraphEditor::HandleLinkCreationRequests(Filter*& fReconfigure)
 {
 	//for some reason node editor wants colors as vec4 not ImU32
-	auto& prefs = m_session.GetPreferences();
+	auto& prefs = m_session->GetPreferences();
 	auto validcolor = prefs.GetColorFloat4("Appearance.Filter Graph.valid_link_color");
 	auto invalidcolor = prefs.GetColorFloat4("Appearance.Filter Graph.invalid_link_color");
 
@@ -1630,7 +1632,7 @@ void FilterGraphEditor::CreateChannelMenu()
 	{
 		vector<StreamDescriptor> streams;
 
-		auto& scopes = m_session.GetScopes();
+		auto& scopes = m_session->GetScopes();
 		for(auto scope : scopes)
 		{
 			//Channels
@@ -1910,7 +1912,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 {
 	//TODO: special color for triggers?
 	//Or use a preference?
-	auto& prefs = m_session.GetPreferences();
+	auto& prefs = m_session->GetPreferences();
 	auto tsize = ImGui::GetFontSize();
 	auto color = ColorFromString("#808080");
 	auto id = GetID(trig);
@@ -1925,7 +1927,7 @@ void FilterGraphEditor::DoNodeForTrigger(Trigger* trig)
 	auto pos = ax::NodeEditor::GetNodePosition(id);
 	auto size = ax::NodeEditor::GetNodeSize(id);
 	string headerText = trig->GetTriggerDisplayName();
-	if(m_session.IsMultiScope())
+	if(m_session->IsMultiScope())
 		headerText = trig->GetScope()->m_nickname + ": " + headerText;
 
 	//Figure out how big the header text is and reserve space for it
@@ -2011,7 +2013,7 @@ void FilterGraphEditor::DoNodeForChannel(
 	if(displaycolor.empty())
 		displaycolor = "#808080";
 
-	auto& prefs = m_session.GetPreferences();
+	auto& prefs = m_session->GetPreferences();
 	auto errorColor = prefs.GetColor("Appearance.Filter Graph.error_outline_color");
 
 	//Get some configuration / style settings
@@ -2403,7 +2405,7 @@ void FilterGraphEditor::HandleDoubleClicks()
 		return;
 
 	//Spawn the appropriate dialog
-	auto node = m_session.m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
+	auto node = m_session->m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
 	auto trig = dynamic_cast<Trigger*>(node);
 	auto ochan = dynamic_cast<OscilloscopeChannel*>(node);
 	auto bo = dynamic_cast<BERTOutputChannel*>(node);
@@ -2450,7 +2452,7 @@ bool FilterGraphEditor::HandleNodeProperties()
 
 		else
 		{
-			auto node = m_session.m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
+			auto node = m_session->m_idtable.Lookup<FlowGraphNode*>(static_cast<uintptr_t>(id));
 			auto trig = dynamic_cast<Trigger*>(node);
 			auto o = dynamic_cast<OscilloscopeChannel*>(node);
 			auto f = dynamic_cast<Filter*>(o);
@@ -2515,7 +2517,7 @@ bool FilterGraphEditor::HandleNodeProperties()
 
 				if(oldTrigger != newTrigger)
 				{
-					m_session.m_idtable.replace(oldTrigger, newTrigger);
+					m_session->m_idtable.replace(oldTrigger, newTrigger);
 					triggerChanged = true;
 				}
 			}
@@ -2568,7 +2570,7 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 void FilterGraphEditor::DoAddMenu()
 {
 	//Get all generation filters, sorted alphabetically
-	auto& refs = m_session.GetReferenceFilters();
+	auto& refs = m_session->GetReferenceFilters();
 	vector<string> sortedNames;
 	for(auto it : refs)
 	{
@@ -2652,11 +2654,11 @@ uintptr_t FilterGraphEditor::AllocateID()
 {
 	//Get next ID, if it's in use try the next one
 	uintptr_t id = m_nextID;
-	while(m_session.m_idtable.HasID(id))
+	while(m_session->m_idtable.HasID(id))
 		id++;
 
 	//Reserve the ID in the session table so nobody else will try to use it
-	m_session.m_idtable.ReserveID(id);
+	m_session->m_idtable.ReserveID(id);
 
 	//We now have an ID that is not in the table, so continue from there
 	m_nextID = id + 1;

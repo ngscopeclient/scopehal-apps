@@ -8,18 +8,21 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Drivers: Added support for many more PicoScope models
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration for many filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+* Filters: Added GPU acceleration for many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
   * Base (17x speedup)
   * CDR PLL (7.5x speedup)
   * Clip (4x speedup)
   * DDJ (16x speedup)
+  * Downconvert (5.8x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
   * PAM Edge Detector (2x speedup)
   * TIE (5.3x speedup)
+  * Vector Frequency (1040x speedup)
+  * Vector Phase (243x speedup)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
@@ -32,12 +35,15 @@ This is a running list of significant bug fixes and new features since the last 
 
 We try to maintain compatibility with older versions of ngscopeclient but occasionally we have no choice to change the interface of a block in a way that requires old filter graphs to be updated.
 
+NOTE: This section only list changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
+
 * Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
   * DDJ
 
 ## Bugs fixed since v0.1.1
 
+* Core: Vulkan initialization code would break on cards that advertised 32-bit atomic float support, but did not support atomic addition (https://github.com/ngscopeclient/scopehal-apps/issues/947)
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
