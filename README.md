@@ -48,17 +48,17 @@ Following these steps:
   If you want to create executables with debug symbols, make sure to change option `MAKE_BUILD_TYPE`
   from `Release` to `Debug` when running `cmake`.
 
-  It is possible that `cmake` errors out with the following error messages:
+It is possible that `cmake` errors out with the following error message:
 
-  ```
+```
 CMake Error at CMakeLists.txt:82 (message):
   Unrecognized version tag 53152c7c / 53152c7c, can't create a VERSIONINFO
   from it.  Must be of format v1.2, v1.2.3, v1.2-rc3, v1.2.3-rc4
-  ```
+```
 
-  You can fix this by creating a dummy tag in your local repo:
+You can fix this by creating a dummy tag in your local repo:
 
-  `git tag v0.0.0`
+`git tag v0.0.0`
 
 ## Special comments
 
