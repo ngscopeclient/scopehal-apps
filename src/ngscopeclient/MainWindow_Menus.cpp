@@ -382,7 +382,8 @@ void MainWindow::DoAddSubMenu(
 							m_dialogs.emplace(make_shared<AddInstrumentDialog>(
 								string("Update ") + typePretty,
 								nick,
-								m_session,
+								&m_session,
+								this,
 								typeInternal,
 								drivername,
 								transname,

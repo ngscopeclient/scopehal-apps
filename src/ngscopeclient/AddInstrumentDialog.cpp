@@ -47,7 +47,10 @@ AddInstrumentDialog::AddInstrumentDialog(
 	const string& nickname,
 	Session* session,
 	MainWindow* parent,
-	const string& driverType)
+	const string& driverType,
+	const std::string& driver,
+	const std::string& transport,
+	const std::string& path)
 	: Dialog(
 		title,
 		string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)),
@@ -57,10 +60,39 @@ AddInstrumentDialog::AddInstrumentDialog(
 	, m_nickname(nickname)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
+	, m_path(path)
 {
 	SCPITransport::EnumTransports(m_transports);
 
 	m_drivers = session->GetDriverNamesForType(driverType);
+	if(!driver.empty())
+	{
+		int i = 0;
+		for(auto driverName: m_drivers)
+		{
+			if(driverName == driver)
+			{
+				m_selectedDriver = i;
+				break;
+			}
+			i++;
+		}
+	}
+
+
+	if(!transport.empty())
+	{
+		int i = 0;
+		for(auto transportName: m_transports)
+		{
+			if(transportName == transport)
+			{
+				m_selectedTransport = i;
+				break;
+			}
+			i++;
+		}
+	}
 }
 
 AddInstrumentDialog::~AddInstrumentDialog()
@@ -218,6 +250,5 @@ SCPITransport* AddInstrumentDialog::MakeTransport()
 
 bool AddInstrumentDialog::DoConnect(SCPITransport* transport)
 {
-	m_session->CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
-	return true;
+	return m_session->CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
 }
