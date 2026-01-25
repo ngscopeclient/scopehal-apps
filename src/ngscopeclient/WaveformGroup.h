@@ -136,6 +136,8 @@ public:
 	bool IsDraggingTrigger()
 	{ return m_dragState == DRAG_STATE_TRIGGER; }
 
+	void AutofitHorizontal(float width);
+
 protected:
 	void RenderTimeline(float width, float height);
 	void RenderTriggerPositionArrows(ImVec2 pos, float height);
