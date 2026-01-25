@@ -4432,5 +4432,7 @@ void WaveformArea::AutofitVertical()
 			c->GetStream().SetVoltageRange(range);
 		}
 	}
+
+	m_parent->SetNeedRender();
 }
 
