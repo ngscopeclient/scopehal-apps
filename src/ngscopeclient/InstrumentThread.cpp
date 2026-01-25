@@ -145,14 +145,15 @@ void InstrumentThread(InstrumentThreadArgs args)
 						scopestate->m_channelInverted[i] = scope->IsInverted(i);
 
 						bool isDigital = (scopechan->GetType(0) == Stream::STREAM_TYPE_DIGITAL);
+						bool isAnalog = (scopechan->GetType(0) == Stream::STREAM_TYPE_ANALOG);
 						if(isDigital)
 						{
 							Unit unit = scopechan->GetYAxisUnits(0);
-							scopestate->m_channelDigitalTrehshold[i] = scope->GetDigitalThreshold(i);
-							scopestate->m_committedDigitalThreshold[i] = scopestate->m_channelDigitalTrehshold[i];
-							scopestate->m_strDigitalThreshold[i] = unit.PrettyPrint(scopestate->m_channelDigitalTrehshold[i]);
+							scopestate->m_channelDigitalThreshold[i] = scope->GetDigitalThreshold(i);
+							scopestate->m_committedDigitalThreshold[i] = scopestate->m_channelDigitalThreshold[i];
+							scopestate->m_strDigitalThreshold[i] = unit.PrettyPrint(scopestate->m_channelDigitalThreshold[i]);
 						}
-						else
+						else if(isAnalog)
 						{
 							scopestate->m_channelAttenuation[i] = scope->GetChannelAttenuation(i);
 							scopestate->m_channelBandwidthLimit[i] = scope->GetChannelBandwidthLimit(i);
@@ -192,7 +193,6 @@ void InstrumentThread(InstrumentThreadArgs args)
 								if(b == limit)
 									scopestate->m_channelBandwidthLimit[i] = j;
 							}
-
 
 							// Populate coupling values
 							auto coupling = scope->GetChannelCoupling(i);
