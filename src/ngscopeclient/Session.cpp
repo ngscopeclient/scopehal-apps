@@ -1240,6 +1240,10 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	//Make any config settings to the instrument from our preference settings
 	ApplyPreferences(scope);
 
+	//Run the preload before adding to the list of scopes since we need to have the channel count etc valid
+	//before we call AddInstrument()
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
@@ -1247,9 +1251,6 @@ bool Session::PreLoadOscilloscope(int version, const YAML::Node& node, bool onli
 	//Load trigger deskew
 	if(node["triggerdeskew"])
 		m_scopeDeskewCal[scope] = node["triggerdeskew"].as<int64_t>();
-
-	//Run the preload
-	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
