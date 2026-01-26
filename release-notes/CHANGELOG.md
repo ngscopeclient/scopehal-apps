@@ -7,6 +7,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Core: Changed rate limiting sleep in InstrumentThread loop from 10ms to 1ms to avoid bogging down high performance instruments like the ThunderScope
 * Core: Scopesession loading now uses multithreaded IO for significant performance gains especially when many channels and deep history are involved
 * Drivers: Added support for many more PicoScope models
+* Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
 * Filters: Added GPU acceleration for many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
   * AC Couple (10x speedup)
@@ -17,6 +18,7 @@ This is a running list of significant bug fixes and new features since the last 
   * DDJ (16x speedup)
   * Downconvert (5.8x speedup)
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
+  * Duty Cycle (8x speedup for analog input, 5x for digital)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
