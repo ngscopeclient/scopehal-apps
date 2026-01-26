@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -44,9 +44,7 @@ using namespace std;
 // Construction / destruction
 
 ManageInstrumentsDialog::ManageInstrumentsDialog(Session& session, MainWindow* parent)
-	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1024, 300),&session,parent)
-	, m_session(session)
-	, m_parent(parent)
+	: Dialog("Manage Instruments", "Manage Instruments", ImVec2(1024, 300), &session, parent)
 	//, m_selection(nullptr)
 {
 }
@@ -66,7 +64,7 @@ ManageInstrumentsDialog::~ManageInstrumentsDialog()
  */
 bool ManageInstrumentsDialog::DoRender()
 {
-	auto scopes = m_session.GetScopes();
+	auto scopes = m_session->GetScopes();
 
 	ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
@@ -92,7 +90,7 @@ bool ManageInstrumentsDialog::DoRender()
 		}
 
 		//Garbage collect trigger groups that have nothing in them
-		m_session.GarbageCollectTriggerGroups();
+		m_session->GarbageCollectTriggerGroups();
 	}
 
 	if(ImGui::CollapsingHeader("All Instruments", ImGuiTreeNodeFlags_DefaultOpen))
@@ -121,7 +119,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 
 	Unit fs(Unit::UNIT_FS);
 
-	auto groups = m_session.GetTriggerGroups();
+	auto groups = m_session->GetTriggerGroups();
 	for(auto group : groups)
 	{
 		//If we get here, we just deleted the last scope in the group
@@ -207,7 +205,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 					auto desc = reinterpret_cast<TriggerGroupDragDescriptor*>(payload->Data);
 
 					//Stop the trigger if rearranging trigger groups
-					m_session.StopTrigger();
+					m_session->StopTrigger();
 
 					//Dropping from a different group
 					if(desc->m_group != group.get())
@@ -305,7 +303,7 @@ void ManageInstrumentsDialog::TriggerGroupsTable()
 				if(ImGui::TableSetColumnIndex(3))
 					ImGui::TextUnformatted(scope->GetSerial().c_str());
 				if(ImGui::TableSetColumnIndex(4))
-					ImGui::TextUnformatted(fs.PrettyPrint(m_session.GetDeskew(scope)).c_str());
+					ImGui::TextUnformatted(fs.PrettyPrint(m_session->GetDeskew(scope)).c_str());
 				if(ImGui::TableSetColumnIndex(5))
 				{
 					if(ImGui::Button("Deskew"))
@@ -371,7 +369,7 @@ void ManageInstrumentsDialog::RowForNewGroup()
 			if(desc->m_scope)
 			{
 				//Make it primary of the new group
-				m_session.MakeNewTriggerGroup(desc->m_scope);
+				m_session->MakeNewTriggerGroup(desc->m_scope);
 
 				//Remove from the existing group
 				desc->m_group->RemoveScope(desc->m_scope);
@@ -380,7 +378,7 @@ void ManageInstrumentsDialog::RowForNewGroup()
 			//Or is it a filter?
 			else if(desc->m_filter)
 			{
-				m_session.MakeNewTriggerGroup(desc->m_filter);
+				m_session->MakeNewTriggerGroup(desc->m_filter);
 				desc->m_group->RemoveFilter(desc->m_filter);
 			}
 		}
@@ -393,8 +391,8 @@ void ManageInstrumentsDialog::RowForNewGroup()
 
 void ManageInstrumentsDialog::AllInstrumentsTable()
 {
-	auto& prefs = m_session.GetPreferences();
-	auto insts = m_session.GetInstruments();
+	auto& prefs = m_session->GetPreferences();
+	auto insts = m_session->GetInstruments();
 	float width = ImGui::GetFontSize();
 	ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 	ImGui::TableSetupColumn("Nickname", ImGuiTableColumnFlags_WidthFixed, 12*width);
