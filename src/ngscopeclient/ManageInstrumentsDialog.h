@@ -54,8 +54,12 @@ protected:
 
 	Session& m_session;
 	MainWindow* m_parent;
+	std::vector<std::string> m_instrumentCommittedNames;
+	std::vector<std::string> m_instrumentCurrentNames;
+	std::vector<std::string> m_instrumentCommittedPaths;
+	std::vector<std::string> m_instrumentCurrentPaths;
 
-	std::shared_ptr<SCPIInstrument> m_selection;
+	//std::shared_ptr<SCPIInstrument> m_selection;
 };
 
 class TriggerGroupDragDescriptor

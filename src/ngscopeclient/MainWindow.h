@@ -514,6 +514,8 @@ protected:
 
 public:
 	void AddToRecentInstrumentList(std::shared_ptr<SCPIInstrument> inst);
+	void RenameRecentInstrument(std::shared_ptr<SCPIInstrument> inst, const std::string& oldName);
+	void RepathRecentInstrument(std::shared_ptr<SCPIInstrument> inst, const std::string& oldPath);
 
 protected:
 

@@ -81,6 +81,7 @@ public:
 		std::string& committedValue);
 
 protected:
+	bool TextInputWithExplicitApply(const std::string& label,std::string& currentValue,std::string& committedValue);
 	bool IntInputWithImplicitApply(const std::string& label, int& currentValue, int& committedValue);
 	bool UnitInputWithExplicitApply(
 		const std::string& label,
@@ -93,6 +94,7 @@ protected:
 	bool renderEditableProperty(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false, bool explicitApply = false);
 	template<typename T>
 	bool renderEditablePropertyWithExplicitApply(float width, const std::string& label, std::string& currentValue, T& committedValue, Unit unit, const char* tooltip = nullptr, std::optional<ImVec4> optcolor = std::nullopt, bool allow7SegmentDisplay = false);
+	void renderBadge(float width, ImVec4 color, const std::string& label);
 
 public:
 	static void Tooltip(const std::string& str, bool allowDisabled = false);

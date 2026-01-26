@@ -48,6 +48,7 @@
 #include "../scopehal/RSRTB2kOscilloscope.h"
 #include "../scopehal/RigolOscilloscope.h"
 #include "../scopehal/MockOscilloscope.h"
+#include "../scopehal/MockPowerSupply.h"
 #include "../scopeprotocols/EyePattern.h"
 
 #include <fstream>
@@ -1313,12 +1314,12 @@ bool Session::PreLoadVNA(int version, const YAML::Node& node, bool online)
 	//Make any config settings to the instrument from our preference settings
 	ApplyPreferences(scope);
 
+	//Run the preload
+	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(scope, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)scope.get());
-
-	//Run the preload
-	scope->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -1799,9 +1800,8 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 
 	if(!psu)
 	{
-		/*
-		//Create the mock scope
-		scope = new MockOscilloscope(
+		//Create the mock PSU
+		psu = make_shared<MockPowerSupply>(
 			node["name"].as<string>(),
 			node["vendor"].as<string>(),
 			node["serial"].as<string>(),
@@ -1809,20 +1809,17 @@ bool Session::PreLoadPowerSupply(int version, const YAML::Node& node, bool onlin
 			driver,
 			node["args"].as<string>()
 			);
-		*/
-		LogError("offline loading of power supplies not implemented yet\n");
-		return true;
 	}
 
 	//Make any config settings to the instrument from our preference settings
 	//ApplyPreferences(psu);
 
+	//Run the preload
+	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
+
 	//All good. Add to our list of scopes etc
 	AddInstrument(psu, false);
 	m_idtable.emplace(node["id"].as<uintptr_t>(), (Instrument*)psu.get());
-
-	//Run the preload
-	psu->PreLoadConfiguration(version, node, m_idtable, m_warnings);
 
 	return true;
 }
@@ -2914,8 +2911,9 @@ void Session::StartWaveformThreadIfNeeded()
 
 /**
 	@brief Creates a new instrument and adds it to the session
+	@return Returns false if creation failed
  */
-void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transport, const string& nickname)
+bool Session::CreateAndAddInstrument(const string& driver, SCPITransport* transport, const string& nickname)
 {
 	shared_ptr<Instrument> inst = nullptr;
 
@@ -2968,7 +2966,7 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 			"Driver error",
 			"Failed to create instrument driver instance of type \"" + driver + "\"");
 		delete transport;
-		return;
+		return false;
 	}
 
 	//Apply preference settings, if any, here
@@ -2978,6 +2976,7 @@ void Session::CreateAndAddInstrument(const string& driver, SCPITransport* transp
 
 	inst->m_nickname = nickname;
 	AddInstrument(inst);
+	return true;
 }
 
 /**

@@ -1595,10 +1595,14 @@ void MainWindow::SaveRecentInstrumentList()
 			continue;
 
 		//Make a node for the instrument
-		YAML::Node inode;
-		inode["path"] = it.first;
-		inode["timestamp"] = static_cast<int64_t>(it.second);
-		node[nick] = inode;
+		int64_t timestamp = static_cast<int64_t>(it.second);
+		if(!node[nick] || (node[nick]["timestamp"].as<int64_t>() < timestamp))
+		{	// Only add node if not already present or if other timestamp is older
+			YAML::Node inode;
+			inode["path"] = it.first;
+			inode["timestamp"] = timestamp;
+			node[nick] = inode;
+		}
 	}
 
 	//Write the generated YAML to disk
@@ -1657,6 +1661,64 @@ void MainWindow::AddToRecentInstrumentList(shared_ptr<SCPIInstrument> inst)
 
 	LogTrace("Added (now have %zu total recent instruments)\n", m_recentInstruments.size());
 	SaveRecentInstrumentList();
+}
+
+void MainWindow::RenameRecentInstrument(std::shared_ptr<SCPIInstrument> inst, const std::string& oldName)
+{
+	if(inst == nullptr)
+		return;
+
+	LogTrace("Renaming instrument \"%s\" with name \"%s\" in recent instrument list (had %zu)\n",
+		oldName.c_str(), inst->m_nickname.c_str(), m_recentInstruments.size());
+
+	auto oldConnectionString =
+		oldName + ":" +
+		inst->GetDriverName() + ":" +
+		inst->GetTransportName() + ":" +
+		inst->GetTransportConnectionString();
+	auto it = m_recentInstruments.find(oldConnectionString);
+	if (it != m_recentInstruments.end()) 
+	{
+		auto now = time(NULL);
+		auto newConnectionString =
+			inst->m_nickname + ":" +
+			inst->GetDriverName() + ":" +
+			inst->GetTransportName() + ":" +
+			inst->GetTransportConnectionString();
+		LogTrace("Replaced connection string %s by %s\n", oldConnectionString.c_str(),newConnectionString.c_str());
+		m_recentInstruments.erase(it);
+		m_recentInstruments.emplace(newConnectionString, now);
+		SaveRecentInstrumentList();
+	}
+}
+
+void MainWindow::RepathRecentInstrument(std::shared_ptr<SCPIInstrument> inst, const std::string& oldPath)
+{
+	if(inst == nullptr)
+		return;
+
+	LogTrace("Changing path for instrument \"%s\" with path \"%s\" in recent instrument list (had %zu)\n",
+		oldPath.c_str(), inst->GetTransportConnectionString().c_str(), m_recentInstruments.size());
+
+	auto oldConnectionString =
+		inst->m_nickname + ":" +
+		inst->GetDriverName() + ":" +
+		inst->GetTransportName() + ":" +
+		oldPath;
+	auto it = m_recentInstruments.find(oldConnectionString);
+	if (it != m_recentInstruments.end()) 
+	{
+		auto now = time(NULL);
+		auto newConnectionString =
+			inst->m_nickname + ":" +
+			inst->GetDriverName() + ":" +
+			inst->GetTransportName() + ":" +
+			inst->GetTransportConnectionString();
+		LogTrace("Replaced connection string %s by %s\n", oldConnectionString.c_str(),newConnectionString.c_str());
+		m_recentInstruments.erase(it);
+		m_recentInstruments.emplace(newConnectionString, now);
+		SaveRecentInstrumentList();
+	}
 }
 
 /**
@@ -1805,6 +1867,9 @@ ImGui::MarkdownConfig MainWindow::GetMarkdownConfig()
  */
 void MainWindow::RenderLoadWarningPopup()
 {
+	if(!m_errorPopupTitle.empty())
+		return; // Already showing Error popup, skip Warning for now
+		
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |

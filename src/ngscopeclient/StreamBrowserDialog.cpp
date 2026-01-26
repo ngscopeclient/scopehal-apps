@@ -1035,49 +1035,54 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 	auto psu = dynamic_pointer_cast<SCPIPowerSupply>(instrument);
 	if (psu)
 	{
-		//Get the state
-		auto psustate = m_session->GetPSUState(psu);
+		if (psu->IsOffline())
+			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_offline_badge_color")), "OFFLINE", "OFFL", NULL);
+		else
+		{
+			//Get the state
+			auto psustate = m_session->GetPSUState(psu);
 
-		bool allOn = false;
-		bool someOn = false;
-		if(psu->SupportsMasterOutputSwitching())
-			allOn = psustate->m_masterEnable;
-		else
-		{
-			allOn = true;
-			for(size_t i = 0 ; i < channelCount ; i++)
-			{
-				if(psustate->m_channelOn[i])
-					someOn = true;
-				else
-					allOn = false;
-			}
-		}
-		bool result;
-		if(allOn || someOn)
-		{
-			result = true;
-			renderToggle(
-				"###psuon",
-				true,
-				allOn ?
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
-				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
-		}
-		else
-		{
-			result = false;
-			renderOnOffToggle("###psuon", true, result);
-		}
-		if(result != allOn)
-		{
+			bool allOn = false;
+			bool someOn = false;
 			if(psu->SupportsMasterOutputSwitching())
-				psu->SetMasterPowerEnable(result);
+				allOn = psustate->m_masterEnable;
 			else
 			{
+				allOn = true;
 				for(size_t i = 0 ; i < channelCount ; i++)
 				{
-					psu->SetPowerChannelActive(i,result);
+					if(psustate->m_channelOn[i])
+						someOn = true;
+					else
+						allOn = false;
+				}
+			}
+			bool result;
+			if(allOn || someOn)
+			{
+				result = true;
+				renderToggle(
+					"###psuon",
+					true,
+					allOn ?
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result);
+			}
+			else
+			{
+				result = false;
+				renderOnOffToggle("###psuon", true, result);
+			}
+			if(result != allOn)
+			{
+				if(psu->SupportsMasterOutputSwitching())
+					psu->SetMasterPowerEnable(result);
+				else
+				{
+					for(size_t i = 0 ; i < channelCount ; i++)
+					{
+						psu->SetPowerChannelActive(i,result);
+					}
 				}
 			}
 		}
@@ -1132,19 +1137,27 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			int bankNumber = 1;
 			for(auto bank : digitalBanks)
 			{	// Iterate on digital banks
-				string nodeName = "Digital Bank " + to_string(bankNumber);
-				if(ImGui::TreeNodeEx(nodeName.c_str()))
-				{
-					ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-					for(auto channel : bank)
-					{	// Iterate on bank's channel
-						size_t i = channel->GetIndex();
-						renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+				if(bank.size() > 1)
+				{	// Only show Digital Bank node if there is more than on channel in the bank
+					string nodeName = "Digital Bank " + to_string(bankNumber);
+					if(ImGui::TreeNodeEx(nodeName.c_str()))
+					{
+						ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+						for(auto channel : bank)
+						{	// Iterate on bank's channel
+							size_t i = channel->GetIndex();
+							renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+						}
+						ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+						ImGui::TreePop();
 					}
-					ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-					ImGui::TreePop();
+					bankNumber++;
 				}
-				bankNumber++;
+				else if(bank.size() == 1)
+				{	// Only one channel in the bank, render it directly
+					size_t i = bank[0]->GetIndex();
+					renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
+				}
 			}
 			for(size_t i : otherChannels)
 			{	// Finally iterate on other channels

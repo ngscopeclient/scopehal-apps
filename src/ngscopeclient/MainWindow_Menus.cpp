@@ -364,9 +364,31 @@ void MainWindow::DoAddSubMenu(
 								path = path + ":" + fields[j];
 						}
 
+						bool success = true;
 						auto transport = MakeTransport(transname, path);
 						if(transport != nullptr)
-							m_session.CreateAndAddInstrument(drivername, transport, nick);
+						{
+							if(!m_session.CreateAndAddInstrument(drivername, transport, nick))
+							{
+								success = false;
+							}
+						}
+						else
+						{
+							success = false;
+						}
+						if(!success)
+						{	// Spawn an AddInstrument dialog here, prefilled with intrument informations, to allow changing connection path
+							m_dialogs.emplace(make_shared<AddInstrumentDialog>(
+								string("Update ") + typePretty,
+								nick,
+								&m_session,
+								this,
+								typeInternal,
+								drivername,
+								transname,
+								path));				
+						}
 					}
 				}
 			}
