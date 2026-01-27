@@ -416,8 +416,10 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
    @param inst the instrument to render the progress channel for
    @param chan the channel to render the progress for
    @param isLast true if it is the last channel of the instrument
+   
+   @return Returns true if the progress bar has been rendered
  */
-void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
+bool StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 {
 	static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
 
@@ -516,7 +518,7 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 	}
 
 	if (!shouldRender)
-		return;
+		return false;
 
 /// @brief Width used to display progress bars (e.g. download progress bar)
 #define PROGRESS_BAR_WIDTH	80
@@ -548,10 +550,11 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 				ImGui::ProgressBar(chan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
 			}
 
-			return;
+			return true;
 		}
 	}
 	// well, shoot -- I guess there wasn't enough room to do *anything* useful!
+	return true;
 }
 
 /**
@@ -1525,17 +1528,49 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	startBadgeLine();
 	if (scopechan)
 	{
+		bool chanEnabled = scopechan->IsEnabled();
+
 		//"trigger" badge on trigger inputs to show they're not displayable channels
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
 
 		// Scope channel
-		else if (!scopechan->IsEnabled())
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
+		else if (!chanEnabled)
+		{
+			if(renderToggle(
+				"###scopeChanEnable",
+				true,
+				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")),
+				chanEnabled,
+				"DISABLED",
+				"ENABLE",
+				3))
+			{
+				if(chanEnabled)
+					scope->EnableChannel(channelIndex);
+			}
+			//renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
+		}
 
 		//Download in progress
 		else
-			renderDownloadProgress(instrument, channel, isLast);
+		{
+			if(!renderDownloadProgress(instrument, channel, isLast))
+			{	// No download in progress, we can show the ENABLE/DISABLE toggle
+				if(renderToggle(
+					"###scopeChanEnable",
+					true,
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")),
+					chanEnabled,
+					"DISABLE",
+					"ENABLED",
+					3))
+				{
+					if(!chanEnabled)
+						scope->DisableChannel(channelIndex);
+				}
+			}
+		}
 	}
 	else if(psu)
 	{
