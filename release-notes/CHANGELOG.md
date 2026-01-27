@@ -20,6 +20,8 @@ This is a running list of significant bug fixes and new features since the last 
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
   * Duty Cycle (8x speedup for analog input, 5x for digital)
   * Emphasis (13.2x speedup)
+  * Emphasis Removal (13.2x speedup)
+  * Envelope (14.5x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
