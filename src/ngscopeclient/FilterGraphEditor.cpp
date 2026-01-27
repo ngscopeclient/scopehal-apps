@@ -44,6 +44,7 @@
 #include "FilterPropertiesDialog.h"
 #include "EmbeddedTriggerPropertiesDialog.h"
 #include "MeasurementsDialog.h"
+#include "../scopehal/DensityFunctionWaveform.h"
 
 using namespace std;
 
@@ -1049,7 +1050,10 @@ void FilterGraphEditor::ClearOldPropertiesDialogs()
 void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 {
 	ImGui::BeginTooltip();
-		switch(stream.GetType())
+
+		//Channel type
+		auto stype = stream.GetType();
+		switch(stype)
 		{
 			case Stream::STREAM_TYPE_ANALOG:
 				ImGui::TextUnformatted("Analog channel");
@@ -1095,6 +1099,33 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 				ImGui::TextUnformatted("Unknown channel type");
 				break;
 		}
+
+		//Get the data type and print (unless it's a scalar)
+		if(stype != Stream::STREAM_TYPE_ANALOG_SCALAR)
+		{
+			auto data = stream.GetData();
+			if(!data)
+				ImGui::Text("No waveform data");
+			else
+			{
+				auto srate = stream.GetXAxisUnits().PrettyPrint(data->m_timescale);
+				if(dynamic_cast<DensityFunctionWaveform*>(data))
+					ImGui::Text("2D density plot");
+				else if(dynamic_cast<UniformAnalogWaveform*>(data))
+					ImGui::Text("Uniformly sampled analog data, %zu samples at %s intervals", data->size(), srate.c_str());
+				else if(dynamic_cast<UniformDigitalWaveform*>(data))
+					ImGui::Text("Uniformly sampled digital data, %zu samples at %s intervals", data->size(), srate.c_str());
+				else if(dynamic_cast<SparseAnalogWaveform*>(data))
+					ImGui::Text("Sparsely sampled analog data, %zu samples at %s resolution", data->size(), srate.c_str());
+				else if(dynamic_cast<SparseDigitalWaveform*>(data))
+					ImGui::Text("Sparsely sampled digital data, %zu samples at %s resolution", data->size(), srate.c_str());
+				else if(dynamic_cast<UniformWaveformBase*>(data))
+					ImGui::Text("Uniformly sampled data, %zu samples at %s intervals", data->size(), srate.c_str());
+				else if(dynamic_cast<SparseWaveformBase*>(data))
+					ImGui::Text("Sparsely sampled data, %zu samples at %s resolution", data->size(), srate.c_str());
+			}
+		}
+
 	ImGui::EndTooltip();
 
 	m_parent->AddStatusHelp("mouse_lmb_drag", "Create connection to new or existing node");
