@@ -3463,7 +3463,8 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 		return;
 	bool isWaveform = payload->IsDataType("Waveform");
 	bool isStream = payload->IsDataType("Stream");
-	if(!isWaveform && !isStream)
+	bool isStreamGroup = payload->IsDataType("StreamGroup");
+	if(!isWaveform && !isStream &&!isStreamGroup)
 		return;
 
 	//Peek the payload. If not compatible, don't even display the target
@@ -3528,11 +3529,34 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 
 			//Reject streams not compatible with this plot
 			//TODO: display nice error message if not
-			if(!IsCompatible(stream))
+			if(!IsCompatible(stream)||IsShowing(stream))
 				ok = false;
 
 			else if(payload->IsDelivery())
 				AddStream(stream);
+		}
+		//Accept  stream group
+		auto sgpay = ImGui::AcceptDragDropPayload("StreamGroup",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(sgpay)
+		{
+			hover = true;
+			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
+			//Reject streams not compatible with this plot
+			//TODO: display nice error message if not
+			ok = false;
+			for(auto channel : streamGroup->m_channels)
+			{
+				StreamDescriptor s(channel, 0);
+				if(IsCompatible(s) && !IsShowing(s))
+				{	// At least one stream is compatible
+					ok = true;
+					if(payload->IsDelivery())
+					{
+						AddStream(s);
+					}
+				}
+			}
 		}
 
 		ImGui::EndDragDropTarget();
@@ -4386,6 +4410,19 @@ bool WaveformArea::IsCompatible(StreamDescriptor desc)
 
 	//All good if we get here
 	return true;
+}
+
+/**
+	@brief Checks if provided stream descriptor is already present in this waveform area
+ */
+bool WaveformArea::IsShowing(StreamDescriptor desc)
+{
+	for(auto channel : m_displayedChannels)
+	{
+		if(channel->GetStream() == desc)
+			return true;
+	}
+	return false;
 }
 
 /**

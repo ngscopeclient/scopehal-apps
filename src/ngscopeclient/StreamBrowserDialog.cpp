@@ -1138,12 +1138,25 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
 			}
 			int bankNumber = 1;
+			bool bankIsOpen;
 			for(auto bank : digitalBanks)
 			{	// Iterate on digital banks
 				if(bank.size() > 1)
 				{	// Only show Digital Bank node if there is more than on channel in the bank
 					string nodeName = "Digital Bank " + to_string(bankNumber);
-					if(ImGui::TreeNodeEx(nodeName.c_str()))
+					bankIsOpen = ImGui::TreeNodeEx(nodeName.c_str());
+					// Add dragdrop source for this bank
+					if(ImGui::BeginDragDropSource())
+					{
+						StreamGroupDescriptor* s = new StreamGroupDescriptor(nodeName, bank);
+						ImGui::SetDragDropPayload("StreamGroup", &s, sizeof(s));
+						ImGui::TextUnformatted(s->GetName().c_str());
+						ImGui::EndDragDropSource();
+					}
+					else
+						DoItemHelp();
+
+					if(bankIsOpen)
 					{
 						ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 						for(auto channel : bank)
