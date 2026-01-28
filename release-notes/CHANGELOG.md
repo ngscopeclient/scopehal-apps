@@ -45,7 +45,11 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 
 * Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
+  * 100baseT1
+  * Constellation
   * DDJ
+  * I/Q Demux
+* The clock output of the I/Q Demux filter was removed as it was redundant.
 
 ## Bugs fixed since v0.1.1
 
