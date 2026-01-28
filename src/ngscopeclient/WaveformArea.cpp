@@ -3618,7 +3618,8 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 		return;
 	bool isWaveform = payload->IsDataType("Waveform");
 	bool isStream = payload->IsDataType("Stream");
-	if(!isWaveform && !isStream)
+	bool isStreamGroup = payload->IsDataType("StreamGroup");
+	if(!isWaveform && !isStream && !isStreamGroup)
 		return;
 
 	//Add drop target
@@ -3655,6 +3656,35 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 			{
 				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
 				m_group->AddArea(area);
+			}
+		}
+
+		//Accept drag/drop payloads for digital banks
+		auto sgpay = ImGui::AcceptDragDropPayload("StreamGroup", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(sgpay)
+		{
+			hover = true;
+			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
+
+			if( (streamGroup->GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				std::shared_ptr<WaveformArea> area;
+				bool first = true;
+				bool singleArea = ImGui::IsKeyDown(ImGuiKey_LeftShift)||ImGui::IsKeyDown(ImGuiKey_RightShift);
+				for(auto channel : streamGroup->m_channels)
+				{
+					StreamDescriptor s(channel, 0);
+					if(first || !singleArea)
+					{
+ 						area = make_shared<WaveformArea>(s, m_group, m_parent);
+						m_group->AddArea(area);
+						first = false;
+					}
+					else
+					{
+						area->AddStream(s);
+					}
+				}
 			}
 		}
 
