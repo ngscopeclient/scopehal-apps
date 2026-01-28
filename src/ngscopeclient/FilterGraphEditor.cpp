@@ -1109,20 +1109,21 @@ void FilterGraphEditor::OutputPortTooltip(StreamDescriptor stream)
 			else
 			{
 				auto srate = stream.GetXAxisUnits().PrettyPrint(data->m_timescale);
+				auto ssamples = Unit(Unit::UNIT_SAMPLEDEPTH).PrettyPrint(data->size());
 				if(dynamic_cast<DensityFunctionWaveform*>(data))
 					ImGui::Text("2D density plot");
 				else if(dynamic_cast<UniformAnalogWaveform*>(data))
-					ImGui::Text("Uniformly sampled analog data, %zu samples at %s intervals", data->size(), srate.c_str());
+					ImGui::Text("Uniformly sampled analog data, %s at %s intervals", ssamples.c_str(), srate.c_str());
 				else if(dynamic_cast<UniformDigitalWaveform*>(data))
-					ImGui::Text("Uniformly sampled digital data, %zu samples at %s intervals", data->size(), srate.c_str());
+					ImGui::Text("Uniformly sampled digital data, %s at %s intervals", ssamples.c_str(), srate.c_str());
 				else if(dynamic_cast<SparseAnalogWaveform*>(data))
-					ImGui::Text("Sparsely sampled analog data, %zu samples at %s resolution", data->size(), srate.c_str());
+					ImGui::Text("Sparsely sampled analog data, %s at %s resolution", ssamples.c_str(), srate.c_str());
 				else if(dynamic_cast<SparseDigitalWaveform*>(data))
-					ImGui::Text("Sparsely sampled digital data, %zu samples at %s resolution", data->size(), srate.c_str());
+					ImGui::Text("Sparsely sampled digital data, %s at %s resolution", ssamples.c_str(), srate.c_str());
 				else if(dynamic_cast<UniformWaveformBase*>(data))
-					ImGui::Text("Uniformly sampled data, %zu samples at %s intervals", data->size(), srate.c_str());
+					ImGui::Text("Uniformly sampled data, %s at %s intervals", ssamples.c_str(), srate.c_str());
 				else if(dynamic_cast<SparseWaveformBase*>(data))
-					ImGui::Text("Sparsely sampled data, %zu samples at %s resolution", data->size(), srate.c_str());
+					ImGui::Text("Sparsely sampled data, %s at %s resolution", ssamples.c_str(), srate.c_str());
 			}
 		}
 
