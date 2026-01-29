@@ -1061,10 +1061,11 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				}
 			}
 			bool result;
+			bool changed;
 			if(allOn || someOn)
 			{
 				result = true;
-				renderToggle(
+				changed = renderToggle(
 					"###psuon",
 					true,
 					allOn ?
@@ -1074,9 +1075,9 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			else
 			{
 				result = false;
-				renderOnOffToggle("###psuon", true, result);
+				changed = renderOnOffToggle("###psuon", true, result);
 			}
-			if(result != allOn)
+			if(changed)
 			{
 				if(psu->SupportsMasterOutputSwitching())
 					psu->SetMasterPowerEnable(result);
@@ -1145,6 +1146,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				{	// Only show Digital Bank node if there is more than on channel in the bank
 					string nodeName = "Digital Bank " + to_string(bankNumber);
 					bankIsOpen = ImGui::TreeNodeEx(nodeName.c_str());
+
 					// Add dragdrop source for this bank
 					if(ImGui::BeginDragDropSource())
 					{
@@ -1156,6 +1158,53 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 					}
 					else
 						DoItemHelp();
+
+					// Add Banck on/off toggle
+					startBadgeLine();
+					bool allOn = true;
+					bool someOn = false;
+					for(auto channel : bank)
+					{	// Iterate on bank's channel
+						size_t i = channel->GetIndex();
+						if(scope->IsChannelEnabled(i))
+						{
+							someOn = true;
+						}
+						else
+						{
+							allOn = false;
+						}
+					}
+					bool result;
+					bool changed;
+					string toggleId = "###"+nodeName+"on";
+					if(allOn || someOn)
+					{
+						result = true;
+						changed = renderToggle(
+							toggleId.c_str(),
+							true,
+							allOn ?
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result,"DISABLE","ENABLED",3);
+					}
+					else
+					{
+						result = false;
+						changed = renderToggle(
+							toggleId.c_str(),
+							true,
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")),
+							result,"DISABLED","ENABLE",3);
+					}
+					if(changed)
+					{
+						for(auto channel : bank)
+						{	// Iterate on bank's channel
+							size_t i = channel->GetIndex();
+							result ? scope->EnableChannel(i) : scope->DisableChannel(i);
+						}
+					}
 
 					if(bankIsOpen)
 					{
