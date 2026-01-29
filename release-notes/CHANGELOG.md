@@ -19,17 +19,19 @@ This is a running list of significant bug fixes and new features since the last 
   * Downconvert (5.8x speedup)
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
   * Duty Cycle (8x speedup for analog input, 5x for digital)
-  * Emphasis (13.2x speedup)
+  * Emphasis (19.5x speedup)
   * Emphasis Removal (13.2x speedup)
   * Envelope (14.5x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
-  * PAM Edge Detector (2x speedup)
+  * I/Q Demux (18.9x speedup)
+  * PAM Edge Detector (21.7x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
   * Vector Phase (243x speedup)
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
+* Filters: CDR PLL now has an "edges" input allowing you to replace the default thresholding edge detector with an external block, e.g. for locking to a PAM signal. This was possible in the past by passing the PAM edge detector block to the input, but this would result in the sampled data output just being a copy of the edge detector. By splitting these, the CDR can now output sampled data from PAM signals as well.
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
