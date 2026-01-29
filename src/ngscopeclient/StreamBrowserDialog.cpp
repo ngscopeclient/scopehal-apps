@@ -1148,9 +1148,10 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 					// Add dragdrop source for this bank
 					if(ImGui::BeginDragDropSource())
 					{
-						StreamGroupDescriptor* s = new StreamGroupDescriptor(nodeName, bank);
-						ImGui::SetDragDropPayload("StreamGroup", &s, sizeof(s));
-						ImGui::TextUnformatted(s->GetName().c_str());
+						m_streamGroupDesciptor = make_shared<StreamGroupDescriptor>(nodeName, bank);
+						auto ptr = m_streamGroupDesciptor.get();
+						ImGui::SetDragDropPayload("StreamGroup", &ptr, sizeof(m_streamGroupDesciptor));
+						ImGui::TextUnformatted(m_streamGroupDesciptor->GetName().c_str());
 						ImGui::EndDragDropSource();
 					}
 					else

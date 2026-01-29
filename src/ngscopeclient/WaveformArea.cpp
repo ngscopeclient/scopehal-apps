@@ -3330,7 +3330,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 
 	bool isWaveform = payload->IsDataType("Waveform");
 	bool isStream = payload->IsDataType("Stream");
-	if(!isWaveform && !isStream)
+	bool isStreamGroup = payload->IsDataType("StreamGroup");
+	if(!isWaveform && !isStream && !isStreamGroup)
 		return;
 
 	//Add drop target
@@ -3369,6 +3370,20 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 			}
 		}
 
+		auto sgpay = ImGui::AcceptDragDropPayload("StreamGroup", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(sgpay)
+		{
+			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
+			bool singleArea = ImGui::IsKeyDown(ImGuiKey_LeftShift)||ImGui::IsKeyDown(ImGuiKey_RightShift);
+			hover = true;
+
+			//Add request to split our current group
+			if(payload->IsDelivery())
+			{
+				LogTrace("splitting\n");
+				m_parent->QueueSplitGroup(m_group, splitDir, streamGroup->shared_from_this(), singleArea);
+			}
+		}
 		ImGui::EndDragDropTarget();
 	}
 

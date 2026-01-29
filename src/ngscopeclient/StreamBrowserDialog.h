@@ -189,6 +189,9 @@ protected:
 	///@brief Map of instruments to timebase settings
 	std::map<std::shared_ptr<Instrument>, std::shared_ptr<StreamBrowserTimebaseInfo> > m_timebaseConfig;
 
+	///@brief Reference to currently dragged StreamGroupDesciptor
+	std::shared_ptr<StreamGroupDescriptor> m_streamGroupDesciptor;
+
 	///@brief Helper to render a small button that's non-interactive
 	void SmallDisabledButton(const char* label)
 	{

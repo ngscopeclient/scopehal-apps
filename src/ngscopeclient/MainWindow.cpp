@@ -1283,12 +1283,37 @@ void MainWindow::DockingArea()
 			}
 			ImGui::DockBuilderDockWindow(group->GetID().c_str(), node->ID);
 
-			//Add a new waveform area for our stream to the new group
-			LogTrace("Making new area for %s in %s\n",
-				request.m_stream.GetName().c_str(),
-				group->GetID().c_str());
-			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
-			group->AddArea(area);
+			//Add a new waveform area for our stream/streamGroup to the new group
+			if(request.m_stream)
+			{
+				LogTrace("Making new area for %s in %s\n",
+					request.m_stream.GetName().c_str(),
+					group->GetID().c_str());
+				auto area = make_shared<WaveformArea>(request.m_stream, group, this);
+				group->AddArea(area);
+			}
+			else if(request.m_streamGroup)
+			{
+				std::shared_ptr<WaveformArea> area;
+				bool first = true;
+				for(auto channel : request.m_streamGroup->m_channels)
+				{
+					StreamDescriptor s(channel, 0);
+					LogTrace("Making new area for %s in %s\n",
+						s.GetName().c_str(),
+						group->GetID().c_str());
+					if(first || !request.m_singleArea)
+					{
+ 						area = make_shared<WaveformArea>(s, group, this);
+						group->AddArea(area);
+						first = false;
+					}
+					else
+					{
+						area->AddStream(s);
+					}
+				}
+			}
 		}
 
 		//Finish up
