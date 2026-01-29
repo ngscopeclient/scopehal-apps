@@ -30,6 +30,7 @@ This is a running list of significant bug fixes and new features since the last 
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
   * Vector Phase (243x speedup)
+* Filters: 100baseT1 now has configurable decision thresholds for better decoding of weak signals
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
 * Filters: CDR PLL now has an "edges" input allowing you to replace the default thresholding edge detector with an external block, e.g. for locking to a PAM signal. This was possible in the past by passing the PAM edge detector block to the input, but this would result in the sampled data output just being a copy of the edge detector. By splitting these, the CDR can now output sampled data from PAM signals as well.
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
@@ -64,6 +65,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
+* Filters: Upsample filter incorrectly calculated sample indexes on waveforms with more than 2^21 points
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)
