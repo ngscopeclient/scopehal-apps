@@ -416,8 +416,10 @@ bool StreamBrowserDialog::renderOnOffToggle(const char* label, bool alignRight, 
    @param inst the instrument to render the progress channel for
    @param chan the channel to render the progress for
    @param isLast true if it is the last channel of the instrument
+   
+   @return Returns true if the progress bar has been rendered
  */
-void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
+bool StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> inst, InstrumentChannel *chan, bool isLast)
 {
 	static const char* const download[] = {"DOWNLOADING", "DOWNLOAD" ,"DL","D", NULL};
 
@@ -516,7 +518,7 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 	}
 
 	if (!shouldRender)
-		return;
+		return false;
 
 /// @brief Width used to display progress bars (e.g. download progress bar)
 #define PROGRESS_BAR_WIDTH	80
@@ -548,10 +550,11 @@ void StreamBrowserDialog::renderDownloadProgress(std::shared_ptr<Instrument> ins
 				ImGui::ProgressBar(chan->GetDownloadProgress(), ImVec2(PROGRESS_BAR_WIDTH, ImGui::GetFontSize()));
 			}
 
-			return;
+			return true;
 		}
 	}
 	// well, shoot -- I guess there wasn't enough room to do *anything* useful!
+	return true;
 }
 
 /**
@@ -1058,10 +1061,11 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				}
 			}
 			bool result;
+			bool changed;
 			if(allOn || someOn)
 			{
 				result = true;
-				renderToggle(
+				changed = renderToggle(
 					"###psuon",
 					true,
 					allOn ?
@@ -1071,9 +1075,9 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 			else
 			{
 				result = false;
-				renderOnOffToggle("###psuon", true, result);
+				changed = renderOnOffToggle("###psuon", true, result);
 			}
-			if(result != allOn)
+			if(changed)
 			{
 				if(psu->SupportsMasterOutputSwitching())
 					psu->SetMasterPowerEnable(result);
@@ -1135,12 +1139,74 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 				renderChannelNode(instrument,i,(i == lastEnabledChannelIndex));
 			}
 			int bankNumber = 1;
+			bool bankIsOpen;
 			for(auto bank : digitalBanks)
 			{	// Iterate on digital banks
 				if(bank.size() > 1)
 				{	// Only show Digital Bank node if there is more than on channel in the bank
 					string nodeName = "Digital Bank " + to_string(bankNumber);
-					if(ImGui::TreeNodeEx(nodeName.c_str()))
+					bankIsOpen = ImGui::TreeNodeEx(nodeName.c_str());
+
+					// Add dragdrop source for this bank
+					if(ImGui::BeginDragDropSource())
+					{
+						m_streamGroupDesciptor = make_shared<StreamGroupDescriptor>(nodeName, bank);
+						auto ptr = m_streamGroupDesciptor.get();
+						ImGui::SetDragDropPayload("StreamGroup", &ptr, sizeof(m_streamGroupDesciptor));
+						ImGui::TextUnformatted(m_streamGroupDesciptor->GetName().c_str());
+						ImGui::EndDragDropSource();
+					}
+					else
+						DoItemHelp();
+					/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
+					// Add Banck on/off toggle
+					startBadgeLine();
+					bool allOn = true;
+					bool someOn = false;
+					for(auto channel : bank)
+					{	// Iterate on bank's channel
+						size_t i = channel->GetIndex();
+						if(scope->IsChannelEnabled(i))
+						{
+							someOn = true;
+						}
+						else
+						{
+							allOn = false;
+						}
+					}
+					bool result;
+					bool changed;
+					string toggleId = "###"+nodeName+"on";
+					if(allOn || someOn)
+					{
+						result = true;
+						changed = renderToggle(
+							toggleId.c_str(),
+							true,
+							allOn ?
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")) :
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_partial_badge_color")), result,"DISABLE","ENABLED",3);
+					}
+					else
+					{
+						result = false;
+						changed = renderToggle(
+							toggleId.c_str(),
+							true,
+							ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_off_badge_color")),
+							result,"DISABLED","ENABLE",3);
+					}
+					if(changed)
+					{
+						for(auto channel : bank)
+						{	// Iterate on bank's channel
+							size_t i = channel->GetIndex();
+							result ? scope->EnableChannel(i) : scope->DisableChannel(i);
+						}
+					}
+					*/
+					if(bankIsOpen)
 					{
 						ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
 						for(auto channel : bank)
@@ -1525,17 +1591,53 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 	startBadgeLine();
 	if (scopechan)
 	{
+		bool chanEnabled = scopechan->IsEnabled();
+
 		//"trigger" badge on trigger inputs to show they're not displayable channels
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
 
+		/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
 		// Scope channel
-		else if (!scopechan->IsEnabled())
-			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
+		else if (!chanEnabled)
+		{
+			if(renderToggle(
+				"###scopeChanEnable",
+				true,
+				ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")),
+				chanEnabled,
+				"DISABLED",
+				"ENABLE",
+				3))
+			{
+				if(chanEnabled)
+					scope->EnableChannel(channelIndex);
+			}
+			//renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
+		} 
+		*/
 
 		//Download in progress
 		else
-			renderDownloadProgress(instrument, channel, isLast);
+		{
+			if(!renderDownloadProgress(instrument, channel, isLast))
+			{	// No download in progress, we can show the ENABLE/DISABLE toggle
+				/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
+				if(renderToggle(
+					"###scopeChanEnable",
+					true,
+					ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_on_badge_color")),
+					chanEnabled,
+					"DISABLE",
+					"ENABLED",
+					3))
+				{
+					if(!chanEnabled)
+						scope->DisableChannel(channelIndex);
+				}
+				*/
+			}
+		}
 	}
 	else if(psu)
 	{

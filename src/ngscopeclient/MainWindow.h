@@ -65,34 +65,74 @@ public:
 	: m_group(group)
 	, m_direction(direction)
 	, m_stream(stream)
+	, m_streamGroup(nullptr)
 	{
 		auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
 		if(schan)
 			schan->AddRef();
 	}
 
+	SplitGroupRequest(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, std::shared_ptr<StreamGroupDescriptor> streamGroup, bool singleArea)
+	: m_group(group)
+	, m_direction(direction)
+	, m_streamGroup(streamGroup)
+	, m_singleArea(singleArea)
+	{
+		if(streamGroup)
+		{
+			for(auto chan : streamGroup->m_channels)
+			{
+				chan->AddRef();
+			}
+		}
+	}
+
 	SplitGroupRequest(const SplitGroupRequest& rhs)
 	: m_group(rhs.m_group)
 	, m_direction(rhs.m_direction)
 	, m_stream(rhs.m_stream)
+	, m_streamGroup(rhs.m_streamGroup)
+	, m_singleArea(rhs.m_singleArea)
 	{
-		auto schan = dynamic_cast<OscilloscopeChannel*>(rhs.m_stream.m_channel);
-		if(schan)
-			schan->AddRef();
+		if(rhs.m_stream)
+		{
+			auto schan = dynamic_cast<OscilloscopeChannel*>(rhs.m_stream.m_channel);
+			if(schan)
+				schan->AddRef();
+		}
+		else if(rhs.m_streamGroup)
+		{
+			for(auto chan : rhs.m_streamGroup->m_channels)
+			{
+				chan->AddRef();
+			}
+		}
 	}
 
 	SplitGroupRequest& operator=(const SplitGroupRequest& /*rhs*/) =delete;
 
 	~SplitGroupRequest()
 	{
-		auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
-		if(schan)
-			schan->Release();
+		if(m_stream)
+		{
+			auto schan = dynamic_cast<OscilloscopeChannel*>(m_stream.m_channel);
+			if(schan)
+				schan->Release();
+		}
+		else if(m_streamGroup)
+		{
+			for(auto chan : m_streamGroup->m_channels)
+			{
+				chan->Release();
+			}
+		}
 	}
 
 	std::shared_ptr<WaveformGroup> m_group;
 	ImGuiDir m_direction;
 	StreamDescriptor m_stream;
+	std::shared_ptr<StreamGroupDescriptor> m_streamGroup;
+	bool m_singleArea;
 };
 
 /**
@@ -128,6 +168,8 @@ public:
 
 	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
 	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
+	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, std::shared_ptr<StreamGroupDescriptor> streamGroup, bool singleArea)
+	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, streamGroup, singleArea)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrument);
