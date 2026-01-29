@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -220,6 +220,10 @@ void TriggerPropertiesPage::Render(bool graphEditorMode)
 		{
 			for(auto it = trig->GetParamBegin(); it != trig->GetParamEnd(); it++)
 			{
+				//Skip hidden parameters
+				if(it->second.IsHidden())
+					continue;
+
 				//Skip trigger level as that's redundant
 				if(it->first == "Level")
 					continue;

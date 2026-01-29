@@ -19,17 +19,20 @@ This is a running list of significant bug fixes and new features since the last 
   * Downconvert (5.8x speedup)
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
   * Duty Cycle (8x speedup for analog input, 5x for digital)
-  * Emphasis (13.2x speedup)
+  * Emphasis (19.5x speedup)
   * Emphasis Removal (13.2x speedup)
   * Envelope (14.5x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
-  * PAM Edge Detector (2x speedup)
+  * I/Q Demux (18.9x speedup)
+  * PAM Edge Detector (21.7x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
   * Vector Phase (243x speedup)
+* Filters: 100baseT1 now has configurable decision thresholds for better decoding of weak signals
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
+* Filters: CDR PLL now has an "edges" input allowing you to replace the default thresholding edge detector with an external block, e.g. for locking to a PAM signal. This was possible in the past by passing the PAM edge detector block to the input, but this would result in the sampled data output just being a copy of the edge detector. By splitting these, the CDR can now output sampled data from PAM signals as well.
 * Filters: FFT now works with arbitrary length input rather than truncating to next lowest power of two
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
@@ -45,7 +48,11 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 
 * Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
+  * 100baseT1
+  * Constellation
   * DDJ
+  * I/Q Demux
+* The clock output of the I/Q Demux filter was removed as it was redundant.
 
 ## Bugs fixed since v0.1.1
 
@@ -58,6 +65,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
+* Filters: Upsample filter incorrectly calculated sample indexes on waveforms with more than 2^21 points
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)
