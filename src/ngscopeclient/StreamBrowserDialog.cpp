@@ -1158,7 +1158,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 					}
 					else
 						DoItemHelp();
-
+					/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
 					// Add Banck on/off toggle
 					startBadgeLine();
 					bool allOn = true;
@@ -1205,7 +1205,7 @@ void StreamBrowserDialog::renderInstrumentNode(shared_ptr<Instrument> instrument
 							result ? scope->EnableChannel(i) : scope->DisableChannel(i);
 						}
 					}
-
+					*/
 					if(bankIsOpen)
 					{
 						ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
@@ -1597,6 +1597,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 		if(scopechan->GetType(0) == Stream::STREAM_TYPE_TRIGGER)
 			renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "TRIG ONLY", "TRIG","--", nullptr);
 
+		/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
 		// Scope channel
 		else if (!chanEnabled)
 		{
@@ -1613,13 +1614,15 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 					scope->EnableChannel(channelIndex);
 			}
 			//renderBadge(ImGui::ColorConvertU32ToFloat4(prefs.GetColor("Appearance.Stream Browser.instrument_disabled_badge_color")), "DISABLED", "DISA","--", nullptr);
-		}
+		} 
+		*/
 
 		//Download in progress
 		else
 		{
 			if(!renderDownloadProgress(instrument, channel, isLast))
 			{	// No download in progress, we can show the ENABLE/DISABLE toggle
+				/* Currently, enable/disable state is coupled to node reference counting, so we can't let the user manually enable/disable channels
 				if(renderToggle(
 					"###scopeChanEnable",
 					true,
@@ -1632,6 +1635,7 @@ void StreamBrowserDialog::renderChannelNode(shared_ptr<Instrument> instrument, s
 					if(!chanEnabled)
 						scope->DisableChannel(channelIndex);
 				}
+				*/
 			}
 		}
 	}
