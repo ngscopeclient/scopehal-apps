@@ -23,6 +23,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Emphasis Removal (13.2x speedup)
   * Envelope (14.5x speedup)
   * Ethernet - 100baseTX (10x speedup)
+  * Exponential Moving Average (35x speedup)
   * Eye pattern (25x speedup)
   * Histogram (12x speedup)
   * I/Q Demux (18.9x speedup)
@@ -46,13 +47,15 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 NOTE: This section only list changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
 
-* Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
+* Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR PLL (or I/Q Demux) block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
-  * 100baseT1
   * Constellation
   * DDJ
+  * Ethernet - 100baseT1
+  * Ethernet - 100baseT1 Link training
   * I/Q Demux
 * The clock output of the I/Q Demux filter was removed as it was redundant.
+* The FSK Decoder filter was removed as it basically did the same thing as the Threshold filter
 
 ## Bugs fixed since v0.1.1
 
@@ -62,6 +65,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Drivers: LeCroy "force trigger" button did not work if the trigger wasn't already armed (https://github.com/ngscopeclient/scopehal-apps/issues/1053)
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
+* Filters: Fall Time measurement had numerical stability issues with deep waveforms
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.

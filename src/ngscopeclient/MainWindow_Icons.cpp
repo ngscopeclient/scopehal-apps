@@ -118,7 +118,6 @@
 #include "../scopeprotocols/FIRFilter.h"
 #include "../scopeprotocols/FFTFilter.h"
 #include "../scopeprotocols/FrequencyMeasurement.h"
-#include "../scopeprotocols/FSKDecoder.h"
 #include "../scopeprotocols/FullWidthHalfMax.h"
 #include "../scopeprotocols/GateFilter.h"
 #include "../scopeprotocols/GlitchRemovalFilter.h"
@@ -346,7 +345,6 @@ void MainWindow::LoadFilterIcons()
 	m_texmgr.LoadTexture("filter-fir-bandpass", FindDataFile("icons/filters/filter-fir-bandpass.png"));
 	m_texmgr.LoadTexture("filter-fir-notch", FindDataFile("icons/filters/filter-fir-notch.png"));
 	m_texmgr.LoadTexture("filter-fft", FindDataFile("icons/filters/filter-fft.png"));
-	m_texmgr.LoadTexture("filter-fsk", FindDataFile("icons/filters/filter-fsk.png"));
 	m_texmgr.LoadTexture("filter-frequency", FindDataFile("icons/filters/filter-frequency.png"));
 	m_texmgr.LoadTexture("filter-fwhm", FindDataFile("icons/filters/filter-fwhm.png"));
 	m_texmgr.LoadTexture("filter-gate", FindDataFile("icons/filters/filter-gate.png"));
@@ -532,7 +530,6 @@ void MainWindow::LoadFilterIcons()
 	m_filterIconMap[type_index(typeid(FallMeasurement))] 						= "filter-fall";
 	m_filterIconMap[type_index(typeid(FFTFilter))] 								= "filter-fft";
 	m_filterIconMap[type_index(typeid(FrequencyMeasurement))] 					= "filter-frequency";
-	m_filterIconMap[type_index(typeid(FSKDecoder))]			 					= "filter-fsk";
 	m_filterIconMap[type_index(typeid(FullWidthHalfMax))] 						= "filter-fwhm";
 	m_filterIconMap[type_index(typeid(GateFilter))] 							= "filter-gate";
 	m_filterIconMap[type_index(typeid(GlitchRemovalFilter))] 					= "filter-glitch-removal";
