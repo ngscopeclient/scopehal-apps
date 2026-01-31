@@ -25,6 +25,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Ethernet - 100baseTX (10x speedup)
   * Exponential Moving Average (35x speedup)
   * Eye pattern (25x speedup)
+  * Fall (15.8x speedup)
   * Histogram (12x speedup)
   * I/Q Demux (18.9x speedup)
   * PAM Edge Detector (21.7x speedup)
