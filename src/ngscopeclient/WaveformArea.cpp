@@ -2127,10 +2127,6 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 		//If we have native int64, do this on the GPU
 		if(g_hasShaderInt64)
 		{
-			//FIXME: what still depends on m_offsets CPU side??
-			//If we don't copy this, nothing is drawn
-			sdata->m_offsets.PrepareForCpuAccessNonblocking(cmdbuf);
-
 			IndexSearchConstants cfg;
 			cfg.len = data->size();
 			cfg.w = w;
