@@ -219,6 +219,12 @@ bool MetricsDialog::DoRender()
 		int64_t deviceHostCopiesRequested =
 			deviceHostCopiesSkipped + deviceHostCopiesBlocking + deviceHostCopiesNonBlocking;
 
+		int64_t deviceDeviceCopiesSkipped = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesSkipped;
+		int64_t deviceDeviceCopiesBlocking = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesBlocking;
+		int64_t deviceDeviceCopiesNonBlocking = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesNonBlocking;
+		int64_t deviceDeviceCopiesRequested =
+			deviceDeviceCopiesSkipped + deviceDeviceCopiesBlocking + deviceDeviceCopiesNonBlocking;
+
 		if(ImGui::TreeNodeEx("Transfers", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			if(ImGui::TreeNodeEx("CPU-GPU", ImGuiTreeNodeFlags_DefaultOpen))
@@ -268,6 +274,34 @@ bool MetricsDialog::DoRender()
 					HelpMarker("Blocking transfers using the implicit global transfer command buffer");
 
 					str = FormatValueWithPercentage(deviceHostCopiesNonBlocking, deviceHostCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Non-blocking", &str);
+					HelpMarker("Nonblocking transfers using an explicit command buffer");
+
+				ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
+
+			if(ImGui::TreeNodeEx("GPU-GPU", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::BeginDisabled();
+					str = counts.PrettyPrint(deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Requested", &str);
+					HelpMarker("Total number of times a data buffer was copied from one GPU location to another");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesSkipped, deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Avoided", &str);
+					HelpMarker("Copies which did not happen because the old buffer was empty");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesBlocking, deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Blocking", &str);
+					HelpMarker("Blocking transfers using the implicit global transfer command buffer");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesNonBlocking, deviceDeviceCopiesRequested);
 					ImGui::SetNextItemWidth(width);
 					ImGui::InputText("Non-blocking", &str);
 					HelpMarker("Nonblocking transfers using an explicit command buffer");
