@@ -29,6 +29,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Fall (15.8x speedup)
   * Histogram (12x speedup)
   * I/Q Demux (18.9x speedup)
+  * Invert (27.3x speedup)
   * PAM Edge Detector (21.7x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
