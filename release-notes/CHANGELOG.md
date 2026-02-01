@@ -41,6 +41,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
+* GUI: Added performance counters for CPU/GPU copies to better identify bottlenecks
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * GUI: Filter graph editor now allows filters and instrument channels to display error messages when their configuration is invalid or something goes wrong. Not all drivers/filters take advantage of this yet.
 

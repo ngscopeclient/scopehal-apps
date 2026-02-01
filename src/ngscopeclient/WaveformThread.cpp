@@ -101,6 +101,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 			g_partialRefilterRequestedEvent.Peek();
 
 			LogTrace("WaveformThread: re-running filter graph and re-rendering\n");
+			AcceleratorBufferPerformanceCounters::Reset();
 			session->RefreshAllFilters();
 			RenderAllWaveforms(cmdbuf, session, queue);
 			g_refilterDoneEvent.Signal();
@@ -110,6 +111,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		if(g_partialRefilterRequestedEvent.Peek())
 		{
 			LogTrace("WaveformThread: re-running partial filter graph and re-rendering\n");
+			AcceleratorBufferPerformanceCounters::Reset();
 			if(session->RefreshDirtyFilters())
 				RenderAllWaveforms(cmdbuf, session, queue);
 			g_refilterDoneEvent.Signal();
@@ -137,6 +139,7 @@ void WaveformThread(Session* session, atomic<bool>* shuttingDown)
 		}
 
 		//We've got data. Download it, then run the filter graph
+		AcceleratorBufferPerformanceCounters::Reset();
 		session->DownloadWaveforms();
 		session->RefreshAllFilters();
 
