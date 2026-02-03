@@ -320,6 +320,7 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		m_rasterizedWaveform.resize(npixels);
 
 		//fill with black
+		//TODO: do this in a shader
 		m_rasterizedWaveform.PrepareForCpuAccess();
 		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
 		m_rasterizedWaveform.MarkModifiedFromCpu();
@@ -3761,6 +3762,8 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto stream = chan->GetStream();
 	auto rchan = stream.m_channel;
 	auto data = stream.GetData();
+	auto udata = dynamic_cast<UniformWaveformBase*>(data);
+	auto sdata = dynamic_cast<SparseWaveformBase*>(data);
 	auto edata = dynamic_cast<EyeWaveform*>(data);
 	auto cdata = dynamic_cast<ConstellationWaveform*>(data);
 	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
@@ -3872,9 +3875,13 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 			else
 			{
 				Unit samples(Unit::UNIT_SAMPLEDEPTH);
-				tooltip += samples.PrettyPrint(data->size()) + "\n";
+				tooltip +=
+					samples.PrettyPrint(data->size()) +
+					" (memory allocated for " +
+					samples.PrettyPrint(data->capacity()) +
+					")\n";
 
-				if(dynamic_cast<UniformWaveformBase*>(data))
+				if(udata)
 				{
 					Unit rate(Unit::UNIT_SAMPLERATE);
 					if(data->m_timescale > 1)
