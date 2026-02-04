@@ -96,6 +96,7 @@ TEST_CASE("Filter_FrequencyMeasurement")
 
 			//Get the output data
 			auto data = dynamic_cast<SparseAnalogWaveform*>(filter->GetData(0));
+			data->PrepareForCpuAccess();
 			REQUIRE(data != nullptr);
 
 			//Counts for each array must be consistent
@@ -120,12 +121,16 @@ TEST_CASE("Filter_FrequencyMeasurement")
 			float davg = gen_freq - avg;
 			float dmin = gen_freq - fmin;
 			float dmax = fmax - gen_freq;
-			LogVerbose("Min: %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
-			LogVerbose("Avg: %s (err = %s)\n", hz.PrettyPrint(avg).c_str(), hz.PrettyPrint(davg).c_str());
-			LogVerbose("Max: %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
+			auto sout = filter->GetScalarValue(1);
+			auto dscalar = gen_freq - sout;
+			LogVerbose("Scalar: %s (err = %s)\n", hz.PrettyPrint(sout).c_str(), hz.PrettyPrint(dscalar).c_str());
+			LogVerbose("Min:    %s (err = %s)\n", hz.PrettyPrint(fmin).c_str(), hz.PrettyPrint(dmin).c_str());
+			LogVerbose("Avg:    %s (err = %s)\n", hz.PrettyPrint(avg).c_str(),  hz.PrettyPrint(davg).c_str());
+			LogVerbose("Max:    %s (err = %s)\n", hz.PrettyPrint(fmax).c_str(), hz.PrettyPrint(dmax).c_str());
 
 			//Average frequency must be +/- 0.1% (arbitrary threshold for now)
 			REQUIRE(fabs(davg) < 0.001 * gen_freq);
+			REQUIRE(fabs(dscalar) < 0.001 * gen_freq);
 
 			//Min and max must be +/- 5% (arbitrary threshold for now)
 			REQUIRE(fabs(dmin) < 0.05 * gen_freq);
