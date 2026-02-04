@@ -2580,6 +2580,7 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 	if(ax::NodeEditor::ShowBackgroundContextMenu())
 	{
 		ax::NodeEditor::Suspend();
+			m_createMousePos = ImGui::GetMousePos();
 			ImGui::OpenPopup("Add Menu");
 		ax::NodeEditor::Resume();
 	}
@@ -2588,7 +2589,6 @@ void FilterGraphEditor::HandleBackgroundContextMenu()
 	ax::NodeEditor::Suspend();
 	if(ImGui::BeginPopup("Add Menu"))
 	{
-		m_createMousePos = ImGui::GetMousePos();
 		DoAddMenu();
 		ImGui::EndPopup();
 	}
