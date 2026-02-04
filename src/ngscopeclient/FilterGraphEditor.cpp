@@ -1815,7 +1815,7 @@ void FilterGraphEditor::FilterSubmenu(StreamDescriptor stream, const string& nam
 		{
 			auto it = refs.find(fname);
 			bool valid = false;
-			if(it->second->GetInputCount() == 0)		//No inputs? Always valid
+			if(!stream || it->second->GetInputCount() == 0)		//No inputs or ne stream ? Always valid
 				valid = true;
 			else
 				valid = it->second->ValidateChannel(0, stream);
@@ -2673,6 +2673,18 @@ void FilterGraphEditor::DoAddMenu()
 		ax::NodeEditor::SetNodePosition(id, mousePos);
 
 		m_groups.emplace(group, id);
+	}
+
+	if(ImGui::BeginMenu("New Filter"))
+	{
+		ImGui::PushFont(nullptr, 0);
+
+		StreamDescriptor emptyStream;
+		FilterMenu(emptyStream);
+
+
+		ImGui::PopFont();
+		ImGui::EndMenu();
 	}
 }
 
