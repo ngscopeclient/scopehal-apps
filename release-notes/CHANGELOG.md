@@ -16,6 +16,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Base (17x speedup)
   * CDR PLL (7.5x speedup)
   * Clip (4x speedup)
+  * Constellation (7.5x speedup)
   * DDJ (16x speedup)
   * Downconvert (5.8x speedup)
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
