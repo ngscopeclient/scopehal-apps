@@ -61,10 +61,15 @@ class CreateFilterBrowser;
 class SplitGroupRequest
 {
 public:
-	SplitGroupRequest(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
+	SplitGroupRequest(
+		std::shared_ptr<WaveformGroup> group,
+		ImGuiDir direction,
+		StreamDescriptor stream,
+		std::string ramp)
 	: m_group(group)
 	, m_direction(direction)
 	, m_stream(stream)
+	, m_ramp(ramp)
 	{
 		auto schan = dynamic_cast<OscilloscopeChannel*>(stream.m_channel);
 		if(schan)
@@ -75,6 +80,7 @@ public:
 	: m_group(rhs.m_group)
 	, m_direction(rhs.m_direction)
 	, m_stream(rhs.m_stream)
+	, m_ramp(rhs.m_ramp)
 	{
 		auto schan = dynamic_cast<OscilloscopeChannel*>(rhs.m_stream.m_channel);
 		if(schan)
@@ -93,6 +99,9 @@ public:
 	std::shared_ptr<WaveformGroup> m_group;
 	ImGuiDir m_direction;
 	StreamDescriptor m_stream;
+
+	///@brief Color ramp request (may be blank if unspecified)
+	std::string m_ramp;
 };
 
 /**
@@ -126,8 +135,12 @@ public:
 
 	void OnScopeAdded(std::shared_ptr<Oscilloscope> scope, bool createViews);
 
-	void QueueSplitGroup(std::shared_ptr<WaveformGroup> group, ImGuiDir direction, StreamDescriptor stream)
-	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream)); }
+	void QueueSplitGroup(
+		std::shared_ptr<WaveformGroup> group,
+		ImGuiDir direction,
+		StreamDescriptor stream,
+		std::string colorRamp)
+	{ m_splitRequests.push_back(SplitGroupRequest(group, direction, stream, colorRamp)); }
 
 	void ShowChannelProperties(OscilloscopeChannel* channel);
 	void ShowInstrumentProperties(std::shared_ptr<Instrument> instrument);

@@ -1288,6 +1288,8 @@ void MainWindow::DockingArea()
 				request.m_stream.GetName().c_str(),
 				group->GetID().c_str());
 			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
+			if(request.m_ramp != "")
+				area->GetDisplayedChannel(0)->m_colorRamp = request.m_ramp;
 			group->AddArea(area);
 		}
 
@@ -1677,7 +1679,7 @@ void MainWindow::RenameRecentInstrument(std::shared_ptr<SCPIInstrument> inst, co
 		inst->GetTransportName() + ":" +
 		inst->GetTransportConnectionString();
 	auto it = m_recentInstruments.find(oldConnectionString);
-	if (it != m_recentInstruments.end()) 
+	if (it != m_recentInstruments.end())
 	{
 		auto now = time(NULL);
 		auto newConnectionString =
@@ -1706,7 +1708,7 @@ void MainWindow::RepathRecentInstrument(std::shared_ptr<SCPIInstrument> inst, co
 		inst->GetTransportName() + ":" +
 		oldPath;
 	auto it = m_recentInstruments.find(oldConnectionString);
-	if (it != m_recentInstruments.end()) 
+	if (it != m_recentInstruments.end())
 	{
 		auto now = time(NULL);
 		auto newConnectionString =
@@ -1869,7 +1871,7 @@ void MainWindow::RenderLoadWarningPopup()
 {
 	if(!m_errorPopupTitle.empty())
 		return; // Already showing Error popup, skip Warning for now
-		
+
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
