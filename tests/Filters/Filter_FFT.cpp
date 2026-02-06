@@ -61,7 +61,8 @@ TEST_CASE("Filter_FFT")
 {
 	auto filter = dynamic_cast<FFTFilter*>(Filter::CreateFilter("FFT", "#ffffff"));
 	REQUIRE(filter != nullptr);
-	filter->AddRef();
+
+	FilterReferencer ref(filter);
 
 	//Create a queue and command buffer
 	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_FFT.queue"));
@@ -201,8 +202,6 @@ TEST_CASE("Filter_FFT")
 	}
 
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
-
-	filter->Release();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
