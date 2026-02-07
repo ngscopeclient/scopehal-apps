@@ -70,6 +70,8 @@ protected:
 	std::vector<std::string> m_drivers;
 	int m_selectedTransport;
 	std::vector<std::string> m_transports;
+	int m_selectedEndpoint;
+	std::vector<TransportEndpoint> m_endpoits;
 	int m_selectedModel;
 	std::vector<std::string> m_models;
 	std::unordered_set<std::string> m_supportedTransports;

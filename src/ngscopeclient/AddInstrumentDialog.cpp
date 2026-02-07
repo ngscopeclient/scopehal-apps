@@ -60,6 +60,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 	, m_nickname(nickname)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
+	, m_selectedEndpoint(0)
 	, m_selectedModel(0)
 	, m_path(path)
 {
@@ -291,6 +292,7 @@ void AddInstrumentDialog::UpdateCombos()
 	{
 		m_models.clear();
 		m_transports.clear();
+		m_endpoits.clear();
 		int modelIndex = 0;
 		auto selectedModel = supportedModels[0];
 		// Model list
@@ -331,6 +333,12 @@ void AddInstrumentDialog::UpdateCombos()
 			m_selectedTransport = 0;
 			if(!m_pathEdited)
 				m_path = "";
+		}
+		// Update endpoint list
+		auto endpoints = SCPITransport::EnumEndpoints(m_transports[m_selectedTransport]);
+		for(auto endpoint : endpoints)
+		{
+			m_endpoits.push_back(endpoint);
 		}
 	}
 	else
