@@ -49,7 +49,9 @@ protected:
 
 	std::string FormatValueWithPercentage(int64_t a, int64_t total)
 	{
-		float percent = (float)a * 100 / (float)total;
+		float percent = 0;
+		if(total != 0)
+			percent = (float)a * 100 / (float)total;
 
 		char tmp[128];
 		snprintf(tmp, sizeof(tmp), "%" PRIi64 " (%.2f %%)", a, percent);
