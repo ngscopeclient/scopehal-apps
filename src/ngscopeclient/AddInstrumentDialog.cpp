@@ -54,7 +54,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 	: Dialog(
 		title,
 		string("AddInstrument") + to_string_hex(reinterpret_cast<uintptr_t>(this)),
-		ImVec2(600, 180),
+		ImVec2(600, 200),
 		session,
 		parent)
 	, m_nickname(nickname)
@@ -200,6 +200,14 @@ bool AddInstrumentDialog::DoRender()
 	else if(dropdownOpen)	//suppress further bubbles if dropdown is active
 		showedBubble = true;
 
+	if(!m_endpoints.empty())
+	{	// Endpoint discovery available: create endpoint combo
+		if(Combo("Endpoint", m_endpointNames, m_selectedEndpoint, &dropdownOpen))
+		{
+			UpdatePath();
+		}
+		HelpMarker("Select the transport endpoint from the list and/or edit the path manually.");
+	}
 	if(ImGui::InputText("Path", &m_path))
 		m_pathEdited = !(m_path.empty() || (m_path == m_defaultPath));
 	HelpMarker(
@@ -283,16 +291,24 @@ bool AddInstrumentDialog::DoConnect(SCPITransport* transport)
 	return m_session->CreateAndAddInstrument(m_drivers[m_selectedDriver], transport, m_nickname);
 }
 
+void AddInstrumentDialog::UpdatePath()
+{
+	size_t pos = m_path.find(':');
+	string suffix = (pos == std::string::npos) ? "" : m_path.substr(pos);
+	m_path = m_endpoints[m_selectedEndpoint].path + suffix;
+}
+
 void AddInstrumentDialog::UpdateCombos()
 {
 	// Update transoport list according to selected driver an connection string according to transport
 	string driver = m_drivers[m_selectedDriver];
 	auto supportedModels = SCPIInstrument::GetSupportedModels(driver);
+	m_endpoints.clear();
+	m_endpointNames.clear();
 	if(!supportedModels.empty())
 	{
 		m_models.clear();
 		m_transports.clear();
-		m_endpoits.clear();
 		int modelIndex = 0;
 		auto selectedModel = supportedModels[0];
 		// Model list
@@ -338,8 +354,15 @@ void AddInstrumentDialog::UpdateCombos()
 		auto endpoints = SCPITransport::EnumEndpoints(m_transports[m_selectedTransport]);
 		for(auto endpoint : endpoints)
 		{
-			m_endpoits.push_back(endpoint);
+			m_endpoints.push_back(endpoint);
+			m_endpointNames.push_back(endpoint.path + " ("+ endpoint.description +")");
 		}
+		if(m_selectedEndpoint >= (int)m_endpoints.size())
+		{
+			m_selectedEndpoint = 0;
+		}
+		if(m_endpoints.size()>0)
+			UpdatePath();
 	}
 	else
 	{	// Supported transports not provided => add all transports
