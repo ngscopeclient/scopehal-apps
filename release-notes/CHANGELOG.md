@@ -9,12 +9,14 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration for many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+* Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+  * 8B/10B (IBM) (12.1x speedup)
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
   * Base (17x speedup)
   * CDR PLL (7.5x speedup)
   * Clip (4x speedup)
+  * Constellation (7.5x speedup)
   * DDJ (16x speedup)
   * Downconvert (5.8x speedup)
   * Downsample (22.2x speedup with AA filter disabled, 16.3x with filter enabled)
@@ -23,9 +25,12 @@ This is a running list of significant bug fixes and new features since the last 
   * Emphasis Removal (13.2x speedup)
   * Envelope (14.5x speedup)
   * Ethernet - 100baseTX (10x speedup)
+  * Exponential Moving Average (35x speedup)
   * Eye pattern (25x speedup)
+  * Fall (15.8x speedup)
   * Histogram (12x speedup)
   * I/Q Demux (18.9x speedup)
+  * Invert (27.3x speedup)
   * PAM Edge Detector (21.7x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
@@ -37,6 +42,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Filters: Peak detector for FFT etc now does quadratic interpolation for sub-sample peak fitting
 * Filters: Horizontal bathtub curve now works properly with MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * Filters: PcapNG export now has an additional mode selector for use with named pipes, allowing live streaming of PcapNG formatted data to WireShark
+* GUI: Added performance counters for CPU/GPU copies to better identify bottlenecks
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * GUI: Filter graph editor now allows filters and instrument channels to display error messages when their configuration is invalid or something goes wrong. Not all drivers/filters take advantage of this yet.
 
@@ -46,13 +52,16 @@ We try to maintain compatibility with older versions of ngscopeclient but occasi
 
 NOTE: This section only list changes which are potentially breaking to an *end user*. Prior to the version 1.0 release, there is no expectation of API/ABI stability and internal software interfaces may change at any time with no warning.
 
-* Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
+* Many filters no longer take the input signal and recovered clock as separate inputs. Instead, they take the new sampled output from the CDR PLL (or I/Q Demux) block. This eliminates redundant sampling and is significantly faster but was not possible to do in a fully backwards compatible fashion. The list of affected filters is:
   * 100baseTX
-  * 100baseT1
+  * 8B/10B (IBM)
   * Constellation
   * DDJ
+  * Ethernet - 100baseT1
+  * Ethernet - 100baseT1 Link training
   * I/Q Demux
 * The clock output of the I/Q Demux filter was removed as it was redundant.
+* The FSK Decoder filter was removed as it basically did the same thing as the Threshold filter
 
 ## Bugs fixed since v0.1.1
 
@@ -62,6 +71,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Drivers: LeCroy "force trigger" button did not work if the trigger wasn't already armed (https://github.com/ngscopeclient/scopehal-apps/issues/1053)
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
+* Filters: Fall Time measurement had numerical stability issues with deep waveforms
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
@@ -69,6 +79,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)
+* GUI: Eye patterns and constellations would forget the selected color ramp when moved to a new location (https://github.com/ngscopeclient/scopehal-apps/issues/556)
 * Session files: Windows build could not load session files containing sample rates or memory depths in excess of 2^32
 
 ## Other changes since v0.1.1

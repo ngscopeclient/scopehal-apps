@@ -205,6 +205,116 @@ bool MetricsDialog::DoRender()
 		}
 	}
 
+	if(ImGui::CollapsingHeader("Buffers"))
+	{
+		int64_t hostDeviceCopiesSkipped = AcceleratorBufferPerformanceCounters::m_hostDeviceCopiesSkipped;
+		int64_t hostDeviceCopiesBlocking = AcceleratorBufferPerformanceCounters::m_hostDeviceCopiesBlocking;
+		int64_t hostDeviceCopiesNonBlocking = AcceleratorBufferPerformanceCounters::m_hostDeviceCopiesNonBlocking;
+		int64_t hostDeviceCopiesRequested =
+			hostDeviceCopiesSkipped + hostDeviceCopiesBlocking + hostDeviceCopiesNonBlocking;
+
+		int64_t deviceHostCopiesSkipped = AcceleratorBufferPerformanceCounters::m_deviceHostCopiesSkipped;
+		int64_t deviceHostCopiesBlocking = AcceleratorBufferPerformanceCounters::m_deviceHostCopiesBlocking;
+		int64_t deviceHostCopiesNonBlocking = AcceleratorBufferPerformanceCounters::m_deviceHostCopiesNonBlocking;
+		int64_t deviceHostCopiesRequested =
+			deviceHostCopiesSkipped + deviceHostCopiesBlocking + deviceHostCopiesNonBlocking;
+
+		int64_t deviceDeviceCopiesSkipped = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesSkipped;
+		int64_t deviceDeviceCopiesBlocking = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesBlocking;
+		int64_t deviceDeviceCopiesNonBlocking = AcceleratorBufferPerformanceCounters::m_deviceDeviceCopiesNonBlocking;
+		int64_t deviceDeviceCopiesRequested =
+			deviceDeviceCopiesSkipped + deviceDeviceCopiesBlocking + deviceDeviceCopiesNonBlocking;
+
+		if(ImGui::TreeNodeEx("Transfers", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			if(ImGui::TreeNodeEx("CPU-GPU", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::BeginDisabled();
+					str = counts.PrettyPrint(hostDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Requested", &str);
+					HelpMarker("Total number of times a data buffer was requested by a GPU shader");
+
+					str = FormatValueWithPercentage(hostDeviceCopiesSkipped, hostDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Avoided", &str);
+					HelpMarker("Copies which did not happen because the GPU already had up-to-date data");
+
+					str = FormatValueWithPercentage(hostDeviceCopiesBlocking, hostDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Blocking", &str);
+					HelpMarker("Blocking transfers using the implicit global transfer command buffer");
+
+					str = FormatValueWithPercentage(hostDeviceCopiesNonBlocking, hostDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Non-blocking", &str);
+					HelpMarker("Nonblocking transfers using an explicit command buffer");
+
+				ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
+
+			if(ImGui::TreeNodeEx("GPU-CPU", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::BeginDisabled();
+					str = counts.PrettyPrint(deviceHostCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Requested", &str);
+					HelpMarker("Total number of times a data buffer was requested by CPU-side code");
+
+					str = FormatValueWithPercentage(deviceHostCopiesSkipped, deviceHostCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Avoided", &str);
+					HelpMarker("Copies which did not happen because the CPU already had up-to-date data");
+
+					str = FormatValueWithPercentage(deviceHostCopiesBlocking, deviceHostCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Blocking", &str);
+					HelpMarker("Blocking transfers using the implicit global transfer command buffer");
+
+					str = FormatValueWithPercentage(deviceHostCopiesNonBlocking, deviceHostCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Non-blocking", &str);
+					HelpMarker("Nonblocking transfers using an explicit command buffer");
+
+				ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
+
+			if(ImGui::TreeNodeEx("GPU-GPU", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::BeginDisabled();
+					str = counts.PrettyPrint(deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Requested", &str);
+					HelpMarker("Total number of times a data buffer was copied from one GPU location to another");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesSkipped, deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Avoided", &str);
+					HelpMarker("Copies which did not happen because the old buffer was empty");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesBlocking, deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Blocking", &str);
+					HelpMarker("Blocking transfers using the implicit global transfer command buffer");
+
+					str = FormatValueWithPercentage(deviceDeviceCopiesNonBlocking, deviceDeviceCopiesRequested);
+					ImGui::SetNextItemWidth(width);
+					ImGui::InputText("Non-blocking", &str);
+					HelpMarker("Nonblocking transfers using an explicit command buffer");
+
+				ImGui::EndDisabled();
+
+				ImGui::TreePop();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
 	//Only show this tab if available
 	if(g_hasMemoryBudget)
 	{

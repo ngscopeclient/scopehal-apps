@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -51,7 +51,7 @@ TEST_CASE("Filter_DeEmbed")
 {
 	auto filter = dynamic_cast<DeEmbedFilter*>(Filter::CreateFilter("De-Embed", "#ffffff"));
 	REQUIRE(filter != nullptr);
-	filter->AddRef();
+	FilterReferencer ref(filter);
 
 	//Create a queue and command buffer
 	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_DeEmbed.queue"));
@@ -188,6 +188,4 @@ TEST_CASE("Filter_DeEmbed")
 	g_scope->GetOscilloscopeChannel(0)->Detach(0);
 	g_scope->GetOscilloscopeChannel(2)->Detach(0);
 	g_scope->GetOscilloscopeChannel(3)->Detach(0);
-
-	filter->Release();
 }

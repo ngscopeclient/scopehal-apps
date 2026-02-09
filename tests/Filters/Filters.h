@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
 *                                                                                                                      *
-* glscopeclient                                                                                                        *
+* ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2022 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -40,5 +40,19 @@ extern std::minstd_rand g_rng;
 
 void FillRandomWaveform(UniformAnalogWaveform* wfm, size_t size, float fmin=-1, float fmax=1);
 void VerifyMatchingResult(AcceleratorBuffer<float>& golden, AcceleratorBuffer<float>& observed, float tolerance = 1e-6f);
+
+class FilterReferencer
+{
+public:
+	FilterReferencer(Filter* p)
+	: m_filter(p)
+	{ m_filter->AddRef(); }
+
+	~FilterReferencer()
+	{ m_filter->Release(); }
+
+protected:
+	Filter* m_filter;
+};
 
 #endif

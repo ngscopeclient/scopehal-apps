@@ -320,6 +320,7 @@ void DisplayedChannel::PrepareToRasterize(size_t x, size_t y)
 		m_rasterizedWaveform.resize(npixels);
 
 		//fill with black
+		//TODO: do this in a shader
 		m_rasterizedWaveform.PrepareForCpuAccess();
 		memset(m_rasterizedWaveform.GetCpuPointer(), 0, npixels * sizeof(float));
 		m_rasterizedWaveform.MarkModifiedFromCpu();
@@ -2127,10 +2128,6 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 		//If we have native int64, do this on the GPU
 		if(g_hasShaderInt64)
 		{
-			//FIXME: what still depends on m_offsets CPU side??
-			//If we don't copy this, nothing is drawn
-			sdata->m_offsets.PrepareForCpuAccessNonblocking(cmdbuf);
-
 			IndexSearchConstants cfg;
 			cfg.len = data->size();
 			cfg.w = w;
@@ -2194,8 +2191,21 @@ void WaveformArea::RasterizeAnalogOrDigitalWaveform(
 	//This will eliminate the need for a (potentially heavy) re-render when adjusting the slider.
 	float alpha = m_parent->GetTraceAlpha();
 	auto end = data->size() - 1;
-	int64_t firstOff = GetOffsetScaled(sdata, udata, 0);
-	int64_t lastOff = GetOffsetScaled(sdata, udata, end);
+	int64_t firstOff;
+	int64_t lastOff;
+	if(sdata)
+	{
+		//Data is sparse. Do a special peek copy to reduce the overhead vs a full copy
+		sdata->m_offsets.PrepareForCpuAccessFirstAndLastOnly();
+		firstOff = GetOffsetScaled(sdata, 0);
+		lastOff = GetOffsetScaled(sdata, end);
+	}
+	else
+	{
+		//This doesn't need the waveform on the CPU, the count is all we care about
+		firstOff = GetOffsetScaled(udata, 0);
+		lastOff = GetOffsetScaled(udata, end);
+	}
 	float capture_len = lastOff - firstOff;
 	float avg_sample_len = capture_len / data->size();
 	float samplesPerPixel = 1.0 / (pixelsPerX * avg_sample_len);
@@ -3351,7 +3361,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 				LogTrace("splitting\n");
 
 				//Add request to split our current group, then remove from origin
-				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+				auto sdc = desc->first->GetDisplayedChannel(desc->second);
+				m_parent->QueueSplitGroup(m_group, splitDir, stream, sdc->m_colorRamp);
 				desc->first->RemoveStream(desc->second);
 			}
 		}
@@ -3366,7 +3377,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 			if(payload->IsDelivery())
 			{
 				LogTrace("splitting\n");
-				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+				m_parent->QueueSplitGroup(m_group, splitDir, stream, "");
 			}
 		}
 
@@ -3655,6 +3666,23 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
 				m_group->AddArea(area);
 
+				//If the stream is is a density function, propagate the color ramp selection
+				switch(stream.GetType())
+				{
+					case Stream::STREAM_TYPE_EYE:
+					case Stream::STREAM_TYPE_SPECTROGRAM:
+					case Stream::STREAM_TYPE_WATERFALL:
+					case Stream::STREAM_TYPE_CONSTELLATION:
+						{
+							auto sdc = desc->first->GetDisplayedChannel(desc->second);
+							area->GetDisplayedChannel(0)->m_colorRamp = sdc->m_colorRamp;
+						}
+						break;
+
+					default:
+						break;
+				}
+
 				//Remove the stream from the originating waveform area
 				desc->first->RemoveStream(desc->second);
 			}
@@ -3834,6 +3862,8 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 	auto stream = chan->GetStream();
 	auto rchan = stream.m_channel;
 	auto data = stream.GetData();
+	auto udata = dynamic_cast<UniformWaveformBase*>(data);
+	//auto sdata = dynamic_cast<SparseWaveformBase*>(data);
 	auto edata = dynamic_cast<EyeWaveform*>(data);
 	auto cdata = dynamic_cast<ConstellationWaveform*>(data);
 	auto ddata = dynamic_cast<DensityFunctionWaveform*>(data);
@@ -3945,9 +3975,13 @@ void WaveformArea::ChannelButton(shared_ptr<DisplayedChannel> chan, size_t index
 			else
 			{
 				Unit samples(Unit::UNIT_SAMPLEDEPTH);
-				tooltip += samples.PrettyPrint(data->size()) + "\n";
+				tooltip +=
+					samples.PrettyPrint(data->size()) +
+					" (memory allocated for " +
+					samples.PrettyPrint(data->capacity()) +
+					")\n";
 
-				if(dynamic_cast<UniformWaveformBase*>(data))
+				if(udata)
 				{
 					Unit rate(Unit::UNIT_SAMPLERATE);
 					if(data->m_timescale > 1)
