@@ -208,6 +208,11 @@ bool AddInstrumentDialog::DoRender()
 			UpdatePath();
 		}
 		HelpMarker("Select the transport endpoint from the list and/or edit the path manually.");
+		ImGui::SameLine();
+		if(ImGui::Button("⟳"))
+		{
+			UpdateCombos();
+		}
 	}
 	if(ImGui::InputText("Path", &m_path))
 		m_pathEdited = !(m_path.empty() || (m_path == m_defaultPath));
