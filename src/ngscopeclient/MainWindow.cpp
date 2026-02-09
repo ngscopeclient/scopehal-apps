@@ -1283,37 +1283,14 @@ void MainWindow::DockingArea()
 			}
 			ImGui::DockBuilderDockWindow(group->GetID().c_str(), node->ID);
 
-			//Add a new waveform area for our stream/streamGroup to the new group
-			if(request.m_stream)
-			{
-				LogTrace("Making new area for %s in %s\n",
-					request.m_stream.GetName().c_str(),
-					group->GetID().c_str());
-				auto area = make_shared<WaveformArea>(request.m_stream, group, this);
-				group->AddArea(area);
-			}
-			else if(request.m_streamGroup)
-			{
-				std::shared_ptr<WaveformArea> area;
-				bool first = true;
-				for(auto channel : request.m_streamGroup->m_channels)
-				{
-					StreamDescriptor s(channel, 0);
-					LogTrace("Making new area for %s in %s\n",
-						s.GetName().c_str(),
-						group->GetID().c_str());
-					if(first || !request.m_singleArea)
-					{
- 						area = make_shared<WaveformArea>(s, group, this);
-						group->AddArea(area);
-						first = false;
-					}
-					else
-					{
-						area->AddStream(s);
-					}
-				}
-			}
+			//Add a new waveform area for our stream to the new group
+			LogTrace("Making new area for %s in %s\n",
+				request.m_stream.GetName().c_str(),
+				group->GetID().c_str());
+			auto area = make_shared<WaveformArea>(request.m_stream, group, this);
+			if(request.m_ramp != "")
+				area->GetDisplayedChannel(0)->m_colorRamp = request.m_ramp;
+			group->AddArea(area);
 		}
 
 		//Finish up
@@ -1702,7 +1679,7 @@ void MainWindow::RenameRecentInstrument(std::shared_ptr<SCPIInstrument> inst, co
 		inst->GetTransportName() + ":" +
 		inst->GetTransportConnectionString();
 	auto it = m_recentInstruments.find(oldConnectionString);
-	if (it != m_recentInstruments.end()) 
+	if (it != m_recentInstruments.end())
 	{
 		auto now = time(NULL);
 		auto newConnectionString =
@@ -1731,7 +1708,7 @@ void MainWindow::RepathRecentInstrument(std::shared_ptr<SCPIInstrument> inst, co
 		inst->GetTransportName() + ":" +
 		oldPath;
 	auto it = m_recentInstruments.find(oldConnectionString);
-	if (it != m_recentInstruments.end()) 
+	if (it != m_recentInstruments.end())
 	{
 		auto now = time(NULL);
 		auto newConnectionString =
@@ -1894,7 +1871,7 @@ void MainWindow::RenderLoadWarningPopup()
 {
 	if(!m_errorPopupTitle.empty())
 		return; // Already showing Error popup, skip Warning for now
-		
+
 	static ImGuiTableFlags flags =
 		ImGuiTableFlags_Resizable |
 		ImGuiTableFlags_BordersOuter |
