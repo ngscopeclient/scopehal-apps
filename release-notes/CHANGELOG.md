@@ -79,6 +79,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * GUI: Crash when closing a session (https://github.com/ngscopeclient/scopehal-apps/issues/934)
 * GUI: Pressing middle mouse on the Y axis to autoscale would fail, setting the full scale range to zero volts, if the waveform was resident in GPU memory and the CPU-side copy of the buffer was stale
 * GUI: History dialog allowed zero or negative values for history depth (https://github.com/ngscopeclient/scopehal-apps/issues/940)
+* GUI: Eye patterns and constellations would forget the selected color ramp when moved to a new location (https://github.com/ngscopeclient/scopehal-apps/issues/556)
 * Session files: Windows build could not load session files containing sample rates or memory depths in excess of 2^32
 
 ## Other changes since v0.1.1

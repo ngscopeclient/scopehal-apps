@@ -3360,7 +3360,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 				LogTrace("splitting\n");
 
 				//Add request to split our current group, then remove from origin
-				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+				auto sdc = desc->first->GetDisplayedChannel(desc->second);
+				m_parent->QueueSplitGroup(m_group, splitDir, stream, sdc->m_colorRamp);
 				desc->first->RemoveStream(desc->second);
 			}
 		}
@@ -3375,7 +3376,7 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 			if(payload->IsDelivery())
 			{
 				LogTrace("splitting\n");
-				m_parent->QueueSplitGroup(m_group, splitDir, stream);
+				m_parent->QueueSplitGroup(m_group, splitDir, stream, "");
 			}
 		}
 
@@ -3624,6 +3625,23 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 			{
 				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
 				m_group->AddArea(area);
+
+				//If the stream is is a density function, propagate the color ramp selection
+				switch(stream.GetType())
+				{
+					case Stream::STREAM_TYPE_EYE:
+					case Stream::STREAM_TYPE_SPECTROGRAM:
+					case Stream::STREAM_TYPE_WATERFALL:
+					case Stream::STREAM_TYPE_CONSTELLATION:
+						{
+							auto sdc = desc->first->GetDisplayedChannel(desc->second);
+							area->GetDisplayedChannel(0)->m_colorRamp = sdc->m_colorRamp;
+						}
+						break;
+
+					default:
+						break;
+				}
 
 				//Remove the stream from the originating waveform area
 				desc->first->RemoveStream(desc->second);
