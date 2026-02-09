@@ -60,6 +60,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 	, m_nickname(nickname)
 	, m_selectedDriver(0)
 	, m_selectedTransport(0)
+	, m_selectedTransportType(SCPITransportType::TRANSPORT_HID)
 	, m_selectedEndpoint(0)
 	, m_selectedModel(0)
 	, m_path(path)
@@ -293,9 +294,16 @@ bool AddInstrumentDialog::DoConnect(SCPITransport* transport)
 
 void AddInstrumentDialog::UpdatePath()
 {
-	size_t pos = m_path.find(':');
-	string suffix = (pos == std::string::npos) ? "" : m_path.substr(pos);
-	m_path = m_endpoints[m_selectedEndpoint].path + suffix;
+	if(m_selectedTransportType == SCPITransportType::TRANSPORT_HID)
+	{	// Special handling for HID transport: replace the whole path with endpoint value
+		m_path = m_endpoints[m_selectedEndpoint].path;
+	}
+	else
+	{
+		size_t pos = m_path.find(':');
+		string suffix = (pos == std::string::npos) ? "" : m_path.substr(pos);
+		m_path = m_endpoints[m_selectedEndpoint].path + suffix;
+	}
 }
 
 void AddInstrumentDialog::UpdateCombos()
@@ -333,13 +341,19 @@ void AddInstrumentDialog::UpdateCombos()
 		for(auto transport : selectedModel.supportedTransports)
 		{
 			string transportName = to_string(transport.transportType);
+			// Prepare transport type for default value
+			if(transportIndex == 0) m_selectedTransportType = transport.transportType;
 			if(m_supportedTransports.find(transportName) != m_supportedTransports.end())
 			{
 				m_transports.push_back(transportName);
-				if(transportIndex == m_selectedTransport && !m_pathEdited)
+				if(transportIndex == m_selectedTransport)
 				{
-					m_path = transport.connectionString;
-					m_defaultPath = m_path;
+					m_selectedTransportType = transport.transportType;
+					if(!m_pathEdited)
+					{
+						m_path = transport.connectionString;
+						m_defaultPath = m_path;
+					}
 				}
 				transportIndex++;
 			}
@@ -352,10 +366,16 @@ void AddInstrumentDialog::UpdateCombos()
 		}
 		// Update endpoint list
 		auto endpoints = SCPITransport::EnumEndpoints(m_transports[m_selectedTransport]);
+		int endpointIndex = 0;
 		for(auto endpoint : endpoints)
 		{
 			m_endpoints.push_back(endpoint);
 			m_endpointNames.push_back(endpoint.path + " ("+ endpoint.description +")");
+			if(m_selectedTransportType == SCPITransportType::TRANSPORT_HID && (endpoint.path.rfind(m_path) == 0))
+			{	// Special handling for HID : select the endpoint matching the path provided by the driver
+				m_selectedEndpoint = endpointIndex;
+			}
+			endpointIndex++;
 		}
 		if(m_selectedEndpoint >= (int)m_endpoints.size())
 		{

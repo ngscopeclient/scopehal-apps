@@ -72,6 +72,7 @@ protected:
 	int m_selectedDriver;
 	std::vector<std::string> m_drivers;
 	int m_selectedTransport;
+	SCPITransportType m_selectedTransportType;
 	std::vector<std::string> m_transports;
 	int m_selectedEndpoint;
 	std::vector<TransportEndpoint> m_endpoints;
