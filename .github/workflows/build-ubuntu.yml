@@ -144,8 +144,17 @@ jobs:
         cd build
         ninja doc
 
-    - name: Run Tests
-      if: ${{ !  matrix.docs }}
+    - name: Run Tests (Legacy Vulkan ICD path)
+      if: ${{ (!  matrix.docs) && (matrix.os == 'ubuntu-22.04') }}
+      run: |
+        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        cd build
+        ls -lh /usr/share/vulkan/icd.d/
+        vulkaninfo
+        ctest --output-on-failure
+
+    - name: Run Tests (Modern Vulkan ICD path)
+      if: ${{ (!  matrix.docs) && (matrix.os ~= 'ubuntu-22.04') }}
       run: |
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
         cd build
