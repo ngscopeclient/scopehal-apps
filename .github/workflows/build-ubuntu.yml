@@ -147,7 +147,7 @@ jobs:
     - name: Run Tests
       if: ${{ !  matrix.docs }}
       run: |
-        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
         cd build
         ls -lh /usr/share/vulkan/icd.d/
         vulkaninfo
