@@ -149,6 +149,7 @@ jobs:
       run: |
         export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
         cd build
+        ls -lh /usr/share/vulkan/icd.d/
         vulkaninfo
         ctest --output-on-failure
 
