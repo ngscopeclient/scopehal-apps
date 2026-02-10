@@ -90,7 +90,8 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install \
           catch2 \
-          mesa-vulkan-drivers
+          mesa-vulkan-drivers \
+          vulkaninfo
 
     - name: Cache Vulkan SDK Standalone
       if: ${{ matrix.sdk_type == 'standalone' }}
