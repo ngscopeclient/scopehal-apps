@@ -32,6 +32,8 @@ This is a running list of significant bug fixes and new features since the last 
   * I/Q Demux (18.9x speedup)
   * Invert (27.3x speedup)
   * PAM Edge Detector (21.7x speedup)
+  * PRBS generator (17.5x speedup)
+  * PRBS checker (3308x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
   * Vector Phase (243x speedup)
@@ -60,6 +62,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
   * Ethernet - 100baseT1
   * Ethernet - 100baseT1 Link training
   * I/Q Demux
+  * PRBS Checker
 * The clock output of the I/Q Demux filter was removed as it was redundant.
 * The FSK Decoder filter was removed as it basically did the same thing as the Threshold filter
 
@@ -67,6 +70,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 
 * Core: Vulkan initialization code would break on cards that advertised 32-bit atomic float support, but did not support atomic addition (https://github.com/ngscopeclient/scopehal-apps/issues/947)
 * Core: Boolean properties of filter graph blocks were serialized to scopesessions with a trailing space, which caused them to load incorrectly
+* Core: Fixed some numerical precision errors in conversion of 64-bit integer values to strings and back (https://github.com/ngscopeclient/scopehal/issues/1073)
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Drivers: LeCroy "force trigger" button did not work if the trigger wasn't already armed (https://github.com/ngscopeclient/scopehal-apps/issues/1053)
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
