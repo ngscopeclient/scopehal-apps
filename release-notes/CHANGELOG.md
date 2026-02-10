@@ -47,6 +47,7 @@ This is a running list of significant bug fixes and new features since the last 
 * GUI: Added performance counters for CPU/GPU copies to better identify bottlenecks
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * GUI: Filter graph editor now allows filters and instrument channels to display error messages when their configuration is invalid or something goes wrong. Not all drivers/filters take advantage of this yet.
+* GUI: "add instrument" dialog now includes automatic enumeration of attached HID and UART devices (https://github.com/ngscopeclient/scopehal-apps/pull/968)
 
 ## Breaking changes since v0.1.1
 
@@ -74,6 +75,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
 * Drivers: LeCroy "force trigger" button did not work if the trigger wasn't already armed (https://github.com/ngscopeclient/scopehal-apps/issues/1053)
 * Filters: broken CSV import with \r\n line endings (https://github.com/ngscopeclient/scopehal-apps/issues/939)
+* Filters: CSV import now uses 64-bit internal precision when parsing timestamps, reducing loss of precision when loading multimillion line files
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
 * Filters: Fall Time measurement had numerical stability issues with deep waveforms
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
