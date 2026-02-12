@@ -71,11 +71,13 @@ bool HardwareFlagsDialog::DoRender()
 
 	if(ImGui::CollapsingHeader("CPU"))
 	{
+		#ifdef __x86_64__
 		ImGui::Checkbox("FMA", &g_hasFMA);
 		ImGui::Checkbox("AVX2", &g_hasAvx2);
 		ImGui::Checkbox("AVX512F", &g_hasAvx512F);
 		ImGui::Checkbox("AVX512VL", &g_hasAvx512VL);
 		ImGui::Checkbox("AVX512DQ", &g_hasAvx512DQ);
+		#endif
 	}
 
 	if(ImGui::CollapsingHeader("GPU"))
