@@ -488,6 +488,8 @@ public:
 
 	bool IsCompatible(StreamDescriptor desc);
 
+	bool IsShowing(StreamDescriptor desc);
+
 	void RemoveStream(size_t i);
 
 	void ClearPersistence();
