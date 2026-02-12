@@ -32,6 +32,8 @@ This is a running list of significant bug fixes and new features since the last 
   * I/Q Demux (18.9x speedup)
   * Invert (27.3x speedup)
   * Maximum (35x speedup)
+  * Minimum (24.8x speedup)
+  * Moving Average (93.5x speedup)
   * PAM Edge Detector (21.7x speedup)
   * PRBS generator (21.6x speedup)
   * PRBS checker (211x speedup)
