@@ -46,6 +46,7 @@
 #include "BERTDialog.h"
 #include "CreateFilterBrowser.h"
 #include "FilterGraphEditor.h"
+#include "HardwareFlagsDialog.h"
 #include "HistoryDialog.h"
 #include "LoadDialog.h"
 #include "LogViewerDialog.h"
@@ -387,7 +388,7 @@ void MainWindow::DoAddSubMenu(
 								typeInternal,
 								drivername,
 								transname,
-								path));				
+								path));
 						}
 					}
 				}
@@ -816,6 +817,9 @@ void MainWindow::DebugMenu()
 
 		if(ImGui::MenuItem("Memory Leaker"))
 			AddDialog(make_shared<MemoryLeakerDialog>(this));
+
+		if(ImGui::MenuItem("Hardware Flags"))
+			AddDialog(make_shared<HardwareFlagsDialog>());
 
 		ImGui::EndMenu();
 	}

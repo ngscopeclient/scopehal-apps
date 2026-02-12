@@ -75,6 +75,7 @@ add_executable(ngscopeclient
 	FilterPropertiesDialog.cpp
 	FontManager.cpp
 	GuiLogSink.cpp
+	HardwareFlagsDialog.cpp
 	HistoryDialog.cpp
 	HistoryManager.cpp
 	IGFDFileBrowser.cpp
