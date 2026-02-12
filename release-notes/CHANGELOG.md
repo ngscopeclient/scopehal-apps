@@ -9,7 +9,7 @@ This is a running list of significant bug fixes and new features since the last 
 * Drivers: Added support for many more PicoScope models
 * Drivers: Added R&S RTB2000 driver (https://github.com/ngscopeclient/scopehal/pull/1048/)
 * Drivers: ThunderScope now overlaps socket IO and GPU processing of waveforms giving a significant increase in WFM/s rate
-* Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including:
+* Filters: Added GPU acceleration and/or optimized many more filters (https://github.com/ngscopeclient/scopehal/issues/977) including. Typical performance improvements (RTX 2080 Ti vs Xeon 6144):
   * 8B/10B (IBM) (12.1x speedup)
   * AC Couple (10x speedup)
   * Average (5.6x speedup)
@@ -34,8 +34,10 @@ This is a running list of significant bug fixes and new features since the last 
   * PAM Edge Detector (21.7x speedup)
   * PRBS generator (21.6x speedup)
   * PRBS checker (211x speedup)
+  * Sine (286x speedup)
   * TIE (5.3x speedup)
   * Vector Frequency (1040x speedup)
+  * Vector Magnitude (73x speedup)
   * Vector Phase (243x speedup)
 * Filters: 100baseT1 now has configurable decision thresholds for better decoding of weak signals
 * Filters: CDR PLL now outputs the input signal sampled by the recovered clock in a second data stream (https://github.com/ngscopeclient/scopehal/issues/991)
