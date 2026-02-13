@@ -68,6 +68,10 @@ public:
 
 	void AddArea(std::shared_ptr<WaveformArea>& area);
 
+	size_t GetAreaPosition(WaveformArea& area);
+
+	void MoveArea(WaveformArea& area, size_t newPosition);
+
 	void OnZoomInHorizontal(int64_t target, float step);
 	void OnZoomOutHorizontal(int64_t target, float step);
 	void OnPanHorizontal(float step);

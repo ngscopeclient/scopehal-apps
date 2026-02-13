@@ -445,6 +445,67 @@ void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const stri
 }
 
 /**
+ * Get the position of the provided Stream in this WaveformArea
+ * @param desc the stream to get the position for
+ * @return the position of the stream if found or the number of channel in this WaveformArea otherwise
+ */
+size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
+{
+	size_t position = m_displayedChannels.size();
+	for (size_t i = 0; i < m_displayedChannels.size(); ++i)
+	{
+		if (m_displayedChannels[i] && m_displayedChannels[i].get()->GetStream() == desc)
+		{
+			position = i;
+			break;
+		}
+	}		
+	return position;
+}
+
+/**
+	@brief Adds a new stream to this plot
+ */
+void WaveformArea::MoveStream(StreamDescriptor desc, size_t newPosition)
+{
+		// Find original position
+		size_t oldIndex = GetStreamPosition(desc);
+		if (oldIndex == m_displayedChannels.size())
+			// Not found
+			return;
+
+		if (oldIndex == newPosition)
+			// Nothing to do
+			return;
+
+/*		if (oldIndex < newPosition)
+		{
+			std::rotate(m_displayedChannels.begin() + oldIndex,
+						m_displayedChannels.begin() + oldIndex + 1,
+						m_displayedChannels.begin() + newPosition + 1);
+		}
+		else
+		{
+			std::rotate(m_displayedChannels.begin() + newPosition,
+						m_displayedChannels.begin() + oldIndex,
+						m_displayedChannels.begin() + oldIndex + 1);
+		}*/
+
+		// Backup value
+		std::shared_ptr<DisplayedChannel> temp = m_displayedChannels[oldIndex];
+
+		// Remove from list
+		m_displayedChannels.erase(m_displayedChannels.begin() + oldIndex);
+
+		// If we move after, index has to be shifted
+		if (oldIndex < newPosition)
+			newPosition--;
+
+		// Insert at new position
+		m_displayedChannels.insert(m_displayedChannels.begin() + newPosition, temp);
+}
+
+/**
 	@brief Removes the stream at a specified index
  */
 void WaveformArea::RemoveStream(size_t i)
@@ -3269,9 +3330,10 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	float topOfMiddle = start.y;
 	float bottomOfMiddle = start.y + size.y;
 	float widthOfMiddle = rightOfMiddle - leftOfMiddle;
+	bool hit = false;
 	if(iArea == 0)
 	{
-		EdgeDropArea(
+		hit |= EdgeDropArea(
 			"top",
 			ImVec2(leftOfMiddle, start.y),
 			ImVec2(widthOfMiddle, heightOfVerticalRegion),
@@ -3283,7 +3345,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	if(iArea == (numAreas-1))
 	{
 		bottomOfMiddle -= heightOfVerticalRegion;
-		EdgeDropArea(
+		hit |= EdgeDropArea(
 			"bottom",
 			ImVec2(leftOfMiddle, bottomOfMiddle),
 			ImVec2(widthOfMiddle, heightOfVerticalRegion),
@@ -3298,9 +3360,13 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
 		CenterRightDropArea(ImVec2(leftOfMiddle + widthOfMiddle/2, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
+//	ImVec2 edgeSize(widthOfVerticalEdge, heightOfVerticalRegion);
 	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
-	EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
-	EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
+	hit |= EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
+	hit |= EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
+
+	if(!hit)
+		CenterDropArea(start, ImVec2(size.x, size.y));
 
 	//Cannot drop scalars into a waveform view. Make this a bit more obvious
 	auto payload = ImGui::GetDragDropPayload();
@@ -3327,7 +3393,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 
 	Dropping a waveform in here splits and forms a new group
  */
-void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
+bool WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir)
 {
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton(name.c_str(), size);
@@ -3336,13 +3402,13 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 
 	auto payload = ImGui::GetDragDropPayload();
 	if(!payload)
-		return;
+		return false;
 
 	bool isWaveform = payload->IsDataType("Waveform");
 	bool isStream = payload->IsDataType("Stream");
 	bool isStreamGroup = payload->IsDataType("StreamGroup");
 	if(!isWaveform && !isStream && !isStreamGroup)
-		return;
+		return false;
 
 	//Add drop target
 	StreamDescriptor stream;
@@ -3470,6 +3536,8 @@ void WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 			ImVec2(center.x + lineSizeX/2 + 0.5, center.y - 0.5),
 			lineColor);
 	}
+
+	return hover;
 }
 
 /**
@@ -3626,6 +3694,239 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 		DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
 	}
 }
+
+/**
+	@brief Drop area between two waveform areas in a waveform group
+
+	Used to reorder waveform areas within the waveform group
+ */
+void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
+{
+	ImGui::SetCursorScreenPos(start);
+	ImGui::InvisibleButton("center", size);
+	//ImGui::Button("center", size);
+	ImGui::SetNextItemAllowOverlap();
+
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	if(!isWaveform)
+		return;
+
+	//Peek the payload. If not compatible, don't even display the target
+	auto wpay = ImGui::GetDragDropPayload();
+	if(!wpay)
+		return;
+
+	auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+	StreamDescriptor stream = desc->first->GetStream(desc->second);
+	size_t position = GetStreamPosition(stream);
+	if(position >= m_displayedChannels.size())
+		// Stream not found in this area
+		return;
+
+	// Round y position to the nearrest space between channel label
+	ImVec2 mousePos = ImGui::GetMousePos();
+	float channelLabeHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
+	size_t insertionIndex = (mousePos.y+(channelLabeHeight/2)-start.y) / channelLabeHeight;
+	insertionIndex = min(insertionIndex,m_displayedChannels.size());
+	float insertionYPosition = insertionIndex * channelLabeHeight;
+
+	//Add drop target
+	bool ok = true;
+	bool hover = false;
+	if(ImGui::BeginDragDropTarget())
+	{
+		//Accept drag/drop payloads from this WaveformArea
+		wpay = ImGui::AcceptDragDropPayload("Waveform",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(wpay)
+		{
+			hover = true;
+
+			//Only drop from the same waveform area
+			if(!(desc->first == this))
+				ok = false;
+
+			else if(payload->IsDelivery())
+			{	// TODO calculate position
+				MoveStream(stream,insertionIndex);
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
+
+	if(!ok)
+	{	// Add visual feedback if drag source is not compatible with this area
+		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+		return;
+	}
+
+	if(hover)
+	{
+		//Draw overlay target
+		const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+		ImVec2 center(start.x + size.x/2, start.y + insertionYPosition);
+		float fillSize = size.x;
+		float lineSize = size.x-2;
+
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		draw_list->AddLine(
+			ImVec2(center.x - lineSize/2 - 0.5, center.y),
+			ImVec2(center.x + lineSize/2 + 0.5, center.y),
+			lineColor,
+			2);
+	}
+}
+
+
+/**
+	@brief Drop area between two waveform areas in a waveform group
+
+	Used to reorder waveform areas within the waveform group
+ */
+void WaveformArea::BetweenWaveformsDropArea(ImVec2 start, ImVec2 size)
+{
+	ImGui::SetCursorScreenPos(start);
+	ImGui::InvisibleButton("centersplit", size);
+	//ImGui::Button("center", size);
+	ImGui::SetNextItemAllowOverlap();
+
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	bool isStream = payload->IsDataType("Stream");
+	bool isStreamGroup = payload->IsDataType("StreamGroup");
+	if(!isWaveform && !isStream && !isStreamGroup)
+		return;
+
+	//Peek the payload. If not compatible, don't even display the target
+	/*auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+	size_t position = m_group->GetAreaPosition(desc->first);
+	if(position >= m_group->GetWaveformAreas().size())
+		// WaveformArea not found in the parent WaveformGroup
+		return;
+	StreamDescriptor stream = desc->first->GetStream(desc->second);
+	*/
+
+	//Add drop target
+	StreamDescriptor stream;
+	bool hover = false;
+	if(ImGui::BeginDragDropTarget())
+	{
+		auto wpay = ImGui::AcceptDragDropPayload("Waveform", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(wpay)
+		{
+			hover = true;
+
+			auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+			stream = desc->first->GetStream(desc->second);
+
+			if( (stream.GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
+				m_group->AddArea(area);
+
+				//If the stream is is a density function, propagate the color ramp selection
+				switch(stream.GetType())
+				{
+					case Stream::STREAM_TYPE_EYE:
+					case Stream::STREAM_TYPE_SPECTROGRAM:
+					case Stream::STREAM_TYPE_WATERFALL:
+					case Stream::STREAM_TYPE_CONSTELLATION:
+						{
+							auto sdc = desc->first->GetDisplayedChannel(desc->second);
+							area->GetDisplayedChannel(0)->m_colorRamp = sdc->m_colorRamp;
+						}
+						break;
+
+					default:
+						break;
+				}
+
+				//Remove the stream from the originating waveform area
+				desc->first->RemoveStream(desc->second);
+			}
+		}
+
+		//Accept drag/drop payloads from the stream browser
+		auto spay = ImGui::AcceptDragDropPayload("Stream", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(spay)
+		{
+			hover = true;
+			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+
+			if( (stream.GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				auto area = make_shared<WaveformArea>(stream, m_group, m_parent);
+				m_group->AddArea(area);
+			}
+		}
+
+		//Accept drag/drop payloads for digital banks
+		auto sgpay = ImGui::AcceptDragDropPayload("StreamGroup", ImGuiDragDropFlags_AcceptPeekOnly);
+		if(sgpay)
+		{
+			hover = true;
+			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
+
+			if( (streamGroup->GetXAxisUnits() == m_group->GetXAxisUnit()) && payload->IsDelivery() )
+			{
+				std::shared_ptr<WaveformArea> area;
+				bool first = true;
+				bool singleArea = ImGui::IsKeyDown(ImGuiKey_LeftShift)||ImGui::IsKeyDown(ImGuiKey_RightShift);
+				for(auto channel : streamGroup->m_channels)
+				{
+					StreamDescriptor s(channel, 0);
+					if(first || !singleArea)
+					{
+ 						area = make_shared<WaveformArea>(s, m_group, m_parent);
+						m_group->AddArea(area);
+						first = false;
+					}
+					else
+					{
+						area->AddStream(s);
+					}
+				}
+			}
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
+	//Draw overlay target
+	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
+	const ImU32 bgBase = ImGui::GetColorU32(ImGuiCol_DockingPreview, 0.70f);
+	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
+	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
+	float fillSize = 34;
+	float lineSize = 32;
+
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	//Draw background and outline
+	draw_list->AddRectFilled(
+		ImVec2(center.x - fillSize/2 - 0.5, center.y - fillSize/2 - 0.5),
+		ImVec2(center.x + fillSize/2 + 0.5, center.y + fillSize/2 + 0.5),
+		hover ? bgHovered : bgBase,
+		rounding);
+	draw_list->AddRect(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y - lineSize/2 - 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y - 0.5),
+		lineColor,
+		rounding);
+
+	draw_list->AddRect(
+		ImVec2(center.x - lineSize/2 - 0.5, center.y + 0.5),
+		ImVec2(center.x + lineSize/2 + 0.5, center.y + lineSize/2 + 0.5),
+		lineColor,
+		rounding);
+}
+
 
 /**
 	@brief Drop area for the middle of the plot

@@ -102,6 +102,72 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshStreamBrowserDialog();
 }
 
+/**
+ * Get the position of the provided WavformArea in this waveform group
+ * @param area the area to get the position for
+ * @return the position of the area if found the size of this WaveformGroup otherwise
+ */
+size_t WaveformGroup::GetAreaPosition(WaveformArea& area)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		size_t position = m_areas.size();
+		for (size_t i = 0; i < m_areas.size(); ++i)
+		{
+			if (m_areas[i] && m_areas[i].get() == &area)
+			{
+				position = i;
+				break;
+			}
+		}		
+		return position;
+	}
+}
+
+void WaveformGroup::MoveArea(WaveformArea& area, size_t newPosition)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		// Find original position
+		size_t oldIndex = GetAreaPosition(area);
+		if (oldIndex == m_areas.size())
+			// Not found
+			return;
+
+		if (oldIndex == newPosition)
+			// Nothing to do
+			return;
+
+/*		if (oldIndex < newPosition)
+		{
+			std::rotate(m_areas.begin() + oldIndex,
+						m_areas.begin() + oldIndex + 1,
+						m_areas.begin() + newPosition + 1);
+		}
+		else
+		{
+			std::rotate(m_areas.begin() + newPosition,
+						m_areas.begin() + oldIndex,
+						m_areas.begin() + oldIndex + 1);
+		}*/
+
+		// Backup value
+		std::shared_ptr<WaveformArea> temp = m_areas[oldIndex];
+
+		// Remove from list
+		m_areas.erase(m_areas.begin() + oldIndex);
+
+		// If we move after, index has to be shifted
+		if (oldIndex < newPosition)
+			newPosition--;
+
+		// Insert at new position
+		m_areas.insert(m_areas.begin() + newPosition, temp);
+	}
+
+	m_parent->RefreshStreamBrowserDialog();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Rendering
 
