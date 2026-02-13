@@ -3530,8 +3530,7 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 
 			//Don't allow dropping in the same area
 			//Reject streams not compatible with this plot
-			//TODO: display nice error message
-			if( (desc->first == this) || !IsCompatible(stream))
+			if( (desc->first == this) || !IsCompatible(stream) ||IsShowing(stream))
 				ok = false;
 
 			else if(payload->IsDelivery())
@@ -3554,7 +3553,6 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
 
 			//Reject streams not compatible with this plot
-			//TODO: display nice error message if not
 			if(!IsCompatible(stream)||IsShowing(stream))
 				ok = false;
 
@@ -3569,7 +3567,6 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 			hover = true;
 			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
 			//Reject streams not compatible with this plot
-			//TODO: display nice error message if not
 			ok = false;
 			for(auto channel : streamGroup->m_channels)
 			{
@@ -3589,7 +3586,10 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	}
 
 	if(!ok)
+	{	// Add visual feedback if drag source is not compatible with this area
+		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
 		return;
+	}
 
 	//Draw overlay target
 	const float rounding = max(3.0f, ImGui::GetStyle().FrameRounding);
