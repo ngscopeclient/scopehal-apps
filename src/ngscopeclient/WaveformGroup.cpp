@@ -159,19 +159,6 @@ void WaveformGroup::MoveArea(WaveformArea& area, size_t newPosition)
 			// Nothing to do
 			return;
 
-/*		if (oldIndex < newPosition)
-		{
-			std::rotate(m_areas.begin() + oldIndex,
-						m_areas.begin() + oldIndex + 1,
-						m_areas.begin() + newPosition + 1);
-		}
-		else
-		{
-			std::rotate(m_areas.begin() + newPosition,
-						m_areas.begin() + oldIndex,
-						m_areas.begin() + oldIndex + 1);
-		}*/
-
 		// Backup value
 		std::shared_ptr<WaveformArea> temp = m_areas[oldIndex];
 
@@ -304,10 +291,10 @@ bool WaveformGroup::Render()
 	for(size_t i=0; i<areas.size(); i++)
 	{
 		if(!areas[i]->Render(i, areas.size(), clientArea))
-			m_areasToClose.push_back(i);
+			m_areasToClose.push_back(areas[i]);
 	}
 	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+		m_areas.erase(std::remove(m_areas.begin(), m_areas.end(), m_areasToClose[i]), m_areas.end());
 	if(!m_areasToClose.empty())
 		m_parent->RefreshStreamBrowserDialog();
 

@@ -212,7 +212,7 @@ protected:
 	double m_tLastMouseMove;
 
 	///@brief List of waveform areas to close next frame
-	std::vector<size_t> m_areasToClose;
+	std::vector< std::shared_ptr<WaveformArea> > m_areasToClose;
 
 	///@brief Height of the timeline
 	float m_timelineHeight;

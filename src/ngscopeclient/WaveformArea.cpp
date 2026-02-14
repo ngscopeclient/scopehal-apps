@@ -3331,8 +3331,8 @@ void WaveformArea::RenderBERLevelArrows(ImVec2 start, ImVec2 /*size*/)
 void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
 	//Drag/drop areas for splitting
-	float dragAreaHeight = max(size.y*0.1,(double)FILL_SIZE);
-	float dragAreaWidth = max(size.x*0.1,(double)FILL_SIZE);
+	float dragAreaHeight = size.y*0.1;
+	float dragAreaWidth = size.x*0.1;
 	float middleDragAreaX = start.x  + (size.x / 2) - (dragAreaWidth / 2);
 	float rightDragAreaX = start.x + size.x - dragAreaWidth;
 	float middleDragAreaY = start.y + (size.y / 2) - (dragAreaHeight / 2);
@@ -3362,10 +3362,6 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 		if(numAreas != 1) middleDragAreaY -= (dragAreaHeight/2);
 	}
 
-	//CenterLeftDropArea(ImVec2(middleDragAreaX, middleDragAreaY), ImVec2(widthOfMiddle/2, heightOfMiddle));
-
-	//Only show split in bottom (or top?) area
-	//if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
 	hit |= CenterRightDropArea(ImVec2(middleDragAreaX + dragAreaWidth, start.y), doubleEdgeSize, ImGuiDir_Up);
 	hit |= CenterRightDropArea(ImVec2(middleDragAreaX + dragAreaWidth, bottomDragAreaY - dragAreaHeight), doubleEdgeSize, ImGuiDir_Down);
 
