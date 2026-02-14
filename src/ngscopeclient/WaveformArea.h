@@ -567,10 +567,9 @@ protected:
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
 	void CenterLeftDropArea(ImVec2 start, ImVec2 size);
-	void CenterRightDropArea(ImVec2 start, ImVec2 size);
+	bool CenterRightDropArea(ImVec2 start, ImVec2 size, ImGuiDir direction);
 	bool EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
-	void BetweenWaveformsDropArea(ImVec2 start, ImVec2 size);
 
 	void FilterMenu(std::shared_ptr<DisplayedChannel> chan);
 	void FilterSubmenu(std::shared_ptr<DisplayedChannel> chan, const std::string& name, Filter::Category cat);

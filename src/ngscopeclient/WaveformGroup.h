@@ -68,6 +68,8 @@ public:
 
 	void AddArea(std::shared_ptr<WaveformArea>& area);
 
+	void AddArea(std::shared_ptr<WaveformArea>& area, size_t position);
+
 	size_t GetAreaPosition(WaveformArea& area);
 
 	void MoveArea(WaveformArea& area, size_t newPosition);

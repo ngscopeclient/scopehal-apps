@@ -102,6 +102,27 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshStreamBrowserDialog();
 }
 
+void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area, size_t position)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		//If this is our first area, adopt its X axis unit as our own
+		if(m_areas.empty())
+			m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
+
+		if(position >= m_areas.size())
+		{
+			m_areas.push_back(area);
+		}
+		else
+		{
+			m_areas.insert(m_areas.begin() + position, area);
+		}
+	}
+
+	m_parent->RefreshStreamBrowserDialog();
+}
+
 /**
  * Get the position of the provided WavformArea in this waveform group
  * @param area the area to get the position for
