@@ -486,6 +486,8 @@ public:
 
 	void AddStream(StreamDescriptor desc, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 
+	void AddStream(StreamDescriptor desc, size_t position, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
+
 	size_t GetStreamPosition(StreamDescriptor desc);
 
 	void MoveStream(StreamDescriptor desc, size_t newPosition);

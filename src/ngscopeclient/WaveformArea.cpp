@@ -44,6 +44,9 @@
 
 #include "imgui_internal.h"	//for SetItemUsingMouseWheel
 
+#define FILL_SIZE 34
+#define LINE_SIZE 32
+
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -445,6 +448,24 @@ void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const stri
 }
 
 /**
+	@brief Adds a new stream to this plot at given position
+ */
+void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persistence, const string& ramp)
+{
+	auto chan = make_shared<DisplayedChannel>(desc, m_parent->GetSession());
+	chan->SetPersistenceEnabled(persistence);
+	chan->m_colorRamp = ramp;
+	if(position >= m_displayedChannels.size())
+	{
+		m_displayedChannels.push_back(chan);
+	}
+	else
+	{
+		m_displayedChannels.insert(m_displayedChannels.begin() + position, chan);
+	}
+}
+
+/**
  * Get the position of the provided Stream in this WaveformArea
  * @param desc the stream to get the position for
  * @return the position of the stream if found or the number of channel in this WaveformArea otherwise
@@ -468,41 +489,28 @@ size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
  */
 void WaveformArea::MoveStream(StreamDescriptor desc, size_t newPosition)
 {
-		// Find original position
-		size_t oldIndex = GetStreamPosition(desc);
-		if (oldIndex == m_displayedChannels.size())
-			// Not found
-			return;
+	// Find original position
+	size_t oldIndex = GetStreamPosition(desc);
+	if (oldIndex == m_displayedChannels.size())
+		// Not found
+		return;
 
-		if (oldIndex == newPosition)
-			// Nothing to do
-			return;
+	if (oldIndex == newPosition)
+		// Nothing to do
+		return;
 
-/*		if (oldIndex < newPosition)
-		{
-			std::rotate(m_displayedChannels.begin() + oldIndex,
-						m_displayedChannels.begin() + oldIndex + 1,
-						m_displayedChannels.begin() + newPosition + 1);
-		}
-		else
-		{
-			std::rotate(m_displayedChannels.begin() + newPosition,
-						m_displayedChannels.begin() + oldIndex,
-						m_displayedChannels.begin() + oldIndex + 1);
-		}*/
+	// Backup value
+	std::shared_ptr<DisplayedChannel> temp = m_displayedChannels[oldIndex];
 
-		// Backup value
-		std::shared_ptr<DisplayedChannel> temp = m_displayedChannels[oldIndex];
+	// Remove from list
+	m_displayedChannels.erase(m_displayedChannels.begin() + oldIndex);
 
-		// Remove from list
-		m_displayedChannels.erase(m_displayedChannels.begin() + oldIndex);
+	// If we move after, index has to be shifted
+	if (oldIndex < newPosition)
+		newPosition--;
 
-		// If we move after, index has to be shifted
-		if (oldIndex < newPosition)
-			newPosition--;
-
-		// Insert at new position
-		m_displayedChannels.insert(m_displayedChannels.begin() + newPosition, temp);
+	// Insert at new position
+	m_displayedChannels.insert(m_displayedChannels.begin() + newPosition, temp);
 }
 
 /**
@@ -3323,12 +3331,12 @@ void WaveformArea::RenderBERLevelArrows(ImVec2 start, ImVec2 /*size*/)
 void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas)
 {
 	//Drag/drop areas for splitting
-	float heightOfVerticalRegion = size.y * 0.25;
-	float widthOfVerticalEdge = size.x*0.25;
+	float heightOfVerticalRegion = max(size.y*0.1,(double)FILL_SIZE);
+	float widthOfVerticalEdge = max(size.x*0.1,(double)FILL_SIZE);
 	float leftOfMiddle = start.x + widthOfVerticalEdge;
-	float rightOfMiddle = start.x + size.x*0.75;
-	float topOfMiddle = start.y;
-	float bottomOfMiddle = start.y + size.y;
+	float rightOfMiddle = start.x + size.x - widthOfVerticalEdge;
+	float topOfMiddle = start.y + (size.y / 2) - heightOfVerticalRegion;
+	float bottomOfMiddle = start.y + (size.y / 2) + heightOfVerticalRegion;;
 	float widthOfMiddle = rightOfMiddle - leftOfMiddle;
 	bool hit = false;
 	if(iArea == 0)
@@ -3354,14 +3362,14 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 
 	float heightOfMiddle = bottomOfMiddle - topOfMiddle;
 
-	CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
+	//CenterLeftDropArea(ImVec2(leftOfMiddle, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
 	//Only show split in bottom (or top?) area
-	if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
-		CenterRightDropArea(ImVec2(leftOfMiddle + widthOfMiddle/2, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
+	//if( iArea == (numAreas-1) /*|| (iArea == 0)*/ )
+	//	CenterRightDropArea(ImVec2(leftOfMiddle + widthOfMiddle/2, topOfMiddle), ImVec2(widthOfMiddle/2, heightOfMiddle));
 
-//	ImVec2 edgeSize(widthOfVerticalEdge, heightOfVerticalRegion);
-	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
+	ImVec2 edgeSize(widthOfVerticalEdge, heightOfVerticalRegion);
+//	ImVec2 edgeSize(widthOfVerticalEdge, heightOfMiddle);
 	hit |= EdgeDropArea("left", ImVec2(start.x, topOfMiddle), edgeSize, ImGuiDir_Left);
 	hit |= EdgeDropArea("right", ImVec2(rightOfMiddle, topOfMiddle), edgeSize, ImGuiDir_Right);
 
@@ -3470,10 +3478,10 @@ bool WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSizeX = 34;
-	float lineSizeX = 32;
-	float fillSizeY = 34;
-	float lineSizeY = 32;
+	float fillSizeX = FILL_SIZE;
+	float lineSizeX = LINE_SIZE;
+	float fillSizeY = FILL_SIZE;
+	float lineSizeY = LINE_SIZE;
 
 	//L-R split: make target half size in X axis
 	if( (splitDir == ImGuiDir_Left) || (splitDir == ImGuiDir_Right) )
@@ -3665,8 +3673,8 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSize = 34;
-	float lineSize = 32;
+	float fillSize = FILL_SIZE;
+	float lineSize = LINE_SIZE;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	draw_list->AddRectFilled(
@@ -3702,6 +3710,167 @@ void WaveformArea::CenterLeftDropArea(ImVec2 start, ImVec2 size)
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
+	ImGui::SetCursorScreenPos(start);
+	ImGui::InvisibleButton("center", size);
+	//ImGui::Button("center", size);
+	ImGui::SetNextItemAllowOverlap();
+
+	auto payload = ImGui::GetDragDropPayload();
+	if(!payload)
+		return;
+	bool isWaveform = payload->IsDataType("Waveform");
+	bool isStream = payload->IsDataType("Stream");
+	bool isStreamGroup = payload->IsDataType("StreamGroup");
+	if(!isWaveform && !isStream &&!isStreamGroup)
+		return;
+
+	//Peek the payload. If not compatible, don't even display the target
+	StreamDescriptor stream;
+	auto peekPayload = ImGui::GetDragDropPayload();
+	if(peekPayload)
+	{
+		if(isWaveform)
+		{
+			auto peekDesc = reinterpret_cast<DragDescriptor*>(peekPayload->Data);
+			stream = peekDesc->first->GetStream(peekDesc->second);
+			if(!IsCompatible(stream))
+				return;
+		}
+		else if(isStream)
+		{
+			stream = *reinterpret_cast<StreamDescriptor*>(peekPayload->Data);
+			if(!IsCompatible(stream))
+				return;
+		}
+	}
+
+	// Round y position to the nearrest space between channel label
+	ImVec2 mousePos = ImGui::GetMousePos();
+	float channelLabeHeight = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
+	size_t insertionIndex = (mousePos.y+(channelLabeHeight/2)-start.y) / channelLabeHeight;
+	insertionIndex = min(insertionIndex,m_displayedChannels.size());
+	float insertionYPosition = insertionIndex * channelLabeHeight;
+
+	//Add drop target
+	bool ok = true;
+	bool hover = false;
+	if(ImGui::BeginDragDropTarget())
+	{
+		//Accept drag/drop payloads from another WaveformArea
+		auto wpay = ImGui::AcceptDragDropPayload("Waveform",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(wpay)
+		{
+			hover = true;
+
+			auto desc = reinterpret_cast<DragDescriptor*>(wpay->Data);
+			stream = desc->first->GetStream(desc->second);
+
+			bool isSelf = (desc->first == this);
+
+			//Don't allow dropping in the same area
+			//Reject streams not compatible with this plot
+			if(!IsCompatible(stream) || (IsShowing(stream)&&!isSelf))
+				ok = false;
+
+			else if(payload->IsDelivery())
+			{
+				if(isSelf)
+				{	// Move a stream within this area
+					MoveStream(stream,insertionIndex);
+				}
+				else
+				{
+					//Add the new stream to us
+					//TODO: copy view settings from the DisplayedChannel over?
+					AddStream(stream,insertionIndex);
+
+					//Remove the stream from the originating waveform area
+					desc->first->RemoveStream(desc->second);
+				}
+			}
+		}
+
+		//Accept drag/drop payloads from the stream browser
+		auto spay = ImGui::AcceptDragDropPayload("Stream",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(spay)
+		{
+			hover = true;
+			stream = *reinterpret_cast<StreamDescriptor*>(spay->Data);
+
+			//Reject streams not compatible with this plot
+			if(!IsCompatible(stream)||IsShowing(stream))
+				ok = false;
+
+			else if(payload->IsDelivery())
+				AddStream(stream,insertionIndex);
+		}
+		//Accept  stream group
+		auto sgpay = ImGui::AcceptDragDropPayload("StreamGroup",
+			ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+		if(sgpay)
+		{
+			hover = true;
+			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
+			//Reject streams not compatible with this plot
+			ok = false;
+			for(auto channel : streamGroup->m_channels)
+			{
+				StreamDescriptor s(channel, 0);
+				if(IsCompatible(s) && !IsShowing(s))
+				{	// At least one stream is compatible
+					ok = true;
+					if(payload->IsDelivery())
+					{
+						AddStream(s,insertionIndex);
+					}
+				}
+			}
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
+	if(!ok)
+	{	// Add visual feedback if drag source is not compatible with this area
+		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+		return;
+	}
+
+	//Draw overlay target
+	if(hover)
+	{
+		//Draw overlay target
+		const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
+		ImVec2 center(start.x + size.x/2, start.y + insertionYPosition);
+		float fillSize = size.x;
+		float lineSize = size.x-2;
+
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		draw_list->AddLine(
+			ImVec2(center.x - lineSize/2 - 0.5, center.y),
+			ImVec2(center.x + lineSize/2 + 0.5, center.y),
+			lineColor,
+			2);
+
+		//If trying to drop into the center marker, display warning if incompatible scales
+		//(new signal has significantly wider range) and not a filter
+		if(hover)
+		{
+			if(stream.GetType() != Stream::STREAM_TYPE_ANALOG)
+				return;
+			auto chan = stream.m_channel;
+			if(dynamic_cast<Filter*>(chan) != nullptr)
+				return;
+
+			center.x += fillSize;
+			DrawDropRangeMismatchMessage(draw_list, center, GetFirstAnalogStream(), stream);
+		}
+	}
+
+
+/*
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
 	//ImGui::Button("center", size);
@@ -3777,7 +3946,7 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 			ImVec2(center.x + lineSize/2 + 0.5, center.y),
 			lineColor,
 			2);
-	}
+	}*/
 }
 
 
@@ -3903,8 +4072,8 @@ void WaveformArea::BetweenWaveformsDropArea(ImVec2 start, ImVec2 size)
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSize = 34;
-	float lineSize = 32;
+	float fillSize = FILL_SIZE;
+	float lineSize = LINE_SIZE;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -4041,8 +4210,8 @@ void WaveformArea::CenterRightDropArea(ImVec2 start, ImVec2 size)
 	const ImU32 bgHovered = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 	const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_NavWindowingHighlight, 0.60f);
 	ImVec2 center(start.x + size.x/2, start.y + size.y/2);
-	float fillSize = 34;
-	float lineSize = 32;
+	float fillSize = FILL_SIZE;
+	float lineSize = LINE_SIZE;
 
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
