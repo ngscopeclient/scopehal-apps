@@ -3815,9 +3815,9 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 			StreamGroupDescriptor* streamGroup = *reinterpret_cast<StreamGroupDescriptor* const*>(sgpay->Data);
 			//Reject streams not compatible with this plot
 			ok = false;
-			for(auto channel : streamGroup->m_channels)
+			for(auto channel = streamGroup->m_channels.rbegin(); channel != streamGroup->m_channels.rend(); ++channel)
 			{
-				StreamDescriptor s(channel, 0);
+				StreamDescriptor s(*channel, 0);
 				if(IsCompatible(s) && !IsShowing(s))
 				{	// At least one stream is compatible
 					ok = true;
