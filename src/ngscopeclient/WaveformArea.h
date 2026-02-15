@@ -566,7 +566,6 @@ protected:
 	void DrawDropScalarMessage(ImDrawList* list, ImVec2 center);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
-	void CenterLeftDropArea(ImVec2 start, ImVec2 size);
 	bool CenterRightDropArea(ImVec2 start, ImVec2 size, ImGuiDir direction);
 	bool EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
 	void CenterDropArea(ImVec2 start, ImVec2 size);
