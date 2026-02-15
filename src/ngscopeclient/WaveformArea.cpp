@@ -448,7 +448,7 @@ void WaveformArea::AddStream(StreamDescriptor desc, bool persistence, const stri
 }
 
 /**
-	@brief Adds a new stream to this plot at given position
+	@brief Adds a new stream to this plot at a given position
  */
 void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persistence, const string& ramp)
 {
@@ -468,7 +468,7 @@ void WaveformArea::AddStream(StreamDescriptor desc, size_t position, bool persis
 /**
  * Get the position of the provided Stream in this WaveformArea
  * @param desc the stream to get the position for
- * @return the position of the stream if found or the number of channel in this WaveformArea otherwise
+ * @return the position of the stream if found or the number of displayed channels in this WaveformArea otherwise
  */
 size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
 {
@@ -485,7 +485,9 @@ size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
 }
 
 /**
-	@brief Adds a new stream to this plot
+	@brief Move a stream to another position in this plot
+	@param desc the stream to move
+	@param newPosition the position to move the stream to
  */
 void WaveformArea::MoveStream(StreamDescriptor desc, size_t newPosition)
 {
@@ -3332,7 +3334,8 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 {
 	bool isFirst = (iArea == 0);
 	bool isLast = (iArea == (numAreas-1));
-	//Drag/drop areas for splitting
+	// Drag/drop areas size and positions : we keep 10% of the waveform area for edge ans split drop areas,
+	// the rest is used for dropping/moving wavefroms at a specific postion in the waveform area
 	float dragAreaWidth = max((double)size.x*0.1,(double)FILL_SIZE);
 	float dragAreaHeight = max((double)size.y*0.1,(double)FILL_SIZE);
 	// Make sure we have room for two split drag area overlays (needed for last row)
@@ -3343,11 +3346,12 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	float bottomDragAreaY = start.y + size.y - dragAreaHeight;
 	float bottomSplitDragAreaY = start.y + size.y - splitDragAreaHeight;
 	ImVec2 edgeSize(dragAreaWidth, dragAreaHeight);
+	// Height for split area may be reduced to fit available space in waveform area
 	ImVec2 edgeSizeSplit(dragAreaWidth, splitDragAreaHeight);
 	bool hit = false;
 	
 	if(isFirst)
-	{
+	{	// Add top drop area to first waveform area of the group
 		hit |= EdgeDropArea(
 			"top",
 			ImVec2(middleDragAreaX, start.y),
@@ -3356,7 +3360,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	}
 
 	if(isLast)
-	{
+	{	// Add bottom drop area to last waveform area of the group
 		hit |= EdgeDropArea(
 			"bottom",
 			ImVec2(middleDragAreaX, bottomDragAreaY),
@@ -3364,12 +3368,15 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 			ImGuiDir_Down);
 	}
 
+	// Add split drop area at the top of each and every waveform area of the waveform group
 	hit |= CenterRightDropArea(ImVec2(middleDragAreaX + dragAreaWidth, start.y), edgeSizeSplit, ImGuiDir_Up);
+	// Only add bottom split drop area to the last waveform area of a waveform group
 	if(isLast) hit |= CenterRightDropArea(ImVec2(middleDragAreaX + dragAreaWidth, bottomSplitDragAreaY), edgeSizeSplit, ImGuiDir_Down);
 
 	hit |= EdgeDropArea("left", ImVec2(start.x, middleDragAreaY), edgeSize, ImGuiDir_Left);
 	hit |= EdgeDropArea("right", ImVec2(rightDragAreaX, middleDragAreaY), edgeSize, ImGuiDir_Right);
 
+	// If we've hit any of other drop areas, process center drop area
 	if(!hit) CenterDropArea(start, ImVec2(size.x, size.y));
 
 	//Cannot drop scalars into a waveform view. Make this a bit more obvious
@@ -3545,15 +3552,12 @@ bool WaveformArea::EdgeDropArea(const string& name, ImVec2 start, ImVec2 size, I
 }
 
 /**
-	@brief Drop area between two waveform areas in a waveform group
-
-	Used to reorder waveform areas within the waveform group
+	@brief Main drop area used to drop a stream in this waveform area at a given position
  */
 void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 {
 	ImGui::SetCursorScreenPos(start);
 	ImGui::InvisibleButton("center", size);
-	//ImGui::Button("center", size);
 	ImGui::SetNextItemAllowOverlap();
 
 	auto payload = ImGui::GetDragDropPayload();
@@ -3680,10 +3684,9 @@ void WaveformArea::CenterDropArea(ImVec2 start, ImVec2 size)
 		return;
 	}
 
-	//Draw overlay target
 	if(hover)
 	{
-		//Draw overlay target
+		//Draw an horizontal line at the insertion position
 		const ImU32 lineColor = ImGui::GetColorU32(ImGuiCol_DockingPreview, 1.00f);
 		ImVec2 center(start.x + size.x/2, start.y + insertionYPosition);
 		float fillSize = size.x;

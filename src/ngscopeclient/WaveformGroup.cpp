@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -102,6 +102,9 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 	m_parent->RefreshStreamBrowserDialog();
 }
 
+/**
+	@brief Adds a new area to this group at a given position
+ */
 void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area, size_t position)
 {
 	lock_guard<mutex> lock(m_areaMutex);
@@ -145,6 +148,11 @@ size_t WaveformGroup::GetAreaPosition(WaveformArea& area)
 	}
 }
 
+/**
+	@brief Move a waveform are to another position in this group
+	@param area the waveform area to move
+	@param newPosition the position to move the waveform area to
+ */
 void WaveformGroup::MoveArea(WaveformArea& area, size_t newPosition)
 {
 	lock_guard<mutex> lock(m_areaMutex);
