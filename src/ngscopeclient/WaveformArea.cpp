@@ -3353,7 +3353,6 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 			ImVec2(middleDragAreaX, start.y),
 			edgeSize,
 			ImGuiDir_Up);
-		//if(numAreas != 1) middleDragAreaY += (dragAreaHeight/2);
 	}
 
 	if(isLast)
@@ -3363,7 +3362,6 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 			ImVec2(middleDragAreaX, bottomDragAreaY),
 			edgeSize,
 			ImGuiDir_Down);
-		//if(numAreas != 1) middleDragAreaY -= (dragAreaHeight/2);
 	}
 
 	hit |= CenterRightDropArea(ImVec2(middleDragAreaX + dragAreaWidth, start.y), edgeSizeSplit, ImGuiDir_Up);
@@ -3372,8 +3370,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	hit |= EdgeDropArea("left", ImVec2(start.x, middleDragAreaY), edgeSize, ImGuiDir_Left);
 	hit |= EdgeDropArea("right", ImVec2(rightDragAreaX, middleDragAreaY), edgeSize, ImGuiDir_Right);
 
-	if(!hit)
-		CenterDropArea(start, ImVec2(size.x, size.y));
+	if(!hit) CenterDropArea(start, ImVec2(size.x, size.y));
 
 	//Cannot drop scalars into a waveform view. Make this a bit more obvious
 	auto payload = ImGui::GetDragDropPayload();
