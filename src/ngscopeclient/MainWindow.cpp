@@ -2604,6 +2604,12 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			m_pendingHeight = window["height"].as<int>();
 			m_softwareResizeRequested = true;
 		}
+		// Load trace alpha
+		if(window["traceAlpha"])
+			m_traceAlpha = window["traceAlpha"].as<float>();
+		// Load persistance s
+		if(window["persistenceDecay"])
+			m_persistenceDecay = window["persistenceDecay"].as<float>();
 	}
 
 	//Waveform groups
@@ -3294,6 +3300,8 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 	window["height"] = m_height;
 	window["width"] = m_width;
 	window["fullscreen"] = m_fullscreen;
+	window["traceAlpha"] = m_traceAlpha;
+	window["persistenceDecay"] = m_persistenceDecay;
 	node["window"] = window;
 
 	//Waveform areas are hierarchical internally, but written as separate area and group headings
