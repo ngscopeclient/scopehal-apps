@@ -121,6 +121,7 @@ int main(int argc, char* argv[])
 	#endif
 
 	string sessionToOpen;
+	bool noMaximize = false;
 	vector<string> instrumentConnectionStrings;
 	for(int i=1; i<argc; i++)
 	{
@@ -140,6 +141,12 @@ int main(int argc, char* argv[])
 		{
 			print_help(stdout);
 			return 0;
+		}
+
+		if (s == "--no-maximize" || s == "-nm")
+		{
+			noMaximize = true;
+			continue;
 		}
 
 		//Other switch (unrecognized)
@@ -249,7 +256,7 @@ int main(int argc, char* argv[])
 	{
 		//Make the top level window
 		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("g_mainWindow.render"));
-		g_mainWindow = make_unique<MainWindow>(queue);
+		g_mainWindow = make_unique<MainWindow>(queue,noMaximize);
 
 		auto& session = g_mainWindow->GetSession();
 

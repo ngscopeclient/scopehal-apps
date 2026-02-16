@@ -43,7 +43,7 @@ class Texture;
 class VulkanWindow
 {
 public:
-	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue);
+	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue, bool noMaximize);
 	virtual ~VulkanWindow();
 
 	GLFWwindow* GetWindow()

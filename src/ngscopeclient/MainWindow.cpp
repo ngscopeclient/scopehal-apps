@@ -115,8 +115,8 @@ static void MainWindow_OnChangedViewport([[maybe_unused]] ImGuiViewport *vp)
 #define DBG_SUFFIX ""
 #endif
 
-MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
-	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue)
+MainWindow::MainWindow(shared_ptr<QueueHandle> queue, bool noMaximise)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue, noMaximise)
 	, m_showDemo(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)

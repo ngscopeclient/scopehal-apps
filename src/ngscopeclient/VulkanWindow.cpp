@@ -57,7 +57,7 @@ void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
 /**
 	@brief Creates a new top level window with the specified title
  */
-VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
+VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, bool noMaximize)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
 	, m_softwareResizeRequested(false)
@@ -105,11 +105,32 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue)
 	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
 	//Create the window
-	m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
+	int wx, wy, ww, wh;
+	if(noMaximize)
+	{
+		m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
+	}
+	else
+	{
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		glfwGetMonitorWorkarea(monitor, &wx, &wy, &ww, &wh);
+		m_window = glfwCreateWindow(ww, wh, title.c_str(), nullptr, nullptr);
+	}
 	if(!m_window)
 	{
 		LogError("Window creation failed\n");
 		abort();
+	}
+	if(!noMaximize)
+	{
+		int left, top, right, bottom;
+		glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
+		glfwSetWindowMonitor(m_window, nullptr, 0, top, ww, wh-top, GLFW_DONT_CARE);
+		LogTrace("Window frame size: %d %d %d %d\n", top, left, right, bottom);
+		LogTrace("Workarea origin: %d %d\n", wx, wy);
+		float xscale, yscale;
+		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
+		LogTrace("DPI scale: %f %f\n", xscale, yscale);
 	}
 
 	//Create a Vulkan surface for drawing onto
