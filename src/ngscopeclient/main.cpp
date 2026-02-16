@@ -92,6 +92,34 @@ int main(int argc, char* argv[])
 	//Global settings
 	Severity console_verbosity = Severity::NOTICE;
 
+	//Windows needs special console handling!
+	#ifdef _WIN32
+		bool attachConsoleFailed = false;
+		bool getConsoleWindowFailed = false;
+		//If we have a parent process console, we were probably run from a powershell/cmd.exe session.
+		//If we had one, we need to attach to it (since as a Win32 subsystem application we aren't connected by default)
+		//Failing here indicates we were run from explorer, and thus should not be spawning a console window
+		//(we just log to the GuiLogSink instead)
+		if(!AttachConsole(ATTACH_PARENT_PROCESS))
+		{
+			attachConsoleFailed = true;
+		}
+
+		//Once we've attached to the console (if we had one), make sure we had a window for it
+		else if(GetConsoleWindow() == NULL)
+			getConsoleWindowFailed = true;
+
+		//If we get here, we were run from a Windows shell session and should log to that console
+		else
+		{
+			//We're using the existing parent process console.
+			//Reopen stdio streams so they point to it
+			freopen("CON", "w", stdout);
+			freopen("CON", "w", stderr);
+			freopen("CON", "r", stdin);
+		}
+	#endif
+
 	string sessionToOpen;
 	vector<string> instrumentConnectionStrings;
 	for(int i=1; i<argc; i++)
@@ -143,7 +171,7 @@ int main(int argc, char* argv[])
 		//If we had one, we need to attach to it (since as a Win32 subsystem application we aren't connected by default)
 		//Failing here indicates we were run from explorer, and thus should not be spawning a console window
 		//(we just log to the GuiLogSink instead)
-		if(!AttachConsole(ATTACH_PARENT_PROCESS))
+		if(attachConsoleFailed)
 		{
 			LogNotice(
 				"Startup: skipping stdout log sink since not run from a console "
@@ -151,17 +179,12 @@ int main(int argc, char* argv[])
 		}
 
 		//Once we've attached to the console (if we had one), make sure we had a window for it
-		else if(GetConsoleWindow() == NULL)
+		else if(getConsoleWindowFailed)
 			LogNotice("Startup: skipping stdout log sink since not run from a console (no console window)\n");
 
 		//If we get here, we were run from a Windows shell session and should log to that console
 		else
 		{
-			//We're using the existing parent process console.
-			//Reopen stdio streams so they point to it
-			freopen("CON", "w", stdout);
-			freopen("CON", "w", stderr);
-			freopen("CON", "r", stdin);
 	#endif
 
 			//Creating the log sink is done on all platforms, windows and otherwise
