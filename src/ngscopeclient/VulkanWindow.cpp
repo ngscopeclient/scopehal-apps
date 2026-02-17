@@ -37,6 +37,7 @@
 #include "TextureManager.h"
 #include "VulkanWindow.h"
 #include "VulkanFFTPlan.h"
+#include "PreferenceManager.h"
 
 using namespace std;
 
@@ -57,7 +58,7 @@ void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
 /**
 	@brief Creates a new top level window with the specified title
  */
-VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, bool noMaximize)
+VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, bool noMaximize, bool noRestore)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
 	, m_softwareResizeRequested(false)
@@ -69,6 +70,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	, m_width(0)
 	, m_height(0)
 	, m_fullscreen(false)
+	, m_noRestore(noRestore)
 	, m_windowedX(0)
 	, m_windowedY(0)
 	, m_windowedWidth(0)
@@ -104,34 +106,85 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	//Scale the initial window size by the monitor DPI
 	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
-	//Create the window
-	int wx, wy, ww, wh;
+	//Prepare window creation
+	int workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth;
+	int windowXPosition, windowYPosition, windowWidth = 0, windowHeigth = 0;
+	bool restoreWindowPosition = false;
+	bool fullscreen = false;
+	bool maximized = false;
 	if(noMaximize)
 	{
+		//Window creation
 		m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
 	}
 	else
 	{
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-		glfwGetMonitorWorkarea(monitor, &wx, &wy, &ww, &wh);
-		m_window = glfwCreateWindow(ww, wh, title.c_str(), nullptr, nullptr);
+		glfwGetMonitorWorkarea(monitor, &workAreaXPosition, &workAreaYPosition, &workAreaWidth, &workAreaHeigth);
+		LogTrace("Workarea position and size: %d %d %d %d\n", workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth);
+		windowWidth = workAreaWidth;
+		windowHeigth = workAreaHeigth;
+		if(!noRestore)
+		{	// Restore window size and position from preferences
+			PreferenceManager& preferences = PreferenceManager::GetPreferences();
+			int windowWidthPref = preferences.GetInt("Appearance.Startup.startup_size_width");
+			int windowHeigthPref = preferences.GetInt("Appearance.Startup.startup_size_heigth");
+			int	windowXPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_x");
+			int windowYPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_y");
+			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
+			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
+			m_width = windowWidthPref;
+			m_height = windowHeigthPref;
+			m_windowedX = windowXPositionPref;
+			m_windowedY = windowYPositionPref;
+			if(!fullscreen && !maximized)
+			{
+				if(windowWidthPref != 0 && windowHeigthPref != 0)
+				{	// Not default values: use them
+					windowWidth = windowWidthPref;
+					windowHeigth = windowHeigthPref;
+					windowXPosition = windowXPositionPref;
+					windowYPosition = windowYPositionPref;
+					LogTrace("Preferences startup position and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidthPref, windowHeigthPref);
+					restoreWindowPosition = true;
+				}
+				else
+				{	// Default to maximized
+					maximized = true;
+				}
+			}
+		}
+		//Window creation
+		if(maximized) glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+		LogTrace("Creating window with size: %d %d and maximized = %d\n", windowWidth, windowHeigth, maximized);
+		m_window = glfwCreateWindow(windowWidth, windowHeigth, title.c_str(), nullptr, nullptr);
 	}
 	if(!m_window)
 	{
 		LogError("Window creation failed\n");
 		abort();
 	}
-	if(!noMaximize)
+	if(fullscreen)
 	{
-		int left, top, right, bottom;
-		glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
-		glfwSetWindowMonitor(m_window, nullptr, 0, top, ww, wh-top, GLFW_DONT_CARE);
-		LogTrace("Window frame size: %d %d %d %d\n", top, left, right, bottom);
-		LogTrace("Workarea origin: %d %d\n", wx, wy);
-		float xscale, yscale;
-		glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
-		LogTrace("DPI scale: %f %f\n", xscale, yscale);
+		SetFullscreen(true);
 	}
+	else if(!noMaximize)
+	{	// Set window size and position
+		int left, top, right, bottom;
+		if(!restoreWindowPosition)
+		{	// Get frame size to adjust window maximization
+			glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
+			LogTrace("Window frame size: %d %d %d %d\n", top, left, right, bottom);
+			windowXPosition = 0;
+			windowYPosition = top;
+			windowHeigth -= top;
+		}
+		LogTrace("Resizing window with postion and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidth, windowHeigth);
+		glfwSetWindowMonitor(m_window, nullptr, windowXPosition, windowYPosition, windowWidth, windowHeigth, GLFW_DONT_CARE);
+	}
+	float xscale, yscale;
+	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
+	LogTrace("DPI scale: %f %f\n", xscale, yscale);
 
 	//Create a Vulkan surface for drawing onto
 	VkSurfaceKHR surface;
@@ -656,6 +709,7 @@ void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 void VulkanWindow::SetFullscreen(bool fullscreen)
 {
 	m_fullscreen = fullscreen;
+	if(!m_noRestore) PreferenceManager::GetPreferences().GetPreference("Appearance.Startup.startup_fullscreen").SetBool(fullscreen);
 
 	if(m_fullscreen)
 	{
@@ -704,6 +758,21 @@ void VulkanWindow::SetFullscreen(bool fullscreen)
 			m_windowedHeight,
 			GLFW_DONT_CARE);
 	}
+}
+
+void VulkanWindow::SaveWindowPositionAndSize()
+{
+	int x, y;
+	glfwGetWindowPos(m_window, &x, &y);
+	PreferenceManager& preferences = PreferenceManager::GetPreferences();
+	preferences.GetPreference("Appearance.Startup.startup_size_width").SetInt(m_width);
+	preferences.GetPreference("Appearance.Startup.startup_size_heigth").SetInt(m_height);
+	preferences.GetPreference("Appearance.Startup.startup_pos_x").SetInt(x);
+	preferences.GetPreference("Appearance.Startup.startup_pos_y").SetInt(y);
+	preferences.GetPreference("Appearance.Startup.monitor_width").SetInt(x);
+	preferences.GetPreference("Appearance.Startup.monitor_heigth").SetInt(y);
+	bool maximized = (glfwGetWindowAttrib(m_window, GLFW_MAXIMIZED) == GLFW_TRUE);
+	preferences.GetPreference("Appearance.Startup.startup_maximized").SetBool(maximized);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -31,6 +31,8 @@
 #include "PreferenceTypes.h"
 #include "ngscopeclient.h"
 
+PreferenceManager PreferenceManager::m_instance;
+
 void PreferenceManager::InitializeDefaults()
 {
 	auto& appearance = this->m_treeRoot.AddCategory("Appearance");
@@ -483,6 +485,15 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("Multi window", VIEWPORT_ENABLE)
 					.EnumValue("Single window", VIEWPORT_DISABLE)
 				);
+		auto& windowStartup = appearance.AddCategory("Startup");
+			windowStartup.AddPreference(Preference::Bool("startup_fullscreen", false).Invisible());
+			windowStartup.AddPreference(Preference::Bool("startup_maximized", false).Invisible());
+			windowStartup.AddPreference(Preference::Int ("startup_pos_x", 0).Invisible());
+			windowStartup.AddPreference(Preference::Int ("startup_pos_y", 0).Invisible());
+			windowStartup.AddPreference(Preference::Int ("startup_size_width", 0).Invisible());
+			windowStartup.AddPreference(Preference::Int ("startup_size_heigth", 0).Invisible());
+			windowStartup.AddPreference(Preference::Int ("monitor_width", 0).Invisible());
+			windowStartup.AddPreference(Preference::Int ("monitor_heigth", 0).Invisible());
 
 	auto& drivers = this->m_treeRoot.AddCategory("Drivers");
 		auto& dgeneral = drivers.AddCategory("General");

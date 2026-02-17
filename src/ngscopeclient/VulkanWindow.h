@@ -43,7 +43,7 @@ class Texture;
 class VulkanWindow
 {
 public:
-	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue, bool noMaximize);
+	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue, bool noMaximize, bool noRestore);
 	virtual ~VulkanWindow();
 
 	GLFWwindow* GetWindow()
@@ -63,6 +63,8 @@ public:
 
 	bool IsFullscreen()
 	{ return m_fullscreen; }
+
+	void SaveWindowPositionAndSize();
 
 protected:
 	bool UpdateFramebuffer();
@@ -157,6 +159,9 @@ protected:
 
 	///@brief Fullscreen flag
 	bool m_fullscreen;
+
+	///@brief True user asked (via command line argument) not to restore previous window state
+	bool m_noRestore;
 
 	///@brief Saved position before we went fullscreen
 	int m_windowedX;
