@@ -108,7 +108,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 
 	//Prepare window creation
 	int workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth;
-	int windowXPosition, windowYPosition, windowWidth = 0, windowHeigth = 0;
+	int windowXPosition = 0, windowYPosition = 0, windowWidth = 0, windowHeigth = 0;
 	bool restoreWindowPosition = false;
 	bool fullscreen = false;
 	bool maximized = false;
@@ -131,9 +131,12 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			int windowHeigthPref = preferences.GetInt("Appearance.Startup.startup_size_heigth");
 			int	windowXPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_x");
 			int windowYPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_y");
+			string monitorName = preferences.GetString("Appearance.Startup.monitor_name");
+			int monitorWidth = preferences.GetInt("Appearance.Startup.monitor_width");
+			int monitorHeigth = preferences.GetInt("Appearance.Startup.monitor_heigth");
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
-			if(fullscreen || maximized)
+			if(fullscreen || maximized || !IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
 			{	// Save prefs for later
 				m_width = windowWidthPref;
 				m_height = windowHeigthPref;
@@ -709,6 +712,50 @@ void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Window management
 
+GLFWmonitor* VulkanWindow::GetCurrentMonitor()
+{
+    int nmonitors;
+    GLFWmonitor** monitors = glfwGetMonitors(&nmonitors);
+    int wx, wy;
+    glfwGetWindowPos(m_window, &wx, &wy);
+    for (int i = 0; i < nmonitors; ++i)
+    {
+        int mx, my, mw, mh;
+        glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
+        if (wx >= mx && wx < mx + mw && wy >= my && wy < my + mh)
+        {	// Window's top left corner is in this monitor's working area
+            return monitors[i];
+        }
+    }
+    // Not found
+    return nullptr;
+}
+
+#define MINIMUM_WINDOW_VISIBLE_AREA_SIZE 50
+
+bool VulkanWindow::IsPositionValid(const std::string monitorName, int /*monitorWidth*/, int /*monitorHeigth*/, int windowXPos, int windowYPos)
+{
+    int nmonitors;
+    GLFWmonitor** monitors = glfwGetMonitors(&nmonitors);
+    for (int i = 0; i < nmonitors; ++i)
+    {
+		string name = string(glfwGetMonitorName(monitors[i]));
+		if(name == monitorName)
+		{	// Monitor name match, check position
+	        int mx, my, mw, mh;
+			glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
+			if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw 
+			 && windowYPos >= my && windowYPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < my + mh)
+			{
+				return true;
+			}
+		}
+    }
+    // Not found
+    return false;
+}
+
+
 void VulkanWindow::SetFullscreen(bool fullscreen)
 {
 	m_fullscreen = fullscreen;
@@ -772,10 +819,19 @@ void VulkanWindow::SaveWindowPositionAndSize()
 	preferences.GetPreference("Appearance.Startup.startup_size_heigth").SetInt(m_height);
 	preferences.GetPreference("Appearance.Startup.startup_pos_x").SetInt(x);
 	preferences.GetPreference("Appearance.Startup.startup_pos_y").SetInt(y);
-	preferences.GetPreference("Appearance.Startup.monitor_width").SetInt(x);
-	preferences.GetPreference("Appearance.Startup.monitor_heigth").SetInt(y);
 	bool maximized = (glfwGetWindowAttrib(m_window, GLFW_MAXIMIZED) == GLFW_TRUE);
 	preferences.GetPreference("Appearance.Startup.startup_maximized").SetBool(maximized);
+	int monitorWidth = 0, monitorHeigth = 0;
+	string monitorName = "";
+	GLFWmonitor* currentMonitor = GetCurrentMonitor();
+	if(currentMonitor)
+	{
+		monitorName = glfwGetMonitorName(currentMonitor);
+		glfwGetMonitorWorkarea(currentMonitor,&x,&y,&monitorWidth,&monitorHeigth);
+	}
+	preferences.GetPreference("Appearance.Startup.monitor_width").SetInt(monitorWidth);
+	preferences.GetPreference("Appearance.Startup.monitor_heigth").SetInt(monitorHeigth);
+	preferences.GetPreference("Appearance.Startup.monitor_name").SetString(monitorName);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

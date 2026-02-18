@@ -492,6 +492,7 @@ void PreferenceManager::InitializeDefaults()
 			windowStartup.AddPreference(Preference::Int ("startup_pos_y", 0).Invisible());
 			windowStartup.AddPreference(Preference::Int ("startup_size_width", 0).Invisible());
 			windowStartup.AddPreference(Preference::Int ("startup_size_heigth", 0).Invisible());
+			windowStartup.AddPreference(Preference::String ("monitor_name", "").Invisible());
 			windowStartup.AddPreference(Preference::Int ("monitor_width", 0).Invisible());
 			windowStartup.AddPreference(Preference::Int ("monitor_heigth", 0).Invisible());
 

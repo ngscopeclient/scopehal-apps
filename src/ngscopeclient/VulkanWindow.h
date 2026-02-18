@@ -69,6 +69,8 @@ public:
 protected:
 	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);
+	GLFWmonitor* GetCurrentMonitor();
+	bool IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos);
 
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 	virtual void RenderUI();
