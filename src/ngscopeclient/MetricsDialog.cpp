@@ -315,10 +315,13 @@ bool MetricsDialog::DoRender()
 		}
 	}
 
-	//Only show this tab if available
-	if(g_hasMemoryBudget)
+	if(ImGui::CollapsingHeader("Memory"))
 	{
-		if(ImGui::CollapsingHeader("Memory"))
+		Unit bytes(Unit::UNIT_BYTES);
+		Unit pct(Unit::UNIT_PERCENT);
+
+		//Only show this section if available
+		if(g_hasMemoryBudget)
 		{
 			//TODO: host OS (un-pinned) memory usage too?
 			auto properties = g_vkComputePhysicalDevice->getMemoryProperties2<
@@ -326,27 +329,25 @@ bool MetricsDialog::DoRender()
 				vk::PhysicalDeviceMemoryBudgetPropertiesEXT>();
 			auto membudget = std::get<1>(properties);
 
-			Unit bytes(Unit::UNIT_BYTES);
-			Unit pct(Unit::UNIT_PERCENT);
-
 			auto pinnedUsage = membudget.heapUsage[g_vkPinnedMemoryHeap];
 			auto pinnedBudget = membudget.heapBudget[g_vkPinnedMemoryHeap];
 
 			std::string pinnedNodeName, pinnedHelpMarkerBudgetText, pinnedHelpMarkerUsageText;
-			if(g_vulkanDeviceHasUnifiedMemory) {
+			if(g_vulkanDeviceHasUnifiedMemory)
+			{
 				pinnedNodeName = "Unified";
 				pinnedHelpMarkerBudgetText = "Amount of unified RAM available for use by ngscopeclient.\n\n"
 					"This is your total RAM minus memory which is in use by the OS or other applications.";
 				pinnedHelpMarkerUsageText = "Amount of unified RAM currently in use by ngscopeclient.";
 			}
-			else {
+			else
+			{
 				pinnedNodeName = "Pinned";
 				pinnedHelpMarkerBudgetText = "Amount of pinned CPU-side RAM available for use by ngscopeclient.\n\n"
 					"This is your total RAM minus memory which cannot be pinned for PCIe access,\n"
 					"or is in use by the OS or other applications.";
 				pinnedHelpMarkerUsageText = "Amount of pinned CPU-side RAM currently in use by ngscopeclient.";
 			}
-
 
 			if(ImGui::TreeNodeEx(pinnedNodeName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -398,6 +399,67 @@ bool MetricsDialog::DoRender()
 				ImGui::TreePop();
 			}
 
+		}
+
+		if(ImGui::TreeNodeEx("Scratch pool", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::BeginDisabled();
+				str = bytes.PrettyPrint(ScratchBufferManager::GetTotalSize(), 4);
+				ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+				ImGui::InputText("Total", &str);
+			ImGui::EndDisabled();
+
+			if(ImGui::TreeNodeEx("GPU", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if(ImGui::TreeNodeEx("Waveform sized", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::BeginDisabled();
+						str = bytes.PrettyPrint(ScratchBufferManager::GetPoolSize(
+							ScratchBufferManager::U8_GPU_WAVEFORM), 4);
+						ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+						ImGui::InputText("uint8", &str);
+					ImGui::EndDisabled();
+
+					ImGui::BeginDisabled();
+						str = bytes.PrettyPrint(ScratchBufferManager::GetPoolSize(
+							ScratchBufferManager::U32_GPU_WAVEFORM), 4);
+						ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+						ImGui::InputText("uint32", &str);
+					ImGui::EndDisabled();
+
+					ImGui::BeginDisabled();
+						str = bytes.PrettyPrint(ScratchBufferManager::GetPoolSize(
+							ScratchBufferManager::F32_GPU_WAVEFORM), 4);
+						ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+						ImGui::InputText("float32", &str);
+					ImGui::EndDisabled();
+
+					ImGui::BeginDisabled();
+						str = bytes.PrettyPrint(ScratchBufferManager::GetPoolSize(
+							ScratchBufferManager::I64_GPU_WAVEFORM), 4);
+						ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+						ImGui::InputText("int64", &str);
+					ImGui::EndDisabled();
+
+					ImGui::TreePop();
+				}
+
+				if(ImGui::TreeNodeEx("Small", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::BeginDisabled();
+						str = bytes.PrettyPrint(ScratchBufferManager::GetPoolSize(
+							ScratchBufferManager::I64_GPU_SMALL), 4);
+						ImGui::SetNextItemWidth(10 * ImGui::GetFontSize());
+						ImGui::InputText("int64", &str);
+					ImGui::EndDisabled();
+
+					ImGui::TreePop();
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::TreePop();
 		}
 	}
 
