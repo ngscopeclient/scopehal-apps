@@ -136,7 +136,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			int monitorHeigth = preferences.GetInt("Appearance.Startup.monitor_heigth");
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
-			if(fullscreen || maximized || !IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
+			if(fullscreen || maximized)
 			{	// Save prefs for later
 				m_width = windowWidthPref;
 				m_height = windowHeigthPref;
@@ -145,7 +145,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			}
 			else
 			{
-				if(windowWidthPref != 0 && windowHeigthPref != 0)
+				if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
 				{	// Not default values: use them
 					windowWidth = windowWidthPref;
 					windowHeigth = windowHeigthPref;
@@ -187,6 +187,8 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		}
 		LogTrace("Resizing window with postion and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidth, windowHeigth);
 		glfwSetWindowMonitor(m_window, nullptr, windowXPosition, windowYPosition, windowWidth, windowHeigth, GLFW_DONT_CARE);
+		m_width = windowWidth;
+		m_height = windowHeigth;
 	}
 	float xscale, yscale;
 	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
@@ -731,7 +733,7 @@ GLFWmonitor* VulkanWindow::GetCurrentMonitor()
     return nullptr;
 }
 
-#define MINIMUM_WINDOW_VISIBLE_AREA_SIZE 50
+#define MINIMUM_WINDOW_VISIBLE_AREA_SIZE 100
 
 bool VulkanWindow::IsPositionValid(const std::string monitorName, int /*monitorWidth*/, int /*monitorHeigth*/, int windowXPos, int windowYPos)
 {
@@ -759,7 +761,6 @@ bool VulkanWindow::IsPositionValid(const std::string monitorName, int /*monitorW
 void VulkanWindow::SetFullscreen(bool fullscreen)
 {
 	m_fullscreen = fullscreen;
-	if(!m_noRestore) PreferenceManager::GetPreferences().GetPreference("Appearance.Startup.startup_fullscreen").SetBool(fullscreen);
 
 	if(m_fullscreen)
 	{
@@ -819,6 +820,7 @@ void VulkanWindow::SaveWindowPositionAndSize()
 	preferences.GetPreference("Appearance.Startup.startup_size_heigth").SetInt(m_height);
 	preferences.GetPreference("Appearance.Startup.startup_pos_x").SetInt(x);
 	preferences.GetPreference("Appearance.Startup.startup_pos_y").SetInt(y);
+	preferences.GetPreference("Appearance.Startup.startup_fullscreen").SetBool(m_fullscreen);
 	bool maximized = (glfwGetWindowAttrib(m_window, GLFW_MAXIMIZED) == GLFW_TRUE);
 	preferences.GetPreference("Appearance.Startup.startup_maximized").SetBool(maximized);
 	int monitorWidth = 0, monitorHeigth = 0;
