@@ -24,6 +24,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Emphasis (19.5x speedup)
   * Emphasis Removal (13.2x speedup)
   * Envelope (14.5x speedup)
+  * Ethernet - 100baseT1 (35x speedup)
   * Ethernet - 100baseTX (10x speedup)
   * Exponential Moving Average (35x speedup)
   * Eye pattern (25x speedup)
