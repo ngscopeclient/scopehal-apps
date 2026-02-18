@@ -133,11 +133,14 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			int windowYPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_y");
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
-			m_width = windowWidthPref;
-			m_height = windowHeigthPref;
-			m_windowedX = windowXPositionPref;
-			m_windowedY = windowYPositionPref;
-			if(!fullscreen && !maximized)
+			if(fullscreen || maximized)
+			{	// Save prefs for later
+				m_width = windowWidthPref;
+				m_height = windowHeigthPref;
+				m_windowedX = windowXPositionPref;
+				m_windowedY = windowYPositionPref;
+			}
+			else
 			{
 				if(windowWidthPref != 0 && windowHeigthPref != 0)
 				{	// Not default values: use them
