@@ -610,7 +610,7 @@ void MainWindow::ResetStyle()
 	style.FontSizeBase = oldStyle.FontSizeBase;
 	style.FontScaleMain = oldStyle.FontScaleMain;
 	style.FontScaleDpi = oldStyle.FontScaleDpi;
-	style.ScaleAllSizes(style.FontScaleDpi);
+	style.ScaleAllSizes(VulkanWindow::m_forceDPIScaling ? VulkanWindow::m_forcedUIScale : style.FontScaleDpi);
 
 	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
 	{

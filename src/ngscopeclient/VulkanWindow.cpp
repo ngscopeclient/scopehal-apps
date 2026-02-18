@@ -85,8 +85,27 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	io.ConfigDpiScaleFonts = true;
-	io.ConfigDpiScaleViewports = true;
+	// Check for environment variable DPI scaling override
+	const char *font_scale_override = getenv("NGSCOPECLIENT_FONT_SCALE");
+	const char *ui_scale_override = getenv("NGSCOPECLIENT_UI_SCALE");
+	if(font_scale_override || ui_scale_override)
+	{
+		m_forceDPIScaling = true;
+		if(font_scale_override)
+		{
+			m_forcedFontScale = atof(font_scale_override);
+		}
+		if(ui_scale_override)
+		{
+			m_forcedUIScale = atof(ui_scale_override);
+		}
+		LogTrace("Forcing DPI scaling with font scale %f and UI scale %f\n",m_forcedFontScale,m_forcedUIScale);
+	}
+	else
+	{
+		io.ConfigDpiScaleFonts = true;
+		io.ConfigDpiScaleViewports = true;
+	}
 
 	//Don't serialize UI config for now
 	//TODO: serialize to scopesession or something? https://github.com/ocornut/imgui/issues/4294
@@ -187,9 +206,6 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	{
 		SetFullscreen(true);
 	}
-	float xscale, yscale;
-	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
-	LogTrace("DPI scale: %f %f\n", xscale, yscale);
 
 	//Create a Vulkan surface for drawing onto
 	VkSurfaceKHR surface;
@@ -258,6 +274,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	info.ImageCount = m_backBuffers.size();
 	info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	info.PipelineInfoMain.RenderPass = **m_renderPass;
+	if(m_forceDPIScaling) ImGui::GetStyle().FontScaleMain = m_forcedFontScale;
 
 	//HERE BE DRAGONS:
 	// We're handing imgui a VkQueue here without holding the lock.
