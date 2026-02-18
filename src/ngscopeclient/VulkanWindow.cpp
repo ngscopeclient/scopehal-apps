@@ -136,32 +136,28 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			int monitorHeigth = preferences.GetInt("Appearance.Startup.monitor_heigth");
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
-			if(fullscreen || maximized)
-			{	// Save prefs for later
+			if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
+			{	// Not default values: use them
+				windowWidth = windowWidthPref;
+				windowHeigth = windowHeigthPref;
+				windowXPosition = windowXPositionPref;
+				windowYPosition = windowYPositionPref;
+				LogTrace("Preferences startup position and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidthPref, windowHeigthPref);
+				restoreWindowPosition = true;
+			}
+			else
+			{	// Default to maximized
+				maximized = true;
+			}
+			if(fullscreen)
+			{	// Save prefs for when we get out of fullscreen mode
 				m_width = windowWidthPref;
 				m_height = windowHeigthPref;
 				m_windowedX = windowXPositionPref;
 				m_windowedY = windowYPositionPref;
 			}
-			else
-			{
-				if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
-				{	// Not default values: use them
-					windowWidth = windowWidthPref;
-					windowHeigth = windowHeigthPref;
-					windowXPosition = windowXPositionPref;
-					windowYPosition = windowYPositionPref;
-					LogTrace("Preferences startup position and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidthPref, windowHeigthPref);
-					restoreWindowPosition = true;
-				}
-				else
-				{	// Default to maximized
-					maximized = true;
-				}
-			}
 		}
 		//Window creation
-		if(maximized) glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 		LogTrace("Creating window with size: %d %d and maximized = %d\n", windowWidth, windowHeigth, maximized);
 		m_window = glfwCreateWindow(windowWidth, windowHeigth, title.c_str(), nullptr, nullptr);
 	}
@@ -170,11 +166,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		LogError("Window creation failed\n");
 		abort();
 	}
-	if(fullscreen)
-	{
-		SetFullscreen(true);
-	}
-	else if(!noMaximize)
+	if(!noMaximize)
 	{	// Set window size and position
 		int left, top, right, bottom;
 		if(!restoreWindowPosition)
@@ -187,8 +179,13 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		}
 		LogTrace("Resizing window with postion and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidth, windowHeigth);
 		glfwSetWindowMonitor(m_window, nullptr, windowXPosition, windowYPosition, windowWidth, windowHeigth, GLFW_DONT_CARE);
+		if(maximized) glfwMaximizeWindow(m_window);
 		m_width = windowWidth;
 		m_height = windowHeigth;
+	}
+	if(fullscreen)
+	{
+		SetFullscreen(true);
 	}
 	float xscale, yscale;
 	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &xscale, &yscale);
@@ -735,25 +732,31 @@ GLFWmonitor* VulkanWindow::GetCurrentMonitor()
 
 #define MINIMUM_WINDOW_VISIBLE_AREA_SIZE 100
 
-bool VulkanWindow::IsPositionValid(const std::string monitorName, int /*monitorWidth*/, int /*monitorHeigth*/, int windowXPos, int windowYPos)
+bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos)
 {
     int nmonitors;
     GLFWmonitor** monitors = glfwGetMonitors(&nmonitors);
     for (int i = 0; i < nmonitors; ++i)
     {
-		string name = string(glfwGetMonitorName(monitors[i]));
-		if(name == monitorName)
-		{	// Monitor name match, check position
-	        int mx, my, mw, mh;
-			glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
-			if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw 
-			 && windowYPos >= my && windowYPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < my + mh)
-			{
+		int mx, my, mw, mh;
+		glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
+		LogTrace("Checking monitor with position and size: %d %d %d %d for window pos %d %d and orginal monotir size %d %d\n", mx, my, mx, mh, windowXPos, windowYPos, monitorWidth, monitorHeigth);
+		if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw 
+			&& windowYPos >= my && windowYPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < my + mh)
+		{	// Check position name since several monitors can share the same name
+			string name = string(glfwGetMonitorName(monitors[i]));
+			LogTrace("Found match for name %s (original %s)\n", name.c_str(), monitorName.c_str());
+			if(name == monitorName && mw == monitorWidth && mh == monitorHeigth)
+			{	// Monitor name and size match
 				return true;
+			}
+			else
+			{	// Monitor configuration has changed
+				return false;
 			}
 		}
     }
-    // Not found
+    // Not found 
     return false;
 }
 
