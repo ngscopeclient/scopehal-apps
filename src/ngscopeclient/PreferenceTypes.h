@@ -55,6 +55,13 @@ enum ViewportMode
 	VIEWPORT_DISABLE
 };
 
+enum StartupMode
+{
+	STARTUP_MODE_WINDOWED,
+	STARTUP_MODE_MAXIMIZED,
+	STARTUP_MODE_LAST_STATE
+};
+
 enum DataWidth
 {
 	WIDTH_AUTO,

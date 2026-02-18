@@ -38,6 +38,7 @@
 #include "VulkanWindow.h"
 #include "VulkanFFTPlan.h"
 #include "PreferenceManager.h"
+#include "PreferenceTypes.h"
 
 using namespace std;
 
@@ -58,7 +59,7 @@ void (*ImGui_ImplVulkan_SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
 /**
 	@brief Creates a new top level window with the specified title
  */
-VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, bool noMaximize, bool noRestore)
+VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, bool maximize, bool restore)
 	: m_renderQueue(queue)
 	, m_resizeEventPending(false)
 	, m_softwareResizeRequested(false)
@@ -70,7 +71,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	, m_width(0)
 	, m_height(0)
 	, m_fullscreen(false)
-	, m_noRestore(noRestore)
+	, m_restore(restore)
 	, m_windowedX(0)
 	, m_windowedY(0)
 	, m_windowedWidth(0)
@@ -125,13 +126,44 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	//Scale the initial window size by the monitor DPI
 	glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
+	// Determine window creation mode according to preferences and command line arguments
+	bool maximized = false;
+	bool restored = false;
+	bool windowed = false;
+	PreferenceManager& preferences = PreferenceManager::GetPreferences();
+	// Priority to command line arguments
+	if(maximize)
+	{
+		maximized = true;
+	}
+	else if(restore)
+	{
+		restored = true;
+	}
+	else
+	{	// No command line argument, check for preferences
+		auto mode = preferences.GetEnumRaw("Appearance.Windowing.startup_mode");
+		switch(mode)
+		{
+			case STARTUP_MODE_MAXIMIZED:
+				maximized = true;
+				break;
+			case STARTUP_MODE_LAST_STATE:
+				restored = true;
+				break;
+			case STARTUP_MODE_WINDOWED:
+			default:
+				windowed = true;
+				break;
+		}
+	}
+
 	//Prepare window creation
 	int workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth;
 	int windowXPosition = 0, windowYPosition = 0, windowWidth = 0, windowHeigth = 0;
 	bool restoreWindowPosition = false;
 	bool fullscreen = false;
-	bool maximized = false;
-	if(noMaximize)
+	if(windowed)
 	{	// Window creation with fixed size
 		m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
 	}
@@ -142,9 +174,8 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		LogTrace("Workarea position and size: %d %d %d %d\n", workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth);
 		windowWidth = workAreaWidth;
 		windowHeigth = workAreaHeigth;
-		if(!noRestore)
+		if(restored)
 		{	// Restore window size and position from preferences
-			PreferenceManager& preferences = PreferenceManager::GetPreferences();
 			int windowWidthPref = preferences.GetInt("Appearance.Startup.startup_size_width");
 			int windowHeigthPref = preferences.GetInt("Appearance.Startup.startup_size_heigth");
 			int	windowXPositionPref = preferences.GetInt("Appearance.Startup.startup_pos_x");
@@ -184,7 +215,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		LogError("Window creation failed\n");
 		abort();
 	}
-	if(!noMaximize)
+	if(!windowed)
 	{	// Now that the window has been created, we can set its position and size correctly
 		int left, top, right, bottom;
 		if(!restoreWindowPosition)

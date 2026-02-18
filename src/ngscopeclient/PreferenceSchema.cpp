@@ -485,6 +485,21 @@ void PreferenceManager::InitializeDefaults()
 					.EnumValue("Multi window", VIEWPORT_ENABLE)
 					.EnumValue("Single window", VIEWPORT_DISABLE)
 				);
+			windows.AddPreference(
+				Preference::Enum("startup_mode", STARTUP_MODE_WINDOWED)
+					.Label("Window startup mode")
+					.Description(
+						"Specifies the way Ngscopeclient window should be opened at startup.\n"
+						"\n"
+						"The default is windowed: the application is started in a fixed 1280x720 window.\n"
+						"Other options are:\n"
+						" - Maximized: the window is maximized on the main screen,\n"
+						" - Last State: the window is restored at the last position and size.\n"
+						)
+					.EnumValue("Windowed", STARTUP_MODE_WINDOWED)
+					.EnumValue("Maximized", STARTUP_MODE_MAXIMIZED)
+					.EnumValue("Last State", STARTUP_MODE_LAST_STATE)
+				);
 		auto& windowStartup = appearance.AddCategory("Startup");
 			windowStartup.AddPreference(Preference::Bool("startup_fullscreen", false).Invisible());
 			windowStartup.AddPreference(Preference::Bool("startup_maximized", false).Invisible());

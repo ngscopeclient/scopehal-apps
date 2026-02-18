@@ -121,8 +121,8 @@ int main(int argc, char* argv[])
 	#endif
 
 	string sessionToOpen;
-	bool noMaximize = false;
-	bool noRestore = false;
+	bool maximize = false;
+	bool restore = false;
 	vector<string> instrumentConnectionStrings;
 	for(int i=1; i<argc; i++)
 	{
@@ -144,15 +144,15 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 
-		if (s == "--no-maximize" || s == "-nm")
+		if (s == "--maximize" || s == "-m")
 		{
-			noMaximize = true;
+			maximize = true;
 			continue;
 		}
 
-		if (s == "--no-restore" || s == "-nr")
+		if (s == "--restore" || s == "-r")
 		{
-			noRestore = true;
+			restore = true;
 			continue;
 		}
 
@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
 	{
 		//Make the top level window
 		shared_ptr<QueueHandle> queue(g_vkQueueManager->GetRenderQueue("g_mainWindow.render"));
-		g_mainWindow = make_unique<MainWindow>(queue,noMaximize,noRestore);
+		g_mainWindow = make_unique<MainWindow>(queue,maximize,restore);
 
 
 		auto& session = g_mainWindow->GetSession();
@@ -317,10 +317,8 @@ int main(int argc, char* argv[])
 			//Draw the main window
 			g_mainWindow->Render();
 		}
-		if(!noRestore && !noMaximize)
-		{	// Store window position and size for next startup
-			g_mainWindow->SaveWindowPositionAndSize();
-		}
+		// Store window position and size for next startup
+		g_mainWindow->SaveWindowPositionAndSize();
 
 		session.ClearBackgroundThreads();
 	}

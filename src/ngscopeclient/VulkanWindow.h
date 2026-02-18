@@ -163,7 +163,7 @@ protected:
 	bool m_fullscreen;
 
 	///@brief True if user asked (via command line argument) not to restore previous window state
-	bool m_noRestore;
+	bool m_restore;
 
 	///@brief True if user asked (via NGSCOPECLIENT_UI_SCALE or NGSCOPECLIENT_FONT_SCALE environment variable) to force DPI scaling
 	bool m_forceDPIScaling;
