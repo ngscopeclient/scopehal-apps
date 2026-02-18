@@ -132,12 +132,11 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	bool fullscreen = false;
 	bool maximized = false;
 	if(noMaximize)
-	{
-		//Window creation
+	{	// Window creation with fixed size
 		m_window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
 	}
 	else
-	{
+	{	// Get primary monitor's content area for default sizing
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		glfwGetMonitorWorkarea(monitor, &workAreaXPosition, &workAreaYPosition, &workAreaWidth, &workAreaHeigth);
 		LogTrace("Workarea position and size: %d %d %d %d\n", workAreaXPosition, workAreaYPosition, workAreaWidth, workAreaHeigth);
@@ -156,7 +155,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			fullscreen = preferences.GetBool("Appearance.Startup.startup_fullscreen");
 			maximized = preferences.GetBool("Appearance.Startup.startup_maximized");
 			if(windowWidthPref != 0 && windowHeigthPref != 0 && IsPositionValid(monitorName, monitorWidth, monitorHeigth, windowXPositionPref, windowYPositionPref))
-			{	// Not default values: use them
+			{	// We have stored position and size: use them
 				windowWidth = windowWidthPref;
 				windowHeigth = windowHeigthPref;
 				windowXPosition = windowXPositionPref;
@@ -165,7 +164,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 				restoreWindowPosition = true;
 			}
 			else
-			{	// Default to maximized
+			{	// No previous position: default to maximized
 				maximized = true;
 			}
 			if(fullscreen)
@@ -176,7 +175,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 				m_windowedY = windowYPositionPref;
 			}
 		}
-		//Window creation
+		// Create the window with calculated size on default monitor, we will reposition it after if needed
 		LogTrace("Creating window with size: %d %d and maximized = %d\n", windowWidth, windowHeigth, maximized);
 		m_window = glfwCreateWindow(windowWidth, windowHeigth, title.c_str(), nullptr, nullptr);
 	}
@@ -186,10 +185,10 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 		abort();
 	}
 	if(!noMaximize)
-	{	// Set window size and position
+	{	// Now that the window has been created, we can set its position and size correctly
 		int left, top, right, bottom;
 		if(!restoreWindowPosition)
-		{	// Get frame size to adjust window maximization
+		{	// Get frame size to adjust window default position and size accordingly
 			glfwGetWindowFrameSize(m_window, &left, &top, &right, &bottom);
 			LogTrace("Window frame size: %d %d %d %d\n", top, left, right, bottom);
 			windowXPosition = 0;
@@ -197,6 +196,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 			windowHeigth -= top;
 		}
 		LogTrace("Resizing window with postion and size: %d %d %d %d\n", windowXPosition, windowYPosition, windowWidth, windowHeigth);
+		// Actually set the window position and size with calculated values
 		glfwSetWindowMonitor(m_window, nullptr, windowXPosition, windowYPosition, windowWidth, windowHeigth, GLFW_DONT_CARE);
 		if(maximized) glfwMaximizeWindow(m_window);
 		m_width = windowWidth;
@@ -730,11 +730,11 @@ void VulkanWindow::DoRender(vk::raii::CommandBuffer& /*cmdBuf*/)
 
 GLFWmonitor* VulkanWindow::GetCurrentMonitor()
 {
-    int nmonitors;
-    GLFWmonitor** monitors = glfwGetMonitors(&nmonitors);
+    int monitorNumber;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorNumber);
     int wx, wy;
     glfwGetWindowPos(m_window, &wx, &wy);
-    for (int i = 0; i < nmonitors; ++i)
+    for (int i = 0; i < monitorNumber; ++i)
     {
         int mx, my, mw, mh;
         glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
@@ -751,9 +751,9 @@ GLFWmonitor* VulkanWindow::GetCurrentMonitor()
 
 bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos)
 {
-    int nmonitors;
-    GLFWmonitor** monitors = glfwGetMonitors(&nmonitors);
-    for (int i = 0; i < nmonitors; ++i)
+    int monitorNumber;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorNumber);
+    for (int i = 0; i < monitorNumber; ++i)
     {
 		int mx, my, mw, mh;
 		glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
