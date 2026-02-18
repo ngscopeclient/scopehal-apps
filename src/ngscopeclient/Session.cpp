@@ -278,6 +278,9 @@ void Session::Clear()
 	//Remove any existing IDs
 	m_idtable.clear();
 
+	//Free scratch buffers
+	ScratchBufferManager::clear();
+
 	//Reset state
 	m_triggerOneShot = false;
 	m_multiScope = false;
@@ -3670,6 +3673,10 @@ bool Session::OnMemoryPressure(MemoryPressureLevel level, MemoryPressureType typ
 {
 	LogDebug("Session::OnMemoryPressure\n");
 	LogIndenter li;
+
+	//Clean up scratch space
+	if(ScratchBufferManager::OnMemoryPressure(level, type, requestedSize))
+		return true;
 
 	bool moreFreed = false;
 
