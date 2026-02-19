@@ -115,8 +115,8 @@ static void MainWindow_OnChangedViewport([[maybe_unused]] ImGuiViewport *vp)
 #define DBG_SUFFIX ""
 #endif
 
-MainWindow::MainWindow(shared_ptr<QueueHandle> queue)
-	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue)
+MainWindow::MainWindow(shared_ptr<QueueHandle> queue, bool maximized, bool restored)
+	: VulkanWindow("ngscopeclient " NGSCOPECLIENT_VERSION " " DBG_SUFFIX SAN_SUFFIX, queue, maximized, restored)
 	, m_showDemo(false)
 	, m_nextWaveformGroup(1)
 	, m_toolbarIconSize(0)
@@ -610,7 +610,7 @@ void MainWindow::ResetStyle()
 	style.FontSizeBase = oldStyle.FontSizeBase;
 	style.FontScaleMain = oldStyle.FontScaleMain;
 	style.FontScaleDpi = oldStyle.FontScaleDpi;
-	style.ScaleAllSizes(style.FontScaleDpi);
+	style.ScaleAllSizes(VulkanWindow::m_forceDPIScaling ? VulkanWindow::m_forcedUIScale : style.FontScaleDpi);
 
 	switch(m_session.GetPreferences().GetEnumRaw("Appearance.General.theme"))
 	{
@@ -2604,6 +2604,12 @@ bool MainWindow::LoadUIConfiguration(int version, const YAML::Node& node)
 			m_pendingHeight = window["height"].as<int>();
 			m_softwareResizeRequested = true;
 		}
+		// Load trace alpha
+		if(window["traceAlpha"])
+			m_traceAlpha = window["traceAlpha"].as<float>();
+		// Load persistance s
+		if(window["persistenceDecay"])
+			m_persistenceDecay = window["persistenceDecay"].as<float>();
 	}
 
 	//Waveform groups
@@ -3294,6 +3300,8 @@ YAML::Node MainWindow::SerializeUIConfiguration()
 	window["height"] = m_height;
 	window["width"] = m_width;
 	window["fullscreen"] = m_fullscreen;
+	window["traceAlpha"] = m_traceAlpha;
+	window["persistenceDecay"] = m_persistenceDecay;
 	node["window"] = window;
 
 	//Waveform areas are hierarchical internally, but written as separate area and group headings

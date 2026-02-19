@@ -2857,7 +2857,7 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 	auto lecroy = dynamic_pointer_cast<LeCroyOscilloscope>(scope);
 	if(lecroy)
 	{
-		if(m_preferences.GetBool("Drivers.Teledyne LeCroy.force_16bit"))
+		if(GetPreferences().GetBool("Drivers.Teledyne LeCroy.force_16bit"))
 			lecroy->ForceHDMode(true);
 
 		//else auto resolution depending on instrument type
@@ -2865,7 +2865,7 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 	auto siglent = dynamic_pointer_cast<SiglentSCPIOscilloscope>(scope);
 	if(siglent)
 	{
-		auto dataWidth = m_preferences.GetEnumRaw("Drivers.Siglent SDS HD.data_width");
+		auto dataWidth = GetPreferences().GetEnumRaw("Drivers.Siglent SDS HD.data_width");
 		if(dataWidth == WIDTH_8_BITS)
 		{
 			siglent->ForceHDMode(false);
@@ -2878,7 +2878,7 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 	auto rsrtb = dynamic_pointer_cast<RSRTB2kOscilloscope>(scope);
 	if(rsrtb)
 	{
-		auto dataWidth = m_preferences.GetEnumRaw("Drivers.RohdeSchwarz RTB.data_width");
+		auto dataWidth = GetPreferences().GetEnumRaw("Drivers.RohdeSchwarz RTB.data_width");
 		if(dataWidth == WIDTH_8_BITS)
 		{
 			rsrtb->ForceHDMode(false);
@@ -2891,7 +2891,7 @@ void Session::ApplyPreferences(shared_ptr<Oscilloscope> scope)
 	auto rigol = dynamic_pointer_cast<RigolOscilloscope>(scope);
 	if(rigol)
 	{
-		auto dataWidth = m_preferences.GetEnumRaw("Drivers.Rigol DHO.data_width");
+		auto dataWidth = GetPreferences().GetEnumRaw("Drivers.Rigol DHO.data_width");
 		if(dataWidth == WIDTH_8_BITS)
 		{
 			rigol->ForceHDMode(false);
