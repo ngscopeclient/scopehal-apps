@@ -34,6 +34,7 @@ This is a running list of significant bug fixes and new features since the last 
   * Invert (27.3x speedup)
   * Maximum (35x speedup)
   * Minimum (24.8x speedup)
+  * Multiple (44.2x speedup for vector x scalar, 75x for vector x vector)
   * Moving Average (93.5x speedup)
   * PAM Edge Detector (21.7x speedup)
   * PRBS generator (21.6x speedup)
