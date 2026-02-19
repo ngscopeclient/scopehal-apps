@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -67,6 +67,12 @@ public:
 	{ return m_title; }
 
 	void AddArea(std::shared_ptr<WaveformArea>& area);
+
+	void AddArea(std::shared_ptr<WaveformArea>& area, size_t position);
+
+	size_t GetAreaPosition(WaveformArea& area);
+
+	void MoveArea(WaveformArea& area, size_t newPosition);
 
 	void OnZoomInHorizontal(int64_t target, float step);
 	void OnZoomOutHorizontal(int64_t target, float step);
@@ -206,7 +212,7 @@ protected:
 	double m_tLastMouseMove;
 
 	///@brief List of waveform areas to close next frame
-	std::vector<size_t> m_areasToClose;
+	std::vector< std::shared_ptr<WaveformArea> > m_areasToClose;
 
 	///@brief Height of the timeline
 	float m_timelineHeight;

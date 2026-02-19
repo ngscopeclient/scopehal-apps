@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -97,6 +97,88 @@ void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area)
 			m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
 
 		m_areas.push_back(area);
+	}
+
+	m_parent->RefreshStreamBrowserDialog();
+}
+
+/**
+	@brief Adds a new area to this group at a given position
+ */
+void WaveformGroup::AddArea(shared_ptr<WaveformArea>& area, size_t position)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		//If this is our first area, adopt its X axis unit as our own
+		if(m_areas.empty())
+			m_xAxisUnit = area->GetStream(0).GetXAxisUnits();
+
+		if(position >= m_areas.size())
+		{
+			m_areas.push_back(area);
+		}
+		else
+		{
+			m_areas.insert(m_areas.begin() + position, area);
+		}
+	}
+
+	m_parent->RefreshStreamBrowserDialog();
+}
+
+/**
+ * Get the position of the provided WavformArea in this waveform group
+ * @param area the area to get the position for
+ * @return the position of the area if found the size of this WaveformGroup otherwise
+ */
+size_t WaveformGroup::GetAreaPosition(WaveformArea& area)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		size_t position = m_areas.size();
+		for (size_t i = 0; i < m_areas.size(); ++i)
+		{
+			if (m_areas[i] && m_areas[i].get() == &area)
+			{
+				position = i;
+				break;
+			}
+		}		
+		return position;
+	}
+}
+
+/**
+	@brief Move a waveform are to another position in this group
+	@param area the waveform area to move
+	@param newPosition the position to move the waveform area to
+ */
+void WaveformGroup::MoveArea(WaveformArea& area, size_t newPosition)
+{
+	lock_guard<mutex> lock(m_areaMutex);
+	{
+		// Find original position
+		size_t oldIndex = GetAreaPosition(area);
+		if (oldIndex == m_areas.size())
+			// Not found
+			return;
+
+		if (oldIndex == newPosition)
+			// Nothing to do
+			return;
+
+		// Backup value
+		std::shared_ptr<WaveformArea> temp = m_areas[oldIndex];
+
+		// Remove from list
+		m_areas.erase(m_areas.begin() + oldIndex);
+
+		// If we move after, index has to be shifted
+		if (oldIndex < newPosition)
+			newPosition--;
+
+		// Insert at new position
+		m_areas.insert(m_areas.begin() + newPosition, temp);
 	}
 
 	m_parent->RefreshStreamBrowserDialog();
@@ -217,10 +299,10 @@ bool WaveformGroup::Render()
 	for(size_t i=0; i<areas.size(); i++)
 	{
 		if(!areas[i]->Render(i, areas.size(), clientArea))
-			m_areasToClose.push_back(i);
+			m_areasToClose.push_back(areas[i]);
 	}
 	for(ssize_t i=static_cast<ssize_t>(m_areasToClose.size()) - 1; i >= 0; i--)
-		m_areas.erase(m_areas.begin() + m_areasToClose[i]);
+		m_areas.erase(std::remove(m_areas.begin(), m_areas.end(), m_areasToClose[i]), m_areas.end());
 	if(!m_areasToClose.empty())
 		m_parent->RefreshStreamBrowserDialog();
 
