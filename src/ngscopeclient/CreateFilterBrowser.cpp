@@ -166,6 +166,11 @@ bool CreateFilterBrowser::DoRender()
 			if(ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) &&
 				!mouseIsDown && !isDragging)
 			{
+				// The tooltip introduced some issues on tiling window managers since it sometimes created
+				// a second OS window when ImGuiConfigFlags_ViewportsEnable was set as a config flag to ImGui.
+				// This forces the tooltip to be a child of the main viewport.
+				ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
+				// Don't put anything in between since this could lead to the SetNextWindowViewport call affecting other windows.
 				if(ImGui::BeginTooltip())
 				{
 					ImGui::TextUnformatted(it.first.c_str());
