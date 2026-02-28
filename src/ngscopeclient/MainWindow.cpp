@@ -1930,8 +1930,9 @@ void MainWindow::RenderLoadWarningPopup()
 					ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeY))
 			{
 				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), GetMarkdownConfig());
-				ImGui::EndChild();
 			}
+			
+			ImGui::EndChild();
 		}
 
 		//If we have config warnings, show them
