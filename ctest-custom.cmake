@@ -28,7 +28,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 
 	set(CTEST_BINARY_DIRECTORY "/home/ci/scopehal-apps/build")
 	set(CTEST_SOURCE_DIRECTORY "/home/ci/scopehal-apps/")
-	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo"
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
 else()
 
