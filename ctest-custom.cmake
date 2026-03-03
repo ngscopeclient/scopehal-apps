@@ -38,12 +38,11 @@ else()
 	message(FATAL_ERROR "No test config matched")
 endif()
 
-#set(CTEST_BUILD_COMMAND "make -j${N_PROCS}")
-
 ctest_start(${CTEST_DASHBOARD})
 
-#don't do ctest_update, prepping the source tree isn't ctest's job
-#ctest_update()
+#report version number but don't do anything else
+set(CTEST_UPDATE_VERSION_ONLY 1)
+ctest_update()
 
 ctest_configure(OPTIONS "${CONFIGURE_OPTIONS}")
 ctest_build(FLAGS "-j${N_PROCS}")
