@@ -593,15 +593,12 @@ public:
 protected:
 	std::optional<TimePoint> m_hoverTime;
 
+public:
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// End user preferences (persistent across sessions)
 
-	//Preferences state
-	PreferenceManager m_preferences;
-
-public:
 	PreferenceManager& GetPreferences()
-	{ return m_preferences; }
+	{ return PreferenceManager::GetPreferences(); }
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Reference filters (used to query legal inputs to filters etc)
