@@ -9,12 +9,21 @@ include(ProcessorCount)
 ProcessorCount(N_PROCS)
 message(STATUS "Detected ${N_PROCS} processor cores")
 
+# default git location unless otherwise specified
+set(CTEST_GIT_COMMAND "/usr/bin/git")
+
+# default build location unless otherwise specified
+set(CTEST_BINARY_DIRECTORY "/home/ci/scopehal-apps/build")
+set(CTEST_SOURCE_DIRECTORY "/home/ci/scopehal-apps/")
+
+# default generator unless otherwise specified
+set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
 	set(CTEST_BUILD_NAME x86_64-linux-debian-13-nvidia)
 	set(CTEST_DASHBOARD Experimental)
-	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known dev config: havequick")
 
 	set(CTEST_BINARY_DIRECTORY ".")
@@ -28,11 +37,20 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: debian-stable")
 
-	set(CTEST_BINARY_DIRECTORY "/home/ci/scopehal-apps/build")
-	set(CTEST_SOURCE_DIRECTORY "/home/ci/scopehal-apps/")
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
+# CI Debian Bookworm
+elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
+	set(CTEST_SITE ci-debian-oldstable)
+	set(CTEST_BUILD_NAME x86_64-linux-debian-12-nvidia)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: debian-oldstable")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
 else()
 
 	#set(CTEST_SITE ${HOSTNAME})
