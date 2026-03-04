@@ -51,6 +51,17 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
 
+# CI Ubuntu Noble
+elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
+	set(CTEST_SITE ci-debian-oldstable)
+	set(CTEST_BUILD_NAME x86_64-linux-ubuntu-24-04)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: ubuntu-oldlts")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
 else()
 
 	#set(CTEST_SITE ${HOSTNAME})
