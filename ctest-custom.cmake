@@ -43,7 +43,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	set(CTEST_SITE ci-debian-oldstable)
-	set(CTEST_BUILD_NAME x86_64-linux-debian-12-nvidia)
+	set(CTEST_BUILD_NAME x86_64-linux-debian-12)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: debian-oldstable")
