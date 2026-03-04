@@ -53,7 +53,7 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
-	set(CTEST_SITE ci-debian-oldstable)
+	set(CTEST_SITE ci-ubuntu-oldlts)
 	set(CTEST_BUILD_NAME x86_64-linux-ubuntu-24-04)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
