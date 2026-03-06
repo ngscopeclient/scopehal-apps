@@ -221,8 +221,9 @@ bool CreateFilterBrowser::DoRender()
 			DrawIconButton(draw_list, pos, color, icon, caption);
 		}
 
-		ImGui::EndChild();
 	}
+	
+	ImGui::EndChild();
 
 	return true;
 }
