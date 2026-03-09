@@ -4524,6 +4524,8 @@ void WaveformArea::AutofitVertical()
 	for(auto& c : m_displayedChannels)
 	{
 		auto data = c->GetStream().GetData();
+		if(!data)
+			continue;
 		data->PrepareForCpuAccess();
 		auto sdata = dynamic_cast<SparseAnalogWaveform*>(data);
 		auto udata = dynamic_cast<UniformAnalogWaveform*>(data);
