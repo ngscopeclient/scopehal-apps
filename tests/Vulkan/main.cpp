@@ -35,7 +35,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
 	g_log_sinks.push_back(make_unique<ColoredSTDLogSink>(Severity::DEBUG));
 
-	if(!VulkanInit())
+	if(!VulkanInit(true))
 		return 1;
 
 	LogDebug("Vulkan initialization successful\n");
