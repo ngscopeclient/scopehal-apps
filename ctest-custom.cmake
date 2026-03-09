@@ -19,6 +19,10 @@ set(CTEST_SOURCE_DIRECTORY "/home/ci/scopehal-apps/")
 # default generator unless otherwise specified
 set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
 
+# Increase maximum output size for uploading
+set(CTEST_CUSTOM_MAXIMUM_FAILED_TEST_OUTPUT_SIZE "131072")
+set(CTEST_CUSTOM_MAXIMUM_PASSED_TEST_OUTPUT_SIZE "131072")
+
 # azonenberg's dev box for testing
 if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_SITE dev-havequick)
