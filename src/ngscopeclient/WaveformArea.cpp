@@ -2730,9 +2730,8 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 
 	if(ImGui::BeginPopupContextWindow())
 	{
-		if(ImGui::MenuItem("Autofit")){
+		if(ImGui::MenuItem("Autofit"))
 			AutofitVertical();
-		}
 		ImGui::EndPopup();
 	}
 
@@ -2796,9 +2795,7 @@ void WaveformArea::RenderYAxis(ImVec2 size, map<float, float>& gridmap, float vb
 		}
 
 		if(ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
-		{
 			AutofitVertical();
-		}
 	}
 }
 
