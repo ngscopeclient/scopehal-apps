@@ -164,7 +164,7 @@ public:
 class MainWindow : public VulkanWindow
 {
 public:
-	MainWindow(std::shared_ptr<QueueHandle> queue);
+	MainWindow(std::shared_ptr<QueueHandle> queue, bool maximized, bool restored);
 	virtual ~MainWindow();
 
 	static bool OnMemoryPressureStatic(MemoryPressureLevel level, MemoryPressureType type, size_t requestedSize);

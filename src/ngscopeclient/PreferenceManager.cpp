@@ -67,6 +67,11 @@ const Preference& PreferenceManager::GetPreference(const string& path) const
 	return this->m_treeRoot.GetLeaf(path);
 }
 
+Preference& PreferenceManager::GetPreference(const string& path)
+{
+	return this->m_treeRoot.GetLeaf(path);
+}
+
 void PreferenceManager::DeterminePath()
 {
 #ifdef _WIN32

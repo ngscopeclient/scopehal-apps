@@ -43,7 +43,7 @@ class Texture;
 class VulkanWindow
 {
 public:
-	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue);
+	VulkanWindow(const std::string& title, std::shared_ptr<QueueHandle> queue, bool noMaximize, bool noRestore);
 	virtual ~VulkanWindow();
 
 	GLFWwindow* GetWindow()
@@ -64,9 +64,13 @@ public:
 	bool IsFullscreen()
 	{ return m_fullscreen; }
 
+	void SaveWindowPositionAndSize();
+
 protected:
 	bool UpdateFramebuffer();
 	void SetFullscreen(bool fullscreen);
+	GLFWmonitor* GetCurrentMonitor();
+	bool IsPositionValid(const std::string monitorName, int monitorWidth, int monitorHeigth, int windowXPos, int windowYPos);
 
 	virtual void DoRender(vk::raii::CommandBuffer& cmdBuf);
 	virtual void RenderUI();
@@ -157,6 +161,18 @@ protected:
 
 	///@brief Fullscreen flag
 	bool m_fullscreen;
+
+	///@brief True if user asked (via command line argument) not to restore previous window state
+	bool m_restore;
+
+	///@brief True if user asked (via NGSCOPECLIENT_UI_SCALE or NGSCOPECLIENT_FONT_SCALE environment variable) to force DPI scaling
+	bool m_forceDPIScaling;
+
+	///@brief Forced font DPI scale value
+	float m_forcedFontScale = 1.0f;
+
+	///@brief Forced UI DPI scale value
+	float m_forcedUIScale = 1.0f;
 
 	///@brief Saved position before we went fullscreen
 	int m_windowedX;

@@ -65,9 +65,13 @@ public:
     PreferenceManager& operator=(const PreferenceManager&) = delete;
     PreferenceManager& operator=(PreferenceManager&&) = default;
 
+    // Singleton access
+    static PreferenceManager& GetPreferences() { return m_instance; };
+
 public:
     void SavePreferences();
     PreferenceCategory& AllPreferences();
+    Preference& GetPreference(const std::string& path);
 
     std::string GetConfigDirectory()
     { return m_configDir; }
@@ -103,6 +107,8 @@ private:
     PreferenceCategory m_treeRoot;
     std::string m_filePath;
     std::string m_configDir;
+	// Singleton instance
+	static PreferenceManager m_instance;
 };
 
 #endif // PreferenceManager_h
