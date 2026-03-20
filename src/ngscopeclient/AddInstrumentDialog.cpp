@@ -67,7 +67,7 @@ AddInstrumentDialog::AddInstrumentDialog(
 {
 	SCPITransport::EnumTransports(m_transports);
 	m_supportedTransports.insert(m_transports.begin(), m_transports.end());
-	m_pathEdited = false;
+	m_pathEdited = !m_path.empty();
 	m_defaultNickname = nickname;
 	m_originalNickname = nickname;
 	m_nicknameEdited = false;

@@ -486,6 +486,12 @@ public:
 
 	void AddStream(StreamDescriptor desc, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
 
+	void AddStream(StreamDescriptor desc, size_t position, bool persistence = false, const std::string& ramp = "eye-gradient-viridis");
+
+	size_t GetStreamPosition(StreamDescriptor desc);
+
+	void MoveStream(StreamDescriptor desc, size_t newPosition);
+
 	bool IsCompatible(StreamDescriptor desc);
 
 	bool IsShowing(StreamDescriptor desc);
@@ -560,9 +566,9 @@ protected:
 	void DrawDropScalarMessage(ImDrawList* list, ImVec2 center);
 
 	void DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int numAreas);
-	void CenterLeftDropArea(ImVec2 start, ImVec2 size);
-	void CenterRightDropArea(ImVec2 start, ImVec2 size);
-	void EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
+	bool CenterRightDropArea(ImVec2 start, ImVec2 size, ImGuiDir direction);
+	bool EdgeDropArea(const std::string& name, ImVec2 start, ImVec2 size, ImGuiDir splitDir);
+	void CenterDropArea(ImVec2 start, ImVec2 size);
 
 	void FilterMenu(std::shared_ptr<DisplayedChannel> chan);
 	void FilterSubmenu(std::shared_ptr<DisplayedChannel> chan, const std::string& name, Filter::Category cat);
