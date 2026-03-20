@@ -55,6 +55,9 @@ This is a running list of significant bug fixes and new features since the last 
 * GUI: enabled mouseover BER measurements on MLT-3 / PAM-3 eyes as well as NRZ. No PAM-4 or higher support yet.
 * GUI: Filter graph editor now allows filters and instrument channels to display error messages when their configuration is invalid or something goes wrong. Not all drivers/filters take advantage of this yet.
 * GUI: "add instrument" dialog now includes automatic enumeration of attached HID and UART devices (https://github.com/ngscopeclient/scopehal-apps/pull/968)
+* GUI: lots of improvements to drag-and-drop of channels between plots (https://github.com/ngscopeclient/scopehal-apps/pull/972)
+* GUI: Added new NGSCOPECLIENT_UI_SCALE and NGSCOPECLIENT_FONT_SCALE environment variables to override automatic detection of DPI scaling (https://github.com/ngscopeclient/scopehal-apps/issues/953)
+* Serialization: trace alpha and persistence decay settings are now saved in session files (https://github.com/ngscopeclient/scopehal-apps/issues/936)
 
 ## Breaking changes since v0.1.1
 
