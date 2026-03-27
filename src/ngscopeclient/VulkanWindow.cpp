@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -72,6 +72,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	, m_height(0)
 	, m_fullscreen(false)
 	, m_restore(restore)
+	, m_forceDPIScaling(false)
 	, m_windowedX(0)
 	, m_windowedY(0)
 	, m_windowedWidth(0)
@@ -789,7 +790,7 @@ bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWid
 		int mx, my, mw, mh;
 		glfwGetMonitorWorkarea(monitors[i], &mx, &my, &mw, &mh);
 		LogTrace("Checking monitor with position and size: %d %d %d %d for window pos %d %d and orginal monotir size %d %d\n", mx, my, mx, mh, windowXPos, windowYPos, monitorWidth, monitorHeigth);
-		if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw 
+		if (windowXPos >= mx && windowXPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < mx + mw
 			&& windowYPos >= my && windowYPos + MINIMUM_WINDOW_VISIBLE_AREA_SIZE < my + mh)
 		{	// Check position name since several monitors can share the same name
 			string name = string(glfwGetMonitorName(monitors[i]));
@@ -804,7 +805,7 @@ bool VulkanWindow::IsPositionValid(const std::string monitorName, int monitorWid
 			}
 		}
     }
-    // Not found 
+    // Not found
     return false;
 }
 
