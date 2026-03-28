@@ -102,6 +102,7 @@ bool MemoryDialog::DoRender()
 
 		auto highOverheadColor = ColorFromString("#800000");
 		auto someOverheadColor = ColorFromString("#808000");
+		auto scratchBufferColor = ColorFromString("#404040");
 
 		ImGui::TableSetupScrollFreeze(0, 1); //Header row does not scroll
 		ImGui::TableSetupColumn("Object", ImGuiTableColumnFlags_WidthFixed, 8*width);
@@ -156,11 +157,17 @@ bool MemoryDialog::DoRender()
 				ImGui::PushID(p);
 				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
+				//Scratch buffers get their own color, independent of overhead
+				//(overhead is not a useful metric here since a buffer can pass through many hands)
+				auto name = p->GetName();
+				if(name.find("ScratchBufferManager") == 0)
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, scratchBufferColor);
+
 				//Color rows with high overhead
-				if(overheadPct > 0.1)
-					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, someOverheadColor);
-				if(overheadPct > 1)
+				else if(overheadPct > 1)
 					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, highOverheadColor);
+				else if(overheadPct > 0.1)
+					ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, someOverheadColor);
 
 				//Object address
 				char selid[128];
@@ -178,7 +185,7 @@ bool MemoryDialog::DoRender()
 
 				//Name
 				ImGui::TableSetColumnIndex(1);
-				ImGui::TextUnformatted(p->GetName().c_str());
+				ImGui::TextUnformatted(name.c_str());
 
 				//Type
 				ImGui::TableSetColumnIndex(2);
