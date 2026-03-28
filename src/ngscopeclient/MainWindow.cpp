@@ -60,6 +60,7 @@
 #include "LogViewerDialog.h"
 #include "ManageInstrumentsDialog.h"
 #include "MeasurementsDialog.h"
+#include "MemoryDialog.h"
 #include "MetricsDialog.h"
 #include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
@@ -268,6 +269,7 @@ void MainWindow::CloseSession()
 	LogTrace("Clearing dialogs\n");
 	m_logViewerDialog = nullptr;
 	m_metricsDialog = nullptr;
+	m_memoryDialog = nullptr;
 	m_triggerDialog = nullptr;
 	m_filterPalette = nullptr;
 	m_streamBrowser = nullptr;
@@ -1182,6 +1184,8 @@ void MainWindow::OnDialogClosed(const std::shared_ptr<Dialog>& dlg)
 		m_streamBrowser = nullptr;
 	if(m_metricsDialog == dlg)
 		m_metricsDialog = nullptr;
+	if(m_memoryDialog == dlg)
+		m_memoryDialog = nullptr;
 	if(m_triggerDialog == dlg)
 		m_triggerDialog = nullptr;
 	if(m_historyDialog == dlg)
@@ -1931,7 +1935,7 @@ void MainWindow::RenderLoadWarningPopup()
 			{
 				ImGui::Markdown( m_session.m_setupNotes.c_str(), m_session.m_setupNotes.length(), GetMarkdownConfig());
 			}
-			
+
 			ImGui::EndChild();
 		}
 
@@ -2938,6 +2942,13 @@ bool MainWindow::LoadDialogs(const YAML::Node& node)
 		AddDialog(m_metricsDialog);
 	}
 
+	auto memory = node["memory"];
+	if(memory && memory.as<bool>())
+	{
+		m_memoryDialog = make_shared<MemoryDialog>(&m_session, this);
+		AddDialog(m_memoryDialog);
+	}
+
 	auto sb = node["streambrowser"];
 	if(sb && sb.as<bool>())
 	{
@@ -3502,6 +3513,10 @@ YAML::Node MainWindow::SerializeDialogs()
 	//Metrics dialog has no separate settings
 	if(m_metricsDialog)
 		node["metrics"] = true;
+
+	//Memory dialog has no separate settings
+	if(m_memoryDialog)
+		node["memory"] = true;
 
 	//Preferences dialog has no separate settings
 	if(m_preferenceDialog)

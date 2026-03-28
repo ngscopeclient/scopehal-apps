@@ -53,6 +53,7 @@
 #include "MeasurementsDialog.h"
 #include "MemoryLeakerDialog.h"
 #include "MetricsDialog.h"
+#include "MemoryDialog.h"
 #include "NotesDialog.h"
 #include "PersistenceSettingsDialog.h"
 #include "PowerSupplyDialog.h"
@@ -624,6 +625,19 @@ void MainWindow::WindowMenu()
 		}
 
 		if(hasMetrics)
+			ImGui::EndDisabled();
+
+		bool hasMemory = m_memoryDialog != nullptr;
+		if(hasMemory)
+			ImGui::BeginDisabled();
+
+		if(ImGui::MenuItem("Memory Analysis"))
+		{
+			m_memoryDialog = make_shared<MemoryDialog>(&m_session, this);
+			AddDialog(m_memoryDialog);
+		}
+
+		if(hasMemory)
 			ImGui::EndDisabled();
 
 		bool hasHistory = m_historyDialog != nullptr;

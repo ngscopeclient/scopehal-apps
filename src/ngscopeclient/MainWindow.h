@@ -140,7 +140,7 @@ public:
 
 	///@brief Color ramp request (may be blank if unspecified)
 	std::string m_ramp;
-	
+
 	std::shared_ptr<StreamGroupDescriptor> m_streamGroup;
 	bool m_singleArea;
 };
@@ -407,6 +407,9 @@ protected:
 
 	///@brief Performance metrics
 	std::shared_ptr<Dialog> m_metricsDialog;
+
+	///@brief Memory analysis
+	std::shared_ptr<Dialog> m_memoryDialog;
 
 	///@brief Preferences
 	std::shared_ptr<Dialog> m_preferenceDialog;
