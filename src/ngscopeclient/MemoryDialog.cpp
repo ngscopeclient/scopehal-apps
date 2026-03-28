@@ -139,9 +139,6 @@ bool MemoryDialog::DoRender()
 			//And actually display them
 			for(auto p : sortedList)
 			{
-				ImGui::PushID(p);
-				ImGui::TableNextRow(ImGuiTableRowFlags_None);
-
 				auto size = p->size();
 				auto sizeBytes = size * p->GetElementSize();
 
@@ -151,6 +148,13 @@ bool MemoryDialog::DoRender()
 				auto overhead = cap - size;
 				auto overheadBytes = overhead * p->GetElementSize();
 				auto overheadPct = (size == 0) ? 0 : (overhead * 1.0 / size);
+
+				//Don't show empty buffers for now
+				if(cap == 0)
+					continue;
+
+				ImGui::PushID(p);
+				ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 				//Color rows with high overhead
 				if(overheadPct > 0.1)
