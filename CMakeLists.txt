@@ -100,11 +100,12 @@ set(DISABLE_PCH CACHE BOOL "Disable precompiled headers as this may break certai
 set(BUILD_TESTING CACHE BOOL "Build unit tests")
 
 # Build with C++ 17 on Linux for maximum compatibility with older system
-# but for Windows, enable C++ 20 to bypass a deprecation warning
+# but for Windows, enable C++ 26 to bypass a deprecation warning
 # (workaround for https://github.com/KhronosGroup/Vulkan-Hpp/issues/2034)
 # even though we do not yet use any C++ 20 features in our codebase
+# also catch2 now wants to build with c++26 on windows clang?
 if(WIN32)
-	set(CMAKE_CXX_STANDARD 20)
+	set(CMAKE_CXX_STANDARD 26)
 else()
 	set(CMAKE_CXX_STANDARD 17)
 endif()
