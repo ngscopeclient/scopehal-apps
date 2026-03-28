@@ -786,6 +786,9 @@ bool Session::LoadWaveformDataForScope(
 
 			chan->Detach(stream);
 			chan->SetData(cap, stream);
+
+			//Give the waveform a name
+			cap->Rename(string("SavedWaveform.") + chan->GetDisplayName());
 		}
 
 		//Actually load the data for each channel
