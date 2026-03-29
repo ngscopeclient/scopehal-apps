@@ -104,12 +104,11 @@ set(BUILD_TESTING CACHE BOOL "Build unit tests")
 # (workaround for https://github.com/KhronosGroup/Vulkan-Hpp/issues/2034)
 # even though we do not yet use any C++ 20 features in our codebase
 if(WIN32)
-	#clang wants c++26 for some catch2 stuff
-	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND BUILD_TESTING)
-		add_compile_options(--std=gnu++26)
+	set(CMAKE_CXX_STANDARD 20)
+
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		add_compile_options(-Wno-error=c2y-extensions)
 	else()
-		set(CMAKE_CXX_STANDARD 20)
-	endif()
 else()
 	set(CMAKE_CXX_STANDARD 17)
 endif()
