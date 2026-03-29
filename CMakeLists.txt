@@ -108,7 +108,7 @@ if(WIN32)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Wno-error=c2y-extensions)
-	else()
+	endif()
 else()
 	set(CMAKE_CXX_STANDARD 17)
 endif()
