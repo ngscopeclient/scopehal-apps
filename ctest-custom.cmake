@@ -80,7 +80,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 # CI Windows 11
 elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_SITE ci-win11)
-	set(CTEST_BUILD_NAME x86_64-windows-11-nogpu)
+	set(CTEST_BUILD_NAME x86_64-windows-11-nvidia)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	set(CTEST_BINARY_DIRECTORY "c:\\Users\\ci\\scopehal-apps\\build")
