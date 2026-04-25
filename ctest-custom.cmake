@@ -77,6 +77,17 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
 
+# CI Windows 11
+elseif(${HOSTNAME} STREQUAL "win11" )
+	set(CTEST_SITE ci-win11)
+	set(CTEST_BUILD_NAME x86_64-windows-11-nogpu)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: win11")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
 else()
 
 	#set(CTEST_SITE ${HOSTNAME})
