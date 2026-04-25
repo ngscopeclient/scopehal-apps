@@ -6,5 +6,4 @@ pacman -Sy --needed --noconfirm \
 	mingw-w64-ucrt-x86_64-vulkan-headers mingw-w64-ucrt-x86_64-vulkan-loader \
 	mingw-w64-ucrt-x86_64-shaderc mingw-w64-ucrt-x86_64-glslang mingw-w64-ucrt-x86_64-spirv-tools \
 	mingw-w64-ucrt-x86_64-fftw
-export CMAKE_GENERATOR="ninja"
 ctest -S ctest-custom.cmake

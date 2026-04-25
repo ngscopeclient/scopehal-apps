@@ -85,6 +85,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	set(CTEST_BINARY_DIRECTORY "c:\\Users\\ci\\scopehal-apps\\build")
 	set(CTEST_SOURCE_DIRECTORY "c:\\Users\\ci\\scopehal-apps")
+	set(CTEST_CMAKE_GENERATOR "ninja")
 	message(STATUS "Found known CI config: win11")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
