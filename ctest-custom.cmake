@@ -88,6 +88,17 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
 
+# CI Fedora 43
+elseif(${HOSTNAME} STREQUAL "fedora" )
+	set(CTEST_SITE ci-fedora)
+	set(CTEST_BUILD_NAME x86_64-linux-fedora-43-llvmpipe)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: fedora")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
 # CI Windows 11
 elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_SITE ci-win11)
