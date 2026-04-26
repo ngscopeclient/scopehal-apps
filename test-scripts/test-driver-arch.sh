@@ -1,4 +1,5 @@
 #!/bin/sh
+# do not use vulkan-swrast the test VM has a nvidia card
 sudo pacman -Syu --noconfirm --needed \
 	git \
 	gcc \
@@ -14,7 +15,6 @@ sudo pacman -Syu --noconfirm --needed \
 	hidapi \
 	ccache \
 	ninja \
-	vulkan-swrast \
 	lsb-release \
 	fftw \
 	texlive-bin \
@@ -29,6 +29,7 @@ sudo pacman -Syu --noconfirm --needed \
 	vulkan-headers \
 	vulkan-icd-loader \
 	shaderc \
-	glslang
+	glslang \
+	vulkan-tools
 
 ctest -S ctest-custom.cmake
