@@ -42,7 +42,7 @@ elseif(${HOSTNAME} STREQUAL "arch" )
 	message(STATUS "Found known CI config: arch")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Debian Trixie
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
@@ -53,7 +53,7 @@ elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	message(STATUS "Found known CI config: debian-stable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Debian Bookworm
 elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
@@ -64,7 +64,7 @@ elseif(${HOSTNAME} STREQUAL "debian-oldstable" )
 	message(STATUS "Found known CI config: debian-oldstable")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Ubuntu Noble
 elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
@@ -75,7 +75,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 	message(STATUS "Found known CI config: ubuntu-oldlts")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
@@ -86,7 +86,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 	message(STATUS "Found known CI config: ubuntu-lts")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Fedora 43
 elseif(${HOSTNAME} STREQUAL "fedora" )
@@ -97,7 +97,7 @@ elseif(${HOSTNAME} STREQUAL "fedora" )
 	message(STATUS "Found known CI config: fedora")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 # CI Windows 11
 elseif(${HOSTNAME} STREQUAL "win11" )
@@ -111,7 +111,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	message(STATUS "Found known CI config: win11")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
 else()
 
