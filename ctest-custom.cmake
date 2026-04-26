@@ -36,7 +36,7 @@ if(${HOSTNAME} STREQUAL "havequick" )
 # CI Arch
 elseif(${HOSTNAME} STREQUAL "arch" )
 	set(CTEST_SITE ci-arch)
-	set(CTEST_BUILD_NAME x86_64-linux-arch-nogpu)
+	set(CTEST_BUILD_NAME x86_64-linux-arch-nvidia)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: arch")
