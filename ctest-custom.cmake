@@ -33,6 +33,17 @@ if(${HOSTNAME} STREQUAL "havequick" )
 	set(CTEST_BINARY_DIRECTORY ".")
 	set(CTEST_SOURCE_DIRECTORY "..")
 
+# CI Arch
+elseif(${HOSTNAME} STREQUAL "arch" )
+	set(CTEST_SITE ci-arch)
+	set(CTEST_BUILD_NAME x86_64-linux-arch-nogpu)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_GIT_COMMAND "/usr/bin/git")
+	message(STATUS "Found known CI config: arch")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON")
+
 # CI Debian Trixie
 elseif(${HOSTNAME} STREQUAL "debian-stable" )
 	set(CTEST_SITE ci-debian-stable)
