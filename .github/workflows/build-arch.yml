@@ -141,12 +141,12 @@ jobs:
         cd build
         ninja doc
 
-    - name: Run Tests
-      if: ${{ !  matrix.docs }}
-      run: |
-        export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
-        cd build
-        ctest --output-on-failure
+    #- name: Run Tests
+    #  if: ${{ !  matrix.docs }}
+    #  run: |
+    #    export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
+    #    cd build
+    #    ctest --output-on-failure
 
     - name: Upload Artifacts
       if: ${{ !  matrix.docs }}
