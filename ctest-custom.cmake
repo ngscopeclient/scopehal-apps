@@ -80,7 +80,7 @@ elseif(${HOSTNAME} STREQUAL "ubuntu-oldlts" )
 # CI Ubuntu Resolute
 elseif(${HOSTNAME} STREQUAL "ubuntu-lts" )
 	set(CTEST_SITE ci-ubuntu-lts)
-	set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-nogpu)
+	set(CTEST_BUILD_NAME x86_64-linux-ubuntu-26-04-llvmpipe)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_GIT_COMMAND "/usr/bin/git")
 	message(STATUS "Found known CI config: ubuntu-lts")
