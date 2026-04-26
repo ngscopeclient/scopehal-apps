@@ -1,5 +1,5 @@
 #!/bin/sh
-sudo pacman -Syu --noconfirm \
+sudo pacman -Syu --noconfirm --needed \
 	git \
 	gcc \
 	cmake \
