@@ -113,8 +113,8 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
-# CI MacOS ARM64
-elseif(${HOSTNAME} STREQUAL "macos" )
+# CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
+elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	set(CTEST_SITE ci-macos)
 	set(CTEST_BUILD_NAME arm64-macos-15-6-moltenvk)
 	set(CTEST_DASHBOARD Continuous)
