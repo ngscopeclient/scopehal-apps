@@ -116,7 +116,7 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 # CI MacOS ARM64, for whatever reason it reports the FQDN not just the hostname
 elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	set(CTEST_SITE ci-macos)
-	set(CTEST_BUILD_NAME arm64-macos-15-6-moltenvk)
+	set(CTEST_BUILD_NAME aarch64-macos-15-6-moltenvk)
 	set(CTEST_DASHBOARD Continuous)
 	set(CTEST_CMAKE_GENERATOR "Ninja")
 	set(CTEST_BINARY_DIRECTORY "/Users/ci/Documents/scopehal-apps/build")
@@ -124,7 +124,7 @@ elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	message(STATUS "Found known CI config: macos")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=OFF -DCMAKE_PREFIX_PATH=\"$(brew --prefix)/opt/libomp\"")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=OFF -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/libomp")
 
 else()
 
