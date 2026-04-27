@@ -113,6 +113,17 @@ elseif(${HOSTNAME} STREQUAL "win11" )
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
 	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=ON")
 
+# CI MacOS ARM64
+elseif(${HOSTNAME} STREQUAL "macos" )
+	set(CTEST_SITE ci-macos)
+	set(CTEST_BUILD_NAME arm64-macos-15-6-moltenvk)
+	set(CTEST_DASHBOARD Continuous)
+	set(CTEST_CMAKE_GENERATOR "Ninja")
+	message(STATUS "Found known CI config: win11")
+
+	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=OFF -DCMAKE_PREFIX_PATH=\"$(brew --prefix)/opt/libomp\"")
+
 else()
 
 	#set(CTEST_SITE ${HOSTNAME})
