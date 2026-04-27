@@ -121,6 +121,7 @@ elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	set(CTEST_CMAKE_GENERATOR "Ninja")
 	set(CTEST_BINARY_DIRECTORY "/Users/ci/Documents/scopehal-apps/build")
 	set(CTEST_SOURCE_DIRECTORY "/Users/ci/Documents/scopehal-apps/")
+	set(CTEST_PARALLEL_LEVEL 1)
 	message(STATUS "Found known CI config: macos")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
