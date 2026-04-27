@@ -25,4 +25,4 @@ brew install \
 	hidapi \
 	fftw
 
-ctest -S ctest-custom.cmake
+ctest -S ctest-custom.cmake -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/libomp
