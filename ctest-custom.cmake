@@ -124,7 +124,7 @@ elseif(${HOSTNAME} STREQUAL "macos.cidmz.poulsbo.antikernel.net" )
 	message(STATUS "Found known CI config: macos")
 
 	set(CTEST_BUILD_CONFIGURATION "RelWithDebInfo")
-	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=OFF -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/libomp")
+	set(CONFIGURE_OPTIONS "-DBUILD_TESTING=ON -DBUILD_DOCS=OFF -DCMAKE_PREFIX_PATH=/opt/homebrew;/opt/homebrew/opt/libomp")
 
 else()
 
