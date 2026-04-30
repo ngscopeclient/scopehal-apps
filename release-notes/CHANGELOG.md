@@ -80,6 +80,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 ## Bugs fixed since v0.1.1
 
 * Core: Vulkan initialization code would break on cards that advertised 32-bit atomic float support, but did not support atomic addition (https://github.com/ngscopeclient/scopehal-apps/issues/947)
+* Core: missing mutex lock causing threading issues on GPUs with less Vulkan queues than active threads (common on AMD cards)
 * Core: Boolean properties of filter graph blocks were serialized to scopesessions with a trailing space, which caused them to load incorrectly
 * Core: Fixed some numerical precision errors in conversion of 64-bit integer values to strings and back (https://github.com/ngscopeclient/scopehal/issues/1073)
 * Drivers: LeCroy allowed some APIs intended for analog inputs to be called on the trigger channel as well, confusing the scope
@@ -88,6 +89,7 @@ NOTE: This section only list changes which are potentially breaking to an *end u
 * Filters: CSV import now uses 64-bit internal precision when parsing timestamps, reducing loss of precision when loading multimillion line files
 * Filters: Eye pattern mask testing would use stale mask geometry after selecting a new mask until the window was resized (https://github.com/ngscopeclient/scopehal/issues/1042)
 * Filters: Fall Time measurement had numerical stability issues with deep waveforms
+* Filters: I/Q demux would sometimes align incorrectly when decoding 100baseT1
 * Filters: PcapNG export did not handle named pipes correctly (no github ticket)
 * Filters: FFT waveforms were shifted one bin to the right of the correct position and also sometimes had incorrect bin size calculation due to rounding
 * Filters: Frequency and period measurement had a rounding error during integer-to-floating-point conversion causing half a cycle of the waveform to be dropped under some circumstances leading to an incorrect result, with worse error at low frequencies and short memory depths. This only affected the "summary" output not the trend plot.
