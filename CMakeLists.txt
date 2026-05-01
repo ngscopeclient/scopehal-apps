@@ -158,6 +158,10 @@ endif()
 
 if(WIN32)
 	add_compile_options(-D_USE_MATH_DEFINES -D_POSIX_THREAD_SAFE_FUNCTIONS)
+
+	# 2026-05-01 mingw g++ 16.1.0 seems to be giving false positives around uninitialized values inside std::strong
+	add_compile_options(-Wno-error=uninitialized)
+	add_compile_options(-Wno-error=maybe-uninitialized)
 endif()
 
 # Package detection
