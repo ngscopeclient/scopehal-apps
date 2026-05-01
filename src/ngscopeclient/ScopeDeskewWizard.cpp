@@ -2,7 +2,7 @@
 *                                                                                                                      *
 * ngscopeclient                                                                                                        *
 *                                                                                                                      *
-* Copyright (c) 2012-2025 Andrew D. Zonenberg and contributors                                                         *
+* Copyright (c) 2012-2026 Andrew D. Zonenberg and contributors                                                         *
 * All rights reserved.                                                                                                 *
 *                                                                                                                      *
 * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the     *
@@ -86,7 +86,7 @@ ScopeDeskewWizard::ScopeDeskewWizard(
 	, m_pool(*g_vkComputeDevice,
 		vk::CommandPoolCreateInfo(
 			vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-			m_queue->m_family ))
+			m_queue->GetQueue()->m_family ))
 	, m_cmdBuf(std::move(vk::raii::CommandBuffers(*g_vkComputeDevice,
 		vk::CommandBufferAllocateInfo(*m_pool, vk::CommandBufferLevel::ePrimary, 1)).front()))
 	, m_corrOut("corrOut")

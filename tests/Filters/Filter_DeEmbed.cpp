@@ -57,7 +57,7 @@ TEST_CASE("Filter_DeEmbed")
 	shared_ptr<QueueHandle> queue(g_vkQueueManager->GetComputeQueue("Filter_DeEmbed.queue"));
 	vk::CommandPoolCreateInfo poolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		queue->m_family );
+		queue->GetQueue()->m_family );
 	vk::raii::CommandPool pool(*g_vkComputeDevice, poolInfo);
 
 	vk::CommandBufferAllocateInfo bufinfo(*pool, vk::CommandBufferLevel::ePrimary, 1);

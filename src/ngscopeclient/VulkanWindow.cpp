@@ -276,7 +276,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	//Set up command pool
 	vk::CommandPoolCreateInfo cmdPoolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		queue->m_family );
+		queue->GetQueue()->m_family );
 	m_cmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
 	vk::CommandBufferAllocateInfo bufinfo(**m_cmdPool, vk::CommandBufferLevel::ePrimary, m_backBuffers.size());
 
@@ -298,7 +298,7 @@ VulkanWindow::VulkanWindow(const string& title, shared_ptr<QueueHandle> queue, b
 	info.Instance = **g_vkInstance;
 	info.PhysicalDevice = **g_vkComputePhysicalDevice;
 	info.Device = **g_vkComputeDevice;
-	info.QueueFamily = queue->m_family;
+	info.QueueFamily = queue->GetQueue()->m_family;
 	info.PipelineCache = **g_pipelineCacheMgr->Lookup("ImGui.spv", IMGUI_VERSION_NUM);
 	info.DescriptorPool = **m_imguiDescriptorPool;
 	info.PipelineInfoMain.Subpass = 0;

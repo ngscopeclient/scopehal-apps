@@ -71,7 +71,7 @@ DisplayedChannel::DisplayedChannel(StreamDescriptor stream, Session& session)
 
 	vk::CommandPoolCreateInfo cmdPoolInfo(
 		vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-		session.GetMainWindow()->GetRenderQueue()->m_family );
+		session.GetMainWindow()->GetRenderQueue()->GetQueue()->m_family );
 	m_utilCmdPool = std::make_unique<vk::raii::CommandPool>(*g_vkComputeDevice, cmdPoolInfo);
 	vk::CommandBufferAllocateInfo bufinfo(**m_utilCmdPool, vk::CommandBufferLevel::ePrimary, 1);
 
@@ -480,7 +480,7 @@ size_t WaveformArea::GetStreamPosition(StreamDescriptor desc)
 			position = i;
 			break;
 		}
-	}		
+	}
 	return position;
 }
 
@@ -3346,7 +3346,7 @@ void WaveformArea::DragDropOverlays(ImVec2 start, ImVec2 size, int iArea, int nu
 	// Height for split area may be reduced to fit available space in waveform area
 	ImVec2 edgeSizeSplit(dragAreaWidth, splitDragAreaHeight);
 	bool hit = false;
-	
+
 	if(isFirst)
 	{	// Add top drop area to first waveform area of the group
 		hit |= EdgeDropArea(
